@@ -10,7 +10,7 @@ from .model import (
     StateSchema,
     Workflow,
 )
-from .runtime import RuntimeContext, WorkflowExecutionError, execute_workflow
+from .runtime import RuntimeContext, TraceEntry, WorkflowExecutionError, execute_workflow
 from .validate import ValidationIssue, ValidationReport, validate_workflow
 
 __all__ = [
@@ -24,6 +24,7 @@ __all__ = [
     "StateField",
     "StateSchema",
     "RuntimeContext",
+    "TraceEntry",
     "ValidationIssue",
     "ValidationReport",
     "Workflow",

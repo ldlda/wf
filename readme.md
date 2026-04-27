@@ -271,6 +271,22 @@ Runtime failure means things like:
 
 Expected business branching should use declared outcomes instead.
 
+### Trace
+
+Each run should produce a structured trace.
+
+At minimum, each trace entry should capture:
+
+- node id
+- step type
+- resolved input snapshot
+- returned outcome
+- mapped output
+- state changes committed
+- next routed node
+
+This keeps debugging honest as loops, retries, and richer tool adapters are added.
+
 ### Retry
 
 Default retry behavior should be strict.

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 from .model import (
@@ -34,6 +34,17 @@ class RuntimeContext:
     activated_incoming_edge: str | None = None
 
 
+@dataclass(slots=True)
+class TraceEntry:
+    node_id: str
+    step_type: str
+    resolved_input: dict[str, Any]
+    outcome: str
+    next_node_id: str
+    output: dict[str, Any] = field(default_factory=dict)
+    state_changes: dict[str, Any] = field(default_factory=dict)
+
+
 NodeHandler = Callable[[dict[str, Any], RuntimeContext], NodeResult | dict[str, Any]]
 
 
@@ -52,6 +63,7 @@ def execute_workflow(
     edge_map = {(edge.from_, edge.outcome): edge.to for edge in workflow.edges}
 
     state = dict(workflow_input)
+    trace: list[TraceEntry] = []
     current_node_id = workflow.start
     prior_outcome: str | None = None
     activated_incoming_edge: str | None = None
@@ -61,7 +73,7 @@ def execute_workflow(
 
         if isinstance(step, NodeUse):
             node_def = node_defs[step.node]
-            outcome = _execute_node_use(
+            node_result = _execute_node_use(
                 step,
                 node_def,
                 state,
@@ -71,11 +83,22 @@ def execute_workflow(
                 activated_incoming_edge,
                 workflow,
             )
+            outcome = node_result["outcome"]
         elif isinstance(step, ConditionNode):
             predicate = _eval_condition(step.check, state, workflow_input, prior_outcome)
             outcome = "true" if predicate else "false"
+            node_result = {
+                "resolved_input": {},
+                "output": {"predicate": predicate},
+                "state_changes": {},
+            }
         elif isinstance(step, JoinNode):
             outcome = "done"
+            node_result = {
+                "resolved_input": {},
+                "output": {},
+                "state_changes": {},
+            }
         elif isinstance(step, ForeachNode):
             raise WorkflowExecutionError("foreach execution is not implemented yet")
         else:
@@ -87,13 +110,29 @@ def execute_workflow(
                 f"no edge found for node {current_node_id!r} and outcome {outcome!r}"
             )
 
+        trace.append(
+            TraceEntry(
+                node_id=current_node_id,
+                step_type=step.type,
+                resolved_input=node_result["resolved_input"],
+                outcome=outcome,
+                next_node_id=next_node_id,
+                output=node_result["output"],
+                state_changes=node_result["state_changes"],
+            )
+        )
+
         prior_outcome = outcome
         activated_incoming_edge = current_node_id
         current_node_id = next_node_id
 
     final_output = _project_output(workflow, state)
     _validate_payload_against_schema(workflow.output_schema, final_output, "workflow output")
-    return {"state": state, "output": final_output}
+    return {
+        "state": state,
+        "output": final_output,
+        "trace": [asdict(entry) for entry in trace],
+    }
 
 
 def _execute_node_use(
@@ -105,7 +144,7 @@ def _execute_node_use(
     prior_outcome: str | None,
     activated_incoming_edge: str | None,
     workflow: Workflow,
-) -> str:
+) -> dict[str, Any]:
     handler = registry.get(node.node)
     if handler is None:
         raise WorkflowExecutionError(f"no handler registered for node def {node.node!r}")
@@ -134,8 +173,13 @@ def _execute_node_use(
     _validate_payload_against_schema(
         node_def.output_schema, result.output, f"node output for {node.id}"
     )
-    _apply_output_map(workflow, node, result.output, state)
-    return result.outcome
+    state_changes = _apply_output_map(workflow, node, result.output, state)
+    return {
+        "outcome": result.outcome,
+        "resolved_input": resolved_input,
+        "output": result.output,
+        "state_changes": state_changes,
+    }
 
 
 def _coerce_node_result(raw_result: NodeResult | dict[str, Any]) -> NodeResult:
@@ -151,7 +195,8 @@ def _apply_output_map(
     node: NodeUse,
     node_output: dict[str, Any],
     state: dict[str, Any],
-) -> None:
+) -> dict[str, Any]:
+    state_changes: dict[str, Any] = {}
     for source_field, destination_path in node.out_map.items():
         if source_field not in node_output:
             raise WorkflowExecutionError(
@@ -159,6 +204,8 @@ def _apply_output_map(
             )
         value = node_output[source_field]
         _write_state_value(workflow, state, destination_path, value)
+        state_changes[destination_path] = value
+    return state_changes
 
 
 def _write_state_value(
