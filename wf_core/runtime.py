@@ -56,7 +56,9 @@ def execute_workflow(
     report = workflow.validate_structure()
     report.raise_for_errors()
 
-    _validate_payload_against_schema(workflow.input_schema, workflow_input, "workflow input")
+    _validate_payload_against_schema(
+        workflow.input_schema, workflow_input, "workflow input"
+    )
 
     node_defs = {node_def.name: node_def for node_def in workflow.node_defs}
     nodes_by_id = {node.id: node for node in workflow.nodes}
@@ -85,7 +87,9 @@ def execute_workflow(
             )
             outcome = node_result["outcome"]
         elif isinstance(step, ConditionNode):
-            predicate = _eval_condition(step.check, state, workflow_input, prior_outcome)
+            predicate = _eval_condition(
+                step.check, state, workflow_input, prior_outcome
+            )
             outcome = "true" if predicate else "false"
             node_result = {
                 "resolved_input": {},
@@ -127,7 +131,9 @@ def execute_workflow(
         current_node_id = next_node_id
 
     final_output = _project_output(workflow, state)
-    _validate_payload_against_schema(workflow.output_schema, final_output, "workflow output")
+    _validate_payload_against_schema(
+        workflow.output_schema, final_output, "workflow output"
+    )
     return {
         "state": state,
         "output": final_output,
@@ -147,7 +153,9 @@ def _execute_node_use(
 ) -> dict[str, Any]:
     handler = registry.get(node.node)
     if handler is None:
-        raise WorkflowExecutionError(f"no handler registered for node def {node.node!r}")
+        raise WorkflowExecutionError(
+            f"no handler registered for node def {node.node!r}"
+        )
 
     resolved_input = {
         destination_field: _resolve_path(source_path, state, workflow_input, {})
@@ -227,7 +235,9 @@ def _write_state_value(
     current_value = _get_nested_value(state, key_path)
     if merge_strategy == "append":
         if current_value is None:
-            _set_nested_value(state, key_path, [value] if not isinstance(value, list) else value)
+            _set_nested_value(
+                state, key_path, [value] if not isinstance(value, list) else value
+            )
             return
         if not isinstance(current_value, list):
             raise WorkflowExecutionError(
@@ -259,9 +269,7 @@ def _write_state_value(
 
 def _project_output(workflow: Workflow, state: dict[str, Any]) -> dict[str, Any]:
     return {
-        key: state[key]
-        for key in workflow.output_schema.properties
-        if key in state
+        key: state[key] for key in workflow.output_schema.properties if key in state
     }
 
 
