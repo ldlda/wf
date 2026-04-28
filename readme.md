@@ -320,6 +320,12 @@ At minimum, run state should track:
 
 This gives the engine a clean path toward checkpointing, interrupt, and resume later.
 
+Run state should also carry execution frames.
+
+- v1 may only have a root workflow frame
+- future `foreach` and subgraph execution should attach work to child frames
+- interrupts should belong to a frame, not just to the run globally
+
 Two useful execution entry points fall out of this:
 
 - `step_workflow(...)` for one-node advancement

@@ -15,7 +15,14 @@ from .model import (
     NodeUse,
     Workflow,
 )
-from .run_state import InterruptRequest, RunState, RunStatus, RuntimeContext, TraceEntry
+from .run_state import (
+    ExecutionFrame,
+    InterruptRequest,
+    RunState,
+    RunStatus,
+    RuntimeContext,
+    TraceEntry,
+)
 from .schema_tools import validate_payload_against_schema
 from .state_ops import apply_mapped_state, apply_output_map, project_output
 from .tokens import END
@@ -34,8 +41,17 @@ def execute_workflow(
         status=RunStatus.PENDING,
         workflow_input=dict(workflow_input),
         state=dict(workflow_input),
+        frames={
+            "root": ExecutionFrame(
+                id="root",
+                kind="workflow",
+                node_id=workflow.start,
+            )
+        },
+        current_frame_id="root",
         current_node_id=workflow.start,
     )
+    run.sync_from_current_frame()
 
     try:
         workflow.validate_structure().raise_for_errors()
@@ -61,6 +77,10 @@ def resume_workflow(
         raise WorkflowExecutionError(
             f"run state belongs to workflow {run.workflow_name!r}, not {workflow.name!r}"
         )
+
+    if run.current_frame_id is None:
+        raise WorkflowExecutionError("run has no current frame")
+    run.sync_from_current_frame()
 
     if run.current_node_id is None:
         raise WorkflowExecutionError("run has no current node")
@@ -124,6 +144,10 @@ def step_workflow(
     nodes_by_id: dict[str, Any] | None = None,
     edge_map: dict[tuple[str, str], str] | None = None,
 ) -> RunState:
+    if run.current_frame_id is None:
+        raise WorkflowExecutionError("run has no current frame")
+
+    run.sync_from_current_frame()
     if run.current_node_id is None or run.current_node_id == END:
         return run
     if run.status == RunStatus.INTERRUPTED:
@@ -141,7 +165,8 @@ def step_workflow(
         (edge.from_, edge.outcome): edge.to for edge in workflow.edges
     }
 
-    step = nodes_by_id[run.current_node_id]
+    frame = run.current_frame()
+    step = nodes_by_id[frame.node_id]
 
     if isinstance(step, NodeUse):
         node_def = node_defs[step.node]
@@ -149,7 +174,7 @@ def step_workflow(
         outcome = step_result["outcome"]
     elif isinstance(step, ConditionNode):
         predicate = eval_condition(
-            step.check, run.state, run.workflow_input, run.prior_outcome
+            step.check, run.state, run.workflow_input, frame.prior_outcome
         )
         outcome = "true" if predicate else "false"
         step_result = {
@@ -167,18 +192,20 @@ def step_workflow(
     elif isinstance(step, InterruptNode):
         interrupt_request = _build_interrupt_request(
             step,
-            run.state,
-            run.workflow_input,
+            frame_id=frame.id,
+            state=run.state,
+            workflow_input=run.workflow_input,
         )
         run.interrupt = interrupt_request
         run.status = RunStatus.INTERRUPTED
         run.trace.append(
             TraceEntry(
-                node_id=run.current_node_id,
+                frame_id=frame.id,
+                node_id=frame.node_id,
                 step_type=step.type,
                 resolved_input=interrupt_request.payload,
                 outcome="interrupt",
-                next_node_id=run.current_node_id,
+                next_node_id=frame.node_id,
                 output=interrupt_request.payload,
                 state_changes={},
             )
@@ -189,15 +216,16 @@ def step_workflow(
     else:
         raise WorkflowExecutionError(f"unsupported step type {step.type!r}")
 
-    next_node_id = edge_map.get((run.current_node_id, outcome))
+    next_node_id = edge_map.get((frame.node_id, outcome))
     if next_node_id is None:
         raise WorkflowExecutionError(
-            f"no edge found for node {run.current_node_id!r} and outcome {outcome!r}"
+            f"no edge found for node {frame.node_id!r} and outcome {outcome!r}"
         )
 
     run.trace.append(
         TraceEntry(
-            node_id=run.current_node_id,
+            frame_id=frame.id,
+            node_id=frame.node_id,
             step_type=step.type,
             resolved_input=step_result["resolved_input"],
             outcome=outcome,
@@ -207,9 +235,10 @@ def step_workflow(
         )
     )
 
-    run.prior_outcome = outcome
-    run.activated_incoming_edge = run.current_node_id
-    run.current_node_id = next_node_id
+    frame.prior_outcome = outcome
+    frame.activated_incoming_edge = frame.node_id
+    frame.node_id = next_node_id
+    run.sync_from_current_frame()
     return run
 
 
@@ -239,10 +268,12 @@ def _execute_node_use(
         node_def.input_schema, resolved_input, f"node input for {node.id}"
     )
 
+    frame = run.current_frame()
     context = RuntimeContext(
         current_node_id=node.id,
-        prior_outcome=run.prior_outcome,
-        activated_incoming_edge=run.activated_incoming_edge,
+        frame_id=frame.id,
+        prior_outcome=frame.prior_outcome,
+        activated_incoming_edge=frame.activated_incoming_edge,
     )
     raw_result = handler(resolved_input, context)
     result = coerce_node_result(raw_result)
@@ -274,6 +305,8 @@ def coerce_node_result(raw_result: NodeResult | dict[str, Any]) -> NodeResult:
 
 def _build_interrupt_request(
     node: InterruptNode,
+    *,
+    frame_id: str,
     state: dict[str, Any],
     workflow_input: dict[str, Any],
 ) -> InterruptRequest:
@@ -288,6 +321,7 @@ def _build_interrupt_request(
     }
     return InterruptRequest(
         id=f"interrupt:{node.id}",
+        frame_id=frame_id,
         node_id=node.id,
         kind=node.kind,
         payload=payload,
@@ -303,12 +337,15 @@ def _resume_interrupt(
     resume_payload: dict[str, Any],
     resume_outcome: str,
 ) -> None:
+    if run.current_frame_id is None:
+        raise WorkflowExecutionError("interrupted run has no current frame")
     if run.current_node_id is None:
         raise WorkflowExecutionError("interrupted run has no current node")
     if run.interrupt is None:
         raise WorkflowExecutionError("run is interrupted but has no interrupt request")
 
-    step = nodes_by_id[run.current_node_id]
+    frame = run.current_frame()
+    step = nodes_by_id[frame.node_id]
     if not isinstance(step, InterruptNode):
         raise WorkflowExecutionError(
             f"interrupted run expected interrupt node, got {step.type!r}"
@@ -325,15 +362,16 @@ def _resume_interrupt(
         run.state,
         missing_field_message="interrupt resume payload is missing required field {field}",
     )
-    next_node_id = edge_map.get((run.current_node_id, resume_outcome))
+    next_node_id = edge_map.get((frame.node_id, resume_outcome))
     if next_node_id is None:
         raise WorkflowExecutionError(
-            f"no edge found for interrupt node {run.current_node_id!r} and outcome {resume_outcome!r}"
+            f"no edge found for interrupt node {frame.node_id!r} and outcome {resume_outcome!r}"
         )
 
     run.trace.append(
         TraceEntry(
-            node_id=run.current_node_id,
+            frame_id=frame.id,
+            node_id=frame.node_id,
             step_type=step.type,
             resolved_input=resume_payload,
             outcome=resume_outcome,
@@ -342,7 +380,8 @@ def _resume_interrupt(
             state_changes=state_changes,
         )
     )
-    run.prior_outcome = resume_outcome
-    run.activated_incoming_edge = run.current_node_id
-    run.current_node_id = next_node_id
+    frame.prior_outcome = resume_outcome
+    frame.activated_incoming_edge = frame.node_id
+    frame.node_id = next_node_id
     run.interrupt = None
+    run.sync_from_current_frame()

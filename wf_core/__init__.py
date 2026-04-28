@@ -19,7 +19,14 @@ from .runtime import (
     resume_workflow,
     step_workflow,
 )
-from .run_state import InterruptRequest, RunState, RunStatus, RuntimeContext, TraceEntry
+from .run_state import (
+    ExecutionFrame,
+    InterruptRequest,
+    RunState,
+    RunStatus,
+    RuntimeContext,
+    TraceEntry,
+)
 from .tokens import END, START
 from .validate import (
     ValidationIssue,
@@ -40,6 +47,7 @@ __all__ = [
     "StateField",
     "StateSchema",
     "NodeHandler",
+    "ExecutionFrame",
     "RunState",
     "RunStatus",
     "RuntimeContext",
