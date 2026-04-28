@@ -33,6 +33,15 @@ class TraceEntry:
 
 
 @dataclass(slots=True)
+class InterruptRequest:
+    id: str
+    node_id: str
+    kind: str
+    payload: dict[str, Any] = field(default_factory=dict)
+    resumable: bool = True
+
+
+@dataclass(slots=True)
 class RunState:
     workflow_name: str
     status: RunStatus
@@ -44,6 +53,7 @@ class RunState:
     prior_outcome: str | None = None
     activated_incoming_edge: str | None = None
     error: str | None = None
+    interrupt: InterruptRequest | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

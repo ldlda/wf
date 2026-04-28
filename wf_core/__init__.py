@@ -2,6 +2,7 @@ from .model import (
     ConditionNode,
     Edge,
     ForeachNode,
+    InterruptNode,
     JoinNode,
     NodeDef,
     NodeResult,
@@ -18,7 +19,7 @@ from .runtime import (
     resume_workflow,
     step_workflow,
 )
-from .run_state import RunState, RunStatus, RuntimeContext, TraceEntry
+from .run_state import InterruptRequest, RunState, RunStatus, RuntimeContext, TraceEntry
 from .tokens import END, START
 from .validate import (
     ValidationIssue,
@@ -31,6 +32,7 @@ __all__ = [
     "ConditionNode",
     "Edge",
     "ForeachNode",
+    "InterruptNode",
     "JoinNode",
     "NodeDef",
     "NodeResult",
@@ -42,6 +44,7 @@ __all__ = [
     "RunStatus",
     "RuntimeContext",
     "TraceEntry",
+    "InterruptRequest",
     "START",
     "END",
     "ValidationIssue",

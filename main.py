@@ -3,13 +3,10 @@ import sys
 
 from wf_core import (
     END,
-    RunState,
-    RunStatus,
     RuntimeContext,
     Workflow,
     execute_workflow,
     resume_workflow,
-    step_workflow,
 )
 
 
@@ -30,6 +27,8 @@ workflow = Workflow.model_validate(
                 "should_email": {"type": "boolean"},
                 "documents": {"type": "array", "merge_strategy": "replace"},
                 "summary": {"type": "string", "merge_strategy": "replace"},
+                "approved": {"type": "boolean", "merge_strategy": "replace"},
+                "approval_comment": {"type": "string", "merge_strategy": "replace"},
                 "email_status": {"type": "string", "merge_strategy": "replace"},
             }
         },
@@ -134,6 +133,20 @@ workflow = Workflow.model_validate(
                 "out_map": {"email_status": "state.email_status"},
             },
             {
+                "id": "approve_email",
+                "type": "interrupt",
+                "kind": "approval",
+                "request_map": {
+                    "state.summary": "summary",
+                    "input.folder_id": "folder_id",
+                },
+                "out_map": {
+                    "approved": "state.approved",
+                    "comment": "state.approval_comment",
+                },
+                "outcomes": ["submitted", "cancelled"],
+            },
+            {
                 "id": "skip_email",
                 "type": "node",
                 "node": "mark_email_skipped",
@@ -144,8 +157,10 @@ workflow = Workflow.model_validate(
         "edges": [
             {"from": "list_files", "outcome": "ok", "to": "summarize"},
             {"from": "summarize", "outcome": "ok", "to": "should_email"},
-            {"from": "should_email", "outcome": "true", "to": "send_email"},
+            {"from": "should_email", "outcome": "true", "to": "approve_email"},
             {"from": "should_email", "outcome": "false", "to": "skip_email"},
+            {"from": "approve_email", "outcome": "submitted", "to": "send_email"},
+            {"from": "approve_email", "outcome": "cancelled", "to": "skip_email"},
             {"from": "send_email", "outcome": "sent", "to": END},
             {"from": "skip_email", "outcome": "ok", "to": END},
         ],
@@ -206,28 +221,30 @@ registry = {
     "mark_email_skipped": mark_email_skipped,
 }
 
-workflow_input = {"folder_id": "demo-folder", "should_email": False}
-
-step_run = RunState(
-    workflow_name=workflow.name,
-    status=RunStatus.PENDING,
-    workflow_input=dict(workflow_input),
-    state=dict(workflow_input),
-    current_node_id=workflow.start,
-)
-
 workflow.validate_structure().raise_for_errors()
 
-print("Step-by-step run:")
-while step_run.current_node_id != END:
-    step_workflow(workflow, step_run, registry)
-    print(json.dumps(step_run.to_dict(), indent=2))
+print("Interrupting run:")
+interrupted_run = execute_workflow(
+    workflow,
+    {"folder_id": "demo-folder", "should_email": True},
+    registry,
+)
+print(json.dumps(interrupted_run.to_dict(), indent=2))
 
-step_run = resume_workflow(workflow, step_run, registry)
+print("Resumed run:")
+resumed_run = resume_workflow(
+    workflow,
+    interrupted_run,
+    registry,
+    resume_payload={"approved": True, "comment": "Looks good to send."},
+    resume_outcome="submitted",
+)
+print(json.dumps(resumed_run.to_dict(), indent=2))
 
-print("Completed stepped run:")
-print(json.dumps(step_run.to_dict(), indent=2))
-
-print("One-shot run:")
-full_run = execute_workflow(workflow, workflow_input, registry)
-print(json.dumps(full_run.to_dict(), indent=2))
+print("Non-interrupt run:")
+non_interrupt_run = execute_workflow(
+    workflow,
+    {"folder_id": "demo-folder", "should_email": False},
+    registry,
+)
+print(json.dumps(non_interrupt_run.to_dict(), indent=2))

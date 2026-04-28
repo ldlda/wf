@@ -4,7 +4,12 @@ from typing import Any
 
 from .errors import WorkflowExecutionError
 from .model import NodeUse, Workflow
-from .paths import PathResolutionError, get_nested_value, set_nested_value, split_graph_path
+from .paths import (
+    PathResolutionError,
+    get_nested_value,
+    set_nested_value,
+    split_graph_path,
+)
 
 
 def apply_output_map(
@@ -13,13 +18,30 @@ def apply_output_map(
     node_output: dict[str, Any],
     state: dict[str, Any],
 ) -> dict[str, Any]:
+    return apply_mapped_state(
+        workflow,
+        node_output,
+        node.out_map,
+        state,
+        missing_field_message=f"node {node.id!r} did not return required mapped field {{field}}",
+    )
+
+
+def apply_mapped_state(
+    workflow: Workflow,
+    source_data: dict[str, Any],
+    mapping: dict[str, str],
+    state: dict[str, Any],
+    *,
+    missing_field_message: str,
+) -> dict[str, Any]:
     state_changes: dict[str, Any] = {}
-    for source_field, destination_path in node.out_map.items():
-        if source_field not in node_output:
+    for source_field, destination_path in mapping.items():
+        if source_field not in source_data:
             raise WorkflowExecutionError(
-                f"node {node.id!r} did not return required mapped field {source_field!r}"
+                missing_field_message.format(field=repr(source_field))
             )
-        value = node_output[source_field]
+        value = source_data[source_field]
         write_state_value(workflow, state, destination_path, value)
         state_changes[destination_path] = value
     return state_changes

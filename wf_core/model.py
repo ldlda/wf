@@ -104,8 +104,17 @@ class JoinNode(BaseModel):
     type: Literal["join"]
 
 
+class InterruptNode(BaseModel):
+    id: str
+    type: Literal["interrupt"]
+    kind: str
+    request_map: dict[str, str] = Field(default_factory=dict)
+    out_map: dict[str, str] = Field(default_factory=dict)
+    outcomes: list[str] = Field(default_factory=lambda: ["submitted"])
+
+
 Step = Annotated[
-    NodeUse | ConditionNode | ForeachNode | JoinNode,
+    NodeUse | ConditionNode | ForeachNode | JoinNode | InterruptNode,
     Field(discriminator="type"),
 ]
 

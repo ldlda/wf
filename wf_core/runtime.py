@@ -5,10 +5,19 @@ from typing import Any
 
 from .conditions import eval_condition, safe_resolve_path
 from .errors import WorkflowExecutionError
-from .model import ConditionNode, ForeachNode, JoinNode, NodeDef, NodeResult, NodeUse, Workflow
-from .run_state import RunState, RunStatus, RuntimeContext, TraceEntry
+from .model import (
+    ConditionNode,
+    ForeachNode,
+    InterruptNode,
+    JoinNode,
+    NodeDef,
+    NodeResult,
+    NodeUse,
+    Workflow,
+)
+from .run_state import InterruptRequest, RunState, RunStatus, RuntimeContext, TraceEntry
 from .schema_tools import validate_payload_against_schema
-from .state_ops import apply_output_map, project_output
+from .state_ops import apply_mapped_state, apply_output_map, project_output
 from .tokens import END
 
 
@@ -44,6 +53,9 @@ def resume_workflow(
     workflow: Workflow,
     run: RunState,
     registry: dict[str, NodeHandler],
+    *,
+    resume_payload: dict[str, Any] | None = None,
+    resume_outcome: str = "submitted",
 ) -> RunState:
     if run.workflow_name != workflow.name:
         raise WorkflowExecutionError(
@@ -56,14 +68,43 @@ def resume_workflow(
     if run.status == RunStatus.COMPLETED:
         return run
 
-    run.status = RunStatus.RUNNING
-    run.error = None
     node_defs = {node_def.name: node_def for node_def in workflow.node_defs}
     nodes_by_id = {node.id: node for node in workflow.nodes}
     edge_map = {(edge.from_, edge.outcome): edge.to for edge in workflow.edges}
 
+    if run.status == RunStatus.INTERRUPTED:
+        if resume_payload is None:
+            return run
+        _resume_interrupt(
+            workflow,
+            run,
+            nodes_by_id=nodes_by_id,
+            edge_map=edge_map,
+            resume_payload=resume_payload,
+            resume_outcome=resume_outcome,
+        )
+        if run.current_node_id == END:
+            run.output = project_output(workflow, run.state)
+            validate_payload_against_schema(
+                workflow.output_schema, run.output, "workflow output"
+            )
+            run.status = RunStatus.COMPLETED
+            return run
+
+    run.status = RunStatus.RUNNING
+    run.error = None
+
     while run.current_node_id != END:
-        step_workflow(workflow, run, registry, node_defs=node_defs, nodes_by_id=nodes_by_id, edge_map=edge_map)
+        step_workflow(
+            workflow,
+            run,
+            registry,
+            node_defs=node_defs,
+            nodes_by_id=nodes_by_id,
+            edge_map=edge_map,
+        )
+        if run.status == RunStatus.INTERRUPTED:
+            return run
 
     run.output = project_output(workflow, run.state)
     validate_payload_against_schema(
@@ -85,14 +126,20 @@ def step_workflow(
 ) -> RunState:
     if run.current_node_id is None or run.current_node_id == END:
         return run
+    if run.status == RunStatus.INTERRUPTED:
+        return run
 
     if run.status == RunStatus.PENDING:
         run.status = RunStatus.RUNNING
     run.error = None
 
-    node_defs = node_defs or {node_def.name: node_def for node_def in workflow.node_defs}
+    node_defs = node_defs or {
+        node_def.name: node_def for node_def in workflow.node_defs
+    }
     nodes_by_id = nodes_by_id or {node.id: node for node in workflow.nodes}
-    edge_map = edge_map or {(edge.from_, edge.outcome): edge.to for edge in workflow.edges}
+    edge_map = edge_map or {
+        (edge.from_, edge.outcome): edge.to for edge in workflow.edges
+    }
 
     step = nodes_by_id[run.current_node_id]
 
@@ -117,6 +164,26 @@ def step_workflow(
             "output": {},
             "state_changes": {},
         }
+    elif isinstance(step, InterruptNode):
+        interrupt_request = _build_interrupt_request(
+            step,
+            run.state,
+            run.workflow_input,
+        )
+        run.interrupt = interrupt_request
+        run.status = RunStatus.INTERRUPTED
+        run.trace.append(
+            TraceEntry(
+                node_id=run.current_node_id,
+                step_type=step.type,
+                resolved_input=interrupt_request.payload,
+                outcome="interrupt",
+                next_node_id=run.current_node_id,
+                output=interrupt_request.payload,
+                state_changes={},
+            )
+        )
+        return run
     elif isinstance(step, ForeachNode):
         raise WorkflowExecutionError("foreach execution is not implemented yet")
     else:
@@ -203,3 +270,79 @@ def coerce_node_result(raw_result: NodeResult | dict[str, Any]) -> NodeResult:
     if "outcome" in raw_result and "output" in raw_result:
         return NodeResult.model_validate(raw_result)
     return NodeResult(outcome="ok", output=raw_result)
+
+
+def _build_interrupt_request(
+    node: InterruptNode,
+    state: dict[str, Any],
+    workflow_input: dict[str, Any],
+) -> InterruptRequest:
+    payload = {
+        payload_field: safe_resolve_path(
+            source_path,
+            state=state,
+            workflow_input=workflow_input,
+            context={},
+        )
+        for source_path, payload_field in node.request_map.items()
+    }
+    return InterruptRequest(
+        id=f"interrupt:{node.id}",
+        node_id=node.id,
+        kind=node.kind,
+        payload=payload,
+    )
+
+
+def _resume_interrupt(
+    workflow: Workflow,
+    run: RunState,
+    *,
+    nodes_by_id: dict[str, Any],
+    edge_map: dict[tuple[str, str], str],
+    resume_payload: dict[str, Any],
+    resume_outcome: str,
+) -> None:
+    if run.current_node_id is None:
+        raise WorkflowExecutionError("interrupted run has no current node")
+    if run.interrupt is None:
+        raise WorkflowExecutionError("run is interrupted but has no interrupt request")
+
+    step = nodes_by_id[run.current_node_id]
+    if not isinstance(step, InterruptNode):
+        raise WorkflowExecutionError(
+            f"interrupted run expected interrupt node, got {step.type!r}"
+        )
+    if resume_outcome not in step.outcomes:
+        raise WorkflowExecutionError(
+            f"interrupt node {step.id!r} does not declare resume outcome {resume_outcome!r}"
+        )
+
+    state_changes = apply_mapped_state(
+        workflow,
+        resume_payload,
+        step.out_map,
+        run.state,
+        missing_field_message="interrupt resume payload is missing required field {field}",
+    )
+    next_node_id = edge_map.get((run.current_node_id, resume_outcome))
+    if next_node_id is None:
+        raise WorkflowExecutionError(
+            f"no edge found for interrupt node {run.current_node_id!r} and outcome {resume_outcome!r}"
+        )
+
+    run.trace.append(
+        TraceEntry(
+            node_id=run.current_node_id,
+            step_type=step.type,
+            resolved_input=resume_payload,
+            outcome=resume_outcome,
+            next_node_id=next_node_id,
+            output=resume_payload,
+            state_changes=state_changes,
+        )
+    )
+    run.prior_outcome = resume_outcome
+    run.activated_incoming_edge = run.current_node_id
+    run.current_node_id = next_node_id
+    run.interrupt = None

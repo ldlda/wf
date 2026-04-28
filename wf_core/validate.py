@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import StrEnum
-from typing import Any
 
 from .model import (
     BinaryCondition,
@@ -11,6 +10,7 @@ from .model import (
     Edge,
     ExistsCondition,
     ForeachNode,
+    InterruptNode,
     LiteralOperand,
     NodeDef,
     NodeUse,
@@ -41,6 +41,8 @@ class ValidationIssueCode(StrEnum):
     EMPTY_CONDITION_ARGS = "empty_condition_args"
     INVALID_CONDITION_PATH = "invalid_condition_path"
     INVALID_FOREACH_SOURCE = "invalid_foreach_source"
+    INVALID_INTERRUPT_SOURCE = "invalid_interrupt_source"
+    INVALID_INTERRUPT_DESTINATION = "invalid_interrupt_destination"
 
 
 @dataclass(slots=True)
@@ -106,6 +108,10 @@ def validate_workflow(workflow: Workflow) -> ValidationReport:
             )
         elif isinstance(node, ForeachNode):
             _validate_foreach_node(
+                node, index, report, state_root_fields, input_root_fields
+            )
+        elif isinstance(node, InterruptNode):
+            _validate_interrupt_node(
                 node, index, report, state_root_fields, input_root_fields
             )
 
@@ -258,6 +264,42 @@ def _validate_foreach_node(
         )
 
 
+def _validate_interrupt_node(
+    node: InterruptNode,
+    index: int,
+    report: ValidationReport,
+    state_root_fields: set[str],
+    input_root_fields: set[str],
+) -> None:
+    for source_path, payload_field in node.request_map.items():
+        if not payload_field:
+            report.add(
+                ValidationIssueCode.INVALID_INTERRUPT_SOURCE,
+                f"nodes[{index}].request_map[{source_path!r}]",
+                "interrupt request payload field must not be empty",
+            )
+        if not is_valid_source_path(source_path, state_root_fields, input_root_fields):
+            report.add(
+                ValidationIssueCode.INVALID_INTERRUPT_SOURCE,
+                f"nodes[{index}].request_map[{source_path!r}]",
+                "interrupt request source must start with input. or state. and reference a declared root field",
+            )
+
+    for resume_field, destination_path in node.out_map.items():
+        if not resume_field:
+            report.add(
+                ValidationIssueCode.INVALID_INTERRUPT_DESTINATION,
+                f"nodes[{index}].out_map[{resume_field!r}]",
+                "interrupt resume field must not be empty",
+            )
+        if not is_valid_destination_path(destination_path):
+            report.add(
+                ValidationIssueCode.INVALID_INTERRUPT_DESTINATION,
+                f"nodes[{index}].out_map[{resume_field!r}]",
+                "interrupt resume destination must start with state.",
+            )
+
+
 def _validate_condition_expr(
     condition: Condition,
     path: str,
@@ -346,6 +388,8 @@ def _declared_outcomes_for_step(step: Step, node_defs: dict[str, NodeDef]) -> se
         return {"done"}
     if step.type == "join":
         return {"done"}
+    if step.type == "interrupt":
+        return set(step.outcomes)
     return set()
 
 
