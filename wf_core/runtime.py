@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass, field
 from typing import Any
 
@@ -20,6 +20,15 @@ from .model import (
     VariadicCondition,
     Workflow,
 )
+from .paths import (
+    PathResolutionError,
+    get_nested_value,
+    path_exists,
+    resolve_graph_path,
+    set_nested_value,
+    split_graph_path,
+)
+from .tokens import END
 
 
 class WorkflowExecutionError(RuntimeError):
@@ -70,7 +79,7 @@ def execute_workflow(
     prior_outcome: str | None = None
     activated_incoming_edge: str | None = None
 
-    while current_node_id != "__end__":
+    while current_node_id != END:
         step = nodes_by_id[current_node_id]
 
         if isinstance(step, NodeUse):
@@ -158,7 +167,12 @@ def _execute_node_use(
         )
 
     resolved_input = {
-        destination_field: _resolve_path(source_path, state, workflow_input, {})
+        destination_field: _safe_resolve_path(
+            source_path,
+            state=state,
+            workflow_input=workflow_input,
+            context={},
+        )
         for source_path, destination_field in node.in_map.items()
     }
     _validate_payload_against_schema(
@@ -219,23 +233,29 @@ def _apply_output_map(
 def _write_state_value(
     workflow: Workflow, state: dict[str, Any], destination_path: str, value: Any
 ) -> None:
-    root, field_name, *rest = destination_path.split(".")
+    try:
+        root, parts = split_graph_path(destination_path)
+    except PathResolutionError as exc:
+        raise WorkflowExecutionError(str(exc)) from exc
+
     if root != "state":
         raise WorkflowExecutionError(
             f"executor only supports writes into state.*, got {destination_path!r}"
         )
+
+    field_name = parts[0]
     declared_field = workflow.state_schema.fields.get(field_name)
     merge_strategy = declared_field.merge_strategy if declared_field else "replace"
-    key_path = [field_name, *rest]
+    key_path = parts
 
     if merge_strategy == "replace":
-        _set_nested_value(state, key_path, value)
+        _safe_set_nested_value(state, key_path, value)
         return
 
-    current_value = _get_nested_value(state, key_path)
+    current_value = get_nested_value(state, key_path)
     if merge_strategy == "append":
         if current_value is None:
-            _set_nested_value(
+            _safe_set_nested_value(
                 state, key_path, [value] if not isinstance(value, list) else value
             )
             return
@@ -255,7 +275,7 @@ def _write_state_value(
                 raise WorkflowExecutionError(
                     f"cannot merge non-object value into {destination_path!r}"
                 )
-            _set_nested_value(state, key_path, dict(value))
+            _safe_set_nested_value(state, key_path, dict(value))
             return
         if not isinstance(current_value, dict) or not isinstance(value, dict):
             raise WorkflowExecutionError(
@@ -291,7 +311,12 @@ def _eval_condition(
     context_data: str | None,
 ) -> bool:
     if isinstance(condition, ExistsCondition):
-        return _path_exists(condition.path, state, workflow_input, context_data)
+        return path_exists(
+            condition.path,
+            state=state,
+            workflow_input=workflow_input,
+            context={"prior_outcome": context_data},
+        )
     if isinstance(condition, NotCondition):
         return not _eval_condition(condition.arg, state, workflow_input, context_data)
     if isinstance(condition, VariadicCondition):
@@ -322,73 +347,36 @@ def _resolve_operand(
 ) -> Any:
     if isinstance(operand, LiteralOperand):
         return operand.value
-    return _resolve_path(
+    return _safe_resolve_path(
         operand.path,
-        state,
-        workflow_input,
-        {"prior_outcome": context_data},
+        state=state,
+        workflow_input=workflow_input,
+        context={"prior_outcome": context_data},
     )
 
 
-def _path_exists(
+def _safe_resolve_path(
     path: str,
-    state: dict[str, Any],
-    workflow_input: dict[str, Any],
-    context_data: str | None,
-) -> bool:
-    try:
-        _resolve_path(path, state, workflow_input, {"prior_outcome": context_data})
-    except WorkflowExecutionError:
-        return False
-    return True
-
-
-def _resolve_path(
-    path: str,
-    state: dict[str, Any],
-    workflow_input: dict[str, Any],
-    context: dict[str, Any],
+    *,
+    state: Mapping[str, Any],
+    workflow_input: Mapping[str, Any],
+    context: Mapping[str, Any],
 ) -> Any:
-    root, *parts = path.split(".")
-    if not parts:
-        raise WorkflowExecutionError(f"invalid path {path!r}")
-
-    if root == "state":
-        source = state
-    elif root == "input":
-        source = workflow_input
-    elif root == "context":
-        source = context
-    else:
-        raise WorkflowExecutionError(f"unknown path root {root!r}")
-
-    current: Any = source
-    for part in parts:
-        if not isinstance(current, dict) or part not in current:
-            raise WorkflowExecutionError(f"path {path!r} could not be resolved")
-        current = current[part]
-    return current
+    try:
+        return resolve_graph_path(
+            path,
+            state=state,
+            workflow_input=workflow_input,
+            context=context,
+        )
+    except PathResolutionError as exc:
+        raise WorkflowExecutionError(str(exc)) from exc
 
 
-def _get_nested_value(state: dict[str, Any], path_parts: list[str]) -> Any:
-    current: Any = state
-    for part in path_parts:
-        if not isinstance(current, dict) or part not in current:
-            return None
-        current = current[part]
-    return current
-
-
-def _set_nested_value(state: dict[str, Any], path_parts: list[str], value: Any) -> None:
-    current = state
-    for part in path_parts[:-1]:
-        next_value = current.get(part)
-        if next_value is None:
-            next_value = {}
-            current[part] = next_value
-        if not isinstance(next_value, dict):
-            raise WorkflowExecutionError(
-                f"cannot descend into non-object state field {part!r}"
-            )
-        current = next_value
-    current[path_parts[-1]] = value
+def _safe_set_nested_value(
+    state: dict[str, Any], path_parts: list[str], value: Any
+) -> None:
+    try:
+        set_nested_value(state, path_parts, value)
+    except PathResolutionError as exc:
+        raise WorkflowExecutionError(str(exc)) from exc

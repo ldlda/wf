@@ -1,7 +1,7 @@
 import json
 import sys
 
-from wf_core import RuntimeContext, Workflow, execute_workflow
+from wf_core import END, RuntimeContext, Workflow, execute_workflow
 
 
 workflow = Workflow.model_validate(
@@ -137,8 +137,8 @@ workflow = Workflow.model_validate(
             {"from": "summarize", "outcome": "ok", "to": "should_email"},
             {"from": "should_email", "outcome": "true", "to": "send_email"},
             {"from": "should_email", "outcome": "false", "to": "skip_email"},
-            {"from": "send_email", "outcome": "sent", "to": "__end__"},
-            {"from": "skip_email", "outcome": "ok", "to": "__end__"},
+            {"from": "send_email", "outcome": "sent", "to": END},
+            {"from": "skip_email", "outcome": "ok", "to": END},
         ],
     }
 )
