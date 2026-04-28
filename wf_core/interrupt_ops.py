@@ -4,10 +4,11 @@ from typing import Any
 
 from .conditions import safe_resolve_path
 from .errors import WorkflowExecutionError
-from .flow_ops import advance_frame, append_trace
+from .flow_ops import advance_frame, append_step_result_trace
 from .model import InterruptNode, Workflow
-from .run_state import InterruptRequest, RunState
+from .run_state import InterruptRequest, RunState, StepExecutionResult
 from .state_ops import apply_mapped_state
+from .workflow_index import WorkflowIndex
 
 
 def build_interrupt_request(
@@ -40,8 +41,7 @@ def resume_interrupt(
     workflow: Workflow,
     run: RunState,
     *,
-    nodes_by_id: dict[str, Any],
-    edge_map: dict[tuple[str, str], str],
+    index: WorkflowIndex,
     resume_payload: dict[str, Any],
     resume_outcome: str,
 ) -> None:
@@ -53,7 +53,7 @@ def resume_interrupt(
         raise WorkflowExecutionError("run is interrupted but has no interrupt request")
 
     frame = run.current_frame()
-    step = nodes_by_id[frame.node_id]
+    step = index.nodes_by_id[frame.node_id]
     if not isinstance(step, InterruptNode):
         raise WorkflowExecutionError(
             f"interrupted run expected interrupt node, got {step.type!r}"
@@ -70,22 +70,19 @@ def resume_interrupt(
         run.state,
         missing_field_message="interrupt resume payload is missing required field {field}",
     )
-    next_node_id = edge_map.get((frame.node_id, resume_outcome))
-    if next_node_id is None:
-        raise WorkflowExecutionError(
-            f"no edge found for interrupt node {frame.node_id!r} and outcome {resume_outcome!r}"
-        )
-
-    append_trace(
+    next_node_id = index.next_node_id(frame.node_id, resume_outcome)
+    append_step_result_trace(
         run,
         frame_id=frame.id,
         node_id=frame.node_id,
         step_type=step.type,
-        resolved_input=resume_payload,
-        outcome=resume_outcome,
         next_node_id=next_node_id,
-        output=resume_payload,
-        state_changes=state_changes,
+        result=StepExecutionResult(
+            outcome=resume_outcome,
+            resolved_input=resume_payload,
+            output=resume_payload,
+            state_changes=state_changes,
+        ),
     )
     run.interrupt = None
     advance_frame(run, frame, outcome=resume_outcome, next_node_id=next_node_id)

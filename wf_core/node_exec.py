@@ -7,7 +7,7 @@ from .conditions import safe_resolve_path
 from .errors import WorkflowExecutionError
 from .frame_ops import frame_context_values
 from .model import NodeDef, NodeResult, NodeUse, Workflow
-from .run_state import RunState, RuntimeContext
+from .run_state import RunState, RuntimeContext, StepExecutionResult
 from .schema_tools import validate_payload_against_schema
 from .state_ops import apply_output_map
 
@@ -20,7 +20,7 @@ def execute_node_use(
     node: NodeUse,
     node_def: NodeDef,
     registry: dict[str, NodeHandler],
-) -> dict[str, Any]:
+) -> StepExecutionResult:
     handler = registry.get(node.node)
     if handler is None:
         raise WorkflowExecutionError(
@@ -61,12 +61,12 @@ def execute_node_use(
         node_def.output_schema, result.output, f"node output for {node.id}"
     )
     state_changes = apply_output_map(workflow, node, result.output, run.state)
-    return {
-        "outcome": result.outcome,
-        "resolved_input": resolved_input,
-        "output": result.output,
-        "state_changes": state_changes,
-    }
+    return StepExecutionResult(
+        outcome=result.outcome,
+        resolved_input=resolved_input,
+        output=result.output,
+        state_changes=state_changes,
+    )
 
 
 def coerce_node_result(raw_result: NodeResult | dict[str, Any]) -> NodeResult:

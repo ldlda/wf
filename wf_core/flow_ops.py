@@ -3,7 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 from .model import Workflow
-from .run_state import ExecutionFrame, FrameStatus, RunState, RunStatus, TraceEntry
+from .run_state import (
+    ExecutionFrame,
+    FrameStatus,
+    RunState,
+    RunStatus,
+    StepExecutionResult,
+    TraceEntry,
+)
 from .schema_tools import validate_payload_against_schema
 from .state_ops import project_output
 from .tokens import END
@@ -32,6 +39,28 @@ def append_trace(
             output=output,
             state_changes=state_changes,
         )
+    )
+
+
+def append_step_result_trace(
+    run: RunState,
+    *,
+    frame_id: str,
+    node_id: str,
+    step_type: str,
+    next_node_id: str,
+    result: StepExecutionResult,
+) -> None:
+    append_trace(
+        run,
+        frame_id=frame_id,
+        node_id=node_id,
+        step_type=step_type,
+        resolved_input=result.resolved_input,
+        outcome=result.outcome,
+        next_node_id=next_node_id,
+        output=result.output,
+        state_changes=result.state_changes,
     )
 
 

@@ -4,7 +4,7 @@ from typing import Any
 
 from .errors import WorkflowExecutionError
 from .foreach_ops import step_foreach
-from .flow_ops import advance_frame, append_trace, finalize_run
+from .flow_ops import advance_frame, append_step_result_trace, finalize_run
 from .frame_ops import collapse_completed_frames
 from .interrupt_ops import resume_interrupt
 from .model import (
@@ -12,13 +12,12 @@ from .model import (
     ForeachNode,
     InterruptNode,
     JoinNode,
-    NodeDef,
     NodeUse,
     Workflow,
 )
 from .node_exec import NodeHandler, coerce_node_result, execute_node_use
+from .run_factory import create_run_state
 from .run_state import (
-    ExecutionFrame,
     FrameStatus,
     RunState,
     RunStatus,
@@ -30,6 +29,7 @@ from .step_handlers import (
     handle_join_step,
 )
 from .tokens import END
+from .workflow_index import WorkflowIndex, build_workflow_index
 
 __all__ = [
     "NodeHandler",
@@ -45,23 +45,7 @@ def execute_workflow(
     workflow_input: dict[str, Any],
     registry: dict[str, NodeHandler],
 ) -> RunState:
-    run = RunState(
-        workflow_name=workflow.name,
-        status=RunStatus.PENDING,
-        workflow_input=dict(workflow_input),
-        state=dict(workflow_input),
-        frames={
-            "root": ExecutionFrame(
-                id="root",
-                kind="workflow",
-                node_id=workflow.start,
-                status=FrameStatus.PENDING,
-            )
-        },
-        current_frame_id="root",
-        current_node_id=workflow.start,
-    )
-    run.sync_from_current_frame()
+    run = create_run_state(workflow, workflow_input)
 
     try:
         workflow.validate_structure().raise_for_errors()
@@ -98,9 +82,7 @@ def resume_workflow(
     if run.status == RunStatus.COMPLETED:
         return run
 
-    node_defs = {node_def.name: node_def for node_def in workflow.node_defs}
-    nodes_by_id = {node.id: node for node in workflow.nodes}
-    edge_map = {(edge.from_, edge.outcome): edge.to for edge in workflow.edges}
+    index = build_workflow_index(workflow)
 
     if run.status == RunStatus.INTERRUPTED:
         if resume_payload is None:
@@ -108,8 +90,7 @@ def resume_workflow(
         resume_interrupt(
             workflow,
             run,
-            nodes_by_id=nodes_by_id,
-            edge_map=edge_map,
+            index=index,
             resume_payload=resume_payload,
             resume_outcome=resume_outcome,
         )
@@ -129,9 +110,7 @@ def resume_workflow(
             workflow,
             run,
             registry,
-            node_defs=node_defs,
-            nodes_by_id=nodes_by_id,
-            edge_map=edge_map,
+            index=index,
         )
         if run.status == RunStatus.INTERRUPTED:
             return run
@@ -144,9 +123,7 @@ def step_workflow(
     run: RunState,
     registry: dict[str, NodeHandler],
     *,
-    node_defs: dict[str, NodeDef] | None = None,
-    nodes_by_id: dict[str, Any] | None = None,
-    edge_map: dict[tuple[str, str], str] | None = None,
+    index: WorkflowIndex | None = None,
 ) -> RunState:
     if run.current_frame_id is None:
         raise WorkflowExecutionError("run has no current frame")
@@ -161,50 +138,41 @@ def step_workflow(
         run.status = RunStatus.RUNNING
     run.error = None
 
-    node_defs = node_defs or {
-        node_def.name: node_def for node_def in workflow.node_defs
-    }
-    nodes_by_id = nodes_by_id or {node.id: node for node in workflow.nodes}
-    edge_map = edge_map or {
-        (edge.from_, edge.outcome): edge.to for edge in workflow.edges
-    }
+    index = index or build_workflow_index(workflow)
 
     frame = run.current_frame()
     if frame.status == FrameStatus.PENDING:
         frame.status = FrameStatus.RUNNING
-    step = nodes_by_id[frame.node_id]
+    step = index.nodes_by_id[frame.node_id]
 
     if isinstance(step, NodeUse):
-        node_def = node_defs[step.node]
+        node_def = index.node_defs[step.node]
         step_result = execute_node_use(workflow, run, step, node_def, registry)
-        outcome = step_result["outcome"]
     elif isinstance(step, ConditionNode):
-        outcome, step_result = handle_condition_step(run, step)
+        step_result = handle_condition_step(run, step)
     elif isinstance(step, JoinNode):
-        outcome, step_result = handle_join_step()
+        step_result = handle_join_step()
     elif isinstance(step, InterruptNode):
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
-        return step_foreach(workflow, run, step, edge_map)
+        return step_foreach(workflow, run, step, index)
     else:
         raise WorkflowExecutionError(f"unsupported step type {step.type!r}")
 
-    next_node_id = edge_map.get((frame.node_id, outcome))
-    if next_node_id is None:
-        raise WorkflowExecutionError(
-            f"no edge found for node {frame.node_id!r} and outcome {outcome!r}"
-        )
+    next_node_id = index.next_node_id(frame.node_id, step_result.outcome)
 
-    append_trace(
+    append_step_result_trace(
         run,
         frame_id=frame.id,
         node_id=frame.node_id,
         step_type=step.type,
-        resolved_input=step_result["resolved_input"],
-        outcome=outcome,
         next_node_id=next_node_id,
-        output=step_result["output"],
-        state_changes=step_result["state_changes"],
+        result=step_result,
     )
-    advance_frame(run, frame, outcome=outcome, next_node_id=next_node_id)
+    advance_frame(
+        run,
+        frame,
+        outcome=step_result.outcome,
+        next_node_id=next_node_id,
+    )
     return run

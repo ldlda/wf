@@ -26,6 +26,7 @@ from .run_state import (
     RunState,
     RunStatus,
     RuntimeContext,
+    StepExecutionResult,
     TraceEntry,
 )
 from .tokens import END, START
@@ -53,6 +54,7 @@ __all__ = [
     "RunState",
     "RunStatus",
     "RuntimeContext",
+    "StepExecutionResult",
     "TraceEntry",
     "InterruptRequest",
     "START",

@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-from typing import Any
-
 from .conditions import eval_condition
 from .flow_ops import append_trace
 from .frame_ops import frame_context_values
 from .interrupt_ops import build_interrupt_request
 from .model import ConditionNode, InterruptNode, JoinNode
-from .run_state import FrameStatus, RunState, RunStatus
+from .run_state import FrameStatus, RunState, RunStatus, StepExecutionResult
 
 
 def handle_condition_step(
     run: RunState,
     step: ConditionNode,
-) -> tuple[str, dict[str, Any]]:
+) -> StepExecutionResult:
     frame = run.current_frame()
     predicate = eval_condition(
         step.check,
@@ -22,19 +20,21 @@ def handle_condition_step(
         frame.prior_outcome,
     )
     outcome = "true" if predicate else "false"
-    return outcome, {
-        "resolved_input": {},
-        "output": {"predicate": predicate},
-        "state_changes": {},
-    }
+    return StepExecutionResult(
+        outcome=outcome,
+        resolved_input={},
+        output={"predicate": predicate},
+        state_changes={},
+    )
 
 
-def handle_join_step() -> tuple[str, dict[str, Any]]:
-    return "done", {
-        "resolved_input": {},
-        "output": {},
-        "state_changes": {},
-    }
+def handle_join_step() -> StepExecutionResult:
+    return StepExecutionResult(
+        outcome="done",
+        resolved_input={},
+        output={},
+        state_changes={},
+    )
 
 
 def handle_interrupt_step(

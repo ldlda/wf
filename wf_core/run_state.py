@@ -57,6 +57,14 @@ class TraceEntry:
 
 
 @dataclass(slots=True)
+class StepExecutionResult:
+    outcome: str
+    resolved_input: dict[str, Any] = field(default_factory=dict)
+    output: dict[str, Any] = field(default_factory=dict)
+    state_changes: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
 class InterruptRequest:
     id: str
     frame_id: str

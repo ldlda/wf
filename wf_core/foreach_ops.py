@@ -1,23 +1,24 @@
 from __future__ import annotations
 
-from typing import Any
-
 from .conditions import safe_resolve_path
 from .errors import WorkflowExecutionError
-from .flow_ops import advance_frame, append_trace
+from .flow_ops import advance_frame, append_step_result_trace
 from .frame_ops import frame_context_values
 from .model import ForeachNode, Workflow
-from .run_state import ExecutionFrame, FrameStatus, RunState
+from .run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
+from .workflow_index import WorkflowIndex
 
 
 def step_foreach(
     workflow: Workflow,
     run: RunState,
     step: ForeachNode,
-    edge_map: dict[tuple[str, str], str],
+    index: WorkflowIndex,
 ) -> RunState:
     if step.mode != "serial":
-        raise WorkflowExecutionError("parallel foreach execution is not implemented yet")
+        raise WorkflowExecutionError(
+            "parallel foreach execution is not implemented yet"
+        )
 
     frame = run.current_frame()
     progress_map = frame.metadata.setdefault("foreach_progress", {})
@@ -34,40 +35,34 @@ def step_foreach(
             f"foreach source {step.over!r} must resolve to a list"
         )
 
-    index = progress["index"]
-    if index >= len(iterable):
+    loop_index = progress["index"]
+    if loop_index >= len(iterable):
         outcome = "done"
-        next_node_id = edge_map.get((frame.node_id, outcome))
-        if next_node_id is None:
-            raise WorkflowExecutionError(
-                f"no edge found for node {frame.node_id!r} and outcome {outcome!r}"
-            )
-        append_trace(
+        next_node_id = index.next_node_id(frame.node_id, outcome)
+        append_step_result_trace(
             run,
             frame_id=frame.id,
             node_id=frame.node_id,
             step_type=step.type,
-            resolved_input={"count": len(iterable), "index": index},
-            outcome=outcome,
             next_node_id=next_node_id,
-            output={},
-            state_changes={},
+            result=StepExecutionResult(
+                outcome=outcome,
+                resolved_input={"count": len(iterable), "index": loop_index},
+                output={},
+                state_changes={},
+            ),
         )
         advance_frame(run, frame, outcome=outcome, next_node_id=next_node_id)
         return run
 
-    loop_start = edge_map.get((frame.node_id, "loop"))
-    if loop_start is None:
-        raise WorkflowExecutionError(
-            f"no edge found for foreach node {frame.node_id!r} and outcome 'loop'"
-        )
+    loop_start = index.next_node_id(frame.node_id, "loop")
 
-    item = iterable[index]
-    progress["index"] = index + 1
-    child_id = f"{frame.id}:{step.id}:{index}"
+    item = iterable[loop_index]
+    progress["index"] = loop_index + 1
+    child_id = f"{frame.id}:{step.id}:{loop_index}"
     child_metadata = {
         "foreach_node_id": step.id,
-        "loop_index": index,
+        "loop_index": loop_index,
         "loop_item": item,
         "loop_alias": step.as_,
     }
@@ -79,16 +74,18 @@ def step_foreach(
         parent_frame_id=frame.id,
         metadata=child_metadata,
     )
-    append_trace(
+    append_step_result_trace(
         run,
         frame_id=frame.id,
         node_id=frame.node_id,
         step_type=step.type,
-        resolved_input={"item": item, "index": index},
-        outcome="loop",
         next_node_id=loop_start,
-        output={},
-        state_changes={},
+        result=StepExecutionResult(
+            outcome="loop",
+            resolved_input={"item": item, "index": loop_index},
+            output={},
+            state_changes={},
+        ),
     )
     run.current_frame_id = child_id
     run.sync_from_current_frame()
