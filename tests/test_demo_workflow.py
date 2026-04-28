@@ -13,7 +13,7 @@ from wf_core import (
 )
 from wf_core.demo_workflow import build_demo_registry, build_demo_workflow
 from wf_core.run_factory import create_run_state
-from wf_authoring import WorkflowBuilder, node
+from wf_authoring import NodeReturn, WorkflowBuilder, build_registry, node
 
 
 class DriveListFilesInput(BaseModel):
@@ -106,11 +106,11 @@ def combine_summaries_spec(
 def send_email_spec(
     payload: SendEmailInput,
     ctx: RuntimeContext,
-) -> dict[str, object]:
-    return {
-        "outcome": "sent",
-        "output": {"email_status": f"sent: {payload.summary}"},
-    }
+) -> NodeReturn[SendEmailOutput]:
+    return NodeReturn(
+        outcome="sent",
+        output=SendEmailOutput(email_status=f"sent: {payload.summary}"),
+    )
 
 
 @node(
@@ -210,13 +210,13 @@ def build_authoring_demo_workflow():
     builder.connect("send_email", "sent", END)
     builder.connect("skip_email", "ok", END)
 
-    registry = {
-        drive_list_files_spec.name: drive_list_files_spec.to_registry_handler(),
-        summarize_document_spec.name: summarize_document_spec.to_registry_handler(),
-        combine_summaries_spec.name: combine_summaries_spec.to_registry_handler(),
-        send_email_spec.name: send_email_spec.to_registry_handler(),
-        mark_email_skipped_spec.name: mark_email_skipped_spec.to_registry_handler(),
-    }
+    registry = build_registry(
+        drive_list_files_spec,
+        summarize_document_spec,
+        combine_summaries_spec,
+        send_email_spec,
+        mark_email_skipped_spec,
+    )
     return builder.compile(), registry
 
 
@@ -368,3 +368,30 @@ def test_builder_compiled_workflow_executes_like_declared_demo() -> None:
     assert built_run.output == declared_run.output
     assert built_run.state == declared_run.state
     assert built_run.current_node_id == declared_run.current_node_id
+
+
+def test_async_node_spec_cannot_export_sync_registry_handler() -> None:
+    class AsyncInput(BaseModel):
+        value: str
+
+    class AsyncOutput(BaseModel):
+        echoed: str
+
+    @node(
+        name="async_echo",
+        input_model=AsyncInput,
+        output_model=AsyncOutput,
+        is_async=True,
+    )
+    async def async_echo(
+        payload: AsyncInput,
+        ctx: RuntimeContext,
+    ) -> AsyncOutput:
+        return AsyncOutput(echoed=payload.value)
+
+    try:
+        async_echo.to_registry_handler()
+    except TypeError as exc:
+        assert "async" in str(exc)
+    else:
+        raise AssertionError("expected async node export to fail for sync registry")
