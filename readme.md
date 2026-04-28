@@ -287,6 +287,32 @@ At minimum, each trace entry should capture:
 
 This keeps debugging honest as loops, retries, and richer tool adapters are added.
 
+### Run State
+
+Execution should return a structured run object, not just loose output maps.
+
+At minimum, run state should track:
+
+- workflow name
+- run status
+- original workflow input
+- current mutable state
+- final output when available
+- current node id
+- prior outcome
+- activated incoming edge
+- accumulated trace
+- terminal error if execution failed
+
+This gives the engine a clean path toward checkpointing, interrupt, and resume later.
+
+Two useful execution entry points fall out of this:
+
+- `step_workflow(...)` for one-node advancement
+- `resume_workflow(...)` for continuing from an existing run state
+
+That keeps the main execution loop small and makes future interrupt/re-invoke semantics easier to model.
+
 ### Retry
 
 Default retry behavior should be strict.

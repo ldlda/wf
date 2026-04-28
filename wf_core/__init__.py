@@ -11,11 +11,14 @@ from .model import (
     Workflow,
 )
 from .runtime import (
-    RuntimeContext,
-    TraceEntry,
+    NodeHandler,
     WorkflowExecutionError,
+    coerce_node_result,
     execute_workflow,
+    resume_workflow,
+    step_workflow,
 )
+from .run_state import RunState, RunStatus, RuntimeContext, TraceEntry
 from .tokens import END, START
 from .validate import (
     ValidationIssue,
@@ -34,6 +37,9 @@ __all__ = [
     "NodeUse",
     "StateField",
     "StateSchema",
+    "NodeHandler",
+    "RunState",
+    "RunStatus",
     "RuntimeContext",
     "TraceEntry",
     "START",
@@ -43,6 +49,9 @@ __all__ = [
     "ValidationReport",
     "Workflow",
     "WorkflowExecutionError",
+    "coerce_node_result",
     "execute_workflow",
+    "resume_workflow",
+    "step_workflow",
     "validate_workflow",
 ]

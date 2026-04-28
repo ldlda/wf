@@ -203,4 +203,4 @@ result = execute_workflow(
     registry,
 )
 
-print(json.dumps(result, indent=2))
+print(json.dumps(result.to_dict(), indent=2))
