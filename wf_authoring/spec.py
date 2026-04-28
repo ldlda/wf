@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from inspect import Parameter, iscoroutinefunction, signature
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast, get_args, get_origin, get_type_hints, overload
 
 from pydantic import BaseModel
 
@@ -24,6 +25,67 @@ def _schema_ref_for(model_type: type[BaseModel]) -> SchemaRef:
 class NodeReturn(Generic[OutputT]):
     outcome: str
     output: OutputT
+
+
+def _is_basemodel_subclass(value: object) -> bool:
+    return isinstance(value, type) and issubclass(value, BaseModel)
+
+
+def _infer_models(
+    fn: Callable[..., object],
+) -> tuple[type[BaseModel], type[BaseModel]]:
+    hints = get_type_hints(fn, include_extras=True)
+    params = list(signature(fn).parameters.values())
+    if len(params) < 2:
+        raise TypeError(
+            "node function must accept at least (payload, ctx) parameters"
+        )
+
+    payload_param = params[0]
+    ctx_param = params[1]
+
+    if payload_param.kind not in (
+        Parameter.POSITIONAL_ONLY,
+        Parameter.POSITIONAL_OR_KEYWORD,
+    ):
+        raise TypeError("node payload parameter must be positional")
+    if ctx_param.kind not in (
+        Parameter.POSITIONAL_ONLY,
+        Parameter.POSITIONAL_OR_KEYWORD,
+    ):
+        raise TypeError("node context parameter must be positional")
+
+    input_model = hints.get(payload_param.name)
+    if not _is_basemodel_subclass(input_model):
+        raise TypeError(
+            "node payload annotation must be a pydantic BaseModel subclass"
+        )
+
+    ctx_type = hints.get(ctx_param.name)
+    if ctx_type is not RuntimeContext:
+        raise TypeError(
+            "node context annotation must be wf_core.RuntimeContext"
+        )
+
+    return_type = hints.get("return")
+    if return_type is None:
+        raise TypeError("node function must declare a return annotation")
+
+    if _is_basemodel_subclass(return_type):
+        return cast(type[BaseModel], input_model), cast(type[BaseModel], return_type)
+
+    origin = get_origin(return_type)
+    if origin is NodeReturn:
+        args = get_args(return_type)
+        if len(args) != 1 or not _is_basemodel_subclass(args[0]):
+            raise TypeError(
+                "NodeReturn return annotation must wrap a BaseModel subclass"
+            )
+        return cast(type[BaseModel], input_model), cast(type[BaseModel], args[0])
+
+    raise TypeError(
+        "node return annotation must be a BaseModel subclass or NodeReturn[BaseModel]"
+    )
 
 
 @dataclass(slots=True)
@@ -78,33 +140,78 @@ class NodeSpec(Generic[InputT, OutputT]):
 
         return handler
 
-
+@overload
 def node(
-    *,
-    name: str | None = None,
-    input_model: type[InputT],
-    output_model: type[OutputT],
-    outcomes: tuple[str, ...] = ("ok",),
-    description: str | None = None,
-    is_async: bool = False,
+    fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT],
+    /,
+) -> NodeSpec[InputT, OutputT]:
+    ...
+
+
+@overload
+def node(
+    fn: None = None,
+    /,
 ) -> Callable[
     [NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT]],
     NodeSpec[InputT, OutputT],
 ]:
+    ...
+
+
+@overload
+def node(
+    fn: None = None,
+    /,
+    *,
+    name: str | None = None,
+    input_model: type[InputT] | None = None,
+    output_model: type[OutputT] | None = None,
+    outcomes: tuple[str, ...] = ("ok",),
+    description: str | None = None,
+    is_async: bool | None = None,
+) -> Callable[
+    [NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT]],
+    NodeSpec[InputT, OutputT],
+]:
+    ...
+
+
+def node(
+    fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT] | None = None,
+    *,
+    name: str | None = None,
+    input_model: type[InputT] | None = None,
+    output_model: type[OutputT] | None = None,
+    outcomes: tuple[str, ...] = ("ok",),
+    description: str | None = None,
+    is_async: bool | None = None,
+) -> Any:
     def decorator(
         fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT],
     ) -> NodeSpec[InputT, OutputT]:
+        inferred_input_model: type[BaseModel] | None = input_model
+        inferred_output_model: type[BaseModel] | None = output_model
+        if inferred_input_model is None or inferred_output_model is None:
+            inferred_input_model, inferred_output_model = _infer_models(fn)
+
         resolved_name = name or getattr(fn, "__name__", "node")
-        return NodeSpec(
-            name=resolved_name,
-            input_model=input_model,
-            output_model=output_model,
-            outcomes=outcomes,
-            fn=fn,
-            description=description or fn.__doc__,
-            is_async=is_async,
+        resolved_is_async = iscoroutinefunction(fn) if is_async is None else is_async
+        return cast(
+            NodeSpec[InputT, OutputT],
+            NodeSpec(
+                name=resolved_name,
+                input_model=inferred_input_model,
+                output_model=inferred_output_model,
+                outcomes=outcomes,
+                fn=cast(Any, fn),
+                description=description or fn.__doc__,
+                is_async=resolved_is_async,
+            ),
         )
 
+    if fn is not None:
+        return decorator(fn)
     return decorator
 
 
