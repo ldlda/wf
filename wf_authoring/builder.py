@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal, TypeAlias
 
@@ -13,27 +14,32 @@ from wf_core import (
     StateSchema,
     Workflow,
 )
+from wf_core.model import Condition as CoreCondition
 
+from .conditions import Expr, compile_condition
+from .mapping import PathArg
 from .paths import GraphPath
 from .spec import NodeSpec
 
-PathArg: TypeAlias = str | GraphPath
 StepRef: TypeAlias = str | NodeUse | ConditionNode | ForeachNode | InterruptNode
+MapArg: TypeAlias = Mapping[Any, Any]
 
 
-def _normalize_path(path: PathArg) -> str:
-    if isinstance(path, GraphPath):
-        return path.value
-    return path
+def _coerce_path(value: object) -> str:
+    if isinstance(value, str):
+        return value
+    if isinstance(value, GraphPath):
+        return value.value
+    raise TypeError(f"unsupported graph path value {value!r}")
 
 
 def _normalize_mapping(
-    mapping: dict[PathArg, PathArg] | None,
+    mapping: MapArg | None,
 ) -> dict[str, str]:
     if mapping is None:
         return {}
     return {
-        _normalize_path(source): _normalize_path(destination)
+        _coerce_path(source): _coerce_path(destination)
         for source, destination in mapping.items()
     }
 
@@ -60,8 +66,8 @@ class WorkflowBuilder:
         spec: NodeSpec[Any, Any],
         *,
         id: str,
-        in_map: dict[PathArg, PathArg] | None = None,
-        out_map: dict[PathArg, PathArg] | None = None,
+        in_map: MapArg | None = None,
+        out_map: MapArg | None = None,
         desc: str | None = None,
     ) -> NodeUse:
         self.node_specs[spec.name] = spec
@@ -76,8 +82,12 @@ class WorkflowBuilder:
         self.nodes.append(node)
         return node
 
-    def condition(self, *, id: str, check: Any) -> ConditionNode:
-        node = ConditionNode(id=id, type="condition", check=check)
+    def condition(self, *, id: str, check: CoreCondition | Expr) -> ConditionNode:
+        node = ConditionNode(
+            id=id,
+            type="condition",
+            check=compile_condition(check),
+        )
         self.nodes.append(node)
         return node
 
@@ -94,7 +104,7 @@ class WorkflowBuilder:
             {
                 "id": id,
                 "type": "foreach",
-                "over": _normalize_path(over),
+                "over": _coerce_path(over),
                 "as": as_,
                 "mode": mode,
                 "on_item_error": on_item_error,
@@ -108,8 +118,8 @@ class WorkflowBuilder:
         *,
         id: str,
         kind: str,
-        request_map: dict[PathArg, PathArg] | None = None,
-        out_map: dict[PathArg, PathArg] | None = None,
+        request_map: MapArg | None = None,
+        out_map: MapArg | None = None,
         outcomes: list[str] | None = None,
     ) -> InterruptNode:
         node = InterruptNode(

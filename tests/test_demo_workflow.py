@@ -16,7 +16,11 @@ from wf_core.run_factory import create_run_state
 from wf_authoring import (
     NodeReturn,
     WorkflowBuilder,
+    bind_fields,
+    bind_state,
     build_registry,
+    exists,
+    state,
     context_path,
     input_path,
     node,
@@ -170,8 +174,8 @@ def build_authoring_demo_workflow():
     list_files = builder.use(
         drive_list_files_spec,
         id="list_files",
-        in_map={input_path("folder_id"): "folder_id"},
-        out_map={"documents": state_path("documents")},
+        in_map=bind_fields(folder_id=input_path("folder_id")),
+        out_map=bind_state(documents=state_path("documents")),
         desc="List files from a Google Drive folder",
     )
     summarize_each = builder.foreach(
@@ -184,49 +188,45 @@ def build_authoring_demo_workflow():
     summarize_one = builder.use(
         summarize_document_spec,
         id="summarize_one",
-        in_map={context_path("document"): "document"},
-        out_map={"item_summary": state_path("item_summaries")},
+        in_map=bind_fields(document=context_path("document")),
+        out_map=bind_state(item_summary=state_path("item_summaries")),
         desc="Summarize one document",
     )
     combine_summaries = builder.use(
         combine_summaries_spec,
         id="combine_summaries",
-        in_map={state_path("item_summaries"): "item_summaries"},
-        out_map={"summary": state_path("summary")},
+        in_map=bind_fields(item_summaries=state_path("item_summaries")),
+        out_map=bind_state(summary=state_path("summary")),
         desc="Combine item summaries into one final summary",
     )
     should_email = builder.condition(
         id="should_email",
-        check={
-            "op": "eq",
-            "left": {"path": "state.should_email"},
-            "right": {"value": True},
-        },
+        check=state("should_email").eq(True),
     )
     send_email = builder.use(
         send_email_spec,
         id="send_email",
-        in_map={state_path("summary"): "summary"},
-        out_map={"email_status": state_path("email_status")},
+        in_map=bind_fields(summary=state_path("summary")),
+        out_map=bind_state(email_status=state_path("email_status")),
         desc="Send the summary by email",
     )
     approve_email = builder.interrupt(
         id="approve_email",
         kind="approval",
-        request_map={
-            state_path("summary"): "summary",
-            input_path("folder_id"): "folder_id",
-        },
-        out_map={
-            "approved": state_path("approved"),
-            "comment": state_path("approval_comment"),
-        },
+        request_map=bind_fields(
+            summary=state_path("summary"),
+            folder_id=input_path("folder_id"),
+        ),
+        out_map=bind_state(
+            approved=state_path("approved"),
+            comment=state_path("approval_comment"),
+        ),
         outcomes=["submitted", "cancelled"],
     )
     skip_email = builder.use(
         mark_email_skipped_spec,
         id="skip_email",
-        out_map={"email_status": state_path("email_status")},
+        out_map=bind_state(email_status=state_path("email_status")),
         desc="Record that email delivery was skipped",
     )
 
@@ -484,3 +484,22 @@ def test_node_decorator_infers_nodereturn_output_model() -> None:
 
 def test_node_decorator_detects_async_automatically() -> None:
     assert inferred_async_echo.is_async is True
+
+
+def test_condition_dsl_compiles_to_core_condition() -> None:
+    condition = state("should_email").eq(True) & exists(state("summary"))
+
+    assert condition.to_condition().model_dump() == {
+        "op": "and",
+        "args": [
+            {
+                "op": "eq",
+                "left": {"path": "state.should_email"},
+                "right": {"value": True},
+            },
+            {
+                "op": "exists",
+                "path": "state.summary",
+            },
+        ],
+    }
