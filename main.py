@@ -1,7 +1,16 @@
 import json
 import sys
 
-from wf_core import END, RuntimeContext, Workflow, execute_workflow
+from wf_core import (
+    END,
+    RunState,
+    RunStatus,
+    RuntimeContext,
+    Workflow,
+    execute_workflow,
+    resume_workflow,
+    step_workflow,
+)
 
 
 workflow = Workflow.model_validate(
@@ -197,10 +206,28 @@ registry = {
     "mark_email_skipped": mark_email_skipped,
 }
 
-result = execute_workflow(
-    workflow,
-    {"folder_id": "demo-folder", "should_email": False},
-    registry,
+workflow_input = {"folder_id": "demo-folder", "should_email": False}
+
+step_run = RunState(
+    workflow_name=workflow.name,
+    status=RunStatus.PENDING,
+    workflow_input=dict(workflow_input),
+    state=dict(workflow_input),
+    current_node_id=workflow.start,
 )
 
-print(json.dumps(result.to_dict(), indent=2))
+workflow.validate_structure().raise_for_errors()
+
+print("Step-by-step run:")
+while step_run.current_node_id != END:
+    step_workflow(workflow, step_run, registry)
+    print(json.dumps(step_run.to_dict(), indent=2))
+
+step_run = resume_workflow(workflow, step_run, registry)
+
+print("Completed stepped run:")
+print(json.dumps(step_run.to_dict(), indent=2))
+
+print("One-shot run:")
+full_run = execute_workflow(workflow, workflow_input, registry)
+print(json.dumps(full_run.to_dict(), indent=2))

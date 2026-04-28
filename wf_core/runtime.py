@@ -86,6 +86,10 @@ def step_workflow(
     if run.current_node_id is None or run.current_node_id == END:
         return run
 
+    if run.status == RunStatus.PENDING:
+        run.status = RunStatus.RUNNING
+    run.error = None
+
     node_defs = node_defs or {node_def.name: node_def for node_def in workflow.node_defs}
     nodes_by_id = nodes_by_id or {node.id: node for node in workflow.nodes}
     edge_map = edge_map or {(edge.from_, edge.outcome): edge.to for edge in workflow.edges}
