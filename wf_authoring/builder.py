@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, TypeAlias
 
 from wf_core import (
     ConditionNode,
@@ -14,7 +14,34 @@ from wf_core import (
     Workflow,
 )
 
+from .paths import GraphPath
 from .spec import NodeSpec
+
+PathArg: TypeAlias = str | GraphPath
+StepRef: TypeAlias = str | NodeUse | ConditionNode | ForeachNode | InterruptNode
+
+
+def _normalize_path(path: PathArg) -> str:
+    if isinstance(path, GraphPath):
+        return path.value
+    return path
+
+
+def _normalize_mapping(
+    mapping: dict[PathArg, PathArg] | None,
+) -> dict[str, str]:
+    if mapping is None:
+        return {}
+    return {
+        _normalize_path(source): _normalize_path(destination)
+        for source, destination in mapping.items()
+    }
+
+
+def _step_id(ref: StepRef) -> str:
+    if isinstance(ref, str):
+        return ref
+    return ref.id
 
 
 @dataclass(slots=True)
@@ -33,8 +60,8 @@ class WorkflowBuilder:
         spec: NodeSpec[Any, Any],
         *,
         id: str,
-        in_map: dict[str, str] | None = None,
-        out_map: dict[str, str] | None = None,
+        in_map: dict[PathArg, PathArg] | None = None,
+        out_map: dict[PathArg, PathArg] | None = None,
         desc: str | None = None,
     ) -> NodeUse:
         self.node_specs[spec.name] = spec
@@ -43,8 +70,8 @@ class WorkflowBuilder:
             type="node",
             node=spec.name,
             desc=desc or spec.description,
-            in_map=in_map or {},
-            out_map=out_map or {},
+            in_map=_normalize_mapping(in_map),
+            out_map=_normalize_mapping(out_map),
         )
         self.nodes.append(node)
         return node
@@ -58,7 +85,7 @@ class WorkflowBuilder:
         self,
         *,
         id: str,
-        over: str,
+        over: PathArg,
         as_: str,
         mode: Literal["serial", "parallel"] = "serial",
         on_item_error: Literal["fail", "collect", "skip"] = "fail",
@@ -67,7 +94,7 @@ class WorkflowBuilder:
             {
                 "id": id,
                 "type": "foreach",
-                "over": over,
+                "over": _normalize_path(over),
                 "as": as_,
                 "mode": mode,
                 "on_item_error": on_item_error,
@@ -81,23 +108,27 @@ class WorkflowBuilder:
         *,
         id: str,
         kind: str,
-        request_map: dict[str, str] | None = None,
-        out_map: dict[str, str] | None = None,
+        request_map: dict[PathArg, PathArg] | None = None,
+        out_map: dict[PathArg, PathArg] | None = None,
         outcomes: list[str] | None = None,
     ) -> InterruptNode:
         node = InterruptNode(
             id=id,
             type="interrupt",
             kind=kind,
-            request_map=request_map or {},
-            out_map=out_map or {},
+            request_map=_normalize_mapping(request_map),
+            out_map=_normalize_mapping(out_map),
             outcomes=outcomes or ["submitted"],
         )
         self.nodes.append(node)
         return node
 
-    def connect(self, from_: str, outcome: str, to: str) -> None:
-        self.edges.append(Edge.model_validate({"from": from_, "outcome": outcome, "to": to}))
+    def connect(self, from_: StepRef, outcome: str, to: StepRef) -> None:
+        self.edges.append(
+            Edge.model_validate(
+                {"from": _step_id(from_), "outcome": outcome, "to": _step_id(to)}
+            )
+        )
 
     def compile(self) -> Workflow:
         node_defs = [spec.to_node_def() for spec in self.node_specs.values()]

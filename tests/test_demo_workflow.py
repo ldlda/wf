@@ -13,7 +13,15 @@ from wf_core import (
 )
 from wf_core.demo_workflow import build_demo_registry, build_demo_workflow
 from wf_core.run_factory import create_run_state
-from wf_authoring import NodeReturn, WorkflowBuilder, build_registry, node
+from wf_authoring import (
+    NodeReturn,
+    WorkflowBuilder,
+    build_registry,
+    context_path,
+    input_path,
+    node,
+    state_path,
+)
 
 
 class DriveListFilesInput(BaseModel):
@@ -159,35 +167,35 @@ def build_authoring_demo_workflow():
         start="list_files",
     )
 
-    builder.use(
+    list_files = builder.use(
         drive_list_files_spec,
         id="list_files",
-        in_map={"input.folder_id": "folder_id"},
-        out_map={"documents": "state.documents"},
+        in_map={input_path("folder_id"): "folder_id"},
+        out_map={"documents": state_path("documents")},
         desc="List files from a Google Drive folder",
     )
-    builder.foreach(
+    summarize_each = builder.foreach(
         id="summarize_each",
-        over="state.documents",
+        over=state_path("documents"),
         as_="document",
         mode="serial",
         on_item_error="fail",
     )
-    builder.use(
+    summarize_one = builder.use(
         summarize_document_spec,
         id="summarize_one",
-        in_map={"context.document": "document"},
-        out_map={"item_summary": "state.item_summaries"},
+        in_map={context_path("document"): "document"},
+        out_map={"item_summary": state_path("item_summaries")},
         desc="Summarize one document",
     )
-    builder.use(
+    combine_summaries = builder.use(
         combine_summaries_spec,
         id="combine_summaries",
-        in_map={"state.item_summaries": "item_summaries"},
-        out_map={"summary": "state.summary"},
+        in_map={state_path("item_summaries"): "item_summaries"},
+        out_map={"summary": state_path("summary")},
         desc="Combine item summaries into one final summary",
     )
-    builder.condition(
+    should_email = builder.condition(
         id="should_email",
         check={
             "op": "eq",
@@ -195,44 +203,44 @@ def build_authoring_demo_workflow():
             "right": {"value": True},
         },
     )
-    builder.use(
+    send_email = builder.use(
         send_email_spec,
         id="send_email",
-        in_map={"state.summary": "summary"},
-        out_map={"email_status": "state.email_status"},
+        in_map={state_path("summary"): "summary"},
+        out_map={"email_status": state_path("email_status")},
         desc="Send the summary by email",
     )
-    builder.interrupt(
+    approve_email = builder.interrupt(
         id="approve_email",
         kind="approval",
         request_map={
-            "state.summary": "summary",
-            "input.folder_id": "folder_id",
+            state_path("summary"): "summary",
+            input_path("folder_id"): "folder_id",
         },
         out_map={
-            "approved": "state.approved",
-            "comment": "state.approval_comment",
+            "approved": state_path("approved"),
+            "comment": state_path("approval_comment"),
         },
         outcomes=["submitted", "cancelled"],
     )
-    builder.use(
+    skip_email = builder.use(
         mark_email_skipped_spec,
         id="skip_email",
-        out_map={"email_status": "state.email_status"},
+        out_map={"email_status": state_path("email_status")},
         desc="Record that email delivery was skipped",
     )
 
-    builder.connect("list_files", "ok", "summarize_each")
-    builder.connect("summarize_each", "loop", "summarize_one")
-    builder.connect("summarize_each", "done", "combine_summaries")
-    builder.connect("summarize_one", "ok", END)
-    builder.connect("combine_summaries", "ok", "should_email")
-    builder.connect("should_email", "true", "approve_email")
-    builder.connect("should_email", "false", "skip_email")
-    builder.connect("approve_email", "submitted", "send_email")
-    builder.connect("approve_email", "cancelled", "skip_email")
-    builder.connect("send_email", "sent", END)
-    builder.connect("skip_email", "ok", END)
+    builder.connect(list_files, "ok", summarize_each)
+    builder.connect(summarize_each, "loop", summarize_one)
+    builder.connect(summarize_each, "done", combine_summaries)
+    builder.connect(summarize_one, "ok", END)
+    builder.connect(combine_summaries, "ok", should_email)
+    builder.connect(should_email, "true", approve_email)
+    builder.connect(should_email, "false", skip_email)
+    builder.connect(approve_email, "submitted", send_email)
+    builder.connect(approve_email, "cancelled", skip_email)
+    builder.connect(send_email, "sent", END)
+    builder.connect(skip_email, "ok", END)
 
     registry = build_registry(
         drive_list_files_spec,
