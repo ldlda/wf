@@ -4,7 +4,7 @@ from .conditions import eval_condition
 from .flow_ops import append_trace
 from .frame_ops import frame_context_values
 from .interrupt_ops import build_interrupt_request
-from .model import ConditionNode, InterruptNode, JoinNode
+from .model import ConditionNode, InterruptNode
 from .run_state import FrameStatus, RunState, RunStatus, StepExecutionResult
 
 

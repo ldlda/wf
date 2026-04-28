@@ -31,8 +31,8 @@ class NodeDef(BaseModel):
     input_schema: SchemaRef
     output_schema: SchemaRef
     outcomes: list[str] = Field(min_length=1)
-    retry: int | None = Field(None, ge=0)
-    timeout_seconds: int | None = Field(None, gt=0)
+    retry: int | None = Field(default=None, ge=0)
+    timeout_seconds: int | None = Field(default=None, gt=0)
 
 
 class NodeUse(BaseModel):
@@ -42,8 +42,8 @@ class NodeUse(BaseModel):
     desc: str | None = None
     in_map: dict[str, str] = Field(default_factory=dict)
     out_map: dict[str, str] = Field(default_factory=dict)
-    retry: int | None = Field(None, ge=0)
-    timeout_seconds: int | None = Field(None, gt=0)
+    retry: int | None = Field(default=None, ge=0)
+    timeout_seconds: int | None = Field(default=None, gt=0)
 
 
 class PathOperand(BaseModel):
@@ -91,6 +91,8 @@ class ConditionNode(BaseModel):
 
 
 class ForeachNode(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
     id: str
     type: Literal["foreach"]
     over: str

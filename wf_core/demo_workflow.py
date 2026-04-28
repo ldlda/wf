@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from typing import cast
 
 from .model import Workflow
 from .run_state import RuntimeContext
@@ -233,7 +234,8 @@ def summarize_documents(
 def combine_summaries(
     payload: dict[str, object], ctx: RuntimeContext
 ) -> dict[str, object]:
-    item_summaries = payload["item_summaries"]
+    raw_item_summaries = cast(list[object], payload["item_summaries"])
+    item_summaries = [str(item) for item in raw_item_summaries]
     return {
         "outcome": "ok",
         "output": {"summary": " | ".join(item_summaries)},

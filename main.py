@@ -1,11 +1,11 @@
 import json
 import sys
 
-from wf_core import RuntimeContext, execute_workflow, resume_workflow
+from wf_core import RunState, execute_workflow, resume_workflow
 from wf_core.demo_workflow import build_demo_registry, build_demo_workflow
 
 
-def print_run(label: str, run: object) -> None:
+def print_run(label: str, run: RunState) -> None:
     print(f"{label}:")
     print(json.dumps(run.to_dict(), indent=2))
 

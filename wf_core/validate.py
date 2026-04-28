@@ -390,7 +390,7 @@ def _declared_outcomes_for_step(step: Step, node_defs: dict[str, NodeDef]) -> se
         return {"loop", "done"}
     if step.type == "join":
         return {"done"}
-    if step.type == "interrupt":
+    if isinstance(step, InterruptNode):
         return set(step.outcomes)
     return set()
 

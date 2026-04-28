@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from pydantic import BaseModel
+
 from wf_core import (
     END,
     FrameStatus,
+    RuntimeContext,
     RunStatus,
     execute_workflow,
     resume_workflow,
@@ -10,6 +13,224 @@ from wf_core import (
 )
 from wf_core.demo_workflow import build_demo_registry, build_demo_workflow
 from wf_core.run_factory import create_run_state
+from wf_authoring import WorkflowBuilder, node
+
+
+class DriveListFilesInput(BaseModel):
+    folder_id: str
+
+
+class DriveListFilesOutput(BaseModel):
+    documents: list[str]
+
+
+class SummarizeDocumentInput(BaseModel):
+    document: str
+
+
+class SummarizeDocumentOutput(BaseModel):
+    item_summary: str
+
+
+class CombineSummariesInput(BaseModel):
+    item_summaries: list[str]
+
+
+class CombineSummariesOutput(BaseModel):
+    summary: str
+
+
+class SendEmailInput(BaseModel):
+    summary: str
+
+
+class SendEmailOutput(BaseModel):
+    email_status: str
+
+
+class MarkEmailSkippedInput(BaseModel):
+    pass
+
+
+class MarkEmailSkippedOutput(BaseModel):
+    email_status: str
+
+
+@node(
+    name="drive_list_files",
+    input_model=DriveListFilesInput,
+    output_model=DriveListFilesOutput,
+)
+def drive_list_files_spec(
+    payload: DriveListFilesInput,
+    ctx: RuntimeContext,
+) -> DriveListFilesOutput:
+    return DriveListFilesOutput(
+        documents=[
+            f"{payload.folder_id}/meeting-notes.md",
+            f"{payload.folder_id}/weekly-report.md",
+        ]
+    )
+
+
+@node(
+    name="summarize_document",
+    input_model=SummarizeDocumentInput,
+    output_model=SummarizeDocumentOutput,
+)
+def summarize_document_spec(
+    payload: SummarizeDocumentInput,
+    ctx: RuntimeContext,
+) -> SummarizeDocumentOutput:
+    return SummarizeDocumentOutput(item_summary=f"Summary of {payload.document}")
+
+
+@node(
+    name="combine_summaries",
+    input_model=CombineSummariesInput,
+    output_model=CombineSummariesOutput,
+)
+def combine_summaries_spec(
+    payload: CombineSummariesInput,
+    ctx: RuntimeContext,
+) -> CombineSummariesOutput:
+    return CombineSummariesOutput(summary=" | ".join(payload.item_summaries))
+
+
+@node(
+    name="send_email",
+    input_model=SendEmailInput,
+    output_model=SendEmailOutput,
+    outcomes=("sent",),
+)
+def send_email_spec(
+    payload: SendEmailInput,
+    ctx: RuntimeContext,
+) -> dict[str, object]:
+    return {
+        "outcome": "sent",
+        "output": {"email_status": f"sent: {payload.summary}"},
+    }
+
+
+@node(
+    name="mark_email_skipped",
+    input_model=MarkEmailSkippedInput,
+    output_model=MarkEmailSkippedOutput,
+)
+def mark_email_skipped_spec(
+    payload: MarkEmailSkippedInput,
+    ctx: RuntimeContext,
+) -> MarkEmailSkippedOutput:
+    return MarkEmailSkippedOutput(email_status="skipped")
+
+
+def build_authoring_demo_workflow():
+    declared = build_demo_workflow()
+    builder = WorkflowBuilder(
+        name=declared.name,
+        input_schema=declared.input_schema,
+        state_schema=declared.state_schema,
+        output_schema=declared.output_schema,
+        start="list_files",
+    )
+
+    builder.use(
+        drive_list_files_spec,
+        id="list_files",
+        in_map={"input.folder_id": "folder_id"},
+        out_map={"documents": "state.documents"},
+        desc="List files from a Google Drive folder",
+    )
+    builder.foreach(
+        id="summarize_each",
+        over="state.documents",
+        as_="document",
+        mode="serial",
+        on_item_error="fail",
+    )
+    builder.use(
+        summarize_document_spec,
+        id="summarize_one",
+        in_map={"context.document": "document"},
+        out_map={"item_summary": "state.item_summaries"},
+        desc="Summarize one document",
+    )
+    builder.use(
+        combine_summaries_spec,
+        id="combine_summaries",
+        in_map={"state.item_summaries": "item_summaries"},
+        out_map={"summary": "state.summary"},
+        desc="Combine item summaries into one final summary",
+    )
+    builder.condition(
+        id="should_email",
+        check={
+            "op": "eq",
+            "left": {"path": "state.should_email"},
+            "right": {"value": True},
+        },
+    )
+    builder.use(
+        send_email_spec,
+        id="send_email",
+        in_map={"state.summary": "summary"},
+        out_map={"email_status": "state.email_status"},
+        desc="Send the summary by email",
+    )
+    builder.interrupt(
+        id="approve_email",
+        kind="approval",
+        request_map={
+            "state.summary": "summary",
+            "input.folder_id": "folder_id",
+        },
+        out_map={
+            "approved": "state.approved",
+            "comment": "state.approval_comment",
+        },
+        outcomes=["submitted", "cancelled"],
+    )
+    builder.use(
+        mark_email_skipped_spec,
+        id="skip_email",
+        out_map={"email_status": "state.email_status"},
+        desc="Record that email delivery was skipped",
+    )
+
+    builder.connect("list_files", "ok", "summarize_each")
+    builder.connect("summarize_each", "loop", "summarize_one")
+    builder.connect("summarize_each", "done", "combine_summaries")
+    builder.connect("summarize_one", "ok", END)
+    builder.connect("combine_summaries", "ok", "should_email")
+    builder.connect("should_email", "true", "approve_email")
+    builder.connect("should_email", "false", "skip_email")
+    builder.connect("approve_email", "submitted", "send_email")
+    builder.connect("approve_email", "cancelled", "skip_email")
+    builder.connect("send_email", "sent", END)
+    builder.connect("skip_email", "ok", END)
+
+    registry = {
+        drive_list_files_spec.name: drive_list_files_spec.to_registry_handler(),
+        summarize_document_spec.name: summarize_document_spec.to_registry_handler(),
+        combine_summaries_spec.name: combine_summaries_spec.to_registry_handler(),
+        send_email_spec.name: send_email_spec.to_registry_handler(),
+        mark_email_skipped_spec.name: mark_email_skipped_spec.to_registry_handler(),
+    }
+    return builder.compile(), registry
+
+
+def _strip_schema_titles(value: object) -> object:
+    if isinstance(value, dict):
+        normalized = {
+            key: _strip_schema_titles(inner)
+            for key, inner in value.items()
+            if key not in {"title", "items"}
+        }
+        return normalized
+    if isinstance(value, list):
+        return [_strip_schema_titles(item) for item in value]
+    return value
 
 
 def test_interrupt_then_resume_to_send_email() -> None:
@@ -116,3 +337,34 @@ def test_foreach_stress_with_many_documents() -> None:
     assert len([entry for entry in run.trace if entry.step_type == "foreach"]) == (
         document_count + 1
     )
+
+
+def test_builder_compiles_same_workflow_as_declared_demo() -> None:
+    declared = build_demo_workflow()
+    built, _registry = build_authoring_demo_workflow()
+
+    assert _strip_schema_titles(built.model_dump(by_alias=True)) == _strip_schema_titles(
+        declared.model_dump(by_alias=True)
+    )
+
+
+def test_builder_compiled_workflow_executes_like_declared_demo() -> None:
+    declared = build_demo_workflow()
+    declared_registry = build_demo_registry()
+    built, built_registry = build_authoring_demo_workflow()
+
+    declared_run = execute_workflow(
+        declared,
+        {"folder_id": "demo-folder", "should_email": False},
+        declared_registry,
+    )
+    built_run = execute_workflow(
+        built,
+        {"folder_id": "demo-folder", "should_email": False},
+        built_registry,
+    )
+
+    assert built_run.status == declared_run.status
+    assert built_run.output == declared_run.output
+    assert built_run.state == declared_run.state
+    assert built_run.current_node_id == declared_run.current_node_id

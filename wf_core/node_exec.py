@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from typing import Any
 
 from .conditions import safe_resolve_path
@@ -19,7 +19,7 @@ def execute_node_use(
     run: RunState,
     node: NodeUse,
     node_def: NodeDef,
-    registry: dict[str, NodeHandler],
+    registry: Mapping[str, NodeHandler],
 ) -> StepExecutionResult:
     handler = registry.get(node.node)
     if handler is None:

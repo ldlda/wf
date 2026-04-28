@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from .errors import WorkflowExecutionError
@@ -43,7 +44,7 @@ __all__ = [
 def execute_workflow(
     workflow: Workflow,
     workflow_input: dict[str, Any],
-    registry: dict[str, NodeHandler],
+    registry: Mapping[str, NodeHandler],
 ) -> RunState:
     run = create_run_state(workflow, workflow_input)
 
@@ -62,7 +63,7 @@ def execute_workflow(
 def resume_workflow(
     workflow: Workflow,
     run: RunState,
-    registry: dict[str, NodeHandler],
+    registry: Mapping[str, NodeHandler],
     *,
     resume_payload: dict[str, Any] | None = None,
     resume_outcome: str = "submitted",
@@ -121,7 +122,7 @@ def resume_workflow(
 def step_workflow(
     workflow: Workflow,
     run: RunState,
-    registry: dict[str, NodeHandler],
+    registry: Mapping[str, NodeHandler],
     *,
     index: WorkflowIndex | None = None,
 ) -> RunState:
