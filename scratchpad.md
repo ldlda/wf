@@ -276,6 +276,70 @@ Default retry behavior should be strict and deterministic.
 - failfast is the default engine behavior
 - more permissive collection behavior should be opt-in at graph level, especially in `foreach`
 
+### Interrupt semantics
+
+Interrupt should primarily be a graph node, not a random Python line.
+
+Preferred shape:
+
+- business node returns something like `needs_input`
+- graph routes to an `InterruptNode`
+- interrupt node raises/surfaces a typed interrupt request
+- runtime marks run interrupted
+- caller provides resume payload later
+- interrupt node maps resumed payload back into state
+- graph continues from declared next outcome
+
+This is cleaner than loose line-level interrupt for this engine.
+
+Why:
+
+- graph can see interrupt points
+- planner can reason about them
+- trace is cleaner
+- validation is easier
+- child graphs and future foreach are less cursed
+
+Interrupt node shape idea:
+
+```text
+InterruptNode
+  .id
+  .type: "interrupt"
+  .kind
+  .request_map       // input/state -> interrupt payload
+  .out_map           // resume payload -> state
+  .outcomes[]        // submitted, cancelled, ...
+```
+
+Interrupt request runtime shape:
+
+```text
+InterruptRequest
+  .id
+  .node_id
+  .kind
+  .payload
+  .resumable
+```
+
+Rules:
+
+- one active interrupt per run in v1
+- whole run pauses in v1
+- if child graph interrupts, parent sees child graph node interrupted
+- external caller/UI should still receive the child interrupt payload
+- resume should continue from interrupt node semantics, not arbitrary instruction pointer
+
+Kinds are explicit and expandable:
+
+- `approval`
+- `text_input`
+- `choice`
+- `tool_auth`
+
+Generic now, specialized later is easy because `kind` already exists.
+
 ### Reuse and composition
 
 - workflow input/output separation makes a workflow reusable as a node

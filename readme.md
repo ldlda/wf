@@ -145,6 +145,20 @@ Conditions are structured JSON, not freeform code strings.
 .type: "join"
 ```
 
+#### **InterruptNode**
+
+```text
+.id
+.type: "interrupt"
+.kind               // approval | text_input | choice | tool_auth | ...
+.request_map        // graph state/input path -> interrupt payload field
+.out_map            // resume payload field -> graph state path
+.outcomes[]         // ex: submitted, cancelled
+```
+
+Interrupt nodes are explicit graph nodes, not arbitrary line-level pauses inside Python code.
+This keeps pause points visible, typed, traceable, and easier to validate.
+
 ### Edges
 
 Routing is outcome-based.
@@ -312,6 +326,86 @@ Two useful execution entry points fall out of this:
 - `resume_workflow(...)` for continuing from an existing run state
 
 That keeps the main execution loop small and makes future interrupt/re-invoke semantics easier to model.
+
+### Interrupts
+
+Interrupts should be graph-native and typed.
+
+Preferred model:
+
+1. A normal business node returns an outcome such as `needs_input`
+2. The graph routes to an `InterruptNode`
+3. The interrupt node produces a typed interrupt request
+4. The runtime marks the run interrupted and surfaces the request externally
+5. External code supplies a typed resume payload
+6. The interrupt node maps resume payload back into state
+7. The graph continues via a declared interrupt outcome such as `submitted` or `cancelled`
+
+This is deliberately stricter than line-level dynamic interrupts inside arbitrary node code.
+
+Why:
+
+- pause points stay visible in the graph
+- interrupt payloads can be validated by `kind`
+- traces stay clean
+- child graph interruption is easier to surface to parent graphs
+- `foreach` and nested execution are less likely to become cursed
+
+#### Interrupt request shape
+
+At runtime, an interrupt should become a structured request attached to run state.
+
+```text
+InterruptRequest
+  .id
+  .node_id
+  .kind
+  .payload
+  .resumable
+```
+
+Notes:
+
+- `kind` chooses the interrupt contract
+- `payload` is still JSON-like, but should be typed by `kind`
+- v1 should allow only one active interrupt per run at a time
+- the whole run pauses in v1, even if the interrupt originated inside a child graph or future foreach frame
+
+#### Resume semantics
+
+Resume should not jump back into the middle of arbitrary Python code.
+
+Instead:
+
+- resume data is delivered to the interrupt node
+- the interrupt node maps resume fields back into state through explicit `out_map`
+- graph routing continues normally from that node
+
+This means the primary interrupt design is node-based, not line-based.
+
+#### Child graph behavior
+
+If a child graph interrupts:
+
+- the parent run is considered interrupted in v1
+- the parent only needs to know that the child graph node interrupted
+- the child interrupt payload should still be surfaced to the external caller/UI
+
+#### Foreach compatibility
+
+Interrupt design must be compatible with future foreach support.
+
+Bad designs to avoid:
+
+- one anonymous global interrupt payload with no origin
+- treating interrupt like a normal business outcome only
+- resuming from arbitrary instruction pointers
+
+Better design:
+
+- interrupt belongs to a specific execution frame / node
+- v1 may still pause the whole run
+- future foreach support should record which iteration/frame produced the interrupt
 
 ### Retry
 
