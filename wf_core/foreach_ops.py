@@ -4,9 +4,10 @@ from typing import Any
 
 from .conditions import safe_resolve_path
 from .errors import WorkflowExecutionError
+from .flow_ops import advance_frame, append_trace
 from .frame_ops import frame_context_values
 from .model import ForeachNode, Workflow
-from .run_state import ExecutionFrame, FrameStatus, RunState, TraceEntry
+from .run_state import ExecutionFrame, FrameStatus, RunState
 
 
 def step_foreach(
@@ -41,22 +42,18 @@ def step_foreach(
             raise WorkflowExecutionError(
                 f"no edge found for node {frame.node_id!r} and outcome {outcome!r}"
             )
-        run.trace.append(
-            TraceEntry(
-                frame_id=frame.id,
-                node_id=frame.node_id,
-                step_type=step.type,
-                resolved_input={"count": len(iterable), "index": index},
-                outcome=outcome,
-                next_node_id=next_node_id,
-                output={},
-                state_changes={},
-            )
+        append_trace(
+            run,
+            frame_id=frame.id,
+            node_id=frame.node_id,
+            step_type=step.type,
+            resolved_input={"count": len(iterable), "index": index},
+            outcome=outcome,
+            next_node_id=next_node_id,
+            output={},
+            state_changes={},
         )
-        frame.prior_outcome = outcome
-        frame.activated_incoming_edge = frame.node_id
-        frame.node_id = next_node_id
-        run.sync_from_current_frame()
+        advance_frame(run, frame, outcome=outcome, next_node_id=next_node_id)
         return run
 
     loop_start = edge_map.get((frame.node_id, "loop"))
@@ -82,17 +79,16 @@ def step_foreach(
         parent_frame_id=frame.id,
         metadata=child_metadata,
     )
-    run.trace.append(
-        TraceEntry(
-            frame_id=frame.id,
-            node_id=frame.node_id,
-            step_type=step.type,
-            resolved_input={"item": item, "index": index},
-            outcome="loop",
-            next_node_id=loop_start,
-            output={},
-            state_changes={},
-        )
+    append_trace(
+        run,
+        frame_id=frame.id,
+        node_id=frame.node_id,
+        step_type=step.type,
+        resolved_input={"item": item, "index": index},
+        outcome="loop",
+        next_node_id=loop_start,
+        output={},
+        state_changes={},
     )
     run.current_frame_id = child_id
     run.sync_from_current_frame()

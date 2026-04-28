@@ -4,10 +4,10 @@ from typing import Any
 
 from .conditions import safe_resolve_path
 from .errors import WorkflowExecutionError
+from .flow_ops import advance_frame, append_trace
 from .model import InterruptNode, Workflow
-from .run_state import FrameStatus, InterruptRequest, RunState, TraceEntry
+from .run_state import InterruptRequest, RunState
 from .state_ops import apply_mapped_state
-from .tokens import END
 
 
 def build_interrupt_request(
@@ -76,22 +76,16 @@ def resume_interrupt(
             f"no edge found for interrupt node {frame.node_id!r} and outcome {resume_outcome!r}"
         )
 
-    run.trace.append(
-        TraceEntry(
-            frame_id=frame.id,
-            node_id=frame.node_id,
-            step_type=step.type,
-            resolved_input=resume_payload,
-            outcome=resume_outcome,
-            next_node_id=next_node_id,
-            output=resume_payload,
-            state_changes=state_changes,
-        )
+    append_trace(
+        run,
+        frame_id=frame.id,
+        node_id=frame.node_id,
+        step_type=step.type,
+        resolved_input=resume_payload,
+        outcome=resume_outcome,
+        next_node_id=next_node_id,
+        output=resume_payload,
+        state_changes=state_changes,
     )
-    frame.prior_outcome = resume_outcome
-    frame.activated_incoming_edge = frame.node_id
-    frame.node_id = next_node_id
-    frame.status = FrameStatus.RUNNING if next_node_id != END else FrameStatus.COMPLETED
-    frame.finished_at_node_id = END if next_node_id == END else None
     run.interrupt = None
-    run.sync_from_current_frame()
+    advance_frame(run, frame, outcome=resume_outcome, next_node_id=next_node_id)

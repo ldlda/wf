@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from .conditions import eval_condition
 from .errors import WorkflowExecutionError
 from .foreach_ops import step_foreach
-from .frame_ops import collapse_completed_frames, frame_context_values
-from .interrupt_ops import build_interrupt_request, resume_interrupt
+from .flow_ops import advance_frame, append_trace, finalize_run
+from .frame_ops import collapse_completed_frames
+from .interrupt_ops import resume_interrupt
 from .model import (
     ConditionNode,
     ForeachNode,
@@ -22,10 +22,13 @@ from .run_state import (
     FrameStatus,
     RunState,
     RunStatus,
-    TraceEntry,
 )
 from .schema_tools import validate_payload_against_schema
-from .state_ops import project_output
+from .step_handlers import (
+    handle_condition_step,
+    handle_interrupt_step,
+    handle_join_step,
+)
 from .tokens import END
 
 __all__ = [
@@ -112,12 +115,7 @@ def resume_workflow(
         )
         collapse_completed_frames(run)
         if run.current_node_id == END:
-            run.output = project_output(workflow, run.state)
-            validate_payload_against_schema(
-                workflow.output_schema, run.output, "workflow output"
-            )
-            run.status = RunStatus.COMPLETED
-            return run
+            return finalize_run(workflow, run)
 
     run.status = RunStatus.RUNNING
     run.error = None
@@ -138,13 +136,7 @@ def resume_workflow(
         if run.status == RunStatus.INTERRUPTED:
             return run
 
-    run.output = project_output(workflow, run.state)
-    validate_payload_against_schema(
-        workflow.output_schema, run.output, "workflow output"
-    )
-    run.status = RunStatus.COMPLETED
-    run.current_node_id = END
-    return run
+    return finalize_run(workflow, run)
 
 
 def step_workflow(
@@ -187,49 +179,11 @@ def step_workflow(
         step_result = execute_node_use(workflow, run, step, node_def, registry)
         outcome = step_result["outcome"]
     elif isinstance(step, ConditionNode):
-        predicate = eval_condition(
-            step.check,
-            run.state,
-            run.workflow_input,
-            frame.prior_outcome,
-        )
-        outcome = "true" if predicate else "false"
-        step_result = {
-            "resolved_input": {},
-            "output": {"predicate": predicate},
-            "state_changes": {},
-        }
+        outcome, step_result = handle_condition_step(run, step)
     elif isinstance(step, JoinNode):
-        outcome = "done"
-        step_result = {
-            "resolved_input": {},
-            "output": {},
-            "state_changes": {},
-        }
+        outcome, step_result = handle_join_step()
     elif isinstance(step, InterruptNode):
-        interrupt_request = build_interrupt_request(
-            step,
-            frame_id=frame.id,
-            state=run.state,
-            workflow_input=run.workflow_input,
-            context=frame_context_values(frame),
-        )
-        run.interrupt = interrupt_request
-        run.status = RunStatus.INTERRUPTED
-        frame.status = FrameStatus.INTERRUPTED
-        run.trace.append(
-            TraceEntry(
-                frame_id=frame.id,
-                node_id=frame.node_id,
-                step_type=step.type,
-                resolved_input=interrupt_request.payload,
-                outcome="interrupt",
-                next_node_id=frame.node_id,
-                output=interrupt_request.payload,
-                state_changes={},
-            )
-        )
-        return run
+        return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
         return step_foreach(workflow, run, step, edge_map)
     else:
@@ -241,24 +195,16 @@ def step_workflow(
             f"no edge found for node {frame.node_id!r} and outcome {outcome!r}"
         )
 
-    run.trace.append(
-        TraceEntry(
-            frame_id=frame.id,
-            node_id=frame.node_id,
-            step_type=step.type,
-            resolved_input=step_result["resolved_input"],
-            outcome=outcome,
-            next_node_id=next_node_id,
-            output=step_result["output"],
-            state_changes=step_result["state_changes"],
-        )
+    append_trace(
+        run,
+        frame_id=frame.id,
+        node_id=frame.node_id,
+        step_type=step.type,
+        resolved_input=step_result["resolved_input"],
+        outcome=outcome,
+        next_node_id=next_node_id,
+        output=step_result["output"],
+        state_changes=step_result["state_changes"],
     )
-
-    frame.prior_outcome = outcome
-    frame.activated_incoming_edge = frame.node_id
-    frame.node_id = next_node_id
-    if next_node_id == END:
-        frame.status = FrameStatus.COMPLETED
-        frame.finished_at_node_id = END
-    run.sync_from_current_frame()
+    advance_frame(run, frame, outcome=outcome, next_node_id=next_node_id)
     return run
