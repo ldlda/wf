@@ -17,6 +17,7 @@ from .model import (
 )
 from .run_state import (
     ExecutionFrame,
+    FrameStatus,
     InterruptRequest,
     RunState,
     RunStatus,
@@ -46,6 +47,7 @@ def execute_workflow(
                 id="root",
                 kind="workflow",
                 node_id=workflow.start,
+                status=FrameStatus.PENDING,
             )
         },
         current_frame_id="root",
@@ -80,7 +82,7 @@ def resume_workflow(
 
     if run.current_frame_id is None:
         raise WorkflowExecutionError("run has no current frame")
-    run.sync_from_current_frame()
+    _collapse_completed_frames(run)
 
     if run.current_node_id is None:
         raise WorkflowExecutionError("run has no current node")
@@ -103,6 +105,7 @@ def resume_workflow(
             resume_payload=resume_payload,
             resume_outcome=resume_outcome,
         )
+        _collapse_completed_frames(run)
         if run.current_node_id == END:
             run.output = project_output(workflow, run.state)
             validate_payload_against_schema(
@@ -113,8 +116,12 @@ def resume_workflow(
 
     run.status = RunStatus.RUNNING
     run.error = None
+    run.current_frame().status = FrameStatus.RUNNING
 
-    while run.current_node_id != END:
+    while True:
+        _collapse_completed_frames(run)
+        if run.current_node_id == END:
+            break
         step_workflow(
             workflow,
             run,
@@ -147,7 +154,7 @@ def step_workflow(
     if run.current_frame_id is None:
         raise WorkflowExecutionError("run has no current frame")
 
-    run.sync_from_current_frame()
+    _collapse_completed_frames(run)
     if run.current_node_id is None or run.current_node_id == END:
         return run
     if run.status == RunStatus.INTERRUPTED:
@@ -166,6 +173,8 @@ def step_workflow(
     }
 
     frame = run.current_frame()
+    if frame.status == FrameStatus.PENDING:
+        frame.status = FrameStatus.RUNNING
     step = nodes_by_id[frame.node_id]
 
     if isinstance(step, NodeUse):
@@ -174,7 +183,10 @@ def step_workflow(
         outcome = step_result["outcome"]
     elif isinstance(step, ConditionNode):
         predicate = eval_condition(
-            step.check, run.state, run.workflow_input, frame.prior_outcome
+            step.check,
+            run.state,
+            run.workflow_input,
+            frame.prior_outcome,
         )
         outcome = "true" if predicate else "false"
         step_result = {
@@ -195,9 +207,11 @@ def step_workflow(
             frame_id=frame.id,
             state=run.state,
             workflow_input=run.workflow_input,
+            context=_frame_context_values(frame),
         )
         run.interrupt = interrupt_request
         run.status = RunStatus.INTERRUPTED
+        frame.status = FrameStatus.INTERRUPTED
         run.trace.append(
             TraceEntry(
                 frame_id=frame.id,
@@ -212,7 +226,7 @@ def step_workflow(
         )
         return run
     elif isinstance(step, ForeachNode):
-        raise WorkflowExecutionError("foreach execution is not implemented yet")
+        return _step_foreach(workflow, run, step, edge_map)
     else:
         raise WorkflowExecutionError(f"unsupported step type {step.type!r}")
 
@@ -238,6 +252,101 @@ def step_workflow(
     frame.prior_outcome = outcome
     frame.activated_incoming_edge = frame.node_id
     frame.node_id = next_node_id
+    if next_node_id == END:
+        frame.status = FrameStatus.COMPLETED
+        frame.finished_at_node_id = END
+    run.sync_from_current_frame()
+    return run
+
+
+def _step_foreach(
+    workflow: Workflow,
+    run: RunState,
+    step: ForeachNode,
+    edge_map: dict[tuple[str, str], str],
+) -> RunState:
+    if step.mode != "serial":
+        raise WorkflowExecutionError(
+            "parallel foreach execution is not implemented yet"
+        )
+
+    frame = run.current_frame()
+    progress_map = frame.metadata.setdefault("foreach_progress", {})
+    progress = progress_map.setdefault(step.id, {"index": 0})
+
+    iterable = safe_resolve_path(
+        step.over,
+        state=run.state,
+        workflow_input=run.workflow_input,
+        context=_frame_context_values(frame),
+    )
+    if not isinstance(iterable, list):
+        raise WorkflowExecutionError(
+            f"foreach source {step.over!r} must resolve to a list"
+        )
+
+    index = progress["index"]
+    if index >= len(iterable):
+        outcome = "done"
+        next_node_id = edge_map.get((frame.node_id, outcome))
+        if next_node_id is None:
+            raise WorkflowExecutionError(
+                f"no edge found for node {frame.node_id!r} and outcome {outcome!r}"
+            )
+        run.trace.append(
+            TraceEntry(
+                frame_id=frame.id,
+                node_id=frame.node_id,
+                step_type=step.type,
+                resolved_input={"count": len(iterable), "index": index},
+                outcome=outcome,
+                next_node_id=next_node_id,
+                output={},
+                state_changes={},
+            )
+        )
+        frame.prior_outcome = outcome
+        frame.activated_incoming_edge = frame.node_id
+        frame.node_id = next_node_id
+        run.sync_from_current_frame()
+        return run
+
+    loop_start = edge_map.get((frame.node_id, "loop"))
+    if loop_start is None:
+        raise WorkflowExecutionError(
+            f"no edge found for foreach node {frame.node_id!r} and outcome 'loop'"
+        )
+
+    item = iterable[index]
+    progress["index"] = index + 1
+    child_id = f"{frame.id}:{step.id}:{index}"
+    child_metadata = {
+        "foreach_node_id": step.id,
+        "loop_index": index,
+        "loop_item": item,
+        "loop_alias": step.as_,
+    }
+    run.frames[child_id] = ExecutionFrame(
+        id=child_id,
+        kind="foreach_iteration",
+        node_id=loop_start,
+        status=FrameStatus.PENDING,
+        parent_frame_id=frame.id,
+        metadata=child_metadata,
+    )
+    run.trace.append(
+        TraceEntry(
+            frame_id=frame.id,
+            node_id=frame.node_id,
+            step_type=step.type,
+            resolved_input={"item": item, "index": index},
+            outcome="loop",
+            next_node_id=loop_start,
+            output={},
+            state_changes={},
+        )
+    )
+    run.current_frame_id = child_id
     run.sync_from_current_frame()
     return run
 
@@ -255,12 +364,14 @@ def _execute_node_use(
             f"no handler registered for node def {node.node!r}"
         )
 
+    frame = run.current_frame()
+    context_values = _frame_context_values(frame)
     resolved_input = {
         destination_field: safe_resolve_path(
             source_path,
             state=run.state,
             workflow_input=run.workflow_input,
-            context={},
+            context=context_values,
         )
         for source_path, destination_field in node.in_map.items()
     }
@@ -268,12 +379,12 @@ def _execute_node_use(
         node_def.input_schema, resolved_input, f"node input for {node.id}"
     )
 
-    frame = run.current_frame()
     context = RuntimeContext(
         current_node_id=node.id,
         frame_id=frame.id,
         prior_outcome=frame.prior_outcome,
         activated_incoming_edge=frame.activated_incoming_edge,
+        metadata=dict(frame.metadata),
     )
     raw_result = handler(resolved_input, context)
     result = coerce_node_result(raw_result)
@@ -309,13 +420,14 @@ def _build_interrupt_request(
     frame_id: str,
     state: dict[str, Any],
     workflow_input: dict[str, Any],
+    context: dict[str, Any],
 ) -> InterruptRequest:
     payload = {
         payload_field: safe_resolve_path(
             source_path,
             state=state,
             workflow_input=workflow_input,
-            context={},
+            context=context,
         )
         for source_path, payload_field in node.request_map.items()
     }
@@ -383,5 +495,39 @@ def _resume_interrupt(
     frame.prior_outcome = resume_outcome
     frame.activated_incoming_edge = frame.node_id
     frame.node_id = next_node_id
+    frame.status = FrameStatus.RUNNING if next_node_id != END else FrameStatus.COMPLETED
+    frame.finished_at_node_id = END if next_node_id == END else None
     run.interrupt = None
     run.sync_from_current_frame()
+
+
+def _collapse_completed_frames(run: RunState) -> None:
+    while run.current_frame_id is not None:
+        frame = run.current_frame()
+        if frame.node_id == END and frame.status != FrameStatus.COMPLETED:
+            frame.status = FrameStatus.COMPLETED
+            frame.finished_at_node_id = END
+        if frame.status != FrameStatus.COMPLETED or frame.parent_frame_id is None:
+            run.sync_from_current_frame()
+            return
+        run.current_frame_id = frame.parent_frame_id
+        parent = run.current_frame()
+        if parent.status == FrameStatus.PENDING:
+            parent.status = FrameStatus.RUNNING
+        run.sync_from_current_frame()
+
+
+def _frame_context_values(frame: ExecutionFrame) -> dict[str, Any]:
+    context: dict[str, Any] = {
+        "prior_outcome": frame.prior_outcome,
+        "activated_incoming_edge": frame.activated_incoming_edge,
+    }
+    if frame.kind == "foreach_iteration":
+        loop_item = frame.metadata.get("loop_item")
+        loop_index = frame.metadata.get("loop_index")
+        loop_alias = frame.metadata.get("loop_alias")
+        context["loop_item"] = loop_item
+        context["loop_index"] = loop_index
+        if isinstance(loop_alias, str) and loop_alias:
+            context[loop_alias] = loop_item
+    return context

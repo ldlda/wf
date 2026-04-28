@@ -205,11 +205,13 @@ def _validate_node_use(
                 f"nodes[{index}].in_map[{source_path!r}]",
                 f"destination field {destination_field!r} is not declared in node input schema",
             )
-        if not is_valid_source_path(source_path, state_fields, input_root_fields):
+        if not is_valid_source_path(
+            source_path, state_fields, input_root_fields, allow_context=True
+        ):
             report.add(
                 ValidationIssueCode.INVALID_SOURCE_PATH,
                 f"nodes[{index}].in_map[{source_path!r}]",
-                "source path must start with input. or state. and reference a declared root field",
+                "source path must start with input., state., or context. and reference a declared root field when applicable",
             )
 
     for source_field, destination_path in node.out_map.items():
@@ -385,7 +387,7 @@ def _declared_outcomes_for_step(step: Step, node_defs: dict[str, NodeDef]) -> se
     if step.type == "condition":
         return {"true", "false"}
     if step.type == "foreach":
-        return {"done"}
+        return {"loop", "done"}
     if step.type == "join":
         return {"done"}
     if step.type == "interrupt":

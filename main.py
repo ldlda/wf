@@ -26,6 +26,7 @@ workflow = Workflow.model_validate(
                 "folder_id": {"type": "string"},
                 "should_email": {"type": "boolean"},
                 "documents": {"type": "array", "merge_strategy": "replace"},
+                "item_summaries": {"type": "array", "merge_strategy": "append"},
                 "summary": {"type": "string", "merge_strategy": "replace"},
                 "approved": {"type": "boolean", "merge_strategy": "replace"},
                 "approval_comment": {"type": "string", "merge_strategy": "replace"},
@@ -56,11 +57,25 @@ workflow = Workflow.model_validate(
                 "outcomes": ["ok"],
             },
             {
-                "name": "summarize_documents",
+                "name": "summarize_document",
                 "input_schema": {
                     "type": "object",
-                    "properties": {"documents": {"type": "array"}},
-                    "required": ["documents"],
+                    "properties": {"document": {"type": "string"}},
+                    "required": ["document"],
+                },
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"item_summary": {"type": "string"}},
+                    "required": ["item_summary"],
+                },
+                "outcomes": ["ok"],
+            },
+            {
+                "name": "combine_summaries",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"item_summaries": {"type": "array"}},
+                    "required": ["item_summaries"],
                 },
                 "output_schema": {
                     "type": "object",
@@ -108,11 +123,27 @@ workflow = Workflow.model_validate(
                 "out_map": {"documents": "state.documents"},
             },
             {
-                "id": "summarize",
+                "id": "summarize_each",
+                "type": "foreach",
+                "over": "state.documents",
+                "as": "document",
+                "mode": "serial",
+                "on_item_error": "fail",
+            },
+            {
+                "id": "summarize_one",
                 "type": "node",
-                "node": "summarize_documents",
-                "desc": "Summarize all retrieved documents",
-                "in_map": {"state.documents": "documents"},
+                "node": "summarize_document",
+                "desc": "Summarize one document",
+                "in_map": {"context.document": "document"},
+                "out_map": {"item_summary": "state.item_summaries"},
+            },
+            {
+                "id": "combine_summaries",
+                "type": "node",
+                "node": "combine_summaries",
+                "desc": "Combine item summaries into one final summary",
+                "in_map": {"state.item_summaries": "item_summaries"},
                 "out_map": {"summary": "state.summary"},
             },
             {
@@ -155,8 +186,11 @@ workflow = Workflow.model_validate(
             },
         ],
         "edges": [
-            {"from": "list_files", "outcome": "ok", "to": "summarize"},
-            {"from": "summarize", "outcome": "ok", "to": "should_email"},
+            {"from": "list_files", "outcome": "ok", "to": "summarize_each"},
+            {"from": "summarize_each", "outcome": "loop", "to": "summarize_one"},
+            {"from": "summarize_each", "outcome": "done", "to": "combine_summaries"},
+            {"from": "summarize_one", "outcome": "ok", "to": END},
+            {"from": "combine_summaries", "outcome": "ok", "to": "should_email"},
             {"from": "should_email", "outcome": "true", "to": "approve_email"},
             {"from": "should_email", "outcome": "false", "to": "skip_email"},
             {"from": "approve_email", "outcome": "submitted", "to": "send_email"},
@@ -191,10 +225,20 @@ def drive_list_files(
 def summarize_documents(
     payload: dict[str, object], ctx: RuntimeContext
 ) -> dict[str, object]:
-    documents = payload["documents"]
+    document = payload["document"]
     return {
         "outcome": "ok",
-        "output": {"summary": f"Summarized {len(documents)} documents from Drive."},
+        "output": {"item_summary": f"Summary of {document}"},
+    }
+
+
+def combine_summaries(
+    payload: dict[str, object], ctx: RuntimeContext
+) -> dict[str, object]:
+    item_summaries = payload["item_summaries"]
+    return {
+        "outcome": "ok",
+        "output": {"summary": " | ".join(item_summaries)},
     }
 
 
@@ -216,7 +260,8 @@ def mark_email_skipped(
 
 registry = {
     "drive_list_files": drive_list_files,
-    "summarize_documents": summarize_documents,
+    "summarize_document": summarize_documents,
+    "combine_summaries": combine_summaries,
     "send_email": send_email,
     "mark_email_skipped": mark_email_skipped,
 }

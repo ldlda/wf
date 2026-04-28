@@ -21,6 +21,7 @@ from .runtime import (
 )
 from .run_state import (
     ExecutionFrame,
+    FrameStatus,
     InterruptRequest,
     RunState,
     RunStatus,
@@ -48,6 +49,7 @@ __all__ = [
     "StateSchema",
     "NodeHandler",
     "ExecutionFrame",
+    "FrameStatus",
     "RunState",
     "RunStatus",
     "RuntimeContext",

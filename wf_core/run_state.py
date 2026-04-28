@@ -13,15 +13,25 @@ class RunStatus(StrEnum):
     INTERRUPTED = "interrupted"
 
 
+class FrameStatus(StrEnum):
+    PENDING = "pending"
+    RUNNING = "running"
+    COMPLETED = "completed"
+    FAILED = "failed"
+    INTERRUPTED = "interrupted"
+
+
 @dataclass(slots=True)
 class ExecutionFrame:
     id: str
     kind: str
     node_id: str
+    status: FrameStatus = FrameStatus.PENDING
     parent_frame_id: str | None = None
     prior_outcome: str | None = None
     activated_incoming_edge: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    finished_at_node_id: str | None = None
 
 
 @dataclass(slots=True)
@@ -31,6 +41,7 @@ class RuntimeContext:
     retry_count: int = 0
     prior_outcome: str | None = None
     activated_incoming_edge: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
