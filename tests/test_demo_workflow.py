@@ -19,12 +19,14 @@ from wf_authoring import (
     bind_fields,
     bind_state,
     build_registry,
+    expr,
     exists,
     state,
+    state_path,
     context_path,
     input_path,
     node,
-    state_path,
+    subgraph_node,
 )
 
 
@@ -487,7 +489,9 @@ def test_node_decorator_detects_async_automatically() -> None:
 
 
 def test_condition_dsl_compiles_to_core_condition() -> None:
-    condition = state("should_email").eq(True) & exists(state("summary"))
+    condition = expr(state_path("should_email")).eq(True) & exists(
+        state_path("summary")
+    )
 
     assert condition.to_condition().model_dump() == {
         "op": "and",
@@ -503,3 +507,33 @@ def test_condition_dsl_compiles_to_core_condition() -> None:
             },
         ],
     }
+
+
+def test_subgraph_node_wraps_compiled_workflow() -> None:
+    class ChildInput(BaseModel):
+        folder_id: str
+        should_email: bool
+
+    class ChildOutput(BaseModel):
+        summary: str
+        email_status: str
+
+    child_workflow = build_demo_workflow()
+    child_registry = build_demo_registry()
+    wrapped = subgraph_node(
+        name="wrapped_demo",
+        workflow=child_workflow,
+        registry=child_registry,
+        input_model=ChildInput,
+        output_model=ChildOutput,
+    )
+
+    registry = build_registry(wrapped)
+    result = registry["wrapped_demo"](
+        {"folder_id": "demo-folder", "should_email": False},
+        RuntimeContext(current_node_id="parent"),
+    )
+
+    assert result["outcome"] == "ok"
+    assert result["output"]["email_status"] == "skipped"
+    assert "summary" in result["output"]

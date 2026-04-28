@@ -12,12 +12,21 @@ from wf_core.model import (
     PathOperand,
     VariadicCondition,
 )
+from .paths import GraphPath, context_path, input_path, state_path
 
 
 def _operand(value: object) -> PathOperand | LiteralOperand:
     if isinstance(value, PathExpr):
         return PathOperand(path=value.path)
+    if isinstance(value, GraphPath):
+        return PathOperand(path=value.value)
     return LiteralOperand(value=value)
+
+
+def _path_str(value: PathExpr | GraphPath) -> str:
+    if isinstance(value, PathExpr):
+        return value.path
+    return value.value
 
 
 @dataclass(frozen=True, slots=True)
@@ -79,20 +88,26 @@ class PathExpr:
         return self.lt(other)
 
 
+def expr(value: PathExpr | GraphPath) -> PathExpr:
+    if isinstance(value, PathExpr):
+        return value
+    return PathExpr(path=value.value)
+
+
 def state(field: str) -> PathExpr:
-    return PathExpr(path=f"state.{field}")
+    return expr(state_path(field))
 
 
 def input(field: str) -> PathExpr:
-    return PathExpr(path=f"input.{field}")
+    return expr(input_path(field))
 
 
 def context(field: str) -> PathExpr:
-    return PathExpr(path=f"context.{field}")
+    return expr(context_path(field))
 
 
-def exists(value: PathExpr) -> Expr:
-    return Expr(ExistsCondition(op="exists", path=value.path))
+def exists(value: PathExpr | GraphPath) -> Expr:
+    return Expr(ExistsCondition(op="exists", path=_path_str(value)))
 
 
 def compile_condition(value: Condition | Expr) -> Condition:
