@@ -9,9 +9,7 @@
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
-        "args": [
-          "@upstash/context7-mcp"
-        ],
+        "args": ["@upstash/context7-mcp"],
         "env": {}
       }
     },
@@ -25,7 +23,8 @@
         "command": "serena",
         "args": [
           "start-mcp-server",
-          "--enable-web-dashboard=true"
+          "--enable-web-dashboard=true",
+          "--project-from-cwd"
         ],
         "env": {}
       }
@@ -38,9 +37,7 @@
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
-        "args": [
-          "@modelcontextprotocol/server-everything"
-        ],
+        "args": ["@modelcontextprotocol/server-everything"],
         "env": {}
       }
     }

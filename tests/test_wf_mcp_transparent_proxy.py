@@ -50,6 +50,7 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             assert "wf.mcp_list_connections" in names
             assert "wf.mcp_get_connection_statuses" in names
             assert "wf.mcp_list_proxy_tools" in names
+            assert "wf.mcp_get_proxy_tool" in names
             assert "fixture.personal_echo_tool" in names
 
             connections_result = await client.call_tool("wf.mcp_list_connections")
@@ -76,12 +77,25 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             assert _structured(result) == {"echoed": "hello"}
 
             proxy_tools_result = await client.call_tool("wf.mcp_list_proxy_tools")
-            proxy_tools = _structured(proxy_tools_result)["result"]
+            proxy_tools_payload = _structured(proxy_tools_result)
+            proxy_tools = proxy_tools_payload["tools"]
+            assert proxy_tools_payload["nextCursor"] is None
+            assert proxy_tools_payload["total"] == 1
             assert len(proxy_tools) == 1
             assert proxy_tools[0]["proxy_name"] == "fixture.personal_echo_tool"
             assert proxy_tools[0]["connection_id"] == "fixture.personal"
             assert proxy_tools[0]["local_name"] == "echo_tool"
             assert proxy_tools[0]["enabled"] is True
+
+            proxy_tool_result = await client.call_tool(
+                "wf.mcp_get_proxy_tool",
+                {"proxy_name": "fixture.personal_echo_tool"},
+            )
+            proxy_tool = _structured(proxy_tool_result)
+            assert proxy_tool["proxy_name"] == "fixture.personal_echo_tool"
+            assert proxy_tool["connection_id"] == "fixture.personal"
+            assert proxy_tool["local_name"] == "echo_tool"
+            assert proxy_tool["input_schema"]["properties"]["text"]["type"] == "string"
 
     asyncio.run(run_proxy())
 
@@ -202,6 +216,71 @@ def test_transparent_proxy_can_collapse_upstream_tools_behind_search() -> None:
                 {"query": "echo text back"},
             )
             assert "fixture.personal_echo_tool" in str(search_result)
+
+    asyncio.run(run_proxy())
+
+
+def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "transparent_proxy_paged_tools_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            ),
+            ConnectionConfig(
+                id="fixture.work",
+                server="fixture",
+                account="work",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            ),
+        ],
+    )
+
+    async def run_proxy() -> None:
+        client = create_transparent_proxy_client(config)
+        async with client:
+            first_page_result = await client.call_tool(
+                "wf.mcp_list_proxy_tools",
+                {"limit": 1},
+            )
+            first_page = _structured(first_page_result)
+            assert len(first_page["tools"]) == 1
+            assert first_page["nextCursor"] is not None
+            assert first_page["total"] == 2
+
+            second_page_result = await client.call_tool(
+                "wf.mcp_list_proxy_tools",
+                {"limit": 1, "cursor": first_page["nextCursor"]},
+            )
+            second_page = _structured(second_page_result)
+            assert len(second_page["tools"]) == 1
+            assert second_page["tools"][0]["proxy_name"] != first_page["tools"][0][
+                "proxy_name"
+            ]
+
+            filtered_result = await client.call_tool(
+                "wf.mcp_list_proxy_tools",
+                {
+                    "connection_id": "fixture.personal",
+                    "query": "echo",
+                    "limit": 10,
+                },
+            )
+            filtered = _structured(filtered_result)
+            assert filtered["nextCursor"] is None
+            assert filtered["total"] == 1
+            assert filtered["tools"][0]["proxy_name"] == "fixture.personal_echo_tool"
 
     asyncio.run(run_proxy())
 

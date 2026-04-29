@@ -16,6 +16,7 @@ from fastmcp.server.transforms.search import BM25SearchTransform
 from .config_manager import BrokerConfigManager, ConfigMutationError
 from .models import BrokerConfig, ConnectionConfig
 from .names import ADMIN_NAMESPACE, is_admin_tool_name, parse_namespaced_tool_name
+from .pagination import paginate_items
 from .proxy_validation import validate_transparent_proxy_config
 
 _ADMIN_TOOL_NAMES = [
@@ -24,6 +25,7 @@ _ADMIN_TOOL_NAMES = [
     f"{ADMIN_NAMESPACE}_get_config",
     f"{ADMIN_NAMESPACE}_reload_config",
     f"{ADMIN_NAMESPACE}_list_proxy_tools",
+    f"{ADMIN_NAMESPACE}_get_proxy_tool",
     f"{ADMIN_NAMESPACE}_add_connection",
     f"{ADMIN_NAMESPACE}_update_connection",
     f"{ADMIN_NAMESPACE}_enable_connection",
@@ -105,6 +107,9 @@ class TransparentProxyRuntime:
         }
 
     async def list_proxy_tools(self) -> list[dict[str, Any]]:
+        return await self._list_proxy_tools()
+
+    async def _list_proxy_tools(self) -> list[dict[str, Any]]:
         config = self.current_config()
         connection_ids = {
             connection.id for connection in config.connections if connection.enabled
@@ -118,16 +123,98 @@ class TransparentProxyRuntime:
             if parsed is None:
                 continue
             result.append(
-                {
-                    "proxy_name": parsed.proxy_name,
-                    "connection_id": parsed.connection_id,
-                    "local_name": parsed.local_name,
-                    "title": tool.title,
-                    "description": tool.description,
-                    "enabled": True,
-                }
+                _proxy_tool_payload(
+                    proxy_name=parsed.proxy_name,
+                    connection_id=parsed.connection_id,
+                    local_name=parsed.local_name,
+                    tool=tool,
+                    include_schema=False,
+                )
             )
         return sorted(result, key=lambda item: item["proxy_name"])
+
+    async def list_proxy_tools_page(
+        self,
+        *,
+        connection_id: str | None = None,
+        query: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        tools = await self._list_proxy_tools()
+        if connection_id is not None:
+            tools = [
+                tool for tool in tools if tool["connection_id"] == connection_id
+            ]
+        if query:
+            needle = query.casefold()
+            tools = [
+                tool
+                for tool in tools
+                if needle
+                in " ".join(
+                    str(tool.get(key, ""))
+                    for key in (
+                        "proxy_name",
+                        "connection_id",
+                        "local_name",
+                        "title",
+                        "description",
+                    )
+                ).casefold()
+            ]
+        page, next_cursor = paginate_items(tools, cursor=cursor, limit=limit)
+        return {
+            "tools": page,
+            "nextCursor": next_cursor,
+            "total": len(tools),
+        }
+
+    async def get_proxy_tool(self, proxy_name: str) -> dict[str, Any]:
+        config = self.current_config()
+        connection_ids = {
+            connection.id for connection in config.connections if connection.enabled
+        }
+        parsed = parse_namespaced_tool_name(proxy_name, connection_ids)
+        if parsed is None:
+            raise KeyError(proxy_name)
+        tools = await self.server.list_tools()
+        for tool in tools:
+            if tool.name == proxy_name:
+                return _proxy_tool_payload(
+                    proxy_name=parsed.proxy_name,
+                    connection_id=parsed.connection_id,
+                    local_name=parsed.local_name,
+                    tool=tool,
+                    include_schema=True,
+                )
+        raise KeyError(proxy_name)
+
+
+def _proxy_tool_payload(
+    *,
+    proxy_name: str,
+    connection_id: str,
+    local_name: str,
+    tool: Any,
+    include_schema: bool,
+) -> dict[str, Any]:
+    payload = {
+        "proxy_name": proxy_name,
+        "connection_id": connection_id,
+        "local_name": local_name,
+        "title": getattr(tool, "title", None),
+        "description": getattr(tool, "description", None),
+        "enabled": True,
+    }
+    if include_schema:
+        payload["input_schema"] = getattr(
+            tool,
+            "input_schema",
+            getattr(tool, "parameters", None),
+        )
+        payload["output_schema"] = getattr(tool, "output_schema", None)
+    return payload
 
 
 def create_proxy_admin_server(
@@ -179,8 +266,22 @@ def create_proxy_admin_server(
         return runtime.reload()
 
     @admin.tool()
-    async def list_proxy_tools() -> list[dict[str, Any]]:
-        return await runtime.list_proxy_tools()
+    async def list_proxy_tools(
+        connection_id: str | None = None,
+        query: str | None = None,
+        limit: int = 50,
+        cursor: str | None = None,
+    ) -> dict[str, Any]:
+        return await runtime.list_proxy_tools_page(
+            connection_id=connection_id,
+            query=query,
+            limit=limit,
+            cursor=cursor,
+        )
+
+    @admin.tool()
+    async def get_proxy_tool(proxy_name: str) -> dict[str, Any]:
+        return await runtime.get_proxy_tool(proxy_name)
 
     @admin.tool()
     async def add_connection(
