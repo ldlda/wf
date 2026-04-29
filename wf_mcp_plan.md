@@ -187,6 +187,174 @@ So the proxy layer should eventually broker:
 
 Not all of these need workflow semantics immediately, but they should still have a place in the package model.
 
+## Transparent MCP proxy mode
+
+The broker also needs a more protocol-native mode than the current generic broker tools.
+
+The current broker tools are useful:
+
+- `get_catalog`
+- `call_broker_tool`
+- `read_broker_resource`
+- `render_broker_prompt`
+- `invoke_broker_method`
+
+But these do not make upstream capabilities appear as first-class MCP capabilities to a client like Inspector.
+
+For a real proxy experience, the broker should eventually mirror upstream capabilities into the broker's own MCP surfaces:
+
+- upstream `tools/list` entries appear in broker `tools/list`
+- upstream `tools/call` requests route back to the owning connection
+- upstream `resources/list` entries appear in broker `resources/list`
+- upstream `resources/read` requests route back to the owning connection
+- upstream `prompts/list` entries appear in broker `prompts/list`
+- upstream `prompts/get` requests route back to the owning connection
+
+Example desired tool entry:
+
+```json
+{
+  "name": "everything.default.echo",
+  "title": "Everything Reference Server: Echo Tool",
+  "description": "Echoes back the input string",
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "message": {
+        "type": "string",
+        "description": "Message to echo"
+      }
+    },
+    "required": ["message"],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "execution": {
+    "taskSupport": "forbidden"
+  }
+}
+```
+
+This is different from `call_broker_tool`. `call_broker_tool` is a convenience wrapper. Mirrored tools are actual MCP tools exposed by the broker.
+
+### Official protocol boundary
+
+The transparent proxy layer should prefer official MCP boundary types over local mirror models.
+
+Use MCP SDK types at the proxy boundary:
+
+- `mcp.types.Tool`
+- `mcp.types.Resource`
+- `mcp.types.Prompt`
+- `mcp.types.CallToolResult`
+- `mcp.types.GetPromptResult`
+- `mcp.types.ReadResourceResult`
+
+Local models such as `DiscoveredTool`, `CatalogNodeEntry`, and `NodeSpec` remain useful, but they are not the wire contract a standard MCP client understands. They are internal broker/workflow models.
+
+Practical rule:
+
+- MCP proxy plane speaks official MCP types
+- workflow plane compiles selected tools into `wf_authoring.NodeSpec`
+- catalog/UI plane can use normalized local models as a persisted view
+
+This keeps protocol compatibility separate from workflow-specific concepts like `outcome`.
+
+### Name mapping
+
+Mirrored capability names must be globally unique and reversible.
+
+Recommended tool name shape:
+
+- `<connection_id>.<local_tool_name>`
+
+Example:
+
+- `everything.default.echo`
+- `github.work.create_issue`
+
+This matches the MCP tool-name guidance: ASCII letters, digits, `_`, `-`, and `.` are valid.
+
+The proxy should keep a mapping table:
+
+- broker name -> connection id
+- broker name -> upstream kind
+- broker name -> upstream local name or URI
+- broker name -> display title
+- broker name -> enabled/disabled state
+
+This mapping should eventually support UI/admin controls:
+
+- enable/disable a connection
+- enable/disable specific tools/resources/prompts
+- logout / clear auth for a connection
+- refresh a connection
+- inspect cached vs live capability state
+
+The UI can come later, but the data model should make room for these states.
+
+### FastMCP middleware path
+
+FastMCP's documented tool injection middleware is promising for the first transparent tool mirror.
+
+The relevant hooks are:
+
+- `ToolInjectionMiddleware.on_list_tools`
+- `ToolInjectionMiddleware.on_call_tool`
+
+These are exactly the two operations needed for first-class mirrored tools:
+
+- inject upstream tools into broker `tools/list`
+- intercept calls to injected tool names and route them upstream
+
+Implementation should verify whether the installed MCP/FastMCP dependency exposes the documented middleware API. If it does, use it. If it does not, treat this as a dependency/version problem and either:
+
+- add the compatible `fastmcp` dependency explicitly
+- or implement the proxy at a lower MCP server/provider layer
+
+Do not encode the transparent proxy as a pile of static decorators. The proxy surface is connection/catalog driven and must be able to change after refresh.
+
+### Sampling and elicitation
+
+Sampling and elicitation make transparent proxying much harder than simple tool forwarding.
+
+Simple request flow:
+
+- client -> broker -> upstream -> broker -> client
+
+Sampling/elicitation flow:
+
+- upstream server may ask the client for a model sample or user input
+- broker must forward that request to the original client
+- broker must route the client's answer back to the upstream server
+
+For a client like Inspector to show an elicitation form from an upstream server, the proxy must preserve this bidirectional protocol behavior.
+
+Near-term stance:
+
+- mirror normal tools/resources/prompts first
+- keep `call_broker_tool` and raw method invocation as debugging fallbacks
+- test the Everything Reference Server elicitation tool as the first serious proxy pressure test
+- only claim elicitation/sampling support once a live Inspector flow works end to end
+
+### Relationship to workflow execution
+
+Transparent proxying and workflow execution are separate concerns.
+
+Proxy path:
+
+- expose upstream tools/resources/prompts to MCP clients
+- preserve official MCP semantics
+- forward protocol interactions
+
+Workflow path:
+
+- turn selected tools into `NodeSpec`s
+- expose them to `wf_core`
+- add workflow-specific state mapping, outcomes, tracing, retries, interrupts
+
+The proxy must not leak workflow concepts like `outcome` into MCP `tools/list`. `outcome` belongs to workflow execution, not the MCP wire contract.
+
 ## Next capability expansion
 
 The next architectural move should be broadening the capability model beyond tools.

@@ -361,6 +361,31 @@ def test_service_can_invoke_raw_method_and_notification() -> None:
     assert "raw_notification_completed" in event_kinds
 
 
+def test_service_can_call_upstream_tool_directly() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "direct_tool_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    result = asyncio.run(
+        service.call_tool(
+            "demo.personal",
+            "echo_tool",
+            arguments={"text": "hello"},
+        )
+    )
+
+    assert result == {
+        "outcome": "ok",
+        "output": {"echoed": "hello"},
+        "meta": {},
+    }
+    event_kinds = [event.kind for event in service.list_events()]
+    assert "tool_call_started" in event_kinds
+    assert "tool_call_completed" in event_kinds
+
+
 def test_service_records_catalog_refresh_failures() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "refresh_fail_store"))
     service.register_connection(

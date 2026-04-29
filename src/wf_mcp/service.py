@@ -234,6 +234,43 @@ class WfMcpService:
         )
         return result
 
+    async def call_tool(
+        self,
+        connection_id: str,
+        tool_name: str,
+        *,
+        arguments: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        connection = self.connections.get(connection_id)
+        adapter = self.adapters.get(connection.server)
+        if adapter is None:
+            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        auth = self.load_auth(connection_id)
+        capability_id = qualify_node_name(connection_id, tool_name)
+        payload = arguments or {}
+        self._record_event(
+            make_event(
+                "tool_call_started",
+                connection_id=connection_id,
+                capability_id=capability_id,
+                payload={"argument_keys": sorted(payload.keys())},
+            )
+        )
+        result = await adapter.call_tool(connection, auth, tool_name, payload)
+        self._record_event(
+            make_event(
+                "tool_call_completed",
+                connection_id=connection_id,
+                capability_id=capability_id,
+                payload={"outcome": result.outcome},
+            )
+        )
+        return {
+            "outcome": result.outcome,
+            "output": result.output,
+            "meta": result.meta,
+        }
+
     async def send_notification(
         self,
         connection_id: str,

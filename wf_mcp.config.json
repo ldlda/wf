@@ -10,7 +10,6 @@
         "transport": "stdio",
         "command": "pnpx",
         "args": [
-          "-y",
           "@modelcontextprotocol/server-everything"
         ]
       }

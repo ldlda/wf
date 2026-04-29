@@ -102,7 +102,40 @@ def create_broker_server(service: WfMcpService) -> FastMCP:
         method: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return await service.invoke_method(connection_id, method, params=params)
+        try:
+            return await service.invoke_method(connection_id, method, params=params)
+        except Exception as exc:
+            return {
+                "connection_id": connection_id,
+                "method": method,
+                "ok": False,
+                **error_payload(exc),
+            }
+
+    @server.tool()
+    async def call_broker_tool(
+        connection_id: str,
+        tool_name: str,
+        arguments: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        try:
+            return {
+                "connection_id": connection_id,
+                "tool_name": tool_name,
+                "ok": True,
+                **await service.call_tool(
+                    connection_id,
+                    tool_name,
+                    arguments=arguments,
+                ),
+            }
+        except Exception as exc:
+            return {
+                "connection_id": connection_id,
+                "tool_name": tool_name,
+                "ok": False,
+                **error_payload(exc),
+            }
 
     @server.tool()
     async def get_broker_events() -> list[dict[str, Any]]:
