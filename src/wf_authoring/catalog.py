@@ -9,6 +9,7 @@ from .spec import NodeSpec
 @dataclass(slots=True)
 class NodeCatalogEntry:
     name: str
+    display_name: str | None
     description: str | None
     outcomes: tuple[str, ...]
     input_schema: dict[str, Any]
@@ -18,6 +19,7 @@ class NodeCatalogEntry:
     def from_spec(cls, spec: NodeSpec[Any, Any]) -> "NodeCatalogEntry":
         return cls(
             name=spec.name,
+            display_name=None,
             description=spec.description,
             outcomes=spec.outcomes,
             input_schema=spec.input_model.model_json_schema(),
@@ -41,6 +43,7 @@ class NodeCatalog:
             "nodes": [
                 {
                     "name": entry.name,
+                    "display_name": entry.display_name,
                     "description": entry.description,
                     "outcomes": list(entry.outcomes),
                     "input_schema": entry.input_schema,

@@ -105,6 +105,7 @@ class FakeAdapter:
         return [
             DiscoveredTool(
                 name="echo_tool",
+                display_name="Echo Tool",
                 description="Echo text back",
                 input_schema={
                     "type": "object",
@@ -128,6 +129,7 @@ class FakeAdapter:
             DiscoveredResource(
                 uri="demo://docs/welcome",
                 name="resource.welcome",
+                display_name="Welcome Resource",
                 description="Welcome resource",
                 mime_type="text/plain",
                 metadata={"kind": "static"},
@@ -142,6 +144,7 @@ class FakeAdapter:
         return [
             DiscoveredPrompt(
                 name="prompt.summarize",
+                display_name="Summarize Prompt",
                 description="Summarize text",
                 arguments=[
                     {

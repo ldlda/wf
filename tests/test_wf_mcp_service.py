@@ -10,6 +10,7 @@ from wf_mcp import (
     RawWorkflowPlan,
     WfMcpService,
 )
+from wf_mcp.error_info import error_payload
 
 from test_wf_mcp_support import (
     FailingDiscoveryAdapter,
@@ -115,6 +116,7 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             "qualified_name": "demo.personal.echo_tool",
             "connection_id": "demo.personal",
             "local_name": "echo_tool",
+            "display_name": "Echo Tool",
             "description": "Echo text back",
             "outcomes": ["ok"],
             "input_schema": {
@@ -138,6 +140,7 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             "qualified_name": "demo.personal.resource.welcome",
             "connection_id": "demo.personal",
             "local_name": "resource.welcome",
+            "display_name": "Welcome Resource",
             "uri": "demo://docs/welcome",
             "description": "Welcome resource",
             "mime_type": "text/plain",
@@ -149,6 +152,7 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             "qualified_name": "demo.personal.prompt.summarize",
             "connection_id": "demo.personal",
             "local_name": "prompt.summarize",
+            "display_name": "Summarize Prompt",
             "description": "Summarize text",
             "arguments": [
                 {
@@ -340,6 +344,14 @@ def test_service_records_catalog_refresh_failures() -> None:
     ]
     assert len(failure_events) == 1
     assert failure_events[0].payload == {
+        "error_type": "PermissionError",
+        "error": "Access is denied",
+    }
+
+
+def test_error_payload_unwraps_exception_group() -> None:
+    exc = ExceptionGroup("outer", [PermissionError("Access is denied")])
+    assert error_payload(exc) == {
         "error_type": "PermissionError",
         "error": "Access is denied",
     }

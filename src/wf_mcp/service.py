@@ -11,6 +11,7 @@ from .adapters import BackendAdapter
 from .catalog import CombinedCatalog, snapshot_from_specs
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from .discovery import discover_connection_capabilities, specs_from_discovered_tools
+from .error_info import error_payload
 from .events import McpEvent, make_event
 from .models import (
     AuthRecord,
@@ -313,6 +314,9 @@ class WfMcpService:
             snapshot = snapshot_from_specs(
                 connection_id,
                 specs=self.specs_by_connection.get(connection_id, {}),
+                tool_display_names={
+                    tool.name: tool.display_name for tool in capabilities.tools
+                },
                 resources=capabilities.resources,
                 prompts=capabilities.prompts,
                 metadata=capabilities.metadata,
@@ -336,10 +340,7 @@ class WfMcpService:
                 make_event(
                     "catalog_refresh_failed",
                     connection_id=connection_id,
-                    payload={
-                        "error_type": type(exc).__name__,
-                        "error": str(exc),
-                    },
+                    payload=error_payload(exc),
                 )
             )
             raise

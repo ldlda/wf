@@ -41,8 +41,14 @@ def _tool_to_discovered(tool: McpTool) -> DiscoveredTool:
         "type": "object",
         "properties": {"content": {"type": "array"}},
     }
+    display_name = (
+        tool.annotations.title
+        if tool.annotations is not None and tool.annotations.title
+        else tool.title
+    )
     return DiscoveredTool(
         name=tool.name,
+        display_name=display_name,
         description=tool.description,
         input_schema=tool.inputSchema,
         output_schema=output_schema,
@@ -56,6 +62,7 @@ def _resource_to_discovered(resource: McpResource) -> DiscoveredResource:
     return DiscoveredResource(
         uri=str(resource.uri),
         name=local_name,
+        display_name=resource.title,
         description=resource.description,
         mime_type=resource.mimeType,
         metadata=resource.model_dump(by_alias=True, mode="json"),
@@ -69,6 +76,7 @@ def _prompt_to_discovered(prompt: McpPrompt) -> DiscoveredPrompt:
     ]
     return DiscoveredPrompt(
         name=prompt.name,
+        display_name=prompt.title,
         description=prompt.description,
         arguments=arguments,
         metadata=prompt.model_dump(by_alias=True, mode="json"),

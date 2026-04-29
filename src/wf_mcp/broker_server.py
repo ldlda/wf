@@ -8,6 +8,7 @@ from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
+from .error_info import error_payload
 from .mcp_sdk_adapter import McpSdkAdapter
 from .models import BrokerConfig, ConnectionConfig
 from .service import WfMcpService
@@ -63,8 +64,7 @@ def create_broker_server(service: WfMcpService) -> FastMCP:
             return {
                 "connection_id": connection_id,
                 "refreshed": False,
-                "error_type": type(exc).__name__,
-                "error": str(exc),
+                **error_payload(exc),
             }
         snapshot = service.get_connection_snapshot(connection_id)
         if snapshot is None:
