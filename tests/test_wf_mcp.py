@@ -2,12 +2,21 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel
 
 from wf_authoring import NodeReturn, node
 from wf_core import END, RuntimeContext, RunStatus
-from wf_mcp import AuthRecord, ConnectionConfig, FileStore, RawWorkflowPlan, WfMcpService
+from wf_mcp import (
+    AuthRecord,
+    ConnectionConfig,
+    DiscoveredTool,
+    FileStore,
+    RawWorkflowPlan,
+    ToolCallResult,
+    WfMcpService,
+)
 
 
 class EchoInput(BaseModel):
@@ -45,6 +54,44 @@ def _local_temp_root() -> Path:
     root = Path("test-artifacts") / "wf_mcp_store"
     root.mkdir(parents=True, exist_ok=True)
     return root
+
+
+class FakeAdapter:
+    async def list_tools(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredTool]:
+        return [
+            DiscoveredTool(
+                name="echo_tool",
+                description="Echo text back",
+                input_schema={
+                    "type": "object",
+                    "properties": {"text": {"type": "string"}},
+                    "required": ["text"],
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"echoed": {"type": "string"}},
+                    "required": ["echoed"],
+                },
+            )
+        ]
+
+    async def call_tool(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        tool_name: str,
+        payload: dict[str, Any],
+    ) -> ToolCallResult:
+        if tool_name != "echo_tool":
+            raise KeyError(tool_name)
+        return ToolCallResult(
+            outcome="ok",
+            output={"echoed": str(payload["text"])},
+        )
 
 
 def test_file_store_round_trips_auth() -> None:
@@ -129,3 +176,45 @@ def test_service_compiles_and_runs_raw_plan() -> None:
 
     assert run.status == RunStatus.COMPLETED
     assert run.output == {"result": "final:hello"}
+
+
+def test_service_refreshes_catalog_from_adapter() -> None:
+    service = WfMcpService(store=FileStore(_local_temp_root() / "adapter_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.save_auth(
+        AuthRecord(
+            connection_id="demo.personal",
+            scheme="token",
+            payload={"token": "abc"},
+        )
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+
+    payload = service.get_catalog().as_payload()
+    assert payload["nodes"] == [
+        {
+            "qualified_name": "demo.personal.echo_tool",
+            "connection_id": "demo.personal",
+            "local_name": "echo_tool",
+            "description": "Echo text back",
+            "outcomes": ["ok"],
+            "input_schema": {
+                "additionalProperties": True,
+                "properties": {"text": {"title": "Text"}},
+                "required": ["text"],
+                "title": "demo.personal_echo_tool_Input",
+                "type": "object",
+            },
+            "output_schema": {
+                "additionalProperties": True,
+                "properties": {"echoed": {"title": "Echoed"}},
+                "required": ["echoed"],
+                "title": "demo.personal_echo_tool_Output",
+                "type": "object",
+            },
+        }
+    ]

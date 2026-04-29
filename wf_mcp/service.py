@@ -7,10 +7,12 @@ from typing import Any
 from wf_authoring import NodeSpec, build_async_registry
 from wf_core import NodeUse, Workflow, execute_workflow_async
 
+from .adapters import BackendAdapter
 from .catalog import CombinedCatalog, snapshot_from_specs
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from .models import AuthRecord, CatalogSnapshot, ConnectionConfig, RawWorkflowPlan
 from .store import Store
+from .wrappers import wrap_discovered_tool
 
 
 def _qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, Any]:
@@ -30,6 +32,7 @@ class WfMcpService:
     store: Store
     default_catalog_max_age_seconds: int = 300
     connections: ConnectionRegistry = field(default_factory=ConnectionRegistry)
+    adapters: dict[str, BackendAdapter] = field(default_factory=dict)
     specs_by_connection: dict[str, dict[str, NodeSpec[Any, Any]]] = field(
         default_factory=dict
     )
@@ -37,6 +40,9 @@ class WfMcpService:
     def register_connection(self, connection: ConnectionConfig) -> None:
         parse_connection_id(connection.id)
         self.connections.register(connection)
+
+    def register_adapter(self, server: str, adapter: BackendAdapter) -> None:
+        self.adapters[server] = adapter
 
     def save_auth(self, record: AuthRecord) -> None:
         self.store.save_auth(record)
@@ -71,6 +77,34 @@ class WfMcpService:
             if snapshot is not None:
                 snapshots[connection.id] = snapshot
         return CombinedCatalog(snapshots=snapshots)
+
+    async def refresh_connection_catalog(
+        self,
+        connection_id: str,
+        *,
+        max_age_seconds: int | None = None,
+    ) -> None:
+        connection = self.connections.get(connection_id)
+        adapter = self.adapters.get(connection.server)
+        if adapter is None:
+            raise KeyError(f"no adapter registered for server {connection.server!r}")
+
+        auth = self.load_auth(connection_id)
+        tools = await adapter.list_tools(connection, auth)
+        specs = [
+            wrap_discovered_tool(
+                connection=connection,
+                auth=auth,
+                adapter=adapter,
+                tool=tool,
+            )
+            for tool in tools
+        ]
+        self.register_specs(
+            connection_id,
+            *specs,
+            max_age_seconds=max_age_seconds,
+        )
 
     def compile_plan(self, plan: RawWorkflowPlan) -> Workflow:
         node_defs: dict[str, Any] = {}
