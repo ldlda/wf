@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -61,6 +62,40 @@ def _local_temp_root() -> Path:
 
 def _fixture_server_path() -> str:
     return str((Path(__file__).parent / "fixtures" / "mcp_echo_server.py").resolve())
+
+
+def _everything_server_connection() -> ConnectionConfig | None:
+    command = os.environ.get("MCP_EVERYTHING_COMMAND")
+    if not command:
+        return None
+
+    raw_args = os.environ.get("MCP_EVERYTHING_ARGS", "")
+    args = [arg for arg in raw_args.split(" ") if arg]
+    transport = os.environ.get("MCP_EVERYTHING_TRANSPORT", "stdio")
+
+    metadata: dict[str, Any] = {
+        "transport": transport,
+        "command": command,
+        "args": args,
+    }
+
+    if transport == "streamable_http":
+        url = os.environ.get("MCP_EVERYTHING_URL")
+        if not url:
+            raise AssertionError(
+                "MCP_EVERYTHING_URL must be set when MCP_EVERYTHING_TRANSPORT=streamable_http"
+            )
+        metadata = {
+            "transport": "streamable_http",
+            "url": url,
+        }
+
+    return ConnectionConfig(
+        id="everything.default",
+        server="everything",
+        account="default",
+        metadata=metadata,
+    )
 
 
 class FakeAdapter:
@@ -265,3 +300,29 @@ def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
         pytest.skip(f"stdio MCP transport is not permitted in this environment: {exc}")
     assert result.outcome == "ok"
     assert result.output == {"echoed": "hello"}
+
+
+def test_mcp_sdk_adapter_can_probe_everything_server() -> None:
+    connection = _everything_server_connection()
+    if connection is None:
+        pytest.skip(
+            "set MCP_EVERYTHING_COMMAND to enable the live everything-server integration test"
+        )
+
+    service = WfMcpService(
+        store=FileStore(_local_temp_root() / "everything_server_store")
+    )
+    service.register_connection(connection)
+    service.register_adapter("everything", McpSdkAdapter())
+
+    try:
+        asyncio.run(service.refresh_connection_catalog("everything.default"))
+    except PermissionError as exc:
+        pytest.skip(f"live MCP transport is not permitted in this environment: {exc}")
+
+    payload = service.get_catalog().as_payload()
+    assert payload["nodes"], "everything-server should expose at least one tool"
+    assert all(
+        node["qualified_name"].startswith("everything.default.")
+        for node in payload["nodes"]
+    )
