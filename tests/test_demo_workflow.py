@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from pydantic import BaseModel
 
 from wf_core import (
@@ -17,6 +19,7 @@ from wf_authoring import (
     NodeReturn,
     WorkflowBuilder,
     bind_fields,
+    build_async_registry,
     bind_state,
     build_registry,
     expr,
@@ -429,6 +432,34 @@ def test_async_node_spec_cannot_export_sync_registry_handler() -> None:
         assert "async" in str(exc)
     else:
         raise AssertionError("expected async node export to fail for sync registry")
+
+
+def test_async_registry_accepts_sync_and_async_specs() -> None:
+    @node()
+    def sync_echo(
+        payload: InferredEchoInput,
+        ctx: RuntimeContext,
+    ) -> InferredEchoOutput:
+        return InferredEchoOutput(echoed=payload.value)
+
+    @node()
+    async def async_echo(
+        payload: InferredAsyncInput,
+        ctx: RuntimeContext,
+    ) -> InferredAsyncOutput:
+        return InferredAsyncOutput(echoed=f"async:{payload.value}")
+
+    registry = build_async_registry(sync_echo, async_echo)
+    ctx = RuntimeContext(current_node_id="demo")
+
+    async def run_handler(name: str, value: str) -> dict[str, object]:
+        return await registry[name]({"value": value}, ctx)
+
+    sync_result = asyncio.run(run_handler("sync_echo", "hello"))
+    async_result = asyncio.run(run_handler("async_echo", "world"))
+
+    assert sync_result == {"outcome": "ok", "output": {"echoed": "hello"}}
+    assert async_result == {"outcome": "ok", "output": {"echoed": "async:world"}}
 
 
 @node()

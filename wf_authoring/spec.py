@@ -15,6 +15,10 @@ NodeCallable = Callable[[InputT, RuntimeContext], "NodeReturn[OutputT] | OutputT
 AsyncNodeCallable = Callable[
     [InputT, RuntimeContext], Awaitable["NodeReturn[OutputT] | OutputT"]
 ]
+SyncRegistryHandler = Callable[[dict[str, Any], RuntimeContext], dict[str, Any]]
+AsyncRegistryHandler = Callable[
+    [dict[str, Any], RuntimeContext], Awaitable[dict[str, Any]]
+]
 
 
 def _schema_ref_for(model_type: type[BaseModel]) -> SchemaRef:
@@ -25,6 +29,28 @@ def _schema_ref_for(model_type: type[BaseModel]) -> SchemaRef:
 class NodeReturn(Generic[OutputT]):
     outcome: str
     output: OutputT
+
+
+def _coerce_registry_result(
+    *,
+    node_name: str,
+    output_model: type[BaseModel],
+    default_outcome: str,
+    raw: NodeReturn[BaseModel] | BaseModel,
+) -> dict[str, Any]:
+    if isinstance(raw, NodeReturn):
+        if not isinstance(raw.output, output_model):
+            raise TypeError(
+                f"node {node_name!r} returned NodeReturn with unsupported output "
+                f"{type(raw.output)!r}"
+            )
+        return {
+            "outcome": raw.outcome,
+            "output": raw.output.model_dump(),
+        }
+    if isinstance(raw, output_model):
+        return {"outcome": default_outcome, "output": raw.model_dump()}
+    raise TypeError(f"node {node_name!r} returned unsupported value {type(raw)!r}")
 
 
 def _is_basemodel_subclass(value: object) -> bool:
@@ -113,7 +139,7 @@ class NodeSpec(Generic[InputT, OutputT]):
             outcomes=list(self.outcomes),
         )
 
-    def to_registry_handler(self) -> Callable[[dict[str, Any], RuntimeContext], dict[str, Any]]:
+    def to_registry_handler(self) -> SyncRegistryHandler:
         if self.is_async:
             raise TypeError(
                 f"node {self.name!r} is async and cannot be exported to the sync registry"
@@ -122,20 +148,34 @@ class NodeSpec(Generic[InputT, OutputT]):
         def handler(payload: dict[str, Any], ctx: RuntimeContext) -> dict[str, Any]:
             parsed = self.input_model.model_validate(payload)
             raw = self.fn(parsed, ctx)
-            if isinstance(raw, NodeReturn):
-                if not isinstance(raw.output, self.output_model):
-                    raise TypeError(
-                        f"node {self.name!r} returned NodeReturn with unsupported output "
-                        f"{type(raw.output)!r}"
-                    )
-                return {
-                    "outcome": raw.outcome,
-                    "output": raw.output.model_dump(),
-                }
-            if isinstance(raw, self.output_model):
-                return {"outcome": self.outcomes[0], "output": raw.model_dump()}
-            raise TypeError(
-                f"node {self.name!r} returned unsupported value {type(raw)!r}"
+            return _coerce_registry_result(
+                node_name=self.name,
+                output_model=self.output_model,
+                default_outcome=self.outcomes[0],
+                raw=cast(NodeReturn[BaseModel] | BaseModel, raw),
+            )
+
+        return handler
+
+    def to_async_registry_handler(self) -> AsyncRegistryHandler:
+        async def handler(
+            payload: dict[str, Any],
+            ctx: RuntimeContext,
+        ) -> dict[str, Any]:
+            parsed = self.input_model.model_validate(payload)
+            raw_result = self.fn(parsed, ctx)
+            if self.is_async:
+                raw = await cast(
+                    Awaitable[NodeReturn[OutputT] | OutputT],
+                    raw_result,
+                )
+            else:
+                raw = cast(NodeReturn[OutputT] | OutputT, raw_result)
+            return _coerce_registry_result(
+                node_name=self.name,
+                output_model=self.output_model,
+                default_outcome=self.outcomes[0],
+                raw=cast(NodeReturn[BaseModel] | BaseModel, raw),
             )
 
         return handler
@@ -217,5 +257,11 @@ def node(
 
 def build_registry(
     *specs: NodeSpec[Any, Any],
-) -> dict[str, Callable[[dict[str, Any], RuntimeContext], dict[str, Any]]]:
+) -> dict[str, SyncRegistryHandler]:
     return {spec.name: spec.to_registry_handler() for spec in specs}
+
+
+def build_async_registry(
+    *specs: NodeSpec[Any, Any],
+) -> dict[str, AsyncRegistryHandler]:
+    return {spec.name: spec.to_async_registry_handler() for spec in specs}
