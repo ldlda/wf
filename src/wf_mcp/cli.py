@@ -47,6 +47,11 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Expose proxied prompts through list_prompts/get_prompt tools.",
     )
+    serve.add_argument(
+        "--search-tools",
+        action="store_true",
+        help="Collapse a large tool catalog into a search interface, for discovery on demand",
+    )
 
     subparsers.add_parser("connections", help="List configured connections.")
     subparsers.add_parser("status", help="Show connection status and snapshot counts.")
@@ -115,6 +120,7 @@ def main(argv: list[str] | None = None) -> int:
                 args.transport,
                 resources_as_tools=args.resources_as_tools,
                 prompts_as_tools=args.prompts_as_tools,
+                search_tools=args.search_tools,
             )
         else:
             run_broker_server(args.config, args.transport)

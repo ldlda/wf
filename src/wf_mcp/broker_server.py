@@ -8,9 +8,10 @@ from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
+from .config_models import BrokerConfigFile
 from .error_info import error_payload
 from .mcp_sdk_adapter import McpSdkAdapter
-from .models import BrokerConfig, ConnectionConfig
+from .models import BrokerConfig
 from .service import WfMcpService
 from .store import FileStore
 from .transparent_proxy import create_transparent_proxy_server
@@ -19,13 +20,7 @@ from .transparent_proxy import create_transparent_proxy_server
 def load_broker_config(path: str | Path) -> BrokerConfig:
     config_path = Path(path)
     data = json.loads(config_path.read_text(encoding="utf-8"))
-    store_root_raw = data.get("store_root", ".wf_mcp_store")
-    store_root = Path(store_root_raw)
-    if not store_root.is_absolute():
-        store_root = (config_path.parent / store_root).resolve()
-
-    connections = [ConnectionConfig(**item) for item in data.get("connections", [])]
-    return BrokerConfig(store_root=store_root, connections=connections)
+    return BrokerConfigFile.model_validate(data).to_runtime(config_path=config_path)
 
 
 def build_service_from_config(config: BrokerConfig) -> WfMcpService:
@@ -228,12 +223,14 @@ def run_transparent_proxy_server(
     *,
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
+    search_tools: bool = False,
 ) -> None:
     config = load_broker_config(config_path)
     server = create_transparent_proxy_server(
         config,
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
+        search_tools=search_tools,
     )
     server.run(transport=normalize_transport(transport), show_banner=False)
 

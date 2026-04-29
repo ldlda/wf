@@ -19,6 +19,12 @@ from .capabilities import (
 )
 from .catalog import CombinedCatalog
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
+from .config_models import (
+    BrokerConfigFile,
+    ConnectionConfigFile,
+    HttpConnectionMetadata,
+    StdioConnectionMetadata,
+)
 from .discovery import (
     DiscoveredConnectionCapabilities,
     discover_connection_capabilities,
@@ -39,6 +45,7 @@ from .store import FileStore, Store
 from .transparent_proxy import (
     broker_config_to_fastmcp_config,
     connection_to_fastmcp_server_config,
+    create_proxy_admin_server,
     create_transparent_proxy_client,
     create_transparent_proxy_server,
 )
@@ -54,23 +61,28 @@ __all__ = [
     "CatalogSnapshot",
     "CombinedCatalog",
     "ConnectionConfig",
+    "ConnectionConfigFile",
     "ConnectionRegistry",
     "DiscoveredConnectionCapabilities",
     "DiscoveredPrompt",
     "DiscoveredResource",
     "DiscoveredTool",
     "FileStore",
+    "BrokerConfigFile",
+    "HttpConnectionMetadata",
     "McpEvent",
     "McpSdkAdapter",
     "ProxyConfigError",
     "RawWorkflowPlan",
     "Store",
+    "StdioConnectionMetadata",
     "ToolCallResult",
     "WfMcpService",
     "build_service_from_config",
     "broker_config_to_fastmcp_config",
     "connection_to_fastmcp_server_config",
     "create_broker_server",
+    "create_proxy_admin_server",
     "create_transparent_proxy_client",
     "create_transparent_proxy_server",
     "discover_connection_capabilities",

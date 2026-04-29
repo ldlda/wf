@@ -7,6 +7,7 @@ from .models import BrokerConfig, ConnectionConfig
 
 _NAMESPACE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 _SUPPORTED_TRANSPORTS = {"stdio", "http", "streamable-http", "streamable_http", "sse"}
+_RESERVED_CONNECTION_IDS = {"wf.mcp"}
 
 
 class ProxyConfigError(ValueError):
@@ -50,6 +51,8 @@ def _validate_connection_ids(
         if not connection_id:
             errors.append("connection id must not be empty")
             continue
+        if connection_id in _RESERVED_CONNECTION_IDS:
+            errors.append(f"connection id {connection_id!r} is reserved by wf-mcp")
         if "_" in connection_id:
             errors.append(
                 f"connection id {connection_id!r} must not contain '_' because "
