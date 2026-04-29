@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from typing import Any
 
 import pytest
 
@@ -16,6 +17,12 @@ from wf_mcp import (
 from wf_mcp.broker_server import load_broker_config
 
 from tests.test_wf_mcp_support import fixture_server_path, local_temp_root
+
+
+def _structured(result: Any) -> dict[str, Any]:
+    content = result.structured_content
+    assert isinstance(content, dict)
+    return content
 
 
 def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
@@ -42,10 +49,11 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             names = [tool.name for tool in tools]
             assert "wf.mcp_list_connections" in names
             assert "wf.mcp_get_connection_statuses" in names
+            assert "wf.mcp_list_proxy_tools" in names
             assert "fixture.personal_echo_tool" in names
 
             connections_result = await client.call_tool("wf.mcp_list_connections")
-            assert connections_result.structured_content == {
+            assert _structured(connections_result) == {
                 "result": [
                     {
                         "id": "fixture.personal",
@@ -65,7 +73,15 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
                 "fixture.personal_echo_tool",
                 {"text": "hello"},
             )
-            assert result.structured_content == {"echoed": "hello"}
+            assert _structured(result) == {"echoed": "hello"}
+
+            proxy_tools_result = await client.call_tool("wf.mcp_list_proxy_tools")
+            proxy_tools = _structured(proxy_tools_result)["result"]
+            assert len(proxy_tools) == 1
+            assert proxy_tools[0]["proxy_name"] == "fixture.personal_echo_tool"
+            assert proxy_tools[0]["connection_id"] == "fixture.personal"
+            assert proxy_tools[0]["local_name"] == "echo_tool"
+            assert proxy_tools[0]["enabled"] is True
 
     asyncio.run(run_proxy())
 
@@ -178,6 +194,7 @@ def test_transparent_proxy_can_collapse_upstream_tools_behind_search() -> None:
             assert "search_tools" in names
             assert "wf.mcp_list_connections" in names
             assert "wf.mcp_get_connection_statuses" in names
+            assert "wf.mcp_list_proxy_tools" in names
             assert "fixture.personal_echo_tool" not in names
 
             search_result = await client.call_tool(
@@ -228,7 +245,7 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
                     },
                 },
             )
-            assert add_result.structured_content == {
+            assert _structured(add_result) == {
                 "action": "add_connection",
                 "connection_id": "fixture.work",
                 "ok": True,
@@ -239,7 +256,7 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
                 "wf.mcp_disable_connection",
                 {"connection_id": "fixture.work"},
             )
-            assert disable_result.structured_content == {
+            assert _structured(disable_result) == {
                 "action": "update_connection",
                 "connection_id": "fixture.work",
                 "ok": True,
@@ -257,7 +274,7 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
                     },
                 },
             )
-            assert update_result.structured_content == {
+            assert _structured(update_result) == {
                 "action": "update_connection",
                 "connection_id": "fixture.work",
                 "ok": True,
@@ -265,13 +282,13 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
             }
 
             config_result = await client.call_tool("wf.mcp_get_config")
-            assert "fixture.work" in str(config_result.structured_content)
+            assert "fixture.work" in str(_structured(config_result))
 
             remove_result = await client.call_tool(
                 "wf.mcp_remove_connection",
                 {"connection_id": "fixture.work"},
             )
-            assert remove_result.structured_content == {
+            assert _structured(remove_result) == {
                 "action": "remove_connection",
                 "connection_id": "fixture.work",
                 "ok": True,
@@ -327,7 +344,7 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
             assert "fixture.personal_echo_tool" not in before_reload_names
 
             reload_result = await client.call_tool("wf.mcp_reload_config")
-            assert reload_result.structured_content == {
+            assert _structured(reload_result) == {
                 "ok": True,
                 "reloaded": True,
                 "mounted_connections": ["fixture.personal"],
@@ -343,6 +360,6 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
                 "fixture.personal_echo_tool",
                 {"text": "reloaded"},
             )
-            assert result.structured_content == {"echoed": "reloaded"}
+            assert _structured(result) == {"echoed": "reloaded"}
 
     asyncio.run(run_proxy())

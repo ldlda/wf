@@ -40,6 +40,13 @@ from .models import (
     RawWorkflowPlan,
 )
 from .mcp_sdk_adapter import McpSdkAdapter
+from .names import (
+    ADMIN_NAMESPACE,
+    ProxyToolName,
+    is_admin_tool_name,
+    namespaced_tool_name,
+    parse_namespaced_tool_name,
+)
 from .proxy_validation import ProxyConfigError, validate_transparent_proxy_config
 from .service import WfMcpService
 from .store import FileStore, Store
@@ -55,6 +62,7 @@ from .wrappers import wrap_discovered_tool
 
 __all__ = [
     "AuthRecord",
+    "ADMIN_NAMESPACE",
     "BackendAdapter",
     "BrokerConfig",
     "BrokerConfigManager",
@@ -77,6 +85,7 @@ __all__ = [
     "McpEvent",
     "McpSdkAdapter",
     "ProxyConfigError",
+    "ProxyToolName",
     "RawWorkflowPlan",
     "Store",
     "StdioConnectionMetadata",
@@ -91,9 +100,12 @@ __all__ = [
     "create_transparent_proxy_client",
     "create_transparent_proxy_server",
     "discover_connection_capabilities",
+    "is_admin_tool_name",
     "load_broker_config",
     "make_event",
+    "namespaced_tool_name",
     "parse_connection_id",
+    "parse_namespaced_tool_name",
     "qualify_node_name",
     "run_broker_server",
     "run_transparent_proxy_server",

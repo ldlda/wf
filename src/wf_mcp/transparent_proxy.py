@@ -15,19 +15,20 @@ from fastmcp.server.transforms.search import BM25SearchTransform
 
 from .config_manager import BrokerConfigManager, ConfigMutationError
 from .models import BrokerConfig, ConnectionConfig
+from .names import ADMIN_NAMESPACE, is_admin_tool_name, parse_namespaced_tool_name
 from .proxy_validation import validate_transparent_proxy_config
 
-_ADMIN_NAMESPACE = "wf.mcp"
 _ADMIN_TOOL_NAMES = [
-    f"{_ADMIN_NAMESPACE}_list_connections",
-    f"{_ADMIN_NAMESPACE}_get_connection_statuses",
-    f"{_ADMIN_NAMESPACE}_get_config",
-    f"{_ADMIN_NAMESPACE}_reload_config",
-    f"{_ADMIN_NAMESPACE}_add_connection",
-    f"{_ADMIN_NAMESPACE}_update_connection",
-    f"{_ADMIN_NAMESPACE}_enable_connection",
-    f"{_ADMIN_NAMESPACE}_disable_connection",
-    f"{_ADMIN_NAMESPACE}_remove_connection",
+    f"{ADMIN_NAMESPACE}_list_connections",
+    f"{ADMIN_NAMESPACE}_get_connection_statuses",
+    f"{ADMIN_NAMESPACE}_get_config",
+    f"{ADMIN_NAMESPACE}_reload_config",
+    f"{ADMIN_NAMESPACE}_list_proxy_tools",
+    f"{ADMIN_NAMESPACE}_add_connection",
+    f"{ADMIN_NAMESPACE}_update_connection",
+    f"{ADMIN_NAMESPACE}_enable_connection",
+    f"{ADMIN_NAMESPACE}_disable_connection",
+    f"{ADMIN_NAMESPACE}_remove_connection",
 ]
 
 
@@ -78,7 +79,7 @@ class TransparentProxyRuntime:
         self.server.providers[:] = [self.server.local_provider]
 
         admin = create_proxy_admin_server(self)
-        admin.add_transform(Namespace(_ADMIN_NAMESPACE))
+        admin.add_transform(Namespace(ADMIN_NAMESPACE))
         self.server.mount(admin)
 
         mounted_connections: list[str] = []
@@ -102,6 +103,31 @@ class TransparentProxyRuntime:
             "connection_count": len(config.connections),
             "enabled_connection_count": len(mounted_connections),
         }
+
+    async def list_proxy_tools(self) -> list[dict[str, Any]]:
+        config = self.current_config()
+        connection_ids = {
+            connection.id for connection in config.connections if connection.enabled
+        }
+        tools = await self.server.list_tools()
+        result: list[dict[str, Any]] = []
+        for tool in tools:
+            if is_admin_tool_name(tool.name):
+                continue
+            parsed = parse_namespaced_tool_name(tool.name, connection_ids)
+            if parsed is None:
+                continue
+            result.append(
+                {
+                    "proxy_name": parsed.proxy_name,
+                    "connection_id": parsed.connection_id,
+                    "local_name": parsed.local_name,
+                    "title": tool.title,
+                    "description": tool.description,
+                    "enabled": True,
+                }
+            )
+        return sorted(result, key=lambda item: item["proxy_name"])
 
 
 def create_proxy_admin_server(
@@ -151,6 +177,10 @@ def create_proxy_admin_server(
     @admin.tool()
     async def reload_config() -> dict[str, Any]:
         return runtime.reload()
+
+    @admin.tool()
+    async def list_proxy_tools() -> list[dict[str, Any]]:
+        return await runtime.list_proxy_tools()
 
     @admin.tool()
     async def add_connection(
