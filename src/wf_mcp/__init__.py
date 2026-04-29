@@ -19,6 +19,7 @@ from .capabilities import (
 )
 from .catalog import CombinedCatalog
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
+from .config_manager import BrokerConfigManager, ConfigMutationError
 from .config_models import (
     BrokerConfigFile,
     ConnectionConfigFile,
@@ -43,6 +44,7 @@ from .proxy_validation import ProxyConfigError, validate_transparent_proxy_confi
 from .service import WfMcpService
 from .store import FileStore, Store
 from .transparent_proxy import (
+    TransparentProxyRuntime,
     broker_config_to_fastmcp_config,
     connection_to_fastmcp_server_config,
     create_proxy_admin_server,
@@ -55,6 +57,7 @@ __all__ = [
     "AuthRecord",
     "BackendAdapter",
     "BrokerConfig",
+    "BrokerConfigManager",
     "CatalogNodeEntry",
     "CatalogPromptEntry",
     "CatalogResourceEntry",
@@ -63,6 +66,7 @@ __all__ = [
     "ConnectionConfig",
     "ConnectionConfigFile",
     "ConnectionRegistry",
+    "ConfigMutationError",
     "DiscoveredConnectionCapabilities",
     "DiscoveredPrompt",
     "DiscoveredResource",
@@ -77,6 +81,7 @@ __all__ = [
     "Store",
     "StdioConnectionMetadata",
     "ToolCallResult",
+    "TransparentProxyRuntime",
     "WfMcpService",
     "build_service_from_config",
     "broker_config_to_fastmcp_config",

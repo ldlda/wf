@@ -2,18 +2,6 @@
   "store_root": ".wf_mcp_store",
   "connections": [
     {
-      "id": "everything.default",
-      "server": "everything",
-      "account": "default",
-      "enabled": true,
-      "metadata": {
-        "transport": "stdio",
-        "command": "pnpx",
-        "args": [
-          "@modelcontextprotocol/server-everything"
-        ]
-      }
-    }, {
       "id": "context7.default",
       "server": "context7",
       "account": "default",
@@ -23,7 +11,37 @@
         "command": "pnpx",
         "args": [
           "@upstash/context7-mcp"
-        ]
+        ],
+        "env": {}
+      }
+    },
+    {
+      "id": "serena.default",
+      "server": "serena",
+      "account": "default",
+      "enabled": true,
+      "metadata": {
+        "transport": "stdio",
+        "command": "serena",
+        "args": [
+          "start-mcp-server",
+          "--enable-web-dashboard=true"
+        ],
+        "env": {}
+      }
+    },
+    {
+      "id": "everything.default",
+      "server": "everything",
+      "account": "default",
+      "enabled": true,
+      "metadata": {
+        "transport": "stdio",
+        "command": "pnpx",
+        "args": [
+          "@modelcontextprotocol/server-everything"
+        ],
+        "env": {}
       }
     }
   ]

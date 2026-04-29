@@ -228,6 +228,7 @@ def run_transparent_proxy_server(
     config = load_broker_config(config_path)
     server = create_transparent_proxy_server(
         config,
+        config_path=config_path,
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
         search_tools=search_tools,
