@@ -11,7 +11,13 @@ from wf_mcp import (
     WfMcpService,
 )
 
-from test_wf_mcp_support import FakeAdapter, echo_tool, finalize_tool, local_temp_root
+from test_wf_mcp_support import (
+    FailingDiscoveryAdapter,
+    FakeAdapter,
+    echo_tool,
+    finalize_tool,
+    local_temp_root,
+)
 
 
 def test_service_builds_namespaced_catalog() -> None:
@@ -311,3 +317,29 @@ def test_service_can_invoke_raw_method_and_notification() -> None:
     assert "raw_method_completed" in event_kinds
     assert "raw_notification_started" in event_kinds
     assert "raw_notification_completed" in event_kinds
+
+
+def test_service_records_catalog_refresh_failures() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "refresh_fail_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FailingDiscoveryAdapter())
+
+    try:
+        asyncio.run(service.refresh_connection_catalog("demo.personal"))
+    except PermissionError as exc:
+        assert str(exc) == "Access is denied"
+    else:
+        raise AssertionError("expected refresh to fail")
+
+    failure_events = [
+        event
+        for event in service.list_events()
+        if event.kind == "catalog_refresh_failed"
+    ]
+    assert len(failure_events) == 1
+    assert failure_events[0].payload == {
+        "error_type": "PermissionError",
+        "error": "Access is denied",
+    }

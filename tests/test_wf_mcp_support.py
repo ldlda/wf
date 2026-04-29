@@ -243,7 +243,17 @@ class FakeAdapter:
         )
 
 
+class FailingDiscoveryAdapter(FakeAdapter):
+    async def list_tools(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredTool]:
+        raise PermissionError("Access is denied")
+
+
 __all__ = [
+    "FailingDiscoveryAdapter",
     "FakeAdapter",
     "echo_tool",
     "everything_server_connection",

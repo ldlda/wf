@@ -52,6 +52,40 @@ def _json_dump(data: Any) -> None:
     print(json.dumps(data, indent=2))
 
 
+async def _refresh_all(service, connection_id: str | None) -> list[dict[str, Any]]:
+    target_ids = (
+        [connection_id]
+        if connection_id is not None
+        else [connection.id for connection in service.connections.list_enabled()]
+    )
+    results: list[dict[str, Any]] = []
+    for target_id in target_ids:
+        try:
+            await service.refresh_connection_catalog(target_id)
+            snapshot = service.get_connection_snapshot(target_id)
+            results.append(
+                {
+                    "connection_id": target_id,
+                    "refreshed": snapshot is not None,
+                    "node_count": 0 if snapshot is None else len(snapshot.nodes),
+                    "resource_count": 0
+                    if snapshot is None
+                    else len(snapshot.resources),
+                    "prompt_count": 0 if snapshot is None else len(snapshot.prompts),
+                }
+            )
+        except Exception as exc:
+            results.append(
+                {
+                    "connection_id": target_id,
+                    "refreshed": False,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                }
+            )
+    return results
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -82,12 +116,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "refresh":
-        if args.connection_id:
-            asyncio.run(service.refresh_connection_catalog(args.connection_id))
-        else:
-            for connection in service.connections.list_enabled():
-                asyncio.run(service.refresh_connection_catalog(connection.id))
-        _json_dump(service.get_catalog().as_payload())
+        results = asyncio.run(_refresh_all(service, args.connection_id))
+        _json_dump(
+            {
+                "results": results,
+                "catalog": service.get_catalog().as_payload(),
+            }
+        )
+        if any(not result["refreshed"] for result in results):
+            return 1
         return 0
 
     parser.error(f"unknown command {args.command!r}")

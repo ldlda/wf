@@ -4,7 +4,7 @@ import json
 import os
 from dataclasses import asdict
 from pathlib import Path
-from typing import Any, Literal, cast
+from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
@@ -57,7 +57,15 @@ def create_broker_server(service: WfMcpService) -> FastMCP:
 
     @server.tool()
     async def refresh_connection_catalog(connection_id: str) -> dict[str, Any]:
-        await service.refresh_connection_catalog(connection_id)
+        try:
+            await service.refresh_connection_catalog(connection_id)
+        except Exception as exc:
+            return {
+                "connection_id": connection_id,
+                "refreshed": False,
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            }
         snapshot = service.get_connection_snapshot(connection_id)
         if snapshot is None:
             return {"connection_id": connection_id, "refreshed": False}

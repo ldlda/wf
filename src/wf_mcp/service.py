@@ -292,44 +292,57 @@ class WfMcpService:
                 payload={"server": connection.server},
             )
         )
-        capabilities = await discover_connection_capabilities(
-            connection=connection,
-            auth=auth,
-            adapter=adapter,
-        )
-        specs = specs_from_discovered_tools(
-            connection=connection,
-            auth=auth,
-            adapter=adapter,
-            tools=capabilities.tools,
-            emit_event=self._record_event,
-        )
-        self.register_specs(
-            connection_id,
-            *specs,
-            max_age_seconds=max_age_seconds,
-        )
-        snapshot = snapshot_from_specs(
-            connection_id,
-            specs=self.specs_by_connection.get(connection_id, {}),
-            resources=capabilities.resources,
-            prompts=capabilities.prompts,
-            metadata=capabilities.metadata,
-            fetched_at_epoch_ms=int(time.time() * 1000),
-            max_age_seconds=max_age_seconds or self.default_catalog_max_age_seconds,
-        )
-        self.store.save_catalog(snapshot)
-        self._record_event(
-            make_event(
-                "catalog_refresh_completed",
-                connection_id=connection_id,
-                payload={
-                    "node_count": len(snapshot.nodes),
-                    "resource_count": len(snapshot.resources),
-                    "prompt_count": len(snapshot.prompts),
-                },
+        try:
+            capabilities = await discover_connection_capabilities(
+                connection=connection,
+                auth=auth,
+                adapter=adapter,
             )
-        )
+            specs = specs_from_discovered_tools(
+                connection=connection,
+                auth=auth,
+                adapter=adapter,
+                tools=capabilities.tools,
+                emit_event=self._record_event,
+            )
+            self.register_specs(
+                connection_id,
+                *specs,
+                max_age_seconds=max_age_seconds,
+            )
+            snapshot = snapshot_from_specs(
+                connection_id,
+                specs=self.specs_by_connection.get(connection_id, {}),
+                resources=capabilities.resources,
+                prompts=capabilities.prompts,
+                metadata=capabilities.metadata,
+                fetched_at_epoch_ms=int(time.time() * 1000),
+                max_age_seconds=max_age_seconds or self.default_catalog_max_age_seconds,
+            )
+            self.store.save_catalog(snapshot)
+            self._record_event(
+                make_event(
+                    "catalog_refresh_completed",
+                    connection_id=connection_id,
+                    payload={
+                        "node_count": len(snapshot.nodes),
+                        "resource_count": len(snapshot.resources),
+                        "prompt_count": len(snapshot.prompts),
+                    },
+                )
+            )
+        except Exception as exc:
+            self._record_event(
+                make_event(
+                    "catalog_refresh_failed",
+                    connection_id=connection_id,
+                    payload={
+                        "error_type": type(exc).__name__,
+                        "error": str(exc),
+                    },
+                )
+            )
+            raise
 
     def compile_plan(self, plan: RawWorkflowPlan) -> Workflow:
         node_defs: dict[str, Any] = {}

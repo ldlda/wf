@@ -13,7 +13,7 @@ from wf_mcp import (
     load_broker_config,
 )
 
-from test_wf_mcp_support import FakeAdapter, local_temp_root
+from test_wf_mcp_support import FailingDiscoveryAdapter, FakeAdapter, local_temp_root
 
 
 def test_load_broker_config_resolves_relative_store_root() -> None:
@@ -80,3 +80,23 @@ def test_build_service_from_config_registers_connections() -> None:
 
     ids = [connection.id for connection in service.connections.list_all()]
     assert ids == ["demo.personal", "demo.work"]
+
+
+def test_broker_refresh_tool_returns_structured_error() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "broker_fail_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FailingDiscoveryAdapter())
+
+    server = create_broker_server(service)
+
+    _content, structured = asyncio.run(
+        server.call_tool("refresh_connection_catalog", {"connection_id": "demo.personal"})
+    )
+    assert structured == {
+        "connection_id": "demo.personal",
+        "refreshed": False,
+        "error_type": "PermissionError",
+        "error": "Access is denied",
+    }
