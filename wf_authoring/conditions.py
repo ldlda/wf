@@ -75,10 +75,10 @@ class PathExpr:
     def lt(self, other: object) -> Expr:
         return self._binary("lt", other)
 
-    def __eq__(self, other: object) -> Expr:  # ty: ignore[invalid-method-override]
+    def __eq__(self, other: object) -> Expr:  # type: ignore[override] # ty: ignore[invalid-method-override]
         return self._binary("eq", other)
 
-    def __ne__(self, other: object) -> Expr:  # ty: ignore[invalid-method-override]
+    def __ne__(self, other: object) -> Expr:  # type: ignore[override] # ty: ignore[invalid-method-override]
         return self._binary("ne", other)
 
     def __gt__(self, other: object) -> Expr:

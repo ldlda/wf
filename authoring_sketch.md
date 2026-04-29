@@ -124,6 +124,101 @@ Preferred design:
 If sync runtime encounters an async node, fail clearly rather than faking a sync
 bridge.
 
+## Async runtime seam
+
+The intended async work should be additive, not a rewrite.
+
+Recommended shape:
+
+- keep current sync runtime as the stable baseline
+- add async siblings instead of mutating the sync path into a mixed mode
+- avoid hidden sync-to-async or async-to-sync bridges in core execution
+
+Likely async entry points:
+
+- `execute_workflow_async(...)`
+- `resume_workflow_async(...)`
+- `step_workflow_async(...)`
+- `execute_node_use_async(...)`
+
+Likely registry split:
+
+- sync registry: `dict[str, SyncNodeHandler]`
+- async registry: `dict[str, AsyncNodeHandler]`
+
+`NodeSpec` should support both export paths:
+
+- `to_registry_handler()` for sync callables only
+- `to_async_registry_handler()` for sync or async callables
+- `build_registry(...)` for sync specs
+- `build_async_registry(...)` for mixed or async specs
+
+This keeps the rules simple:
+
+- sync runtime executes sync handlers only
+- async runtime can execute both sync and async handlers
+- async runtime is the natural home for future MCP-backed tool nodes
+
+## MCP proxy layer
+
+MCP integration should sit above `wf_core`, not inside it.
+
+Recommended layering:
+
+1. MCP client or proxy code discovers tools
+2. each MCP tool is wrapped as a `NodeSpec`
+3. wrapped specs enter the same `NodeCatalog` as handwritten nodes
+4. the client LLM builds graphs against one unified catalog
+5. workflows compile to the existing core `Workflow`
+6. runtime executes registry handlers without caring whether the backing tool is local Python or MCP
+
+This means MCP tools should look like ordinary nodes at the authoring boundary:
+
+- declared input model
+- declared output model
+- declared outcomes
+- description/docs for LLM consumption
+- sync or async execution capability
+
+The proxy/MCP layer should be responsible for:
+
+- tool discovery
+- schema translation
+- auth/session concerns
+- wrapping tool calls into `NodeSpec`s
+
+The core runtime should remain responsible only for:
+
+- mapping input/state/context into node payloads
+- validating payloads
+- routing outcomes
+- writing mapped output into workflow state
+- interrupts, frames, trace, and foreach semantics
+
+## Type validation stance
+
+Current core validation is intentionally shallow. Today it mainly enforces:
+
+- object payloads are dict-like
+- required keys exist
+
+It does not yet fully enforce:
+
+- scalar field types
+- nested object structure
+- array item types
+- enums/literals
+
+Near-term recommendation:
+
+- keep `SchemaRef` as the portable contract/export shape
+- keep using `pydantic.BaseModel` as the strongest validation layer for authored nodes
+- gradually strengthen core schema validation where it pays off
+
+This is especially useful for MCP wrapping, because the proxy layer can often
+normalize a tool contract into Pydantic models before the workflow runtime sees
+it.
+
 ## Future extension
 
 ### `Workflow -> NodeSpec`

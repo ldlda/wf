@@ -264,12 +264,12 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "mcp", extras = ["cli", "rich"], specifier = ">=1.27.0" },
-    { name = "pydantic", specifier = ">=2.13.3" },
+    { name = "mcp", extras = ["cli", "rich"], specifier = ">=1" },
+    { name = "pydantic", specifier = ">=2" },
 ]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=8.4.0" }]
+dev = [{ name = "pytest", specifier = ">=8" }]
 
 [[package]]
 name = "markdown-it-py"

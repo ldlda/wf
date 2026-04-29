@@ -1,88 +1,17 @@
 # Graph as struct? workflow as struct
 
-One graph is one input output
+This file is now mostly a working design note.
 
-i decide to make edge dumb as shit. Nodes do all the work
+The original top section was rough brainstorming around a few ideas that did end
+up surviving:
 
-struct needs to define in, out and ALL states. any output from a node is either writing to state or writing to a key of it.
+- edges should stay dumb
+- nodes should own business outcomes
+- graph use-sites should explicitly map input and output
+- workflow state needs declared merge behavior
+- a workflow/subgraph should eventually be reusable like a function
 
-metadata for states to hide in tracing
-
-whatever language works
-
-## plan
-
-dumbass stupid plan fuhh ahh plan
-
-```text
-.in -> pydantic.create_model
-.out -> pydantic.create_model
-.state // langgraph partial update style
-.steps[] // either nodes only or all everything (all everything seems cooler I LIKE ENUMS but it could be stupih)
-.steps[]:
-  .type IN node, edge
-  node:
-    .tool // ours, so do ts well
-    .args
-    .desc?
-    .bind? // either update .state or .state[.bind]
-  edge:
-    .from
-    .to
-```
-
-### next node
-
-GENUINELY HOW do i convey next node?
-do i pass next node in arg? args.next.{this cond, that cond}
-
-function do need to know about where its run. Who called. So it can decide where it goes next. how? idk maybe a context struct that has the full next list from .edges[]?
-
-or can it just reference any next node? but how? who tells it what node?
-
-function 100% can select what node it wants to go next if supported. Since this is MY stuff, a function I make can do that.
-
-### registry
-
-past graph can turn into a function. so a graph is lowk same thing as a fn.
-
-### input
-
-how in the FUCK do i convey input!
-
-this is how:
-
-since input is state, this function kinda doesnt care about args. Args comes from state.
-
-a function cares about certain keys (args) looking this shape, the least i can do is a remap on node {"specialized graph state key": "generic fn input key"}
-
-same as output {"generic fn answer key": "specialized graph state key"}
-
-### this is lowk constricted
-
-But the counterpart is freeform code...
-
-### more problems
-
-batch? foreach?
-
-control flow.
-
-maybe special nodes that does control flow. Like ensure: something that only after all nodes connected to it ran does it run the nodes it connects to?
-
-if bool = exist, maybe truth table node... if .state.key1 and .state.key2
-
-## Alternative plan! god damn
-
-that was looking like langgraphs Graph API, we could have Functional API being a taddddd simpler: functions imported and run in a sealed ahh box.
-
-functional api is actually peam. its like async.
-
-## inspo
-
-my little use of langgraph
-my nonexistent knowledge of openai fn schema
-claude
+The cleaned spec starts below.
 
 ---
 
