@@ -37,6 +37,27 @@ def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
 
     payload = service.get_catalog().as_payload()
     assert payload["nodes"][0]["qualified_name"] == "fixture.personal.echo_tool"
+    assert payload["resources"] == [
+        {
+            "qualified_name": "fixture.personal.resource.welcome",
+            "connection_id": "fixture.personal",
+            "local_name": "resource.welcome",
+            "uri": "fixture://docs/welcome",
+            "description": "Welcome text resource for fixture tests.",
+            "mime_type": "text/plain",
+            "metadata": payload["resources"][0]["metadata"],
+        }
+    ]
+    assert payload["prompts"] == [
+        {
+            "qualified_name": "fixture.personal.prompt.summarize",
+            "connection_id": "fixture.personal",
+            "local_name": "prompt.summarize",
+            "description": "Summarize an input text for fixture tests.",
+            "arguments": payload["prompts"][0]["arguments"],
+            "metadata": payload["prompts"][0]["metadata"],
+        }
+    ]
 
     adapter = McpSdkAdapter()
     try:
