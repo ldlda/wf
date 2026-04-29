@@ -364,14 +364,17 @@ def test_foreach_stress_with_many_documents() -> None:
     assert run.status == RunStatus.COMPLETED
     assert len(run.state["documents"]) == document_count
     assert len(run.state["item_summaries"]) == document_count
-    assert len(
-        [
-            frame
-            for frame in run.frames.values()
-            if frame.kind == "foreach_iteration"
-            and frame.status == FrameStatus.COMPLETED
-        ]
-    ) == document_count
+    assert (
+        len(
+            [
+                frame
+                for frame in run.frames.values()
+                if frame.kind == "foreach_iteration"
+                and frame.status == FrameStatus.COMPLETED
+            ]
+        )
+        == document_count
+    )
     assert len([entry for entry in run.trace if entry.step_type == "foreach"]) == (
         document_count + 1
     )
@@ -381,9 +384,9 @@ def test_builder_compiles_same_workflow_as_declared_demo() -> None:
     declared = build_demo_workflow()
     built, _registry = build_authoring_demo_workflow()
 
-    assert _strip_schema_titles(built.model_dump(by_alias=True)) == _strip_schema_titles(
-        declared.model_dump(by_alias=True)
-    )
+    assert _strip_schema_titles(
+        built.model_dump(by_alias=True)
+    ) == _strip_schema_titles(declared.model_dump(by_alias=True))
 
 
 def test_builder_compiled_workflow_executes_like_declared_demo() -> None:

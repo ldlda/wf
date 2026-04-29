@@ -3,7 +3,17 @@ from __future__ import annotations
 from inspect import Parameter, iscoroutinefunction, signature
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Generic, Literal, TypeVar, cast, get_args, get_origin, get_type_hints, overload
+from typing import (
+    Any,
+    Generic,
+    Literal,
+    TypeVar,
+    cast,
+    get_args,
+    get_origin,
+    get_type_hints,
+    overload,
+)
 
 from pydantic import BaseModel
 
@@ -67,9 +77,7 @@ def _infer_models(
     hints = get_type_hints(fn, include_extras=True)
     params = list(signature(fn).parameters.values())
     if len(params) < 2:
-        raise TypeError(
-            "node function must accept at least (payload, ctx) parameters"
-        )
+        raise TypeError("node function must accept at least (payload, ctx) parameters")
 
     payload_param = params[0]
     ctx_param = params[1]
@@ -87,15 +95,11 @@ def _infer_models(
 
     input_model = hints.get(payload_param.name)
     if not _is_basemodel_subclass(input_model):
-        raise TypeError(
-            "node payload annotation must be a pydantic BaseModel subclass"
-        )
+        raise TypeError("node payload annotation must be a pydantic BaseModel subclass")
 
     ctx_type = hints.get(ctx_param.name)
     if ctx_type is not RuntimeContext:
-        raise TypeError(
-            "node context annotation must be wf_core.RuntimeContext"
-        )
+        raise TypeError("node context annotation must be wf_core.RuntimeContext")
 
     return_type = hints.get("return")
     if return_type is None:
@@ -184,12 +188,12 @@ class NodeSpec(Generic[InputT, OutputT]):
 
         return handler
 
+
 @overload
 def node(
     fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT],
     /,
-) -> NodeSpec[InputT, OutputT]:
-    ...
+) -> NodeSpec[InputT, OutputT]: ...
 
 
 @overload
@@ -199,8 +203,7 @@ def node(
 ) -> Callable[
     [NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT]],
     NodeSpec[InputT, OutputT],
-]:
-    ...
+]: ...
 
 
 @overload
@@ -217,12 +220,13 @@ def node(
 ) -> Callable[
     [NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT]],
     NodeSpec[InputT, OutputT],
-]:
-    ...
+]: ...
 
 
 def node(
-    fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT] | None = None,
+    fn: NodeCallable[InputT, OutputT]
+    | AsyncNodeCallable[InputT, OutputT]
+    | None = None,
     *,
     name: str | None = None,
     input_model: type[InputT] | None = None,
@@ -276,8 +280,7 @@ def _build_registry(
     specs: tuple[NodeSpec[Any, Any], ...],
     *,
     export: Literal["sync"],
-) -> dict[str, SyncRegistryHandler]:
-    ...
+) -> dict[str, SyncRegistryHandler]: ...
 
 
 @overload
@@ -285,8 +288,7 @@ def _build_registry(
     specs: tuple[NodeSpec[Any, Any], ...],
     *,
     export: Literal["async"],
-) -> dict[str, AsyncRegistryHandler]:
-    ...
+) -> dict[str, AsyncRegistryHandler]: ...
 
 
 def _build_registry(

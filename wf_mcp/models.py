@@ -61,4 +61,3 @@ def dump_catalog_snapshot(snapshot: CatalogSnapshot) -> dict[str, Any]:
         "max_age_seconds": snapshot.max_age_seconds,
         "nodes": [asdict(node) for node in snapshot.nodes],
     }
-

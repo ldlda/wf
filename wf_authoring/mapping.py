@@ -16,15 +16,13 @@ def normalize_path(path: PathArg) -> str:
 
 def bind_fields(**mapping: PathArg) -> dict[str, str]:
     return {
-        normalize_path(source): destination
-        for destination, source in mapping.items()
+        normalize_path(source): destination for destination, source in mapping.items()
     }
 
 
 def bind_state(**mapping: PathArg) -> dict[str, str]:
     return {
-        destination: normalize_path(target)
-        for destination, target in mapping.items()
+        destination: normalize_path(target) for destination, target in mapping.items()
     }
 
 

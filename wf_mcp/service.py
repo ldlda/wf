@@ -58,7 +58,9 @@ class WfMcpService:
     ) -> None:
         self.connections.get(connection_id)
         qualified_specs = {
-            qualify_node_name(connection_id, spec.name): _qualify_spec(connection_id, spec)
+            qualify_node_name(connection_id, spec.name): _qualify_spec(
+                connection_id, spec
+            )
             for spec in specs
         }
         self.specs_by_connection[connection_id] = qualified_specs

@@ -65,21 +65,22 @@ def _fixture_server_path() -> str:
 
 
 def _everything_server_connection() -> ConnectionConfig | None:
-    command = os.environ.get("MCP_EVERYTHING_COMMAND")
-    if not command:
-        return None
-
-    raw_args = os.environ.get("MCP_EVERYTHING_ARGS", "")
-    args = [arg for arg in raw_args.split(" ") if arg]
     transport = os.environ.get("MCP_EVERYTHING_TRANSPORT", "stdio")
+    if transport == "stdio":
+        command = os.environ.get("MCP_EVERYTHING_COMMAND")
+        if not command:
+            return None
 
-    metadata: dict[str, Any] = {
-        "transport": transport,
-        "command": command,
-        "args": args,
-    }
+        raw_args = os.environ.get("MCP_EVERYTHING_ARGS", "")
+        args = [arg for arg in raw_args.split(" ") if arg]
 
-    if transport == "streamable_http":
+        metadata: dict[str, Any] = {
+            "transport": transport,
+            "command": command,
+            "args": args,
+        }
+
+    elif transport == "streamable_http":
         url = os.environ.get("MCP_EVERYTHING_URL")
         if not url:
             raise AssertionError(
@@ -89,7 +90,8 @@ def _everything_server_connection() -> ConnectionConfig | None:
             "transport": "streamable_http",
             "url": url,
         }
-
+    else:
+        return None
     return ConnectionConfig(
         id="everything.default",
         server="everything",

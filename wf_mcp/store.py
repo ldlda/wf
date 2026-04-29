@@ -78,4 +78,3 @@ class FileStore(Store):
             max_age_seconds=data["max_age_seconds"],
             nodes=[CatalogNodeEntry(**node) for node in data.get("nodes", [])],
         )
-

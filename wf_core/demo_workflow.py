@@ -192,7 +192,11 @@ def build_demo_workflow() -> Workflow:
             "edges": [
                 {"from": "list_files", "outcome": "ok", "to": "summarize_each"},
                 {"from": "summarize_each", "outcome": "loop", "to": "summarize_one"},
-                {"from": "summarize_each", "outcome": "done", "to": "combine_summaries"},
+                {
+                    "from": "summarize_each",
+                    "outcome": "done",
+                    "to": "combine_summaries",
+                },
                 {"from": "summarize_one", "outcome": "ok", "to": END},
                 {"from": "combine_summaries", "outcome": "ok", "to": "should_email"},
                 {"from": "should_email", "outcome": "true", "to": "approve_email"},

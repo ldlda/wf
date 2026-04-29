@@ -7,14 +7,10 @@ from .models import ConnectionConfig
 
 def parse_connection_id(connection_id: str) -> tuple[str, str]:
     if "." not in connection_id:
-        raise ValueError(
-            "connection id must look like '<server>.<account>'"
-        )
+        raise ValueError("connection id must look like '<server>.<account>'")
     server, account = connection_id.split(".", 1)
     if not server or not account:
-        raise ValueError(
-            "connection id must look like '<server>.<account>'"
-        )
+        raise ValueError("connection id must look like '<server>.<account>'")
     return server, account
 
 
@@ -37,5 +33,6 @@ class ConnectionRegistry:
         return self.connections[connection_id]
 
     def list_enabled(self) -> list[ConnectionConfig]:
-        return [connection for connection in self.connections.values() if connection.enabled]
-
+        return [
+            connection for connection in self.connections.values() if connection.enabled
+        ]
