@@ -380,6 +380,70 @@ If we follow the plan above, the next likely modules are:
 
 Whether these stay as separate files or fold back into `models.py` / `service.py` should be driven by clarity, not purity.
 
+## Auth and storage
+
+Auth should remain behind a pluggable store interface.
+
+First implementation:
+
+- file-backed store
+
+Expected future replacements:
+
+- database-backed store
+- encrypted local store
+- secret-manager-backed store
+
+The store should persist:
+
+- auth records
+- cached capability snapshots
+
+It may later persist:
+
+- saved plans/workflows
+- job specs
+- run metadata
+
+## Execution model
+
+Near-term execution stance:
+
+- async-first at the MCP layer
+- use existing async workflow runtime
+- keep workflow runs mostly in memory
+- leave room for future scheduled/offline execution
+
+The important offline use case is:
+
+- build workflow once
+- execute it later without the LLM in the loop
+
+This is closer to scheduled automation than to interactive planning.
+
+## Public API direction
+
+`wf_mcp` should expose two explicit entrypoints.
+
+### 1. Convenient/build-style API
+
+For human or higher-level service use.
+
+Examples:
+
+- build workflow from selected catalog items
+- helper methods around namespaced tools/resources/prompts
+
+### 2. Raw plan API
+
+For client LLM use.
+
+This should accept plans that:
+
+- reference namespaced capabilities directly
+- avoid raw `NodeDef` authoring
+- still compile down to `wf_core.Workflow`
+
 ## Test organization direction
 
 The current test suite is still small enough to live in two top-level files, but it will get noisy if `wf_mcp` grows beyond tools.

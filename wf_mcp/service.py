@@ -10,9 +10,9 @@ from wf_core import NodeUse, Workflow, execute_workflow_async
 from .adapters import BackendAdapter
 from .catalog import CombinedCatalog, snapshot_from_specs
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
+from .discovery import discover_connection_capabilities, specs_from_discovered_tools
 from .models import AuthRecord, CatalogSnapshot, ConnectionConfig, RawWorkflowPlan
 from .store import Store
-from .wrappers import wrap_discovered_tool
 
 
 def _qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, Any]:
@@ -92,19 +92,17 @@ class WfMcpService:
             raise KeyError(f"no adapter registered for server {connection.server!r}")
 
         auth = self.load_auth(connection_id)
-        tools = await adapter.list_tools(connection, auth)
-        resources = await adapter.list_resources(connection, auth)
-        prompts = await adapter.list_prompts(connection, auth)
-        metadata = await adapter.get_connection_metadata(connection, auth)
-        specs = [
-            wrap_discovered_tool(
-                connection=connection,
-                auth=auth,
-                adapter=adapter,
-                tool=tool,
-            )
-            for tool in tools
-        ]
+        capabilities = await discover_connection_capabilities(
+            connection=connection,
+            auth=auth,
+            adapter=adapter,
+        )
+        specs = specs_from_discovered_tools(
+            connection=connection,
+            auth=auth,
+            adapter=adapter,
+            tools=capabilities.tools,
+        )
         self.register_specs(
             connection_id,
             *specs,
@@ -113,9 +111,9 @@ class WfMcpService:
         snapshot = snapshot_from_specs(
             connection_id,
             specs=self.specs_by_connection.get(connection_id, {}),
-            resources=resources,
-            prompts=prompts,
-            metadata=metadata,
+            resources=capabilities.resources,
+            prompts=capabilities.prompts,
+            metadata=capabilities.metadata,
             fetched_at_epoch_ms=int(time.time() * 1000),
             max_age_seconds=max_age_seconds or self.default_catalog_max_age_seconds,
         )

@@ -7,6 +7,11 @@ from .adapters import (
 )
 from .catalog import CombinedCatalog
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
+from .discovery import (
+    DiscoveredConnectionCapabilities,
+    discover_connection_capabilities,
+    specs_from_discovered_tools,
+)
 from .models import (
     AuthRecord,
     CatalogNodeEntry,
@@ -31,6 +36,7 @@ __all__ = [
     "CombinedCatalog",
     "ConnectionConfig",
     "ConnectionRegistry",
+    "DiscoveredConnectionCapabilities",
     "DiscoveredPrompt",
     "DiscoveredResource",
     "DiscoveredTool",
@@ -40,7 +46,9 @@ __all__ = [
     "Store",
     "ToolCallResult",
     "WfMcpService",
+    "discover_connection_capabilities",
     "parse_connection_id",
     "qualify_node_name",
+    "specs_from_discovered_tools",
     "wrap_discovered_tool",
 ]
