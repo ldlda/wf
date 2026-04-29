@@ -66,3 +66,30 @@ def test_cli_catalog_prints_empty_catalog_when_not_refreshed(
     assert payload["nodes"] == []
     assert payload["resources"] == []
     assert payload["prompts"] == []
+
+
+def test_cli_status_prints_connection_statuses(capsys) -> None:
+    tmp_path = local_temp_root() / "cli_status_test"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config_path = tmp_path / "wf_mcp.config.json"
+    _write_config(config_path)
+
+    exit_code = main(["--config", str(config_path), "status"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    payload = json.loads(captured.out)
+    assert payload == [
+        {
+            "connection_id": "demo.personal",
+            "server": "demo",
+            "account": "personal",
+            "enabled": True,
+            "has_snapshot": False,
+            "fetched_at_epoch_ms": None,
+            "max_age_seconds": None,
+            "node_count": 0,
+            "resource_count": 0,
+            "prompt_count": 0,
+        }
+    ]

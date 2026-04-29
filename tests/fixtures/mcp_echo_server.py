@@ -6,7 +6,7 @@ from mcp.server.fastmcp import FastMCP
 server = FastMCP("echo-fixture")
 
 
-@server.tool()
+@server.tool(title="Echo tool")
 async def echo_tool(text: str) -> dict[str, str]:
     return {"echoed": text}
 
@@ -14,6 +14,7 @@ async def echo_tool(text: str) -> dict[str, str]:
 @server.resource(
     "fixture://docs/welcome",
     name="resource.welcome",
+    title="Resource Welcome",
     description="Welcome text resource for fixture tests.",
     mime_type="text/plain",
 )
@@ -22,6 +23,7 @@ def welcome_resource() -> str:
 
 
 @server.prompt(
+    title="Prompt Summarize",
     name="prompt.summarize",
     description="Summarize an input text for fixture tests.",
 )

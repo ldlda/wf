@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import shutil
 
 from wf_core import END, RunStatus
 from wf_mcp import (
@@ -116,7 +117,7 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             "qualified_name": "demo.personal.echo_tool",
             "connection_id": "demo.personal",
             "local_name": "echo_tool",
-            "display_name": "Echo Tool",
+            "title": "Echo Tool",
             "description": "Echo text back",
             "outcomes": ["ok"],
             "input_schema": {
@@ -140,7 +141,7 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             "qualified_name": "demo.personal.resource.welcome",
             "connection_id": "demo.personal",
             "local_name": "resource.welcome",
-            "display_name": "Welcome Resource",
+            "title": "Welcome Resource",
             "uri": "demo://docs/welcome",
             "description": "Welcome resource",
             "mime_type": "text/plain",
@@ -152,7 +153,7 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             "qualified_name": "demo.personal.prompt.summarize",
             "connection_id": "demo.personal",
             "local_name": "prompt.summarize",
-            "display_name": "Summarize Prompt",
+            "title": "Summarize Prompt",
             "description": "Summarize text",
             "arguments": [
                 {
@@ -262,8 +263,45 @@ def test_service_can_inspect_resources_and_prompts() -> None:
     assert prompt.arguments[0]["name"] == "text"
 
 
+def test_service_reports_connection_statuses() -> None:
+    store = local_temp_root() / "status_store"
+    # clear store before test
+    shutil.rmtree(store)
+    service = WfMcpService(store=FileStore(store))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    before = service.connection_statuses()
+    assert before == [
+        {
+            "connection_id": "demo.personal",
+            "server": "demo",
+            "account": "personal",
+            "enabled": True,
+            "has_snapshot": False,
+            "fetched_at_epoch_ms": None,
+            "max_age_seconds": None,
+            "node_count": 0,
+            "resource_count": 0,
+            "prompt_count": 0,
+        }
+    ]
+
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+    after = service.connection_statuses()
+    assert after[0]["has_snapshot"] is True
+    assert after[0]["node_count"] == 1
+    assert after[0]["resource_count"] == 1
+    assert after[0]["prompt_count"] == 1
+
+
 def test_service_can_proxy_resource_reads_and_prompt_gets() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "proxy_store"))
+    store = local_temp_root() / "proxy_store"
+    # new store
+    shutil.rmtree(store)
+    service = WfMcpService(store=FileStore(store))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )

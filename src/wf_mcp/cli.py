@@ -32,6 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     subparsers.add_parser("connections", help="List configured connections.")
+    subparsers.add_parser("status", help="Show connection status and snapshot counts.")
     subparsers.add_parser("catalog", help="Print the broker catalog as JSON.")
 
     refresh = subparsers.add_parser(
@@ -109,6 +110,10 @@ def main(argv: list[str] | None = None) -> int:
                 for connection in service.connections.list_all()
             ]
         )
+        return 0
+
+    if args.command == "status":
+        _json_dump(service.connection_statuses())
         return 0
 
     if args.command == "catalog":

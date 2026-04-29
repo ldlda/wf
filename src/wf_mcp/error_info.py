@@ -18,4 +18,3 @@ def error_payload(exc: BaseException) -> dict[str, str]:
         "error_type": type(root).__name__,
         "error": str(root),
     }
-

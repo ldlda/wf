@@ -60,10 +60,12 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
     resource_names = {resource.name for resource in resources}
     prompt_names = {prompt.name for prompt in prompts}
 
+    assert "get_connection_statuses" in tool_names
     assert "refresh_connection_catalog" in tool_names
     assert "invoke_broker_method" in tool_names
     assert "catalog.all" in resource_names
     assert "events.all" in resource_names
+    assert "status.all" in resource_names
     assert "plan_with_catalog" in prompt_names
 
 
@@ -92,7 +94,9 @@ def test_broker_refresh_tool_returns_structured_error() -> None:
     server = create_broker_server(service)
 
     _content, structured = asyncio.run(
-        server.call_tool("refresh_connection_catalog", {"connection_id": "demo.personal"})
+        server.call_tool(
+            "refresh_connection_catalog", {"connection_id": "demo.personal"}
+        )
     )
     assert structured == {
         "connection_id": "demo.personal",

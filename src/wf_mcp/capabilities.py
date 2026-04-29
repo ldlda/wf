@@ -4,10 +4,12 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+## are these our own redef of MCP VERY MUCH NICE VERY MUCH READY structs?
+## These are unfortunately boundary. Hence, we need good typecheck on these, and since mcp lib is good stuff, carry those over. Could be pro
 @dataclass(slots=True)
 class DiscoveredTool:
     name: str
-    display_name: str | None
+    title: str | None
     description: str | None
     input_schema: dict[str, Any]
     output_schema: dict[str, Any]
@@ -19,7 +21,7 @@ class DiscoveredTool:
 class DiscoveredResource:
     uri: str
     name: str
-    display_name: str | None
+    title: str | None
     description: str | None
     mime_type: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -28,7 +30,7 @@ class DiscoveredResource:
 @dataclass(slots=True)
 class DiscoveredPrompt:
     name: str
-    display_name: str | None
+    title: str | None
     description: str | None
     arguments: list[dict[str, Any]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -39,7 +41,7 @@ class CatalogNodeEntry:
     qualified_name: str
     connection_id: str
     local_name: str
-    display_name: str | None
+    title: str | None
     description: str | None
     outcomes: tuple[str, ...]
     input_schema: dict[str, Any]
@@ -51,7 +53,7 @@ class CatalogResourceEntry:
     qualified_name: str
     connection_id: str
     local_name: str
-    display_name: str | None
+    title: str | None
     uri: str
     description: str | None
     mime_type: str | None = None
@@ -63,7 +65,7 @@ class CatalogPromptEntry:
     qualified_name: str
     connection_id: str
     local_name: str
-    display_name: str | None
+    title: str | None
     description: str | None
     arguments: list[dict[str, Any]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)

@@ -57,6 +57,10 @@ def create_broker_server(service: WfMcpService) -> FastMCP:
         ]
 
     @server.tool()
+    async def get_connection_statuses() -> list[dict[str, Any]]:
+        return service.connection_statuses()
+
+    @server.tool()
     async def refresh_connection_catalog(connection_id: str) -> dict[str, Any]:
         try:
             await service.refresh_connection_catalog(connection_id)
@@ -132,6 +136,10 @@ def create_broker_server(service: WfMcpService) -> FastMCP:
     @server.resource("wf-mcp://events", name="events.all")
     def events_resource() -> str:
         return json.dumps([asdict(event) for event in service.list_events()], indent=2)
+
+    @server.resource("wf-mcp://status", name="status.all")
+    def status_resource() -> str:
+        return json.dumps(service.connection_statuses(), indent=2)
 
     @server.prompt(
         name="plan_with_catalog",

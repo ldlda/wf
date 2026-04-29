@@ -9,11 +9,16 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 from mcp.types import CallToolResult as McpCallToolResult
-from mcp.types import ClientNotification, ClientRequest
-from mcp.types import ListPromptsResult, ListResourcesResult
-from mcp.types import ListToolsResult, Tool as McpTool
+from mcp.types import (
+    ClientNotification,
+    ClientRequest,
+    ListPromptsResult,
+    ListResourcesResult,
+    ListToolsResult,
+)
 from mcp.types import Prompt as McpPrompt
 from mcp.types import Resource as McpResource
+from mcp.types import Tool as McpTool
 from pydantic import AnyUrl
 
 from .adapters import (
@@ -48,7 +53,7 @@ def _tool_to_discovered(tool: McpTool) -> DiscoveredTool:
     )
     return DiscoveredTool(
         name=tool.name,
-        display_name=display_name,
+        title=display_name,
         description=tool.description,
         input_schema=tool.inputSchema,
         output_schema=output_schema,
@@ -62,7 +67,7 @@ def _resource_to_discovered(resource: McpResource) -> DiscoveredResource:
     return DiscoveredResource(
         uri=str(resource.uri),
         name=local_name,
-        display_name=resource.title,
+        title=resource.title,
         description=resource.description,
         mime_type=resource.mimeType,
         metadata=resource.model_dump(by_alias=True, mode="json"),
@@ -76,7 +81,7 @@ def _prompt_to_discovered(prompt: McpPrompt) -> DiscoveredPrompt:
     ]
     return DiscoveredPrompt(
         name=prompt.name,
-        display_name=prompt.title,
+        title=prompt.title,
         description=prompt.description,
         arguments=arguments,
         metadata=prompt.model_dump(by_alias=True, mode="json"),

@@ -115,6 +115,32 @@ class WfMcpService:
         self.connections.get(connection_id)
         return self.store.load_catalog(connection_id)
 
+    def connection_statuses(self) -> list[dict[str, Any]]:
+        statuses: list[dict[str, Any]] = []
+        for connection in self.connections.list_all():
+            snapshot = self.store.load_catalog(connection.id)
+            statuses.append(
+                {
+                    "connection_id": connection.id,
+                    "server": connection.server,
+                    "account": connection.account,
+                    "enabled": connection.enabled,
+                    "has_snapshot": snapshot is not None,
+                    "fetched_at_epoch_ms": None
+                    if snapshot is None
+                    else snapshot.fetched_at_epoch_ms,
+                    "max_age_seconds": None
+                    if snapshot is None
+                    else snapshot.max_age_seconds,
+                    "node_count": 0 if snapshot is None else len(snapshot.nodes),
+                    "resource_count": 0
+                    if snapshot is None
+                    else len(snapshot.resources),
+                    "prompt_count": 0 if snapshot is None else len(snapshot.prompts),
+                }
+            )
+        return statuses
+
     def list_resources(
         self,
         *,
@@ -315,7 +341,7 @@ class WfMcpService:
                 connection_id,
                 specs=self.specs_by_connection.get(connection_id, {}),
                 tool_display_names={
-                    tool.name: tool.display_name for tool in capabilities.tools
+                    tool.name: tool.title for tool in capabilities.tools
                 },
                 resources=capabilities.resources,
                 prompts=capabilities.prompts,
