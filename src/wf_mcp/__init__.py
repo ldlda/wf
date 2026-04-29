@@ -33,6 +33,7 @@ from .models import (
     RawWorkflowPlan,
 )
 from .mcp_sdk_adapter import McpSdkAdapter
+from .proxy_validation import ProxyConfigError, validate_transparent_proxy_config
 from .service import WfMcpService
 from .store import FileStore, Store
 from .transparent_proxy import (
@@ -61,6 +62,7 @@ __all__ = [
     "FileStore",
     "McpEvent",
     "McpSdkAdapter",
+    "ProxyConfigError",
     "RawWorkflowPlan",
     "Store",
     "ToolCallResult",
@@ -79,5 +81,6 @@ __all__ = [
     "run_broker_server",
     "run_transparent_proxy_server",
     "specs_from_discovered_tools",
+    "validate_transparent_proxy_config",
     "wrap_discovered_tool",
 ]

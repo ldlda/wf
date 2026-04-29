@@ -11,6 +11,7 @@ from fastmcp.server import create_proxy
 from fastmcp.server.transforms import Namespace, PromptsAsTools, ResourcesAsTools
 
 from .models import BrokerConfig, ConnectionConfig
+from .proxy_validation import validate_transparent_proxy_config
 
 
 def connection_to_fastmcp_server_config(
@@ -40,6 +41,7 @@ def connection_to_fastmcp_server_config(
 
 
 def broker_config_to_fastmcp_config(config: BrokerConfig) -> MCPConfig:
+    validate_transparent_proxy_config(config)
     return MCPConfig.from_dict(
         {
             "mcpServers": {
@@ -57,6 +59,11 @@ def create_transparent_proxy_server(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
 ) -> FastMCP[Any]:
+    validate_transparent_proxy_config(
+        config,
+        resources_as_tools=resources_as_tools,
+        prompts_as_tools=prompts_as_tools,
+    )
     root = FastMCP(
         "wf-mcp-transparent-proxy",
         instructions=(
