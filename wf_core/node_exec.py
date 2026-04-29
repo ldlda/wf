@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
-from typing import Any
+from collections.abc import Awaitable, Callable, Mapping
+from typing import Any, cast
 
 from .conditions import safe_resolve_path
 from .errors import WorkflowExecutionError
@@ -12,21 +12,19 @@ from .schema_tools import validate_payload_against_schema
 from .state_ops import apply_output_map
 
 NodeHandler = Callable[[dict[str, Any], RuntimeContext], NodeResult | dict[str, Any]]
+AsyncNodeHandler = Callable[
+    [dict[str, Any], RuntimeContext],
+    Awaitable[NodeResult | dict[str, Any]] | NodeResult | dict[str, Any],
+]
 
 
-def execute_node_use(
+def _resolve_node_execution(
+    *,
     workflow: Workflow,
     run: RunState,
     node: NodeUse,
     node_def: NodeDef,
-    registry: Mapping[str, NodeHandler],
-) -> StepExecutionResult:
-    handler = registry.get(node.node)
-    if handler is None:
-        raise WorkflowExecutionError(
-            f"no handler registered for node def {node.node!r}"
-        )
-
+) -> tuple[dict[str, Any], RuntimeContext]:
     frame = run.current_frame()
     context_values = frame_context_values(frame)
     resolved_input = {
@@ -49,7 +47,18 @@ def execute_node_use(
         activated_incoming_edge=frame.activated_incoming_edge,
         metadata=dict(frame.metadata),
     )
-    raw_result = handler(resolved_input, context)
+    return resolved_input, context
+
+
+def _finalize_node_execution(
+    *,
+    workflow: Workflow,
+    run: RunState,
+    node: NodeUse,
+    node_def: NodeDef,
+    resolved_input: dict[str, Any],
+    raw_result: NodeResult | dict[str, Any],
+) -> StepExecutionResult:
     result = coerce_node_result(raw_result)
 
     if result.outcome not in node_def.outcomes:
@@ -66,6 +75,70 @@ def execute_node_use(
         resolved_input=resolved_input,
         output=result.output,
         state_changes=state_changes,
+    )
+
+
+def execute_node_use(
+    workflow: Workflow,
+    run: RunState,
+    node: NodeUse,
+    node_def: NodeDef,
+    registry: Mapping[str, NodeHandler],
+) -> StepExecutionResult:
+    handler = registry.get(node.node)
+    if handler is None:
+        raise WorkflowExecutionError(
+            f"no handler registered for node def {node.node!r}"
+        )
+
+    resolved_input, context = _resolve_node_execution(
+        workflow=workflow,
+        run=run,
+        node=node,
+        node_def=node_def,
+    )
+    raw_result = handler(resolved_input, context)
+    return _finalize_node_execution(
+        workflow=workflow,
+        run=run,
+        node=node,
+        node_def=node_def,
+        resolved_input=resolved_input,
+        raw_result=raw_result,
+    )
+
+
+async def execute_node_use_async(
+    workflow: Workflow,
+    run: RunState,
+    node: NodeUse,
+    node_def: NodeDef,
+    registry: Mapping[str, AsyncNodeHandler],
+) -> StepExecutionResult:
+    handler = registry.get(node.node)
+    if handler is None:
+        raise WorkflowExecutionError(
+            f"no handler registered for node def {node.node!r}"
+        )
+
+    resolved_input, context = _resolve_node_execution(
+        workflow=workflow,
+        run=run,
+        node=node,
+        node_def=node_def,
+    )
+    raw_or_awaitable = handler(resolved_input, context)
+    if isinstance(raw_or_awaitable, Awaitable):
+        raw_result = await raw_or_awaitable
+    else:
+        raw_result = raw_or_awaitable
+    return _finalize_node_execution(
+        workflow=workflow,
+        run=run,
+        node=node,
+        node_def=node_def,
+        resolved_input=resolved_input,
+        raw_result=cast(NodeResult | dict[str, Any], raw_result),
     )
 
 

@@ -13,11 +13,15 @@ from .model import (
     Workflow,
 )
 from .runtime import (
+    AsyncNodeHandler,
     NodeHandler,
     WorkflowExecutionError,
     coerce_node_result,
+    execute_workflow_async,
     execute_workflow,
+    resume_workflow_async,
     resume_workflow,
+    step_workflow_async,
     step_workflow,
 )
 from .run_state import (
@@ -50,6 +54,7 @@ __all__ = [
     "SchemaRef",
     "StateField",
     "StateSchema",
+    "AsyncNodeHandler",
     "NodeHandler",
     "ExecutionFrame",
     "FrameStatus",
@@ -67,8 +72,11 @@ __all__ = [
     "Workflow",
     "WorkflowExecutionError",
     "coerce_node_result",
+    "execute_workflow_async",
     "execute_workflow",
+    "resume_workflow_async",
     "resume_workflow",
+    "step_workflow_async",
     "step_workflow",
     "validate_workflow",
 ]

@@ -9,6 +9,7 @@ from wf_core import (
     FrameStatus,
     RuntimeContext,
     RunStatus,
+    execute_workflow_async,
     execute_workflow,
     resume_workflow,
     step_workflow,
@@ -460,6 +461,29 @@ def test_async_registry_accepts_sync_and_async_specs() -> None:
 
     assert sync_result == {"outcome": "ok", "output": {"echoed": "hello"}}
     assert async_result == {"outcome": "ok", "output": {"echoed": "async:world"}}
+
+
+def test_execute_workflow_async_runs_with_async_registry() -> None:
+    workflow, _ = build_authoring_demo_workflow()
+    registry = build_async_registry(
+        drive_list_files_spec,
+        summarize_document_spec,
+        combine_summaries_spec,
+        send_email_spec,
+        mark_email_skipped_spec,
+    )
+
+    run = asyncio.run(
+        execute_workflow_async(
+            workflow,
+            {"folder_id": "demo-folder", "should_email": False},
+            registry,
+        )
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.output["email_status"] == "skipped"
+    assert run.interrupt is None
 
 
 @node()
