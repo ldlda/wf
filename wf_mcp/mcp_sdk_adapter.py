@@ -88,6 +88,7 @@ def _tool_result_to_call_result(result: McpCallToolResult) -> ToolCallResult:
         meta=result.meta or {},
     )
 
+
 class McpSdkAdapter(BackendAdapter):
     @asynccontextmanager
     async def _session(

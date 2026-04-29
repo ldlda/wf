@@ -1,9 +1,14 @@
 from .adapters import (
     BackendAdapter,
+    ToolCallResult,
+)
+from .capabilities import (
+    CatalogNodeEntry,
+    CatalogPromptEntry,
+    CatalogResourceEntry,
     DiscoveredPrompt,
     DiscoveredResource,
     DiscoveredTool,
-    ToolCallResult,
 )
 from .catalog import CombinedCatalog
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
@@ -15,9 +20,6 @@ from .discovery import (
 from .events import McpEvent, make_event
 from .models import (
     AuthRecord,
-    CatalogNodeEntry,
-    CatalogPromptEntry,
-    CatalogResourceEntry,
     CatalogSnapshot,
     ConnectionConfig,
     RawWorkflowPlan,

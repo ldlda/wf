@@ -5,14 +5,15 @@ from typing import Any
 
 from wf_authoring import NodeCatalog, NodeSpec
 
-from .adapters import DiscoveredPrompt, DiscoveredResource
-from .connections import qualify_node_name
-from .models import (
+from .capabilities import (
     CatalogNodeEntry,
     CatalogPromptEntry,
     CatalogResourceEntry,
-    CatalogSnapshot,
+    DiscoveredPrompt,
+    DiscoveredResource,
 )
+from .connections import qualify_node_name
+from .models import CatalogSnapshot
 
 
 def snapshot_from_specs(
