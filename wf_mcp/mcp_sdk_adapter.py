@@ -44,29 +44,31 @@ def _tool_to_discovered(tool: McpTool) -> DiscoveredTool:
         input_schema=tool.inputSchema,
         output_schema=output_schema,
         outcomes=("ok", "error"),
-        metadata=tool.model_dump(by_alias=True),
+        metadata=tool.model_dump(by_alias=True, mode="json"),
     )
 
 
 def _resource_to_discovered(resource: McpResource) -> DiscoveredResource:
+    local_name = resource.name or str(resource.uri)
     return DiscoveredResource(
         uri=str(resource.uri),
-        name=str(resource.uri),
+        name=local_name,
         description=resource.description,
         mime_type=resource.mimeType,
-        metadata=resource.model_dump(by_alias=True),
+        metadata=resource.model_dump(by_alias=True, mode="json"),
     )
 
 
 def _prompt_to_discovered(prompt: McpPrompt) -> DiscoveredPrompt:
     arguments = [
-        argument.model_dump(by_alias=True) for argument in prompt.arguments or []
+        argument.model_dump(by_alias=True, mode="json")
+        for argument in prompt.arguments or []
     ]
     return DiscoveredPrompt(
         name=prompt.name,
         description=prompt.description,
         arguments=arguments,
-        metadata=prompt.model_dump(by_alias=True),
+        metadata=prompt.model_dump(by_alias=True, mode="json"),
     )
 
 

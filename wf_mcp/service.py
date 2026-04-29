@@ -11,6 +11,7 @@ from .adapters import BackendAdapter
 from .catalog import CombinedCatalog, snapshot_from_specs
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from .discovery import discover_connection_capabilities, specs_from_discovered_tools
+from .events import McpEvent, make_event
 from .models import AuthRecord, CatalogSnapshot, ConnectionConfig, RawWorkflowPlan
 from .store import Store
 
@@ -36,16 +37,31 @@ class WfMcpService:
     specs_by_connection: dict[str, dict[str, NodeSpec[Any, Any]]] = field(
         default_factory=dict
     )
+    events: list[McpEvent] = field(default_factory=list)
 
     def register_connection(self, connection: ConnectionConfig) -> None:
         parse_connection_id(connection.id)
         self.connections.register(connection)
+        self._record_event(
+            make_event(
+                "connection_registered",
+                connection_id=connection.id,
+                payload={"server": connection.server, "account": connection.account},
+            )
+        )
 
     def register_adapter(self, server: str, adapter: BackendAdapter) -> None:
         self.adapters[server] = adapter
 
     def save_auth(self, record: AuthRecord) -> None:
         self.store.save_auth(record)
+        self._record_event(
+            make_event(
+                "auth_saved",
+                connection_id=record.connection_id,
+                payload={"scheme": record.scheme},
+            )
+        )
 
     def load_auth(self, connection_id: str) -> AuthRecord | None:
         return self.store.load_auth(connection_id)
@@ -71,6 +87,13 @@ class WfMcpService:
             max_age_seconds=max_age_seconds or self.default_catalog_max_age_seconds,
         )
         self.store.save_catalog(snapshot)
+        self._record_event(
+            make_event(
+                "specs_registered",
+                connection_id=connection_id,
+                payload={"node_count": len(qualified_specs)},
+            )
+        )
 
     def get_catalog(self) -> CombinedCatalog:
         snapshots: dict[str, CatalogSnapshot] = {}
@@ -92,6 +115,13 @@ class WfMcpService:
             raise KeyError(f"no adapter registered for server {connection.server!r}")
 
         auth = self.load_auth(connection_id)
+        self._record_event(
+            make_event(
+                "catalog_refresh_started",
+                connection_id=connection_id,
+                payload={"server": connection.server},
+            )
+        )
         capabilities = await discover_connection_capabilities(
             connection=connection,
             auth=auth,
@@ -102,6 +132,7 @@ class WfMcpService:
             auth=auth,
             adapter=adapter,
             tools=capabilities.tools,
+            emit_event=self._record_event,
         )
         self.register_specs(
             connection_id,
@@ -118,6 +149,17 @@ class WfMcpService:
             max_age_seconds=max_age_seconds or self.default_catalog_max_age_seconds,
         )
         self.store.save_catalog(snapshot)
+        self._record_event(
+            make_event(
+                "catalog_refresh_completed",
+                connection_id=connection_id,
+                payload={
+                    "node_count": len(snapshot.nodes),
+                    "resource_count": len(snapshot.resources),
+                    "prompt_count": len(snapshot.prompts),
+                },
+            )
+        )
 
     def compile_plan(self, plan: RawWorkflowPlan) -> Workflow:
         node_defs: dict[str, Any] = {}
@@ -145,6 +187,13 @@ class WfMcpService:
         plan: RawWorkflowPlan,
         workflow_input: dict[str, Any],
     ):
+        self._record_event(
+            make_event(
+                "workflow_run_started",
+                workflow_name=plan.name,
+                payload={"input_keys": sorted(workflow_input.keys())},
+            )
+        )
         workflow = self.compile_plan(plan)
         specs = [
             self._get_qualified_spec(node.node)
@@ -152,7 +201,18 @@ class WfMcpService:
             if isinstance(node, NodeUse)
         ]
         registry = build_async_registry(*specs)
-        return await execute_workflow_async(workflow, workflow_input, registry)
+        run = await execute_workflow_async(workflow, workflow_input, registry)
+        self._record_event(
+            make_event(
+                "workflow_run_completed",
+                workflow_name=plan.name,
+                payload={"status": run.status.value},
+            )
+        )
+        return run
+
+    def list_events(self) -> list[McpEvent]:
+        return list(self.events)
 
     def _get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
         connection_id, _ = qualified_name.rsplit(".", 1)
@@ -160,3 +220,6 @@ class WfMcpService:
         if specs is None or qualified_name not in specs:
             raise KeyError(f"unknown qualified node {qualified_name!r}")
         return specs[qualified_name]
+
+    def _record_event(self, event: McpEvent) -> None:
+        self.events.append(event)

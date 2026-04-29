@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -11,6 +12,7 @@ from .adapters import (
     DiscoveredResource,
     DiscoveredTool,
 )
+from .events import McpEvent
 from .models import AuthRecord, ConnectionConfig
 from .wrappers import wrap_discovered_tool
 
@@ -47,6 +49,7 @@ def specs_from_discovered_tools(
     auth: AuthRecord | None,
     adapter: BackendAdapter,
     tools: list[DiscoveredTool],
+    emit_event: Callable[[McpEvent], None] | None = None,
 ) -> list[NodeSpec[Any, Any]]:
     return [
         wrap_discovered_tool(
@@ -54,6 +57,7 @@ def specs_from_discovered_tools(
             auth=auth,
             adapter=adapter,
             tool=tool,
+            emit_event=emit_event,
         )
         for tool in tools
     ]

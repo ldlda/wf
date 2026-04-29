@@ -82,6 +82,9 @@ def test_service_compiles_and_runs_raw_plan() -> None:
 
     assert run.status == RunStatus.COMPLETED
     assert run.output == {"result": "final:hello"}
+    event_kinds = [event.kind for event in service.list_events()]
+    assert "workflow_run_started" in event_kinds
+    assert "workflow_run_completed" in event_kinds
 
 
 def test_service_refreshes_catalog_from_adapter() -> None:
@@ -163,3 +166,61 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             },
         }
     ]
+    event_kinds = [event.kind for event in service.list_events()]
+    assert "catalog_refresh_started" in event_kinds
+    assert "catalog_refresh_completed" in event_kinds
+
+
+def test_service_records_tool_call_events() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "event_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+
+    plan = RawWorkflowPlan(
+        name="tool_only_plan",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        state_schema={
+            "fields": {
+                "echoed": {"type": "string"},
+            }
+        },
+        output_schema={
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+            "required": ["echoed"],
+        },
+        start="echo",
+        nodes=[
+            {
+                "id": "echo",
+                "type": "node",
+                "node": "demo.personal.echo_tool",
+                "in_map": {"input.text": "text"},
+                "out_map": {"echoed": "state.echoed"},
+            }
+        ],
+        edges=[
+            {"from": "echo", "outcome": "ok", "to": END},
+        ],
+    )
+
+    run = asyncio.run(service.run_workflow_from_plan(plan, {"text": "hello"}))
+
+    assert run.status == RunStatus.COMPLETED
+    tool_events = [
+        event for event in service.list_events() if "tool_call" in event.kind
+    ]
+    assert [event.kind for event in tool_events] == [
+        "tool_call_started",
+        "tool_call_completed",
+    ]
+    assert tool_events[0].capability_id == "demo.personal.echo_tool"
+    assert tool_events[1].payload["outcome"] == "ok"

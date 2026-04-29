@@ -12,6 +12,7 @@ from .discovery import (
     discover_connection_capabilities,
     specs_from_discovered_tools,
 )
+from .events import McpEvent, make_event
 from .models import (
     AuthRecord,
     CatalogNodeEntry,
@@ -41,12 +42,14 @@ __all__ = [
     "DiscoveredResource",
     "DiscoveredTool",
     "FileStore",
+    "McpEvent",
     "McpSdkAdapter",
     "RawWorkflowPlan",
     "Store",
     "ToolCallResult",
     "WfMcpService",
     "discover_connection_capabilities",
+    "make_event",
     "parse_connection_id",
     "qualify_node_name",
     "specs_from_discovered_tools",
