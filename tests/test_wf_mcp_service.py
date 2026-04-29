@@ -13,7 +13,7 @@ from wf_mcp import (
 )
 from wf_mcp.error_info import error_payload
 
-from test_wf_mcp_support import (
+from tests.test_wf_mcp_support import (
     FailingDiscoveryAdapter,
     FakeAdapter,
     echo_tool,

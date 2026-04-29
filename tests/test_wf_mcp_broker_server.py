@@ -13,7 +13,11 @@ from wf_mcp import (
     load_broker_config,
 )
 
-from test_wf_mcp_support import FailingDiscoveryAdapter, FakeAdapter, local_temp_root
+from tests.test_wf_mcp_support import (
+    FailingDiscoveryAdapter,
+    FakeAdapter,
+    local_temp_root,
+)
 
 
 def test_load_broker_config_resolves_relative_store_root() -> None:

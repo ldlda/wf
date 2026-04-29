@@ -6,7 +6,7 @@ import pytest
 
 from wf_mcp import ConnectionConfig, FileStore, McpSdkAdapter, WfMcpService
 
-from test_wf_mcp_support import (
+from tests.test_wf_mcp_support import (
     everything_server_connection,
     fixture_server_path,
     local_temp_root,

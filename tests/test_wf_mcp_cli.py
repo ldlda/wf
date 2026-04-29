@@ -5,7 +5,7 @@ from pathlib import Path
 
 from wf_mcp.cli import build_parser, main
 
-from test_wf_mcp_support import local_temp_root
+from tests.test_wf_mcp_support import local_temp_root
 
 
 def _write_config(path: Path) -> None:
@@ -34,6 +34,27 @@ def test_build_parser_accepts_serve_transport() -> None:
 
     assert args.command == "serve"
     assert args.transport == "streamable_http"
+    assert args.mode == "proxy"
+    assert args.resources_as_tools is False
+    assert args.prompts_as_tools is False
+
+
+def test_build_parser_accepts_proxy_compatibility_flags() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "--config",
+            "wf_mcp.config.json",
+            "serve",
+            "--resources-as-tools",
+            "--prompts-as-tools",
+        ]
+    )
+
+    assert args.command == "serve"
+    assert args.mode == "proxy"
+    assert args.resources_as_tools is True
+    assert args.prompts_as_tools is True
 
 
 def test_cli_connections_prints_configured_connections(capsys) -> None:

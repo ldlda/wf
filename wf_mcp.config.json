@@ -13,6 +13,18 @@
           "@modelcontextprotocol/server-everything"
         ]
       }
+    }, {
+      "id": "context7.default",
+      "server": "context7",
+      "account": "default",
+      "enabled": true,
+      "metadata": {
+        "transport": "stdio",
+        "command": "pnpx",
+        "args": [
+          "@upstash/context7-mcp"
+        ]
+      }
     }
   ]
 }

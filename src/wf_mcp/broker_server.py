@@ -13,6 +13,7 @@ from .mcp_sdk_adapter import McpSdkAdapter
 from .models import BrokerConfig, ConnectionConfig
 from .service import WfMcpService
 from .store import FileStore
+from .transparent_proxy import create_transparent_proxy_server
 
 
 def load_broker_config(path: str | Path) -> BrokerConfig:
@@ -219,6 +220,22 @@ def run_broker_server(config_path: str | Path, transport: str = "stdio") -> None
     service = build_service_from_config(config)
     server = create_broker_server(service)
     server.run(transport=normalize_transport(transport))
+
+
+def run_transparent_proxy_server(
+    config_path: str | Path,
+    transport: str = "stdio",
+    *,
+    resources_as_tools: bool = False,
+    prompts_as_tools: bool = False,
+) -> None:
+    config = load_broker_config(config_path)
+    server = create_transparent_proxy_server(
+        config,
+        resources_as_tools=resources_as_tools,
+        prompts_as_tools=prompts_as_tools,
+    )
+    server.run(transport=normalize_transport(transport), show_banner=False)
 
 
 if __name__ == "__main__":

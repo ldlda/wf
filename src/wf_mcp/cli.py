@@ -10,6 +10,7 @@ from .broker_server import (
     build_service_from_config,
     load_broker_config,
     run_broker_server,
+    run_transparent_proxy_server,
 )
 
 
@@ -29,6 +30,22 @@ def build_parser() -> argparse.ArgumentParser:
         default="stdio",
         choices=["stdio", "sse", "streamable-http", "streamable_http"],
         help="Transport to run the broker server with.",
+    )
+    serve.add_argument(
+        "--mode",
+        default="proxy",
+        choices=["broker", "proxy"],
+        help="Run admin/workflow broker mode or transparent proxy mode.",
+    )
+    serve.add_argument(
+        "--resources-as-tools",
+        action="store_true",
+        help="Expose proxied resources through list_resources/read_resource tools.",
+    )
+    serve.add_argument(
+        "--prompts-as-tools",
+        action="store_true",
+        help="Expose proxied prompts through list_prompts/get_prompt tools.",
     )
 
     subparsers.add_parser("connections", help="List configured connections.")
@@ -92,7 +109,15 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "serve":
-        run_broker_server(args.config, args.transport)
+        if args.mode == "proxy":
+            run_transparent_proxy_server(
+                args.config,
+                args.transport,
+                resources_as_tools=args.resources_as_tools,
+                prompts_as_tools=args.prompts_as_tools,
+            )
+        else:
+            run_broker_server(args.config, args.transport)
         return 0
 
     service = _service_from_config(args.config)

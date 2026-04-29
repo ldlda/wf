@@ -6,6 +6,8 @@ from .broker_server import (
     build_service_from_config,
     create_broker_server,
     load_broker_config,
+    run_broker_server,
+    run_transparent_proxy_server,
 )
 from .capabilities import (
     CatalogNodeEntry,
@@ -33,6 +35,12 @@ from .models import (
 from .mcp_sdk_adapter import McpSdkAdapter
 from .service import WfMcpService
 from .store import FileStore, Store
+from .transparent_proxy import (
+    broker_config_to_fastmcp_config,
+    connection_to_fastmcp_server_config,
+    create_transparent_proxy_client,
+    create_transparent_proxy_server,
+)
 from .wrappers import wrap_discovered_tool
 
 __all__ = [
@@ -58,12 +66,18 @@ __all__ = [
     "ToolCallResult",
     "WfMcpService",
     "build_service_from_config",
+    "broker_config_to_fastmcp_config",
+    "connection_to_fastmcp_server_config",
     "create_broker_server",
+    "create_transparent_proxy_client",
+    "create_transparent_proxy_server",
     "discover_connection_capabilities",
     "load_broker_config",
     "make_event",
     "parse_connection_id",
     "qualify_node_name",
+    "run_broker_server",
+    "run_transparent_proxy_server",
     "specs_from_discovered_tools",
     "wrap_discovered_tool",
 ]
