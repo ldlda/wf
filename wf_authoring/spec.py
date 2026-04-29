@@ -3,7 +3,7 @@ from __future__ import annotations
 from inspect import Parameter, iscoroutinefunction, signature
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Any, Generic, TypeVar, cast, get_args, get_origin, get_type_hints, overload
+from typing import Any, Generic, Literal, TypeVar, cast, get_args, get_origin, get_type_hints, overload
 
 from pydantic import BaseModel
 
@@ -29,6 +29,10 @@ def _schema_ref_for(model_type: type[BaseModel]) -> SchemaRef:
 class NodeReturn(Generic[OutputT]):
     outcome: str
     output: OutputT
+
+
+def _default_outcome(spec: "NodeSpec[Any, Any]") -> str:
+    return spec.outcomes[0]
 
 
 def _coerce_registry_result(
@@ -151,7 +155,7 @@ class NodeSpec(Generic[InputT, OutputT]):
             return _coerce_registry_result(
                 node_name=self.name,
                 output_model=self.output_model,
-                default_outcome=self.outcomes[0],
+                default_outcome=_default_outcome(self),
                 raw=cast(NodeReturn[BaseModel] | BaseModel, raw),
             )
 
@@ -174,7 +178,7 @@ class NodeSpec(Generic[InputT, OutputT]):
             return _coerce_registry_result(
                 node_name=self.name,
                 output_model=self.output_model,
-                default_outcome=self.outcomes[0],
+                default_outcome=_default_outcome(self),
                 raw=cast(NodeReturn[BaseModel] | BaseModel, raw),
             )
 
@@ -258,10 +262,40 @@ def node(
 def build_registry(
     *specs: NodeSpec[Any, Any],
 ) -> dict[str, SyncRegistryHandler]:
-    return {spec.name: spec.to_registry_handler() for spec in specs}
+    return _build_registry(specs, export="sync")
 
 
 def build_async_registry(
     *specs: NodeSpec[Any, Any],
 ) -> dict[str, AsyncRegistryHandler]:
-    return {spec.name: spec.to_async_registry_handler() for spec in specs}
+    return _build_registry(specs, export="async")
+
+
+@overload
+def _build_registry(
+    specs: tuple[NodeSpec[Any, Any], ...],
+    *,
+    export: Literal["sync"],
+) -> dict[str, SyncRegistryHandler]:
+    ...
+
+
+@overload
+def _build_registry(
+    specs: tuple[NodeSpec[Any, Any], ...],
+    *,
+    export: Literal["async"],
+) -> dict[str, AsyncRegistryHandler]:
+    ...
+
+
+def _build_registry(
+    specs: tuple[NodeSpec[Any, Any], ...],
+    *,
+    export: Literal["sync", "async"],
+) -> dict[str, Any]:
+    if export == "sync":
+        return {spec.name: spec.to_registry_handler() for spec in specs}
+    if export == "async":
+        return {spec.name: spec.to_async_registry_handler() for spec in specs}
+    raise ValueError(f"unknown registry export mode {export!r}")

@@ -1,5 +1,5 @@
 [project]
-name = "lda-w"
+name = "lda-wf"
 version = "0.0.1"
 description = "Add your description here"
 readme = "README.md"
