@@ -59,6 +59,25 @@ def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
         }
     ]
 
+    resource_result = asyncio.run(
+        service.read_resource("fixture.personal.resource.welcome")
+    )
+    prompt_result = asyncio.run(
+        service.render_prompt(
+            "fixture.personal.prompt.summarize",
+            arguments={"text": "hello"},
+        )
+    )
+    assert (
+        resource_result["contents"][0]["text"] == "Welcome from the fixture MCP server."
+    )
+    assert (
+        prompt_result["messages"][0]["content"]["text"]
+        == "Summarize this text:\n\nhello"
+    )
+    ping_result = asyncio.run(service.invoke_method("fixture.personal", "ping"))
+    assert ping_result == {}
+
     adapter = McpSdkAdapter()
     try:
         result = asyncio.run(

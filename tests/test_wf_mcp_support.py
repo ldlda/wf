@@ -165,6 +165,69 @@ class FakeAdapter:
             "auth_scheme": auth.scheme if auth is not None else None,
         }
 
+    async def read_resource(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        uri: str,
+    ) -> dict[str, Any]:
+        if uri != "demo://docs/welcome":
+            raise KeyError(uri)
+        return {
+            "contents": [
+                {
+                    "uri": uri,
+                    "mimeType": "text/plain",
+                    "text": "Welcome from the fake adapter resource.",
+                }
+            ]
+        }
+
+    async def get_prompt(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        prompt_name: str,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        if prompt_name != "prompt.summarize":
+            raise KeyError(prompt_name)
+        text = (arguments or {}).get("text", "")
+        return {
+            "description": "Summarize text",
+            "messages": [
+                {
+                    "role": "user",
+                    "content": {
+                        "type": "text",
+                        "text": f"Summarize this text:\n\n{text}",
+                    },
+                }
+            ],
+        }
+
+    async def invoke_method(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        if method == "ping":
+            return {}
+        if method == "demo.echo":
+            return {"echoed": (params or {}).get("text", "")}
+        raise KeyError(method)
+
+    async def send_notification(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> None:
+        return None
+
     async def call_tool(
         self,
         connection: ConnectionConfig,

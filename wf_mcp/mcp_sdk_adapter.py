@@ -4,14 +4,17 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 import httpx
+from mcp import ClientResult
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 from mcp.types import CallToolResult as McpCallToolResult
+from mcp.types import ClientNotification, ClientRequest
 from mcp.types import ListPromptsResult, ListResourcesResult
 from mcp.types import ListToolsResult, Tool as McpTool
 from mcp.types import Prompt as McpPrompt
 from mcp.types import Resource as McpResource
+from pydantic import AnyUrl
 
 from .adapters import (
     BackendAdapter,
@@ -84,7 +87,6 @@ def _tool_result_to_call_result(result: McpCallToolResult) -> ToolCallResult:
         output=output,
         meta=result.meta or {},
     )
-
 
 class McpSdkAdapter(BackendAdapter):
     @asynccontextmanager
@@ -167,6 +169,53 @@ class McpSdkAdapter(BackendAdapter):
             "server": connection.server,
             "transport": connection.metadata.get("transport", "stdio"),
         }
+
+    async def read_resource(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        uri: str,
+    ) -> dict[str, Any]:
+        async with self._session(connection, auth) as session:
+            result = await session.read_resource(AnyUrl(uri))
+            return result.model_dump(by_alias=True, mode="json", exclude_none=True)
+
+    async def get_prompt(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        prompt_name: str,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        async with self._session(connection, auth) as session:
+            result = await session.get_prompt(prompt_name, arguments)
+            return result.model_dump(by_alias=True, mode="json", exclude_none=True)
+
+    async def invoke_method(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        async with self._session(connection, auth) as session:
+            result = await session.send_request(
+                ClientRequest.model_validate({"method": method, "params": params}),
+                ClientResult,
+            )
+            return result.model_dump(by_alias=True, mode="json", exclude_none=True)
+
+    async def send_notification(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> None:
+        async with self._session(connection, auth) as session:
+            await session.send_notification(
+                ClientNotification.model_validate({"method": method, "params": params})
+            )
 
     async def call_tool(
         self,

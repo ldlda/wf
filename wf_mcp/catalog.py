@@ -96,6 +96,18 @@ class CombinedCatalog:
             result.extend(snapshot.prompts)
         return sorted(result, key=lambda entry: entry.qualified_name)
 
+    def find_resource(self, qualified_name: str) -> CatalogResourceEntry | None:
+        for entry in self.resource_entries():
+            if entry.qualified_name == qualified_name:
+                return entry
+        return None
+
+    def find_prompt(self, qualified_name: str) -> CatalogPromptEntry | None:
+        for entry in self.prompt_entries():
+            if entry.qualified_name == qualified_name:
+                return entry
+        return None
+
     def as_payload(self) -> dict[str, Any]:
         return {
             "nodes": [

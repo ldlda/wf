@@ -65,6 +65,37 @@ class BackendAdapter(Protocol):
         auth: AuthRecord | None,
     ) -> dict[str, Any]: ...
 
+    async def read_resource(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        uri: str,
+    ) -> dict[str, Any]: ...
+
+    async def get_prompt(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        prompt_name: str,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]: ...
+
+    async def invoke_method(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]: ...
+
+    async def send_notification(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> None: ...
+
     async def call_tool(
         self,
         connection: ConnectionConfig,

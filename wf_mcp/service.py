@@ -12,7 +12,14 @@ from .catalog import CombinedCatalog, snapshot_from_specs
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from .discovery import discover_connection_capabilities, specs_from_discovered_tools
 from .events import McpEvent, make_event
-from .models import AuthRecord, CatalogSnapshot, ConnectionConfig, RawWorkflowPlan
+from .models import (
+    AuthRecord,
+    CatalogPromptEntry,
+    CatalogResourceEntry,
+    CatalogSnapshot,
+    ConnectionConfig,
+    RawWorkflowPlan,
+)
 from .store import Store
 
 
@@ -102,6 +109,169 @@ class WfMcpService:
             if snapshot is not None:
                 snapshots[connection.id] = snapshot
         return CombinedCatalog(snapshots=snapshots)
+
+    def get_connection_snapshot(self, connection_id: str) -> CatalogSnapshot | None:
+        self.connections.get(connection_id)
+        return self.store.load_catalog(connection_id)
+
+    def list_resources(
+        self,
+        *,
+        connection_id: str | None = None,
+    ) -> list[CatalogResourceEntry]:
+        if connection_id is None:
+            return self.get_catalog().resource_entries()
+        snapshot = self.get_connection_snapshot(connection_id)
+        if snapshot is None:
+            return []
+        return sorted(snapshot.resources, key=lambda entry: entry.qualified_name)
+
+    def list_prompts(
+        self,
+        *,
+        connection_id: str | None = None,
+    ) -> list[CatalogPromptEntry]:
+        if connection_id is None:
+            return self.get_catalog().prompt_entries()
+        snapshot = self.get_connection_snapshot(connection_id)
+        if snapshot is None:
+            return []
+        return sorted(snapshot.prompts, key=lambda entry: entry.qualified_name)
+
+    def get_resource(self, qualified_name: str) -> CatalogResourceEntry:
+        entry = self.get_catalog().find_resource(qualified_name)
+        if entry is None:
+            raise KeyError(f"unknown resource {qualified_name!r}")
+        return entry
+
+    def get_prompt(self, qualified_name: str) -> CatalogPromptEntry:
+        entry = self.get_catalog().find_prompt(qualified_name)
+        if entry is None:
+            raise KeyError(f"unknown prompt {qualified_name!r}")
+        return entry
+
+    async def read_resource(self, qualified_name: str) -> dict[str, Any]:
+        resource = self.get_resource(qualified_name)
+        connection = self.connections.get(resource.connection_id)
+        adapter = self.adapters.get(connection.server)
+        if adapter is None:
+            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        auth = self.load_auth(resource.connection_id)
+        self._record_event(
+            make_event(
+                "resource_read_started",
+                connection_id=resource.connection_id,
+                capability_id=qualified_name,
+                payload={"uri": resource.uri},
+            )
+        )
+        result = await adapter.read_resource(connection, auth, resource.uri)
+        self._record_event(
+            make_event(
+                "resource_read_completed",
+                connection_id=resource.connection_id,
+                capability_id=qualified_name,
+                payload={"uri": resource.uri},
+            )
+        )
+        return result
+
+    async def invoke_method(
+        self,
+        connection_id: str,
+        method: str,
+        *,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        connection = self.connections.get(connection_id)
+        adapter = self.adapters.get(connection.server)
+        if adapter is None:
+            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        auth = self.load_auth(connection_id)
+        self._record_event(
+            make_event(
+                "raw_method_started",
+                connection_id=connection_id,
+                capability_id=method,
+                payload={"params": params or {}},
+            )
+        )
+        result = await adapter.invoke_method(connection, auth, method, params)
+        self._record_event(
+            make_event(
+                "raw_method_completed",
+                connection_id=connection_id,
+                capability_id=method,
+                payload={"result_keys": sorted(result.keys())},
+            )
+        )
+        return result
+
+    async def send_notification(
+        self,
+        connection_id: str,
+        method: str,
+        *,
+        params: dict[str, Any] | None = None,
+    ) -> None:
+        connection = self.connections.get(connection_id)
+        adapter = self.adapters.get(connection.server)
+        if adapter is None:
+            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        auth = self.load_auth(connection_id)
+        self._record_event(
+            make_event(
+                "raw_notification_started",
+                connection_id=connection_id,
+                capability_id=method,
+                payload={"params": params or {}},
+            )
+        )
+        await adapter.send_notification(connection, auth, method, params)
+        self._record_event(
+            make_event(
+                "raw_notification_completed",
+                connection_id=connection_id,
+                capability_id=method,
+                payload={},
+            )
+        )
+
+    async def render_prompt(
+        self,
+        qualified_name: str,
+        *,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        prompt = self.get_prompt(qualified_name)
+        connection = self.connections.get(prompt.connection_id)
+        adapter = self.adapters.get(connection.server)
+        if adapter is None:
+            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        auth = self.load_auth(prompt.connection_id)
+        self._record_event(
+            make_event(
+                "prompt_get_started",
+                connection_id=prompt.connection_id,
+                capability_id=qualified_name,
+                payload={"argument_keys": sorted((arguments or {}).keys())},
+            )
+        )
+        result = await adapter.get_prompt(
+            connection,
+            auth,
+            prompt.local_name,
+            arguments,
+        )
+        self._record_event(
+            make_event(
+                "prompt_get_completed",
+                connection_id=prompt.connection_id,
+                capability_id=qualified_name,
+                payload={"argument_keys": sorted((arguments or {}).keys())},
+            )
+        )
+        return result
 
     async def refresh_connection_catalog(
         self,

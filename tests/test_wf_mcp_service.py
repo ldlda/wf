@@ -224,3 +224,90 @@ def test_service_records_tool_call_events() -> None:
     ]
     assert tool_events[0].capability_id == "demo.personal.echo_tool"
     assert tool_events[1].payload["outcome"] == "ok"
+
+
+def test_service_can_inspect_resources_and_prompts() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "inspect_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+
+    resources = service.list_resources(connection_id="demo.personal")
+    prompts = service.list_prompts(connection_id="demo.personal")
+
+    assert [resource.qualified_name for resource in resources] == [
+        "demo.personal.resource.welcome"
+    ]
+    assert [prompt.qualified_name for prompt in prompts] == [
+        "demo.personal.prompt.summarize"
+    ]
+
+    resource = service.get_resource("demo.personal.resource.welcome")
+    prompt = service.get_prompt("demo.personal.prompt.summarize")
+
+    assert resource.uri == "demo://docs/welcome"
+    assert prompt.arguments[0]["name"] == "text"
+
+
+def test_service_can_proxy_resource_reads_and_prompt_gets() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "proxy_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+
+    resource_result = asyncio.run(
+        service.read_resource("demo.personal.resource.welcome")
+    )
+    prompt_result = asyncio.run(
+        service.render_prompt(
+            "demo.personal.prompt.summarize",
+            arguments={"text": "hello world"},
+        )
+    )
+
+    assert (
+        resource_result["contents"][0]["text"]
+        == "Welcome from the fake adapter resource."
+    )
+    assert (
+        prompt_result["messages"][0]["content"]["text"]
+        == "Summarize this text:\n\nhello world"
+    )
+
+    event_kinds = [event.kind for event in service.list_events()]
+    assert "resource_read_started" in event_kinds
+    assert "resource_read_completed" in event_kinds
+    assert "prompt_get_started" in event_kinds
+    assert "prompt_get_completed" in event_kinds
+
+
+def test_service_can_invoke_raw_method_and_notification() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "raw_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    result = asyncio.run(
+        service.invoke_method("demo.personal", "demo.echo", params={"text": "hello"})
+    )
+    asyncio.run(
+        service.send_notification(
+            "demo.personal",
+            "notifications/progress",
+            params={"progress": 1},
+        )
+    )
+
+    assert result == {"echoed": "hello"}
+    event_kinds = [event.kind for event in service.list_events()]
+    assert "raw_method_started" in event_kinds
+    assert "raw_method_completed" in event_kinds
+    assert "raw_notification_started" in event_kinds
+    assert "raw_notification_completed" in event_kinds
