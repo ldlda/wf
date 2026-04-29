@@ -2,6 +2,11 @@ from .adapters import (
     BackendAdapter,
     ToolCallResult,
 )
+from .broker_server import (
+    build_service_from_config,
+    create_broker_server,
+    load_broker_config,
+)
 from .capabilities import (
     CatalogNodeEntry,
     CatalogPromptEntry,
@@ -20,6 +25,7 @@ from .discovery import (
 from .events import McpEvent, make_event
 from .models import (
     AuthRecord,
+    BrokerConfig,
     CatalogSnapshot,
     ConnectionConfig,
     RawWorkflowPlan,
@@ -32,6 +38,7 @@ from .wrappers import wrap_discovered_tool
 __all__ = [
     "AuthRecord",
     "BackendAdapter",
+    "BrokerConfig",
     "CatalogNodeEntry",
     "CatalogPromptEntry",
     "CatalogResourceEntry",
@@ -50,7 +57,10 @@ __all__ = [
     "Store",
     "ToolCallResult",
     "WfMcpService",
+    "build_service_from_config",
+    "create_broker_server",
     "discover_connection_capabilities",
+    "load_broker_config",
     "make_event",
     "parse_connection_id",
     "qualify_node_name",

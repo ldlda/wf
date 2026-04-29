@@ -3,11 +3,15 @@ name = "lda-wf"
 version = "0.0.1"
 description = "Add your description here"
 readme = "README.md"
+authors = [{ name = "lda", email = "lda@ldlda.com" }]
 requires-python = ">=3.14"
 dependencies = [
     "mcp[cli,rich]>=1",
     "pydantic>=2",
 ]
+
+[project.scripts]
+wf-mcp = "wf_mcp.cli:main"
 
 [dependency-groups]
 dev = [
@@ -16,3 +20,6 @@ dev = [
 
 [tool.pytest.ini_options]
 addopts = "-p no:cacheprovider"
+
+[tool.uv]
+package = true

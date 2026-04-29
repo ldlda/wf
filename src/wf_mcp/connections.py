@@ -32,6 +32,9 @@ class ConnectionRegistry:
     def get(self, connection_id: str) -> ConnectionConfig:
         return self.connections[connection_id]
 
+    def list_all(self) -> list[ConnectionConfig]:
+        return list(self.connections.values())
+
     def list_enabled(self) -> list[ConnectionConfig]:
         return [
             connection for connection in self.connections.values() if connection.enabled

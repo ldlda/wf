@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Any
 
 from .capabilities import CatalogNodeEntry, CatalogPromptEntry, CatalogResourceEntry
@@ -46,6 +47,12 @@ class RawWorkflowPlan:
     start: str
     nodes: list[dict[str, Any]]
     edges: list[dict[str, Any]]
+
+
+@dataclass(slots=True)
+class BrokerConfig:
+    store_root: Path
+    connections: list[ConnectionConfig] = field(default_factory=list)
 
 
 def dump_catalog_snapshot(snapshot: CatalogSnapshot) -> dict[str, Any]:

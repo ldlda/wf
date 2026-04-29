@@ -251,7 +251,7 @@ wheels = [
 [[package]]
 name = "lda-wf"
 version = "0.0.1"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "mcp", extra = ["cli", "rich"] },
     { name = "pydantic" },

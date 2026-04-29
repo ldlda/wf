@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+import asyncio
+import json
+
+from wf_mcp import (
+    BrokerConfig,
+    ConnectionConfig,
+    FileStore,
+    WfMcpService,
+    build_service_from_config,
+    create_broker_server,
+    load_broker_config,
+)
+
+from test_wf_mcp_support import FakeAdapter, local_temp_root
+
+
+def test_load_broker_config_resolves_relative_store_root() -> None:
+    tmp_path = local_temp_root() / "broker_config_test"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "store_root": ".broker-store",
+                "connections": [
+                    {
+                        "id": "demo.personal",
+                        "server": "demo",
+                        "account": "personal",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_broker_config(config_path)
+
+    assert config.store_root == (tmp_path / ".broker-store").resolve()
+    assert [connection.id for connection in config.connections] == ["demo.personal"]
+
+
+def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "broker_server_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+
+    server = create_broker_server(service)
+
+    tools = asyncio.run(server.list_tools())
+    resources = asyncio.run(server.list_resources())
+    prompts = asyncio.run(server.list_prompts())
+
+    tool_names = {tool.name for tool in tools}
+    resource_names = {resource.name for resource in resources}
+    prompt_names = {prompt.name for prompt in prompts}
+
+    assert "refresh_connection_catalog" in tool_names
+    assert "invoke_broker_method" in tool_names
+    assert "catalog.all" in resource_names
+    assert "events.all" in resource_names
+    assert "plan_with_catalog" in prompt_names
+
+
+def test_build_service_from_config_registers_connections() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "broker_config_store",
+        connections=[
+            ConnectionConfig(id="demo.personal", server="demo", account="personal"),
+            ConnectionConfig(id="demo.work", server="demo", account="work"),
+        ],
+    )
+
+    service = build_service_from_config(config)
+
+    ids = [connection.id for connection in service.connections.list_all()]
+    assert ids == ["demo.personal", "demo.work"]

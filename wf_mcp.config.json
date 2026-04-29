@@ -1,0 +1,19 @@
+{
+  "store_root": ".wf_mcp_store",
+  "connections": [
+    {
+      "id": "everything.default",
+      "server": "everything",
+      "account": "default",
+      "enabled": true,
+      "metadata": {
+        "transport": "stdio",
+        "command": "pnpx",
+        "args": [
+          "-y",
+          "@modelcontextprotocol/server-everything"
+        ]
+      }
+    }
+  ]
+}
