@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
+import sys
 from pathlib import Path
 from typing import Any
 
+import pytest
 from pydantic import BaseModel
 
 from wf_authoring import NodeReturn, node
@@ -13,6 +15,7 @@ from wf_mcp import (
     ConnectionConfig,
     DiscoveredTool,
     FileStore,
+    McpSdkAdapter,
     RawWorkflowPlan,
     ToolCallResult,
     WfMcpService,
@@ -54,6 +57,10 @@ def _local_temp_root() -> Path:
     root = Path("test-artifacts") / "wf_mcp_store"
     root.mkdir(parents=True, exist_ok=True)
     return root
+
+
+def _fixture_server_path() -> str:
+    return str((Path(__file__).parent / "fixtures" / "mcp_echo_server.py").resolve())
 
 
 class FakeAdapter:
@@ -218,3 +225,43 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             },
         }
     ]
+
+
+def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
+    service = WfMcpService(store=FileStore(_local_temp_root() / "sdk_adapter_store"))
+    service.register_connection(
+        ConnectionConfig(
+            id="fixture.personal",
+            server="fixture",
+            account="personal",
+            metadata={
+                "transport": "stdio",
+                "command": sys.executable,
+                "args": [_fixture_server_path()],
+            },
+        )
+    )
+    service.register_adapter("fixture", McpSdkAdapter())
+
+    try:
+        asyncio.run(service.refresh_connection_catalog("fixture.personal"))
+    except PermissionError as exc:
+        pytest.skip(f"stdio MCP transport is not permitted in this environment: {exc}")
+
+    payload = service.get_catalog().as_payload()
+    assert payload["nodes"][0]["qualified_name"] == "fixture.personal.echo_tool"
+
+    adapter = McpSdkAdapter()
+    try:
+        result = asyncio.run(
+            adapter.call_tool(
+                connection=service.connections.get("fixture.personal"),
+                auth=None,
+                tool_name="echo_tool",
+                payload={"text": "hello"},
+            )
+        )
+    except PermissionError as exc:
+        pytest.skip(f"stdio MCP transport is not permitted in this environment: {exc}")
+    assert result.outcome == "ok"
+    assert result.output == {"echoed": "hello"}

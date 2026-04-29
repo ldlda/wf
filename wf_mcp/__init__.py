@@ -8,6 +8,7 @@ from .models import (
     ConnectionConfig,
     RawWorkflowPlan,
 )
+from .mcp_sdk_adapter import McpSdkAdapter
 from .service import WfMcpService
 from .store import FileStore, Store
 from .wrappers import wrap_discovered_tool
@@ -22,6 +23,7 @@ __all__ = [
     "ConnectionRegistry",
     "DiscoveredTool",
     "FileStore",
+    "McpSdkAdapter",
     "RawWorkflowPlan",
     "Store",
     "ToolCallResult",
