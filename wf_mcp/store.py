@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
 from pathlib import Path
 
-from .models import AuthRecord, CatalogNodeEntry, CatalogSnapshot
+from .models import (
+    AuthRecord,
+    CatalogNodeEntry,
+    CatalogPromptEntry,
+    CatalogResourceEntry,
+    CatalogSnapshot,
+    dump_catalog_snapshot,
+)
 
 
 class Store:
@@ -44,7 +50,14 @@ class FileStore(Store):
 
     def save_auth(self, record: AuthRecord) -> None:
         self._auth_path(record.connection_id).write_text(
-            json.dumps(asdict(record), indent=2),
+            json.dumps(
+                {
+                    "connection_id": record.connection_id,
+                    "scheme": record.scheme,
+                    "payload": record.payload,
+                },
+                indent=2,
+            ),
             encoding="utf-8",
         )
 
@@ -56,14 +69,8 @@ class FileStore(Store):
         return AuthRecord(**data)
 
     def save_catalog(self, snapshot: CatalogSnapshot) -> None:
-        payload = {
-            "connection_id": snapshot.connection_id,
-            "fetched_at_epoch_ms": snapshot.fetched_at_epoch_ms,
-            "max_age_seconds": snapshot.max_age_seconds,
-            "nodes": [asdict(node) for node in snapshot.nodes],
-        }
         self._catalog_path(snapshot.connection_id).write_text(
-            json.dumps(payload, indent=2),
+            json.dumps(dump_catalog_snapshot(snapshot), indent=2),
             encoding="utf-8",
         )
 
@@ -77,4 +84,12 @@ class FileStore(Store):
             fetched_at_epoch_ms=data["fetched_at_epoch_ms"],
             max_age_seconds=data["max_age_seconds"],
             nodes=[CatalogNodeEntry(**node) for node in data.get("nodes", [])],
+            resources=[
+                CatalogResourceEntry(**resource)
+                for resource in data.get("resources", [])
+            ],
+            prompts=[
+                CatalogPromptEntry(**prompt) for prompt in data.get("prompts", [])
+            ],
+            metadata=data.get("metadata", {}),
         )

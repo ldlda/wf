@@ -8,9 +8,18 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 from mcp.types import CallToolResult as McpCallToolResult
+from mcp.types import ListPromptsResult, ListResourcesResult
 from mcp.types import ListToolsResult, Tool as McpTool
+from mcp.types import Prompt as McpPrompt
+from mcp.types import Resource as McpResource
 
-from .adapters import BackendAdapter, DiscoveredTool, ToolCallResult
+from .adapters import (
+    BackendAdapter,
+    DiscoveredPrompt,
+    DiscoveredResource,
+    DiscoveredTool,
+    ToolCallResult,
+)
 from .models import AuthRecord, ConnectionConfig
 
 
@@ -36,6 +45,28 @@ def _tool_to_discovered(tool: McpTool) -> DiscoveredTool:
         output_schema=output_schema,
         outcomes=("ok", "error"),
         metadata=tool.model_dump(by_alias=True),
+    )
+
+
+def _resource_to_discovered(resource: McpResource) -> DiscoveredResource:
+    return DiscoveredResource(
+        uri=str(resource.uri),
+        name=str(resource.uri),
+        description=resource.description,
+        mime_type=resource.mimeType,
+        metadata=resource.model_dump(by_alias=True),
+    )
+
+
+def _prompt_to_discovered(prompt: McpPrompt) -> DiscoveredPrompt:
+    arguments = [
+        argument.model_dump(by_alias=True) for argument in prompt.arguments or []
+    ]
+    return DiscoveredPrompt(
+        name=prompt.name,
+        description=prompt.description,
+        arguments=arguments,
+        metadata=prompt.model_dump(by_alias=True),
     )
 
 
@@ -106,6 +137,34 @@ class McpSdkAdapter(BackendAdapter):
         async with self._session(connection, auth) as session:
             result: ListToolsResult = await session.list_tools()
             return [_tool_to_discovered(tool) for tool in result.tools]
+
+    async def list_resources(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredResource]:
+        async with self._session(connection, auth) as session:
+            result: ListResourcesResult = await session.list_resources()
+            return [_resource_to_discovered(resource) for resource in result.resources]
+
+    async def list_prompts(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredPrompt]:
+        async with self._session(connection, auth) as session:
+            result: ListPromptsResult = await session.list_prompts()
+            return [_prompt_to_discovered(prompt) for prompt in result.prompts]
+
+    async def get_connection_metadata(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> dict[str, Any]:
+        return {
+            "server": connection.server,
+            "transport": connection.metadata.get("transport", "stdio"),
+        }
 
     async def call_tool(
         self,

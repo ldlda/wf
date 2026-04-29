@@ -93,6 +93,9 @@ class WfMcpService:
 
         auth = self.load_auth(connection_id)
         tools = await adapter.list_tools(connection, auth)
+        resources = await adapter.list_resources(connection, auth)
+        prompts = await adapter.list_prompts(connection, auth)
+        metadata = await adapter.get_connection_metadata(connection, auth)
         specs = [
             wrap_discovered_tool(
                 connection=connection,
@@ -107,6 +110,16 @@ class WfMcpService:
             *specs,
             max_age_seconds=max_age_seconds,
         )
+        snapshot = snapshot_from_specs(
+            connection_id,
+            specs=self.specs_by_connection.get(connection_id, {}),
+            resources=resources,
+            prompts=prompts,
+            metadata=metadata,
+            fetched_at_epoch_ms=int(time.time() * 1000),
+            max_age_seconds=max_age_seconds or self.default_catalog_max_age_seconds,
+        )
+        self.store.save_catalog(snapshot)
 
     def compile_plan(self, plan: RawWorkflowPlan) -> Workflow:
         node_defs: dict[str, Any] = {}

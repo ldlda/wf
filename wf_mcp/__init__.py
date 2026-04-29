@@ -1,9 +1,17 @@
-from .adapters import BackendAdapter, DiscoveredTool, ToolCallResult
+from .adapters import (
+    BackendAdapter,
+    DiscoveredPrompt,
+    DiscoveredResource,
+    DiscoveredTool,
+    ToolCallResult,
+)
 from .catalog import CombinedCatalog
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from .models import (
     AuthRecord,
     CatalogNodeEntry,
+    CatalogPromptEntry,
+    CatalogResourceEntry,
     CatalogSnapshot,
     ConnectionConfig,
     RawWorkflowPlan,
@@ -17,10 +25,14 @@ __all__ = [
     "AuthRecord",
     "BackendAdapter",
     "CatalogNodeEntry",
+    "CatalogPromptEntry",
+    "CatalogResourceEntry",
     "CatalogSnapshot",
     "CombinedCatalog",
     "ConnectionConfig",
     "ConnectionRegistry",
+    "DiscoveredPrompt",
+    "DiscoveredResource",
     "DiscoveredTool",
     "FileStore",
     "McpSdkAdapter",

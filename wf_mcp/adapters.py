@@ -17,6 +17,23 @@ class DiscoveredTool:
 
 
 @dataclass(slots=True)
+class DiscoveredResource:
+    uri: str
+    name: str
+    description: str | None
+    mime_type: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class DiscoveredPrompt:
+    name: str
+    description: str | None
+    arguments: list[dict[str, Any]] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
 class ToolCallResult:
     outcome: str
     output: dict[str, Any] = field(default_factory=dict)
@@ -29,6 +46,24 @@ class BackendAdapter(Protocol):
         connection: ConnectionConfig,
         auth: AuthRecord | None,
     ) -> list[DiscoveredTool]: ...
+
+    async def list_resources(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredResource]: ...
+
+    async def list_prompts(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredPrompt]: ...
+
+    async def get_connection_metadata(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> dict[str, Any]: ...
 
     async def call_tool(
         self,

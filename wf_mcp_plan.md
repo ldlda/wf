@@ -162,6 +162,31 @@ Already present:
 
 This is a good first vertical slice for tool execution.
 
+## What "good proxy" means
+
+For `wf_mcp`, "proxy" should not only mean "call tools on behalf of a client."
+
+It should mean:
+
+- discover backend MCP capabilities and expose them with stable namespacing
+- preserve enough metadata that a client can understand what exists and how to use it
+- forward or mirror backend-facing events and responses in a traceable way
+- keep auth/session boundaries explicit per connection
+- separate "what the backend offers" from "what becomes a workflow node"
+
+So the proxy layer should eventually broker:
+
+- tools
+- resources
+- prompts
+- notifications/events
+- auth-related state markers
+- tasks / long-running operations
+- elicitations / human-input capabilities
+- app/server metadata
+
+Not all of these need workflow semantics immediately, but they should still have a place in the package model.
+
 ## Next capability expansion
 
 The next architectural move should be broadening the capability model beyond tools.
@@ -201,6 +226,81 @@ The client-facing catalog payload should be usable by:
 - a human inspector UI
 - an LLM that builds workflows
 - internal service code
+
+## Near-term implementation order
+
+This is the intended order of work from here.
+
+### Milestone 1: Broaden discovery models
+
+Add normalized discovery models for:
+
+- resources
+- prompts
+- notifications
+- tasks
+- elicitations
+- app/server metadata
+
+Outcome:
+
+- `wf_mcp` can describe more of an MCP backend than just tools
+- namespacing rules apply uniformly across capability types
+
+### Milestone 2: Unified capability snapshots
+
+Move from tool-only snapshots to connection-scoped capability snapshots that can store:
+
+- tools
+- resources
+- prompts
+- capability metadata
+- freshness timestamps
+- auth-state hints
+
+Outcome:
+
+- the catalog becomes useful to a real client or inspector
+- capability caching is no longer tool-specific
+
+### Milestone 3: Service APIs for non-tool capabilities
+
+Expose service methods that let a client:
+
+- inspect resources
+- inspect prompts
+- read capability metadata
+- refresh one connection or all connections
+
+Outcome:
+
+- `wf_mcp` becomes a usable broker, not only a workflow launcher
+
+### Milestone 4: Trace/event correlation
+
+Add a light event model that can connect:
+
+- client action
+- backend MCP request/response
+- workflow run/step trace
+
+Outcome:
+
+- better observability
+- cleaner debugging
+- future notification/task support has a home
+
+### Milestone 5: Selective workflow mapping
+
+Only after the above is stable:
+
+- keep tools as workflow nodes
+- evaluate whether prompts/resources should become helper nodes or stay catalog-only
+- map elicitation to workflow interrupts carefully
+
+Outcome:
+
+- workflow integration grows from understood protocol behavior, not guesses
 
 ## Workflow integration policy
 
@@ -258,120 +358,57 @@ Traceability is a major requirement.
 We should eventually distinguish:
 
 - workflow execution trace
-- MCP backend call trace
-- client-facing event/notification stream
+- backend MCP call trace
+- client-facing event stream
 
-These are related but not identical.
+The important design rule is that these should be related, but not collapsed into one giant anonymous log.
 
-The design should make it possible to correlate them through:
+## Concrete next files
 
-- connection id
-- capability id
-- workflow run id
-- frame/node ids where appropriate
+If we follow the plan above, the next likely modules are:
 
-## Auth and storage
+- `wf_mcp/discovery.py`
+  - orchestrate refresh and cache policy for all capability types
+- `wf_mcp/capabilities.py`
+  - broader normalized capability models if `models.py` starts getting crowded
+- `wf_mcp/events.py`
+  - event / trace correlation shapes
+- `wf_mcp/resources.py`
+  - resource-facing service helpers
+- `wf_mcp/prompts.py`
+  - prompt-facing service helpers
 
-Auth should remain behind a pluggable store interface.
+Whether these stay as separate files or fold back into `models.py` / `service.py` should be driven by clarity, not purity.
 
-First implementation:
+## Test organization direction
 
-- file-backed store
+The current test suite is still small enough to live in two top-level files, but it will get noisy if `wf_mcp` grows beyond tools.
 
-Expected future replacements:
+Recommended direction once the next capability work starts:
 
-- database-backed store
-- encrypted local store
-- secret-manager-backed store
+- `tests/wf_core/`
+- `tests/wf_authoring/`
+- `tests/wf_mcp/`
+- `tests/fixtures/`
 
-The store should persist:
+For `wf_mcp`, likely split by concern:
 
-- auth records
-- cached capability snapshots
+- `tests/wf_mcp/test_store.py`
+- `tests/wf_mcp/test_catalog.py`
+- `tests/wf_mcp/test_service.py`
+- `tests/wf_mcp/test_adapters.py`
+- `tests/wf_mcp/test_sdk_adapter.py`
 
-It may later persist:
+This does not need to happen immediately, but it should happen before one `test_wf_mcp.py` turns into a junk drawer.
 
-- saved plans/workflows
-- job specs
-- run metadata
+## Working rule for the next phase
 
-## Execution model
+Before making a new MCP capability executable inside workflows, first answer:
 
-Near-term execution stance:
+- is this primarily catalog/proxy surface, or workflow surface?
+- what is the stable namespaced identifier?
+- what is the trace/event story?
+- does it need auth/session context?
+- does it map cleanly to `wf_core`, or does it stay above it?
 
-- async-first at the MCP layer
-- use existing async workflow runtime
-- keep workflow runs mostly in memory
-- leave room for future scheduled/offline execution
-
-The important offline use case is:
-
-- build workflow once
-- execute it later without the LLM in the loop
-
-This is closer to scheduled automation than to interactive planning.
-
-## Public API direction
-
-`wf_mcp` should expose two explicit entrypoints.
-
-### 1. Convenient/build-style API
-
-For human or higher-level service use.
-
-Examples:
-
-- build workflow from selected catalog items
-- helper methods around namespaced tools/resources/prompts
-
-### 2. Raw plan API
-
-For client LLM use.
-
-This should accept plans that:
-
-- reference namespaced capabilities directly
-- avoid raw `NodeDef` authoring
-- still compile down to `wf_core.Workflow`
-
-## Proposed modules
-
-Existing:
-
-- `models.py`
-- `connections.py`
-- `store.py`
-- `catalog.py`
-- `service.py`
-- `adapters.py`
-- `wrappers.py`
-- `mcp_sdk_adapter.py`
-
-Likely next:
-
-- `discovery.py`
-- `capabilities.py`
-- `events.py`
-- `auth.py`
-- `plans.py`
-- `jobs.py`
-
-## Recommended next implementation order
-
-1. Broaden capability models beyond tools
-2. Introduce unified capability snapshots/catalog payloads
-3. Add discovery/cache orchestration policy
-4. Expose prompt/resource inspection through service APIs
-5. Add trace/event correlation hooks
-6. Revisit workflow integration for elicitation/tasks
-
-## Guiding rule
-
-`wf_mcp` should not collapse protocol richness into fake simplicity too early.
-
-It should:
-
-- preserve namespacing
-- preserve capability boundaries
-- preserve traceability
-- only turn protocol features into workflow features when the semantic mapping is clear
+That rule should keep us from forcing everything through the node model too early.

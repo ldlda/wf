@@ -14,6 +14,8 @@ from wf_core import END, RuntimeContext, RunStatus
 from wf_mcp import (
     AuthRecord,
     ConnectionConfig,
+    DiscoveredPrompt,
+    DiscoveredResource,
     DiscoveredTool,
     FileStore,
     McpSdkAdapter,
@@ -122,6 +124,52 @@ class FakeAdapter:
                 },
             )
         ]
+
+    async def list_resources(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredResource]:
+        return [
+            DiscoveredResource(
+                uri="demo://docs/welcome",
+                name="resource.welcome",
+                description="Welcome resource",
+                mime_type="text/plain",
+                metadata={"kind": "static"},
+            )
+        ]
+
+    async def list_prompts(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredPrompt]:
+        return [
+            DiscoveredPrompt(
+                name="prompt.summarize",
+                description="Summarize text",
+                arguments=[
+                    {
+                        "name": "text",
+                        "required": True,
+                        "description": "Text to summarize",
+                    }
+                ],
+                metadata={"kind": "template"},
+            )
+        ]
+
+    async def get_connection_metadata(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> dict[str, Any]:
+        return {
+            "server": connection.server,
+            "account": connection.account,
+            "auth_scheme": auth.scheme if auth is not None else None,
+        }
 
     async def call_tool(
         self,
@@ -262,6 +310,45 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             },
         }
     ]
+    assert payload["resources"] == [
+        {
+            "qualified_name": "demo.personal.resource.welcome",
+            "connection_id": "demo.personal",
+            "local_name": "resource.welcome",
+            "uri": "demo://docs/welcome",
+            "description": "Welcome resource",
+            "mime_type": "text/plain",
+            "metadata": {"kind": "static"},
+        }
+    ]
+    assert payload["prompts"] == [
+        {
+            "qualified_name": "demo.personal.prompt.summarize",
+            "connection_id": "demo.personal",
+            "local_name": "prompt.summarize",
+            "description": "Summarize text",
+            "arguments": [
+                {
+                    "name": "text",
+                    "required": True,
+                    "description": "Text to summarize",
+                }
+            ],
+            "metadata": {"kind": "template"},
+        }
+    ]
+    assert payload["connections"] == [
+        {
+            "connection_id": "demo.personal",
+            "fetched_at_epoch_ms": payload["connections"][0]["fetched_at_epoch_ms"],
+            "max_age_seconds": 300,
+            "metadata": {
+                "server": "demo",
+                "account": "personal",
+                "auth_scheme": "token",
+            },
+        }
+    ]
 
 
 def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
@@ -328,3 +415,5 @@ def test_mcp_sdk_adapter_can_probe_everything_server() -> None:
         node["qualified_name"].startswith("everything.default.")
         for node in payload["nodes"]
     )
+    assert "resources" in payload
+    assert "prompts" in payload

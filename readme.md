@@ -1,5 +1,11 @@
 # lda.chat - Running Design Notes
 
+## Related docs
+
+- [authoring_sketch.md](authoring_sketch.md): `wf_authoring` direction, including `@node`, `NodeSpec`, builder ergonomics, async registry seams, and subgraph-as-node.
+- [wf_mcp_plan.md](wf_mcp_plan.md): `wf_mcp` direction as a namespaced MCP capability broker plus workflow build/run layer.
+- [scratchpad.md](scratchpad.md): rougher design history and intermediate spec notes that fed the current model.
+
 ## What is this
 
 `lda.chat` is an AI agent that turns natural language requests into executable
