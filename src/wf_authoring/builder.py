@@ -184,9 +184,11 @@ class WorkflowBuilder:
         """
         return execute_workflow(self.compile(), workflow_input, self.registry())
 
-    def condition(self, *, id: str, check: CoreCondition | Expr) -> ConditionNode:
+    def condition(
+        self, *, id: str | None = None, check: CoreCondition | Expr
+    ) -> ConditionNode:
         node = ConditionNode(
-            id=id,
+            id=id or self._next_step_id("condition"),
             type="condition",
             check=compile_condition(check),
         )
@@ -196,7 +198,7 @@ class WorkflowBuilder:
     def foreach(
         self,
         *,
-        id: str,
+        id: str | None = None,
         over: PathArg,
         as_: str,
         mode: Literal["serial", "parallel"] = "serial",
@@ -204,7 +206,7 @@ class WorkflowBuilder:
     ) -> ForeachNode:
         node = ForeachNode.model_validate(
             {
-                "id": id,
+                "id": id or self._next_step_id(f"foreach_{_slug_id(as_)}"),
                 "type": "foreach",
                 "over": _coerce_path(over),
                 "as": as_,
@@ -218,14 +220,14 @@ class WorkflowBuilder:
     def interrupt(
         self,
         *,
-        id: str,
+        id: str | None = None,
         kind: str,
         request_map: MapArg | None = None,
         out_map: MapArg | None = None,
         outcomes: list[str] | None = None,
     ) -> InterruptNode:
         node = InterruptNode(
-            id=id,
+            id=id or self._next_step_id(f"interrupt_{_slug_id(kind)}"),
             type="interrupt",
             kind=kind,
             request_map=_normalize_mapping(request_map),
@@ -252,6 +254,7 @@ class WorkflowBuilder:
         Passing a NodeSpec creates a node use with auto-mapping and an auto id.
         Passing an existing step or id only wires edges. Empty branch maps are
         allowed but warn because they usually indicate an unfinished router.
+        The returned mapping is keyed by branch outcome, not generated target id.
         """
         if not branches:
             warnings.warn(

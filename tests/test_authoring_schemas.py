@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 
 import pytest
 
-from wf_authoring import WorkflowBuilder, node, state_field
+from wf_authoring import WorkflowBuilder, node, state, state_field
 from wf_core import RunStatus, WorkflowExecutionError
 
 
@@ -284,3 +284,22 @@ def test_builder_branch_warns_on_empty_branch_map() -> None:
         targets = builder.branch(router, {})
 
     assert targets == {}
+
+
+def test_builder_can_auto_id_condition_foreach_and_interrupt() -> None:
+    builder = WorkflowBuilder(
+        name="auto_id_control_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    first_condition = builder.condition(check=state("count").gt(0))
+    second_condition = builder.condition(check=state("count").gt(1))
+    foreach = builder.foreach(over="state.tags", as_="tag")
+    interrupt = builder.interrupt(kind="approval")
+
+    assert first_condition.id == "condition"
+    assert second_condition.id == "condition_2"
+    assert foreach.id == "foreach_tag"
+    assert interrupt.id == "interrupt_approval"
