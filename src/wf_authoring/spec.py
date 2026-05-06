@@ -21,10 +21,30 @@ from wf_core import NodeDef, RuntimeContext, SchemaRef
 
 InputT = TypeVar("InputT", bound=BaseModel)
 OutputT = TypeVar("OutputT", bound=BaseModel)
-NodeCallable = Callable[[InputT, RuntimeContext], "NodeReturn[OutputT] | OutputT"]
-AsyncNodeCallable = Callable[
+
+ContextNodeCallable = Callable[
+    [InputT, RuntimeContext], "NodeReturn[OutputT] | OutputT"
+]
+PlainNodeCallable = Callable[[InputT], "NodeReturn[OutputT] | OutputT"]
+NodeCallable = (
+    Callable[[InputT, RuntimeContext], "NodeReturn[OutputT] | OutputT"]
+    | Callable[[InputT], "NodeReturn[OutputT] | OutputT"]
+)
+
+AsyncContextNodeCallable = Callable[
     [InputT, RuntimeContext], Awaitable["NodeReturn[OutputT] | OutputT"]
 ]
+AsyncPlainNodeCallable = Callable[
+    [InputT], Awaitable["NodeReturn[OutputT] | OutputT"]
+]
+AsyncNodeCallable = (
+    Callable[
+        [InputT, RuntimeContext],
+        Awaitable["NodeReturn[OutputT] | OutputT"],
+    ]
+    | Callable[[InputT], Awaitable["NodeReturn[OutputT] | OutputT"]]
+)
+
 SyncRegistryHandler = Callable[[dict[str, Any], RuntimeContext], dict[str, Any]]
 AsyncRegistryHandler = Callable[
     [dict[str, Any], RuntimeContext], Awaitable[dict[str, Any]]
@@ -76,30 +96,31 @@ def _infer_models(
 ) -> tuple[type[BaseModel], type[BaseModel]]:
     hints = get_type_hints(fn, include_extras=True)
     params = list(signature(fn).parameters.values())
-    if len(params) < 2:
-        raise TypeError("node function must accept at least (payload, ctx) parameters")
+    if len(params) not in {1, 2}:
+        raise TypeError("node function must accept (payload) or (payload, ctx)")
 
     payload_param = params[0]
-    ctx_param = params[1]
 
     if payload_param.kind not in (
         Parameter.POSITIONAL_ONLY,
         Parameter.POSITIONAL_OR_KEYWORD,
     ):
         raise TypeError("node payload parameter must be positional")
-    if ctx_param.kind not in (
-        Parameter.POSITIONAL_ONLY,
-        Parameter.POSITIONAL_OR_KEYWORD,
-    ):
-        raise TypeError("node context parameter must be positional")
 
     input_model = hints.get(payload_param.name)
     if not _is_basemodel_subclass(input_model):
         raise TypeError("node payload annotation must be a pydantic BaseModel subclass")
 
-    ctx_type = hints.get(ctx_param.name)
-    if ctx_type is not RuntimeContext:
-        raise TypeError("node context annotation must be wf_core.RuntimeContext")
+    if len(params) == 2:
+        ctx_param = params[1]
+        if ctx_param.kind not in (
+            Parameter.POSITIONAL_ONLY,
+            Parameter.POSITIONAL_OR_KEYWORD,
+        ):
+            raise TypeError("node context parameter must be positional")
+        ctx_type = hints.get(ctx_param.name)
+        if ctx_type is not RuntimeContext:
+            raise TypeError("node context annotation must be wf_core.RuntimeContext")
 
     return_type = hints.get("return")
     if return_type is None:
@@ -122,6 +143,10 @@ def _infer_models(
     )
 
 
+def _accepts_context(fn: Callable[..., object]) -> bool:
+    return len(signature(fn).parameters) >= 2
+
+
 @dataclass(slots=True)
 class NodeSpec(Generic[InputT, OutputT]):
     name: str
@@ -131,13 +156,18 @@ class NodeSpec(Generic[InputT, OutputT]):
     fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT]
     description: str | None = None
     is_async: bool = False
+    accepts_context: bool = True
 
     def __call__(
         self,
         payload: InputT,
-        ctx: RuntimeContext,
+        ctx: RuntimeContext | None = None,
     ) -> NodeReturn[OutputT] | OutputT | Awaitable[NodeReturn[OutputT] | OutputT]:
-        return self.fn(payload, ctx)
+        if self.accepts_context:
+            if ctx is None:
+                raise TypeError(f"node {self.name!r} requires RuntimeContext")
+            return cast("ContextNodeCallable[InputT, OutputT]", self.fn)(payload, ctx)
+        return cast("PlainNodeCallable[InputT, OutputT]", self.fn)(payload)
 
     def to_node_def(self) -> NodeDef:
         return NodeDef(
@@ -155,7 +185,7 @@ class NodeSpec(Generic[InputT, OutputT]):
 
         def handler(payload: dict[str, Any], ctx: RuntimeContext) -> dict[str, Any]:
             parsed = self.input_model.model_validate(payload)
-            raw = self.fn(parsed, ctx)
+            raw = self(parsed, ctx)
             return _coerce_registry_result(
                 node_name=self.name,
                 output_model=self.output_model,
@@ -171,7 +201,7 @@ class NodeSpec(Generic[InputT, OutputT]):
             ctx: RuntimeContext,
         ) -> dict[str, Any]:
             parsed = self.input_model.model_validate(payload)
-            raw_result = self.fn(parsed, ctx)
+            raw_result = self(parsed, ctx)
             if self.is_async:
                 raw = await cast(
                     Awaitable[NodeReturn[OutputT] | OutputT],
@@ -245,6 +275,7 @@ def node(
 
         resolved_name = name or getattr(fn, "__name__", "node")
         resolved_is_async = iscoroutinefunction(fn) if is_async is None else is_async
+        resolved_accepts_context = _accepts_context(fn)
         return cast(
             NodeSpec[InputT, OutputT],
             NodeSpec(
@@ -255,6 +286,7 @@ def node(
                 fn=cast(Any, fn),
                 description=description or fn.__doc__,
                 is_async=resolved_is_async,
+                accepts_context=resolved_accepts_context,
             ),
         )
 

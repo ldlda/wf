@@ -2,6 +2,14 @@ from .builder import WorkflowBuilder
 from .catalog import NodeCatalog, NodeCatalogEntry
 from .conditions import context, exists, expr, input, state
 from .mapping import bind_fields, bind_state, merge_maps
+from .ops import (
+    ItemOutput,
+    MaybeItemOutput,
+    SequenceInput,
+    first_item,
+    first_item_maybe,
+    first_item_or_none,
+)
 from .paths import GraphPath, context_path, graph_path, input_path, state_path
 from .spec import (
     AsyncRegistryHandler,
@@ -18,10 +26,13 @@ __all__ = [
     "NodeCatalog",
     "NodeCatalogEntry",
     "GraphPath",
+    "ItemOutput",
+    "MaybeItemOutput",
     "NodeReturn",
     "NodeSpec",
     "AsyncRegistryHandler",
     "SyncRegistryHandler",
+    "SequenceInput",
     "WorkflowBuilder",
     "bind_fields",
     "build_async_registry",
@@ -32,6 +43,9 @@ __all__ = [
     "context_path",
     "expr",
     "exists",
+    "first_item",
+    "first_item_maybe",
+    "first_item_or_none",
     "graph_path",
     "input",
     "input_path",
