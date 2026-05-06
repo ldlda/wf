@@ -1,19 +1,12 @@
 from __future__ import annotations
 
-from inspect import iscoroutinefunction
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable
 from dataclasses import dataclass
-from typing import (
-    Any,
-    Generic,
-    Literal,
-    cast,
-    overload,
-)
+from typing import Any, Generic, cast
 
 from pydantic import BaseModel
 
-from wf_core import NodeDef, RuntimeContext, SchemaRef
+from wf_core import NodeDef, RuntimeContext
 
 from .callables import (
     AsyncNodeCallable,
@@ -25,12 +18,8 @@ from .callables import (
     PlainNodeCallable,
     SyncRegistryHandler,
 )
-from .inference import accepts_context, infer_models
 from .result import NodeReturn
-
-
-def _schema_ref_for(model_type: type[BaseModel]) -> SchemaRef:
-    return SchemaRef.model_validate(model_type.model_json_schema())
+from .schema import schema_ref_for
 
 
 def _default_outcome(spec: "NodeSpec[Any, Any]") -> str:
@@ -61,6 +50,8 @@ def _coerce_registry_result(
 
 @dataclass(slots=True)
 class NodeSpec(Generic[InputT, OutputT]):
+    """Authoring-time wrapper for a typed Python node function."""
+
     name: str
     input_model: type[InputT]
     output_model: type[OutputT]
@@ -84,8 +75,8 @@ class NodeSpec(Generic[InputT, OutputT]):
     def to_node_def(self) -> NodeDef:
         return NodeDef(
             name=self.name,
-            input_schema=_schema_ref_for(self.input_model),
-            output_schema=_schema_ref_for(self.output_model),
+            input_schema=schema_ref_for(self.input_model),
+            output_schema=schema_ref_for(self.output_model),
             outcomes=list(self.outcomes),
         )
 
@@ -129,119 +120,3 @@ class NodeSpec(Generic[InputT, OutputT]):
             )
 
         return handler
-
-
-@overload
-def node(
-    fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT],
-    /,
-) -> NodeSpec[InputT, OutputT]: ...
-
-
-@overload
-def node(
-    fn: None = None,
-    /,
-) -> Callable[
-    [NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT]],
-    NodeSpec[InputT, OutputT],
-]: ...
-
-
-@overload
-def node(
-    fn: None = None,
-    /,
-    *,
-    name: str | None = None,
-    input_model: type[InputT] | None = None,
-    output_model: type[OutputT] | None = None,
-    outcomes: tuple[str, ...] = ("ok",),
-    description: str | None = None,
-    is_async: bool | None = None,
-) -> Callable[
-    [NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT]],
-    NodeSpec[InputT, OutputT],
-]: ...
-
-
-def node(
-    fn: NodeCallable[InputT, OutputT]
-    | AsyncNodeCallable[InputT, OutputT]
-    | None = None,
-    *,
-    name: str | None = None,
-    input_model: type[InputT] | None = None,
-    output_model: type[OutputT] | None = None,
-    outcomes: tuple[str, ...] = ("ok",),
-    description: str | None = None,
-    is_async: bool | None = None,
-) -> Any:
-    def decorator(
-        fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT],
-    ) -> NodeSpec[InputT, OutputT]:
-        inferred_input_model: type[BaseModel] | None = input_model
-        inferred_output_model: type[BaseModel] | None = output_model
-        if inferred_input_model is None or inferred_output_model is None:
-            inferred_input_model, inferred_output_model = infer_models(fn)
-
-        resolved_name = name or getattr(fn, "__name__", "node")
-        resolved_is_async = iscoroutinefunction(fn) if is_async is None else is_async
-        resolved_accepts_context = accepts_context(fn)
-        return cast(
-            NodeSpec[InputT, OutputT],
-            NodeSpec(
-                name=resolved_name,
-                input_model=inferred_input_model,
-                output_model=inferred_output_model,
-                outcomes=outcomes,
-                fn=cast(Any, fn),
-                description=description or fn.__doc__,
-                is_async=resolved_is_async,
-                accepts_context=resolved_accepts_context,
-            ),
-        )
-
-    if fn is not None:
-        return decorator(fn)
-    return decorator
-
-
-def build_registry(
-    *specs: NodeSpec[Any, Any],
-) -> dict[str, SyncRegistryHandler]:
-    return _build_registry(specs, export="sync")
-
-
-def build_async_registry(
-    *specs: NodeSpec[Any, Any],
-) -> dict[str, AsyncRegistryHandler]:
-    return _build_registry(specs, export="async")
-
-
-@overload
-def _build_registry(
-    specs: tuple[NodeSpec[Any, Any], ...],
-    *,
-    export: Literal["sync"],
-) -> dict[str, SyncRegistryHandler]: ...
-
-
-@overload
-def _build_registry(
-    specs: tuple[NodeSpec[Any, Any], ...],
-    *,
-    export: Literal["async"],
-) -> dict[str, AsyncRegistryHandler]: ...
-
-
-def _build_registry(
-    specs: tuple[NodeSpec[Any, Any], ...],
-    *,
-    export: Literal["sync", "async"],
-) -> dict[str, Any]:
-    if export == "sync":
-        return {spec.name: spec.to_registry_handler() for spec in specs}
-    if export == "async":
-        return {spec.name: spec.to_async_registry_handler() for spec in specs}
-    raise ValueError(f"unknown registry export mode {export!r}")

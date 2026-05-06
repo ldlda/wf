@@ -10,5 +10,7 @@ OutputT_co = TypeVar("OutputT_co", bound=BaseModel, covariant=True)
 
 @dataclass(frozen=True, slots=True)
 class NodeReturn(Generic[OutputT_co]):
+    """A node result that explicitly selects the outgoing workflow outcome."""
+
     outcome: str
     output: OutputT_co
