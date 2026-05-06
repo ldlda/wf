@@ -8,12 +8,14 @@ from .nodes import (
     NodeCallable,
     NodeReturn,
     NodeSpec,
+    Nothing,
     OutputT,
     PlainNodeCallable,
     SyncRegistryHandler,
     build_async_registry,
     build_registry,
     node,
+    outcome,
 )
 
 __all__ = [
@@ -26,10 +28,12 @@ __all__ = [
     "NodeCallable",
     "NodeReturn",
     "NodeSpec",
+    "Nothing",
     "OutputT",
     "PlainNodeCallable",
     "SyncRegistryHandler",
     "build_async_registry",
     "build_registry",
     "node",
+    "outcome",
 ]

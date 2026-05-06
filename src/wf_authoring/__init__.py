@@ -43,10 +43,12 @@ from .nodes import (
     AsyncRegistryHandler,
     NodeReturn,
     NodeSpec,
+    Nothing,
     SyncRegistryHandler,
     build_async_registry,
     build_registry,
     node,
+    outcome,
 )
 from .schemas import StateFieldMetadata, state_field
 from .subgraph import subgraph_node
@@ -64,6 +66,7 @@ __all__ = [
     "PickKeyInput",
     "NodeReturn",
     "NodeSpec",
+    "Nothing",
     "AsyncRegistryHandler",
     "SyncRegistryHandler",
     "SequenceInput",
@@ -95,6 +98,7 @@ __all__ = [
     "length",
     "pick_key",
     "node",
+    "outcome",
     "state",
     "state_field",
     "state_path",

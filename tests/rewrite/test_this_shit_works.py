@@ -21,10 +21,9 @@ from pydantic import BaseModel, Field
 from wf_authoring import node
 from wf_authoring import NodeReturn
 from wf_authoring.dsl.conditions import expr, state
-from wf_authoring.nodes.registry import build_registry
+from wf_authoring.nodes.result import Nothing, outcome
 from wf_authoring.schemas import state_field
 from wf_core.run_state import RunStatus
-from wf_core.runtime.engine import execute_workflow
 from wf_core.tokens import END
 
 # i copy things over, not the greatest design but im not doing deep fixes.
@@ -64,7 +63,7 @@ class ContextInput(BaseModel):
 
 
 class how_do_i_explain_this(BaseModel):
-    pity_120_available: bool = True
+    pity_120_available: bool = Field(default=True)
 
 
 class Input(Counters, ContextInput, Countdown, how_do_i_explain_this):
@@ -160,9 +159,6 @@ class State(
     # context: Context
 
 
-class Nothing(BaseModel): ...  # variance shit IDC
-
-
 # to the functions
 # @node(outcomes=("ok", "end")) # breaks because of input | nothing
 @node
@@ -209,12 +205,8 @@ def rate_booster(c: Counters) -> NodeReturn[Nothing]:
     rate_guarantee, which is no op.
     """
     if c.counter["c_80"] >= 65:
-        return NodeReturn("65", Nothing())
-    return NodeReturn("0", Nothing())
-
-
-def s(o: str) -> NodeReturn[Nothing]:
-    return NodeReturn(o, Nothing())
+        return outcome("65")
+    return outcome("0")
 
 
 def _popped(storage: list[Entity]) -> bool:
@@ -223,7 +215,7 @@ def _popped(storage: list[Entity]) -> bool:
 
 @node
 def popped(s: Storage) -> how_do_i_explain_this:
-    return how_do_i_explain_this(pity_120_available=_popped(s.storage))
+    return how_do_i_explain_this(pity_120_available=not _popped(s.storage))
 
 
 @node(outcomes=("240", "80", "10", "1"))
@@ -238,12 +230,12 @@ def pre_roll_router(c: CountersContextOutputInputAhhModelType) -> NodeReturn[Not
     if c.context["type"] == "banner" and (
         (sc == 120 and c.pity_120_available) or (sc > 0 and sc % 240 == 0)
     ):
-        return NodeReturn("240", Nothing())
+        return outcome("240")
     if ct.get("c_80", 0) % 80 == 0:
-        return s("80")
+        return outcome("80")
     if ct.get("c_10", 0) % 10 == 0:
-        return s("10")
-    return s("1")
+        return outcome("10")
+    return outcome("1")
 
 
 # now to the weeds of it. a Class!
@@ -398,7 +390,7 @@ def tick(state: Countdown) -> Countdown:
 
 @node(outcomes=("tick", END))
 def keep_rolling(state: Countdown) -> NodeReturn[Nothing]:
-    return s("tick") if (state.countdown or 0) > 0 else s(END)
+    return outcome("tick") if (state.countdown or 0) > 0 else outcome(END)
 
 
 gacha = WorkflowBuilder(
@@ -549,34 +541,25 @@ def build_input(context: Context):
     return dec
 
 
-def execute(graph: WorkflowBuilder, input: Input):
-    c = graph.compile()
-    r = build_registry(*(graph.node_specs.values()))
-    i = input.model_dump()
-    pprint(i)
-    pprint(c)
-    pprint(r)
-    return execute_workflow(c, i, r)
-
-
 # twice in a row! it took 100+ and a miss tho
 
 
 def test():
     assert 240 - 135 + 20 >= 120, "my math!"
-    d = execute(
-        gacha,
+    d = gacha.execute(
         build_input(context)(
-            20,
+            20,  # lets be optimistic
             rolled_previously=240 - 135,
             until_5=5,
             until_6=73,
             good_stuff=False,  # lets pretend
-        ),
+        ).model_dump()
     )
     assert d.status == RunStatus.COMPLETED, "oops"
     state = State.model_validate(d.state)
-    assert any(i["name"] in context["pool"]["n_240"] for i in state.storage)
+    assert any(
+        i["name"] in context["pool"]["n_240"] for i in state.storage
+    ), "pity logic failed"
     pprint(state.storage)
 
 

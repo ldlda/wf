@@ -13,7 +13,7 @@ from .callables import (
 from .inference import accepts_context, infer_models, is_basemodel_subclass
 from .decorator import node
 from .registry import build_async_registry, build_registry
-from .result import NodeReturn
+from .result import NodeReturn, Nothing, outcome
 from .schema import schema_ref_for
 from .spec import NodeSpec
 
@@ -27,6 +27,7 @@ __all__ = [
     "NodeCallable",
     "NodeReturn",
     "NodeSpec",
+    "Nothing",
     "OutputT",
     "PlainNodeCallable",
     "SyncRegistryHandler",
@@ -36,5 +37,6 @@ __all__ = [
     "infer_models",
     "is_basemodel_subclass",
     "node",
+    "outcome",
     "schema_ref_for",
 ]

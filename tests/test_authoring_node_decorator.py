@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from wf_authoring import build_registry, node
+from wf_authoring import Nothing, build_registry, node, outcome
 from wf_core import RuntimeContext
 
 
@@ -60,3 +60,19 @@ def test_node_can_alias_spec_with_direct_metadata_call() -> None:
     assert alias.fn is echo.fn
     assert alias.input_model is AliasInput
     assert alias.output_model is AliasOutput
+
+
+def test_outcome_returns_nothing_output_by_default() -> None:
+    result = outcome("skip")
+
+    assert result.outcome == "skip"
+    assert isinstance(result.output, Nothing)
+
+
+def test_outcome_can_wrap_explicit_output() -> None:
+    output = AliasOutput(value="hello")
+
+    result = outcome("ok", output)
+
+    assert result.outcome == "ok"
+    assert result.output is output
