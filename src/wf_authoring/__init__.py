@@ -48,6 +48,7 @@ from .nodes import (
     build_registry,
     node,
 )
+from .schemas import StateFieldMetadata, state_field
 from .subgraph import subgraph_node
 
 __all__ = [
@@ -66,6 +67,7 @@ __all__ = [
     "AsyncRegistryHandler",
     "SyncRegistryHandler",
     "SequenceInput",
+    "StateFieldMetadata",
     "TruthyInput",
     "ValueOutput",
     "WorkflowBuilder",
@@ -94,6 +96,7 @@ __all__ = [
     "pick_key",
     "node",
     "state",
+    "state_field",
     "state_path",
     "subgraph_node",
     "truthy",

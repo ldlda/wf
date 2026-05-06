@@ -12,17 +12,18 @@ also:
 
 from pprint import pprint
 import random
-from typing import Any, Final, Literal, TypedDict
+from typing import Annotated, Any, Final, Literal, TypedDict
 
 
 from wf_authoring.builder import WorkflowBuilder
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from wf_authoring import node
 from wf_authoring import NodeReturn
-from wf_authoring.dsl.conditions import compile_condition, expr, state
+from wf_authoring.dsl.conditions import expr, state
 from wf_authoring.nodes.registry import build_registry
-from wf_core.model import Workflow
+from wf_authoring.schemas import state_field
+from wf_core.run_state import RunStatus
 from wf_core.runtime.engine import execute_workflow
 from wf_core.tokens import END
 
@@ -47,7 +48,9 @@ class SophisticatedRates(TypedDict):
 
 class Counters(BaseModel):
     # alot of state["thing"] in the og code, so i think this is the design?
-    counter: SophisticatedCounter  # or, that is because of langgraph limitation,
+    counter: SophisticatedCounter = Field(
+        default_factory=lambda: SophisticatedCounter(c_10=0, c_80=0)
+    )  # or, that is because of langgraph limitation,
     # id prefer counter.update with dict.update override (Overwrite, not like that ever worked)
     simple_counter: int  # add
 
@@ -59,8 +62,10 @@ class Countdown(BaseModel):
 class ContextInput(BaseModel):
     context: Context  # final!
 
+
 class how_do_i_explain_this(BaseModel):
     pity_120_available: bool = True
+
 
 class Input(Counters, ContextInput, Countdown, how_do_i_explain_this):
     "input of the graph"
@@ -101,13 +106,12 @@ class Context(TypedDict):  # dataclass support? no. i mean langgraph doesnt.
     "still very convoluted logic"
 
 
-
-
-
 class Storage(BaseModel):
     "i NEED to do this?"
 
-    storage: list[Entity]  # add!
+    storage: Annotated[list[Entity], state_field(merge_strategy="append")] = Field(
+        default_factory=list
+    )  # add!
 
 
 class CurrentRoll(BaseModel):
@@ -117,12 +121,16 @@ class CurrentRoll(BaseModel):
 class ThisStorage(Storage, CurrentRoll): ...
 
 
+class PartialRates(SophisticatedRates, total=False):
+    pass
+
+
 class Rates(BaseModel):
-    rates: SophisticatedRates  # or_!
+    rates: Annotated[PartialRates, state_field(merge_strategy="merge_object")]  # or_!
 
 
 class CurrentPools(BaseModel):
-    current_pools: list[PoolByCategory] # replace!
+    current_pools: list[PoolByCategory]  # replace!
 
 
 # holy refactory
@@ -217,12 +225,15 @@ def rate_booster(c: Counters) -> NodeReturn[Nothing]:
 def s(o: str) -> NodeReturn[Nothing]:
     return NodeReturn(o, Nothing())
 
+
 def _popped(storage: list[Entity]) -> bool:
     return any(c["category"] == "240" for c in reversed(storage))
+
 
 @node
 def popped(s: Storage) -> how_do_i_explain_this:
     return how_do_i_explain_this(pity_120_available=_popped(s.storage))
+
 
 @node(outcomes=("240", "80", "10", "1"))
 def pre_roll_router(c: CountersContextOutputInputAhhModelType) -> NodeReturn[Nothing]:
@@ -250,8 +261,17 @@ def pre_roll_router(c: CountersContextOutputInputAhhModelType) -> NodeReturn[Not
 class RateChange:
     @node(name="force 6* rating")
     @staticmethod
-    def r80(_: Nothing) -> Rates:
-        return Rates.model_validate({"rates": {"r_1": 0, "r_10": 0}})
+    def r80(r: Rates) -> Rates:
+        return Rates.model_validate(
+            {
+                "rates": {
+                    "r_1": 0,
+                    "r_10": 0,
+                    "r_80": r.rates["r_80"],
+                    "r_240": r.rates["r_240"],
+                }
+            }
+        )
 
     @node(name="force banner rating")
     @staticmethod
@@ -262,14 +282,23 @@ class RateChange:
 
     @node(name="force 5*+ rating")
     @staticmethod
-    def r10(_: Nothing) -> Rates:
-        return Rates.model_validate({"rates": {"r_1": 0}})
+    def r10(r: Rates) -> Rates:
+        return Rates.model_validate(
+            {
+                "rates": {
+                    "r_1": 0,
+                    "r_10": r.rates["r_10"],
+                    "r_80": r.rates["r_80"],
+                    "r_240": r.rates["r_240"],
+                }
+            }
+        )
 
     @node(name="buff 6* rating")
     @staticmethod
     def r65(state: CountersContext) -> Rates:
         c = state.counter
-        assert c["c_80"] > 65, f"routed wrongly, 80 pity currently at {c["c_80"]}"
+        assert c["c_80"] >= 65, f"routed wrongly, 80 pity currently at {c["c_80"]}"
         n = c["c_80"] - 64
         rpn = n * 0.05
         br = state.context["initial_rates"]
@@ -300,24 +329,24 @@ class RateChange:
 class CounterUp:
     @node(name="counter 6* reset")
     @staticmethod
-    def c80(_: Nothing) -> Counters:
+    def c80(c: Counters) -> Counters:
         return Counters.model_validate(
             {
                 "counter": {
                     "c_80": 0,
                     "c_10": 0,
                 },
+                "simple_counter": c.simple_counter,
             }
         )
 
     @node(name="counter 5* reset")
     @staticmethod
-    def c10(_: Nothing) -> Counters:
+    def c10(c: Counters) -> Counters:
         return Counters.model_validate(
             {
-                "counter": {
-                    "c_10": 0,
-                },  # merge with or_!
+                "counter": {"c_10": 0, "c_80": c.counter["c_80"]},  # merge with or_!
+                "simple_counter": c.simple_counter,
             }
         )
 
@@ -326,10 +355,8 @@ class CounterUp:
     def c1(state: Counters) -> Counters:
         c = state.counter
         return Counters(
-            **{
-                "simple_counter": 1,
-                "counter": {"c_10": (c["c_10"] + 1) % 10, "c_80": (c["c_80"] + 1) % 80},
-            }
+            simple_counter=state.simple_counter + 1,
+            counter={"c_10": (c["c_10"] + 1) % 10, "c_80": (c["c_80"] + 1) % 80},
         )
 
 
@@ -340,7 +367,7 @@ class RatesContextInput(Rates, ContextInput): ...
 def prep(state: RatesContextInput) -> CurrentPools:
     r = state.rates
     p = state.context["pool"]
-    t: Final[tuple[tuple, ...]] = (  # greatest hack
+    t: Final[tuple[tuple[str, str, str], ...]] = (  # greatest hack
         ("1", "r_1", "n_1"),
         ("10", "r_10", "n_10"),
         ("80", "r_80", "n_80"),
@@ -435,7 +462,7 @@ gacha.connect("r_g10", "ok", "prep")
 
 gacha.connect("roll", "ok", "post_roll_router")  # missed this! good job
 gacha.use(post_roll_router, id="post_roll_router")
-gacha.use(popped, id = "reset_avail")
+gacha.use(popped, id="reset_avail")
 gacha.connect("reset_avail", "ok", "c_80")
 
 for outcome, node_id in {
@@ -494,7 +521,11 @@ context: Final[Context] = {
 
 
 def build_input_lite(
-    rolling: int, rolled_previously: int = 0, until_5: int = 10, until_6: int = 80, good_stuff: bool = False
+    rolling: int,
+    rolled_previously: int = 0,
+    until_5: int = 10,
+    until_6: int = 80,
+    good_stuff: bool = False,
 ) -> dict[str, Any]:
     if not 0 < until_5 <= 10:
         print(f"{until_5 = } invalid, idc")
@@ -507,13 +538,17 @@ def build_input_lite(
             "c_10": 10 - until_5,
             "c_80": 80 - until_6,
         },
-        "pity_120_available": not good_stuff
+        "pity_120_available": not good_stuff,
     }
 
 
 def build_input(context: Context):
     def dec(
-        rolling: int, rolled_previously: int = 0, until_5: int = 10, until_6: int = 80, good_stuff: bool = False
+        rolling: int,
+        rolled_previously: int = 0,
+        until_5: int = 10,
+        until_6: int = 80,
+        good_stuff: bool = False,
     ) -> Input:
         r = build_input_lite(rolling, rolled_previously, until_5, until_6, good_stuff)
         return Input.model_validate(r | {"context": context})
@@ -525,12 +560,25 @@ def execute(graph: WorkflowBuilder, input: Input):
     c = graph.compile()
     r = build_registry(*(graph.node_specs.values()))
     i = input.model_dump()
-    pprint(i)
-    pprint(c)
-    pprint(r)
+    # pprint(i)
+    # pprint(c)
+    # pprint(r)
     return execute_workflow(c, i, r)
 
 
-execute(gacha, build_input(context)(10, rolled_previously=240-135, until_5=5, until_6=73, good_stuff = True)) 
 # twice in a row! it took 100+ and a miss tho
-# E   wf_core.errors.WorkflowExecutionError: node input for init is missing required field 'countdown'
+
+def test():
+    d = execute(
+        gacha,
+        build_input(context)(
+            20, rolled_previously=240 - 135, until_5=5, until_6=73, good_stuff=False # lets pretend
+        ),
+    )
+    assert d.status == RunStatus.COMPLETED, "oops"
+    state = State.model_validate(d.state)
+    assert any(i["name"] in context["pool"]["n_240"] for i in state.storage)
+    pprint(state.storage)
+
+if __name__ == "__main__":
+    test()

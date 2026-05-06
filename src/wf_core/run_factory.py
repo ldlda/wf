@@ -1,15 +1,23 @@
 from __future__ import annotations
 
+from copy import deepcopy
+
 from .model import Workflow
 from .run_state import ExecutionFrame, FrameStatus, RunState, RunStatus
 
 
 def create_run_state(workflow: Workflow, workflow_input: dict[str, object]) -> RunState:
+    state = {
+        name: deepcopy(field.default)
+        for name, field in workflow.state_schema.fields.items()
+        if field.default is not None
+    }
+    state.update(dict(workflow_input))
     run = RunState(
         workflow_name=workflow.name,
         status=RunStatus.PENDING,
         workflow_input=dict(workflow_input),
-        state=dict(workflow_input),
+        state=state,
         frames={
             "root": ExecutionFrame(
                 id="root",

@@ -18,6 +18,7 @@ class StateField(BaseModel):
     type: str
     merge_strategy: Literal["replace", "append", "merge_object"] = "replace"
     trace: bool = True
+    default: Any = None
 
 
 class StateSchema(BaseModel):

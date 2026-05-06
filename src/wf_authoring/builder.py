@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+import re
 from typing import Any, Literal, TypeAlias, cast
 
 from wf_core import (
@@ -49,6 +50,48 @@ def _step_id(ref: StepRef) -> str:
     return ref.id
 
 
+def _slug_id(value: str) -> str:
+    slug = re.sub(r"[^0-9A-Za-z_]+", "_", value).strip("_").lower()
+    return slug or "step"
+
+
+def _auto_input_map(
+    spec: NodeSpec[Any, Any],
+    *,
+    input_schema: SchemaRef,
+    state_schema: StateSchema,
+) -> dict[str, str]:
+    return {
+        _auto_source_path(field, input_schema=input_schema, state_schema=state_schema): field
+        for field in spec.input_model.model_json_schema().get("properties", {})
+    }
+
+
+def _auto_output_map(
+    spec: NodeSpec[Any, Any],
+    *,
+    state_schema: StateSchema,
+) -> dict[str, str]:
+    return {
+        field: f"state.{field}"
+        for field in spec.output_model.model_json_schema().get("properties", {})
+        if field in state_schema.fields
+    }
+
+
+def _auto_source_path(
+    field: str,
+    *,
+    input_schema: SchemaRef,
+    state_schema: StateSchema,
+) -> str:
+    if field in state_schema.fields:
+        return f"state.{field}"
+    if field in input_schema.properties:
+        return f"input.{field}"
+    return f"state.{field}"
+
+
 @dataclass(slots=True)
 class WorkflowBuilder:
     name: str
@@ -70,22 +113,46 @@ class WorkflowBuilder:
         self,
         spec: NodeSpec[Any, Any],
         *,
-        id: str,
+        id: str | None = None,
         in_map: MapArg | None = None,
         out_map: MapArg | None = None,
         desc: str | None = None,
     ) -> NodeUse:
         self.node_specs[spec.name] = spec
+        normalized_input_schema = cast(SchemaRef, self.input_schema)
+        normalized_state_schema = cast(StateSchema, self.state_schema)
         node = NodeUse(
-            id=id,
+            id=id or self._next_step_id(_slug_id(spec.name)),
             type="node",
             node=spec.name,
             desc=desc or spec.description,
-            in_map=_normalize_mapping(in_map),
-            out_map=_normalize_mapping(out_map),
+            in_map=(
+                _auto_input_map(
+                    spec,
+                    input_schema=normalized_input_schema,
+                    state_schema=normalized_state_schema,
+                )
+                if in_map is None
+                else _normalize_mapping(in_map)
+            ),
+            out_map=(
+                _auto_output_map(spec, state_schema=normalized_state_schema)
+                if out_map is None
+                else _normalize_mapping(out_map)
+            ),
         )
         self.nodes.append(node)
         return node
+
+    def _next_step_id(self, base: str) -> str:
+        """Return a stable unused step id based on the requested base name."""
+        used_ids = {_step_id(node) for node in self.nodes}
+        if base not in used_ids:
+            return base
+        suffix = 2
+        while f"{base}_{suffix}" in used_ids:
+            suffix += 1
+        return f"{base}_{suffix}"
 
     def condition(self, *, id: str, check: CoreCondition | Expr) -> ConditionNode:
         node = ConditionNode(
