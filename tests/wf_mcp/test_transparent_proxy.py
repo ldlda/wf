@@ -16,7 +16,7 @@ from wf_mcp import (
 )
 from wf_mcp.broker_server import load_broker_config
 
-from tests.test_wf_mcp_support import fixture_server_path, local_temp_root
+from .test_support import fixture_server_path, local_temp_root
 
 
 def _structured(result: Any) -> dict[str, Any]:

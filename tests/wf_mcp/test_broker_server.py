@@ -13,7 +13,7 @@ from wf_mcp import (
     load_broker_config,
 )
 
-from tests.test_wf_mcp_support import (
+from .test_support import (
     FailingDiscoveryAdapter,
     FakeAdapter,
     local_temp_root,

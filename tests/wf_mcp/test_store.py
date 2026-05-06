@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from wf_mcp import AuthRecord, FileStore
 
-from tests.test_wf_mcp_support import local_temp_root
+from .test_support import local_temp_root
 
 
 def test_file_store_round_trips_auth() -> None:

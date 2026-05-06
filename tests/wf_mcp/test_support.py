@@ -57,7 +57,7 @@ def local_temp_root() -> Path:
 
 
 def fixture_server_path() -> str:
-    return str((Path(__file__).resolve().parent / "fixtures" / "mcp_echo_server.py"))
+    return str(Path(__file__).resolve().parents[1] / "fixtures" / "mcp_echo_server.py")
 
 
 def everything_server_connection() -> ConnectionConfig | None:

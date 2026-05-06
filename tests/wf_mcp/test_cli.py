@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from wf_mcp.cli import build_parser, main
 from wf_mcp.broker_server import load_broker_config
 
-from tests.test_wf_mcp_support import local_temp_root
+from .test_support import local_temp_root
 
 
 def _write_config(path: Path) -> None:

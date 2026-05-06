@@ -557,9 +557,9 @@ def test():
     )
     assert d.status == RunStatus.COMPLETED, "oops"
     state = State.model_validate(d.state)
-    assert any(
-        i["name"] in context["pool"]["n_240"] for i in state.storage
-    ), "pity logic failed"
+    assert any(i["name"] in context["pool"]["n_240"] for i in state.storage), (
+        "pity logic failed"
+    )
     pprint(state.storage)
 
 
