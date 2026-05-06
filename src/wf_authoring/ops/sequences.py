@@ -4,7 +4,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from .spec import NodeReturn, node
+from wf_authoring.nodes import NodeReturn, node
 
 
 class SequenceInput(BaseModel):
@@ -25,15 +25,6 @@ class CountOutput(BaseModel):
 
 class BoolOutput(BaseModel):
     value: bool
-
-
-class CoalesceInput(BaseModel):
-    value: Any | None = None
-    fallback: Any
-
-
-class ValueOutput(BaseModel):
-    value: Any
 
 
 @node(
@@ -63,9 +54,7 @@ def first_item_or_none(input: SequenceInput) -> ItemOutput:
     input_model=SequenceInput,
     output_model=MaybeItemOutput,
     outcomes=("found", "missing"),
-    description=(
-        "Select the first item from a sequence, routing to found or missing."
-    ),
+    description="Select the first item from a sequence, routing to found or missing.",
 )
 def first_item_maybe(input: SequenceInput) -> NodeReturn[MaybeItemOutput]:
     if not input.items:
@@ -113,13 +102,3 @@ def length(input: SequenceInput) -> CountOutput:
 )
 def is_empty(input: SequenceInput) -> BoolOutput:
     return BoolOutput(value=not input.items)
-
-
-@node(
-    name="authoring.coalesce",
-    input_model=CoalesceInput,
-    output_model=ValueOutput,
-    description="Return value when it is not None, otherwise return fallback.",
-)
-def coalesce(input: CoalesceInput) -> ValueOutput:
-    return ValueOutput(value=input.value if input.value is not None else input.fallback)

@@ -1,4 +1,4 @@
-from .nodes import (
+from .callables import (
     AsyncContextNodeCallable,
     AsyncNodeCallable,
     AsyncPlainNodeCallable,
@@ -6,15 +6,13 @@ from .nodes import (
     ContextNodeCallable,
     InputT,
     NodeCallable,
-    NodeReturn,
-    NodeSpec,
     OutputT,
     PlainNodeCallable,
     SyncRegistryHandler,
-    build_async_registry,
-    build_registry,
-    node,
 )
+from .inference import accepts_context, infer_models, is_basemodel_subclass
+from .result import NodeReturn
+from .spec import NodeSpec, build_async_registry, build_registry, node
 
 __all__ = [
     "AsyncContextNodeCallable",
@@ -29,7 +27,10 @@ __all__ = [
     "OutputT",
     "PlainNodeCallable",
     "SyncRegistryHandler",
+    "accepts_context",
     "build_async_registry",
     "build_registry",
+    "infer_models",
+    "is_basemodel_subclass",
     "node",
 ]

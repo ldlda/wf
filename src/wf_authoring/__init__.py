@@ -20,7 +20,7 @@ from .ops import (
     length,
 )
 from .paths import GraphPath, context_path, graph_path, input_path, state_path
-from .spec import (
+from .nodes import (
     AsyncRegistryHandler,
     NodeReturn,
     NodeSpec,
