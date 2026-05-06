@@ -265,9 +265,10 @@ def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> N
             )
             second_page = _structured(second_page_result)
             assert len(second_page["tools"]) == 1
-            assert second_page["tools"][0]["proxy_name"] != first_page["tools"][0][
-                "proxy_name"
-            ]
+            assert (
+                second_page["tools"][0]["proxy_name"]
+                != first_page["tools"][0]["proxy_name"]
+            )
 
             filtered_result = await client.call_tool(
                 "wf.mcp_list_proxy_tools",

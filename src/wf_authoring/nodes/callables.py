@@ -33,9 +33,7 @@ class PlainNodeCallable(Protocol[InputT_contra, OutputT_co]):
     ) -> NodeReturn[OutputT_co] | OutputT_co: ...
 
 
-NodeCallable = ContextNodeCallable[InputT, OutputT] | PlainNodeCallable[
-    InputT, OutputT
-]
+NodeCallable = ContextNodeCallable[InputT, OutputT] | PlainNodeCallable[InputT, OutputT]
 
 
 class AsyncContextNodeCallable(Protocol[InputT_contra, OutputT_co]):
@@ -55,9 +53,9 @@ class AsyncPlainNodeCallable(Protocol[InputT_contra, OutputT_co]):
     ) -> Awaitable[NodeReturn[OutputT_co] | OutputT_co]: ...
 
 
-AsyncNodeCallable = AsyncContextNodeCallable[
-    InputT, OutputT
-] | AsyncPlainNodeCallable[InputT, OutputT]
+AsyncNodeCallable = (
+    AsyncContextNodeCallable[InputT, OutputT] | AsyncPlainNodeCallable[InputT, OutputT]
+)
 
 SyncRegistryHandler = Callable[[dict[str, Any], RuntimeContext], dict[str, Any]]
 AsyncRegistryHandler = Callable[

@@ -3,7 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 import re
-from typing import Any, Literal, TypeAlias, cast
+from typing import Any, Literal, TypeAlias, TypeGuard, cast
+import warnings
 
 from wf_core import (
     ConditionNode,
@@ -14,6 +15,8 @@ from wf_core import (
     SchemaRef,
     StateSchema,
     Workflow,
+    RunState,
+    execute_workflow,
 )
 from wf_core.errors import WorkflowExecutionError
 from wf_core.model import Condition as CoreCondition
@@ -25,6 +28,7 @@ from .schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_
 from .spec import NodeSpec
 
 StepRef: TypeAlias = str | NodeUse | ConditionNode | ForeachNode | InterruptNode
+BranchRef: TypeAlias = StepRef | NodeSpec[Any, Any]
 MapArg: TypeAlias = Mapping[Any, Any]
 
 
@@ -53,6 +57,10 @@ def _step_id(ref: StepRef) -> str:
     return ref.id
 
 
+def _is_node_spec(ref: object) -> TypeGuard[NodeSpec[Any, Any]]:
+    return isinstance(ref, NodeSpec)
+
+
 def _slug_id(value: str) -> str:
     slug = re.sub(r"[^0-9A-Za-z_]+", "_", value).strip("_").lower()
     return slug or "step"
@@ -65,7 +73,9 @@ def _auto_input_map(
     state_schema: StateSchema,
 ) -> dict[str, str]:
     return {
-        _auto_source_path(field, input_schema=input_schema, state_schema=state_schema): field
+        _auto_source_path(
+            field, input_schema=input_schema, state_schema=state_schema
+        ): field
         for field in spec.input_model.model_json_schema().get("properties", {})
     }
 
@@ -165,6 +175,15 @@ class WorkflowBuilder:
         """Export handlers for all node specs used by this builder."""
         return build_registry(*self.node_specs.values())
 
+    def execute(self, workflow_input: dict[str, Any]) -> RunState:
+        """Compile and execute this workflow with its used node registry.
+
+        This is intended for tests, examples, and local authoring loops. Production
+        callers that need custom registries, persistence, or resume behavior should
+        call wf_core execution functions directly.
+        """
+        return execute_workflow(self.compile(), workflow_input, self.registry())
+
     def condition(self, *, id: str, check: CoreCondition | Expr) -> ConditionNode:
         node = ConditionNode(
             id=id,
@@ -222,6 +241,33 @@ class WorkflowBuilder:
                 {"from": _step_id(from_), "outcome": outcome, "to": _step_id(to)}
             )
         )
+
+    def branch(
+        self,
+        from_: BranchRef,
+        branches: Mapping[str, BranchRef],
+    ) -> dict[str, StepRef]:
+        """Connect multiple outcomes from one branch source.
+
+        Passing a NodeSpec creates a node use with auto-mapping and an auto id.
+        Passing an existing step or id only wires edges. Empty branch maps are
+        allowed but warn because they usually indicate an unfinished router.
+        """
+        if not branches:
+            warnings.warn(
+                "WorkflowBuilder.branch called with no branches",
+                UserWarning,
+                stacklevel=2,
+            )
+            return {}
+
+        source = self.use(from_) if _is_node_spec(from_) else from_
+        resolved_targets: dict[str, StepRef] = {}
+        for outcome, target in branches.items():
+            resolved = self.use(target) if _is_node_spec(target) else target
+            self.connect(cast(StepRef, source), outcome, cast(StepRef, resolved))
+            resolved_targets[outcome] = cast(StepRef, resolved)
+        return resolved_targets
 
     def compile(self) -> Workflow:
         if self.start is None:

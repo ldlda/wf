@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 import pytest
 
 from wf_authoring import WorkflowBuilder, node, state_field
-from wf_core import RunStatus, WorkflowExecutionError, execute_workflow
+from wf_core import RunStatus, WorkflowExecutionError
 
 
 class WorkflowInput(BaseModel):
@@ -59,6 +59,12 @@ class DefaultedState(BaseModel):
 def auto_bind_node(input: AutoBindInput) -> AutoBindOutput:
     """Return updated fields using automatically mapped state input."""
     return AutoBindOutput(text=input.text.upper(), count=input.count + 1)
+
+
+@node(name="test.branch_router", outcomes=("left", "right"))
+def branch_router(input: AutoBindInput) -> AutoBindOutput:
+    """Route to left or right while preserving state shape."""
+    return AutoBindOutput(text=input.text, count=input.count)
 
 
 def test_builder_accepts_basemodel_classes_for_workflow_schemas() -> None:
@@ -136,11 +142,8 @@ def test_builder_auto_binds_matching_node_inputs_and_outputs_to_state() -> None:
     step = builder.use(auto_bind_node, id="update")
     builder.connect(step, "ok", "__end__")
 
-    workflow = builder.compile()
-    run = execute_workflow(
-        workflow,
+    run = builder.execute(
         {"text": "hello", "count": 1},
-        builder.registry(),
     )
 
     assert step.in_map == {
@@ -210,3 +213,74 @@ def test_builder_registry_exports_used_node_specs() -> None:
     builder.use(auto_bind_node)
 
     assert set(builder.registry()) == {"test.auto_bind"}
+
+
+def test_builder_execute_compiles_and_runs_with_used_registry() -> None:
+    builder = WorkflowBuilder(
+        name="execute_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+    step = builder.use(auto_bind_node)
+    builder.set_entry_point(step)
+    builder.connect(step, "ok", "__end__")
+
+    run = builder.execute({"text": "hello", "count": 1})
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.state["text"] == "HELLO"
+    assert run.state["count"] == 2
+
+
+def test_builder_branch_connects_existing_steps() -> None:
+    builder = WorkflowBuilder(
+        name="branch_existing_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+    router = builder.use(branch_router)
+    left = builder.use(auto_bind_node, id="left")
+    right = builder.use(auto_bind_node, id="right")
+
+    builder.branch(router, {"left": left, "right": right})
+
+    assert [(edge.from_, edge.outcome, edge.to) for edge in builder.edges] == [
+        ("test_branch_router", "left", "left"),
+        ("test_branch_router", "right", "right"),
+    ]
+
+
+def test_builder_branch_can_use_node_specs_as_targets() -> None:
+    builder = WorkflowBuilder(
+        name="branch_specs_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+    router = builder.use(branch_router)
+
+    targets = builder.branch(router, {"left": auto_bind_node})
+
+    target = targets["left"]
+    assert not isinstance(target, str)
+    assert target.id == "test_auto_bind"
+    assert builder.edges[0].from_ == "test_branch_router"
+    assert builder.edges[0].outcome == "left"
+    assert builder.edges[0].to == "test_auto_bind"
+
+
+def test_builder_branch_warns_on_empty_branch_map() -> None:
+    builder = WorkflowBuilder(
+        name="branch_empty_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+    router = builder.use(branch_router)
+
+    with pytest.warns(UserWarning, match="no branches"):
+        targets = builder.branch(router, {})
+
+    assert targets == {}

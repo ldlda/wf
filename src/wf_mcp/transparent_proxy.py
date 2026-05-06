@@ -60,7 +60,9 @@ class TransparentProxyRuntime:
         if prompts_as_tools:
             self.server.add_transform(PromptsAsTools(self.server))
         if search_tools:
-            self.server.add_transform(BM25SearchTransform(always_visible=_ADMIN_TOOL_NAMES))
+            self.server.add_transform(
+                BM25SearchTransform(always_visible=_ADMIN_TOOL_NAMES)
+            )
 
     def current_config(self) -> BrokerConfig:
         if self.manager is None:
@@ -143,9 +145,7 @@ class TransparentProxyRuntime:
     ) -> dict[str, Any]:
         tools = await self._list_proxy_tools()
         if connection_id is not None:
-            tools = [
-                tool for tool in tools if tool["connection_id"] == connection_id
-            ]
+            tools = [tool for tool in tools if tool["connection_id"] == connection_id]
         if query:
             needle = query.casefold()
             tools = [

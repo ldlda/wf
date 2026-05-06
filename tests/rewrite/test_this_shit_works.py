@@ -298,7 +298,7 @@ class RateChange:
     @staticmethod
     def r65(state: CountersContext) -> Rates:
         c = state.counter
-        assert c["c_80"] >= 65, f"routed wrongly, 80 pity currently at {c["c_80"]}"
+        assert c["c_80"] >= 65, f"routed wrongly, 80 pity currently at {c['c_80']}"
         n = c["c_80"] - 64
         rpn = n * 0.05
         br = state.context["initial_rates"]
@@ -401,7 +401,7 @@ def post_roll_router(
 
 
 @node(name="main")
-def tick(state: Countdown) -> Countdown:  # type: ignore
+def tick(state: Countdown) -> Countdown:
     return Countdown(countdown=state.countdown - 1)
 
 
@@ -412,23 +412,19 @@ def keep_rolling(state: Countdown) -> NodeReturn[Nothing]:
 
 # could be @graph.(something combining node and use)...
 
-gacha.use(
-    init,
-    id="init",  # use the node name if not defined?
-    # should i HAVE to declare in / out maps every time?
-)
-gacha.use(tick, id="tick")
-gacha.use(CounterUp.c1, id="counter_up")  # 0 base to 1 base probably
-gacha.use(RateChange.r65, id="rate_up")
-gacha.use(RateChange.r0, id="rate_same")
-gacha.use(RateChange.r10, id="r_g10")
+gacha.use(init)
+gacha.use(tick, id="tick") # itd use main
+counter_up = gacha.use(CounterUp.c1, id="counter_up")  # 0 base to 1 base probably
+rate_up = gacha.use(RateChange.r65, id="rate_up")
+rate_same = gacha.use(RateChange.r0, id="rate_same")
+r_10 = gacha.use(RateChange.r10, id="r_g10")
 gacha.use(RateChange.r80, id="r_g80")
 gacha.use(RateChange.r240, id="r_gs")
-gacha.use(prep, id="prep")
-gacha.use(roll, id="roll")
-gacha.use(CounterUp.c80, id="c_80")
+prepare_pool = gacha.use(prep)
+gacha.use(roll)
+c_80 = gacha.use(CounterUp.c80, id="c_80")
 gacha.use(CounterUp.c10, id="c_10")
-gacha.condition(
+gacha.condition(  # condition dont ignore id; you can...
     id="keep_rolling", check=expr(state("countdown")) > 0
 )  # replaces keep_rolling
 # Outcome is currently hidden from the docs (there is none), outcome_map is insane, should we have it
@@ -440,40 +436,44 @@ gacha.connect("tick", "ok", "counter_up")
 gacha.use(rate_booster, id="rate_booster")
 
 gacha.connect("counter_up", "ok", "rate_booster")
-gacha.connect("rate_booster", "0", "rate_same")
-gacha.connect("rate_booster", "65", "rate_up")
+gacha.connect("rate_booster", "0", rate_same)
+gacha.connect("rate_booster", "65", rate_up)
 gacha.use(pre_roll_router, id="router")
 
 gacha.connect("rate_up", "ok", "router")
 gacha.connect("rate_same", "ok", "router")
-for outcome, node_id in {
-    "240": "r_gs",
-    "80": "r_g80",
-    "10": "r_g10",
-    "1": "prep",
-}.items():
-    gacha.connect("router", outcome, node_id)
-
-
-gacha.connect("prep", "ok", "roll")
-gacha.connect("r_gs", "ok", "prep")
-gacha.connect("r_g80", "ok", "prep")
-gacha.connect("r_g10", "ok", "prep")
+preroll_routes = gacha.branch(
+    "router",
+    {
+        "240": "r_gs",
+        "80": "r_g80",
+        "10": r_10,
+        "1": "prepare_pool",
+    },
+)
+print(preroll_routes)
+gacha.connect(prepare_pool, "ok", "roll")
+gacha.connect("r_gs", "ok", "prepare_pool")
+gacha.connect(preroll_routes["80"], "ok", prepare_pool)
+gacha.connect("r_g10", "ok", prepare_pool)
 
 gacha.connect("roll", "ok", "post_roll_router")  # missed this! good job
 gacha.use(post_roll_router, id="post_roll_router")
-gacha.use(popped, id="reset_avail")
-gacha.connect("reset_avail", "ok", "c_80")
+reset_avail = gacha.use(popped, id="reset_avail")
+gacha.connect(reset_avail, "ok", c_80)
 
-for outcome, node_id in {
-    "240": "reset_avail",
-    "80": "c_80",
-    "10": "c_10",
-    "1": "keep_rolling",
-}.items():  # missed this!
-    gacha.connect("post_roll_router", outcome, node_id)
+# missed this!
+gacha.branch(
+    "post_roll_router",
+    {
+        "240": "reset_avail",
+        "80": "c_80",
+        "10": "c_10",
+        "1": "keep_rolling",
+    },
+)
 
-gacha.connect("c_80", "ok", "keep_rolling")
+gacha.connect(c_80, "ok", "keep_rolling")
 gacha.connect("c_10", "ok", "keep_rolling")
 
 # there is like no general uses for the nodes; idk tho
@@ -560,25 +560,31 @@ def execute(graph: WorkflowBuilder, input: Input):
     c = graph.compile()
     r = build_registry(*(graph.node_specs.values()))
     i = input.model_dump()
-    # pprint(i)
-    # pprint(c)
-    # pprint(r)
+    pprint(i)
+    pprint(c)
+    pprint(r)
     return execute_workflow(c, i, r)
 
 
 # twice in a row! it took 100+ and a miss tho
 
+
 def test():
     d = execute(
         gacha,
         build_input(context)(
-            20, rolled_previously=240 - 135, until_5=5, until_6=73, good_stuff=False # lets pretend
+            20,
+            rolled_previously=240 - 135,
+            until_5=5,
+            until_6=73,
+            good_stuff=False,  # lets pretend
         ),
     )
     assert d.status == RunStatus.COMPLETED, "oops"
     state = State.model_validate(d.state)
     assert any(i["name"] in context["pool"]["n_240"] for i in state.storage)
     pprint(state.storage)
+
 
 if __name__ == "__main__":
     test()

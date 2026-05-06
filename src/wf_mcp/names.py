@@ -43,7 +43,8 @@ def parse_namespaced_tool_name(
 def is_admin_tool_name(proxy_name: str) -> bool:
     return proxy_name.startswith(f"{ADMIN_NAMESPACE}_")
 
+
 class LdaNamespace(Namespace):
     def __init__(self, prefix: str) -> None:
         super().__init__(prefix)
-        self._name_prefix = f"{prefix}." # some good stuff
+        self._name_prefix = f"{prefix}."  # some good stuff
