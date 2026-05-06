@@ -3,12 +3,21 @@ from .catalog import NodeCatalog, NodeCatalogEntry
 from .conditions import context, exists, expr, input, state
 from .mapping import bind_fields, bind_state, merge_maps
 from .ops import (
+    BoolOutput,
+    CoalesceInput,
+    CountOutput,
     ItemOutput,
     MaybeItemOutput,
     SequenceInput,
+    ValueOutput,
+    coalesce,
     first_item,
     first_item_maybe,
     first_item_or_none,
+    is_empty,
+    last_item,
+    last_item_or_none,
+    length,
 )
 from .paths import GraphPath, context_path, graph_path, input_path, state_path
 from .spec import (
@@ -25,6 +34,9 @@ from .subgraph import subgraph_node
 __all__ = [
     "NodeCatalog",
     "NodeCatalogEntry",
+    "BoolOutput",
+    "CoalesceInput",
+    "CountOutput",
     "GraphPath",
     "ItemOutput",
     "MaybeItemOutput",
@@ -33,11 +45,13 @@ __all__ = [
     "AsyncRegistryHandler",
     "SyncRegistryHandler",
     "SequenceInput",
+    "ValueOutput",
     "WorkflowBuilder",
     "bind_fields",
     "build_async_registry",
     "build_registry",
     "bind_state",
+    "coalesce",
     "merge_maps",
     "context",
     "context_path",
@@ -49,6 +63,10 @@ __all__ = [
     "graph_path",
     "input",
     "input_path",
+    "is_empty",
+    "last_item",
+    "last_item_or_none",
+    "length",
     "node",
     "state",
     "state_path",

@@ -19,6 +19,23 @@ class MaybeItemOutput(BaseModel):
     item: Any | None = None
 
 
+class CountOutput(BaseModel):
+    count: int
+
+
+class BoolOutput(BaseModel):
+    value: bool
+
+
+class CoalesceInput(BaseModel):
+    value: Any | None = None
+    fallback: Any
+
+
+class ValueOutput(BaseModel):
+    value: Any
+
+
 @node(
     name="authoring.first_item",
     input_model=SequenceInput,
@@ -54,3 +71,55 @@ def first_item_maybe(input: SequenceInput) -> NodeReturn[MaybeItemOutput]:
     if not input.items:
         return NodeReturn(outcome="missing", output=MaybeItemOutput())
     return NodeReturn(outcome="found", output=MaybeItemOutput(item=input.items[0]))
+
+
+@node(
+    name="authoring.last_item",
+    input_model=SequenceInput,
+    output_model=ItemOutput,
+    description="Select the last item from a non-empty sequence.",
+)
+def last_item(input: SequenceInput) -> ItemOutput:
+    if not input.items:
+        raise ValueError("last_item requires at least one item")
+    return ItemOutput(item=input.items[-1])
+
+
+@node(
+    name="authoring.last_item_or_none",
+    input_model=SequenceInput,
+    output_model=ItemOutput,
+    description="Select the last item from a sequence, or None when it is empty.",
+)
+def last_item_or_none(input: SequenceInput) -> ItemOutput:
+    return ItemOutput(item=input.items[-1] if input.items else None)
+
+
+@node(
+    name="authoring.length",
+    input_model=SequenceInput,
+    output_model=CountOutput,
+    description="Count the items in a sequence.",
+)
+def length(input: SequenceInput) -> CountOutput:
+    return CountOutput(count=len(input.items))
+
+
+@node(
+    name="authoring.is_empty",
+    input_model=SequenceInput,
+    output_model=BoolOutput,
+    description="Return whether a sequence is empty.",
+)
+def is_empty(input: SequenceInput) -> BoolOutput:
+    return BoolOutput(value=not input.items)
+
+
+@node(
+    name="authoring.coalesce",
+    input_model=CoalesceInput,
+    output_model=ValueOutput,
+    description="Return value when it is not None, otherwise return fallback.",
+)
+def coalesce(input: CoalesceInput) -> ValueOutput:
+    return ValueOutput(value=input.value if input.value is not None else input.fallback)

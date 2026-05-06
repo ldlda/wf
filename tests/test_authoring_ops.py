@@ -7,12 +7,24 @@ from wf_authoring import (
     bind_fields,
     bind_state,
     build_registry,
+    coalesce,
     first_item,
     first_item_maybe,
     first_item_or_none,
+    is_empty,
+    last_item,
+    last_item_or_none,
+    length,
     state_path,
 )
-from wf_core import RunStatus, SchemaRef, StateField, StateSchema, execute_workflow
+from wf_core import (
+    RunStatus,
+    RuntimeContext,
+    SchemaRef,
+    StateField,
+    StateSchema,
+    execute_workflow,
+)
 
 
 def _build_first_workflow(use_safe_first: bool = False):
@@ -114,3 +126,74 @@ def test_first_item_maybe_routes_missing_outcome() -> None:
     assert run.status == RunStatus.COMPLETED
     assert run.state["item"] is None
     assert run.trace[0].outcome == "missing"
+
+
+def test_last_item_selects_last_value() -> None:
+    registry = build_registry(last_item)
+
+    result = registry["authoring.last_item"](
+        {"items": ["a", "b"]},
+        RuntimeContext(current_node_id="last"),
+    )
+
+    assert result == {"outcome": "ok", "output": {"item": "b"}}
+
+
+def test_last_item_fails_on_empty_sequence() -> None:
+    registry = build_registry(last_item)
+
+    with pytest.raises(ValueError, match="last_item requires at least one item"):
+        registry["authoring.last_item"](
+            {"items": []},
+            RuntimeContext(current_node_id="last"),
+        )
+
+
+def test_last_item_or_none_returns_none_for_empty_sequence() -> None:
+    registry = build_registry(last_item_or_none)
+
+    result = registry["authoring.last_item_or_none"](
+        {"items": []},
+        RuntimeContext(current_node_id="last"),
+    )
+
+    assert result == {"outcome": "ok", "output": {"item": None}}
+
+
+def test_length_counts_items() -> None:
+    registry = build_registry(length)
+
+    result = registry["authoring.length"](
+        {"items": ["a", "b", "c"]},
+        RuntimeContext(current_node_id="length"),
+    )
+
+    assert result == {"outcome": "ok", "output": {"count": 3}}
+
+
+def test_is_empty_detects_empty_sequence() -> None:
+    registry = build_registry(is_empty)
+
+    result = registry["authoring.is_empty"](
+        {"items": []},
+        RuntimeContext(current_node_id="is_empty"),
+    )
+
+    assert result == {"outcome": "ok", "output": {"value": True}}
+
+
+def test_coalesce_returns_value_or_fallback() -> None:
+    registry = build_registry(coalesce)
+    ctx = RuntimeContext(current_node_id="coalesce")
+
+    present = registry["authoring.coalesce"](
+        {"value": "x", "fallback": "fallback"},
+        ctx,
+    )
+    missing = registry["authoring.coalesce"](
+        {"value": None, "fallback": "fallback"},
+        ctx,
+    )
+
+    assert present == {"outcome": "ok", "output": {"value": "x"}}
+    assert missing == {"outcome": "ok", "output": {"value": "fallback"}}
