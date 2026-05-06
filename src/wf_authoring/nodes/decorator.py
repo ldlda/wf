@@ -13,8 +13,26 @@ from .spec import NodeSpec
 
 @overload
 def node(
-    fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT],
+    fn: NodeSpec[InputT, OutputT]
+    | NodeCallable[InputT, OutputT]
+    | AsyncNodeCallable[InputT, OutputT],
     /,
+) -> NodeSpec[InputT, OutputT]: ...
+
+
+@overload
+def node(
+    fn: NodeSpec[InputT, OutputT]
+    | NodeCallable[InputT, OutputT]
+    | AsyncNodeCallable[InputT, OutputT],
+    /,
+    *,
+    name: str | None = None,
+    input_model: type[InputT] | None = None,
+    output_model: type[OutputT] | None = None,
+    outcomes: tuple[str, ...] = ("ok",),
+    description: str | None = None,
+    is_async: bool | None = None,
 ) -> NodeSpec[InputT, OutputT]: ...
 
 
@@ -23,7 +41,11 @@ def node(
     fn: None = None,
     /,
 ) -> Callable[
-    [NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT]],
+    [
+        NodeSpec[InputT, OutputT]
+        | NodeCallable[InputT, OutputT]
+        | AsyncNodeCallable[InputT, OutputT]
+    ],
     NodeSpec[InputT, OutputT],
 ]: ...
 
@@ -40,13 +62,18 @@ def node(
     description: str | None = None,
     is_async: bool | None = None,
 ) -> Callable[
-    [NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT]],
+    [
+        NodeSpec[InputT, OutputT]
+        | NodeCallable[InputT, OutputT]
+        | AsyncNodeCallable[InputT, OutputT]
+    ],
     NodeSpec[InputT, OutputT],
 ]: ...
 
 
 def node(
-    fn: NodeCallable[InputT, OutputT]
+    fn: NodeSpec[InputT, OutputT]
+    | NodeCallable[InputT, OutputT]
     | AsyncNodeCallable[InputT, OutputT]
     | None = None,
     *,
@@ -58,9 +85,24 @@ def node(
     is_async: bool | None = None,
 ) -> Any:
     """Convert a typed Python function into a reusable workflow node spec."""
+
     def decorator(
-        fn: NodeCallable[InputT, OutputT] | AsyncNodeCallable[InputT, OutputT],
+        fn: NodeSpec[InputT, OutputT]
+        | NodeCallable[InputT, OutputT]
+        | AsyncNodeCallable[InputT, OutputT],
     ) -> NodeSpec[InputT, OutputT]:
+        if isinstance(fn, NodeSpec):
+            return NodeSpec(
+                name=name or fn.name,
+                input_model=input_model or fn.input_model,
+                output_model=output_model or fn.output_model,
+                outcomes=outcomes if outcomes != ("ok",) else fn.outcomes,
+                fn=fn.fn,
+                description=description or fn.description,
+                is_async=is_async if is_async is not None else fn.is_async,
+                accepts_context=fn.accepts_context,
+            )
+
         inferred_input_model: type[BaseModel] | None = input_model
         inferred_output_model: type[BaseModel] | None = output_model
         if inferred_input_model is None or inferred_output_model is None:

@@ -4,15 +4,38 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from wf_authoring.nodes import node
+from wf_authoring.nodes import NodeReturn, node
 
 
 class CoalesceInput(BaseModel):
+    """Input model for selecting the first non-None value."""
+
     value: Any | None = None
     fallback: Any
 
 
 class ValueOutput(BaseModel):
+    """Output model for ops that emit an arbitrary value."""
+
+    value: Any
+
+
+class ConstantInput(BaseModel):
+    """Input model for passing through a configured value."""
+
+    value: Any
+
+
+class PickKeyInput(BaseModel):
+    """Input model for selecting a value from a mapping by key."""
+
+    mapping: dict[str, Any]
+    key: str
+
+
+class TruthyInput(BaseModel):
+    """Input model for routing by Python truthiness."""
+
     value: Any
 
 
@@ -23,4 +46,48 @@ class ValueOutput(BaseModel):
     description="Return value when it is not None, otherwise return fallback.",
 )
 def coalesce(input: CoalesceInput) -> ValueOutput:
+    """Return value when it is not None, otherwise return fallback."""
     return ValueOutput(value=input.value if input.value is not None else input.fallback)
+
+
+default_if_none = node(
+    name="authoring.default_if_none",
+    description="Alias for coalesce: return fallback only when value is None.",
+)(coalesce)
+"""Alias for coalesce with a more explicit name for None-defaulting workflows."""
+
+
+@node(
+    name="authoring.constant",
+    input_model=ConstantInput,
+    output_model=ValueOutput,
+    description="Return the provided value unchanged.",
+)
+def constant(input: ConstantInput) -> ValueOutput:
+    """Return the provided value unchanged."""
+    return ValueOutput(value=input.value)
+
+
+@node(
+    name="authoring.pick_key",
+    input_model=PickKeyInput,
+    output_model=ValueOutput,
+    description="Select a value from a mapping by key, returning None if missing.",
+)
+def pick_key(input: PickKeyInput) -> ValueOutput:
+    """Select a value from a mapping by key, returning None if missing."""
+    return ValueOutput(value=input.mapping.get(input.key))
+
+
+@node(
+    name="authoring.truthy",
+    input_model=TruthyInput,
+    output_model=ValueOutput,
+    outcomes=("truthy", "falsey"),
+    description="Route based on Python truthiness of a value.",
+)
+def truthy(input: TruthyInput) -> NodeReturn[ValueOutput]:
+    """Route based on Python truthiness of a value."""
+    value = bool(input.value)
+    outcome = "truthy" if value else "falsey"
+    return NodeReturn(outcome=outcome, output=ValueOutput(value=value))

@@ -8,22 +8,32 @@ from wf_authoring.nodes import NodeReturn, node
 
 
 class SequenceInput(BaseModel):
+    """Input model for ops that consume an ordered sequence."""
+
     items: list[Any]
 
 
 class ItemOutput(BaseModel):
+    """Output model for ops that return a selected item."""
+
     item: Any
 
 
 class MaybeItemOutput(BaseModel):
+    """Output model for ops that may not find an item."""
+
     item: Any | None = None
 
 
 class CountOutput(BaseModel):
+    """Output model for ops that return a count."""
+
     count: int
 
 
 class BoolOutput(BaseModel):
+    """Output model for ops that return a boolean value."""
+
     value: bool
 
 
@@ -34,6 +44,7 @@ class BoolOutput(BaseModel):
     description="Select the first item from a non-empty sequence.",
 )
 def first_item(input: SequenceInput) -> ItemOutput:
+    """Select the first item from a non-empty sequence."""
     if not input.items:
         raise ValueError("first_item requires at least one item")
     return ItemOutput(item=input.items[0])
@@ -46,6 +57,7 @@ def first_item(input: SequenceInput) -> ItemOutput:
     description="Select the first item from a sequence, or None when it is empty.",
 )
 def first_item_or_none(input: SequenceInput) -> ItemOutput:
+    """Select the first item from a sequence, or None if it is empty."""
     return ItemOutput(item=input.items[0] if input.items else None)
 
 
@@ -57,6 +69,7 @@ def first_item_or_none(input: SequenceInput) -> ItemOutput:
     description="Select the first item from a sequence, routing to found or missing.",
 )
 def first_item_maybe(input: SequenceInput) -> NodeReturn[MaybeItemOutput]:
+    """Select the first item and route by whether one exists."""
     if not input.items:
         return NodeReturn(outcome="missing", output=MaybeItemOutput())
     return NodeReturn(outcome="found", output=MaybeItemOutput(item=input.items[0]))
@@ -69,6 +82,7 @@ def first_item_maybe(input: SequenceInput) -> NodeReturn[MaybeItemOutput]:
     description="Select the last item from a non-empty sequence.",
 )
 def last_item(input: SequenceInput) -> ItemOutput:
+    """Select the last item from a non-empty sequence."""
     if not input.items:
         raise ValueError("last_item requires at least one item")
     return ItemOutput(item=input.items[-1])
@@ -81,6 +95,7 @@ def last_item(input: SequenceInput) -> ItemOutput:
     description="Select the last item from a sequence, or None when it is empty.",
 )
 def last_item_or_none(input: SequenceInput) -> ItemOutput:
+    """Select the last item from a sequence, or None if it is empty."""
     return ItemOutput(item=input.items[-1] if input.items else None)
 
 
@@ -91,6 +106,7 @@ def last_item_or_none(input: SequenceInput) -> ItemOutput:
     description="Count the items in a sequence.",
 )
 def length(input: SequenceInput) -> CountOutput:
+    """Count the number of items in a sequence."""
     return CountOutput(count=len(input.items))
 
 
@@ -101,4 +117,5 @@ def length(input: SequenceInput) -> CountOutput:
     description="Return whether a sequence is empty.",
 )
 def is_empty(input: SequenceInput) -> BoolOutput:
+    """Return whether a sequence has no items."""
     return BoolOutput(value=not input.items)

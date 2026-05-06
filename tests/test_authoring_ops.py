@@ -8,6 +8,8 @@ from wf_authoring import (
     bind_state,
     build_registry,
     coalesce,
+    constant,
+    default_if_none,
     first_item,
     first_item_maybe,
     first_item_or_none,
@@ -15,7 +17,9 @@ from wf_authoring import (
     last_item,
     last_item_or_none,
     length,
+    pick_key,
     state_path,
+    truthy,
 )
 from wf_core import (
     RunStatus,
@@ -197,3 +201,60 @@ def test_coalesce_returns_value_or_fallback() -> None:
 
     assert present == {"outcome": "ok", "output": {"value": "x"}}
     assert missing == {"outcome": "ok", "output": {"value": "fallback"}}
+
+
+def test_default_if_none_is_coalesce_alias() -> None:
+    registry = build_registry(default_if_none)
+
+    result = registry["authoring.default_if_none"](
+        {"value": None, "fallback": "fallback"},
+        RuntimeContext(current_node_id="default_if_none"),
+    )
+
+    assert default_if_none.name == "authoring.default_if_none"
+    assert default_if_none.fn is coalesce.fn
+    assert result == {"outcome": "ok", "output": {"value": "fallback"}}
+
+
+def test_constant_returns_configured_value() -> None:
+    registry = build_registry(constant)
+
+    result = registry["authoring.constant"](
+        {"value": {"source": "fixture"}},
+        RuntimeContext(current_node_id="constant"),
+    )
+
+    assert result == {"outcome": "ok", "output": {"value": {"source": "fixture"}}}
+
+
+def test_pick_key_selects_value_from_mapping() -> None:
+    registry = build_registry(pick_key)
+
+    result = registry["authoring.pick_key"](
+        {"mapping": {"name": "Ada", "age": 36}, "key": "name"},
+        RuntimeContext(current_node_id="pick_key"),
+    )
+
+    assert result == {"outcome": "ok", "output": {"value": "Ada"}}
+
+
+def test_pick_key_returns_none_when_missing() -> None:
+    registry = build_registry(pick_key)
+
+    result = registry["authoring.pick_key"](
+        {"mapping": {"name": "Ada"}, "key": "missing"},
+        RuntimeContext(current_node_id="pick_key"),
+    )
+
+    assert result == {"outcome": "ok", "output": {"value": None}}
+
+
+def test_truthy_routes_truthy_and_falsey_outcomes() -> None:
+    registry = build_registry(truthy)
+    ctx = RuntimeContext(current_node_id="truthy")
+
+    truthy_result = registry["authoring.truthy"]({"value": "yes"}, ctx)
+    falsey_result = registry["authoring.truthy"]({"value": ""}, ctx)
+
+    assert truthy_result == {"outcome": "truthy", "output": {"value": True}}
+    assert falsey_result == {"outcome": "falsey", "output": {"value": False}}
