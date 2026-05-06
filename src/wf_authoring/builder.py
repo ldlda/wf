@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any, Literal, TypeAlias
+from typing import Any, Literal, TypeAlias, cast
 
 from wf_core import (
     ConditionNode,
@@ -17,6 +17,7 @@ from wf_core import (
 from wf_core.model import Condition as CoreCondition
 
 from .dsl import Expr, GraphPath, PathArg, compile_condition
+from .schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_from
 from .spec import NodeSpec
 
 StepRef: TypeAlias = str | NodeUse | ConditionNode | ForeachNode | InterruptNode
@@ -51,13 +52,19 @@ def _step_id(ref: StepRef) -> str:
 @dataclass(slots=True)
 class WorkflowBuilder:
     name: str
-    input_schema: SchemaRef
-    state_schema: StateSchema
-    output_schema: SchemaRef
+    input_schema: SchemaLike
+    state_schema: StateSchemaLike
+    output_schema: SchemaLike
     start: str
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
     nodes: list[Any] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        """Normalize authoring-friendly schema declarations into core schemas."""
+        self.input_schema = schema_ref_from(self.input_schema)
+        self.state_schema = state_schema_from(self.state_schema)
+        self.output_schema = schema_ref_from(self.output_schema)
 
     def use(
         self,
@@ -142,9 +149,9 @@ class WorkflowBuilder:
         node_defs = [spec.to_node_def() for spec in self.node_specs.values()]
         return Workflow(
             name=self.name,
-            input_schema=self.input_schema,
-            state_schema=self.state_schema,
-            output_schema=self.output_schema,
+            input_schema=cast(SchemaRef, self.input_schema),
+            state_schema=cast(StateSchema, self.state_schema),
+            output_schema=cast(SchemaRef, self.output_schema),
             node_defs=node_defs,
             start=self.start,
             nodes=self.nodes,

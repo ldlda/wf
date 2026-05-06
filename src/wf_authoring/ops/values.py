@@ -51,9 +51,10 @@ def coalesce(input: CoalesceInput) -> ValueOutput:
 
 
 default_if_none = node(
+    coalesce,
     name="authoring.default_if_none",
     description="Alias for coalesce: return fallback only when value is None.",
-)(coalesce)
+)
 """Alias for coalesce with a more explicit name for None-defaulting workflows."""
 
 
