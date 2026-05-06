@@ -15,9 +15,12 @@ from wf_core import (
     StateSchema,
     Workflow,
 )
+from wf_core.errors import WorkflowExecutionError
 from wf_core.model import Condition as CoreCondition
 
 from .dsl import Expr, GraphPath, PathArg, compile_condition
+from .nodes.callables import SyncRegistryHandler
+from .nodes.registry import build_registry
 from .schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_from
 from .spec import NodeSpec
 
@@ -98,7 +101,7 @@ class WorkflowBuilder:
     input_schema: SchemaLike
     state_schema: StateSchemaLike
     output_schema: SchemaLike
-    start: str
+    start: str | None = None
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
     nodes: list[Any] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
@@ -153,6 +156,14 @@ class WorkflowBuilder:
         while f"{base}_{suffix}" in used_ids:
             suffix += 1
         return f"{base}_{suffix}"
+
+    def set_entry_point(self, step: StepRef) -> None:
+        """Set the workflow start node explicitly."""
+        self.start = _step_id(step)
+
+    def registry(self) -> dict[str, SyncRegistryHandler]:
+        """Export handlers for all node specs used by this builder."""
+        return build_registry(*self.node_specs.values())
 
     def condition(self, *, id: str, check: CoreCondition | Expr) -> ConditionNode:
         node = ConditionNode(
@@ -213,6 +224,11 @@ class WorkflowBuilder:
         )
 
     def compile(self) -> Workflow:
+        if self.start is None:
+            raise WorkflowExecutionError(
+                "workflow builder requires an explicit start; call set_entry_point(...) "
+                "or pass start=..."
+            )
         node_defs = [spec.to_node_def() for spec in self.node_specs.values()]
         return Workflow(
             name=self.name,

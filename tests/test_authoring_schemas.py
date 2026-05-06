@@ -4,8 +4,10 @@ from typing import Annotated, TypedDict
 
 from pydantic import BaseModel, Field
 
-from wf_authoring import WorkflowBuilder, build_registry, node, state_field
-from wf_core import RunStatus, execute_workflow
+import pytest
+
+from wf_authoring import WorkflowBuilder, node, state_field
+from wf_core import RunStatus, WorkflowExecutionError, execute_workflow
 
 
 class WorkflowInput(BaseModel):
@@ -138,7 +140,7 @@ def test_builder_auto_binds_matching_node_inputs_and_outputs_to_state() -> None:
     run = execute_workflow(
         workflow,
         {"text": "hello", "count": 1},
-        build_registry(auto_bind_node),
+        builder.registry(),
     )
 
     assert step.in_map == {
@@ -168,3 +170,43 @@ def test_builder_can_auto_id_node_uses_from_spec_name() -> None:
 
     assert first.id == "test_auto_bind"
     assert second.id == "test_auto_bind_2"
+
+
+def test_builder_can_compile_with_explicit_start_set_later() -> None:
+    builder = WorkflowBuilder(
+        name="optional_start_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+    step = builder.use(auto_bind_node)
+    builder.set_entry_point(step)
+
+    workflow = builder.compile()
+
+    assert workflow.start == "test_auto_bind"
+
+
+def test_builder_requires_explicit_start_before_compile() -> None:
+    builder = WorkflowBuilder(
+        name="missing_start_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="start"):
+        builder.compile()
+
+
+def test_builder_registry_exports_used_node_specs() -> None:
+    builder = WorkflowBuilder(
+        name="registry_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+        start="test_auto_bind",
+    )
+    builder.use(auto_bind_node)
+
+    assert set(builder.registry()) == {"test.auto_bind"}
