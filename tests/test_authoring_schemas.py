@@ -303,3 +303,22 @@ def test_builder_can_auto_id_condition_foreach_and_interrupt() -> None:
     assert second_condition.id == "condition_2"
     assert foreach.id == "foreach_tag"
     assert interrupt.id == "interrupt_approval"
+
+
+def test_builder_connect_can_use_node_specs_and_returns_resolved_refs() -> None:
+    builder = WorkflowBuilder(
+        name="connect_specs_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    source, target = builder.connect(auto_bind_node, "ok", auto_bind_node)
+
+    assert not isinstance(source, str)
+    assert not isinstance(target, str)
+    assert source.id == "test_auto_bind"
+    assert target.id == "test_auto_bind_2"
+    assert builder.edges[0].from_ == "test_auto_bind"
+    assert builder.edges[0].outcome == "ok"
+    assert builder.edges[0].to == "test_auto_bind_2"

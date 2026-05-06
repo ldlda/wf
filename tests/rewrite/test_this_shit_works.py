@@ -160,15 +160,6 @@ class State(
     # context: Context
 
 
-gacha = WorkflowBuilder(
-    name="im not hiding it no more",
-    input_schema=Input,
-    output_schema=Storage,  # could be State, since the OG doesnt care, ill probably dump out the list.
-    state_schema=State,
-    start="init",
-)
-
-
 class Nothing(BaseModel): ...  # variance shit IDC
 
 
@@ -410,25 +401,26 @@ def keep_rolling(state: Countdown) -> NodeReturn[Nothing]:
     return s("tick") if (state.countdown or 0) > 0 else s(END)
 
 
-# could be @graph.(something combining node and use)...
-
-gacha.use(init)
-gacha.use(tick, id="tick") # itd use main
+gacha = WorkflowBuilder(
+    name="im not hiding it no more",
+    input_schema=Input,
+    output_schema=Storage,  # could be State, since the OG doesnt care, ill probably dump out the list.
+    state_schema=State,
+)
+gacha.use(tick, id="tick")  # itd use main if we dont have id
 counter_up = gacha.use(CounterUp.c1, id="counter_up")  # 0 base to 1 base probably
 rate_up = gacha.use(RateChange.r65, id="rate_up")
 rate_same = gacha.use(RateChange.r0, id="rate_same")
 r_10 = gacha.use(RateChange.r10, id="r_g10")
 gacha.use(RateChange.r80, id="r_g80")
 gacha.use(RateChange.r240, id="r_gs")
-prepare_pool = gacha.use(prep)
-gacha.use(roll)
 c_80 = gacha.use(CounterUp.c80, id="c_80")
 gacha.use(CounterUp.c10, id="c_10")
 gacha.condition(  # condition dont ignore id; you can...
     id="keep_rolling", check=expr(state("countdown")) > 0
 )  # replaces keep_rolling
 # Outcome is currently hidden from the docs (there is none), outcome_map is insane, should we have it
-gacha.connect("init", "ok", "keep_rolling")
+init_ref, _ = gacha.connect(init, "ok", "keep_rolling")
 gacha.connect("keep_rolling", "true", "tick")
 gacha.connect("keep_rolling", "false", END)
 
@@ -448,11 +440,11 @@ preroll_routes = gacha.branch(
         "240": "r_gs",
         "80": "r_g80",
         "10": r_10,
-        "1": "prepare_pool",
+        "1": prep,
     },
 )
-print(preroll_routes)
-gacha.connect(prepare_pool, "ok", "roll")
+prepare_pool = preroll_routes["1"]
+_, roll_ref = gacha.connect(prepare_pool, "ok", roll)
 gacha.connect("r_gs", "ok", "prepare_pool")
 gacha.connect(preroll_routes["80"], "ok", prepare_pool)
 gacha.connect("r_g10", "ok", prepare_pool)
@@ -475,6 +467,7 @@ gacha.branch(
 
 gacha.connect(c_80, "ok", "keep_rolling")
 gacha.connect("c_10", "ok", "keep_rolling")
+gacha.set_entry_point(init_ref)
 
 # there is like no general uses for the nodes; idk tho
 
@@ -570,6 +563,7 @@ def execute(graph: WorkflowBuilder, input: Input):
 
 
 def test():
+    assert 240 - 135 + 20 >= 120, "my math!"
     d = execute(
         gacha,
         build_input(context)(

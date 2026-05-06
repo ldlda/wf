@@ -237,12 +237,25 @@ class WorkflowBuilder:
         self.nodes.append(node)
         return node
 
-    def connect(self, from_: StepRef, outcome: str, to: StepRef) -> None:
+    def connect(
+        self,
+        from_: BranchRef,
+        outcome: str,
+        to: BranchRef,
+    ) -> tuple[StepRef, StepRef]:
+        """Connect one outcome, auto-using NodeSpec endpoints as fresh node uses."""
+        source = self.use(from_) if _is_node_spec(from_) else from_
+        target = self.use(to) if _is_node_spec(to) else to
         self.edges.append(
             Edge.model_validate(
-                {"from": _step_id(from_), "outcome": outcome, "to": _step_id(to)}
+                {
+                    "from": _step_id(cast(StepRef, source)),
+                    "outcome": outcome,
+                    "to": _step_id(cast(StepRef, target)),
+                }
             )
         )
+        return cast(StepRef, source), cast(StepRef, target)
 
     def branch(
         self,
