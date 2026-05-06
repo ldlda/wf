@@ -7,6 +7,7 @@ from typing import (
     Any,
     Generic,
     Literal,
+    Protocol,
     TypeVar,
     cast,
     get_args,
@@ -22,28 +23,45 @@ from wf_core import NodeDef, RuntimeContext, SchemaRef
 InputT = TypeVar("InputT", bound=BaseModel)
 OutputT = TypeVar("OutputT", bound=BaseModel)
 
-ContextNodeCallable = Callable[
-    [InputT, RuntimeContext], "NodeReturn[OutputT] | OutputT"
-]
-PlainNodeCallable = Callable[[InputT], "NodeReturn[OutputT] | OutputT"]
-NodeCallable = (
-    Callable[[InputT, RuntimeContext], "NodeReturn[OutputT] | OutputT"]
-    | Callable[[InputT], "NodeReturn[OutputT] | OutputT"]
-)
 
-AsyncContextNodeCallable = Callable[
-    [InputT, RuntimeContext], Awaitable["NodeReturn[OutputT] | OutputT"]
+class ContextNodeCallable(Protocol[InputT, OutputT]):
+    def __call__(
+        self,
+        payload: InputT,
+        /,
+        ctx: RuntimeContext,
+    ) -> "NodeReturn[OutputT] | OutputT": ...
+
+
+class PlainNodeCallable(Protocol[InputT, OutputT]):
+    def __call__(self, payload: InputT, /) -> "NodeReturn[OutputT] | OutputT": ...
+
+
+NodeCallable = ContextNodeCallable[InputT, OutputT] | PlainNodeCallable[
+    InputT, OutputT
 ]
-AsyncPlainNodeCallable = Callable[
-    [InputT], Awaitable["NodeReturn[OutputT] | OutputT"]
-]
-AsyncNodeCallable = (
-    Callable[
-        [InputT, RuntimeContext],
-        Awaitable["NodeReturn[OutputT] | OutputT"],
-    ]
-    | Callable[[InputT], Awaitable["NodeReturn[OutputT] | OutputT"]]
-)
+
+
+class AsyncContextNodeCallable(Protocol[InputT, OutputT]):
+    def __call__(
+        self,
+        payload: InputT,
+        /,
+        ctx: RuntimeContext,
+    ) -> Awaitable["NodeReturn[OutputT] | OutputT"]: ...
+
+
+class AsyncPlainNodeCallable(Protocol[InputT, OutputT]):
+    def __call__(
+        self,
+        payload: InputT,
+        /,
+    ) -> Awaitable["NodeReturn[OutputT] | OutputT"]: ...
+
+
+AsyncNodeCallable = AsyncContextNodeCallable[
+    InputT, OutputT
+] | AsyncPlainNodeCallable[InputT, OutputT]
 
 SyncRegistryHandler = Callable[[dict[str, Any], RuntimeContext], dict[str, Any]]
 AsyncRegistryHandler = Callable[
@@ -166,8 +184,8 @@ class NodeSpec(Generic[InputT, OutputT]):
         if self.accepts_context:
             if ctx is None:
                 raise TypeError(f"node {self.name!r} requires RuntimeContext")
-            return cast("ContextNodeCallable[InputT, OutputT]", self.fn)(payload, ctx)
-        return cast("PlainNodeCallable[InputT, OutputT]", self.fn)(payload)
+            return cast(ContextNodeCallable[InputT, OutputT], self.fn)(payload, ctx)
+        return cast(PlainNodeCallable[InputT, OutputT], self.fn)(payload)
 
     def to_node_def(self) -> NodeDef:
         return NodeDef(
