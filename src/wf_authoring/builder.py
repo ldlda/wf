@@ -16,9 +16,7 @@ from wf_core import (
 )
 from wf_core.model import Condition as CoreCondition
 
-from .conditions import Expr, compile_condition
-from .mapping import PathArg
-from .paths import GraphPath
+from .dsl import Expr, GraphPath, PathArg, compile_condition
 from .spec import NodeSpec
 
 StepRef: TypeAlias = str | NodeUse | ConditionNode | ForeachNode | InterruptNode
