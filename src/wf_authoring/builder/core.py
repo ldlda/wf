@@ -2,8 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-import re
-from typing import Any, Literal, TypeAlias, TypeGuard, cast
+from typing import Any, Literal, cast
 import warnings
 
 from wf_core import (
@@ -21,88 +20,20 @@ from wf_core import (
 from wf_core.errors import WorkflowExecutionError
 from wf_core.model import Condition as CoreCondition
 
-from .dsl import Expr, GraphPath, PathArg, compile_condition
-from .nodes.callables import SyncRegistryHandler
-from .nodes.registry import build_registry
-from .schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_from
-from .spec import NodeSpec
-
-StepRef: TypeAlias = str | NodeUse | ConditionNode | ForeachNode | InterruptNode
-BranchRef: TypeAlias = StepRef | NodeSpec[Any, Any]
-MapArg: TypeAlias = Mapping[Any, Any]
-
-
-def _coerce_path(value: object) -> str:
-    if isinstance(value, str):
-        return value
-    if isinstance(value, GraphPath):
-        return value.value
-    raise TypeError(f"unsupported graph path value {value!r}")
-
-
-def _normalize_mapping(
-    mapping: MapArg | None,
-) -> dict[str, str]:
-    if mapping is None:
-        return {}
-    return {
-        _coerce_path(source): _coerce_path(destination)
-        for source, destination in mapping.items()
-    }
-
-
-def _step_id(ref: StepRef) -> str:
-    if isinstance(ref, str):
-        return ref
-    return ref.id
-
-
-def _is_node_spec(ref: object) -> TypeGuard[NodeSpec[Any, Any]]:
-    return isinstance(ref, NodeSpec)
-
-
-def _slug_id(value: str) -> str:
-    slug = re.sub(r"[^0-9A-Za-z_]+", "_", value).strip("_").lower()
-    return slug or "step"
-
-
-def _auto_input_map(
-    spec: NodeSpec[Any, Any],
-    *,
-    input_schema: SchemaRef,
-    state_schema: StateSchema,
-) -> dict[str, str]:
-    return {
-        _auto_source_path(
-            field, input_schema=input_schema, state_schema=state_schema
-        ): field
-        for field in spec.input_model.model_json_schema().get("properties", {})
-    }
-
-
-def _auto_output_map(
-    spec: NodeSpec[Any, Any],
-    *,
-    state_schema: StateSchema,
-) -> dict[str, str]:
-    return {
-        field: f"state.{field}"
-        for field in spec.output_model.model_json_schema().get("properties", {})
-        if field in state_schema.fields
-    }
-
-
-def _auto_source_path(
-    field: str,
-    *,
-    input_schema: SchemaRef,
-    state_schema: StateSchema,
-) -> str:
-    if field in state_schema.fields:
-        return f"state.{field}"
-    if field in input_schema.properties:
-        return f"input.{field}"
-    return f"state.{field}"
+from ..dsl import Expr, PathArg, compile_condition
+from ..nodes.callables import SyncRegistryHandler
+from ..nodes.registry import build_registry
+from ..schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_from
+from ..spec import NodeSpec
+from .ids import next_step_id, slug_id
+from .mapping import (
+    MapArg,
+    auto_input_map,
+    auto_output_map,
+    coerce_path,
+    normalize_mapping,
+)
+from .refs import BranchRef, StepRef, is_node_spec, step_id
 
 
 @dataclass(slots=True)
@@ -135,23 +66,23 @@ class WorkflowBuilder:
         normalized_input_schema = cast(SchemaRef, self.input_schema)
         normalized_state_schema = cast(StateSchema, self.state_schema)
         node = NodeUse(
-            id=id or self._next_step_id(_slug_id(spec.name)),
+            id=id or self._next_step_id(slug_id(spec.name)),
             type="node",
             node=spec.name,
             desc=desc or spec.description,
             in_map=(
-                _auto_input_map(
+                auto_input_map(
                     spec,
                     input_schema=normalized_input_schema,
                     state_schema=normalized_state_schema,
                 )
                 if in_map is None
-                else _normalize_mapping(in_map)
+                else normalize_mapping(in_map)
             ),
             out_map=(
-                _auto_output_map(spec, state_schema=normalized_state_schema)
+                auto_output_map(spec, state_schema=normalized_state_schema)
                 if out_map is None
-                else _normalize_mapping(out_map)
+                else normalize_mapping(out_map)
             ),
         )
         self.nodes.append(node)
@@ -159,17 +90,11 @@ class WorkflowBuilder:
 
     def _next_step_id(self, base: str) -> str:
         """Return a stable unused step id based on the requested base name."""
-        used_ids = {_step_id(node) for node in self.nodes}
-        if base not in used_ids:
-            return base
-        suffix = 2
-        while f"{base}_{suffix}" in used_ids:
-            suffix += 1
-        return f"{base}_{suffix}"
+        return next_step_id(base, cast(list[StepRef], self.nodes))
 
     def set_entry_point(self, step: StepRef) -> None:
         """Set the workflow start node explicitly."""
-        self.start = _step_id(step)
+        self.start = step_id(step)
 
     def registry(self) -> dict[str, SyncRegistryHandler]:
         """Export handlers for all node specs used by this builder."""
@@ -206,9 +131,9 @@ class WorkflowBuilder:
     ) -> ForeachNode:
         node = ForeachNode.model_validate(
             {
-                "id": id or self._next_step_id(f"foreach_{_slug_id(as_)}"),
+                "id": id or self._next_step_id(f"foreach_{slug_id(as_)}"),
                 "type": "foreach",
-                "over": _coerce_path(over),
+                "over": coerce_path(over),
                 "as": as_,
                 "mode": mode,
                 "on_item_error": on_item_error,
@@ -227,11 +152,11 @@ class WorkflowBuilder:
         outcomes: list[str] | None = None,
     ) -> InterruptNode:
         node = InterruptNode(
-            id=id or self._next_step_id(f"interrupt_{_slug_id(kind)}"),
+            id=id or self._next_step_id(f"interrupt_{slug_id(kind)}"),
             type="interrupt",
             kind=kind,
-            request_map=_normalize_mapping(request_map),
-            out_map=_normalize_mapping(out_map),
+            request_map=normalize_mapping(request_map),
+            out_map=normalize_mapping(out_map),
             outcomes=outcomes or ["submitted"],
         )
         self.nodes.append(node)
@@ -244,14 +169,14 @@ class WorkflowBuilder:
         to: BranchRef,
     ) -> tuple[StepRef, StepRef]:
         """Connect one outcome, auto-using NodeSpec endpoints as fresh node uses."""
-        source = self.use(from_) if _is_node_spec(from_) else from_
-        target = self.use(to) if _is_node_spec(to) else to
+        source = self.use(from_) if is_node_spec(from_) else from_
+        target = self.use(to) if is_node_spec(to) else to
         self.edges.append(
             Edge.model_validate(
                 {
-                    "from": _step_id(cast(StepRef, source)),
+                    "from": step_id(cast(StepRef, source)),
                     "outcome": outcome,
-                    "to": _step_id(cast(StepRef, target)),
+                    "to": step_id(cast(StepRef, target)),
                 }
             )
         )
@@ -277,10 +202,10 @@ class WorkflowBuilder:
             )
             return {}
 
-        source = self.use(from_) if _is_node_spec(from_) else from_
+        source = self.use(from_) if is_node_spec(from_) else from_
         resolved_targets: dict[str, StepRef] = {}
         for outcome, target in branches.items():
-            resolved = self.use(target) if _is_node_spec(target) else target
+            resolved = self.use(target) if is_node_spec(target) else target
             self.connect(cast(StepRef, source), outcome, cast(StepRef, resolved))
             resolved_targets[outcome] = cast(StepRef, resolved)
         return resolved_targets
