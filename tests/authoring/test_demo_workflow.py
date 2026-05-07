@@ -405,4 +405,3 @@ def test_async_node_spec_cannot_export_sync_registry_handler() -> None:
         assert "async" in str(exc)
     else:
         raise AssertionError("expected async node export to fail for sync registry")
-
