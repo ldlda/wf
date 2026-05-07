@@ -2,7 +2,7 @@
 name = "lda-wf"
 version = "0.0.1"
 description = "Add your description here"
-readme = "README.md"
+readme = "readme.md"
 authors = [{ name = "lda", email = "lda@ldlda.com" }]
 requires-python = ">=3.14"
 dependencies = [

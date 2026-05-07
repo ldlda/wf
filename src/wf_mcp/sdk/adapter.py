@@ -8,7 +8,6 @@ from mcp import ClientResult
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
-from mcp.types import CallToolResult as McpCallToolResult
 from mcp.types import (
     ClientNotification,
     ClientRequest,
@@ -16,14 +15,17 @@ from mcp.types import (
     ListResourcesResult,
     ListToolsResult,
 )
-from mcp.types import Prompt as McpPrompt
-from mcp.types import Resource as McpResource
-from mcp.types import Tool as McpTool
 from pydantic import AnyUrl
 
 from ..capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from ..models import AuthRecord, ConnectionConfig
 from .base import BackendAdapter, ToolCallResult
+from .converters import (
+    prompt_to_discovered,
+    resource_to_discovered,
+    tool_result_to_call_result,
+    tool_to_discovered,
+)
 
 
 def _auth_headers(auth: AuthRecord | None) -> dict[str, str]:
@@ -34,67 +36,6 @@ def _auth_headers(auth: AuthRecord | None) -> dict[str, str]:
     if isinstance(token, str) and "Authorization" not in headers:
         headers["Authorization"] = f"Bearer {token}"
     return headers
-
-
-def _tool_to_discovered(tool: McpTool) -> DiscoveredTool:
-    output_schema = tool.outputSchema or {
-        "type": "object",
-        "properties": {"content": {"type": "array"}},
-    }
-    display_name = (
-        tool.annotations.title
-        if tool.annotations is not None and tool.annotations.title
-        else tool.title
-    )
-    return DiscoveredTool(
-        name=tool.name,
-        title=display_name,
-        description=tool.description,
-        input_schema=tool.inputSchema,
-        output_schema=output_schema,
-        outcomes=("ok", "error"),
-        metadata=tool.model_dump(by_alias=True, mode="json"),
-    )
-
-
-def _resource_to_discovered(resource: McpResource) -> DiscoveredResource:
-    local_name = resource.name or str(resource.uri)
-    return DiscoveredResource(
-        uri=str(resource.uri),
-        name=local_name,
-        title=resource.title,
-        description=resource.description,
-        mime_type=resource.mimeType,
-        metadata=resource.model_dump(by_alias=True, mode="json"),
-    )
-
-
-def _prompt_to_discovered(prompt: McpPrompt) -> DiscoveredPrompt:
-    arguments = [
-        argument.model_dump(by_alias=True, mode="json")
-        for argument in prompt.arguments or []
-    ]
-    return DiscoveredPrompt(
-        name=prompt.name,
-        title=prompt.title,
-        description=prompt.description,
-        arguments=arguments,
-        metadata=prompt.model_dump(by_alias=True, mode="json"),
-    )
-
-
-def _tool_result_to_call_result(result: McpCallToolResult) -> ToolCallResult:
-    if result.structuredContent is not None:
-        output = result.structuredContent
-    else:
-        output = {
-            "content": [item.model_dump(by_alias=True) for item in result.content]
-        }
-    return ToolCallResult(
-        outcome="error" if result.isError else "ok",
-        output=output,
-        meta=result.meta or {},
-    )
 
 
 class McpSdkAdapter(BackendAdapter):
@@ -149,7 +90,7 @@ class McpSdkAdapter(BackendAdapter):
     ) -> list[DiscoveredTool]:
         async with self._session(connection, auth) as session:
             result: ListToolsResult = await session.list_tools()
-            return [_tool_to_discovered(tool) for tool in result.tools]
+            return [tool_to_discovered(tool) for tool in result.tools]
 
     async def list_resources(
         self,
@@ -158,7 +99,7 @@ class McpSdkAdapter(BackendAdapter):
     ) -> list[DiscoveredResource]:
         async with self._session(connection, auth) as session:
             result: ListResourcesResult = await session.list_resources()
-            return [_resource_to_discovered(resource) for resource in result.resources]
+            return [resource_to_discovered(resource) for resource in result.resources]
 
     async def list_prompts(
         self,
@@ -167,7 +108,7 @@ class McpSdkAdapter(BackendAdapter):
     ) -> list[DiscoveredPrompt]:
         async with self._session(connection, auth) as session:
             result: ListPromptsResult = await session.list_prompts()
-            return [_prompt_to_discovered(prompt) for prompt in result.prompts]
+            return [prompt_to_discovered(prompt) for prompt in result.prompts]
 
     async def get_connection_metadata(
         self,
@@ -235,4 +176,4 @@ class McpSdkAdapter(BackendAdapter):
     ) -> ToolCallResult:
         async with self._session(connection, auth) as session:
             result = await session.call_tool(tool_name, payload)
-            return _tool_result_to_call_result(result)
+            return tool_result_to_call_result(result)

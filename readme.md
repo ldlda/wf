@@ -2,9 +2,10 @@
 
 ## Related docs
 
-- [authoring_sketch.md](authoring_sketch.md): `wf_authoring` direction, including `@node`, `NodeSpec`, builder ergonomics, async registry seams, and subgraph-as-node.
-- [wf_mcp_plan.md](wf_mcp_plan.md): `wf_mcp` direction as a namespaced MCP capability broker plus workflow build/run layer.
-- [scratchpad.md](scratchpad.md): rougher design history and intermediate spec notes that fed the current model.
+- [docs/authoring_sketch.md](docs/authoring_sketch.md): `wf_authoring` direction, including `@node`, `NodeSpec`, builder ergonomics, async registry seams, and subgraph-as-node.
+- [docs/wf_mcp_plan.md](docs/wf_mcp_plan.md): `wf_mcp` direction as a namespaced MCP capability broker plus workflow build/run layer.
+- [docs/wf_mcp_architecture.md](docs/wf_mcp_architecture.md): current `wf_mcp` package boundaries and dependency rules.
+- [docs/scratchpad.md](docs/scratchpad.md): rougher design history and intermediate spec notes that fed the current model.
 
 ## What is this
 
