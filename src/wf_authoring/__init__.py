@@ -23,6 +23,7 @@ from .ops import (
     ItemOutput,
     MaybeItemOutput,
     PickKeyInput,
+    RuntimeErrorInput,
     SequenceInput,
     TruthyInput,
     ValueOutput,
@@ -37,6 +38,7 @@ from .ops import (
     last_item_or_none,
     length,
     pick_key,
+    runtime_error,
     truthy,
 )
 from .nodes import (
@@ -64,6 +66,7 @@ __all__ = [
     "ItemOutput",
     "MaybeItemOutput",
     "PickKeyInput",
+    "RuntimeErrorInput",
     "NodeReturn",
     "NodeSpec",
     "Nothing",
@@ -97,6 +100,7 @@ __all__ = [
     "last_item_or_none",
     "length",
     "pick_key",
+    "runtime_error",
     "node",
     "outcome",
     "state",

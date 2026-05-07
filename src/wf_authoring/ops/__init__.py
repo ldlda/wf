@@ -16,12 +16,14 @@ from .values import (
     CoalesceInput,
     ConstantInput,
     PickKeyInput,
+    RuntimeErrorInput,
     TruthyInput,
     ValueOutput,
     coalesce,
     constant,
     default_if_none,
     pick_key,
+    runtime_error,
     truthy,
 )
 
@@ -33,6 +35,7 @@ __all__ = [
     "ItemOutput",
     "MaybeItemOutput",
     "PickKeyInput",
+    "RuntimeErrorInput",
     "SequenceInput",
     "TruthyInput",
     "ValueOutput",
@@ -47,5 +50,6 @@ __all__ = [
     "last_item_or_none",
     "length",
     "pick_key",
+    "runtime_error",
     "truthy",
 ]

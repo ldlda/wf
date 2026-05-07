@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, NoReturn
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from wf_authoring.nodes import NodeReturn, node
+from wf_authoring.nodes import NodeReturn, Nothing, node
 
 
 class CoalesceInput(BaseModel):
@@ -37,6 +37,13 @@ class TruthyInput(BaseModel):
     """Input model for routing by Python truthiness."""
 
     value: Any
+
+
+class RuntimeErrorInput(BaseModel):
+    """Input model for intentionally failing a workflow branch."""
+
+    message: str
+    details: dict[str, Any] = Field(default_factory=dict)
 
 
 @node(
@@ -92,3 +99,16 @@ def truthy(input: TruthyInput) -> NodeReturn[ValueOutput]:
     value = bool(input.value)
     outcome = "truthy" if value else "falsey"
     return NodeReturn(outcome=outcome, output=ValueOutput(value=value))
+
+
+@node(
+    name="authoring.runtime_error",
+    input_model=RuntimeErrorInput,
+    output_model=Nothing,
+    description="Raise RuntimeError with the provided message and details.",
+)
+def runtime_error(input: RuntimeErrorInput) -> NoReturn:
+    """Raise RuntimeError with the provided message and details."""
+    if input.details:
+        raise RuntimeError(f"{input.message}: {input.details!r}")
+    raise RuntimeError(input.message)

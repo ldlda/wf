@@ -18,6 +18,7 @@ from wf_authoring import (
     last_item_or_none,
     length,
     pick_key,
+    runtime_error,
     state_path,
     truthy,
 )
@@ -258,3 +259,13 @@ def test_truthy_routes_truthy_and_falsey_outcomes() -> None:
 
     assert truthy_result == {"outcome": "truthy", "output": {"value": True}}
     assert falsey_result == {"outcome": "falsey", "output": {"value": False}}
+
+
+def test_runtime_error_raises_with_message_and_details() -> None:
+    registry = build_registry(runtime_error)
+
+    with pytest.raises(RuntimeError, match="bad branch"):
+        registry["authoring.runtime_error"](
+            {"message": "bad branch", "details": {"step": "demo"}},
+            RuntimeContext(current_node_id="runtime_error"),
+        )
