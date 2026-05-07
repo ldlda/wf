@@ -7,13 +7,13 @@ from typing import Any
 from wf_authoring import NodeSpec, build_async_registry
 from wf_core import NodeUse, Workflow, execute_workflow_async
 
-from .adapters import BackendAdapter
-from .catalog import CombinedCatalog, snapshot_from_specs
-from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
-from .discovery import discover_connection_capabilities, specs_from_discovered_tools
-from .error_info import error_payload
-from .events import McpEvent, make_event
-from .models import (
+from ..adapters import BackendAdapter
+from ..catalog import CombinedCatalog, snapshot_from_specs
+from ..connections import ConnectionRegistry, parse_connection_id, qualify_node_name
+from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
+from ..error_info import error_payload
+from ..events import McpEvent, make_event
+from ..models import (
     AuthRecord,
     CatalogPromptEntry,
     CatalogResourceEntry,
@@ -21,19 +21,9 @@ from .models import (
     ConnectionConfig,
     RawWorkflowPlan,
 )
-from .store import Store
-
-
-def _qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, Any]:
-    return NodeSpec(
-        name=qualify_node_name(connection_id, spec.name),
-        input_model=spec.input_model,
-        output_model=spec.output_model,
-        outcomes=spec.outcomes,
-        fn=spec.fn,
-        description=spec.description,
-        is_async=spec.is_async,
-    )
+from ..store import Store
+from .adapters import require_adapter
+from .specs import get_qualified_spec, qualify_spec
 
 
 @dataclass(slots=True)
@@ -82,9 +72,7 @@ class WfMcpService:
     ) -> None:
         self.connections.get(connection_id)
         qualified_specs = {
-            qualify_node_name(connection_id, spec.name): _qualify_spec(
-                connection_id, spec
-            )
+            qualify_node_name(connection_id, spec.name): qualify_spec(connection_id, spec)
             for spec in specs
         }
         self.specs_by_connection[connection_id] = qualified_specs
@@ -180,9 +168,7 @@ class WfMcpService:
     async def read_resource(self, qualified_name: str) -> dict[str, Any]:
         resource = self.get_resource(qualified_name)
         connection = self.connections.get(resource.connection_id)
-        adapter = self.adapters.get(connection.server)
-        if adapter is None:
-            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        adapter = require_adapter(connection, self.adapters)
         auth = self.load_auth(resource.connection_id)
         self._record_event(
             make_event(
@@ -211,9 +197,7 @@ class WfMcpService:
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         connection = self.connections.get(connection_id)
-        adapter = self.adapters.get(connection.server)
-        if adapter is None:
-            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        adapter = require_adapter(connection, self.adapters)
         auth = self.load_auth(connection_id)
         self._record_event(
             make_event(
@@ -242,9 +226,7 @@ class WfMcpService:
         arguments: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         connection = self.connections.get(connection_id)
-        adapter = self.adapters.get(connection.server)
-        if adapter is None:
-            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        adapter = require_adapter(connection, self.adapters)
         auth = self.load_auth(connection_id)
         capability_id = qualify_node_name(connection_id, tool_name)
         payload = arguments or {}
@@ -279,9 +261,7 @@ class WfMcpService:
         params: dict[str, Any] | None = None,
     ) -> None:
         connection = self.connections.get(connection_id)
-        adapter = self.adapters.get(connection.server)
-        if adapter is None:
-            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        adapter = require_adapter(connection, self.adapters)
         auth = self.load_auth(connection_id)
         self._record_event(
             make_event(
@@ -309,9 +289,7 @@ class WfMcpService:
     ) -> dict[str, Any]:
         prompt = self.get_prompt(qualified_name)
         connection = self.connections.get(prompt.connection_id)
-        adapter = self.adapters.get(connection.server)
-        if adapter is None:
-            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        adapter = require_adapter(connection, self.adapters)
         auth = self.load_auth(prompt.connection_id)
         self._record_event(
             make_event(
@@ -344,9 +322,7 @@ class WfMcpService:
         max_age_seconds: int | None = None,
     ) -> None:
         connection = self.connections.get(connection_id)
-        adapter = self.adapters.get(connection.server)
-        if adapter is None:
-            raise KeyError(f"no adapter registered for server {connection.server!r}")
+        adapter = require_adapter(connection, self.adapters)
 
         auth = self.load_auth(connection_id)
         self._record_event(
@@ -462,11 +438,7 @@ class WfMcpService:
         return list(self.events)
 
     def _get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
-        connection_id, _ = qualified_name.rsplit(".", 1)
-        specs = self.specs_by_connection.get(connection_id)
-        if specs is None or qualified_name not in specs:
-            raise KeyError(f"unknown qualified node {qualified_name!r}")
-        return specs[qualified_name]
+        return get_qualified_spec(self.specs_by_connection, qualified_name)
 
     def _record_event(self, event: McpEvent) -> None:
         self.events.append(event)

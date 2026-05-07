@@ -8,15 +8,15 @@ from fastmcp import FastMCP
 from fastmcp.client import Client
 from fastmcp.client.transports.config import MCPConfigTransport
 from fastmcp.client.transports.memory import FastMCPTransport
-from fastmcp.mcp_config import MCPConfig
 from fastmcp.server import create_proxy
 from fastmcp.server.transforms import Namespace, PromptsAsTools, ResourcesAsTools
 from fastmcp.server.transforms.search import BM25SearchTransform
 
 from .config_manager import BrokerConfigManager, ConfigMutationError
-from .models import BrokerConfig, ConnectionConfig
+from .models import BrokerConfig
 from .names import ADMIN_NAMESPACE, is_admin_tool_name, parse_namespaced_tool_name
 from .pagination import paginate_items
+from .proxy_config import broker_config_to_fastmcp_config
 from .proxy_validation import validate_transparent_proxy_config
 
 _ADMIN_TOOL_NAMES = [
@@ -334,45 +334,6 @@ def create_proxy_admin_server(
         return runtime.require_manager().remove_connection(connection_id)
 
     return admin
-
-
-def connection_to_fastmcp_server_config(
-    connection: ConnectionConfig,
-) -> dict[str, Any]:
-    metadata = dict(connection.metadata)
-    transport = metadata.get("transport", "stdio")
-    if transport == "streamable_http":
-        metadata["transport"] = "http"
-    if transport == "stdio":
-        return {
-            "command": metadata["command"],
-            "args": list(metadata.get("args", [])),
-            "env": dict(metadata.get("env", {})),
-            "cwd": metadata.get("cwd"),
-            "transport": "stdio",
-            "description": metadata.get("description"),
-        }
-    if transport in {"http", "streamable-http", "sse"}:
-        return {
-            "url": metadata["url"],
-            "transport": transport,
-            "headers": dict(metadata.get("headers", {})),
-            "description": metadata.get("description"),
-        }
-    raise ValueError(f"unsupported MCP transport {transport!r}")
-
-
-def broker_config_to_fastmcp_config(config: BrokerConfig) -> MCPConfig:
-    validate_transparent_proxy_config(config)
-    return MCPConfig.from_dict(
-        {
-            "mcpServers": {
-                connection.id: connection_to_fastmcp_server_config(connection)
-                for connection in config.connections
-                if connection.enabled
-            }
-        }
-    )
 
 
 def create_transparent_proxy_server(

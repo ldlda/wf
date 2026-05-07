@@ -48,12 +48,14 @@ from .names import (
     parse_namespaced_tool_name,
 )
 from .proxy_validation import ProxyConfigError, validate_transparent_proxy_config
+from .proxy_config import (
+    broker_config_to_fastmcp_config,
+    connection_to_fastmcp_server_config,
+)
 from .service import WfMcpService
 from .store import FileStore, Store
 from .transparent_proxy import (
     TransparentProxyRuntime,
-    broker_config_to_fastmcp_config,
-    connection_to_fastmcp_server_config,
     create_proxy_admin_server,
     create_transparent_proxy_client,
     create_transparent_proxy_server,
