@@ -9,14 +9,9 @@ from pydantic import BaseModel
 
 from wf_authoring import NodeReturn, node
 from wf_core import RuntimeContext
-from wf_mcp import (
-    AuthRecord,
-    ConnectionConfig,
-    DiscoveredPrompt,
-    DiscoveredResource,
-    DiscoveredTool,
-    ToolCallResult,
-)
+from wf_mcp.capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+from wf_mcp.models import AuthRecord, ConnectionConfig
+from wf_mcp.sdk import ToolCallResult
 
 
 class EchoInput(BaseModel):

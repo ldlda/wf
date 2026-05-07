@@ -4,7 +4,10 @@ import asyncio
 
 import pytest
 
-from wf_mcp import ConnectionConfig, FileStore, McpSdkAdapter, WfMcpService
+from wf_mcp.broker import WfMcpService
+from wf_mcp.models import ConnectionConfig
+from wf_mcp.sdk import McpSdkAdapter
+from wf_mcp.storage import FileStore
 
 from .test_support import (
     everything_server_connection,

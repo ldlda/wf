@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from wf_mcp import AuthRecord, FileStore
+from wf_mcp.models import AuthRecord
+from wf_mcp.storage import FileStore
 
 from .test_support import local_temp_root
 

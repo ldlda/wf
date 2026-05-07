@@ -20,6 +20,11 @@ Root modules such as `wf_mcp.store`, `wf_mcp.service`, and
 `wf_mcp.mcp_sdk_adapter` are compatibility shims. New internal imports should
 prefer the concern package directly.
 
+The root `wf_mcp` package is a small public facade for common user entrypoints,
+not a dump of every internal helper. If a caller needs broker internals, SDK
+adapter protocols, proxy admin pieces, or shared name parsing, import the
+relevant concern package directly.
+
 ## Dependency Rules
 
 - `wf_mcp.sdk` should not import `wf_core` or `wf_authoring`.

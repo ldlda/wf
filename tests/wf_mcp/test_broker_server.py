@@ -3,15 +3,14 @@ from __future__ import annotations
 import asyncio
 import json
 
-from wf_mcp import (
-    BrokerConfig,
-    ConnectionConfig,
-    FileStore,
+from wf_mcp.broker import (
     WfMcpService,
     build_service_from_config,
     create_broker_server,
     load_broker_config,
 )
+from wf_mcp.models import BrokerConfig, ConnectionConfig
+from wf_mcp.storage import FileStore
 
 from .test_support import (
     FailingDiscoveryAdapter,

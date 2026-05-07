@@ -4,14 +4,10 @@ import asyncio
 import shutil
 
 from wf_core import END, RunStatus
-from wf_mcp import (
-    AuthRecord,
-    ConnectionConfig,
-    FileStore,
-    RawWorkflowPlan,
-    WfMcpService,
-)
-from wf_mcp.error_info import error_payload
+from wf_mcp.broker import WfMcpService
+from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
+from wf_mcp.shared.errors import error_payload
+from wf_mcp.storage import FileStore
 
 from .test_support import (
     FailingDiscoveryAdapter,
