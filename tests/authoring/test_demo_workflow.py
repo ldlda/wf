@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from pydantic import BaseModel
 
 from wf_core import (
@@ -9,7 +7,6 @@ from wf_core import (
     FrameStatus,
     RuntimeContext,
     RunStatus,
-    execute_workflow_async,
     execute_workflow,
     resume_workflow,
     step_workflow,
@@ -20,17 +17,13 @@ from wf_authoring import (
     NodeReturn,
     WorkflowBuilder,
     bind_fields,
-    build_async_registry,
     bind_state,
     build_registry,
-    expr,
-    exists,
     state,
     state_path,
     context_path,
     input_path,
     node,
-    subgraph_node,
 )
 
 
@@ -72,30 +65,6 @@ class MarkEmailSkippedInput(BaseModel):
 
 class MarkEmailSkippedOutput(BaseModel):
     email_status: str
-
-
-class InferredEchoInput(BaseModel):
-    value: str
-
-
-class InferredEchoOutput(BaseModel):
-    echoed: str
-
-
-class InferredOutcomeInput(BaseModel):
-    value: str
-
-
-class InferredOutcomeOutput(BaseModel):
-    echoed: str
-
-
-class InferredAsyncInput(BaseModel):
-    value: str
-
-
-class InferredAsyncOutput(BaseModel):
-    echoed: str
 
 
 @node(
@@ -437,161 +406,3 @@ def test_async_node_spec_cannot_export_sync_registry_handler() -> None:
     else:
         raise AssertionError("expected async node export to fail for sync registry")
 
-
-def test_async_registry_accepts_sync_and_async_specs() -> None:
-    @node()
-    def sync_echo(
-        payload: InferredEchoInput,
-        ctx: RuntimeContext,
-    ) -> InferredEchoOutput:
-        return InferredEchoOutput(echoed=payload.value)
-
-    @node()
-    async def async_echo(
-        payload: InferredAsyncInput,
-        ctx: RuntimeContext,
-    ) -> InferredAsyncOutput:
-        return InferredAsyncOutput(echoed=f"async:{payload.value}")
-
-    registry = build_async_registry(sync_echo, async_echo)
-    ctx = RuntimeContext(current_node_id="demo")
-
-    async def run_handler(name: str, value: str) -> dict[str, object]:
-        return await registry[name]({"value": value}, ctx)
-
-    sync_result = asyncio.run(run_handler("sync_echo", "hello"))
-    async_result = asyncio.run(run_handler("async_echo", "world"))
-
-    assert sync_result == {"outcome": "ok", "output": {"echoed": "hello"}}
-    assert async_result == {"outcome": "ok", "output": {"echoed": "async:world"}}
-
-
-def test_execute_workflow_async_runs_with_async_registry() -> None:
-    workflow, _ = build_authoring_demo_workflow()
-    registry = build_async_registry(
-        drive_list_files_spec,
-        summarize_document_spec,
-        combine_summaries_spec,
-        send_email_spec,
-        mark_email_skipped_spec,
-    )
-
-    run = asyncio.run(
-        execute_workflow_async(
-            workflow,
-            {"folder_id": "demo-folder", "should_email": False},
-            registry,
-        )
-    )
-
-    assert run.status == RunStatus.COMPLETED
-    assert run.output["email_status"] == "skipped"
-    assert run.interrupt is None
-
-
-@node()
-def inferred_echo(
-    payload: InferredEchoInput,
-    ctx: RuntimeContext,
-) -> InferredEchoOutput:
-    return InferredEchoOutput(echoed=payload.value)
-
-
-@node(outcomes=("done", "retry"))
-def inferred_echo_with_outcome(
-    payload: InferredOutcomeInput,
-    ctx: RuntimeContext,
-) -> NodeReturn[InferredOutcomeOutput]:
-    return NodeReturn(
-        outcome="done",
-        output=InferredOutcomeOutput(echoed=payload.value),
-    )
-
-
-@node()
-async def inferred_async_echo(
-    payload: InferredAsyncInput,
-    ctx: RuntimeContext,
-) -> InferredAsyncOutput:
-    return InferredAsyncOutput(echoed=payload.value)
-
-
-def test_node_decorator_infers_models_from_annotations() -> None:
-    assert inferred_echo.input_model is InferredEchoInput
-    assert inferred_echo.output_model is InferredEchoOutput
-    assert inferred_echo.outcomes == ("ok",)
-    assert inferred_echo.is_async is False
-
-    registry = build_registry(inferred_echo)
-    result = registry["inferred_echo"](
-        {"value": "hello"},
-        RuntimeContext(current_node_id="x"),
-    )
-    assert result == {"outcome": "ok", "output": {"echoed": "hello"}}
-
-
-def test_node_decorator_infers_nodereturn_output_model() -> None:
-    assert inferred_echo_with_outcome.input_model is InferredOutcomeInput
-    assert inferred_echo_with_outcome.output_model is InferredOutcomeOutput
-
-    registry = build_registry(inferred_echo_with_outcome)
-    result = registry["inferred_echo_with_outcome"](
-        {"value": "hello"},
-        RuntimeContext(current_node_id="x"),
-    )
-    assert result == {"outcome": "done", "output": {"echoed": "hello"}}
-
-
-def test_node_decorator_detects_async_automatically() -> None:
-    assert inferred_async_echo.is_async is True
-
-
-def test_condition_dsl_compiles_to_core_condition() -> None:
-    condition = expr(state_path("should_email")).eq(True) & exists(
-        state_path("summary")
-    )
-
-    assert condition.to_condition().model_dump() == {
-        "op": "and",
-        "args": [
-            {
-                "op": "eq",
-                "left": {"path": "state.should_email"},
-                "right": {"value": True},
-            },
-            {
-                "op": "exists",
-                "path": "state.summary",
-            },
-        ],
-    }
-
-
-def test_subgraph_node_wraps_compiled_workflow() -> None:
-    class ChildInput(BaseModel):
-        folder_id: str
-        should_email: bool
-
-    class ChildOutput(BaseModel):
-        summary: str
-        email_status: str
-
-    child_workflow = build_demo_workflow()
-    child_registry = build_demo_registry()
-    wrapped = subgraph_node(
-        name="wrapped_demo",
-        workflow=child_workflow,
-        registry=child_registry,
-        input_model=ChildInput,
-        output_model=ChildOutput,
-    )
-
-    registry = build_registry(wrapped)
-    result = registry["wrapped_demo"](
-        {"folder_id": "demo-folder", "should_email": False},
-        RuntimeContext(current_node_id="parent"),
-    )
-
-    assert result["outcome"] == "ok"
-    assert result["output"]["email_status"] == "skipped"
-    assert "summary" in result["output"]

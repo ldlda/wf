@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel
 
-from wf_authoring import Nothing, build_registry, node, outcome
+from wf_authoring import NodeReturn, Nothing, build_registry, node, outcome
 from wf_core import RuntimeContext
 
 
@@ -12,6 +12,57 @@ class AliasInput(BaseModel):
 
 class AliasOutput(BaseModel):
     value: str
+
+
+class InferredEchoInput(BaseModel):
+    value: str
+
+
+class InferredEchoOutput(BaseModel):
+    echoed: str
+
+
+class InferredOutcomeInput(BaseModel):
+    value: str
+
+
+class InferredOutcomeOutput(BaseModel):
+    echoed: str
+
+
+class InferredAsyncInput(BaseModel):
+    value: str
+
+
+class InferredAsyncOutput(BaseModel):
+    echoed: str
+
+
+@node()
+def inferred_echo(
+    payload: InferredEchoInput,
+    ctx: RuntimeContext,
+) -> InferredEchoOutput:
+    return InferredEchoOutput(echoed=payload.value)
+
+
+@node(outcomes=("done", "retry"))
+def inferred_echo_with_outcome(
+    payload: InferredOutcomeInput,
+    ctx: RuntimeContext,
+) -> NodeReturn[InferredOutcomeOutput]:
+    return NodeReturn(
+        outcome="done",
+        output=InferredOutcomeOutput(echoed=payload.value),
+    )
+
+
+@node()
+async def inferred_async_echo(
+    payload: InferredAsyncInput,
+    ctx: RuntimeContext,
+) -> InferredAsyncOutput:
+    return InferredAsyncOutput(echoed=payload.value)
 
 
 def test_node_decorator_can_alias_existing_node_spec() -> None:
@@ -76,3 +127,33 @@ def test_outcome_can_wrap_explicit_output() -> None:
 
     assert result.outcome == "ok"
     assert result.output is output
+
+
+def test_node_decorator_infers_models_from_annotations() -> None:
+    assert inferred_echo.input_model is InferredEchoInput
+    assert inferred_echo.output_model is InferredEchoOutput
+    assert inferred_echo.outcomes == ("ok",)
+    assert inferred_echo.is_async is False
+
+    registry = build_registry(inferred_echo)
+    result = registry["inferred_echo"](
+        {"value": "hello"},
+        RuntimeContext(current_node_id="x"),
+    )
+    assert result == {"outcome": "ok", "output": {"echoed": "hello"}}
+
+
+def test_node_decorator_infers_nodereturn_output_model() -> None:
+    assert inferred_echo_with_outcome.input_model is InferredOutcomeInput
+    assert inferred_echo_with_outcome.output_model is InferredOutcomeOutput
+
+    registry = build_registry(inferred_echo_with_outcome)
+    result = registry["inferred_echo_with_outcome"](
+        {"value": "hello"},
+        RuntimeContext(current_node_id="x"),
+    )
+    assert result == {"outcome": "done", "output": {"echoed": "hello"}}
+
+
+def test_node_decorator_detects_async_automatically() -> None:
+    assert inferred_async_echo.is_async is True
