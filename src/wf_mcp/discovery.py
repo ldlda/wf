@@ -6,12 +6,8 @@ from typing import Any
 
 from wf_authoring import NodeSpec
 
-from .adapters import (
-    BackendAdapter,
-    DiscoveredPrompt,
-    DiscoveredResource,
-    DiscoveredTool,
-)
+from .capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+from .sdk import BackendAdapter
 from .events import McpEvent
 from .models import AuthRecord, ConnectionConfig
 from .wrappers import wrap_discovered_tool

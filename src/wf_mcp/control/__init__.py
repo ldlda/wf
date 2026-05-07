@@ -1,4 +1,5 @@
-from .control.models import (
+from .manager import BrokerConfigManager, ConfigMutationError
+from .models import (
     BrokerConfigFile,
     ConnectionConfigFile,
     HttpConnectionMetadata,
@@ -7,6 +8,8 @@ from .control.models import (
 
 __all__ = [
     "BrokerConfigFile",
+    "BrokerConfigManager",
+    "ConfigMutationError",
     "ConnectionConfigFile",
     "HttpConnectionMetadata",
     "StdioConnectionMetadata",

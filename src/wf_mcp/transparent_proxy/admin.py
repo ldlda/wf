@@ -5,7 +5,7 @@ from typing import Any, Protocol
 
 from fastmcp import FastMCP
 
-from ..config_manager import BrokerConfigManager
+from ..control import BrokerConfigManager
 from ..models import BrokerConfig
 
 

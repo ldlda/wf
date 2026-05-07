@@ -7,11 +7,11 @@ from typing import Any
 from wf_authoring import NodeSpec, build_async_registry
 from wf_core import NodeUse, Workflow, execute_workflow_async
 
-from ..adapters import BackendAdapter
+from ..sdk import BackendAdapter
 from ..catalog import CombinedCatalog, snapshot_from_specs
 from ..connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
-from ..error_info import error_payload
+from ..shared.errors import error_payload
 from ..events import McpEvent, make_event
 from ..models import (
     AuthRecord,

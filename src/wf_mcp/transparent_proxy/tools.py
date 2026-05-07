@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any
 
-from ..names import is_admin_tool_name, parse_namespaced_tool_name
-from ..pagination import paginate_items
+from ..shared.names import is_admin_tool_name, parse_namespaced_tool_name
+from ..shared.pagination import paginate_items
 
 
 def proxy_tool_payload(

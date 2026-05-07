@@ -11,9 +11,9 @@ from fastmcp.server import create_proxy
 from fastmcp.server.transforms import Namespace, PromptsAsTools, ResourcesAsTools
 from fastmcp.server.transforms.search import BM25SearchTransform
 
-from ..config_manager import BrokerConfigManager, ConfigMutationError
+from ..control import BrokerConfigManager, ConfigMutationError
 from ..models import BrokerConfig
-from ..names import ADMIN_NAMESPACE
+from ..shared.names import ADMIN_NAMESPACE
 from ..proxy_config import broker_config_to_fastmcp_config
 from ..proxy_validation import validate_transparent_proxy_config
 from .admin import create_proxy_admin_server

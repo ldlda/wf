@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ..adapters import BackendAdapter
+from ..sdk import BackendAdapter
 from ..models import ConnectionConfig
 
 

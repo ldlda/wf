@@ -8,7 +8,8 @@ from pydantic import BaseModel, ConfigDict, Field, create_model
 from wf_authoring import NodeReturn, NodeSpec
 from wf_core import RuntimeContext
 
-from .adapters import BackendAdapter, DiscoveredTool
+from .capabilities import DiscoveredTool
+from .sdk import BackendAdapter
 from .events import McpEvent, make_event
 from .models import AuthRecord, ConnectionConfig
 

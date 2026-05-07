@@ -1,5 +1,6 @@
-from .adapters import (
+from .sdk import (
     BackendAdapter,
+    McpSdkAdapter,
     ToolCallResult,
 )
 from .broker_server import (
@@ -19,8 +20,9 @@ from .capabilities import (
 )
 from .catalog import CombinedCatalog
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
-from .config_manager import BrokerConfigManager, ConfigMutationError
-from .config_models import (
+from .control import (
+    BrokerConfigManager,
+    ConfigMutationError,
     BrokerConfigFile,
     ConnectionConfigFile,
     HttpConnectionMetadata,
@@ -39,8 +41,7 @@ from .models import (
     ConnectionConfig,
     RawWorkflowPlan,
 )
-from .mcp_sdk_adapter import McpSdkAdapter
-from .names import (
+from .shared.names import (
     ADMIN_NAMESPACE,
     ProxyToolName,
     is_admin_tool_name,

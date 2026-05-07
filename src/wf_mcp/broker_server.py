@@ -8,9 +8,9 @@ from typing import Any, Literal
 
 from mcp.server.fastmcp import FastMCP
 
-from .config_models import BrokerConfigFile
-from .error_info import error_payload
-from .mcp_sdk_adapter import McpSdkAdapter
+from .control import BrokerConfigFile
+from .shared.errors import error_payload
+from .sdk import McpSdkAdapter
 from .models import BrokerConfig
 from .service import WfMcpService
 from .store import FileStore
