@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from ..sdk import BackendAdapter
-from ..models import ConnectionConfig
+from ...models import ConnectionConfig
+from ...sdk import BackendAdapter
 
 
 def require_adapter(

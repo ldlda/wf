@@ -4,7 +4,7 @@ from typing import Any
 
 from wf_authoring import NodeSpec
 
-from ..connections import qualify_node_name
+from ...connections import qualify_node_name
 
 
 def qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, Any]:

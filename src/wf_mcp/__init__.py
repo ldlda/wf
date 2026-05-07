@@ -3,12 +3,19 @@ from .sdk import (
     McpSdkAdapter,
     ToolCallResult,
 )
-from .broker_server import (
+from .broker import (
     build_service_from_config,
+    CombinedCatalog,
     create_broker_server,
+    DiscoveredConnectionCapabilities,
+    discover_connection_capabilities,
     load_broker_config,
+    McpEvent,
+    make_event,
     run_broker_server,
     run_transparent_proxy_server,
+    specs_from_discovered_tools,
+    WfMcpService,
 )
 from .capabilities import (
     CatalogNodeEntry,
@@ -18,7 +25,6 @@ from .capabilities import (
     DiscoveredResource,
     DiscoveredTool,
 )
-from .catalog import CombinedCatalog
 from .connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from .control import (
     BrokerConfigManager,
@@ -28,12 +34,6 @@ from .control import (
     HttpConnectionMetadata,
     StdioConnectionMetadata,
 )
-from .discovery import (
-    DiscoveredConnectionCapabilities,
-    discover_connection_capabilities,
-    specs_from_discovered_tools,
-)
-from .events import McpEvent, make_event
 from .models import (
     AuthRecord,
     BrokerConfig,
@@ -53,15 +53,14 @@ from .proxy_config import (
     broker_config_to_fastmcp_config,
     connection_to_fastmcp_server_config,
 )
-from .service import WfMcpService
-from .store import FileStore, Store
+from .storage import FileStore, Store
 from .transparent_proxy import (
     TransparentProxyRuntime,
     create_proxy_admin_server,
     create_transparent_proxy_client,
     create_transparent_proxy_server,
 )
-from .wrappers import wrap_discovered_tool
+from .workflow import wrap_discovered_tool
 
 __all__ = [
     "AuthRecord",
