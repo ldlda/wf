@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+from typing import Annotated, TypedDict
+
 from mcp.server.fastmcp import FastMCP
+from pydantic import Field
 
 
 server = FastMCP("echo-fixture")
 
+class EchoToolResult(TypedDict):
+    echoed: str
 
 @server.tool(title="Echo tool")
-async def echo_tool(text: str) -> dict[str, str]:
+async def echo_tool(
+    text: Annotated[str, Field(description="Text to echo")],
+) -> EchoToolResult:
     return {"echoed": text}
 
 

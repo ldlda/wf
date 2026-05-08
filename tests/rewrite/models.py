@@ -47,6 +47,29 @@ class Context(TypedDict):  # dataclass support? no. i mean langgraph doesnt.
 # class Input(TypedDict, total=False):
 
 
+## context is a hard thing
+# According to https://docs.langchain.com/oss/python/concepts/context, there are three types:
+#
+# | type | mut | lifetime |
+# | --- | --- | --- |
+# |static runtime (context) | static | single run |
+# |dynamic runtime (state) | mut | single run |
+# |dynamic cross-convo (store) | mut | cross-conversation |
+#
+# now what the hell is store
+### store
+#
+# store is used in langgraph-demo for debugging. but it can be used for more things.
+# it saves every turn. every graph nodes. I use InMemoryStore, you can use psql store!
+# This allows for picking the work up again after a while for example.
+# a lot more versatility there.
+#
+### what about us? how should we handle context?
+#
+# in the future if wed like, we could handle context. This could be useful for lda.chat!
+# i want lda.chat to be/have a meta-agent. So i could spin up ideas! a 
+
+
 class ContextInput(BaseModel):
     context: Context  # final!
 

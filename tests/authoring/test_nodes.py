@@ -177,11 +177,9 @@ def test_pydantic_field_descriptions_survive_node_catalog_schema() -> None:
     assert entry.description == "Echoes a documented message."
     assert entry.input_schema["type"] == "object"
     assert (
-        entry.input_schema["properties"]["message"]["description"]
-        == "Message to echo"
+        entry.input_schema["properties"]["message"]["description"] == "Message to echo"
     )
     assert entry.output_schema["type"] == "object"
     assert (
-        entry.output_schema["properties"]["echoed"]["description"]
-        == "Echoed message"
+        entry.output_schema["properties"]["echoed"]["description"] == "Echoed message"
     )

@@ -196,10 +196,7 @@ def test_service_catalog_preserves_json_schema_description_metadata() -> None:
     node = service.get_catalog().as_payload()["nodes"][0]
     assert node["input_schema"]["type"] == "object"
     assert isinstance(node["input_schema"]["properties"], dict)
-    assert (
-        node["input_schema"]["properties"]["text"]["description"]
-        == "Text to echo"
-    )
+    assert node["input_schema"]["properties"]["text"]["description"] == "Text to echo"
     assert node["output_schema"]["type"] == "object"
     assert isinstance(node["output_schema"]["properties"], dict)
 
@@ -226,7 +223,9 @@ def test_service_wrapped_tool_adapter_model_validates_simple_schema_types() -> N
     except ValueError as exc:
         assert "text" in str(exc)
     else:
-        raise AssertionError("expected generated adapter model to reject non-string text")
+        raise AssertionError(
+            "expected generated adapter model to reject non-string text"
+        )
 
 
 def test_service_records_tool_call_events() -> None:
