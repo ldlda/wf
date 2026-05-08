@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from pydantic import BaseModel
 
 from wf_core import (
@@ -7,6 +8,7 @@ from wf_core import (
     FrameStatus,
     RuntimeContext,
     RunStatus,
+    WorkflowExecutionError,
     execute_workflow,
     resume_workflow,
     step_workflow,
@@ -284,6 +286,43 @@ def test_non_interrupt_path_skips_email() -> None:
     assert run.status == RunStatus.COMPLETED
     assert run.output["email_status"] == "skipped"
     assert run.interrupt is None
+
+
+def test_workflow_input_schema_rejects_wrong_type() -> None:
+    workflow = build_demo_workflow()
+    registry = build_demo_registry()
+
+    with pytest.raises(
+        WorkflowExecutionError,
+        match=r"workflow input\['should_email'\].*not of type 'boolean'",
+    ):
+        execute_workflow(
+            workflow,
+            {"folder_id": "demo-folder", "should_email": "false"},
+            registry,
+        )
+
+
+def test_node_output_schema_rejects_wrong_type() -> None:
+    workflow = build_demo_workflow()
+    registry = build_demo_registry()
+
+    def bad_list_files(
+        payload: dict[str, object], ctx: RuntimeContext
+    ) -> dict[str, object]:
+        return {"outcome": "ok", "output": {"documents": "not-a-list"}}
+
+    registry["drive_list_files"] = bad_list_files
+
+    with pytest.raises(
+        WorkflowExecutionError,
+        match=r"node output for list_files\['documents'\].*not of type 'array'",
+    ):
+        execute_workflow(
+            workflow,
+            {"folder_id": "demo-folder", "should_email": False},
+            registry,
+        )
 
 
 def test_stepwise_execution_reaches_interrupt() -> None:

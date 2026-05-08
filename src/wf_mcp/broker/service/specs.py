@@ -17,6 +17,9 @@ def qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, 
         fn=spec.fn,
         description=spec.description,
         is_async=spec.is_async,
+        accepts_context=spec.accepts_context,
+        input_schema_contract=spec.input_schema_contract,
+        output_schema_contract=spec.output_schema_contract,
     )
 
 

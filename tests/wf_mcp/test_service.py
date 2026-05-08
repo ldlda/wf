@@ -117,17 +117,23 @@ def test_service_refreshes_catalog_from_adapter() -> None:
             "description": "Echo text back",
             "outcomes": ["ok"],
             "input_schema": {
-                "additionalProperties": True,
-                "properties": {"text": {"title": "Text"}},
+                "properties": {
+                    "text": {
+                        "description": "Text to echo",
+                        "type": "string",
+                    }
+                },
                 "required": ["text"],
-                "title": "demo.personal_echo_tool_Input",
                 "type": "object",
             },
             "output_schema": {
-                "additionalProperties": True,
-                "properties": {"echoed": {"title": "Echoed"}},
+                "properties": {
+                    "echoed": {
+                        "description": "Echoed text",
+                        "type": "string",
+                    }
+                },
                 "required": ["echoed"],
-                "title": "demo.personal_echo_tool_Output",
                 "type": "object",
             },
         }
@@ -176,6 +182,51 @@ def test_service_refreshes_catalog_from_adapter() -> None:
     event_kinds = [event.kind for event in service.list_events()]
     assert "catalog_refresh_started" in event_kinds
     assert "catalog_refresh_completed" in event_kinds
+
+
+def test_service_catalog_preserves_json_schema_description_metadata() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "schema_doc_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+
+    node = service.get_catalog().as_payload()["nodes"][0]
+    assert node["input_schema"]["type"] == "object"
+    assert isinstance(node["input_schema"]["properties"], dict)
+    assert (
+        node["input_schema"]["properties"]["text"]["description"]
+        == "Text to echo"
+    )
+    assert node["output_schema"]["type"] == "object"
+    assert isinstance(node["output_schema"]["properties"], dict)
+
+
+def test_service_wrapped_tool_adapter_model_validates_simple_schema_types() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "schema_model_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+    spec = service.specs_by_connection["demo.personal"]["demo.personal.echo_tool"]
+
+    parsed = spec.input_model.model_validate({"text": "hello"})
+    assert parsed.model_dump() == {"text": "hello"}
+    assert (
+        spec.input_model.model_json_schema()["properties"]["text"]["description"]
+        == "Text to echo"
+    )
+
+    try:
+        spec.input_model.model_validate({"text": 123})
+    except ValueError as exc:
+        assert "text" in str(exc)
+    else:
+        raise AssertionError("expected generated adapter model to reject non-string text")
 
 
 def test_service_records_tool_call_events() -> None:

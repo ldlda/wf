@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from wf_authoring import NodeReturn, node
 from wf_core import RuntimeContext
@@ -15,11 +15,11 @@ from wf_mcp.sdk import ToolCallResult
 
 
 class EchoInput(BaseModel):
-    text: str
+    text: str = Field(description="Text to echo")
 
 
 class EchoOutput(BaseModel):
-    echoed: str
+    echoed: str = Field(description="Echoed text")
 
 
 class FinalizeInput(BaseModel):
@@ -104,12 +104,22 @@ class FakeAdapter:
                 description="Echo text back",
                 input_schema={
                     "type": "object",
-                    "properties": {"text": {"type": "string"}},
+                    "properties": {
+                        "text": {
+                            "type": "string",
+                            "description": "Text to echo",
+                        }
+                    },
                     "required": ["text"],
                 },
                 output_schema={
                     "type": "object",
-                    "properties": {"echoed": {"type": "string"}},
+                    "properties": {
+                        "echoed": {
+                            "type": "string",
+                            "description": "Echoed text",
+                        }
+                    },
                     "required": ["echoed"],
                 },
             )

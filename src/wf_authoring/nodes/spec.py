@@ -60,6 +60,8 @@ class NodeSpec(Generic[InputT, OutputT]):
     description: str | None = None
     is_async: bool = False
     accepts_context: bool = True
+    input_schema_contract: dict[str, Any] | None = None
+    output_schema_contract: dict[str, Any] | None = None
 
     def __call__(
         self,
@@ -75,8 +77,14 @@ class NodeSpec(Generic[InputT, OutputT]):
     def to_node_def(self) -> NodeDef:
         return NodeDef(
             name=self.name,
-            input_schema=schema_ref_for(self.input_model),
-            output_schema=schema_ref_for(self.output_model),
+            input_schema=schema_ref_for(
+                self.input_model,
+                self.input_schema_contract,
+            ),
+            output_schema=schema_ref_for(
+                self.output_model,
+                self.output_schema_contract,
+            ),
             outcomes=list(self.outcomes),
         )
 

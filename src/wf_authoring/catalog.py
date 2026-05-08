@@ -17,13 +17,19 @@ class NodeCatalogEntry:
 
     @classmethod
     def from_spec(cls, spec: NodeSpec[Any, Any]) -> "NodeCatalogEntry":
+        input_schema = (
+            spec.input_schema_contract or spec.input_model.model_json_schema()
+        )
+        output_schema = (
+            spec.output_schema_contract or spec.output_model.model_json_schema()
+        )
         return cls(
             name=spec.name,
             display_name=None,
             description=spec.description,
             outcomes=spec.outcomes,
-            input_schema=spec.input_model.model_json_schema(),
-            output_schema=spec.output_model.model_json_schema(),
+            input_schema=input_schema,
+            output_schema=output_schema,
         )
 
 

@@ -4,10 +4,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
-## are these our own redef of MCP VERY MUCH NICE VERY MUCH READY structs?
-## These are unfortunately boundary. Hence, we need good typecheck on these, and since mcp lib is good stuff, carry those over. Could be pro
 @dataclass(slots=True)
 class DiscoveredTool:
+    """Tool snapshot after converting from an upstream MCP SDK tool."""
+
     name: str
     title: str | None
     description: str | None
@@ -19,6 +19,8 @@ class DiscoveredTool:
 
 @dataclass(slots=True)
 class DiscoveredResource:
+    """Resource snapshot after converting from an upstream MCP SDK resource."""
+
     uri: str
     name: str
     title: str | None
@@ -29,6 +31,8 @@ class DiscoveredResource:
 
 @dataclass(slots=True)
 class DiscoveredPrompt:
+    """Prompt snapshot after converting from an upstream MCP SDK prompt."""
+
     name: str
     title: str | None
     description: str | None
@@ -38,6 +42,8 @@ class DiscoveredPrompt:
 
 @dataclass(slots=True)
 class CatalogNodeEntry:
+    """Namespaced tool entry stored in the broker catalog snapshot."""
+
     qualified_name: str
     connection_id: str
     local_name: str
@@ -50,6 +56,8 @@ class CatalogNodeEntry:
 
 @dataclass(slots=True)
 class CatalogResourceEntry:
+    """Namespaced resource entry stored in the broker catalog snapshot."""
+
     qualified_name: str
     connection_id: str
     local_name: str
@@ -62,6 +70,8 @@ class CatalogResourceEntry:
 
 @dataclass(slots=True)
 class CatalogPromptEntry:
+    """Namespaced prompt entry stored in the broker catalog snapshot."""
+
     qualified_name: str
     connection_id: str
     local_name: str
