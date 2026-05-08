@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 from wf_core import RuntimeContext, Workflow, execute_workflow
 
-from .spec import NodeSpec
+from .nodes import NodeSpec
 
 InputT = TypeVar("InputT", bound=BaseModel)
 OutputT = TypeVar("OutputT", bound=BaseModel)

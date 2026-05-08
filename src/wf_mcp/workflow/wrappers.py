@@ -9,9 +9,9 @@ from wf_authoring import NodeReturn, NodeSpec
 from wf_core import RuntimeContext
 
 from ..capabilities import DiscoveredTool
-from ..events import McpEvent, make_event
 from ..models import AuthRecord, ConnectionConfig
 from ..sdk import BackendAdapter
+from wf_mcp.broker.events import McpEvent, make_event
 
 
 def _model_from_schema(name: str, schema: dict[str, Any]) -> type[BaseModel]:

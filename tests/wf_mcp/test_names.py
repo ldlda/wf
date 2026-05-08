@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from wf_mcp.names import (
+from wf_mcp.shared.names import (
     is_admin_tool_name,
     namespaced_tool_name,
     parse_namespaced_tool_name,

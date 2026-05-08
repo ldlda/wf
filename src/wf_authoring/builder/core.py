@@ -24,7 +24,7 @@ from ..dsl import Expr, PathArg, compile_condition
 from ..nodes.callables import SyncRegistryHandler
 from ..nodes.registry import build_registry
 from ..schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_from
-from ..spec import NodeSpec
+from ..nodes import NodeSpec
 from .ids import next_step_id, slug_id
 from .mapping import (
     MapArg,

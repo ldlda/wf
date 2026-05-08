@@ -7,7 +7,7 @@ import pytest
 from pydantic import ValidationError
 
 from wf_mcp.cli import build_parser, main
-from wf_mcp.broker_server import load_broker_config
+from wf_mcp.broker import load_broker_config
 
 from .test_support import local_temp_root
 

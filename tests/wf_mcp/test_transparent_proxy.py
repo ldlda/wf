@@ -10,7 +10,7 @@ import pytest
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy_validation import ProxyConfigError, validate_transparent_proxy_config
 from wf_mcp.transparent_proxy import create_transparent_proxy_client
-from wf_mcp.broker_server import load_broker_config
+from wf_mcp.broker import load_broker_config
 
 from .test_support import fixture_server_path, local_temp_root
 

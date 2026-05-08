@@ -16,10 +16,6 @@ overhead before the APIs settle.
 | `wf_mcp.storage` | Persist auth records and catalog snapshots. |
 | `wf_mcp.shared` | Pure helpers used across concerns, such as names, pagination, and error payloads. |
 
-Root modules such as `wf_mcp.store`, `wf_mcp.service`, and
-`wf_mcp.mcp_sdk_adapter` are compatibility shims. New internal imports should
-prefer the concern package directly.
-
 The root `wf_mcp` package is a small public facade for common user entrypoints,
 not a dump of every internal helper. If a caller needs broker internals, SDK
 adapter protocols, proxy admin pieces, or shared name parsing, import the

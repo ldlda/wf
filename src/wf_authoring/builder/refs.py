@@ -4,7 +4,7 @@ from typing import Any, TypeAlias, TypeGuard
 
 from wf_core import ConditionNode, ForeachNode, InterruptNode, NodeUse
 
-from ..spec import NodeSpec
+from ..nodes import NodeSpec
 
 StepRef: TypeAlias = str | NodeUse | ConditionNode | ForeachNode | InterruptNode
 BranchRef: TypeAlias = StepRef | NodeSpec[Any, Any]

@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from .broker_server import (
+from .broker import (
     build_service_from_config,
     load_broker_config,
     run_broker_server,

@@ -6,7 +6,7 @@ from typing import Any, TypeAlias
 from wf_core import SchemaRef, StateSchema
 
 from ..dsl import GraphPath
-from ..spec import NodeSpec
+from ..nodes import NodeSpec
 
 MapArg: TypeAlias = Mapping[Any, Any]
 
