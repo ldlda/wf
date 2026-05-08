@@ -3,9 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import cast
 
-from .models import Workflow
-from .run_state import RuntimeContext
-from .tokens import END
+from wf_core import END, RuntimeContext, Workflow
 
 DemoHandler = Callable[[dict[str, object], RuntimeContext], dict[str, object]]
 

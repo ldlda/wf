@@ -64,8 +64,6 @@ raising at the first failure.
 
 ## What This Cleanup Does Not Solve Yet
 
-- `demo_workflow.py` is still large because it is a fixture/demo, not core
-  runtime. If it becomes a permanent example suite, move it out of `wf_core`.
 - Foreach is still serial-only. Parallel foreach needs an explicit scheduling
   model, not just `asyncio.gather`.
 - Interrupt lifecycle is still node-level and run-state-level. Long-lived

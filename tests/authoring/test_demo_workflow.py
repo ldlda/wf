@@ -11,8 +11,8 @@ from wf_core import (
     resume_workflow,
     step_workflow,
 )
-from wf_core.demo_workflow import build_demo_registry, build_demo_workflow
 from wf_core.runtime.ops.runs import create_run_state
+from examples.demo_workflow import build_demo_registry, build_demo_workflow
 from wf_authoring import (
     NodeReturn,
     WorkflowBuilder,

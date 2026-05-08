@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from wf_authoring import build_registry, subgraph_node
 from wf_core import RuntimeContext
-from wf_core.demo_workflow import build_demo_registry, build_demo_workflow
+from examples.demo_workflow import build_demo_registry, build_demo_workflow
 
 
 def test_subgraph_node_wraps_compiled_workflow() -> None:
