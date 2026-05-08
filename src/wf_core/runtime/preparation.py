@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.models import Workflow
+from wf_core.models.workflow import Workflow
 from wf_core.runtime.ops.frames import collapse_completed_frames
 from wf_core.runtime.ops.index import WorkflowIndex, build_workflow_index
 from wf_core.runtime.ops.interrupts import resume_interrupt

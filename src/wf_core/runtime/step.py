@@ -4,14 +4,14 @@ from collections.abc import Mapping
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.models import (
+from wf_core.models.steps import (
     ConditionNode,
     ForeachNode,
     InterruptNode,
     JoinNode,
     NodeUse,
-    Workflow,
 )
+from wf_core.models.workflow import Workflow
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.foreach import step_foreach
 from wf_core.runtime.ops.handlers import (

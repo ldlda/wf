@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from wf_core.models import Workflow
+from wf_core.models.workflow import Workflow
 from wf_core.run_state import (
     ExecutionFrame,
     FrameStatus,

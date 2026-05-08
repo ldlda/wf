@@ -62,6 +62,13 @@ raising at the first failure.
 - `wf_core.__init__` should stay a curated public facade, not a dump of runtime
   internals.
 
+## Schema Validation
+
+Payload schema validation is intentionally isolated behind
+`wf_core.runtime.ops.schemas.validate_payload_against_schema`. That function is
+not a full JSON Schema engine today; see `docs/schema_validation.md` for the
+current limits and intended adapter seam.
+
 ## What This Cleanup Does Not Solve Yet
 
 - Foreach is still serial-only. Parallel foreach needs an explicit scheduling
@@ -72,3 +79,5 @@ raising at the first failure.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer
   error payload can be added later, but should be designed as part of trace/run
   state rather than scattered exceptions.
+- Payload schema validation is still shallow. The runtime checks object payloads
+  and required top-level keys, not full JSON Schema semantics.

@@ -4,15 +4,15 @@ from collections.abc import Mapping
 from typing import Any
 
 from .errors import WorkflowExecutionError
-from .models import (
+from .models.conditions import (
     BinaryCondition,
     Condition,
     ExistsCondition,
     LiteralOperand,
     NotCondition,
     PathOperand,
-    VariadicCondition,
 )
+from .models.conditions import VariadicCondition
 from .paths import PathResolutionError, path_exists, resolve_graph_path
 
 

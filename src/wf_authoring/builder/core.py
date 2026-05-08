@@ -18,7 +18,7 @@ from wf_core import (
     execute_workflow,
 )
 from wf_core.errors import WorkflowExecutionError
-from wf_core.models import Condition as CoreCondition
+from wf_core.models.conditions import Condition as CoreCondition
 
 from ..dsl import Expr, PathArg, compile_condition
 from ..nodes.callables import SyncRegistryHandler

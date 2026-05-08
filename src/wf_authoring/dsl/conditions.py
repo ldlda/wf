@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Literal
 
-from wf_core.models import (
+from wf_core.models.conditions import (
     BinaryCondition,
     Condition,
     ExistsCondition,

@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from wf_core.models import (
+from wf_core.models.steps import (
     ConditionNode,
-    Edge,
     ForeachNode,
     InterruptNode,
-    NodeDef,
     NodeUse,
     Step,
-    Workflow,
 )
+from wf_core.models.schemas import NodeDef
+from wf_core.models.workflow import Edge, Workflow
 from wf_core.tokens import END
 from wf_core.validation.issues import ValidationIssueCode, ValidationReport
 from wf_core.validation.outcomes import declared_outcomes_for_step, reachable_node_ids

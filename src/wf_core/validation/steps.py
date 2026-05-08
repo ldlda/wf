@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-from wf_core.models import (
+from wf_core.models.conditions import (
     BinaryCondition,
     Condition,
-    ConditionNode,
     ExistsCondition,
-    ForeachNode,
-    InterruptNode,
     LiteralOperand,
-    NodeDef,
-    NodeUse,
     NotCondition,
     PathOperand,
     VariadicCondition,
-    Workflow,
 )
+from wf_core.models.schemas import NodeDef
+from wf_core.models.steps import ConditionNode, ForeachNode, InterruptNode, NodeUse
+from wf_core.models.workflow import Workflow
 from wf_core.paths import is_valid_destination_path, is_valid_source_path
 from wf_core.validation.issues import ValidationIssueCode, ValidationReport
 

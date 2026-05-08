@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from wf_core.models import Edge, InterruptNode, NodeDef, NodeUse, Step
+from wf_core.models.schemas import NodeDef
+from wf_core.models.steps import InterruptNode, NodeUse, Step
+from wf_core.models.workflow import Edge
 from wf_core.tokens import END
 
 

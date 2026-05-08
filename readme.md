@@ -3,7 +3,9 @@
 ## Related docs
 
 - [docs/authoring_sketch.md](docs/authoring_sketch.md): `wf_authoring` direction, including `@node`, `NodeSpec`, builder ergonomics, async registry seams, and subgraph-as-node.
+- [docs/project_map.md](docs/project_map.md): current package map, entrypoints, examples, tests, and verification commands.
 - [docs/wf_core_architecture.md](docs/wf_core_architecture.md): current `wf_core` package boundaries, runtime flow, validation flow, and remaining cleanup seams.
+- [docs/schema_validation.md](docs/schema_validation.md): current payload schema validation limits and intended validation seam.
 - [docs/wf_mcp_plan.md](docs/wf_mcp_plan.md): `wf_mcp` direction as a namespaced MCP capability broker plus workflow build/run layer.
 - [docs/wf_mcp_architecture.md](docs/wf_mcp_architecture.md): current `wf_mcp` package boundaries and dependency rules.
 - [docs/scratchpad.md](docs/scratchpad.md): rougher design history and intermediate spec notes that fed the current model.
