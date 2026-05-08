@@ -19,7 +19,9 @@ def declared_outcomes_for_step(step: Step, node_defs: dict[str, NodeDef]) -> set
     return set()
 
 
-def reachable_node_ids(start: str, edges: list[Edge], nodes_by_id: dict[str, Step]) -> set[str]:
+def reachable_node_ids(
+    start: str, edges: list[Edge], nodes_by_id: dict[str, Step]
+) -> set[str]:
     if start not in nodes_by_id:
         return set()
 
@@ -38,4 +40,3 @@ def reachable_node_ids(start: str, edges: list[Edge], nodes_by_id: dict[str, Ste
         seen.add(node_id)
         stack.extend(adjacency.get(node_id, []))
     return seen
-

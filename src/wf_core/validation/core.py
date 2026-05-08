@@ -166,4 +166,3 @@ def _validate_reachable_outcomes(
                 f"nodes[{node_id}]",
                 f"reachable node is missing edges for outcomes {sorted(missing)!r}",
             )
-

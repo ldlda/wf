@@ -11,4 +11,3 @@ __all__ = [
     "ValidationReport",
     "validate_workflow",
 ]
-

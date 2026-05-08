@@ -220,4 +220,3 @@ def validate_operand(
             path,
             f"invalid operand path {operand.path!r}",
         )
-

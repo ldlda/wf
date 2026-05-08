@@ -1,28 +1,24 @@
-"""Compatibility facade for core workflow model objects."""
-
-from wf_core.models import (
+from wf_core.models.conditions import (
     BinaryCondition,
     Condition,
-    ConditionNode,
-    Edge,
     ExistsCondition,
-    ForeachNode,
-    InterruptNode,
-    JoinNode,
     LiteralOperand,
-    NodeDef,
-    NodeResult,
-    NodeUse,
     NotCondition,
     Operand,
     PathOperand,
-    SchemaRef,
-    StateField,
-    StateSchema,
-    Step,
     VariadicCondition,
-    Workflow,
 )
+from wf_core.models.results import NodeResult
+from wf_core.models.schemas import NodeDef, SchemaRef, StateField, StateSchema
+from wf_core.models.steps import (
+    ConditionNode,
+    ForeachNode,
+    InterruptNode,
+    JoinNode,
+    NodeUse,
+    Step,
+)
+from wf_core.models.workflow import Edge, Workflow
 
 __all__ = [
     "BinaryCondition",
@@ -47,9 +43,3 @@ __all__ = [
     "VariadicCondition",
     "Workflow",
 ]
-
-
-if __name__ == "__main__":
-    import json
-
-    print(json.dumps(Workflow.model_json_schema(), indent=2))

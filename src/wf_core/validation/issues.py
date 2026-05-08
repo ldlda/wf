@@ -50,4 +50,3 @@ class ValidationReport:
             f"- [{issue.code}] {issue.path}: {issue.message}" for issue in self.errors
         )
         raise ValueError(f"Workflow validation failed:\n{rendered}")
-
