@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from .errors import WorkflowExecutionError
-from .model import (
+from .models import (
     BinaryCondition,
     Condition,
     ExistsCondition,

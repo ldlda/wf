@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.model import NodeDef, Workflow
+from wf_core.models import NodeDef, Workflow
 
 
 @dataclass(slots=True)

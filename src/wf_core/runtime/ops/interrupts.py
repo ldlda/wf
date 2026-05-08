@@ -4,7 +4,7 @@ from typing import Any
 
 from wf_core.conditions import safe_resolve_path
 from wf_core.errors import WorkflowExecutionError
-from wf_core.model import InterruptNode, Workflow
+from wf_core.models import InterruptNode, Workflow
 from wf_core.run_state import InterruptRequest, RunState, StepExecutionResult
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.index import WorkflowIndex

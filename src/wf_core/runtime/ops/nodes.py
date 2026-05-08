@@ -5,7 +5,7 @@ from typing import Any, cast
 
 from wf_core.conditions import safe_resolve_path
 from wf_core.errors import WorkflowExecutionError
-from wf_core.model import NodeDef, NodeResult, NodeUse, Workflow
+from wf_core.models import NodeDef, NodeResult, NodeUse, Workflow
 from wf_core.run_state import RunState, RuntimeContext, StepExecutionResult
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.schemas import validate_payload_against_schema

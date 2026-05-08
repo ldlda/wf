@@ -12,7 +12,7 @@ from wf_core import (
     step_workflow,
 )
 from wf_core.demo_workflow import build_demo_registry, build_demo_workflow
-from wf_core.run_factory import create_run_state
+from wf_core.runtime.ops.runs import create_run_state
 from wf_authoring import (
     NodeReturn,
     WorkflowBuilder,

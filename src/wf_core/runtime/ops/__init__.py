@@ -1,6 +1,6 @@
 """Executor-only operations used by `wf_core.runtime`.
 
-Root modules such as `wf_core.node_exec` remain as compatibility shims. New
-runtime internals should import from this package so the execution seam stays
-easy to navigate.
+This package owns the runtime implementation helpers: node execution, state
+writes, frame movement, foreach, interrupts, indexes, and schema checks.
+Callers should use `wf_core.runtime` unless they are extending the executor.
 """

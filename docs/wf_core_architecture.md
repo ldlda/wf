@@ -12,7 +12,6 @@ and user-facing control belong in `wf_mcp`.
 | Package / module | Responsibility |
 | --- | --- |
 | `wf_core.models` | Pydantic workflow schema package: schemas, condition expressions, executable steps, workflow graph, and node results. |
-| `wf_core.model` | Compatibility facade for older imports of core model objects. |
 | `wf_core.run_state` | Serializable execution state: run status, frames, trace entries, interrupt requests, and runtime context. |
 | `wf_core.runtime` | Public execution interface: execute, resume, and step in sync or async mode. |
 | `wf_core.runtime.ops` | Executor-only operations used behind `wf_core.runtime`: node execution, state writes, frame movement, foreach, interrupts, indexes, and schema checks. |
@@ -21,9 +20,9 @@ and user-facing control belong in `wf_mcp`.
 | `wf_core.paths` | Graph path parsing, reading, existence checks, and nested state writes. |
 | `wf_core.tokens` | Importable graph boundary tokens: `START` and `END`. |
 
-Root modules such as `wf_core.model`, `wf_core.node_exec`, `wf_core.state_ops`,
-and `wf_core.validate` are compatibility shims. New internal imports should
-prefer the concern package directly.
+The root `wf_core` package is the public facade for common callers. Internal
+code should import from the concern package directly instead of relying on old
+flat modules.
 
 ## Runtime Flow
 
@@ -56,12 +55,12 @@ raising at the first failure.
 
 - `wf_core` must not import `wf_authoring` or `wf_mcp`.
 - `wf_core.models` and `wf_core.run_state` should stay mostly data-only.
-- `wf_core.model` should stay a thin import facade.
 - `wf_core.runtime` may import `runtime.ops`, but callers should not need to.
 - `wf_core.runtime.ops` may use model, run state, paths, conditions, and errors.
 - `wf_core.validation` may inspect model and path rules, but should not execute
   workflow behavior.
-- Compatibility shims should stay thin: import and re-export only.
+- `wf_core.__init__` should stay a curated public facade, not a dump of runtime
+  internals.
 
 ## What This Cleanup Does Not Solve Yet
 

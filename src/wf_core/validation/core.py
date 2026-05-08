@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from wf_core.model import (
+from wf_core.models import (
     ConditionNode,
     Edge,
     ForeachNode,

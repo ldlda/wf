@@ -4,7 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.model import (
+from wf_core.models import (
     ConditionNode,
     ForeachNode,
     InterruptNode,

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from wf_core.model import Workflow
+from wf_core.models import Workflow
 from wf_core.runtime.ops.flow import finalize_run
 from wf_core.runtime.ops.frames import collapse_completed_frames
 from wf_core.runtime.ops.nodes import AsyncNodeHandler, NodeHandler

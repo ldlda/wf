@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.model import NodeUse, Workflow
+from wf_core.models import NodeUse, Workflow
 from wf_core.paths import (
     PathResolutionError,
     get_nested_value,

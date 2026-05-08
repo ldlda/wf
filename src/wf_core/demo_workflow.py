@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import cast
 
-from .model import Workflow
+from .models import Workflow
 from .run_state import RuntimeContext
 from .tokens import END
 

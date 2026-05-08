@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from wf_core.conditions import eval_condition
-from wf_core.model import ConditionNode, InterruptNode
+from wf_core.models import ConditionNode, InterruptNode
 from wf_core.run_state import FrameStatus, RunState, RunStatus, StepExecutionResult
 from wf_core.runtime.ops.flow import append_trace
 from wf_core.runtime.ops.frames import frame_context_values
