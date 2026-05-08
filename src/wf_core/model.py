@@ -1,8 +1,11 @@
 from __future__ import annotations
 
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal, cast
 
 from pydantic import BaseModel, ConfigDict, Field
+
+if TYPE_CHECKING:
+    from wf_core.validation.issues import ValidationReport
 
 
 class SchemaRef(BaseModel):
@@ -138,10 +141,11 @@ class Workflow(BaseModel):
     nodes: list[Step]
     edges: list[Edge]
 
-    def validate_structure(self):
-        from .validate import validate_workflow
+    def validate_structure(self) -> "ValidationReport":
+        from importlib import import_module
 
-        return validate_workflow(self)
+        validation = import_module("wf_core.validation.core")
+        return cast("ValidationReport", validation.validate_workflow(self))
 
 
 class NodeResult(BaseModel):

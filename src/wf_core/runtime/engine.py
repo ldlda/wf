@@ -3,11 +3,11 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from wf_core.flow_ops import finalize_run
-from wf_core.frame_ops import collapse_completed_frames
 from wf_core.model import Workflow
-from wf_core.node_exec import AsyncNodeHandler, NodeHandler
-from wf_core.run_factory import create_run_state
+from wf_core.runtime.ops.flow import finalize_run
+from wf_core.runtime.ops.frames import collapse_completed_frames
+from wf_core.runtime.ops.nodes import AsyncNodeHandler, NodeHandler
+from wf_core.runtime.ops.runs import create_run_state
 from wf_core.run_state import RunState, RunStatus
 from wf_core.tokens import END
 

@@ -1,33 +1,4 @@
-from __future__ import annotations
+"""Compatibility shim for run-state construction."""
 
-from copy import deepcopy
+from wf_core.runtime.ops.runs import *  # noqa: F403
 
-from .model import Workflow
-from .run_state import ExecutionFrame, FrameStatus, RunState, RunStatus
-
-
-def create_run_state(workflow: Workflow, workflow_input: dict[str, object]) -> RunState:
-    state = {
-        name: deepcopy(field.default)
-        for name, field in workflow.state_schema.fields.items()
-        if field.default is not None
-    }
-    state.update(dict(workflow_input))
-    run = RunState(
-        workflow_name=workflow.name,
-        status=RunStatus.PENDING,
-        workflow_input=dict(workflow_input),
-        state=state,
-        frames={
-            "root": ExecutionFrame(
-                id="root",
-                kind="workflow",
-                node_id=workflow.start,
-                status=FrameStatus.PENDING,
-            )
-        },
-        current_frame_id="root",
-        current_node_id=workflow.start,
-    )
-    run.sync_from_current_frame()
-    return run

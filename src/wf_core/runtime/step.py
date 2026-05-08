@@ -4,8 +4,6 @@ from collections.abc import Mapping
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.flow_ops import advance_frame, append_step_result_trace
-from wf_core.foreach_ops import step_foreach
 from wf_core.model import (
     ConditionNode,
     ForeachNode,
@@ -14,19 +12,21 @@ from wf_core.model import (
     NodeUse,
     Workflow,
 )
-from wf_core.node_exec import (
+from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
+from wf_core.runtime.ops.foreach import step_foreach
+from wf_core.runtime.ops.handlers import (
+    handle_condition_step,
+    handle_interrupt_step,
+    handle_join_step,
+)
+from wf_core.runtime.ops.index import WorkflowIndex
+from wf_core.runtime.ops.nodes import (
     AsyncNodeHandler,
     NodeHandler,
     execute_node_use,
     execute_node_use_async,
 )
 from wf_core.run_state import RunState
-from wf_core.step_handlers import (
-    handle_condition_step,
-    handle_interrupt_step,
-    handle_join_step,
-)
-from wf_core.workflow_index import WorkflowIndex
 
 from .preparation import prepare_step
 

@@ -1,5 +1,5 @@
 from wf_core.errors import WorkflowExecutionError
-from wf_core.node_exec import (
+from wf_core.runtime.ops.nodes import (
     AsyncNodeHandler,
     NodeHandler,
     coerce_node_result,

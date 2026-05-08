@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.frame_ops import collapse_completed_frames
-from wf_core.interrupt_ops import resume_interrupt
 from wf_core.model import Workflow
-from wf_core.run_factory import create_run_state
+from wf_core.runtime.ops.frames import collapse_completed_frames
+from wf_core.runtime.ops.index import WorkflowIndex, build_workflow_index
+from wf_core.runtime.ops.interrupts import resume_interrupt
+from wf_core.runtime.ops.runs import create_run_state
+from wf_core.runtime.ops.schemas import validate_payload_against_schema
 from wf_core.run_state import FrameStatus, RunState, RunStatus
-from wf_core.schema_tools import validate_payload_against_schema
 from wf_core.tokens import END
-from wf_core.workflow_index import WorkflowIndex, build_workflow_index
 
 
 def prepare_new_run(workflow: Workflow, workflow_input: dict[str, Any]) -> RunState:
