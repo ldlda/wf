@@ -65,9 +65,9 @@ raising at the first failure.
 ## Schema Validation
 
 Payload schema validation is intentionally isolated behind
-`wf_core.runtime.ops.schemas.validate_payload_against_schema`. That function is
-not a full JSON Schema engine today; see `docs/schema_validation.md` for the
-current limits and intended adapter seam.
+`wf_core.runtime.ops.schemas.validate_payload_against_schema` and delegated to
+the `jsonschema` library. See `docs/schema_validation.md` for the current
+limits and intended adapter seam.
 
 ## What This Cleanup Does Not Solve Yet
 
@@ -79,5 +79,5 @@ current limits and intended adapter seam.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer
   error payload can be added later, but should be designed as part of trace/run
   state rather than scattered exceptions.
-- Payload schema validation is still shallow. The runtime checks object payloads
-  and required top-level keys, not full JSON Schema semantics.
+- Payload schema validation depends on JSON Schema semantics. If external tools
+  emit unusual schema dialects, add compatibility tests before adapting them.

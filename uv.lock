@@ -522,6 +522,7 @@ version = "0.0.1"
 source = { editable = "." }
 dependencies = [
     { name = "fastmcp" },
+    { name = "jsonschema" },
     { name = "mcp", extra = ["cli", "rich"] },
     { name = "pydantic" },
 ]
@@ -534,6 +535,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "fastmcp", specifier = ">=3.2.4" },
+    { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "mcp", extras = ["cli", "rich"], specifier = ">=1" },
     { name = "pydantic", specifier = ">=2" },
 ]
