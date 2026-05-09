@@ -46,6 +46,11 @@ as service spec sources so raw workflow plans can address nodes like
 `wf.std.runtime_error` and `wf.mcp.call_tool` without polluting connection status,
 auth, adapter lookup, or persisted backend catalog snapshots.
 
+The longer-term source model is described in
+[`wf_mcp_capability_sources.md`](wf_mcp_capability_sources.md). In that model,
+sources own tools, workflow node specs, prompts, and resources, while broker,
+proxy, planner, and admin UI surfaces project different capability kinds.
+
 ## Hot Reload
 
 Transparent proxy reload is intentionally isolated in
