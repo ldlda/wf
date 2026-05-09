@@ -1,13 +1,56 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol
 
-from wf_authoring import NodeSpec, node, runtime_error
+from pydantic import BaseModel, Field
 
+from wf_authoring import NodeReturn, NodeSpec, node, runtime_error
+
+from .sources import SpecSource
 from .specs import qualify_spec
 
 BUILTIN_CONNECTION_ID = "wf.std"
 """Internal source id for workflow standard-library node specs."""
+
+MCP_SOURCE_ID = "wf.mcp"
+"""Internal source id for broker MCP utility node specs."""
+
+
+class ToolCaller(Protocol):
+    """Small service boundary needed by the broker-local MCP utility nodes."""
+
+    async def call_tool(
+        self,
+        connection_id: str,
+        tool_name: str,
+        *,
+        arguments: dict[str, Any] | None = None,
+    ) -> dict[str, Any]: ...
+
+
+class McpCallToolInput(BaseModel):
+    """Input for calling a proxied MCP tool from inside a workflow."""
+
+    connection_id: str = Field(description="Connection id that owns the MCP tool.")
+    tool_name: str = Field(description="Local tool name on the upstream MCP server.")
+    arguments: dict[str, Any] = Field(
+        default_factory=dict,
+        description="JSON-compatible arguments passed to the upstream tool.",
+    )
+
+
+class McpCallToolOutput(BaseModel):
+    """Normalized output returned by a proxied MCP tool call."""
+
+    outcome: str = Field(description="Workflow outcome reported by the upstream tool.")
+    output: dict[str, Any] = Field(
+        default_factory=dict,
+        description="JSON-compatible tool result payload.",
+    )
+    meta: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Adapter metadata returned with the tool result.",
+    )
 
 
 def builtin_specs() -> dict[str, NodeSpec[Any, Any]]:
@@ -21,3 +64,44 @@ def builtin_specs() -> dict[str, NodeSpec[Any, Any]]:
     ]
     qualified_specs = [qualify_spec(BUILTIN_CONNECTION_ID, spec) for spec in specs]
     return {spec.name: spec for spec in qualified_specs}
+
+
+def mcp_specs(service: ToolCaller) -> dict[str, NodeSpec[Any, Any]]:
+    """Return service-bound MCP utility specs available to raw plans."""
+
+    @node(
+        name="call_tool",
+        outcomes=("ok", "error"),
+        input_model=McpCallToolInput,
+        output_model=McpCallToolOutput,
+        description="Call a tool on a registered MCP connection.",
+    )
+    async def call_tool(payload: McpCallToolInput) -> NodeReturn[McpCallToolOutput]:
+        result = await service.call_tool(
+            payload.connection_id,
+            payload.tool_name,
+            arguments=payload.arguments,
+        )
+        output = McpCallToolOutput.model_validate(result)
+        return NodeReturn(outcome=output.outcome, output=output)
+
+    qualified_specs = [qualify_spec(MCP_SOURCE_ID, call_tool)]
+    return {spec.name: spec for spec in qualified_specs}
+
+
+def builtin_sources(service: ToolCaller) -> dict[str, SpecSource]:
+    """Return all broker-local spec sources."""
+    return {
+        BUILTIN_CONNECTION_ID: SpecSource(
+            id=BUILTIN_CONNECTION_ID,
+            kind="system",
+            specs=builtin_specs(),
+            description="Workflow standard-library nodes.",
+        ),
+        MCP_SOURCE_ID: SpecSource(
+            id=MCP_SOURCE_ID,
+            kind="system",
+            specs=mcp_specs(service),
+            description="Broker MCP utility nodes.",
+        ),
+    }

@@ -22,6 +22,9 @@ This repository has three main packages plus examples and tests.
 - `wf_authoring.node`: typed Python function to `NodeSpec`.
 - `wf_mcp`: public MCP facade.
 - `wf-mcp`: CLI script from `pyproject.toml`.
+- `wf_mcp.broker.WfMcpService.get_catalog()`: backend MCP catalog snapshots.
+- `wf_mcp.broker.WfMcpService.get_planner_catalog()`: backend snapshots plus
+  broker-local workflow sources such as `wf.std` and `wf.mcp`.
 
 ## Examples
 
@@ -57,6 +60,7 @@ need local environment configuration.
   `wf_core.validation`.
 - Add author convenience helpers in `wf_authoring`, not `wf_core`.
 - Add MCP transport/proxy/config behavior in `wf_mcp` concern packages.
+- Add broker-local workflow utilities as `WfMcpService` spec sources, not as
+  fake MCP connections.
 - Add runnable examples in `examples`.
 - Add test-only servers or helpers in `tests/fixtures`.
-

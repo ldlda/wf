@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from typing import Any
 
+from collections.abc import Mapping
+
 from wf_authoring import NodeSpec
 
 from ...connections import qualify_node_name
+from .sources import SpecSource
 
 
 def qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, Any]:
@@ -24,12 +27,12 @@ def qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, 
 
 
 def get_qualified_spec(
-    specs_by_connection: dict[str, dict[str, NodeSpec[Any, Any]]],
+    spec_sources: Mapping[str, SpecSource],
     qualified_name: str,
 ) -> NodeSpec[Any, Any]:
-    """Resolve a namespaced node spec from the service's connection cache."""
-    connection_id, _ = qualified_name.rsplit(".", 1)
-    specs = specs_by_connection.get(connection_id)
-    if specs is None or qualified_name not in specs:
+    """Resolve a namespaced node spec from planner-visible sources."""
+    source_id, _ = qualified_name.rsplit(".", 1)
+    source = spec_sources.get(source_id)
+    if source is None or qualified_name not in source.specs:
         raise KeyError(f"unknown qualified node {qualified_name!r}")
-    return specs[qualified_name]
+    return source.specs[qualified_name]

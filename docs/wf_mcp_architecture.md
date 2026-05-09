@@ -31,6 +31,21 @@ relevant concern package directly.
 - `wf_mcp.shared` should stay pure and should not import other `wf_mcp` concern packages.
 - Root compatibility shims should stay thin: import and re-export only.
 
+## Broker Catalogs
+
+The broker keeps two related catalog views:
+
+- `get_catalog()` is the backend MCP catalog. It only includes enabled upstream
+  connection snapshots loaded from storage.
+- `get_planner_catalog()` is the workflow-planning catalog. It includes backend
+  connection snapshots plus broker-local system sources such as `wf.std` and
+  `wf.mcp`.
+
+Broker-local sources are not fake MCP backend connections. They are registered
+as service spec sources so raw workflow plans can address nodes like
+`wf.std.runtime_error` and `wf.mcp.call_tool` without polluting connection status,
+auth, adapter lookup, or persisted backend catalog snapshots.
+
 ## Hot Reload
 
 Transparent proxy reload is intentionally isolated in

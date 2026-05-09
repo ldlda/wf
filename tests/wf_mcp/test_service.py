@@ -37,8 +37,14 @@ def test_service_builds_namespaced_catalog() -> None:
 def test_service_installs_builtin_stdlib_specs_by_default() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "builtin_store"))
 
-    assert "wf.std" in service.specs_by_connection
-    assert "wf.std.runtime_error" in service.specs_by_connection["wf.std"]
+    assert "wf.std" in service.spec_sources
+    assert "wf.std.runtime_error" in service.spec_sources["wf.std"].specs
+    assert "wf.mcp" in service.spec_sources
+    assert "wf.mcp.call_tool" in service.spec_sources["wf.mcp"].specs
+
+    sources = service.list_spec_sources()
+    assert {source["id"] for source in sources} == {"wf.mcp", "wf.std"}
+    assert all(source["kind"] == "system" for source in sources)
 
 
 def test_service_can_disable_builtin_stdlib_specs() -> None:
@@ -47,7 +53,26 @@ def test_service_can_disable_builtin_stdlib_specs() -> None:
         include_builtin_specs=False,
     )
 
-    assert "wf.std" not in service.specs_by_connection
+    assert "wf.std" not in service.spec_sources
+    assert "wf.mcp" not in service.spec_sources
+    assert service.list_spec_sources() == []
+
+
+def test_service_catalog_split_keeps_system_specs_out_of_backend_catalog() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "planner_store"))
+
+    backend_payload = service.get_catalog().as_payload()
+    planner_payload = service.get_planner_catalog().as_payload()
+
+    assert backend_payload["nodes"] == []
+    assert [node["qualified_name"] for node in planner_payload["nodes"]] == [
+        "wf.mcp.call_tool",
+        "wf.std.runtime_error",
+    ]
+    assert [entry.qualified_name for entry in service.list_available_specs()] == [
+        "wf.mcp.call_tool",
+        "wf.std.runtime_error",
+    ]
 
 
 def test_service_compiles_and_runs_raw_plan() -> None:
@@ -225,7 +250,7 @@ def test_service_wrapped_tool_adapter_model_validates_simple_schema_types() -> N
     service.register_adapter("demo", FakeAdapter())
 
     asyncio.run(service.refresh_connection_catalog("demo.personal"))
-    spec = service.specs_by_connection["demo.personal"]["demo.personal.echo_tool"]
+    spec = service.spec_sources["demo.personal"].specs["demo.personal.echo_tool"]
 
     parsed = spec.input_model.model_validate({"text": "hello"})
     assert parsed.model_dump() == {"text": "hello"}
@@ -297,6 +322,69 @@ def test_service_records_tool_call_events() -> None:
     ]
     assert tool_events[0].capability_id == "demo.personal.echo_tool"
     assert tool_events[1].payload["outcome"] == "ok"
+
+
+def test_service_can_call_upstream_tool_through_wf_mcp_system_node() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "system_tool_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    plan = RawWorkflowPlan(
+        name="system_tool_plan",
+        input_schema={
+            "type": "object",
+            "properties": {
+                "connection_id": {"type": "string"},
+                "tool_name": {"type": "string"},
+                "arguments": {"type": "object"},
+            },
+            "required": ["connection_id", "tool_name", "arguments"],
+        },
+        state_schema={
+            "fields": {
+                "tool_result": {"type": "object"},
+            }
+        },
+        output_schema={
+            "type": "object",
+            "properties": {"tool_result": {"type": "object"}},
+            "required": ["tool_result"],
+        },
+        start="call_tool",
+        nodes=[
+            {
+                "id": "call_tool",
+                "type": "node",
+                "node": "wf.mcp.call_tool",
+                "in_map": {
+                    "input.connection_id": "connection_id",
+                    "input.tool_name": "tool_name",
+                    "input.arguments": "arguments",
+                },
+                "out_map": {"output": "state.tool_result"},
+            }
+        ],
+        edges=[
+            {"from": "call_tool", "outcome": "ok", "to": END},
+            {"from": "call_tool", "outcome": "error", "to": END},
+        ],
+    )
+
+    run = asyncio.run(
+        service.run_workflow_from_plan(
+            plan,
+            {
+                "connection_id": "demo.personal",
+                "tool_name": "echo_tool",
+                "arguments": {"text": "hello"},
+            },
+        )
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.output["tool_result"]["echoed"] == "hello"
 
 
 def test_service_can_inspect_resources_and_prompts() -> None:

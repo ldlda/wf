@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from typing import Any, cast
 
 from wf_mcp.broker import (
     WfMcpService,
@@ -65,12 +66,35 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
 
     assert "get_connection_statuses" in tool_names
     assert "refresh_connection_catalog" in tool_names
+    assert "get_planner_catalog" in tool_names
+    assert "list_spec_sources" in tool_names
     assert "invoke_broker_method" in tool_names
     assert "call_broker_tool" in tool_names
     assert "catalog.all" in resource_names
     assert "events.all" in resource_names
     assert "status.all" in resource_names
     assert "plan_with_catalog" in prompt_names
+
+    _content, planner_catalog_raw = asyncio.run(
+        server.call_tool("get_planner_catalog", {})
+    )
+    planner_catalog = cast(dict[str, Any], cast(object, planner_catalog_raw))
+    planner_names = [
+        node["qualified_name"] for node in planner_catalog["nodes"]
+    ]
+    assert "demo.personal.echo_tool" in planner_names
+    assert "wf.mcp.call_tool" in planner_names
+    assert "wf.std.runtime_error" in planner_names
+
+    _content, source_payload_raw = asyncio.run(
+        server.call_tool("list_spec_sources", {})
+    )
+    source_payload = cast(dict[str, Any], cast(object, source_payload_raw))
+    sources = source_payload["result"]
+    source_ids = [source["id"] for source in sources]
+    assert "demo.personal" in source_ids
+    assert "wf.mcp" in source_ids
+    assert "wf.std" in source_ids
 
 
 def test_build_service_from_config_registers_connections() -> None:

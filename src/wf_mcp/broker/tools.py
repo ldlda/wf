@@ -52,6 +52,14 @@ def register_broker_tools(server: FastMCP, service: WfMcpService) -> None:
         return service.get_catalog().as_payload()
 
     @server.tool()
+    async def get_planner_catalog() -> dict[str, Any]:
+        return service.get_planner_catalog().as_payload()
+
+    @server.tool()
+    async def list_spec_sources() -> list[dict[str, Any]]:
+        return service.list_spec_sources()
+
+    @server.tool()
     async def read_broker_resource(qualified_name: str) -> dict[str, Any]:
         return await service.read_resource(qualified_name)
 

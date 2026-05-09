@@ -10,6 +10,7 @@ from wf_core import NodeUse, Workflow, execute_workflow_async
 from ...connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from ...models import (
     AuthRecord,
+    CatalogNodeEntry,
     CatalogPromptEntry,
     CatalogResourceEntry,
     CatalogSnapshot,
@@ -23,7 +24,8 @@ from ..catalog import CombinedCatalog, snapshot_from_specs
 from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
 from ..events import McpEvent, make_event
 from .adapters import require_adapter
-from .builtins import BUILTIN_CONNECTION_ID, builtin_specs
+from .builtins import builtin_sources
+from .sources import SpecSource
 from .specs import get_qualified_spec, qualify_spec
 
 
@@ -33,16 +35,20 @@ class WfMcpService:
     default_catalog_max_age_seconds: int = 300
     connections: ConnectionRegistry = field(default_factory=ConnectionRegistry)
     adapters: dict[str, BackendAdapter] = field(default_factory=dict)
-    specs_by_connection: dict[str, dict[str, NodeSpec[Any, Any]]] = field(
-        default_factory=dict
-    )
+    spec_sources: dict[str, SpecSource] = field(default_factory=dict)
     events: list[McpEvent] = field(default_factory=list)
     include_builtin_specs: bool = True
 
     def __post_init__(self) -> None:
-        """Install broker-local standard-library specs when enabled."""
+        """Install broker-local system specs when enabled."""
         if self.include_builtin_specs:
-            self.specs_by_connection.setdefault(BUILTIN_CONNECTION_ID, builtin_specs())
+            for source in builtin_sources(self).values():
+                self.register_spec_source(source)
+
+    @property
+    def specs_by_connection(self) -> dict[str, dict[str, NodeSpec[Any, Any]]]:
+        """Compatibility view of source specs keyed by source id."""
+        return {source.id: source.specs for source in self.spec_sources.values()}
 
     def register_connection(self, connection: ConnectionConfig) -> None:
         parse_connection_id(connection.id)
@@ -84,7 +90,14 @@ class WfMcpService:
             )
             for spec in specs
         }
-        self.specs_by_connection[connection_id] = qualified_specs
+        self.register_spec_source(
+            SpecSource(
+                id=connection_id,
+                kind="connection",
+                specs=qualified_specs,
+                description=f"Specs discovered or registered for {connection_id}.",
+            )
+        )
         snapshot = snapshot_from_specs(
             connection_id,
             specs=qualified_specs,
@@ -107,6 +120,39 @@ class WfMcpService:
             if snapshot is not None:
                 snapshots[connection.id] = snapshot
         return CombinedCatalog(snapshots=snapshots)
+
+    def get_planner_catalog(self) -> CombinedCatalog:
+        """Return all planner-visible specs, including broker-local sources."""
+        snapshots = dict(self.get_catalog().snapshots)
+        fetched_at_epoch_ms = int(time.time() * 1000)
+        for source in self.spec_sources.values():
+            if not source.visible or source.kind != "system":
+                continue
+            snapshots[source.id] = snapshot_from_specs(
+                source.id,
+                specs=source.specs,
+                metadata={
+                    "kind": source.kind,
+                    "description": source.description,
+                },
+                fetched_at_epoch_ms=fetched_at_epoch_ms,
+                max_age_seconds=self.default_catalog_max_age_seconds,
+            )
+        return CombinedCatalog(snapshots=snapshots)
+
+    def list_spec_sources(self) -> list[dict[str, Any]]:
+        """Return planner spec sources without expanding every node schema."""
+        return [
+            source.as_status()
+            for source in sorted(
+                self.spec_sources.values(),
+                key=lambda source: source.id,
+            )
+        ]
+
+    def list_available_specs(self) -> list[CatalogNodeEntry]:
+        """Return planner-visible node catalog entries from every visible source."""
+        return self.get_planner_catalog().entries()
 
     def get_connection_snapshot(self, connection_id: str) -> CatalogSnapshot | None:
         self.connections.get(connection_id)
@@ -361,7 +407,10 @@ class WfMcpService:
             )
             snapshot = snapshot_from_specs(
                 connection_id,
-                specs=self.specs_by_connection.get(connection_id, {}),
+                specs=self.spec_sources.get(
+                    connection_id,
+                    SpecSource(id=connection_id, kind="connection"),
+                ).specs,
                 tool_display_names={
                     tool.name: tool.title for tool in capabilities.tools
                 },
@@ -446,8 +495,12 @@ class WfMcpService:
     def list_events(self) -> list[McpEvent]:
         return list(self.events)
 
+    def register_spec_source(self, source: SpecSource) -> None:
+        """Register a planner source."""
+        self.spec_sources[source.id] = source
+
     def _get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
-        return get_qualified_spec(self.specs_by_connection, qualified_name)
+        return get_qualified_spec(self.spec_sources, qualified_name)
 
     def _record_event(self, event: McpEvent) -> None:
         self.events.append(event)
