@@ -23,6 +23,7 @@ from ..catalog import CombinedCatalog, snapshot_from_specs
 from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
 from ..events import McpEvent, make_event
 from .adapters import require_adapter
+from .builtins import BUILTIN_CONNECTION_ID, builtin_specs
 from .specs import get_qualified_spec, qualify_spec
 
 
@@ -36,6 +37,12 @@ class WfMcpService:
         default_factory=dict
     )
     events: list[McpEvent] = field(default_factory=list)
+    include_builtin_specs: bool = True
+
+    def __post_init__(self) -> None:
+        """Install broker-local standard-library specs when enabled."""
+        if self.include_builtin_specs:
+            self.specs_by_connection.setdefault(BUILTIN_CONNECTION_ID, builtin_specs())
 
     def register_connection(self, connection: ConnectionConfig) -> None:
         parse_connection_id(connection.id)

@@ -61,7 +61,9 @@ class NodeSpec(Generic[InputT, OutputT]):
     is_async: bool = False
     accepts_context: bool = True
     input_schema_contract: dict[str, Any] | None = None
+    "enforced schema, if None use input_model"
     output_schema_contract: dict[str, Any] | None = None
+    "enforced schema, if None use output_model"
 
     def __call__(
         self,

@@ -67,7 +67,7 @@ class Context(TypedDict):  # dataclass support? no. i mean langgraph doesnt.
 ### what about us? how should we handle context?
 #
 # in the future if wed like, we could handle context. This could be useful for lda.chat!
-# i want lda.chat to be/have a meta-agent. So i could spin up ideas! a 
+# i want lda.chat to be/have a meta-agent. So i could spin up ideas! a
 
 
 class ContextInput(BaseModel):

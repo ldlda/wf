@@ -8,8 +8,10 @@ from pydantic import Field
 
 server = FastMCP("echo-fixture")
 
+
 class EchoToolResult(TypedDict):
     echoed: str
+
 
 @server.tool(title="Echo tool")
 async def echo_tool(

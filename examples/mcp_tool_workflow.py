@@ -55,11 +55,19 @@ async def run_example() -> dict[str, object]:
                 "node": "fixture.personal.echo_tool",
                 "in_map": {"input.text": "text"},
                 "out_map": {"echoed": "state.echoed"},
-            }
+            },
+            {
+                "id": "raise_mcp_error",
+                "type": "node",
+                "node": "wf.std.runtime_error",
+                "in_map": {"input.text": "message"},
+                "out_map": {},
+            },
         ],
         edges=[
             {"from": "echo", "outcome": "ok", "to": END},
-            {"from": "echo", "outcome": "error", "to": END}, # workaround for now; i need wf_authoring.ops::runtime_error
+            {"from": "echo", "outcome": "error", "to": "raise_mcp_error"},
+            {"from": "raise_mcp_error", "outcome": "ok", "to": END},
         ],
     )
 

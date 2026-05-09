@@ -34,6 +34,22 @@ def test_service_builds_namespaced_catalog() -> None:
     ]
 
 
+def test_service_installs_builtin_stdlib_specs_by_default() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "builtin_store"))
+
+    assert "wf.std" in service.specs_by_connection
+    assert "wf.std.runtime_error" in service.specs_by_connection["wf.std"]
+
+
+def test_service_can_disable_builtin_stdlib_specs() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "no_builtin_store"),
+        include_builtin_specs=False,
+    )
+
+    assert "wf.std" not in service.specs_by_connection
+
+
 def test_service_compiles_and_runs_raw_plan() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "run_store"))
     service.register_connection(

@@ -101,6 +101,8 @@ def node(
                 description=description or fn.description,
                 is_async=is_async if is_async is not None else fn.is_async,
                 accepts_context=fn.accepts_context,
+                input_schema_contract=fn.input_schema_contract,
+                output_schema_contract=fn.output_schema_contract,
             )
 
         inferred_input_model: type[BaseModel] | None = input_model
