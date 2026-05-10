@@ -4,7 +4,9 @@ from dataclasses import dataclass
 
 from fastmcp.server.transforms import Namespace
 
-ADMIN_NAMESPACE = "wf.mcp"
+ADMIN_NAMESPACE = "wf.admin"
+RESERVED_CONNECTION_IDS = frozenset({ADMIN_NAMESPACE, "wf.mcp"})
+"""Source ids reserved by wf-mcp system capabilities."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -41,10 +43,14 @@ def parse_namespaced_tool_name(
 
 
 def is_admin_tool_name(proxy_name: str) -> bool:
-    return proxy_name.startswith(f"{ADMIN_NAMESPACE}_")
+    return proxy_name.startswith(f"{ADMIN_NAMESPACE}.") or proxy_name.startswith(
+        f"{ADMIN_NAMESPACE}_"
+    )
 
 
 class LdaNamespace(Namespace):
     def __init__(self, prefix: str) -> None:
         super().__init__(prefix)
-        self._name_prefix = f"{prefix}."  # some good stuff
+        # FastMCP's public Namespace transform uses underscores; override its
+        # private prefix so admin tools keep their dotted wf.admin.* names.
+        self._name_prefix = f"{prefix}."

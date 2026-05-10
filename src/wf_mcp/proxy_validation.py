@@ -4,12 +4,10 @@ import re
 from collections.abc import Iterable
 
 from .models import BrokerConfig, ConnectionConfig
+from .shared.names import RESERVED_CONNECTION_IDS
 
 _NAMESPACE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 _SUPPORTED_TRANSPORTS = {"stdio", "http", "streamable-http", "streamable_http", "sse"}
-_RESERVED_CONNECTION_IDS = {"wf.mcp"}
-
-
 class ProxyConfigError(ValueError):
     """Raised when a broker config cannot safely run as a transparent proxy."""
 
@@ -51,7 +49,7 @@ def _validate_connection_ids(
         if not connection_id:
             errors.append("connection id must not be empty")
             continue
-        if connection_id in _RESERVED_CONNECTION_IDS:
+        if connection_id in RESERVED_CONNECTION_IDS:
             errors.append(f"connection id {connection_id!r} is reserved by wf-mcp")
         if "_" in connection_id:
             errors.append(

@@ -32,7 +32,7 @@
     {
       "id": "everything.default",
       "server": "everything",
-      "account": "default",
+      "account": "demo",
       "enabled": true,
       "metadata": {
         "transport": "stdio",

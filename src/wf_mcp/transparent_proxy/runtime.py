@@ -13,7 +13,7 @@ from fastmcp.server.transforms.search import BM25SearchTransform
 
 from ..control import BrokerConfigManager, ConfigMutationError
 from ..models import BrokerConfig
-from ..shared.names import ADMIN_NAMESPACE
+from ..shared.names import ADMIN_NAMESPACE, LdaNamespace
 from ..proxy_config import broker_config_to_fastmcp_config
 from ..proxy_validation import validate_transparent_proxy_config
 from .admin import create_proxy_admin_server
@@ -24,17 +24,17 @@ from .tools import (
 )
 
 _ADMIN_TOOL_NAMES = [
-    f"{ADMIN_NAMESPACE}_list_connections",
-    f"{ADMIN_NAMESPACE}_get_connection_statuses",
-    f"{ADMIN_NAMESPACE}_get_config",
-    f"{ADMIN_NAMESPACE}_reload_config",
-    f"{ADMIN_NAMESPACE}_list_proxy_tools",
-    f"{ADMIN_NAMESPACE}_get_proxy_tool",
-    f"{ADMIN_NAMESPACE}_add_connection",
-    f"{ADMIN_NAMESPACE}_update_connection",
-    f"{ADMIN_NAMESPACE}_enable_connection",
-    f"{ADMIN_NAMESPACE}_disable_connection",
-    f"{ADMIN_NAMESPACE}_remove_connection",
+    f"{ADMIN_NAMESPACE}.list_connections",
+    f"{ADMIN_NAMESPACE}.get_connection_statuses",
+    f"{ADMIN_NAMESPACE}.get_config",
+    f"{ADMIN_NAMESPACE}.reload_config",
+    f"{ADMIN_NAMESPACE}.list_proxy_tools",
+    f"{ADMIN_NAMESPACE}.get_proxy_tool",
+    f"{ADMIN_NAMESPACE}.add_connection",
+    f"{ADMIN_NAMESPACE}.update_connection",
+    f"{ADMIN_NAMESPACE}.enable_connection",
+    f"{ADMIN_NAMESPACE}.disable_connection",
+    f"{ADMIN_NAMESPACE}.remove_connection",
 ]
 
 
@@ -87,7 +87,7 @@ class TransparentProxyRuntime:
         self.server.providers[:] = [self.server.local_provider]
 
         admin = create_proxy_admin_server(self)
-        admin.add_transform(Namespace(ADMIN_NAMESPACE))
+        admin.add_transform(LdaNamespace(ADMIN_NAMESPACE))
         self.server.mount(admin)
 
         mounted_connections: list[str] = []

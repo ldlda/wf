@@ -3,8 +3,14 @@ from __future__ import annotations
 import asyncio
 import shutil
 
-from wf_core import END, RunStatus
+from wf_authoring import NodeSpec
+from wf_core import END, NodeUse, RunStatus
 from wf_mcp.broker import WfMcpService
+from wf_mcp.broker.service.capability_sources import (
+    CapabilityBuckets,
+    CapabilitySource,
+    SourceVisibility,
+)
 from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
 from wf_mcp.shared.errors import error_payload
 from wf_mcp.storage import FileStore
@@ -16,6 +22,36 @@ from .test_support import (
     finalize_tool,
     local_temp_root,
 )
+
+
+def _single_echo_plan(plan_name: str, node_name: str) -> RawWorkflowPlan:
+    return RawWorkflowPlan(
+        name=plan_name,
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        state_schema={"fields": {"echoed": {"type": "string"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+            "required": ["echoed"],
+        },
+        start="echo",
+        nodes=[
+            {
+                "id": "echo",
+                "type": "node",
+                "node": node_name,
+                "in_map": {"input.text": "text"},
+                "out_map": {"echoed": "state.echoed"},
+            }
+        ],
+        edges=[
+            {"from": "echo", "outcome": "ok", "to": END},
+        ],
+    )
 
 
 def test_service_builds_namespaced_catalog() -> None:
@@ -34,6 +70,21 @@ def test_service_builds_namespaced_catalog() -> None:
     ]
 
 
+def test_service_rejects_reserved_connection_ids() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "reserved_ids_store"))
+
+    for connection_id in ("wf.admin", "wf.mcp"):
+        try:
+            service.register_connection(
+                ConnectionConfig(id=connection_id, server="wf", account="reserved")
+            )
+        except ValueError as exc:
+            assert connection_id in str(exc)
+            assert "reserved by wf-mcp" in str(exc)
+        else:
+            raise AssertionError(f"expected {connection_id!r} to be rejected")
+
+
 def test_service_installs_builtin_stdlib_specs_by_default() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "builtin_store"))
 
@@ -47,6 +98,95 @@ def test_service_installs_builtin_stdlib_specs_by_default() -> None:
     assert all(source["kind"] == "system" for source in sources)
 
 
+def test_wf_std_source_contains_authoring_ops() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "stdlib_source_store"))
+    specs = service.capability_sources["wf.std"].capabilities.node_specs
+
+    expected = {
+        "wf.std.coalesce",
+        "wf.std.default_if_none",
+        "wf.std.constant",
+        "wf.std.pick_key",
+        "wf.std.truthy",
+        "wf.std.runtime_error",
+        "wf.std.first_item",
+        "wf.std.first_item_or_none",
+        "wf.std.first_item_maybe",
+        "wf.std.last_item",
+        "wf.std.last_item_or_none",
+        "wf.std.length",
+        "wf.std.is_empty",
+    }
+    assert set(specs) == expected
+
+
+def test_service_sources_have_visibility_and_capability_buckets() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "source_shape_store"))
+
+    std_source = service.capability_sources["wf.std"]
+    mcp_source = service.capability_sources["wf.mcp"]
+
+    assert std_source.id == "wf.std"
+    assert std_source.kind == "system"
+    assert std_source.visibility.planner is True
+    assert std_source.visibility.mcp_client is True
+    assert std_source.visibility.admin_dashboard is True
+    assert "wf.std.runtime_error" in std_source.capabilities.node_specs
+    assert not std_source.capabilities.tools
+
+    assert mcp_source.id == "wf.mcp"
+    assert mcp_source.visibility.planner is True
+    assert mcp_source.permissions.calls_upstream is True
+    assert "wf.mcp.call_tool" in mcp_source.capabilities.node_specs
+
+
+def test_wf_admin_source_exists_but_is_not_planner_visible() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "admin_source_store"))
+    source = service.capability_sources["wf.admin"]
+
+    assert source.kind == "system"
+    assert source.visibility.planner is False
+    assert source.visibility.mcp_client is False
+    assert source.visibility.admin_dashboard is True
+    assert source.permissions.safe_for_workflow is False
+    assert source.permissions.calls_upstream is False
+    assert source.permissions.mutates_config is True
+    assert source.permissions.mutates_auth is True
+    assert "wf.admin.list_sources" in source.capabilities.tools
+    assert "wf.admin.disable_source" in source.capabilities.tools
+    assert "wf.admin.enable_source" in source.capabilities.tools
+    assert "wf.admin" not in service.get_planner_catalog().snapshots
+
+
+def test_service_spec_views_are_derived_from_capability_sources() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "source_view_store"))
+
+    assert "wf.std" in service.capability_sources
+    assert "wf.std" in service.spec_sources
+    assert "wf.std" in service.specs_by_connection
+    assert (
+        service.spec_sources["wf.std"].specs
+        is not service.capability_sources["wf.std"].capabilities.node_specs
+    )
+    assert (
+        service.specs_by_connection["wf.std"]
+        is not service.capability_sources["wf.std"].capabilities.node_specs
+    )
+    assert (
+        service.specs_by_connection["wf.std"]["wf.std.runtime_error"]
+        is service.capability_sources["wf.std"].capabilities.node_specs[
+            "wf.std.runtime_error"
+        ]
+    )
+
+    service.spec_sources["wf.std"].specs.clear()
+    service.specs_by_connection["wf.std"].clear()
+    assert (
+        "wf.std.runtime_error"
+        in service.capability_sources["wf.std"].capabilities.node_specs
+    )
+
+
 def test_service_can_disable_builtin_stdlib_specs() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "no_builtin_store"),
@@ -58,6 +198,36 @@ def test_service_can_disable_builtin_stdlib_specs() -> None:
     assert service.list_spec_sources() == []
 
 
+def test_service_list_spec_sources_excludes_hidden_sources() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "hidden_list_store"))
+    hidden_echo_tool = NodeSpec(
+        name="hidden.source.echo_tool",
+        input_model=echo_tool.input_model,
+        output_model=echo_tool.output_model,
+        outcomes=echo_tool.outcomes,
+        fn=echo_tool.fn,
+        description=echo_tool.description,
+        is_async=echo_tool.is_async,
+        accepts_context=echo_tool.accepts_context,
+        input_schema_contract=echo_tool.input_schema_contract,
+        output_schema_contract=echo_tool.output_schema_contract,
+    )
+    service.register_capability_source(
+        CapabilitySource(
+            id="hidden.source",
+            kind="system",
+            capabilities=CapabilityBuckets(
+                node_specs={"hidden.source.echo_tool": hidden_echo_tool}
+            ),
+            visibility=SourceVisibility(planner=False, admin_dashboard=False),
+        )
+    )
+
+    source_ids = {source["id"] for source in service.list_spec_sources()}
+
+    assert "hidden.source" not in source_ids
+
+
 def test_service_catalog_split_keeps_system_specs_out_of_backend_catalog() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "planner_store"))
 
@@ -65,14 +235,44 @@ def test_service_catalog_split_keeps_system_specs_out_of_backend_catalog() -> No
     planner_payload = service.get_planner_catalog().as_payload()
 
     assert backend_payload["nodes"] == []
-    assert [node["qualified_name"] for node in planner_payload["nodes"]] == [
-        "wf.mcp.call_tool",
-        "wf.std.runtime_error",
-    ]
-    assert [entry.qualified_name for entry in service.list_available_specs()] == [
-        "wf.mcp.call_tool",
-        "wf.std.runtime_error",
-    ]
+    planner_node_names = {node["qualified_name"] for node in planner_payload["nodes"]}
+    assert "wf.mcp.call_tool" in planner_node_names
+    assert "wf.std.runtime_error" in planner_node_names
+    available_names = {entry.qualified_name for entry in service.list_available_specs()}
+    assert "wf.mcp.call_tool" in available_names
+    assert "wf.std.runtime_error" in available_names
+
+
+def test_service_hydrates_planner_specs_from_stored_catalog() -> None:
+    store = local_temp_root() / "restart_planner_store"
+    shutil.rmtree(store, ignore_errors=True)
+    first_service = WfMcpService(store=FileStore(store))
+    first_service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    first_service.register_adapter("demo", FakeAdapter())
+    asyncio.run(first_service.refresh_connection_catalog("demo.personal"))
+
+    second_service = WfMcpService(store=FileStore(store))
+    second_service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    second_service.register_adapter("demo", FakeAdapter())
+
+    planner_names = {
+        node["qualified_name"]
+        for node in second_service.get_planner_catalog().as_payload()["nodes"]
+    }
+    run = asyncio.run(
+        second_service.run_workflow_from_plan(
+            _single_echo_plan("hydrated_plan", "demo.personal.echo_tool"),
+            {"text": "hello"},
+        )
+    )
+
+    assert "demo.personal.echo_tool" in planner_names
+    assert run.status == RunStatus.COMPLETED
+    assert run.output["echoed"] == "hello"
 
 
 def test_service_compiles_and_runs_raw_plan() -> None:
@@ -130,6 +330,237 @@ def test_service_compiles_and_runs_raw_plan() -> None:
     event_kinds = [event.kind for event in service.list_events()]
     assert "workflow_run_started" in event_kinds
     assert "workflow_run_completed" in event_kinds
+
+
+def test_service_resolves_registered_spec_with_dotted_local_name() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "dotted_spec_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    dotted_echo_tool = NodeSpec(
+        name="foo.bar",
+        input_model=echo_tool.input_model,
+        output_model=echo_tool.output_model,
+        outcomes=echo_tool.outcomes,
+        fn=echo_tool.fn,
+        description=echo_tool.description,
+        is_async=echo_tool.is_async,
+        accepts_context=echo_tool.accepts_context,
+        input_schema_contract=echo_tool.input_schema_contract,
+        output_schema_contract=echo_tool.output_schema_contract,
+    )
+    service.register_specs("demo.personal", dotted_echo_tool)
+
+    plan = RawWorkflowPlan(
+        name="dotted_local_name_plan",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        state_schema={"fields": {"echoed": {"type": "string"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+            "required": ["echoed"],
+        },
+        start="echo",
+        nodes=[
+            {
+                "id": "echo",
+                "type": "node",
+                "node": "demo.personal.foo.bar",
+                "in_map": {"input.text": "text"},
+                "out_map": {"echoed": "state.echoed"},
+            }
+        ],
+        edges=[
+            {"from": "echo", "outcome": "ok", "to": END},
+        ],
+    )
+
+    workflow = service.compile_plan(plan)
+    run = asyncio.run(service.run_workflow_from_plan(plan, {"text": "hello"}))
+
+    assert workflow.name == "dotted_local_name_plan"
+    first_node = workflow.nodes[0]
+    assert isinstance(first_node, NodeUse)
+    assert first_node.node == "demo.personal.foo.bar"
+    assert run.status == RunStatus.COMPLETED
+    assert run.output["echoed"] == "hello"
+
+
+def test_service_does_not_resolve_specs_hidden_from_planner() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "hidden_spec_store"))
+    hidden_echo_tool = NodeSpec(
+        name="hidden.source.echo_tool",
+        input_model=echo_tool.input_model,
+        output_model=echo_tool.output_model,
+        outcomes=echo_tool.outcomes,
+        fn=echo_tool.fn,
+        description=echo_tool.description,
+        is_async=echo_tool.is_async,
+        accepts_context=echo_tool.accepts_context,
+        input_schema_contract=echo_tool.input_schema_contract,
+        output_schema_contract=echo_tool.output_schema_contract,
+    )
+    service.register_capability_source(
+        CapabilitySource(
+            id="hidden.source",
+            kind="system",
+            capabilities=CapabilityBuckets(
+                node_specs={"hidden.source.echo_tool": hidden_echo_tool}
+            ),
+            visibility=SourceVisibility(planner=False),
+        )
+    )
+
+    plan = RawWorkflowPlan(
+        name="hidden_source_plan",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        state_schema={"fields": {"echoed": {"type": "string"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+            "required": ["echoed"],
+        },
+        start="echo",
+        nodes=[
+            {
+                "id": "echo",
+                "type": "node",
+                "node": "hidden.source.echo_tool",
+                "in_map": {"input.text": "text"},
+                "out_map": {"echoed": "state.echoed"},
+            }
+        ],
+        edges=[
+            {"from": "echo", "outcome": "ok", "to": END},
+        ],
+    )
+
+    try:
+        service.compile_plan(plan)
+    except KeyError as exc:
+        assert "hidden.source.echo_tool" in str(exc)
+    else:
+        raise AssertionError("expected planner-hidden spec resolution to fail")
+
+
+def test_service_excludes_disabled_connection_specs_from_planner_catalog() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "disabled_connection_spec_store")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    service.capability_sources["demo.personal"].enabled = False
+
+    planner_payload = service.get_planner_catalog().as_payload()
+    planner_names = [
+        node["qualified_name"] for node in planner_payload["nodes"]
+    ]
+    available_names = [
+        entry.qualified_name for entry in service.list_available_specs()
+    ]
+
+    assert "demo.personal.echo_tool" not in planner_names
+    assert "demo.personal.echo_tool" not in available_names
+    assert "demo.personal" not in service.get_planner_catalog().snapshots
+
+    try:
+        service.compile_plan(
+            _single_echo_plan("disabled_connection_plan", "demo.personal.echo_tool")
+        )
+    except KeyError as exc:
+        assert "demo.personal.echo_tool" in str(exc)
+    else:
+        raise AssertionError("expected disabled connection spec resolution to fail")
+
+
+def test_service_preserves_disabled_connection_source_on_reregistration() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "disabled_reregister_spec_store")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    service.capability_sources["demo.personal"].enabled = False
+
+    service.register_specs("demo.personal", finalize_tool)
+
+    source = service.capability_sources["demo.personal"]
+    assert source.enabled is False
+    assert "demo.personal.finalize_tool" in source.capabilities.node_specs
+    assert "demo.personal.echo_tool" not in source.capabilities.node_specs
+
+
+def test_service_excludes_planner_hidden_connection_specs_from_planner_catalog() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "hidden_connection_spec_store")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    service.capability_sources["demo.personal"].visibility = SourceVisibility(
+        planner=False,
+        mcp_client=True,
+        admin_dashboard=True,
+    )
+
+    planner_payload = service.get_planner_catalog().as_payload()
+    planner_names = [
+        node["qualified_name"] for node in planner_payload["nodes"]
+    ]
+    available_names = [
+        entry.qualified_name for entry in service.list_available_specs()
+    ]
+
+    assert "demo.personal.echo_tool" not in planner_names
+    assert "demo.personal.echo_tool" not in available_names
+    assert "demo.personal" not in service.get_planner_catalog().snapshots
+
+    try:
+        service.compile_plan(
+            _single_echo_plan("hidden_connection_plan", "demo.personal.echo_tool")
+        )
+    except KeyError as exc:
+        assert "demo.personal.echo_tool" in str(exc)
+    else:
+        raise AssertionError(
+            "expected planner-hidden connection spec resolution to fail"
+        )
+
+
+def test_service_preserves_planner_hidden_connection_source_on_reregistration() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "hidden_reregister_spec_store")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    service.capability_sources["demo.personal"].visibility = SourceVisibility(
+        planner=False,
+        mcp_client=True,
+        admin_dashboard=True,
+    )
+
+    service.register_specs("demo.personal", finalize_tool)
+
+    source = service.capability_sources["demo.personal"]
+    assert source.visibility.planner is False
+    assert source.visibility.mcp_client is True
+    assert source.visibility.admin_dashboard is True
+    assert "demo.personal.finalize_tool" in source.capabilities.node_specs
+    assert "demo.personal.echo_tool" not in source.capabilities.node_specs
 
 
 def test_service_refreshes_catalog_from_adapter() -> None:

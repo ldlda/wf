@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from typing import Any
-
 from collections.abc import Mapping
+from typing import Any
 
 from wf_authoring import NodeSpec
 
 from ...connections import qualify_node_name
-from .sources import SpecSource
+from .capability_sources import CapabilitySource
 
 
 def qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, Any]:
@@ -27,12 +26,14 @@ def qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, 
 
 
 def get_qualified_spec(
-    spec_sources: Mapping[str, SpecSource],
+    sources: Mapping[str, CapabilitySource],
     qualified_name: str,
 ) -> NodeSpec[Any, Any]:
-    """Resolve a namespaced node spec from planner-visible sources."""
-    source_id, _ = qualified_name.rsplit(".", 1)
-    source = spec_sources.get(source_id)
-    if source is None or qualified_name not in source.specs:
-        raise KeyError(f"unknown qualified node {qualified_name!r}")
-    return source.specs[qualified_name]
+    """Resolve a namespaced node spec from enabled planner-visible sources."""
+    for source in sources.values():
+        if not source.enabled or not source.visibility.planner:
+            continue
+        spec = source.capabilities.node_specs.get(qualified_name)
+        if spec is not None:
+            return spec
+    raise KeyError(f"unknown qualified node {qualified_name!r}")

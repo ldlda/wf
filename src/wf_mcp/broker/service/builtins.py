@@ -4,7 +4,24 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
 
-from wf_authoring import NodeReturn, NodeSpec, node, runtime_error
+from wf_authoring import (
+    NodeReturn,
+    NodeSpec,
+    coalesce,
+    constant,
+    default_if_none,
+    first_item,
+    first_item_maybe,
+    first_item_or_none,
+    is_empty,
+    last_item,
+    last_item_or_none,
+    length,
+    node,
+    pick_key,
+    runtime_error,
+    truthy,
+)
 
 from .sources import SpecSource
 from .specs import qualify_spec
@@ -14,6 +31,24 @@ BUILTIN_CONNECTION_ID = "wf.std"
 
 MCP_SOURCE_ID = "wf.mcp"
 """Internal source id for broker MCP utility node specs."""
+
+
+AUTHORING_STD_SPECS: tuple[NodeSpec[Any, Any], ...] = (
+    coalesce,
+    default_if_none,
+    constant,
+    pick_key,
+    truthy,
+    runtime_error,
+    first_item,
+    first_item_or_none,
+    first_item_maybe,
+    last_item,
+    last_item_or_none,
+    length,
+    is_empty,
+)
+"""Existing authoring ops that are also exposed through the workflow stdlib."""
 
 
 class ToolCaller(Protocol):
@@ -56,11 +91,8 @@ class McpCallToolOutput(BaseModel):
 def builtin_specs() -> dict[str, NodeSpec[Any, Any]]:
     """Return built-in NodeSpecs available to raw broker workflow plans."""
     specs = [
-        node(
-            runtime_error,
-            name="runtime_error",
-            description="Fail the current workflow branch with a runtime error.",
-        )
+        node(spec, name=spec.name.removeprefix("authoring."))
+        for spec in AUTHORING_STD_SPECS
     ]
     qualified_specs = [qualify_spec(BUILTIN_CONNECTION_ID, spec) for spec in specs]
     return {spec.name: spec for spec in qualified_specs}
@@ -96,12 +128,15 @@ def builtin_sources(service: ToolCaller) -> dict[str, SpecSource]:
             id=BUILTIN_CONNECTION_ID,
             kind="system",
             specs=builtin_specs(),
+            mcp_client_visible=True,
+            safe_for_workflow=True,
             description="Workflow standard-library nodes.",
         ),
         MCP_SOURCE_ID: SpecSource(
             id=MCP_SOURCE_ID,
             kind="system",
             specs=mcp_specs(service),
+            calls_upstream=True,
             description="Broker MCP utility nodes.",
         ),
     }

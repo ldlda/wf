@@ -71,9 +71,10 @@ Workflow runtime helpers for interacting with MCP backends.
 
 Expected capabilities:
 
-- `node_specs`: `wf.mcp.call_tool`, `wf.mcp.read_resource`,
+- `node_specs`: currently `wf.mcp.call_tool`.
+- Near-term node specs may include `wf.mcp.read_resource` and
   `wf.mcp.get_prompt`.
-- Advanced/escape-hatch node specs may exist later:
+- Advanced/escape-hatch node specs may include:
   `wf.mcp.invoke_method`, `wf.mcp.send_notification`.
 - `prompts/resources`: docs for building MCP-backed workflows.
 
@@ -175,6 +176,32 @@ This is the preferred place for source toggling:
 Dashboard operations should use `wf.admin` capability definitions or Python
 control APIs, not ad hoc tool functions copied across broker and proxy modes.
 
+## Implemented Shape
+
+The code now has the first capability-source layer in place.
+
+- `CapabilitySource` owns source metadata, visibility, permissions, and
+  capability buckets.
+- `WfMcpService.capability_sources` is the canonical in-memory registry.
+- `spec_sources` and `specs_by_connection` are compatibility views derived from
+  `capability_sources`.
+- `wf.std` owns current `wf_authoring.ops` workflow node specs under
+  `wf.std.*`.
+- `wf.mcp` owns workflow MCP runtime node specs, currently
+  `wf.mcp.call_tool`.
+- `wf.admin` owns privileged admin capability metadata and is not planner-visible
+  or MCP-client-visible by default.
+- Transparent proxy admin tools now use dotted `wf.admin.*` names through
+  `LdaNamespace`.
+- `wf.admin` and `wf.mcp` are reserved connection ids.
+- Planner catalog, `list_available_specs()`, and workflow spec resolution respect
+  source `enabled` and `visibility.planner`.
+
+Broker MCP tools still expose compatibility names such as `list_connections` and
+`get_planner_catalog`. Their metadata belongs to `wf.admin`, but dotted
+`wf.admin.*` broker tool projection is intentionally deferred until admin MCP
+exposure is explicit.
+
 ## Current Code Mapping
 
 Current code has several useful pieces but the boundaries are blurred.
@@ -183,14 +210,13 @@ Current code has several useful pieces but the boundaries are blurred.
 | --- | --- | --- |
 | `wf_authoring.ops` | reusable workflow node specs | `wf.std.node_specs` |
 | `wf_mcp.broker.service.builtins` | local workflow specs | `wf.std`, `wf.mcp` |
-| `wf_mcp.broker.tools` | broker MCP admin/control tools | `wf.admin.tools` |
-| `wf_mcp.transparent_proxy.admin` | proxy MCP admin/control tools | `wf.admin.tools` |
+| `wf_mcp.broker.tools` | compatibility broker MCP admin/control tools | `wf.admin.tools` |
+| `wf_mcp.transparent_proxy.admin` | dotted proxy MCP admin/control tools | `wf.admin.tools` |
 | discovered MCP tools | upstream tools and workflow wrappers | connection source |
 | broker resources/prompts | catalog/status/planning context | likely `wf.admin` or docs sources |
 
-The current `SpecSource` is a first step, but it only models workflow node specs.
-It should evolve into `CapabilitySource`, or be replaced by it, so tools,
-prompts, resources, and node specs share one source registry.
+`SpecSource` is now a compatibility wrapper. New source behavior should be added
+to `CapabilitySource` unless there is a specific compatibility reason not to.
 
 ## Naming Rules
 
@@ -201,25 +227,18 @@ Use source ids consistently:
 - `wf.admin.*` for privileged control/admin capabilities.
 - `<connection_id>.*` for upstream connection capabilities.
 
-Avoid using `wf.mcp_*` for admin tools. That name currently comes from
-FastMCP's `Namespace` transform using underscores, but semantically it makes
-admin look like MCP workflow runtime. If a custom namespace transform can
-preserve dotted names, prefer `wf.admin.list_sources` over
-`wf.mcp_list_sources`.
+Avoid using `wf.mcp_*` for admin tools. `wf.mcp` is reserved for workflow MCP
+runtime helpers. Transparent proxy admin tools now use dotted `wf.admin.*`
+names.
 
 ## Migration Path
 
-1. Keep the current tests green while making `SpecSource` canonical for node
-   specs.
-2. Add a `CapabilitySource` shape that can hold `tools`, `node_specs`,
-   `prompts`, and `resources`.
-3. Move all `wf_authoring.ops` registrations into the `wf.std` source.
-4. Move broker and transparent-proxy admin operations into one `wf.admin`
-   source definition.
-5. Make broker and proxy servers project admin tools from `wf.admin` only when
-   admin MCP exposure is explicitly enabled.
-6. Add source-level enable/disable behavior and make every projection respect it.
-7. Add system prompts/resources for `wf.std` and `wf.mcp` manuals.
+1. Add explicit admin MCP exposure controls for broker mode.
+2. Project broker admin tools from `wf.admin` only when admin MCP exposure is
+   enabled.
+3. Add source-level enable/disable operations backed by `wf.admin`.
+4. Add persisted source policy so source visibility survives process restart.
+5. Add system prompts/resources for `wf.std` and `wf.mcp` manuals.
 
 The implementation should avoid having broker mode and transparent proxy mode
 define separate copies of the same admin/control capabilities.

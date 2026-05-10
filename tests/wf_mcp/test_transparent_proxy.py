@@ -43,13 +43,13 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
         async with client:
             tools = await client.list_tools()
             names = [tool.name for tool in tools]
-            assert "wf.mcp_list_connections" in names
-            assert "wf.mcp_get_connection_statuses" in names
-            assert "wf.mcp_list_proxy_tools" in names
-            assert "wf.mcp_get_proxy_tool" in names
+            assert "wf.admin.list_connections" in names
+            assert "wf.admin.get_connection_statuses" in names
+            assert "wf.admin.list_proxy_tools" in names
+            assert "wf.admin.get_proxy_tool" in names
             assert "fixture.personal_echo_tool" in names
 
-            connections_result = await client.call_tool("wf.mcp_list_connections")
+            connections_result = await client.call_tool("wf.admin.list_connections")
             assert _structured(connections_result) == {
                 "result": [
                     {
@@ -72,7 +72,7 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             )
             assert _structured(result) == {"echoed": "hello"}
 
-            proxy_tools_result = await client.call_tool("wf.mcp_list_proxy_tools")
+            proxy_tools_result = await client.call_tool("wf.admin.list_proxy_tools")
             proxy_tools_payload = _structured(proxy_tools_result)
             proxy_tools = proxy_tools_payload["tools"]
             assert proxy_tools_payload["nextCursor"] is None
@@ -84,7 +84,7 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             assert proxy_tools[0]["enabled"] is True
 
             proxy_tool_result = await client.call_tool(
-                "wf.mcp_get_proxy_tool",
+                "wf.admin.get_proxy_tool",
                 {"proxy_name": "fixture.personal_echo_tool"},
             )
             proxy_tool = _structured(proxy_tool_result)
@@ -130,6 +130,12 @@ def test_transparent_proxy_rejects_invalid_connection_config() -> None:
                 account="mcp",
                 metadata={"transport": "stdio", "command": sys.executable},
             ),
+            ConnectionConfig(
+                id="wf.admin",
+                server="wf",
+                account="admin",
+                metadata={"transport": "stdio", "command": sys.executable},
+            ),
         ],
     )
 
@@ -143,6 +149,7 @@ def test_transparent_proxy_rejects_invalid_connection_config() -> None:
     assert "connection id 'bad_scope.personal' must not contain '_'" in message
     assert "fixture.http: http transport requires metadata.url" in message
     assert "connection id 'wf.mcp' is reserved by wf-mcp" in message
+    assert "connection id 'wf.admin' is reserved by wf-mcp" in message
 
 
 def test_transparent_proxy_can_expose_resources_and_prompts_as_tools() -> None:
@@ -202,9 +209,9 @@ def test_transparent_proxy_can_collapse_upstream_tools_behind_search() -> None:
             tools = await client.list_tools()
             names = [tool.name for tool in tools]
             assert "search_tools" in names
-            assert "wf.mcp_list_connections" in names
-            assert "wf.mcp_get_connection_statuses" in names
-            assert "wf.mcp_list_proxy_tools" in names
+            assert "wf.admin.list_connections" in names
+            assert "wf.admin.get_connection_statuses" in names
+            assert "wf.admin.list_proxy_tools" in names
             assert "fixture.personal_echo_tool" not in names
 
             search_result = await client.call_tool(
@@ -247,7 +254,7 @@ def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> N
         client = create_transparent_proxy_client(config)
         async with client:
             first_page_result = await client.call_tool(
-                "wf.mcp_list_proxy_tools",
+                "wf.admin.list_proxy_tools",
                 {"limit": 1},
             )
             first_page = _structured(first_page_result)
@@ -256,7 +263,7 @@ def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> N
             assert first_page["total"] == 2
 
             second_page_result = await client.call_tool(
-                "wf.mcp_list_proxy_tools",
+                "wf.admin.list_proxy_tools",
                 {"limit": 1, "cursor": first_page["nextCursor"]},
             )
             second_page = _structured(second_page_result)
@@ -267,7 +274,7 @@ def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> N
             )
 
             filtered_result = await client.call_tool(
-                "wf.mcp_list_proxy_tools",
+                "wf.admin.list_proxy_tools",
                 {
                     "connection_id": "fixture.personal",
                     "query": "echo",
@@ -308,7 +315,7 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
         client = create_transparent_proxy_client(config, config_path=config_path)
         async with client:
             add_result = await client.call_tool(
-                "wf.mcp_add_connection",
+                "wf.admin.add_connection",
                 {
                     "connection_id": "fixture.work",
                     "server": "fixture",
@@ -329,7 +336,7 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
             }
 
             disable_result = await client.call_tool(
-                "wf.mcp_disable_connection",
+                "wf.admin.disable_connection",
                 {"connection_id": "fixture.work"},
             )
             assert _structured(disable_result) == {
@@ -340,7 +347,7 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
             }
 
             update_result = await client.call_tool(
-                "wf.mcp_update_connection",
+                "wf.admin.update_connection",
                 {
                     "connection_id": "fixture.work",
                     "metadata": {
@@ -357,11 +364,11 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
                 "requires_reload": True,
             }
 
-            config_result = await client.call_tool("wf.mcp_get_config")
+            config_result = await client.call_tool("wf.admin.get_config")
             assert "fixture.work" in str(_structured(config_result))
 
             remove_result = await client.call_tool(
-                "wf.mcp_remove_connection",
+                "wf.admin.remove_connection",
                 {"connection_id": "fixture.work"},
             )
             assert _structured(remove_result) == {
@@ -402,7 +409,7 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
             assert "fixture.personal_echo_tool" not in initial_names
 
             await client.call_tool(
-                "wf.mcp_add_connection",
+                "wf.admin.add_connection",
                 {
                     "connection_id": "fixture.personal",
                     "server": "fixture",
@@ -419,7 +426,7 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
             before_reload_names = [tool.name for tool in before_reload_tools]
             assert "fixture.personal_echo_tool" not in before_reload_names
 
-            reload_result = await client.call_tool("wf.mcp_reload_config")
+            reload_result = await client.call_tool("wf.admin.reload_config")
             assert _structured(reload_result) == {
                 "ok": True,
                 "reloaded": True,

@@ -12,6 +12,9 @@ from .service import WfMcpService
 def register_broker_tools(server: FastMCP, service: WfMcpService) -> None:
     """Register broker tool handlers on a FastMCP server."""
 
+    # These MCP tool names are compatibility exports. Their capability metadata
+    # belongs to the wf.admin source; future admin-enabled servers can project
+    # dotted wf.admin.* names from that source.
     @server.tool()
     async def list_connections() -> list[dict[str, Any]]:
         return [
