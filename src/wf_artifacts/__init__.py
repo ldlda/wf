@@ -1,3 +1,8 @@
+from .catalog import (
+    WorkflowArtifactCatalogEntry,
+    artifact_catalog_entry,
+    artifact_node_name,
+)
 from .models import (
     AvailableCapability,
     AvailableSource,
@@ -20,7 +25,10 @@ __all__ = [
     "FileWorkflowArtifactStore",
     "RequiredCapability",
     "WorkflowArtifact",
+    "WorkflowArtifactCatalogEntry",
     "WorkflowArtifactStore",
     "WorkflowDeployment",
+    "artifact_catalog_entry",
+    "artifact_node_name",
     "validate_deployment_dependencies",
 ]
