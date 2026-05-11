@@ -22,6 +22,7 @@ from wf_mcp.storage import FileStore
 from .test_support import (
     FailingDiscoveryAdapter,
     FakeAdapter,
+    echo_tool,
     local_temp_root,
 )
 
@@ -316,6 +317,116 @@ def test_broker_saves_and_lists_workflow_deployments() -> None:
     assert list_payload["deployments"][0]["bindings"]["context7"] == "context7.personal"
 
 
+def test_broker_runs_non_interrupting_workflow_deployment() -> None:
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "broker_run_artifacts")
+    artifact_store.save_artifact(_echo_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.personal",
+            artifact_id="echo",
+            artifact_version=1,
+            bindings={"demo": "demo.personal"},
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "broker_run_mcp_store"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    server = create_broker_server(service)
+
+    _content, structured = asyncio.run(
+        server.call_tool(
+            "run_workflow_deployment",
+            {
+                "deployment_id": "echo.personal",
+                "workflow_input": {"text": "hello"},
+            },
+        )
+    )
+    payload = cast(dict[str, Any], cast(object, structured))
+
+    assert payload["deployment_id"] == "echo.personal"
+    assert payload["artifact_id"] == "echo"
+    assert payload["status"] == "completed"
+    assert payload["output"]["echoed"] == "hello"
+    assert payload["diagnostics"] == []
+    assert payload["trace_count"] > 0
+
+
+def test_broker_run_deployment_returns_unrunnable_for_dependency_errors() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "broker_run_unrunnable_artifacts"
+    )
+    artifact_store.save_artifact(_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="summarize_docs.personal",
+            artifact_id="summarize_docs",
+            artifact_version=1,
+            bindings={"context7": "context7.personal"},
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "broker_run_unrunnable_mcp_store"),
+        artifact_store=artifact_store,
+    )
+    server = create_broker_server(service)
+
+    _content, structured = asyncio.run(
+        server.call_tool(
+            "run_workflow_deployment",
+            {
+                "deployment_id": "summarize_docs.personal",
+                "workflow_input": {},
+            },
+        )
+    )
+    payload = cast(dict[str, Any], cast(object, structured))
+
+    assert payload["status"] == "unrunnable"
+    assert payload["output"] is None
+    assert payload["diagnostics"][0]["code"] == "source_missing"
+
+
+def test_broker_run_deployment_rejects_interrupting_artifacts() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "broker_run_interrupt_artifacts"
+    )
+    artifact_store.save_artifact(_interrupt_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="approval.personal",
+            artifact_id="approval",
+            artifact_version=1,
+            bindings={},
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "broker_run_interrupt_mcp_store"),
+        artifact_store=artifact_store,
+    )
+    server = create_broker_server(service)
+
+    _content, structured = asyncio.run(
+        server.call_tool(
+            "run_workflow_deployment",
+            {
+                "deployment_id": "approval.personal",
+                "workflow_input": {"message": "send?"},
+            },
+        )
+    )
+    payload = cast(dict[str, Any], cast(object, structured))
+
+    assert payload["status"] == "unsupported"
+    assert payload["output"] is None
+    assert payload["diagnostics"][0]["code"] == "interrupting_artifact_unsupported"
+
+
 def test_build_service_from_config_uses_store_root_for_artifacts() -> None:
     store_root = local_temp_root() / "broker_config_artifact_store"
     service = build_service_from_config(
@@ -347,5 +458,94 @@ def _artifact() -> WorkflowArtifact:
                 input_schema_hash="sha256:input",
                 output_schema_hash="sha256:output",
             )
+        },
+    )
+
+
+def _echo_artifact() -> WorkflowArtifact:
+    return WorkflowArtifact(
+        id="echo",
+        version=1,
+        title="Echo",
+        description="Echo text through a demo capability.",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        output_schema={
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+            "required": ["echoed"],
+        },
+        outcomes=("completed",),
+        plan={
+            "name": "echo",
+            "input_schema": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            },
+            "state_schema": {"fields": {"echoed": {"type": "string"}}},
+            "output_schema": {
+                "type": "object",
+                "properties": {"echoed": {"type": "string"}},
+                "required": ["echoed"],
+            },
+            "start": "echo",
+            "nodes": [
+                {
+                    "id": "echo",
+                    "type": "node",
+                    "node": "demo.personal.echo_tool",
+                    "in_map": {"input.text": "text"},
+                    "out_map": {"echoed": "state.echoed"},
+                }
+            ],
+            "edges": [{"from": "echo", "outcome": "ok", "to": "__end__"}],
+        },
+        required_capabilities={
+            "demo.echo_tool": RequiredCapability(
+                logical_source="demo",
+                capability_name="echo_tool",
+                kind="node_spec",
+            )
+        },
+    )
+
+
+def _interrupt_artifact() -> WorkflowArtifact:
+    return WorkflowArtifact(
+        id="approval",
+        version=1,
+        title="Approval",
+        input_schema={
+            "type": "object",
+            "properties": {"message": {"type": "string"}},
+            "required": ["message"],
+        },
+        output_schema={"type": "object", "properties": {}},
+        outcomes=("submitted",),
+        plan={
+            "name": "approval",
+            "input_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+            },
+            "state_schema": {"fields": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "approval",
+            "nodes": [
+                {
+                    "id": "approval",
+                    "type": "interrupt",
+                    "kind": "approval",
+                    "request_map": {"input.message": "message"},
+                    "out_map": {},
+                    "outcomes": ["submitted"],
+                }
+            ],
+            "edges": [{"from": "approval", "outcome": "submitted", "to": "__end__"}],
         },
     )
