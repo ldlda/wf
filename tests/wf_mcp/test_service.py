@@ -462,12 +462,8 @@ def test_service_excludes_disabled_connection_specs_from_planner_catalog() -> No
     service.capability_sources["demo.personal"].enabled = False
 
     planner_payload = service.get_planner_catalog().as_payload()
-    planner_names = [
-        node["qualified_name"] for node in planner_payload["nodes"]
-    ]
-    available_names = [
-        entry.qualified_name for entry in service.list_available_specs()
-    ]
+    planner_names = [node["qualified_name"] for node in planner_payload["nodes"]]
+    available_names = [entry.qualified_name for entry in service.list_available_specs()]
 
     assert "demo.personal.echo_tool" not in planner_names
     assert "demo.personal.echo_tool" not in available_names
@@ -501,7 +497,9 @@ def test_service_preserves_disabled_connection_source_on_reregistration() -> Non
     assert "demo.personal.echo_tool" not in source.capabilities.node_specs
 
 
-def test_service_excludes_planner_hidden_connection_specs_from_planner_catalog() -> None:
+def test_service_excludes_planner_hidden_connection_specs_from_planner_catalog() -> (
+    None
+):
     service = WfMcpService(
         store=FileStore(local_temp_root() / "hidden_connection_spec_store")
     )
@@ -516,12 +514,8 @@ def test_service_excludes_planner_hidden_connection_specs_from_planner_catalog()
     )
 
     planner_payload = service.get_planner_catalog().as_payload()
-    planner_names = [
-        node["qualified_name"] for node in planner_payload["nodes"]
-    ]
-    available_names = [
-        entry.qualified_name for entry in service.list_available_specs()
-    ]
+    planner_names = [node["qualified_name"] for node in planner_payload["nodes"]]
+    available_names = [entry.qualified_name for entry in service.list_available_specs()]
 
     assert "demo.personal.echo_tool" not in planner_names
     assert "demo.personal.echo_tool" not in available_names

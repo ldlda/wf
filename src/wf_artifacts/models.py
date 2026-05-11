@@ -37,6 +37,23 @@ class RequiredCapability(BaseModel):
     observed_at_epoch_ms: int | None = Field(default=None, ge=0)
 
 
+class AvailableCapability(BaseModel):
+    """Current contract for one capability exposed by a bound source."""
+
+    name: str
+    kind: Literal["tool", "resource", "prompt", "node_spec", "workflow"]
+    input_schema_hash: str | None = None
+    output_schema_hash: str | None = None
+
+
+class AvailableSource(BaseModel):
+    """Provider-neutral source snapshot used by artifact dependency validation."""
+
+    id: str
+    enabled: bool = True
+    capabilities: dict[str, AvailableCapability] = Field(default_factory=dict)
+
+
 class DependencyDiagnostic(BaseModel):
     """Machine-readable reason a deployment is degraded or unrunnable."""
 

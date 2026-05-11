@@ -1,4 +1,6 @@
 from .models import (
+    AvailableCapability,
+    AvailableSource,
     DependencyDiagnostic,
     DiagnosticSeverity,
     DriftPolicy,
@@ -7,8 +9,11 @@ from .models import (
     WorkflowDeployment,
 )
 from .store import FileWorkflowArtifactStore, WorkflowArtifactStore
+from .validation import validate_deployment_dependencies
 
 __all__ = [
+    "AvailableCapability",
+    "AvailableSource",
     "DependencyDiagnostic",
     "DiagnosticSeverity",
     "DriftPolicy",
@@ -17,4 +22,5 @@ __all__ = [
     "WorkflowArtifact",
     "WorkflowArtifactStore",
     "WorkflowDeployment",
+    "validate_deployment_dependencies",
 ]

@@ -149,7 +149,7 @@ class WfMcpService:
                         f"Specs discovered or registered for {connection_id}."
                     ),
                 )
-        )
+            )
         snapshot = snapshot_from_specs(
             connection_id,
             specs=qualified_specs,
@@ -185,8 +185,7 @@ class WfMcpService:
                 source.id,
                 specs=source.capabilities.node_specs,
                 tool_display_names={
-                    entry.local_name: entry.title
-                    for entry in stored_snapshot.nodes
+                    entry.local_name: entry.title for entry in stored_snapshot.nodes
                 }
                 if stored_snapshot is not None
                 else None,

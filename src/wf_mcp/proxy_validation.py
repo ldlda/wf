@@ -8,6 +8,8 @@ from .shared.names import RESERVED_CONNECTION_IDS
 
 _NAMESPACE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 _SUPPORTED_TRANSPORTS = {"stdio", "http", "streamable-http", "streamable_http", "sse"}
+
+
 class ProxyConfigError(ValueError):
     """Raised when a broker config cannot safely run as a transparent proxy."""
 

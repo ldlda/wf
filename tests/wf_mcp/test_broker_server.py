@@ -79,9 +79,7 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
         server.call_tool("get_planner_catalog", {})
     )
     planner_catalog = cast(dict[str, Any], cast(object, planner_catalog_raw))
-    planner_names = [
-        node["qualified_name"] for node in planner_catalog["nodes"]
-    ]
+    planner_names = [node["qualified_name"] for node in planner_catalog["nodes"]]
     assert "demo.personal.echo_tool" in planner_names
     assert "wf.mcp.call_tool" in planner_names
     assert "wf.std.runtime_error" in planner_names
@@ -106,9 +104,10 @@ def test_broker_admin_tools_are_backed_by_wf_admin_source() -> None:
 
     assert "list_spec_sources" in tool_names
     assert "get_planner_catalog" in tool_names
-    assert "wf.admin.list_sources" in service.capability_sources[
-        "wf.admin"
-    ].capabilities.tools
+    assert (
+        "wf.admin.list_sources"
+        in service.capability_sources["wf.admin"].capabilities.tools
+    )
 
 
 def test_build_service_from_config_registers_connections() -> None:
