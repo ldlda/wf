@@ -27,6 +27,9 @@ class WorkflowArtifactStore:
     def get_deployment(self, deployment_id: str) -> WorkflowDeployment:
         raise NotImplementedError
 
+    def list_deployments(self) -> list[WorkflowDeployment]:
+        raise NotImplementedError
+
 
 class FileWorkflowArtifactStore(WorkflowArtifactStore):
     """JSON file-backed artifact store for local development and tests."""
@@ -89,3 +92,11 @@ class FileWorkflowArtifactStore(WorkflowArtifactStore):
         if not path.exists():
             raise KeyError(f"unknown workflow deployment {deployment_id!r}")
         return WorkflowDeployment.model_validate_json(path.read_text(encoding="utf-8"))
+
+    def list_deployments(self) -> list[WorkflowDeployment]:
+        deployments: list[WorkflowDeployment] = []
+        for path in sorted(self.deployments_dir.glob("*.json")):
+            deployments.append(
+                WorkflowDeployment.model_validate_json(path.read_text(encoding="utf-8"))
+            )
+        return deployments

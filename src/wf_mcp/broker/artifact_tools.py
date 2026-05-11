@@ -6,6 +6,8 @@ from mcp.server.fastmcp import FastMCP
 from wf_artifacts import (
     AvailableCapability,
     AvailableSource,
+    WorkflowArtifact,
+    WorkflowDeployment,
     validate_deployment_dependencies,
 )
 
@@ -26,6 +28,18 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
         return {"nodes": entries}
 
     @server.tool()
+    async def save_workflow_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
+        if service.artifact_store is None:
+            raise KeyError("workflow artifact store is not configured")
+        workflow_artifact = WorkflowArtifact.model_validate(artifact)
+        service.artifact_store.save_artifact(workflow_artifact)
+        return {
+            "artifact_id": workflow_artifact.id,
+            "version": workflow_artifact.version,
+            "saved": True,
+        }
+
+    @server.tool()
     async def inspect_workflow_artifact(
         artifact_id: str,
         version: int,
@@ -34,6 +48,30 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
             raise KeyError("workflow artifact store is not configured")
         artifact = service.artifact_store.get_artifact(artifact_id, version)
         return artifact.model_dump(mode="json")
+
+    @server.tool()
+    async def list_workflow_deployments() -> dict[str, Any]:
+        if service.artifact_store is None:
+            return {"deployments": []}
+        return {
+            "deployments": [
+                deployment.model_dump(mode="json")
+                for deployment in service.artifact_store.list_deployments()
+            ]
+        }
+
+    @server.tool()
+    async def save_workflow_deployment(deployment: dict[str, Any]) -> dict[str, Any]:
+        if service.artifact_store is None:
+            raise KeyError("workflow artifact store is not configured")
+        workflow_deployment = WorkflowDeployment.model_validate(deployment)
+        service.artifact_store.save_deployment(workflow_deployment)
+        return {
+            "deployment_id": workflow_deployment.id,
+            "artifact_id": workflow_deployment.artifact_id,
+            "artifact_version": workflow_deployment.artifact_version,
+            "saved": True,
+        }
 
     @server.tool()
     async def validate_workflow_deployment(deployment_id: str) -> dict[str, Any]:

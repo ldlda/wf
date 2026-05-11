@@ -258,6 +258,64 @@ def test_broker_validates_workflow_deployment_from_artifact_store() -> None:
     assert payload["diagnostics"][0]["code"] == "source_missing"
 
 
+def test_broker_saves_workflow_artifact() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "broker_save_artifacts"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "broker_save_mcp_store"),
+        artifact_store=artifact_store,
+    )
+    server = create_broker_server(service)
+
+    _content, structured = asyncio.run(
+        server.call_tool(
+            "save_workflow_artifact",
+            {"artifact": _artifact().model_dump(mode="json")},
+        )
+    )
+    payload = cast(dict[str, Any], cast(object, structured))
+    loaded = artifact_store.get_artifact("summarize_docs", 1)
+
+    assert payload["artifact_id"] == "summarize_docs"
+    assert payload["version"] == 1
+    assert loaded.title == "Summarize Docs"
+
+
+def test_broker_saves_and_lists_workflow_deployments() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "broker_save_deployments"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "broker_save_deployments_mcp_store"),
+        artifact_store=artifact_store,
+    )
+    server = create_broker_server(service)
+
+    _content, save_structured = asyncio.run(
+        server.call_tool(
+            "save_workflow_deployment",
+            {
+                "deployment": WorkflowDeployment(
+                    id="summarize_docs.personal",
+                    artifact_id="summarize_docs",
+                    artifact_version=1,
+                    bindings={"context7": "context7.personal"},
+                ).model_dump(mode="json")
+            },
+        )
+    )
+    save_payload = cast(dict[str, Any], cast(object, save_structured))
+    _content, list_structured = asyncio.run(
+        server.call_tool("list_workflow_deployments", {})
+    )
+    list_payload = cast(dict[str, Any], cast(object, list_structured))
+
+    assert save_payload["deployment_id"] == "summarize_docs.personal"
+    assert list_payload["deployments"][0]["id"] == "summarize_docs.personal"
+    assert list_payload["deployments"][0]["bindings"]["context7"] == "context7.personal"
+
+
 def test_build_service_from_config_uses_store_root_for_artifacts() -> None:
     store_root = local_temp_root() / "broker_config_artifact_store"
     service = build_service_from_config(
