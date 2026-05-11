@@ -6,6 +6,7 @@ from pathlib import Path
 from mcp.server.fastmcp import FastMCP
 
 from ..transparent_proxy import create_transparent_proxy_server
+from .artifact_tools import register_artifact_tools
 from .config import build_service_from_config, load_broker_config
 from .prompts import register_broker_prompts
 from .resources import register_broker_resources
@@ -25,6 +26,7 @@ def create_broker_server(service: WfMcpService) -> FastMCP:
     )
 
     register_broker_tools(server, service)
+    register_artifact_tools(server, service)
     register_broker_resources(server, service)
     register_broker_prompts(server, service)
     return server

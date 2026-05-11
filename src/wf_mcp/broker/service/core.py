@@ -2,11 +2,19 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
 
 from wf_authoring import NodeReturn, NodeSpec, build_async_registry
+from wf_artifacts import (
+    FileWorkflowArtifactStore,
+    WorkflowArtifact,
+    WorkflowArtifactCatalogEntry,
+    WorkflowArtifactStore,
+    artifact_catalog_entry,
+)
 from wf_core import NodeUse, Workflow, execute_workflow_async
 
 from ...connections import ConnectionRegistry, parse_connection_id, qualify_node_name
@@ -40,6 +48,12 @@ from .sources import SpecSource
 from .specs import get_qualified_spec, qualify_spec
 
 
+def _store_root(store: Store) -> Path:
+    """Return the file root for stores that expose one, else use local default."""
+    root = getattr(store, "root", None)
+    return root if isinstance(root, Path) else Path(".wf_mcp_store")
+
+
 @dataclass(slots=True)
 class WfMcpService:
     store: Store
@@ -49,9 +63,12 @@ class WfMcpService:
     capability_sources: dict[str, CapabilitySource] = field(default_factory=dict)
     events: list[McpEvent] = field(default_factory=list)
     include_builtin_specs: bool = True
+    artifact_store: WorkflowArtifactStore | None = None
 
     def __post_init__(self) -> None:
         """Install broker-local system specs when enabled."""
+        if self.artifact_store is None:
+            self.artifact_store = FileWorkflowArtifactStore(_store_root(self.store))
         if self.include_builtin_specs:
             for source in builtin_sources(self).values():
                 self.register_spec_source(source)
@@ -229,6 +246,13 @@ class WfMcpService:
     def list_available_specs(self) -> list[CatalogNodeEntry]:
         """Return planner-visible node catalog entries from every visible source."""
         return self.get_planner_catalog().entries()
+
+    def workflow_artifact_catalog_entry(
+        self,
+        artifact: WorkflowArtifact,
+    ) -> WorkflowArtifactCatalogEntry:
+        """Project a saved workflow artifact as a planner catalog entry."""
+        return artifact_catalog_entry(artifact)
 
     def get_connection_snapshot(self, connection_id: str) -> CatalogSnapshot | None:
         self.connections.get(connection_id)

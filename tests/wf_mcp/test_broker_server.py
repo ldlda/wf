@@ -4,6 +4,12 @@ import asyncio
 import json
 from typing import Any, cast
 
+from wf_artifacts import (
+    FileWorkflowArtifactStore,
+    RequiredCapability,
+    WorkflowArtifact,
+    WorkflowDeployment,
+)
 from wf_mcp.broker import (
     WfMcpService,
     build_service_from_config,
@@ -174,3 +180,114 @@ def test_broker_call_tool_returns_structured_result() -> None:
         "output": {"echoed": "hello"},
         "meta": {},
     }
+
+
+def test_broker_lists_workflow_artifacts_from_artifact_store() -> None:
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "broker_artifacts")
+    artifact_store.save_artifact(_artifact())
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "broker_artifacts_mcp_store"),
+        artifact_store=artifact_store,
+    )
+    server = create_broker_server(service)
+
+    _content, structured = asyncio.run(server.call_tool("list_workflow_artifacts", {}))
+    payload = cast(dict[str, Any], cast(object, structured))
+
+    nodes = payload["nodes"]
+    assert len(nodes) == 1
+    assert nodes[0]["name"] == "workflow.summarize_docs.v1"
+    assert nodes[0]["required_sources"] == ["context7"]
+    assert "plan" not in nodes[0]
+
+
+def test_broker_inspects_workflow_artifact_from_artifact_store() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "broker_inspect_artifacts"
+    )
+    artifact_store.save_artifact(_artifact())
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "broker_inspect_mcp_store"),
+        artifact_store=artifact_store,
+    )
+    server = create_broker_server(service)
+
+    _content, structured = asyncio.run(
+        server.call_tool(
+            "inspect_workflow_artifact",
+            {"artifact_id": "summarize_docs", "version": 1},
+        )
+    )
+    artifact = cast(dict[str, Any], cast(object, structured))
+
+    assert artifact["id"] == "summarize_docs"
+    assert artifact["version"] == 1
+    assert artifact["plan"]["name"] == "summarize_docs"
+
+
+def test_broker_validates_workflow_deployment_from_artifact_store() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "broker_validate_artifacts"
+    )
+    artifact_store.save_artifact(_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="summarize_docs.personal",
+            artifact_id="summarize_docs",
+            artifact_version=1,
+            bindings={"context7": "context7.personal"},
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "broker_validate_mcp_store"),
+        artifact_store=artifact_store,
+    )
+    server = create_broker_server(service)
+
+    _content, structured = asyncio.run(
+        server.call_tool(
+            "validate_workflow_deployment",
+            {"deployment_id": "summarize_docs.personal"},
+        )
+    )
+    payload = cast(dict[str, Any], cast(object, structured))
+
+    assert payload["deployment_id"] == "summarize_docs.personal"
+    assert payload["artifact_id"] == "summarize_docs"
+    assert payload["status"] == "unrunnable"
+    assert payload["diagnostics"][0]["code"] == "source_missing"
+
+
+def test_build_service_from_config_uses_store_root_for_artifacts() -> None:
+    store_root = local_temp_root() / "broker_config_artifact_store"
+    service = build_service_from_config(
+        BrokerConfig(
+            store_root=store_root,
+            connections=[],
+        )
+    )
+
+    assert isinstance(service.artifact_store, FileWorkflowArtifactStore)
+    assert service.artifact_store.root == store_root
+
+
+def _artifact() -> WorkflowArtifact:
+    return WorkflowArtifact(
+        id="summarize_docs",
+        version=1,
+        title="Summarize Docs",
+        description="Summarize retrieved documentation.",
+        input_schema={"type": "object", "properties": {}},
+        output_schema={"type": "object", "properties": {}},
+        outcomes=("done",),
+        plan={"name": "summarize_docs", "nodes": [], "edges": []},
+        required_capabilities={
+            "context7.query-docs": RequiredCapability(
+                logical_source="context7",
+                capability_name="query-docs",
+                kind="tool",
+                input_schema_hash="sha256:input",
+                output_schema_hash="sha256:output",
+            )
+        },
+    )
