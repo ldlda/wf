@@ -76,6 +76,16 @@ limits and intended adapter seam.
 - Interrupt lifecycle is still node-level and run-state-level. Long-lived
   external subscriptions or notification streams need a separate lifecycle
   design.
+- Native subgraphs are not part of `wf_core` yet. The core `Step` model only
+  includes node, condition, foreach, join, and interrupt steps; `Workflow` does
+  not contain nested workflow/subgraph steps.
+- Nested subgraph interruption is not first-class yet. The current
+  `wf_authoring` subgraph helper wraps a child workflow as an ordinary node and
+  validates the child output; it does not preserve a child run state that can
+  interrupt, bubble to the parent, and later resume inside the child.
+- Saved workflow-as-node execution with interrupts requires a core runtime
+  upgrade: nested run state, child-frame trace preservation, interrupt bubbling
+  with path metadata, and resume back into the child workflow.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer
   error payload can be added later, but should be designed as part of trace/run
   state rather than scattered exceptions.
