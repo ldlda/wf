@@ -15,6 +15,7 @@ from wf_artifacts import (
     validate_deployment_dependencies,
 )
 
+from ..events import make_event
 from ..models import RawWorkflowPlan
 
 if TYPE_CHECKING:
@@ -43,6 +44,16 @@ class WorkflowSurfaceHandlers:
             raise KeyError("workflow artifact store is not configured")
         workflow_artifact = WorkflowArtifact.model_validate(artifact)
         self.service.artifact_store.save_artifact(workflow_artifact)
+        self.service._record_event(
+            make_event(
+                "workflow_artifact_saved",
+                capability_id=_artifact_capability_id(workflow_artifact),
+                payload={
+                    "artifact_id": workflow_artifact.id,
+                    "version": workflow_artifact.version,
+                },
+            )
+        )
         return {
             "artifact_id": workflow_artifact.id,
             "version": workflow_artifact.version,
@@ -77,6 +88,17 @@ class WorkflowSurfaceHandlers:
             created_from_catalog_version=created_from_catalog_version,
         )
         self.service.artifact_store.save_artifact(workflow_artifact)
+        self.service._record_event(
+            make_event(
+                "workflow_artifact_saved",
+                capability_id=_artifact_capability_id(workflow_artifact),
+                payload={
+                    "artifact_id": workflow_artifact.id,
+                    "version": workflow_artifact.version,
+                    "created_from_plan": True,
+                },
+            )
+        )
         return {
             "artifact_id": workflow_artifact.id,
             "version": workflow_artifact.version,
@@ -106,6 +128,17 @@ class WorkflowSurfaceHandlers:
             raise KeyError("workflow artifact store is not configured")
         workflow_deployment = WorkflowDeployment.model_validate(deployment)
         self.service.artifact_store.save_deployment(workflow_deployment)
+        self.service._record_event(
+            make_event(
+                "workflow_deployment_saved",
+                capability_id=f"deployment.{workflow_deployment.id}",
+                payload={
+                    "deployment_id": workflow_deployment.id,
+                    "artifact_id": workflow_deployment.artifact_id,
+                    "artifact_version": workflow_deployment.artifact_version,
+                },
+            )
+        )
         return {
             "deployment_id": workflow_deployment.id,
             "artifact_id": workflow_deployment.artifact_id,
@@ -199,6 +232,11 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
             )
         )
     return sources
+
+
+def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
+    """Use the same stable name shape as workflow artifact catalog entries."""
+    return f"workflow.{artifact.id}.v{artifact.version}"
 
 
 def _raw_plan_from_artifact(artifact: WorkflowArtifact) -> RawWorkflowPlan:

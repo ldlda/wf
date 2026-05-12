@@ -52,6 +52,35 @@ def test_workflow_surface_validates_deployment_dependencies() -> None:
     assert payload["diagnostics"][0]["code"] == "source_missing"
 
 
+def test_workflow_surface_records_artifact_and_deployment_save_events() -> None:
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_events")
+    handlers = _handlers(artifact_store)
+
+    artifact_payload = asyncio.run(
+        handlers.save_artifact(_echo_artifact().model_dump(mode="json"))
+    )
+    deployment_payload = asyncio.run(
+        handlers.save_deployment(
+            WorkflowDeployment(
+                id="echo.personal",
+                artifact_id="echo",
+                artifact_version=1,
+                bindings={"demo": "demo.personal"},
+            ).model_dump(mode="json")
+        )
+    )
+
+    events = handlers.service.list_events()
+    assert artifact_payload["saved"] is True
+    assert deployment_payload["saved"] is True
+    assert [event.kind for event in events] == [
+        "workflow_artifact_saved",
+        "workflow_deployment_saved",
+    ]
+    assert events[0].capability_id == "workflow.echo.v1"
+    assert events[1].capability_id == "deployment.echo.personal"
+
+
 def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_run")
     artifact_store.save_artifact(_echo_artifact())

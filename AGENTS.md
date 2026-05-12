@@ -9,11 +9,16 @@ yes: assert dict['field'] == dict['field'] unless we know better
 
 more later
 
-# when you move through code, add docstrings / comment weird logic
+# when you move through code, add docstrings / comment weird/complicated logic
 
 # use available MCP tools/skills
 
-- serena mcp: symbol discovery
+- serena mcp: symbol discovery. Has some of LSP stuff
 - context7: docs
 
-- skills: outside of workspace, request commands
+- skills: outside of workspace, request commands. Use when appropiate
+
+# docs/ pair with `superpowers` and other skills
+
+superpowers, a Codex-cli plugin, is a set of skills. check paths given by Codex
+if not found, might be stale hash

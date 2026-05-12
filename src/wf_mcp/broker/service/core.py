@@ -18,6 +18,7 @@ from wf_artifacts import (
 from wf_core import NodeUse, Workflow, execute_workflow_async
 
 from ...connections import ConnectionRegistry, parse_connection_id, qualify_node_name
+from ...events import EventBus, McpEvent, make_event
 from ...models import (
     AuthRecord,
     CatalogNodeEntry,
@@ -34,7 +35,6 @@ from ...storage import Store
 from ...workflow.wrappers import _model_from_schema
 from ..catalog import CombinedCatalog, snapshot_from_specs
 from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
-from ..events import McpEvent, make_event
 from ..admin_capabilities import admin_source
 from .adapters import require_adapter
 from .builtins import builtin_sources
@@ -61,7 +61,7 @@ class WfMcpService:
     connections: ConnectionRegistry = field(default_factory=ConnectionRegistry)
     adapters: dict[str, BackendAdapter] = field(default_factory=dict)
     capability_sources: dict[str, CapabilitySource] = field(default_factory=dict)
-    events: list[McpEvent] = field(default_factory=list)
+    event_bus: EventBus = field(default_factory=EventBus)
     include_builtin_specs: bool = True
     artifact_store: WorkflowArtifactStore | None = None
 
@@ -590,7 +590,7 @@ class WfMcpService:
         return run
 
     def list_events(self) -> list[McpEvent]:
-        return list(self.events)
+        return self.event_bus.list_events()
 
     def register_capability_source(self, source: CapabilitySource) -> None:
         """Register a capability source as canonical service state."""
@@ -669,4 +669,4 @@ class WfMcpService:
         return get_qualified_spec(self.capability_sources, qualified_name)
 
     def _record_event(self, event: McpEvent) -> None:
-        self.events.append(event)
+        self.event_bus.publish(event)

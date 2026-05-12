@@ -314,13 +314,13 @@ config_reloaded
 - Modify: unified server files from Phase 3.
 - Test: `tests/wf_mcp/test_events.py`
 
-- [ ] Introduce an in-process event bus abstraction.
-- [ ] Keep the existing stored `McpEvent` list as one subscriber/sink.
+- [x] Introduce an in-process event bus abstraction.
+- [x] Keep the existing stored `McpEvent` list as one subscriber/sink.
 - [ ] Add event kinds for workflow artifacts and deployments:
-  - `workflow_artifact_saved`
-  - `workflow_deployment_saved`
-  - `workflow_run_started`
-  - `workflow_run_completed`
+  - [x] `workflow_artifact_saved`
+  - [x] `workflow_deployment_saved`
+  - [x] `workflow_run_started`
+  - [x] `workflow_run_completed`
   - `workflow_run_failed`
 - [ ] Add event kinds for capability changes:
   - `source_enabled`
