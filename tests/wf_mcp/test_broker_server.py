@@ -283,6 +283,48 @@ def test_broker_saves_workflow_artifact() -> None:
     assert loaded.title == "Summarize Docs"
 
 
+def test_broker_creates_workflow_artifact_from_plan() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "broker_create_artifact_from_plan"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "broker_create_artifact_mcp_store"),
+        artifact_store=artifact_store,
+    )
+    server = create_broker_server(service)
+
+    _content, structured = asyncio.run(
+        server.call_tool(
+            "create_workflow_artifact_from_plan",
+            {
+                "artifact_id": "echo",
+                "version": 1,
+                "title": "Echo",
+                "description": "Echo through a saved plan.",
+                "plan": _echo_artifact().plan,
+                "outcomes": ["done"],
+                "required_capabilities": {
+                    "demo.echo_tool": {
+                        "logical_source": "demo",
+                        "capability_name": "echo_tool",
+                        "kind": "node_spec",
+                    }
+                },
+                "created_from_catalog_version": "catalog-1",
+            },
+        )
+    )
+    payload = cast(dict[str, Any], cast(object, structured))
+    loaded = artifact_store.get_artifact("echo", 1)
+
+    assert payload["artifact_id"] == "echo"
+    assert payload["version"] == 1
+    assert payload["saved"] is True
+    assert loaded.input_schema["properties"]["text"]["type"] == "string"
+    assert loaded.output_schema["properties"]["echoed"]["type"] == "string"
+    assert loaded.required_capabilities["demo.echo_tool"].logical_source == "demo"
+
+
 def test_broker_saves_and_lists_workflow_deployments() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "broker_save_deployments"

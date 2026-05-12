@@ -8,8 +8,10 @@ from wf_artifacts import (
     AvailableSource,
     DependencyDiagnostic,
     DiagnosticSeverity,
+    RequiredCapability,
     WorkflowArtifact,
     WorkflowDeployment,
+    create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
     validate_deployment_dependencies,
 )
 
@@ -35,6 +37,39 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
         if service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
         workflow_artifact = WorkflowArtifact.model_validate(artifact)
+        service.artifact_store.save_artifact(workflow_artifact)
+        return {
+            "artifact_id": workflow_artifact.id,
+            "version": workflow_artifact.version,
+            "saved": True,
+        }
+
+    @server.tool()
+    async def create_workflow_artifact_from_plan(
+        artifact_id: str,
+        version: int,
+        title: str,
+        plan: dict[str, Any],
+        outcomes: list[str],
+        description: str | None = None,
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        created_from_catalog_version: str | None = None,
+    ) -> dict[str, Any]:
+        if service.artifact_store is None:
+            raise KeyError("workflow artifact store is not configured")
+        workflow_artifact = build_workflow_artifact_from_plan(
+            artifact_id=artifact_id,
+            version=version,
+            title=title,
+            description=description,
+            plan=plan,
+            outcomes=tuple(outcomes),
+            required_capabilities={
+                name: RequiredCapability.model_validate(capability)
+                for name, capability in (required_capabilities or {}).items()
+            },
+            created_from_catalog_version=created_from_catalog_version,
+        )
         service.artifact_store.save_artifact(workflow_artifact)
         return {
             "artifact_id": workflow_artifact.id,

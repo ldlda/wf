@@ -3,6 +3,7 @@ from .catalog import (
     artifact_catalog_entry,
     artifact_node_name,
 )
+from .factory import create_workflow_artifact_from_plan
 from .models import (
     AvailableCapability,
     AvailableSource,
@@ -30,5 +31,6 @@ __all__ = [
     "WorkflowDeployment",
     "artifact_catalog_entry",
     "artifact_node_name",
+    "create_workflow_artifact_from_plan",
     "validate_deployment_dependencies",
 ]
