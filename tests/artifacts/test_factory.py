@@ -50,6 +50,43 @@ def test_create_workflow_artifact_from_plan_rejects_missing_boundary_schema() ->
         raise AssertionError("expected missing output_schema to be rejected")
 
 
+def test_create_workflow_artifact_from_plan_rejects_invalid_workflow_shape() -> None:
+    plan = _plan()
+    plan["state_schema"] = {"fields": {"echoed": {"schema": {"type": "string"}}}}
+
+    try:
+        create_workflow_artifact_from_plan(
+            artifact_id="echo",
+            version=1,
+            title="Echo",
+            plan=plan,
+            outcomes=("done",),
+        )
+    except ValueError as exc:
+        assert "state_schema" in str(exc)
+        assert "type" in str(exc)
+    else:
+        raise AssertionError("expected invalid state schema to be rejected")
+
+
+def test_create_workflow_artifact_from_plan_rejects_missing_start_node() -> None:
+    plan = _plan()
+    plan["start"] = "missing"
+
+    try:
+        create_workflow_artifact_from_plan(
+            artifact_id="echo",
+            version=1,
+            title="Echo",
+            plan=plan,
+            outcomes=("done",),
+        )
+    except ValueError as exc:
+        assert "start node 'missing' does not exist" in str(exc)
+    else:
+        raise AssertionError("expected missing start node to be rejected")
+
+
 def _plan() -> dict[str, object]:
     return {
         "name": "echo",
@@ -65,6 +102,14 @@ def _plan() -> dict[str, object]:
             "required": ["echoed"],
         },
         "start": "echo",
-        "nodes": [],
-        "edges": [],
+        "nodes": [
+            {
+                "id": "echo",
+                "type": "node",
+                "node": "demo.echo_tool",
+                "in_map": {"input.text": "text"},
+                "out_map": {"echoed": "state.echoed"},
+            }
+        ],
+        "edges": [{"from": "echo", "outcome": "ok", "to": "__end__"}],
     }

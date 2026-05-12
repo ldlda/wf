@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from wf_core import Workflow
+
 from .models import JsonObject, RequiredCapability, WorkflowArtifact
 
 
@@ -17,6 +19,7 @@ def create_workflow_artifact_from_plan(
     created_from_catalog_version: str | None = None,
 ) -> WorkflowArtifact:
     """Create an immutable artifact from a declarative workflow plan."""
+    _validate_workflow_plan(plan)
     return WorkflowArtifact(
         id=artifact_id,
         version=version,
@@ -36,3 +39,30 @@ def _required_object_field(plan: JsonObject, field_name: str) -> JsonObject:
     if not isinstance(value, dict):
         raise ValueError(f"workflow plan is missing object field {field_name!r}")
     return value
+
+
+def _validate_workflow_plan(plan: JsonObject) -> None:
+    try:
+        workflow = Workflow.model_validate(plan)
+    except Exception as exc:
+        raise ValueError(f"invalid workflow plan: {exc}") from exc
+
+    node_ids = {node.id for node in workflow.nodes}
+    if workflow.start not in node_ids:
+        raise ValueError(
+            f"invalid workflow plan: start node {workflow.start!r} does not exist"
+        )
+
+    # wf_core currently uses Workflow.start as the only entry-point source.
+    # START is exported for future LangGraph-style edges, but core validation
+    # does not accept START edges yet.
+    edge_sources = set(node_ids)
+    for edge in workflow.edges:
+        if edge.from_ not in edge_sources:
+            raise ValueError(
+                f"invalid workflow plan: edge source {edge.from_!r} does not exist"
+            )
+        if edge.to not in node_ids and edge.to != "__end__":
+            raise ValueError(
+                f"invalid workflow plan: edge destination {edge.to!r} does not exist"
+            )

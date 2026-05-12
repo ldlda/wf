@@ -360,7 +360,9 @@ def test_broker_saves_and_lists_workflow_deployments() -> None:
 
 
 def test_broker_runs_non_interrupting_workflow_deployment() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "broker_run_artifacts")
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "broker_run_artifacts"
+    )
     artifact_store.save_artifact(_echo_artifact())
     artifact_store.save_deployment(
         WorkflowDeployment(

@@ -14,17 +14,15 @@
       }
     },
     {
-      "id": "serena.default",
-      "server": "serena",
+      "id": "playwright.default",
+      "server": "playwright",
       "account": "default",
       "enabled": true,
       "metadata": {
         "transport": "stdio",
-        "command": "serena",
+        "command": "pnpx",
         "args": [
-          "start-mcp-server",
-          "--enable-web-dashboard=true",
-          "--project-from-cwd"
+            "@playwright/mcp@latest"
         ],
         "env": {}
       }
