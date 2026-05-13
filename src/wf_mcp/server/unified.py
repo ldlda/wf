@@ -87,15 +87,29 @@ def _register_workflow_tools(
 ) -> None:
     """Register stable workflow tools on the unified MCP surface."""
 
-    @server.tool(name="wf.workflow.list_artifacts")
+    @server.tool(
+        name="wf.workflow.list_artifacts",
+        title="List Workflow Artifacts",
+        description="List saved workflow artifacts available to run or inspect.",
+    )
     async def list_artifacts() -> dict[str, Any]:
         return await handlers.list_artifacts()
 
-    @server.tool(name="wf.workflow.save_artifact")
+    @server.tool(
+        name="wf.workflow.save_artifact",
+        title="Save Workflow Artifact",
+        description="Persist a complete workflow artifact JSON document.",
+    )
     async def save_artifact(artifact: dict[str, Any]) -> dict[str, Any]:
         return await handlers.save_artifact(artifact)
 
-    @server.tool(name="wf.workflow.create_artifact_from_plan")
+    @server.tool(
+        name="wf.workflow.create_artifact_from_plan",
+        title="Create Workflow Artifact From Plan",
+        description=(
+            "Validate a raw workflow plan and save it as a versioned artifact."
+        ),
+    )
     async def create_artifact_from_plan(
         artifact_id: str,
         version: int,
@@ -117,7 +131,11 @@ def _register_workflow_tools(
             created_from_catalog_version=created_from_catalog_version,
         )
 
-    @server.tool(name="wf.workflow.inspect_artifact")
+    @server.tool(
+        name="wf.workflow.inspect_artifact",
+        title="Inspect Workflow Artifact",
+        description="Return the full saved artifact for artifact_id and version.",
+    )
     async def inspect_artifact(
         artifact_id: str,
         version: int,
@@ -127,19 +145,40 @@ def _register_workflow_tools(
             version=version,
         )
 
-    @server.tool(name="wf.workflow.list_deployments")
+    @server.tool(
+        name="wf.workflow.list_deployments",
+        title="List Workflow Deployments",
+        description="List saved workflow deployments and their source bindings.",
+    )
     async def list_deployments() -> dict[str, Any]:
         return await handlers.list_deployments()
 
-    @server.tool(name="wf.workflow.save_deployment")
+    @server.tool(
+        name="wf.workflow.save_deployment",
+        title="Save Workflow Deployment",
+        description="Persist a workflow deployment that binds logical sources.",
+    )
     async def save_deployment(deployment: dict[str, Any]) -> dict[str, Any]:
         return await handlers.save_deployment(deployment)
 
-    @server.tool(name="wf.workflow.validate_deployment")
+    @server.tool(
+        name="wf.workflow.validate_deployment",
+        title="Validate Workflow Deployment",
+        description=(
+            "Check whether a deployment_id can run with currently enabled sources."
+        ),
+    )
     async def validate_deployment(deployment_id: str) -> dict[str, Any]:
         return await handlers.validate_deployment(deployment_id=deployment_id)
 
-    @server.tool(name="wf.workflow.run_deployment")
+    @server.tool(
+        name="wf.workflow.run_deployment",
+        title="Run Workflow Deployment",
+        description=(
+            "Run deployment_id with workflow_input and return status, output, "
+            "diagnostics, and trace_count."
+        ),
+    )
     async def run_deployment(
         deployment_id: str,
         workflow_input: dict[str, Any],

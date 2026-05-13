@@ -5,11 +5,13 @@
       "id": "context7.default",
       "server": "context7",
       "account": "default",
-      "enabled": true,
+      "enabled": false,
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
-        "args": ["@upstash/context7-mcp"],
+        "args": [
+          "@upstash/context7-mcp"
+        ],
         "env": {}
       }
     },
@@ -22,7 +24,7 @@
         "transport": "stdio",
         "command": "pnpx",
         "args": [
-            "@playwright/mcp@latest"
+          "@playwright/mcp@latest"
         ],
         "env": {}
       }
@@ -35,9 +37,26 @@
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
-        "args": ["@modelcontextprotocol/server-everything"],
+        "args": [
+          "@modelcontextprotocol/server-everything"
+        ],
         "env": {}
       }
+    },
+    {
+        "id": "serena.default",
+        "server": "serena",
+        "account": "default",
+        "enabled": false,
+        "metadata": {
+          "transport": "stdio",
+          "command": "serena",
+          "args": [
+            "start-mcp-server",
+            "--project-from-cwd"
+          ],
+          "env": {}
+        }
     }
   ]
 }
