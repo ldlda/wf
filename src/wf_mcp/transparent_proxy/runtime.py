@@ -47,6 +47,7 @@ class TransparentProxyRuntime:
         resources_as_tools: bool = False,
         prompts_as_tools: bool = False,
         search_tools: bool = False,
+        admin_tools: bool = True,
     ) -> None:
         self.config = config
         self.manager = None if config_path is None else BrokerConfigManager(config_path)
@@ -58,6 +59,7 @@ class TransparentProxyRuntime:
                 "broker capabilities with connection-qualified names."
             ),
         )
+        self.admin_tools = admin_tools
         self.reload()
         if resources_as_tools:
             self.server.add_transform(ResourcesAsTools(self.server))
@@ -86,9 +88,10 @@ class TransparentProxyRuntime:
         validate_transparent_proxy_config(config)
         self.server.providers[:] = [self.server.local_provider]
 
-        admin = create_proxy_admin_server(self)
-        admin.add_transform(LdaNamespace(ADMIN_NAMESPACE))
-        self.server.mount(admin)
+        if self.admin_tools:
+            admin = create_proxy_admin_server(self)
+            admin.add_transform(LdaNamespace(ADMIN_NAMESPACE))
+            self.server.mount(admin)
 
         mounted_connections: list[str] = []
         for connection in config.connections:
@@ -167,6 +170,7 @@ def create_transparent_proxy_server(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    admin_tools: bool = True,
 ) -> FastMCP[Any]:
     validate_transparent_proxy_config(
         config,
@@ -179,6 +183,7 @@ def create_transparent_proxy_server(
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
         search_tools=search_tools,
+        admin_tools=admin_tools,
     ).server
 
 
@@ -189,6 +194,7 @@ def create_transparent_proxy_client(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    admin_tools: bool = True,
 ) -> Client[FastMCPTransport]:
     return Client(
         FastMCPTransport(
@@ -198,6 +204,7 @@ def create_transparent_proxy_client(
                 resources_as_tools=resources_as_tools,
                 prompts_as_tools=prompts_as_tools,
                 search_tools=search_tools,
+                admin_tools=admin_tools,
             )
         )
     )

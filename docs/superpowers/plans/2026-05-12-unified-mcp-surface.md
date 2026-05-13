@@ -268,7 +268,7 @@ config_reloaded
   - [x] `wf.workflow.save_deployment`
   - [x] `wf.workflow.validate_deployment`
   - [x] `wf.workflow.run_deployment`
-- [ ] Register admin tools only when admin exposure is enabled.
+- [x] Register admin tools only when admin exposure is enabled.
 - [x] Project upstream tools using the transparent proxy path.
 - [x] Keep existing `broker` and `proxy` CLI modes during migration.
 - [x] Add `unified` CLI mode.

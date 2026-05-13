@@ -53,6 +53,13 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Collapse a large tool catalog into a search interface, for discovery on demand",
     )
+    serve.add_argument(
+        "--no-admin-tools",
+        dest="admin_tools",
+        action="store_false",
+        help="Hide wf.admin.* tools in unified mode.",
+    )
+    serve.set_defaults(admin_tools=True)
 
     subparsers.add_parser("connections", help="List configured connections.")
     subparsers.add_parser("status", help="Show connection status and snapshot counts.")
@@ -134,6 +141,7 @@ def main(argv: list[str] | None = None) -> int:
                 resources_as_tools=args.resources_as_tools,
                 prompts_as_tools=args.prompts_as_tools,
                 search_tools=args.search_tools,
+                admin_tools=args.admin_tools,
             )
         return 0
 

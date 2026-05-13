@@ -78,6 +78,25 @@ def test_build_parser_accepts_unified_mode() -> None:
 
     assert args.command == "serve"
     assert args.mode == "unified"
+    assert args.admin_tools is True
+
+
+def test_build_parser_accepts_no_admin_tools_flag() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "--config",
+            "wf_mcp.config.json",
+            "serve",
+            "--mode",
+            "unified",
+            "--no-admin-tools",
+        ]
+    )
+
+    assert args.command == "serve"
+    assert args.mode == "unified"
+    assert args.admin_tools is False
 
 
 def test_cli_connections_prints_configured_connections(capsys) -> None:

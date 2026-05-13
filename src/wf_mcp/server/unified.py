@@ -21,6 +21,7 @@ def create_unified_proxy_server(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    admin_tools: bool = True,
 ) -> FastMCP[Any]:
     """Create one MCP server with upstream proxy, admin, and workflow tools."""
     runtime = TransparentProxyRuntime(
@@ -29,6 +30,7 @@ def create_unified_proxy_server(
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
         search_tools=search_tools,
+        admin_tools=admin_tools,
     )
     service = build_service_from_config(config)
     _register_workflow_tools(runtime.server, WorkflowSurfaceHandlers(service))
@@ -43,6 +45,7 @@ def run_unified_proxy_server(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    admin_tools: bool = True,
 ) -> None:
     server = create_unified_proxy_server(
         config,
@@ -50,6 +53,7 @@ def run_unified_proxy_server(
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
         search_tools=search_tools,
+        admin_tools=admin_tools,
     )
     server.run(transport=normalize_transport(transport), show_banner=False)
 
@@ -61,6 +65,7 @@ def create_unified_proxy_client(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    admin_tools: bool = True,
 ) -> Client[FastMCPTransport]:
     return Client(
         FastMCPTransport(
@@ -70,6 +75,7 @@ def create_unified_proxy_client(
                 resources_as_tools=resources_as_tools,
                 prompts_as_tools=prompts_as_tools,
                 search_tools=search_tools,
+                admin_tools=admin_tools,
             )
         )
     )
