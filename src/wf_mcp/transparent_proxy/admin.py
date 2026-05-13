@@ -5,8 +5,8 @@ from typing import Any
 from fastmcp import Context, FastMCP
 
 from ..admin_surface import ProxyAdminRuntime, TransparentAdminHandlers
-from ..events import make_event
 from ..notifications import FastMcpContextNotificationSink
+from .reload_events import reload_change_events
 
 
 def create_proxy_admin_server(
@@ -48,7 +48,7 @@ def create_proxy_admin_server(
     )
     async def reload_config(ctx: Context) -> dict[str, Any]:
         result = handlers.reload_config()
-        await _send_reload_notifications(ctx)
+        await _send_reload_notifications(ctx, result)
         return result
 
     @admin.tool(
@@ -140,9 +140,8 @@ def create_proxy_admin_server(
     return admin
 
 
-async def _send_reload_notifications(ctx: Context) -> None:
+async def _send_reload_notifications(ctx: Context, result: dict[str, Any]) -> None:
     """Notify the current client that reload may have changed visible capabilities."""
     sink = FastMcpContextNotificationSink(ctx)
-    await sink.send_event(make_event("tools_changed"))
-    await sink.send_event(make_event("resources_changed"))
-    await sink.send_event(make_event("prompts_changed"))
+    for event in reload_change_events(result):
+        await sink.send_event(event)

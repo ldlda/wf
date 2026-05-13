@@ -24,6 +24,7 @@ def create_unified_proxy_server(
     admin_tools: bool = True,
 ) -> FastMCP[Any]:
     """Create one MCP server with upstream proxy, admin, and workflow tools."""
+    service = build_service_from_config(config)
     runtime = TransparentProxyRuntime(
         config,
         config_path=config_path,
@@ -31,8 +32,8 @@ def create_unified_proxy_server(
         prompts_as_tools=prompts_as_tools,
         search_tools=search_tools,
         admin_tools=admin_tools,
+        event_bus=service.event_bus,
     )
-    service = build_service_from_config(config)
     _register_workflow_tools(runtime.server, WorkflowSurfaceHandlers(service))
     return runtime.server
 

@@ -59,6 +59,24 @@ provider/proxy unmount lifecycle that we can rely on for safe per-connection
 teardown. Until that exists, reload should be treated as best-effort remounting,
 not a fully safe session/subscription lifecycle.
 
+Unified mode currently reuses this runtime as its proxy mounting engine. The
+`transparent_proxy` package name is therefore partly legacy: the code is still
+the place where configured upstream MCP connections become mounted FastMCP
+providers.
+
+After a successful reload, the runtime publishes local `tools_changed`,
+`resources_changed`, `prompts_changed`, and `catalog_changed` events when an
+event bus is supplied. The admin MCP tool projects the same event kinds into
+MCP list-changed notifications for the current client session. Config mutation
+tools still only stage changes and return `requires_reload`; they do not emit
+list-changed notifications until reload remounts the visible capability set.
+
+Do not memoize mounted proxies or clients without an explicit lifecycle design.
+The tempting implementation is a dictionary keyed by connection id around
+`create_proxy(client, ...)`, but cached clients need clear close/reconnect/error
+semantics. Prefer FastMCP's official unmount/provider lifecycle when it becomes
+available.
+
 Do not add notification proxying or long-lived subscription handling across
 reloads without first introducing an explicit mount lifecycle boundary.
 

@@ -12,6 +12,7 @@ from fastmcp.server.transforms import Namespace, PromptsAsTools, ResourcesAsTool
 from fastmcp.server.transforms.search import BM25SearchTransform
 
 from ..control import BrokerConfigManager, ConfigMutationError
+from ..events import EventBus
 from ..models import BrokerConfig
 from ..shared.names import ADMIN_NAMESPACE, LdaNamespace
 from ..proxy_config import broker_config_to_fastmcp_config
@@ -22,6 +23,7 @@ from .tools import (
     filter_proxy_tools,
     proxy_tools_page,
 )
+from .reload_events import reload_change_events
 
 _ADMIN_TOOL_NAMES = [
     f"{ADMIN_NAMESPACE}.list_connections",
@@ -48,6 +50,7 @@ class TransparentProxyRuntime:
         prompts_as_tools: bool = False,
         search_tools: bool = False,
         admin_tools: bool = True,
+        event_bus: EventBus | None = None,
     ) -> None:
         self.config = config
         self.manager = None if config_path is None else BrokerConfigManager(config_path)
@@ -60,6 +63,7 @@ class TransparentProxyRuntime:
             ),
         )
         self.admin_tools = admin_tools
+        self.event_bus = event_bus
         self.reload()
         if resources_as_tools:
             self.server.add_transform(ResourcesAsTools(self.server))
@@ -107,13 +111,22 @@ class TransparentProxyRuntime:
             self.server.mount(proxy)
             mounted_connections.append(connection.id)
 
-        return {
+        result = {
             "ok": True,
             "reloaded": True,
             "mounted_connections": mounted_connections,
             "connection_count": len(config.connections),
             "enabled_connection_count": len(mounted_connections),
         }
+        self._publish_reload_events(result)
+        return result
+
+    def _publish_reload_events(self, result: dict[str, Any]) -> None:
+        """Publish local change events after a successful best-effort remount."""
+        if self.event_bus is None:
+            return
+        for event in reload_change_events(result):
+            self.event_bus.publish(event)
 
     async def list_proxy_tools(self) -> list[dict[str, Any]]:
         return await self._list_proxy_tools()
@@ -171,6 +184,7 @@ def create_transparent_proxy_server(
     prompts_as_tools: bool = False,
     search_tools: bool = False,
     admin_tools: bool = True,
+    event_bus: EventBus | None = None,
 ) -> FastMCP[Any]:
     validate_transparent_proxy_config(
         config,
@@ -184,6 +198,7 @@ def create_transparent_proxy_server(
         prompts_as_tools=prompts_as_tools,
         search_tools=search_tools,
         admin_tools=admin_tools,
+        event_bus=event_bus,
     ).server
 
 
@@ -195,6 +210,7 @@ def create_transparent_proxy_client(
     prompts_as_tools: bool = False,
     search_tools: bool = False,
     admin_tools: bool = True,
+    event_bus: EventBus | None = None,
 ) -> Client[FastMCPTransport]:
     return Client(
         FastMCPTransport(
@@ -205,6 +221,8 @@ def create_transparent_proxy_client(
                 prompts_as_tools=prompts_as_tools,
                 search_tools=search_tools,
                 admin_tools=admin_tools,
+                event_bus=event_bus,
             )
         )
     )
+

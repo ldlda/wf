@@ -8,9 +8,10 @@ from typing import Any
 import mcp.types as mcp_types
 import pytest
 
+from wf_mcp.events import EventBus, InMemoryEventSink
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy_validation import ProxyConfigError, validate_transparent_proxy_config
-from wf_mcp.transparent_proxy import create_transparent_proxy_client
+from wf_mcp.transparent_proxy import TransparentProxyRuntime, create_transparent_proxy_client
 from wf_mcp.broker import load_broker_config
 
 from .test_support import fixture_server_path, local_temp_root
@@ -481,3 +482,27 @@ def test_transparent_proxy_admin_reload_sends_list_changed_notifications() -> No
     assert "notifications/tools/list_changed" in methods
     assert "notifications/resources/list_changed" in methods
     assert "notifications/prompts/list_changed" in methods
+
+
+def test_transparent_proxy_runtime_reload_publishes_local_change_events() -> None:
+    sink = InMemoryEventSink()
+    event_bus = EventBus(sink)
+    config = BrokerConfig(
+        store_root=local_temp_root() / "transparent_proxy_event_store",
+        connections=[],
+    )
+    runtime = TransparentProxyRuntime(config, event_bus=event_bus)
+    initial_event_count = len(sink.list_events())
+
+    result = runtime.reload()
+
+    events = sink.list_events()[initial_event_count:]
+    event_kinds = [event.kind for event in events]
+    catalog_changed = [
+        event for event in events if event.kind == "catalog_changed"
+    ]
+    assert result["reloaded"] is True
+    assert "tools_changed" in event_kinds
+    assert "resources_changed" in event_kinds
+    assert "prompts_changed" in event_kinds
+    assert catalog_changed[0].payload["reason"] == "transparent_reload"
