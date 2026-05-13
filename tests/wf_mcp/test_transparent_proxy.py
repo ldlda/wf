@@ -5,6 +5,7 @@ import json
 import sys
 from typing import Any
 
+import mcp.types as mcp_types
 import pytest
 
 from wf_mcp.models import BrokerConfig, ConnectionConfig
@@ -446,3 +447,37 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
             assert _structured(result) == {"echoed": "reloaded"}
 
     asyncio.run(run_proxy())
+
+
+def test_transparent_proxy_admin_reload_sends_list_changed_notifications() -> None:
+    tmp_path = local_temp_root() / "transparent_proxy_reload_notification_store"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "store_root": ".wf_mcp_store",
+                "connections": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    config = load_broker_config(config_path)
+    notifications: list[mcp_types.ServerNotification] = []
+
+    async def message_handler(message: object) -> None:
+        if isinstance(message, mcp_types.ServerNotification):
+            notifications.append(message)
+
+    async def run_proxy() -> None:
+        client = create_transparent_proxy_client(config, config_path=config_path)
+        client._session_kwargs["message_handler"] = message_handler
+        async with client:
+            await client.call_tool("wf.admin.reload_config")
+
+    asyncio.run(run_proxy())
+
+    methods = [notification.root.method for notification in notifications]
+    assert "notifications/tools/list_changed" in methods
+    assert "notifications/resources/list_changed" in methods
+    assert "notifications/prompts/list_changed" in methods

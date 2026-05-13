@@ -2,9 +2,11 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastmcp import FastMCP
+from fastmcp import Context, FastMCP
 
 from ..admin_surface import ProxyAdminRuntime, TransparentAdminHandlers
+from ..events import make_event
+from ..notifications import FastMcpContextNotificationSink
 
 
 def create_proxy_admin_server(
@@ -44,8 +46,10 @@ def create_proxy_admin_server(
             "Reload the config file and remount enabled upstream MCP connections."
         ),
     )
-    async def reload_config() -> dict[str, Any]:
-        return handlers.reload_config()
+    async def reload_config(ctx: Context) -> dict[str, Any]:
+        result = handlers.reload_config()
+        await _send_reload_notifications(ctx)
+        return result
 
     @admin.tool(
         title="List Proxy Tools",
@@ -134,3 +138,11 @@ def create_proxy_admin_server(
         return handlers.remove_connection(connection_id)
 
     return admin
+
+
+async def _send_reload_notifications(ctx: Context) -> None:
+    """Notify the current client that reload may have changed visible capabilities."""
+    sink = FastMcpContextNotificationSink(ctx)
+    await sink.send_event(make_event("tools_changed"))
+    await sink.send_event(make_event("resources_changed"))
+    await sink.send_event(make_event("prompts_changed"))

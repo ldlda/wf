@@ -44,19 +44,19 @@
       }
     },
     {
-        "id": "serena.default",
-        "server": "serena",
-        "account": "default",
-        "enabled": false,
-        "metadata": {
-          "transport": "stdio",
-          "command": "serena",
-          "args": [
-            "start-mcp-server",
-            "--project-from-cwd"
-          ],
-          "env": {}
-        }
+      "id": "serena.default",
+      "server": "serena",
+      "account": "default",
+      "enabled": false,
+      "metadata": {
+        "transport": "stdio",
+        "command": "serena",
+        "args": [
+          "start-mcp-server",
+          "--project-from-cwd"
+        ],
+        "env": {}
+      }
     }
   ]
 }

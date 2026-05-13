@@ -220,21 +220,23 @@ WfMcpService
     -> later: McpSessionNotificationSink
 ```
 
-Near-term implementation should add a notification mapping layer with a fake
-sink first. Real MCP emission needs one of these session-aware entry points:
+Implemented local notification pieces:
 
-- a FastMCP tool/resource/prompt handler with injected `Context`
-- middleware that can access the active `Context` or session
-- explicit lower-level session management if FastMCP exposes enough stable API
+- pure internal-event to `mcp.types.ServerNotification` mapping
+- recording sink for protocol projection tests
+- FastMCP `Context` sink for request-scoped notification emission
+- `wf.admin.reload_config` sends tool/resource/prompt list-changed
+  notifications to the current client session
 
-Until we have a session-aware sink, list-changed events should remain internal
-events exposed through `get_broker_events` / `wf-mcp://events`.
+This is still not a global broadcast system. It only emits through an active
+request context, which matches FastMCP's available public API today.
 
 ### Concrete Notification Plan
 
 Implement notifications in this order.
 
-1. Add a pure mapping layer from internal events to MCP notification objects.
+1. Done: add a pure mapping layer from internal events to MCP notification
+   objects.
 
 ```text
 tools_changed     -> ToolListChangedNotification
@@ -245,13 +247,13 @@ prompts_changed   -> PromptListChangedNotification
 This layer should not know about FastMCP sessions. It should be easy to test
 with plain `mcp.types` objects.
 
-2. Add a fake/test notification sink.
+2. Done: add a fake/test notification sink.
 
 The first sink should only record which MCP notification objects would be sent.
 This proves the event-to-notification mapping without depending on Codex,
 Inspector, stdio behavior, or Streamable HTTP behavior.
 
-3. Add a FastMCP `Context` notification sink.
+3. Done: add a FastMCP `Context` notification sink.
 
 This sink can call:
 
@@ -263,7 +265,7 @@ It is only valid while handling a request that has an active FastMCP context.
 This should be treated as a session-scoped projection, not a global broadcast
 system.
 
-4. Wire local admin operations first.
+4. Partly done: wire local admin operations first.
 
 Best first live target:
 
@@ -271,12 +273,17 @@ Best first live target:
 wf.admin.reload_config
 ```
 
-When reload changes mounted capabilities, it should:
+Current behavior:
 
-- perform the reload
-- emit internal catalog/tool/resource/prompt change events
-- send list-changed MCP notifications to the current client session when a
-  FastMCP context is available
+- performs the reload
+- sends tool/resource/prompt list-changed MCP notifications to the current
+  client session when a FastMCP context is available
+
+Remaining cleanup:
+
+- also emit internal catalog/tool/resource/prompt change events from the
+  transparent runtime path, so broker history and protocol notifications share
+  one source of truth
 
 This is intentionally local. It does not require solving upstream notification
 forwarding.
