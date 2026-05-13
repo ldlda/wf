@@ -70,6 +70,8 @@ event bus is supplied. The admin MCP tool projects the same event kinds into
 MCP list-changed notifications for the current client session. Config mutation
 tools still only stage changes and return `requires_reload`; they do not emit
 list-changed notifications until reload remounts the visible capability set.
+Internally, reload metadata uses `ProxyReloadResult`; MCP tools serialize that
+typed result to a plain payload at the boundary.
 
 Do not memoize mounted proxies or clients without an explicit lifecycle design.
 The tempting implementation is a dictionary keyed by connection id around

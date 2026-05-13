@@ -23,7 +23,7 @@ from .tools import (
     filter_proxy_tools,
     proxy_tools_page,
 )
-from .reload_events import reload_change_events
+from .reload_events import ProxyReloadResult, reload_change_events
 
 _ADMIN_TOOL_NAMES = [
     f"{ADMIN_NAMESPACE}.list_connections",
@@ -117,17 +117,15 @@ class ProxyRuntime:
             self.server.mount(proxy)
             mounted_connections.append(connection.id)
 
-        result = {
-            "ok": True,
-            "reloaded": True,
-            "mounted_connections": mounted_connections,
-            "connection_count": len(config.connections),
-            "enabled_connection_count": len(mounted_connections),
-        }
+        result = ProxyReloadResult(
+            mounted_connections=mounted_connections,
+            connection_count=len(config.connections),
+            enabled_connection_count=len(mounted_connections),
+        )
         self._publish_reload_events(result)
-        return result
+        return result.to_payload()
 
-    def _publish_reload_events(self, result: dict[str, Any]) -> None:
+    def _publish_reload_events(self, result: ProxyReloadResult) -> None:
         """Publish local change events after a successful best-effort remount."""
         if self.event_bus is None:
             return

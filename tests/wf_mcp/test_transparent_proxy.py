@@ -12,6 +12,10 @@ from wf_mcp.events import EventBus, InMemoryEventSink
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy_validation import ProxyConfigError, validate_transparent_proxy_config
 from wf_mcp.transparent_proxy import ProxyRuntime, create_transparent_proxy_client
+from wf_mcp.transparent_proxy.reload_events import (
+    ProxyReloadResult,
+    reload_change_events,
+)
 from wf_mcp.broker import load_broker_config
 
 from .test_support import fixture_server_path, local_temp_root
@@ -556,3 +560,24 @@ def test_transparent_proxy_runtime_reload_publishes_local_change_events() -> Non
     assert "resources_changed" in event_kinds
     assert "prompts_changed" in event_kinds
     assert catalog_changed[0].payload["reason"] == "transparent_reload"
+
+
+def test_proxy_reload_result_serializes_and_drives_reload_events() -> None:
+    result = ProxyReloadResult(
+        mounted_connections=["fixture.personal"],
+        connection_count=2,
+        enabled_connection_count=1,
+    )
+
+    payload = result.to_payload()
+    rehydrated = ProxyReloadResult.from_payload(payload)
+    events = reload_change_events(result)
+
+    assert payload["ok"] is True
+    assert payload["reloaded"] is True
+    assert payload["mounted_connections"] == ["fixture.personal"]
+    assert payload["connection_count"] == 2
+    assert payload["enabled_connection_count"] == 1
+    assert rehydrated == result
+    assert events[0].payload["mounted_connections"] == ["fixture.personal"]
+    assert events[0].payload["enabled_connection_count"] == 1
