@@ -244,10 +244,10 @@ config_reloaded
 
 - [ ] Move workflow artifact list/save/inspect/validate/run logic into shared
   handler functions/classes.
-- [ ] Move admin list/refresh/config/reload logic into shared handler
+- [x] Move admin list/refresh/config/reload logic into shared handler
   functions/classes.
-- [ ] Keep broker compatibility tool names working.
-- [ ] Keep transparent proxy admin tool names working.
+- [x] Keep broker compatibility tool names working.
+- [x] Keep transparent proxy admin tool names working.
 - [ ] Do not change behavior in this phase; only remove duplicated logic and
   create a single implementation path.
 
