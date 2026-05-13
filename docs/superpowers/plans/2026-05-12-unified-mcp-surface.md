@@ -325,10 +325,10 @@ config_reloaded
 - [ ] Add event kinds for capability changes:
   - `source_enabled`
   - `source_disabled`
-  - `catalog_changed`
-  - `tools_changed`
-  - `resources_changed`
-  - `prompts_changed`
+  - [x] `catalog_changed`
+  - [x] `tools_changed`
+  - [x] `resources_changed`
+  - [x] `prompts_changed`
 - [ ] Do not emit MCP notifications yet unless the server/session API is
   clearly available. This phase creates the source of truth.
 

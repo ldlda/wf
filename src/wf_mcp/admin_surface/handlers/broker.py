@@ -69,7 +69,9 @@ class BrokerAdminHandlers:
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         try:
-            return await self.service.invoke_method(connection_id, method, params=params)
+            return await self.service.invoke_method(
+                connection_id, method, params=params
+            )
         except Exception as exc:
             return {
                 "connection_id": connection_id,

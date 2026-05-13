@@ -141,6 +141,7 @@ class WfMcpService:
         connection_id: str,
         *specs: NodeSpec[Any, Any],
         max_age_seconds: int | None = None,
+        emit_change_events: bool = True,
     ) -> None:
         self.connections.get(connection_id)
         qualified_specs = {
@@ -181,6 +182,12 @@ class WfMcpService:
                 payload={"node_count": len(qualified_specs)},
             )
         )
+        if emit_change_events:
+            self._record_catalog_change_events(
+                connection_id,
+                snapshot,
+                reason="specs_registered",
+            )
 
     def get_catalog(self) -> CombinedCatalog:
         snapshots: dict[str, CatalogSnapshot] = {}
@@ -504,6 +511,7 @@ class WfMcpService:
                 connection_id,
                 *specs,
                 max_age_seconds=max_age_seconds,
+                emit_change_events=False,
             )
             snapshot = snapshot_from_specs(
                 connection_id,
@@ -518,6 +526,11 @@ class WfMcpService:
                 max_age_seconds=max_age_seconds or self.default_catalog_max_age_seconds,
             )
             self.store.save_catalog(snapshot)
+            self._record_catalog_change_events(
+                connection_id,
+                snapshot,
+                reason="catalog_refresh",
+            )
             self._record_event(
                 make_event(
                     "catalog_refresh_completed",
@@ -670,3 +683,51 @@ class WfMcpService:
 
     def _record_event(self, event: McpEvent) -> None:
         self.event_bus.publish(event)
+
+    def _record_catalog_change_events(
+        self,
+        connection_id: str,
+        snapshot: CatalogSnapshot,
+        *,
+        reason: str,
+    ) -> None:
+        """Emit local change events that future MCP notifications can project."""
+        counts = {
+            "node_count": len(snapshot.nodes),
+            "resource_count": len(snapshot.resources),
+            "prompt_count": len(snapshot.prompts),
+        }
+        if snapshot.nodes:
+            self._record_event(
+                make_event(
+                    "tools_changed",
+                    connection_id=connection_id,
+                    payload={"reason": reason, "node_count": counts["node_count"]},
+                )
+            )
+        if snapshot.resources:
+            self._record_event(
+                make_event(
+                    "resources_changed",
+                    connection_id=connection_id,
+                    payload={
+                        "reason": reason,
+                        "resource_count": counts["resource_count"],
+                    },
+                )
+            )
+        if snapshot.prompts:
+            self._record_event(
+                make_event(
+                    "prompts_changed",
+                    connection_id=connection_id,
+                    payload={"reason": reason, "prompt_count": counts["prompt_count"]},
+                )
+            )
+        self._record_event(
+            make_event(
+                "catalog_changed",
+                connection_id=connection_id,
+                payload={"reason": reason, **counts},
+            )
+        )
