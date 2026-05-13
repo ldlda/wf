@@ -16,6 +16,7 @@ from wf_mcp.transparent_proxy.reload_events import (
     ProxyReloadResult,
     reload_change_events,
 )
+from wf_mcp.transparent_proxy.tools import ProxyToolPayload, ProxyToolsPage
 from wf_mcp.broker import load_broker_config
 
 from .test_support import fixture_server_path, local_temp_root
@@ -581,3 +582,45 @@ def test_proxy_reload_result_serializes_and_drives_reload_events() -> None:
     assert rehydrated == result
     assert events[0].payload["mounted_connections"] == ["fixture.personal"]
     assert events[0].payload["enabled_connection_count"] == 1
+
+
+def test_proxy_tool_payload_serializes_admin_tool_metadata() -> None:
+    payload = ProxyToolPayload(
+        proxy_name="fixture.personal_echo_tool",
+        connection_id="fixture.personal",
+        local_name="echo_tool",
+        title="Echo Tool",
+        description="Echo text back",
+        input_schema={"type": "object"},
+        output_schema={"type": "object"},
+    )
+
+    minimal = payload.to_payload(include_schema=False)
+    with_schema = payload.to_payload(include_schema=True)
+
+    assert minimal["proxy_name"] == "fixture.personal_echo_tool"
+    assert minimal["connection_id"] == "fixture.personal"
+    assert minimal["local_name"] == "echo_tool"
+    assert minimal["enabled"] is True
+    assert "input_schema" not in minimal
+    assert with_schema["input_schema"] == {"type": "object"}
+    assert with_schema["output_schema"] == {"type": "object"}
+
+
+def test_proxy_tools_page_serializes_paginated_payload() -> None:
+    tool = ProxyToolPayload(
+        proxy_name="fixture.personal_echo_tool",
+        connection_id="fixture.personal",
+        local_name="echo_tool",
+    )
+    page = ProxyToolsPage(
+        tools=[tool],
+        next_cursor="cursor-1",
+        total=3,
+    )
+
+    payload = page.to_payload(include_schema=False)
+
+    assert payload["nextCursor"] == "cursor-1"
+    assert payload["total"] == 3
+    assert payload["tools"][0]["proxy_name"] == "fixture.personal_echo_tool"

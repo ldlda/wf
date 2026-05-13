@@ -72,6 +72,8 @@ tools still only stage changes and return `requires_reload`; they do not emit
 list-changed notifications until reload remounts the visible capability set.
 Internally, reload metadata uses `ProxyReloadResult`; MCP tools serialize that
 typed result to a plain payload at the boundary.
+Proxy tool listing similarly uses `ProxyToolPayload` / `ProxyToolsPage`
+internally and serializes to admin MCP payloads at the boundary.
 
 Do not memoize mounted proxies or clients without an explicit lifecycle design.
 The tempting implementation is a dictionary keyed by connection id around

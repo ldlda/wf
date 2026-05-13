@@ -19,7 +19,8 @@ from ..proxy_config import broker_config_to_fastmcp_config
 from ..proxy_validation import validate_transparent_proxy_config
 from .admin import create_proxy_admin_server
 from .tools import (
-    collect_proxy_tool_payloads,
+    ProxyToolPayload,
+    collect_proxy_tools,
     filter_proxy_tools,
     proxy_tools_page,
 )
@@ -133,18 +134,22 @@ class ProxyRuntime:
             self.event_bus.publish(event)
 
     async def list_proxy_tools(self) -> list[dict[str, Any]]:
-        return await self._list_proxy_tools()
+        return [
+            tool.to_payload(include_schema=False)
+            for tool in await self._list_proxy_tools()
+        ]
 
-    async def _list_proxy_tools(self) -> list[dict[str, Any]]:
+    async def _list_proxy_tools(
+        self,
+    ) -> list[ProxyToolPayload]:
         config = self.current_config()
         connection_ids = {
             connection.id for connection in config.connections if connection.enabled
         }
         tools = await self.server.list_tools()
-        return collect_proxy_tool_payloads(
+        return collect_proxy_tools(
             tools=tools,
             connection_ids=connection_ids,
-            include_schema=False,
         )
 
     async def list_proxy_tools_page(
@@ -169,14 +174,13 @@ class ProxyRuntime:
             connection.id for connection in config.connections if connection.enabled
         }
         tools = await self.server.list_tools()
-        payloads = collect_proxy_tool_payloads(
+        payloads = collect_proxy_tools(
             tools=tools,
             connection_ids=connection_ids,
-            include_schema=True,
         )
-        for payload in payloads:
-            if payload["proxy_name"] == proxy_name:
-                return payload
+        for tool in payloads:
+            if tool.proxy_name == proxy_name:
+                return tool.to_payload(include_schema=True)
         raise KeyError(proxy_name)
 
 
