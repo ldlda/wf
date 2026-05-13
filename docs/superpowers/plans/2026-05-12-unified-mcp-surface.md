@@ -259,19 +259,19 @@ config_reloaded
 - Modify: `src/wf_mcp/broker/server.py`
 - Test: `tests/wf_mcp/test_unified_server.py`
 
-- [ ] Build one FastMCP server from `BrokerConfig`.
+- [x] Build one FastMCP server from `BrokerConfig`.
 - [ ] Register local workflow tools with namespaced names:
-  - `wf.workflow.list_artifacts`
-  - `wf.workflow.create_artifact_from_plan`
-  - `wf.workflow.save_artifact`
-  - `wf.workflow.list_deployments`
-  - `wf.workflow.save_deployment`
-  - `wf.workflow.validate_deployment`
-  - `wf.workflow.run_deployment`
+  - [x] `wf.workflow.list_artifacts`
+  - [x] `wf.workflow.create_artifact_from_plan`
+  - [x] `wf.workflow.save_artifact`
+  - [x] `wf.workflow.list_deployments`
+  - [x] `wf.workflow.save_deployment`
+  - [x] `wf.workflow.validate_deployment`
+  - [x] `wf.workflow.run_deployment`
 - [ ] Register admin tools only when admin exposure is enabled.
-- [ ] Project upstream tools using the transparent proxy path.
-- [ ] Keep existing `broker` and `proxy` CLI modes during migration.
-- [ ] Add `unified` CLI mode.
+- [x] Project upstream tools using the transparent proxy path.
+- [x] Keep existing `broker` and `proxy` CLI modes during migration.
+- [x] Add `unified` CLI mode.
 - [ ] Do not make unified default until manual Inspector/Codex tests pass.
 
 ## Phase 4: Namespacing And Collision Policy

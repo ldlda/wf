@@ -20,5 +20,5 @@ more later
 
 # docs/ pair with `superpowers` and other skills
 
-superpowers, a Codex-cli plugin, is a set of skills. check paths given by Codex
-if not found, might be stale hash
+superpowers, a Codex-cli plugin, is a set of skills. plugin provided skills live in nonstandard paths. check paths given by Codex
+if not found, might be stale hash, try find new hash

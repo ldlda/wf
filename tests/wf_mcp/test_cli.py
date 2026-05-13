@@ -64,6 +64,22 @@ def test_build_parser_accepts_proxy_compatibility_flags() -> None:
     assert args.search_tools is True
 
 
+def test_build_parser_accepts_unified_mode() -> None:
+    parser = build_parser()
+    args = parser.parse_args(
+        [
+            "--config",
+            "wf_mcp.config.json",
+            "serve",
+            "--mode",
+            "unified",
+        ]
+    )
+
+    assert args.command == "serve"
+    assert args.mode == "unified"
+
+
 def test_cli_connections_prints_configured_connections(capsys) -> None:
     tmp_path = local_temp_root() / "cli_connections_test"
     tmp_path.mkdir(parents=True, exist_ok=True)

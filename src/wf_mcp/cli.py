@@ -12,6 +12,7 @@ from .broker import (
     run_broker_server,
     run_transparent_proxy_server,
 )
+from .server import run_unified_proxy_server
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -34,8 +35,8 @@ def build_parser() -> argparse.ArgumentParser:
     serve.add_argument(
         "--mode",
         default="proxy",
-        choices=["broker", "proxy"],
-        help="Run admin/workflow broker mode or transparent proxy mode.",
+        choices=["broker", "proxy", "unified"],
+        help="Run broker mode, transparent proxy mode, or unified mode.",
     )
     serve.add_argument(
         "--resources-as-tools",
@@ -122,8 +123,18 @@ def main(argv: list[str] | None = None) -> int:
                 prompts_as_tools=args.prompts_as_tools,
                 search_tools=args.search_tools,
             )
-        else:
+        elif args.mode == "broker":
             run_broker_server(args.config, args.transport)
+        else:
+            config = load_broker_config(args.config)
+            run_unified_proxy_server(
+                config,
+                args.transport,
+                config_path=args.config,
+                resources_as_tools=args.resources_as_tools,
+                prompts_as_tools=args.prompts_as_tools,
+                search_tools=args.search_tools,
+            )
         return 0
 
     service = _service_from_config(args.config)
