@@ -59,10 +59,10 @@ provider/proxy unmount lifecycle that we can rely on for safe per-connection
 teardown. Until that exists, reload should be treated as best-effort remounting,
 not a fully safe session/subscription lifecycle.
 
-Unified mode currently reuses this runtime as its proxy mounting engine. The
+Unified mode currently reuses `ProxyRuntime` as its proxy mounting engine. The
 `transparent_proxy` package name is therefore partly legacy: the code is still
 the place where configured upstream MCP connections become mounted FastMCP
-providers.
+providers. `TransparentProxyRuntime` remains a compatibility alias.
 
 After a successful reload, the runtime publishes local `tools_changed`,
 `resources_changed`, `prompts_changed`, and `catalog_changed` events when an

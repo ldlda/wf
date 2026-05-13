@@ -10,7 +10,7 @@ from fastmcp.client.transports.memory import FastMCPTransport
 from ..broker.config import build_service_from_config
 from ..broker.transport import normalize_transport
 from ..models import BrokerConfig
-from ..transparent_proxy.runtime import TransparentProxyRuntime
+from ..transparent_proxy.runtime import ProxyRuntime
 from ..workflow_surface import WorkflowSurfaceHandlers
 
 
@@ -25,7 +25,7 @@ def create_unified_proxy_server(
 ) -> FastMCP[Any]:
     """Create one MCP server with upstream proxy, admin, and workflow tools."""
     service = build_service_from_config(config)
-    runtime = TransparentProxyRuntime(
+    runtime = ProxyRuntime(
         config,
         config_path=config_path,
         resources_as_tools=resources_as_tools,

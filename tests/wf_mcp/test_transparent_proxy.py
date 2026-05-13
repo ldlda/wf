@@ -11,7 +11,7 @@ import pytest
 from wf_mcp.events import EventBus, InMemoryEventSink
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy_validation import ProxyConfigError, validate_transparent_proxy_config
-from wf_mcp.transparent_proxy import TransparentProxyRuntime, create_transparent_proxy_client
+from wf_mcp.transparent_proxy import ProxyRuntime, create_transparent_proxy_client
 from wf_mcp.broker import load_broker_config
 
 from .test_support import fixture_server_path, local_temp_root
@@ -484,6 +484,56 @@ def test_transparent_proxy_admin_reload_sends_list_changed_notifications() -> No
     assert "notifications/prompts/list_changed" in methods
 
 
+def test_transparent_proxy_config_mutation_does_not_notify_before_reload() -> None:
+    tmp_path = local_temp_root() / "transparent_proxy_staged_notification_store"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "store_root": ".wf_mcp_store",
+                "connections": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    config = load_broker_config(config_path)
+    notifications: list[mcp_types.ServerNotification] = []
+
+    async def message_handler(message: object) -> None:
+        if isinstance(message, mcp_types.ServerNotification):
+            notifications.append(message)
+
+    async def run_proxy() -> None:
+        client = create_transparent_proxy_client(config, config_path=config_path)
+        client._session_kwargs["message_handler"] = message_handler
+        async with client:
+            add_result = await client.call_tool(
+                "wf.admin.add_connection",
+                {
+                    "connection_id": "fixture.personal",
+                    "server": "fixture",
+                    "account": "personal",
+                    "metadata": {
+                        "transport": "stdio",
+                        "command": sys.executable,
+                        "args": [fixture_server_path()],
+                    },
+                },
+            )
+            assert _structured(add_result)["requires_reload"] is True
+            assert notifications == []
+
+            await client.call_tool("wf.admin.reload_config")
+
+    asyncio.run(run_proxy())
+
+    methods = [notification.root.method for notification in notifications]
+    assert "notifications/tools/list_changed" in methods
+    assert "notifications/resources/list_changed" in methods
+    assert "notifications/prompts/list_changed" in methods
+
+
 def test_transparent_proxy_runtime_reload_publishes_local_change_events() -> None:
     sink = InMemoryEventSink()
     event_bus = EventBus(sink)
@@ -491,7 +541,7 @@ def test_transparent_proxy_runtime_reload_publishes_local_change_events() -> Non
         store_root=local_temp_root() / "transparent_proxy_event_store",
         connections=[],
     )
-    runtime = TransparentProxyRuntime(config, event_bus=event_bus)
+    runtime = ProxyRuntime(config, event_bus=event_bus)
     initial_event_count = len(sink.list_events())
 
     result = runtime.reload()

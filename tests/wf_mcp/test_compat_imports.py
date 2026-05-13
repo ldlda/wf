@@ -29,8 +29,10 @@ def test_concern_package_imports_resolve() -> None:
     from wf_mcp.broker import WfMcpService, load_broker_config
     from wf_mcp.sdk import McpSdkAdapter
     from wf_mcp.storage import FileStore
+    from wf_mcp.transparent_proxy import ProxyRuntime, TransparentProxyRuntime
 
     assert FileStore.__name__ == "FileStore"
     assert McpSdkAdapter.__name__ == "McpSdkAdapter"
     assert WfMcpService.__name__ == "WfMcpService"
     assert callable(load_broker_config)
+    assert TransparentProxyRuntime is ProxyRuntime

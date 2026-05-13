@@ -40,7 +40,13 @@ _ADMIN_TOOL_NAMES = [
 ]
 
 
-class TransparentProxyRuntime:
+class ProxyRuntime:
+    """Mount configured upstream MCP connections into one FastMCP server.
+
+    The `transparent_proxy` package name is compatibility history. This runtime
+    is now the shared proxy mounting engine used by unified mode too.
+    """
+
     def __init__(
         self,
         config: BrokerConfig,
@@ -176,6 +182,9 @@ class TransparentProxyRuntime:
         raise KeyError(proxy_name)
 
 
+TransparentProxyRuntime = ProxyRuntime
+
+
 def create_transparent_proxy_server(
     config: BrokerConfig,
     *,
@@ -191,7 +200,7 @@ def create_transparent_proxy_server(
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
     )
-    return TransparentProxyRuntime(
+    return ProxyRuntime(
         config,
         config_path=config_path,
         resources_as_tools=resources_as_tools,
@@ -225,4 +234,3 @@ def create_transparent_proxy_client(
             )
         )
     )
-
