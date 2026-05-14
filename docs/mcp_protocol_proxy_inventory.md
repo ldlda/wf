@@ -100,6 +100,10 @@ Tool simulate-research-query requires task augmentation (taskSupport: 'required'
   templates.
 - Tool-result resource links: incomplete; embedded resource URIs need explicit
   rewrite or a documented limitation.
+- `wf_mcp.proxy_results` now contains pure typed helpers for rewriting
+  `mcp.types.ResourceLink` content inside `mcp.types.CallToolResult`. These
+  helpers are not wired into the FastMCP proxy runtime yet because FastMCP does
+  not currently expose a result-transform hook.
 - Session resources: unresolved; needs a focused test because session affinity
   may matter.
 - Tasks: unsupported; task-required tools should remain clearly diagnosed until

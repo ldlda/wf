@@ -145,4 +145,3 @@ async def _send_reload_notifications(ctx: Context, result: ProxyReloadResult) ->
     sink = FastMcpContextNotificationSink(ctx)
     for event in reload_change_events(result):
         await sink.send_event(event)
-

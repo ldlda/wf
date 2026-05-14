@@ -38,7 +38,9 @@ def test_maps_capability_change_events_to_mcp_list_changed_notifications() -> No
         resource_notifications[0].root,
         mcp_types.ResourceListChangedNotification,
     )
-    assert resource_notifications[0].root.method == "notifications/resources/list_changed"
+    assert (
+        resource_notifications[0].root.method == "notifications/resources/list_changed"
+    )
     assert isinstance(
         prompt_notifications[0].root,
         mcp_types.PromptListChangedNotification,
@@ -75,7 +77,9 @@ def test_fastmcp_context_notification_sink_sends_projected_notifications() -> No
         await sink.send_event(
             make_event("resources_changed", connection_id="demo.personal")
         )
-        await sink.send_event(make_event("workflow_artifact_saved", workflow_name="demo"))
+        await sink.send_event(
+            make_event("workflow_artifact_saved", workflow_name="demo")
+        )
 
     asyncio.run(run())
 

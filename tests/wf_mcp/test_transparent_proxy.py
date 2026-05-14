@@ -553,9 +553,7 @@ def test_transparent_proxy_runtime_reload_publishes_local_change_events() -> Non
 
     events = sink.list_events()[initial_event_count:]
     event_kinds = [event.kind for event in events]
-    catalog_changed = [
-        event for event in events if event.kind == "catalog_changed"
-    ]
+    catalog_changed = [event for event in events if event.kind == "catalog_changed"]
     assert result["reloaded"] is True
     assert "tools_changed" in event_kinds
     assert "resources_changed" in event_kinds
