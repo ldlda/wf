@@ -4,6 +4,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from fastmcp.tools import Tool
+
 from ..shared.names import is_admin_tool_name, parse_namespaced_tool_name
 from ..shared.pagination import paginate_items
 
@@ -61,7 +63,7 @@ def proxy_tool_payload(
     proxy_name: str,
     connection_id: str,
     local_name: str,
-    tool: Any,
+    tool: Tool,
     include_schema: bool,
 ) -> dict[str, Any]:
     """Return the admin-facing metadata payload for one proxied tool."""
@@ -82,7 +84,7 @@ def proxy_tool_payload(
 
 def collect_proxy_tools(
     *,
-    tools: Sequence[Any],
+    tools: Sequence[Tool],
     connection_ids: set[str],
 ) -> list[ProxyToolPayload]:
     """Collect visible upstream tool metadata from FastMCP's listed tools."""
@@ -113,7 +115,7 @@ def collect_proxy_tools(
 
 def collect_proxy_tool_payloads(
     *,
-    tools: Sequence[Any],
+    tools: Sequence[Tool],
     connection_ids: set[str],
     include_schema: bool,
 ) -> list[dict[str, Any]]:
