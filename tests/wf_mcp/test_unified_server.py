@@ -38,13 +38,13 @@ def test_unified_server_exposes_upstream_admin_and_workflow_tools() -> None:
         async with client:
             tools = await client.list_tools()
             names = [tool.name for tool in tools]
-            assert "fixture.personal_echo_tool" in names
+            assert "fixture.personal.echo_tool" in names
             assert "wf.admin.list_connections" in names
             assert "wf.workflow.list_artifacts" in names
             assert "wf.workflow.run_deployment" in names
 
             echo_result = await client.call_tool(
-                "fixture.personal_echo_tool",
+                "fixture.personal.echo_tool",
                 {"text": "hello"},
             )
             artifacts_result = await client.call_tool("wf.workflow.list_artifacts")
@@ -77,7 +77,7 @@ def test_unified_server_can_hide_admin_tools() -> None:
         async with client:
             tools = await client.list_tools()
             names = [tool.name for tool in tools]
-            assert "fixture.personal_echo_tool" in names
+            assert "fixture.personal.echo_tool" in names
             assert "wf.workflow.list_artifacts" in names
             assert "wf.admin.list_connections" not in names
 

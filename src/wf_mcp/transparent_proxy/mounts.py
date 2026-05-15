@@ -10,11 +10,10 @@ from fastmcp import FastMCP
 from fastmcp.client import Client
 from fastmcp.client.transports.config import MCPConfigTransport
 from fastmcp.server import create_proxy
-from fastmcp.server.transforms import Namespace
-
 from ..models import BrokerConfig, ConnectionConfig
 from ..proxy_results import ResourceLinkNamespace
 from ..proxy_config import broker_config_to_fastmcp_config
+from ..shared.names import ProxyNamespace
 
 ProxyT = TypeVar("ProxyT")
 ProxyMountFactory = Callable[[ConnectionConfig, Path], "ProxyMount[ProxyT]"]
@@ -98,7 +97,7 @@ def create_proxy_mount(
     transport = MCPConfigTransport(server_config, name_as_prefix=False)
     client = Client(transport=transport, name=f"wf-mcp:{connection.id}")
     proxy: FastMCP[Any] = create_proxy(client, name=f"Proxy-{connection.id}")
-    proxy.add_transform(Namespace(connection.id))
+    proxy.add_transform(ProxyNamespace(connection.id))
     proxy.add_transform(ResourceLinkNamespace(connection.id))
     return ProxyMount(
         connection_id=connection.id,

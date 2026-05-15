@@ -53,11 +53,6 @@ def _validate_connection_ids(
             continue
         if connection_id in RESERVED_CONNECTION_IDS:
             errors.append(f"connection id {connection_id!r} is reserved by wf-mcp")
-        if "_" in connection_id:
-            errors.append(
-                f"connection id {connection_id!r} must not contain '_' because "
-                "FastMCP Namespace uses '_' as the tool-name separator"
-            )
         if not _NAMESPACE_ID_RE.fullmatch(connection_id):
             errors.append(
                 f"connection id {connection_id!r} must contain only letters, "

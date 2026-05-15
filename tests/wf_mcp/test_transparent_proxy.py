@@ -54,7 +54,7 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             assert "wf.admin.get_connection_statuses" in names
             assert "wf.admin.list_proxy_tools" in names
             assert "wf.admin.get_proxy_tool" in names
-            assert "fixture.personal_echo_tool" in names
+            assert "fixture.personal.echo_tool" in names
 
             connections_result = await client.call_tool("wf.admin.list_connections")
             assert _structured(connections_result) == {
@@ -74,7 +74,7 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             }
 
             result = await client.call_tool(
-                "fixture.personal_echo_tool",
+                "fixture.personal.echo_tool",
                 {"text": "hello"},
             )
             assert _structured(result) == {"echoed": "hello"}
@@ -85,21 +85,21 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             assert proxy_tools_payload["nextCursor"] is None
             assert proxy_tools_payload["total"] == 2
             assert len(proxy_tools) == 2
-            assert proxy_tools[0]["proxy_name"] == "fixture.personal_echo_tool"
+            assert proxy_tools[0]["proxy_name"] == "fixture.personal.echo_tool"
             assert proxy_tools[0]["connection_id"] == "fixture.personal"
             assert proxy_tools[0]["local_name"] == "echo_tool"
             assert proxy_tools[0]["enabled"] is True
             assert (
                 proxy_tools[1]["proxy_name"]
-                == "fixture.personal_resource_link_tool"
+                == "fixture.personal.resource_link_tool"
             )
 
             proxy_tool_result = await client.call_tool(
                 "wf.admin.get_proxy_tool",
-                {"proxy_name": "fixture.personal_echo_tool"},
+                {"proxy_name": "fixture.personal.echo_tool"},
             )
             proxy_tool = _structured(proxy_tool_result)
-            assert proxy_tool["proxy_name"] == "fixture.personal_echo_tool"
+            assert proxy_tool["proxy_name"] == "fixture.personal.echo_tool"
             assert proxy_tool["connection_id"] == "fixture.personal"
             assert proxy_tool["local_name"] == "echo_tool"
             assert proxy_tool["input_schema"]["properties"]["text"]["type"] == "string"
@@ -127,10 +127,10 @@ def test_transparent_proxy_rewrites_resource_links_returned_by_tools() -> None:
     async def run_proxy() -> None:
         client = create_transparent_proxy_client(config)
         async with client:
-            result = await client.call_tool("fixture.personal_resource_link_tool")
+            result = await client.call_tool("fixture.personal.resource_link_tool")
             link = result.content[0]
             assert isinstance(link, mcp_types.ResourceLink)
-            assert str(link.uri) == "fixture://fixture.personal/docs/welcome"
+            assert str(link.uri) == "fixture://fixture/personal/docs/welcome"
 
             contents = await client.read_resource(str(link.uri))
             assert isinstance(contents[0], mcp_types.TextResourceContents)
@@ -189,7 +189,6 @@ def test_transparent_proxy_rejects_invalid_connection_config() -> None:
     assert "duplicate connection id 'fixture.personal'" in message
     assert "fixture.personal: stdio transport requires metadata.command" in message
     assert "fixture.personal: unsupported MCP transport 'websocket'" in message
-    assert "connection id 'bad_scope.personal' must not contain '_'" in message
     assert "fixture.http: http transport requires metadata.url" in message
     assert "connection id 'wf.mcp' is reserved by wf-mcp" in message
     assert "connection id 'wf.admin' is reserved by wf-mcp" in message
@@ -255,13 +254,13 @@ def test_transparent_proxy_can_collapse_upstream_tools_behind_search() -> None:
             assert "wf.admin.list_connections" in names
             assert "wf.admin.get_connection_statuses" in names
             assert "wf.admin.list_proxy_tools" in names
-            assert "fixture.personal_echo_tool" not in names
+            assert "fixture.personal.echo_tool" not in names
 
             search_result = await client.call_tool(
                 "search_tools",
                 {"query": "echo text back"},
             )
-            assert "fixture.personal_echo_tool" in str(search_result)
+            assert "fixture.personal.echo_tool" in str(search_result)
 
     asyncio.run(run_proxy())
 
@@ -327,7 +326,7 @@ def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> N
             filtered = _structured(filtered_result)
             assert filtered["nextCursor"] is None
             assert filtered["total"] == 1
-            assert filtered["tools"][0]["proxy_name"] == "fixture.personal_echo_tool"
+            assert filtered["tools"][0]["proxy_name"] == "fixture.personal.echo_tool"
 
     asyncio.run(run_proxy())
 
@@ -449,7 +448,7 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
         async with client:
             initial_tools = await client.list_tools()
             initial_names = [tool.name for tool in initial_tools]
-            assert "fixture.personal_echo_tool" not in initial_names
+            assert "fixture.personal.echo_tool" not in initial_names
 
             await client.call_tool(
                 "wf.admin.add_connection",
@@ -467,7 +466,7 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
 
             before_reload_tools = await client.list_tools()
             before_reload_names = [tool.name for tool in before_reload_tools]
-            assert "fixture.personal_echo_tool" not in before_reload_names
+            assert "fixture.personal.echo_tool" not in before_reload_names
 
             reload_result = await client.call_tool("wf.admin.reload_config")
             assert _structured(reload_result) == {
@@ -480,10 +479,10 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
 
             after_reload_tools = await client.list_tools()
             after_reload_names = [tool.name for tool in after_reload_tools]
-            assert "fixture.personal_echo_tool" in after_reload_names
+            assert "fixture.personal.echo_tool" in after_reload_names
 
             result = await client.call_tool(
-                "fixture.personal_echo_tool",
+                "fixture.personal.echo_tool",
                 {"text": "reloaded"},
             )
             assert _structured(result) == {"echoed": "reloaded"}
@@ -648,7 +647,7 @@ def test_proxy_reload_result_serializes_and_drives_reload_events() -> None:
 
 def test_proxy_tool_payload_serializes_admin_tool_metadata() -> None:
     payload = ProxyToolPayload(
-        proxy_name="fixture.personal_echo_tool",
+        proxy_name="fixture.personal.echo_tool",
         connection_id="fixture.personal",
         local_name="echo_tool",
         title="Echo Tool",
@@ -660,7 +659,7 @@ def test_proxy_tool_payload_serializes_admin_tool_metadata() -> None:
     minimal = payload.to_payload(include_schema=False)
     with_schema = payload.to_payload(include_schema=True)
 
-    assert minimal["proxy_name"] == "fixture.personal_echo_tool"
+    assert minimal["proxy_name"] == "fixture.personal.echo_tool"
     assert minimal["connection_id"] == "fixture.personal"
     assert minimal["local_name"] == "echo_tool"
     assert minimal["enabled"] is True
@@ -671,7 +670,7 @@ def test_proxy_tool_payload_serializes_admin_tool_metadata() -> None:
 
 def test_proxy_tools_page_serializes_paginated_payload() -> None:
     tool = ProxyToolPayload(
-        proxy_name="fixture.personal_echo_tool",
+        proxy_name="fixture.personal.echo_tool",
         connection_id="fixture.personal",
         local_name="echo_tool",
     )
@@ -685,4 +684,4 @@ def test_proxy_tools_page_serializes_paginated_payload() -> None:
 
     assert payload["nextCursor"] == "cursor-1"
     assert payload["total"] == 3
-    assert payload["tools"][0]["proxy_name"] == "fixture.personal_echo_tool"
+    assert payload["tools"][0]["proxy_name"] == "fixture.personal.echo_tool"

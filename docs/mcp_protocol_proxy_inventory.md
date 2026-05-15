@@ -29,7 +29,7 @@ wf-mcp serve --mode unified
 ### Working
 
 - `tools/list` shows Everything tools through `wf-mcp`.
-- `tools/call` works for normal tools such as `everything.default_echo`.
+- `tools/call` works for normal tools such as `everything.default.echo`.
 - Tool metadata is preserved for proxy inventory, including title, description,
   and JSON input schema.
 - Annotated text content is preserved.
@@ -47,7 +47,7 @@ Example listed resource mapping:
 
 ```text
 upstream: demo://resource/static/document/instructions.md
-proxied:  demo://everything.default/resource/static/document/instructions.md
+proxied:  demo://everything/default/resource/static/document/instructions.md
 ```
 
 ### Gaps
@@ -63,7 +63,7 @@ demo://resource/dynamic/text/2
   normal dynamic resources:
 
 ```text
-demo://everything.default/resource/dynamic/text/2
+demo://everything/default/resource/dynamic/text/2
 ```
 
 - Session resource links from `gzip-file-as-resource` are not currently usable

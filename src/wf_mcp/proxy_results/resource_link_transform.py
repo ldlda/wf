@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import re
 from collections.abc import Callable, Sequence
 from typing import Any
 
@@ -11,8 +10,7 @@ from pydantic import ConfigDict
 from pydantic.json_schema import SkipJsonSchema
 
 from .resource_links import rewrite_resource_link_content
-
-_URI_PATTERN = re.compile(r"^([^:]+://)(.*?)$")
+from ..shared.names import connection_id_to_resource_path
 
 
 class ResourceLinkRewritingTool(Tool):
@@ -55,7 +53,7 @@ class ResourceLinkNamespace(Transform):
     """Rewrite resource links returned by tools into one namespace."""
 
     def __init__(self, prefix: str) -> None:
-        self._prefix = prefix
+        self._prefix = connection_id_to_resource_path(prefix)
 
     def __repr__(self) -> str:
         return f"ResourceLinkNamespace({self._prefix!r})"
@@ -80,8 +78,7 @@ class ResourceLinkNamespace(Transform):
 
     def _transform_uri(self, uri: str) -> str:
         """Match FastMCP Namespace URI projection for tool-returned links."""
-        match = _URI_PATTERN.match(uri)
-        if match is None:
+        protocol, separator, path = uri.partition("://")
+        if not separator:
             return uri
-        protocol, path = match.groups()
-        return f"{protocol}{self._prefix}/{path}"
+        return f"{protocol}://{self._prefix}/{path}"

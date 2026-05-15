@@ -17,15 +17,15 @@ def test_namespaced_tool_names_are_reversible_with_known_connections() -> None:
     )
 
     assert parsed is not None
-    assert parsed.proxy_name == "everything.default_get-sum"
+    assert parsed.proxy_name == "everything.default.get-sum"
     assert parsed.connection_id == "everything.default"
     assert parsed.local_name == "get-sum"
 
 
 def test_namespaced_tool_parser_rejects_unknown_and_admin_names() -> None:
-    assert parse_namespaced_tool_name("missing_echo", {"everything.default"}) is None
+    assert parse_namespaced_tool_name("missing.echo", {"everything.default"}) is None
     assert is_admin_tool_name("wf.admin.list_connections") is True
-    assert is_admin_tool_name("everything.default_echo") is False
+    assert is_admin_tool_name("everything.default.echo") is False
 
 
 def test_admin_namespace_is_distinct_from_wf_mcp_runtime_source() -> None:
