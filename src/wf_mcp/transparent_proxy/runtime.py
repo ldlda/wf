@@ -5,19 +5,17 @@ from typing import Any
 
 from fastmcp import FastMCP
 from fastmcp.client import Client
-from fastmcp.client.transports.config import MCPConfigTransport
 from fastmcp.client.transports.memory import FastMCPTransport
-from fastmcp.server import create_proxy
-from fastmcp.server.transforms import Namespace, PromptsAsTools, ResourcesAsTools
+from fastmcp.server.transforms import PromptsAsTools, ResourcesAsTools
 from fastmcp.server.transforms.search import BM25SearchTransform
 
 from ..control import BrokerConfigManager, ConfigMutationError
 from ..events import EventBus
 from ..models import BrokerConfig
 from ..shared.names import ADMIN_NAMESPACE, LdaNamespace
-from ..proxy_config import broker_config_to_fastmcp_config
 from ..proxy_validation import validate_transparent_proxy_config
 from .admin import create_proxy_admin_server
+from .mounts import ProxyMountRegistry, create_proxy_mount
 from .tools import (
     ProxyToolPayload,
     collect_proxy_tools,
@@ -71,6 +69,9 @@ class ProxyRuntime:
         )
         self.admin_tools = admin_tools
         self.event_bus = event_bus
+        self.mounts: ProxyMountRegistry[FastMCP[Any]] = ProxyMountRegistry(
+            create_proxy_mount
+        )
         self.reload()
         if resources_as_tools:
             self.server.add_transform(ResourcesAsTools(self.server))
@@ -104,19 +105,10 @@ class ProxyRuntime:
             admin.add_transform(LdaNamespace(ADMIN_NAMESPACE))
             self.server.mount(admin)
 
-        mounted_connections: list[str] = []
-        for connection in config.connections:
-            if not connection.enabled:
-                continue
-            server_config = broker_config_to_fastmcp_config(
-                BrokerConfig(store_root=config.store_root, connections=[connection])
-            )
-            transport = MCPConfigTransport(server_config, name_as_prefix=False)
-            client = Client(transport=transport, name=f"wf-mcp:{connection.id}")
-            proxy = create_proxy(client, name=f"Proxy-{connection.id}")
-            proxy.add_transform(Namespace(connection.id))
-            self.server.mount(proxy)
-            mounted_connections.append(connection.id)
+        mounts = self.mounts.active_mounts_for(config)
+        for mount in mounts:
+            self.server.mount(mount.proxy)
+        mounted_connections = [mount.connection_id for mount in mounts]
 
         result = ProxyReloadResult(
             mounted_connections=mounted_connections,
