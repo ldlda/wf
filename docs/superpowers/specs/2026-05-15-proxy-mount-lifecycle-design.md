@@ -178,10 +178,28 @@ actually implemented.
 - wiring `wf_mcp.proxy_results` helpers into real tool-result handling
 - replacing FastMCP behavior that should be fixed upstream instead
 
-## Open Question
+## Investigation Result
 
-Whether reused mounts should keep FastMCP `ProxyProvider` component caches across
-reload is not yet a promise. Reuse likely does preserve those caches. If that
-causes stale catalog behavior, the registry should either invalidate the provider
-cache explicitly when supported or treat reload as a reason to rebuild mounts
-for affected connections.
+FastMCP 3.3.0 makes unchanged-mount reuse reasonable, with caveats:
+
+- `create_proxy_mount()` passes a disconnected `Client` into `create_proxy(...)`.
+  FastMCP turns that into `client.new()` per request, so reusing a
+  `FastMCPProxy` does **not** keep one permanently connected upstream session
+  alive.
+- `ProxyProvider` intentionally caches tools, resources, templates, and prompts
+  for lookup efficiency. The default TTL is 300 seconds.
+- Every explicit `list_*` call refreshes the corresponding proxy cache. Direct
+  lookup paths may use a still-fresh cached list until TTL expiry.
+- `FastMCP.mount()` returns no provider handle, and no public general-purpose
+  unmount API was found. Parent-side provider-list rebuild is still the only
+  safe visible-surface removal we currently own.
+
+Therefore the current registry behavior is acceptable:
+
+- reuse unchanged enabled mounts
+- rebuild changed mounts
+- stop remounting disabled or removed mounts
+- do not claim safe close/unmount of retired mounts yet
+
+If dynamic upstream catalogs become a practical problem, prefer a documented
+refresh/invalidation policy over throwing away unchanged mounts on every reload.

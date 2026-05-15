@@ -13,6 +13,7 @@ from fastmcp.server import create_proxy
 from fastmcp.server.transforms import Namespace
 
 from ..models import BrokerConfig, ConnectionConfig
+from ..proxy_results import ResourceLinkNamespace
 from ..proxy_config import broker_config_to_fastmcp_config
 
 ProxyT = TypeVar("ProxyT")
@@ -98,6 +99,7 @@ def create_proxy_mount(
     client = Client(transport=transport, name=f"wf-mcp:{connection.id}")
     proxy: FastMCP[Any] = create_proxy(client, name=f"Proxy-{connection.id}")
     proxy.add_transform(Namespace(connection.id))
+    proxy.add_transform(ResourceLinkNamespace(connection.id))
     return ProxyMount(
         connection_id=connection.id,
         fingerprint=connection_fingerprint(connection),

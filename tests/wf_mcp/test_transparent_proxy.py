@@ -83,12 +83,16 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             proxy_tools_payload = _structured(proxy_tools_result)
             proxy_tools = proxy_tools_payload["tools"]
             assert proxy_tools_payload["nextCursor"] is None
-            assert proxy_tools_payload["total"] == 1
-            assert len(proxy_tools) == 1
+            assert proxy_tools_payload["total"] == 2
+            assert len(proxy_tools) == 2
             assert proxy_tools[0]["proxy_name"] == "fixture.personal_echo_tool"
             assert proxy_tools[0]["connection_id"] == "fixture.personal"
             assert proxy_tools[0]["local_name"] == "echo_tool"
             assert proxy_tools[0]["enabled"] is True
+            assert (
+                proxy_tools[1]["proxy_name"]
+                == "fixture.personal_resource_link_tool"
+            )
 
             proxy_tool_result = await client.call_tool(
                 "wf.admin.get_proxy_tool",
@@ -99,6 +103,38 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             assert proxy_tool["connection_id"] == "fixture.personal"
             assert proxy_tool["local_name"] == "echo_tool"
             assert proxy_tool["input_schema"]["properties"]["text"]["type"] == "string"
+
+    asyncio.run(run_proxy())
+
+
+def test_transparent_proxy_rewrites_resource_links_returned_by_tools() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "transparent_proxy_resource_link_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    async def run_proxy() -> None:
+        client = create_transparent_proxy_client(config)
+        async with client:
+            result = await client.call_tool("fixture.personal_resource_link_tool")
+            link = result.content[0]
+            assert isinstance(link, mcp_types.ResourceLink)
+            assert str(link.uri) == "fixture://fixture.personal/docs/welcome"
+
+            contents = await client.read_resource(str(link.uri))
+            assert isinstance(contents[0], mcp_types.TextResourceContents)
+            assert contents[0].text == "Welcome from the fixture MCP server."
 
     asyncio.run(run_proxy())
 
@@ -267,7 +303,7 @@ def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> N
             first_page = _structured(first_page_result)
             assert len(first_page["tools"]) == 1
             assert first_page["nextCursor"] is not None
-            assert first_page["total"] == 2
+            assert first_page["total"] == 4
 
             second_page_result = await client.call_tool(
                 "wf.admin.list_proxy_tools",
@@ -559,6 +595,34 @@ def test_transparent_proxy_runtime_reload_publishes_local_change_events() -> Non
     assert "resources_changed" in event_kinds
     assert "prompts_changed" in event_kinds
     assert catalog_changed[0].payload["reason"] == "transparent_reload"
+
+
+def test_transparent_proxy_runtime_reload_reuses_unchanged_mounts() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "transparent_proxy_reuse_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+    runtime = ProxyRuntime(config)
+    first_mount = runtime.mounts.active_mounts_for(config)[0]
+
+    result = runtime.reload()
+    second_mount = runtime.mounts.active_mounts_for(config)[0]
+
+    assert result["mounted_connections"] == ["fixture.personal"]
+    assert result["connection_count"] == 1
+    assert result["enabled_connection_count"] == 1
+    assert first_mount is second_mount
 
 
 def test_proxy_reload_result_serializes_and_drives_reload_events() -> None:

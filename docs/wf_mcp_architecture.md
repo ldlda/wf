@@ -64,6 +64,20 @@ Unified mode currently reuses `ProxyRuntime` as its proxy mounting engine. The
 the place where configured upstream MCP connections become mounted FastMCP
 providers. `TransparentProxyRuntime` remains a compatibility alias.
 
+`ProxyRuntime` now owns a small `ProxyMountRegistry`. Reload still clears the
+visible mounted provider list and rebuilds it from current config, but unchanged
+enabled connections reuse their cached proxy mount instead of recreating a new
+client/proxy pair every time. Disabled or removed connections are no longer
+mounted after reload, but their cached mounts are only *retired* internally for
+now; they are not safely closed or unmounted because FastMCP does not yet expose
+the lifecycle hook we need.
+
+The reused FastMCP proxies are not holding one forever-open upstream connection.
+`create_proxy_mount()` gives `create_proxy(...)` a disconnected client, and
+FastMCP creates fresh request clients from it. What persists across reload is the
+proxy/provider object and its component-list caches. FastMCP refreshes those
+caches on explicit `list_*` calls and otherwise expires them after its TTL.
+
 After a successful reload, the runtime publishes local `tools_changed`,
 `resources_changed`, `prompts_changed`, and `catalog_changed` events when an
 event bus is supplied. The admin MCP tool projects the same event kinds into
@@ -75,11 +89,10 @@ typed result to a plain payload at the boundary.
 Proxy tool listing similarly uses `ProxyToolPayload` / `ProxyToolsPage`
 internally and serializes to admin MCP payloads at the boundary.
 
-Do not memoize mounted proxies or clients without an explicit lifecycle design.
-The tempting implementation is a dictionary keyed by connection id around
-`create_proxy(client, ...)`, but cached clients need clear close/reconnect/error
-semantics. Prefer FastMCP's official unmount/provider lifecycle when it becomes
-available.
+Do not add more lifecycle behavior outside `ProxyMountRegistry`. Cached clients
+still need clear close/reconnect/error semantics, and the registry is the single
+place where that future behavior should land. Prefer FastMCP's official
+unmount/provider lifecycle when it becomes available.
 
 Do not add notification proxying or long-lived subscription handling across
 reloads without first introducing an explicit mount lifecycle boundary.

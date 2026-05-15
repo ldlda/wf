@@ -98,12 +98,11 @@ Tool simulate-research-query requires task augmentation (taskSupport: 'required'
 - Proxy tool projection: healthy for ordinary tools.
 - Proxy resource list/read projection: healthy for listed resources and
   templates.
-- Tool-result resource links: incomplete; embedded resource URIs need explicit
-  rewrite or a documented limitation.
-- `wf_mcp.proxy_results` now contains pure typed helpers for rewriting
-  `mcp.types.ResourceLink` content inside `mcp.types.CallToolResult`. These
-  helpers are not wired into the FastMCP proxy runtime yet because FastMCP does
-  not currently expose a result-transform hook.
+- Tool-result resource links: ordinary embedded resource URIs are now rewritten
+  by a local proxy transform so downstream clients receive namespaced URIs.
+- `wf_mcp.proxy_results` contains pure typed helpers for rewriting
+  `mcp.types.ResourceLink` content and a small FastMCP workaround transform that
+  wraps proxied tools until upstream FastMCP handles this projection itself.
 - Session resources: unresolved; needs a focused test because session affinity
   may matter.
 - Tasks: unsupported; task-required tools should remain clearly diagnosed until
@@ -115,10 +114,8 @@ Tool simulate-research-query requires task augmentation (taskSupport: 'required'
 
 - Add automated tests for listed resource/template namespacing through unified
   mode.
-- Add a fixture or Everything integration test showing tool-returned
-  `resource_link` URIs are not rewritten today.
-- Decide whether to rewrite embedded resource links in tool results or expose a
-  helper that resolves upstream resource links into proxied resource URIs.
+- Keep the fixture regression proving ordinary tool-returned `resource_link`
+  URIs are rewritten into downstream-facing namespaced URIs.
 - Investigate session resource lifecycle separately from URI rewriting.
 - Inventory current FastMCP/MCP SDK APIs for tasks, logging notifications, and
   resource update notifications before implementing protocol forwarding.
