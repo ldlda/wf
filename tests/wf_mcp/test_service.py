@@ -98,6 +98,24 @@ def test_service_installs_builtin_stdlib_specs_by_default() -> None:
     assert all(source["kind"] == "system" for source in sources)
 
 
+def test_service_lists_all_capability_sources_with_owned_capability_names() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "source_inventory"))
+
+    sources = service.list_sources()
+    sources_by_id = {source["id"]: source for source in sources}
+
+    std_source = sources_by_id["wf.std"]
+    assert "wf.std.runtime_error" in std_source["capabilities"]["node_specs"]
+    assert std_source["capabilities"]["tools"] == []
+
+    mcp_source = sources_by_id["wf.mcp"]
+    assert mcp_source["capabilities"]["node_specs"] == ["wf.mcp.call_tool"]
+
+    admin_source = sources_by_id["wf.admin"]
+    assert admin_source["visibility"]["planner"] is False
+    assert "wf.admin.list_sources" in admin_source["capabilities"]["tools"]
+
+
 def test_wf_std_source_contains_authoring_ops() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "stdlib_source_store"))
     specs = service.capability_sources["wf.std"].capabilities.node_specs

@@ -63,3 +63,15 @@ class CapabilitySource:
             "prompt_count": len(self.capabilities.prompts),
             "resource_count": len(self.capabilities.resources),
         }
+
+    def as_inventory(self) -> dict[str, Any]:
+        """Return source metadata plus the capability names it owns."""
+        return {
+            **self.as_status(),
+            "capabilities": {
+                "tools": sorted(self.capabilities.tools),
+                "node_specs": sorted(self.capabilities.node_specs),
+                "prompts": sorted(self.capabilities.prompts),
+                "resources": sorted(self.capabilities.resources),
+            },
+        }

@@ -246,3 +246,20 @@ names.
 
 The implementation should avoid having broker mode and transparent proxy mode
 define separate copies of the same admin/control capabilities.
+
+## Current Inventory Surfaces
+
+Two source listings now exist on purpose:
+
+- `list_spec_sources()`
+  - compatibility/planner view
+  - only returns enabled planner-visible sources with node specs
+- `list_sources()`
+  - full capability-source inventory
+  - returns every source plus visibility, permissions, counts, and the names
+    owned in each capability bucket
+
+The broader `list_sources()` view is the one humans and LLM authoring clients
+should use when deciding what exists. The narrower `list_spec_sources()` view is
+still useful when the question is only "what can the planner currently place in
+a graph?"

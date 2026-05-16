@@ -250,6 +250,16 @@ class WfMcpService:
             and source.visibility.planner
         ]
 
+    def list_sources(self) -> list[dict[str, Any]]:
+        """Return every capability source with the names it currently owns."""
+        return [
+            source.as_inventory()
+            for source in sorted(
+                self.capability_sources.values(),
+                key=lambda source: source.id,
+            )
+        ]
+
     def list_available_specs(self) -> list[CatalogNodeEntry]:
         """Return planner-visible node catalog entries from every visible source."""
         return self.get_planner_catalog().entries()

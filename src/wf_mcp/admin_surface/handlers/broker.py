@@ -52,6 +52,9 @@ class BrokerAdminHandlers:
     def list_spec_sources(self) -> list[dict[str, Any]]:
         return self.service.list_spec_sources()
 
+    def list_sources(self) -> list[dict[str, Any]]:
+        return self.service.list_sources()
+
     async def read_broker_resource(self, qualified_name: str) -> dict[str, Any]:
         return await self.service.read_resource(qualified_name)
 

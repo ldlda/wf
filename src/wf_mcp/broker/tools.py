@@ -40,6 +40,10 @@ def register_broker_tools(server: FastMCP, service: WfMcpService) -> None:
         return handlers.list_spec_sources()
 
     @server.tool()
+    async def list_sources() -> list[dict[str, Any]]:
+        return handlers.list_sources()
+
+    @server.tool()
     async def read_broker_resource(qualified_name: str) -> dict[str, Any]:
         return await handlers.read_broker_resource(qualified_name)
 
