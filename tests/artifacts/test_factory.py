@@ -22,6 +22,7 @@ def test_create_workflow_artifact_from_plan_derives_boundary_schemas() -> None:
     )
 
     assert artifact.id == "echo"
+    assert artifact.kind == "workflow"
     assert artifact.version == 1
     assert artifact.title == "Echo"
     assert artifact.input_schema["properties"]["text"]["type"] == "string"
@@ -30,6 +31,19 @@ def test_create_workflow_artifact_from_plan_derives_boundary_schemas() -> None:
     assert artifact.plan["name"] == "echo"
     assert "demo.echo_tool" in artifact.required_capabilities
     assert artifact.created_from_catalog_version == "catalog-1"
+
+
+def test_create_workflow_artifact_from_plan_accepts_wrapper_kind() -> None:
+    artifact = create_workflow_artifact_from_plan(
+        artifact_id="normalize_status",
+        version=1,
+        title="Normalize Status",
+        plan=_plan(),
+        outcomes=("done",),
+        kind="wrapper",
+    )
+
+    assert artifact.kind == "wrapper"
 
 
 def test_create_workflow_artifact_from_plan_rejects_missing_boundary_schema() -> None:

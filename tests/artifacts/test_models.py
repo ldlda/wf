@@ -38,11 +38,29 @@ def test_workflow_artifact_serializes_required_capability_contract() -> None:
     dumped = artifact.model_dump(mode="json")
 
     assert dumped["id"] == "summarize_docs"
+    assert dumped["kind"] == "workflow"
     assert dumped["version"] == 1
     assert dumped["outcomes"] == ["done", "failed"]
     required = dumped["required_capabilities"]["context7.query-docs"]
     assert required["logical_source"] == "context7"
     assert required["input_schema_hash"] == "sha256:input"
+
+
+def test_workflow_artifact_can_be_marked_as_wrapper_intent() -> None:
+    artifact = WorkflowArtifact(
+        id="normalize_status",
+        version=1,
+        title="Normalize Status",
+        kind="wrapper",
+        input_schema={"type": "object", "properties": {}},
+        output_schema={"type": "object", "properties": {}},
+        outcomes=("done", "needs_input"),
+        plan={"name": "normalize_status", "nodes": [], "edges": []},
+    )
+
+    dumped = artifact.model_dump(mode="json")
+
+    assert dumped["kind"] == "wrapper"
 
 
 def test_workflow_deployment_binds_logical_sources_to_concrete_sources() -> None:

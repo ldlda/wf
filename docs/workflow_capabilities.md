@@ -85,7 +85,8 @@ how did the original provider happen to expose this thing?
 ### Wrapper / Adapter Artifact
 
 A wrapper artifact is a saved reusable bridge from a raw capability to a
-workflow capability.
+workflow capability. In storage it is not a second artifact family: it is a
+`WorkflowArtifact` with `kind="wrapper"`.
 
 Examples:
 
@@ -264,10 +265,10 @@ Today:
 - `wf.std` owns local reusable workflow node specs
 - `wf.mcp` owns workflow-facing MCP runtime helpers
 - discovered upstream tools can already become workflow node specs
+- saved artifacts can be tagged with `kind="workflow"` or `kind="wrapper"`
 
 Not yet implemented:
 
-- a saved wrapper artifact model
 - a direct public tool for calling arbitrary workflow node specs for authoring
   tests
 - per-outcome output schemas

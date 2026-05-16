@@ -6,6 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 JsonObject = dict[str, Any]
+ArtifactKind = Literal["workflow", "wrapper"]
 
 
 class DriftPolicy(StrEnum):
@@ -71,6 +72,7 @@ class WorkflowArtifact(BaseModel):
     id: str
     version: int = Field(ge=1)
     title: str
+    kind: ArtifactKind = "workflow"
     description: str | None = None
     input_schema: JsonObject
     output_schema: JsonObject

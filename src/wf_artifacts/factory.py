@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 from wf_core import Workflow
 
-from .models import JsonObject, RequiredCapability, WorkflowArtifact
+from .models import ArtifactKind, JsonObject, RequiredCapability, WorkflowArtifact
 
 
 def create_workflow_artifact_from_plan(
@@ -14,6 +14,7 @@ def create_workflow_artifact_from_plan(
     title: str,
     plan: JsonObject,
     outcomes: tuple[str, ...],
+    kind: ArtifactKind = "workflow",
     description: str | None = None,
     required_capabilities: Mapping[str, RequiredCapability] | None = None,
     created_from_catalog_version: str | None = None,
@@ -24,6 +25,7 @@ def create_workflow_artifact_from_plan(
         id=artifact_id,
         version=version,
         title=title,
+        kind=kind,
         description=description,
         input_schema=_required_object_field(plan, "input_schema"),
         output_schema=_required_object_field(plan, "output_schema"),

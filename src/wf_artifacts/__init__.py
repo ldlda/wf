@@ -5,6 +5,7 @@ from .catalog import (
 )
 from .factory import create_workflow_artifact_from_plan
 from .models import (
+    ArtifactKind,
     AvailableCapability,
     AvailableSource,
     DependencyDiagnostic,
@@ -19,6 +20,7 @@ from .validation import validate_deployment_dependencies
 
 __all__ = [
     "AvailableCapability",
+    "ArtifactKind",
     "AvailableSource",
     "DependencyDiagnostic",
     "DiagnosticSeverity",
