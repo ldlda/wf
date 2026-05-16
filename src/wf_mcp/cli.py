@@ -10,7 +10,7 @@ from .broker import (
     build_service_from_config,
     load_broker_config,
 )
-from .server import run_unified_proxy_server
+from .server import run_server
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -115,7 +115,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "serve":
         config = load_broker_config(args.config)
-        run_unified_proxy_server(
+        run_server(
             config,
             args.transport,
             config_path=args.config,

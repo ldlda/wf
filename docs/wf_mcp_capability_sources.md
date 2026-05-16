@@ -194,17 +194,19 @@ The code now has the first capability-source layer in place.
 - `wf.mcp` owns workflow MCP runtime node specs, currently
   `wf.mcp.call_tool`.
 - `wf.admin` owns privileged admin capability metadata and is not planner-visible
-  or MCP-client-visible by default.
+  by default.
 - Transparent proxy admin tools now use dotted `wf.admin.*` names through
   `LdaNamespace`.
 - `wf.admin` and `wf.mcp` are reserved connection ids.
 - Planner catalog, `list_available_specs()`, and workflow spec resolution respect
   source `enabled` and `visibility.planner`.
 
-Broker MCP tools still expose compatibility names such as `list_connections` and
-`get_planner_catalog`. Their metadata belongs to `wf.admin`, but dotted
-`wf.admin.*` broker tool projection is intentionally deferred until admin MCP
-exposure is explicit.
+Legacy broker MCP tools still expose compatibility names such as
+`list_connections` and `get_planner_catalog` on the compatibility-only broker
+server constructor. They now reuse the same service-admin registrar as the
+public server, with only the visible names changed. The public server projects
+service-backed admin tools such as `wf.admin.list_sources` alongside
+proxy-backed admin tools under the same `wf.admin.*` namespace.
 
 ## Current Code Mapping
 
@@ -214,8 +216,9 @@ Current code has several useful pieces but the boundaries are blurred.
 | --- | --- | --- |
 | `wf_authoring.ops` | reusable workflow node specs | `wf.std.node_specs` |
 | `wf_mcp.broker.service.builtins` | local workflow specs | `wf.std`, `wf.mcp` |
-| `wf_mcp.broker.tools` | compatibility broker MCP admin/control tools | `wf.admin.tools` |
-| `wf_mcp.transparent_proxy.admin` | dotted proxy MCP admin/control tools | `wf.admin.tools` |
+| `wf_mcp.broker.tools` | compatibility wrapper over shared service-admin registration | `wf.admin.tools` |
+| `wf_mcp.admin_surface.tools` | shared service-backed admin tool registration | `wf.admin.tools` |
+| `wf_mcp.transparent_proxy.admin` | proxy-backed public admin tools | `wf.admin.tools` |
 | discovered MCP tools | upstream tools and workflow wrappers | connection source |
 | broker resources/prompts | catalog/status/planning context | likely `wf.admin` or docs sources |
 

@@ -5,7 +5,7 @@ import sys
 from typing import Any
 
 from wf_mcp.models import BrokerConfig, ConnectionConfig
-from wf_mcp.server import create_unified_proxy_client
+from wf_mcp.server import create_server_client
 
 from .test_support import fixture_server_path, local_temp_root
 
@@ -16,7 +16,7 @@ def _structured(result: Any) -> dict[str, Any]:
     return content
 
 
-def test_unified_server_exposes_upstream_admin_and_workflow_tools() -> None:
+def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "unified_server_store",
         connections=[
@@ -34,12 +34,23 @@ def test_unified_server_exposes_upstream_admin_and_workflow_tools() -> None:
     )
 
     async def run_proxy() -> None:
-        client = create_unified_proxy_client(config)
+        client = create_server_client(config)
         async with client:
             tools = await client.list_tools()
             names = [tool.name for tool in tools]
             assert "fixture.personal.echo_tool" in names
             assert "wf.admin.list_connections" in names
+            assert "wf.admin.get_connection_statuses" in names
+            assert "wf.admin.refresh_connection_catalog" in names
+            assert "wf.admin.get_catalog" in names
+            assert "wf.admin.get_planner_catalog" in names
+            assert "wf.admin.list_spec_sources" in names
+            assert "wf.admin.list_sources" in names
+            assert "wf.admin.read_resource" in names
+            assert "wf.admin.render_prompt" in names
+            assert "wf.admin.invoke_method" in names
+            assert "wf.admin.call_tool" in names
+            assert "wf.admin.get_events" in names
             assert "wf.workflow.list_artifacts" in names
             assert "wf.workflow.run_deployment" in names
 
@@ -48,14 +59,21 @@ def test_unified_server_exposes_upstream_admin_and_workflow_tools() -> None:
                 {"text": "hello"},
             )
             artifacts_result = await client.call_tool("wf.workflow.list_artifacts")
+            sources_result = await client.call_tool("wf.admin.list_sources")
 
             assert _structured(echo_result)["echoed"] == "hello"
             assert _structured(artifacts_result)["nodes"] == []
+            source_ids = {
+                source["id"] for source in _structured(sources_result)["result"]
+            }
+            assert "wf.admin" in source_ids
+            assert "wf.mcp" in source_ids
+            assert "wf.std" in source_ids
 
     asyncio.run(run_proxy())
 
 
-def test_unified_server_can_hide_admin_tools() -> None:
+def test_server_can_hide_admin_tools() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "unified_no_admin_store",
         connections=[
@@ -73,7 +91,7 @@ def test_unified_server_can_hide_admin_tools() -> None:
     )
 
     async def run_proxy() -> None:
-        client = create_unified_proxy_client(config, admin_tools=False)
+        client = create_server_client(config, admin_tools=False)
         async with client:
             tools = await client.list_tools()
             names = [tool.name for tool in tools]
@@ -84,14 +102,14 @@ def test_unified_server_can_hide_admin_tools() -> None:
     asyncio.run(run_proxy())
 
 
-def test_unified_workflow_tools_have_human_metadata() -> None:
+def test_workflow_tools_have_human_metadata() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "unified_metadata_store",
         connections=[],
     )
 
     async def run_proxy() -> None:
-        client = create_unified_proxy_client(config, admin_tools=False)
+        client = create_server_client(config, admin_tools=False)
         async with client:
             tools = await client.list_tools()
             by_name = {tool.name: tool for tool in tools}
@@ -106,14 +124,14 @@ def test_unified_workflow_tools_have_human_metadata() -> None:
     asyncio.run(run_proxy())
 
 
-def test_unified_admin_tools_have_human_metadata() -> None:
+def test_admin_tools_have_human_metadata() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "unified_admin_metadata_store",
         connections=[],
     )
 
     async def run_proxy() -> None:
-        client = create_unified_proxy_client(config)
+        client = create_server_client(config)
         async with client:
             tools = await client.list_tools()
             by_name = {tool.name: tool for tool in tools}

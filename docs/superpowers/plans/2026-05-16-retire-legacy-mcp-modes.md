@@ -1,10 +1,10 @@
 # Retire Legacy MCP Modes Plan
 
-> **Status:** current execution plan for the next cleanup pass.
+> **Status:** completed retirement pass; kept as the decision record.
 
 ## Goal
 
-Make **unified mode** the only public MCP server mode exposed by `wf-mcp`.
+Make one public MCP server surface exposed by `wf-mcp`.
 
 `broker` mode and `proxy` mode were useful while the unified surface was being
 built, but keeping all three as public launch modes now creates the wrong mental
@@ -12,7 +12,7 @@ model:
 
 - broker mode suggests local workflow/admin tools are a separate product surface
 - proxy mode suggests upstream projection is a separate product surface
-- unified mode is already the real target: one server that exposes local
+- the combined server is already the real target: one server that exposes local
   capabilities and proxied upstream capabilities together
 
 The public product should have one server mode. The implementation may still
@@ -62,7 +62,7 @@ Where historical explanation is useful, call them legacy migration surfaces.
 
 Delete or rewrite tests whose only purpose is to prove the old public mode split.
 Keep behavior tests for the underlying capabilities when those behaviors still
-exist through unified mode.
+exist through the public server.
 
 ## What Stays
 
@@ -82,7 +82,7 @@ source of confusion.
 
 ### Shared services
 
-Keep the service/config/store/runtime objects that unified mode already uses.
+Keep the service/config/store/runtime objects that the public server already uses.
 This pass is about removing duplicate **entrypoints**, not rewriting the
 underlying architecture.
 
@@ -104,8 +104,8 @@ The cleanup should reduce surfaces, not churn the capability vocabulary.
 2. Remove or privatize old broker/proxy server launch functions that only exist
    for the retired public modes.
 3. Collapse docs/help text that still describe three user-facing modes.
-4. Keep implementation reuse through the existing unified server path.
-5. Update tests so they assert unified behavior directly instead of branching on
+4. Keep implementation reuse through the existing server path.
+5. Update tests so they assert server behavior directly instead of branching on
    legacy mode names.
 
 ## Non-Goals For This Pass
@@ -123,13 +123,13 @@ Those topics already have separate docs and should stay separate.
 
 - `wf-mcp serve` has one public MCP server behavior.
 - No public docs imply that broker/proxy are still supported product modes.
-- Unified mode continues to expose:
+- The server continues to expose:
   - proxied upstream capabilities
   - stable local workflow tools
   - optional admin tools
 - The test suite passes with the old public mode split removed.
 - Remaining roadmap docs still point to the real unresolved work instead of
-  making the reader rediscover why unified mode exists.
+  making the reader rediscover why the combined server exists.
 
 ## Follow-On Work After This Pass
 

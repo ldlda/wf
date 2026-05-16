@@ -1,92 +1,17 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
-from fastmcp.client import Client
-from fastmcp.client.transports.memory import FastMCPTransport
 
-from ..broker.config import build_service_from_config
-from ..broker.transport import normalize_transport
-from ..models import BrokerConfig
-from ..transparent_proxy.runtime import ProxyRuntime
-from ..workflow_surface import WorkflowSurfaceHandlers
+from wf_mcp.broker.service import WfMcpService
+
+from .handlers import WorkflowSurfaceHandlers
 
 
-def create_unified_proxy_server(
-    config: BrokerConfig,
-    *,
-    config_path: str | Path | None = None,
-    resources_as_tools: bool = False,
-    prompts_as_tools: bool = False,
-    search_tools: bool = False,
-    admin_tools: bool = True,
-) -> FastMCP[Any]:
-    """Create one MCP server with upstream proxy, admin, and workflow tools."""
-    service = build_service_from_config(config)
-    runtime = ProxyRuntime(
-        config,
-        config_path=config_path,
-        resources_as_tools=resources_as_tools,
-        prompts_as_tools=prompts_as_tools,
-        search_tools=search_tools,
-        admin_tools=admin_tools,
-        event_bus=service.event_bus,
-    )
-    _register_workflow_tools(runtime.server, WorkflowSurfaceHandlers(service))
-    return runtime.server
-
-
-def run_unified_proxy_server(
-    config: BrokerConfig,
-    transport: str = "stdio",
-    *,
-    config_path: str | Path | None = None,
-    resources_as_tools: bool = False,
-    prompts_as_tools: bool = False,
-    search_tools: bool = False,
-    admin_tools: bool = True,
-) -> None:
-    server = create_unified_proxy_server(
-        config,
-        config_path=config_path,
-        resources_as_tools=resources_as_tools,
-        prompts_as_tools=prompts_as_tools,
-        search_tools=search_tools,
-        admin_tools=admin_tools,
-    )
-    server.run(transport=normalize_transport(transport), show_banner=False)
-
-
-def create_unified_proxy_client(
-    config: BrokerConfig,
-    *,
-    config_path: str | Path | None = None,
-    resources_as_tools: bool = False,
-    prompts_as_tools: bool = False,
-    search_tools: bool = False,
-    admin_tools: bool = True,
-) -> Client[FastMCPTransport]:
-    return Client(
-        FastMCPTransport(
-            create_unified_proxy_server(
-                config,
-                config_path=config_path,
-                resources_as_tools=resources_as_tools,
-                prompts_as_tools=prompts_as_tools,
-                search_tools=search_tools,
-                admin_tools=admin_tools,
-            )
-        )
-    )
-
-
-def _register_workflow_tools(
-    server: FastMCP[Any],
-    handlers: WorkflowSurfaceHandlers,
-) -> None:
-    """Register stable workflow tools on the unified MCP surface."""
+def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None:
+    """Register stable workflow tools on the public MCP server surface."""
+    handlers = WorkflowSurfaceHandlers(service)
 
     @server.tool(
         name="wf.workflow.list_artifacts",
@@ -107,9 +32,7 @@ def _register_workflow_tools(
     @server.tool(
         name="wf.workflow.create_artifact_from_plan",
         title="Create Workflow Artifact From Plan",
-        description=(
-            "Validate a raw workflow plan and save it as a versioned artifact."
-        ),
+        description="Validate a raw workflow plan and save it as a versioned artifact.",
     )
     async def create_artifact_from_plan(
         artifact_id: str,
@@ -137,10 +60,7 @@ def _register_workflow_tools(
         title="Inspect Workflow Artifact",
         description="Return the full saved artifact for artifact_id and version.",
     )
-    async def inspect_artifact(
-        artifact_id: str,
-        version: int,
-    ) -> dict[str, Any]:
+    async def inspect_artifact(artifact_id: str, version: int) -> dict[str, Any]:
         return await handlers.inspect_artifact(
             artifact_id=artifact_id,
             version=version,
@@ -165,9 +85,7 @@ def _register_workflow_tools(
     @server.tool(
         name="wf.workflow.validate_deployment",
         title="Validate Workflow Deployment",
-        description=(
-            "Check whether a deployment_id can run with currently enabled sources."
-        ),
+        description="Check whether a deployment_id can run with currently enabled sources.",
     )
     async def validate_deployment(deployment_id: str) -> dict[str, Any]:
         return await handlers.validate_deployment(deployment_id=deployment_id)
