@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from typing import Annotated, TypedDict
+from typing import Annotated, Any, TypedDict
 
 import mcp.types as mcp_types
-from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp import Context, FastMCP
+from pydantic import AnyUrl
 from pydantic import Field
 
 
@@ -34,6 +35,19 @@ async def resource_link_tool() -> list[mcp_types.ResourceLink]:
             }
         )
     ]
+
+
+@server.tool(title="Emit notifications tool")
+async def emit_notifications_tool(ctx: Context[Any, Any, Any]) -> dict[str, bool]:
+    """Emit protocol notifications so proxy relay behavior can be tested."""
+    await ctx.request_context.session.send_tool_list_changed()
+    await ctx.request_context.session.send_resource_list_changed()
+    await ctx.request_context.session.send_prompt_list_changed()
+    await ctx.request_context.session.send_resource_updated(
+        AnyUrl("fixture://docs/welcome")
+    )
+    await ctx.info("fixture emitted notifications")
+    return {"emitted": True}
 
 
 @server.resource(

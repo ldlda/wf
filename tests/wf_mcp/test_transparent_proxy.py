@@ -83,16 +83,15 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
             proxy_tools_payload = _structured(proxy_tools_result)
             proxy_tools = proxy_tools_payload["tools"]
             assert proxy_tools_payload["nextCursor"] is None
-            assert proxy_tools_payload["total"] == 2
-            assert len(proxy_tools) == 2
+            assert proxy_tools_payload["total"] == 3
+            assert len(proxy_tools) == 3
             assert proxy_tools[0]["proxy_name"] == "fixture.personal.echo_tool"
             assert proxy_tools[0]["connection_id"] == "fixture.personal"
             assert proxy_tools[0]["local_name"] == "echo_tool"
             assert proxy_tools[0]["enabled"] is True
-            assert (
-                proxy_tools[1]["proxy_name"]
-                == "fixture.personal.resource_link_tool"
-            )
+            proxy_names = [tool["proxy_name"] for tool in proxy_tools]
+            assert "fixture.personal.emit_notifications_tool" in proxy_names
+            assert "fixture.personal.resource_link_tool" in proxy_names
 
             proxy_tool_result = await client.call_tool(
                 "wf.admin.get_proxy_tool",
@@ -302,7 +301,7 @@ def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> N
             first_page = _structured(first_page_result)
             assert len(first_page["tools"]) == 1
             assert first_page["nextCursor"] is not None
-            assert first_page["total"] == 4
+            assert first_page["total"] == 6
 
             second_page_result = await client.call_tool(
                 "wf.admin.list_proxy_tools",

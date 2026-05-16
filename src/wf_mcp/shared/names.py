@@ -94,7 +94,9 @@ class ProxyNamespace(Transform):
         return f"ProxyNamespace({self._connection_id!r})"
 
     async def list_tools(self, tools: Sequence[Tool]) -> Sequence[Tool]:
-        return [tool.model_copy(update={"name": self._name(tool.name)}) for tool in tools]
+        return [
+            tool.model_copy(update={"name": self._name(tool.name)}) for tool in tools
+        ]
 
     async def get_tool(
         self,
@@ -172,7 +174,9 @@ class ProxyNamespace(Transform):
         return (
             None
             if template is None
-            else template.model_copy(update={"uri_template": self._uri(template.uri_template)})
+            else template.model_copy(
+                update={"uri_template": self._uri(template.uri_template)}
+            )
         )
 
     def _name(self, name: str) -> str:
@@ -197,4 +201,4 @@ class ProxyNamespace(Transform):
         protocol, path = match.groups()
         if not path.startswith(self._resource_prefix):
             return None
-        return f"{protocol}{path[len(self._resource_prefix):]}"
+        return f"{protocol}{path[len(self._resource_prefix) :]}"
