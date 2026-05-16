@@ -101,6 +101,12 @@ The current practical proxy roadmap, including which FastMCP gaps are worth
 working around locally and which should stay upstream-dependent for now, lives
 in [`wf_mcp_proxy_reality_and_roadmap.md`](wf_mcp_proxy_reality_and_roadmap.md).
 
+The public MCP mode split is now being retired. The current execution plan is
+[`superpowers/plans/2026-05-16-retire-legacy-mcp-modes.md`](superpowers/plans/2026-05-16-retire-legacy-mcp-modes.md):
+`broker` and `proxy` are legacy public launch surfaces, while unified behavior
+is the intended product surface. Internal concern packages remain useful even
+after the public mode choices disappear.
+
 ## Future Extraction
 
 If this becomes multiple distributions, likely split points are:

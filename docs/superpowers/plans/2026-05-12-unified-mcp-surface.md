@@ -404,6 +404,11 @@ config_reloaded
 - [ ] Do not delete compatibility modes until tests cover every important
   surface.
 
+> **Superseded on 2026-05-16:** the compatibility period is now considered long
+> enough. The current plan is to retire the public broker/proxy mode split in
+> [`2026-05-16-retire-legacy-mcp-modes.md`](2026-05-16-retire-legacy-mcp-modes.md)
+> while keeping the useful internal implementation boundaries.
+
 ## Manual Verification Checklist
 
 - [ ] Codex can list upstream tools.
