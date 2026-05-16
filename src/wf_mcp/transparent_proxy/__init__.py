@@ -1,4 +1,4 @@
-from .admin import create_proxy_admin_server
+from .admin import register_proxy_admin_tools
 from .runtime import (
     ProxyRuntime,
     TransparentProxyRuntime,
@@ -9,7 +9,7 @@ from .runtime import (
 __all__ = [
     "ProxyRuntime",
     "TransparentProxyRuntime",
-    "create_proxy_admin_server",
+    "register_proxy_admin_tools",
     "create_transparent_proxy_client",
     "create_transparent_proxy_server",
 ]

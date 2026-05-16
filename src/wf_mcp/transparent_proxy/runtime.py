@@ -12,9 +12,9 @@ from fastmcp.server.transforms.search import BM25SearchTransform
 from ..control import BrokerConfigManager, ConfigMutationError
 from ..events import EventBus
 from ..models import BrokerConfig
-from ..shared.names import ADMIN_NAMESPACE, LdaNamespace
+from ..shared.names import ADMIN_NAMESPACE
 from ..proxy_validation import validate_transparent_proxy_config
-from .admin import create_proxy_admin_server
+from .admin import register_proxy_admin_tools
 from .mounts import ProxyMountRegistry, create_proxy_mount
 from .tools import (
     ProxyToolPayload,
@@ -72,6 +72,8 @@ class ProxyRuntime:
         self.mounts: ProxyMountRegistry[FastMCP[Any]] = ProxyMountRegistry(
             create_proxy_mount
         )
+        if self.admin_tools:
+            register_proxy_admin_tools(self.server, self)
         self.reload()
         if resources_as_tools:
             self.server.add_transform(ResourcesAsTools(self.server))
@@ -99,11 +101,6 @@ class ProxyRuntime:
         config = self.current_config()
         validate_transparent_proxy_config(config)
         self.server.providers[:] = [self.server.local_provider]
-
-        if self.admin_tools:
-            admin = create_proxy_admin_server(self)
-            admin.add_transform(LdaNamespace(ADMIN_NAMESPACE))
-            self.server.mount(admin)
 
         mounts = self.mounts.active_mounts_for(config)
         for mount in mounts:

@@ -64,8 +64,9 @@ Unified mode currently reuses `ProxyRuntime` as its proxy mounting engine. The
 the place where configured upstream MCP connections become mounted FastMCP
 providers. `TransparentProxyRuntime` remains a compatibility alias.
 
-`ProxyRuntime` now owns a small `ProxyMountRegistry`. Reload still clears the
-visible mounted provider list and rebuilds it from current config, but unchanged
+`ProxyRuntime` now owns a small `ProxyMountRegistry`. Proxy/admin tools are
+registered once on the top-level local provider; reload only clears the visible
+mounted upstream provider list and rebuilds it from current config. Unchanged
 enabled connections reuse their cached proxy mount instead of recreating a new
 client/proxy pair every time. Disabled or removed connections are no longer
 mounted after reload, but their cached mounts are only *retired* internally for

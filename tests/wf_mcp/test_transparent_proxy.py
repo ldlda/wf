@@ -106,6 +106,21 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
     asyncio.run(run_proxy())
 
 
+def test_transparent_proxy_registers_admin_tools_on_local_provider() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "transparent_proxy_local_admin_store",
+        connections=[],
+    )
+
+    runtime = ProxyRuntime(config)
+
+    assert len(runtime.server.providers) == 1
+    tools = asyncio.run(runtime.server.local_provider.list_tools())
+    names = {tool.name for tool in tools}
+    assert "wf.admin.list_connections" in names
+    assert "wf.admin.reload_config" in names
+
+
 def test_transparent_proxy_rewrites_resource_links_returned_by_tools() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "transparent_proxy_resource_link_store",
