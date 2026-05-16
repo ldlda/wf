@@ -279,6 +279,45 @@ def test_transparent_proxy_can_collapse_upstream_tools_behind_search() -> None:
     asyncio.run(run_proxy())
 
 
+def test_transparent_proxy_admin_inventory_ignores_search_visibility() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "transparent_proxy_admin_inventory_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    async def run_proxy() -> None:
+        client = create_transparent_proxy_client(config, search_tools=True)
+        async with client:
+            visible_names = [tool.name for tool in await client.list_tools()]
+            assert "fixture.personal.echo_tool" not in visible_names
+
+            listed = await client.call_tool("wf.admin.list_proxy_tools", {})
+            payload = listed.data
+            assert isinstance(payload, dict)
+            assert payload["tools"][0]["proxy_name"] == "fixture.personal.echo_tool"
+
+            inspected = await client.call_tool(
+                "wf.admin.get_proxy_tool",
+                {"proxy_name": "fixture.personal.echo_tool"},
+            )
+            inspected_payload = inspected.data
+            assert isinstance(inspected_payload, dict)
+            assert inspected_payload["proxy_name"] == "fixture.personal.echo_tool"
+
+    asyncio.run(run_proxy())
+
+
 def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "transparent_proxy_paged_tools_store",

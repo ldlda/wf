@@ -136,13 +136,10 @@ class ProxyRuntime:
         self,
     ) -> list[ProxyToolPayload]:
         config = self.current_config()
-        connection_ids = {
-            connection.id for connection in config.connections if connection.enabled
-        }
-        tools = await self.server.list_tools()
+        tools = await self._list_active_mount_tools(config)
         return collect_proxy_tools(
             tools=tools,
-            connection_ids=connection_ids,
+            connection_ids=self._enabled_connection_ids(config),
         )
 
     async def list_proxy_tools_page(
@@ -163,18 +160,33 @@ class ProxyRuntime:
 
     async def get_proxy_tool(self, proxy_name: str) -> dict[str, Any]:
         config = self.current_config()
-        connection_ids = {
-            connection.id for connection in config.connections if connection.enabled
-        }
-        tools = await self.server.list_tools()
+        tools = await self._list_active_mount_tools(config)
         payloads = collect_proxy_tools(
             tools=tools,
-            connection_ids=connection_ids,
+            connection_ids=self._enabled_connection_ids(config),
         )
         for tool in payloads:
             if tool.proxy_name == proxy_name:
                 return tool.to_payload(include_schema=True)
         raise KeyError(proxy_name)
+
+    async def _list_active_mount_tools(self, config: BrokerConfig) -> list[Any]:
+        """Return mounted upstream tools without top-level client transforms.
+
+        Per-mount namespace transforms are part of our proxy contract, but
+        top-level transforms such as BM25 search are only presentation layers
+        for MCP clients. Admin inventory must inspect the mounted proxies
+        directly so hidden-but-mounted tools remain discoverable here.
+        """
+        tools: list[Any] = []
+        for mount in self.mounts.active_mounts_for(config):
+            tools.extend(await mount.proxy.list_tools())
+        return tools
+
+    @staticmethod
+    def _enabled_connection_ids(config: BrokerConfig) -> set[str]:
+        """Return connection ids that currently contribute mounted proxies."""
+        return {connection.id for connection in config.connections if connection.enabled}
 
 
 TransparentProxyRuntime = ProxyRuntime

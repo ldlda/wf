@@ -19,7 +19,7 @@
       "id": "playwright.default",
       "server": "playwright",
       "account": "default",
-      "enabled": true,
+      "enabled": false,
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
