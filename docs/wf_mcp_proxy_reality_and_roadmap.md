@@ -126,8 +126,8 @@ When the exposed tool catalog grows large or changes often, FastMCP's search
 transform is a good mitigation: keep a stable pinned control/workflow spine
 visible, and use `search_tools` plus its synthetic `call_tool` for the changing
 rest of the catalog. Do not confuse that synthetic raw-tool caller with a
-future workflow-capability test tool; testing a normalized `NodeSpec` contract
-is a separate operation and should also remain pinned once it exists.
+workflow-capability test tool; `wf.workflow.call_capability` tests a normalized
+`NodeSpec` contract and remains pinned for that reason.
 
 ## What Is Probably Not Worth Owning Yet
 

@@ -22,6 +22,23 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         return await handlers.list_artifacts()
 
     @server.tool(
+        name="wf.workflow.call_capability",
+        title="Call Workflow Capability",
+        description=(
+            "Execute one planner-visible workflow capability once and return its "
+            "normalized outcome and output."
+        ),
+    )
+    async def call_capability(
+        qualified_name: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        return await handlers.call_capability(
+            qualified_name=qualified_name,
+            payload=payload,
+        )
+
+    @server.tool(
         name="wf.workflow.save_artifact",
         title="Save Workflow Artifact",
         description="Persist a complete workflow artifact JSON document.",

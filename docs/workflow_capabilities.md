@@ -266,11 +266,11 @@ Today:
 - `wf.mcp` owns workflow-facing MCP runtime helpers
 - discovered upstream tools can already become workflow node specs
 - saved artifacts can be tagged with `kind="workflow"` or `kind="wrapper"`
+- `wf.workflow.call_capability` can execute one planner-visible workflow
+  capability directly and return normalized `outcome` / `output`
 
 Not yet implemented:
 
-- a direct public tool for calling arbitrary workflow node specs for authoring
-  tests
 - per-outcome output schemas
 - graph-as-node for saved workflows
 

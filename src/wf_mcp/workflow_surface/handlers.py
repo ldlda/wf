@@ -14,6 +14,8 @@ from wf_artifacts import (
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
     validate_deployment_dependencies,
 )
+from wf_authoring import build_async_registry
+from wf_core import RuntimeContext
 
 from ..events import make_event
 from ..models import RawWorkflowPlan
@@ -38,6 +40,25 @@ class WorkflowSurfaceHandlers:
             for artifact in self.service.artifact_store.list_artifacts()
         ]
         return {"nodes": entries}
+
+    async def call_capability(
+        self,
+        *,
+        qualified_name: str,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Execute one planner-visible workflow capability for authoring tests."""
+        spec = self.service._get_qualified_spec(qualified_name)
+        handler = build_async_registry(spec)[spec.name]
+        result = await handler(
+            payload,
+            RuntimeContext(current_node_id=spec.name),
+        )
+        return {
+            "qualified_name": spec.name,
+            "outcome": result["outcome"],
+            "output": result["output"],
+        }
 
     async def save_artifact(self, artifact: dict[str, Any]) -> dict[str, Any]:
         if self.service.artifact_store is None:

@@ -51,6 +51,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.admin.call_tool" in names
             assert "wf.admin.get_events" in names
             assert "wf.workflow.list_artifacts" in names
+            assert "wf.workflow.call_capability" in names
             assert "wf.workflow.run_deployment" in names
 
             echo_result = await client.call_tool(
@@ -58,10 +59,19 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
                 {"text": "hello"},
             )
             artifacts_result = await client.call_tool("wf.workflow.list_artifacts")
+            capability_result = await client.call_tool(
+                "wf.workflow.call_capability",
+                {
+                    "qualified_name": "wf.std.constant",
+                    "payload": {"value": "hello"},
+                },
+            )
             sources_result = await client.call_tool("wf.admin.list_sources")
 
             assert _structured(echo_result)["echoed"] == "hello"
             assert _structured(artifacts_result)["nodes"] == []
+            assert _structured(capability_result)["outcome"] == "ok"
+            assert _structured(capability_result)["output"] == {"value": "hello"}
             source_ids = {
                 source["id"] for source in _structured(sources_result)["result"]
             }
@@ -133,6 +143,7 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.admin.list_proxy_tools" in names
             assert "wf.admin.get_proxy_tool" in names
             assert "wf.workflow.list_artifacts" in names
+            assert "wf.workflow.call_capability" in names
             assert "wf.workflow.inspect_artifact" in names
             assert "wf.workflow.list_deployments" in names
             assert "wf.workflow.validate_deployment" in names
