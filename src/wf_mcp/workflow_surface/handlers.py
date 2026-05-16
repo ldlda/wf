@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from wf_artifacts import (
+    ArtifactKind,
     AvailableCapability,
     AvailableSource,
     DependencyDiagnostic,
@@ -48,16 +49,55 @@ class WorkflowSurfaceHandlers:
         payload: dict[str, Any],
     ) -> dict[str, Any]:
         """Execute one planner-visible workflow capability for authoring tests."""
+        wrapper_artifact = self._wrapper_artifact_for_capability_name(qualified_name)
+        if wrapper_artifact is not None:
+            return await self._call_wrapper_artifact(wrapper_artifact, payload)
+
         spec = self.service._get_qualified_spec(qualified_name)
         handler = build_async_registry(spec)[spec.name]
-        result = await handler(
-            payload,
-            RuntimeContext(current_node_id=spec.name),
-        )
+        result = await handler(payload, RuntimeContext(current_node_id=spec.name))
         return {
             "qualified_name": spec.name,
             "outcome": result["outcome"],
             "output": result["output"],
+        }
+
+    def _wrapper_artifact_for_capability_name(
+        self,
+        qualified_name: str,
+    ) -> WorkflowArtifact | None:
+        """Resolve a saved node-like wrapper artifact from its stable capability name."""
+        parsed = _parse_artifact_capability_id(qualified_name)
+        if parsed is None or self.service.artifact_store is None:
+            return None
+        artifact_id, version = parsed
+        try:
+            artifact = self.service.artifact_store.get_artifact(artifact_id, version)
+        except KeyError:
+            return None
+        if artifact.kind != "wrapper":
+            return None
+        return artifact
+
+    async def _call_wrapper_artifact(
+        self,
+        artifact: WorkflowArtifact,
+        payload: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Execute a saved wrapper artifact through the workflow runner."""
+        unsupported = _unsupported_interrupt_diagnostic(artifact)
+        if unsupported is not None:
+            raise ValueError(unsupported.message)
+
+        # For now only wrapper artifacts are honest node capabilities here.
+        # Full saved workflows stay on `run_deployment` until core supports
+        # graph-as-node semantics instead of us faking subgraphs at this layer.
+        plan = _raw_plan_from_artifact(artifact)
+        run = await self.service.run_workflow_from_plan(plan, payload)
+        return {
+            "qualified_name": _artifact_capability_id(artifact),
+            "outcome": run.status.value,
+            "output": run.output,
         }
 
     async def save_artifact(self, artifact: dict[str, Any]) -> dict[str, Any]:
@@ -87,20 +127,27 @@ class WorkflowSurfaceHandlers:
         artifact_id: str,
         version: int,
         title: str,
-        plan: dict[str, Any],
+        plan: RawWorkflowPlan | dict[str, Any],
         outcomes: Sequence[str],
+        kind: ArtifactKind = "workflow",
         description: str | None = None,
         required_capabilities: dict[str, dict[str, Any]] | None = None,
         created_from_catalog_version: str | None = None,
     ) -> dict[str, Any]:
         if self.service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
+        typed_plan = (
+            plan
+            if isinstance(plan, RawWorkflowPlan)
+            else RawWorkflowPlan.model_validate(plan)
+        )
         workflow_artifact = build_workflow_artifact_from_plan(
             artifact_id=artifact_id,
             version=version,
             title=title,
+            kind=kind,
             description=description,
-            plan=plan,
+            plan=typed_plan.model_dump(mode="json", by_alias=True),
             outcomes=tuple(outcomes),
             required_capabilities={
                 name: RequiredCapability.model_validate(capability)
@@ -260,16 +307,32 @@ def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
     return f"workflow.{artifact.id}.v{artifact.version}"
 
 
+# this feels like a hack
+def _parse_artifact_capability_id(qualified_name: str) -> tuple[str, int] | None:
+    """Parse the stable `workflow.<artifact_id>.v<version>` capability name."""
+    prefix = "workflow."
+    if not qualified_name.startswith(prefix):
+        return None
+    artifact_part, separator, version_part = qualified_name[len(prefix) :].rpartition(
+        ".v"
+    )
+    if not separator or not artifact_part or not version_part.isdecimal():
+        return None
+    return artifact_part, int(version_part)
+
+
 def _raw_plan_from_artifact(artifact: WorkflowArtifact) -> RawWorkflowPlan:
     """Validate the stored plan shape expected by the broker workflow runner."""
-    return RawWorkflowPlan(
-        name=_plan_field(artifact, "name"),
-        input_schema=_plan_field(artifact, "input_schema"),
-        state_schema=_plan_field(artifact, "state_schema"),
-        output_schema=_plan_field(artifact, "output_schema"),
-        start=_plan_field(artifact, "start"),
-        nodes=_plan_field(artifact, "nodes"),
-        edges=_plan_field(artifact, "edges"),
+    return RawWorkflowPlan.model_validate(
+        {
+            "name": _plan_field(artifact, "name"),
+            "input_schema": _plan_field(artifact, "input_schema"),
+            "state_schema": _plan_field(artifact, "state_schema"),
+            "output_schema": _plan_field(artifact, "output_schema"),
+            "start": _plan_field(artifact, "start"),
+            "nodes": _plan_field(artifact, "nodes"),
+            "edges": _plan_field(artifact, "edges"),
+        }
     )
 
 

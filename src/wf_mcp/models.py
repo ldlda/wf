@@ -4,6 +4,10 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
+from pydantic import BaseModel
+from wf_core import Edge
+from wf_core.models.steps import Step
+
 from .capabilities import CatalogNodeEntry, CatalogPromptEntry, CatalogResourceEntry
 
 
@@ -38,15 +42,16 @@ class CatalogSnapshot:
         return age_ms > self.max_age_seconds * 1000
 
 
-@dataclass(slots=True)
-class RawWorkflowPlan:
+class RawWorkflowPlan(BaseModel):
+    """Raw authoring plan using the same graph step and edge models as core."""
+
     name: str
     input_schema: dict[str, Any]
     state_schema: dict[str, Any]
     output_schema: dict[str, Any]
     start: str
-    nodes: list[dict[str, Any]]
-    edges: list[dict[str, Any]]
+    nodes: list[Step]
+    edges: list[Edge]
 
 
 @dataclass(slots=True)

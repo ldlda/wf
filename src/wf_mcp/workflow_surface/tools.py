@@ -1,11 +1,14 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Mapping
 
 from fastmcp import FastMCP
 
+from wf_artifacts import ArtifactKind
+from wf_artifacts.models import RequiredCapability
 from wf_mcp.broker.service import WfMcpService
 
+from ..models import RawWorkflowPlan
 from .handlers import WorkflowSurfaceHandlers
 
 
@@ -55,20 +58,32 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         artifact_id: str,
         version: int,
         title: str,
-        plan: dict[str, Any],
+        plan: RawWorkflowPlan,
         outcomes: list[str],
+        kind: ArtifactKind = "workflow",
         description: str | None = None,
-        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        required_capabilities: (
+            Mapping[str, RequiredCapability | dict[str, Any]] | None
+        ) = None,
         created_from_catalog_version: str | None = None,
     ) -> dict[str, Any]:
         return await handlers.create_artifact_from_plan(
             artifact_id=artifact_id,
             version=version,
             title=title,
+            kind=kind,
             description=description,
             plan=plan,
             outcomes=outcomes,
-            required_capabilities=required_capabilities,
+            required_capabilities={
+                name: (
+                    capability.model_dump()
+                    if isinstance(capability, RequiredCapability)
+                    else capability
+                )
+                for name, capability in (required_capabilities or {}).items()
+            }
+            or None,
             created_from_catalog_version=created_from_catalog_version,
         )
 

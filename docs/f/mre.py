@@ -4,14 +4,16 @@ import mcp.types as mcp_types
 from fastmcp import Client
 from fastmcp.client.transports import FastMCPTransport
 from fastmcp.server import create_proxy
-from mcp.server.fastmcp import Context, FastMCP
+from fastmcp import Context, FastMCP
+from fastmcp.dependencies import CurrentContext
 from pydantic import AnyUrl
 
 server = FastMCP("notification-fixture")
 
 
 @server.tool()
-async def emit_notifications_tool(ctx: Context) -> dict[str, bool]:
+async def emit_notifications_tool(ctx: Context = CurrentContext()) -> dict[str, bool]:
+    assert ctx.request_context is not None
     await ctx.request_context.session.send_tool_list_changed()
     await ctx.request_context.session.send_resource_list_changed()
     await ctx.request_context.session.send_prompt_list_changed()

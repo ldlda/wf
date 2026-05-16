@@ -523,9 +523,9 @@ class WfMcpService:
     def compile_plan(self, plan: RawWorkflowPlan) -> Workflow:
         node_defs: dict[str, Any] = {}
         for step in plan.nodes:
-            if step.get("type") != "node":
+            if not isinstance(step, NodeUse):
                 continue
-            qualified_name = step["node"]
+            qualified_name = step.node
             spec = self._get_qualified_spec(qualified_name)
             node_defs[qualified_name] = spec.to_node_def()
 
@@ -536,8 +536,8 @@ class WfMcpService:
             "output_schema": plan.output_schema,
             "start": plan.start,
             "node_defs": [node.model_dump() for node in node_defs.values()],
-            "nodes": plan.nodes,
-            "edges": plan.edges,
+            "nodes": [node.model_dump(by_alias=True) for node in plan.nodes],
+            "edges": [edge.model_dump(by_alias=True) for edge in plan.edges],
         }
         return Workflow.model_validate(payload)
 

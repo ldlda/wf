@@ -5,6 +5,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 
 from ..workflow_surface import WorkflowSurfaceHandlers
+from ..models import RawWorkflowPlan
 from .service import WfMcpService
 
 
@@ -25,7 +26,7 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
         artifact_id: str,
         version: int,
         title: str,
-        plan: dict[str, Any],
+        plan: RawWorkflowPlan,
         outcomes: list[str],
         description: str | None = None,
         required_capabilities: dict[str, dict[str, Any]] | None = None,

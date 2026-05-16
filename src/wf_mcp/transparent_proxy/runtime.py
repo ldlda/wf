@@ -35,6 +35,7 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     # Stable workflow control surface. Keep future workflow-capability test
     # tools pinned here too; they are distinct from raw MCP tool execution.
     "wf.workflow.list_artifacts",
+    "wf.workflow.create_artifact_from_plan",
     "wf.workflow.call_capability",
     "wf.workflow.inspect_artifact",
     "wf.workflow.list_deployments",
@@ -186,7 +187,9 @@ class ProxyRuntime:
     @staticmethod
     def _enabled_connection_ids(config: BrokerConfig) -> set[str]:
         """Return connection ids that currently contribute mounted proxies."""
-        return {connection.id for connection in config.connections if connection.enabled}
+        return {
+            connection.id for connection in config.connections if connection.enabled
+        }
 
 
 TransparentProxyRuntime = ProxyRuntime

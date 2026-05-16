@@ -9,6 +9,9 @@ class WorkflowArtifactCatalogEntry(BaseModel):
     """NodeSpec-shaped projection of a saved workflow artifact."""
 
     name: str
+    artifact_id: str
+    version: int
+    kind: str
     display_name: str
     description: str | None = None
     outcomes: tuple[str, ...]
@@ -37,6 +40,9 @@ def artifact_catalog_entry(
     )
     return WorkflowArtifactCatalogEntry(
         name=artifact_node_name(artifact),
+        artifact_id=artifact.id,
+        version=artifact.version,
+        kind=artifact.kind,
         display_name=artifact.title,
         description=artifact.description,
         outcomes=artifact.outcomes,

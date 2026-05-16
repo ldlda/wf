@@ -11,6 +11,7 @@ from wf_artifacts import (
 )
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
+from wf_mcp.models import RawWorkflowPlan
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 
@@ -27,6 +28,9 @@ def test_workflow_surface_lists_artifact_catalog_entries() -> None:
     nodes = payload["nodes"]
     assert len(nodes) == 1
     assert nodes[0]["name"] == "workflow.summarize_docs.v1"
+    assert nodes[0]["artifact_id"] == "summarize_docs"
+    assert nodes[0]["version"] == 1
+    assert nodes[0]["kind"] == "workflow"
     assert nodes[0]["required_sources"] == ["context7"]
     assert "plan" not in nodes[0]
 
@@ -81,6 +85,35 @@ def test_workflow_surface_records_artifact_and_deployment_save_events() -> None:
     assert events[1].capability_id == "deployment.echo.personal"
 
 
+def test_workflow_surface_creates_wrapper_artifact_from_plan() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_wrapper_plan"
+    )
+    handlers = _handlers(artifact_store)
+
+    payload = asyncio.run(
+        handlers.create_artifact_from_plan(
+            artifact_id="echo_wrapper",
+            version=1,
+            title="Echo Wrapper",
+            kind="wrapper",
+            plan=_echo_artifact().plan,
+            outcomes=("completed",),
+        )
+    )
+    artifact = artifact_store.get_artifact("echo_wrapper", 1)
+
+    assert payload["saved"] is True
+    assert artifact.kind == "wrapper"
+
+
+def test_raw_workflow_plan_uses_core_step_and_edge_models() -> None:
+    plan = RawWorkflowPlan.model_validate(_echo_artifact().plan)
+
+    assert plan.nodes[0].type == "node"
+    assert plan.edges[0].outcome == "ok"
+
+
 def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_run")
     artifact_store.save_artifact(_echo_artifact())
@@ -112,6 +145,36 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     assert payload["status"] == "completed"
     assert payload["output"]["echoed"] == "hello"
     assert payload["diagnostics"] == []
+
+
+def test_workflow_surface_calls_saved_wrapper_artifact() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_wrapper_call"
+    )
+    wrapper = _echo_artifact().model_copy(
+        update={"id": "echo_wrapper", "kind": "wrapper"}
+    )
+    artifact_store.save_artifact(wrapper)
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_wrapper_call_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.call_capability(
+            qualified_name="workflow.echo_wrapper.v1",
+            payload={"text": "hello"},
+        )
+    )
+
+    assert payload["qualified_name"] == "workflow.echo_wrapper.v1"
+    assert payload["outcome"] == "completed"
+    assert payload["output"]["echoed"] == "hello"
 
 
 def _handlers(artifact_store: FileWorkflowArtifactStore) -> WorkflowSurfaceHandlers:
