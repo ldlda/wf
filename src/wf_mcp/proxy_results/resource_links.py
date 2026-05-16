@@ -26,7 +26,11 @@ def rewrite_call_tool_result_resource_links(
     result: mcp_types.CallToolResult,
     rewrite_uri: ResourceUriRewriter,
 ) -> mcp_types.CallToolResult:
-    """Return a copy of a tool result with ResourceLink content URIs rewritten."""
+    """Return a copy of a tool result with ResourceLink content URIs rewritten.
+
+    This pure helper expresses the same missing proxy behavior as
+    `ResourceLinkNamespace` without depending on FastMCP wrapper classes.
+    """
     return result.model_copy(
         update={
             "content": [

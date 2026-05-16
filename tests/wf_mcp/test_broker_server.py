@@ -81,7 +81,8 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
     assert "catalog.all" in resource_names
     assert "events.all" in resource_names
     assert "status.all" in resource_names
-    assert "plan_with_catalog" in prompt_names
+    assert "workflow_authoring_guide" in prompt_names
+    assert "plan_with_catalog" not in prompt_names
 
     _content, planner_catalog_raw = asyncio.run(
         server.call_tool("get_planner_catalog", {})

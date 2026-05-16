@@ -92,7 +92,19 @@ def namespace_resource_uri(connection_id: str, uri: str) -> str:
 
 
 class ProxyNamespace(Transform):
-    """Project MCP proxy names with dots for callables and slashes for URIs."""
+    """Project one upstream MCP server into wf-mcp's public namespace.
+
+    This intentionally replaces FastMCP's stock `Namespace` transform for
+    proxied capabilities. FastMCP's transform is almost the right thing, but it
+    uses underscore-prefixed callable names and does not match our desired
+    downstream shape:
+
+    - tools/prompts use `connection.id.local_name`
+    - resources/templates use URI paths like `scheme://connection/id/path`
+
+    Keep this class narrow. It should only remake the namespace projection
+    behavior we need from FastMCP, not become a general proxy framework.
+    """
 
     def __init__(self, connection_id: str) -> None:
         self._connection_id = connection_id

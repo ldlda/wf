@@ -14,7 +14,13 @@ from ..shared.names import connection_id_to_resource_path
 
 
 class ResourceLinkRewritingTool(Tool):
-    """Delegate tool execution while rewriting returned resource-link URIs."""
+    """Delegate execution while compensating for one FastMCP proxy gap.
+
+    FastMCP already rewrites resources listed through namespace transforms, but
+    proxied tools can also return typed `ResourceLink` content blocks. Current
+    FastMCP does not rewrite those result payloads for us, so this wrapper keeps
+    the public tool schema and changes only the returned resource-link URIs.
+    """
 
     model_config = ConfigDict(extra="allow", arbitrary_types_allowed=True)
 
@@ -50,7 +56,12 @@ class ResourceLinkRewritingTool(Tool):
 
 
 class ResourceLinkNamespace(Transform):
-    """Rewrite resource links returned by tools into one namespace."""
+    """Mirror namespace URI projection inside proxied tool results.
+
+    This is a local stand-in for the result-transform behavior a fully
+    transparent FastMCP proxy would ideally provide itself. If upstream gains a
+    general result rewrite hook, this class should become deletable.
+    """
 
     def __init__(self, prefix: str) -> None:
         self._prefix = connection_id_to_resource_path(prefix)
