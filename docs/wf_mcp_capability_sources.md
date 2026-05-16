@@ -37,6 +37,10 @@ CapabilitySource
 Important rule: a source is not "an MCP tool source." A source owns
 capabilities. Each surface decides which capability kinds it projects.
 
+For the distinction between raw capabilities, workflow-facing `NodeSpec`s, and
+future saved wrapper artifacts, see
+[`workflow_capabilities.md`](workflow_capabilities.md).
+
 ## Canonical Sources
 
 ### `wf.std`
