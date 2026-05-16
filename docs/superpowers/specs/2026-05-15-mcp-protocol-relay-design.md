@@ -28,10 +28,21 @@ capability before we can bridge it end to end would make `wf-mcp` lie to clients
 
 Known remaining uncertainty:
 
-- which upstream notifications FastMCP proxying already forwards
 - which advanced MCP requests FastMCP can already bridge
 - how initialization capabilities should be projected through a broker with
   multiple enabled upstream connections
+
+Resolved after this spec was written:
+
+- generic upstream notifications such as list-changed, resource-updated, and
+  logging notifications do **not** automatically reach downstream clients
+  through the current proxy path
+- current capability negotiation is not the reason for that gap
+
+See [`../../mcp_protocol_proxy_inventory.md`](../../mcp_protocol_proxy_inventory.md)
+for the measured facts and
+[`../../wf_mcp_proxy_reality_and_roadmap.md`](../../wf_mcp_proxy_reality_and_roadmap.md)
+for the current practical roadmap.
 
 ## Core Distinction
 

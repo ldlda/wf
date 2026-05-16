@@ -226,6 +226,8 @@ Still unproven:
 - whether future explicit relay code should project list-changed notifications
   one-for-one, coalesce them, or translate them into local catalog refresh
   events first
+- whether future explicit relay code should use FastMCP's public proxy hooks or
+  a small local wrapper around the upstream message handler
 
 ## Capability Negotiation Inventory
 

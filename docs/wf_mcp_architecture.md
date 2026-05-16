@@ -97,6 +97,10 @@ unmount/provider lifecycle when it becomes available.
 Do not add notification proxying or long-lived subscription handling across
 reloads without first introducing an explicit mount lifecycle boundary.
 
+The current practical proxy roadmap, including which FastMCP gaps are worth
+working around locally and which should stay upstream-dependent for now, lives
+in [`wf_mcp_proxy_reality_and_roadmap.md`](wf_mcp_proxy_reality_and_roadmap.md).
+
 ## Future Extraction
 
 If this becomes multiple distributions, likely split points are:

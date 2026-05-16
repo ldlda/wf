@@ -82,6 +82,15 @@ def connection_id_to_resource_path(connection_id: str) -> str:
     return connection_id.replace(".", "/")
 
 
+def namespace_resource_uri(connection_id: str, uri: str) -> str:
+    """Project one upstream resource URI into its downstream proxy namespace."""
+    match = _URI_PATTERN.match(uri)
+    if match is None:
+        return uri
+    protocol, path = match.groups()
+    return f"{protocol}{connection_id_to_resource_path(connection_id)}/{path}"
+
+
 class ProxyNamespace(Transform):
     """Project MCP proxy names with dots for callables and slashes for URIs."""
 
@@ -188,11 +197,7 @@ class ProxyNamespace(Transform):
         return name[len(self._name_prefix) :]
 
     def _uri(self, uri: str) -> str:
-        match = _URI_PATTERN.match(uri)
-        if match is None:
-            return uri
-        protocol, path = match.groups()
-        return f"{protocol}{self._resource_prefix}{path}"
+        return namespace_resource_uri(self._connection_id, uri)
 
     def _local_uri(self, uri: str) -> str | None:
         match = _URI_PATTERN.match(uri)
