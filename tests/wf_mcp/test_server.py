@@ -44,7 +44,6 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.admin.refresh_connection_catalog" in names
             assert "wf.admin.get_catalog" in names
             assert "wf.admin.get_planner_catalog" in names
-            assert "wf.admin.list_spec_sources" in names
             assert "wf.admin.list_sources" in names
             assert "wf.admin.read_resource" in names
             assert "wf.admin.render_prompt" in names

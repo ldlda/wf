@@ -8,8 +8,8 @@ _WORKFLOW_AUTHORING_GUIDE = """\
 Build workflows from current capabilities instead of assuming a stale catalog.
 
 Use `get_planner_catalog` when you need the current workflow-capability view.
-Use `list_sources` and `list_spec_sources` when you need to understand what is
-available and which sources are planner-visible.
+Use `list_sources` when you need to understand source ownership, visibility,
+and capability kinds.
 Use `call_broker_tool` to test an upstream MCP tool manually before wrapping it
 into a workflow.
 

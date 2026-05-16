@@ -88,14 +88,12 @@ def test_service_rejects_reserved_connection_ids() -> None:
 def test_service_installs_builtin_stdlib_specs_by_default() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "builtin_store"))
 
-    assert "wf.std" in service.spec_sources
-    assert "wf.std.runtime_error" in service.spec_sources["wf.std"].specs
-    assert "wf.mcp" in service.spec_sources
-    assert "wf.mcp.call_tool" in service.spec_sources["wf.mcp"].specs
-
-    sources = service.list_spec_sources()
-    assert {source["id"] for source in sources} == {"wf.mcp", "wf.std"}
-    assert all(source["kind"] == "system" for source in sources)
+    assert "wf.std.runtime_error" in service.capability_sources[
+        "wf.std"
+    ].capabilities.node_specs
+    assert "wf.mcp.call_tool" in service.capability_sources[
+        "wf.mcp"
+    ].capabilities.node_specs
 
 
 def test_service_lists_all_capability_sources_with_owned_capability_names() -> None:
@@ -176,47 +174,17 @@ def test_wf_admin_source_exists_but_is_not_planner_visible() -> None:
     assert "wf.admin" not in service.get_planner_catalog().snapshots
 
 
-def test_service_spec_views_are_derived_from_capability_sources() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "source_view_store"))
-
-    assert "wf.std" in service.capability_sources
-    assert "wf.std" in service.spec_sources
-    assert "wf.std" in service.specs_by_connection
-    assert (
-        service.spec_sources["wf.std"].specs
-        is not service.capability_sources["wf.std"].capabilities.node_specs
-    )
-    assert (
-        service.specs_by_connection["wf.std"]
-        is not service.capability_sources["wf.std"].capabilities.node_specs
-    )
-    assert (
-        service.specs_by_connection["wf.std"]["wf.std.runtime_error"]
-        is service.capability_sources["wf.std"].capabilities.node_specs[
-            "wf.std.runtime_error"
-        ]
-    )
-
-    service.spec_sources["wf.std"].specs.clear()
-    service.specs_by_connection["wf.std"].clear()
-    assert (
-        "wf.std.runtime_error"
-        in service.capability_sources["wf.std"].capabilities.node_specs
-    )
-
-
 def test_service_can_disable_builtin_stdlib_specs() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "no_builtin_store"),
         include_builtin_specs=False,
     )
 
-    assert "wf.std" not in service.spec_sources
-    assert "wf.mcp" not in service.spec_sources
-    assert service.list_spec_sources() == []
+    assert "wf.std" not in service.capability_sources
+    assert "wf.mcp" not in service.capability_sources
 
 
-def test_service_list_spec_sources_excludes_hidden_sources() -> None:
+def test_service_planner_catalog_excludes_hidden_sources() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "hidden_list_store"))
     hidden_echo_tool = NodeSpec(
         name="hidden.source.echo_tool",
@@ -241,9 +209,10 @@ def test_service_list_spec_sources_excludes_hidden_sources() -> None:
         )
     )
 
-    source_ids = {source["id"] for source in service.list_spec_sources()}
-
-    assert "hidden.source" not in source_ids
+    planner_names = {
+        entry.qualified_name for entry in service.get_planner_catalog().entries()
+    }
+    assert "hidden.source.echo_tool" not in planner_names
 
 
 def test_service_catalog_split_keeps_system_specs_out_of_backend_catalog() -> None:
@@ -693,7 +662,9 @@ def test_service_wrapped_tool_adapter_model_validates_simple_schema_types() -> N
     service.register_adapter("demo", FakeAdapter())
 
     asyncio.run(service.refresh_connection_catalog("demo.personal"))
-    spec = service.spec_sources["demo.personal"].specs["demo.personal.echo_tool"]
+    spec = service.capability_sources["demo.personal"].capabilities.node_specs[
+        "demo.personal.echo_tool"
+    ]
 
     parsed = spec.input_model.model_validate({"text": "hello"})
     assert parsed.model_dump() == {"text": "hello"}

@@ -75,7 +75,6 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
     assert "refresh_connection_catalog" in tool_names
     assert "get_planner_catalog" in tool_names
     assert "list_sources" in tool_names
-    assert "list_spec_sources" in tool_names
     assert "invoke_broker_method" in tool_names
     assert "call_broker_tool" in tool_names
     assert "catalog.all" in resource_names
@@ -92,16 +91,6 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
     assert "demo.personal.echo_tool" in planner_names
     assert "wf.mcp.call_tool" in planner_names
     assert "wf.std.runtime_error" in planner_names
-
-    _content, source_payload_raw = asyncio.run(
-        server.call_tool("list_spec_sources", {})
-    )
-    source_payload = cast(dict[str, Any], cast(object, source_payload_raw))
-    sources = source_payload["result"]
-    source_ids = [source["id"] for source in sources]
-    assert "demo.personal" in source_ids
-    assert "wf.mcp" in source_ids
-    assert "wf.std" in source_ids
 
     _content, all_sources_payload_raw = asyncio.run(
         server.call_tool("list_sources", {})
@@ -120,7 +109,6 @@ def test_broker_admin_tools_are_backed_by_wf_admin_source() -> None:
     tools = asyncio.run(server.list_tools())
     tool_names = {tool.name for tool in tools}
 
-    assert "list_spec_sources" in tool_names
     assert "get_planner_catalog" in tool_names
     assert (
         "wf.admin.list_sources"

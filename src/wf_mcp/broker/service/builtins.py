@@ -23,7 +23,12 @@ from wf_authoring import (
     truthy,
 )
 
-from .sources import SpecSource
+from .capability_sources import (
+    CapabilityBuckets,
+    CapabilitySource,
+    SourcePermissions,
+    SourceVisibility,
+)
 from .specs import qualify_spec
 
 BUILTIN_CONNECTION_ID = "wf.std"
@@ -121,22 +126,27 @@ def mcp_specs(service: ToolCaller) -> dict[str, NodeSpec[Any, Any]]:
     return {spec.name: spec for spec in qualified_specs}
 
 
-def builtin_sources(service: ToolCaller) -> dict[str, SpecSource]:
-    """Return all broker-local spec sources."""
+def builtin_sources(service: ToolCaller) -> dict[str, CapabilitySource]:
+    """Return all broker-local capability sources."""
     return {
-        BUILTIN_CONNECTION_ID: SpecSource(
+        BUILTIN_CONNECTION_ID: CapabilitySource(
             id=BUILTIN_CONNECTION_ID,
             kind="system",
-            specs=builtin_specs(),
-            mcp_client_visible=True,
-            safe_for_workflow=True,
+            capabilities=CapabilityBuckets(node_specs=builtin_specs()),
+            visibility=SourceVisibility(
+                planner=True,
+                mcp_client=True,
+                admin_dashboard=True,
+            ),
+            permissions=SourcePermissions(safe_for_workflow=True),
             description="Workflow standard-library nodes.",
         ),
-        MCP_SOURCE_ID: SpecSource(
+        MCP_SOURCE_ID: CapabilitySource(
             id=MCP_SOURCE_ID,
             kind="system",
-            specs=mcp_specs(service),
-            calls_upstream=True,
+            capabilities=CapabilityBuckets(node_specs=mcp_specs(service)),
+            visibility=SourceVisibility(planner=True, admin_dashboard=True),
+            permissions=SourcePermissions(calls_upstream=True),
             description="Broker MCP utility nodes.",
         ),
     }

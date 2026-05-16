@@ -49,9 +49,6 @@ class BrokerAdminHandlers:
     def get_planner_catalog(self) -> dict[str, Any]:
         return self.service.get_planner_catalog().as_payload()
 
-    def list_spec_sources(self) -> list[dict[str, Any]]:
-        return self.service.list_spec_sources()
-
     def list_sources(self) -> list[dict[str, Any]]:
         return self.service.list_sources()
 

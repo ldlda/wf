@@ -78,14 +78,6 @@ def register_service_admin_tools(
         return handlers.get_planner_catalog()
 
     @server.tool(
-        name=name("list_spec_sources"),
-        title="List Spec Sources",
-        description="List planner-visible sources that currently provide node specs.",
-    )
-    async def list_spec_sources() -> list[dict[str, Any]]:
-        return handlers.list_spec_sources()
-
-    @server.tool(
         name=name("list_sources"),
         title="List Sources",
         description="List configured capability sources and what each source owns.",

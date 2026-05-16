@@ -187,8 +187,8 @@ The code now has the first capability-source layer in place.
 - `CapabilitySource` owns source metadata, visibility, permissions, and
   capability buckets.
 - `WfMcpService.capability_sources` is the canonical in-memory registry.
-- `spec_sources` and `specs_by_connection` are compatibility views derived from
-  `capability_sources`.
+- Planner node lookup reads `CapabilitySource.capabilities.node_specs`
+  directly; the old `SpecSource` compatibility layer has been removed.
 - `wf.std` owns current `wf_authoring.ops` workflow node specs under
   `wf.std.*`.
 - `wf.mcp` owns workflow MCP runtime node specs, currently
@@ -222,8 +222,7 @@ Current code has several useful pieces but the boundaries are blurred.
 | discovered MCP tools | upstream tools and workflow wrappers | connection source |
 | broker resources/prompts | catalog/status/planning context | likely `wf.admin` or docs sources |
 
-`SpecSource` is now a compatibility wrapper. New source behavior should be added
-to `CapabilitySource` unless there is a specific compatibility reason not to.
+New source behavior should be added to `CapabilitySource`.
 
 ## Naming Rules
 
@@ -250,19 +249,15 @@ names.
 The implementation should avoid having separate backend layers define copies of
 the same admin/control capabilities.
 
-## Current Inventory Surfaces
+## Current Inventory Surface
 
-Two source listings now exist on purpose:
+`list_sources()` is the source inventory:
 
-- `list_spec_sources()`
-  - compatibility/planner view
-  - only returns enabled planner-visible sources with node specs
-- `list_sources()`
-  - full capability-source inventory
-  - returns every source plus visibility, permissions, counts, and the names
-    owned in each capability bucket
+- returns every source
+- includes visibility, permissions, counts, and owned capability names
+- lets callers answer planner questions by inspecting
+  `visibility.planner` plus `capabilities.node_specs`
 
-The broader `list_sources()` view is the one humans and LLM authoring clients
-should use when deciding what exists. The narrower `list_spec_sources()` view is
-still useful when the question is only "what can the planner currently place in
-a graph?"
+Humans and LLM authoring clients should use that one inventory when deciding
+what exists. Planner projection remains a different **use** of source metadata,
+not a second source model.
