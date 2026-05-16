@@ -99,6 +99,36 @@ classified as a proxy bug.
 Task-required tools are discoverable but not usable through our current surface.
 This is a real protocol-support gap, not an ordinary tool-call issue.
 
+### 5. LLM harnesses may not adopt dynamic tool changes reliably
+
+`wf-mcp` can expose new tools after reload, but that does not guarantee an agent
+harness rebuilds the callable tool schema for the model turn that is already in
+flight.
+
+Observed on 2026-05-17 with Codex:
+
+- `playwright.default` was enabled
+- `wf.admin.reload_config` remounted it successfully
+- `wf.admin.list_proxy_tools` showed the new tools
+- after reconnect, the Codex UI showed `playwright.default.browser_navigate`
+- the model turn still did not receive a callable binding for that new tool
+
+This is a common Codex / Claude Code / general LLM harness class of problem, not
+just a proxy-server problem. The host may refresh `tools/list` for display or
+inspection while model invocation still uses a previously materialized tool
+schema.
+
+Design consequence: do not make core workflows depend on newly registered MCP
+tools becoming callable immediately. Prefer stable control tools plus explicit
+inspection/call paths when the client must work reliably across harnesses.
+
+When the exposed tool catalog grows large or changes often, FastMCP's search
+transform is a good mitigation: keep a stable pinned control/workflow spine
+visible, and use `search_tools` plus its synthetic `call_tool` for the changing
+rest of the catalog. Do not confuse that synthetic raw-tool caller with a
+future workflow-capability test tool; testing a normalized `NodeSpec` contract
+is a separate operation and should also remain pinned once it exists.
+
 ## What Is Probably Not Worth Owning Yet
 
 Do **not** rush to implement a custom full protocol relay for:

@@ -88,12 +88,14 @@ def test_service_rejects_reserved_connection_ids() -> None:
 def test_service_installs_builtin_stdlib_specs_by_default() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "builtin_store"))
 
-    assert "wf.std.runtime_error" in service.capability_sources[
-        "wf.std"
-    ].capabilities.node_specs
-    assert "wf.mcp.call_tool" in service.capability_sources[
-        "wf.mcp"
-    ].capabilities.node_specs
+    assert (
+        "wf.std.runtime_error"
+        in service.capability_sources["wf.std"].capabilities.node_specs
+    )
+    assert (
+        "wf.mcp.call_tool"
+        in service.capability_sources["wf.mcp"].capabilities.node_specs
+    )
 
 
 def test_service_lists_all_capability_sources_with_owned_capability_names() -> None:

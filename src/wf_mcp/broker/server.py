@@ -24,4 +24,3 @@ def create_broker_server(service: WfMcpService) -> FastMCP:
     register_broker_resources(server, service)
     register_broker_prompts(server, service)
     return server
-

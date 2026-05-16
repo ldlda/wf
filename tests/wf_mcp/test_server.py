@@ -101,6 +101,49 @@ def test_server_can_hide_admin_tools() -> None:
     asyncio.run(run_proxy())
 
 
+def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "server_search_mode_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(config, search_tools=True)
+        async with client:
+            tools = await client.list_tools()
+            names = [tool.name for tool in tools]
+
+            assert "search_tools" in names
+            assert "call_tool" in names
+            assert "wf.admin.list_sources" in names
+            assert "wf.admin.list_connections" in names
+            assert "wf.admin.get_connection_statuses" in names
+            assert "wf.admin.reload_config" in names
+            assert "wf.admin.list_proxy_tools" in names
+            assert "wf.admin.get_proxy_tool" in names
+            assert "wf.workflow.list_artifacts" in names
+            assert "wf.workflow.inspect_artifact" in names
+            assert "wf.workflow.list_deployments" in names
+            assert "wf.workflow.validate_deployment" in names
+            assert "wf.workflow.run_deployment" in names
+
+            assert "wf.admin.call_tool" not in names
+            assert "fixture.personal.echo_tool" not in names
+
+    asyncio.run(run_proxy())
+
+
 def test_workflow_tools_have_human_metadata() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "unified_metadata_store",

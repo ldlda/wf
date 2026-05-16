@@ -24,18 +24,21 @@ from .tools import (
 )
 from .reload_events import ProxyReloadResult, reload_change_events
 
-_ADMIN_TOOL_NAMES = [
+_SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
+    # Stable discovery/control spine.
+    f"{ADMIN_NAMESPACE}.list_sources",
     f"{ADMIN_NAMESPACE}.list_connections",
     f"{ADMIN_NAMESPACE}.get_connection_statuses",
-    f"{ADMIN_NAMESPACE}.get_config",
     f"{ADMIN_NAMESPACE}.reload_config",
     f"{ADMIN_NAMESPACE}.list_proxy_tools",
     f"{ADMIN_NAMESPACE}.get_proxy_tool",
-    f"{ADMIN_NAMESPACE}.add_connection",
-    f"{ADMIN_NAMESPACE}.update_connection",
-    f"{ADMIN_NAMESPACE}.enable_connection",
-    f"{ADMIN_NAMESPACE}.disable_connection",
-    f"{ADMIN_NAMESPACE}.remove_connection",
+    # Stable workflow control surface. Keep future workflow-capability test
+    # tools pinned here too; they are distinct from raw MCP tool execution.
+    "wf.workflow.list_artifacts",
+    "wf.workflow.inspect_artifact",
+    "wf.workflow.list_deployments",
+    "wf.workflow.validate_deployment",
+    "wf.workflow.run_deployment",
 ]
 
 
@@ -81,7 +84,7 @@ class ProxyRuntime:
             self.server.add_transform(PromptsAsTools(self.server))
         if search_tools:
             self.server.add_transform(
-                BM25SearchTransform(always_visible=_ADMIN_TOOL_NAMES)
+                BM25SearchTransform(always_visible=_SEARCH_ALWAYS_VISIBLE_TOOL_NAMES)
             )
 
     def current_config(self) -> BrokerConfig:

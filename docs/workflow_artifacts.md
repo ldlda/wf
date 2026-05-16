@@ -47,9 +47,11 @@ wf.workflow.run_deployment
 ```
 
 This is important because MCP clients may not reliably refresh `tools/list` when
-new workflow artifacts are saved. A stable `run_deployment` tool lets an LLM
-test saved workflows immediately without requiring dynamic tool registration or
-tool-list notifications to work perfectly.
+new workflow artifacts are saved. More specifically, LLM harnesses may refresh
+or display a changed tool list without rebuilding the callable tool schema used
+for the current model turn. A stable `run_deployment` tool lets an LLM test saved
+workflows immediately without requiring dynamic tool registration or tool-list
+notifications to work perfectly.
 
 This control surface should not fork between backend service layers. The public
 server now has one exposure style, but internally it still combines:

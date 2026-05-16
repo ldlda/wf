@@ -32,7 +32,9 @@ def register_service_admin_tools(
     }
 
     def name(local_name: str) -> str:
-        visible_name = legacy_name_map.get(local_name, local_name) if legacy_names else local_name
+        visible_name = (
+            legacy_name_map.get(local_name, local_name) if legacy_names else local_name
+        )
         return visible_name if namespace is None else f"{namespace}.{visible_name}"
 
     if include_connection_tools:

@@ -93,6 +93,14 @@ Tool simulate-research-query requires task augmentation (taskSupport: 'required'
 - Sampling was not visible as a direct listed tool in the current Everything
   server inventory.
 
+- Dynamic tool-list adoption is harness-dependent. On 2026-05-17, after
+  enabling `playwright.default` and reloading `wf-mcp`, the server-side admin
+  inventory showed the new proxy tools immediately. After restarting Codex, the
+  UI could show `playwright.default.browser_navigate`, but the current model turn
+  still did not receive a callable tool binding for it. That means a host can
+  observe an updated `tools/list` without rebuilding the tool schema supplied to
+  an already-running model interaction.
+
 ### Current Classification
 
 - Proxy tool projection: healthy for ordinary tools.
@@ -109,6 +117,9 @@ Tool simulate-research-query requires task augmentation (taskSupport: 'required'
   MCP task support is implemented.
 - Notifications/logging/subscriptions: unverified; current client did not show
   forwarded notifications.
+- Dynamic tool-list adoption: server-side updates work, but LLM harnesses may
+  keep a stale or separately-materialized callable tool schema even after a UI
+  refresh or reconnect.
 
 ## Next Test Targets
 

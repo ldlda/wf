@@ -36,7 +36,9 @@ async def downstream_message_handler(message: object) -> None:
         downstream_seen.append(message.root.method)
 
 
-upstream_transport = FastMCPTransport(server) # any transport will do, tried python stdio, and fastmcp, both reproduce.
+upstream_transport = FastMCPTransport(
+    server
+)  # any transport will do, tried python stdio, and fastmcp, both reproduce.
 
 
 async def prog() -> None:
@@ -60,7 +62,9 @@ async def prog() -> None:
         "notifications/message",
     ]
     assert upstream_seen == seen
-    assert downstream_seen == seen, "bug here: notifications should be forwarded by the proxy"
+    assert downstream_seen == seen, (
+        "bug here: notifications should be forwarded by the proxy"
+    )
 
 
 asyncio.run(prog())
