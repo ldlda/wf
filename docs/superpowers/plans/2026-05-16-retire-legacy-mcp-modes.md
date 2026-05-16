@@ -49,7 +49,7 @@ Remove the public `serve --mode broker` and `serve --mode proxy` choices.
 
 After this pass:
 
-- `wf-mcp serve` runs the unified surface
+- `wf-mcp serve` runs the server surface
 - users no longer choose among three product modes
 - docs should describe one server behavior, not a mode matrix
 
@@ -76,7 +76,7 @@ These packages still represent useful implementation boundaries:
 - `wf_mcp.server`
 
 `transparent_proxy` is already partly a legacy package name, but the code inside
-it still owns real proxy-mounting mechanics used by unified mode. Rename or
+it still owns real proxy-mounting mechanics used by the server. Rename or
 re-home that code only as a later cleanup if the package name becomes a real
 source of confusion.
 

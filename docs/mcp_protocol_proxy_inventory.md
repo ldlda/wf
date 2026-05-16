@@ -1,6 +1,6 @@
 # MCP Protocol Proxy Inventory
 
-This document records observed behavior of `wf-mcp` unified mode against real
+This document records observed behavior of the `wf-mcp` server against real
 upstream MCP servers. It is not a design spec. It is a fact log for deciding
 which proxy features need explicit implementation.
 
@@ -23,7 +23,7 @@ everything.default
 Proxy mode:
 
 ```text
-wf-mcp serve --mode unified
+wf-mcp serve
 ```
 
 ### Working

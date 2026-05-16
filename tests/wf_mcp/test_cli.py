@@ -38,7 +38,6 @@ def test_build_parser_accepts_serve_transport() -> None:
 
     assert args.command == "serve"
     assert args.transport == "streamable_http"
-    assert args.mode == "proxy"
     assert args.resources_as_tools is False
     assert args.prompts_as_tools is False
     assert args.search_tools is False
@@ -58,27 +57,24 @@ def test_build_parser_accepts_proxy_compatibility_flags() -> None:
     )
 
     assert args.command == "serve"
-    assert args.mode == "proxy"
     assert args.resources_as_tools is True
     assert args.prompts_as_tools is True
     assert args.search_tools is True
 
 
-def test_build_parser_accepts_unified_mode() -> None:
+def test_build_parser_rejects_legacy_mode_flag() -> None:
     parser = build_parser()
-    args = parser.parse_args(
-        [
-            "--config",
-            "wf_mcp.config.json",
-            "serve",
-            "--mode",
-            "unified",
-        ]
-    )
 
-    assert args.command == "serve"
-    assert args.mode == "unified"
-    assert args.admin_tools is True
+    with pytest.raises(SystemExit):
+        parser.parse_args(
+            [
+                "--config",
+                "wf_mcp.config.json",
+                "serve",
+                "--mode",
+                "unified",
+            ]
+        )
 
 
 def test_build_parser_accepts_no_admin_tools_flag() -> None:
@@ -88,14 +84,11 @@ def test_build_parser_accepts_no_admin_tools_flag() -> None:
             "--config",
             "wf_mcp.config.json",
             "serve",
-            "--mode",
-            "unified",
             "--no-admin-tools",
         ]
     )
 
     assert args.command == "serve"
-    assert args.mode == "unified"
     assert args.admin_tools is False
 
 

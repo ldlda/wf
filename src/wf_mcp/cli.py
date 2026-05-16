@@ -9,8 +9,6 @@ from typing import Any
 from .broker import (
     build_service_from_config,
     load_broker_config,
-    run_broker_server,
-    run_transparent_proxy_server,
 )
 from .server import run_unified_proxy_server
 
@@ -25,18 +23,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     subparsers = parser.add_subparsers(dest="command", required=True)
 
-    serve = subparsers.add_parser("serve", help="Run the broker MCP server.")
+    serve = subparsers.add_parser("serve", help="Run the MCP server.")
     serve.add_argument(
         "--transport",
         default="stdio",
         choices=["stdio", "sse", "streamable-http", "streamable_http"],
-        help="Transport to run the broker server with.",
-    )
-    serve.add_argument(
-        "--mode",
-        default="proxy",
-        choices=["broker", "proxy", "unified"],
-        help="Run broker mode, transparent proxy mode, or unified mode.",
+        help="Transport to run the MCP server with.",
     )
     serve.add_argument(
         "--resources-as-tools",
@@ -57,7 +49,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--no-admin-tools",
         dest="admin_tools",
         action="store_false",
-        help="Hide wf.admin.* tools in unified mode.",
+        help="Hide wf.admin.* tools.",
     )
     serve.set_defaults(admin_tools=True)
 
@@ -122,27 +114,16 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.command == "serve":
-        if args.mode == "proxy":
-            run_transparent_proxy_server(
-                args.config,
-                args.transport,
-                resources_as_tools=args.resources_as_tools,
-                prompts_as_tools=args.prompts_as_tools,
-                search_tools=args.search_tools,
-            )
-        elif args.mode == "broker":
-            run_broker_server(args.config, args.transport)
-        else:
-            config = load_broker_config(args.config)
-            run_unified_proxy_server(
-                config,
-                args.transport,
-                config_path=args.config,
-                resources_as_tools=args.resources_as_tools,
-                prompts_as_tools=args.prompts_as_tools,
-                search_tools=args.search_tools,
-                admin_tools=args.admin_tools,
-            )
+        config = load_broker_config(args.config)
+        run_unified_proxy_server(
+            config,
+            args.transport,
+            config_path=args.config,
+            resources_as_tools=args.resources_as_tools,
+            prompts_as_tools=args.prompts_as_tools,
+            search_tools=args.search_tools,
+            admin_tools=args.admin_tools,
+        )
         return 0
 
     service = _service_from_config(args.config)

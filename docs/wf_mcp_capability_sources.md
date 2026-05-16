@@ -2,8 +2,8 @@
 
 `wf_mcp` should model capabilities before it models MCP server tool lists.
 Tools, workflow node specs, prompts, resources, and admin controls all belong to
-a source. Broker mode, transparent proxy mode, workflow planning, and future UI
-surfaces are projections of those sources.
+a source. The MCP server, workflow planning, and future UI surfaces are
+projections of those sources.
 
 This avoids the current trap where broker admin tools, transparent proxy admin
 tools, workflow node specs, and upstream MCP tools all look like unrelated
@@ -237,15 +237,15 @@ names.
 
 ## Migration Path
 
-1. Add explicit admin MCP exposure controls for broker mode.
-2. Project broker admin tools from `wf.admin` only when admin MCP exposure is
+1. Keep explicit admin MCP exposure controls on the server surface.
+2. Project admin tools from `wf.admin` only when admin MCP exposure is
    enabled.
 3. Add source-level enable/disable operations backed by `wf.admin`.
 4. Add persisted source policy so source visibility survives process restart.
 5. Add system prompts/resources for `wf.std` and `wf.mcp` manuals.
 
-The implementation should avoid having broker mode and transparent proxy mode
-define separate copies of the same admin/control capabilities.
+The implementation should avoid having separate backend layers define copies of
+the same admin/control capabilities.
 
 ## Current Inventory Surfaces
 

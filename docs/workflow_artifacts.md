@@ -51,16 +51,15 @@ new workflow artifacts are saved. A stable `run_deployment` tool lets an LLM
 test saved workflows immediately without requiring dynamic tool registration or
 tool-list notifications to work perfectly.
 
-This control surface should not fork between broker mode and transparent proxy
-mode. The project currently has two MCP exposure styles:
+This control surface should not fork between backend service layers. The public
+server now has one exposure style, but internally it still combines:
 
-- compatibility broker tools such as list/call wrappers
-- transparent proxy projection through MCP `tools/list` and `tools/call`
+- service-backed local workflow/admin tools
+- upstream proxy projection through MCP `tools/list` and `tools/call`
 
 Workflow artifact operations should be defined once and projected through the
-chosen MCP server surface. If broker and transparent modes remain as launch
-options, they should share the same platform service instead of owning separate
-workflow registries or separate run semantics.
+server surface instead of owning separate workflow registries or separate run
+semantics.
 
 Dynamic projection of saved workflows as individual MCP tools can exist later,
 but it should be optional. The stable run tool is the reliable base layer.

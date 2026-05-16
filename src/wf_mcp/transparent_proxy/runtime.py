@@ -43,7 +43,7 @@ class ProxyRuntime:
     """Mount configured upstream MCP connections into one FastMCP server.
 
     The `transparent_proxy` package name is compatibility history. This runtime
-    is now the shared proxy mounting engine used by unified mode too.
+    is now the shared proxy mounting engine used by the public server surface.
     """
 
     def __init__(
