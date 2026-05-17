@@ -78,6 +78,13 @@ def merge_object_reducer(current_value: Any, incoming_value: Any) -> Any:
     return current_value | incoming_value
 
 
+def add_reducer(current_value: Any, incoming_value: Any) -> Any:
+    """Add numeric incoming values into a numeric state path."""
+    if current_value is None:
+        return incoming_value
+    return current_value + incoming_value
+
+
 def set_union_reducer(current_value: Any, incoming_value: Any) -> Any:
     """Merge list values while preserving stable first-seen order."""
     if current_value is None:
@@ -125,6 +132,13 @@ DEFAULT_REDUCER_DEFINITIONS: Mapping[str, ReducerDefinition] = {
             description="Shallow-merge object values at one exact state path.",
         ),
         fn=merge_object_reducer,
+    ),
+    "wf.std.add": ReducerDefinition(
+        spec=ReducerSpec(
+            name="wf.std.add",
+            description="Add numeric incoming values into a numeric state path.",
+        ),
+        fn=add_reducer,
     ),
     "wf.std.set_union": ReducerDefinition(
         spec=ReducerSpec(

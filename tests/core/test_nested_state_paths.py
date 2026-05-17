@@ -138,6 +138,19 @@ def test_max_reducer_keeps_larger_value() -> None:
     assert state["best_score"] == 9
 
 
+def test_add_reducer_sums_numeric_values() -> None:
+    workflow = _workflow(
+        fields={
+            "count": StateField(reducer=ReducerRef(name="wf.std.add"), type="integer")
+        }
+    )
+    state = {"count": 7}
+
+    write_state_value(workflow, state, "state.count", 5)
+
+    assert state["count"] == 12
+
+
 def test_reducer_definition_can_wrap_plain_two_arg_callable() -> None:
     definition = ReducerDefinition(
         spec=ReducerSpec(name="test.add"),

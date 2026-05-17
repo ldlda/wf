@@ -249,7 +249,8 @@ def post_roll_router(
 
 @node(name="main")
 def tick(state: Countdown) -> Countdown:
-    return Countdown(countdown=state.countdown - 1)
+    """Emit a countdown delta because State.countdown uses the add reducer."""
+    return Countdown(countdown=-1)
 
 
 @node(outcomes=("tick", END))

@@ -5,6 +5,8 @@ Constraints:
     try to use builtin wf_authoring.ops
 """
 
+from itertools import islice
+import json
 from pprint import pprint
 from typing import Any
 
@@ -70,10 +72,13 @@ def test():
     )
     assert d.status == RunStatus.COMPLETED, "oops"
     state = State.model_validate(d.state)
-    assert any(i["name"] in context["pool"]["n_240"] for i in state.storage), (
-        "pity logic failed"
-    )
+    assert any(
+        i["name"] in context["pool"]["n_240"]
+        for i in islice(state.storage, 120 - (240 - 135))
+    ), "pity logic failed"
     pprint(state.storage)
+    # pprint(gacha.compile().edges)
+    # pprint(gacha.compile().nodes)
 
 
 if __name__ == "__main__":
