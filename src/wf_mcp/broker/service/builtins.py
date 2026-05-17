@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Any, Protocol
+from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel, Field
 
-from wf_core import ReducerSpec
+from wf_core.runtime.ops.merges import DEFAULT_REDUCER_DEFINITIONS
 from wf_authoring import (
     NodeReturn,
     NodeSpec,
@@ -34,6 +34,9 @@ from .capability_sources import (
     SourceVisibility,
 )
 from .specs import qualify_spec
+
+if TYPE_CHECKING:
+    from wf_core import ReducerSpec
 
 BUILTIN_CONNECTION_ID = "wf.std"
 """Internal source id for workflow standard-library node specs."""
@@ -112,29 +115,10 @@ def builtin_specs() -> dict[str, NodeSpec[Any, Any]]:
 
 def builtin_reducers() -> dict[str, ReducerSpec]:
     """Return built-in reducers owned by the workflow standard library."""
-    specs = (
-        ReducerSpec(
-            name="wf.std.replace",
-            description="Replace the current state value with the incoming value.",
-        ),
-        ReducerSpec(
-            name="wf.std.append",
-            description="Append one value or many values into a list-valued state path.",
-        ),
-        ReducerSpec(
-            name="wf.std.merge_object",
-            description="Shallow-merge object values at one exact state path.",
-        ),
-        ReducerSpec(
-            name="wf.std.max",
-            description="Keep the larger of the current and incoming values.",
-        ),
-        ReducerSpec(
-            name="wf.std.set_union",
-            description="Merge list values while preserving stable first-seen order.",
-        ),
-    )
-    return {spec.name: spec for spec in specs}
+    return {
+        definition.spec.name: definition.spec
+        for definition in DEFAULT_REDUCER_DEFINITIONS.values()
+    }
 
 
 def mcp_specs(service: ToolCaller) -> dict[str, NodeSpec[Any, Any]]:

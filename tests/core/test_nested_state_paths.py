@@ -1,6 +1,14 @@
 from __future__ import annotations
 
-from wf_core import ReducerRef, SchemaRef, StateField, StateSchema, Workflow
+from wf_core import (
+    ReducerRef,
+    ReducerSpec,
+    SchemaRef,
+    StateField,
+    StateSchema,
+    Workflow,
+)
+from wf_core.runtime.ops.merges import ReducerDefinition, apply_reducer
 from wf_core.runtime.ops.state import write_state_value
 
 
@@ -48,9 +56,7 @@ def test_state_field_defaults_to_replace_reducer() -> None:
 
 
 def test_state_field_accepts_string_reducer_shorthand() -> None:
-    field = StateField.model_validate(
-        {"type": "array", "reducer": "wf.std.set_union"}
-    )
+    field = StateField.model_validate({"type": "array", "reducer": "wf.std.set_union"})
 
     assert field.reducer == ReducerRef(name="wf.std.set_union")
 
@@ -61,16 +67,15 @@ def test_state_field_accepts_configured_reducer_reference() -> None:
         reducer=ReducerRef(name="wf.std.max", config={"sample": True}),
     )
 
-    assert field.reducer.name == "wf.std.max"
-    assert field.reducer.config == {"sample": True}
+    # PYLINT!!!! what is u on ts is so clear
+    assert field.reducer.name == "wf.std.max"  # pylint: disable=no-member
+    assert field.reducer.config == {"sample": True}  # pylint: disable=no-member
 
 
 def test_unknown_state_reducer_fails_clearly() -> None:
     workflow = _workflow(
         fields={
-            "person.tags": StateField(
-                reducer=ReducerRef(name="x.nope"), type="array"
-            )
+            "person.tags": StateField(reducer=ReducerRef(name="x.nope"), type="array")
         }
     )
     state = {"person": {"tags": ["seed"]}}
@@ -131,6 +136,50 @@ def test_max_reducer_keeps_larger_value() -> None:
     write_state_value(workflow, state, "state.best_score", 9)
 
     assert state["best_score"] == 9
+
+
+def test_reducer_definition_can_wrap_plain_two_arg_callable() -> None:
+    definition = ReducerDefinition(
+        spec=ReducerSpec(name="test.add"),
+        fn=lambda current, incoming: (current or 0) + incoming,
+    )
+
+    result = apply_reducer(
+        reducer=ReducerRef(name="test.add"),
+        current_value=2,
+        incoming_value=3,
+        destination_path="state.total",
+        reducers={"test.add": definition},
+    )
+
+    assert result == 5
+
+
+def test_reducer_definition_can_wrap_config_aware_callable() -> None:
+    definition = ReducerDefinition(
+        spec=ReducerSpec(
+            name="test.modulo_add",
+            config_schema={
+                "type": "object",
+                "properties": {"modulus": {"type": "integer"}},
+                "required": ["modulus"],
+                "additionalProperties": False,
+            },
+        ),
+        fn=lambda current, incoming, config: ((current or 0) + incoming)
+        % config["modulus"],
+        accepts_config=True,
+    )
+
+    result = apply_reducer(
+        reducer=ReducerRef(name="test.modulo_add", config={"modulus": 10}),
+        current_value=8,
+        incoming_value=5,
+        destination_path="state.total",
+        reducers={"test.modulo_add": definition},
+    )
+
+    assert result == 3
 
 
 def _workflow(*, fields: dict[str, StateField]) -> Workflow:

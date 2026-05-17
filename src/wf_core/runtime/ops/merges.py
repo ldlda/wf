@@ -1,25 +1,58 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
-from typing import Any
+from dataclasses import dataclass
+from typing import Any, cast
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.reducers import ReducerRef, ReducerSpec
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
 
-Reducer = Callable[[Any, Any, Mapping[str, Any]], Any]
+PlainReducer = Callable[[Any, Any], Any]
+ConfigReducer = Callable[[Any, Any, Mapping[str, Any]], Any]
+Reducer = PlainReducer | ConfigReducer
 
 
-def replace_reducer(
-    _current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
-) -> Any:
+@dataclass(frozen=True, slots=True)
+class ReducerDefinition:
+    """Runtime reducer implementation paired with its inspectable spec."""
+
+    spec: ReducerSpec
+    fn: Reducer
+    accepts_config: bool = False
+
+    def apply(
+        self,
+        *,
+        reducer: ReducerRef,
+        current_value: Any,
+        incoming_value: Any,
+        destination_path: str,
+    ) -> Any:
+        """Validate config, then apply the pure reducer function."""
+        validate_payload_against_schema(
+            self.spec.config_schema,
+            reducer.config,
+            f"reducer config for {self.spec.name!r}",
+        )
+        try:
+            if self.accepts_config:
+                return cast(ConfigReducer, self.fn)(
+                    current_value,
+                    incoming_value,
+                    reducer.config,
+                )
+            return cast(PlainReducer, self.fn)(current_value, incoming_value)
+        except TypeError as exc:
+            raise WorkflowExecutionError(f"{exc} at {destination_path!r}") from exc
+
+
+def replace_reducer(_current_value: Any, incoming_value: Any) -> Any:
     """Replace the current state value with the incoming value."""
     return incoming_value
 
 
-def append_reducer(
-    current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
-) -> Any:
+def append_reducer(current_value: Any, incoming_value: Any) -> Any:
     """Append one value or many values into a list-valued state path."""
     if current_value is None:
         return (
@@ -34,9 +67,7 @@ def append_reducer(
     )
 
 
-def merge_object_reducer(
-    current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
-) -> Any:
+def merge_object_reducer(current_value: Any, incoming_value: Any) -> Any:
     """Shallow-merge object values at one exact state path."""
     if current_value is None:
         if not isinstance(incoming_value, dict):
@@ -47,9 +78,7 @@ def merge_object_reducer(
     return current_value | incoming_value
 
 
-def set_union_reducer(
-    current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
-) -> Any:
+def set_union_reducer(current_value: Any, incoming_value: Any) -> Any:
     """Merge list values while preserving stable first-seen order."""
     if current_value is None:
         current_items: list[Any] = []
@@ -68,25 +97,49 @@ def set_union_reducer(
     return merged
 
 
-def max_reducer(
-    current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
-) -> Any:
+def max_reducer(current_value: Any, incoming_value: Any) -> Any:
     """Keep the larger of the current and incoming values."""
     return (
         incoming_value if current_value is None else max(current_value, incoming_value)
     )
 
 
-DEFAULT_REDUCERS: Mapping[str, Reducer] = {
-    "wf.std.replace": replace_reducer,
-    "wf.std.append": append_reducer,
-    "wf.std.merge_object": merge_object_reducer,
-    "wf.std.set_union": set_union_reducer,
-    "wf.std.max": max_reducer,
-}
-
-DEFAULT_REDUCER_SPECS: Mapping[str, ReducerSpec] = {
-    name: ReducerSpec(name=name) for name in DEFAULT_REDUCERS
+DEFAULT_REDUCER_DEFINITIONS: Mapping[str, ReducerDefinition] = {
+    "wf.std.replace": ReducerDefinition(
+        spec=ReducerSpec(
+            name="wf.std.replace",
+            description="Replace the current state value with the incoming value.",
+        ),
+        fn=replace_reducer,
+    ),
+    "wf.std.append": ReducerDefinition(
+        spec=ReducerSpec(
+            name="wf.std.append",
+            description="Append one value or many values into a list-valued state path.",
+        ),
+        fn=append_reducer,
+    ),
+    "wf.std.merge_object": ReducerDefinition(
+        spec=ReducerSpec(
+            name="wf.std.merge_object",
+            description="Shallow-merge object values at one exact state path.",
+        ),
+        fn=merge_object_reducer,
+    ),
+    "wf.std.set_union": ReducerDefinition(
+        spec=ReducerSpec(
+            name="wf.std.set_union",
+            description="Merge list values while preserving stable first-seen order.",
+        ),
+        fn=set_union_reducer,
+    ),
+    "wf.std.max": ReducerDefinition(
+        spec=ReducerSpec(
+            name="wf.std.max",
+            description="Keep the larger of the current and incoming values.",
+        ),
+        fn=max_reducer,
+    ),
 }
 
 
@@ -96,22 +149,15 @@ def apply_reducer(
     current_value: Any,
     incoming_value: Any,
     destination_path: str,
-    reducers: Mapping[str, Reducer] = DEFAULT_REDUCERS,
-    reducer_specs: Mapping[str, ReducerSpec] = DEFAULT_REDUCER_SPECS,
+    reducers: Mapping[str, ReducerDefinition] = DEFAULT_REDUCER_DEFINITIONS,
 ) -> Any:
     """Apply one named pure reducer to a state write."""
-    reducer_fn = reducers.get(reducer.name)
-    if reducer_fn is None:
+    definition = reducers.get(reducer.name)
+    if definition is None:
         raise WorkflowExecutionError(f"unknown reducer {reducer.name!r}")
-    spec = reducer_specs.get(reducer.name)
-    if spec is None:
-        raise WorkflowExecutionError(f"unknown reducer spec {reducer.name!r}")
-    validate_payload_against_schema(
-        spec.config_schema,
-        reducer.config,
-        f"reducer config for {reducer.name!r}",
+    return definition.apply(
+        reducer=reducer,
+        current_value=current_value,
+        incoming_value=incoming_value,
+        destination_path=destination_path,
     )
-    try:
-        return reducer_fn(current_value, incoming_value, reducer.config)
-    except TypeError as exc:
-        raise WorkflowExecutionError(f"{exc} at {destination_path!r}") from exc
