@@ -36,7 +36,7 @@ from .mapping import (
     coerce_path,
     normalize_mapping,
 )
-from .refs import BranchRef, StepRef, is_node_spec, step_id
+from .refs import BranchRef, RouteRef, StepRef, is_node_spec, step_id
 
 
 @dataclass(slots=True)
@@ -239,7 +239,7 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         default: BranchRef = runtime_error,
-    ) -> dict[object, StepRef]:
+    ) -> RouteRef:
         """Route graph data by equality checks or one boolean condition.
 
         `branch()` wires outcomes already produced by a node. `route()` is the
@@ -259,9 +259,10 @@ class WorkflowBuilder:
         *,
         id: str | None,
         default: BranchRef,
-    ) -> dict[object, StepRef]:
+    ) -> RouteRef:
         """Expand value cases into an ordered chain of equality checks."""
         resolved_targets: dict[object, StepRef] = {}
+        conditions: list[ConditionNode] = []
         default_target = self.use(default) if is_node_spec(default) else default
         previous_condition: ConditionNode | None = None
         condition_base = id or "condition"
@@ -270,6 +271,7 @@ class WorkflowBuilder:
                 id=self._next_step_id(condition_base),
                 check=value.eq(case_value),
             )
+            conditions.append(condition)
             resolved = self.use(target) if is_node_spec(target) else target
             if previous_condition is not None:
                 self.connect(previous_condition, "false", condition)
@@ -280,7 +282,11 @@ class WorkflowBuilder:
             raise ValueError("WorkflowBuilder.route requires at least one case")
         self.connect(previous_condition, "false", cast(StepRef, default_target))
         resolved_targets["default"] = cast(StepRef, default_target)
-        return resolved_targets
+        return RouteRef(
+            entry=conditions[0],
+            conditions=tuple(conditions),
+            targets=resolved_targets,
+        )
 
     def _route_condition(
         self,
@@ -289,7 +295,7 @@ class WorkflowBuilder:
         *,
         id: str | None,
         default: BranchRef,
-    ) -> dict[object, StepRef]:
+    ) -> RouteRef:
         """Route a boolean condition expression through true/false outcomes."""
         invalid_cases = [case for case in cases if not isinstance(case, bool)]
         if invalid_cases:
@@ -304,7 +310,11 @@ class WorkflowBuilder:
             resolved = self.use(target) if is_node_spec(target) else target
             self.connect(condition_node, outcome, cast(StepRef, resolved))
             resolved_targets[case_value] = cast(StepRef, resolved)
-        return resolved_targets
+        return RouteRef(
+            entry=condition_node,
+            conditions=(condition_node,),
+            targets=resolved_targets,
+        )
 
     def compile(self) -> Workflow:
         if self.start is None:

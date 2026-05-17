@@ -1,4 +1,4 @@
 from .core import WorkflowBuilder
-from .refs import BranchRef, StepRef
+from .refs import BranchRef, RouteRef, StepRef
 
-__all__ = ["BranchRef", "StepRef", "WorkflowBuilder"]
+__all__ = ["BranchRef", "RouteRef", "StepRef", "WorkflowBuilder"]

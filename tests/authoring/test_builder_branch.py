@@ -83,10 +83,11 @@ def test_builder_route_expands_state_value_cases_into_condition_chain() -> None:
         default=fallback,
     )
 
-    assert [node.id for node in builder.nodes if node.type == "condition"] == [
+    assert [node.id for node in targets.conditions] == [
         "condition",
         "condition_2",
     ]
+    assert targets.entry.id == "condition"
     assert [(edge.from_, edge.outcome, edge.to) for edge in builder.edges] == [
         ("condition", "true", "left"),
         ("condition", "false", "condition_2"),
@@ -134,6 +135,8 @@ def test_builder_route_accepts_boolean_condition_expression() -> None:
 
     targets = builder.route(state("count").ge(1), {True: left, False: right})
 
+    assert targets.entry.id == "condition"
+    assert [node.id for node in targets.conditions] == ["condition"]
     assert [(edge.from_, edge.outcome, edge.to) for edge in builder.edges] == [
         ("condition", "true", "left"),
         ("condition", "false", "right"),
