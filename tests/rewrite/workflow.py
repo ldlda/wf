@@ -1,4 +1,5 @@
-from tests.authoring.test_reducers import modulo_add
+from pydantic import BaseModel, Field
+
 from tests.rewrite.actions import (
     CounterUp,
     RateChange,
@@ -14,7 +15,23 @@ from tests.rewrite.models import Input, State, Storage
 from wf_authoring.builder import WorkflowBuilder
 from wf_authoring.dsl.conditions import expr, state
 from wf_authoring.reducers.catalog import ReducerCatalog
+from wf_authoring.reducers.decorator import reducer
 from wf_core.tokens import END
+
+
+class ModuloConfig(BaseModel):
+    modulus: int = Field(gt=0)
+
+
+@reducer(name="wf.std.modulo_add", config_model=ModuloConfig)
+def modulo_add(
+    current: int | None,
+    incoming: int,
+    config: ModuloConfig,
+) -> int:
+    """Add incoming values modulo a configured positive integer."""
+    return ((current or 0) + incoming) % config.modulus
+
 
 # alr so we start with workflowbuilder.
 

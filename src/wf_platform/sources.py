@@ -8,6 +8,7 @@ from wf_core import ReducerSpec
 from wf_core.runtime.ops.merges import ReducerDefinition
 
 SourceKind = Literal["system", "connection"]
+JsonObject = dict[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,11 +43,24 @@ class SourcePermissionsSnapshot(BaseModel):
     mutates_auth: bool = False
 
 
+class NodeSpecInventory(BaseModel):
+    """Serializable public contract for one executable node spec."""
+
+    name: str
+    description: str | None = None
+    outcomes: tuple[str, ...]
+    input_schema: JsonObject
+    output_schema: JsonObject
+    is_async: bool
+    accepts_context: bool
+
+
 class SourceCapabilityInventory(BaseModel):
     """Serializable names owned by one source, grouped by capability kind."""
 
     tools: tuple[str, ...] = ()
     node_specs: tuple[str, ...] = ()
+    node_spec_details: tuple[NodeSpecInventory, ...] = ()
     reducers: tuple[str, ...] = ()
     prompts: tuple[str, ...] = ()
     resources: tuple[str, ...] = ()
@@ -126,8 +140,29 @@ class CapabilitySource:
             capabilities=SourceCapabilityInventory(
                 tools=tuple(sorted(self.capabilities.tools)),
                 node_specs=tuple(sorted(self.capabilities.node_specs)),
+                node_spec_details=tuple(
+                    _node_spec_inventory(spec)
+                    for spec in sorted(
+                        self.capabilities.node_specs.values(),
+                        key=lambda spec: spec.name,
+                    )
+                ),
                 reducers=tuple(sorted(self.capabilities.reducers)),
                 prompts=tuple(sorted(self.capabilities.prompts)),
                 resources=tuple(sorted(self.capabilities.resources)),
             ),
         )
+
+
+def _node_spec_inventory(spec: NodeSpec[Any, Any]) -> NodeSpecInventory:
+    """Project one executable node spec into a serializable public contract."""
+    node_def = spec.to_node_def()
+    return NodeSpecInventory(
+        name=spec.name,
+        description=spec.description,
+        outcomes=tuple(node_def.outcomes),
+        input_schema=node_def.input_schema.model_dump(mode="json"),
+        output_schema=node_def.output_schema.model_dump(mode="json"),
+        is_async=spec.is_async,
+        accepts_context=spec.accepts_context,
+    )

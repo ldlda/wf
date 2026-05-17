@@ -194,6 +194,10 @@ The code now has the first capability-source layer in place.
 - `CapabilitySource` is the mutable runtime registry object; typed
   `SourceStatus` and `SourceInventory` snapshots are the serializable domain
   projections used at boundaries such as `list_sources()`.
+- Executable `NodeSpec` objects stay inside runtime buckets because they hold
+  Python callables. Inventory exposes `NodeSpecInventory` contracts instead:
+  names, descriptions, outcomes, schemas, and execution flags, but never the
+  wrapped function object itself.
 - `WfMcpService.capability_sources` is the canonical in-memory registry.
 - Planner node lookup reads `CapabilitySource.capabilities.node_specs`
   directly; the old `SpecSource` compatibility layer has been removed.
