@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from wf_authoring import NodeSpec
+from wf_core import ReducerSpec
 
 SourceKind = Literal["system", "connection"]
 
@@ -27,6 +28,7 @@ class SourcePermissions:
 class CapabilityBuckets:
     tools: dict[str, Any] = field(default_factory=dict)
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
+    reducers: dict[str, ReducerSpec] = field(default_factory=dict)
     prompts: dict[str, Any] = field(default_factory=dict)
     resources: dict[str, Any] = field(default_factory=dict)
 
@@ -60,6 +62,7 @@ class CapabilitySource:
             "description": self.description,
             "tool_count": len(self.capabilities.tools),
             "node_spec_count": len(self.capabilities.node_specs),
+            "reducer_count": len(self.capabilities.reducers),
             "prompt_count": len(self.capabilities.prompts),
             "resource_count": len(self.capabilities.resources),
         }
@@ -71,6 +74,7 @@ class CapabilitySource:
             "capabilities": {
                 "tools": sorted(self.capabilities.tools),
                 "node_specs": sorted(self.capabilities.node_specs),
+                "reducers": sorted(self.capabilities.reducers),
                 "prompts": sorted(self.capabilities.prompts),
                 "resources": sorted(self.capabilities.resources),
             },

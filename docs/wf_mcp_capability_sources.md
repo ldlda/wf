@@ -30,6 +30,7 @@ CapabilitySource
   capabilities:
     tools
     node_specs
+    reducers
     prompts
     resources
 ```
@@ -60,6 +61,7 @@ Expected capabilities:
   `wf.std.truthy`, `wf.std.first_item`, `wf.std.first_item_maybe`,
   `wf.std.first_item_or_none`, `wf.std.last_item`, `wf.std.last_item_or_none`,
   `wf.std.length`, `wf.std.is_empty`.
+- `reducers`: `wf.std.replace`, `wf.std.append`, `wf.std.merge_object`.
 - `prompts`: workflow authoring guide, error-handling guide, mapping guide.
 - `resources`: reference docs for stdlib node behavior.
 
@@ -215,6 +217,7 @@ Current code has several useful pieces but the boundaries are blurred.
 | Current location | Current role | Target source |
 | --- | --- | --- |
 | `wf_authoring.ops` | reusable workflow node specs | `wf.std.node_specs` |
+| `wf_core` built-in reducers | reusable workflow state reducers | `wf.std.reducers` |
 | `wf_mcp.broker.service.builtins` | local workflow specs | `wf.std`, `wf.mcp` |
 | `wf_mcp.broker.tools` | compatibility wrapper over shared service-admin registration | `wf.admin.tools` |
 | `wf_mcp.admin_surface.tools` | shared service-backed admin tool registration | `wf.admin.tools` |

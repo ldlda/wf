@@ -21,7 +21,8 @@ A source is a named owner of capabilities.
 Examples:
 
 - `everything.default`: an upstream MCP connection source
-- `wf.std`: the local workflow standard library
+- `wf.std`: the local workflow standard library, including reusable nodes and
+  reducers
 - `wf.mcp`: local workflow helpers for interacting with MCP backends
 - `wf.admin`: privileged control-plane capabilities
 
@@ -237,6 +238,7 @@ Sources own capability kinds:
 ```text
 tools
 node_specs
+reducers
 prompts
 resources
 ```
@@ -262,7 +264,7 @@ Today:
 - `CapabilitySource` already owns buckets for tools, node specs, prompts, and
   resources
 - connection sources represent upstream MCP snapshots
-- `wf.std` owns local reusable workflow node specs
+- `wf.std` owns local reusable workflow node specs and reducers
 - `wf.mcp` owns workflow-facing MCP runtime helpers
 - discovered upstream tools can already become workflow node specs
 - saved artifacts can be tagged with `kind="workflow"` or `kind="wrapper"`

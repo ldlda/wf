@@ -4,6 +4,7 @@ from typing import Any, Protocol
 
 from pydantic import BaseModel, Field
 
+from wf_core import ReducerSpec
 from wf_authoring import (
     NodeReturn,
     NodeSpec,
@@ -109,6 +110,25 @@ def builtin_specs() -> dict[str, NodeSpec[Any, Any]]:
     return {spec.name: spec for spec in qualified_specs}
 
 
+def builtin_reducers() -> dict[str, ReducerSpec]:
+    """Return built-in reducers owned by the workflow standard library."""
+    specs = (
+        ReducerSpec(
+            name="wf.std.replace",
+            description="Replace the current state value with the incoming value.",
+        ),
+        ReducerSpec(
+            name="wf.std.append",
+            description="Append one value or many values into a list-valued state path.",
+        ),
+        ReducerSpec(
+            name="wf.std.merge_object",
+            description="Shallow-merge object values at one exact state path.",
+        ),
+    )
+    return {spec.name: spec for spec in specs}
+
+
 def mcp_specs(service: ToolCaller) -> dict[str, NodeSpec[Any, Any]]:
     """Return service-bound MCP utility specs available to raw plans."""
 
@@ -138,7 +158,10 @@ def builtin_sources(service: ToolCaller) -> dict[str, CapabilitySource]:
         BUILTIN_CONNECTION_ID: CapabilitySource(
             id=BUILTIN_CONNECTION_ID,
             kind="system",
-            capabilities=CapabilityBuckets(node_specs=builtin_specs()),
+            capabilities=CapabilityBuckets(
+                node_specs=builtin_specs(),
+                reducers=builtin_reducers(),
+            ),
             visibility=SourceVisibility(
                 planner=True,
                 mcp_client=True,
