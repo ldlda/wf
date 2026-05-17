@@ -5,7 +5,7 @@
       "id": "context7.default",
       "server": "context7",
       "account": "default",
-      "enabled": false,
+      "enabled": true,
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",

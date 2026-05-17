@@ -74,6 +74,31 @@ def test_workflow_surface_lists_artifact_catalog_entries() -> None:
     assert "plan" not in nodes[0]
 
 
+def test_workflow_surface_lists_planner_visible_capabilities() -> None:
+    handlers = _handlers(FileWorkflowArtifactStore(local_temp_root() / "surface_caps"))
+
+    payload = asyncio.run(handlers.list_capabilities())
+    names = [capability["name"] for capability in payload["capabilities"]]
+
+    assert "wf.std.runtime_error" in names
+    assert "wf.mcp.call_tool" in names
+    assert "wf.admin.list_sources" not in names
+
+
+def test_workflow_surface_inspects_one_capability() -> None:
+    handlers = _handlers(
+        FileWorkflowArtifactStore(local_temp_root() / "surface_inspect_cap")
+    )
+
+    payload = asyncio.run(
+        handlers.inspect_capability(qualified_name="wf.std.runtime_error")
+    )
+
+    assert payload["name"] == "wf.std.runtime_error"
+    assert payload["outcomes"] == ["ok"]
+    assert "input_schema" in payload
+
+
 def test_workflow_surface_validates_deployment_dependencies() -> None:
     artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_validate")
     artifact_store.save_artifact(_artifact())

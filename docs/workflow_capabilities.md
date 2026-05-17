@@ -247,6 +247,20 @@ That direct-call surface is different from:
 
 It exists so authors can test the workflow-facing contract before composing it.
 
+The workflow-facing MCP surface now has dedicated discovery tools for the
+authoring loop:
+
+- `wf.workflow.list_capabilities`
+  - lists enabled planner-visible workflow-ready node specs
+- `wf.workflow.inspect_capability`
+  - returns one full workflow capability contract with schemas and outcomes
+- `wf.workflow.call_capability`
+  - executes one such capability once for direct testing
+
+These are authoring-plane tools. They do not replace the privileged
+`wf.admin.list_sources` source inventory, and older planner-catalog projections
+may remain while callers migrate to the workflow-facing surface.
+
 ## Relationship To Capability Sources
 
 Sources own capability kinds:

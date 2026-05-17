@@ -44,6 +44,29 @@ class WorkflowSurfaceHandlers:
         ]
         return {"nodes": entries}
 
+    async def list_capabilities(self) -> dict[str, Any]:
+        """Return planner-visible workflow-ready node spec contracts."""
+        capabilities = [
+            detail.model_dump(mode="json")
+            for source in sorted(
+                self.service.capability_sources.values(),
+                key=lambda source: source.id,
+            )
+            if source.enabled and source.visibility.planner
+            for detail in source.as_inventory().capabilities.node_spec_details
+        ]
+        return {"capabilities": capabilities}
+
+    async def inspect_capability(self, *, qualified_name: str) -> dict[str, Any]:
+        """Return one planner-visible workflow capability contract."""
+        for source in self.service.capability_sources.values():
+            if not source.enabled or not source.visibility.planner:
+                continue
+            for detail in source.as_inventory().capabilities.node_spec_details:
+                if detail.name == qualified_name:
+                    return detail.model_dump(mode="json")
+        raise KeyError(f"unknown workflow capability {qualified_name!r}")
+
     async def call_capability(
         self,
         *,

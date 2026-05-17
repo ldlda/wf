@@ -25,6 +25,22 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         return await handlers.list_artifacts()
 
     @server.tool(
+        name="wf.workflow.list_capabilities",
+        title="List Workflow Capabilities",
+        description="List planner-visible workflow-ready node capabilities.",
+    )
+    async def list_capabilities() -> dict[str, Any]:
+        return await handlers.list_capabilities()
+
+    @server.tool(
+        name="wf.workflow.inspect_capability",
+        title="Inspect Workflow Capability",
+        description="Return one planner-visible workflow capability contract.",
+    )
+    async def inspect_capability(qualified_name: str) -> dict[str, Any]:
+        return await handlers.inspect_capability(qualified_name=qualified_name)
+
+    @server.tool(
         name="wf.workflow.call_capability",
         title="Call Workflow Capability",
         description=(

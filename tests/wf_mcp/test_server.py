@@ -51,6 +51,8 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.admin.call_tool" in names
             assert "wf.admin.get_events" in names
             assert "wf.workflow.list_artifacts" in names
+            assert "wf.workflow.list_capabilities" in names
+            assert "wf.workflow.inspect_capability" in names
             assert "wf.workflow.call_capability" in names
             assert "wf.workflow.run_deployment" in names
 
