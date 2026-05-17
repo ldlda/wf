@@ -12,6 +12,8 @@ systems.
 ## Core Model
 
 A capability source is a named provider of one or more capability kinds.
+The domain model lives in `wf_platform.sources`; `wf_mcp` projects MCP-backed
+connections into that model rather than owning the model itself.
 
 ```text
 CapabilitySource
@@ -187,7 +189,7 @@ control APIs, not ad hoc tool functions copied across broker and proxy modes.
 
 The code now has the first capability-source layer in place.
 
-- `CapabilitySource` owns source metadata, visibility, permissions, and
+- `wf_platform.CapabilitySource` owns source metadata, visibility, permissions, and
   capability buckets.
 - `WfMcpService.capability_sources` is the canonical in-memory registry.
 - Planner node lookup reads `CapabilitySource.capabilities.node_specs`

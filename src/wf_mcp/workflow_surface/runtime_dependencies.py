@@ -8,6 +8,7 @@ from wf_authoring import AsyncRegistryHandler, NodeSpec, build_async_registry
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_platform import CapabilitySource
 
+
 @dataclass(frozen=True, slots=True)
 class RuntimeDependencies:
     """Executable dependencies resolved for one workflow run."""

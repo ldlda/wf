@@ -277,8 +277,8 @@ Examples:
 
 Today:
 
-- `CapabilitySource` already owns buckets for tools, node specs, prompts, and
-  resources
+- `wf_platform.CapabilitySource` already owns buckets for tools, node specs,
+  prompts, and resources
 - connection sources represent upstream MCP snapshots
 - `wf.std` owns local reusable workflow node specs and reducers
 - `wf.mcp` owns workflow-facing MCP runtime helpers

@@ -8,6 +8,7 @@ from wf_authoring import NodeSpec
 from wf_platform import CapabilitySource
 from wf_mcp.connections import qualify_node_name
 
+
 def qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, Any]:
     """Return a copy of a spec with its node name scoped to a connection."""
     return NodeSpec(
