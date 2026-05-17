@@ -307,7 +307,6 @@ def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
     return f"workflow.{artifact.id}.v{artifact.version}"
 
 
-# this feels like a hack
 def _parse_artifact_capability_id(qualified_name: str) -> tuple[str, int] | None:
     """Parse the stable `workflow.<artifact_id>.v<version>` capability name."""
     prefix = "workflow."

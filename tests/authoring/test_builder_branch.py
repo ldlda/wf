@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from wf_authoring import WorkflowBuilder
+from wf_authoring import WorkflowBuilder, state
 
 from tests.authoring.helpers import (
     AutoBindInput,
@@ -64,3 +64,35 @@ def test_builder_branch_warns_on_empty_branch_map() -> None:
         targets = builder.branch(router, {})
 
     assert targets == {}
+
+
+def test_builder_route_expands_state_value_cases_into_condition_chain() -> None:
+    builder = WorkflowBuilder(
+        name="route_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+    left = builder.use(auto_bind_node, id="left")
+    right = builder.use(auto_bind_node, id="right")
+    fallback = builder.use(auto_bind_node, id="fallback")
+
+    targets = builder.route(
+        state("value"),
+        {"left": left, "right": right},
+        default=fallback,
+    )
+
+    assert [node.id for node in builder.nodes if node.type == "condition"] == [
+        "condition",
+        "condition_2",
+    ]
+    assert [(edge.from_, edge.outcome, edge.to) for edge in builder.edges] == [
+        ("condition", "true", "left"),
+        ("condition", "false", "condition_2"),
+        ("condition_2", "true", "right"),
+        ("condition_2", "false", "fallback"),
+    ]
+    assert targets["left"] is left
+    assert targets["right"] is right
+    assert targets["default"] is fallback

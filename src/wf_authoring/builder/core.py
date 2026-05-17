@@ -20,7 +20,7 @@ from wf_core import (
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.conditions import Condition as CoreCondition
 
-from ..dsl import Expr, PathArg, compile_condition
+from ..dsl import Expr, PathArg, PathExpr, compile_condition
 from ..nodes.callables import SyncRegistryHandler
 from ..nodes.registry import build_registry
 from ..schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_from
@@ -208,6 +208,37 @@ class WorkflowBuilder:
             resolved = self.use(target) if is_node_spec(target) else target
             self.connect(cast(StepRef, source), outcome, cast(StepRef, resolved))
             resolved_targets[outcome] = cast(StepRef, resolved)
+        return resolved_targets
+
+    def route(
+        self,
+        value: PathExpr,
+        cases: Mapping[object, BranchRef],
+        *,
+        default: BranchRef,
+    ) -> dict[object, StepRef]:
+        """Route graph data by equality checks compiled to condition nodes.
+
+        `branch()` wires outcomes already produced by a node. `route()` is the
+        companion for ordinary graph data: it compares one path against case
+        values, expands those checks into a condition chain, and wires the first
+        matching target plus a required fallback.
+        """
+        resolved_targets: dict[object, StepRef] = {}
+        default_target = self.use(default) if is_node_spec(default) else default
+        previous_condition: ConditionNode | None = None
+        for case_value, target in cases.items():
+            condition = self.condition(check=value.eq(case_value))
+            resolved = self.use(target) if is_node_spec(target) else target
+            if previous_condition is not None:
+                self.connect(previous_condition, "false", condition)
+            self.connect(condition, "true", cast(StepRef, resolved))
+            previous_condition = condition
+            resolved_targets[case_value] = cast(StepRef, resolved)
+        if previous_condition is None:
+            raise ValueError("WorkflowBuilder.route requires at least one case")
+        self.connect(previous_condition, "false", cast(StepRef, default_target))
+        resolved_targets["default"] = cast(StepRef, default_target)
         return resolved_targets
 
     def compile(self) -> Workflow:
