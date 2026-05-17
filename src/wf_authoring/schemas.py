@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Any, Iterator
 
 from pydantic import BaseModel, TypeAdapter
@@ -9,23 +10,26 @@ from wf_core import ReducerRef, SchemaRef, StateField, StateSchema
 
 SchemaLike = SchemaRef | type[BaseModel] | type[Any] | dict[str, Any]
 StateSchemaLike = StateSchema | type[BaseModel] | type[Any] | dict[str, Any]
+ReducerLike = str | ReducerRef | Mapping[str, Any]
 
 
 @dataclass(frozen=True, slots=True)
 class StateFieldMetadata:
     """Authoring metadata attached to BaseModel state fields."""
 
-    reducer: str = "wf.std.replace"
+    reducer: ReducerRef = field(
+        default_factory=lambda: ReducerRef(name="wf.std.replace")
+    )
     trace: bool = True
 
 
 def state_field(
     *,
-    reducer: str = "wf.std.replace",
+    reducer: ReducerLike = "wf.std.replace",
     trace: bool = True,
 ) -> StateFieldMetadata:
     """Declare workflow state behavior for an Annotated BaseModel field."""
-    return StateFieldMetadata(reducer=reducer, trace=trace)
+    return StateFieldMetadata(reducer=_reducer_ref_from(reducer), trace=trace)
 
 
 def schema_ref_from(value: SchemaLike) -> SchemaRef:
@@ -51,15 +55,21 @@ def state_schema_from(value: StateSchemaLike) -> StateSchema:
     fields = {
         path: StateField(
             type=_state_field_type(property_schema),
-            reducer=ReducerRef(
-                name=metadata_by_name.get(path, StateFieldMetadata()).reducer
-            ),
+            reducer=metadata_by_name.get(path, StateFieldMetadata()).reducer,
             trace=metadata_by_name.get(path, StateFieldMetadata()).trace,
             default=_state_field_default(value, path, property_schema),
         )
         for path, property_schema in _flatten_state_properties(schema)
     }
     return StateSchema(fields=fields)
+
+
+def _reducer_ref_from(value: ReducerLike) -> ReducerRef:
+    if isinstance(value, ReducerRef):
+        return value
+    if isinstance(value, str):
+        return ReducerRef(name=value)
+    return ReducerRef.model_validate(value)
 
 
 def _state_metadata_by_name(value: object) -> dict[str, StateFieldMetadata]:

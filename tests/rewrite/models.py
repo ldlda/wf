@@ -17,8 +17,8 @@ class SophisticatedRates(TypedDict):
 
 
 class SophisticatedCounter(TypedDict):
-    c_10: int  # how do i convey "add" sublevel? can we have plugins for this? should we cover this; since langgraph doesnt.
-    c_80: int
+    c_10: Annotated[int, state_field(reducer="wf.std.add")]  # how do i convey "add" sublevel? can we have plugins for this? should we cover this; since langgraph doesnt.
+    c_80: Annotated[int, state_field(reducer="wf.std.add")]
 
 
 class Counters(BaseModel):
@@ -31,7 +31,7 @@ class Counters(BaseModel):
 
 
 class Countdown(BaseModel):
-    countdown: int  # add!
+    countdown: Annotated[int, state_field(reducer="wf.std.add")]  # add!
 
 
 # has to migrate from typeddict for what? for nothing.

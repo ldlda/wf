@@ -20,6 +20,7 @@ from wf_core.runtime.ops.handlers import (
     handle_join_step,
 )
 from wf_core.runtime.ops.index import WorkflowIndex
+from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.nodes import (
     AsyncNodeHandler,
     NodeHandler,
@@ -67,6 +68,7 @@ def step_workflow(
     registry: Mapping[str, NodeHandler],
     *,
     index: WorkflowIndex | None = None,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
     """Execute at most one synchronous workflow step."""
     prepared = prepare_step(workflow, run, index)
@@ -77,7 +79,14 @@ def step_workflow(
 
     if isinstance(step, NodeUse):
         node_def = index.node_defs[step.node]
-        step_result = execute_node_use(workflow, run, step, node_def, registry)
+        step_result = execute_node_use(
+            workflow,
+            run,
+            step,
+            node_def,
+            registry,
+            reducers=reducers,
+        )
     elif isinstance(step, ConditionNode):
         step_result = handle_condition_step(run, step)
     elif isinstance(step, JoinNode):
@@ -108,6 +117,7 @@ async def step_workflow_async(
     registry: Mapping[str, AsyncNodeHandler],
     *,
     index: WorkflowIndex | None = None,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
     """Execute at most one async workflow step."""
     prepared = prepare_step(workflow, run, index)
@@ -119,7 +129,12 @@ async def step_workflow_async(
     if isinstance(step, NodeUse):
         node_def = index.node_defs[step.node]
         step_result = await execute_node_use_async(
-            workflow, run, step, node_def, registry
+            workflow,
+            run,
+            step,
+            node_def,
+            registry,
+            reducers=reducers,
         )
     elif isinstance(step, ConditionNode):
         step_result = handle_condition_step(run, step)

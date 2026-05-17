@@ -6,6 +6,7 @@ from typing import Any
 from wf_core.models.workflow import Workflow
 from wf_core.runtime.ops.flow import finalize_run
 from wf_core.runtime.ops.frames import collapse_completed_frames
+from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.nodes import AsyncNodeHandler, NodeHandler
 from wf_core.runtime.ops.runs import create_run_state
 from wf_core.run_state import RunState, RunStatus
@@ -19,13 +20,15 @@ def execute_workflow(
     workflow: Workflow,
     workflow_input: dict[str, Any],
     registry: Mapping[str, NodeHandler],
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
     """Create a run and execute a workflow synchronously until it stops."""
     run = create_run_state(workflow, workflow_input)
 
     try:
         run = prepare_new_run(workflow, workflow_input)
-        return resume_workflow(workflow, run, registry)
+        return resume_workflow(workflow, run, registry, reducers=reducers)
     except Exception as exc:
         run.status = RunStatus.FAILED
         run.error = str(exc)
@@ -36,13 +39,15 @@ async def execute_workflow_async(
     workflow: Workflow,
     workflow_input: dict[str, Any],
     registry: Mapping[str, AsyncNodeHandler],
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
     """Create a run and execute a workflow asynchronously until it stops."""
     run = create_run_state(workflow, workflow_input)
 
     try:
         run = prepare_new_run(workflow, workflow_input)
-        return await resume_workflow_async(workflow, run, registry)
+        return await resume_workflow_async(workflow, run, registry, reducers=reducers)
     except Exception as exc:
         run.status = RunStatus.FAILED
         run.error = str(exc)
@@ -56,6 +61,7 @@ def resume_workflow(
     *,
     resume_payload: dict[str, Any] | None = None,
     resume_outcome: str = "submitted",
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
     """Resume a synchronous run from its current state."""
     index = prepare_resume(
@@ -63,6 +69,7 @@ def resume_workflow(
         run,
         resume_payload=resume_payload,
         resume_outcome=resume_outcome,
+        reducers=reducers,
     )
     if index is None:
         if run.current_node_id == END:
@@ -78,6 +85,7 @@ def resume_workflow(
             run,
             registry,
             index=index,
+            reducers=reducers,
         )
         if run.status == RunStatus.INTERRUPTED:
             return run
@@ -92,6 +100,7 @@ async def resume_workflow_async(
     *,
     resume_payload: dict[str, Any] | None = None,
     resume_outcome: str = "submitted",
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
     """Resume an async run from its current state."""
     index = prepare_resume(
@@ -99,6 +108,7 @@ async def resume_workflow_async(
         run,
         resume_payload=resume_payload,
         resume_outcome=resume_outcome,
+        reducers=reducers,
     )
     if index is None:
         if run.current_node_id == END:
@@ -114,6 +124,7 @@ async def resume_workflow_async(
             run,
             registry,
             index=index,
+            reducers=reducers,
         )
         if run.status == RunStatus.INTERRUPTED:
             return run

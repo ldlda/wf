@@ -43,11 +43,19 @@ gacha.connect("keep_rolling", "true", "tick")
 gacha.connect("keep_rolling", "false", END)
 
 gacha.connect("tick", "ok", "counter_up")
-gacha.use(rate_booster, id="rate_booster")
+# gacha.use(rate_booster, id="rate_booster")
 
 gacha.connect("counter_up", "ok", "rate_booster")
-gacha.connect("rate_booster", "0", rate_same)
-gacha.connect("rate_booster", "65", rate_up)
+# gacha.connect("rate_booster", "0", rate_same)
+# gacha.connect("rate_booster", "65", rate_up)
+gacha.route(
+    state("counter.c_80").ge(65),
+    {
+        True: rate_up,
+        False: rate_same,
+    },
+    id = "rate_booster"
+)
 gacha.use(pre_roll_router, id="router")
 
 gacha.connect("rate_up", "ok", "router")

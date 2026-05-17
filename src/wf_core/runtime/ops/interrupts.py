@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from wf_core.conditions import safe_resolve_path
@@ -9,6 +10,7 @@ from wf_core.models.workflow import Workflow
 from wf_core.run_state import InterruptRequest, RunState, StepExecutionResult
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.index import WorkflowIndex
+from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.state import apply_mapped_state
 
 
@@ -45,6 +47,7 @@ def resume_interrupt(
     index: WorkflowIndex,
     resume_payload: dict[str, Any],
     resume_outcome: str,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> None:
     if run.current_frame_id is None:
         raise WorkflowExecutionError("interrupted run has no current frame")
@@ -69,6 +72,7 @@ def resume_interrupt(
         resume_payload,
         step.out_map,
         run.state,
+        reducers=reducers,
         missing_field_message="interrupt resume payload is missing required field {field}",
     )
     next_node_id = index.next_node_id(frame.node_id, resume_outcome)

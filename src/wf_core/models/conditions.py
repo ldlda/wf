@@ -45,7 +45,7 @@ class VariadicCondition(BaseModel):
 class BinaryCondition(BaseModel):
     """Condition that compares two operands."""
 
-    op: Literal["eq", "ne", "gt", "lt"]
+    op: Literal["eq", "ne", "gt", "ge", "lt", "le"]
     left: PathOperand | LiteralOperand
     right: PathOperand | LiteralOperand
 

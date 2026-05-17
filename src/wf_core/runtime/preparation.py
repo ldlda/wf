@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
@@ -7,6 +8,7 @@ from wf_core.models.workflow import Workflow
 from wf_core.runtime.ops.frames import collapse_completed_frames
 from wf_core.runtime.ops.index import WorkflowIndex, build_workflow_index
 from wf_core.runtime.ops.interrupts import resume_interrupt
+from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.runs import create_run_state
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
 from wf_core.run_state import FrameStatus, RunState, RunStatus
@@ -29,6 +31,7 @@ def prepare_resume(
     *,
     resume_payload: dict[str, Any] | None,
     resume_outcome: str,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> WorkflowIndex | None:
     """Validate and normalize a run state before resume execution."""
     if run.workflow_name != workflow.name:
@@ -57,6 +60,7 @@ def prepare_resume(
             index=index,
             resume_payload=resume_payload,
             resume_outcome=resume_outcome,
+            reducers=reducers,
         )
         collapse_completed_frames(run)
         if run.current_node_id == END:

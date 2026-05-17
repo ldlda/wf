@@ -55,7 +55,9 @@ class Expr:
 class PathExpr:
     path: str
 
-    def _binary(self, op: Literal["eq", "ne", "gt", "lt"], other: object) -> Expr:
+    def _binary(
+        self, op: Literal["eq", "ne", "gt", "ge", "lt", "le"], other: object
+    ) -> Expr:
         return Expr(
             BinaryCondition(
                 op=op,
@@ -73,8 +75,14 @@ class PathExpr:
     def gt(self, other: object) -> Expr:
         return self._binary("gt", other)
 
+    def ge(self, other: object) -> Expr:
+        return self._binary("ge", other)
+
     def lt(self, other: object) -> Expr:
         return self._binary("lt", other)
+
+    def le(self, other: object) -> Expr:
+        return self._binary("le", other)
 
     def __eq__(self, other: object) -> Expr:  # pyright: ignore[reportIncompatibleMethodOverride] # type: ignore[override] # ty: ignore[invalid-method-override]
         return self._binary("eq", other)
@@ -85,8 +93,14 @@ class PathExpr:
     def __gt__(self, other: object) -> Expr:
         return self.gt(other)
 
+    def __ge__(self, other: object) -> Expr:
+        return self.ge(other)
+
     def __lt__(self, other: object) -> Expr:
         return self.lt(other)
+
+    def __le__(self, other: object) -> Expr:
+        return self.le(other)
 
 
 def expr(value: PathExpr | GraphPath) -> PathExpr:
@@ -109,6 +123,11 @@ def context(field: str) -> PathExpr:
 
 def exists(value: PathExpr | GraphPath) -> Expr:
     return Expr(ExistsCondition(op="exists", path=_path_str(value)))
+
+
+def not_(value: Condition | Expr) -> Expr:
+    """Negate a condition without relying on Python's visually subtle `~expr`."""
+    return Expr(NotCondition(op="not", arg=compile_condition(value)))
 
 
 def compile_condition(value: Condition | Expr) -> Condition:

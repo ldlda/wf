@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from wf_authoring import exists, expr, state_path
+from wf_authoring import exists, expr, not_, state, state_path
+from wf_core.conditions import eval_condition
 
 
 def test_condition_dsl_compiles_to_core_condition() -> None:
@@ -22,3 +23,18 @@ def test_condition_dsl_compiles_to_core_condition() -> None:
             },
         ],
     }
+
+
+def test_condition_dsl_supports_not_ge_and_ne() -> None:
+    condition = not_(
+        state("score").ge(10) & state("score").le(20) & state("status").ne("blocked")
+    )
+    compiled = condition.to_condition()
+
+    assert compiled.model_dump()["op"] == "not"
+    assert eval_condition(
+        compiled,
+        state={"score": 7, "status": "ready"},
+        workflow_input={},
+        context_data=None,
+    )

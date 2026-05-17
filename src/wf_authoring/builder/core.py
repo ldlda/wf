@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any, Literal, cast
 import warnings
 
+from wf_authoring.ops.values import runtime_error
 from wf_core import (
     ConditionNode,
     Edge,
@@ -19,10 +20,12 @@ from wf_core import (
 )
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.conditions import Condition as CoreCondition
+from wf_core.runtime.ops.merges import ReducerDefinition
 
 from ..dsl import Expr, PathArg, PathExpr, compile_condition
 from ..nodes.callables import SyncRegistryHandler
 from ..nodes.registry import build_registry
+from ..reducers import ReducerCatalog
 from ..schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_from
 from ..nodes import NodeSpec
 from .ids import next_step_id, slug_id
@@ -43,6 +46,7 @@ class WorkflowBuilder:
     state_schema: StateSchemaLike
     output_schema: SchemaLike
     start: str | None = None
+    reducers: ReducerCatalog | Mapping[str, ReducerDefinition] | None = None
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
     nodes: list[Any] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
@@ -100,6 +104,19 @@ class WorkflowBuilder:
         """Export handlers for all node specs used by this builder."""
         return build_registry(*self.node_specs.values())
 
+    def reducer_registry(self) -> dict[str, ReducerDefinition]:
+        """Export custom reducers attached to this builder.
+
+        The core runtime always falls back to built-in reducers. This method
+        returns only the authored additions/overrides so callers can pass the
+        same runtime environment that `execute()` uses.
+        """
+        if self.reducers is None:
+            return {}
+        if isinstance(self.reducers, ReducerCatalog):
+            return dict(self.reducers.definitions)
+        return dict(self.reducers)
+
     def execute(self, workflow_input: dict[str, Any]) -> RunState:
         """Compile and execute this workflow with its used node registry.
 
@@ -107,7 +124,12 @@ class WorkflowBuilder:
         callers that need custom registries, persistence, or resume behavior should
         call wf_core execution functions directly.
         """
-        return execute_workflow(self.compile(), workflow_input, self.registry())
+        return execute_workflow(
+            self.compile(),
+            workflow_input,
+            self.registry(),
+            reducers=self.reducer_registry(),
+        )
 
     def condition(
         self, *, id: str | None = None, check: CoreCondition | Expr
@@ -212,23 +234,42 @@ class WorkflowBuilder:
 
     def route(
         self,
+        value: PathExpr | Expr,
+        cases: Mapping[object, BranchRef],
+        *,
+        id: str | None = None,
+        default: BranchRef = runtime_error,
+    ) -> dict[object, StepRef]:
+        """Route graph data by equality checks or one boolean condition.
+
+        `branch()` wires outcomes already produced by a node. `route()` is the
+        companion for ordinary graph data: with a path, it compares that path
+        against case values; with a condition expression, it expects boolean
+        `True`/`False` cases and emits one condition node.
+        """
+        if isinstance(value, Expr):
+            return self._route_condition(value, cases, id=id, default=default)
+
+        return self._route_value(value, cases, id=id, default=default)
+
+    def _route_value(
+        self,
         value: PathExpr,
         cases: Mapping[object, BranchRef],
         *,
+        id: str | None,
         default: BranchRef,
     ) -> dict[object, StepRef]:
-        """Route graph data by equality checks compiled to condition nodes.
-
-        `branch()` wires outcomes already produced by a node. `route()` is the
-        companion for ordinary graph data: it compares one path against case
-        values, expands those checks into a condition chain, and wires the first
-        matching target plus a required fallback.
-        """
+        """Expand value cases into an ordered chain of equality checks."""
         resolved_targets: dict[object, StepRef] = {}
         default_target = self.use(default) if is_node_spec(default) else default
         previous_condition: ConditionNode | None = None
+        condition_base = id or "condition"
         for case_value, target in cases.items():
-            condition = self.condition(check=value.eq(case_value))
+            condition = self.condition(
+                id=self._next_step_id(condition_base),
+                check=value.eq(case_value),
+            )
             resolved = self.use(target) if is_node_spec(target) else target
             if previous_condition is not None:
                 self.connect(previous_condition, "false", condition)
@@ -239,6 +280,30 @@ class WorkflowBuilder:
             raise ValueError("WorkflowBuilder.route requires at least one case")
         self.connect(previous_condition, "false", cast(StepRef, default_target))
         resolved_targets["default"] = cast(StepRef, default_target)
+        return resolved_targets
+
+    def _route_condition(
+        self,
+        condition: Expr,
+        cases: Mapping[object, BranchRef],
+        *,
+        id: str | None,
+        default: BranchRef,
+    ) -> dict[object, StepRef]:
+        """Route a boolean condition expression through true/false outcomes."""
+        invalid_cases = [case for case in cases if not isinstance(case, bool)]
+        if invalid_cases:
+            raise ValueError("condition route cases must be boolean True/False keys")
+        if not cases:
+            raise ValueError("WorkflowBuilder.route requires at least one case")
+
+        condition_node = self.condition(id=id, check=condition)
+        resolved_targets: dict[object, StepRef] = {}
+        for case_value, outcome in ((True, "true"), (False, "false")):
+            target = cases.get(case_value, default)
+            resolved = self.use(target) if is_node_spec(target) else target
+            self.connect(condition_node, outcome, cast(StepRef, resolved))
+            resolved_targets[case_value] = cast(StepRef, resolved)
         return resolved_targets
 
     def compile(self) -> Workflow:

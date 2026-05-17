@@ -6,6 +6,7 @@ from .conditions import (
     exists,
     expr,
     input,
+    not_,
     state,
 )
 from .mapping import PathArg, bind_fields, bind_state, merge_maps, normalize_path
@@ -28,6 +29,7 @@ __all__ = [
     "input_path",
     "merge_maps",
     "normalize_path",
+    "not_",
     "state",
     "state_path",
 ]

@@ -1,13 +1,38 @@
 from __future__ import annotations
 
+from typing import Annotated
+
 from pydantic import BaseModel, Field
 
-from wf_authoring import ReducerCatalog, reducer
+from wf_authoring import (
+    NodeReturn,
+    ReducerCatalog,
+    WorkflowBuilder,
+    node,
+    reducer,
+    state_field,
+)
 from wf_core import ReducerRef
 
 
 class ModuloConfig(BaseModel):
     modulus: int = Field(gt=0)
+
+
+class CounterState(BaseModel):
+    total: Annotated[int, state_field(reducer="wf.std.add")] = 0
+
+
+class EmptyInput(BaseModel):
+    pass
+
+
+class ModuloCounterState(BaseModel):
+    total: int = 0
+
+
+class CounterOutput(BaseModel):
+    total: int
 
 
 @reducer(name="wf.std.add")
@@ -61,3 +86,43 @@ def test_reducer_catalog_exposes_definitions_and_specs() -> None:
     assert set(catalog.definitions) == {"wf.std.add", "wf.std.modulo_add"}
     assert catalog.specs["wf.std.add"].name == "wf.std.add"
     assert catalog.specs["wf.std.modulo_add"].name == "wf.std.modulo_add"
+
+
+def test_builder_executes_with_custom_reducer_catalog() -> None:
+    @node
+    def emit(_: EmptyInput) -> NodeReturn[CounterOutput]:
+        return NodeReturn(outcome="ok", output=CounterOutput(total=4))
+
+    builder = WorkflowBuilder(
+        name="custom_reducer",
+        input_schema=EmptyInput,
+        state_schema=CounterState,
+        output_schema=CounterOutput,
+        reducers=ReducerCatalog.from_reducers(add),
+    )
+    step = builder.use(
+        emit,
+        in_map={},
+        out_map={"total": "state.total"},
+    )
+    builder.set_entry_point(step)
+    builder.connect(step, "ok", "__end__")
+
+    run = builder.execute({})
+
+    assert run.state["total"] == 4
+
+
+def test_state_field_accepts_configured_reducer_reference() -> None:
+    class State(BaseModel):
+        total: Annotated[
+            int,
+            state_field(
+                reducer={"name": "wf.std.modulo_add", "config": {"modulus": 10}}
+            ),
+        ] = 0
+
+    field = State.model_fields["total"].metadata[0]
+
+    assert field.reducer.name == "wf.std.modulo_add"
+    assert field.reducer.config["modulus"] == 10

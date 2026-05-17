@@ -12,6 +12,7 @@ from .dsl import (
     input,
     input_path,
     merge_maps,
+    not_,
     state,
     state_path,
 )
@@ -119,6 +120,7 @@ __all__ = [
     "rename_fields",
     "runtime_error",
     "node",
+    "not_",
     "outcome",
     "reducer",
     "state",

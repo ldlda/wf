@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
@@ -13,7 +14,7 @@ from wf_core.paths import (
     set_nested_value,
     split_graph_path,
 )
-from wf_core.runtime.ops.merges import apply_reducer
+from wf_core.runtime.ops.merges import ReducerDefinition, apply_reducer
 
 
 def apply_output_map(
@@ -21,12 +22,14 @@ def apply_output_map(
     node: NodeUse,
     node_output: dict[str, Any],
     state: dict[str, Any],
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> dict[str, Any]:
     return apply_mapped_state(
         workflow,
         node_output,
         node.out_map,
         state,
+        reducers=reducers,
         missing_field_message=f"node {node.id!r} did not return required mapped field {{field}}",
     )
 
@@ -37,6 +40,7 @@ def apply_mapped_state(
     mapping: dict[str, str],
     state: dict[str, Any],
     *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
     missing_field_message: str,
 ) -> dict[str, Any]:
     if has_overlapping_paths(mapping.values()):
@@ -55,12 +59,23 @@ def apply_mapped_state(
         patch[destination_path] = value
 
     for destination_path, value in patch.items():
-        write_state_value(workflow, state, destination_path, value)
+        write_state_value(
+            workflow,
+            state,
+            destination_path,
+            value,
+            reducers=reducers,
+        )
     return dict(patch)
 
 
 def write_state_value(
-    workflow: Workflow, state: dict[str, Any], destination_path: str, value: Any
+    workflow: Workflow,
+    state: dict[str, Any],
+    destination_path: str,
+    value: Any,
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> None:
     try:
         root, parts = split_graph_path(destination_path)
@@ -74,7 +89,9 @@ def write_state_value(
 
     declared_path = ".".join(parts)
     declared_field = workflow.state_schema.fields.get(declared_path)
-    reducer = declared_field.reducer if declared_field else ReducerRef(name="wf.std.replace")
+    reducer = (
+        declared_field.reducer if declared_field else ReducerRef(name="wf.std.replace")
+    )
     key_path = parts
     current_value = get_nested_value(state, key_path)
     merged_value = apply_reducer(
@@ -82,6 +99,7 @@ def write_state_value(
         current_value=current_value,
         incoming_value=value,
         destination_path=destination_path,
+        reducers=reducers,
     )
     safe_set_nested_value(state, key_path, merged_value)
 

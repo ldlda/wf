@@ -46,8 +46,12 @@ def eval_condition(
             return left != right
         if condition.op == "gt":
             return left > right
+        if condition.op == "ge":
+            return left >= right
         if condition.op == "lt":
             return left < right
+        if condition.op == "le":
+            return left <= right
     raise WorkflowExecutionError(f"unsupported condition operator {condition.op!r}")
 
 

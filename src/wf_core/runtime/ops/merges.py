@@ -149,10 +149,17 @@ def apply_reducer(
     current_value: Any,
     incoming_value: Any,
     destination_path: str,
-    reducers: Mapping[str, ReducerDefinition] = DEFAULT_REDUCER_DEFINITIONS,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> Any:
-    """Apply one named pure reducer to a state write."""
-    definition = reducers.get(reducer.name)
+    """Apply one named pure reducer to a state write.
+
+    Injected reducer definitions are additive over the built-ins so authoring
+    tests and local packages can provide custom reducers without re-registering
+    every `wf.std.*` reducer.
+    """
+    definition = None if reducers is None else reducers.get(reducer.name)
+    if definition is None:
+        definition = DEFAULT_REDUCER_DEFINITIONS.get(reducer.name)
     if definition is None:
         raise WorkflowExecutionError(f"unknown reducer {reducer.name!r}")
     return definition.apply(

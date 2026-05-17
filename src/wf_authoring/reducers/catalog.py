@@ -18,13 +18,10 @@ class ReducerCatalog:
     def from_reducers(cls, *reducers: AuthoredReducer) -> "ReducerCatalog":
         return cls(
             definitions={
-                reducer.definition.spec.name: reducer.definition
-                for reducer in reducers
+                reducer.definition.spec.name: reducer.definition for reducer in reducers
             }
         )
 
     @property
     def specs(self) -> dict[str, ReducerSpec]:
-        return {
-            name: definition.spec for name, definition in self.definitions.items()
-        }
+        return {name: definition.spec for name, definition in self.definitions.items()}

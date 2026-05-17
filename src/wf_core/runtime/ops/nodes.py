@@ -12,6 +12,7 @@ from wf_core.models.steps import NodeUse
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import RunState, RuntimeContext, StepExecutionResult
 from wf_core.runtime.ops.frames import frame_context_values
+from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
 from wf_core.runtime.ops.state import apply_output_map
 
@@ -65,6 +66,7 @@ def _finalize_node_execution(
     node_def: NodeDef,
     resolved_input: dict[str, Any],
     raw_result: NodeResult | dict[str, Any],
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> StepExecutionResult:
     result = coerce_node_result(raw_result)
 
@@ -76,7 +78,13 @@ def _finalize_node_execution(
     validate_payload_against_schema(
         node_def.output_schema, result.output, f"node output for {node.id}"
     )
-    state_changes = apply_output_map(workflow, node, result.output, run.state)
+    state_changes = apply_output_map(
+        workflow,
+        node,
+        result.output,
+        run.state,
+        reducers=reducers,
+    )
     return StepExecutionResult(
         outcome=result.outcome,
         resolved_input=resolved_input,
@@ -91,6 +99,7 @@ def execute_node_use(
     node: NodeUse,
     node_def: NodeDef,
     registry: Mapping[str, NodeHandler],
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> StepExecutionResult:
     handler = registry.get(node.node)
     if handler is None:
@@ -112,6 +121,7 @@ def execute_node_use(
         node_def=node_def,
         resolved_input=resolved_input,
         raw_result=raw_result,
+        reducers=reducers,
     )
 
 
@@ -121,6 +131,7 @@ async def execute_node_use_async(
     node: NodeUse,
     node_def: NodeDef,
     registry: Mapping[str, AsyncNodeHandler],
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> StepExecutionResult:
     handler = registry.get(node.node)
     if handler is None:
@@ -146,6 +157,7 @@ async def execute_node_use_async(
         node_def=node_def,
         resolved_input=resolved_input,
         raw_result=cast(NodeResult | dict[str, Any], raw_result),
+        reducers=reducers,
     )
 
 
