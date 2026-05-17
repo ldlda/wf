@@ -16,7 +16,9 @@ def replace_reducer(_current_value: Any, incoming_value: Any) -> Any:
 def append_reducer(current_value: Any, incoming_value: Any) -> Any:
     """Append one value or many values into a list-valued state path."""
     if current_value is None:
-        return [incoming_value] if not isinstance(incoming_value, list) else incoming_value
+        return (
+            [incoming_value] if not isinstance(incoming_value, list) else incoming_value
+        )
     if not isinstance(current_value, list):
         raise TypeError("cannot append into non-list state value")
     return (
@@ -37,10 +39,38 @@ def merge_object_reducer(current_value: Any, incoming_value: Any) -> Any:
     return current_value | incoming_value
 
 
+def set_union_reducer(current_value: Any, incoming_value: Any) -> Any:
+    """Merge list values while preserving stable first-seen order."""
+    if current_value is None:
+        current_items: list[Any] = []
+    elif isinstance(current_value, list):
+        current_items = current_value
+    else:
+        raise TypeError("set_union requires list values")
+
+    if not isinstance(incoming_value, list):
+        raise TypeError("set_union requires list values")
+
+    merged: list[Any] = []
+    for item in [*current_items, *incoming_value]:
+        if item not in merged:
+            merged.append(item)
+    return merged
+
+
+def max_reducer(current_value: Any, incoming_value: Any) -> Any:
+    """Keep the larger of the current and incoming values."""
+    return (
+        incoming_value if current_value is None else max(current_value, incoming_value)
+    )
+
+
 DEFAULT_REDUCERS: Mapping[str, Reducer] = {
     "wf.std.replace": replace_reducer,
     "wf.std.append": append_reducer,
     "wf.std.merge_object": merge_object_reducer,
+    "wf.std.set_union": set_union_reducer,
+    "wf.std.max": max_reducer,
 }
 
 

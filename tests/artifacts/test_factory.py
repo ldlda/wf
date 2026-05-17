@@ -33,6 +33,26 @@ def test_create_workflow_artifact_from_plan_derives_boundary_schemas() -> None:
     assert artifact.created_from_catalog_version == "catalog-1"
 
 
+def test_create_workflow_artifact_from_plan_adds_reducer_dependencies() -> None:
+    plan = _plan()
+    plan["state_schema"] = {
+        "fields": {"best_score": {"type": "integer", "reducer": "wf.std.max"}}
+    }
+
+    artifact = create_workflow_artifact_from_plan(
+        artifact_id="score",
+        version=1,
+        title="Score",
+        plan=plan,
+        outcomes=("done",),
+    )
+
+    reducer = artifact.required_capabilities["wf.std.max"]
+    assert reducer.logical_source == "wf.std"
+    assert reducer.capability_name == "max"
+    assert reducer.kind == "reducer"
+
+
 def test_create_workflow_artifact_from_plan_accepts_wrapper_kind() -> None:
     artifact = create_workflow_artifact_from_plan(
         artifact_id="normalize_status",

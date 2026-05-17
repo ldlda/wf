@@ -178,7 +178,9 @@ Existing built-in reducers remain distinct:
 
 - `wf.std.replace`
 - `wf.std.append`
+- `wf.std.max`
 - `wf.std.merge_object`
+- `wf.std.set_union`
 
 `wf.std.merge_object` means shallow object merge at the exact destination path, similar
 to `dict.update` or `operator.or_`. It is not a recursive deep merge.
@@ -211,7 +213,6 @@ and belongs in nodes or graph structure.
 Examples a future reducer library could support:
 
 - `max`
-- `set_union`
 - `modulo_add` with configuration such as modulus `10`
 
 ## Implementation Phases

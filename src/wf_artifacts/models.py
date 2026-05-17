@@ -29,7 +29,7 @@ class RequiredCapability(BaseModel):
 
     logical_source: str
     capability_name: str
-    kind: Literal["tool", "resource", "prompt", "node_spec", "workflow"]
+    kind: Literal["tool", "resource", "prompt", "node_spec", "reducer", "workflow"]
     input_schema_hash: str | None = None
     input_schema_snapshot: JsonObject | None = None
     output_schema_hash: str | None = None
@@ -42,7 +42,7 @@ class AvailableCapability(BaseModel):
     """Current contract for one capability exposed by a bound source."""
 
     name: str
-    kind: Literal["tool", "resource", "prompt", "node_spec", "workflow"]
+    kind: Literal["tool", "resource", "prompt", "node_spec", "reducer", "workflow"]
     input_schema_hash: str | None = None
     output_schema_hash: str | None = None
 

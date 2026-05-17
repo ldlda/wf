@@ -125,6 +125,14 @@ def builtin_reducers() -> dict[str, ReducerSpec]:
             name="wf.std.merge_object",
             description="Shallow-merge object values at one exact state path.",
         ),
+        ReducerSpec(
+            name="wf.std.max",
+            description="Keep the larger of the current and incoming values.",
+        ),
+        ReducerSpec(
+            name="wf.std.set_union",
+            description="Merge list values while preserving stable first-seen order.",
+        ),
     )
     return {spec.name: spec for spec in specs}
 

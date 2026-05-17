@@ -292,6 +292,15 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
             )
             for spec in source.capabilities.node_specs.values()
         }
+        capabilities.update(
+            {
+                reducer.name.rsplit(".", maxsplit=1)[-1]: AvailableCapability(
+                    name=reducer.name.rsplit(".", maxsplit=1)[-1],
+                    kind="reducer",
+                )
+                for reducer in source.capabilities.reducers.values()
+            }
+        )
         sources.append(
             AvailableSource(
                 id=source.id,

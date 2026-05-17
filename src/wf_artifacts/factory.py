@@ -31,7 +31,10 @@ def create_workflow_artifact_from_plan(
         output_schema=_required_object_field(plan, "output_schema"),
         outcomes=outcomes,
         plan=plan,
-        required_capabilities=dict(required_capabilities or {}),
+        required_capabilities={
+            **_required_reducers_from_plan(plan),
+            **dict(required_capabilities or {}),
+        },
         created_from_catalog_version=created_from_catalog_version,
     )
 
@@ -68,3 +71,28 @@ def _validate_workflow_plan(plan: JsonObject) -> None:
             raise ValueError(
                 f"invalid workflow plan: edge destination {edge.to!r} does not exist"
             )
+
+
+def _required_reducers_from_plan(plan: JsonObject) -> dict[str, RequiredCapability]:
+    """Infer reducer dependencies from declared state fields in one plan."""
+    state_schema = plan.get("state_schema")
+    if not isinstance(state_schema, dict):
+        return {}
+    fields = state_schema.get("fields")
+    if not isinstance(fields, dict):
+        return {}
+
+    requirements: dict[str, RequiredCapability] = {}
+    for field in fields.values():
+        if not isinstance(field, dict):
+            continue
+        reducer = field.get("reducer", "wf.std.replace")
+        if not isinstance(reducer, str) or "." not in reducer:
+            continue
+        logical_source, _, capability_name = reducer.rpartition(".")
+        requirements[reducer] = RequiredCapability(
+            logical_source=logical_source,
+            capability_name=capability_name,
+            kind="reducer",
+        )
+    return requirements

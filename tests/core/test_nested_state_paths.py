@@ -40,7 +40,9 @@ def test_state_field_defaults_to_replace_reducer() -> None:
 
 
 def test_unknown_state_reducer_fails_clearly() -> None:
-    workflow = _workflow(fields={"person.tags": StateField(type="array", reducer="x.nope")})
+    workflow = _workflow(
+        fields={"person.tags": StateField(type="array", reducer="x.nope")}
+    )
     state = {"person": {"tags": ["seed"]}}
 
     try:
@@ -49,6 +51,28 @@ def test_unknown_state_reducer_fails_clearly() -> None:
         assert "unknown reducer 'x.nope'" in str(exc)
     else:
         raise AssertionError("expected unknown reducer to fail")
+
+
+def test_set_union_reducer_preserves_first_seen_order() -> None:
+    workflow = _workflow(
+        fields={"person.tags": StateField(type="array", reducer="wf.std.set_union")}
+    )
+    state = {"person": {"tags": ["alpha", "beta"]}}
+
+    write_state_value(workflow, state, "state.person.tags", ["beta", "gamma"])
+
+    assert state["person"]["tags"] == ["alpha", "beta", "gamma"]
+
+
+def test_max_reducer_keeps_larger_value() -> None:
+    workflow = _workflow(
+        fields={"best_score": StateField(type="integer", reducer="wf.std.max")}
+    )
+    state = {"best_score": 7}
+
+    write_state_value(workflow, state, "state.best_score", 9)
+
+    assert state["best_score"] == 9
 
 
 def _workflow(*, fields: dict[str, StateField]) -> Workflow:

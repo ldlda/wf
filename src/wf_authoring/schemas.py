@@ -83,7 +83,9 @@ def _iter_model_metadata(
             yield from _iter_model_metadata(annotation, prefix=path)
 
 
-def _flatten_state_properties(schema: SchemaRef) -> Iterator[tuple[str, dict[str, Any]]]:
+def _flatten_state_properties(
+    schema: SchemaRef,
+) -> Iterator[tuple[str, dict[str, Any]]]:
     raw_schema = schema.model_dump(exclude_none=True)
     yield from _iter_state_properties(raw_schema.get("properties", {}), raw_schema)
 
@@ -143,7 +145,11 @@ def _state_field_default(
     field_name: str,
     property_schema: object,
 ) -> object:
-    if "." not in field_name and isinstance(value, type) and issubclass(value, BaseModel):
+    if (
+        "." not in field_name
+        and isinstance(value, type)
+        and issubclass(value, BaseModel)
+    ):
         field_info = value.model_fields[field_name]
         if not field_info.is_required():
             return field_info.get_default(call_default_factory=True)

@@ -61,7 +61,8 @@ Expected capabilities:
   `wf.std.truthy`, `wf.std.first_item`, `wf.std.first_item_maybe`,
   `wf.std.first_item_or_none`, `wf.std.last_item`, `wf.std.last_item_or_none`,
   `wf.std.length`, `wf.std.is_empty`.
-- `reducers`: `wf.std.replace`, `wf.std.append`, `wf.std.merge_object`.
+- `reducers`: `wf.std.replace`, `wf.std.append`, `wf.std.max`,
+  `wf.std.merge_object`, `wf.std.set_union`.
 - `prompts`: workflow authoring guide, error-handling guide, mapping guide.
 - `resources`: reference docs for stdlib node behavior.
 

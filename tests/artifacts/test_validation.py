@@ -176,3 +176,28 @@ def test_validate_deployment_allows_changed_schema_when_policy_allows() -> None:
     )
 
     assert diagnostics == []
+
+
+def test_validate_deployment_accepts_reducer_capability() -> None:
+    reducer = RequiredCapability(
+        logical_source="wf.std",
+        capability_name="set_union",
+        kind="reducer",
+    )
+    diagnostics = validate_deployment_dependencies(
+        artifact=artifact_with(reducer),
+        deployment=deployment(bindings={"wf.std": "wf.std"}),
+        sources=[
+            AvailableSource(
+                id="wf.std",
+                capabilities={
+                    "set_union": AvailableCapability(
+                        name="set_union",
+                        kind="reducer",
+                    )
+                },
+            )
+        ],
+    )
+
+    assert diagnostics == []

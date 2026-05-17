@@ -125,9 +125,7 @@ class PartialRates(SophisticatedRates, total=False):
 
 
 class Rates(BaseModel):
-    rates: Annotated[
-        PartialRates, state_field(reducer="wf.std.merge_object")
-    ]  # or_!
+    rates: Annotated[PartialRates, state_field(reducer="wf.std.merge_object")]  # or_!
 
 
 class CurrentPools(BaseModel):
