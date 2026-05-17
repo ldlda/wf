@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from copy import deepcopy
 
+from wf_platform import CapabilityRef, SourceRef
+
 from .models import JsonObject, RequiredCapability
 
 
@@ -68,6 +70,8 @@ def logical_ref_for_concrete_ref(
         capability_name = concrete_ref[len(prefix) :]
         if not capability_name:
             continue
-        logical_ref = f"{logical_source}.{capability_name}"
+        logical_ref = str(
+            CapabilityRef(source=SourceRef.parse(logical_source), name=capability_name)
+        )
         return logical_ref, logical_source, capability_name, concrete_source
     return None

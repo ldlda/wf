@@ -1,3 +1,4 @@
+from .refs import CapabilityRef, SourceRef
 from .sources import (
     CapabilityBuckets,
     CapabilitySource,
@@ -14,6 +15,7 @@ from .sources import (
 __all__ = [
     "CapabilityBuckets",
     "CapabilitySource",
+    "CapabilityRef",
     "SourceCapabilityInventory",
     "SourceInventory",
     "SourceKind",
@@ -22,4 +24,5 @@ __all__ = [
     "SourceStatus",
     "SourceVisibility",
     "SourceVisibilitySnapshot",
+    "SourceRef",
 ]

@@ -571,12 +571,11 @@ concrete source but leaves the saved artifact immutable. Concrete node names
 such as `demo.personal.echo_tool` remain supported for raw local plans and older
 artifacts.
 
-Implementation note: these references are currently parsed from strings with
-dot-separated source and capability names. That keeps the wire format simple but
-leaks path logic into runtime code. A future cleanup should introduce typed
-reference objects, such as `CapabilityRef(logical_source, capability_name)` and
-`BoundCapabilityRef(concrete_source, capability_name)`, and leave dot-joined
-strings as presentation and serialization only.
+Implementation note: source and capability names now have segment-backed
+platform refs: `SourceRef(parts=...)` and `CapabilityRef(source=..., name=...)`.
+Dot-joined names remain the wire/presentation format, but new runtime code
+should parse or format through those refs instead of rediscovering source/name
+boundaries with ad hoc string splits.
 
 The first implementation should prefer artifact validation and dependency
 diagnostics before attempting persistent nested resume.

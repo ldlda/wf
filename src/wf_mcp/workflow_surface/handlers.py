@@ -15,6 +15,7 @@ from wf_artifacts import (
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
     validate_deployment_dependencies,
 )
+from wf_platform import CapabilityRef
 from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
 
@@ -316,21 +317,23 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
     sources: list[AvailableSource] = []
     for source in service.capability_sources.values():
         capabilities = {
-            spec.name.rsplit(".", maxsplit=1)[-1]: AvailableCapability(
-                name=spec.name.rsplit(".", maxsplit=1)[-1],
+            capability_name: AvailableCapability(
+                name=capability_name,
                 kind="node_spec",
                 input_schema_hash=None,
                 output_schema_hash=None,
             )
             for spec in source.capabilities.node_specs.values()
+            if (capability_name := _capability_name(spec.name)) is not None
         }
         capabilities.update(
             {
-                reducer.name.rsplit(".", maxsplit=1)[-1]: AvailableCapability(
-                    name=reducer.name.rsplit(".", maxsplit=1)[-1],
+                capability_name: AvailableCapability(
+                    name=capability_name,
                     kind="reducer",
                 )
                 for reducer in source.capabilities.reducers.values()
+                if (capability_name := _capability_name(reducer.name)) is not None
             }
         )
         sources.append(
@@ -341,6 +344,14 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
             )
         )
     return sources
+
+
+def _capability_name(qualified_name: str) -> str | None:
+    """Return the local name of one qualified capability ref if it is valid."""
+    try:
+        return CapabilityRef.parse(qualified_name).name
+    except ValueError:
+        return None
 
 
 def _artifact_capability_id(artifact: WorkflowArtifact) -> str:

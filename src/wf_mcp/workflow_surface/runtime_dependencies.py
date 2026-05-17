@@ -6,7 +6,7 @@ from typing import Any
 from wf_artifacts import RequiredCapability, WorkflowArtifact, WorkflowDeployment
 from wf_authoring import AsyncRegistryHandler, NodeSpec, build_async_registry
 from wf_core.runtime.ops.merges import ReducerDefinition
-from wf_platform import CapabilitySource
+from wf_platform import CapabilityRef, CapabilitySource
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,14 +67,15 @@ def _resolve_node_spec(
         return node_name, concrete
 
     if deployment is not None:
-        logical_source, separator, capability_name = node_name.rpartition(".")
-        if separator:
-            bound_source_id = deployment.bindings.get(logical_source)
-            if bound_source_id is not None:
-                bound_name = f"{bound_source_id}.{capability_name}"
-                concrete = _find_node_spec(bound_name, sources)
-                if concrete is not None:
-                    return bound_name, concrete
+        try:
+            bound_ref = CapabilityRef.parse(node_name).bind(deployment.bindings)
+        except ValueError:
+            bound_ref = None
+        if bound_ref is not None:
+            bound_name = str(bound_ref)
+            concrete = _find_node_spec(bound_name, sources)
+            if concrete is not None:
+                return bound_name, concrete
 
     raise KeyError(f"unknown node spec {node_name!r}")
 
@@ -124,6 +125,10 @@ def _find_reducer_definition(
     capability_name: str,
 ) -> ReducerDefinition | None:
     for reducer_name, definition in source.capabilities.reducer_definitions.items():
-        if reducer_name.rsplit(".", maxsplit=1)[-1] == capability_name:
+        try:
+            reducer_ref = CapabilityRef.parse(reducer_name)
+        except ValueError:
+            continue
+        if reducer_ref.name == capability_name:
             return definition
     return None
