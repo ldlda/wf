@@ -17,7 +17,10 @@ from wf_authoring import (
     last_item,
     last_item_or_none,
     length,
+    pick_path,
     pick_key,
+    project_fields,
+    rename_fields,
     runtime_error,
     state_path,
     truthy,
@@ -248,6 +251,45 @@ def test_pick_key_returns_none_when_missing() -> None:
     )
 
     assert result == {"outcome": "ok", "output": {"value": None}}
+
+
+def test_pick_path_selects_nested_value() -> None:
+    registry = build_registry(pick_path)
+
+    result = registry["authoring.pick_path"](
+        {"mapping": {"result": {"status": "done"}}, "path": "result.status"},
+        RuntimeContext(current_node_id="pick_path"),
+    )
+
+    assert result == {"outcome": "ok", "output": {"value": "done"}}
+
+
+def test_project_fields_selects_named_keys() -> None:
+    registry = build_registry(project_fields)
+
+    result = registry["authoring.project_fields"](
+        {"mapping": {"status": "done", "message": "ok", "debug": True}, "fields": ["status", "message"]},
+        RuntimeContext(current_node_id="project_fields"),
+    )
+
+    assert result == {
+        "outcome": "ok",
+        "output": {"mapping": {"status": "done", "message": "ok"}},
+    }
+
+
+def test_rename_fields_remaps_existing_keys() -> None:
+    registry = build_registry(rename_fields)
+
+    result = registry["authoring.rename_fields"](
+        {"mapping": {"provider_status": "done", "provider_message": "ok"}, "renames": {"provider_status": "status", "provider_message": "message"}},
+        RuntimeContext(current_node_id="rename_fields"),
+    )
+
+    assert result == {
+        "outcome": "ok",
+        "output": {"mapping": {"status": "done", "message": "ok"}},
+    }
 
 
 def test_truthy_routes_truthy_and_falsey_outcomes() -> None:
