@@ -22,7 +22,7 @@ class ContextNodeCallable(Protocol[InputT_contra, OutputT_co]):
         payload: InputT_contra,
         /,
         ctx: RuntimeContext,
-    ) -> NodeReturn[OutputT_co] | OutputT_co: ...
+    ) -> NodeReturn[OutputT_co] | OutputT_co | None: ...
 
 
 class PlainNodeCallable(Protocol[InputT_contra, OutputT_co]):
@@ -30,7 +30,7 @@ class PlainNodeCallable(Protocol[InputT_contra, OutputT_co]):
         self,
         payload: InputT_contra,
         /,
-    ) -> NodeReturn[OutputT_co] | OutputT_co: ...
+    ) -> NodeReturn[OutputT_co] | OutputT_co | None: ...
 
 
 NodeCallable = ContextNodeCallable[InputT, OutputT] | PlainNodeCallable[InputT, OutputT]
@@ -42,7 +42,7 @@ class AsyncContextNodeCallable(Protocol[InputT_contra, OutputT_co]):
         payload: InputT_contra,
         /,
         ctx: RuntimeContext,
-    ) -> Awaitable[NodeReturn[OutputT_co] | OutputT_co]: ...
+    ) -> Awaitable[NodeReturn[OutputT_co] | OutputT_co | None]: ...
 
 
 class AsyncPlainNodeCallable(Protocol[InputT_contra, OutputT_co]):
@@ -50,7 +50,7 @@ class AsyncPlainNodeCallable(Protocol[InputT_contra, OutputT_co]):
         self,
         payload: InputT_contra,
         /,
-    ) -> Awaitable[NodeReturn[OutputT_co] | OutputT_co]: ...
+    ) -> Awaitable[NodeReturn[OutputT_co] | OutputT_co | None]: ...
 
 
 AsyncNodeCallable = (

@@ -1,6 +1,7 @@
 import random
 from typing import Final
 
+
 from tests.rewrite.models import (
     ContextInput,
     Countdown,
@@ -15,7 +16,7 @@ from tests.rewrite.models import (
     how_do_i_explain_this,
 )
 from wf_authoring import NodeReturn, node
-from wf_authoring.nodes.result import Nothing, outcome
+from wf_authoring.nodes.result import NoOutput, Nothing, outcome
 from wf_core.tokens import END
 
 # to the functions
@@ -24,9 +25,9 @@ from wf_core.tokens import END
 
 @node
 def init(
-    inp: Input,
+    _inp: Input,
     # ) -> NodeReturn[Input | Nothing]:  # JUST doesnt work if the types are above
-) -> Input:
+) -> None:
     # why cant use basemodel? should we convert typeddicts to basemodels? Why cant use
     """i hope that this is done by default, because langgraph DOESNT. why.
 
@@ -41,11 +42,13 @@ def init(
     # )
     # if inp.pity_120_available and inp.context["type"] == "normal":
     #    "i doesnt care"
-    return inp
+    # return Nothing()
+    # return None
+    # return inp
 
 
 @node(outcomes=("0", "65"))
-def rate_booster(c: Counters) -> NodeReturn[Nothing]:
+def rate_booster(c: Counters) -> NoOutput:
     """This was an edge.
 
     Should I implement r65 here too... i think not.
@@ -80,7 +83,7 @@ class CountersContextOutputInputAhhModelType(
 
 
 @node(outcomes=("240", "80", "10", "1"))
-def pre_roll_router(c: CountersContextOutputInputAhhModelType) -> NodeReturn[Nothing]:
+def pre_roll_router(c: CountersContextOutputInputAhhModelType) -> NoOutput:
     """another edge.
 
     the conditional router calculates which to reset to 0 (guarantee the rest)
@@ -152,12 +155,13 @@ class RateChange:
         else:
             r240 = 0
             r80 = br["r_80"] * (1 + rpn)
-
+        r10 = br["r_10"]  # use initial rates because i dont know how this works
+        r1 = 1 - r240 - r80 - r10
         return Rates.model_validate(
             {
                 "rates": {
-                    "r_1": 1 - r240 - r80 - br["r_10"],
-                    "r_10": br["r_10"],
+                    "r_1": r1,
+                    "r_10": r10,
                     "r_80": r80,
                     "r_240": r240,
                 }
@@ -173,24 +177,27 @@ class RateChange:
 class CounterUp:
     @node(name="counter 6* reset")
     @staticmethod
-    def c80(c: Counters) -> Counters:
+    def c80(_: Nothing) -> Counters:
         return Counters.model_validate(
             {
                 "counter": {
                     "c_80": 0,
                     "c_10": 0,
                 },
-                "simple_counter": c.simple_counter,
+                "simple_counter": 0,
+                # this is influenced by the add reducer.
+                # its top level. it doesnt reset. its a miracle. i hate this.
             }
         )
 
     @node(name="counter 5* reset")
     @staticmethod
     def c10(c: Counters) -> Counters:
+        c80 = c.counter["c_80"]
         return Counters.model_validate(
             {
-                "counter": {"c_10": 0, "c_80": c.counter["c_80"]},  # merge with or_!
-                "simple_counter": c.simple_counter,
+                "counter": {"c_10": 0, "c_80": c80},  # merge with or_!
+                "simple_counter": 0,
             }
         )
 
@@ -198,9 +205,10 @@ class CounterUp:
     @staticmethod
     def c1(state: Counters) -> Counters:
         c = state.counter
+        c10, c80 = c["c_10"], c["c_80"]
         return Counters(
-            simple_counter=state.simple_counter + 1,
-            counter={"c_10": (c["c_10"] + 1) % 10, "c_80": (c["c_80"] + 1) % 80},
+            simple_counter=1,
+            counter={"c_10": (c10 + 1) % 10, "c_80": (c80 + 1) % 80},
         )
 
 
@@ -241,10 +249,8 @@ def roll(state: CurrentPools) -> ThisStorage:
 @node(outcomes=("240", "80", "10", "1"))  # missed this! good job.
 def post_roll_router(
     state: CurrentRoll,
-) -> NodeReturn[
-    Nothing
-]:  # Literal["240", "80", "10", "1"] maybe you need to encode this in node returns. Literal of strings.
-    return NodeReturn(state.this["category"], Nothing())
+) -> NoOutput:  # Literal["240", "80", "10", "1"] maybe you need to encode this in node returns. Literal of strings.
+    return outcome(state.this["category"])
 
 
 @node(name="main")

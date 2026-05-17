@@ -13,7 +13,7 @@ from .callables import (
 from .inference import accepts_context, infer_models, is_basemodel_subclass
 from .decorator import node
 from .registry import build_async_registry, build_registry
-from .result import NodeReturn, Nothing, outcome
+from .result import NoOutput, NodeReturn, Nothing, outcome
 from .schema import schema_ref_for
 from .spec import NodeSpec
 
@@ -25,6 +25,7 @@ __all__ = [
     "ContextNodeCallable",
     "InputT",
     "NodeCallable",
+    "NoOutput",
     "NodeReturn",
     "NodeSpec",
     "Nothing",

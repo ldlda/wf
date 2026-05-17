@@ -1,3 +1,4 @@
+from tests.authoring.test_reducers import modulo_add
 from tests.rewrite.actions import (
     CounterUp,
     RateChange,
@@ -12,6 +13,7 @@ from tests.rewrite.actions import (
 from tests.rewrite.models import Input, State, Storage
 from wf_authoring.builder import WorkflowBuilder
 from wf_authoring.dsl.conditions import expr, state
+from wf_authoring.reducers.catalog import ReducerCatalog
 from wf_core.tokens import END
 
 # alr so we start with workflowbuilder.
@@ -21,6 +23,7 @@ gacha = WorkflowBuilder(
     input_schema=Input,
     output_schema=Storage,  # could be State, since the OG doesnt care, ill probably dump out the list.
     state_schema=State,
+    reducers=ReducerCatalog.from_reducers(modulo_add),
 )
 "example workflow"
 
@@ -53,7 +56,7 @@ rate_route = gacha.route(
         True: rate_up,
         False: rate_same,
     },
-    id = "rate_booster"
+    id="rate_booster",
 )
 
 gacha.use(pre_roll_router, id="router")

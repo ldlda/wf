@@ -122,7 +122,7 @@ def test_state_field_accepts_configured_reducer_reference() -> None:
             ),
         ] = 0
 
-    field = State.model_fields["total"].metadata[0]
+    field = State.model_fields["total"].metadata[0]  # pylint: disable=unsubscriptable-object
 
     assert field.reducer.name == "wf.std.modulo_add"
     assert field.reducer.config["modulus"] == 10

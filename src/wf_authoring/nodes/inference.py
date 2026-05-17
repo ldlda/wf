@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from wf_core import RuntimeContext
 
-from .result import NodeReturn
+from .result import NodeReturn, Nothing
 
 
 def is_basemodel_subclass(value: object) -> bool:
@@ -47,9 +47,14 @@ def infer_models(fn: Callable[..., object]) -> tuple[type[BaseModel], type[BaseM
     return_type = hints.get("return")
     if return_type is None:
         raise TypeError("node function must declare a return annotation")
+    if return_type is type(None):
+        return cast(type[BaseModel], input_model), Nothing
 
     if is_basemodel_subclass(return_type):
         return cast(type[BaseModel], input_model), cast(type[BaseModel], return_type)
+
+    if return_type is NodeReturn:
+        return cast(type[BaseModel], input_model), Nothing
 
     origin = get_origin(return_type)
     if origin is NodeReturn:

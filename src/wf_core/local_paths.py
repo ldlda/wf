@@ -10,6 +10,8 @@ class LocalPathError(ValueError):
 
 def split_local_path(path: str) -> list[str]:
     """Split one dotted node-local path, rejecting empty segments."""
+    if path == ".":
+        return []
     parts = path.split(".")
     if not path or any(not part for part in parts):
         raise LocalPathError(f"invalid local path {path!r}")
@@ -18,6 +20,8 @@ def split_local_path(path: str) -> list[str]:
 
 def get_local_value(payload: Mapping[str, Any], path: str) -> Any:
     """Resolve one node-local path from a nested mapping payload."""
+    if path == ".":
+        return dict(payload)
     current: Any = payload
     for part in split_local_path(path):
         if not isinstance(current, Mapping) or part not in current:
@@ -29,6 +33,12 @@ def get_local_value(payload: Mapping[str, Any], path: str) -> Any:
 def set_local_value(payload: dict[str, Any], path: str, value: Any) -> None:
     """Write one value into a nested node-local mapping payload."""
     parts = split_local_path(path)
+    if not parts:
+        if not isinstance(value, Mapping):
+            raise LocalPathError("root local path requires a mapping value")
+        payload.clear()
+        payload.update(value)
+        return
     current = payload
     for part in parts[:-1]:
         next_value = current.setdefault(part, {})

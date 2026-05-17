@@ -18,7 +18,7 @@ from .callables import (
     PlainNodeCallable,
     SyncRegistryHandler,
 )
-from .result import NodeReturn
+from .result import NodeReturn, Nothing
 from .schema import schema_ref_for
 
 
@@ -33,6 +33,8 @@ def _coerce_registry_result(
     default_outcome: str,
     raw: NodeReturn[BaseModel] | BaseModel,
 ) -> dict[str, Any]:
+    if raw is None and output_model is Nothing:
+        return {"outcome": default_outcome, "output": {}}
     if isinstance(raw, NodeReturn):
         if not isinstance(raw.output, output_model):
             raise TypeError(
@@ -69,7 +71,12 @@ class NodeSpec(Generic[InputT, OutputT]):
         self,
         payload: InputT,
         ctx: RuntimeContext | None = None,
-    ) -> NodeReturn[OutputT] | OutputT | Awaitable[NodeReturn[OutputT] | OutputT]:
+    ) -> (
+        NodeReturn[OutputT]
+        | OutputT
+        | None
+        | Awaitable[NodeReturn[OutputT] | OutputT | None]
+    ):
         if self.accepts_context:
             if ctx is None:
                 raise TypeError(f"node {self.name!r} requires RuntimeContext")

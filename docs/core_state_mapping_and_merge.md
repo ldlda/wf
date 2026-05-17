@@ -219,6 +219,20 @@ They should not receive node ids, frame ids, loop indexes, timestamps, or other
 runtime context. If behavior depends on workflow context, that is business logic
 and belongs in nodes or graph structure.
 
+Reducers are meant to remove write boilerplate, not absorb domain decisions.
+If a node needs to decide whether to increment two counters, reset both
+counters, reset one counter, or preserve one counter, that decision belongs in
+the node or in an explicit graph branch. A reducer should only describe how a
+declared state path combines the node's write with the current state value.
+
+This distinction matters for fragmented outputs. It is valid for a node to emit
+a delta if the node is explicitly a delta-producing node, such as
+`countdown_delta = -1` written through `wf.std.add`. It is a smell if a node
+returns artificial fragments only to trigger reducer behavior while hiding the
+actual domain operation. In that case prefer a clearer node output, an explicit
+shaping node, or a default map on the node spec that is still validated at the
+use site.
+
 Examples a future reducer library could support:
 
 - `max`

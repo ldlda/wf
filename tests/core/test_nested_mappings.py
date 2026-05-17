@@ -60,6 +60,59 @@ def test_missing_nested_node_output_path_fails() -> None:
         )
 
 
+def test_root_node_local_paths_map_whole_input_and_output_payloads() -> None:
+    workflow = Workflow(
+        name="root_mapping",
+        input_schema=SchemaRef.model_validate(
+            {
+                "type": "object",
+                "properties": {"rates": {"type": "object"}},
+            }
+        ),
+        state_schema=StateSchema(fields={"rates": StateField(type="object")}),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="force_rates",
+                input_schema=SchemaRef(type="object", properties={}),
+                output_schema=SchemaRef(
+                    type="object",
+                    properties={
+                        "r_1": {"type": "number"},
+                        "r_10": {"type": "number"},
+                    },
+                ),
+                outcomes=["ok"],
+            )
+        ],
+        start="force",
+        nodes=[
+            NodeUse(
+                id="force",
+                type="node",
+                node="force_rates",
+                in_map={"input.rates": "."},
+                out_map={".": "state.rates"},
+            )
+        ],
+        edges=[Edge.model_validate({"from": "force", "outcome": "ok", "to": END})],
+    )
+
+    run = execute_workflow(
+        workflow,
+        {"rates": {"r_1": 0.9, "r_10": 0.1}},
+        {
+            "force_rates": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"r_1": 0.0, "r_10": payload["r_10"]},
+            }
+        },
+    )
+
+    assert run.trace[0].resolved_input == {"r_1": 0.9, "r_10": 0.1}
+    assert run.state["rates"] == {"r_1": 0.0, "r_10": 0.1}
+
+
 def _nested_mapping_workflow() -> Workflow:
     return Workflow(
         name="nested_mapping",

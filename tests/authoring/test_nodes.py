@@ -2,7 +2,15 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
-from wf_authoring import NodeCatalog, NodeReturn, Nothing, build_registry, node, outcome
+from wf_authoring import (
+    NoOutput,
+    NodeCatalog,
+    NodeReturn,
+    Nothing,
+    build_registry,
+    node,
+    outcome,
+)
 from wf_core import RuntimeContext
 
 
@@ -44,6 +52,10 @@ class DocumentedInput(BaseModel):
 
 class DocumentedOutput(BaseModel):
     echoed: str = Field(description="Echoed message")
+
+
+class NoOutputInput(BaseModel):
+    value: str
 
 
 @node()
@@ -135,6 +147,53 @@ def test_outcome_can_wrap_explicit_output() -> None:
 
     assert result.outcome == "ok"
     assert result.output is output
+
+
+def test_node_return_annotation_none_uses_nothing_output() -> None:
+    @node
+    def no_output(_: NoOutputInput) -> None:
+        return None
+
+    registry = build_registry(no_output)
+    result = registry["no_output"](
+        {"value": "hello"},
+        RuntimeContext(current_node_id="x"),
+    )
+
+    assert no_output.output_model is Nothing
+    assert result == {"outcome": "ok", "output": {}}
+
+
+def test_bare_nodereturn_annotation_defaults_to_nothing_output() -> None:
+    @node(outcomes=("skip",))
+    def no_output_with_outcome(
+        _: NoOutputInput,
+    ) -> NodeReturn:  # pyright: ignore[reportMissingTypeArgument]
+        return outcome("skip")
+
+    registry = build_registry(no_output_with_outcome)
+    result = registry["no_output_with_outcome"](
+        {"value": "hello"},
+        RuntimeContext(current_node_id="x"),
+    )
+
+    assert no_output_with_outcome.output_model is Nothing
+    assert result == {"outcome": "skip", "output": {}}
+
+
+def test_no_output_alias_annotates_outcome_only_nodes() -> None:
+    @node(outcomes=("skip",))
+    def no_output_alias(_: NoOutputInput) -> NoOutput:
+        return outcome("skip")
+
+    registry = build_registry(no_output_alias)
+    result = registry["no_output_alias"](
+        {"value": "hello"},
+        RuntimeContext(current_node_id="x"),
+    )
+
+    assert no_output_alias.output_model is Nothing
+    assert result == {"outcome": "skip", "output": {}}
 
 
 def test_node_decorator_infers_models_from_annotations() -> None:

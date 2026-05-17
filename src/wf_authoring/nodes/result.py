@@ -20,6 +20,10 @@ class Nothing(BaseModel):
     """Empty output model for nodes that only choose an outcome."""
 
 
+NoOutput = NodeReturn[Nothing]
+"""Type alias for outcome-only nodes that return no output payload."""
+
+
 @overload
 def outcome(name: str) -> NodeReturn[Nothing]: ...
 

@@ -59,6 +59,24 @@ def test_builder_preserves_explicit_nested_node_local_maps() -> None:
     assert step.out_map == {"payload.text": "state.text"}
 
 
+def test_builder_preserves_explicit_root_node_local_maps() -> None:
+    builder = WorkflowBuilder(
+        name="root_local_maps",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    step = builder.use(
+        auto_bind_node,
+        in_map={"state.text": "."},
+        out_map={".": "state.text"},
+    )
+
+    assert step.in_map == {"state.text": "."}
+    assert step.out_map == {".": "state.text"}
+
+
 def test_builder_can_auto_id_node_uses_from_spec_name() -> None:
     builder = WorkflowBuilder(
         name="auto_id_demo",

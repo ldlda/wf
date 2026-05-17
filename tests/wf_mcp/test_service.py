@@ -111,15 +111,16 @@ def test_service_lists_all_capability_sources_with_owned_capability_names() -> N
 
     std_source = sources_by_id["wf.std"]
     assert "wf.std.runtime_error" in std_source["capabilities"]["node_specs"]
-    assert std_source["capabilities"]["reducers"] == [
+    assert set(std_source["capabilities"]["reducers"]) == {
         "wf.std.append",
         "wf.std.max",
         "wf.std.merge_object",
         "wf.std.replace",
         "wf.std.set_union",
-    ]
+        "wf.std.add",
+    }
     assert std_source["capabilities"]["tools"] == []
-    assert std_source["reducer_count"] == 5
+    assert std_source["reducer_count"] == 6
 
     mcp_source = sources_by_id["wf.mcp"]
     assert mcp_source["capabilities"]["node_specs"] == ["wf.mcp.call_tool"]
@@ -164,6 +165,7 @@ def test_wf_std_source_contains_builtin_reducers() -> None:
         "wf.std.max",
         "wf.std.merge_object",
         "wf.std.set_union",
+        "wf.std.add",
     }
 
 

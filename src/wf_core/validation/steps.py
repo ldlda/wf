@@ -39,11 +39,10 @@ def validate_node_use(
     input_root_fields = set(workflow.input_schema.properties)
 
     for source_path, destination_field in node.in_map.items():
-        try:
-            destination_root = split_local_path(destination_field)[0]
-        except LocalPathError:
-            destination_root = ""
-        if destination_root not in input_fields:
+        destination_root = _local_root(destination_field)
+        if destination_root is None or (
+            destination_root != "." and destination_root not in input_fields
+        ):
             report.add(
                 ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
                 f"nodes[{index}].in_map[{source_path!r}]",
@@ -66,11 +65,10 @@ def validate_node_use(
         )
 
     for source_field, destination_path in node.out_map.items():
-        try:
-            source_root = split_local_path(source_field)[0]
-        except LocalPathError:
-            source_root = ""
-        if source_root not in output_fields:
+        source_root = _local_root(source_field)
+        if source_root is None or (
+            source_root != "." and source_root not in output_fields
+        ):
             report.add(
                 ValidationIssueCode.INVALID_NODE_OUTPUT_FIELD,
                 f"nodes[{index}].out_map[{source_field!r}]",
@@ -88,6 +86,14 @@ def validate_node_use(
             f"nodes[{index}].out_map",
             "out_map has overlapping state destination paths",
         )
+
+
+def _local_root(path: str) -> str | None:
+    try:
+        parts = split_local_path(path)
+    except LocalPathError:
+        return None
+    return "." if not parts else parts[0]
 
 
 def validate_condition_node(

@@ -6,7 +6,6 @@ Constraints:
 """
 
 from itertools import islice
-import json
 from pprint import pprint
 from typing import Any
 
@@ -64,19 +63,31 @@ def test():
     d = gacha.execute(
         build_input(context)(
             20,  # lets be optimistic
-            rolled_previously=240 - 135,
-            until_5=5,
-            until_6=73,
+            rolled_previously=240 - 135,  # 15
+            until_5=5,  # 5
+            until_6=73,  # 7
             good_stuff=False,  # lets pretend
         ).model_dump()
     )
     assert d.status == RunStatus.COMPLETED, "oops"
     state = State.model_validate(d.state)
+    pprint(state.storage)
+    pprint(
+        [
+            t
+            for t in d.trace
+            if t.node_id
+            in (
+                "counter_up",
+                "tick",
+            )
+        ]
+    )
+    pprint(d.state)
     assert any(
         i["name"] in context["pool"]["n_240"]
         for i in islice(state.storage, 120 - (240 - 135))
     ), "pity logic failed"
-    pprint(state.storage)
     # pprint(gacha.compile().edges)
     # pprint(gacha.compile().nodes)
 

@@ -3,6 +3,7 @@ from typing import Annotated, Literal, TypedDict
 from pydantic import BaseModel, Field
 
 from wf_authoring.schemas import state_field
+from wf_core.models.reducers import ReducerRef
 
 
 class SophisticatedRates(TypedDict):
@@ -17,8 +18,20 @@ class SophisticatedRates(TypedDict):
 
 
 class SophisticatedCounter(TypedDict):
-    c_10: Annotated[int, state_field(reducer="wf.std.add")]  # how do i convey "add" sublevel? can we have plugins for this? should we cover this; since langgraph doesnt.
-    c_80: Annotated[int, state_field(reducer="wf.std.add")]
+    c_10: Annotated[
+        int,
+        state_field(
+            reducer=ReducerRef(name="wf.std.modulo_add", config={"modulus": 10})
+        ),
+    ]  # add!
+    c_80: Annotated[
+        int,
+        state_field(
+            reducer=ReducerRef(name="wf.std.modulo_add", config={"modulus": 80})
+        ),
+    ]
+    # all that reducerref and then nothing touches them. only way you do rn is
+    # putting in/out maps on graph.use, which is cool ig. i just am not using them.
 
 
 class Counters(BaseModel):
@@ -27,7 +40,7 @@ class Counters(BaseModel):
         default_factory=lambda: SophisticatedCounter(c_10=0, c_80=0)
     )  # or, that is because of langgraph limitation,
     # id prefer counter.update with dict.update override (Overwrite, not like that ever worked)
-    simple_counter: int  # add
+    simple_counter: Annotated[int, state_field(reducer="wf.std.add")]  # add
 
 
 class Countdown(BaseModel):
@@ -120,7 +133,7 @@ class CurrentRoll(BaseModel):
     this: Entity
 
 
-class PartialRates(SophisticatedRates, total=False):
+class PartialRates(SophisticatedRates, TypedDict, total=False):
     pass
 
 
@@ -145,6 +158,8 @@ class State(
 ):
     "this forces basemodel, i used typeddict"
 
+
+# this feels fragmented. it is fragmented
 
 # countdown: int  # input carries here, should input have a bound like all(attr(input) in attr(state))? how tf do i even try to type that
 # simple_counter: int  # how to signal that ts adds up? we have that.

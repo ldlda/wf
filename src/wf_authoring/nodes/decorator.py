@@ -6,7 +6,12 @@ from typing import Any, cast, overload
 
 from pydantic import BaseModel
 
-from .callables import AsyncNodeCallable, InputT, NodeCallable, OutputT
+from .callables import (
+    AsyncNodeCallable,
+    InputT,
+    NodeCallable,
+    OutputT,
+)
 from .inference import accepts_context, infer_models
 from .spec import NodeSpec
 
