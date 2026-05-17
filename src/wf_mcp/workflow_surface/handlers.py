@@ -157,6 +157,7 @@ class WorkflowSurfaceHandlers:
         kind: ArtifactKind = "workflow",
         description: str | None = None,
         required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
     ) -> dict[str, Any]:
         if self.service.artifact_store is None:
@@ -178,6 +179,7 @@ class WorkflowSurfaceHandlers:
                 name: RequiredCapability.model_validate(capability)
                 for name, capability in (required_capabilities or {}).items()
             },
+            source_bindings=source_bindings,
             created_from_catalog_version=created_from_catalog_version,
         )
         self.service.artifact_store.save_artifact(workflow_artifact)

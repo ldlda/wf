@@ -30,6 +30,7 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
         outcomes: list[str],
         description: str | None = None,
         required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
     ) -> dict[str, Any]:
         return await handlers.create_artifact_from_plan(
@@ -43,6 +44,7 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
                 name: capability
                 for name, capability in (required_capabilities or {}).items()
             },
+            source_bindings=source_bindings,
             created_from_catalog_version=created_from_catalog_version,
         )
 

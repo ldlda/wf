@@ -409,6 +409,60 @@ The practical split:
 - migrate: changed workflow behavior, incompatible schema, or different
   provider semantics
 
+## Artifact References
+
+Reusable saved artifacts should prefer logical capability references, not
+account-specific concrete references.
+
+For example, if discovery shows a concrete node spec:
+
+```text
+demo.personal.echo_tool
+```
+
+and the author wants the artifact to depend on the logical source `demo`, the
+saved plan should use:
+
+```text
+demo.echo_tool
+```
+
+and the artifact should declare a matching required capability:
+
+```text
+RequiredCapability(
+  logical_source="demo",
+  capability_name="echo_tool",
+  kind="node_spec"
+)
+```
+
+The deployment then chooses the concrete account or connection profile:
+
+```text
+bindings:
+  demo: demo.personal
+```
+
+This keeps reusable artifacts portable across accounts while still letting
+runtime validation prove that the concrete deployment can actually supply the
+required capability.
+
+Concrete references such as `demo.personal.echo_tool` remain useful for raw
+local plans, tests, direct calls, and backward compatibility. Artifact creation
+tools should avoid saving those concrete names by default when the user is
+creating a reusable workflow or wrapper.
+
+Planned authoring helper:
+
+```text
+concrete discovered ref + logical source alias -> artifact ref
+demo.personal.echo_tool + demo -> demo.echo_tool
+```
+
+That helper should also populate `required_capabilities` so LLM clients do not
+have to reverse-engineer dependency metadata from formatted names.
+
 Bindings should live outside the immutable artifact, preferably on a deployment
 or run configuration:
 

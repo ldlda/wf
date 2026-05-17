@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 from wf_artifacts import RequiredCapability, create_workflow_artifact_from_plan
 
 
@@ -51,6 +53,55 @@ def test_create_workflow_artifact_from_plan_adds_reducer_dependencies() -> None:
     assert reducer.logical_source == "wf.std"
     assert reducer.capability_name == "max"
     assert reducer.kind == "reducer"
+
+
+def test_create_workflow_artifact_from_plan_rewrites_bound_node_specs() -> None:
+    plan = _plan()
+    _set_first_node_ref(plan, "demo.personal.echo_tool")
+
+    artifact = create_workflow_artifact_from_plan(
+        artifact_id="echo",
+        version=1,
+        title="Echo",
+        plan=plan,
+        outcomes=("done",),
+        source_bindings={"demo": "demo.personal"},
+    )
+
+    node = artifact.plan["nodes"][0]
+    required = artifact.required_capabilities["demo.echo_tool"]
+    assert node["node"] == "demo.echo_tool"
+    assert required.logical_source == "demo"
+    assert required.capability_name == "echo_tool"
+    assert required.kind == "node_spec"
+    assert required.observed_concrete_source == "demo.personal"
+
+
+def test_create_workflow_artifact_from_plan_keeps_explicit_capability_metadata() -> (
+    None
+):
+    plan = _plan()
+    _set_first_node_ref(plan, "demo.personal.echo_tool")
+
+    artifact = create_workflow_artifact_from_plan(
+        artifact_id="echo",
+        version=1,
+        title="Echo",
+        plan=plan,
+        outcomes=("done",),
+        source_bindings={"demo": "demo.personal"},
+        required_capabilities={
+            "demo.echo_tool": RequiredCapability(
+                logical_source="demo",
+                capability_name="echo_tool",
+                kind="node_spec",
+                input_schema_hash="sha256:explicit",
+            )
+        },
+    )
+
+    required = artifact.required_capabilities["demo.echo_tool"]
+    assert required.input_schema_hash == "sha256:explicit"
 
 
 def test_create_workflow_artifact_from_plan_accepts_wrapper_kind() -> None:
@@ -147,3 +198,9 @@ def _plan() -> dict[str, object]:
         ],
         "edges": [{"from": "echo", "outcome": "ok", "to": "__end__"}],
     }
+
+
+def _set_first_node_ref(plan: dict[str, object], node_ref: str) -> None:
+    """Set the first node ref in a loosely typed raw plan test fixture."""
+    nodes = cast("list[dict[str, Any]]", plan["nodes"])
+    nodes[0]["node"] = node_ref

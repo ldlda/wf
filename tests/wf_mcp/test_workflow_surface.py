@@ -134,6 +134,30 @@ def test_workflow_surface_creates_wrapper_artifact_from_plan() -> None:
     assert artifact.kind == "wrapper"
 
 
+def test_workflow_surface_creates_artifact_with_logical_node_refs() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_logical_refs"
+    )
+    handlers = _handlers(artifact_store)
+    plan = _echo_artifact().plan
+    plan["nodes"][0]["node"] = "demo.personal.echo_tool"
+
+    asyncio.run(
+        handlers.create_artifact_from_plan(
+            artifact_id="echo_logical",
+            version=1,
+            title="Echo Logical",
+            plan=plan,
+            outcomes=("completed",),
+            source_bindings={"demo": "demo.personal"},
+        )
+    )
+    artifact = artifact_store.get_artifact("echo_logical", 1)
+
+    assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
+    assert artifact.required_capabilities["demo.echo_tool"].logical_source == "demo"
+
+
 def test_raw_workflow_plan_uses_core_step_and_edge_models() -> None:
     plan = RawWorkflowPlan.model_validate(_echo_artifact().plan)
 

@@ -5,6 +5,7 @@ from collections.abc import Mapping
 from wf_core import ReducerRef, Workflow
 
 from .models import ArtifactKind, JsonObject, RequiredCapability, WorkflowArtifact
+from .references import normalize_plan_node_refs
 
 
 def create_workflow_artifact_from_plan(
@@ -17,22 +18,28 @@ def create_workflow_artifact_from_plan(
     kind: ArtifactKind = "workflow",
     description: str | None = None,
     required_capabilities: Mapping[str, RequiredCapability] | None = None,
+    source_bindings: Mapping[str, str] | None = None,
     created_from_catalog_version: str | None = None,
 ) -> WorkflowArtifact:
     """Create an immutable artifact from a declarative workflow plan."""
-    _validate_workflow_plan(plan)
+    normalized_plan, node_requirements = normalize_plan_node_refs(
+        plan,
+        source_bindings or {},
+    )
+    _validate_workflow_plan(normalized_plan)
     return WorkflowArtifact(
         id=artifact_id,
         version=version,
         title=title,
         kind=kind,
         description=description,
-        input_schema=_required_object_field(plan, "input_schema"),
-        output_schema=_required_object_field(plan, "output_schema"),
+        input_schema=_required_object_field(normalized_plan, "input_schema"),
+        output_schema=_required_object_field(normalized_plan, "output_schema"),
         outcomes=outcomes,
-        plan=plan,
+        plan=normalized_plan,
         required_capabilities={
-            **_required_reducers_from_plan(plan),
+            **_required_reducers_from_plan(normalized_plan),
+            **node_requirements,
             **dict(required_capabilities or {}),
         },
         created_from_catalog_version=created_from_catalog_version,

@@ -227,6 +227,18 @@ Saved wrapper artifacts can be called with a deployment id when they use logical
 source names. The deployment supplies the concrete source bindings for that
 test call, matching the way `run_deployment` resolves a full saved workflow.
 
+Reusable wrapper and workflow artifacts should be authored against logical
+source names by default. If an author discovers a concrete capability such as
+`everything.default.echo`, the saved artifact should normally depend on a
+logical reference such as `everything.echo` plus a required capability entry.
+The deployment is responsible for binding `everything` to `everything.default`,
+`everything.work`, or any other compatible concrete source.
+
+This is especially important for LLM-authored workflows. The LLM should not
+need to infer dependency metadata by parsing formatted names, and a saved
+artifact should not accidentally become tied to the first account used during
+exploration.
+
 That direct-call surface is different from:
 
 - calling the raw upstream MCP tool
