@@ -47,11 +47,16 @@ class WorkflowSurfaceHandlers:
         *,
         qualified_name: str,
         payload: dict[str, Any],
+        deployment_id: str | None = None,
     ) -> dict[str, Any]:
         """Execute one planner-visible workflow capability for authoring tests."""
         wrapper_artifact = self._wrapper_artifact_for_capability_name(qualified_name)
         if wrapper_artifact is not None:
-            return await self._call_wrapper_artifact(wrapper_artifact, payload)
+            return await self._call_wrapper_artifact(
+                wrapper_artifact,
+                payload,
+                deployment_id=deployment_id,
+            )
 
         spec = self.service._get_qualified_spec(qualified_name)
         handler = build_async_registry(spec)[spec.name]
@@ -83,6 +88,8 @@ class WorkflowSurfaceHandlers:
         self,
         artifact: WorkflowArtifact,
         payload: dict[str, Any],
+        *,
+        deployment_id: str | None,
     ) -> dict[str, Any]:
         """Execute a saved wrapper artifact through the workflow runner."""
         unsupported = _unsupported_interrupt_diagnostic(artifact)
@@ -93,7 +100,25 @@ class WorkflowSurfaceHandlers:
         # Full saved workflows stay on `run_deployment` until core supports
         # graph-as-node semantics instead of us faking subgraphs at this layer.
         plan = _raw_plan_from_artifact(artifact)
-        run = await self.service.run_workflow_from_plan(plan, payload)
+        deployment = None
+        if deployment_id is not None:
+            if self.service.artifact_store is None:
+                raise KeyError("workflow artifact store is not configured")
+            deployment = self.service.artifact_store.get_deployment(deployment_id)
+            if (
+                deployment.artifact_id != artifact.id
+                or deployment.artifact_version != artifact.version
+            ):
+                raise ValueError(
+                    f"deployment {deployment_id!r} does not target "
+                    f"workflow.{artifact.id}.v{artifact.version}"
+                )
+        run = await self.service.run_workflow_from_plan(
+            plan,
+            payload,
+            deployment=deployment,
+            artifact=artifact,
+        )
         return {
             "qualified_name": _artifact_capability_id(artifact),
             "outcome": run.status.value,

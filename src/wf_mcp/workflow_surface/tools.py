@@ -29,16 +29,19 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Call Workflow Capability",
         description=(
             "Execute one planner-visible workflow capability once and return its "
-            "normalized outcome and output."
+            "normalized outcome and output. Pass deployment_id for saved wrappers "
+            "that use deployment-bound logical sources."
         ),
     )
     async def call_capability(
         qualified_name: str,
         payload: dict[str, Any],
+        deployment_id: str | None = None,
     ) -> dict[str, Any]:
         return await handlers.call_capability(
             qualified_name=qualified_name,
             payload=payload,
+            deployment_id=deployment_id,
         )
 
     @server.tool(

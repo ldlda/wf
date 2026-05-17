@@ -223,6 +223,10 @@ A client authoring workflows, including an LLM client, should be able to:
 5. inspect the normalized output and outcome
 6. reuse that capability inside a graph
 
+Saved wrapper artifacts can be called with a deployment id when they use logical
+source names. The deployment supplies the concrete source bindings for that
+test call, matching the way `run_deployment` resolves a full saved workflow.
+
 That direct-call surface is different from:
 
 - calling the raw upstream MCP tool

@@ -287,6 +287,47 @@ def test_workflow_surface_calls_saved_wrapper_artifact() -> None:
     assert payload["output"]["echoed"] == "hello"
 
 
+def test_workflow_surface_calls_saved_wrapper_artifact_with_deployment_bindings() -> (
+    None
+):
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_wrapper_bound_call"
+    )
+    wrapper = _logical_echo_artifact().model_copy(
+        update={"id": "logical_echo_wrapper", "kind": "wrapper"}
+    )
+    artifact_store.save_artifact(wrapper)
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="logical_echo_wrapper.personal",
+            artifact_id="logical_echo_wrapper",
+            artifact_version=1,
+            bindings={"demo": "demo.personal"},
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_wrapper_bound_call_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.call_capability(
+            qualified_name="workflow.logical_echo_wrapper.v1",
+            payload={"text": "hello"},
+            deployment_id="logical_echo_wrapper.personal",
+        )
+    )
+
+    assert payload["qualified_name"] == "workflow.logical_echo_wrapper.v1"
+    assert payload["outcome"] == "completed"
+    assert payload["output"]["echoed"] == "hello"
+
+
 def _handlers(artifact_store: FileWorkflowArtifactStore) -> WorkflowSurfaceHandlers:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_mcp"),
