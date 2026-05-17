@@ -5,6 +5,7 @@ from wf_authoring import WorkflowBuilder
 from tests.authoring.helpers import (
     AppendState,
     DefaultedState,
+    NestedWorkflowState,
     TypedDictInput,
     WorkflowInput,
     WorkflowOutput,
@@ -74,3 +75,26 @@ def test_state_basemodel_seeds_safe_initial_defaults() -> None:
     assert workflow.state_schema.fields["items"].default == []
     assert workflow.state_schema.fields["metadata"].default == {}
     assert workflow.state_schema.fields["explicit"].default == 3
+
+
+def test_nested_state_basemodel_projects_parent_and_child_paths() -> None:
+    builder = WorkflowBuilder(
+        name="nested_state_schema_demo",
+        input_schema=WorkflowInput,
+        state_schema=NestedWorkflowState,
+        output_schema=WorkflowOutput,
+        start="start",
+    )
+
+    workflow = builder.compile()
+
+    assert set(workflow.state_schema.fields) == {
+        "person",
+        "person.name",
+        "person.tags",
+    }
+    assert workflow.state_schema.fields["person"].type == "object"
+    assert workflow.state_schema.fields["person.name"].type == "string"
+    assert workflow.state_schema.fields["person.tags"].type == "array"
+    assert workflow.state_schema.fields["person"].merge_strategy == "replace"
+    assert workflow.state_schema.fields["person.tags"].merge_strategy == "append"

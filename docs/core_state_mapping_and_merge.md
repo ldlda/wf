@@ -154,6 +154,12 @@ fields = {
 Presentation layers may rebuild a tree for humans. Core should keep the simpler
 path-keyed representation.
 
+`wf_authoring` keeps authored schemas nested for humans and LLM clients, but
+projects nested authored state into this flat exact-path index. For example, a
+Pydantic `person: Person` field may produce declarations for `person`,
+`person.name`, and `person.tags` without forcing the author to spell those
+paths manually.
+
 ### Exact-path ownership
 
 Merge behavior belongs only to the exact declared state path being written.

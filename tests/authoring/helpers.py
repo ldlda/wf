@@ -52,6 +52,17 @@ class DefaultedState(BaseModel):
     explicit: int = 3
 
 
+class NestedPersonState(BaseModel):
+    name: str
+    tags: Annotated[list[str], state_field(merge_strategy="append")] = Field(
+        default_factory=list
+    )
+
+
+class NestedWorkflowState(BaseModel):
+    person: NestedPersonState
+
+
 @node(name="test.auto_bind")
 def auto_bind_node(input: AutoBindInput) -> AutoBindOutput:
     """Return updated fields using automatically mapped state input."""

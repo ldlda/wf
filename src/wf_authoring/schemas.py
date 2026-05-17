@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Literal
+from typing import Any, Iterator, Literal
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -49,15 +49,15 @@ def state_schema_from(value: StateSchemaLike) -> StateSchema:
     schema = schema_ref_from(value)
     metadata_by_name = _state_metadata_by_name(value)
     fields = {
-        name: StateField(
+        path: StateField(
             type=_state_field_type(property_schema),
             merge_strategy=metadata_by_name.get(
-                name, StateFieldMetadata()
+                path, StateFieldMetadata()
             ).merge_strategy,
-            trace=metadata_by_name.get(name, StateFieldMetadata()).trace,
-            default=_state_field_default(value, name, property_schema),
+            trace=metadata_by_name.get(path, StateFieldMetadata()).trace,
+            default=_state_field_default(value, path, property_schema),
         )
-        for name, property_schema in schema.properties.items()
+        for path, property_schema in _flatten_state_properties(schema)
     }
     return StateSchema(fields=fields)
 
@@ -66,13 +66,65 @@ def _state_metadata_by_name(value: object) -> dict[str, StateFieldMetadata]:
     if not isinstance(value, type) or not issubclass(value, BaseModel):
         return {}
 
-    metadata: dict[str, StateFieldMetadata] = {}
-    for name, field_info in value.model_fields.items():
+    return dict(_iter_model_metadata(value))
+
+
+def _iter_model_metadata(
+    model_type: type[BaseModel],
+    *,
+    prefix: str = "",
+) -> Iterator[tuple[str, StateFieldMetadata]]:
+    for name, field_info in model_type.model_fields.items():
+        path = f"{prefix}.{name}" if prefix else name
         for item in field_info.metadata:
             if isinstance(item, StateFieldMetadata):
-                metadata[name] = item
+                yield path, item
                 break
-    return metadata
+        annotation = field_info.annotation
+        if isinstance(annotation, type) and issubclass(annotation, BaseModel):
+            yield from _iter_model_metadata(annotation, prefix=path)
+
+
+def _flatten_state_properties(schema: SchemaRef) -> Iterator[tuple[str, dict[str, Any]]]:
+    raw_schema = schema.model_dump(exclude_none=True)
+    yield from _iter_state_properties(raw_schema.get("properties", {}), raw_schema)
+
+
+def _iter_state_properties(
+    properties: object,
+    root_schema: dict[str, Any],
+    *,
+    prefix: str = "",
+) -> Iterator[tuple[str, dict[str, Any]]]:
+    if not isinstance(properties, dict):
+        return
+
+    for name, property_schema in properties.items():
+        if not isinstance(property_schema, dict):
+            continue
+        path = f"{prefix}.{name}" if prefix else name
+        resolved_schema = _resolve_property_schema(property_schema, root_schema)
+        yield path, resolved_schema
+        yield from _iter_state_properties(
+            resolved_schema.get("properties", {}),
+            root_schema,
+            prefix=path,
+        )
+
+
+def _resolve_property_schema(
+    property_schema: dict[str, Any],
+    root_schema: dict[str, Any],
+) -> dict[str, Any]:
+    ref = property_schema.get("$ref")
+    if not isinstance(ref, str) or not ref.startswith("#/$defs/"):
+        return property_schema
+    definition_name = ref.removeprefix("#/$defs/")
+    definitions = root_schema.get("$defs", {})
+    if not isinstance(definitions, dict):
+        return property_schema
+    resolved = definitions.get(definition_name)
+    return resolved if isinstance(resolved, dict) else property_schema
 
 
 def _state_field_type(property_schema: object) -> str:
@@ -93,7 +145,7 @@ def _state_field_default(
     field_name: str,
     property_schema: object,
 ) -> object:
-    if isinstance(value, type) and issubclass(value, BaseModel):
+    if "." not in field_name and isinstance(value, type) and issubclass(value, BaseModel):
         field_info = value.model_fields[field_name]
         if not field_info.is_required():
             return field_info.get_default(call_default_factory=True)
