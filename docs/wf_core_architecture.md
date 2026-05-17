@@ -71,6 +71,10 @@ limits and intended adapter seam.
 
 ## What This Cleanup Does Not Solve Yet
 
+- Node-local mapping paths are still top-level only in the current runtime.
+  The intended direction for nested node-local paths, patch commits, and future
+  nested merge metadata is documented in
+  [`core_state_mapping_and_merge.md`](core_state_mapping_and_merge.md).
 - Foreach is still serial-only. Parallel foreach needs an explicit scheduling
   model, not just `asyncio.gather`.
 - Interrupt lifecycle is still node-level and run-state-level. Long-lived

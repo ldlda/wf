@@ -23,6 +23,7 @@ It still does not solve:
   external JSON Schema dialect
 - typed Python object creation from arbitrary JSON Schema
 - workflow state merge behavior
+- deep node-local map-path validation beyond statically knowable schema roots
 - better domain-specific error payloads beyond `WorkflowExecutionError`
 
 This means schema fields are mostly contracts for authoring, planning,

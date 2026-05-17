@@ -394,13 +394,13 @@ Practical notes:
 `in_map`:
 
 - source is graph `input`, `state`, or future `context` path
-- destination is a declared node input field
+- destination is a node-local input path
 - missing required source path is a graph/runtime error
 - optional destination fields may be omitted
 
 `out_map`:
 
-- source is a declared node output field
+- source is a node-local output path
 - destination is a graph state path
 - mapping to undeclared state keys is allowed, but loses typed merge behavior
 - mapping a required output field that does not exist at runtime is node failure
@@ -452,8 +452,8 @@ Before execution, validator should be able to check:
 - every edge destination exists or is `__end__`
 - every edge outcome is declared by its source node type
 - every reachable declared outcome is wired
-- every `in_map` destination exists in node input schema
-- every `out_map` source exists in node output schema
+- every `in_map` destination has a valid declared node-input root
+- every `out_map` source has a valid declared node-output root
 - every condition node uses valid operators and operand shapes
 
 At runtime, executor should still check:
