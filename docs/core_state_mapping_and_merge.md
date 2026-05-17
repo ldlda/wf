@@ -140,9 +140,8 @@ creates a reusable boundary for:
 
 ## State Declarations and Merge Rules
 
-The current implementation attaches merge behavior to declared top-level state
-fields. The target model should later allow nested declared state paths while
-keeping the internal representation flat:
+State merge behavior is attached to declared exact state paths while keeping the
+internal representation flat:
 
 ```python
 fields = {
@@ -226,10 +225,12 @@ current state merge behavior.
 
 ### Phase 2: Nested declared state paths
 
-- allow exact nested state path declarations
-- resolve merge strategies by exact destination path only
-- keep undeclared paths as `replace`
-- keep `merge_object` shallow
+Implemented in core:
+
+- exact nested state path declarations
+- merge strategies resolved by exact destination path only
+- undeclared paths remain `replace`
+- `merge_object` remains shallow
 
 ### Phase 3: Reducer capabilities
 

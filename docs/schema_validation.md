@@ -22,13 +22,13 @@ It still does not solve:
 - semantic compatibility between Pydantic-generated schemas and every possible
   external JSON Schema dialect
 - typed Python object creation from arbitrary JSON Schema
-- workflow state merge behavior
+- workflow state merge behavior beyond declared exact-path metadata
 - deep node-local map-path validation beyond statically knowable schema roots
 - better domain-specific error payloads beyond `WorkflowExecutionError`
 
-This means schema fields are mostly contracts for authoring, planning,
-documentation, and mapping validation today. They are not yet strong runtime
-guards.
+This means schema fields are contracts for authoring, planning, documentation,
+and mapping validation. Runtime state merge behavior is separate metadata on
+declared exact state paths; undeclared paths still use `replace`.
 
 ## Why This Matters
 

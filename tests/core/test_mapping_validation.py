@@ -21,7 +21,9 @@ def test_validation_rejects_overlapping_node_input_destinations() -> None:
         out_map={},
     ).validate_structure()
 
-    assert any("overlapping node-local input paths" in issue.message for issue in report.errors)
+    assert any(
+        "overlapping node-local input paths" in issue.message for issue in report.errors
+    )
 
 
 def test_validation_rejects_overlapping_state_write_destinations() -> None:
@@ -33,7 +35,10 @@ def test_validation_rejects_overlapping_state_write_destinations() -> None:
         },
     ).validate_structure()
 
-    assert any("overlapping state destination paths" in issue.message for issue in report.errors)
+    assert any(
+        "overlapping state destination paths" in issue.message
+        for issue in report.errors
+    )
 
 
 def _workflow(*, in_map: dict[str, str], out_map: dict[str, str]) -> Workflow:

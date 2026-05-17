@@ -141,7 +141,11 @@ def pick_path(input: PickPathInput) -> ValueOutput:
 def project_fields(input: ProjectFieldsInput) -> MappingOutput:
     """Return only the requested existing fields from a mapping."""
     return MappingOutput(
-        mapping={field: input.mapping[field] for field in input.fields if field in input.mapping}
+        mapping={
+            field: input.mapping[field]
+            for field in input.fields
+            if field in input.mapping
+        }
     )
 
 

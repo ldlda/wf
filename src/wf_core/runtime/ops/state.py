@@ -39,7 +39,9 @@ def apply_mapped_state(
     missing_field_message: str,
 ) -> dict[str, Any]:
     if has_overlapping_paths(mapping.values()):
-        raise WorkflowExecutionError("mapped state patch has overlapping destination paths")
+        raise WorkflowExecutionError(
+            "mapped state patch has overlapping destination paths"
+        )
 
     patch: dict[str, Any] = {}
     for source_field, destination_path in mapping.items():
@@ -69,8 +71,8 @@ def write_state_value(
             f"executor only supports writes into state.*, got {destination_path!r}"
         )
 
-    field_name = parts[0]
-    declared_field = workflow.state_schema.fields.get(field_name)
+    declared_path = ".".join(parts)
+    declared_field = workflow.state_schema.fields.get(declared_path)
     merge_strategy = declared_field.merge_strategy if declared_field else "replace"
     key_path = parts
     current_value = get_nested_value(state, key_path)

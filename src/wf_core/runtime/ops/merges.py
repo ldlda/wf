@@ -23,15 +23,23 @@ def apply_builtin_merge(
 
     if strategy == "append":
         if current_value is None:
-            return [incoming_value] if not isinstance(incoming_value, list) else incoming_value
+            return (
+                [incoming_value]
+                if not isinstance(incoming_value, list)
+                else incoming_value
+            )
         if not isinstance(current_value, list):
             raise WorkflowExecutionError(
                 f"cannot append into non-list state path {destination_path!r}"
             )
-        return [
-            *current_value,
-            *incoming_value,
-        ] if isinstance(incoming_value, list) else [*current_value, incoming_value]
+        return (
+            [
+                *current_value,
+                *incoming_value,
+            ]
+            if isinstance(incoming_value, list)
+            else [*current_value, incoming_value]
+        )
 
     if strategy == "merge_object":
         if current_value is None:

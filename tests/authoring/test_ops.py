@@ -268,7 +268,10 @@ def test_project_fields_selects_named_keys() -> None:
     registry = build_registry(project_fields)
 
     result = registry["authoring.project_fields"](
-        {"mapping": {"status": "done", "message": "ok", "debug": True}, "fields": ["status", "message"]},
+        {
+            "mapping": {"status": "done", "message": "ok", "debug": True},
+            "fields": ["status", "message"],
+        },
         RuntimeContext(current_node_id="project_fields"),
     )
 
@@ -282,7 +285,10 @@ def test_rename_fields_remaps_existing_keys() -> None:
     registry = build_registry(rename_fields)
 
     result = registry["authoring.rename_fields"](
-        {"mapping": {"provider_status": "done", "provider_message": "ok"}, "renames": {"provider_status": "status", "provider_message": "message"}},
+        {
+            "mapping": {"provider_status": "done", "provider_message": "ok"},
+            "renames": {"provider_status": "status", "provider_message": "message"},
+        },
         RuntimeContext(current_node_id="rename_fields"),
     )
 

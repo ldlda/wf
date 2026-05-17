@@ -17,7 +17,7 @@ class SchemaRef(BaseModel):
 
 
 class StateField(BaseModel):
-    """Declared root state field plus its runtime merge behavior."""
+    """Declared state path plus its runtime merge behavior."""
 
     type: str
     merge_strategy: Literal["replace", "append", "merge_object"] = "replace"
@@ -26,7 +26,7 @@ class StateField(BaseModel):
 
 
 class StateSchema(BaseModel):
-    """Workflow state schema keyed by declared root field name."""
+    """Workflow state schema keyed by declared exact state path."""
 
     model_config = ConfigDict(extra="allow")
 
