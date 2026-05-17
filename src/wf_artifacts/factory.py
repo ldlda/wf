@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from wf_core import ReducerRef, Workflow
-from wf_platform import CapabilityRef
+from wf_platform import CapabilityRef, NodeSpecInventory
 
 from .models import ArtifactKind, JsonObject, RequiredCapability, WorkflowArtifact
 from .references import normalize_plan_node_refs
@@ -20,12 +20,14 @@ def create_workflow_artifact_from_plan(
     description: str | None = None,
     required_capabilities: Mapping[str, RequiredCapability] | None = None,
     source_bindings: Mapping[str, str] | None = None,
+    observed_node_specs: Mapping[str, NodeSpecInventory] | None = None,
     created_from_catalog_version: str | None = None,
 ) -> WorkflowArtifact:
     """Create an immutable artifact from a declarative workflow plan."""
     normalized_plan, node_requirements = normalize_plan_node_refs(
         plan,
         source_bindings or {},
+        observed_node_specs,
     )
     _validate_workflow_plan(normalized_plan)
     return WorkflowArtifact(

@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from wf_artifacts import RequiredCapability, create_workflow_artifact_from_plan
+from wf_platform import NodeSpecInventory
 
 
 def test_create_workflow_artifact_from_plan_derives_boundary_schemas() -> None:
@@ -75,6 +76,45 @@ def test_create_workflow_artifact_from_plan_rewrites_bound_node_specs() -> None:
     assert required.capability_name == "echo_tool"
     assert required.kind == "node_spec"
     assert required.observed_concrete_source == "demo.personal"
+
+
+def test_create_workflow_artifact_from_plan_snapshots_observed_node_spec() -> None:
+    plan = _plan()
+    _set_first_node_ref(plan, "demo.personal.echo_tool")
+
+    artifact = create_workflow_artifact_from_plan(
+        artifact_id="echo",
+        version=1,
+        title="Echo",
+        plan=plan,
+        outcomes=("done",),
+        source_bindings={"demo": "demo.personal"},
+        observed_node_specs={
+            "demo.personal.echo_tool": NodeSpecInventory(
+                name="demo.personal.echo_tool",
+                outcomes=("ok",),
+                input_schema={"type": "object", "properties": {"text": {"type": "string"}}},
+                output_schema={
+                    "type": "object",
+                    "properties": {"echoed": {"type": "string"}},
+                },
+                is_async=False,
+                accepts_context=False,
+            )
+        },
+    )
+
+    required = artifact.required_capabilities["demo.echo_tool"]
+    assert required.input_schema_snapshot == {
+        "type": "object",
+        "properties": {"text": {"type": "string"}},
+    }
+    assert required.output_schema_snapshot == {
+        "type": "object",
+        "properties": {"echoed": {"type": "string"}},
+    }
+    assert required.input_schema_hash is not None
+    assert required.output_schema_hash is not None
 
 
 def test_create_workflow_artifact_from_plan_keeps_explicit_capability_metadata() -> (

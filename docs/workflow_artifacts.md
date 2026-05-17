@@ -463,6 +463,13 @@ demo.personal.echo_tool + demo -> demo.echo_tool
 That helper should also populate `required_capabilities` so LLM clients do not
 have to reverse-engineer dependency metadata from formatted names.
 
+When artifact creation can observe the concrete `NodeSpecInventory` used during
+authoring, it should persist that node spec's input/output schema snapshots and
+stable hashes into the generated `RequiredCapability`. Later deployment
+validation compares the saved contract against the currently bound concrete
+source and can report `schema_changed` when a source still has the same logical
+capability name but no longer the same contract.
+
 Bindings should live outside the immutable artifact, preferably on a deployment
 or run configuration:
 

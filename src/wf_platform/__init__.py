@@ -1,4 +1,5 @@
 from .refs import CapabilityRef, SourceRef
+from .schema_hashes import hash_json_schema
 from .sources import (
     CapabilityBuckets,
     CapabilitySource,
@@ -27,4 +28,5 @@ __all__ = [
     "SourceVisibility",
     "SourceVisibilitySnapshot",
     "SourceRef",
+    "hash_json_schema",
 ]

@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from copy import deepcopy
 
-from wf_platform import CapabilityRef, SourceRef
+from wf_platform import CapabilityRef, NodeSpecInventory, SourceRef, hash_json_schema
 
 from .models import JsonObject, RequiredCapability
 
@@ -11,6 +11,7 @@ from .models import JsonObject, RequiredCapability
 def normalize_plan_node_refs(
     plan: JsonObject,
     source_bindings: Mapping[str, str],
+    observed_node_specs: Mapping[str, NodeSpecInventory] | None = None,
 ) -> tuple[JsonObject, dict[str, RequiredCapability]]:
     """Rewrite concrete node refs in a plan to deployment-bound logical refs.
 
@@ -39,10 +40,31 @@ def normalize_plan_node_refs(
             continue
         logical_ref, logical_source, capability_name, concrete_source = replacement
         node["node"] = logical_ref
+        observed = (
+            observed_node_specs.get(raw_node_ref)
+            if observed_node_specs is not None
+            else None
+        )
         requirements[logical_ref] = RequiredCapability(
             logical_source=logical_source,
             capability_name=capability_name,
             kind="node_spec",
+            input_schema_hash=(
+                hash_json_schema(observed.input_schema)
+                if observed is not None
+                else None
+            ),
+            input_schema_snapshot=(
+                observed.input_schema if observed is not None else None
+            ),
+            output_schema_hash=(
+                hash_json_schema(observed.output_schema)
+                if observed is not None
+                else None
+            ),
+            output_schema_snapshot=(
+                observed.output_schema if observed is not None else None
+            ),
             observed_concrete_source=concrete_source,
         )
 

@@ -34,9 +34,22 @@ class AmountOutput(BaseModel):
     amount: int
 
 
+class ChangedEchoInput(BaseModel):
+    message: str
+
+
+class ChangedEchoOutput(BaseModel):
+    echoed: str
+
+
 @node()
 async def amount_tool(payload: AmountInput) -> AmountOutput:
     return AmountOutput(amount=payload.amount)
+
+
+@node(name="echo_tool")
+def changed_echo_tool(payload: ChangedEchoInput) -> ChangedEchoOutput:
+    return ChangedEchoOutput(echoed=payload.message)
 
 
 @reducer(name="custom.default.multiply")
@@ -279,6 +292,72 @@ def test_workflow_surface_runs_artifact_created_from_concrete_node_ref() -> None
     assert payload["status"] == "completed"
     assert payload["output"]["echoed"] == "hello"
     assert payload["diagnostics"] == []
+
+
+def test_workflow_surface_detects_drift_from_saved_node_spec_snapshot() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_created_drift"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_created_drift_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    asyncio.run(
+        handlers.create_artifact_from_plan(
+            artifact_id="created_echo_drift",
+            version=1,
+            title="Created Echo Drift",
+            plan=_echo_artifact().plan,
+            outcomes=("completed",),
+            source_bindings={"demo": "demo.personal"},
+        )
+    )
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="created_echo_drift.personal",
+            artifact_id="created_echo_drift",
+            artifact_version=1,
+            bindings={
+                "demo": "demo.personal",
+                "wf.std": "wf.std",
+            },
+        )
+    )
+
+    required = artifact_store.get_artifact(
+        "created_echo_drift",
+        1,
+    ).required_capabilities["demo.echo_tool"]
+    assert required.input_schema_hash is not None
+
+    service.register_connection(
+        ConnectionConfig(id="demo.work", server="demo", account="work")
+    )
+    service.register_specs("demo.work", changed_echo_tool)
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="created_echo_drift.work",
+            artifact_id="created_echo_drift",
+            artifact_version=1,
+            bindings={
+                "demo": "demo.work",
+                "wf.std": "wf.std",
+            },
+        )
+    )
+
+    payload = asyncio.run(
+        handlers.validate_deployment(deployment_id="created_echo_drift.work")
+    )
+
+    assert payload["status"] == "unrunnable"
+    assert payload["diagnostics"][0]["code"] == "schema_changed"
 
 
 def test_workflow_surface_runs_deployment_with_bound_reducer_dependency() -> None:

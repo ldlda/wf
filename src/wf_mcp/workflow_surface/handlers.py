@@ -16,7 +16,7 @@ from wf_artifacts import (
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
     validate_deployment_dependencies,
 )
-from wf_platform import CapabilityRef
+from wf_platform import CapabilityRef, NodeSpecInventory, hash_json_schema
 from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
 
@@ -182,6 +182,7 @@ class WorkflowSurfaceHandlers:
                 for name, capability in (required_capabilities or {}).items()
             },
             source_bindings=source_bindings,
+            observed_node_specs=_observed_node_specs(self.service),
             created_from_catalog_version=created_from_catalog_version,
         )
         self.service.artifact_store.save_artifact(workflow_artifact)
@@ -317,15 +318,20 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
     """Convert broker capability sources into artifact validation snapshots."""
     sources: list[AvailableSource] = []
     for source in service.capability_sources.values():
+        node_spec_details = {
+            detail.name: detail
+            for detail in source.as_inventory().capabilities.node_spec_details
+        }
         capabilities = {
             capability_name: AvailableCapability(
                 name=capability_name,
                 kind="node_spec",
-                input_schema_hash=None,
-                output_schema_hash=None,
+                input_schema_hash=hash_json_schema(detail.input_schema),
+                output_schema_hash=hash_json_schema(detail.output_schema),
             )
             for spec in source.capabilities.node_specs.values()
             if (capability_name := _capability_name(spec.name)) is not None
+            if (detail := node_spec_details.get(spec.name)) is not None
         }
         capabilities.update(
             {
@@ -345,6 +351,20 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
             )
         )
     return sources
+
+
+def _observed_node_specs(service: WfMcpService) -> dict[str, NodeSpecInventory]:
+    """Project current executable specs into serializable observed contracts."""
+    observed: dict[str, NodeSpecInventory] = {}
+    for source in service.capability_sources.values():
+        inventory = source.as_inventory()
+        observed.update(
+            {
+                detail.name: detail
+                for detail in inventory.capabilities.node_spec_details
+            }
+        )
+    return observed
 
 
 def _capability_name(qualified_name: str) -> str | None:
