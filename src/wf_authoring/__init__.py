@@ -59,12 +59,14 @@ from .nodes import (
     node,
     outcome,
 )
+from .reducers import AuthoredReducer, ReducerCatalog, reducer
 from .schemas import StateFieldMetadata, state_field
 from .subgraph import subgraph_node
 
 __all__ = [
     "NodeCatalog",
     "NodeCatalogEntry",
+    "AuthoredReducer",
     "BoolOutput",
     "CoalesceInput",
     "ConstantInput",
@@ -76,6 +78,7 @@ __all__ = [
     "PickKeyInput",
     "PickPathInput",
     "ProjectFieldsInput",
+    "ReducerCatalog",
     "RenameFieldsInput",
     "RuntimeErrorInput",
     "NodeReturn",
@@ -117,6 +120,7 @@ __all__ = [
     "runtime_error",
     "node",
     "outcome",
+    "reducer",
     "state",
     "state_field",
     "state_path",
