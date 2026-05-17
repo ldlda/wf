@@ -11,6 +11,7 @@ from wf_artifacts import (
     DiagnosticSeverity,
     RequiredCapability,
     WorkflowArtifact,
+    WorkflowCapabilityRef,
     WorkflowDeployment,
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
     validate_deployment_dependencies,
@@ -356,20 +357,21 @@ def _capability_name(qualified_name: str) -> str | None:
 
 def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
     """Use the same stable name shape as workflow artifact catalog entries."""
-    return f"workflow.{artifact.id}.v{artifact.version}"
+    return str(
+        WorkflowCapabilityRef(
+            artifact_id=artifact.id,
+            version=artifact.version,
+        )
+    )
 
 
 def _parse_artifact_capability_id(qualified_name: str) -> tuple[str, int] | None:
     """Parse the stable `workflow.<artifact_id>.v<version>` capability name."""
-    prefix = "workflow."
-    if not qualified_name.startswith(prefix):
+    try:
+        ref = WorkflowCapabilityRef.parse(qualified_name)
+    except ValueError:
         return None
-    artifact_part, separator, version_part = qualified_name[len(prefix) :].rpartition(
-        ".v"
-    )
-    if not separator or not artifact_part or not version_part.isdecimal():
-        return None
-    return artifact_part, int(version_part)
+    return ref.artifact_id, ref.version
 
 
 def _raw_plan_from_artifact(artifact: WorkflowArtifact) -> RawWorkflowPlan:

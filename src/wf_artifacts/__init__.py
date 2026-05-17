@@ -15,6 +15,7 @@ from .models import (
     WorkflowArtifact,
     WorkflowDeployment,
 )
+from .refs import WorkflowCapabilityRef
 from .store import FileWorkflowArtifactStore, WorkflowArtifactStore
 from .validation import validate_deployment_dependencies
 from .references import logical_ref_for_concrete_ref, normalize_plan_node_refs
@@ -30,6 +31,7 @@ __all__ = [
     "RequiredCapability",
     "WorkflowArtifact",
     "WorkflowArtifactCatalogEntry",
+    "WorkflowCapabilityRef",
     "WorkflowArtifactStore",
     "WorkflowDeployment",
     "artifact_catalog_entry",

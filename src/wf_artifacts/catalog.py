@@ -3,6 +3,7 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from .models import DependencyDiagnostic, JsonObject, WorkflowArtifact
+from .refs import WorkflowCapabilityRef
 
 
 class WorkflowArtifactCatalogEntry(BaseModel):
@@ -23,7 +24,12 @@ class WorkflowArtifactCatalogEntry(BaseModel):
 
 def artifact_node_name(artifact: WorkflowArtifact) -> str:
     """Return the stable planner name for an artifact version."""
-    return f"workflow.{artifact.id}.v{artifact.version}"
+    return str(
+        WorkflowCapabilityRef(
+            artifact_id=artifact.id,
+            version=artifact.version,
+        )
+    )
 
 
 def artifact_catalog_entry(

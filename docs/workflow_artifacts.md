@@ -577,6 +577,11 @@ Dot-joined names remain the wire/presentation format, but new runtime code
 should parse or format through those refs instead of rediscovering source/name
 boundaries with ad hoc string splits.
 
+Saved workflow artifact names use a separate grammar and ref type:
+`WorkflowCapabilityRef(artifact_id, version)` serializes as
+`workflow.<artifact_id>.v<version>`. Artifact ids may contain dots, so this
+must not be parsed as a generic `CapabilityRef`.
+
 The first implementation should prefer artifact validation and dependency
 diagnostics before attempting persistent nested resume.
 
