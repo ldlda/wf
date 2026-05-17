@@ -522,14 +522,26 @@ class WfMcpService:
             )
             raise
 
-    def compile_plan(self, plan: RawWorkflowPlan) -> Workflow:
+    def compile_plan(
+        self,
+        plan: RawWorkflowPlan,
+        node_name_bindings: dict[str, str] | None = None,
+    ) -> Workflow:
         node_defs: dict[str, Any] = {}
+        bindings = node_name_bindings or {}
         for step in plan.nodes:
             if not isinstance(step, NodeUse):
                 continue
-            qualified_name = step.node
+            qualified_name = bindings.get(step.node, step.node)
             spec = self._get_qualified_spec(qualified_name)
             node_defs[qualified_name] = spec.to_node_def()
+
+        nodes = []
+        for node in plan.nodes:
+            payload = node.model_dump(by_alias=True)
+            if isinstance(node, NodeUse):
+                payload["node"] = bindings.get(node.node, node.node)
+            nodes.append(payload)
 
         payload = {
             "name": plan.name,
@@ -538,7 +550,7 @@ class WfMcpService:
             "output_schema": plan.output_schema,
             "start": plan.start,
             "node_defs": [node.model_dump() for node in node_defs.values()],
-            "nodes": [node.model_dump(by_alias=True) for node in plan.nodes],
+            "nodes": nodes,
             "edges": [edge.model_dump(by_alias=True) for edge in plan.edges],
         }
         return Workflow.model_validate(payload)
@@ -557,9 +569,8 @@ class WfMcpService:
                 payload={"input_keys": sorted(workflow_input.keys())},
             )
         )
-        workflow = self.compile_plan(plan)
         plan_node_names = [
-            node.node for node in workflow.nodes if isinstance(node, NodeUse)
+            node.node for node in plan.nodes if isinstance(node, NodeUse)
         ]
         runtime_artifact = artifact or WorkflowArtifact(
             id=plan.name,
@@ -576,6 +587,7 @@ class WfMcpService:
             sources=self.capability_sources,
             plan_node_names=plan_node_names,
         )
+        workflow = self.compile_plan(plan, dependencies.node_name_bindings)
         run = await execute_workflow_async(
             workflow,
             workflow_input,

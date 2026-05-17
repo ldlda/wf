@@ -510,10 +510,19 @@ saved workflow state schema, such as `custom.multiply`. This keeps artifact
 plans stable while allowing deployments to choose concrete accounts or local
 reducer packages.
 
-Node specs are less abstract today: saved raw workflow plans still contain
-concrete node spec names such as `demo.personal.echo_tool`. Rebinding node specs
-through deployment aliases is a later migration. Reducers are the first runtime
-dependency family to use deployment-bound logical names end-to-end.
+Node specs may also use deployment-bound logical names. A saved plan can refer
+to `demo.echo_tool`, while the deployment binds `demo` to a concrete source such
+as `demo.personal`. At runtime the compiler builds node definitions from the
+concrete source but leaves the saved artifact immutable. Concrete node names
+such as `demo.personal.echo_tool` remain supported for raw local plans and older
+artifacts.
+
+Implementation note: these references are currently parsed from strings with
+dot-separated source and capability names. That keeps the wire format simple but
+leaks path logic into runtime code. A future cleanup should introduce typed
+reference objects, such as `CapabilityRef(logical_source, capability_name)` and
+`BoundCapabilityRef(concrete_source, capability_name)`, and leave dot-joined
+strings as presentation and serialization only.
 
 The first implementation should prefer artifact validation and dependency
 diagnostics before attempting persistent nested resume.

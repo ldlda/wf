@@ -15,6 +15,7 @@ class RuntimeDependencies:
     """Executable dependencies resolved for one workflow run."""
 
     node_specs: dict[str, NodeSpec[Any, Any]]
+    node_name_bindings: dict[str, str]
     node_registry: dict[str, AsyncRegistryHandler]
     reducers: dict[str, ReducerDefinition]
 
@@ -33,10 +34,16 @@ def resolve_runtime_dependencies(
     they resolve through deployment bindings and are registered under the
     logical reducer name used by the workflow state schema.
     """
-    node_specs = {
-        node_name: _find_node_spec(node_name, sources)
-        for node_name in dict.fromkeys(plan_node_names)
-    }
+    node_specs: dict[str, NodeSpec[Any, Any]] = {}
+    node_name_bindings: dict[str, str] = {}
+    for node_name in dict.fromkeys(plan_node_names):
+        concrete_name, spec = _resolve_node_spec(
+            node_name=node_name,
+            deployment=deployment,
+            sources=sources,
+        )
+        node_name_bindings[node_name] = concrete_name
+        node_specs[concrete_name] = spec
     reducers = _resolve_reducers(
         required_capabilities=artifact.required_capabilities,
         deployment=deployment,
@@ -44,20 +51,44 @@ def resolve_runtime_dependencies(
     )
     return RuntimeDependencies(
         node_specs=node_specs,
+        node_name_bindings=node_name_bindings,
         node_registry=build_async_registry(*node_specs.values()),
         reducers=reducers,
     )
 
 
+def _resolve_node_spec(
+    *,
+    node_name: str,
+    deployment: WorkflowDeployment | None,
+    sources: dict[str, CapabilitySource],
+) -> tuple[str, NodeSpec[Any, Any]]:
+    concrete = _find_node_spec(node_name, sources)
+    if concrete is not None:
+        return node_name, concrete
+
+    if deployment is not None:
+        logical_source, separator, capability_name = node_name.rpartition(".")
+        if separator:
+            bound_source_id = deployment.bindings.get(logical_source)
+            if bound_source_id is not None:
+                bound_name = f"{bound_source_id}.{capability_name}"
+                concrete = _find_node_spec(bound_name, sources)
+                if concrete is not None:
+                    return bound_name, concrete
+
+    raise KeyError(f"unknown node spec {node_name!r}")
+
+
 def _find_node_spec(
     node_name: str,
     sources: dict[str, CapabilitySource],
-) -> NodeSpec[Any, Any]:
+) -> NodeSpec[Any, Any] | None:
     for source in sources.values():
         spec = source.capabilities.node_specs.get(node_name)
         if spec is not None:
             return spec
-    raise KeyError(f"unknown node spec {node_name!r}")
+    return None
 
 
 def _resolve_reducers(

@@ -174,6 +174,39 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     assert payload["diagnostics"] == []
 
 
+def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency() -> None:
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_bound_node")
+    artifact_store.save_artifact(_logical_echo_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.personal",
+            artifact_id="logical_echo",
+            artifact_version=1,
+            bindings={"demo": "demo.personal"},
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_bound_node_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.run_deployment(
+            deployment_id="echo.personal",
+            workflow_input={"text": "hello"},
+        )
+    )
+
+    assert payload["status"] == "completed"
+    assert payload["output"]["echoed"] == "hello"
+    assert payload["diagnostics"] == []
+
+
 def test_workflow_surface_runs_deployment_with_bound_reducer_dependency() -> None:
     artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_reducer")
     artifact_store.save_artifact(_custom_reducer_artifact())
@@ -325,6 +358,20 @@ def _echo_artifact() -> WorkflowArtifact:
                 kind="node_spec",
             )
         },
+    )
+
+
+def _logical_echo_artifact() -> WorkflowArtifact:
+    artifact = _echo_artifact()
+    plan = dict(artifact.plan)
+    nodes = [dict(node) for node in plan["nodes"]]
+    nodes[0]["node"] = "demo.echo_tool"
+    plan["nodes"] = nodes
+    return artifact.model_copy(
+        update={
+            "id": "logical_echo",
+            "plan": plan,
+        }
     )
 
 
