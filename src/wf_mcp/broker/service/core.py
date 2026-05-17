@@ -213,7 +213,7 @@ class WfMcpService:
     def list_sources(self) -> list[dict[str, Any]]:
         """Return every capability source with the names it currently owns."""
         return [
-            source.as_inventory()
+            source.as_inventory().model_dump(mode="json")
             for source in sorted(
                 self.capability_sources.values(),
                 key=lambda source: source.id,

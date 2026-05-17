@@ -191,6 +191,9 @@ The code now has the first capability-source layer in place.
 
 - `wf_platform.CapabilitySource` owns source metadata, visibility, permissions, and
   capability buckets.
+- `CapabilitySource` is the mutable runtime registry object; typed
+  `SourceStatus` and `SourceInventory` snapshots are the serializable domain
+  projections used at boundaries such as `list_sources()`.
 - `WfMcpService.capability_sources` is the canonical in-memory registry.
 - Planner node lookup reads `CapabilitySource.capabilities.node_specs`
   directly; the old `SpecSource` compatibility layer has been removed.
