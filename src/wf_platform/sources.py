@@ -55,6 +55,14 @@ class NodeSpecInventory(BaseModel):
     accepts_context: bool
 
 
+class ReducerInventory(BaseModel):
+    """Serializable public contract for one pure reducer."""
+
+    name: str
+    description: str | None = None
+    config_schema: JsonObject
+
+
 class SourceCapabilityInventory(BaseModel):
     """Serializable names owned by one source, grouped by capability kind."""
 
@@ -62,6 +70,7 @@ class SourceCapabilityInventory(BaseModel):
     node_specs: tuple[str, ...] = ()
     node_spec_details: tuple[NodeSpecInventory, ...] = ()
     reducers: tuple[str, ...] = ()
+    reducer_details: tuple[ReducerInventory, ...] = ()
     prompts: tuple[str, ...] = ()
     resources: tuple[str, ...] = ()
 
@@ -148,6 +157,17 @@ class CapabilitySource:
                     )
                 ),
                 reducers=tuple(sorted(self.capabilities.reducers)),
+                reducer_details=tuple(
+                    ReducerInventory(
+                        name=reducer.name,
+                        description=reducer.description,
+                        config_schema=reducer.config_schema,
+                    )
+                    for reducer in sorted(
+                        self.capabilities.reducers.values(),
+                        key=lambda reducer: reducer.name,
+                    )
+                ),
                 prompts=tuple(sorted(self.capabilities.prompts)),
                 resources=tuple(sorted(self.capabilities.resources)),
             ),

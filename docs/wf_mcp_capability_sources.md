@@ -198,6 +198,9 @@ The code now has the first capability-source layer in place.
   Python callables. Inventory exposes `NodeSpecInventory` contracts instead:
   names, descriptions, outcomes, schemas, and execution flags, but never the
   wrapped function object itself.
+- Reducer inventory follows the same rule: executable reducer definitions stay
+  private, while `ReducerInventory` exposes only reducer names, descriptions,
+  and config schemas.
 - `WfMcpService.capability_sources` is the canonical in-memory registry.
 - Planner node lookup reads `CapabilitySource.capabilities.node_specs`
   directly; the old `SpecSource` compatibility layer has been removed.
