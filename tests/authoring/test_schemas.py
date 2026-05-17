@@ -46,7 +46,7 @@ def test_builder_accepts_typeddict_for_json_schema_refs() -> None:
     assert workflow.input_schema.properties["text"]["type"] == "string"
 
 
-def test_state_basemodel_can_declare_merge_strategy_with_annotated_metadata() -> None:
+def test_state_basemodel_can_declare_reducer_with_annotated_metadata() -> None:
     builder = WorkflowBuilder(
         name="state_metadata_demo",
         input_schema=WorkflowInput,
@@ -58,7 +58,7 @@ def test_state_basemodel_can_declare_merge_strategy_with_annotated_metadata() ->
     workflow = builder.compile()
 
     assert workflow.state_schema.fields["items"].type == "array"
-    assert workflow.state_schema.fields["items"].merge_strategy == "append"
+    assert workflow.state_schema.fields["items"].reducer == "wf.std.append"
 
 
 def test_state_basemodel_seeds_safe_initial_defaults() -> None:
@@ -96,5 +96,5 @@ def test_nested_state_basemodel_projects_parent_and_child_paths() -> None:
     assert workflow.state_schema.fields["person"].type == "object"
     assert workflow.state_schema.fields["person.name"].type == "string"
     assert workflow.state_schema.fields["person.tags"].type == "array"
-    assert workflow.state_schema.fields["person"].merge_strategy == "replace"
-    assert workflow.state_schema.fields["person.tags"].merge_strategy == "append"
+    assert workflow.state_schema.fields["person"].reducer == "wf.std.replace"
+    assert workflow.state_schema.fields["person.tags"].reducer == "wf.std.append"

@@ -111,7 +111,7 @@ class UnsophisticatedPool(TypedDict):
 class Storage(BaseModel):
     "i NEED to do this?"
 
-    storage: Annotated[list[Entity], state_field(merge_strategy="append")] = Field(
+    storage: Annotated[list[Entity], state_field(reducer="wf.std.append")] = Field(
         default_factory=list
     )  # add!
 
@@ -125,7 +125,9 @@ class PartialRates(SophisticatedRates, total=False):
 
 
 class Rates(BaseModel):
-    rates: Annotated[PartialRates, state_field(merge_strategy="merge_object")]  # or_!
+    rates: Annotated[
+        PartialRates, state_field(reducer="wf.std.merge_object")
+    ]  # or_!
 
 
 class CurrentPools(BaseModel):

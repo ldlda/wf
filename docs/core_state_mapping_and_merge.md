@@ -145,9 +145,9 @@ internal representation flat:
 
 ```python
 fields = {
-    "person.name": StateField(type="string", merge_strategy="replace"),
-    "person.tags": StateField(type="array", merge_strategy="append"),
-    "profile": StateField(type="object", merge_strategy="merge_object"),
+    "person.name": StateField(type="string", reducer="wf.std.replace"),
+    "person.tags": StateField(type="array", reducer="wf.std.append"),
+    "profile": StateField(type="object", reducer="wf.std.merge_object"),
 }
 ```
 
@@ -174,13 +174,13 @@ today.
 
 ### Built-in strategies
 
-Existing built-ins remain distinct:
+Existing built-in reducers remain distinct:
 
-- `replace`
-- `append`
-- `merge_object`
+- `wf.std.replace`
+- `wf.std.append`
+- `wf.std.merge_object`
 
-`merge_object` means shallow object merge at the exact destination path, similar
+`wf.std.merge_object` means shallow object merge at the exact destination path, similar
 to `dict.update` or `operator.or_`. It is not a recursive deep merge.
 
 If recursive merge is ever needed, it should be explicit rather than hidden
@@ -188,16 +188,15 @@ inside `merge_object`.
 
 ## Future Reducers
 
-Custom reducers should become a future capability family, similar to reusable
-node specs:
+Reducers are a capability family, similar to reusable node specs:
 
 - named
 - source-owned
 - inspectable
 - dependency-trackable
 
-State fields should reference reducers declaratively. Workflow artifacts should
-not embed arbitrary Python callables.
+State fields reference reducers declaratively. Workflow artifacts do not embed
+arbitrary Python callables.
 
 Reducers should be pure:
 
@@ -240,9 +239,17 @@ Implemented in core:
 
 ### Phase 3: Reducer capabilities
 
-- design source-owned reducer specs
-- add reducer dependency references to state metadata
-- resolve pure reducers through runtime/deployment registries
+Implemented in core:
+
+- state metadata references named reducers instead of merge strategies
+- built-ins are registered as `wf.std.replace`, `wf.std.append`, and
+  `wf.std.merge_object`
+- runtime resolves reducer names before state writes
+
+Still future:
+
+- source-owned reducer specs beyond the built-ins
+- reducer dependency references at deployment/platform level
 
 ### Phase 4: Core features that depend on this foundation
 

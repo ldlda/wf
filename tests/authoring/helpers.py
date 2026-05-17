@@ -41,7 +41,7 @@ class AutoBindState(BaseModel):
 
 
 class AppendState(BaseModel):
-    items: Annotated[list[str], state_field(merge_strategy="append")] = Field(
+    items: Annotated[list[str], state_field(reducer="wf.std.append")] = Field(
         default_factory=list
     )
 
@@ -54,7 +54,7 @@ class DefaultedState(BaseModel):
 
 class NestedPersonState(BaseModel):
     name: str
-    tags: Annotated[list[str], state_field(merge_strategy="append")] = Field(
+    tags: Annotated[list[str], state_field(reducer="wf.std.append")] = Field(
         default_factory=list
     )
 

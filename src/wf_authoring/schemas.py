@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Iterator, Literal
+from typing import Any, Iterator
 
 from pydantic import BaseModel, TypeAdapter
 
@@ -15,17 +15,17 @@ StateSchemaLike = StateSchema | type[BaseModel] | type[Any] | dict[str, Any]
 class StateFieldMetadata:
     """Authoring metadata attached to BaseModel state fields."""
 
-    merge_strategy: Literal["replace", "append", "merge_object"] = "replace"
+    reducer: str = "wf.std.replace"
     trace: bool = True
 
 
 def state_field(
     *,
-    merge_strategy: Literal["replace", "append", "merge_object"] = "replace",
+    reducer: str = "wf.std.replace",
     trace: bool = True,
 ) -> StateFieldMetadata:
     """Declare workflow state behavior for an Annotated BaseModel field."""
-    return StateFieldMetadata(merge_strategy=merge_strategy, trace=trace)
+    return StateFieldMetadata(reducer=reducer, trace=trace)
 
 
 def schema_ref_from(value: SchemaLike) -> SchemaRef:
@@ -51,9 +51,7 @@ def state_schema_from(value: StateSchemaLike) -> StateSchema:
     fields = {
         path: StateField(
             type=_state_field_type(property_schema),
-            merge_strategy=metadata_by_name.get(
-                path, StateFieldMetadata()
-            ).merge_strategy,
+            reducer=metadata_by_name.get(path, StateFieldMetadata()).reducer,
             trace=metadata_by_name.get(path, StateFieldMetadata()).trace,
             default=_state_field_default(value, path, property_schema),
         )

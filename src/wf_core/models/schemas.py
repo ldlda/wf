@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -20,7 +20,7 @@ class StateField(BaseModel):
     """Declared state path plus its runtime merge behavior."""
 
     type: str
-    merge_strategy: Literal["replace", "append", "merge_object"] = "replace"
+    reducer: str = "wf.std.replace"
     trace: bool = True
     default: Any = None
 

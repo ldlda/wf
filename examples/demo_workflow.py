@@ -24,15 +24,15 @@ def build_demo_workflow() -> Workflow:
                 "fields": {
                     "folder_id": {"type": "string"},
                     "should_email": {"type": "boolean"},
-                    "documents": {"type": "array", "merge_strategy": "replace"},
-                    "item_summaries": {"type": "array", "merge_strategy": "append"},
-                    "summary": {"type": "string", "merge_strategy": "replace"},
-                    "approved": {"type": "boolean", "merge_strategy": "replace"},
+                    "documents": {"type": "array", "reducer": "wf.std.replace"},
+                    "item_summaries": {"type": "array", "reducer": "wf.std.append"},
+                    "summary": {"type": "string", "reducer": "wf.std.replace"},
+                    "approved": {"type": "boolean", "reducer": "wf.std.replace"},
                     "approval_comment": {
                         "type": "string",
-                        "merge_strategy": "replace",
+                        "reducer": "wf.std.replace",
                     },
-                    "email_status": {"type": "string", "merge_strategy": "replace"},
+                    "email_status": {"type": "string", "reducer": "wf.std.replace"},
                 }
             },
             "output_schema": {

@@ -12,7 +12,7 @@ from wf_core.paths import (
     set_nested_value,
     split_graph_path,
 )
-from wf_core.runtime.ops.merges import apply_builtin_merge
+from wf_core.runtime.ops.merges import apply_reducer
 
 
 def apply_output_map(
@@ -73,11 +73,11 @@ def write_state_value(
 
     declared_path = ".".join(parts)
     declared_field = workflow.state_schema.fields.get(declared_path)
-    merge_strategy = declared_field.merge_strategy if declared_field else "replace"
+    reducer_name = declared_field.reducer if declared_field else "wf.std.replace"
     key_path = parts
     current_value = get_nested_value(state, key_path)
-    merged_value = apply_builtin_merge(
-        strategy=merge_strategy,
+    merged_value = apply_reducer(
+        reducer_name=reducer_name,
         current_value=current_value,
         incoming_value=value,
         destination_path=destination_path,
