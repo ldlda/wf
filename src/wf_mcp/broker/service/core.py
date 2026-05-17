@@ -7,17 +7,23 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from wf_authoring import NodeReturn, NodeSpec
 from wf_artifacts import (
     FileWorkflowArtifactStore,
     WorkflowArtifact,
     WorkflowArtifactCatalogEntry,
-    WorkflowDeployment,
     WorkflowArtifactStore,
+    WorkflowDeployment,
     artifact_catalog_entry,
 )
+from wf_authoring import NodeReturn, NodeSpec
 from wf_core import NodeUse, Workflow, execute_workflow_async
 
+from wf_platform import (
+    CapabilityBuckets,
+    CapabilitySource,
+    SourcePermissions,
+    SourceVisibility,
+)
 from ...connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from ...events import EventBus, McpEvent, make_event
 from ...models import (
@@ -35,17 +41,11 @@ from ...shared.names import RESERVED_CONNECTION_IDS
 from ...storage import Store
 from ...workflow.wrappers import _model_from_schema
 from ...workflow_surface.runtime_dependencies import resolve_runtime_dependencies
+from ..admin_capabilities import admin_source
 from ..catalog import CombinedCatalog, snapshot_from_specs
 from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
-from ..admin_capabilities import admin_source
 from .adapters import require_adapter
 from .builtins import builtin_sources
-from .capability_sources import (
-    CapabilityBuckets,
-    CapabilitySource,
-    SourcePermissions,
-    SourceVisibility,
-)
 from .specs import get_qualified_spec, qualify_spec
 
 

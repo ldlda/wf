@@ -4,7 +4,6 @@ from typing import TYPE_CHECKING, Any, Protocol
 
 from pydantic import BaseModel, Field
 
-from wf_core.runtime.ops.merges import DEFAULT_REDUCER_DEFINITIONS
 from wf_authoring import (
     NodeReturn,
     NodeSpec,
@@ -19,21 +18,22 @@ from wf_authoring import (
     last_item_or_none,
     length,
     node,
-    pick_path,
     pick_key,
+    pick_path,
     project_fields,
     rename_fields,
     runtime_error,
     truthy,
 )
+from wf_core.runtime.ops.merges import DEFAULT_REDUCER_DEFINITIONS
 
-from .capability_sources import (
+from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
     SourcePermissions,
     SourceVisibility,
 )
-from .specs import qualify_spec
+from wf_mcp.broker.service.specs import qualify_spec
 
 if TYPE_CHECKING:
     from wf_core import ReducerSpec

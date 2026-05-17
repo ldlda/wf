@@ -6,14 +6,14 @@ import shutil
 from wf_authoring import NodeSpec
 from wf_core import END, NodeUse, RunStatus
 from wf_mcp.broker import WfMcpService
-from wf_mcp.broker.service.capability_sources import (
+from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
+from wf_mcp.shared.errors import error_payload
+from wf_mcp.storage import FileStore
+from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
     SourceVisibility,
 )
-from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
-from wf_mcp.shared.errors import error_payload
-from wf_mcp.storage import FileStore
 
 from .test_support import (
     FailingDiscoveryAdapter,

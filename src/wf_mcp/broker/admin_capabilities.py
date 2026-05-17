@@ -2,13 +2,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .service.capability_sources import (
+from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
     SourcePermissions,
     SourceVisibility,
 )
-
 
 ADMIN_SOURCE_ID = "wf.admin"
 

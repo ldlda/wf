@@ -13,16 +13,15 @@ from wf_artifacts import (
 )
 from wf_authoring import node, reducer
 from wf_mcp.broker import WfMcpService
-from wf_mcp.broker.service.capability_sources import (
+from wf_mcp.models import ConnectionConfig, RawWorkflowPlan
+from wf_mcp.storage import FileStore
+from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
+from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
     SourcePermissions,
     SourceVisibility,
 )
-from wf_mcp.models import ConnectionConfig
-from wf_mcp.models import RawWorkflowPlan
-from wf_mcp.storage import FileStore
-from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 
 from .test_support import echo_tool, local_temp_root
 

@@ -6,9 +6,7 @@ from typing import Any
 from wf_artifacts import RequiredCapability, WorkflowArtifact, WorkflowDeployment
 from wf_authoring import AsyncRegistryHandler, NodeSpec, build_async_registry
 from wf_core.runtime.ops.merges import ReducerDefinition
-
-from wf_mcp.broker.service.capability_sources import CapabilitySource
-
+from wf_platform import CapabilitySource
 
 @dataclass(frozen=True, slots=True)
 class RuntimeDependencies:
