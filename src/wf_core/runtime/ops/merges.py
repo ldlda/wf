@@ -4,16 +4,22 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
+from wf_core.models.reducers import ReducerRef, ReducerSpec
+from wf_core.runtime.ops.schemas import validate_payload_against_schema
 
-Reducer = Callable[[Any, Any], Any]
+Reducer = Callable[[Any, Any, Mapping[str, Any]], Any]
 
 
-def replace_reducer(_current_value: Any, incoming_value: Any) -> Any:
+def replace_reducer(
+    _current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
+) -> Any:
     """Replace the current state value with the incoming value."""
     return incoming_value
 
 
-def append_reducer(current_value: Any, incoming_value: Any) -> Any:
+def append_reducer(
+    current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
+) -> Any:
     """Append one value or many values into a list-valued state path."""
     if current_value is None:
         return (
@@ -28,7 +34,9 @@ def append_reducer(current_value: Any, incoming_value: Any) -> Any:
     )
 
 
-def merge_object_reducer(current_value: Any, incoming_value: Any) -> Any:
+def merge_object_reducer(
+    current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
+) -> Any:
     """Shallow-merge object values at one exact state path."""
     if current_value is None:
         if not isinstance(incoming_value, dict):
@@ -39,7 +47,9 @@ def merge_object_reducer(current_value: Any, incoming_value: Any) -> Any:
     return current_value | incoming_value
 
 
-def set_union_reducer(current_value: Any, incoming_value: Any) -> Any:
+def set_union_reducer(
+    current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
+) -> Any:
     """Merge list values while preserving stable first-seen order."""
     if current_value is None:
         current_items: list[Any] = []
@@ -58,7 +68,9 @@ def set_union_reducer(current_value: Any, incoming_value: Any) -> Any:
     return merged
 
 
-def max_reducer(current_value: Any, incoming_value: Any) -> Any:
+def max_reducer(
+    current_value: Any, incoming_value: Any, _config: Mapping[str, Any]
+) -> Any:
     """Keep the larger of the current and incoming values."""
     return (
         incoming_value if current_value is None else max(current_value, incoming_value)
@@ -73,20 +85,33 @@ DEFAULT_REDUCERS: Mapping[str, Reducer] = {
     "wf.std.max": max_reducer,
 }
 
+DEFAULT_REDUCER_SPECS: Mapping[str, ReducerSpec] = {
+    name: ReducerSpec(name=name) for name in DEFAULT_REDUCERS
+}
+
 
 def apply_reducer(
     *,
-    reducer_name: str,
+    reducer: ReducerRef,
     current_value: Any,
     incoming_value: Any,
     destination_path: str,
     reducers: Mapping[str, Reducer] = DEFAULT_REDUCERS,
+    reducer_specs: Mapping[str, ReducerSpec] = DEFAULT_REDUCER_SPECS,
 ) -> Any:
     """Apply one named pure reducer to a state write."""
-    reducer = reducers.get(reducer_name)
-    if reducer is None:
-        raise WorkflowExecutionError(f"unknown reducer {reducer_name!r}")
+    reducer_fn = reducers.get(reducer.name)
+    if reducer_fn is None:
+        raise WorkflowExecutionError(f"unknown reducer {reducer.name!r}")
+    spec = reducer_specs.get(reducer.name)
+    if spec is None:
+        raise WorkflowExecutionError(f"unknown reducer spec {reducer.name!r}")
+    validate_payload_against_schema(
+        spec.config_schema,
+        reducer.config,
+        f"reducer config for {reducer.name!r}",
+    )
     try:
-        return reducer(current_value, incoming_value)
+        return reducer_fn(current_value, incoming_value, reducer.config)
     except TypeError as exc:
         raise WorkflowExecutionError(f"{exc} at {destination_path!r}") from exc

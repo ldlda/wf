@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from wf_core.models.reducers import ReducerRef
 
 
 class SchemaRef(BaseModel):
@@ -20,9 +22,18 @@ class StateField(BaseModel):
     """Declared state path plus its runtime merge behavior."""
 
     type: str
-    reducer: str = "wf.std.replace"
+    reducer: ReducerRef = Field(
+        default_factory=lambda: ReducerRef(name="wf.std.replace")
+    )
     trace: bool = True
     default: Any = None
+
+    @field_validator("reducer", mode="before")
+    @classmethod
+    def _coerce_reducer(cls, value: object) -> object:
+        if isinstance(value, str):
+            return {"name": value}
+        return value
 
 
 class StateSchema(BaseModel):

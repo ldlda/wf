@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from wf_core import Workflow
+from wf_core import ReducerRef, Workflow
 
 from .models import ArtifactKind, JsonObject, RequiredCapability, WorkflowArtifact
 
@@ -86,11 +86,20 @@ def _required_reducers_from_plan(plan: JsonObject) -> dict[str, RequiredCapabili
     for field in fields.values():
         if not isinstance(field, dict):
             continue
-        reducer = field.get("reducer", "wf.std.replace")
-        if not isinstance(reducer, str) or "." not in reducer:
+        reducer_payload = field.get("reducer", "wf.std.replace")
+        if isinstance(reducer_payload, str):
+            reducer = ReducerRef(name=reducer_payload)
+        else:
+            try:
+                reducer = ReducerRef.model_validate(reducer_payload)
+            except ValueError:
+                continue
+        if "." not in reducer.name:
             continue
-        logical_source, _, capability_name = reducer.rpartition(".")
-        requirements[reducer] = RequiredCapability(
+        if "." not in reducer.name:
+            continue
+        logical_source, _, capability_name = reducer.name.rpartition(".")
+        requirements[reducer.name] = RequiredCapability(
             logical_source=logical_source,
             capability_name=capability_name,
             kind="reducer",

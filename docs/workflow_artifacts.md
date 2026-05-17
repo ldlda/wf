@@ -499,7 +499,8 @@ Saved workflow execution eventually needs first-class runtime support for:
 - child final outcome mapping to parent node outcome
 - dependency checks before execution
 - reducer capabilities referenced by declared workflow state fields are saved as
-  direct artifact dependencies just like node specs or tools
+  direct artifact dependencies just like node specs or tools; reducer config is
+  part of the state field contract, while the dependency key is the reducer name
 
 The first implementation should prefer artifact validation and dependency
 diagnostics before attempting persistent nested resume.

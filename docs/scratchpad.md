@@ -416,7 +416,7 @@ At minimum each declared field may carry:
 ```text
 StateField
   .type
-  .reducer            // wf.std.replace | wf.std.append | wf.std.merge_object | ...
+  .reducer            // "wf.std.replace" or { name, config }
   .trace?             // whether to include in trace by default
 ```
 

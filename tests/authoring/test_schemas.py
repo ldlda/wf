@@ -58,7 +58,7 @@ def test_state_basemodel_can_declare_reducer_with_annotated_metadata() -> None:
     workflow = builder.compile()
 
     assert workflow.state_schema.fields["items"].type == "array"
-    assert workflow.state_schema.fields["items"].reducer == "wf.std.append"
+    assert workflow.state_schema.fields["items"].reducer.name == "wf.std.append"
 
 
 def test_state_basemodel_seeds_safe_initial_defaults() -> None:
@@ -96,5 +96,5 @@ def test_nested_state_basemodel_projects_parent_and_child_paths() -> None:
     assert workflow.state_schema.fields["person"].type == "object"
     assert workflow.state_schema.fields["person.name"].type == "string"
     assert workflow.state_schema.fields["person.tags"].type == "array"
-    assert workflow.state_schema.fields["person"].reducer == "wf.std.replace"
-    assert workflow.state_schema.fields["person.tags"].reducer == "wf.std.append"
+    assert workflow.state_schema.fields["person"].reducer.name == "wf.std.replace"
+    assert workflow.state_schema.fields["person.tags"].reducer.name == "wf.std.append"

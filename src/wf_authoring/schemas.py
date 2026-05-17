@@ -5,7 +5,7 @@ from typing import Any, Iterator
 
 from pydantic import BaseModel, TypeAdapter
 
-from wf_core import SchemaRef, StateField, StateSchema
+from wf_core import ReducerRef, SchemaRef, StateField, StateSchema
 
 SchemaLike = SchemaRef | type[BaseModel] | type[Any] | dict[str, Any]
 StateSchemaLike = StateSchema | type[BaseModel] | type[Any] | dict[str, Any]
@@ -51,7 +51,9 @@ def state_schema_from(value: StateSchemaLike) -> StateSchema:
     fields = {
         path: StateField(
             type=_state_field_type(property_schema),
-            reducer=metadata_by_name.get(path, StateFieldMetadata()).reducer,
+            reducer=ReducerRef(
+                name=metadata_by_name.get(path, StateFieldMetadata()).reducer
+            ),
             trace=metadata_by_name.get(path, StateFieldMetadata()).trace,
             default=_state_field_default(value, path, property_schema),
         )

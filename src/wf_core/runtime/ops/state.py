@@ -4,6 +4,7 @@ from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.local_paths import LocalPathError, get_local_value, has_overlapping_paths
+from wf_core.models.reducers import ReducerRef
 from wf_core.models.steps import NodeUse
 from wf_core.models.workflow import Workflow
 from wf_core.paths import (
@@ -73,11 +74,11 @@ def write_state_value(
 
     declared_path = ".".join(parts)
     declared_field = workflow.state_schema.fields.get(declared_path)
-    reducer_name = declared_field.reducer if declared_field else "wf.std.replace"
+    reducer = declared_field.reducer if declared_field else ReducerRef(name="wf.std.replace")
     key_path = parts
     current_value = get_nested_value(state, key_path)
     merged_value = apply_reducer(
-        reducer_name=reducer_name,
+        reducer=reducer,
         current_value=current_value,
         incoming_value=value,
         destination_path=destination_path,
