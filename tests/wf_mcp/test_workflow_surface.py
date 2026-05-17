@@ -231,6 +231,57 @@ def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency() -> N
     assert payload["diagnostics"] == []
 
 
+def test_workflow_surface_runs_artifact_created_from_concrete_node_ref() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_created_bound_node"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_created_bound_node_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    asyncio.run(
+        handlers.create_artifact_from_plan(
+            artifact_id="created_echo",
+            version=1,
+            title="Created Echo",
+            plan=_echo_artifact().plan,
+            outcomes=("completed",),
+            source_bindings={"demo": "demo.personal"},
+        )
+    )
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="created_echo.personal",
+            artifact_id="created_echo",
+            artifact_version=1,
+            bindings={
+                "demo": "demo.personal",
+                "wf.std": "wf.std",
+            },
+        )
+    )
+
+    payload = asyncio.run(
+        handlers.run_deployment(
+            deployment_id="created_echo.personal",
+            workflow_input={"text": "hello"},
+        )
+    )
+    artifact = artifact_store.get_artifact("created_echo", 1)
+
+    assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
+    assert artifact.required_capabilities["demo.echo_tool"].logical_source == "demo"
+    assert payload["status"] == "completed"
+    assert payload["output"]["echoed"] == "hello"
+    assert payload["diagnostics"] == []
+
+
 def test_workflow_surface_runs_deployment_with_bound_reducer_dependency() -> None:
     artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_reducer")
     artifact_store.save_artifact(_custom_reducer_artifact())
