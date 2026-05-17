@@ -251,7 +251,12 @@ class WorkflowSurfaceHandlers:
             )
 
         plan = _raw_plan_from_artifact(artifact)
-        run = await self.service.run_workflow_from_plan(plan, workflow_input)
+        run = await self.service.run_workflow_from_plan(
+            plan,
+            workflow_input,
+            deployment=deployment,
+            artifact=artifact,
+        )
         return _run_payload(
             deployment=deployment,
             artifact=artifact,

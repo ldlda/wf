@@ -121,6 +121,11 @@ def builtin_reducers() -> dict[str, ReducerSpec]:
     }
 
 
+def builtin_reducer_definitions():
+    """Return executable built-in reducers for trusted runtime dependency wiring."""
+    return dict(DEFAULT_REDUCER_DEFINITIONS)
+
+
 def mcp_specs(service: ToolCaller) -> dict[str, NodeSpec[Any, Any]]:
     """Return service-bound MCP utility specs available to raw plans."""
 
@@ -153,6 +158,7 @@ def builtin_sources(service: ToolCaller) -> dict[str, CapabilitySource]:
             capabilities=CapabilityBuckets(
                 node_specs=builtin_specs(),
                 reducers=builtin_reducers(),
+                reducer_definitions=builtin_reducer_definitions(),
             ),
             visibility=SourceVisibility(
                 planner=True,

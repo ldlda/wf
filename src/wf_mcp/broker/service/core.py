@@ -7,11 +7,12 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from wf_authoring import NodeReturn, NodeSpec, build_async_registry
+from wf_authoring import NodeReturn, NodeSpec
 from wf_artifacts import (
     FileWorkflowArtifactStore,
     WorkflowArtifact,
     WorkflowArtifactCatalogEntry,
+    WorkflowDeployment,
     WorkflowArtifactStore,
     artifact_catalog_entry,
 )
@@ -33,6 +34,7 @@ from ...shared.errors import error_payload
 from ...shared.names import RESERVED_CONNECTION_IDS
 from ...storage import Store
 from ...workflow.wrappers import _model_from_schema
+from ...workflow_surface.runtime_dependencies import resolve_runtime_dependencies
 from ..catalog import CombinedCatalog, snapshot_from_specs
 from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
 from ..admin_capabilities import admin_source
@@ -545,6 +547,8 @@ class WfMcpService:
         self,
         plan: RawWorkflowPlan,
         workflow_input: dict[str, Any],
+        deployment: WorkflowDeployment | None = None,
+        artifact: WorkflowArtifact | None = None,
     ):
         self._record_event(
             make_event(
@@ -554,13 +558,30 @@ class WfMcpService:
             )
         )
         workflow = self.compile_plan(plan)
-        specs = [
-            self._get_qualified_spec(node.node)
-            for node in workflow.nodes
-            if isinstance(node, NodeUse)
+        plan_node_names = [
+            node.node for node in workflow.nodes if isinstance(node, NodeUse)
         ]
-        registry = build_async_registry(*specs)
-        run = await execute_workflow_async(workflow, workflow_input, registry)
+        runtime_artifact = artifact or WorkflowArtifact(
+            id=plan.name,
+            version=1,
+            title=plan.name,
+            input_schema=plan.input_schema,
+            output_schema=plan.output_schema,
+            outcomes=("completed",),
+            plan=plan.model_dump(mode="json", by_alias=True),
+        )
+        dependencies = resolve_runtime_dependencies(
+            artifact=runtime_artifact,
+            deployment=deployment,
+            sources=self.capability_sources,
+            plan_node_names=plan_node_names,
+        )
+        run = await execute_workflow_async(
+            workflow,
+            workflow_input,
+            dependencies.node_registry,
+            reducers=dependencies.reducers,
+        )
         self._record_event(
             make_event(
                 "workflow_run_completed",

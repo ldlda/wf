@@ -502,6 +502,19 @@ Saved workflow execution eventually needs first-class runtime support for:
   direct artifact dependencies just like node specs or tools; reducer config is
   part of the state field contract, while the dependency key is the reducer name
 
+Runtime execution must resolve reducer dependencies, not just validate that they
+exist. A deployment binding maps the artifact's logical reducer source, such as
+`custom`, to a concrete source, such as `custom.default`. The runtime registers
+the concrete `ReducerDefinition` under the logical reducer name used in the
+saved workflow state schema, such as `custom.multiply`. This keeps artifact
+plans stable while allowing deployments to choose concrete accounts or local
+reducer packages.
+
+Node specs are less abstract today: saved raw workflow plans still contain
+concrete node spec names such as `demo.personal.echo_tool`. Rebinding node specs
+through deployment aliases is a later migration. Reducers are the first runtime
+dependency family to use deployment-bound logical names end-to-end.
+
 The first implementation should prefer artifact validation and dependency
 diagnostics before attempting persistent nested resume.
 

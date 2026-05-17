@@ -3,19 +3,46 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from pydantic import BaseModel
+
 from wf_artifacts import (
     FileWorkflowArtifactStore,
     RequiredCapability,
     WorkflowArtifact,
     WorkflowDeployment,
 )
+from wf_authoring import node, reducer
 from wf_mcp.broker import WfMcpService
+from wf_mcp.broker.service.capability_sources import (
+    CapabilityBuckets,
+    CapabilitySource,
+    SourcePermissions,
+    SourceVisibility,
+)
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.models import RawWorkflowPlan
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 
 from .test_support import echo_tool, local_temp_root
+
+
+class AmountInput(BaseModel):
+    amount: int
+
+
+class AmountOutput(BaseModel):
+    amount: int
+
+
+@node()
+async def amount_tool(payload: AmountInput) -> AmountOutput:
+    return AmountOutput(amount=payload.amount)
+
+
+@reducer(name="custom.default.multiply")
+def multiply(current: int | None, incoming: int) -> int:
+    return (current or 1) * incoming
 
 
 def test_workflow_surface_lists_artifact_catalog_entries() -> None:
@@ -147,6 +174,56 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     assert payload["diagnostics"] == []
 
 
+def test_workflow_surface_runs_deployment_with_bound_reducer_dependency() -> None:
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_reducer")
+    artifact_store.save_artifact(_custom_reducer_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="multiply.personal",
+            artifact_id="multiply",
+            artifact_version=1,
+            bindings={
+                "demo": "demo.personal",
+                "custom": "custom.default",
+            },
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_reducer_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", amount_tool)
+    service.register_capability_source(
+        CapabilitySource(
+            id="custom.default",
+            kind="system",
+            capabilities=CapabilityBuckets(
+                reducers={multiply.definition.spec.name: multiply.definition.spec},
+                reducer_definitions={
+                    multiply.definition.spec.name: multiply.definition,
+                },
+            ),
+            visibility=SourceVisibility(planner=True),
+            permissions=SourcePermissions(safe_for_workflow=True),
+        )
+    )
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.run_deployment(
+            deployment_id="multiply.personal",
+            workflow_input={"total": 2, "amount": 3},
+        )
+    )
+
+    assert payload["status"] == "completed"
+    assert payload["output"]["total"] == 6
+    assert payload["diagnostics"] == []
+
+
 def test_workflow_surface_calls_saved_wrapper_artifact() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "surface_wrapper_call"
@@ -247,5 +324,64 @@ def _echo_artifact() -> WorkflowArtifact:
                 capability_name="echo_tool",
                 kind="node_spec",
             )
+        },
+    )
+
+
+def _custom_reducer_artifact() -> WorkflowArtifact:
+    plan: dict[str, Any] = {
+        "name": "multiply",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "total": {"type": "integer"},
+                "amount": {"type": "integer"},
+            },
+            "required": ["total", "amount"],
+        },
+        "state_schema": {
+            "fields": {
+                "total": {
+                    "type": "integer",
+                    "reducer": "custom.multiply",
+                }
+            }
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {"total": {"type": "integer"}},
+            "required": ["total"],
+        },
+        "start": "amount",
+        "nodes": [
+            {
+                "id": "amount",
+                "type": "node",
+                "node": "demo.personal.amount_tool",
+                "in_map": {"input.amount": "amount"},
+                "out_map": {"amount": "state.total"},
+            }
+        ],
+        "edges": [{"from": "amount", "outcome": "ok", "to": "__end__"}],
+    }
+    return WorkflowArtifact(
+        id="multiply",
+        version=1,
+        title="Multiply",
+        input_schema=plan["input_schema"],
+        output_schema=plan["output_schema"],
+        outcomes=("completed",),
+        plan=plan,
+        required_capabilities={
+            "demo.amount_tool": RequiredCapability(
+                logical_source="demo",
+                capability_name="amount_tool",
+                kind="node_spec",
+            ),
+            "custom.multiply": RequiredCapability(
+                logical_source="custom",
+                capability_name="multiply",
+                kind="reducer",
+            ),
         },
     )

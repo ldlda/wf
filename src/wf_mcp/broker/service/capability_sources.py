@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from wf_authoring import NodeSpec
 from wf_core import ReducerSpec
+from wf_core.runtime.ops.merges import ReducerDefinition
 
 SourceKind = Literal["system", "connection"]
 
@@ -29,6 +30,7 @@ class CapabilityBuckets:
     tools: dict[str, Any] = field(default_factory=dict)
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
     reducers: dict[str, ReducerSpec] = field(default_factory=dict)
+    reducer_definitions: dict[str, ReducerDefinition] = field(default_factory=dict)
     prompts: dict[str, Any] = field(default_factory=dict)
     resources: dict[str, Any] = field(default_factory=dict)
 
