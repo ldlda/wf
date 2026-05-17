@@ -41,6 +41,24 @@ def test_builder_auto_binds_matching_node_inputs_and_outputs_to_state() -> None:
     assert run.state["count"] == 2
 
 
+def test_builder_preserves_explicit_nested_node_local_maps() -> None:
+    builder = WorkflowBuilder(
+        name="nested_local_maps",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    step = builder.use(
+        auto_bind_node,
+        in_map={"state.text": "payload.text"},
+        out_map={"payload.text": "state.text"},
+    )
+
+    assert step.in_map == {"state.text": "payload.text"}
+    assert step.out_map == {"payload.text": "state.text"}
+
+
 def test_builder_can_auto_id_node_uses_from_spec_name() -> None:
     builder = WorkflowBuilder(
         name="auto_id_demo",

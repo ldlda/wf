@@ -9,6 +9,7 @@ from wf_core.models.conditions import (
     PathOperand,
     VariadicCondition,
 )
+from wf_core.local_paths import LocalPathError, has_overlapping_paths, split_local_path
 from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import ConditionNode, ForeachNode, InterruptNode, NodeUse
 from wf_core.models.workflow import Workflow
@@ -38,7 +39,11 @@ def validate_node_use(
     input_root_fields = set(workflow.input_schema.properties)
 
     for source_path, destination_field in node.in_map.items():
-        if destination_field not in input_fields:
+        try:
+            destination_root = split_local_path(destination_field)[0]
+        except LocalPathError:
+            destination_root = ""
+        if destination_root not in input_fields:
             report.add(
                 ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
                 f"nodes[{index}].in_map[{source_path!r}]",
@@ -53,8 +58,19 @@ def validate_node_use(
                 "source path must start with input., state., or context. and reference a declared root field when applicable",
             )
 
+    if has_overlapping_paths(node.in_map.values()):
+        report.add(
+            ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
+            f"nodes[{index}].in_map",
+            "in_map has overlapping node-local input paths",
+        )
+
     for source_field, destination_path in node.out_map.items():
-        if source_field not in output_fields:
+        try:
+            source_root = split_local_path(source_field)[0]
+        except LocalPathError:
+            source_root = ""
+        if source_root not in output_fields:
             report.add(
                 ValidationIssueCode.INVALID_NODE_OUTPUT_FIELD,
                 f"nodes[{index}].out_map[{source_field!r}]",
@@ -66,6 +82,12 @@ def validate_node_use(
                 f"nodes[{index}].out_map[{source_field!r}]",
                 "destination path must start with state.",
             )
+    if has_overlapping_paths(node.out_map.values()):
+        report.add(
+            ValidationIssueCode.INVALID_DESTINATION_PATH,
+            f"nodes[{index}].out_map",
+            "out_map has overlapping state destination paths",
+        )
 
 
 def validate_condition_node(

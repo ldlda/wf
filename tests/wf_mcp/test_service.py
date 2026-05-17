@@ -25,7 +25,7 @@ from .test_support import (
 
 
 def _single_echo_plan(plan_name: str, node_name: str) -> RawWorkflowPlan:
-    return RawWorkflowPlan(
+    return _raw_plan(
         name=plan_name,
         input_schema={
             "type": "object",
@@ -52,6 +52,11 @@ def _single_echo_plan(plan_name: str, node_name: str) -> RawWorkflowPlan:
             {"from": "echo", "outcome": "ok", "to": END},
         ],
     )
+
+
+def _raw_plan(**payload: object) -> RawWorkflowPlan:
+    """Parse JSON-shaped workflow input through the public typed boundary."""
+    return RawWorkflowPlan.model_validate(payload)
 
 
 def test_service_builds_namespaced_catalog() -> None:
@@ -274,7 +279,7 @@ def test_service_compiles_and_runs_raw_plan() -> None:
     )
     service.register_specs("demo.personal", echo_tool, finalize_tool)
 
-    plan = RawWorkflowPlan(
+    plan = _raw_plan(
         name="demo_plan",
         input_schema={
             "type": "object",
@@ -343,7 +348,7 @@ def test_service_resolves_registered_spec_with_dotted_local_name() -> None:
     )
     service.register_specs("demo.personal", dotted_echo_tool)
 
-    plan = RawWorkflowPlan(
+    plan = _raw_plan(
         name="dotted_local_name_plan",
         input_schema={
             "type": "object",
@@ -407,7 +412,7 @@ def test_service_does_not_resolve_specs_hidden_from_planner() -> None:
         )
     )
 
-    plan = RawWorkflowPlan(
+    plan = _raw_plan(
         name="hidden_source_plan",
         input_schema={
             "type": "object",
@@ -697,7 +702,7 @@ def test_service_records_tool_call_events() -> None:
 
     asyncio.run(service.refresh_connection_catalog("demo.personal"))
 
-    plan = RawWorkflowPlan(
+    plan = _raw_plan(
         name="tool_only_plan",
         input_schema={
             "type": "object",
@@ -750,7 +755,7 @@ def test_service_can_call_upstream_tool_through_wf_mcp_system_node() -> None:
     )
     service.register_adapter("demo", FakeAdapter())
 
-    plan = RawWorkflowPlan(
+    plan = _raw_plan(
         name="system_tool_plan",
         input_schema={
             "type": "object",

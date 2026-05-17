@@ -5,6 +5,7 @@ from typing import Any, cast
 
 from wf_core.conditions import safe_resolve_path
 from wf_core.errors import WorkflowExecutionError
+from wf_core.local_paths import LocalPathError, set_local_value
 from wf_core.models.results import NodeResult
 from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import NodeUse
@@ -30,15 +31,18 @@ def _resolve_node_execution(
 ) -> tuple[dict[str, Any], RuntimeContext]:
     frame = run.current_frame()
     context_values = frame_context_values(frame)
-    resolved_input = {
-        destination_field: safe_resolve_path(
+    resolved_input: dict[str, Any] = {}
+    for source_path, destination_field in node.in_map.items():
+        value = safe_resolve_path(
             source_path,
             state=run.state,
             workflow_input=run.workflow_input,
             context=context_values,
         )
-        for source_path, destination_field in node.in_map.items()
-    }
+        try:
+            set_local_value(resolved_input, destination_field, value)
+        except LocalPathError as exc:
+            raise WorkflowExecutionError(str(exc)) from exc
     validate_payload_against_schema(
         node_def.input_schema, resolved_input, f"node input for {node.id}"
     )
