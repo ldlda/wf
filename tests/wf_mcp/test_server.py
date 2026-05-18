@@ -82,6 +82,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
                 for source in _structured(sources_result)["sources"]
             }
             assert "wf.admin" in source_ids
+            assert "wf.docs" in source_ids
             assert "wf.mcp" in source_ids
             assert "wf.std" in source_ids
 
@@ -199,6 +200,27 @@ def test_server_exposes_platform_documentation_resources() -> None:
             result = await client.read_resource("wf://docs/operator-manual")
             assert isinstance(result[0], mcp_types.TextResourceContents)
             assert "wf_mcp Operator Manual" in result[0].text
+
+    asyncio.run(run_proxy())
+
+
+def test_server_exposes_platform_documentation_prompts() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "unified_docs_prompt_store",
+        connections=[],
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(config, admin_tools=False)
+        async with client:
+            prompts = await client.list_prompts()
+            names = [prompt.name for prompt in prompts]
+            assert "wf.docs.operator_guide" in names
+
+            result = await client.get_prompt("wf.docs.operator_guide")
+            content = result.messages[0].content
+            assert isinstance(content, mcp_types.TextContent)
+            assert "wf://docs/operator-manual" in content.text
 
     asyncio.run(run_proxy())
 

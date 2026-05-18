@@ -3,6 +3,7 @@ from __future__ import annotations
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
+    DocumentationPrompt,
     DocumentationResource,
     SourceInventory,
     SourcePermissions,
@@ -66,7 +67,15 @@ def test_documentation_source_owns_provider_neutral_resources() -> None:
                 mime_type="text/markdown",
                 text="# Operator Manual",
             )
-        ]
+        ],
+        prompts=[
+            DocumentationPrompt(
+                name="wf.docs.operator_guide",
+                title="Operator Guide",
+                description="Guide a human operator to the right manuals.",
+                text="Read wf://docs/operator-manual first.",
+            )
+        ],
     )
 
     resource = source.capabilities.resources["wf.docs.operator_manual"]
@@ -75,3 +84,6 @@ def test_documentation_source_owns_provider_neutral_resources() -> None:
     assert source.visibility.mcp_client is True
     assert resource.uri == "wf://docs/operator-manual"
     assert resource.text == "# Operator Manual"
+    assert source.capabilities.prompts["wf.docs.operator_guide"].text == (
+        "Read wf://docs/operator-manual first."
+    )

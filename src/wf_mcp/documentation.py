@@ -2,7 +2,12 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from wf_platform import CapabilitySource, DocumentationResource, build_documentation_source
+from wf_platform import (
+    CapabilitySource,
+    DocumentationPrompt,
+    DocumentationResource,
+    build_documentation_source,
+)
 
 
 def build_local_documentation_source(repo_root: Path) -> CapabilitySource:
@@ -31,7 +36,42 @@ def build_local_documentation_source(repo_root: Path) -> CapabilitySource:
                 title="wf_mcp Troubleshooting",
                 description="Failure-oriented guide for discovery and deployment issues.",
             ),
-        ]
+        ],
+        prompts=[
+            DocumentationPrompt(
+                name="wf.docs.operator_guide",
+                title="wf_mcp Operator Guide",
+                description="Choose the right wf_mcp manual for the task at hand.",
+                text=(
+                    "Use wf://docs/operator-manual for the platform mental model. "
+                    "Use wf://docs/end-to-end-runbook for the normal connection-to-run "
+                    "flow. Use wf://docs/troubleshooting when a source, capability, "
+                    "or deployment is missing or unrunnable."
+                ),
+            ),
+            DocumentationPrompt(
+                name="wf.docs.workflow_authoring_guide",
+                title="Workflow Authoring Guide",
+                description="Guide an authoring client through safe capability discovery.",
+                text=(
+                    "Start with wf.admin.list_sources, then use "
+                    "wf.workflow.list_capabilities and "
+                    "wf.workflow.inspect_capability. Test a small reusable piece with "
+                    "wf.workflow.call_capability before saving a larger artifact. "
+                    "Read wf://docs/end-to-end-runbook for the full sequence."
+                ),
+            ),
+            DocumentationPrompt(
+                name="wf.docs.troubleshooting_guide",
+                title="wf_mcp Troubleshooting Guide",
+                description="Point a client to the failure-oriented manual.",
+                text=(
+                    "When a source, capability, or deployment is missing, inspect the "
+                    "smallest layer first and read wf://docs/troubleshooting for the "
+                    "diagnostic ladder."
+                ),
+            ),
+        ],
     )
 
 

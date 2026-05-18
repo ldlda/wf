@@ -14,6 +14,7 @@ from ..documentation import build_local_documentation_source
 from ..models import BrokerConfig
 from ..transparent_proxy.runtime import ProxyRuntime
 from ..workflow_surface import register_workflow_tools
+from .prompts import register_documentation_prompts
 from .resources import register_documentation_resources
 
 
@@ -46,6 +47,7 @@ def create_server(
     register_workflow_tools(runtime.server, service)
     docs_source = build_local_documentation_source(_repo_root())
     service.capability_sources[docs_source.id] = docs_source
+    register_documentation_prompts(runtime.server, docs_source)
     register_documentation_resources(runtime.server, docs_source)
     return runtime.server
 

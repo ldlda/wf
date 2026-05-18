@@ -27,7 +27,7 @@ with each other just because MCP transports them all.
 | Noun | Meaning | Example |
 | --- | --- | --- |
 | Connection | A configured upstream MCP account/profile with auth and transport settings. | `everything.default` |
-| Source | A named owner of capabilities. A source may be local or backed by a connection. | `wf.std`, `wf.mcp`, `everything.default` |
+| Source | A named owner of capabilities. A source may be local or backed by a connection. | `wf.std`, `wf.docs`, `wf.mcp`, `everything.default` |
 | Catalog | A discovered snapshot of backend MCP capabilities. | tools/resources/prompts loaded from `everything.default` |
 | Workflow capability | A workflow-ready `NodeSpec` contract that graphs can consume. | `wf.std.runtime_error`, `everything.default.echo` |
 | Artifact | An immutable saved workflow definition or saved wrapper workflow. | `codex_echo_probe` version `2` |
@@ -91,6 +91,26 @@ Typical tools:
 - `wf.workflow.save_deployment`
 - `wf.workflow.validate_deployment`
 - `wf.workflow.run_deployment`
+
+### `wf.docs`
+
+Local documentation source.
+
+It owns stable documentation resources such as:
+
+- `wf://docs/operator-manual`
+- `wf://docs/end-to-end-runbook`
+- `wf://docs/troubleshooting`
+
+It also owns short guide prompts such as:
+
+- `wf.docs.operator_guide`
+- `wf.docs.workflow_authoring_guide`
+- `wf.docs.troubleshooting_guide`
+
+This source exists so manuals are discoverable through the same capability model
+as everything else. The docs themselves are provider-neutral platform
+resources; MCP is only one projection of them.
 
 ### Proxied Upstream Tools
 
@@ -257,6 +277,7 @@ connection.
 Examples:
 
 - `everything.default`: both a connection and a source
+- `wf.docs`: a local documentation source, not a connection
 - `wf.std`: a local source, not a connection
 - `wf.admin`: a privileged local source, not a connection
 

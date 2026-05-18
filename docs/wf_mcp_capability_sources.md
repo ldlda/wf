@@ -20,7 +20,7 @@ connections into that model rather than owning the model itself.
 
 ```text
 CapabilitySource
-  id: "wf.std" | "wf.mcp" | "wf.admin" | "<server>.<account>"
+  id: "wf.std" | "wf.docs" | "wf.mcp" | "wf.admin" | "<server>.<account>"
   kind: "system" | "connection"
   enabled: bool
   visibility:
@@ -48,6 +48,27 @@ future saved wrapper artifacts, see
 [`workflow_capabilities.md`](workflow_capabilities.md).
 
 ## Canonical Sources
+
+### `wf.docs`
+
+Local platform documentation.
+
+- Planner-visible: no.
+- MCP-client-visible: yes.
+- Admin-dashboard-visible: yes.
+- MCP tools: none.
+- Workflow safety: not applicable; it owns docs, not workflow nodes.
+
+Current capabilities:
+
+- `prompts`: `wf.docs.operator_guide`, `wf.docs.workflow_authoring_guide`,
+  `wf.docs.troubleshooting_guide`.
+- `resources`: `wf://docs/operator-manual`,
+  `wf://docs/end-to-end-runbook`, `wf://docs/troubleshooting`.
+
+The documentation resource model lives in `wf_platform`, not in the MCP
+projection layer. That lets the same manuals feed MCP resources now and other
+surfaces such as a future CLI or UI later.
 
 ### `wf.std`
 
