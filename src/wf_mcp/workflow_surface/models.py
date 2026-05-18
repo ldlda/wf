@@ -91,6 +91,14 @@ class DraftWorkspaceResult(BaseModel):
     )
 
 
+class DraftWorkspaceListResult(BaseModel):
+    """Inspector-visible response for listing stored draft workspaces."""
+
+    workspaces: list[dict[str, Any]] = Field(
+        description="Compact draft workspace summaries. Full drafts are omitted."
+    )
+
+
 class CreateDraftWorkspaceRequest(BaseModel):
     """Typed MCP request payload for creating a stored draft workspace."""
 

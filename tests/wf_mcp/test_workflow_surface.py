@@ -377,6 +377,36 @@ def test_workflow_surface_creates_and_gets_draft_workspace() -> None:
     assert fetched["draft"]["steps"]["echo"]["use"] == "demo.personal.echo_tool"
 
 
+def test_workflow_surface_lists_draft_workspaces() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_list"
+    )
+    handlers = _handlers(artifact_store)
+    asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="b_draft",
+            draft=_echo_draft(),
+            title="B Draft",
+        )
+    )
+    asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="a_draft",
+            draft=_echo_draft(),
+            title="A Draft",
+        )
+    )
+
+    payload = asyncio.run(handlers.list_draft_workspaces())
+
+    assert [workspace["workspace_id"] for workspace in payload["workspaces"]] == [
+        "a_draft",
+        "b_draft",
+    ]
+    assert payload["workspaces"][0]["title"] == "A Draft"
+    assert "draft" not in payload["workspaces"][0]
+
+
 def test_workflow_surface_patches_draft_workspace_by_revision() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "surface_workspace_patch"

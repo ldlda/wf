@@ -375,6 +375,16 @@ class WorkflowSurfaceHandlers:
             raise KeyError("draft workspace store is not configured")
         return self.service.draft_workspace_store
 
+    async def list_draft_workspaces(self) -> dict[str, Any]:
+        """Return compact summaries for stored draft workspaces."""
+        store = self._draft_store()
+        return {
+            "workspaces": [
+                get_draft_workspace_record(store, workspace_id=workspace.id)
+                for workspace in store.list_workspaces()
+            ]
+        }
+
     async def create_draft_workspace(
         self,
         *,

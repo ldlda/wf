@@ -14,6 +14,7 @@ from .models import (
     CreateArtifactFromWorkspaceRequest,
     CreateDraftWorkspaceRequest,
     CreateMinimalDraftWorkspaceRequest,
+    DraftWorkspaceListResult,
     DraftWorkspaceResult,
     PatchDraftWorkspaceRequest,
 )
@@ -196,6 +197,16 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
         return await handlers.patch_draft(draft=draft, patch=patch)
+
+    @server.tool(
+        name="wf.workflow.list_draft_workspaces",
+        title="List Draft Workspaces",
+        description="List compact summaries for mutable workflow draft workspaces.",
+    )
+    async def list_draft_workspaces() -> DraftWorkspaceListResult:
+        return DraftWorkspaceListResult.model_validate(
+            await handlers.list_draft_workspaces()
+        )
 
     @server.tool(
         name="wf.workflow.create_draft_workspace",

@@ -64,6 +64,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.compile_draft" in names
             assert "wf.workflow.create_artifact_from_draft" in names
             assert "wf.workflow.patch_draft" in names
+            assert "wf.workflow.list_draft_workspaces" in names
             assert "wf.workflow.create_draft_workspace" in names
             assert "wf.workflow.get_draft_workspace" in names
             assert "wf.workflow.patch_draft_workspace" in names
@@ -187,6 +188,7 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.workflow.list_artifacts" in names
             assert "wf.workflow.validate_draft" in names
             assert "wf.workflow.create_artifact_from_draft" in names
+            assert "wf.workflow.list_draft_workspaces" in names
             assert "wf.workflow.create_draft_workspace" in names
             assert "wf.workflow.get_draft_workspace" in names
             assert "wf.workflow.patch_draft_workspace" in names

@@ -349,6 +349,7 @@ resending the full draft each turn.
 | Need | Tool |
 | --- | --- |
 | Start a patchable authoring session | `wf.workflow.create_minimal_draft_workspace` |
+| List existing draft sessions | `wf.workflow.list_draft_workspaces` |
 | Fetch current draft workspace | `wf.workflow.get_draft_workspace` |
 | Patch current draft workspace | `wf.workflow.patch_draft_workspace` |
 | Save final workspace as artifact | `wf.workflow.create_artifact_from_workspace` |

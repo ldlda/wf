@@ -41,6 +41,7 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     "wf.workflow.create_artifact_from_plan",
     "wf.workflow.create_artifact_from_draft",
     "wf.workflow.patch_draft",
+    "wf.workflow.list_draft_workspaces",
     "wf.workflow.create_draft_workspace",
     "wf.workflow.get_draft_workspace",
     "wf.workflow.patch_draft_workspace",
