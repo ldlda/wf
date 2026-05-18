@@ -21,7 +21,7 @@ Each public control-flow method should name one decision mechanism.
 | `match` | one graph value | compare that value against equality cases |
 | `when` | one boolean condition | route through `true` / `false` |
 | `choose` | ordered boolean conditions | first true condition wins |
-| future `handle` | several source/outcome pairs | send shared outcomes to one target |
+| `handle` | several source/outcome pairs | send shared outcomes to one target |
 
 Future fluent builders or operator sugar must call these methods rather than
 constructing edges/conditions independently.
@@ -174,13 +174,36 @@ Recommended behavior during compatibility:
 The public docs should prefer only:
 
 - `branch`
+- `handle`
 - `match`
 - `when`
 - `choose`
 
+## Shared Outcome Handlers
+
+`handle()` is the reverse-shaped companion to `branch()`: it connects several
+source/outcome pairs to one shared target.
+
+```python
+g.handle(
+    (lookup_user, "error"),
+    (charge_card, "error"),
+    to=fail,
+)
+```
+
+Meaning:
+
+```text
+lookup_user.error -> fail
+charge_card.error -> fail
+```
+
+It does not create a join, wait for multiple branches, or inspect state. It is
+just outcome-edge sugar for the common "several things fail the same way" case.
+
 ## Not In This Pass
 
-- reverse-branch/shared handlers (`handle`)
 - fluent/cursor builder APIs
 - operator overloading
 - graph-as-node/subgraph support

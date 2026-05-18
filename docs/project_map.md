@@ -20,6 +20,8 @@ This repository has three main packages plus examples and tests.
 - `wf_authoring`: public authoring facade.
 - `wf_authoring.WorkflowBuilder`: graph construction.
 - `wf_authoring.node`: typed Python function to `NodeSpec`.
+- [`docs/wf_authoring_control_flow.md`](wf_authoring_control_flow.md): when to
+  use `branch`, `handle`, `match`, `when`, and `choose`.
 - `wf_mcp`: public MCP facade.
 - `wf-mcp`: CLI script from `pyproject.toml`.
 - `wf_mcp.broker.WfMcpService.get_catalog()`: backend MCP catalog snapshots.
@@ -28,9 +30,11 @@ This repository has three main packages plus examples and tests.
 
 ## Examples
 
-`examples/demo_workflow.py` contains the declared demo workflow and demo node
-registry used by `main.py` and workflow tests. It is intentionally outside
-`wf_core` so the kernel package does not carry fixture/demo code.
+- `examples/demo_workflow.py` contains the declared demo workflow and demo node
+  registry used by `main.py` and workflow tests. It is intentionally outside
+  `wf_core` so the kernel package does not carry fixture/demo code.
+- `examples/authoring_control_flow.py` demonstrates `WorkflowBuilder.branch`,
+  `handle`, `match`, `when`, `choose`, and `use_ref` with executable examples.
 
 ## Tests
 
