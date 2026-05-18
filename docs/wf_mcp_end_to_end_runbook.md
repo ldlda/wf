@@ -510,10 +510,12 @@ Concrete MCP sequence:
 6. Use focused helpers such as `wf.workflow.set_draft_name` or
    `wf.workflow.set_draft_route`, or call `wf.workflow.patch_draft_workspace`
    with the current `revision` for arbitrary JSON Patch edits.
-7. `wf.workflow.create_artifact_from_workspace` after validation is clean.
-8. `wf.workflow.save_deployment`, then `validate_deployment`, then
+7. `wf.workflow.validate_draft_workspace` if capabilities changed or you want
+   to refresh diagnostics without editing the draft.
+8. `wf.workflow.create_artifact_from_workspace` after validation is clean.
+9. `wf.workflow.save_deployment`, then `validate_deployment`, then
    `run_deployment`.
-9. `wf.workflow.delete_draft_workspace` when the mutable authoring session is no
+10. `wf.workflow.delete_draft_workspace` when the mutable authoring session is no
    longer needed.
 
 `create_artifact_from_workspace` also uses a `request` object:

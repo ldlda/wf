@@ -46,6 +46,7 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     "wf.workflow.get_draft_workspace",
     "wf.workflow.delete_draft_workspace",
     "wf.workflow.patch_draft_workspace",
+    "wf.workflow.validate_draft_workspace",
     "wf.workflow.set_draft_name",
     "wf.workflow.set_draft_route",
     "wf.workflow.set_step_input_map",

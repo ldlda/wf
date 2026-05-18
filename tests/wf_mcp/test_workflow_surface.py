@@ -492,6 +492,39 @@ def test_workflow_surface_patch_helpers_update_draft_workspace() -> None:
     assert fetched["draft"]["steps"]["echo"]["out"] == {"echoed": "state.echoed"}
 
 
+def test_workflow_surface_validates_draft_workspace_with_live_outcomes() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_validate"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_workspace_validate_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+    draft = _echo_draft()
+    draft["routes"]["echo"] = {"typo": "__end__"}
+    asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="echo_draft",
+            draft=draft,
+        )
+    )
+
+    payload = asyncio.run(
+        handlers.validate_draft_workspace(workspace_id="echo_draft")
+    )
+    fetched = asyncio.run(handlers.get_draft_workspace(workspace_id="echo_draft"))
+
+    assert payload["revision"] == 1
+    assert payload["status"] == "invalid"
+    assert payload["diagnostics"][0]["code"] == "unknown_outcome"
+    assert fetched["status"] == "invalid"
+
+
 def test_workflow_surface_patches_draft_workspace_by_revision() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "surface_workspace_patch"

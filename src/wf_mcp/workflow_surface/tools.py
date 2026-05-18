@@ -23,6 +23,7 @@ from .models import (
     SetDraftRouteRequest,
     SetStepInputMapRequest,
     SetStepOutputMapRequest,
+    ValidateDraftWorkspaceRequest,
 )
 
 
@@ -275,6 +276,21 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 revision=request.revision,
                 patch=request.patch,
             )
+        )
+
+    @server.tool(
+        name="wf.workflow.validate_draft_workspace",
+        title="Validate Draft Workspace",
+        description=(
+            "Refresh validation status for one draft workspace without changing "
+            "its revision."
+        ),
+    )
+    async def validate_draft_workspace(
+        request: ValidateDraftWorkspaceRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.validate_draft_workspace(workspace_id=request.workspace_id)
         )
 
     @server.tool(

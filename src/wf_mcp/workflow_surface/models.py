@@ -115,6 +115,12 @@ class PatchDraftWorkspaceRequest(BaseModel):
     patch: JsonPatchOperations
 
 
+class ValidateDraftWorkspaceRequest(BaseModel):
+    """Typed MCP request for refreshing one workspace validation status."""
+
+    workspace_id: WorkspaceId
+
+
 class SetDraftNameRequest(BaseModel):
     """Typed MCP request for changing the workflow draft name."""
 

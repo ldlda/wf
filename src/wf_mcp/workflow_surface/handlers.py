@@ -419,6 +419,20 @@ class WorkflowSurfaceHandlers:
             "status": "deleted" if deleted else "not_found",
         }
 
+    async def validate_draft_workspace(self, *, workspace_id: str) -> dict[str, Any]:
+        """Refresh stored validation status without changing draft revision."""
+        store = self._draft_store()
+        workspace = store.get_workspace(workspace_id)
+        validation = await self.validate_draft(draft=workspace.draft)
+        refreshed = workspace.model_copy(
+            update={
+                "status": validation["status"],
+                "diagnostics": validation["diagnostics"],
+            }
+        )
+        store.save_workspace(refreshed)
+        return get_draft_workspace_record(store, workspace_id=workspace_id)
+
     async def patch_draft_workspace(
         self,
         *,
