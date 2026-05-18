@@ -8,6 +8,8 @@ from typing import Any
 from pydantic import BaseModel
 
 from wf_artifacts import (
+    DraftWorkspaceStore,
+    FileDraftWorkspaceStore,
     FileWorkflowArtifactStore,
     WorkflowArtifact,
     WorkflowArtifactCatalogEntry,
@@ -67,11 +69,16 @@ class WfMcpService:
     event_bus: EventBus = field(default_factory=EventBus)
     include_builtin_specs: bool = True
     artifact_store: WorkflowArtifactStore | None = None
+    draft_workspace_store: DraftWorkspaceStore | None = None
 
     def __post_init__(self) -> None:
         """Install broker-local system specs when enabled."""
         if self.artifact_store is None:
             self.artifact_store = FileWorkflowArtifactStore(_store_root(self.store))
+        if self.draft_workspace_store is None:
+            self.draft_workspace_store = FileDraftWorkspaceStore(
+                _store_root(self.store)
+            )
         if self.include_builtin_specs:
             for source in builtin_sources(self).values():
                 self.register_capability_source(source)

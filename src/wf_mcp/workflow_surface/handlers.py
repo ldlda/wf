@@ -9,12 +9,16 @@ from wf_artifacts import (
     AvailableSource,
     DependencyDiagnostic,
     DiagnosticSeverity,
+    DraftWorkspaceStore,
     RequiredCapability,
     WorkflowArtifact,
     WorkflowCapabilityRef,
     WorkflowDeployment,
     compile_workflow_draft,
+    create_draft_workspace as create_draft_workspace_record,
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
+    get_draft_workspace as get_draft_workspace_record,
+    patch_draft_workspace as patch_draft_workspace_record,
     patch_workflow_draft,
     validate_workflow_draft,
     validate_deployment_dependencies,
@@ -340,7 +344,7 @@ class WorkflowSurfaceHandlers:
         required_sources = sorted(
             {
                 capability.logical_source
-                for capability in workflow_artifact.required_capabilities.values()
+                for capability in dict(workflow_artifact.required_capabilities).values()
             }
         )
         return {
@@ -358,6 +362,139 @@ class WorkflowSurfaceHandlers:
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
         return patch_workflow_draft(draft, patch)
+
+    def _draft_store(self) -> DraftWorkspaceStore:
+        if self.service.draft_workspace_store is None:
+            raise KeyError("draft workspace store is not configured")
+        return self.service.draft_workspace_store
+
+    async def create_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        draft: dict[str, Any],
+        title: str | None = None,
+    ) -> dict[str, Any]:
+        return create_draft_workspace_record(
+            self._draft_store(),
+            workspace_id=workspace_id,
+            draft=draft,
+            title=title,
+        )
+
+    async def get_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        include_draft: bool = False,
+    ) -> dict[str, Any]:
+        return get_draft_workspace_record(
+            self._draft_store(),
+            workspace_id=workspace_id,
+            include_draft=include_draft,
+        )
+
+    async def patch_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        patch: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return patch_draft_workspace_record(
+            self._draft_store(),
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
+        )
+
+    async def create_minimal_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        name: str,
+        capability_name: str,
+        input_schema: dict[str, Any],
+        state_schema: dict[str, Any],
+        output_schema: dict[str, Any],
+        input_map: dict[str, str],
+        output_map: dict[str, str],
+        error_message_source: str | None = None,
+        title: str | None = None,
+    ) -> dict[str, Any]:
+        """Bootstrap the smallest patchable draft around one workflow capability."""
+        outcomes = self._outcomes_for_capability(capability_name) or ("ok",)
+        steps: dict[str, Any] = {
+            "call": {
+                "use": capability_name,
+                "in": input_map,
+                "out": output_map,
+            }
+        }
+        routes: dict[str, dict[str, str]] = {"call": {"ok": "__end__"}}
+        error_source = error_message_source or _first_state_path(output_map)
+        if "error" in outcomes and error_source is not None:
+            # The bootstrapper cannot infer provider-specific error envelopes.
+            # It only wires an error route when the caller gave, or output_map
+            # exposes, a concrete state path that can become a runtime message.
+            steps["tool_error"] = {
+                "use": "wf.std.runtime_error",
+                "in": {error_source: "message"},
+                "out": {},
+            }
+            routes["call"]["error"] = "tool_error"
+            routes["tool_error"] = {"ok": "__end__"}
+        draft = {
+            "name": name,
+            "input_schema": input_schema,
+            "state_schema": state_schema,
+            "output_schema": output_schema,
+            "start": "call",
+            "steps": steps,
+            "routes": routes,
+        }
+        return await self.create_draft_workspace(
+            workspace_id=workspace_id,
+            title=title,
+            draft=draft,
+        )
+
+    async def create_artifact_from_workspace(
+        self,
+        *,
+        workspace_id: str,
+        artifact_id: str,
+        version: int,
+        title: str,
+        outcomes: Sequence[str],
+        kind: ArtifactKind = "workflow",
+        description: str | None = None,
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
+        created_from_catalog_version: str | None = None,
+    ) -> dict[str, Any]:
+        workspace = self._draft_store().get_workspace(workspace_id)
+        validation = await self.validate_draft(draft=workspace.draft)
+        if validation["status"] != "valid":
+            return {
+                "saved": False,
+                "workspace_id": workspace_id,
+                "revision": workspace.revision,
+                "status": validation["status"],
+                "diagnostics": validation["diagnostics"],
+            }
+        return await self.create_artifact_from_draft(
+            artifact_id=artifact_id,
+            version=version,
+            title=title,
+            kind=kind,
+            description=description,
+            draft=workspace.draft,
+            outcomes=outcomes,
+            required_capabilities=required_capabilities,
+            source_bindings=source_bindings,
+            created_from_catalog_version=created_from_catalog_version,
+        )
 
     def _outcomes_for_capability(self, qualified_name: str) -> tuple[str, ...] | None:
         try:
@@ -581,6 +718,14 @@ def _schema_field_names(schema: dict[str, Any]) -> list[str]:
     if not isinstance(properties, dict):
         return []
     return sorted(str(name) for name in properties)
+
+
+def _first_state_path(output_map: dict[str, str]) -> str | None:
+    """Return the first mapped state path for minimal error-route bootstraps."""
+    for target in output_map.values():
+        if target.startswith("state."):
+            return target
+    return None
 
 
 def _source_id_for_capability(

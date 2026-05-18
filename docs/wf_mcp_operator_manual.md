@@ -340,3 +340,19 @@ accounts.
 - [`workflow_drafts.md`](workflow_drafts.md) for the preferred authoring format
 - [`workflow_artifacts.md`](workflow_artifacts.md) for immutable artifacts,
   deployments, and saved workflows as future nodes
+
+## Draft Workspace Authoring
+
+Use draft workspaces when a client should iteratively edit one workflow without
+resending the full draft each turn.
+
+| Need | Tool |
+| --- | --- |
+| Start a patchable authoring session | `wf.workflow.create_minimal_draft_workspace` |
+| Fetch current draft workspace | `wf.workflow.get_draft_workspace` |
+| Patch current draft workspace | `wf.workflow.patch_draft_workspace` |
+| Save final workspace as artifact | `wf.workflow.create_artifact_from_workspace` |
+
+Workspace patches are optimistic-concurrency guarded. Pass the current
+`revision` from `get_draft_workspace`; a stale revision returns
+`revision_conflict` and leaves the stored draft unchanged.

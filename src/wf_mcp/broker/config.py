@@ -3,11 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
+
 from ..control import BrokerConfigFile
 from ..models import BrokerConfig
 from ..sdk import McpSdkAdapter
 from ..storage import FileStore
-from wf_artifacts import FileWorkflowArtifactStore
 from .service import WfMcpService
 
 
@@ -23,6 +24,7 @@ def build_service_from_config(config: BrokerConfig) -> WfMcpService:
     service = WfMcpService(
         store=FileStore(config.store_root),
         artifact_store=FileWorkflowArtifactStore(config.store_root),
+        draft_workspace_store=FileDraftWorkspaceStore(config.store_root),
     )
     for connection in config.connections:
         service.register_connection(connection)

@@ -52,6 +52,12 @@ def changed_echo_tool(payload: ChangedEchoInput) -> ChangedEchoOutput:
     return ChangedEchoOutput(echoed=payload.message)
 
 
+@node(name="mcp_echo_tool", outcomes=("ok", "error"))
+def mcp_echo_tool(payload: ChangedEchoInput) -> ChangedEchoOutput:
+    """Test fixture that mirrors naive MCP wrappers with ok/error outcomes."""
+    return ChangedEchoOutput(echoed=payload.message)
+
+
 @reducer(name="custom.default.multiply")
 def multiply(current: int | None, incoming: int) -> int:
     return (current or 1) * incoming
@@ -346,6 +352,133 @@ def test_workflow_surface_patches_draft_without_saving() -> None:
     assert payload["status"] == "valid"
     assert payload["draft"]["steps"]["echo"]["in"]["input.text"] == "message"
     assert not artifact_store.list_artifacts()
+
+
+def test_workflow_surface_creates_and_gets_draft_workspace() -> None:
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_workspace")
+    handlers = _handlers(artifact_store)
+
+    created = asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="echo_draft",
+            title="Echo Draft",
+            draft=_echo_draft(),
+        )
+    )
+    fetched = asyncio.run(
+        handlers.get_draft_workspace(
+            workspace_id="echo_draft",
+            include_draft=True,
+        )
+    )
+
+    assert created["workspace_id"] == "echo_draft"
+    assert created["revision"] == 1
+    assert fetched["draft"]["steps"]["echo"]["use"] == "demo.personal.echo_tool"
+
+
+def test_workflow_surface_patches_draft_workspace_by_revision() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_patch"
+    )
+    handlers = _handlers(artifact_store)
+    asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="echo_draft",
+            draft=_echo_draft(),
+        )
+    )
+
+    patched = asyncio.run(
+        handlers.patch_draft_workspace(
+            workspace_id="echo_draft",
+            revision=1,
+            patch=[{"op": "replace", "path": "/name", "value": "echo_v2"}],
+        )
+    )
+
+    assert patched["revision"] == 2
+    assert patched["status"] == "valid"
+
+
+def test_workflow_surface_creates_minimal_draft_workspace_with_error_route() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_minimal_workspace"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_minimal_workspace_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", mcp_echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    result = asyncio.run(
+        handlers.create_minimal_draft_workspace(
+            workspace_id="echo_draft",
+            name="echo",
+            capability_name="demo.personal.mcp_echo_tool",
+            input_schema={
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            },
+            state_schema={"fields": {"echoed": {"type": "string"}}},
+            output_schema={
+                "type": "object",
+                "properties": {"echoed": {"type": "string"}},
+                "required": ["echoed"],
+            },
+            input_map={"input.text": "text"},
+            output_map={"echoed": "state.echoed"},
+        )
+    )
+    assert service.draft_workspace_store is not None
+    workspace = service.draft_workspace_store.get_workspace("echo_draft")
+
+    assert result["workspace_id"] == "echo_draft"
+    assert workspace.draft["routes"]["call"]["ok"] == "__end__"
+    assert workspace.draft["routes"]["call"]["error"] == "tool_error"
+    assert workspace.draft["steps"]["tool_error"]["use"] == "wf.std.runtime_error"
+    assert workspace.draft["steps"]["tool_error"]["in"] == {"state.echoed": "message"}
+
+
+def test_workflow_surface_creates_artifact_from_workspace() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_artifact"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_workspace_artifact_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+    asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="echo_draft",
+            draft=_echo_draft(),
+        )
+    )
+
+    result = asyncio.run(
+        handlers.create_artifact_from_workspace(
+            workspace_id="echo_draft",
+            artifact_id="workspace_echo",
+            version=1,
+            title="Workspace Echo",
+            outcomes=("completed",),
+            source_bindings={"demo": "demo.personal"},
+        )
+    )
+
+    artifact = artifact_store.get_artifact("workspace_echo", 1)
+    assert result["saved"] is True
+    assert artifact.id == "workspace_echo"
 
 
 def test_raw_workflow_plan_uses_core_step_and_edge_models() -> None:
@@ -696,7 +829,7 @@ def test_workflow_surface_calls_saved_wrapper_artifact_with_deployment_bindings(
 
 def _handlers(artifact_store: FileWorkflowArtifactStore) -> WorkflowSurfaceHandlers:
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "surface_mcp"),
+        store=FileStore(artifact_store.root / "surface_mcp" / str(id(artifact_store))),
         artifact_store=artifact_store,
     )
     return WorkflowSurfaceHandlers(service)

@@ -9,7 +9,7 @@ from wf_artifacts.models import RequiredCapability
 from wf_mcp.broker.service import WfMcpService
 
 from .handlers import WorkflowSurfaceHandlers
-from .models import CallCapabilityResult
+from .models import CallCapabilityResult, DraftWorkspaceResult
 
 
 def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None:
@@ -189,6 +189,136 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
         return await handlers.patch_draft(draft=draft, patch=patch)
+
+    @server.tool(
+        name="wf.workflow.create_draft_workspace",
+        title="Create Draft Workspace",
+        description="Store a mutable workflow draft workspace for iterative patching.",
+    )
+    async def create_draft_workspace(
+        workspace_id: str,
+        draft: dict[str, Any],
+        title: str | None = None,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.create_draft_workspace(
+                workspace_id=workspace_id,
+                draft=draft,
+                title=title,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.get_draft_workspace",
+        title="Get Draft Workspace",
+        description="Fetch a mutable workflow draft workspace by id.",
+    )
+    async def get_draft_workspace(
+        workspace_id: str,
+        include_draft: bool = False,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.get_draft_workspace(
+                workspace_id=workspace_id,
+                include_draft=include_draft,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.patch_draft_workspace",
+        title="Patch Draft Workspace",
+        description=(
+            "Apply an RFC 6902 JSON Patch to a stored workflow draft workspace "
+            "when the expected revision matches."
+        ),
+    )
+    async def patch_draft_workspace(
+        workspace_id: str,
+        revision: int,
+        patch: list[dict[str, Any]],
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.patch_draft_workspace(
+                workspace_id=workspace_id,
+                revision=revision,
+                patch=patch,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.create_minimal_draft_workspace",
+        title="Create Minimal Draft Workspace",
+        description="Bootstrap a patchable draft workspace around one capability.",
+    )
+    async def create_minimal_draft_workspace(
+        workspace_id: str,
+        name: str,
+        capability_name: str,
+        input_schema: dict[str, Any],
+        state_schema: dict[str, Any],
+        output_schema: dict[str, Any],
+        input_map: dict[str, str],
+        output_map: dict[str, str],
+        error_message_source: str | None = None,
+        title: str | None = None,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.create_minimal_draft_workspace(
+                workspace_id=workspace_id,
+                name=name,
+                capability_name=capability_name,
+                input_schema=input_schema,
+                state_schema=state_schema,
+                output_schema=output_schema,
+                input_map=input_map,
+                output_map=output_map,
+                error_message_source=error_message_source,
+                title=title,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.create_artifact_from_workspace",
+        title="Create Workflow Artifact From Workspace",
+        description=(
+            "Validate the current draft workspace and save it as a versioned "
+            "workflow artifact."
+        ),
+    )
+    async def create_artifact_from_workspace(
+        workspace_id: str,
+        artifact_id: str,
+        version: int,
+        title: str,
+        outcomes: list[str],
+        kind: ArtifactKind = "workflow",
+        description: str | None = None,
+        required_capabilities: (
+            Mapping[str, RequiredCapability | dict[str, Any]] | None
+        ) = None,
+        source_bindings: Mapping[str, str] | None = None,
+        created_from_catalog_version: str | None = None,
+    ) -> dict[str, Any]:
+        return await handlers.create_artifact_from_workspace(
+            workspace_id=workspace_id,
+            artifact_id=artifact_id,
+            version=version,
+            title=title,
+            kind=kind,
+            description=description,
+            outcomes=outcomes,
+            required_capabilities={
+                name: (
+                    capability.model_dump()
+                    if isinstance(capability, RequiredCapability)
+                    else capability
+                )
+                for name, capability in (required_capabilities or {}).items()
+            }
+            or None,
+            source_bindings=dict(source_bindings or {}),
+            created_from_catalog_version=created_from_catalog_version,
+        )
 
     @server.tool(
         name="wf.workflow.inspect_artifact",

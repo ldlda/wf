@@ -197,6 +197,29 @@ The workflow MCP surface exposes these draft tools:
 Use `validate_draft` before saving. Use `patch_draft` when an LLM client needs a
 small targeted correction instead of rewriting the whole workflow.
 
+## Draft Workspaces
+
+Stateless draft tools require the caller to resend the whole draft. Draft
+workspaces are the preferred LLM authoring flow when a client will patch a
+workflow over several turns.
+
+The workspace flow is:
+
+1. `wf.workflow.create_minimal_draft_workspace`
+2. `wf.workflow.get_draft_workspace`
+3. `wf.workflow.patch_draft_workspace`
+4. repeat get/patch until valid
+5. `wf.workflow.create_artifact_from_workspace`
+
+Workspaces are mutable and revisioned. Artifacts are immutable and versioned.
+Patch calls must include the current `revision`; stale revisions return
+`revision_conflict` and do not mutate the workspace.
+
+`create_minimal_draft_workspace` is intentionally only a bootstrapper. It wires
+an `error` outcome for naive MCP wrappers only when `error_message_source` is
+provided or a state path can be derived from `output_map`. Provider-specific
+error envelopes still belong in saved wrapper artifacts or follow-up patches.
+
 ## Patching Drafts
 
 `patch_draft` accepts JSON Patch operations.

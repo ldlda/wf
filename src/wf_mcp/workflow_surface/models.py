@@ -32,3 +32,23 @@ class CallCapabilityResult(BaseModel):
         default_factory=list,
         description="Structured diagnostics. Empty for successful calls.",
     )
+
+
+class DraftWorkspaceResult(BaseModel):
+    """Inspector-visible response contract for draft workspace operations."""
+
+    workspace_id: str = Field(description="Mutable draft workspace id.")
+    revision: int = Field(description="Current optimistic-concurrency revision.")
+    title: str | None = Field(default=None, description="Optional workspace title.")
+    status: str = Field(description="Workspace validation status.")
+    diagnostics: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Structured diagnostics for invalid or conflicted workspaces.",
+    )
+    summary: dict[str, Any] = Field(
+        description="Compact draft summary for progressive MCP clients."
+    )
+    draft: dict[str, Any] | None = Field(
+        default=None,
+        description="Full draft document, only returned when requested.",
+    )

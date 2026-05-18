@@ -483,3 +483,15 @@ wf.workflow.validate_deployment
 - [`workflow_drafts.md`](workflow_drafts.md) for the preferred authoring format
 - [`workflow_artifacts.md`](workflow_artifacts.md) for immutable artifacts,
   deployments, and dependency contracts
+
+## Workspace Variant
+
+If the client is iterating with an LLM, prefer a draft workspace:
+
+1. Create a minimal workspace from the selected capability.
+2. Fetch the workspace by id when context is needed.
+3. Patch it by id and revision.
+4. Save an artifact from the workspace after validation is clean.
+
+This avoids resending the whole draft object every turn. The saved artifact is
+still immutable and should be deployed through the normal deployment path.

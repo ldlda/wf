@@ -64,6 +64,11 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.compile_draft" in names
             assert "wf.workflow.create_artifact_from_draft" in names
             assert "wf.workflow.patch_draft" in names
+            assert "wf.workflow.create_draft_workspace" in names
+            assert "wf.workflow.get_draft_workspace" in names
+            assert "wf.workflow.patch_draft_workspace" in names
+            assert "wf.workflow.create_minimal_draft_workspace" in names
+            assert "wf.workflow.create_artifact_from_workspace" in names
             assert "wf.workflow.run_deployment" in names
             call_capability_schema = tools_by_name[
                 "wf.workflow.call_capability"
@@ -72,6 +77,12 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "source_id" in call_capability_schema["properties"]
             assert "kind" in call_capability_schema["properties"]
             assert "diagnostics" in call_capability_schema["properties"]
+            create_workspace_schema = tools_by_name[
+                "wf.workflow.create_draft_workspace"
+            ].outputSchema
+            assert create_workspace_schema is not None
+            assert "workspace_id" in create_workspace_schema["properties"]
+            assert "revision" in create_workspace_schema["properties"]
 
             echo_result = await client.call_tool(
                 "fixture.personal.echo_tool",
@@ -165,6 +176,11 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.workflow.list_artifacts" in names
             assert "wf.workflow.validate_draft" in names
             assert "wf.workflow.create_artifact_from_draft" in names
+            assert "wf.workflow.create_draft_workspace" in names
+            assert "wf.workflow.get_draft_workspace" in names
+            assert "wf.workflow.patch_draft_workspace" in names
+            assert "wf.workflow.create_minimal_draft_workspace" in names
+            assert "wf.workflow.create_artifact_from_workspace" in names
             assert "wf.workflow.call_capability" in names
             assert "wf.workflow.inspect_artifact" in names
             assert "wf.workflow.list_deployments" in names
