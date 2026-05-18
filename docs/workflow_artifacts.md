@@ -3,6 +3,9 @@
 This document captures the current design direction for saved workflows. It is a
 design note, not an implementation status document.
 
+For the current operator workflow around artifacts and deployments, see
+[`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md).
+
 ## Ownership Boundary
 
 Saved workflows are not inherently MCP concerns. `wf_mcp` is one capability

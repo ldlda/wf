@@ -5,6 +5,9 @@ Tools, workflow node specs, prompts, resources, and admin controls all belong to
 a source. The MCP server, workflow planning, and future UI surfaces are
 projections of those sources.
 
+If you need the practical "which thing do I call?" view before the domain model,
+start with [`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md).
+
 This avoids the current trap where broker admin tools, transparent proxy admin
 tools, workflow node specs, and upstream MCP tools all look like unrelated
 systems.

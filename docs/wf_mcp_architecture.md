@@ -4,6 +4,9 @@
 The goal is to keep future package extraction cheap without adding packaging
 overhead before the APIs settle.
 
+For the short operator-facing map of the current nouns and tool families, start
+with [`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md).
+
 ## Packages
 
 | Package | Responsibility |

@@ -3,6 +3,9 @@
 This document separates the things an MCP-facing platform can expose from the
 things a workflow should usually consume.
 
+For the short operator/client workflow using these concepts, see
+[`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md).
+
 The short version:
 
 ```text
