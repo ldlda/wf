@@ -42,6 +42,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
         async with client:
             tools = await client.list_tools()
             names = [tool.name for tool in tools]
+            tools_by_name = {tool.name: tool for tool in tools}
             assert "fixture.personal.echo_tool" in names
             assert "wf.admin.list_connections" in names
             assert "wf.admin.get_connection_statuses" in names
@@ -64,6 +65,13 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.create_artifact_from_draft" in names
             assert "wf.workflow.patch_draft" in names
             assert "wf.workflow.run_deployment" in names
+            call_capability_schema = tools_by_name[
+                "wf.workflow.call_capability"
+            ].outputSchema
+            assert call_capability_schema is not None
+            assert "source_id" in call_capability_schema["properties"]
+            assert "kind" in call_capability_schema["properties"]
+            assert "diagnostics" in call_capability_schema["properties"]
 
             echo_result = await client.call_tool(
                 "fixture.personal.echo_tool",

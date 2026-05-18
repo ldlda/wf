@@ -614,7 +614,38 @@ def test_workflow_surface_calls_saved_wrapper_artifact() -> None:
     )
 
     assert payload["qualified_name"] == "workflow.echo_wrapper.v1"
+    assert payload["source_id"] == "workflow"
+    assert payload["kind"] == "wrapper_artifact"
+    assert payload["diagnostics"] == []
     assert payload["outcome"] == "completed"
+    assert payload["output"]["echoed"] == "hello"
+
+
+def test_workflow_surface_calls_live_node_spec_with_self_describing_response() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_live_capability_call"),
+        artifact_store=FileWorkflowArtifactStore(
+            local_temp_root() / "surface_live_capability_call_artifacts"
+        ),
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.call_capability(
+            qualified_name="demo.personal.echo_tool",
+            payload={"text": "hello"},
+        )
+    )
+
+    assert payload["qualified_name"] == "demo.personal.echo_tool"
+    assert payload["source_id"] == "demo.personal"
+    assert payload["kind"] == "node_spec"
+    assert payload["diagnostics"] == []
+    assert payload["outcome"] == "ok"
     assert payload["output"]["echoed"] == "hello"
 
 
@@ -655,6 +686,10 @@ def test_workflow_surface_calls_saved_wrapper_artifact_with_deployment_bindings(
     )
 
     assert payload["qualified_name"] == "workflow.logical_echo_wrapper.v1"
+    assert payload["source_id"] == "workflow"
+    assert payload["kind"] == "wrapper_artifact"
+    assert payload["deployment_id"] == "logical_echo_wrapper.personal"
+    assert payload["diagnostics"] == []
     assert payload["outcome"] == "completed"
     assert payload["output"]["echoed"] == "hello"
 

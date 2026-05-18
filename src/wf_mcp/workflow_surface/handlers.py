@@ -19,7 +19,13 @@ from wf_artifacts import (
     validate_workflow_draft,
     validate_deployment_dependencies,
 )
-from wf_platform import CapabilityRef, NodeSpecInventory, hash_json_schema, page_items
+from wf_platform import (
+    CapabilityRef,
+    CapabilitySource,
+    NodeSpecInventory,
+    hash_json_schema,
+    page_items,
+)
 from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
 
@@ -118,8 +124,15 @@ class WorkflowSurfaceHandlers:
         result = await handler(payload, RuntimeContext(current_node_id=spec.name))
         return {
             "qualified_name": spec.name,
+            "source_id": _source_id_for_capability(
+                self.service.capability_sources,
+                spec.name,
+            ),
+            "kind": "node_spec",
+            "deployment_id": None,
             "outcome": result["outcome"],
             "output": result["output"],
+            "diagnostics": [],
         }
 
     def _wrapper_artifact_for_capability_name(
@@ -176,8 +189,12 @@ class WorkflowSurfaceHandlers:
         )
         return {
             "qualified_name": _artifact_capability_id(artifact),
+            "source_id": "workflow",
+            "kind": "wrapper_artifact",
+            "deployment_id": deployment_id,
             "outcome": run.status.value,
             "output": run.output,
+            "diagnostics": [],
         }
 
     async def save_artifact(self, artifact: dict[str, Any]) -> dict[str, Any]:
@@ -564,6 +581,17 @@ def _schema_field_names(schema: dict[str, Any]) -> list[str]:
     if not isinstance(properties, dict):
         return []
     return sorted(str(name) for name in properties)
+
+
+def _source_id_for_capability(
+    sources: dict[str, CapabilitySource],
+    qualified_name: str,
+) -> str | None:
+    """Return the source that currently owns one workflow capability."""
+    for source in sources.values():
+        if qualified_name in source.capabilities.node_specs:
+            return source.id
+    return None
 
 
 def _capability_name(qualified_name: str) -> str | None:

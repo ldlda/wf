@@ -9,6 +9,7 @@ from wf_artifacts.models import RequiredCapability
 from wf_mcp.broker.service import WfMcpService
 
 from .handlers import WorkflowSurfaceHandlers
+from .models import CallCapabilityResult
 
 
 def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None:
@@ -62,11 +63,13 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         qualified_name: str,
         payload: dict[str, Any],
         deployment_id: str | None = None,
-    ) -> dict[str, Any]:
-        return await handlers.call_capability(
-            qualified_name=qualified_name,
-            payload=payload,
-            deployment_id=deployment_id,
+    ) -> CallCapabilityResult:
+        return CallCapabilityResult.model_validate(
+            await handlers.call_capability(
+                qualified_name=qualified_name,
+                payload=payload,
+                deployment_id=deployment_id,
+            )
         )
 
     @server.tool(

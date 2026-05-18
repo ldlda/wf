@@ -268,6 +268,8 @@ authoring loop:
   - returns one full workflow capability contract with schemas and outcomes
 - `wf.workflow.call_capability`
   - executes one such capability once for direct testing
+  - returns `qualified_name`, `source_id`, `kind`, optional `deployment_id`,
+    `outcome`, `output`, and `diagnostics`
 
 These are authoring-plane tools. They do not replace the privileged
 `wf.admin.list_sources` source inventory, and older planner-catalog projections
@@ -281,6 +283,8 @@ Recommended discovery order:
    workflow-ready node specs.
 3. Use `wf.workflow.inspect_capability` only for the selected capability's full
    schema contract.
+4. Use `wf.workflow.call_capability` with a plain input object to test the
+   selected contract once before composing it into a draft.
 
 ## Relationship To Capability Sources
 

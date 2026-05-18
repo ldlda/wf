@@ -179,6 +179,11 @@ nodes rather than source ownership. Its rows include `source_id`, outcomes, and
 top-level input/output field names, while full JSON schemas stay behind
 `wf.workflow.inspect_capability`.
 
+`wf.workflow.call_capability` is the REPL-style test step. Its result is
+self-describing: `kind` is either `node_spec` or `wrapper_artifact`,
+`source_id` identifies the owner when applicable, and `diagnostics` is empty for
+successful calls.
+
 ### 4. Manage Saved Workflows
 
 Use `wf.workflow.*` for artifacts and deployments:
