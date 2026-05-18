@@ -150,7 +150,13 @@ deployment bindings: {}
 Fix:
 
 - add a binding such as `"demo": "demo.personal"`
+- if the missing logical source is local, add a self-binding such as
+  `"wf.std": "wf.std"` or `"wf.mcp": "wf.mcp"`
 - then validate again
+
+System-source self-bindings look redundant, but they mean "use the local
+standard source with the same id." Current deployments bind local and external
+sources through the same field.
 
 Use:
 

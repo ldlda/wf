@@ -324,6 +324,22 @@ The `wf.std` self-binding is present when the saved graph depends on standard
 library capabilities. This tiny echo graph does not need much from `wf.std`, but
 keeping local system-source bindings explicit is the current general pattern.
 
+System-source bindings can look redundant:
+
+```json
+{
+  "wf.std": "wf.std",
+  "wf.mcp": "wf.mcp"
+}
+```
+
+They mean "bind the artifact's logical local source to the concrete local source
+with the same id." They are not external account bindings. Keep them explicit
+for now when validation reports `binding_missing` for `wf.std` or `wf.mcp`.
+Later the platform may make system-source self-bindings implicit, but current
+artifacts and deployments use one uniform binding mechanism for both local and
+external sources.
+
 ## 8. Validate Before Running
 
 ```yaml

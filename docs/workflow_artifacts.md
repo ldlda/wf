@@ -396,6 +396,21 @@ artifact reference: context7.query-docs
 runtime binding:    context7 -> context7.default
 ```
 
+Local system sources use the same binding mechanism. For example:
+
+```text
+artifact reference: wf.std.replace
+runtime binding:    wf.std -> wf.std
+
+artifact reference: wf.mcp.call_tool
+runtime binding:    wf.mcp -> wf.mcp
+```
+
+These self-bindings are not external account choices. They keep dependency
+resolution uniform across local system sources and upstream connection sources.
+They may become implicit later, but today deployments should include them when
+validation reports `binding_missing` for `wf.std` or `wf.mcp`.
+
 or:
 
 ```text

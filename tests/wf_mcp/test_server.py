@@ -186,6 +186,26 @@ def test_workflow_tools_have_human_metadata() -> None:
     asyncio.run(run_proxy())
 
 
+def test_create_artifact_from_plan_exposes_plan_as_plain_object() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "unified_create_artifact_schema_store",
+        connections=[],
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(config, admin_tools=False)
+        async with client:
+            tools = await client.list_tools()
+            by_name = {tool.name: tool for tool in tools}
+            schema = by_name["wf.workflow.create_artifact_from_plan"].inputSchema
+            plan_schema = schema["properties"]["plan"]
+
+            assert plan_schema["type"] == "object"
+            assert plan_schema.get("additionalProperties") is True
+
+    asyncio.run(run_proxy())
+
+
 def test_server_exposes_platform_documentation_resources() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "unified_docs_resource_store",

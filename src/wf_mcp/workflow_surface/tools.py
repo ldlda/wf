@@ -8,7 +8,6 @@ from wf_artifacts import ArtifactKind
 from wf_artifacts.models import RequiredCapability
 from wf_mcp.broker.service import WfMcpService
 
-from ..models import RawWorkflowPlan
 from .handlers import WorkflowSurfaceHandlers
 
 
@@ -87,7 +86,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         artifact_id: str,
         version: int,
         title: str,
-        plan: RawWorkflowPlan,
+        plan: dict[str, Any],
         outcomes: list[str],
         kind: ArtifactKind = "workflow",
         description: str | None = None,
