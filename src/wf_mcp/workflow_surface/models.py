@@ -115,6 +115,42 @@ class PatchDraftWorkspaceRequest(BaseModel):
     patch: JsonPatchOperations
 
 
+class SetDraftNameRequest(BaseModel):
+    """Typed MCP request for changing the workflow draft name."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    name: str = Field(description="New workflow draft name.")
+
+
+class SetDraftRouteRequest(BaseModel):
+    """Typed MCP request for setting one outcome route on one draft step."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    step_id: str = Field(description="Draft step id whose route should be edited.")
+    outcome: str = Field(description="Outcome label to route, for example ok or error.")
+    target: str = Field(description="Target step id or __end__.")
+
+
+class SetStepInputMapRequest(BaseModel):
+    """Typed MCP request for replacing one step input map."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    step_id: str = Field(description="Draft step id whose input map should change.")
+    input_map: DraftPathMap
+
+
+class SetStepOutputMapRequest(BaseModel):
+    """Typed MCP request for replacing one step output map."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    step_id: str = Field(description="Draft step id whose output map should change.")
+    output_map: DraftPathMap
+
+
 class DeleteDraftWorkspaceRequest(BaseModel):
     """Typed MCP request payload for deleting one draft workspace."""
 

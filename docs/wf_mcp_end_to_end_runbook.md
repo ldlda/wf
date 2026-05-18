@@ -507,7 +507,9 @@ Concrete MCP sequence:
    existing workspace ids.
 5. `wf.workflow.get_draft_workspace` with `include_draft=true` if the client
    needs to inspect the full current draft.
-6. `wf.workflow.patch_draft_workspace` with the current `revision`.
+6. Use focused helpers such as `wf.workflow.set_draft_name` or
+   `wf.workflow.set_draft_route`, or call `wf.workflow.patch_draft_workspace`
+   with the current `revision` for arbitrary JSON Patch edits.
 7. `wf.workflow.create_artifact_from_workspace` after validation is clean.
 8. `wf.workflow.save_deployment`, then `validate_deployment`, then
    `run_deployment`.

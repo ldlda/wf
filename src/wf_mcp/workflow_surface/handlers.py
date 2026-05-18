@@ -433,6 +433,83 @@ class WorkflowSurfaceHandlers:
             patch=patch,
         )
 
+    async def set_draft_name(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        name: str,
+    ) -> dict[str, Any]:
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=[{"op": "replace", "path": "/name", "value": name}],
+        )
+
+    async def set_draft_route(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        outcome: str,
+        target: str,
+    ) -> dict[str, Any]:
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=[
+                {
+                    "op": "add",
+                    "path": (
+                        f"/routes/{_escape_json_pointer(step_id)}/"
+                        f"{_escape_json_pointer(outcome)}"
+                    ),
+                    "value": target,
+                }
+            ],
+        )
+
+    async def set_step_input_map(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        input_map: dict[str, str],
+    ) -> dict[str, Any]:
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=[
+                {
+                    "op": "replace",
+                    "path": f"/steps/{_escape_json_pointer(step_id)}/in",
+                    "value": input_map,
+                }
+            ],
+        )
+
+    async def set_step_output_map(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        output_map: dict[str, str],
+    ) -> dict[str, Any]:
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=[
+                {
+                    "op": "replace",
+                    "path": f"/steps/{_escape_json_pointer(step_id)}/out",
+                    "value": output_map,
+                }
+            ],
+        )
+
     async def create_minimal_draft_workspace(
         self,
         *,
@@ -757,6 +834,11 @@ def _first_state_path(output_map: dict[str, str]) -> str | None:
         if target.startswith("state."):
             return target
     return None
+
+
+def _escape_json_pointer(value: str) -> str:
+    """Escape one JSON Pointer path segment for generated JSON Patch helpers."""
+    return value.replace("~", "~0").replace("/", "~1")
 
 
 def _source_id_for_capability(

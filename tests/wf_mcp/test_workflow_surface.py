@@ -434,6 +434,64 @@ def test_workflow_surface_deletes_draft_workspace() -> None:
     assert listed["workspaces"] == []
 
 
+def test_workflow_surface_patch_helpers_update_draft_workspace() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_patch_helpers"
+    )
+    handlers = _handlers(artifact_store)
+    asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="echo_draft",
+            draft=_echo_draft(),
+        )
+    )
+
+    named = asyncio.run(
+        handlers.set_draft_name(
+            workspace_id="echo_draft",
+            revision=1,
+            name="echo_v2",
+        )
+    )
+    routed = asyncio.run(
+        handlers.set_draft_route(
+            workspace_id="echo_draft",
+            revision=2,
+            step_id="echo",
+            outcome="error",
+            target="__end__",
+        )
+    )
+    input_mapped = asyncio.run(
+        handlers.set_step_input_map(
+            workspace_id="echo_draft",
+            revision=3,
+            step_id="echo",
+            input_map={"input.text": "message"},
+        )
+    )
+    output_mapped = asyncio.run(
+        handlers.set_step_output_map(
+            workspace_id="echo_draft",
+            revision=4,
+            step_id="echo",
+            output_map={"echoed": "state.echoed"},
+        )
+    )
+    fetched = asyncio.run(
+        handlers.get_draft_workspace(workspace_id="echo_draft", include_draft=True)
+    )
+
+    assert named["revision"] == 2
+    assert routed["revision"] == 3
+    assert input_mapped["revision"] == 4
+    assert output_mapped["revision"] == 5
+    assert fetched["draft"]["name"] == "echo_v2"
+    assert fetched["draft"]["routes"]["echo"]["error"] == "__end__"
+    assert fetched["draft"]["steps"]["echo"]["in"] == {"input.text": "message"}
+    assert fetched["draft"]["steps"]["echo"]["out"] == {"echoed": "state.echoed"}
+
+
 def test_workflow_surface_patches_draft_workspace_by_revision() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "surface_workspace_patch"

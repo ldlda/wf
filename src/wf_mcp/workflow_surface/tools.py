@@ -19,6 +19,10 @@ from .models import (
     DraftWorkspaceListResult,
     DraftWorkspaceResult,
     PatchDraftWorkspaceRequest,
+    SetDraftNameRequest,
+    SetDraftRouteRequest,
+    SetStepInputMapRequest,
+    SetStepOutputMapRequest,
 )
 
 
@@ -270,6 +274,70 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 workspace_id=request.workspace_id,
                 revision=request.revision,
                 patch=request.patch,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.set_draft_name",
+        title="Set Draft Name",
+        description="Replace the name field of a stored draft workspace.",
+    )
+    async def set_draft_name(request: SetDraftNameRequest) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.set_draft_name(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                name=request.name,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.set_draft_route",
+        title="Set Draft Route",
+        description="Set one outcome route on one step in a draft workspace.",
+    )
+    async def set_draft_route(request: SetDraftRouteRequest) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.set_draft_route(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                outcome=request.outcome,
+                target=request.target,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.set_step_input_map",
+        title="Set Step Input Map",
+        description="Replace one step input map in a draft workspace.",
+    )
+    async def set_step_input_map(
+        request: SetStepInputMapRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.set_step_input_map(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                input_map=request.input_map,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.set_step_output_map",
+        title="Set Step Output Map",
+        description="Replace one step output map in a draft workspace.",
+    )
+    async def set_step_output_map(
+        request: SetStepOutputMapRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.set_step_output_map(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                output_map=request.output_map,
             )
         )
 

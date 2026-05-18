@@ -352,6 +352,7 @@ resending the full draft each turn.
 | List existing draft sessions | `wf.workflow.list_draft_workspaces` |
 | Fetch current draft workspace | `wf.workflow.get_draft_workspace` |
 | Patch current draft workspace | `wf.workflow.patch_draft_workspace` |
+| Change common draft fields without JSON Patch | `wf.workflow.set_draft_name`, `wf.workflow.set_draft_route`, `wf.workflow.set_step_input_map`, `wf.workflow.set_step_output_map` |
 | Save final workspace as artifact | `wf.workflow.create_artifact_from_workspace` |
 | Clean up a draft workspace | `wf.workflow.delete_draft_workspace` |
 
@@ -420,6 +421,18 @@ Patch example:
         "value": "echo_v2"
       }
     ]
+  }
+}
+```
+
+If you do not want to write JSON Patch by hand, use the focused helpers:
+
+```json
+{
+  "request": {
+    "workspace_id": "echo_draft",
+    "revision": 1,
+    "name": "echo_v2"
   }
 }
 ```
