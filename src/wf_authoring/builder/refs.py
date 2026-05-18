@@ -3,11 +3,13 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, TypeAlias, TypeGuard
 
-from wf_core import ConditionNode, ForeachNode, InterruptNode, NodeUse
+from wf_core import ConditionNode, ForeachNode, InterruptNode, JoinNode, NodeUse
 
 from ..nodes import NodeSpec
 
-StepRef: TypeAlias = str | NodeUse | ConditionNode | ForeachNode | InterruptNode
+StepRef: TypeAlias = (
+    str | NodeUse | ConditionNode | ForeachNode | InterruptNode | JoinNode
+)
 BranchRef: TypeAlias = StepRef | NodeSpec[Any, Any]
 
 

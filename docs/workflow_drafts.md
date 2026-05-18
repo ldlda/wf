@@ -64,11 +64,9 @@ A minimal draft looks like this:
     "required": ["echoed"]
   },
   "start": "echo",
-  "steps": [
-    {
-      "id": "echo",
-      "kind": "use",
-      "capability": "demo.personal.echo_tool",
+  "steps": {
+    "echo": {
+      "use": "demo.personal.echo_tool",
       "in": {
         "input.text": "text"
       },
@@ -76,22 +74,20 @@ A minimal draft looks like this:
         "echoed": "state.echoed"
       }
     }
-  ],
-  "edges": [
-    {
-      "from": "echo",
-      "outcome": "ok",
-      "to": "__end__"
+  },
+  "routes": {
+    "echo": {
+      "ok": "__end__"
     }
-  ]
+  }
 }
 ```
 
 Important details:
 
-- `steps[].id` is required because JSON has no Python object identity.
-- `start` names a step id.
-- `edges[].to` can name another step id or `__end__`.
+- `steps` are keyed by stable ids so patches do not depend on array positions.
+- `start` names one step id.
+- `routes` map step outcomes to another step id or `__end__`.
 - `capability` may be concrete during exploration, such as
   `demo.personal.echo_tool`.
 - When saved with source bindings, concrete refs can be normalized to logical
@@ -105,9 +101,7 @@ Calls a workflow capability.
 
 ```json
 {
-  "id": "echo",
-  "kind": "use",
-  "capability": "demo.personal.echo_tool",
+  "use": "demo.personal.echo_tool",
   "in": {
     "input.text": "text"
   },
@@ -120,36 +114,18 @@ Calls a workflow capability.
 Use this for normal node calls, including generated workflow wrappers around
 MCP tools and local `wf.std` capabilities.
 
-### `condition`
-
-Evaluates a condition and routes by outcome.
-
-```json
-{
-  "id": "has_text",
-  "kind": "condition",
-  "check": {
-    "op": "exists",
-    "args": ["input.text"]
-  }
-}
-```
-
-Condition nodes compile to graph nodes with condition semantics. Their outgoing
-edges should use condition outcomes such as `true` and `false`.
-
 ### `foreach`
 
 Runs a child body over items.
 
 ```json
 {
-  "id": "each_item",
-  "kind": "foreach",
-  "over": "state.items",
-  "as": "item",
-  "mode": "serial",
-  "on_item_error": "fail"
+  "foreach": {
+    "over": "state.items",
+    "as": "item",
+    "mode": "serial",
+    "on_item_error": "fail"
+  }
 }
 ```
 
@@ -162,16 +138,16 @@ Declares an interrupting step.
 
 ```json
 {
-  "id": "ask_user",
-  "kind": "interrupt",
-  "interrupt_kind": "input",
-  "request": {
-    "state.question": "question"
-  },
-  "resume": {
-    "answer": "state.answer"
-  },
-  "outcomes": ["resumed", "cancelled"]
+  "interrupt": {
+    "kind": "input",
+    "request": {
+      "state.question": "question"
+    },
+    "resume": {
+      "answer": "state.answer"
+    },
+    "outcomes": ["resumed", "cancelled"]
+  }
 }
 ```
 
@@ -185,8 +161,7 @@ Joins control flow.
 
 ```json
 {
-  "id": "join_results",
-  "kind": "join"
+  "join": {}
 }
 ```
 
@@ -214,17 +189,13 @@ Example:
 [
   {
     "op": "replace",
-    "path": "/steps/0/in/input.text",
+    "path": "/steps/echo/in/input.text",
     "value": "message"
   },
   {
     "op": "add",
-    "path": "/edges/-",
-    "value": {
-      "from": "echo",
-      "outcome": "error",
-      "to": "__end__"
-    }
+    "path": "/routes/echo/error",
+    "value": "__end__"
   }
 ]
 ```

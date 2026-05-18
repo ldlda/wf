@@ -22,7 +22,7 @@ This pass covers:
 
 1. keyed steps
 2. compact outcome routes
-3. verb-keyed step shapes such as `use` and `route`
+3. verb-keyed step shapes such as `use`
 4. saved capability/workflow references in `use`
 5. stable JSON Patch paths
 6. parity documentation against current `wf_authoring`
@@ -30,6 +30,7 @@ This pass covers:
 This pass does **not** cover:
 
 - reverse-branch / shared outcome handlers
+- draft `route` sugar
 - a new `wf_authoring` fluent API
 - true subgraph support
 - new core graph semantics
@@ -85,7 +86,7 @@ The draft layer owns:
 
 It should not own:
 
-- route expansion
+- graph construction rules
 - graph construction rules
 - duplicate edge-building machinery
 - alternate workflow semantics
@@ -109,7 +110,6 @@ but no step kind is inferred.
 Exactly one step-kind key must be present. Allowed step-kind keys are:
 
 - `use`
-- `route`
 - `foreach`
 - `interrupt`
 - `join`
@@ -145,22 +145,8 @@ Zero kind keys or multiple kind keys are validation errors.
       }
     }
   },
-  "start": "has_text",
+  "start": "echo",
   "steps": {
-    "has_text": {
-      "route": [
-        {
-          "when": {
-            "op": "exists",
-            "path": "input.text"
-          },
-          "to": "echo"
-        },
-        {
-          "otherwise": "missing_text"
-        }
-      ]
-    },
     "echo": {
       "use": "demo.personal.echo_tool",
       "in": {
@@ -217,49 +203,9 @@ Call one workflow capability.
 - saved wrapper capability
 - saved workflow capability once graph-as-node is available
 
-The compiler lowers this to a core `NodeUse`.
-
-### `route`
-
-Route based on input/state conditions.
-
-```json
-{
-  "route": [
-    {
-      "when": {
-        "op": "exists",
-        "path": "state.hit"
-      },
-      "to": "found"
-    },
-    {
-      "otherwise": "missing"
-    }
-  ]
-}
-```
-
-The draft adapter asks `wf_authoring` to lower a route step using the same
-repeated condition-chain sugar that current Python authoring uses:
-
-```text
-if cond_1 -> target_1 else
-if cond_2 -> target_2 else
-...
-otherwise -> fallback
-```
-
-That means traces show the expanded condition steps. No new core runtime
-semantics are required.
-
-Rules:
-
-- clauses are ordered
-- zero or more `when` clauses may appear
-- at most one `otherwise` clause may appear
-- `otherwise` must be last
-- every clause must declare a target
+The adapter lowers this through `WorkflowBuilder.use_ref(...)`, which exists for
+named external capabilities that do not have a local Python callable-backed
+`NodeSpec`.
 
 ### `foreach`
 
@@ -323,7 +269,7 @@ Most ordinary edges should be authored through `routes`:
 }
 ```
 
-The adapter passes these through the same authoring route/connection path that
+The adapter passes these through the same authoring connection path that
 produces normal core edges.
 
 Outcome keys remain strings in JSON because they are wire values, but they
@@ -334,7 +280,7 @@ declared outcomes.
 `routes` is intended for:
 
 - outcome routing from `use`
-- outgoing edges from lowered route/condition machinery
+- outgoing edges from authored graph steps
 - ordinary terminal edges
 
 The raw edge list remains compiler output, not the normal authoring surface.
@@ -367,7 +313,7 @@ This is a core reason for keyed `steps`.
 | `g.use(spec, ...)` | `steps[id].use` | direct conceptual match |
 | `g.connect(step, outcome, target)` | `routes[id][outcome] = target` | same graph meaning, better JSON |
 | `g.branch(...)` | `routes[...]` | outcome routing is already compact in JSON |
-| `route(...)` node | `steps[id].route` | state/input routing |
+| `route(...)` node | not in the first draft surface | defer until both front doors agree |
 | explicit `start(...)` | `start` | direct match |
 | `END` | `"__end__"` | keep wire token explicit |
 | `NodeSpec` object | capability ref string | MCP cannot carry Python callable identity |
@@ -403,7 +349,7 @@ Possible later surfaces:
 The MCP draft surface exposes friction in current Python authoring too:
 
 - no fluent shared-handler helper
-- no full parity with route sugar
+- no draft parity for route sugar yet
 - likely room for better grouped declarations
 - outcome names still travel as bare strings even though `NodeSpec` already
   declares them
@@ -423,6 +369,13 @@ Potential later core work:
 - meaningful join semantics
 - future START-edge support if `Workflow.start` changes
 
+### Draft `route` Sugar
+
+Current `wf_authoring.route()` already has a specific equality/boolean routing
+surface. The draft layer should not invent a richer JSON route language ahead of
+Python authoring. Add draft route sugar later, after the shape is chosen
+deliberately for both front doors.
+
 ## Prototype Replacement
 
 The current draft prototype should be deleted or replaced directly.
@@ -441,8 +394,7 @@ Tests should cover:
 1. verb-key validation: exactly one step-kind key
 2. keyed-step compilation into core nodes
 3. `routes` compilation into core edges
-4. `route` lowering into current condition nodes/edges
-5. saved capability refs passing through `use`
-6. patching by stable ids
-7. artifact creation from the new draft surface
-8. diagnostics with stable draft paths
+4. saved capability refs passing through `use`
+5. patching by stable ids
+6. artifact creation from the new draft surface
+7. diagnostics with stable draft paths

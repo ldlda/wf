@@ -257,11 +257,9 @@ arguments:
       "required": ["echoed"]
     },
     "start": "echo",
-    "steps": [
-      {
-        "id": "echo",
-        "kind": "use",
-        "capability": "demo.personal.echo_tool",
+    "steps": {
+      "echo": {
+        "use": "demo.personal.echo_tool",
         "in": {
           "input.text": "text"
         },
@@ -269,14 +267,12 @@ arguments:
           "echoed": "state.echoed"
         }
       }
-    ],
-    "edges": [
-      {
-        "from": "echo",
-        "outcome": "ok",
-        "to": "__end__"
+    },
+    "routes": {
+      "echo": {
+        "ok": "__end__"
       }
-    ]
+    }
   }
 }
 ```

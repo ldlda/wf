@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from wf_authoring import WorkflowBuilder, state
-from wf_core import RunStatus, WorkflowExecutionError
+from wf_core import END, RunStatus, WorkflowExecutionError
 
 from tests.authoring.helpers import (
     AutoBindInput,
@@ -187,3 +187,27 @@ def test_builder_connect_can_use_node_specs_and_returns_resolved_refs() -> None:
     assert builder.edges[0].from_ == "test_auto_bind"
     assert builder.edges[0].outcome == "ok"
     assert builder.edges[0].to == "test_auto_bind_2"
+
+
+def test_builder_use_ref_creates_external_node_use_without_node_def() -> None:
+    builder = WorkflowBuilder(
+        name="external_ref_demo",
+        input_schema={},
+        state_schema={"fields": {}},
+        output_schema={},
+    )
+
+    step = builder.use_ref(
+        "demo.echo",
+        id="echo",
+        in_map={"input.text": "text"},
+        out_map={"echoed": "state.echoed"},
+    )
+    builder.set_entry_point(step)
+    builder.connect(step, "ok", END)
+    workflow = builder.compile()
+
+    assert step.node == "demo.echo"
+    assert step.in_map["input.text"] == "text"
+    assert step.out_map["echoed"] == "state.echoed"
+    assert workflow.node_defs == []

@@ -254,7 +254,10 @@ class WorkflowSurfaceHandlers:
         }
 
     async def validate_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
-        return validate_workflow_draft(draft)
+        return validate_workflow_draft(
+            draft,
+            outcome_lookup=self._outcomes_for_capability,
+        )
 
     async def compile_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
         plan = compile_workflow_draft(draft)
@@ -335,6 +338,12 @@ class WorkflowSurfaceHandlers:
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
         return patch_workflow_draft(draft, patch)
+
+    def _outcomes_for_capability(self, qualified_name: str) -> tuple[str, ...] | None:
+        try:
+            return self.service._get_qualified_spec(qualified_name).outcomes
+        except KeyError:
+            return None
 
     async def inspect_artifact(
         self, *, artifact_id: str, version: int

@@ -92,6 +92,33 @@ class WorkflowBuilder:
         self.nodes.append(node)
         return node
 
+    def use_ref(
+        self,
+        name: str,
+        *,
+        id: str | None = None,
+        in_map: MapArg | None = None,
+        out_map: MapArg | None = None,
+        desc: str | None = None,
+    ) -> NodeUse:
+        """Use an already-named external capability without a local `NodeSpec`.
+
+        `use()` is for callable-backed Python specs that can contribute a local
+        node definition and registry handler. `use_ref()` is the matching escape
+        hatch for MCP/saved-workflow capability refs that are resolved later by
+        the environment runner into node definitions and registry handlers.
+        """
+        node = NodeUse(
+            id=id or self._next_step_id(slug_id(name)),
+            type="node",
+            node=name,
+            desc=desc,
+            in_map=normalize_mapping(in_map),
+            out_map=normalize_mapping(out_map),
+        )
+        self.nodes.append(node)
+        return node
+
     def _next_step_id(self, base: str) -> str:
         """Return a stable unused step id based on the requested base name."""
         return next_step_id(base, cast(list[StepRef], self.nodes))

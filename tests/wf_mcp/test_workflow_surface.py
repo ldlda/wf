@@ -224,6 +224,30 @@ def test_workflow_surface_validates_draft_without_saving() -> None:
     assert artifact_store.list_artifacts() == []
 
 
+def test_workflow_surface_rejects_unknown_draft_route_outcome_when_spec_is_known() -> (
+    None
+):
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_draft_bad_outcome"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_draft_bad_outcome_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+    draft = _echo_draft()
+    draft["routes"]["echo"] = {"typo": "__end__"}
+
+    payload = asyncio.run(handlers.validate_draft(draft=draft))
+
+    assert payload["status"] == "invalid"
+    assert payload["diagnostics"][0]["path"] == "routes.echo.typo"
+
+
 def test_workflow_surface_creates_artifact_from_draft_with_binding_suggestions() -> (
     None
 ):
@@ -240,7 +264,7 @@ def test_workflow_surface_creates_artifact_from_draft_with_binding_suggestions()
     service.register_specs("demo.personal", echo_tool)
     handlers = WorkflowSurfaceHandlers(service)
     draft = _echo_draft()
-    draft["steps"][0]["capability"] = "demo.personal.echo_tool"
+    draft["steps"]["echo"]["use"] = "demo.personal.echo_tool"
 
     payload = asyncio.run(
         handlers.create_artifact_from_draft(
@@ -307,7 +331,7 @@ def test_workflow_surface_patches_draft_without_saving() -> None:
             patch=[
                 {
                     "op": "replace",
-                    "path": "/steps/0/in/input.text",
+                    "path": "/steps/echo/in/input.text",
                     "value": "message",
                 }
             ],
@@ -315,7 +339,7 @@ def test_workflow_surface_patches_draft_without_saving() -> None:
     )
 
     assert payload["status"] == "valid"
-    assert payload["draft"]["steps"][0]["in"]["input.text"] == "message"
+    assert payload["draft"]["steps"]["echo"]["in"]["input.text"] == "message"
     assert artifact_store.list_artifacts() == []
 
 
@@ -719,16 +743,14 @@ def _echo_draft() -> dict[str, Any]:
             "required": ["echoed"],
         },
         "start": "echo",
-        "steps": [
-            {
-                "id": "echo",
-                "kind": "use",
-                "capability": "demo.personal.echo_tool",
+        "steps": {
+            "echo": {
+                "use": "demo.personal.echo_tool",
                 "in": {"input.text": "text"},
                 "out": {"echoed": "state.echoed"},
             }
-        ],
-        "edges": [{"from": "echo", "outcome": "ok", "to": "__end__"}],
+        },
+        "routes": {"echo": {"ok": "__end__"}},
     }
 
 
