@@ -78,6 +78,22 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         return await handlers.save_artifact(artifact)
 
     @server.tool(
+        name="wf.workflow.validate_draft",
+        title="Validate Workflow Draft",
+        description="Validate an LLM-friendly workflow draft without saving it.",
+    )
+    async def validate_draft(draft: dict[str, Any]) -> dict[str, Any]:
+        return await handlers.validate_draft(draft=draft)
+
+    @server.tool(
+        name="wf.workflow.compile_draft",
+        title="Compile Workflow Draft",
+        description="Compile an LLM-friendly workflow draft into a raw workflow plan.",
+    )
+    async def compile_draft(draft: dict[str, Any]) -> dict[str, Any]:
+        return await handlers.compile_draft(draft=draft)
+
+    @server.tool(
         name="wf.workflow.create_artifact_from_plan",
         title="Create Workflow Artifact From Plan",
         description="Validate a raw workflow plan and save it as a versioned artifact.",
@@ -116,6 +132,60 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
             source_bindings=dict(source_bindings or {}),
             created_from_catalog_version=created_from_catalog_version,
         )
+
+    @server.tool(
+        name="wf.workflow.create_artifact_from_draft",
+        title="Create Workflow Artifact From Draft",
+        description=(
+            "Compile an LLM-friendly workflow draft and save it as a versioned "
+            "artifact."
+        ),
+    )
+    async def create_artifact_from_draft(
+        artifact_id: str,
+        version: int,
+        title: str,
+        draft: dict[str, Any],
+        outcomes: list[str],
+        kind: ArtifactKind = "workflow",
+        description: str | None = None,
+        required_capabilities: (
+            Mapping[str, RequiredCapability | dict[str, Any]] | None
+        ) = None,
+        source_bindings: Mapping[str, str] | None = None,
+        created_from_catalog_version: str | None = None,
+    ) -> dict[str, Any]:
+        return await handlers.create_artifact_from_draft(
+            artifact_id=artifact_id,
+            version=version,
+            title=title,
+            kind=kind,
+            description=description,
+            draft=draft,
+            outcomes=outcomes,
+            required_capabilities={
+                name: (
+                    capability.model_dump()
+                    if isinstance(capability, RequiredCapability)
+                    else capability
+                )
+                for name, capability in (required_capabilities or {}).items()
+            }
+            or None,
+            source_bindings=dict(source_bindings or {}),
+            created_from_catalog_version=created_from_catalog_version,
+        )
+
+    @server.tool(
+        name="wf.workflow.patch_draft",
+        title="Patch Workflow Draft",
+        description="Apply an RFC 6902 JSON Patch to a workflow draft and validate it.",
+    )
+    async def patch_draft(
+        draft: dict[str, Any],
+        patch: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return await handlers.patch_draft(draft=draft, patch=patch)
 
     @server.tool(
         name="wf.workflow.inspect_artifact",

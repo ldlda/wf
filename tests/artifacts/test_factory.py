@@ -93,7 +93,10 @@ def test_create_workflow_artifact_from_plan_snapshots_observed_node_spec() -> No
             "demo.personal.echo_tool": NodeSpecInventory(
                 name="demo.personal.echo_tool",
                 outcomes=("ok",),
-                input_schema={"type": "object", "properties": {"text": {"type": "string"}}},
+                input_schema={
+                    "type": "object",
+                    "properties": {"text": {"type": "string"}},
+                },
                 output_schema={
                     "type": "object",
                     "properties": {"echoed": {"type": "string"}},

@@ -18,6 +18,7 @@ from .events import McpEvent
 
 _CapabilityT = TypeVar("_CapabilityT")
 
+
 @dataclass(slots=True)
 class DiscoveredConnectionCapabilities:
     tools: list[DiscoveredTool] = field(default_factory=list)

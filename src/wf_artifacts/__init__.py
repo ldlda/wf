@@ -4,6 +4,11 @@ from .catalog import (
     artifact_node_name,
 )
 from .factory import create_workflow_artifact_from_plan
+from .drafts import (
+    compile_workflow_draft,
+    patch_workflow_draft,
+    validate_workflow_draft,
+)
 from .models import (
     ArtifactKind,
     AvailableCapability,
@@ -37,7 +42,10 @@ __all__ = [
     "artifact_catalog_entry",
     "artifact_node_name",
     "create_workflow_artifact_from_plan",
+    "compile_workflow_draft",
     "logical_ref_for_concrete_ref",
     "normalize_plan_node_refs",
+    "patch_workflow_draft",
     "validate_deployment_dependencies",
+    "validate_workflow_draft",
 ]

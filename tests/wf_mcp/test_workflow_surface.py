@@ -210,6 +210,115 @@ def test_workflow_surface_creates_artifact_with_logical_node_refs() -> None:
     assert artifact.required_capabilities["demo.echo_tool"].logical_source == "demo"
 
 
+def test_workflow_surface_validates_draft_without_saving() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_draft_validate"
+    )
+    handlers = _handlers(artifact_store)
+
+    payload = asyncio.run(handlers.validate_draft(draft=_echo_draft()))
+
+    assert payload["status"] == "valid"
+    assert payload["diagnostics"] == []
+    assert payload["compiled_plan"]["nodes"][0]["type"] == "node"
+    assert artifact_store.list_artifacts() == []
+
+
+def test_workflow_surface_creates_artifact_from_draft_with_binding_suggestions() -> (
+    None
+):
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_draft_create"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_draft_create_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+    draft = _echo_draft()
+    draft["steps"][0]["capability"] = "demo.personal.echo_tool"
+
+    payload = asyncio.run(
+        handlers.create_artifact_from_draft(
+            artifact_id="draft_echo",
+            version=1,
+            title="Draft Echo",
+            draft=draft,
+            outcomes=("completed",),
+            source_bindings={"demo": "demo.personal"},
+        )
+    )
+    artifact = artifact_store.get_artifact("draft_echo", 1)
+
+    assert payload["saved"] is True
+    assert payload["required_logical_sources"] == ["demo", "wf.std"]
+    assert payload["suggested_bindings"]["wf.std"] == "wf.std"
+    assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
+    assert artifact.required_capabilities["demo.echo_tool"].logical_source == "demo"
+
+
+def test_workflow_surface_draft_artifact_requires_std_self_binding() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_draft_missing_std"
+    )
+    handlers = _handlers(artifact_store)
+
+    asyncio.run(
+        handlers.create_artifact_from_draft(
+            artifact_id="draft_echo_missing_std",
+            version=1,
+            title="Draft Echo Missing Std",
+            draft=_echo_draft(),
+            outcomes=("completed",),
+            source_bindings={"demo": "demo.personal"},
+        )
+    )
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="draft_echo_missing_std.personal",
+            artifact_id="draft_echo_missing_std",
+            artifact_version=1,
+            bindings={"demo": "demo.personal"},
+        )
+    )
+
+    payload = asyncio.run(
+        handlers.validate_deployment(deployment_id="draft_echo_missing_std.personal")
+    )
+
+    assert payload["status"] == "unrunnable"
+    assert payload["diagnostics"][0]["code"] == "binding_missing"
+    assert payload["diagnostics"][0]["logical_ref"] == "wf.std.replace"
+
+
+def test_workflow_surface_patches_draft_without_saving() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_draft_patch"
+    )
+    handlers = _handlers(artifact_store)
+
+    payload = asyncio.run(
+        handlers.patch_draft(
+            draft=_echo_draft(),
+            patch=[
+                {
+                    "op": "replace",
+                    "path": "/steps/0/in/input.text",
+                    "value": "message",
+                }
+            ],
+        )
+    )
+
+    assert payload["status"] == "valid"
+    assert payload["draft"]["steps"][0]["in"]["input.text"] == "message"
+    assert artifact_store.list_artifacts() == []
+
+
 def test_raw_workflow_plan_uses_core_step_and_edge_models() -> None:
     plan = RawWorkflowPlan.model_validate(_echo_artifact().plan)
 
@@ -593,6 +702,34 @@ def _echo_artifact() -> WorkflowArtifact:
             )
         },
     )
+
+
+def _echo_draft() -> dict[str, Any]:
+    return {
+        "name": "echo",
+        "input_schema": {
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        "state_schema": {"fields": {"echoed": {"type": "string"}}},
+        "output_schema": {
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+            "required": ["echoed"],
+        },
+        "start": "echo",
+        "steps": [
+            {
+                "id": "echo",
+                "kind": "use",
+                "capability": "demo.personal.echo_tool",
+                "in": {"input.text": "text"},
+                "out": {"echoed": "state.echoed"},
+            }
+        ],
+        "edges": [{"from": "echo", "outcome": "ok", "to": "__end__"}],
+    }
 
 
 def _logical_echo_artifact() -> WorkflowArtifact:

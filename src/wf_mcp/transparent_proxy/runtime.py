@@ -36,7 +36,11 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     # Stable workflow control surface. Keep future workflow-capability test
     # tools pinned here too; they are distinct from raw MCP tool execution.
     "wf.workflow.list_artifacts",
+    "wf.workflow.validate_draft",
+    "wf.workflow.compile_draft",
     "wf.workflow.create_artifact_from_plan",
+    "wf.workflow.create_artifact_from_draft",
+    "wf.workflow.patch_draft",
     "wf.workflow.call_capability",
     "wf.workflow.inspect_artifact",
     "wf.workflow.list_deployments",

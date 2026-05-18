@@ -59,6 +59,10 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.list_capabilities" in names
             assert "wf.workflow.inspect_capability" in names
             assert "wf.workflow.call_capability" in names
+            assert "wf.workflow.validate_draft" in names
+            assert "wf.workflow.compile_draft" in names
+            assert "wf.workflow.create_artifact_from_draft" in names
+            assert "wf.workflow.patch_draft" in names
             assert "wf.workflow.run_deployment" in names
 
             echo_result = await client.call_tool(
@@ -80,8 +84,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert _structured(capability_result)["outcome"] == "ok"
             assert _structured(capability_result)["output"] == {"value": "hello"}
             source_ids = {
-                source["id"]
-                for source in _structured(sources_result)["sources"]
+                source["id"] for source in _structured(sources_result)["sources"]
             }
             assert "wf.admin" in source_ids
             assert "wf.docs" in source_ids
@@ -152,6 +155,8 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.admin.list_proxy_tools" in names
             assert "wf.admin.get_proxy_tool" in names
             assert "wf.workflow.list_artifacts" in names
+            assert "wf.workflow.validate_draft" in names
+            assert "wf.workflow.create_artifact_from_draft" in names
             assert "wf.workflow.call_capability" in names
             assert "wf.workflow.inspect_artifact" in names
             assert "wf.workflow.list_deployments" in names
@@ -202,6 +207,39 @@ def test_create_artifact_from_plan_exposes_plan_as_plain_object() -> None:
 
             assert plan_schema["type"] == "object"
             assert plan_schema.get("additionalProperties") is True
+
+    asyncio.run(run_proxy())
+
+
+def test_draft_tools_expose_plain_object_and_patch_array_schemas() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "unified_draft_schema_store",
+        connections=[],
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(config, admin_tools=False)
+        async with client:
+            tools = await client.list_tools()
+            by_name = {tool.name: tool for tool in tools}
+
+            validate_schema = by_name["wf.workflow.validate_draft"].inputSchema
+            validate_draft_schema = validate_schema["properties"]["draft"]
+            create_schema = by_name[
+                "wf.workflow.create_artifact_from_draft"
+            ].inputSchema
+            create_draft_schema = create_schema["properties"]["draft"]
+            patch_schema = by_name["wf.workflow.patch_draft"].inputSchema
+            patch_draft_schema = patch_schema["properties"]["draft"]
+            patch_patch_schema = patch_schema["properties"]["patch"]
+
+            assert validate_draft_schema["type"] == "object"
+            assert validate_draft_schema.get("additionalProperties") is True
+            assert create_draft_schema["type"] == "object"
+            assert create_draft_schema.get("additionalProperties") is True
+            assert patch_draft_schema["type"] == "object"
+            assert patch_patch_schema["type"] == "array"
+            assert "$defs" not in patch_patch_schema
 
     asyncio.run(run_proxy())
 
@@ -306,8 +344,7 @@ def test_server_reload_syncs_service_connection_source_enabled_state() -> None:
                 {"source_id": "fixture.personal"},
             )
             names = [
-                capability["name"]
-                for capability in _structured(after)["capabilities"]
+                capability["name"] for capability in _structured(after)["capabilities"]
             ]
             assert "fixture.personal.echo_tool" in names
 

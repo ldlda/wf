@@ -13,7 +13,10 @@ from wf_artifacts import (
     WorkflowArtifact,
     WorkflowCapabilityRef,
     WorkflowDeployment,
+    compile_workflow_draft,
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
+    patch_workflow_draft,
+    validate_workflow_draft,
     validate_deployment_dependencies,
 )
 from wf_platform import CapabilityRef, NodeSpecInventory, hash_json_schema, page_items
@@ -250,6 +253,89 @@ class WorkflowSurfaceHandlers:
             "saved": True,
         }
 
+    async def validate_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
+        return validate_workflow_draft(draft)
+
+    async def compile_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
+        plan = compile_workflow_draft(draft)
+        return {
+            "compiled_plan": plan,
+            "required_capabilities": _required_capability_payloads(
+                _required_capabilities_for_plan(
+                    plan,
+                    source_bindings=None,
+                    service=self.service,
+                )
+            ),
+        }
+
+    async def create_artifact_from_draft(
+        self,
+        *,
+        artifact_id: str,
+        version: int,
+        title: str,
+        draft: dict[str, Any],
+        outcomes: Sequence[str],
+        kind: ArtifactKind = "workflow",
+        description: str | None = None,
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
+        created_from_catalog_version: str | None = None,
+    ) -> dict[str, Any]:
+        if self.service.artifact_store is None:
+            raise KeyError("workflow artifact store is not configured")
+        plan = compile_workflow_draft(draft)
+        workflow_artifact = build_workflow_artifact_from_plan(
+            artifact_id=artifact_id,
+            version=version,
+            title=title,
+            kind=kind,
+            description=description,
+            plan=plan,
+            outcomes=tuple(outcomes),
+            required_capabilities={
+                name: RequiredCapability.model_validate(capability)
+                for name, capability in (required_capabilities or {}).items()
+            },
+            source_bindings=source_bindings,
+            observed_node_specs=_observed_node_specs(self.service),
+            created_from_catalog_version=created_from_catalog_version,
+        )
+        self.service.artifact_store.save_artifact(workflow_artifact)
+        self.service._record_event(
+            make_event(
+                "workflow_artifact_saved",
+                capability_id=_artifact_capability_id(workflow_artifact),
+                payload={
+                    "artifact_id": workflow_artifact.id,
+                    "version": workflow_artifact.version,
+                    "created_from_draft": True,
+                },
+            )
+        )
+        required_sources = sorted(
+            {
+                capability.logical_source
+                for capability in workflow_artifact.required_capabilities.values()
+            }
+        )
+        return {
+            "artifact_id": workflow_artifact.id,
+            "version": workflow_artifact.version,
+            "saved": True,
+            "required_logical_sources": required_sources,
+            "suggested_bindings": _suggested_self_bindings(required_sources),
+        }
+
+    async def patch_draft(
+        self,
+        *,
+        draft: dict[str, Any],
+        patch: list[dict[str, Any]],
+    ) -> dict[str, Any]:
+        return patch_workflow_draft(draft, patch)
+
     async def inspect_artifact(
         self, *, artifact_id: str, version: int
     ) -> dict[str, Any]:
@@ -400,16 +486,62 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
     return sources
 
 
+def _required_capabilities_for_plan(
+    plan: dict[str, Any],
+    *,
+    source_bindings: dict[str, str] | None,
+    service: WfMcpService,
+) -> dict[str, RequiredCapability]:
+    """Infer a draft dependency summary without persisting an artifact."""
+    artifact = build_workflow_artifact_from_plan(
+        artifact_id="draft_preview",
+        version=1,
+        title="Draft Preview",
+        plan=plan,
+        outcomes=("completed",),
+        source_bindings=source_bindings,
+        observed_node_specs=_observed_node_specs(service),
+    )
+    requirements = dict(artifact.required_capabilities)
+    for node in _plan_nodes(artifact):
+        raw_ref = node.get("node")
+        if not isinstance(raw_ref, str) or raw_ref in requirements:
+            continue
+        try:
+            parsed = CapabilityRef.parse(raw_ref)
+        except ValueError:
+            continue
+        requirements[raw_ref] = RequiredCapability(
+            logical_source=str(parsed.source),
+            capability_name=parsed.name,
+            kind="node_spec",
+        )
+    return requirements
+
+
+def _required_capability_payloads(
+    requirements: dict[str, RequiredCapability],
+) -> dict[str, dict[str, Any]]:
+    return {
+        name: capability.model_dump(mode="json")
+        for name, capability in sorted(requirements.items())
+    }
+
+
+def _suggested_self_bindings(required_sources: Sequence[str]) -> dict[str, str]:
+    """Suggest local bindings for built-in sources that deploy to themselves."""
+    return {
+        source: source for source in required_sources if source in {"wf.std", "wf.mcp"}
+    }
+
+
 def _observed_node_specs(service: WfMcpService) -> dict[str, NodeSpecInventory]:
     """Project current executable specs into serializable observed contracts."""
     observed: dict[str, NodeSpecInventory] = {}
     for source in service.capability_sources.values():
         inventory = source.as_inventory()
         observed.update(
-            {
-                detail.name: detail
-                for detail in inventory.capabilities.node_spec_details
-            }
+            {detail.name: detail for detail in inventory.capabilities.node_spec_details}
         )
     return observed
 
