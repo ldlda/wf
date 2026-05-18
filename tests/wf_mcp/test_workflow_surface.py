@@ -79,12 +79,16 @@ def test_workflow_surface_lists_planner_visible_capabilities() -> None:
 
     payload = asyncio.run(handlers.list_capabilities(limit=2))
     names = [capability["name"] for capability in payload["capabilities"]]
+    first = payload["capabilities"][0]
 
     assert len(names) == 2
     assert payload["total"] >= 2
     assert payload["next_cursor"] == "2"
-    assert "description" in payload["capabilities"][0]
-    assert "input_schema" not in payload["capabilities"][0]
+    assert "description" in first
+    assert "source_id" in first
+    assert "input_fields" in first
+    assert "output_fields" in first
+    assert "input_schema" not in first
     assert "wf.admin.list_sources" not in names
 
 
@@ -98,6 +102,7 @@ def test_workflow_surface_filters_capabilities_by_source() -> None:
     assert [capability["name"] for capability in payload["capabilities"]] == [
         "wf.mcp.call_tool"
     ]
+    assert payload["capabilities"][0]["source_id"] == "wf.mcp"
 
 
 def test_workflow_surface_inspects_one_capability() -> None:

@@ -59,9 +59,12 @@ class WorkflowSurfaceHandlers:
         capabilities = [
             {
                 "name": detail.name,
+                "source_id": source.id,
                 "description": detail.description,
                 "outcomes": list(detail.outcomes),
                 "is_async": detail.is_async,
+                "input_fields": _schema_field_names(detail.input_schema),
+                "output_fields": _schema_field_names(detail.output_schema),
             }
             for source in sorted(
                 self.service.capability_sources.values(),
@@ -553,6 +556,14 @@ def _observed_node_specs(service: WfMcpService) -> dict[str, NodeSpecInventory]:
             {detail.name: detail for detail in inventory.capabilities.node_spec_details}
         )
     return observed
+
+
+def _schema_field_names(schema: dict[str, Any]) -> list[str]:
+    """Return top-level JSON object property names for compact discovery rows."""
+    properties = schema.get("properties")
+    if not isinstance(properties, dict):
+        return []
+    return sorted(str(name) for name in properties)
 
 
 def _capability_name(qualified_name: str) -> str | None:

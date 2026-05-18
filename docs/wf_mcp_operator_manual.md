@@ -174,6 +174,11 @@ only when you need its full owned-capability list. The compact response includes
 counts plus small preview lists and `has_more` flags, so clients can usually
 choose the next source to inspect without loading every schema.
 
+Use `wf.workflow.list_capabilities` after that when you need workflow-ready
+nodes rather than source ownership. Its rows include `source_id`, outcomes, and
+top-level input/output field names, while full JSON schemas stay behind
+`wf.workflow.inspect_capability`.
+
 ### 4. Manage Saved Workflows
 
 Use `wf.workflow.*` for artifacts and deployments:

@@ -262,6 +262,8 @@ authoring loop:
 - `wf.workflow.list_capabilities`
   - lists compact paged enabled planner-visible workflow-ready node spec
     summaries, with optional query/source filtering
+  - includes the owning `source_id`, outcomes, and top-level input/output field
+    names, but not full schemas
 - `wf.workflow.inspect_capability`
   - returns one full workflow capability contract with schemas and outcomes
 - `wf.workflow.call_capability`
@@ -270,6 +272,15 @@ authoring loop:
 These are authoring-plane tools. They do not replace the privileged
 `wf.admin.list_sources` source inventory, and older planner-catalog projections
 may remain while callers migrate to the workflow-facing surface.
+
+Recommended discovery order:
+
+1. Use `wf.admin.list_sources` to find capability owners and preview source
+   contents.
+2. Use `wf.workflow.list_capabilities` with `source_id` or `query` to find
+   workflow-ready node specs.
+3. Use `wf.workflow.inspect_capability` only for the selected capability's full
+   schema contract.
 
 ## Relationship To Capability Sources
 

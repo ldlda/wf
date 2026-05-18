@@ -162,6 +162,9 @@ arguments:
 }
 ```
 
+The list response is intentionally compact. It includes `source_id`, outcomes,
+and top-level `input_fields` / `output_fields`, but not full JSON schemas.
+
 Then inspect its full contract:
 
 ```yaml
