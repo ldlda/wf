@@ -2,7 +2,13 @@ from __future__ import annotations
 
 import pytest
 
-from wf_artifacts.drafts import compile_workflow_draft, patch_workflow_draft
+from wf_artifacts.drafts import (
+    DraftNodeUse,
+    WorkflowDraft,
+    compile_workflow_draft,
+    patch_workflow_draft,
+    validate_workflow_draft,
+)
 
 
 def test_compile_draft_maps_use_step_to_raw_node_use() -> None:
@@ -16,6 +22,13 @@ def test_compile_draft_maps_use_step_to_raw_node_use() -> None:
     assert plan["nodes"][0]["in_map"]["input.message"] == "message"
     assert plan["nodes"][0]["out_map"]["content"] == "state.content"
     assert plan["edges"][0]["to"] == "__end__"
+
+
+def test_workflow_draft_uses_concrete_authoring_models() -> None:
+    draft = WorkflowDraft.model_validate(_draft_with_steps([_use_step()]))
+
+    assert isinstance(draft.steps[0], DraftNodeUse)
+    assert draft.steps[0].capability == "everything.echo"
 
 
 def test_compile_draft_maps_condition_foreach_interrupt_and_join() -> None:
@@ -75,6 +88,16 @@ def test_compile_draft_requires_explicit_step_ids() -> None:
         compile_workflow_draft(draft)
 
     assert "steps[0].id" in str(exc_info.value)
+
+
+def test_validate_draft_returns_structured_step_diagnostic() -> None:
+    draft = _draft_with_steps([{"id": "each", "kind": "foreach", "over": "items"}])
+
+    result = validate_workflow_draft(draft)
+
+    assert result["status"] == "invalid"
+    assert result["diagnostics"][0]["path"] == "steps[0].as"
+    assert result["diagnostics"][0]["step_id"] == "each"
 
 
 def test_patch_workflow_draft_applies_json_patch_and_validates_result() -> None:

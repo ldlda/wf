@@ -158,6 +158,9 @@ System-source self-bindings look redundant, but they mean "use the local
 standard source with the same id." Current deployments bind local and external
 sources through the same field.
 
+If the artifact was created from a draft, inspect the
+`create_artifact_from_draft` response for suggested local bindings.
+
 Use:
 
 ```text
@@ -323,6 +326,33 @@ wrapper when it:
 
 See [`workflow_capabilities.md`](workflow_capabilities.md).
 
+## A Draft Is Invalid Or Almost Correct
+
+Use the draft tools before saving:
+
+```text
+wf.workflow.validate_draft
+wf.workflow.patch_draft
+wf.workflow.compile_draft
+```
+
+`validate_draft` checks the authored draft and the compiled raw workflow plan.
+`patch_draft` applies RFC 6902 JSON Patch and validates the patched result.
+
+Prefer patching a draft over patching a raw plan. The draft is the authoring
+surface; the raw plan is the execution boundary.
+
+If a draft compiles but the deployment later fails with `binding_missing`, add
+the reported source binding to the deployment. Local system-source bindings can
+be explicit, for example:
+
+```json
+{
+  "wf.std": "wf.std",
+  "wf.mcp": "wf.mcp"
+}
+```
+
 ## MCP Resources Or Prompts Are Missing
 
 First ask whether the upstream server actually supports them.
@@ -370,3 +400,4 @@ whether the LLM harness can call it in the same session
   path
 - [`workflow_artifacts.md`](workflow_artifacts.md) for dependency diagnostics
   and drift policy
+- [`workflow_drafts.md`](workflow_drafts.md) for draft validation and patching

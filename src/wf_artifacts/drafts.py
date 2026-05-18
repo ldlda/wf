@@ -1,34 +1,173 @@
 from __future__ import annotations
 
 from copy import deepcopy
-from typing import Any
+from typing import Annotated, Any, Literal
 
 import jsonpatch
-from pydantic import ValidationError
+from pydantic import BaseModel, Field, ValidationError
 
-from wf_core import Workflow
+from wf_core import (
+    END,
+    ConditionNode,
+    ForeachNode,
+    InterruptNode,
+    JoinNode,
+    NodeUse,
+    Workflow,
+)
 
 JsonObject = dict[str, Any]
 JsonPatch = list[dict[str, Any]]
 
 
+class DraftNodeUse(BaseModel):
+    """Authoring-friendly use of one workflow capability."""
+
+    id: str
+    kind: Literal["use"]
+    capability: str
+    desc: str | None = None
+    in_: dict[str, str] = Field(default_factory=dict, alias="in")
+    out: dict[str, str] = Field(default_factory=dict)
+    retry: int | None = Field(default=None, ge=0)
+    timeout_seconds: int | None = Field(default=None, gt=0)
+
+
+class DraftConditionNode(BaseModel):
+    """Authoring-friendly condition step."""
+
+    id: str
+    kind: Literal["condition"]
+    check: JsonObject
+
+
+class DraftForeachNode(BaseModel):
+    """Authoring-friendly foreach step."""
+
+    id: str
+    kind: Literal["foreach"]
+    over: str
+    as_: str = Field(alias="as")
+    mode: Literal["serial", "parallel"] = "serial"
+    on_item_error: Literal["fail", "collect", "skip"] = "fail"
+
+
+class DraftInterruptNode(BaseModel):
+    """Authoring-friendly interrupt step."""
+
+    id: str
+    kind: Literal["interrupt"]
+    interrupt_kind: str
+    request: dict[str, str] = Field(default_factory=dict)
+    resume: dict[str, str] = Field(default_factory=dict)
+    outcomes: list[str] = Field(default_factory=lambda: ["submitted"])
+
+
+class DraftJoinNode(BaseModel):
+    """Authoring-friendly join step."""
+
+    id: str
+    kind: Literal["join"]
+
+
+DraftStep = Annotated[
+    DraftNodeUse
+    | DraftConditionNode
+    | DraftForeachNode
+    | DraftInterruptNode
+    | DraftJoinNode,
+    Field(discriminator="kind"),
+]
+"""Discriminated union of workflow draft steps."""
+
+
+class DraftEdge(BaseModel):
+    """Outcome-specific transition between draft steps."""
+
+    from_: str = Field(alias="from")
+    outcome: str
+    to: str
+
+
+class WorkflowDraft(BaseModel):
+    """LLM-friendly authoring shape that compiles into one raw workflow plan."""
+
+    name: str
+    input_schema: JsonObject
+    state_schema: JsonObject
+    output_schema: JsonObject
+    start: str
+    steps: list[DraftStep]
+    edges: list[DraftEdge]
+
+
+class DraftDiagnostic(BaseModel):
+    """Machine-readable reason a draft could not be compiled."""
+
+    code: str
+    path: str
+    step_id: str | None = None
+    message: str
+
+
+class DraftReferenceError(ValueError):
+    """Reference failure discovered after the draft shape itself is valid."""
+
+    def __init__(self, *, path: str, message: str, step_id: str | None = None) -> None:
+        super().__init__(message)
+        self.path = path
+        self.step_id = step_id
+
+
+class DraftValidationError(ValueError):
+    """Typed draft-shape failure with already-normalized authoring diagnostics."""
+
+    def __init__(self, diagnostic: DraftDiagnostic) -> None:
+        super().__init__(f"{diagnostic.path}: {diagnostic.message}")
+        self.diagnostic = diagnostic
+
+
 def compile_workflow_draft(draft: JsonObject) -> JsonObject:
-    """Compile the LLM-friendly draft shape into the normalized workflow plan."""
-    plan = _compile_unvalidated_draft(draft)
-    _validate_plan_model(plan)
-    _validate_graph_references(plan)
-    return plan
+    """Compile the authoring draft into the normalized raw workflow plan."""
+    try:
+        parsed = WorkflowDraft.model_validate(draft)
+    except ValidationError as exc:
+        raise DraftValidationError(
+            _diagnostic_from_validation_error(exc, draft)
+        ) from exc
+    workflow = Workflow.model_validate(
+        {
+            "name": parsed.name,
+            "input_schema": deepcopy(parsed.input_schema),
+            "state_schema": deepcopy(parsed.state_schema),
+            "output_schema": deepcopy(parsed.output_schema),
+            "start": parsed.start,
+            "nodes": [
+                step.model_dump(mode="json", by_alias=True)
+                for step in _compile_steps(parsed.steps)
+            ],
+            "edges": [edge.model_dump(by_alias=True) for edge in parsed.edges],
+        }
+    )
+    _validate_graph_references(parsed)
+    return workflow.model_dump(mode="json", by_alias=True, exclude={"node_defs"})
 
 
 def validate_workflow_draft(draft: JsonObject) -> JsonObject:
     """Return structured draft diagnostics instead of raising on bad input."""
     try:
         compiled_plan = compile_workflow_draft(draft)
-    except Exception as exc:
-        return {
-            "status": "invalid",
-            "diagnostics": [_diagnostic_from_exception(exc)],
-        }
+    except DraftValidationError as exc:
+        return _invalid_result(exc.diagnostic)
+    except DraftReferenceError as exc:
+        return _invalid_result(
+            DraftDiagnostic(
+                code="draft_invalid",
+                path=exc.path,
+                step_id=exc.step_id,
+                message=str(exc),
+            )
+        )
     return {
         "status": "valid",
         "diagnostics": [],
@@ -45,225 +184,154 @@ def patch_workflow_draft(draft: JsonObject, patch: JsonPatch) -> JsonObject:
     try:
         patched = jsonpatch.JsonPatch(patch).apply(deepcopy(draft), in_place=False)
     except Exception as exc:
-        return {
-            "status": "invalid",
-            "diagnostics": [
-                {
-                    "code": "patch_invalid",
-                    "path": "patch",
-                    "message": str(exc),
-                }
-            ],
-        }
+        return _invalid_result(
+            DraftDiagnostic(
+                code="patch_invalid",
+                path="patch",
+                message=str(exc),
+            )
+        )
     if not isinstance(patched, dict):
-        return {
-            "status": "invalid",
-            "diagnostics": [
-                {
-                    "code": "draft_not_object",
-                    "path": "",
-                    "message": "patched draft must be a JSON object",
-                }
-            ],
-        }
+        return _invalid_result(
+            DraftDiagnostic(
+                code="draft_not_object",
+                path="",
+                message="patched draft must be a JSON object",
+            )
+        )
     result = validate_workflow_draft(patched)
     return {"draft": patched, **result}
 
 
-def _compile_unvalidated_draft(draft: JsonObject) -> JsonObject:
-    if not isinstance(draft, dict):
-        raise ValueError("draft must be a JSON object")
-
-    plan: JsonObject = {
-        "name": _required_str(draft, "name"),
-        "input_schema": _required_object(draft, "input_schema"),
-        "state_schema": _required_object(draft, "state_schema"),
-        "output_schema": _required_object(draft, "output_schema"),
-        "start": _required_str(draft, "start"),
-        "nodes": [
-            _compile_step(step, index) for index, step in enumerate(_steps(draft))
-        ],
-        "edges": [
-            _compile_edge(edge, index) for index, edge in enumerate(_edges(draft))
-        ],
-    }
-    return plan
+def _compile_steps(
+    steps: list[DraftStep],
+) -> list[NodeUse | ConditionNode | ForeachNode | InterruptNode | JoinNode]:
+    return [_compile_step(step) for step in steps]
 
 
-def _compile_step(step: object, index: int) -> JsonObject:
-    path = f"steps[{index}]"
-    if not isinstance(step, dict):
-        raise ValueError(f"{path} must be a JSON object")
+def _compile_step(
+    step: DraftStep,
+) -> NodeUse | ConditionNode | ForeachNode | InterruptNode | JoinNode:
+    if isinstance(step, DraftNodeUse):
+        return NodeUse.model_validate(
+            {
+                "id": step.id,
+                "type": "node",
+                "node": step.capability,
+                "desc": step.desc,
+                "in_map": deepcopy(step.in_),
+                "out_map": deepcopy(step.out),
+                "retry": step.retry,
+                "timeout_seconds": step.timeout_seconds,
+            }
+        )
+    if isinstance(step, DraftConditionNode):
+        return ConditionNode.model_validate(
+            {
+                "id": step.id,
+                "type": "condition",
+                "check": deepcopy(step.check),
+            }
+        )
+    if isinstance(step, DraftForeachNode):
+        return ForeachNode.model_validate(
+            {
+                "id": step.id,
+                "type": "foreach",
+                "over": step.over,
+                "as": step.as_,
+                "mode": step.mode,
+                "on_item_error": step.on_item_error,
+            }
+        )
+    if isinstance(step, DraftInterruptNode):
+        return InterruptNode.model_validate(
+            {
+                "id": step.id,
+                "type": "interrupt",
+                "kind": step.interrupt_kind,
+                "request_map": deepcopy(step.request),
+                "out_map": deepcopy(step.resume),
+                "outcomes": deepcopy(step.outcomes),
+            }
+        )
+    return JoinNode.model_validate({"id": step.id, "type": "join"})
 
-    step_id = _required_str(step, "id", path=path)
-    kind = _required_str(step, "kind", path=path)
-    if kind == "use":
-        node: JsonObject = {
-            "id": step_id,
-            "type": "node",
-            "node": _required_str(step, "capability", path=path),
-            "in_map": _optional_object(step, "in", default={}),
-            "out_map": _optional_object(step, "out", default={}),
-        }
-        _copy_optional(step, node, "desc")
-        _copy_optional(step, node, "retry")
-        _copy_optional(step, node, "timeout_seconds")
-        return node
-    if kind == "condition":
-        return {
-            "id": step_id,
-            "type": "condition",
-            "check": _required_object(step, "check", path=path),
-        }
-    if kind == "foreach":
-        node = {
-            "id": step_id,
-            "type": "foreach",
-            "over": _required_str(step, "over", path=path),
-            "as": _required_str(step, "as", path=path),
-        }
-        _copy_optional(step, node, "mode")
-        _copy_optional(step, node, "on_item_error")
-        return node
-    if kind == "interrupt":
-        node = {
-            "id": step_id,
-            "type": "interrupt",
-            "kind": _required_str(step, "interrupt_kind", path=path),
-            "request_map": _optional_object(step, "request", default={}),
-            "out_map": _optional_object(step, "resume", default={}),
-        }
-        _copy_optional(step, node, "outcomes")
-        return node
-    if kind == "join":
-        return {"id": step_id, "type": "join"}
-    raise ValueError(f"{path}.kind has unsupported value {kind!r}")
+
+def _validate_graph_references(draft: WorkflowDraft) -> None:
+    step_ids = [step.id for step in draft.steps]
+    step_id_set = set(step_ids)
+    if len(step_ids) != len(step_id_set):
+        raise DraftReferenceError(
+            path="steps",
+            message="steps contain duplicate ids",
+        )
+    if draft.start not in step_id_set:
+        raise DraftReferenceError(
+            path="start",
+            message=f"start references unknown step id {draft.start!r}",
+        )
+    for index, edge in enumerate(draft.edges):
+        if edge.from_ not in step_id_set:
+            raise DraftReferenceError(
+                path=f"edges[{index}].from",
+                message=f"edges[{index}].from references unknown step id {edge.from_!r}",
+            )
+        if edge.to != END and edge.to not in step_id_set:
+            raise DraftReferenceError(
+                path=f"edges[{index}].to",
+                message=f"edges[{index}].to references unknown step id {edge.to!r}",
+            )
 
 
-def _compile_edge(edge: object, index: int) -> JsonObject:
-    path = f"edges[{index}]"
-    if not isinstance(edge, dict):
-        raise ValueError(f"{path} must be a JSON object")
+def _invalid_result(diagnostic: DraftDiagnostic) -> JsonObject:
     return {
-        "from": _required_str(edge, "from", path=path),
-        "outcome": _required_str(edge, "outcome", path=path),
-        "to": _required_str(edge, "to", path=path),
+        "status": "invalid",
+        "diagnostics": [diagnostic.model_dump(mode="json")],
     }
 
 
-def _validate_plan_model(plan: JsonObject) -> None:
-    try:
-        Workflow.model_validate(plan)
-    except ValidationError as exc:
-        raise ValueError(_validation_error_message(exc)) from exc
-
-
-def _validate_graph_references(plan: JsonObject) -> None:
-    node_ids = [node["id"] for node in plan["nodes"] if isinstance(node, dict)]
-    node_id_set = set(node_ids)
-    if len(node_ids) != len(node_id_set):
-        raise ValueError("steps contain duplicate ids")
-    if plan["start"] not in node_id_set:
-        raise ValueError(f"start references unknown step id {plan['start']!r}")
-    for index, edge in enumerate(plan["edges"]):
-        if edge["from"] not in node_id_set:
-            raise ValueError(
-                f"edges[{index}].from references unknown step id {edge['from']!r}"
-            )
-        if edge["to"] != "__end__" and edge["to"] not in node_id_set:
-            raise ValueError(
-                f"edges[{index}].to references unknown step id {edge['to']!r}"
-            )
-
-
-def _steps(draft: JsonObject) -> list[object]:
-    steps = draft.get("steps")
-    if not isinstance(steps, list):
-        raise ValueError("steps must be an array")
-    return steps
-
-
-def _edges(draft: JsonObject) -> list[object]:
-    edges = draft.get("edges")
-    if not isinstance(edges, list):
-        raise ValueError("edges must be an array")
-    return edges
-
-
-def _required_object(payload: JsonObject, key: str, *, path: str = "") -> JsonObject:
-    value = payload.get(key)
-    if not isinstance(value, dict):
-        raise ValueError(f"{_join_path(path, key)} must be an object")
-    return deepcopy(value)
-
-
-def _optional_object(
-    payload: JsonObject,
-    key: str,
-    *,
-    default: JsonObject,
-) -> JsonObject:
-    value = payload.get(key, default)
-    if not isinstance(value, dict):
-        raise ValueError(f"{key} must be an object")
-    return deepcopy(value)
-
-
-def _required_str(payload: JsonObject, key: str, *, path: str = "") -> str:
-    value = payload.get(key)
-    if not isinstance(value, str) or not value:
-        raise ValueError(f"{_join_path(path, key)} must be a non-empty string")
-    return value
-
-
-def _copy_optional(source: JsonObject, target: JsonObject, key: str) -> None:
-    if key in source:
-        target[key] = deepcopy(source[key])
-
-
-def _join_path(path: str, key: str) -> str:
-    return f"{path}.{key}" if path else key
-
-
-def _validation_error_message(exc: ValidationError) -> str:
+def _diagnostic_from_validation_error(
+    exc: ValidationError,
+    draft: JsonObject,
+) -> DraftDiagnostic:
     first_error = exc.errors()[0]
-    location = ".".join(str(part) for part in first_error["loc"])
-    return f"{_draft_path(location)}: {first_error['msg']}"
+    path = _format_error_path(first_error["loc"])
+    return DraftDiagnostic(
+        code="draft_invalid",
+        path=path,
+        step_id=_step_id_for_path(draft, path),
+        message=first_error["msg"],
+    )
 
 
-def _diagnostic_from_exception(exc: Exception) -> JsonObject:
-    message = str(exc)
-    path = _path_from_message(message)
-    return {
-        "code": "draft_invalid",
-        "path": path,
-        "step_id": _step_id_from_path(path),
-        "message": message,
-    }
+def _format_error_path(location: tuple[object, ...]) -> str:
+    parts: list[str] = []
+    for part in location:
+        if isinstance(part, int):
+            parts[-1] = f"{parts[-1]}[{part}]"
+            continue
+        if part == "in_":
+            part = "in"
+        elif part == "as_":
+            part = "as"
+        if part in {"use", "condition", "foreach", "interrupt", "join"}:
+            continue
+        parts.append(str(part))
+    return ".".join(parts)
 
 
-def _path_from_message(message: str) -> str:
-    if ":" in message and message.split(":", 1)[0]:
-        return _draft_path(message.split(":", 1)[0])
-    token = message.split(" ", 1)[0]
-    if token.startswith(("steps[", "edges[")) or token in {
-        "name",
-        "input_schema",
-        "state_schema",
-        "output_schema",
-        "start",
-        "steps",
-        "edges",
-    }:
-        return _draft_path(token)
-    return ""
-
-
-def _draft_path(path: str) -> str:
-    return path.replace("nodes[", "steps[").replace(".type", ".kind")
-
-
-def _step_id_from_path(path: str) -> str | None:
+def _step_id_for_path(draft: JsonObject, path: str) -> str | None:
     if not path.startswith("steps["):
         return None
-    return None
+    index_text = path.removeprefix("steps[").split("]", 1)[0]
+    if not index_text.isdecimal():
+        return None
+    steps = draft.get("steps")
+    if not isinstance(steps, list):
+        return None
+    index = int(index_text)
+    if index >= len(steps) or not isinstance(steps[index], dict):
+        return None
+    step_id = steps[index].get("id")
+    return step_id if isinstance(step_id, str) else None

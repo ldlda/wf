@@ -224,7 +224,13 @@ A client authoring workflows, including an LLM client, should be able to:
 3. inspect existing workflow capabilities and saved wrappers
 4. call a workflow capability directly once
 5. inspect the normalized output and outcome
-6. reuse that capability inside a graph
+6. author a workflow draft
+7. validate or patch the draft
+8. save the compiled workflow artifact
+
+Drafts are the preferred authoring format for this loop. See
+[`workflow_drafts.md`](workflow_drafts.md). Raw workflow plans remain an escape
+hatch for advanced clients and compiler outputs.
 
 Saved wrapper artifacts can be called with a deployment id when they use logical
 source names. The deployment supplies the concrete source bindings for that

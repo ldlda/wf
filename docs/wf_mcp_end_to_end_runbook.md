@@ -219,7 +219,7 @@ Create a one-node workflow that:
 - ends on the node's `ok` outcome
 
 ```yaml
-tool: wf.workflow.create_artifact_from_plan
+tool: wf.workflow.create_artifact_from_draft
 arguments:
 {
   "artifact_id": "echo",
@@ -229,7 +229,7 @@ arguments:
   "source_bindings": {
     "demo": "demo.personal"
   },
-  "plan": {
+  "draft": {
     "name": "echo",
     "input_schema": {
       "type": "object",
@@ -257,15 +257,15 @@ arguments:
       "required": ["echoed"]
     },
     "start": "echo",
-    "nodes": [
+    "steps": [
       {
         "id": "echo",
-        "type": "node",
-        "node": "demo.personal.echo_tool",
-        "in_map": {
+        "kind": "use",
+        "capability": "demo.personal.echo_tool",
+        "in": {
           "input.text": "text"
         },
-        "out_map": {
+        "out": {
           "echoed": "state.echoed"
         }
       }
@@ -287,6 +287,7 @@ Important behavior:
   is normalized to logical node ref `demo.echo_tool`
 - the saved dependency contract records what was observed from
   `demo.personal.echo_tool` at creation time
+- the draft is compiled into a raw workflow plan and validated before saving
 
 Inspect the saved result if needed:
 
@@ -421,7 +422,8 @@ wf.admin.list_sources
 wf.workflow.list_capabilities
 wf.workflow.inspect_capability
 wf.workflow.call_capability
-wf.workflow.create_artifact_from_plan
+wf.workflow.validate_draft
+wf.workflow.create_artifact_from_draft
 wf.workflow.save_deployment
 wf.workflow.validate_deployment
 wf.workflow.run_deployment
@@ -450,6 +452,11 @@ A tools-only server should still refresh successfully.
 That is the raw-tool versus workflow-capability distinction. Use or build a
 workflow-facing wrapper when the raw tool's shape is provider-centric.
 
+### The draft is close but has one wrong field
+
+Use `wf.workflow.patch_draft` instead of asking the client to rewrite the whole
+workflow. Draft patching uses JSON Patch and revalidates the patched result.
+
 ### The deployment used to run but now fails validation
 
 Likely causes:
@@ -474,5 +481,6 @@ wf.workflow.validate_deployment
   discovery and deployment failures
 - [`workflow_capabilities.md`](workflow_capabilities.md) for raw tool versus
   workflow capability
+- [`workflow_drafts.md`](workflow_drafts.md) for the preferred authoring format
 - [`workflow_artifacts.md`](workflow_artifacts.md) for immutable artifacts,
   deployments, and dependency contracts

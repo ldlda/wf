@@ -75,7 +75,8 @@ Use it for:
 
 - discovering workflow-ready capabilities
 - inspecting and directly test-calling one capability
-- creating saved artifacts
+- validating, patching, and compiling workflow drafts
+- creating saved artifacts from drafts or raw plans
 - listing and inspecting saved artifacts
 - saving deployments
 - validating and running deployments
@@ -85,6 +86,10 @@ Typical tools:
 - `wf.workflow.list_capabilities`
 - `wf.workflow.inspect_capability`
 - `wf.workflow.call_capability`
+- `wf.workflow.validate_draft`
+- `wf.workflow.compile_draft`
+- `wf.workflow.patch_draft`
+- `wf.workflow.create_artifact_from_draft`
 - `wf.workflow.create_artifact_from_plan`
 - `wf.workflow.list_artifacts`
 - `wf.workflow.inspect_artifact`
@@ -212,12 +217,18 @@ graph would consume.
 ### 4. Build And Save
 
 ```text
-wf.workflow.create_artifact_from_plan
+wf.workflow.validate_draft
+wf.workflow.create_artifact_from_draft
 wf.workflow.save_deployment
 ```
 
-Artifacts should prefer logical source aliases in saved plans. Deployments bind
-those logical aliases to concrete sources such as `context7.default`.
+Drafts are the preferred interactive authoring format. They compile into raw
+workflow plans before saving. Use `create_artifact_from_plan` only when a caller
+already has a compiled raw plan or intentionally wants the low-level escape
+hatch.
+
+Artifacts should prefer logical source aliases in saved workflows. Deployments
+bind those logical aliases to concrete sources such as `context7.default`.
 
 ### 5. Validate And Run
 
@@ -244,7 +255,11 @@ schemas mid-session.
 | Find one workflow-ready node | `wf.workflow.list_capabilities` |
 | Read one node contract in full | `wf.workflow.inspect_capability` |
 | Test one node directly | `wf.workflow.call_capability` |
-| Save a workflow definition | `wf.workflow.create_artifact_from_plan` |
+| Validate an authored workflow draft | `wf.workflow.validate_draft` |
+| Apply a targeted fix to a draft | `wf.workflow.patch_draft` |
+| Compile a draft without saving | `wf.workflow.compile_draft` |
+| Save a workflow definition from a draft | `wf.workflow.create_artifact_from_draft` |
+| Save a compiled raw workflow definition | `wf.workflow.create_artifact_from_plan` |
 | List saved workflows/wrappers | `wf.workflow.list_artifacts` |
 | Bind a saved workflow to concrete sources | `wf.workflow.save_deployment` |
 | Check whether a deployment can run | `wf.workflow.validate_deployment` |
@@ -310,5 +325,6 @@ accounts.
   model
 - [`workflow_capabilities.md`](workflow_capabilities.md) for raw versus
   workflow-facing capability design
+- [`workflow_drafts.md`](workflow_drafts.md) for the preferred authoring format
 - [`workflow_artifacts.md`](workflow_artifacts.md) for immutable artifacts,
   deployments, and saved workflows as future nodes
