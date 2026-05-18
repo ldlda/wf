@@ -50,6 +50,9 @@ class DraftWorkspaceStore:
     def list_workspaces(self) -> list[WorkflowDraftWorkspace]:
         raise NotImplementedError
 
+    def delete_workspace(self, workspace_id: str) -> bool:
+        raise NotImplementedError
+
 
 class FileDraftWorkspaceStore(DraftWorkspaceStore):
     """JSON file-backed draft workspace store for local development and tests.
@@ -112,6 +115,14 @@ class FileDraftWorkspaceStore(DraftWorkspaceStore):
             WorkflowDraftWorkspace.model_validate_json(path.read_text(encoding="utf-8"))
             for path in sorted(self.workspaces_dir.glob("*.json"))
         ]
+
+    def delete_workspace(self, workspace_id: str) -> bool:
+        with self._lock:
+            path = self._workspace_path(workspace_id)
+            if not path.exists():
+                return False
+            path.unlink()
+            return True
 
     def _workspace_path(self, workspace_id: str) -> Path:
         safe_id = ensure_workspace_id(workspace_id)

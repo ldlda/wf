@@ -353,6 +353,7 @@ resending the full draft each turn.
 | Fetch current draft workspace | `wf.workflow.get_draft_workspace` |
 | Patch current draft workspace | `wf.workflow.patch_draft_workspace` |
 | Save final workspace as artifact | `wf.workflow.create_artifact_from_workspace` |
+| Clean up a draft workspace | `wf.workflow.delete_draft_workspace` |
 
 Workspace patches are optimistic-concurrency guarded. Pass the current
 `revision` from `get_draft_workspace`; a stale revision returns

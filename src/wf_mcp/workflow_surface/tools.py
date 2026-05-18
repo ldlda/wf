@@ -14,6 +14,8 @@ from .models import (
     CreateArtifactFromWorkspaceRequest,
     CreateDraftWorkspaceRequest,
     CreateMinimalDraftWorkspaceRequest,
+    DeleteDraftWorkspaceRequest,
+    DeleteDraftWorkspaceResult,
     DraftWorkspaceListResult,
     DraftWorkspaceResult,
     PatchDraftWorkspaceRequest,
@@ -238,6 +240,18 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 workspace_id=workspace_id,
                 include_draft=include_draft,
             )
+        )
+
+    @server.tool(
+        name="wf.workflow.delete_draft_workspace",
+        title="Delete Draft Workspace",
+        description="Delete one mutable workflow draft workspace by id.",
+    )
+    async def delete_draft_workspace(
+        request: DeleteDraftWorkspaceRequest,
+    ) -> DeleteDraftWorkspaceResult:
+        return DeleteDraftWorkspaceResult.model_validate(
+            await handlers.delete_draft_workspace(workspace_id=request.workspace_id)
         )
 
     @server.tool(

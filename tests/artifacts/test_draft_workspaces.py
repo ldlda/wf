@@ -96,6 +96,28 @@ def test_file_draft_workspace_store_lists_workspaces(tmp_path) -> None:
     assert [workspace.id for workspace in store.list_workspaces()] == ["a", "b"]
 
 
+def test_file_draft_workspace_store_deletes_workspace(tmp_path) -> None:
+    store = FileDraftWorkspaceStore(tmp_path)
+    store.save_workspace(
+        WorkflowDraftWorkspace(
+            id="echo_draft",
+            revision=1,
+            draft=_draft(),
+            status="valid",
+            diagnostics=[],
+            created_at_epoch_ms=100,
+            updated_at_epoch_ms=100,
+        )
+    )
+
+    deleted = store.delete_workspace("echo_draft")
+    deleted_again = store.delete_workspace("echo_draft")
+
+    assert deleted is True
+    assert deleted_again is False
+    assert store.list_workspaces() == []
+
+
 def test_file_draft_workspace_store_rejects_path_traversal_ids(tmp_path) -> None:
     store = FileDraftWorkspaceStore(tmp_path)
 

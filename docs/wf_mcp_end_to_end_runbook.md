@@ -511,6 +511,8 @@ Concrete MCP sequence:
 7. `wf.workflow.create_artifact_from_workspace` after validation is clean.
 8. `wf.workflow.save_deployment`, then `validate_deployment`, then
    `run_deployment`.
+9. `wf.workflow.delete_draft_workspace` when the mutable authoring session is no
+   longer needed.
 
 `create_artifact_from_workspace` also uses a `request` object:
 

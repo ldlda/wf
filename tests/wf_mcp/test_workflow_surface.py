@@ -407,6 +407,33 @@ def test_workflow_surface_lists_draft_workspaces() -> None:
     assert "draft" not in payload["workspaces"][0]
 
 
+def test_workflow_surface_deletes_draft_workspace() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_delete"
+    )
+    handlers = _handlers(artifact_store)
+    asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="echo_draft",
+            draft=_echo_draft(),
+        )
+    )
+
+    deleted = asyncio.run(
+        handlers.delete_draft_workspace(workspace_id="echo_draft")
+    )
+    deleted_again = asyncio.run(
+        handlers.delete_draft_workspace(workspace_id="echo_draft")
+    )
+    listed = asyncio.run(handlers.list_draft_workspaces())
+
+    assert deleted["deleted"] is True
+    assert deleted["status"] == "deleted"
+    assert deleted_again["deleted"] is False
+    assert deleted_again["status"] == "not_found"
+    assert listed["workspaces"] == []
+
+
 def test_workflow_surface_patches_draft_workspace_by_revision() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "surface_workspace_patch"

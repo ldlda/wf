@@ -411,6 +411,14 @@ class WorkflowSurfaceHandlers:
             include_draft=include_draft,
         )
 
+    async def delete_draft_workspace(self, *, workspace_id: str) -> dict[str, Any]:
+        deleted = self._draft_store().delete_workspace(workspace_id)
+        return {
+            "workspace_id": workspace_id,
+            "deleted": deleted,
+            "status": "deleted" if deleted else "not_found",
+        }
+
     async def patch_draft_workspace(
         self,
         *,

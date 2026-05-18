@@ -115,6 +115,20 @@ class PatchDraftWorkspaceRequest(BaseModel):
     patch: JsonPatchOperations
 
 
+class DeleteDraftWorkspaceRequest(BaseModel):
+    """Typed MCP request payload for deleting one draft workspace."""
+
+    workspace_id: WorkspaceId
+
+
+class DeleteDraftWorkspaceResult(BaseModel):
+    """Inspector-visible response for draft workspace cleanup."""
+
+    workspace_id: str = Field(description="Draft workspace id targeted for deletion.")
+    deleted: bool = Field(description="True when a stored workspace was removed.")
+    status: Literal["deleted", "not_found"] = Field(description="Cleanup result.")
+
+
 class CreateMinimalDraftWorkspaceRequest(BaseModel):
     """Typed MCP request payload for bootstrapping one-capability drafts."""
 
