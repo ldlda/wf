@@ -6,18 +6,24 @@ from .api import (
     validate_workflow_draft,
 )
 from .models import (
+    DraftChooseClause,
+    DraftChooseStep,
     DraftForeachStep,
     DraftInterruptStep,
     DraftJoinStep,
+    DraftWhenStep,
     DraftUseStep,
     WorkflowDraft,
 )
 
 __all__ = [
     "DraftDiagnostic",
+    "DraftChooseClause",
+    "DraftChooseStep",
     "DraftForeachStep",
     "DraftInterruptStep",
     "DraftJoinStep",
+    "DraftWhenStep",
     "DraftUseStep",
     "WorkflowDraft",
     "build_workflow_from_draft",

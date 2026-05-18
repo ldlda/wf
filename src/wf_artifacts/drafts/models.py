@@ -4,8 +4,10 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
+from wf_core.models.conditions import Condition
+
 JsonObject = dict[str, Any]
-STEP_KIND_KEYS = frozenset({"use", "foreach", "interrupt", "join"})
+STEP_KIND_KEYS = frozenset({"use", "foreach", "interrupt", "join", "when", "choose"})
 
 
 class DraftUseStep(BaseModel):
@@ -55,7 +57,48 @@ class DraftJoinStep(BaseModel):
     join: JsonObject = Field(default_factory=dict)
 
 
-DraftStep = DraftUseStep | DraftForeachStep | DraftInterruptStep | DraftJoinStep
+class DraftWhenPayload(BaseModel):
+    """Payload for one boolean draft decision."""
+
+    if_: Condition = Field(alias="if")
+    then: str
+    otherwise: str = "__end__"
+
+
+class DraftWhenStep(BaseModel):
+    """Draft step that delegates one boolean decision to `WorkflowBuilder.when`."""
+
+    when: DraftWhenPayload
+
+
+class DraftChooseClause(BaseModel):
+    """One ordered boolean clause in a draft choose decision."""
+
+    if_: Condition = Field(alias="if")
+    then: str
+
+
+class DraftChoosePayload(BaseModel):
+    """Payload for an ordered first-true draft decision."""
+
+    clauses: list[DraftChooseClause] = Field(min_length=1)
+    default: str = "__end__"
+
+
+class DraftChooseStep(BaseModel):
+    """Draft step that delegates ordered decisions to `WorkflowBuilder.choose`."""
+
+    choose: DraftChoosePayload
+
+
+DraftStep = (
+    DraftUseStep
+    | DraftForeachStep
+    | DraftInterruptStep
+    | DraftJoinStep
+    | DraftWhenStep
+    | DraftChooseStep
+)
 
 
 class WorkflowDraft(BaseModel):

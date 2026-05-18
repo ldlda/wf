@@ -183,6 +183,69 @@ Joins control flow.
 }
 ```
 
+### `when`
+
+Creates one boolean decision step. The condition uses the same JSON shape as
+`wf_core.models.conditions.Condition`.
+
+```json
+{
+  "when": {
+    "if": {
+      "op": "ge",
+      "left": {
+        "path": "state.count"
+      },
+      "right": {
+        "value": 1
+      }
+    },
+    "then": "positive",
+    "otherwise": "zero"
+  }
+}
+```
+
+The draft adapter lowers this through `WorkflowBuilder.when()`. The draft step
+id becomes the generated condition entry id, so other routes can target it.
+
+### `choose`
+
+Creates an ordered first-true decision chain.
+
+```json
+{
+  "choose": {
+    "clauses": [
+      {
+        "if": {
+          "op": "gt",
+          "left": {
+            "path": "state.score"
+          },
+          "right": {
+            "value": 80
+          }
+        },
+        "then": "high"
+      },
+      {
+        "if": {
+          "op": "exists",
+          "path": "state.fallback"
+        },
+        "then": "fallback"
+      }
+    ],
+    "default": "__end__"
+  }
+}
+```
+
+`choose` lowers through `WorkflowBuilder.choose()` and expands to generated
+condition nodes. It replaces the deprecated `route()` concept for draft JSON;
+there is intentionally no draft `route` step kind.
+
 ## Draft Tools
 
 The workflow MCP surface exposes these draft tools:

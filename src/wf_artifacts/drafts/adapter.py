@@ -9,6 +9,8 @@ from .models import (
     DraftJoinStep,
     DraftStep,
     DraftUseStep,
+    DraftWhenStep,
+    DraftChooseStep,
     WorkflowDraft,
 )
 
@@ -61,4 +63,20 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
         node = JoinNode(id=step_id, type="join")
         builder.nodes.append(node)
         return node
+    if isinstance(step, DraftWhenStep):
+        return builder.when(
+            step.when.if_,
+            id=step_id,
+            then=step.when.then,
+            otherwise=step.when.otherwise,
+        ).entry
+    if isinstance(step, DraftChooseStep):
+        return builder.choose(
+            *[
+                (clause.if_, clause.then)
+                for clause in step.choose.clauses
+            ],
+            id=step_id,
+            default=step.choose.default,
+        ).entry
     raise TypeError(f"unsupported draft step {type(step)!r}")

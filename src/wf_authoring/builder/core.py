@@ -346,7 +346,7 @@ class WorkflowBuilder:
 
     def when(
         self,
-        condition: Expr,
+        condition: CoreCondition | Expr,
         *,
         then: BranchRef,
         otherwise: BranchRef = runtime_error,
@@ -369,7 +369,7 @@ class WorkflowBuilder:
 
     def choose(
         self,
-        *clauses: tuple[Expr, BranchRef],
+        *clauses: tuple[CoreCondition | Expr, BranchRef],
         default: BranchRef = runtime_error,
         id: str | None = None,
     ) -> DecisionResult:
