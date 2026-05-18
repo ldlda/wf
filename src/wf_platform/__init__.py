@@ -1,3 +1,4 @@
+from .docs import DocumentationResource, build_documentation_source
 from .refs import CapabilityRef, SourceRef
 from .paging import Page, page_items
 from .schema_hashes import hash_json_schema
@@ -20,6 +21,7 @@ __all__ = [
     "CapabilityBuckets",
     "CapabilitySource",
     "CapabilityRef",
+    "DocumentationResource",
     "NodeSpecInventory",
     "Page",
     "ReducerInventory",
@@ -32,6 +34,7 @@ __all__ = [
     "SourceVisibility",
     "SourceVisibilitySnapshot",
     "SourceRef",
+    "build_documentation_source",
     "hash_json_schema",
     "page_items",
 ]

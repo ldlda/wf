@@ -10,9 +10,11 @@ from fastmcp.client.transports.memory import FastMCPTransport
 from ..admin_surface import register_service_admin_tools
 from ..broker.config import build_service_from_config
 from ..broker.transport import normalize_transport
+from ..documentation import build_local_documentation_source
 from ..models import BrokerConfig
 from ..transparent_proxy.runtime import ProxyRuntime
 from ..workflow_surface import register_workflow_tools
+from .resources import register_documentation_resources
 
 
 def create_server(
@@ -42,6 +44,9 @@ def create_server(
             include_connection_tools=False,
         )
     register_workflow_tools(runtime.server, service)
+    docs_source = build_local_documentation_source(_repo_root())
+    service.capability_sources[docs_source.id] = docs_source
+    register_documentation_resources(runtime.server, docs_source)
     return runtime.server
 
 
@@ -87,3 +92,8 @@ def create_server_client(
             )
         )
     )
+
+
+def _repo_root() -> Path:
+    """Return the project root while docs still live beside the source tree."""
+    return Path(__file__).resolve().parents[3]

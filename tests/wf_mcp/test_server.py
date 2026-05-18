@@ -4,6 +4,8 @@ import asyncio
 import sys
 from typing import Any
 
+from mcp import types as mcp_types
+
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.server import create_server_client
 
@@ -177,6 +179,26 @@ def test_workflow_tools_have_human_metadata() -> None:
             assert "saved workflow artifacts" in (list_artifacts.description or "")
             assert run_deployment.title == "Run Workflow Deployment"
             assert "deployment_id" in (run_deployment.description or "")
+
+    asyncio.run(run_proxy())
+
+
+def test_server_exposes_platform_documentation_resources() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "unified_docs_resource_store",
+        connections=[],
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(config, admin_tools=False)
+        async with client:
+            resources = await client.list_resources()
+            uris = [str(resource.uri) for resource in resources]
+            assert "wf://docs/operator-manual" in uris
+
+            result = await client.read_resource("wf://docs/operator-manual")
+            assert isinstance(result[0], mcp_types.TextResourceContents)
+            assert "wf_mcp Operator Manual" in result[0].text
 
     asyncio.run(run_proxy())
 

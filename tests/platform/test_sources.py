@@ -3,10 +3,12 @@ from __future__ import annotations
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
+    DocumentationResource,
     SourceInventory,
     SourcePermissions,
     SourceStatus,
     SourceVisibility,
+    build_documentation_source,
 )
 
 
@@ -51,3 +53,25 @@ def test_capability_source_projects_typed_inventory() -> None:
     assert inventory.model_dump(mode="json")["capabilities"]["tools"] == [
         "wf.std.inspect"
     ]
+
+
+def test_documentation_source_owns_provider_neutral_resources() -> None:
+    source = build_documentation_source(
+        [
+            DocumentationResource(
+                name="wf.docs.operator_manual",
+                uri="wf://docs/operator-manual",
+                title="Operator Manual",
+                description="How to operate the platform.",
+                mime_type="text/markdown",
+                text="# Operator Manual",
+            )
+        ]
+    )
+
+    resource = source.capabilities.resources["wf.docs.operator_manual"]
+
+    assert source.id == "wf.docs"
+    assert source.visibility.mcp_client is True
+    assert resource.uri == "wf://docs/operator-manual"
+    assert resource.text == "# Operator Manual"
