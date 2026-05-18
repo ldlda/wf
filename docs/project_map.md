@@ -38,6 +38,9 @@ This repository has three main packages plus examples and tests.
 - `examples/wrapper_status_route.py` and `examples/wrapper_normalization.py`
   show two wrapper styles: routing on provider status fields, and converting
   provider status fields into workflow outcomes.
+- `examples/mcp_workflow_surface.py` shows the fixture-style MCP workflow path:
+  discover a backend tool, create a draft artifact, save a deployment, and run
+  it while wiring the generated `ok` and `error` outcomes.
 
 ## Tests
 

@@ -114,6 +114,24 @@ Calls a workflow capability.
 Use this for normal node calls, including generated workflow wrappers around
 MCP tools and local `wf.std` capabilities.
 
+Generated MCP tool wrappers are intentionally naive. They normally expose both
+`ok` and `error` outcomes, because MCP tool calls can report transport/provider
+errors separately from useful output. Drafts should wire both outcomes:
+
+```json
+{
+  "routes": {
+    "call_tool": {
+      "ok": "__end__",
+      "error": "tool_error"
+    }
+  }
+}
+```
+
+Use a wrapper node or `wf.std.runtime_error` for the `error` path. Do not leave
+the generated `error` outcome dangling.
+
 ### `foreach`
 
 Runs a child body over items.
