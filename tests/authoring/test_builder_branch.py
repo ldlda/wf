@@ -41,9 +41,9 @@ def test_builder_branch_can_use_node_specs_as_targets() -> None:
     )
     router = builder.use(branch_router)
 
-    targets = builder.branch(router, {"left": auto_bind_node})
-
-    target = targets["left"]
+    result = builder.branch(router, {"left": auto_bind_node})
+    assert result.source == router
+    target = result["left"]
     assert not isinstance(target, str)
     assert target.id == "test_auto_bind"
     assert builder.edges[0].from_ == "test_branch_router"
@@ -51,19 +51,53 @@ def test_builder_branch_can_use_node_specs_as_targets() -> None:
     assert builder.edges[0].to == "test_auto_bind"
 
 
-def test_builder_branch_warns_on_empty_branch_map() -> None:
+def test_builder_branch_rejects_empty_branch_map_without_using_source() -> None:
     builder = WorkflowBuilder(
         name="branch_empty_demo",
         input_schema=AutoBindInput,
         state_schema=AutoBindState,
         output_schema=AutoBindOutput,
     )
-    router = builder.use(branch_router)
 
-    with pytest.warns(UserWarning, match="no branches"):
-        targets = builder.branch(router, {})
+    with pytest.raises(ValueError, match="at least one branch"):
+        builder.branch(branch_router, {})
 
-    assert targets == {}
+    assert builder.nodes == []
+
+
+def test_builder_handle_connects_shared_target_for_duplicate_outcomes() -> None:
+    builder = WorkflowBuilder(
+        name="handle_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+    left = builder.use(auto_bind_node, id="left")
+    right = builder.use(auto_bind_node, id="right")
+    fallback = builder.use(auto_bind_node, id="fallback")
+
+    result = builder.handle((left, "error"), (right, "error"), to=fallback)
+    assert result is not None
+    assert result.target is fallback
+    assert [(edge.from_, edge.outcome, edge.to) for edge in builder.edges] == [
+        ("left", "error", "fallback"),
+        ("right", "error", "fallback"),
+    ]
+    assert result.branches == ((left, "error"), (right, "error"))
+
+
+def test_builder_handle_rejects_empty_sources_without_using_target() -> None:
+    builder = WorkflowBuilder(
+        name="handle_empty_demo",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    with pytest.raises(ValueError, match="at least one branch"):
+        builder.handle(to=auto_bind_node)
+
+    assert builder.nodes == []
 
 
 def test_builder_match_expands_state_value_cases_into_condition_chain() -> None:

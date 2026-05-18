@@ -27,3 +27,6 @@ addopts = "-p no:cacheprovider"
 
 [tool.uv]
 package = true
+
+[tool.basedpyright]
+typeCheckingMode = "basic"

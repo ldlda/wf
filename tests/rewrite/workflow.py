@@ -64,7 +64,7 @@ gacha.connect("keep_rolling", "false", END)
 gacha.connect("tick", "ok", "counter_up")
 
 gacha.connect("counter_up", "ok", "rate_booster")
-rate_route = gacha.when( # condition + branch in one. its so good.
+rate_route = gacha.when(  # condition + branch in one. its so good.
     state("counter.c_80").ge(65),
     then=rate_up,
     otherwise=rate_same,
@@ -75,7 +75,7 @@ gacha.use(pre_roll_router, id="router")
 
 gacha.connect("rate_up", "ok", "router")
 gacha.connect("rate_same", "ok", "router")
-preroll_routes = gacha.branch( # `connect`s in one branch. also so good.
+preroll_routes = gacha.branch(  # `connect`s in one branch. also so good.
     "router",
     {
         "240": "r_gs",

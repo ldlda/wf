@@ -22,6 +22,7 @@ from wf_core import (
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.conditions import Condition as CoreCondition
 from wf_core.models.conditions import BinaryCondition, ExistsCondition, PathOperand
+from wf_core.models.steps import Step
 from wf_core.runtime.ops.merges import ReducerDefinition
 
 from ..dsl import Expr, PathArg, PathExpr, compile_condition
@@ -38,7 +39,14 @@ from .mapping import (
     coerce_path,
     normalize_mapping,
 )
-from .refs import BranchRef, RouteRef, StepRef, is_node_spec, step_id
+from .refs import (
+    BranchRef,
+    BranchResult,
+    DecisionResult,
+    HandleResult,
+    StepRef,
+    step_id,
+)
 
 
 def _condition_base(condition: CoreCondition) -> str:
@@ -61,7 +69,7 @@ class WorkflowBuilder:
     start: str | None = None
     reducers: ReducerCatalog | Mapping[str, ReducerDefinition] | None = None
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
-    nodes: list[Any] = field(default_factory=list)
+    nodes: list[Step] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
 
     def __post_init__(self) -> None:
@@ -134,7 +142,13 @@ class WorkflowBuilder:
 
     def _next_step_id(self, base: str) -> str:
         """Return a stable unused step id based on the requested base name."""
-        return next_step_id(base, cast(list[StepRef], self.nodes))
+        return next_step_id(base, self.nodes)
+
+    def _resolve_branch_ref(self, ref: BranchRef) -> StepRef:
+        """Resolve a possibly callable-backed branch ref into one step ref."""
+        if isinstance(ref, NodeSpec):
+            return self.use(ref)
+        return ref
 
     def set_entry_point(self, step: StepRef) -> None:
         """Set the workflow start node explicitly."""
@@ -232,46 +246,59 @@ class WorkflowBuilder:
         to: BranchRef,
     ) -> tuple[StepRef, StepRef]:
         """Connect one outcome, auto-using NodeSpec endpoints as fresh node uses."""
-        source = self.use(from_) if is_node_spec(from_) else from_
-        target = self.use(to) if is_node_spec(to) else to
+        source = self._resolve_branch_ref(from_)
+        target = self._resolve_branch_ref(to)
         self.edges.append(
             Edge.model_validate(
                 {
-                    "from": step_id(cast(StepRef, source)),
+                    "from": step_id(source),
                     "outcome": outcome,
-                    "to": step_id(cast(StepRef, target)),
+                    "to": step_id(target),
                 }
             )
         )
-        return cast(StepRef, source), cast(StepRef, target)
+        return source, target
 
     def branch(
         self,
         from_: BranchRef,
         branches: Mapping[str, BranchRef],
-    ) -> dict[str, StepRef]:
+    ) -> BranchResult:
         """Connect multiple outcomes from one branch source.
 
         Passing a NodeSpec creates a node use with auto-mapping and an auto id.
-        Passing an existing step or id only wires edges. Empty branch maps are
-        allowed but warn because they usually indicate an unfinished router.
+        Passing an existing step or id only wires edges.
         The returned mapping is keyed by branch outcome, not generated target id.
         """
         if not branches:
-            warnings.warn(
-                "WorkflowBuilder.branch called with no branches",
-                UserWarning,
-                stacklevel=2,
-            )
-            return {}
+            raise ValueError("WorkflowBuilder.branch requires at least one branch")
 
-        source = self.use(from_) if is_node_spec(from_) else from_
+        source = self._resolve_branch_ref(from_)
         resolved_targets: dict[str, StepRef] = {}
         for outcome, target in branches.items():
-            resolved = self.use(target) if is_node_spec(target) else target
-            self.connect(cast(StepRef, source), outcome, cast(StepRef, resolved))
-            resolved_targets[outcome] = cast(StepRef, resolved)
-        return resolved_targets
+            resolved = self._resolve_branch_ref(target)
+            self.connect(source, outcome, resolved)
+            resolved_targets[outcome] = resolved
+        return BranchResult(source=source, targets=resolved_targets)
+
+    def handle(
+        self,
+        *branches: tuple[BranchRef, str],
+        to: BranchRef,
+    ) -> HandleResult:
+        """Connect several source outcomes to one shared target."""
+        if not branches:
+            raise ValueError("WorkflowBuilder.handle requires at least one branch")
+        resolved_branches: list[tuple[StepRef, str]] = []
+        target = self._resolve_branch_ref(to)
+        for branch, outcome in branches:
+            resolved = self._resolve_branch_ref(branch)
+            self.connect(resolved, outcome, target)
+            resolved_branches.append((resolved, outcome))
+        return HandleResult(
+            target=target,
+            branches=tuple(resolved_branches),
+        )
 
     def match(
         self,
@@ -280,11 +307,20 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         default: BranchRef = runtime_error,
-    ) -> RouteRef:
-        """Match one graph value against ordered equality cases."""
+    ) -> DecisionResult:
+        """Match one graph value against ordered equality cases.
+
+        DecisionResult.targets is keyed by case value, not generated target id.
+        The default case is always available under the "default" key. Case
+        values must be hashable and are compared using equality against the
+        graph value at runtime, so they should be primitives or tuples of
+        primitives for predictable behavior.
+        """
+        if not cases:
+            raise ValueError("WorkflowBuilder.match requires at least one case")
         resolved_targets: dict[object, StepRef] = {}
         conditions: list[ConditionNode] = []
-        default_target = self.use(default) if is_node_spec(default) else default
+        default_target = self._resolve_branch_ref(default)
         previous_condition: ConditionNode | None = None
         condition_base = id or slug_id(value.path)
         for case_value, target in cases.items():
@@ -293,17 +329,16 @@ class WorkflowBuilder:
                 check=value.eq(case_value),
             )
             conditions.append(condition)
-            resolved = self.use(target) if is_node_spec(target) else target
+            resolved = self._resolve_branch_ref(target)
             if previous_condition is not None:
                 self.connect(previous_condition, "false", condition)
-            self.connect(condition, "true", cast(StepRef, resolved))
+            self.connect(condition, "true", resolved)
             previous_condition = condition
-            resolved_targets[case_value] = cast(StepRef, resolved)
-        if previous_condition is None:
-            raise ValueError("WorkflowBuilder.match requires at least one case")
-        self.connect(previous_condition, "false", cast(StepRef, default_target))
-        resolved_targets["default"] = cast(StepRef, default_target)
-        return RouteRef(
+            resolved_targets[case_value] = resolved
+        assert previous_condition is not None  # guarded by cases check above
+        self.connect(previous_condition, "false", default_target)
+        resolved_targets["default"] = default_target
+        return DecisionResult(
             entry=conditions[0],
             conditions=tuple(conditions),
             targets=resolved_targets,
@@ -316,21 +351,19 @@ class WorkflowBuilder:
         then: BranchRef,
         otherwise: BranchRef = runtime_error,
         id: str | None = None,
-    ) -> RouteRef:
+    ) -> DecisionResult:
         """Route one boolean condition through true and false targets."""
         condition_node = self.condition(id=id, check=condition)
-        resolved_then = self.use(then) if is_node_spec(then) else then
-        resolved_otherwise = (
-            self.use(otherwise) if is_node_spec(otherwise) else otherwise
-        )
-        self.connect(condition_node, "true", cast(StepRef, resolved_then))
-        self.connect(condition_node, "false", cast(StepRef, resolved_otherwise))
-        return RouteRef(
+        resolved_then = self._resolve_branch_ref(then)
+        resolved_otherwise = self._resolve_branch_ref(otherwise)
+        self.connect(condition_node, "true", resolved_then)
+        self.connect(condition_node, "false", resolved_otherwise)
+        return DecisionResult(
             entry=condition_node,
             conditions=(condition_node,),
             targets={
-                True: cast(StepRef, resolved_then),
-                False: cast(StepRef, resolved_otherwise),
+                True: resolved_then,
+                False: resolved_otherwise,
             },
         )
 
@@ -339,7 +372,7 @@ class WorkflowBuilder:
         *clauses: tuple[Expr, BranchRef],
         default: BranchRef = runtime_error,
         id: str | None = None,
-    ) -> RouteRef:
+    ) -> DecisionResult:
         """Route to the first target whose ordered condition is true."""
         if not clauses:
             raise ValueError("WorkflowBuilder.choose requires at least one clause")
@@ -354,16 +387,17 @@ class WorkflowBuilder:
                 check=condition_expr,
             )
             conditions.append(condition)
-            resolved = self.use(target) if is_node_spec(target) else target
+            resolved = self._resolve_branch_ref(target)
             if previous_condition is not None:
                 self.connect(previous_condition, "false", condition)
-            self.connect(condition, "true", cast(StepRef, resolved))
+            self.connect(condition, "true", resolved)
             previous_condition = condition
-            resolved_targets[index] = cast(StepRef, resolved)
-        default_target = self.use(default) if is_node_spec(default) else default
-        self.connect(cast(ConditionNode, previous_condition), "false", cast(StepRef, default_target))
-        resolved_targets["default"] = cast(StepRef, default_target)
-        return RouteRef(
+            resolved_targets[index] = resolved
+        default_target = self._resolve_branch_ref(default)
+        assert previous_condition is not None  # guarded by clauses check above
+        self.connect(previous_condition, "false", default_target)
+        resolved_targets["default"] = default_target
+        return DecisionResult(
             entry=conditions[0],
             conditions=tuple(conditions),
             targets=resolved_targets,
@@ -377,7 +411,7 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         default: BranchRef = runtime_error,
-    ) -> RouteRef:
+    ) -> DecisionResult:
         """Deprecated compatibility shim for the old overloaded route API."""
         warnings.warn(
             "WorkflowBuilder.route is deprecated; use match(...) or when(...)",
@@ -385,9 +419,11 @@ class WorkflowBuilder:
             stacklevel=2,
         )
         if isinstance(value, Expr):
-            invalid_cases = [case for case in cases if not isinstance(case, bool)]
+            invalid_cases = any(not isinstance(case, bool) for case in cases)
             if invalid_cases:
-                raise ValueError("condition route cases must be boolean True/False keys")
+                raise ValueError(
+                    "condition route cases must be boolean True/False keys"
+                )
             if not cases:
                 raise ValueError("WorkflowBuilder.route requires at least one case")
             return self.when(
@@ -401,8 +437,8 @@ class WorkflowBuilder:
     def compile(self) -> Workflow:
         if self.start is None:
             raise WorkflowExecutionError(
-                "workflow builder requires an explicit start; call set_entry_point(...) "
-                "or pass start=..."
+                "workflow builder requires an explicit start; "
+                "call set_entry_point(...) or pass start=..."
             )
         node_defs = [spec.to_node_def() for spec in self.node_specs.values()]
         return Workflow(

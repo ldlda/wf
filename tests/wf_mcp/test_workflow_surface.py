@@ -221,7 +221,7 @@ def test_workflow_surface_validates_draft_without_saving() -> None:
     assert payload["status"] == "valid"
     assert payload["diagnostics"] == []
     assert payload["compiled_plan"]["nodes"][0]["type"] == "node"
-    assert artifact_store.list_artifacts() == []
+    assert not artifact_store.list_artifacts()
 
 
 def test_workflow_surface_rejects_unknown_draft_route_outcome_when_spec_is_known() -> (
@@ -340,7 +340,7 @@ def test_workflow_surface_patches_draft_without_saving() -> None:
 
     assert payload["status"] == "valid"
     assert payload["draft"]["steps"]["echo"]["in"]["input.text"] == "message"
-    assert artifact_store.list_artifacts() == []
+    assert not artifact_store.list_artifacts()
 
 
 def test_raw_workflow_plan_uses_core_step_and_edge_models() -> None:
