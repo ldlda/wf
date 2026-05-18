@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from wf_artifacts.drafts import (
     DraftChooseStep,
+    DraftMatchStep,
     DraftUseStep,
     DraftWhenStep,
     WorkflowDraft,
@@ -85,6 +86,30 @@ def test_workflow_draft_accepts_choose_step() -> None:
     )
 
     assert isinstance(draft.steps["choose_next"], DraftChooseStep)
+
+
+def test_workflow_draft_accepts_match_step() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "start": "match_status",
+            "steps": {
+                **_keyed_echo_draft()["steps"],
+                "match_status": {
+                    "match": {
+                        "value": "state.status",
+                        "cases": [
+                            {"equals": "ready", "then": "echo"},
+                            {"equals": "done", "then": "__end__"},
+                        ],
+                        "default": "__end__",
+                    }
+                },
+            },
+        }
+    )
+
+    assert isinstance(draft.steps["match_status"], DraftMatchStep)
 
 
 def _keyed_echo_draft() -> dict[str, Any]:

@@ -121,3 +121,47 @@ def test_adapter_lowers_choose_step_through_builder() -> None:
         ("pick_2", "true", "fallback"),
         ("pick_2", "false", "__end__"),
     ]
+
+
+def test_adapter_lowers_match_step_through_builder() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            "name": "match_example",
+            "input_schema": {},
+            "state_schema": {"fields": {}},
+            "output_schema": {},
+            "start": "match_status",
+            "steps": {
+                "match_status": {
+                    "match": {
+                        "value": "state.status",
+                        "cases": [
+                            {"equals": "ready", "then": "ready"},
+                            {"equals": "waiting", "then": "waiting"},
+                        ],
+                        "default": "__end__",
+                    }
+                },
+                "ready": {"use": "demo.ready"},
+                "waiting": {"use": "demo.waiting"},
+            },
+            "routes": {
+                "ready": {"ok": "__end__"},
+                "waiting": {"ok": "__end__"},
+            },
+        }
+    )
+
+    workflow = build_workflow_from_draft(draft)
+    condition_ids = [
+        node.id for node in workflow.nodes if isinstance(node, ConditionNode)
+    ]
+
+    assert condition_ids == ["match_status", "match_status_2"]
+    assert workflow.start == "match_status"
+    assert [(edge.from_, edge.outcome, edge.to) for edge in workflow.edges[:4]] == [
+        ("match_status", "true", "ready"),
+        ("match_status", "false", "match_status_2"),
+        ("match_status_2", "true", "waiting"),
+        ("match_status_2", "false", "__end__"),
+    ]

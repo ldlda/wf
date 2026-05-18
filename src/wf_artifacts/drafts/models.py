@@ -7,7 +7,9 @@ from pydantic import BaseModel, Field, model_validator
 from wf_core.models.conditions import Condition
 
 JsonObject = dict[str, Any]
-STEP_KIND_KEYS = frozenset({"use", "foreach", "interrupt", "join", "when", "choose"})
+STEP_KIND_KEYS = frozenset(
+    {"use", "foreach", "interrupt", "join", "when", "choose", "match"}
+)
 
 
 class DraftUseStep(BaseModel):
@@ -91,6 +93,27 @@ class DraftChooseStep(BaseModel):
     choose: DraftChoosePayload
 
 
+class DraftMatchCase(BaseModel):
+    """One ordered equality case in a draft match decision."""
+
+    equals: Any
+    then: str
+
+
+class DraftMatchPayload(BaseModel):
+    """Payload for matching one graph value against ordered equality cases."""
+
+    value: str
+    cases: list[DraftMatchCase] = Field(min_length=1)
+    default: str = "__end__"
+
+
+class DraftMatchStep(BaseModel):
+    """Draft step that delegates equality decisions to `WorkflowBuilder.match`."""
+
+    match: DraftMatchPayload
+
+
 DraftStep = (
     DraftUseStep
     | DraftForeachStep
@@ -98,6 +121,7 @@ DraftStep = (
     | DraftJoinStep
     | DraftWhenStep
     | DraftChooseStep
+    | DraftMatchStep
 )
 
 

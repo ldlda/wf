@@ -209,6 +209,33 @@ Creates one boolean decision step. The condition uses the same JSON shape as
 The draft adapter lowers this through `WorkflowBuilder.when()`. The draft step
 id becomes the generated condition entry id, so other routes can target it.
 
+### `match`
+
+Matches one graph value against ordered equality cases.
+
+```json
+{
+  "match": {
+    "value": "state.status",
+    "cases": [
+      {
+        "equals": "ready",
+        "then": "run"
+      },
+      {
+        "equals": "waiting",
+        "then": "pause"
+      }
+    ],
+    "default": "__end__"
+  }
+}
+```
+
+Cases are a list rather than a JSON object so values such as `1`, `"1"`, and
+`true` are not silently coerced into object keys. The draft adapter lowers this
+through `WorkflowBuilder.match()`.
+
 ### `choose`
 
 Creates an ordered first-true decision chain.
@@ -243,8 +270,8 @@ Creates an ordered first-true decision chain.
 ```
 
 `choose` lowers through `WorkflowBuilder.choose()` and expands to generated
-condition nodes. It replaces the deprecated `route()` concept for draft JSON;
-there is intentionally no draft `route` step kind.
+condition nodes. `match`, `when`, and `choose` replace the deprecated `route()`
+concept for draft JSON; there is intentionally no draft `route` step kind.
 
 ## Draft Tools
 

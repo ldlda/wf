@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from wf_authoring import WorkflowBuilder
+from wf_authoring.dsl import PathExpr
 from wf_core import JoinNode, Workflow
 
 from .models import (
+    DraftChooseStep,
     DraftForeachStep,
     DraftInterruptStep,
     DraftJoinStep,
+    DraftMatchStep,
     DraftStep,
     DraftUseStep,
     DraftWhenStep,
-    DraftChooseStep,
     WorkflowDraft,
 )
 
@@ -78,5 +80,12 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
             ],
             id=step_id,
             default=step.choose.default,
+        ).entry
+    if isinstance(step, DraftMatchStep):
+        return builder.match(
+            PathExpr(step.match.value),
+            {case.equals: case.then for case in step.match.cases},
+            id=step_id,
+            default=step.match.default,
         ).entry
     raise TypeError(f"unsupported draft step {type(step)!r}")
