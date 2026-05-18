@@ -356,3 +356,68 @@ resending the full draft each turn.
 Workspace patches are optimistic-concurrency guarded. Pass the current
 `revision` from `get_draft_workspace`; a stale revision returns
 `revision_conflict` and leaves the stored draft unchanged.
+
+Workspace mutation tools use a single `request` object in MCP Inspector. That
+keeps the form grouped and lets the schema describe fields like
+`input_schema`, `output_map`, and `error_message_source`.
+
+Minimal example:
+
+```json
+{
+  "request": {
+    "workspace_id": "echo_draft",
+    "name": "echo",
+    "capability_name": "demo.personal.echo_tool",
+    "input_schema": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string"
+        }
+      },
+      "required": ["text"]
+    },
+    "state_schema": {
+      "fields": {
+        "echoed": {
+          "type": "string"
+        }
+      }
+    },
+    "output_schema": {
+      "type": "object",
+      "properties": {
+        "echoed": {
+          "type": "string"
+        }
+      },
+      "required": ["echoed"]
+    },
+    "input_map": {
+      "input.text": "text"
+    },
+    "output_map": {
+      "echoed": "state.echoed"
+    }
+  }
+}
+```
+
+Patch example:
+
+```json
+{
+  "request": {
+    "workspace_id": "echo_draft",
+    "revision": 1,
+    "patch": [
+      {
+        "op": "replace",
+        "path": "/name",
+        "value": "echo_v2"
+      }
+    ]
+  }
+}
+```

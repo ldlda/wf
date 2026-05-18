@@ -495,3 +495,35 @@ If the client is iterating with an LLM, prefer a draft workspace:
 
 This avoids resending the whole draft object every turn. The saved artifact is
 still immutable and should be deployed through the normal deployment path.
+
+Concrete MCP sequence:
+
+1. `wf.workflow.list_capabilities` with a query such as `echo`.
+2. `wf.workflow.call_capability` with a small payload to verify the selected
+   capability behaves as expected.
+3. `wf.workflow.create_minimal_draft_workspace` with a `request` object that
+   contains schemas, `input_map`, and `output_map`.
+4. `wf.workflow.get_draft_workspace` with `include_draft=true` if the client
+   needs to inspect the full current draft.
+5. `wf.workflow.patch_draft_workspace` with the current `revision`.
+6. `wf.workflow.create_artifact_from_workspace` after validation is clean.
+7. `wf.workflow.save_deployment`, then `validate_deployment`, then
+   `run_deployment`.
+
+`create_artifact_from_workspace` also uses a `request` object:
+
+```json
+{
+  "request": {
+    "workspace_id": "echo_draft",
+    "artifact_id": "echo",
+    "version": 1,
+    "title": "Echo",
+    "outcomes": ["completed"],
+    "source_bindings": {
+      "demo": "demo.personal",
+      "wf.std": "wf.std"
+    }
+  }
+}
+```

@@ -35,6 +35,13 @@ from wf_core import RuntimeContext
 
 from ..events import make_event
 from ..models import RawWorkflowPlan
+from .constants import (
+    DEFAULT_CALL_STEP_ID,
+    DEFAULT_ERROR_OUTCOME,
+    DEFAULT_ERROR_STEP_ID,
+    DEFAULT_OK_OUTCOME,
+    RUNTIME_ERROR_CAPABILITY,
+)
 
 if TYPE_CHECKING:
     from ..broker.service import WfMcpService
@@ -423,33 +430,39 @@ class WorkflowSurfaceHandlers:
         title: str | None = None,
     ) -> dict[str, Any]:
         """Bootstrap the smallest patchable draft around one workflow capability."""
-        outcomes = self._outcomes_for_capability(capability_name) or ("ok",)
+        outcomes = self._outcomes_for_capability(capability_name) or (
+            DEFAULT_OK_OUTCOME,
+        )
         steps: dict[str, Any] = {
-            "call": {
+            DEFAULT_CALL_STEP_ID: {
                 "use": capability_name,
                 "in": input_map,
                 "out": output_map,
             }
         }
-        routes: dict[str, dict[str, str]] = {"call": {"ok": "__end__"}}
+        routes: dict[str, dict[str, str]] = {
+            DEFAULT_CALL_STEP_ID: {DEFAULT_OK_OUTCOME: "__end__"}
+        }
         error_source = error_message_source or _first_state_path(output_map)
-        if "error" in outcomes and error_source is not None:
+        if DEFAULT_ERROR_OUTCOME in outcomes and error_source is not None:
             # The bootstrapper cannot infer provider-specific error envelopes.
             # It only wires an error route when the caller gave, or output_map
             # exposes, a concrete state path that can become a runtime message.
-            steps["tool_error"] = {
-                "use": "wf.std.runtime_error",
+            steps[DEFAULT_ERROR_STEP_ID] = {
+                "use": RUNTIME_ERROR_CAPABILITY,
                 "in": {error_source: "message"},
                 "out": {},
             }
-            routes["call"]["error"] = "tool_error"
-            routes["tool_error"] = {"ok": "__end__"}
+            routes[DEFAULT_CALL_STEP_ID][DEFAULT_ERROR_OUTCOME] = (
+                DEFAULT_ERROR_STEP_ID
+            )
+            routes[DEFAULT_ERROR_STEP_ID] = {DEFAULT_OK_OUTCOME: "__end__"}
         draft = {
             "name": name,
             "input_schema": input_schema,
             "state_schema": state_schema,
             "output_schema": output_schema,
-            "start": "call",
+            "start": DEFAULT_CALL_STEP_ID,
             "steps": steps,
             "routes": routes,
         }

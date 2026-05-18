@@ -83,6 +83,17 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert create_workspace_schema is not None
             assert "workspace_id" in create_workspace_schema["properties"]
             assert "revision" in create_workspace_schema["properties"]
+            minimal_workspace_input = tools_by_name[
+                "wf.workflow.create_minimal_draft_workspace"
+            ].inputSchema
+            minimal_request = minimal_workspace_input["properties"]["request"]
+            assert minimal_request["properties"]["workspace_id"]["pattern"]
+            assert "error_message_source" in minimal_request["properties"]
+            assert (
+                minimal_request["properties"]["input_schema"]["description"]
+                == "JSON Schema object. Keep this as ordinary JSON; "
+                "nested schema fields are passed through unchanged."
+            )
 
             echo_result = await client.call_tool(
                 "fixture.personal.echo_tool",

@@ -220,6 +220,10 @@ an `error` outcome for naive MCP wrappers only when `error_message_source` is
 provided or a state path can be derived from `output_map`. Provider-specific
 error envelopes still belong in saved wrapper artifacts or follow-up patches.
 
+In MCP Inspector, workspace mutation tools accept a single `request` object.
+This is deliberate: the request object carries descriptions and validation for
+the authoring envelope while raw JSON Schema fields remain plain JSON objects.
+
 ## Patching Drafts
 
 `patch_draft` accepts JSON Patch operations.
