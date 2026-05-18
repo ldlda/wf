@@ -305,9 +305,34 @@ the same admin/control capabilities.
 `list_sources()` is the compact source-discovery surface:
 
 - returns paged source summaries with visibility, permissions, and counts
+- includes small sorted preview name lists per capability kind
+- includes `has_more` flags when a preview omits additional owned names
 - is intentionally compact enough for progressive discovery
 - pairs with `inspect_source(source_id)` for the full owned-capability inventory
 
 Humans and LLM authoring clients should list sources first, then inspect only the
 sources they need. Planner projection remains a different **use** of source
 metadata, not a second source model.
+
+The summary payload intentionally does not include schemas or executable
+contracts:
+
+```json
+{
+  "id": "wf.std",
+  "node_spec_count": 12,
+  "reducer_count": 6,
+  "preview": {
+    "node_specs": ["wf.std.coalesce", "wf.std.constant", "wf.std.default_if_none"],
+    "reducers": ["wf.std.add", "wf.std.append", "wf.std.max"]
+  },
+  "has_more": {
+    "node_specs": true,
+    "reducers": true
+  }
+}
+```
+
+Call `inspect_source("wf.std")` only when those previews indicate the source is
+relevant. That keeps large source inventories usable for MCP clients with tight
+context windows.

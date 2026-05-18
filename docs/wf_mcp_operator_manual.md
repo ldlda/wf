@@ -170,7 +170,9 @@ wf.admin.get_planner_catalog
 ```
 
 Prefer `list_sources` first. It is the compact inventory. Inspect one source
-only when you need its full owned-capability list.
+only when you need its full owned-capability list. The compact response includes
+counts plus small preview lists and `has_more` flags, so clients can usually
+choose the next source to inspect without loading every schema.
 
 ### 4. Manage Saved Workflows
 

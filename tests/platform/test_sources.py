@@ -18,7 +18,12 @@ def test_capability_source_projects_typed_status() -> None:
         id="wf.std",
         kind="system",
         capabilities=CapabilityBuckets(
-            tools={"wf.std.inspect": object()},
+            tools={
+                "wf.std.inspect": object(),
+                "wf.std.zeta": object(),
+                "wf.std.alpha": object(),
+                "wf.std.beta": object(),
+            },
             resources={"wf.std.manual": object()},
         ),
         visibility=SourceVisibility(planner=True, mcp_client=True),
@@ -32,8 +37,16 @@ def test_capability_source_projects_typed_status() -> None:
     assert status.id == "wf.std"
     assert status.visibility.planner is True
     assert status.permissions.safe_for_workflow is True
-    assert status.tool_count == 1
+    assert status.tool_count == 4
+    assert status.preview.tools == (
+        "wf.std.alpha",
+        "wf.std.beta",
+        "wf.std.inspect",
+    )
+    assert status.has_more.tools is True
     assert status.resource_count == 1
+    assert status.preview.resources == ("wf.std.manual",)
+    assert status.has_more.resources is False
 
 
 def test_capability_source_projects_typed_inventory() -> None:

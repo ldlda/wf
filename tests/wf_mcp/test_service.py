@@ -153,6 +153,12 @@ def test_service_lists_compact_source_summaries() -> None:
     assert payload["next_cursor"] == "2"
     assert "capabilities" not in payload["sources"][0]
 
+    full_page = service.list_source_summaries(limit=100)
+    sources_by_id = {source["id"]: source for source in full_page["sources"]}
+    std_source = sources_by_id["wf.std"]
+    assert "wf.std.coalesce" in std_source["preview"]["node_specs"]
+    assert std_source["has_more"]["node_specs"] is True
+
 
 def test_wf_std_source_contains_authoring_ops() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "stdlib_source_store"))

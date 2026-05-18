@@ -75,6 +75,26 @@ class SourceCapabilityInventory(BaseModel):
     resources: tuple[str, ...] = ()
 
 
+class SourceCapabilityPreview(BaseModel):
+    """Small sorted capability-name sample for compact source discovery."""
+
+    tools: tuple[str, ...] = ()
+    node_specs: tuple[str, ...] = ()
+    reducers: tuple[str, ...] = ()
+    prompts: tuple[str, ...] = ()
+    resources: tuple[str, ...] = ()
+
+
+class SourceCapabilityHasMore(BaseModel):
+    """Whether each compact source preview omitted owned capabilities."""
+
+    tools: bool = False
+    node_specs: bool = False
+    reducers: bool = False
+    prompts: bool = False
+    resources: bool = False
+
+
 class SourceStatus(BaseModel):
     """Serializable source metadata without the full owned-name inventory."""
 
@@ -89,6 +109,8 @@ class SourceStatus(BaseModel):
     reducer_count: int
     prompt_count: int
     resource_count: int
+    preview: SourceCapabilityPreview
+    has_more: SourceCapabilityHasMore
 
 
 class SourceInventory(SourceStatus):
@@ -119,6 +141,7 @@ class CapabilitySource:
 
     def as_status(self) -> SourceStatus:
         """Return serializable source metadata without owned capability names."""
+        preview_limit = 3
         return SourceStatus(
             id=self.id,
             kind=self.kind,
@@ -140,6 +163,23 @@ class CapabilitySource:
             reducer_count=len(self.capabilities.reducers),
             prompt_count=len(self.capabilities.prompts),
             resource_count=len(self.capabilities.resources),
+            preview=SourceCapabilityPreview(
+                tools=_preview_names(self.capabilities.tools, preview_limit),
+                node_specs=_preview_names(
+                    self.capabilities.node_specs,
+                    preview_limit,
+                ),
+                reducers=_preview_names(self.capabilities.reducers, preview_limit),
+                prompts=_preview_names(self.capabilities.prompts, preview_limit),
+                resources=_preview_names(self.capabilities.resources, preview_limit),
+            ),
+            has_more=SourceCapabilityHasMore(
+                tools=_has_more(self.capabilities.tools, preview_limit),
+                node_specs=_has_more(self.capabilities.node_specs, preview_limit),
+                reducers=_has_more(self.capabilities.reducers, preview_limit),
+                prompts=_has_more(self.capabilities.prompts, preview_limit),
+                resources=_has_more(self.capabilities.resources, preview_limit),
+            ),
         )
 
     def as_inventory(self) -> SourceInventory:
@@ -186,3 +226,13 @@ def _node_spec_inventory(spec: NodeSpec[Any, Any]) -> NodeSpecInventory:
         is_async=spec.is_async,
         accepts_context=spec.accepts_context,
     )
+
+
+def _preview_names(values: dict[str, Any], limit: int) -> tuple[str, ...]:
+    """Return a tiny deterministic sample so list views stay inspectable."""
+    return tuple(sorted(values)[:limit])
+
+
+def _has_more(values: dict[str, Any], limit: int) -> bool:
+    """Return whether the compact preview omitted owned capability names."""
+    return len(values) > limit
