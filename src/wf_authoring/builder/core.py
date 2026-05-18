@@ -21,6 +21,7 @@ from wf_core import (
 )
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.conditions import Condition as CoreCondition
+from wf_core.models.conditions import BinaryCondition, ExistsCondition, PathOperand
 from wf_core.runtime.ops.merges import ReducerDefinition
 
 from ..dsl import Expr, PathArg, PathExpr, compile_condition
@@ -38,6 +39,17 @@ from .mapping import (
     normalize_mapping,
 )
 from .refs import BranchRef, RouteRef, StepRef, is_node_spec, step_id
+
+
+def _condition_base(condition: CoreCondition) -> str:
+    """Return a small source-derived id base when one path is obvious."""
+    if isinstance(condition, ExistsCondition):
+        return slug_id(condition.path)
+    if isinstance(condition, BinaryCondition) and isinstance(
+        condition.left, PathOperand
+    ):
+        return slug_id(condition.left.path)
+    return "condition"
 
 
 @dataclass(slots=True)
@@ -162,10 +174,11 @@ class WorkflowBuilder:
     def condition(
         self, *, id: str | None = None, check: CoreCondition | Expr
     ) -> ConditionNode:
+        compiled = compile_condition(check)
         node = ConditionNode(
-            id=id or self._next_step_id("condition"),
+            id=id or self._next_step_id(_condition_base(compiled)),
             type="condition",
-            check=compile_condition(check),
+            check=compiled,
         )
         self.nodes.append(node)
         return node
@@ -273,7 +286,7 @@ class WorkflowBuilder:
         conditions: list[ConditionNode] = []
         default_target = self.use(default) if is_node_spec(default) else default
         previous_condition: ConditionNode | None = None
-        condition_base = id or "condition"
+        condition_base = id or slug_id(value.path)
         for case_value, target in cases.items():
             condition = self.condition(
                 id=self._next_step_id(condition_base),
@@ -334,7 +347,7 @@ class WorkflowBuilder:
         conditions: list[ConditionNode] = []
         resolved_targets: dict[object, StepRef] = {}
         previous_condition: ConditionNode | None = None
-        condition_base = id or "condition"
+        condition_base = id or _condition_base(compile_condition(clauses[0][0]))
         for index, (condition_expr, target) in enumerate(clauses):
             condition = self.condition(
                 id=self._next_step_id(condition_base),

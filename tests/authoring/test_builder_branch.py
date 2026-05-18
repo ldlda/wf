@@ -84,15 +84,15 @@ def test_builder_match_expands_state_value_cases_into_condition_chain() -> None:
     )
 
     assert [node.id for node in targets.conditions] == [
-        "condition",
-        "condition_2",
+        "state_value",
+        "state_value_2",
     ]
-    assert targets.entry.id == "condition"
+    assert targets.entry.id == "state_value"
     assert [(edge.from_, edge.outcome, edge.to) for edge in builder.edges] == [
-        ("condition", "true", "left"),
-        ("condition", "false", "condition_2"),
-        ("condition_2", "true", "right"),
-        ("condition_2", "false", "fallback"),
+        ("state_value", "true", "left"),
+        ("state_value", "false", "state_value_2"),
+        ("state_value_2", "true", "right"),
+        ("state_value_2", "false", "fallback"),
     ]
     assert targets["left"] is left
     assert targets["right"] is right
@@ -135,11 +135,11 @@ def test_builder_when_routes_one_boolean_condition_expression() -> None:
 
     targets = builder.when(state("count").ge(1), then=left, otherwise=right)
 
-    assert targets.entry.id == "condition"
-    assert [node.id for node in targets.conditions] == ["condition"]
+    assert targets.entry.id == "state_count"
+    assert [node.id for node in targets.conditions] == ["state_count"]
     assert [(edge.from_, edge.outcome, edge.to) for edge in builder.edges] == [
-        ("condition", "true", "left"),
-        ("condition", "false", "right"),
+        ("state_count", "true", "left"),
+        ("state_count", "false", "right"),
     ]
     assert targets[True] is left
     assert targets[False] is right

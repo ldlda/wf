@@ -164,8 +164,8 @@ def test_builder_can_auto_id_condition_foreach_and_interrupt() -> None:
     foreach = builder.foreach(over="state.tags", as_="tag")
     interrupt = builder.interrupt(kind="approval")
 
-    assert first_condition.id == "condition"
-    assert second_condition.id == "condition_2"
+    assert first_condition.id == "state_count"
+    assert second_condition.id == "state_count_2"
     assert foreach.id == "foreach_tag"
     assert interrupt.id == "interrupt_approval"
 
