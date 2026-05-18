@@ -19,12 +19,13 @@
       "id": "playwright.default",
       "server": "playwright",
       "account": "default",
-      "enabled": false,
+      "enabled": true,
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
         "args": [
-          "@playwright/mcp@latest"
+          "@playwright/mcp@latest",
+          "--isolated"
         ],
         "env": {}
       }

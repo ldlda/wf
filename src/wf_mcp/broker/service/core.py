@@ -33,6 +33,7 @@ from ...models import (
     CatalogPromptEntry,
     CatalogResourceEntry,
     CatalogSnapshot,
+    BrokerConfig,
     ConnectionConfig,
     RawWorkflowPlan,
 )
@@ -89,6 +90,33 @@ class WfMcpService:
                 payload={"server": connection.server, "account": connection.account},
             )
         )
+
+    def sync_connections_from_config(self, config: BrokerConfig) -> None:
+        """Reconcile connection sources after the public server reloads config.
+
+        The public server has two cooperating views: proxy mounts read the live
+        file-backed config, while workflow discovery reads this service's source
+        registry. Reload must keep those views aligned, or raw proxy tools can be
+        enabled while planner-visible workflow capabilities remain disabled.
+        """
+        next_ids = {connection.id for connection in config.connections}
+        previous_ids = set(self.connections.connections)
+        for connection_id in previous_ids - next_ids:
+            del self.connections.connections[connection_id]
+            self.capability_sources.pop(connection_id, None)
+
+        for connection in config.connections:
+            parse_connection_id(connection.id)
+            if connection.id in RESERVED_CONNECTION_IDS:
+                raise ValueError(
+                    f"connection id {connection.id!r} is reserved by wf-mcp"
+                )
+            self.connections.register(connection)
+            source = self.capability_sources.get(connection.id)
+            if source is None:
+                self._hydrate_connection_source_from_snapshot(connection)
+            else:
+                source.enabled = connection.enabled
 
     def register_adapter(self, server: str, adapter: BackendAdapter) -> None:
         self.adapters[server] = adapter

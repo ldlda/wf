@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 from typing import Any
 
 from mcp import types as mcp_types
 
+from wf_mcp.broker.config import load_broker_config
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.server import create_server_client
 
@@ -221,6 +223,73 @@ def test_server_exposes_platform_documentation_prompts() -> None:
             content = result.messages[0].content
             assert isinstance(content, mcp_types.TextContent)
             assert "wf://docs/operator-manual" in content.text
+
+    asyncio.run(run_proxy())
+
+
+def test_server_reload_syncs_service_connection_source_enabled_state() -> None:
+    tmp_path = local_temp_root() / "unified_reload_service_source_store"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "store_root": ".wf_mcp_store",
+                "connections": [
+                    {
+                        "id": "fixture.personal",
+                        "server": "fixture",
+                        "account": "personal",
+                        "enabled": False,
+                        "metadata": {
+                            "transport": "stdio",
+                            "command": sys.executable,
+                            "args": [fixture_server_path()],
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    config = load_broker_config(config_path)
+
+    async def run_proxy() -> None:
+        client = create_server_client(config, config_path=config_path)
+        async with client:
+            await client.call_tool(
+                "wf.admin.refresh_connection_catalog",
+                {"connection_id": "fixture.personal"},
+            )
+            before = await client.call_tool(
+                "wf.workflow.list_capabilities",
+                {"source_id": "fixture.personal"},
+            )
+            assert _structured(before)["capabilities"] == []
+
+            await client.call_tool(
+                "wf.admin.enable_connection",
+                {"connection_id": "fixture.personal"},
+            )
+            await client.call_tool("wf.admin.reload_config")
+
+            sources = await client.call_tool("wf.admin.list_sources", {"limit": 100})
+            fixture_source = next(
+                source
+                for source in _structured(sources)["sources"]
+                if source["id"] == "fixture.personal"
+            )
+            assert fixture_source["enabled"] is True
+
+            after = await client.call_tool(
+                "wf.workflow.list_capabilities",
+                {"source_id": "fixture.personal"},
+            )
+            names = [
+                capability["name"]
+                for capability in _structured(after)["capabilities"]
+            ]
+            assert "fixture.personal.echo_tool" in names
 
     asyncio.run(run_proxy())
 

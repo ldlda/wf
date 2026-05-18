@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from collections.abc import Callable
 from typing import Any
 
 from fastmcp import FastMCP
@@ -61,6 +62,7 @@ class ProxyRuntime:
         search_tools: bool = False,
         admin_tools: bool = True,
         event_bus: EventBus | None = None,
+        on_reload: Callable[[BrokerConfig], None] | None = None,
     ) -> None:
         self.config = config
         self.manager = None if config_path is None else BrokerConfigManager(config_path)
@@ -74,6 +76,7 @@ class ProxyRuntime:
         )
         self.admin_tools = admin_tools
         self.event_bus = event_bus
+        self.on_reload = on_reload
         self.mounts: ProxyMountRegistry[FastMCP[Any]] = ProxyMountRegistry(
             create_proxy_mount
         )
@@ -105,6 +108,8 @@ class ProxyRuntime:
     def reload(self) -> dict[str, Any]:
         config = self.current_config()
         validate_transparent_proxy_config(config)
+        if self.on_reload is not None:
+            self.on_reload(config)
         self.server.providers[:] = [self.server.local_provider]
 
         mounts = self.mounts.active_mounts_for(config)

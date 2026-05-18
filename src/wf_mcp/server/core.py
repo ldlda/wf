@@ -12,6 +12,7 @@ from ..broker.config import build_service_from_config
 from ..broker.transport import normalize_transport
 from ..documentation import build_local_documentation_source
 from ..models import BrokerConfig
+from ..sdk import McpSdkAdapter
 from ..transparent_proxy.runtime import ProxyRuntime
 from ..workflow_surface import register_workflow_tools
 from .prompts import register_documentation_prompts
@@ -29,6 +30,13 @@ def create_server(
 ) -> FastMCP[Any]:
     """Create the public MCP server with proxy, admin, and workflow tools."""
     service = build_service_from_config(config)
+
+    def sync_service(config: BrokerConfig) -> None:
+        service.sync_connections_from_config(config)
+        for connection in config.connections:
+            if connection.server not in service.adapters:
+                service.register_adapter(connection.server, McpSdkAdapter())
+
     runtime = ProxyRuntime(
         config,
         config_path=config_path,
@@ -37,6 +45,7 @@ def create_server(
         search_tools=search_tools,
         admin_tools=admin_tools,
         event_bus=service.event_bus,
+        on_reload=sync_service,
     )
     if admin_tools:
         register_service_admin_tools(
