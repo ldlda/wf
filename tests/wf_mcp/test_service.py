@@ -103,6 +103,19 @@ def test_service_installs_builtin_stdlib_specs_by_default() -> None:
     )
 
 
+def test_service_registers_empty_source_for_connection_without_catalog() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "empty_source"))
+
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+
+    source = service.capability_sources["demo.personal"]
+    assert source.enabled is True
+    assert source.capabilities.node_specs == {}
+    assert source.description == "No catalog loaded for demo.personal."
+
+
 def test_service_lists_all_capability_sources_with_owned_capability_names() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "source_inventory"))
 

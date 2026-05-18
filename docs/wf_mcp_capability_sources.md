@@ -124,6 +124,17 @@ Each upstream MCP connection is a source, for example `everything.default` or
 Connection sources are the only sources that represent upstream MCP server
 snapshots. System sources are local broker capabilities.
 
+A configured connection should still appear as a connection source even when no
+catalog snapshot has been loaded yet. In that state the source can have zero
+owned capabilities and a description such as `No catalog loaded for ...`; the
+absence of discovered capabilities must not make the configured connection
+disappear from source inventory.
+
+Connection discovery treats `tools/list` as the required workflow-facing family.
+Optional MCP families such as `resources/list` and `prompts/list` may be absent;
+servers that return MCP `Method not found` for those methods still refresh as
+tool-only sources instead of failing the whole catalog refresh.
+
 ## Projections
 
 ### Planner Catalog

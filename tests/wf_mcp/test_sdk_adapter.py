@@ -3,7 +3,10 @@ from __future__ import annotations
 import asyncio
 
 import pytest
+from mcp import McpError
+from mcp.types import ErrorData
 
+from wf_mcp.capabilities import DiscoveredTool
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.sdk import McpSdkAdapter
@@ -15,6 +18,51 @@ from .test_support import (
     local_temp_root,
     sys,
 )
+
+
+class _ToolsOnlyAdapter:
+    async def list_tools(self, connection, auth):
+        return [
+            DiscoveredTool(
+                name="echo_tool",
+                title="Echo",
+                description="Echo text.",
+                input_schema={"type": "object", "properties": {}},
+                output_schema={"type": "object", "properties": {}},
+            )
+        ]
+
+    async def list_resources(self, connection, auth):
+        raise McpError(ErrorData(code=-32601, message="Method not found"))
+
+    async def list_prompts(self, connection, auth):
+        raise McpError(ErrorData(code=-32601, message="Method not found"))
+
+    async def get_connection_metadata(self, connection, auth):
+        return {"server": connection.server}
+
+    async def read_resource(self, connection, auth, uri):
+        raise NotImplementedError
+
+    async def get_prompt(self, connection, auth, prompt_name, arguments=None):
+        raise NotImplementedError
+
+    async def invoke_method(self, connection, auth, method, params=None):
+        raise NotImplementedError
+
+    async def send_notification(self, connection, auth, method, params=None):
+        raise NotImplementedError
+
+    async def call_tool(self, connection, auth, tool_name, payload):
+        raise NotImplementedError
+
+
+class _WrappedToolsOnlyAdapter(_ToolsOnlyAdapter):
+    async def list_resources(self, connection, auth):
+        raise ExceptionGroup(
+            "unhandled errors in a TaskGroup",
+            [McpError(ErrorData(code=-32601, message="Method not found"))],
+        )
 
 
 def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
@@ -125,3 +173,45 @@ def test_mcp_sdk_adapter_can_probe_everything_server() -> None:
     )
     assert "resources" in payload
     assert "prompts" in payload
+
+
+def test_refresh_catalog_keeps_tools_when_optional_lists_are_unsupported() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "tools_only_server_store")
+    )
+    service.register_connection(
+        ConnectionConfig(
+            id="tools_only.personal",
+            server="tools_only",
+            account="personal",
+        )
+    )
+    service.register_adapter("tools_only", _ToolsOnlyAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("tools_only.personal"))
+
+    payload = service.get_catalog().as_payload()
+    assert payload["nodes"][0]["qualified_name"] == "tools_only.personal.echo_tool"
+    assert payload["resources"] == []
+    assert payload["prompts"] == []
+
+
+def test_refresh_catalog_unwraps_taskgroup_method_not_found() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "wrapped_tools_only_server_store")
+    )
+    service.register_connection(
+        ConnectionConfig(
+            id="wrapped_tools_only.personal",
+            server="wrapped_tools_only",
+            account="personal",
+        )
+    )
+    service.register_adapter("wrapped_tools_only", _WrappedToolsOnlyAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("wrapped_tools_only.personal"))
+
+    payload = service.get_catalog().as_payload()
+    assert payload["nodes"][0]["qualified_name"] == (
+        "wrapped_tools_only.personal.echo_tool"
+    )

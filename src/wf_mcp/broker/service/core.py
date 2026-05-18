@@ -644,18 +644,20 @@ class WfMcpService:
         self,
         connection: ConnectionConfig,
     ) -> None:
-        """Restore planner-visible connection specs from a stored catalog snapshot."""
+        """Register one connection source, hydrating specs from snapshot if present."""
         if connection.id in self.capability_sources:
             return
 
         snapshot = self.store.load_catalog(connection.id)
-        if snapshot is None or not snapshot.nodes:
-            return
-
         specs = {
             entry.qualified_name: self._spec_from_snapshot_entry(entry)
-            for entry in snapshot.nodes
+            for entry in (() if snapshot is None else snapshot.nodes)
         }
+        description = (
+            f"Specs restored from catalog for {connection.id}."
+            if specs
+            else f"No catalog loaded for {connection.id}."
+        )
         self.register_capability_source(
             CapabilitySource(
                 id=connection.id,
@@ -668,7 +670,7 @@ class WfMcpService:
                     admin_dashboard=True,
                 ),
                 permissions=SourcePermissions(calls_upstream=True),
-                description=f"Specs restored from catalog for {connection.id}.",
+                description=description,
             )
         )
 

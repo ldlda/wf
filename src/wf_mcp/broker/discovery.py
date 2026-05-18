@@ -1,17 +1,22 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
+
+from mcp import McpError
+from mcp.types import METHOD_NOT_FOUND
 
 from wf_authoring import NodeSpec
 
 from ..capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from ..models import AuthRecord, ConnectionConfig
 from ..sdk import BackendAdapter
+from ..shared import root_exception
 from ..workflow import wrap_discovered_tool
 from .events import McpEvent
 
+_CapabilityT = TypeVar("_CapabilityT")
 
 @dataclass(slots=True)
 class DiscoveredConnectionCapabilities:
@@ -28,8 +33,12 @@ async def discover_connection_capabilities(
     adapter: BackendAdapter,
 ) -> DiscoveredConnectionCapabilities:
     tools = await adapter.list_tools(connection, auth)
-    resources = await adapter.list_resources(connection, auth)
-    prompts = await adapter.list_prompts(connection, auth)
+    resources = await _list_optional_capabilities(
+        lambda: adapter.list_resources(connection, auth)
+    )
+    prompts = await _list_optional_capabilities(
+        lambda: adapter.list_prompts(connection, auth)
+    )
     metadata = await adapter.get_connection_metadata(connection, auth)
     return DiscoveredConnectionCapabilities(
         tools=tools,
@@ -37,6 +46,25 @@ async def discover_connection_capabilities(
         prompts=prompts,
         metadata=metadata,
     )
+
+
+async def _list_optional_capabilities(
+    load: Callable[[], Awaitable[list[_CapabilityT]]],
+) -> list[_CapabilityT]:
+    """Treat unsupported optional MCP capability families as empty lists.
+
+    Some SDK transports raise ``METHOD_NOT_FOUND`` from inside an
+    ``ExceptionGroup`` because the request ran through a task group. Resources
+    and prompts are optional families, so only that exact root error means "not
+    supported"; every other failure still needs to surface.
+    """
+    try:
+        return await load()
+    except Exception as exc:
+        root = root_exception(exc)
+        if isinstance(root, McpError) and root.error.code == METHOD_NOT_FOUND:
+            return []
+        raise
 
 
 def specs_from_discovered_tools(
