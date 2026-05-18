@@ -111,6 +111,34 @@ def test_workflow_surface_filters_capabilities_by_source() -> None:
     assert payload["capabilities"][0]["source_id"] == "wf.mcp"
 
 
+def test_workflow_surface_lists_saved_wrapper_capabilities() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_wrapper_caps"
+    )
+    artifact_store.save_artifact(
+        _echo_artifact().model_copy(
+            update={
+                "id": "echo_wrapper",
+                "kind": "wrapper",
+                "description": "Reusable echo wrapper.",
+            }
+        )
+    )
+    artifact_store.save_artifact(_echo_artifact())
+    handlers = _handlers(artifact_store)
+
+    payload = asyncio.run(
+        handlers.list_capabilities(source_id="workflow", query="echo")
+    )
+
+    names = [capability["name"] for capability in payload["capabilities"]]
+    assert names == ["workflow.echo_wrapper.v1"]
+    assert payload["capabilities"][0]["source_id"] == "workflow"
+    assert payload["capabilities"][0]["outcomes"] == ["completed"]
+    assert payload["capabilities"][0]["input_fields"] == ["text"]
+    assert payload["capabilities"][0]["output_fields"] == ["echoed"]
+
+
 def test_workflow_surface_inspects_one_capability() -> None:
     handlers = _handlers(
         FileWorkflowArtifactStore(local_temp_root() / "surface_inspect_cap")
@@ -122,6 +150,27 @@ def test_workflow_surface_inspects_one_capability() -> None:
 
     assert payload["name"] == "wf.std.runtime_error"
     assert payload["outcomes"] == ["ok"]
+    assert "input_schema" in payload
+
+
+def test_workflow_surface_inspects_saved_wrapper_capability() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_inspect_wrapper_cap"
+    )
+    artifact_store.save_artifact(
+        _echo_artifact().model_copy(update={"id": "echo_wrapper", "kind": "wrapper"})
+    )
+    handlers = _handlers(artifact_store)
+
+    payload = asyncio.run(
+        handlers.inspect_capability(qualified_name="workflow.echo_wrapper.v1")
+    )
+
+    assert payload["name"] == "workflow.echo_wrapper.v1"
+    assert payload["source_id"] == "workflow"
+    assert payload["kind"] == "wrapper_artifact"
+    assert payload["artifact_id"] == "echo_wrapper"
+    assert payload["outcomes"] == ["completed"]
     assert "input_schema" in payload
 
 
@@ -419,9 +468,7 @@ def test_workflow_surface_deletes_draft_workspace() -> None:
         )
     )
 
-    deleted = asyncio.run(
-        handlers.delete_draft_workspace(workspace_id="echo_draft")
-    )
+    deleted = asyncio.run(handlers.delete_draft_workspace(workspace_id="echo_draft"))
     deleted_again = asyncio.run(
         handlers.delete_draft_workspace(workspace_id="echo_draft")
     )
@@ -514,9 +561,7 @@ def test_workflow_surface_validates_draft_workspace_with_live_outcomes() -> None
         )
     )
 
-    payload = asyncio.run(
-        handlers.validate_draft_workspace(workspace_id="echo_draft")
-    )
+    payload = asyncio.run(handlers.validate_draft_workspace(workspace_id="echo_draft"))
     fetched = asyncio.run(handlers.get_draft_workspace(workspace_id="echo_draft"))
 
     assert payload["revision"] == 1
@@ -627,6 +672,43 @@ def test_workflow_surface_creates_artifact_from_workspace() -> None:
     artifact = artifact_store.get_artifact("workspace_echo", 1)
     assert result["saved"] is True
     assert artifact.id == "workspace_echo"
+
+
+def test_workflow_surface_creates_wrapper_from_workspace() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_wrapper"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_workspace_wrapper_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+    asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="echo_draft",
+            draft=_echo_draft(),
+        )
+    )
+
+    result = asyncio.run(
+        handlers.create_wrapper_from_workspace(
+            workspace_id="echo_draft",
+            artifact_id="workspace_echo_wrapper",
+            version=1,
+            title="Workspace Echo Wrapper",
+            outcomes=("completed",),
+            source_bindings={"demo": "demo.personal"},
+        )
+    )
+    artifact = artifact_store.get_artifact("workspace_echo_wrapper", 1)
+
+    assert result["saved"] is True
+    assert artifact.kind == "wrapper"
+    assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
 
 
 def test_raw_workflow_plan_uses_core_step_and_edge_models() -> None:

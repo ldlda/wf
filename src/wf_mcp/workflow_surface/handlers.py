@@ -97,6 +97,10 @@ class WorkflowSurfaceHandlers:
                 and query.casefold() in detail.description.casefold()
             )
         ]
+        capabilities.extend(
+            self._wrapper_capability_summaries(query=query, source_id=source_id)
+        )
+        capabilities.sort(key=lambda capability: capability["name"])
         page = page_items(capabilities, cursor=cursor, limit=limit)
         return {
             "capabilities": list(page.items),
@@ -112,6 +116,9 @@ class WorkflowSurfaceHandlers:
             for detail in source.as_inventory().capabilities.node_spec_details:
                 if detail.name == qualified_name:
                     return detail.model_dump(mode="json")
+        wrapper_detail = self._wrapper_capability_detail(qualified_name)
+        if wrapper_detail is not None:
+            return wrapper_detail
         raise KeyError(f"unknown workflow capability {qualified_name!r}")
 
     async def call_capability(
@@ -162,6 +169,71 @@ class WorkflowSurfaceHandlers:
         if artifact.kind != "wrapper":
             return None
         return artifact
+
+    def _wrapper_capability_summaries(
+        self,
+        *,
+        query: str | None,
+        source_id: str | None,
+    ) -> list[dict[str, Any]]:
+        """Project saved wrappers into workflow capability discovery rows.
+
+        Wrapper artifacts are not live source NodeSpecs, but authors need to
+        discover and test them through the same workflow-facing REPL surface.
+        Full saved workflows stay out of this projection until graph-as-node is
+        real in core.
+        """
+        if source_id not in {None, "workflow"} or self.service.artifact_store is None:
+            return []
+        rows: list[dict[str, Any]] = []
+        for artifact in self.service.artifact_store.list_artifacts():
+            if artifact.kind != "wrapper":
+                continue
+            name = _artifact_capability_id(artifact)
+            if not _matches_capability_query(
+                name,
+                artifact.description,
+                query=query,
+            ):
+                continue
+            rows.append(
+                {
+                    "name": name,
+                    "source_id": "workflow",
+                    "description": artifact.description,
+                    "outcomes": list(artifact.outcomes),
+                    "is_async": True,
+                    "input_fields": _schema_field_names(artifact.input_schema),
+                    "output_fields": _schema_field_names(artifact.output_schema),
+                }
+            )
+        return rows
+
+    def _wrapper_capability_detail(
+        self,
+        qualified_name: str,
+    ) -> dict[str, Any] | None:
+        """Return a NodeSpec-like contract for one saved wrapper artifact."""
+        artifact = self._wrapper_artifact_for_capability_name(qualified_name)
+        if artifact is None:
+            return None
+        return {
+            "name": _artifact_capability_id(artifact),
+            "source_id": "workflow",
+            "kind": "wrapper_artifact",
+            "artifact_id": artifact.id,
+            "version": artifact.version,
+            "title": artifact.title,
+            "description": artifact.description,
+            "outcomes": list(artifact.outcomes),
+            "is_async": True,
+            "input_schema": artifact.input_schema,
+            "output_schema": artifact.output_schema,
+            "required_capabilities": {
+                name: capability.model_dump(mode="json")
+                for name, capability in sorted(artifact.required_capabilities.items())
+            },
+        }
 
     async def _call_wrapper_artifact(
         self,
@@ -562,9 +634,7 @@ class WorkflowSurfaceHandlers:
                 "in": {error_source: "message"},
                 "out": {},
             }
-            routes[DEFAULT_CALL_STEP_ID][DEFAULT_ERROR_OUTCOME] = (
-                DEFAULT_ERROR_STEP_ID
-            )
+            routes[DEFAULT_CALL_STEP_ID][DEFAULT_ERROR_OUTCOME] = DEFAULT_ERROR_STEP_ID
             routes[DEFAULT_ERROR_STEP_ID] = {DEFAULT_OK_OUTCOME: "__end__"}
         draft = {
             "name": name,
@@ -613,6 +683,33 @@ class WorkflowSurfaceHandlers:
             description=description,
             draft=workspace.draft,
             outcomes=outcomes,
+            required_capabilities=required_capabilities,
+            source_bindings=source_bindings,
+            created_from_catalog_version=created_from_catalog_version,
+        )
+
+    async def create_wrapper_from_workspace(
+        self,
+        *,
+        workspace_id: str,
+        artifact_id: str,
+        version: int,
+        title: str,
+        outcomes: Sequence[str],
+        description: str | None = None,
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
+        created_from_catalog_version: str | None = None,
+    ) -> dict[str, Any]:
+        """Save the current draft workspace as a callable wrapper artifact."""
+        return await self.create_artifact_from_workspace(
+            workspace_id=workspace_id,
+            artifact_id=artifact_id,
+            version=version,
+            title=title,
+            outcomes=outcomes,
+            kind="wrapper",
+            description=description,
             required_capabilities=required_capabilities,
             source_bindings=source_bindings,
             created_from_catalog_version=created_from_catalog_version,
@@ -840,6 +937,21 @@ def _schema_field_names(schema: dict[str, Any]) -> list[str]:
     if not isinstance(properties, dict):
         return []
     return sorted(str(name) for name in properties)
+
+
+def _matches_capability_query(
+    name: str,
+    description: str | None,
+    *,
+    query: str | None,
+) -> bool:
+    """Apply the same compact capability search semantics to every row kind."""
+    if query is None:
+        return True
+    lowered = query.casefold()
+    return lowered in name.casefold() or (
+        description is not None and lowered in description.casefold()
+    )
 
 
 def _first_state_path(output_map: dict[str, str]) -> str | None:

@@ -53,6 +53,7 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     "wf.workflow.set_step_output_map",
     "wf.workflow.create_minimal_draft_workspace",
     "wf.workflow.create_artifact_from_workspace",
+    "wf.workflow.create_wrapper_from_workspace",
     "wf.workflow.call_capability",
     "wf.workflow.inspect_artifact",
     "wf.workflow.list_deployments",

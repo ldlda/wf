@@ -76,6 +76,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.set_step_output_map" in names
             assert "wf.workflow.create_minimal_draft_workspace" in names
             assert "wf.workflow.create_artifact_from_workspace" in names
+            assert "wf.workflow.create_wrapper_from_workspace" in names
             assert "wf.workflow.run_deployment" in names
             call_capability_schema = tools_by_name[
                 "wf.workflow.call_capability"
@@ -101,6 +102,12 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
                 == "JSON Schema object. Keep this as ordinary JSON; "
                 "nested schema fields are passed through unchanged."
             )
+            wrapper_workspace_input = tools_by_name[
+                "wf.workflow.create_wrapper_from_workspace"
+            ].inputSchema
+            wrapper_request = wrapper_workspace_input["properties"]["request"]
+            assert "kind" not in wrapper_request["properties"]
+            assert "artifact_id" in wrapper_request["properties"]
 
             echo_result = await client.call_tool(
                 "fixture.personal.echo_tool",
@@ -206,6 +213,7 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.workflow.set_step_output_map" in names
             assert "wf.workflow.create_minimal_draft_workspace" in names
             assert "wf.workflow.create_artifact_from_workspace" in names
+            assert "wf.workflow.create_wrapper_from_workspace" in names
             assert "wf.workflow.call_capability" in names
             assert "wf.workflow.inspect_artifact" in names
             assert "wf.workflow.list_deployments" in names

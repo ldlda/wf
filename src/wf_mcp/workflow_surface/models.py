@@ -216,3 +216,26 @@ class CreateArtifactFromWorkspaceRequest(BaseModel):
         default=None,
         description="Optional catalog version used while authoring.",
     )
+
+
+class CreateWrapperFromWorkspaceRequest(BaseModel):
+    """Typed MCP request for saving a draft workspace as a wrapper artifact."""
+
+    workspace_id: WorkspaceId
+    artifact_id: str = Field(description="Immutable wrapper artifact id to write.")
+    version: int = Field(ge=1, description="Wrapper artifact version to write.")
+    title: str = Field(description="Human-readable wrapper title.")
+    outcomes: list[str] = Field(description="Wrapper-level outcomes.")
+    description: str | None = Field(default=None, description="Optional description.")
+    required_capabilities: dict[str, dict[str, Any]] | None = Field(
+        default=None,
+        description="Optional explicit dependency contract override.",
+    )
+    source_bindings: SourceBindings | None = Field(
+        default=None,
+        description="Optional logical-to-concrete source bindings.",
+    )
+    created_from_catalog_version: str | None = Field(
+        default=None,
+        description="Optional catalog version used while authoring.",
+    )

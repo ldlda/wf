@@ -14,6 +14,7 @@ from .models import (
     CreateArtifactFromWorkspaceRequest,
     CreateDraftWorkspaceRequest,
     CreateMinimalDraftWorkspaceRequest,
+    CreateWrapperFromWorkspaceRequest,
     DeleteDraftWorkspaceRequest,
     DeleteDraftWorkspaceResult,
     DraftWorkspaceListResult,
@@ -405,9 +406,38 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                     if isinstance(capability, RequiredCapability)
                     else capability
                 )
-                for name, capability in (
-                    request.required_capabilities or {}
-                ).items()
+                for name, capability in (request.required_capabilities or {}).items()
+            }
+            or None,
+            source_bindings=dict(request.source_bindings or {}),
+            created_from_catalog_version=request.created_from_catalog_version,
+        )
+
+    @server.tool(
+        name="wf.workflow.create_wrapper_from_workspace",
+        title="Create Wrapper From Workspace",
+        description=(
+            "Validate the current draft workspace and save it as a callable "
+            "wrapper artifact."
+        ),
+    )
+    async def create_wrapper_from_workspace(
+        request: CreateWrapperFromWorkspaceRequest,
+    ) -> dict[str, Any]:
+        return await handlers.create_wrapper_from_workspace(
+            workspace_id=request.workspace_id,
+            artifact_id=request.artifact_id,
+            version=request.version,
+            title=request.title,
+            description=request.description,
+            outcomes=request.outcomes,
+            required_capabilities={
+                name: (
+                    capability.model_dump()
+                    if isinstance(capability, RequiredCapability)
+                    else capability
+                )
+                for name, capability in (request.required_capabilities or {}).items()
             }
             or None,
             source_bindings=dict(request.source_bindings or {}),

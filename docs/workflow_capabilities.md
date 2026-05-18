@@ -262,6 +262,7 @@ authoring loop:
 - `wf.workflow.list_capabilities`
   - lists compact paged enabled planner-visible workflow-ready node spec
     summaries, with optional query/source filtering
+  - also includes saved wrapper artifacts under source id `workflow`
   - includes the owning `source_id`, outcomes, and top-level input/output field
     names, but not full schemas
 - `wf.workflow.inspect_capability`
@@ -298,9 +299,10 @@ prompts
 resources
 ```
 
-Possible later additions may include saved wrappers or workflow artifacts as
-first-class projected capability kinds, but they should not erase the raw versus
-workflow-facing distinction.
+Possible later additions may include full workflow artifacts as first-class
+projected capability kinds, but they should not erase the raw versus
+workflow-facing distinction. Saved wrapper artifacts are already projected as
+workflow capabilities because they have a node-like callable boundary today.
 
 Examples:
 
@@ -325,6 +327,8 @@ Today:
 - saved artifacts can be tagged with `kind="workflow"` or `kind="wrapper"`
 - `wf.workflow.call_capability` can execute one planner-visible workflow
   capability directly and return normalized `outcome` / `output`
+- `wf.workflow.list_capabilities` and `wf.workflow.inspect_capability` project
+  saved wrapper artifacts as workflow capabilities under source id `workflow`
 
 Not yet implemented:
 

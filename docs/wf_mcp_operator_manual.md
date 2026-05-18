@@ -355,6 +355,7 @@ resending the full draft each turn.
 | Refresh validation without changing revision | `wf.workflow.validate_draft_workspace` |
 | Change common draft fields without JSON Patch | `wf.workflow.set_draft_name`, `wf.workflow.set_draft_route`, `wf.workflow.set_step_input_map`, `wf.workflow.set_step_output_map` |
 | Save final workspace as artifact | `wf.workflow.create_artifact_from_workspace` |
+| Save final workspace as callable wrapper | `wf.workflow.create_wrapper_from_workspace` |
 | Clean up a draft workspace | `wf.workflow.delete_draft_workspace` |
 
 Workspace patches are optimistic-concurrency guarded. Pass the current
@@ -364,6 +365,11 @@ Workspace patches are optimistic-concurrency guarded. Pass the current
 Workspace mutation tools use a single `request` object in MCP Inspector. That
 keeps the form grouped and lets the schema describe fields like
 `input_schema`, `output_map`, and `error_message_source`.
+
+Use `create_wrapper_from_workspace` when the draft is meant to normalize a raw
+capability into a reusable workflow-facing wrapper. It is the same validation
+path as `create_artifact_from_workspace`, but the saved artifact kind is fixed
+to `wrapper`.
 
 Minimal example:
 

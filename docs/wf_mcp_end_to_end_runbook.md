@@ -513,6 +513,8 @@ Concrete MCP sequence:
 7. `wf.workflow.validate_draft_workspace` if capabilities changed or you want
    to refresh diagnostics without editing the draft.
 8. `wf.workflow.create_artifact_from_workspace` after validation is clean.
+   Use `wf.workflow.create_wrapper_from_workspace` instead when the workspace
+   is a reusable wrapper around a raw capability.
 9. `wf.workflow.save_deployment`, then `validate_deployment`, then
    `run_deployment`.
 10. `wf.workflow.delete_draft_workspace` when the mutable authoring session is no
@@ -535,3 +537,7 @@ Concrete MCP sequence:
   }
 }
 ```
+
+`create_wrapper_from_workspace` accepts the same request shape except there is
+no `kind` field. It always saves `kind="wrapper"` and the result is discoverable
+as a workflow capability named `workflow.<artifact_id>.v<version>`.

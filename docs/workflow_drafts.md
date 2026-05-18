@@ -299,7 +299,8 @@ The workspace flow is:
 2. `wf.workflow.get_draft_workspace`
 3. `wf.workflow.patch_draft_workspace`
 4. repeat get/patch until valid
-5. `wf.workflow.create_artifact_from_workspace`
+5. `wf.workflow.create_artifact_from_workspace` for a full workflow, or
+   `wf.workflow.create_wrapper_from_workspace` for a reusable callable wrapper
 
 Workspaces are mutable and revisioned. Artifacts are immutable and versioned.
 Patch calls must include the current `revision`; stale revisions return
@@ -313,6 +314,10 @@ error envelopes still belong in saved wrapper artifacts or follow-up patches.
 In MCP Inspector, workspace mutation tools accept a single `request` object.
 This is deliberate: the request object carries descriptions and validation for
 the authoring envelope while raw JSON Schema fields remain plain JSON objects.
+
+`create_wrapper_from_workspace` is intentionally just the wrapper-specific save
+path. It validates and compiles the same draft workspace, but fixes the saved
+artifact kind to `wrapper` so clients do not need to pass `kind` manually.
 
 ## Patching Drafts
 
