@@ -35,6 +35,9 @@ This repository has three main packages plus examples and tests.
   `wf_core` so the kernel package does not carry fixture/demo code.
 - `examples/authoring_control_flow.py` demonstrates `WorkflowBuilder.branch`,
   `handle`, `match`, `when`, `choose`, and `use_ref` with executable examples.
+- `examples/wrapper_status_route.py` and `examples/wrapper_normalization.py`
+  show two wrapper styles: routing on provider status fields, and converting
+  provider status fields into workflow outcomes.
 
 ## Tests
 

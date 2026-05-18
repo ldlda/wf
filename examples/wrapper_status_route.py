@@ -62,16 +62,17 @@ def build_wrapper() -> WorkflowBuilder:
         output_schema=WrapperOutput,
     )
     tool = graph.use(raw_tool)
-    graph.route(
+    decision = graph.match(
         state("status"),
         {
             "done": graph.use(done, id="done"),
             "needs_input": graph.use(needs_input, id="needs_input"),
         },
         default=graph.use(failed, id="failed"),
+        id="status",
     )
     graph.set_entry_point(tool)
-    graph.connect(tool, "ok", "condition")
+    graph.connect(tool, "ok", decision.entry)
     graph.connect("done", "ok", "__end__")
     graph.connect("needs_input", "ok", "__end__")
     graph.connect("failed", "ok", "__end__")
