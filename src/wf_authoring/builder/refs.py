@@ -15,14 +15,14 @@ BranchRef: TypeAlias = StepRef | NodeSpec[Any, Any]
 
 @dataclass(frozen=True, slots=True)
 class RouteRef:
-    """Reference bundle returned by route() for generated condition nodes."""
+    """Reference bundle returned by control-flow helpers with generated conditions."""
 
     entry: ConditionNode
     conditions: tuple[ConditionNode, ...]
     targets: dict[object, StepRef]
 
     def __getitem__(self, key: object) -> StepRef:
-        """Keep route["case"] ergonomic while exposing generated conditions."""
+        """Keep helper result lookup ergonomic while exposing generated conditions."""
         return self.targets[key]
 
 

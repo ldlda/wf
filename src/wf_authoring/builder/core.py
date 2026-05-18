@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Literal, cast
 import warnings
+from warnings import deprecated
 
 from wf_authoring.ops.values import runtime_error
 from wf_core import (
@@ -259,35 +260,15 @@ class WorkflowBuilder:
             resolved_targets[outcome] = cast(StepRef, resolved)
         return resolved_targets
 
-    def route(
+    def match(
         self,
-        value: PathExpr | Expr,
+        value: PathExpr,
         cases: Mapping[object, BranchRef],
         *,
         id: str | None = None,
         default: BranchRef = runtime_error,
     ) -> RouteRef:
-        """Route graph data by equality checks or one boolean condition.
-
-        `branch()` wires outcomes already produced by a node. `route()` is the
-        companion for ordinary graph data: with a path, it compares that path
-        against case values; with a condition expression, it expects boolean
-        `True`/`False` cases and emits one condition node.
-        """
-        if isinstance(value, Expr):
-            return self._route_condition(value, cases, id=id, default=default)
-
-        return self._route_value(value, cases, id=id, default=default)
-
-    def _route_value(
-        self,
-        value: PathExpr,
-        cases: Mapping[object, BranchRef],
-        *,
-        id: str | None,
-        default: BranchRef,
-    ) -> RouteRef:
-        """Expand value cases into an ordered chain of equality checks."""
+        """Match one graph value against ordered equality cases."""
         resolved_targets: dict[object, StepRef] = {}
         conditions: list[ConditionNode] = []
         default_target = self.use(default) if is_node_spec(default) else default
@@ -306,7 +287,7 @@ class WorkflowBuilder:
             previous_condition = condition
             resolved_targets[case_value] = cast(StepRef, resolved)
         if previous_condition is None:
-            raise ValueError("WorkflowBuilder.route requires at least one case")
+            raise ValueError("WorkflowBuilder.match requires at least one case")
         self.connect(previous_condition, "false", cast(StepRef, default_target))
         resolved_targets["default"] = cast(StepRef, default_target)
         return RouteRef(
@@ -315,33 +296,94 @@ class WorkflowBuilder:
             targets=resolved_targets,
         )
 
-    def _route_condition(
+    def when(
         self,
         condition: Expr,
-        cases: Mapping[object, BranchRef],
         *,
-        id: str | None,
-        default: BranchRef,
+        then: BranchRef,
+        otherwise: BranchRef = runtime_error,
+        id: str | None = None,
     ) -> RouteRef:
-        """Route a boolean condition expression through true/false outcomes."""
-        invalid_cases = [case for case in cases if not isinstance(case, bool)]
-        if invalid_cases:
-            raise ValueError("condition route cases must be boolean True/False keys")
-        if not cases:
-            raise ValueError("WorkflowBuilder.route requires at least one case")
-
+        """Route one boolean condition through true and false targets."""
         condition_node = self.condition(id=id, check=condition)
-        resolved_targets: dict[object, StepRef] = {}
-        for case_value, outcome in ((True, "true"), (False, "false")):
-            target = cases.get(case_value, default)
-            resolved = self.use(target) if is_node_spec(target) else target
-            self.connect(condition_node, outcome, cast(StepRef, resolved))
-            resolved_targets[case_value] = cast(StepRef, resolved)
+        resolved_then = self.use(then) if is_node_spec(then) else then
+        resolved_otherwise = (
+            self.use(otherwise) if is_node_spec(otherwise) else otherwise
+        )
+        self.connect(condition_node, "true", cast(StepRef, resolved_then))
+        self.connect(condition_node, "false", cast(StepRef, resolved_otherwise))
         return RouteRef(
             entry=condition_node,
             conditions=(condition_node,),
+            targets={
+                True: cast(StepRef, resolved_then),
+                False: cast(StepRef, resolved_otherwise),
+            },
+        )
+
+    def choose(
+        self,
+        *clauses: tuple[Expr, BranchRef],
+        default: BranchRef = runtime_error,
+        id: str | None = None,
+    ) -> RouteRef:
+        """Route to the first target whose ordered condition is true."""
+        if not clauses:
+            raise ValueError("WorkflowBuilder.choose requires at least one clause")
+
+        conditions: list[ConditionNode] = []
+        resolved_targets: dict[object, StepRef] = {}
+        previous_condition: ConditionNode | None = None
+        condition_base = id or "condition"
+        for index, (condition_expr, target) in enumerate(clauses):
+            condition = self.condition(
+                id=self._next_step_id(condition_base),
+                check=condition_expr,
+            )
+            conditions.append(condition)
+            resolved = self.use(target) if is_node_spec(target) else target
+            if previous_condition is not None:
+                self.connect(previous_condition, "false", condition)
+            self.connect(condition, "true", cast(StepRef, resolved))
+            previous_condition = condition
+            resolved_targets[index] = cast(StepRef, resolved)
+        default_target = self.use(default) if is_node_spec(default) else default
+        self.connect(cast(ConditionNode, previous_condition), "false", cast(StepRef, default_target))
+        resolved_targets["default"] = cast(StepRef, default_target)
+        return RouteRef(
+            entry=conditions[0],
+            conditions=tuple(conditions),
             targets=resolved_targets,
         )
+
+    @deprecated("use match(...) or when(...) instead")
+    def route(
+        self,
+        value: PathExpr | Expr,
+        cases: Mapping[object, BranchRef],
+        *,
+        id: str | None = None,
+        default: BranchRef = runtime_error,
+    ) -> RouteRef:
+        """Deprecated compatibility shim for the old overloaded route API."""
+        warnings.warn(
+            "WorkflowBuilder.route is deprecated; use match(...) or when(...)",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        if isinstance(value, Expr):
+            invalid_cases = [case for case in cases if not isinstance(case, bool)]
+            if invalid_cases:
+                raise ValueError("condition route cases must be boolean True/False keys")
+            if not cases:
+                raise ValueError("WorkflowBuilder.route requires at least one case")
+            return self.when(
+                value,
+                then=cases.get(True, default),
+                otherwise=cases.get(False, default),
+                id=id,
+            )
+        return self.match(value, cases, id=id, default=default)
 
     def compile(self) -> Workflow:
         if self.start is None:
