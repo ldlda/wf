@@ -45,6 +45,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.admin.get_catalog" in names
             assert "wf.admin.get_planner_catalog" in names
             assert "wf.admin.list_sources" in names
+            assert "wf.admin.inspect_source" in names
             assert "wf.admin.read_resource" in names
             assert "wf.admin.render_prompt" in names
             assert "wf.admin.invoke_method" in names
@@ -75,7 +76,8 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert _structured(capability_result)["outcome"] == "ok"
             assert _structured(capability_result)["output"] == {"value": "hello"}
             source_ids = {
-                source["id"] for source in _structured(sources_result)["result"]
+                source["id"]
+                for source in _structured(sources_result)["sources"]
             }
             assert "wf.admin" in source_ids
             assert "wf.mcp" in source_ids

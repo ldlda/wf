@@ -96,7 +96,7 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
         server.call_tool("list_sources", {})
     )
     all_sources_payload = cast(dict[str, Any], cast(object, all_sources_payload_raw))
-    all_sources = all_sources_payload["result"]
+    all_sources = all_sources_payload["sources"]
     all_source_ids = {source["id"] for source in all_sources}
     assert "wf.admin" in all_source_ids
     assert "demo.personal" in all_source_ids

@@ -82,10 +82,21 @@ def register_service_admin_tools(
     @server.tool(
         name=name("list_sources"),
         title="List Sources",
-        description="List configured capability sources and what each source owns.",
+        description="List compact configured capability source summaries.",
     )
-    async def list_sources() -> list[dict[str, Any]]:
-        return handlers.list_sources()
+    async def list_sources(
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return handlers.list_sources(cursor=cursor, limit=limit)
+
+    @server.tool(
+        name=name("inspect_source"),
+        title="Inspect Source",
+        description="Return the full inventory for one configured capability source.",
+    )
+    async def inspect_source(source_id: str) -> dict[str, Any]:
+        return handlers.inspect_source(source_id)
 
     @server.tool(
         name=name("read_resource"),

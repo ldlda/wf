@@ -267,13 +267,12 @@ the same admin/control capabilities.
 
 ## Current Inventory Surface
 
-`list_sources()` is the source inventory:
+`list_sources()` is the compact source-discovery surface:
 
-- returns every source
-- includes visibility, permissions, counts, and owned capability names
-- lets callers answer planner questions by inspecting
-  `visibility.planner` plus `capabilities.node_specs`
+- returns paged source summaries with visibility, permissions, and counts
+- is intentionally compact enough for progressive discovery
+- pairs with `inspect_source(source_id)` for the full owned-capability inventory
 
-Humans and LLM authoring clients should use that one inventory when deciding
-what exists. Planner projection remains a different **use** of source metadata,
-not a second source model.
+Humans and LLM authoring clients should list sources first, then inspect only the
+sources they need. Planner projection remains a different **use** of source
+metadata, not a second source model.

@@ -23,6 +23,7 @@ from wf_platform import (
     CapabilitySource,
     SourcePermissions,
     SourceVisibility,
+    page_items,
 )
 from ...connections import ConnectionRegistry, parse_connection_id, qualify_node_name
 from ...events import EventBus, McpEvent, make_event
@@ -219,6 +220,35 @@ class WfMcpService:
                 key=lambda source: source.id,
             )
         ]
+
+    def list_source_summaries(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Return compact paged source summaries for progressive discovery."""
+        summaries = [
+            source.as_status().model_dump(mode="json")
+            for source in sorted(
+                self.capability_sources.values(),
+                key=lambda source: source.id,
+            )
+        ]
+        page = page_items(summaries, cursor=cursor, limit=limit)
+        return {
+            "sources": list(page.items),
+            "next_cursor": page.next_cursor,
+            "total": page.total,
+        }
+
+    def inspect_source(self, source_id: str) -> dict[str, Any]:
+        """Return the full source inventory for one exact source id."""
+        try:
+            source = self.capability_sources[source_id]
+        except KeyError as exc:
+            raise KeyError(f"unknown source {source_id!r}") from exc
+        return source.as_inventory().model_dump(mode="json")
 
     def list_available_specs(self) -> list[CatalogNodeEntry]:
         """Return planner-visible node catalog entries from every visible source."""

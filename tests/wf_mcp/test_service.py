@@ -130,6 +130,17 @@ def test_service_lists_all_capability_sources_with_owned_capability_names() -> N
     assert "wf.admin.list_sources" in admin_source["capabilities"]["tools"]
 
 
+def test_service_lists_compact_source_summaries() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "source_summaries"))
+
+    payload = service.list_source_summaries(limit=2)
+
+    assert len(payload["sources"]) == 2
+    assert payload["total"] >= 2
+    assert payload["next_cursor"] == "2"
+    assert "capabilities" not in payload["sources"][0]
+
+
 def test_wf_std_source_contains_authoring_ops() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "stdlib_source_store"))
     specs = service.capability_sources["wf.std"].capabilities.node_specs

@@ -1,4 +1,5 @@
 from .refs import CapabilityRef, SourceRef
+from .paging import Page, page_items
 from .schema_hashes import hash_json_schema
 from .sources import (
     CapabilityBuckets,
@@ -20,6 +21,7 @@ __all__ = [
     "CapabilitySource",
     "CapabilityRef",
     "NodeSpecInventory",
+    "Page",
     "ReducerInventory",
     "SourceCapabilityInventory",
     "SourceInventory",
@@ -31,4 +33,5 @@ __all__ = [
     "SourceVisibilitySnapshot",
     "SourceRef",
     "hash_json_schema",
+    "page_items",
 ]

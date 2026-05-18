@@ -251,7 +251,8 @@ The workflow-facing MCP surface now has dedicated discovery tools for the
 authoring loop:
 
 - `wf.workflow.list_capabilities`
-  - lists enabled planner-visible workflow-ready node specs
+  - lists compact paged enabled planner-visible workflow-ready node spec
+    summaries, with optional query/source filtering
 - `wf.workflow.inspect_capability`
   - returns one full workflow capability contract with schemas and outcomes
 - `wf.workflow.call_capability`

@@ -27,10 +27,20 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     @server.tool(
         name="wf.workflow.list_capabilities",
         title="List Workflow Capabilities",
-        description="List planner-visible workflow-ready node capabilities.",
+        description="List compact planner-visible workflow-ready node capabilities.",
     )
-    async def list_capabilities() -> dict[str, Any]:
-        return await handlers.list_capabilities()
+    async def list_capabilities(
+        query: str | None = None,
+        source_id: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return await handlers.list_capabilities(
+            query=query,
+            source_id=source_id,
+            cursor=cursor,
+            limit=limit,
+        )
 
     @server.tool(
         name="wf.workflow.inspect_capability",

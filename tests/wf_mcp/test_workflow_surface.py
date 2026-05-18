@@ -77,12 +77,27 @@ def test_workflow_surface_lists_artifact_catalog_entries() -> None:
 def test_workflow_surface_lists_planner_visible_capabilities() -> None:
     handlers = _handlers(FileWorkflowArtifactStore(local_temp_root() / "surface_caps"))
 
-    payload = asyncio.run(handlers.list_capabilities())
+    payload = asyncio.run(handlers.list_capabilities(limit=2))
     names = [capability["name"] for capability in payload["capabilities"]]
 
-    assert "wf.std.runtime_error" in names
-    assert "wf.mcp.call_tool" in names
+    assert len(names) == 2
+    assert payload["total"] >= 2
+    assert payload["next_cursor"] == "2"
+    assert "description" in payload["capabilities"][0]
+    assert "input_schema" not in payload["capabilities"][0]
     assert "wf.admin.list_sources" not in names
+
+
+def test_workflow_surface_filters_capabilities_by_source() -> None:
+    handlers = _handlers(
+        FileWorkflowArtifactStore(local_temp_root() / "surface_filtered_caps")
+    )
+
+    payload = asyncio.run(handlers.list_capabilities(source_id="wf.mcp"))
+
+    assert [capability["name"] for capability in payload["capabilities"]] == [
+        "wf.mcp.call_tool"
+    ]
 
 
 def test_workflow_surface_inspects_one_capability() -> None:

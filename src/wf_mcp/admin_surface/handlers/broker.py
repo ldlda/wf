@@ -49,8 +49,16 @@ class BrokerAdminHandlers:
     def get_planner_catalog(self) -> dict[str, Any]:
         return self.service.get_planner_catalog().as_payload()
 
-    def list_sources(self) -> list[dict[str, Any]]:
-        return self.service.list_sources()
+    def list_sources(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return self.service.list_source_summaries(cursor=cursor, limit=limit)
+
+    def inspect_source(self, source_id: str) -> dict[str, Any]:
+        return self.service.inspect_source(source_id)
 
     async def read_broker_resource(self, qualified_name: str) -> dict[str, Any]:
         return await self.service.read_resource(qualified_name)

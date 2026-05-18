@@ -16,7 +16,7 @@ from wf_artifacts import (
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
     validate_deployment_dependencies,
 )
-from wf_platform import CapabilityRef, NodeSpecInventory, hash_json_schema
+from wf_platform import CapabilityRef, NodeSpecInventory, hash_json_schema, page_items
 from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
 
@@ -44,18 +44,42 @@ class WorkflowSurfaceHandlers:
         ]
         return {"nodes": entries}
 
-    async def list_capabilities(self) -> dict[str, Any]:
-        """Return planner-visible workflow-ready node spec contracts."""
+    async def list_capabilities(
+        self,
+        *,
+        query: str | None = None,
+        source_id: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Return compact paged planner-visible workflow capability summaries."""
         capabilities = [
-            detail.model_dump(mode="json")
+            {
+                "name": detail.name,
+                "description": detail.description,
+                "outcomes": list(detail.outcomes),
+                "is_async": detail.is_async,
+            }
             for source in sorted(
                 self.service.capability_sources.values(),
                 key=lambda source: source.id,
             )
             if source.enabled and source.visibility.planner
+            if source_id is None or source.id == source_id
             for detail in source.as_inventory().capabilities.node_spec_details
+            if query is None
+            or query.casefold() in detail.name.casefold()
+            or (
+                detail.description is not None
+                and query.casefold() in detail.description.casefold()
+            )
         ]
-        return {"capabilities": capabilities}
+        page = page_items(capabilities, cursor=cursor, limit=limit)
+        return {
+            "capabilities": list(page.items),
+            "next_cursor": page.next_cursor,
+            "total": page.total,
+        }
 
     async def inspect_capability(self, *, qualified_name: str) -> dict[str, Any]:
         """Return one planner-visible workflow capability contract."""
