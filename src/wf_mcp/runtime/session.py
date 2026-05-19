@@ -4,8 +4,11 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
+from mcp.client.session import ClientSession
+
 from ..models import AuthRecord, ConnectionConfig
 from ..sdk import ToolCallResult
+from ..sdk.converters import tool_result_to_call_result
 
 
 @dataclass(slots=True)
@@ -14,20 +17,14 @@ class PersistentMcpSession:
 
     connection: ConnectionConfig
     auth: AuthRecord | None
-    client: Any
+    client: ClientSession
     close_callback: Callable[[], Awaitable[None]] | None = None
 
     async def call_tool(self, tool_name: str, payload: dict[str, Any]) -> ToolCallResult:
-        return await self.client.call_tool(tool_name, payload)
+        result = await self.client.call_tool(tool_name, payload)
+        return tool_result_to_call_result(result)
 
     async def close(self) -> None:
-        """Close this runtime without assuming a specific SDK client shape."""
+        """Close the transport/session stack owned by the runtime factory."""
         if self.close_callback is not None:
             await self.close_callback()
-            return
-        close = getattr(self.client, "close", None)
-        if close is None:
-            return
-        result = close()
-        if hasattr(result, "__await__"):
-            await result
