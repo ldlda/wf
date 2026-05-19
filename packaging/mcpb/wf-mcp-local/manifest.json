@@ -1,0 +1,65 @@
+{
+  "manifest_version": "0.3",
+  "name": "wf-mcp-local",
+  "display_name": "wf-mcp Local",
+  "version": "0.0.1",
+  "description": "Local development bundle for the wf-mcp workflow/proxy server.",
+  "long_description": "Runs the wf-mcp server from the local lda-workflow-as-struct checkout over stdio. This bundle is for local testing with Claude Desktop, not a self-contained distribution. It uses the config file in the checkout; that config owns store_root, connections, and reload behavior.",
+  "author": {
+    "name": "lda"
+  },
+  "server": {
+    "type": "binary",
+    "entry_point": "uv",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "C:/Users/Admin/Documents/lda.chat/lda-workflow-as-struct",
+        "wf-mcp",
+        "--config",
+        "C:/Users/Admin/Documents/lda.chat/lda-workflow-as-struct/wf_mcp.config.json",
+        "serve",
+        "--transport",
+        "stdio",
+        "--resources-as-tools",
+        "--prompts-as-tools",
+        "--search-tools",
+        "--safe-tool-names"
+      ],
+      "env": {}
+    }
+  },
+  "tools": [
+    {
+      "name": "search_tools",
+      "description": "Search the wf-mcp tool catalog when search mode is enabled."
+    },
+    {
+      "name": "call_tool",
+      "description": "Call a discovered proxied tool by name when search mode is enabled."
+    },
+    {
+      "name": "wf_workflow_list_capabilities",
+      "description": "MCPB-safe preview name for runtime tool wf.workflow.list_capabilities."
+    },
+    {
+      "name": "wf_workflow_call_capability",
+      "description": "MCPB-safe preview name for runtime tool wf.workflow.call_capability."
+    }
+  ],
+  "tools_generated": true,
+  "prompts_generated": true,
+  "keywords": [
+    "mcp",
+    "workflow",
+    "proxy",
+    "local-dev"
+  ],
+  "compatibility": {
+    "platforms": [
+      "win32"
+    ]
+  }
+}

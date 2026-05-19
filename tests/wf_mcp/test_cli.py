@@ -53,6 +53,7 @@ def test_build_parser_accepts_proxy_compatibility_flags() -> None:
             "--resources-as-tools",
             "--prompts-as-tools",
             "--search-tools",
+            "--safe-tool-names",
         ]
     )
 
@@ -60,6 +61,7 @@ def test_build_parser_accepts_proxy_compatibility_flags() -> None:
     assert args.resources_as_tools is True
     assert args.prompts_as_tools is True
     assert args.search_tools is True
+    assert args.safe_tool_names is True
 
 
 def test_build_parser_rejects_legacy_mode_flag() -> None:

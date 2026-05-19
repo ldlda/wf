@@ -24,6 +24,7 @@ from .tools import (
     proxy_tools_page,
 )
 from .reload_events import ProxyReloadResult, reload_change_events
+from .safe_names import SafeToolNames
 
 _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     # Stable discovery/control spine.
@@ -75,6 +76,7 @@ class ProxyRuntime:
         resources_as_tools: bool = False,
         prompts_as_tools: bool = False,
         search_tools: bool = False,
+        safe_tool_names: bool = False,
         admin_tools: bool = True,
         event_bus: EventBus | None = None,
         on_reload: Callable[[BrokerConfig], None] | None = None,
@@ -106,6 +108,11 @@ class ProxyRuntime:
             self.server.add_transform(
                 BM25SearchTransform(always_visible=_SEARCH_ALWAYS_VISIBLE_TOOL_NAMES)
             )
+        if safe_tool_names:
+            # Keep this outermost so every previous tool projection, including
+            # search mode's synthetic tools and always-visible controls, is
+            # adapted for clients with stricter name patterns.
+            self.server.add_transform(SafeToolNames())
 
     def current_config(self) -> BrokerConfig:
         if self.manager is None:
@@ -222,6 +229,7 @@ def create_transparent_proxy_server(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    safe_tool_names: bool = False,
     admin_tools: bool = True,
     event_bus: EventBus | None = None,
 ) -> FastMCP[Any]:
@@ -236,6 +244,7 @@ def create_transparent_proxy_server(
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
         search_tools=search_tools,
+        safe_tool_names=safe_tool_names,
         admin_tools=admin_tools,
         event_bus=event_bus,
     ).server
@@ -248,6 +257,7 @@ def create_transparent_proxy_client(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    safe_tool_names: bool = False,
     admin_tools: bool = True,
     event_bus: EventBus | None = None,
 ) -> Client[FastMCPTransport]:
@@ -259,6 +269,7 @@ def create_transparent_proxy_client(
                 resources_as_tools=resources_as_tools,
                 prompts_as_tools=prompts_as_tools,
                 search_tools=search_tools,
+                safe_tool_names=safe_tool_names,
                 admin_tools=admin_tools,
                 event_bus=event_bus,
             )

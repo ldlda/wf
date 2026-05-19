@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import sys
 from typing import Any
 
@@ -18,6 +19,23 @@ def _structured(result: Any) -> dict[str, Any]:
     content = result.structured_content
     assert isinstance(content, dict)
     return content
+
+
+async def _assert_safe_tool_maps(
+    client: Any,
+    *,
+    original_name: str,
+    safe_name: str,
+    arguments: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Assert one safe public tool name maps back to its original tool."""
+    tools = await client.list_tools()
+    names = [tool.name for tool in tools]
+    assert safe_name in names
+    assert original_name not in names
+    assert all(re.fullmatch(r"^[a-zA-Z0-9_-]{1,64}$", name) for name in names)
+    assert len(names) == len(set(names))
+    return _structured(await client.call_tool(safe_name, arguments or {}))
 
 
 def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
@@ -99,8 +117,8 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "error_message_source" in minimal_request["properties"]
             assert (
                 minimal_request["properties"]["input_schema"]["description"]
-                == "JSON Schema object. Keep this as ordinary JSON; "
-                "nested schema fields are passed through unchanged."
+                == "Public input JSON Schema for the workflow or wrapper being "
+                "drafted."
             )
             wrapper_workspace_input = tools_by_name[
                 "wf.workflow.create_wrapper_from_workspace"
@@ -228,6 +246,88 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.workflow.patch_draft" not in names
             assert "wf.admin.call_tool" not in names
             assert "fixture.personal.echo_tool" not in names
+
+    asyncio.run(run_proxy())
+
+
+def test_server_search_mode_can_use_safe_tool_names() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "server_search_safe_names_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(
+            config,
+            search_tools=True,
+            safe_tool_names=True,
+        )
+        async with client:
+            tools = await client.list_tools()
+            names = [tool.name for tool in tools]
+
+            assert "search_tools" in names
+            assert "call_tool" in names
+            assert "wf_admin_list_sources" in names
+            assert "wf_workflow_call_capability" in names
+            assert "wf.admin.list_sources" not in names
+
+            result = await _assert_safe_tool_maps(
+                client,
+                original_name="wf.admin.list_sources",
+                safe_name="wf_admin_list_sources",
+            )
+            source_ids = {source["id"] for source in result["sources"]}
+            assert "wf.std" in source_ids
+
+    asyncio.run(run_proxy())
+
+
+def test_server_safe_tool_names_adapts_dotted_runtime_names() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "server_safe_tool_names_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(config, safe_tool_names=True)
+        async with client:
+            artifacts = await _assert_safe_tool_maps(
+                client,
+                original_name="wf.workflow.list_artifacts",
+                safe_name="wf_workflow_list_artifacts",
+            )
+            echo = await _assert_safe_tool_maps(
+                client,
+                original_name="fixture.personal.echo_tool",
+                safe_name="fixture_personal_echo_tool",
+                arguments={"text": "hello"},
+            )
+
+            assert artifacts["nodes"] == []
+            assert echo["echoed"] == "hello"
 
     asyncio.run(run_proxy())
 

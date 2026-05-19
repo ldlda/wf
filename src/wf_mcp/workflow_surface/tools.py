@@ -43,7 +43,11 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     @server.tool(
         name="wf.workflow.list_capabilities",
         title="List Workflow Capabilities",
-        description="List compact planner-visible workflow-ready node capabilities.",
+        description=(
+            "List compact planner-visible workflow-ready capabilities. Use this "
+            "before inspecting schemas; saved wrappers appear with kind "
+            "wrapper_artifact under source_id workflow."
+        ),
     )
     async def list_capabilities(
         query: str | None = None,
@@ -61,7 +65,10 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     @server.tool(
         name="wf.workflow.inspect_capability",
         title="Inspect Workflow Capability",
-        description="Return one planner-visible workflow capability contract.",
+        description=(
+            "Return one workflow capability contract with schemas and outcomes. "
+            "Use after list_capabilities selects one candidate."
+        ),
     )
     async def inspect_capability(qualified_name: str) -> dict[str, Any]:
         return await handlers.inspect_capability(qualified_name=qualified_name)
@@ -219,7 +226,10 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     @server.tool(
         name="wf.workflow.create_draft_workspace",
         title="Create Draft Workspace",
-        description="Store a mutable workflow draft workspace for iterative patching.",
+        description=(
+            "Store a mutable workflow draft workspace for iterative patching. "
+            "Prefer create_minimal_draft_workspace for one-capability starts."
+        ),
     )
     async def create_draft_workspace(
         request: CreateDraftWorkspaceRequest,
@@ -265,7 +275,8 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Patch Draft Workspace",
         description=(
             "Apply an RFC 6902 JSON Patch to a stored workflow draft workspace "
-            "when the expected revision matches."
+            "when the expected revision matches. Prefer focused helpers for common "
+            "field edits."
         ),
     )
     async def patch_draft_workspace(
@@ -361,7 +372,10 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     @server.tool(
         name="wf.workflow.create_minimal_draft_workspace",
         title="Create Minimal Draft Workspace",
-        description="Bootstrap a patchable draft workspace around one capability.",
+        description=(
+            "Bootstrap a patchable draft workspace around one inspected capability. "
+            "Use this before patch helpers when authoring from MCP clients."
+        ),
     )
     async def create_minimal_draft_workspace(
         request: CreateMinimalDraftWorkspaceRequest,
@@ -386,7 +400,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Create Workflow Artifact From Workspace",
         description=(
             "Validate the current draft workspace and save it as a versioned "
-            "workflow artifact."
+            "workflow artifact for deployment/run_deployment."
         ),
     )
     async def create_artifact_from_workspace(
@@ -418,7 +432,8 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Create Wrapper From Workspace",
         description=(
             "Validate the current draft workspace and save it as a callable "
-            "wrapper artifact."
+            "wrapper artifact. The result appears as workflow.<artifact_id>.v<version> "
+            "in list_capabilities and can be tested with call_capability."
         ),
     )
     async def create_wrapper_from_workspace(

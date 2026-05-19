@@ -38,7 +38,12 @@ JsonPatchOperations = Annotated[
 ]
 SourceBindings = Annotated[
     dict[str, str],
-    Field(description="Map logical source ids to concrete source ids."),
+    Field(
+        description=(
+            "Map logical source ids in the draft/artifact to concrete runtime "
+            "sources, for example {'demo': 'demo.personal', 'wf.std': 'wf.std'}."
+        )
+    ),
 ]
 
 
@@ -103,7 +108,12 @@ class CreateDraftWorkspaceRequest(BaseModel):
     """Typed MCP request payload for creating a stored draft workspace."""
 
     workspace_id: WorkspaceId
-    draft: dict[str, Any] = Field(description="WorkflowDraft JSON document.")
+    draft: dict[str, Any] = Field(
+        description=(
+            "WorkflowDraft JSON document. Prefer create_minimal_draft_workspace "
+            "for a one-capability bootstrap, then patch this workspace by revision."
+        )
+    )
     title: str | None = Field(default=None, description="Optional workspace title.")
 
 
@@ -112,7 +122,13 @@ class PatchDraftWorkspaceRequest(BaseModel):
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
-    patch: JsonPatchOperations
+    patch: JsonPatchOperations = Field(
+        description=(
+            "RFC 6902 JSON Patch operations against the stored WorkflowDraft. "
+            "Use focused helpers such as set_draft_route or set_step_input_map "
+            "when possible."
+        )
+    )
 
 
 class ValidateDraftWorkspaceRequest(BaseModel):
@@ -177,13 +193,36 @@ class CreateMinimalDraftWorkspaceRequest(BaseModel):
     workspace_id: WorkspaceId
     name: str = Field(description="Workflow draft name.")
     capability_name: str = Field(
-        description="Workflow capability to call, such as demo.default.echo_tool."
+        description=(
+            "Workflow capability to call, such as demo.default.echo_tool or "
+            "workflow.echo_wrapper.v1. Inspect it first when unsure."
+        )
     )
-    input_schema: JsonSchemaObject
-    state_schema: JsonSchemaObject
-    output_schema: JsonSchemaObject
-    input_map: DraftPathMap
-    output_map: DraftPathMap
+    input_schema: JsonSchemaObject = Field(
+        description="Public input JSON Schema for the workflow or wrapper being drafted."
+    )
+    state_schema: JsonSchemaObject = Field(
+        description=(
+            "Workflow state schema. The current core state schema uses a fields "
+            "object; keep it small and explicit."
+        )
+    )
+    output_schema: JsonSchemaObject = Field(
+        description="Public output JSON Schema for the workflow or wrapper being drafted."
+    )
+    input_map: DraftPathMap = Field(
+        description=(
+            "Map public workflow input paths to local capability input paths. "
+            "Example: {'input.text': 'message'} sends workflow input.text to "
+            "capability field message."
+        )
+    )
+    output_map: DraftPathMap = Field(
+        description=(
+            "Map local capability output paths to workflow state paths. Example: "
+            "{'echoed': 'state.echoed'} stores capability output echoed in state.echoed."
+        )
+    )
     error_message_source: str | None = Field(
         default=None,
         description=(
@@ -198,10 +237,20 @@ class CreateArtifactFromWorkspaceRequest(BaseModel):
     """Typed MCP request payload for saving a draft workspace as an artifact."""
 
     workspace_id: WorkspaceId
-    artifact_id: str = Field(description="Immutable artifact id to write.")
+    artifact_id: str = Field(
+        description=(
+            "Immutable artifact id to write. Use a stable snake_case name; each "
+            "version is saved separately."
+        )
+    )
     version: int = Field(ge=1, description="Artifact version to write.")
     title: str = Field(description="Human-readable artifact title.")
-    outcomes: list[str] = Field(description="Artifact-level outcomes.")
+    outcomes: list[str] = Field(
+        description=(
+            "Public outcomes for this saved artifact, for example ['completed'] "
+            "or ['completed', 'failed']."
+        )
+    )
     kind: ArtifactKind = Field(default="workflow", description="Artifact kind.")
     description: str | None = Field(default=None, description="Optional description.")
     required_capabilities: dict[str, dict[str, Any]] | None = Field(
@@ -222,11 +271,26 @@ class CreateWrapperFromWorkspaceRequest(BaseModel):
     """Typed MCP request for saving a draft workspace as a wrapper artifact."""
 
     workspace_id: WorkspaceId
-    artifact_id: str = Field(description="Immutable wrapper artifact id to write.")
+    artifact_id: str = Field(
+        description=(
+            "Immutable wrapper artifact id to write. The callable capability name "
+            "will be workflow.<artifact_id>.v<version>."
+        )
+    )
     version: int = Field(ge=1, description="Wrapper artifact version to write.")
     title: str = Field(description="Human-readable wrapper title.")
-    outcomes: list[str] = Field(description="Wrapper-level outcomes.")
-    description: str | None = Field(default=None, description="Optional description.")
+    outcomes: list[str] = Field(
+        description=(
+            "Wrapper-level outcomes exposed to graphs and call_capability. Use "
+            "explicit outcomes when the wrapper normalizes provider status/error shapes."
+        )
+    )
+    description: str | None = Field(
+        default=None,
+        description=(
+            "Optional description of what raw capability shape this wrapper normalizes."
+        ),
+    )
     required_capabilities: dict[str, dict[str, Any]] | None = Field(
         default=None,
         description="Optional explicit dependency contract override.",

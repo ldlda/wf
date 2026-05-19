@@ -206,3 +206,10 @@ poetry.toml
 
 # LSP config files
 pyrightconfig.json
+
+
+# local config file
+wf_mcp.config.json
+
+# Generated MCPB packages
+*.mcpb

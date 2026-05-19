@@ -26,6 +26,7 @@ def create_server(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    safe_tool_names: bool = False,
     admin_tools: bool = True,
 ) -> FastMCP[Any]:
     """Create the public MCP server with proxy, admin, and workflow tools."""
@@ -43,6 +44,7 @@ def create_server(
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
         search_tools=search_tools,
+        safe_tool_names=safe_tool_names,
         admin_tools=admin_tools,
         event_bus=service.event_bus,
         on_reload=sync_service,
@@ -69,6 +71,7 @@ def run_server(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    safe_tool_names: bool = False,
     admin_tools: bool = True,
 ) -> None:
     server = create_server(
@@ -77,6 +80,7 @@ def run_server(
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
         search_tools=search_tools,
+        safe_tool_names=safe_tool_names,
         admin_tools=admin_tools,
     )
     server.run(transport=normalize_transport(transport), show_banner=False)
@@ -89,6 +93,7 @@ def create_server_client(
     resources_as_tools: bool = False,
     prompts_as_tools: bool = False,
     search_tools: bool = False,
+    safe_tool_names: bool = False,
     admin_tools: bool = True,
 ) -> Client[FastMCPTransport]:
     return Client(
@@ -99,6 +104,7 @@ def create_server_client(
                 resources_as_tools=resources_as_tools,
                 prompts_as_tools=prompts_as_tools,
                 search_tools=search_tools,
+                safe_tool_names=safe_tool_names,
                 admin_tools=admin_tools,
             )
         )

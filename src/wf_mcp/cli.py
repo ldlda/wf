@@ -46,6 +46,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Collapse a large tool catalog into a search interface, for discovery on demand",
     )
     serve.add_argument(
+        "--safe-tool-names",
+        action="store_true",
+        help=(
+            "Expose runtime tool names using only letters, numbers, underscore, "
+            "and dash for strict clients such as Claude Desktop MCPB."
+        ),
+    )
+    serve.add_argument(
         "--no-admin-tools",
         dest="admin_tools",
         action="store_false",
@@ -122,6 +130,7 @@ def main(argv: list[str] | None = None) -> int:
             resources_as_tools=args.resources_as_tools,
             prompts_as_tools=args.prompts_as_tools,
             search_tools=args.search_tools,
+            safe_tool_names=args.safe_tool_names,
             admin_tools=args.admin_tools,
         )
         return 0
