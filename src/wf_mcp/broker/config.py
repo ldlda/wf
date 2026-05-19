@@ -7,6 +7,7 @@ from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
 
 from ..control import BrokerConfigFile
 from ..models import BrokerConfig
+from ..runtime import McpRuntimePool, PersistentSessionFactory
 from ..sdk import McpSdkAdapter
 from ..storage import FileStore
 from .service import WfMcpService
@@ -21,10 +22,15 @@ def load_broker_config(path: str | Path) -> BrokerConfig:
 
 def build_service_from_config(config: BrokerConfig) -> WfMcpService:
     """Create a broker service with SDK adapters for configured connections."""
+    runtime_factory = PersistentSessionFactory()
     service = WfMcpService(
         store=FileStore(config.store_root),
         artifact_store=FileWorkflowArtifactStore(config.store_root),
         draft_workspace_store=FileDraftWorkspaceStore(config.store_root),
+        # Discovery can use short-lived SDK sessions. Workflow execution needs
+        # a persistent runtime so stateful MCP servers keep session/page state
+        # across sequential workflow nodes.
+        tool_executor=McpRuntimePool(runtime_factory.create),
     )
     for connection in config.connections:
         service.register_connection(connection)

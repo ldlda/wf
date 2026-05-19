@@ -41,6 +41,7 @@ from ...models import (
     ConnectionConfig,
     RawWorkflowPlan,
 )
+from ...runtime import ToolExecutor
 from ...sdk import BackendAdapter
 from ...shared.errors import error_payload
 from ...shared.names import RESERVED_CONNECTION_IDS
@@ -72,6 +73,7 @@ class WfMcpService:
     include_builtin_specs: bool = True
     artifact_store: WorkflowArtifactStore | None = None
     draft_workspace_store: DraftWorkspaceStore | None = None
+    tool_executor: ToolExecutor | None = None
 
     def __post_init__(self) -> None:
         """Install broker-local system specs when enabled."""
@@ -129,6 +131,17 @@ class WfMcpService:
 
     def register_adapter(self, server: str, adapter: BackendAdapter) -> None:
         self.adapters[server] = adapter
+
+    def _tool_executor_for(self, connection: ConnectionConfig) -> ToolExecutor:
+        """Return the executor used by generated workflow NodeSpecs.
+
+        Discovery still uses the short-lived adapter path. Generated workflow
+        nodes use this executor hook so config-built services can swap in a
+        persistent runtime pool for stateful MCP servers.
+        """
+        if self.tool_executor is not None:
+            return self.tool_executor
+        return require_adapter(connection, self.adapters)
 
     def save_auth(self, record: AuthRecord) -> None:
         self.store.save_auth(record)
@@ -606,7 +619,7 @@ class WfMcpService:
             specs = specs_from_discovered_tools(
                 connection=connection,
                 auth=auth,
-                executor=adapter,
+                executor=self._tool_executor_for(connection),
                 tools=capabilities.tools,
                 emit_event=self._record_event,
             )

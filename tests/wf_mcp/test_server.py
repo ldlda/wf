@@ -8,7 +8,7 @@ from typing import Any
 
 from mcp import types as mcp_types
 
-from wf_mcp.broker.config import load_broker_config
+from wf_mcp.broker.config import build_service_from_config, load_broker_config
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.server import create_server_client
 
@@ -19,6 +19,29 @@ def _structured(result: Any) -> dict[str, Any]:
     content = result.structured_content
     assert isinstance(content, dict)
     return content
+
+
+def test_config_built_service_uses_persistent_tool_executor() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "runtime_config_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    service = build_service_from_config(config)
+
+    assert service.adapters["fixture"].__class__.__name__ == "McpSdkAdapter"
+    assert service.tool_executor is not None
 
 
 async def _assert_safe_tool_maps(

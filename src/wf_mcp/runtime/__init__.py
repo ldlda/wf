@@ -1,3 +1,12 @@
+from .factory import PersistentSessionFactory
+from .pool import McpRuntimePool, connection_runtime_fingerprint
 from .protocols import ToolExecutor
+from .session import PersistentMcpSession
 
-__all__ = ["ToolExecutor"]
+__all__ = [
+    "McpRuntimePool",
+    "PersistentMcpSession",
+    "PersistentSessionFactory",
+    "ToolExecutor",
+    "connection_runtime_fingerprint",
+]

@@ -2,12 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import shutil
+from typing import Any, cast
 
 from wf_artifacts import FileDraftWorkspaceStore
-from wf_authoring import NodeSpec
-from wf_core import END, NodeUse, RunStatus
+from wf_authoring import NodeSpec, build_async_registry
+from wf_core import END, NodeUse, RunStatus, RuntimeContext
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
+from wf_mcp.runtime import ToolExecutor
+from wf_mcp.sdk import ToolCallResult
 from wf_mcp.shared.errors import error_payload
 from wf_mcp.storage import FileStore
 from wf_platform import (
@@ -1020,6 +1023,45 @@ def test_service_can_call_upstream_tool_directly() -> None:
     event_kinds = [event.kind for event in service.list_events()]
     assert "tool_call_started" in event_kinds
     assert "tool_call_completed" in event_kinds
+
+
+def test_generated_specs_use_injected_tool_executor() -> None:
+    class RecordingExecutor:
+        def __init__(self) -> None:
+            self.payloads: list[dict[str, Any]] = []
+
+        async def call_tool(
+            self,
+            connection: ConnectionConfig,
+            auth: AuthRecord | None,
+            tool_name: str,
+            payload: dict[str, Any],
+        ) -> ToolCallResult:
+            self.payloads.append(payload)
+            return ToolCallResult(outcome="ok", output={"echoed": payload["text"]})
+
+    executor = RecordingExecutor()
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "injected_executor_store"),
+        tool_executor=cast(ToolExecutor, executor),
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+    spec = service._get_qualified_spec("demo.personal.echo_tool")
+    handler = build_async_registry(spec)[spec.name]
+
+    async def run_node() -> dict[str, Any]:
+        return await handler({"text": "hello"}, RuntimeContext(current_node_id="echo"))
+
+    result = asyncio.run(run_node())
+
+    assert result["outcome"] == "ok"
+    assert result["output"]["echoed"] == "hello"
+    assert executor.payloads == [{"text": "hello"}]
 
 
 def test_service_records_catalog_refresh_failures() -> None:

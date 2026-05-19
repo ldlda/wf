@@ -8,6 +8,19 @@
 
 **Tech Stack:** Python 3.14, FastMCP, MCP Python SDK, `wf_core`, `wf_authoring`, `wf_mcp`, pytest, basedpyright, ruff.
 
+## Implementation Status
+
+- Tasks 1-3 are implemented: generated MCP workflow NodeSpecs now depend on
+  the `ToolExecutor` protocol instead of directly baking in the one-shot SDK
+  adapter.
+- Tasks 4-7 are implemented: `McpRuntimePool`, `PersistentMcpSession`, and
+  `PersistentSessionFactory` exist, and config-built services use the runtime
+  pool for generated workflow node execution while discovery/catalog refreshes
+  still use short-lived SDK adapter sessions.
+- Remaining work starts at hiding/removing unsafe raw public `call_tool`
+  surfaces and then renaming the legacy `transparent_proxy` package to the
+  clearer proxy/provider-layer package.
+
 ---
 
 ## Problem Statement
