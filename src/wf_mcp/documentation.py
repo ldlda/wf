@@ -36,6 +36,23 @@ def build_local_documentation_source(repo_root: Path) -> CapabilitySource:
                 title="wf_mcp Troubleshooting",
                 description="Failure-oriented guide for discovery and deployment issues.",
             ),
+            _markdown_resource(
+                path=docs_dir / "workflow_capabilities.md",
+                name="wf.docs.workflow_capabilities",
+                uri="wf://docs/workflow-capabilities",
+                title="Workflow Capabilities",
+                description=(
+                    "Raw capabilities, workflow capabilities, wrappers, and "
+                    "source ownership."
+                ),
+            ),
+            _markdown_resource(
+                path=docs_dir / "workflow_drafts.md",
+                name="wf.docs.workflow_drafts",
+                uri="wf://docs/workflow-drafts",
+                title="Workflow Drafts",
+                description="Draft and workspace authoring model for workflows.",
+            ),
         ],
         prompts=[
             DocumentationPrompt(
@@ -45,7 +62,10 @@ def build_local_documentation_source(repo_root: Path) -> CapabilitySource:
                 text=(
                     "Use wf://docs/operator-manual for the platform mental model. "
                     "Use wf://docs/end-to-end-runbook for the normal connection-to-run "
-                    "flow. Use wf://docs/troubleshooting when a source, capability, "
+                    "flow. Use wf://docs/workflow-capabilities for wrappers and "
+                    "workflow-ready node contracts. Use wf://docs/workflow-drafts "
+                    "for draft workspace authoring. "
+                    "Use wf://docs/troubleshooting when a source, capability, "
                     "or deployment is missing or unrunnable."
                 ),
             ),
@@ -58,7 +78,8 @@ def build_local_documentation_source(repo_root: Path) -> CapabilitySource:
                     "wf.workflow.list_capabilities and "
                     "wf.workflow.inspect_capability. Test a small reusable piece with "
                     "wf.workflow.call_capability before saving a larger artifact. "
-                    "Read wf://docs/end-to-end-runbook for the full sequence."
+                    "Read wf://docs/workflow-capabilities for the wrapper model, "
+                    "then wf://docs/workflow-drafts for the workspace tools."
                 ),
             ),
             DocumentationPrompt(

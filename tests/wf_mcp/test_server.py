@@ -199,8 +199,9 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.admin.list_proxy_tools" in names
             assert "wf.admin.get_proxy_tool" in names
             assert "wf.workflow.list_artifacts" in names
-            assert "wf.workflow.validate_draft" in names
-            assert "wf.workflow.create_artifact_from_draft" in names
+            assert "wf.workflow.list_capabilities" in names
+            assert "wf.workflow.inspect_capability" in names
+            assert "wf.workflow.call_capability" in names
             assert "wf.workflow.list_draft_workspaces" in names
             assert "wf.workflow.create_draft_workspace" in names
             assert "wf.workflow.get_draft_workspace" in names
@@ -214,12 +215,17 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.workflow.create_minimal_draft_workspace" in names
             assert "wf.workflow.create_artifact_from_workspace" in names
             assert "wf.workflow.create_wrapper_from_workspace" in names
-            assert "wf.workflow.call_capability" in names
             assert "wf.workflow.inspect_artifact" in names
             assert "wf.workflow.list_deployments" in names
+            assert "wf.workflow.save_deployment" in names
             assert "wf.workflow.validate_deployment" in names
             assert "wf.workflow.run_deployment" in names
 
+            assert "wf.workflow.validate_draft" not in names
+            assert "wf.workflow.compile_draft" not in names
+            assert "wf.workflow.create_artifact_from_plan" not in names
+            assert "wf.workflow.create_artifact_from_draft" not in names
+            assert "wf.workflow.patch_draft" not in names
             assert "wf.admin.call_tool" not in names
             assert "fixture.personal.echo_tool" not in names
 
@@ -313,6 +319,8 @@ def test_server_exposes_platform_documentation_resources() -> None:
             resources = await client.list_resources()
             uris = [str(resource.uri) for resource in resources]
             assert "wf://docs/operator-manual" in uris
+            assert "wf://docs/workflow-capabilities" in uris
+            assert "wf://docs/workflow-drafts" in uris
 
             result = await client.read_resource("wf://docs/operator-manual")
             assert isinstance(result[0], mcp_types.TextResourceContents)
