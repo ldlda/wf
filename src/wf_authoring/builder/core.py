@@ -84,6 +84,7 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         in_map: MapArg | None = None,
+        input_values: Mapping[str, Any] | None = None,
         out_map: MapArg | None = None,
         desc: str | None = None,
     ) -> NodeUse:
@@ -104,6 +105,7 @@ class WorkflowBuilder:
                 if in_map is None
                 else normalize_mapping(in_map)
             ),
+            input_values=dict(input_values or {}),
             out_map=(
                 auto_output_map(spec, state_schema=normalized_state_schema)
                 if out_map is None
@@ -119,6 +121,7 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         in_map: MapArg | None = None,
+        input_values: Mapping[str, Any] | None = None,
         out_map: MapArg | None = None,
         desc: str | None = None,
     ) -> NodeUse:
@@ -135,6 +138,7 @@ class WorkflowBuilder:
             node=name,
             desc=desc,
             in_map=normalize_mapping(in_map),
+            input_values=dict(input_values or {}),
             out_map=normalize_mapping(out_map),
         )
         self.nodes.append(node)

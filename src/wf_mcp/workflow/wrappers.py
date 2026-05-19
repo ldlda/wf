@@ -126,14 +126,16 @@ def wrap_discovered_tool(
                     "tool_call_started",
                     connection_id=connection.id,
                     capability_id=f"{connection.id}.{tool.name}",
-                    payload={"input": payload.model_dump()},
+                    payload={"input": payload.model_dump(exclude_unset=True)},
                 )
             )
         result = await adapter.call_tool(
             connection=connection,
             auth=auth,
             tool_name=tool.name,
-            payload=payload.model_dump(),
+            # Pydantic fills absent optional fields with None, but strict MCP
+            # servers such as Playwright distinguish omitted from explicit null.
+            payload=payload.model_dump(exclude_unset=True),
         )
         if emit_event is not None:
             emit_event(

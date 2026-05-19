@@ -113,6 +113,55 @@ def test_root_node_local_paths_map_whole_input_and_output_payloads() -> None:
     assert run.state["rates"] == {"r_1": 0.0, "r_10": 0.1}
 
 
+def test_static_input_values_are_merged_into_node_local_input() -> None:
+    workflow = Workflow(
+        name="static_input_values",
+        input_schema=SchemaRef.model_validate({"type": "object", "properties": {}}),
+        state_schema=StateSchema(fields={"message": StateField(type="string")}),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="constant",
+                input_schema=SchemaRef.model_validate(
+                    {
+                        "type": "object",
+                        "properties": {"value": {"type": "string"}},
+                        "required": ["value"],
+                    }
+                ),
+                output_schema=SchemaRef.model_validate(
+                    {
+                        "type": "object",
+                        "properties": {"value": {"type": "string"}},
+                        "required": ["value"],
+                    }
+                ),
+                outcomes=["ok"],
+            )
+        ],
+        start="constant",
+        nodes=[
+            NodeUse(
+                id="constant",
+                type="node",
+                node="constant",
+                input_values={"value": "CLICKED"},
+                out_map={"value": "state.message"},
+            )
+        ],
+        edges=[Edge.model_validate({"from": "constant", "outcome": "ok", "to": END})],
+    )
+
+    run = execute_workflow(
+        workflow,
+        {},
+        {"constant": lambda payload, _ctx: {"outcome": "ok", "output": payload}},
+    )
+
+    assert run.trace[0].resolved_input["value"] == "CLICKED"
+    assert run.state["message"] == "CLICKED"
+
+
 def _nested_mapping_workflow() -> Workflow:
     return Workflow(
         name="nested_mapping",

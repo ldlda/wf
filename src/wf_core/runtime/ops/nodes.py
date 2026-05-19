@@ -33,6 +33,11 @@ def _resolve_node_execution(
     frame = run.current_frame()
     context_values = frame_context_values(frame)
     resolved_input: dict[str, Any] = {}
+    for destination_field, value in node.input_values.items():
+        try:
+            set_local_value(resolved_input, destination_field, value)
+        except LocalPathError as exc:
+            raise WorkflowExecutionError(str(exc)) from exc
     for source_path, destination_field in node.in_map.items():
         value = safe_resolve_path(
             source_path,

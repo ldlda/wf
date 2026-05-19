@@ -38,6 +38,17 @@ def validate_node_use(
     state_fields = set(workflow.state_schema.fields)
     input_root_fields = set(workflow.input_schema.properties)
 
+    for destination_field in node.input_values:
+        destination_root = _local_root(destination_field)
+        if destination_root is None or (
+            destination_root != "." and destination_root not in input_fields
+        ):
+            report.add(
+                ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
+                f"nodes[{index}].input_values[{destination_field!r}]",
+                f"destination field {destination_field!r} is not declared in node input schema",
+            )
+
     for source_path, destination_field in node.in_map.items():
         destination_root = _local_root(destination_field)
         if destination_root is None or (
@@ -62,6 +73,12 @@ def validate_node_use(
             ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
             f"nodes[{index}].in_map",
             "in_map has overlapping node-local input paths",
+        )
+    if has_overlapping_paths([*node.input_values, *node.in_map.values()]):
+        report.add(
+            ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
+            f"nodes[{index}].input_values",
+            "static input_values overlap with path-based in_map destinations",
         )
 
     for source_field, destination_path in node.out_map.items():

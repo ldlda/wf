@@ -42,6 +42,7 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
             step.use,
             id=step_id,
             in_map=step.in_,
+            input_values=step.with_,
             out_map=step.out,
             desc=step.desc,
         )

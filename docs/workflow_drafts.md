@@ -93,6 +93,75 @@ Important details:
 - When saved with source bindings, concrete refs can be normalized to logical
   refs such as `demo.echo_tool`.
 
+## Mapping Shape
+
+Draft maps are JSON objects whose keys and values are strings:
+
+```ts
+type InMap = Record<string, string>
+type OutMap = Record<string, string>
+```
+
+Both maps are source-to-destination.
+
+| Map | Key | Value | Example |
+| --- | --- | --- | --- |
+| `in` | graph source path | node-local input path | `"input.text": "message"` |
+| `out` | node-local output path | graph state destination path | `"echoed": "state.echoed"` |
+
+Graph source paths in `in` normally start with `input.`, `state.`, or
+`context.`. Node-local paths do not use those prefixes; they are paths inside
+the target capability's input or output payload.
+
+For example:
+
+```json
+{
+  "in": {
+    "input.user.name": "user.name",
+    "state.job.title": "job.title"
+  },
+  "out": {
+    "user.age": "state.person.age",
+    "job.years": "state.experience.years"
+  }
+}
+```
+
+Read that as:
+
+- `input.user.name` -> local input `user.name`
+- `state.job.title` -> local input `job.title`
+- local output `user.age` -> `state.person.age`
+- local output `job.years` -> `state.experience.years`
+
+Do not reverse the direction. This is wrong:
+
+```json
+{
+  "in": {
+    "message": "input.text"
+  }
+}
+```
+
+That asks the runtime to read from graph path `message` and write into a
+node-local input field literally named `input.text`.
+
+Do not put constants in `in`. This is also wrong:
+
+```json
+{
+  "in": {
+    "value": {
+      "value": "CLICKED"
+    }
+  }
+}
+```
+
+Use `with` for static node-local values instead.
+
 ## Step Kinds
 
 ### `use`
@@ -113,6 +182,27 @@ Calls a workflow capability.
 
 Use this for normal node calls, including generated workflow wrappers around
 MCP tools and local `wf.std` capabilities.
+
+`use` steps can also provide static node-local input values with `with`.
+Use this for hardcoded strings, booleans, numbers, and small JSON values that
+are part of the graph definition:
+
+```json
+{
+  "use": "wf.std.constant",
+  "with": {
+    "value": "CLICKED"
+  },
+  "out": {
+    "value": "state.wait_text"
+  }
+}
+```
+
+Static values are not path mappings. Do not put `{"value": "CLICKED"}` inside
+`in`. The `in` object only maps graph paths such as `input.url` or
+`state.wait_text` to node-local input fields. Invalid draft step shapes are
+rejected instead of silently compiling to `join`.
 
 Generated MCP tool wrappers are intentionally naive. They normally expose both
 `ok` and `error` outcomes, because MCP tool calls can report transport/provider

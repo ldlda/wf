@@ -353,6 +353,21 @@ be explicit, for example:
 }
 ```
 
+For node inputs:
+
+- `in` is path mapping only, in source-to-destination order such as
+  `"input.url": "url"`.
+- `with` is for static node-local values such as
+  `"value": "CLICKED"`.
+- Do not put literal objects inside `in`. Invalid `use` step payloads should be
+  rejected, not silently treated as joins.
+
+For strict MCP servers such as Playwright, unmapped optional tool arguments
+should be omitted. If a trace shows optional keys being sent as `null`, capture
+the capability name, the node trace `resolved_input`, and the upstream error;
+that points at the workflow capability wrapper boundary rather than the raw MCP
+tool.
+
 ## MCP Resources Or Prompts Are Missing
 
 First ask whether the upstream server actually supports them.

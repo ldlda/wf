@@ -14,8 +14,29 @@ class NodeUse(BaseModel):
     type: Literal["node"]
     node: str
     desc: str | None = None
-    in_map: dict[str, str] = Field(default_factory=dict)
-    out_map: dict[str, str] = Field(default_factory=dict)
+    in_map: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Map graph source paths to node-local input paths. Keys are paths "
+            "such as input.text, state.user.name, or context.item; values are "
+            "input fields/paths inside the node payload."
+        ),
+    )
+    input_values: dict[str, object] = Field(
+        default_factory=dict,
+        description=(
+            "Static node-local input values keyed by destination input field/path. "
+            "Use this for graph-defined constants; use in_map only for graph paths."
+        ),
+    )
+    out_map: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Map node-local output paths to workflow state destinations. Keys "
+            "are output fields/paths inside the node payload; values must be "
+            "state.* destination paths."
+        ),
+    )
     retry: int | None = Field(default=None, ge=0)
     timeout_seconds: int | None = Field(default=None, gt=0)
 

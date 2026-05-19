@@ -9,9 +9,7 @@
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
-        "args": [
-          "@upstash/context7-mcp"
-        ],
+        "args": ["@upstash/context7-mcp"],
         "env": {}
       }
     },
@@ -23,10 +21,7 @@
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
-        "args": [
-          "@playwright/mcp@latest",
-          "--isolated"
-        ],
+        "args": ["@playwright/mcp@latest"],
         "env": {}
       }
     },
@@ -38,9 +33,7 @@
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
-        "args": [
-          "@modelcontextprotocol/server-everything"
-        ],
+        "args": ["@modelcontextprotocol/server-everything"],
         "env": {}
       }
     },
@@ -52,10 +45,7 @@
       "metadata": {
         "transport": "stdio",
         "command": "serena",
-        "args": [
-          "start-mcp-server",
-          "--project-from-cwd"
-        ],
+        "args": ["start-mcp-server", "--project-from-cwd"],
         "env": {}
       }
     }

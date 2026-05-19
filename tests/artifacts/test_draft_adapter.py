@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pydantic import ValidationError
+
 from wf_artifacts.drafts import WorkflowDraft
+from wf_artifacts.drafts.api import compile_workflow_draft, validate_workflow_draft
 from wf_artifacts.drafts.adapter import build_workflow_from_draft
 from wf_core import ConditionNode, NodeUse
 
@@ -27,6 +30,62 @@ def test_adapter_lowers_keyed_use_steps_and_routes_through_builder() -> None:
     assert workflow.edges[0].from_ == "echo"
     assert workflow.edges[0].outcome == "ok"
     assert workflow.edges[0].to == "__end__"
+
+
+def test_adapter_lowers_static_inputs_for_constant_like_steps() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            "name": "constant",
+            "input_schema": {},
+            "state_schema": {"fields": {"message": {"type": "string"}}},
+            "output_schema": {},
+            "start": "constant",
+            "steps": {
+                "constant": {
+                    "use": "wf.std.constant",
+                    "with": {"value": "CLICKED"},
+                    "out": {"value": "state.message"},
+                }
+            },
+            "routes": {"constant": {"ok": "__end__"}},
+        }
+    )
+
+    workflow = build_workflow_from_draft(draft)
+    node = workflow.nodes[0]
+
+    assert isinstance(node, NodeUse)
+    assert node.node == "wf.std.constant"
+    assert node.input_values["value"] == "CLICKED"
+    assert node.in_map == {}
+
+
+def test_invalid_literal_input_map_does_not_fall_through_to_join() -> None:
+    draft = {
+        "name": "bad_constant",
+        "input_schema": {},
+        "state_schema": {"fields": {}},
+        "output_schema": {},
+        "start": "constant",
+        "steps": {
+            "constant": {
+                "use": "wf.std.constant",
+                "in": {"value": {"value": "CLICKED"}},
+            }
+        },
+        "routes": {"constant": {"ok": "__end__"}},
+    }
+
+    result = validate_workflow_draft(draft)
+
+    assert result["status"] == "invalid"
+    assert "steps.constant" in result["diagnostics"][0]["path"]
+    try:
+        compile_workflow_draft(draft)
+    except ValidationError:
+        pass
+    else:  # pragma: no cover - kept explicit because silent join fallback was the bug.
+        raise AssertionError("invalid use step compiled instead of failing")
 
 
 def test_adapter_lowers_when_step_through_builder() -> None:
