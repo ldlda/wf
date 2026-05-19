@@ -606,7 +606,7 @@ class WfMcpService:
             specs = specs_from_discovered_tools(
                 connection=connection,
                 auth=auth,
-                adapter=adapter,
+                executor=adapter,
                 tools=capabilities.tools,
                 emit_event=self._record_event,
             )

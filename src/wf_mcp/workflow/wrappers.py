@@ -12,7 +12,7 @@ from wf_mcp.broker.events import McpEvent, make_event
 
 from ..capabilities import DiscoveredTool
 from ..models import AuthRecord, ConnectionConfig
-from ..sdk import BackendAdapter
+from ..runtime import ToolExecutor
 
 
 _JSON_TYPE_MAP: dict[str, object] = {
@@ -103,7 +103,7 @@ def wrap_discovered_tool(
     *,
     connection: ConnectionConfig,
     auth: AuthRecord | None,
-    adapter: BackendAdapter,
+    executor: ToolExecutor,
     tool: DiscoveredTool,
     emit_event: Callable[[McpEvent], None] | None = None,
 ) -> NodeSpec[BaseModel, BaseModel]:
@@ -129,7 +129,7 @@ def wrap_discovered_tool(
                     payload={"input": payload.model_dump(exclude_unset=True)},
                 )
             )
-        result = await adapter.call_tool(
+        result = await executor.call_tool(
             connection=connection,
             auth=auth,
             tool_name=tool.name,

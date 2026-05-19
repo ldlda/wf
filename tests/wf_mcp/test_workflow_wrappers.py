@@ -7,7 +7,8 @@ from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
 from wf_mcp.capabilities import DiscoveredTool
 from wf_mcp.models import AuthRecord, ConnectionConfig
-from wf_mcp.sdk import BackendAdapter, ToolCallResult
+from wf_mcp.runtime import ToolExecutor
+from wf_mcp.sdk import ToolCallResult
 from wf_mcp.workflow import wrap_discovered_tool
 
 
@@ -37,7 +38,7 @@ def test_discovered_tool_wrapper_omits_unset_optional_arguments() -> None:
             account="default",
         ),
         auth=None,
-        adapter=cast(BackendAdapter, adapter),
+        executor=cast(ToolExecutor, adapter),
         tool=DiscoveredTool(
             name="browser_snapshot",
             title=None,

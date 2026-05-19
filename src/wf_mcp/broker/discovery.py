@@ -11,6 +11,7 @@ from wf_authoring import NodeSpec
 
 from ..capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from ..models import AuthRecord, ConnectionConfig
+from ..runtime import ToolExecutor
 from ..sdk import BackendAdapter
 from ..shared import root_exception
 from ..workflow import wrap_discovered_tool
@@ -72,7 +73,7 @@ def specs_from_discovered_tools(
     *,
     connection: ConnectionConfig,
     auth: AuthRecord | None,
-    adapter: BackendAdapter,
+    executor: ToolExecutor,
     tools: list[DiscoveredTool],
     emit_event: Callable[[McpEvent], None] | None = None,
 ) -> list[NodeSpec[Any, Any]]:
@@ -80,7 +81,7 @@ def specs_from_discovered_tools(
         wrap_discovered_tool(
             connection=connection,
             auth=auth,
-            adapter=adapter,
+            executor=executor,
             tool=tool,
             emit_event=emit_event,
         )
