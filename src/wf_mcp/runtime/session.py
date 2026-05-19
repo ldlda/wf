@@ -25,7 +25,9 @@ class PersistentMcpSession:
     client: ClientSession
     close_callback: Callable[[], Awaitable[None]] | None = None
 
-    async def call_tool(self, tool_name: str, payload: dict[str, Any]) -> ToolCallResult:
+    async def call_tool(
+        self, tool_name: str, payload: dict[str, Any]
+    ) -> ToolCallResult:
         result = await self.client.call_tool(tool_name, payload)
         return tool_result_to_call_result(result)
 

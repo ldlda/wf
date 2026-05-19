@@ -11,12 +11,12 @@ import pytest
 from wf_mcp.events import EventBus, InMemoryEventSink
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy_validation import ProxyConfigError, validate_transparent_proxy_config
-from wf_mcp.transparent_proxy import ProxyRuntime, create_transparent_proxy_client
-from wf_mcp.transparent_proxy.reload_events import (
+from wf_mcp.proxy import ProxyRuntime, create_transparent_proxy_client
+from wf_mcp.proxy.reload_events import (
     ProxyReloadResult,
     reload_change_events,
 )
-from wf_mcp.transparent_proxy.tools import ProxyToolPayload, ProxyToolsPage
+from wf_mcp.proxy.tools import ProxyToolPayload, ProxyToolsPage
 from wf_mcp.broker import load_broker_config
 
 from .test_support import fixture_server_path, local_temp_root

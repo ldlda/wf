@@ -4,7 +4,7 @@ import asyncio
 
 from fastmcp import FastMCP
 
-from wf_mcp.transparent_proxy.safe_names import (
+from wf_mcp.proxy.safe_names import (
     SafeToolNames,
     encode_safe_tool_name,
 )

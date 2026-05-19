@@ -219,9 +219,6 @@ class ProxyRuntime:
         }
 
 
-TransparentProxyRuntime = ProxyRuntime
-
-
 def create_transparent_proxy_server(
     config: BrokerConfig,
     *,

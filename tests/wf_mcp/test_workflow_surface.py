@@ -104,7 +104,9 @@ def test_workflow_surface_filters_stdlib_capabilities_by_source() -> None:
         FileWorkflowArtifactStore(local_temp_root() / "surface_filtered_caps")
     )
 
-    payload = asyncio.run(handlers.list_capabilities(source_id="wf.std", query="truthy"))
+    payload = asyncio.run(
+        handlers.list_capabilities(source_id="wf.std", query="truthy")
+    )
 
     assert [capability["name"] for capability in payload["capabilities"]] == [
         "wf.std.truthy"

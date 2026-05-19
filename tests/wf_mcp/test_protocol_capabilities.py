@@ -9,7 +9,7 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
 from wf_mcp.models import BrokerConfig, ConnectionConfig
-from wf_mcp.transparent_proxy import create_transparent_proxy_client
+from wf_mcp.proxy import create_transparent_proxy_client
 
 from .test_support import fixture_server_path, local_temp_root
 

@@ -82,12 +82,14 @@ class PersistentSessionFactory:
             http_client = await stack.enter_async_context(
                 httpx.AsyncClient(headers=_auth_headers(auth) or None)
             )
-            read_stream, write_stream, _get_session_id = (
-                await stack.enter_async_context(
-                    streamable_http_client(
-                        connection.metadata["url"],
-                        http_client=http_client,
-                    )
+            (
+                read_stream,
+                write_stream,
+                _get_session_id,
+            ) = await stack.enter_async_context(
+                streamable_http_client(
+                    connection.metadata["url"],
+                    http_client=http_client,
                 )
             )
             session = await stack.enter_async_context(

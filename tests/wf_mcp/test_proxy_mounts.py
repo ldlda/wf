@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from wf_mcp.models import BrokerConfig, ConnectionConfig
-from wf_mcp.transparent_proxy.mounts import ProxyMount, ProxyMountRegistry
+from wf_mcp.proxy.mounts import ProxyMount, ProxyMountRegistry
 
 
 def test_registry_reuses_unchanged_enabled_mount() -> None:

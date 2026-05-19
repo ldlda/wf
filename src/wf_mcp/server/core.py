@@ -13,7 +13,7 @@ from ..broker.transport import normalize_transport
 from ..documentation import build_local_documentation_source
 from ..models import BrokerConfig
 from ..sdk import McpSdkAdapter
-from ..transparent_proxy.runtime import ProxyRuntime
+from ..proxy.runtime import ProxyRuntime
 from ..workflow_surface import register_workflow_tools
 from .prompts import register_documentation_prompts
 from .resources import register_documentation_resources

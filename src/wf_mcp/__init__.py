@@ -16,7 +16,7 @@ from .models import (
 from .proxy_validation import ProxyConfigError, validate_transparent_proxy_config
 from .sdk import McpSdkAdapter
 from .storage import FileStore, Store
-from .transparent_proxy import (
+from .proxy import (
     create_transparent_proxy_client,
     create_transparent_proxy_server,
 )
