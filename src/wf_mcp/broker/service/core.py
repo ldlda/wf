@@ -23,6 +23,8 @@ from wf_core import NodeUse, Workflow, execute_workflow_async
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
+    DocumentationPrompt,
+    DocumentationResource,
     SourcePermissions,
     SourceVisibility,
     page_items,
@@ -363,6 +365,25 @@ class WfMcpService:
         return entry
 
     async def read_resource(self, qualified_name: str) -> dict[str, Any]:
+        local_resource = self._local_documentation_resource(qualified_name)
+        if local_resource is not None:
+            self._record_event(
+                make_event(
+                    "resource_read_completed",
+                    capability_id=qualified_name,
+                    payload={"uri": local_resource.uri, "source": "local"},
+                )
+            )
+            return {
+                "contents": [
+                    {
+                        "uri": local_resource.uri,
+                        "mimeType": local_resource.mime_type,
+                        "text": local_resource.text,
+                    }
+                ]
+            }
+
         resource = self.get_resource(qualified_name)
         connection = self.connections.get(resource.connection_id)
         adapter = require_adapter(connection, self.adapters)
@@ -484,6 +505,31 @@ class WfMcpService:
         *,
         arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
+        local_prompt = self._local_documentation_prompt(qualified_name)
+        if local_prompt is not None:
+            self._record_event(
+                make_event(
+                    "prompt_get_completed",
+                    capability_id=qualified_name,
+                    payload={
+                        "argument_keys": sorted((arguments or {}).keys()),
+                        "source": "local",
+                    },
+                )
+            )
+            return {
+                "description": local_prompt.description,
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": {
+                            "type": "text",
+                            "text": local_prompt.text,
+                        },
+                    }
+                ],
+            }
+
         prompt = self.get_prompt(qualified_name)
         connection = self.connections.get(prompt.connection_id)
         adapter = require_adapter(connection, self.adapters)
@@ -511,6 +557,28 @@ class WfMcpService:
             )
         )
         return result
+
+    def _local_documentation_resource(
+        self,
+        qualified_name: str,
+    ) -> DocumentationResource | None:
+        """Return a local docs resource from capability sources by qualified name."""
+        for source in self.capability_sources.values():
+            resource = source.capabilities.resources.get(qualified_name)
+            if isinstance(resource, DocumentationResource):
+                return resource
+        return None
+
+    def _local_documentation_prompt(
+        self,
+        qualified_name: str,
+    ) -> DocumentationPrompt | None:
+        """Return a local docs prompt from capability sources by qualified name."""
+        for source in self.capability_sources.values():
+            prompt = source.capabilities.prompts.get(qualified_name)
+            if isinstance(prompt, DocumentationPrompt):
+                return prompt
+        return None
 
     async def refresh_connection_catalog(
         self,

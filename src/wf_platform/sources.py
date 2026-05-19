@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, dataclass_transform
 
 from pydantic import BaseModel
 

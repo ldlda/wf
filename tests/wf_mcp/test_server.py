@@ -450,6 +450,43 @@ def test_server_exposes_platform_documentation_prompts() -> None:
     asyncio.run(run_proxy())
 
 
+def test_admin_tools_can_read_local_documentation_source() -> None:
+    config = BrokerConfig(
+        store_root=local_temp_root() / "unified_admin_docs_store",
+        connections=[],
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(
+            config,
+            resources_as_tools=True,
+            prompts_as_tools=True,
+            safe_tool_names=True,
+        )
+        async with client:
+            resource = await client.call_tool(
+                "wf_admin_read_resource",
+                {"qualified_name": "wf.docs.workflow_capabilities"},
+            )
+            prompt = await client.call_tool(
+                "wf_admin_render_prompt",
+                {"qualified_name": "wf.docs.workflow_authoring_guide"},
+            )
+
+            resource_payload = _structured(resource)
+            prompt_payload = _structured(prompt)
+            assert resource_payload["contents"][0]["uri"] == (
+                "wf://docs/workflow-capabilities"
+            )
+            assert "# Workflow Capabilities" in resource_payload["contents"][0]["text"]
+            assert (
+                "wf://docs/workflow-capabilities"
+                in (prompt_payload["messages"][0]["content"]["text"])
+            )
+
+    asyncio.run(run_proxy())
+
+
 def test_server_reload_syncs_service_connection_source_enabled_state() -> None:
     tmp_path = local_temp_root() / "unified_reload_service_source_store"
     tmp_path.mkdir(parents=True, exist_ok=True)

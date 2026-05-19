@@ -74,10 +74,7 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
         ).entry
     if isinstance(step, DraftChooseStep):
         return builder.choose(
-            *[
-                (clause.if_, clause.then)
-                for clause in step.choose.clauses
-            ],
+            *[(clause.if_, clause.then) for clause in step.choose.clauses],
             id=step_id,
             default=step.choose.default,
         ).entry

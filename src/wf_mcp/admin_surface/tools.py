@@ -101,7 +101,10 @@ def register_service_admin_tools(
     @server.tool(
         name=name("read_resource"),
         title="Read Resource",
-        description="Read a broker-catalog resource by qualified name.",
+        description=(
+            "Read a local docs or broker-catalog resource by qualified name, "
+            "for example wf.docs.workflow_capabilities."
+        ),
     )
     async def read_resource(qualified_name: str) -> dict[str, Any]:
         return await handlers.read_broker_resource(qualified_name)
@@ -109,7 +112,10 @@ def register_service_admin_tools(
     @server.tool(
         name=name("render_prompt"),
         title="Render Prompt",
-        description="Render a broker-catalog prompt by qualified name.",
+        description=(
+            "Render a local docs or broker-catalog prompt by qualified name, "
+            "for example wf.docs.workflow_authoring_guide."
+        ),
     )
     async def render_prompt(
         qualified_name: str,
