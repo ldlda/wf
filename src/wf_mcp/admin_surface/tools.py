@@ -27,7 +27,6 @@ def register_service_admin_tools(
         "read_resource": "read_broker_resource",
         "render_prompt": "render_broker_prompt",
         "invoke_method": "invoke_broker_method",
-        "call_tool": "call_broker_tool",
         "get_events": "get_broker_events",
     }
 
@@ -140,22 +139,6 @@ def register_service_admin_tools(
             connection_id,
             method,
             params=params,
-        )
-
-    @server.tool(
-        name=name("call_tool"),
-        title="Call Tool",
-        description="Call one upstream MCP tool through the broker service layer.",
-    )
-    async def call_tool(
-        connection_id: str,
-        tool_name: str,
-        arguments: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        return await handlers.call_broker_tool(
-            connection_id,
-            tool_name,
-            arguments=arguments,
         )
 
     @server.tool(

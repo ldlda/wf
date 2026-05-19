@@ -191,10 +191,9 @@ Not all of these need workflow semantics immediately, but they should still have
 
 The broker also needs a more protocol-native mode than the current generic broker tools.
 
-The current broker tools are useful:
+The current broker tools are useful for catalog and control-plane inspection:
 
 - `get_catalog`
-- `call_broker_tool`
 - `read_broker_resource`
 - `render_broker_prompt`
 - `invoke_broker_method`
@@ -235,7 +234,9 @@ Example desired tool entry:
 }
 ```
 
-This is different from `call_broker_tool`. `call_broker_tool` is a convenience wrapper. Mirrored tools are actual MCP tools exposed by the broker.
+Mirrored tools are actual MCP tools exposed by the broker/proxy surface. Do not
+reintroduce a generic `call_tool` wrapper for upstream tools; it duplicates the
+proxy plane and is the wrong abstraction for stateful MCP servers.
 
 ### Official protocol boundary
 
@@ -333,7 +334,7 @@ For a client like Inspector to show an elicitation form from an upstream server,
 Near-term stance:
 
 - mirror normal tools/resources/prompts first
-- keep `call_broker_tool` and raw method invocation as debugging fallbacks
+- keep raw method invocation only for explicit protocol/admin diagnostics
 - test the Everything Reference Server elicitation tool as the first serious proxy pressure test
 - only claim elicitation/sampling support once a live Inspector flow works end to end
 

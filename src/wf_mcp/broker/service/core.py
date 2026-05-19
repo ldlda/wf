@@ -84,7 +84,7 @@ class WfMcpService:
                 _store_root(self.store)
             )
         if self.include_builtin_specs:
-            for source in builtin_sources(self).values():
+            for source in builtin_sources().values():
                 self.register_capability_source(source)
         self.register_capability_source(admin_source())
 
@@ -449,41 +449,6 @@ class WfMcpService:
         )
         return result
 
-    async def call_tool(
-        self,
-        connection_id: str,
-        tool_name: str,
-        *,
-        arguments: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        connection = self.connections.get(connection_id)
-        adapter = require_adapter(connection, self.adapters)
-        auth = self.load_auth(connection_id)
-        capability_id = qualify_node_name(connection_id, tool_name)
-        payload = arguments or {}
-        self._record_event(
-            make_event(
-                "tool_call_started",
-                connection_id=connection_id,
-                capability_id=capability_id,
-                payload={"argument_keys": sorted(payload.keys())},
-            )
-        )
-        result = await adapter.call_tool(connection, auth, tool_name, payload)
-        self._record_event(
-            make_event(
-                "tool_call_completed",
-                connection_id=connection_id,
-                capability_id=capability_id,
-                payload={"outcome": result.outcome},
-            )
-        )
-        return {
-            "outcome": result.outcome,
-            "output": result.output,
-            "meta": result.meta,
-        }
-
     async def send_notification(
         self,
         connection_id: str,
@@ -794,20 +759,29 @@ class WfMcpService:
         self,
         entry: CatalogNodeEntry,
     ) -> NodeSpec[Any, Any]:
-        """Rebuild an executable tool wrapper from a stored catalog node entry."""
+        """Rebuild an executable tool wrapper from a stored catalog node entry.
+
+        Snapshot entries store schema/name metadata, not Python functions. This
+        helper reconstructs the same generated NodeSpec shape and routes calls
+        through `_tool_executor_for()`, so hydrated specs use the persistent MCP
+        runtime when the service has one configured.
+        """
         model_prefix = entry.qualified_name.replace(".", "_").replace("-", "_")
         input_model = _model_from_schema(f"{model_prefix}_Input", entry.input_schema)
         output_model = _model_from_schema(f"{model_prefix}_Output", entry.output_schema)
 
         async def invoke_tool(payload: BaseModel) -> NodeReturn[BaseModel]:
-            result = await self.call_tool(
-                entry.connection_id,
+            connection = self.connections.get(entry.connection_id)
+            auth = self.load_auth(entry.connection_id)
+            result = await self._tool_executor_for(connection).call_tool(
+                connection,
+                auth,
                 entry.local_name,
-                arguments=payload.model_dump(),
+                payload.model_dump(exclude_unset=True),
             )
             return NodeReturn(
-                outcome=result["outcome"],
-                output=output_model.model_validate(result["output"]),
+                outcome=result.outcome,
+                output=output_model.model_validate(result.output),
             )
 
         return NodeSpec(

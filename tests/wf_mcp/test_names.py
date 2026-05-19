@@ -31,4 +31,4 @@ def test_namespaced_tool_parser_rejects_unknown_and_admin_names() -> None:
 def test_admin_namespace_is_distinct_from_wf_mcp_runtime_source() -> None:
     assert ADMIN_NAMESPACE == "wf.admin"
     assert is_admin_tool_name("wf.admin.list_connections") is True
-    assert is_admin_tool_name("wf.mcp.call_tool") is False
+    assert is_admin_tool_name("wf.std.runtime_error") is False

@@ -40,7 +40,13 @@ def connection_runtime_fingerprint(
 
 @dataclass(slots=True)
 class McpRuntimePool:
-    """Cache one persistent MCP runtime per unchanged connection fingerprint."""
+    """Cache one persistent MCP runtime per unchanged connection fingerprint.
+
+    Callers provide full `ConnectionConfig` and optional `AuthRecord` on every
+    call. The pool decides whether that identity still maps to the existing
+    upstream MCP session. If command, URL, account, or auth changes, the old
+    session is closed and replaced.
+    """
 
     session_factory: SessionFactory
     _sessions: dict[str, tuple[str, PersistentMcpSession]] = field(default_factory=dict)

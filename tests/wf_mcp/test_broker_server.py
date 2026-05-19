@@ -76,7 +76,6 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
     assert "get_planner_catalog" in tool_names
     assert "list_sources" in tool_names
     assert "invoke_broker_method" in tool_names
-    assert "call_broker_tool" in tool_names
     assert "catalog.all" in resource_names
     assert "events.all" in resource_names
     assert "status.all" in resource_names
@@ -89,7 +88,6 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
     planner_catalog = cast(dict[str, Any], cast(object, planner_catalog_raw))
     planner_names = [node["qualified_name"] for node in planner_catalog["nodes"]]
     assert "demo.personal.echo_tool" in planner_names
-    assert "wf.mcp.call_tool" in planner_names
     assert "wf.std.runtime_error" in planner_names
 
     _content, all_sources_payload_raw = asyncio.run(
@@ -150,35 +148,6 @@ def test_broker_refresh_tool_returns_structured_error() -> None:
         "refreshed": False,
         "error_type": "PermissionError",
         "error": "Access is denied",
-    }
-
-
-def test_broker_call_tool_returns_structured_result() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "broker_tool_store"))
-    service.register_connection(
-        ConnectionConfig(id="demo.personal", server="demo", account="personal")
-    )
-    service.register_adapter("demo", FakeAdapter())
-
-    server = create_broker_server(service)
-
-    _content, structured = asyncio.run(
-        server.call_tool(
-            "call_broker_tool",
-            {
-                "connection_id": "demo.personal",
-                "tool_name": "echo_tool",
-                "arguments": {"text": "hello"},
-            },
-        )
-    )
-    assert structured == {
-        "connection_id": "demo.personal",
-        "tool_name": "echo_tool",
-        "ok": True,
-        "outcome": "ok",
-        "output": {"echoed": "hello"},
-        "meta": {},
     }
 
 

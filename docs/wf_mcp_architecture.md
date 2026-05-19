@@ -41,13 +41,12 @@ The broker keeps two related catalog views:
 - `get_catalog()` is the backend MCP catalog. It only includes enabled upstream
   connection snapshots loaded from storage.
 - `get_planner_catalog()` is the workflow-planning catalog. It includes backend
-  connection snapshots plus broker-local system sources such as `wf.std` and
-  `wf.mcp`.
+  connection snapshots plus broker-local system sources such as `wf.std`.
 
 Broker-local sources are not fake MCP backend connections. They are registered
 as service spec sources so raw workflow plans can address nodes like
-`wf.std.runtime_error` and `wf.mcp.call_tool` without polluting connection status,
-auth, adapter lookup, or persisted backend catalog snapshots.
+`wf.std.runtime_error` without polluting connection status, auth, adapter lookup,
+or persisted backend catalog snapshots.
 
 The longer-term source model is described in
 [`wf_mcp_capability_sources.md`](wf_mcp_capability_sources.md). In that model,

@@ -99,17 +99,17 @@ def test_workflow_surface_lists_planner_visible_capabilities() -> None:
     assert "wf.admin.list_sources" not in names
 
 
-def test_workflow_surface_filters_capabilities_by_source() -> None:
+def test_workflow_surface_filters_stdlib_capabilities_by_source() -> None:
     handlers = _handlers(
         FileWorkflowArtifactStore(local_temp_root() / "surface_filtered_caps")
     )
 
-    payload = asyncio.run(handlers.list_capabilities(source_id="wf.mcp"))
+    payload = asyncio.run(handlers.list_capabilities(source_id="wf.std", query="truthy"))
 
     assert [capability["name"] for capability in payload["capabilities"]] == [
-        "wf.mcp.call_tool"
+        "wf.std.truthy"
     ]
-    assert payload["capabilities"][0]["source_id"] == "wf.mcp"
+    assert payload["capabilities"][0]["source_id"] == "wf.std"
 
 
 def test_workflow_surface_lists_saved_wrapper_capabilities() -> None:

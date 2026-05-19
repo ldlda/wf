@@ -88,30 +88,5 @@ class BrokerAdminHandlers:
                 **error_payload(exc),
             }
 
-    async def call_broker_tool(
-        self,
-        connection_id: str,
-        tool_name: str,
-        arguments: dict[str, Any] | None = None,
-    ) -> dict[str, Any]:
-        try:
-            return {
-                "connection_id": connection_id,
-                "tool_name": tool_name,
-                "ok": True,
-                **await self.service.call_tool(
-                    connection_id,
-                    tool_name,
-                    arguments=arguments,
-                ),
-            }
-        except Exception as exc:
-            return {
-                "connection_id": connection_id,
-                "tool_name": tool_name,
-                "ok": False,
-                **error_payload(exc),
-            }
-
     def get_broker_events(self) -> list[dict[str, Any]]:
         return [asdict(event) for event in self.service.list_events()]

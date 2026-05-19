@@ -24,7 +24,13 @@ def _auth_headers(auth: AuthRecord | None) -> dict[str, str]:
 
 @dataclass(slots=True)
 class PersistentSessionFactory:
-    """Create initialized persistent MCP sessions for configured connections."""
+    """Create initialized persistent MCP sessions for configured connections.
+
+    Input connection metadata must describe either stdio transport
+    (`command`, optional `args`/`env`/`cwd`) or streamable HTTP transport
+    (`url`). The returned session owns its transport stack and closes it through
+    the `PersistentMcpSession.close_callback`.
+    """
 
     async def create(
         self,

@@ -10,8 +10,8 @@ Build workflows from current capabilities instead of assuming a stale catalog.
 Use `get_planner_catalog` when you need the current workflow-capability view.
 Use `list_sources` when you need to understand source ownership, visibility,
 and capability kinds.
-Use `call_broker_tool` to test an upstream MCP tool manually before wrapping it
-into a workflow.
+Use source-projected workflow capabilities or directly exposed proxy tools to
+test the smallest reusable piece before wrapping it into a workflow.
 
 Prefer namespaced capabilities, inspect before you rely on them, and test the
 smallest reusable piece before saving a larger workflow artifact.

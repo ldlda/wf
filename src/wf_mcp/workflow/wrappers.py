@@ -25,7 +25,13 @@ _JSON_TYPE_MAP: dict[str, object] = {
 
 
 def _python_type_from_schema(schema: object) -> object:
-    """Map a small JSON Schema subset into a Pydantic field annotation."""
+    """Map the supported JSON Schema subset into a Pydantic annotation.
+
+    Input is expected to be an MCP tool property schema. This helper is not a
+    full JSON Schema compiler; unsupported shapes intentionally become `Any`
+    so discovery remains tolerant while the original schema contract is still
+    preserved on the generated NodeSpec.
+    """
     if not isinstance(schema, dict):
         return Any
 
@@ -65,14 +71,25 @@ def _field_default(
     property_schema: object,
     required: set[str],
 ) -> object:
-    """Return the Pydantic field default for a JSON Schema property."""
+    """Return the Pydantic default for one MCP tool input property.
+
+    Required fields use `...`; optional fields default to `None`; explicit JSON
+    Schema defaults win. Runtime calls later use `exclude_unset=True`, so absent
+    optional fields are omitted instead of being sent upstream as explicit null.
+    """
     if isinstance(property_schema, dict) and "default" in property_schema:
         return property_schema["default"]
     return ... if field_name in required else None
 
 
 def _model_from_schema(name: str, schema: dict[str, Any]) -> type[BaseModel]:
-    """Create a loose Pydantic adapter model for an MCP JSON Schema object."""
+    """Create a loose Pydantic adapter model for an MCP JSON Schema object.
+
+    Input should be an object-like JSON Schema with `properties` and optional
+    `required`. The returned model is only the Python-call boundary for a
+    generated NodeSpec; the original JSON Schema remains the public contract via
+    `input_schema_contract` / `output_schema_contract`.
+    """
     properties = cast(dict[str, Any], schema.get("properties", {}))
     required = set(cast(list[str], schema.get("required", [])))
     field_defs: dict[str, tuple[object, object]] = {}

@@ -20,7 +20,7 @@ connections into that model rather than owning the model itself.
 
 ```text
 CapabilitySource
-  id: "wf.std" | "wf.docs" | "wf.mcp" | "wf.admin" | "<server>.<account>"
+  id: "wf.std" | "wf.docs" | "wf.admin" | "<server>.<account>"
   kind: "system" | "connection"
   enabled: bool
   visibility:
@@ -94,25 +94,14 @@ Expected capabilities:
 
 ### `wf.mcp`
 
-Workflow runtime helpers for interacting with MCP backends.
+Reserved for future workflow-safe MCP helpers.
 
-- Planner-visible: yes, for workflow node specs.
-- MCP-client-visible: maybe, for docs/prompts/resources, not admin mutation.
-- Admin-dashboard-visible: yes, for inspection and source toggling.
-- MCP tools: normally none.
-- Workflow safety: mixed. Individual capabilities must be marked.
-
-Expected capabilities:
-
-- `node_specs`: currently `wf.mcp.call_tool`.
-- Near-term node specs may include `wf.mcp.read_resource` and
-  `wf.mcp.get_prompt`.
-- Advanced/escape-hatch node specs may include:
-  `wf.mcp.invoke_method`, `wf.mcp.send_notification`.
-- `prompts/resources`: docs for building MCP-backed workflows.
-
-`wf.mcp` is not the admin namespace. It should mean "workflow can interact with
-MCP capabilities."
+`wf.mcp` currently owns no public NodeSpecs. The previous raw
+`wf.mcp.call_tool` helper was deleted because it duplicated the proxy tool
+surface and used the wrong abstraction for stateful servers. Workflow authors
+should use generated connection NodeSpecs, saved wrappers, or
+`wf.workflow.call_capability` when they need to test a workflow-facing
+capability.
 
 ### `wf.admin`
 
@@ -128,7 +117,7 @@ Expected capabilities:
 
 - `tools`: list sources, enable source, disable source, refresh catalog, list
   connections, add/update/remove connections, view config, reload config, inspect
-  events, inspect proxy tools, call/debug upstream capabilities.
+  events, and inspect proxy tools.
 - `prompts/resources`: admin documentation may be useful later.
 
 This source is privileged. A normal client LLM should not automatically see
@@ -174,7 +163,6 @@ and capability is safe or explicitly allowed for workflow
 Examples:
 
 - include `wf.std.runtime_error`
-- include `wf.mcp.call_tool`
 - include `everything.default.echo`
 - exclude `wf.admin.disable_source`
 
@@ -200,7 +188,7 @@ Examples:
 
 - `wf.std.workflow_manual`
 - `wf.std.error_handling_guide`
-- `wf.mcp.mcp_workflow_guide`
+- MCP workflow guides under `wf.docs`
 
 These are MCP-visible without implying the source exposes MCP tools.
 
@@ -241,8 +229,8 @@ The code now has the first capability-source layer in place.
   directly; the old `SpecSource` compatibility layer has been removed.
 - `wf.std` owns current `wf_authoring.ops` workflow node specs under
   `wf.std.*`.
-- `wf.mcp` owns workflow MCP runtime node specs, currently
-  `wf.mcp.call_tool`.
+- `wf.mcp` is reserved for future workflow-safe MCP helpers and currently owns
+  no public NodeSpecs.
 - `wf.admin` owns privileged admin capability metadata and is not planner-visible
   by default.
 - Transparent proxy admin tools now use dotted `wf.admin.*` names through
@@ -266,7 +254,7 @@ Current code has several useful pieces but the boundaries are blurred.
 | --- | --- | --- |
 | `wf_authoring.ops` | reusable workflow node specs | `wf.std.node_specs` |
 | `wf_core` built-in reducers | reusable workflow state reducers | `wf.std.reducers` |
-| `wf_mcp.broker.service.builtins` | local workflow specs | `wf.std`, `wf.mcp` |
+| `wf_mcp.broker.service.builtins` | local workflow specs | `wf.std` |
 | `wf_mcp.broker.tools` | compatibility wrapper over shared service-admin registration | `wf.admin.tools` |
 | `wf_mcp.admin_surface.tools` | shared service-backed admin tool registration | `wf.admin.tools` |
 | `wf_mcp.transparent_proxy.admin` | proxy-backed public admin tools | `wf.admin.tools` |

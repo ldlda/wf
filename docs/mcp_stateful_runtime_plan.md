@@ -17,9 +17,9 @@
   `PersistentSessionFactory` exist, and config-built services use the runtime
   pool for generated workflow node execution while discovery/catalog refreshes
   still use short-lived SDK adapter sessions.
-- Remaining work starts at hiding/removing unsafe raw public `call_tool`
-  surfaces and then renaming the legacy `transparent_proxy` package to the
-  clearer proxy/provider-layer package.
+- Unsafe raw public `call_tool` surfaces have been deleted. Remaining work starts
+  at renaming the legacy `transparent_proxy` package to the clearer
+  proxy/provider-layer package.
 
 ---
 

@@ -95,7 +95,6 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.admin.read_resource" in names
             assert "wf.admin.render_prompt" in names
             assert "wf.admin.invoke_method" in names
-            assert "wf.admin.call_tool" in names
             assert "wf.admin.get_events" in names
             assert "wf.workflow.list_artifacts" in names
             assert "wf.workflow.list_capabilities" in names
@@ -173,7 +172,6 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             }
             assert "wf.admin" in source_ids
             assert "wf.docs" in source_ids
-            assert "wf.mcp" in source_ids
             assert "wf.std" in source_ids
 
     asyncio.run(run_proxy())

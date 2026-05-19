@@ -13,7 +13,12 @@ from ..sdk.converters import tool_result_to_call_result
 
 @dataclass(slots=True)
 class PersistentMcpSession:
-    """Long-lived MCP execution handle for one configured connection."""
+    """Long-lived MCP execution handle for one configured connection.
+
+    `client` is an initialized MCP SDK `ClientSession`. `call_tool()` returns
+    this project's normalized `ToolCallResult`, not the SDK result object, so
+    generated workflow nodes do not need to know MCP wire result shapes.
+    """
 
     connection: ConnectionConfig
     auth: AuthRecord | None
