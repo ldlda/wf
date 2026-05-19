@@ -8,16 +8,16 @@ from typing import Any
 import mcp.types as mcp_types
 import pytest
 
+from wf_mcp.broker import load_broker_config
 from wf_mcp.events import EventBus, InMemoryEventSink
 from wf_mcp.models import BrokerConfig, ConnectionConfig
-from wf_mcp.proxy_validation import ProxyConfigError, validate_transparent_proxy_config
-from wf_mcp.proxy import ProxyRuntime, create_transparent_proxy_client
+from wf_mcp.proxy import ProxyRuntime, create_proxy_client
 from wf_mcp.proxy.reload_events import (
     ProxyReloadResult,
     reload_change_events,
 )
 from wf_mcp.proxy.tools import ProxyToolPayload, ProxyToolsPage
-from wf_mcp.broker import load_broker_config
+from wf_mcp.proxy_validation import ProxyConfigError, validate_proxy_config
 
 from .test_support import fixture_server_path, local_temp_root
 
@@ -28,9 +28,9 @@ def _structured(result: Any) -> dict[str, Any]:
     return content
 
 
-def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
+def test_proxy_lists_and_calls_upstream_tools() -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_store",
+        store_root=local_temp_root() / "proxy_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",
@@ -46,7 +46,7 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
     )
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(config)
+        client = create_proxy_client(config)
         async with client:
             tools = await client.list_tools()
             names = [tool.name for tool in tools]
@@ -106,9 +106,9 @@ def test_transparent_proxy_lists_and_calls_upstream_tools() -> None:
     asyncio.run(run_proxy())
 
 
-def test_transparent_proxy_registers_admin_tools_on_local_provider() -> None:
+def test_proxy_registers_admin_tools_on_local_provider() -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_local_admin_store",
+        store_root=local_temp_root() / "proxy_local_admin_store",
         connections=[],
     )
 
@@ -121,9 +121,9 @@ def test_transparent_proxy_registers_admin_tools_on_local_provider() -> None:
     assert "wf.admin.reload_config" in names
 
 
-def test_transparent_proxy_rewrites_resource_links_returned_by_tools() -> None:
+def test_proxy_rewrites_resource_links_returned_by_tools() -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_resource_link_store",
+        store_root=local_temp_root() / "proxy_resource_link_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",
@@ -139,7 +139,7 @@ def test_transparent_proxy_rewrites_resource_links_returned_by_tools() -> None:
     )
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(config)
+        client = create_proxy_client(config)
         async with client:
             result = await client.call_tool("fixture.personal.resource_link_tool")
             link = result.content[0]
@@ -153,9 +153,9 @@ def test_transparent_proxy_rewrites_resource_links_returned_by_tools() -> None:
     asyncio.run(run_proxy())
 
 
-def test_transparent_proxy_rejects_invalid_connection_config() -> None:
+def test_proxy_rejects_invalid_connection_config() -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_invalid_store",
+        store_root=local_temp_root() / "proxy_invalid_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",
@@ -197,7 +197,7 @@ def test_transparent_proxy_rejects_invalid_connection_config() -> None:
     )
 
     with pytest.raises(ProxyConfigError) as exc_info:
-        validate_transparent_proxy_config(config)
+        validate_proxy_config(config)
 
     message = str(exc_info.value)
     assert "duplicate connection id 'fixture.personal'" in message
@@ -208,9 +208,9 @@ def test_transparent_proxy_rejects_invalid_connection_config() -> None:
     assert "connection id 'wf.admin' is reserved by wf-mcp" in message
 
 
-def test_transparent_proxy_can_expose_resources_and_prompts_as_tools() -> None:
+def test_proxy_can_expose_resources_and_prompts_as_tools() -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_helper_store",
+        store_root=local_temp_root() / "proxy_helper_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",
@@ -226,7 +226,7 @@ def test_transparent_proxy_can_expose_resources_and_prompts_as_tools() -> None:
     )
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(
+        client = create_proxy_client(
             config,
             resources_as_tools=True,
             prompts_as_tools=True,
@@ -242,9 +242,9 @@ def test_transparent_proxy_can_expose_resources_and_prompts_as_tools() -> None:
     asyncio.run(run_proxy())
 
 
-def test_transparent_proxy_can_collapse_upstream_tools_behind_search() -> None:
+def test_proxy_can_collapse_upstream_tools_behind_search() -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_search_store",
+        store_root=local_temp_root() / "proxy_search_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",
@@ -260,7 +260,7 @@ def test_transparent_proxy_can_collapse_upstream_tools_behind_search() -> None:
     )
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(config, search_tools=True)
+        client = create_proxy_client(config, search_tools=True)
         async with client:
             tools = await client.list_tools()
             names = [tool.name for tool in tools]
@@ -279,9 +279,9 @@ def test_transparent_proxy_can_collapse_upstream_tools_behind_search() -> None:
     asyncio.run(run_proxy())
 
 
-def test_transparent_proxy_admin_inventory_ignores_search_visibility() -> None:
+def test_proxy_admin_inventory_ignores_search_visibility() -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_admin_inventory_store",
+        store_root=local_temp_root() / "proxy_admin_inventory_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",
@@ -297,7 +297,7 @@ def test_transparent_proxy_admin_inventory_ignores_search_visibility() -> None:
     )
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(config, search_tools=True)
+        client = create_proxy_client(config, search_tools=True)
         async with client:
             visible_names = [tool.name for tool in await client.list_tools()]
             assert "fixture.personal.echo_tool" not in visible_names
@@ -318,9 +318,9 @@ def test_transparent_proxy_admin_inventory_ignores_search_visibility() -> None:
     asyncio.run(run_proxy())
 
 
-def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> None:
+def test_proxy_proxy_tool_listing_supports_filters_and_cursor() -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_paged_tools_store",
+        store_root=local_temp_root() / "proxy_paged_tools_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",
@@ -346,7 +346,7 @@ def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> N
     )
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(config)
+        client = create_proxy_client(config)
         async with client:
             first_page_result = await client.call_tool(
                 "wf.admin.list_proxy_tools",
@@ -384,8 +384,8 @@ def test_transparent_proxy_proxy_tool_listing_supports_filters_and_cursor() -> N
     asyncio.run(run_proxy())
 
 
-def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
-    tmp_path = local_temp_root() / "transparent_proxy_admin_store"
+def test_proxy_admin_tools_mutate_config_file() -> None:
+    tmp_path = local_temp_root() / "proxy_admin_store"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
@@ -407,7 +407,7 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
     config = load_broker_config(config_path)
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(config, config_path=config_path)
+        client = create_proxy_client(config, config_path=config_path)
         async with client:
             add_result = await client.call_tool(
                 "wf.admin.add_connection",
@@ -481,8 +481,8 @@ def test_transparent_proxy_admin_tools_mutate_config_file() -> None:
     ]
 
 
-def test_transparent_proxy_admin_reload_remounts_connections() -> None:
-    tmp_path = local_temp_root() / "transparent_proxy_reload_store"
+def test_proxy_admin_reload_remounts_connections() -> None:
+    tmp_path = local_temp_root() / "proxy_reload_store"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
@@ -497,7 +497,7 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
     config = load_broker_config(config_path)
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(config, config_path=config_path)
+        client = create_proxy_client(config, config_path=config_path)
         async with client:
             initial_tools = await client.list_tools()
             initial_names = [tool.name for tool in initial_tools]
@@ -543,8 +543,8 @@ def test_transparent_proxy_admin_reload_remounts_connections() -> None:
     asyncio.run(run_proxy())
 
 
-def test_transparent_proxy_admin_reload_sends_list_changed_notifications() -> None:
-    tmp_path = local_temp_root() / "transparent_proxy_reload_notification_store"
+def test_proxy_admin_reload_sends_list_changed_notifications() -> None:
+    tmp_path = local_temp_root() / "proxy_reload_notification_store"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
@@ -564,7 +564,7 @@ def test_transparent_proxy_admin_reload_sends_list_changed_notifications() -> No
             notifications.append(message)
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(config, config_path=config_path)
+        client = create_proxy_client(config, config_path=config_path)
         client._session_kwargs["message_handler"] = message_handler
         async with client:
             await client.call_tool("wf.admin.reload_config")
@@ -577,8 +577,8 @@ def test_transparent_proxy_admin_reload_sends_list_changed_notifications() -> No
     assert "notifications/prompts/list_changed" in methods
 
 
-def test_transparent_proxy_config_mutation_does_not_notify_before_reload() -> None:
-    tmp_path = local_temp_root() / "transparent_proxy_staged_notification_store"
+def test_proxy_config_mutation_does_not_notify_before_reload() -> None:
+    tmp_path = local_temp_root() / "proxy_staged_notification_store"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
@@ -598,7 +598,7 @@ def test_transparent_proxy_config_mutation_does_not_notify_before_reload() -> No
             notifications.append(message)
 
     async def run_proxy() -> None:
-        client = create_transparent_proxy_client(config, config_path=config_path)
+        client = create_proxy_client(config, config_path=config_path)
         client._session_kwargs["message_handler"] = message_handler
         async with client:
             add_result = await client.call_tool(
@@ -627,11 +627,11 @@ def test_transparent_proxy_config_mutation_does_not_notify_before_reload() -> No
     assert "notifications/prompts/list_changed" in methods
 
 
-def test_transparent_proxy_runtime_reload_publishes_local_change_events() -> None:
+def test_proxy_runtime_reload_publishes_local_change_events() -> None:
     sink = InMemoryEventSink()
     event_bus = EventBus(sink)
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_event_store",
+        store_root=local_temp_root() / "proxy_event_store",
         connections=[],
     )
     runtime = ProxyRuntime(config, event_bus=event_bus)
@@ -649,9 +649,9 @@ def test_transparent_proxy_runtime_reload_publishes_local_change_events() -> Non
     assert catalog_changed[0].payload["reason"] == "transparent_reload"
 
 
-def test_transparent_proxy_runtime_reload_reuses_unchanged_mounts() -> None:
+def test_proxy_runtime_reload_reuses_unchanged_mounts() -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "transparent_proxy_reuse_store",
+        store_root=local_temp_root() / "proxy_reuse_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",

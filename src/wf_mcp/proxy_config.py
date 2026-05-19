@@ -5,8 +5,7 @@ from typing import Any
 from fastmcp.mcp_config import MCPConfig
 
 from .models import BrokerConfig, ConnectionConfig
-from .proxy_validation import validate_transparent_proxy_config
-
+from .proxy_validation import validate_proxy_config
 
 def connection_to_fastmcp_server_config(
     connection: ConnectionConfig,
@@ -37,7 +36,7 @@ def connection_to_fastmcp_server_config(
 
 def broker_config_to_fastmcp_config(config: BrokerConfig) -> MCPConfig:
     """Convert broker config into FastMCP's multi-server config object."""
-    validate_transparent_proxy_config(config)
+    validate_proxy_config(config)
     return MCPConfig.from_dict(
         {
             "mcpServers": {

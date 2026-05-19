@@ -8,7 +8,7 @@ This repository has three main packages plus examples and tests.
 | --- | --- | --- |
 | `wf_core` | Deterministic workflow kernel: models, validation, runtime, run state, traces, interrupts, foreach, and path/state operations. | Runtime users, `wf_authoring`, workflow adapters. |
 | `wf_authoring` | Ergonomic workflow construction: `@node`, `NodeSpec`, builder DSL, conditions, path helpers, reusable ops, subgraph nodes. | Humans, tests, future LLM workflow builders. |
-| `wf_mcp` | MCP integration: SDK adapters, broker/proxy runtime, storage, config control, transparent proxy, and workflow wrappers for discovered tools. | MCP-facing CLI/server code and future UI/control surfaces. |
+| `wf_mcp` | MCP integration: SDK adapters, broker/proxy runtime, storage, config control, and workflow wrappers for discovered tools. | MCP-facing CLI/server code and future UI/control surfaces. |
 
 ## Important Entry Points
 
@@ -46,7 +46,7 @@ This repository has three main packages plus examples and tests.
 
 - `tests/authoring`: builder, node decorator, ops, async runtime, subgraph, and
   demo workflow comparisons.
-- `tests/wf_mcp`: MCP SDK adapter, broker, transparent proxy, storage, CLI, and
+- `tests/wf_mcp`: MCP SDK adapter, broker, proxy, storage, CLI, and
   naming behavior.
 - `tests/rewrite`: local rewrite/port experiments that should keep exercising
   real user ergonomics.

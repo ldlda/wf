@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from fastmcp import FastMCP
@@ -13,18 +13,18 @@ from fastmcp.server.transforms.search import BM25SearchTransform
 from ..control import BrokerConfigManager, ConfigMutationError
 from ..events import EventBus
 from ..models import BrokerConfig
+from ..proxy_validation import validate_proxy_config
 from ..shared.names import ADMIN_NAMESPACE
-from ..proxy_validation import validate_transparent_proxy_config
 from .admin import register_proxy_admin_tools
 from .mounts import ProxyMountRegistry, create_proxy_mount
+from .reload_events import ProxyReloadResult, reload_change_events
+from .safe_names import SafeToolNames
 from .tools import (
     ProxyToolPayload,
     collect_proxy_tools,
     filter_proxy_tools,
     proxy_tools_page,
 )
-from .reload_events import ProxyReloadResult, reload_change_events
-from .safe_names import SafeToolNames
 
 _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     # Stable discovery/control spine.
@@ -64,8 +64,8 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
 class ProxyRuntime:
     """Mount configured upstream MCP connections into one FastMCP server.
 
-    The `transparent_proxy` package name is compatibility history. This runtime
-    is now the shared proxy mounting engine used by the public server surface.
+    This runtime is the shared proxy mounting engine used by the public server
+    surface. It owns mounted upstream providers, not workflow execution.
     """
 
     def __init__(
@@ -84,9 +84,9 @@ class ProxyRuntime:
         self.config = config
         self.manager = None if config_path is None else BrokerConfigManager(config_path)
         self.server: FastMCP[Any] = FastMCP(
-            "wf-mcp-transparent-proxy",
+            "wf-mcp-proxy",
             instructions=(
-                "Transparent MCP proxy over configured upstream MCP connections. "
+                "MCP proxy over configured upstream MCP connections. "
                 "Upstream tools, resources, and prompts are exposed as first-class "
                 "broker capabilities with connection-qualified names."
             ),
@@ -129,7 +129,7 @@ class ProxyRuntime:
 
     def reload(self) -> dict[str, Any]:
         config = self.current_config()
-        validate_transparent_proxy_config(config)
+        validate_proxy_config(config)
         if self.on_reload is not None:
             self.on_reload(config)
         self.server.providers[:] = [self.server.local_provider]
@@ -219,7 +219,7 @@ class ProxyRuntime:
         }
 
 
-def create_transparent_proxy_server(
+def create_proxy_server(
     config: BrokerConfig,
     *,
     config_path: str | Path | None = None,
@@ -230,7 +230,7 @@ def create_transparent_proxy_server(
     admin_tools: bool = True,
     event_bus: EventBus | None = None,
 ) -> FastMCP[Any]:
-    validate_transparent_proxy_config(
+    validate_proxy_config(
         config,
         resources_as_tools=resources_as_tools,
         prompts_as_tools=prompts_as_tools,
@@ -247,7 +247,7 @@ def create_transparent_proxy_server(
     ).server
 
 
-def create_transparent_proxy_client(
+def create_proxy_client(
     config: BrokerConfig,
     *,
     config_path: str | Path | None = None,
@@ -260,7 +260,7 @@ def create_transparent_proxy_client(
 ) -> Client[FastMCPTransport]:
     return Client(
         FastMCPTransport(
-            create_transparent_proxy_server(
+            create_proxy_server(
                 config,
                 config_path=config_path,
                 resources_as_tools=resources_as_tools,

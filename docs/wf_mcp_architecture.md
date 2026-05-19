@@ -11,7 +11,7 @@ with [`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md).
 
 | Package | Responsibility |
 | --- | --- |
-| `wf_mcp.transparent_proxy` | Expose configured upstream MCP servers as a transparent MCP proxy. Owns proxy runtime, admin tools, and proxy tool listing helpers. |
+| `wf_mcp.proxy` | Expose configured upstream MCP servers through mounted FastMCP proxy providers. Owns proxy runtime, admin tools, and proxy tool listing helpers. |
 | `wf_mcp.broker` | Coordinate remembered connections, catalog snapshots, discovery, events, and workflow execution through broker services. |
 | `wf_mcp.workflow` | Convert discovered MCP tools into `wf_authoring` / `wf_core` node specs. |
 | `wf_mcp.sdk` | Speak to upstream MCP servers through the MCP Python SDK. Owns adapter protocols, SDK transport/session calls, and SDK object converters. |
@@ -27,7 +27,7 @@ relevant concern package directly.
 ## Dependency Rules
 
 - `wf_mcp.sdk` should not import `wf_core` or `wf_authoring`.
-- `wf_mcp.transparent_proxy` should not import `wf_mcp.workflow`.
+- `wf_mcp.proxy` should not import `wf_mcp.workflow`.
 - `wf_mcp.workflow` is the only layer that converts MCP capabilities into node specs.
 - `wf_mcp.broker` may coordinate `sdk`, `storage`, `control`, and `workflow`.
 - `wf_mcp.control` should not know about live MCP clients or workflow execution.
@@ -55,8 +55,8 @@ proxy, planner, and admin UI surfaces project different capability kinds.
 
 ## Hot Reload
 
-Transparent proxy reload is intentionally isolated in
-`wf_mcp.transparent_proxy.runtime`. FastMCP does not currently expose a complete
+Proxy reload is intentionally isolated in
+`wf_mcp.proxy.runtime`. FastMCP does not currently expose a complete
 provider/proxy unmount lifecycle that we can rely on for safe per-connection
 teardown. Until that exists, reload should be treated as best-effort remounting,
 not a fully safe session/subscription lifecycle.
@@ -114,7 +114,7 @@ gone.
 
 If this becomes multiple distributions, likely split points are:
 
-- `wf-mcp-proxy`: `transparent_proxy`, `control`, `shared`
+- `wf-mcp-proxy`: `proxy`, `control`, `shared`
 - `wf-mcp-broker`: `broker`, `storage`, `workflow`, `shared`
 - `wf-mcp-sdk`: `sdk`, `capabilities`, `models`, `shared`
 

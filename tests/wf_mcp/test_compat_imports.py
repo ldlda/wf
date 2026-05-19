@@ -10,7 +10,7 @@ def test_root_facade_exports_core_entrypoints() -> None:
         FileStore,
         McpSdkAdapter,
         WfMcpService,
-        create_transparent_proxy_client,
+        create_proxy_client,
         load_broker_config,
     )
 
@@ -21,7 +21,7 @@ def test_root_facade_exports_core_entrypoints() -> None:
     assert FileStore.__name__ == "FileStore"
     assert McpSdkAdapter.__name__ == "McpSdkAdapter"
     assert WfMcpService.__name__ == "WfMcpService"
-    assert callable(create_transparent_proxy_client)
+    assert callable(create_proxy_client)
     assert callable(load_broker_config)
 
 

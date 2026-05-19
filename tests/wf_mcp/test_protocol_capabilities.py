@@ -9,7 +9,7 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
 from wf_mcp.models import BrokerConfig, ConnectionConfig
-from wf_mcp.proxy import create_transparent_proxy_client
+from wf_mcp.proxy import create_proxy_client
 
 from .test_support import fixture_server_path, local_temp_root
 
@@ -58,7 +58,7 @@ def test_unified_proxy_initialize_capabilities_reflect_local_surface() -> None:
     )
 
     async def inspect_capabilities() -> mcp_types.ServerCapabilities:
-        client = create_transparent_proxy_client(config)
+        client = create_proxy_client(config)
         async with client:
             initialize_result = client.initialize_result
             assert initialize_result is not None

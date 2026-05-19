@@ -1,6 +1,6 @@
 from .broker import (
-    load_broker_config,
     WfMcpService,
+    load_broker_config,
 )
 from .capabilities import (
     DiscoveredPrompt,
@@ -13,13 +13,13 @@ from .models import (
     ConnectionConfig,
     RawWorkflowPlan,
 )
-from .proxy_validation import ProxyConfigError, validate_transparent_proxy_config
+from .proxy import (
+    create_proxy_client,
+    create_proxy_server,
+)
+from .proxy_validation import ProxyConfigError, validate_proxy_config
 from .sdk import McpSdkAdapter
 from .storage import FileStore, Store
-from .proxy import (
-    create_transparent_proxy_client,
-    create_transparent_proxy_server,
-)
 
 __all__ = [
     "AuthRecord",
@@ -34,8 +34,8 @@ __all__ = [
     "RawWorkflowPlan",
     "Store",
     "WfMcpService",
-    "create_transparent_proxy_client",
-    "create_transparent_proxy_server",
+    "create_proxy_client",
+    "create_proxy_server",
     "load_broker_config",
-    "validate_transparent_proxy_config",
+    "validate_proxy_config",
 ]

@@ -10,10 +10,9 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 
 from wf_mcp.models import BrokerConfig, ConnectionConfig
-from wf_mcp.proxy import create_transparent_proxy_client
+from wf_mcp.proxy import create_proxy_client
 
 from .test_support import fixture_server_path, local_temp_root
-
 
 NotificationProbe = Callable[
     [Callable[[mcp_types.ServerNotification], None]],
@@ -93,7 +92,7 @@ def test_transparent_proxy_does_not_relay_upstream_protocol_notifications_yet() 
             if isinstance(message, mcp_types.ServerNotification):
                 record(message)
 
-        client = create_transparent_proxy_client(config)
+        client = create_proxy_client(config)
         client._session_kwargs["message_handler"] = message_handler
         async with client:
             await client.call_tool("fixture.personal.emit_notifications_tool")

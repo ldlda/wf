@@ -14,7 +14,7 @@ class ProxyConfigError(ValueError):
     """Raised when a broker config cannot safely run as a transparent proxy."""
 
 
-def validate_transparent_proxy_config(
+def validate_proxy_config(
     config: BrokerConfig,
     *,
     resources_as_tools: bool = False,
