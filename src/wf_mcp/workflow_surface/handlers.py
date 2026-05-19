@@ -77,6 +77,7 @@ class WorkflowSurfaceHandlers:
             {
                 "name": detail.name,
                 "source_id": source.id,
+                "kind": "node_spec",
                 "description": detail.description,
                 "outcomes": list(detail.outcomes),
                 "is_async": detail.is_async,
@@ -200,6 +201,10 @@ class WorkflowSurfaceHandlers:
                 {
                     "name": name,
                     "source_id": "workflow",
+                    "kind": "wrapper_artifact",
+                    "artifact_id": artifact.id,
+                    "version": artifact.version,
+                    "title": artifact.title,
                     "description": artifact.description,
                     "outcomes": list(artifact.outcomes),
                     "is_async": True,

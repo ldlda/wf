@@ -92,6 +92,7 @@ def test_workflow_surface_lists_planner_visible_capabilities() -> None:
     assert payload["next_cursor"] == "2"
     assert "description" in first
     assert "source_id" in first
+    assert first["kind"] == "node_spec"
     assert "input_fields" in first
     assert "output_fields" in first
     assert "input_schema" not in first
@@ -134,6 +135,10 @@ def test_workflow_surface_lists_saved_wrapper_capabilities() -> None:
     names = [capability["name"] for capability in payload["capabilities"]]
     assert names == ["workflow.echo_wrapper.v1"]
     assert payload["capabilities"][0]["source_id"] == "workflow"
+    assert payload["capabilities"][0]["kind"] == "wrapper_artifact"
+    assert payload["capabilities"][0]["artifact_id"] == "echo_wrapper"
+    assert payload["capabilities"][0]["version"] == 1
+    assert payload["capabilities"][0]["title"] == "Echo"
     assert payload["capabilities"][0]["outcomes"] == ["completed"]
     assert payload["capabilities"][0]["input_fields"] == ["text"]
     assert payload["capabilities"][0]["output_fields"] == ["echoed"]
