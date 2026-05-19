@@ -66,6 +66,7 @@ this SHOULD support both path and literal.
 langgraph has 3 ways of storage, if you read tests/rewrite
 
 lets copy that over:
+
 ```
  According to https://docs.langchain.com/oss/python/concepts/context, there are three types:
 
@@ -84,9 +85,17 @@ lets copy that over:
  a lot more versatility there.
 ```
 
-now we 100% has state. we kinda have store if you skim it (trace), but trace is no store. and Context is patched in through state.
+now we 100% has state. we kinda have store if you skim it (trace), but trace is only 50% store. and Context is patched in through input/state.
 
 this can be done with support for async, because lowk store is going to give us superpowers.
+
+## how this would aid adding async + foreach parallel
+
+(probably async gather)
+
+currently frame feels like magic + its core i dont understand. + the current serial mode impl is lowk smart.
+its reasonable; it spawns how many child frames as how many loop in foreach container item. Serially, like how `for in` in python works.
+complaints are only API improvements; not so much aid into adding these
 
 ## complaints come when user uses
 
