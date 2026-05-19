@@ -17,9 +17,10 @@
   `PersistentSessionFactory` exist, and config-built services use the runtime
   pool for generated workflow node execution while discovery/catalog refreshes
   still use short-lived SDK adapter sessions.
-- Unsafe raw public `call_tool` surfaces have been deleted. Remaining work starts
-  at renaming the legacy `transparent_proxy` package to the clearer
-  proxy/provider-layer package.
+- Unsafe raw public `call_tool` surfaces have been deleted.
+- The proxy/provider layer has been renamed to `wf_mcp.proxy`; public helper
+  names now use `create_proxy_client`, `create_proxy_server`, and
+  `validate_proxy_config`.
 
 ---
 
@@ -44,7 +45,7 @@ This is not a `wf_core` graph problem. It is an MCP runtime lifecycle problem.
 
 ## Current Execution Paths
 
-### Transparent Proxy Path
+### Proxy Path
 
 Used by directly exposed proxied MCP tools in MCP clients:
 
@@ -58,7 +59,7 @@ MCP client
 
 Relevant file:
 
-- `src/wf_mcp/transparent_proxy/mounts.py`
+- `src/wf_mcp/proxy/mounts.py`
 
 Current behavior:
 
@@ -101,9 +102,9 @@ Current behavior:
 - Do not implement Playwright-specific hacks.
 - Do not claim notification/subscription forwarding is solved.
 - Do not delete all of `src/wf_mcp/broker` in this pass. That package still owns service/source/catalog/deployment infrastructure.
-- Do not keep `src/wf_mcp/transparent_proxy` as a long-term package name. That
-  name describes a retired public mode split, not the unified server's mounted
-  upstream proxy/provider layer.
+- Do not reintroduce the old `transparent_proxy` package name. It described a
+  retired public mode split, not the unified server's mounted upstream
+  proxy/provider layer.
 - Do not expose a bigger public broker surface while fixing this.
 
 ## Target Design
@@ -202,10 +203,9 @@ Retire or hide:
 - `wf.mcp.call_tool` as planner-visible workflow helper
 - legacy `call_broker_tool` from public broker mode tests
 
-### `wf_mcp.transparent_proxy`
+### `wf_mcp.proxy`
 
-This package is also legacy-named. The code is still useful, but the name is
-wrong for the current architecture.
+This package owns the mounted upstream proxy/provider layer.
 
 Current useful contents:
 
@@ -1137,120 +1137,13 @@ Every remaining mention either:
 - says historical/debugging-only, or
 - points to the persistent runtime migration plan.
 
-## Task 10: Rename `transparent_proxy` To `proxy`
+## Task 10: Proxy Rename Completed
 
-**Files:**
+The old `transparent_proxy` package and `TransparentProxyRuntime` alias are gone.
+Use `wf_mcp.proxy.ProxyRuntime`, `create_proxy_client`,
+`create_proxy_server`, and `validate_proxy_config`.
 
-- Move: `src/wf_mcp/transparent_proxy/admin.py` -> `src/wf_mcp/proxy/admin.py`
-- Move: `src/wf_mcp/transparent_proxy/mounts.py` -> `src/wf_mcp/proxy/mounts.py`
-- Move: `src/wf_mcp/transparent_proxy/runtime.py` -> `src/wf_mcp/proxy/runtime.py`
-- Move: `src/wf_mcp/transparent_proxy/safe_names.py` -> `src/wf_mcp/proxy/safe_names.py`
-- Move: `src/wf_mcp/transparent_proxy/tools.py` -> `src/wf_mcp/proxy/tools.py`
-- Modify: `src/wf_mcp/server/core.py`
-- Modify: `src/wf_mcp/cli.py`
-- Modify: `docs/wf_mcp_architecture.md`
-- Modify: tests under `tests/wf_mcp/`
-
-- [ ] **Step 1: Move the package contents**
-
-Create `src/wf_mcp/proxy/` and move the active implementation files:
-
-```text
-admin.py
-mounts.py
-runtime.py
-safe_names.py
-tools.py
-```
-
-Create `src/wf_mcp/proxy/__init__.py` exporting the runtime names currently
-used by callers.
-
-- [ ] **Step 2: Leave a temporary compatibility shim**
-
-Replace `src/wf_mcp/transparent_proxy/__init__.py` with:
-
-```python
-from wf_mcp.proxy import *  # noqa: F403
-```
-
-Delete all other files from `src/wf_mcp/transparent_proxy/`.
-
-This makes the old package visibly empty while giving downstream imports one
-migration window.
-
-- [ ] **Step 3: Update internal imports**
-
-Replace internal imports of:
-
-```text
-wf_mcp.transparent_proxy
-```
-
-with:
-
-```text
-wf_mcp.proxy
-```
-
-Check with:
-
-```bash
-rg -n "transparent_proxy" src tests
-```
-
-Expected after this step:
-
-```text
-src/wf_mcp/transparent_proxy/__init__.py
-```
-
-is the only remaining source import location.
-
-- [ ] **Step 4: Rename tests if practical**
-
-Preferred rename:
-
-```text
-tests/wf_mcp/test_transparent_proxy.py -> tests/wf_mcp/test_proxy.py
-```
-
-If the file is too noisy, keep the filename for one pass but update test names
-and imports first. The goal is no new test code using "transparent proxy" as the
-current architecture term.
-
-- [ ] **Step 5: Update docs**
-
-In `docs/wf_mcp_architecture.md`, replace the package row with:
-
-```markdown
-| `wf_mcp.proxy` | Mount configured upstream MCP servers into the unified server. Owns proxy runtime, admin tools, safe tool-name transforms, and proxy inventory helpers. |
-```
-
-Add:
-
-```markdown
-`wf_mcp.transparent_proxy` is a compatibility shim only. Do not add new code
-there.
-```
-
-- [ ] **Step 6: Run verification**
-
-Run:
-
-```bash
-uv run --with pytest pytest tests/wf_mcp -q
-uv run basedpyright --level error
-uvx ruff check src/wf_mcp tests/wf_mcp
-```
-
-Expected:
-
-```text
-passed
-0 errors
-ruff clean
-```
+The proxy tests now live in `tests/wf_mcp/test_proxy.py`.
 
 ## Task 11: Live Playwright Verification
 
@@ -1325,21 +1218,13 @@ Append to `random shit/sonnet46-challenge-cont.md`:
 
 ## Migration Rule
 
-Until this plan is implemented:
-
-- Treat `wf.mcp.call_tool` as stateless/debugging-only.
-- Prefer direct transparent proxy tools for manual upstream testing.
-- Do not recommend broker raw calls for Playwright workflows.
-- Do not delete `WfMcpService`; it still owns too much platform infrastructure.
-- Do not add new code to `wf_mcp.transparent_proxy`; it should become a
-  compatibility shim after the rename to `wf_mcp.proxy`.
-
 After this plan is implemented:
 
 - Generated workflow node specs should use persistent MCP runtime.
-- Public raw call helpers should be hidden, removed, or clearly debug-only.
-- `transparent_proxy/` should contain only a shim or be removed after one
-  compatibility window.
+- Public raw call helpers should stay deleted.
+- Prefer direct proxy tools for manual upstream testing.
+- Do not recommend broker raw calls for Playwright workflows.
+- Do not delete `WfMcpService`; it still owns too much platform infrastructure.
 - `broker/` can be renamed/split safely in a later structural cleanup.
 
 ## Verification Commands

@@ -5,7 +5,7 @@ from wf_mcp.models import BrokerConfig
 
 
 class ProxyAdminRuntime(Protocol):
-    """Runtime boundary needed by transparent proxy admin handlers."""
+    """Runtime boundary needed by proxy admin handlers."""
 
     @property
     def manager(self) -> ConfigManager | None: ...

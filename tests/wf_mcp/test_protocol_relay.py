@@ -70,7 +70,7 @@ def test_fixture_server_emits_observable_protocol_notifications_directly() -> No
     assert "notifications/message" in methods
 
 
-def test_transparent_proxy_does_not_relay_upstream_protocol_notifications_yet() -> None:
+def test_proxy_does_not_relay_upstream_protocol_notifications_yet() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "protocol_relay_store",
         connections=[

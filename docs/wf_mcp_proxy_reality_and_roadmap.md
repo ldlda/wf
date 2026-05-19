@@ -161,7 +161,7 @@ Generic notification relay does not pass it yet.
 
 ### Continue Building Now
 
-These areas do not require a perfect transparent proxy:
+These areas do not require a perfect protocol-transparent proxy:
 
 1. capability and source inventory surfaced clearly to users and LLM clients
 2. admin/control UX over configured sources

@@ -240,7 +240,7 @@ proxy plane and is the wrong abstraction for stateful MCP servers.
 
 ### Official protocol boundary
 
-The transparent proxy layer should prefer official MCP boundary types over local mirror models.
+The proxy layer should prefer official MCP boundary types over local mirror models.
 
 Use MCP SDK types at the proxy boundary:
 
@@ -313,11 +313,11 @@ Implementation should verify whether the installed MCP/FastMCP dependency expose
 - add the compatible `fastmcp` dependency explicitly
 - or implement the proxy at a lower MCP server/provider layer
 
-Do not encode the transparent proxy as a pile of static decorators. The proxy surface is connection/catalog driven and must be able to change after refresh.
+Do not encode the proxy as a pile of static decorators. The proxy surface is connection/catalog driven and must be able to change after refresh.
 
 ### Sampling and elicitation
 
-Sampling and elicitation make transparent proxying much harder than simple tool forwarding.
+Sampling and elicitation make protocol-transparent proxying much harder than simple tool forwarding.
 
 Simple request flow:
 

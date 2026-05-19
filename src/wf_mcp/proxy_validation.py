@@ -11,7 +11,7 @@ _SUPPORTED_TRANSPORTS = {"stdio", "http", "streamable-http", "streamable_http", 
 
 
 class ProxyConfigError(ValueError):
-    """Raised when a broker config cannot safely run as a transparent proxy."""
+    """Raised when a broker config cannot safely run as a proxy."""
 
 
 def validate_proxy_config(
@@ -33,7 +33,7 @@ def validate_proxy_config(
     )
     if errors:
         joined = "\n".join(f"- {error}" for error in errors)
-        raise ProxyConfigError(f"invalid transparent proxy config:\n{joined}")
+        raise ProxyConfigError(f"invalid proxy config:\n{joined}")
 
 
 def _validate_connection_ids(

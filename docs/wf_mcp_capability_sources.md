@@ -8,7 +8,7 @@ projections of those sources.
 If you need the practical "which thing do I call?" view before the domain model,
 start with [`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md).
 
-This avoids the current trap where broker admin tools, transparent proxy admin
+This avoids the current trap where broker admin tools, proxy admin
 tools, workflow node specs, and upstream MCP tools all look like unrelated
 systems.
 
@@ -257,7 +257,7 @@ Current code has several useful pieces but the boundaries are blurred.
 | `wf_mcp.broker.service.builtins` | local workflow specs | `wf.std` |
 | `wf_mcp.broker.tools` | compatibility wrapper over shared service-admin registration | `wf.admin.tools` |
 | `wf_mcp.admin_surface.tools` | shared service-backed admin tool registration | `wf.admin.tools` |
-| `wf_mcp.transparent_proxy.admin` | proxy-backed public admin tools | `wf.admin.tools` |
+| `wf_mcp.proxy.admin` | proxy-backed public admin tools | `wf.admin.tools` |
 | discovered MCP tools | upstream tools and workflow wrappers | connection source |
 | broker resources/prompts | catalog/status/planning context | likely `wf.admin` or docs sources |
 
