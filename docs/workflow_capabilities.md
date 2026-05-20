@@ -294,6 +294,23 @@ Recommended discovery order:
 4. Use `wf.workflow.call_capability` with a plain input object to test the
    selected contract once before composing it into a draft.
 
+For the copy-less wrapper authoring path, use:
+
+1. `wf.workflow.inspect_capability` to inspect the source capability and review
+   `wrapper_hints`.
+2. `wf.workflow.create_draft_workspace_from_capability` to create a patchable
+   draft workspace from those hints.
+3. Focused patch helpers such as `wf.workflow.set_step_input_map`,
+   `wf.workflow.set_step_output_map`, and `wf.workflow.set_draft_route` to fix
+   low-confidence hints or explicit `missing_decisions`.
+4. `wf.workflow.validate_draft_workspace` to refresh diagnostics.
+5. `wf.workflow.create_wrapper_from_workspace` to save the wrapper artifact.
+6. `wf.workflow.call_capability` with `workflow.<artifact_id>.v<version>` to
+   test the saved wrapper.
+
+See `examples/mcp_wrapper_authoring_flow.py` for the same flow through the
+Python handler layer.
+
 ## Wrapper Authoring Hints
 
 `wf.workflow.inspect_capability` returns `wrapper_hints` for planner-visible
