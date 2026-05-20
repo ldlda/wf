@@ -9,6 +9,8 @@ from pydantic import BaseModel, Field
 
 from wf_authoring import NodeReturn, node
 from wf_core import RuntimeContext
+from wf_core.models.steps import InputPathBinding, OutputBinding
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_mcp.capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.sdk import ToolCallResult
@@ -53,6 +55,22 @@ def local_temp_root() -> Path:
 
 def fixture_server_path() -> str:
     return str(Path(__file__).resolve().parents[1] / "fixtures" / "mcp_echo_server.py")
+
+
+def input_binding(path: str, target: str) -> dict[str, object]:
+    """Return canonical JSON for a node input path binding in raw plans."""
+    return InputPathBinding(
+        path=GraphSourcePath.parse(path),
+        target=LocalPath.parse(target),
+    ).model_dump(mode="json")
+
+
+def output_binding(source: str, target: str) -> dict[str, object]:
+    """Return canonical JSON for a node output binding in raw plans."""
+    return OutputBinding(
+        source=LocalPath.parse(source),
+        target=StatePath.parse(target),
+    ).model_dump(mode="json")
 
 
 def everything_server_connection() -> ConnectionConfig | None:

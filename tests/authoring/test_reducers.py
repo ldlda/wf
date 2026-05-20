@@ -9,8 +9,10 @@ from wf_authoring import (
     ReducerCatalog,
     WorkflowBuilder,
     node,
+    output_to,
     reducer,
     state_field,
+    state_path,
 )
 from wf_core import ReducerRef
 
@@ -102,8 +104,7 @@ def test_builder_executes_with_custom_reducer_catalog() -> None:
     )
     step = builder.use(
         emit,
-        in_map={},
-        out_map={"total": "state.total"},
+        output=[output_to("total", state_path("total"))],
     )
     builder.set_entry_point(step)
     builder.connect(step, "ok", "__end__")

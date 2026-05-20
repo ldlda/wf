@@ -25,7 +25,7 @@ from wf_platform import (
     SourceVisibility,
 )
 
-from .test_support import echo_tool, local_temp_root
+from .test_support import echo_tool, input_binding, local_temp_root, output_binding
 
 
 class AmountInput(BaseModel):
@@ -1263,8 +1263,8 @@ def _echo_artifact() -> WorkflowArtifact:
                 "id": "echo",
                 "type": "node",
                 "node": "demo.personal.echo_tool",
-                "in_map": {"input.text": "text"},
-                "out_map": {"echoed": "state.echoed"},
+                "input": [input_binding("input.text", "text")],
+                "output": [output_binding("echoed", "state.echoed")],
             }
         ],
         "edges": [{"from": "echo", "outcome": "ok", "to": "__end__"}],
@@ -1367,8 +1367,8 @@ def _custom_reducer_artifact() -> WorkflowArtifact:
                 "id": "amount",
                 "type": "node",
                 "node": "demo.personal.amount_tool",
-                "in_map": {"input.amount": "amount"},
-                "out_map": {"amount": "state.total"},
+                "input": [input_binding("input.amount", "amount")],
+                "output": [output_binding("amount", "state.total")],
             }
         ],
         "edges": [{"from": "amount", "outcome": "ok", "to": "__end__"}],

@@ -21,7 +21,9 @@ from wf_authoring import (
     bind_fields,
     bind_state,
     build_registry,
+    input_from,
     state,
+    output_to,
     state_path,
     context_path,
     input_path,
@@ -151,8 +153,8 @@ def build_authoring_demo_workflow():
     list_files = builder.use(
         drive_list_files_spec,
         id="list_files",
-        in_map=bind_fields(folder_id=input_path("folder_id")),
-        out_map=bind_state(documents=state_path("documents")),
+        input=[input_from(input_path("folder_id"), "folder_id")],
+        output=[output_to("documents", state_path("documents"))],
         desc="List files from a Google Drive folder",
     )
     summarize_each = builder.foreach(
@@ -165,15 +167,15 @@ def build_authoring_demo_workflow():
     summarize_one = builder.use(
         summarize_document_spec,
         id="summarize_one",
-        in_map=bind_fields(document=context_path("document")),
-        out_map=bind_state(item_summary=state_path("item_summaries")),
+        input=[input_from(context_path("document"), "document")],
+        output=[output_to("item_summary", state_path("item_summaries"))],
         desc="Summarize one document",
     )
     combine_summaries = builder.use(
         combine_summaries_spec,
         id="combine_summaries",
-        in_map=bind_fields(item_summaries=state_path("item_summaries")),
-        out_map=bind_state(summary=state_path("summary")),
+        input=[input_from(state_path("item_summaries"), "item_summaries")],
+        output=[output_to("summary", state_path("summary"))],
         desc="Combine item summaries into one final summary",
     )
     should_email = builder.condition(
@@ -183,8 +185,8 @@ def build_authoring_demo_workflow():
     send_email = builder.use(
         send_email_spec,
         id="send_email",
-        in_map=bind_fields(summary=state_path("summary")),
-        out_map=bind_state(email_status=state_path("email_status")),
+        input=[input_from(state_path("summary"), "summary")],
+        output=[output_to("email_status", state_path("email_status"))],
         desc="Send the summary by email",
     )
     approve_email = builder.interrupt(
@@ -203,7 +205,7 @@ def build_authoring_demo_workflow():
     skip_email = builder.use(
         mark_email_skipped_spec,
         id="skip_email",
-        out_map=bind_state(email_status=state_path("email_status")),
+        output=[output_to("email_status", state_path("email_status"))],
         desc="Record that email delivery was skipped",
     )
 
@@ -373,12 +375,14 @@ def test_foreach_stress_with_many_documents() -> None:
     assert len(run.state["documents"]) == document_count
     assert len(run.state["item_summaries"]) == document_count
     assert (
-        len([
-            frame
-            for frame in run.frames.values()
-            if frame.kind == "foreach_iteration"
-            and frame.status == FrameStatus.COMPLETED
-        ])
+        len(
+            [
+                frame
+                for frame in run.frames.values()
+                if frame.kind == "foreach_iteration"
+                and frame.status == FrameStatus.COMPLETED
+            ]
+        )
         == document_count
     )
     assert len([entry for entry in run.trace if entry.step_type == "foreach"]) == (

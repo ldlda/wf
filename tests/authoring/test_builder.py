@@ -5,7 +5,14 @@ from collections.abc import Iterator, Mapping
 
 import pytest
 
-from wf_authoring import WorkflowBuilder, input_path, state, state_path
+from wf_authoring import (
+    WorkflowBuilder,
+    input_from,
+    input_path,
+    output_to,
+    state,
+    state_path,
+)
 from wf_core import END, RunStatus, WorkflowExecutionError
 from wf_core.models.steps import InputPathBinding, InputValueBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
@@ -59,8 +66,8 @@ def test_builder_preserves_explicit_nested_node_local_maps() -> None:
 
     step = builder.use(
         auto_bind_node,
-        in_map={"state.text": "payload.text"},
-        out_map={"payload.text": "state.text"},
+        input=[input_from(state_path("text"), "payload.text")],
+        output=[output_to("payload.text", state_path("text"))],
     )
 
     assert isinstance(step.input[0], InputPathBinding)
@@ -80,8 +87,8 @@ def test_builder_use_accepts_typed_paths_and_literal_iterable_paths() -> None:
 
     step = builder.use(
         auto_bind_node,
-        in_map={input_path('"text.with.dot"'): ("payload.text",)},
-        out_map={("payload.text",): state_path(("state field",))},
+        input=[input_from(input_path('"text.with.dot"'), ("payload.text",))],
+        output=[output_to(("payload.text",), state_path(("state field",)))],
     )
 
     assert isinstance(step.input[0], InputPathBinding)
@@ -139,8 +146,8 @@ def test_builder_preserves_explicit_root_node_local_maps() -> None:
 
     step = builder.use(
         auto_bind_node,
-        in_map={"state.text": "."},
-        out_map={".": "state.text"},
+        input=[input_from(state_path("text"), ".")],
+        output=[output_to(".", state_path("text"))],
     )
 
     assert isinstance(step.input[0], InputPathBinding)
@@ -161,8 +168,8 @@ def test_builder_emits_canonical_node_bindings() -> None:
     step = builder.use(
         auto_bind_node,
         id="update",
-        in_map={"input.text": "text"},
-        out_map={"text": "state.text"},
+        input=[input_from(input_path("text"), "text")],
+        output=[output_to("text", state_path("text"))],
     )
     builder.connect(step, "ok", END)
 
@@ -300,8 +307,8 @@ def test_builder_use_ref_creates_external_node_use_without_node_def() -> None:
     step = builder.use_ref(
         "demo.echo",
         id="echo",
-        in_map={"input.text": "text"},
-        out_map={"echoed": "state.echoed"},
+        input=[input_from(input_path("text"), "text")],
+        output=[output_to("echoed", state_path("echoed"))],
     )
     builder.set_entry_point(step)
     builder.connect(step, "ok", END)

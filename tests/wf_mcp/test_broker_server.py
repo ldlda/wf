@@ -23,7 +23,9 @@ from .test_support import (
     FailingDiscoveryAdapter,
     FakeAdapter,
     echo_tool,
+    input_binding,
     local_temp_root,
+    output_binding,
 )
 
 
@@ -32,16 +34,18 @@ def test_load_broker_config_resolves_relative_store_root() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps({
-            "store_root": ".broker-store",
-            "connections": [
-                {
-                    "id": "demo.personal",
-                    "server": "demo",
-                    "account": "personal",
-                }
-            ],
-        }),
+        json.dumps(
+            {
+                "store_root": ".broker-store",
+                "connections": [
+                    {
+                        "id": "demo.personal",
+                        "server": "demo",
+                        "account": "personal",
+                    }
+                ],
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -518,8 +522,8 @@ def _echo_artifact() -> WorkflowArtifact:
                     "id": "echo",
                     "type": "node",
                     "node": "demo.personal.echo_tool",
-                    "in_map": {"input.text": "text"},
-                    "out_map": {"echoed": "state.echoed"},
+                    "input": [input_binding("input.text", "text")],
+                    "output": [output_binding("echoed", "state.echoed")],
                 }
             ],
             "edges": [{"from": "echo", "outcome": "ok", "to": "__end__"}],

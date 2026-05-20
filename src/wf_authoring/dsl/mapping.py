@@ -1,10 +1,17 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import TypeAlias
+from typing import Any, TypeAlias
 
+from wf_core.models.steps import InputPathBinding, InputValueBinding, OutputBinding
+
+from .path_inputs import (
+    PathInput,
+    coerce_graph_path,
+    coerce_local_path,
+    coerce_state_path,
+)
 from .paths import GraphPath
-from .path_inputs import PathInput, coerce_graph_path, coerce_state_path
 
 PathArg: TypeAlias = PathInput | GraphPath
 
@@ -39,6 +46,30 @@ def bind_state(**mapping: PathArg) -> dict[str, str]:
         )
         for destination, target in mapping.items()
     }
+
+
+def input_from(path: PathArg, target: PathInput) -> InputPathBinding:
+    """Bind a workflow graph path into a node-local input path."""
+    return InputPathBinding(
+        target=coerce_local_path(target),
+        path=coerce_graph_path(path.path if isinstance(path, GraphPath) else path),
+    )
+
+
+def input_value(target: PathInput, value: Any) -> InputValueBinding:
+    """Bind a literal value into a node-local input path."""
+    return InputValueBinding(target=coerce_local_path(target), value=value)
+
+
+def output_to(source: PathInput, target: PathArg) -> OutputBinding:
+    """Bind a node-local output path back into workflow state."""
+    return OutputBinding(
+        source=coerce_local_path(source),
+        target=coerce_state_path(
+            target.path if isinstance(target, GraphPath) else target,
+            allow_legacy_root=True,
+        ),
+    )
 
 
 def merge_maps(*maps: Mapping[str, str]) -> dict[str, str]:

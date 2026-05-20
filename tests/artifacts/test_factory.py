@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any, cast
 
 from wf_artifacts import RequiredCapability, create_workflow_artifact_from_plan
+from wf_core.models.steps import InputPathBinding, OutputBinding
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_platform import NodeSpecInventory
 
 
@@ -265,8 +267,8 @@ def _plan() -> dict[str, object]:
                 "id": "echo",
                 "type": "node",
                 "node": "demo.echo_tool",
-                "in_map": {"input.text": "text"},
-                "out_map": {"echoed": "state.echoed"},
+                "input": [_input_binding("input.text", "text")],
+                "output": [_output_binding("echoed", "state.echoed")],
             }
         ],
         "edges": [{"from": "echo", "outcome": "ok", "to": "__end__"}],
@@ -277,3 +279,19 @@ def _set_first_node_ref(plan: dict[str, object], node_ref: str) -> None:
     """Set the first node ref in a loosely typed raw plan test fixture."""
     nodes = cast("list[dict[str, Any]]", plan["nodes"])
     nodes[0]["node"] = node_ref
+
+
+def _input_binding(path: str, target: str) -> dict[str, object]:
+    """Return canonical JSON for raw workflow plan fixtures."""
+    return InputPathBinding(
+        path=GraphSourcePath.parse(path),
+        target=LocalPath.parse(target),
+    ).model_dump(mode="json")
+
+
+def _output_binding(source: str, target: str) -> dict[str, object]:
+    """Return canonical JSON for raw workflow plan fixtures."""
+    return OutputBinding(
+        source=LocalPath.parse(source),
+        target=StatePath.parse(target),
+    ).model_dump(mode="json")

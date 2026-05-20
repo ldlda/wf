@@ -4,7 +4,18 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from wf_authoring import NodeReturn, NodeSpec, WorkflowBuilder, node, outcome, state
+from wf_authoring import (
+    NodeReturn,
+    NodeSpec,
+    WorkflowBuilder,
+    input_from,
+    input_path,
+    node,
+    outcome,
+    output_to,
+    state,
+    state_path,
+)
 from wf_core import END
 
 
@@ -169,8 +180,8 @@ def _message_use(
     return graph.use(
         spec,
         id=id,
-        in_map={"state.message": "message"},
-        out_map={"message": "state.message"},
+        input=[input_from(state_path("message"), "message")],
+        output=[output_to("message", state_path("message"))],
     )
 
 
@@ -184,8 +195,8 @@ def _status_use(
     return graph.use(
         spec,
         id=id,
-        in_map={"state.status": "status"},
-        out_map={"message": "state.message"},
+        input=[input_from(state_path("status"), "status")],
+        output=[output_to("message", state_path("message"))],
     )
 
 
@@ -199,11 +210,11 @@ def _metrics_use(
     return graph.use(
         spec,
         id=id,
-        in_map={
-            "state.message": "message",
-            "state.length": "length",
-        },
-        out_map={"message": "state.message"},
+        input=[
+            input_from(state_path("message"), "message"),
+            input_from(state_path("length"), "length"),
+        ],
+        output=[output_to("message", state_path("message"))],
     )
 
 
@@ -213,8 +224,8 @@ def build_branch_workflow() -> WorkflowBuilder:
     router = graph.use(
         classify_message,
         id="classify",
-        in_map={"input.text": "text"},
-        out_map={"message": "state.message"},
+        input=[input_from(input_path("text"), "text")],
+        output=[output_to("message", state_path("message"))],
     )
     graph.branch(
         router,
@@ -237,8 +248,8 @@ def build_handle_workflow() -> WorkflowBuilder:
     lookup = graph.use(
         lookup_message,
         id="lookup",
-        in_map={"input.text": "text"},
-        out_map={"message": "state.message"},
+        input=[input_from(input_path("text"), "text")],
+        output=[output_to("message", state_path("message"))],
     )
     deliver = _message_use(graph, deliver_message, id="deliver")
     failed = _message_use(graph, fail_safely, id="failed")
@@ -256,8 +267,8 @@ def build_match_workflow() -> WorkflowBuilder:
     classifier = graph.use(
         classify_status,
         id="classify_status",
-        in_map={"input.text": "text"},
-        out_map={"status": "state.status"},
+        input=[input_from(input_path("text"), "text")],
+        output=[output_to("status", state_path("status"))],
     )
     decision = graph.match(
         state("status"),
@@ -282,11 +293,11 @@ def build_when_workflow() -> WorkflowBuilder:
     measure = graph.use(
         measure_text,
         id="measure",
-        in_map={"input.text": "text"},
-        out_map={
-            "message": "state.message",
-            "length": "state.length",
-        },
+        input=[input_from(input_path("text"), "text")],
+        output=[
+            output_to("message", state_path("message")),
+            output_to("length", state_path("length")),
+        ],
     )
     decision = graph.when(
         state("length").ge(6),
@@ -307,11 +318,11 @@ def build_choose_workflow() -> WorkflowBuilder:
     measure = graph.use(
         measure_text,
         id="measure",
-        in_map={"input.text": "text"},
-        out_map={
-            "message": "state.message",
-            "length": "state.length",
-        },
+        input=[input_from(input_path("text"), "text")],
+        output=[
+            output_to("message", state_path("message")),
+            output_to("length", state_path("length")),
+        ],
     )
     decision = graph.choose(
         (state("length").ge(20), _metrics_use(graph, long_message, id="long")),
@@ -333,8 +344,8 @@ def build_use_ref_workflow() -> WorkflowBuilder:
     echo = graph.use_ref(
         "demo.echo",
         id="echo",
-        in_map={"input.text": "message"},
-        out_map={"echoed": "state.message"},
+        input=[input_from(input_path("text"), "message")],
+        output=[output_to("echoed", state_path("message"))],
     )
     graph.connect(echo, "ok", END)
     graph.set_entry_point(echo)

@@ -4,8 +4,6 @@ import pytest
 
 from wf_authoring import (
     WorkflowBuilder,
-    bind_fields,
-    bind_state,
     build_registry,
     coalesce,
     constant,
@@ -14,9 +12,11 @@ from wf_authoring import (
     first_item_maybe,
     first_item_or_none,
     is_empty,
+    input_from,
     last_item,
     last_item_or_none,
     length,
+    output_to,
     pick_path,
     pick_key,
     project_fields,
@@ -39,21 +39,23 @@ def _build_first_workflow(use_safe_first: bool = False):
     builder = WorkflowBuilder(
         name="first_demo",
         input_schema=SchemaRef(type="object"),
-        state_schema=StateSchema.model_validate({
-            "type": "object",
-            "properties": {
-                "items": {"type": "array"},
-                "item": {"type": ["string", "null"]},
-            },
-        }),
+        state_schema=StateSchema.model_validate(
+            {
+                "type": "object",
+                "properties": {
+                    "items": {"type": "array"},
+                    "item": {"type": ["string", "null"]},
+                },
+            }
+        ),
         output_schema=SchemaRef(type="object"),
         start="pick_first",
     )
     node = builder.use(
         spec,
         id="pick_first",
-        in_map=bind_fields(items=state_path("items")),
-        out_map=bind_state(item=state_path("item")),
+        input=[input_from(state_path("items"), "items")],
+        output=[output_to("item", state_path("item"))],
     )
     builder.connect(node, "ok", "__end__")
     return builder.compile(), build_registry(spec)
@@ -63,28 +65,30 @@ def _build_first_maybe_workflow():
     builder = WorkflowBuilder(
         name="first_maybe_demo",
         input_schema=SchemaRef(type="object"),
-        state_schema=StateSchema.model_validate({
-            "type": "object",
-            "properties": {
-                "items": {"type": "array"},
-                "item": {"type": ["string", "null"]},
-                "missing": {"type": "boolean"},
-            },
-        }),
+        state_schema=StateSchema.model_validate(
+            {
+                "type": "object",
+                "properties": {
+                    "items": {"type": "array"},
+                    "item": {"type": ["string", "null"]},
+                    "missing": {"type": "boolean"},
+                },
+            }
+        ),
         output_schema=SchemaRef(type="object"),
         start="pick_first",
     )
     pick_first = builder.use(
         first_item_maybe,
         id="pick_first",
-        in_map=bind_fields(items=state_path("items")),
-        out_map=bind_state(item=state_path("item")),
+        input=[input_from(state_path("items"), "items")],
+        output=[output_to("item", state_path("item"))],
     )
     mark_missing = builder.use(
         first_item_or_none,
         id="mark_missing",
-        in_map=bind_fields(items=state_path("items")),
-        out_map=bind_state(item=state_path("item")),
+        input=[input_from(state_path("items"), "items")],
+        output=[output_to("item", state_path("item"))],
     )
     builder.connect(pick_first, "found", "__end__")
     builder.connect(pick_first, "missing", mark_missing)

@@ -26,7 +26,9 @@ from .test_support import (
     FakeAdapter,
     echo_tool,
     finalize_tool,
+    input_binding,
     local_temp_root,
+    output_binding,
 )
 
 
@@ -55,8 +57,8 @@ def _single_echo_plan(plan_name: str, node_name: str) -> RawWorkflowPlan:
                 "id": "echo",
                 "type": "node",
                 "node": node_name,
-                "in_map": {"input.text": "text"},
-                "out_map": {"echoed": "state.echoed"},
+                "input": [input_binding("input.text", "text")],
+                "output": [output_binding("echoed", "state.echoed")],
             }
         ],
         edges=[
@@ -360,15 +362,15 @@ def test_service_compiles_and_runs_raw_plan() -> None:
                 "id": "echo",
                 "type": "node",
                 "node": "demo.personal.echo_tool",
-                "in_map": {"input.text": "text"},
-                "out_map": {"echoed": "state.echoed"},
+                "input": [input_binding("input.text", "text")],
+                "output": [output_binding("echoed", "state.echoed")],
             },
             {
                 "id": "finalize",
                 "type": "node",
                 "node": "demo.personal.finalize_tool",
-                "in_map": {"state.echoed": "echoed"},
-                "out_map": {"result": "state.result"},
+                "input": [input_binding("state.echoed", "echoed")],
+                "output": [output_binding("result", "state.result")],
             },
         ],
         edges=[
@@ -424,8 +426,8 @@ def test_service_resolves_registered_spec_with_dotted_local_name() -> None:
                 "id": "echo",
                 "type": "node",
                 "node": "demo.personal.foo.bar",
-                "in_map": {"input.text": "text"},
-                "out_map": {"echoed": "state.echoed"},
+                "input": [input_binding("input.text", "text")],
+                "output": [output_binding("echoed", "state.echoed")],
             }
         ],
         edges=[
@@ -571,8 +573,8 @@ def test_service_does_not_resolve_specs_hidden_from_planner() -> None:
                 "id": "echo",
                 "type": "node",
                 "node": "hidden.source.echo_tool",
-                "in_map": {"input.text": "text"},
-                "out_map": {"echoed": "state.echoed"},
+                "input": [input_binding("input.text", "text")],
+                "output": [output_binding("echoed", "state.echoed")],
             }
         ],
         edges=[
@@ -865,8 +867,8 @@ def test_service_records_tool_call_events() -> None:
                 "id": "echo",
                 "type": "node",
                 "node": "demo.personal.echo_tool",
-                "in_map": {"input.text": "text"},
-                "out_map": {"echoed": "state.echoed"},
+                "input": [input_binding("input.text", "text")],
+                "output": [output_binding("echoed", "state.echoed")],
             }
         ],
         edges=[

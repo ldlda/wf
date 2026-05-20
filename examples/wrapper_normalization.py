@@ -4,7 +4,16 @@ from typing import Literal
 
 from pydantic import BaseModel
 
-from wf_authoring import NodeReturn, WorkflowBuilder, node, outcome
+from wf_authoring import (
+    NodeReturn,
+    WorkflowBuilder,
+    input_from,
+    input_path,
+    node,
+    outcome,
+    output_to,
+    state_path,
+)
 from wf_core import END
 
 
@@ -65,20 +74,20 @@ def build_normalized_wrapper() -> WorkflowBuilder:
     raw = graph.use(
         raw_status_tool,
         id="raw_tool",
-        in_map={"input.text": "text"},
-        out_map={
-            "status": "state.status",
-            "message": "state.message",
-        },
+        input=[input_from(input_path("text"), "text")],
+        output=[
+            output_to("status", state_path("status")),
+            output_to("message", state_path("message")),
+        ],
     )
     normalizer = graph.use(
         normalize_status,
         id="normalize",
-        in_map={
-            "state.status": "status",
-            "state.message": "message",
-        },
-        out_map={"message": "state.message"},
+        input=[
+            input_from(state_path("status"), "status"),
+            input_from(state_path("message"), "message"),
+        ],
+        output=[output_to("message", state_path("message"))],
     )
     graph.connect(raw, "ok", normalizer)
     graph.connect(normalizer, "done", END)

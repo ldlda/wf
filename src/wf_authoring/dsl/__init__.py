@@ -9,7 +9,16 @@ from .conditions import (
     not_,
     state,
 )
-from .mapping import PathArg, bind_fields, bind_state, merge_maps, normalize_path
+from .mapping import (
+    PathArg,
+    bind_fields,
+    bind_state,
+    input_from,
+    input_value,
+    merge_maps,
+    normalize_path,
+    output_to,
+)
 from .paths import GraphPath, context_path, graph_path, input_path, state_path
 
 __all__ = [
@@ -26,10 +35,13 @@ __all__ = [
     "expr",
     "graph_path",
     "input",
+    "input_from",
     "input_path",
+    "input_value",
     "merge_maps",
     "normalize_path",
     "not_",
+    "output_to",
     "state",
     "state_path",
 ]
