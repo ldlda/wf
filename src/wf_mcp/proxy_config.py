@@ -7,6 +7,7 @@ from fastmcp.mcp_config import MCPConfig
 from .models import BrokerConfig, ConnectionConfig
 from .proxy_validation import validate_proxy_config
 
+
 def connection_to_fastmcp_server_config(
     connection: ConnectionConfig,
 ) -> dict[str, Any]:
