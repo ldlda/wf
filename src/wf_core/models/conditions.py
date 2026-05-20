@@ -4,11 +4,13 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
+from wf_core.paths import GraphSourcePath
+
 
 class PathOperand(BaseModel):
     """Condition operand resolved from a workflow graph path."""
 
-    path: str
+    path: GraphSourcePath
 
 
 class LiteralOperand(BaseModel):
@@ -25,7 +27,7 @@ class ExistsCondition(BaseModel):
     """Condition that is true when a graph path resolves to a present value."""
 
     op: Literal["exists"]
-    path: str
+    path: GraphSourcePath
 
 
 class NotCondition(BaseModel):

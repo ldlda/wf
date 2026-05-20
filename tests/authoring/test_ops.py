@@ -40,8 +40,8 @@ def _build_first_workflow(use_safe_first: bool = False):
     builder = WorkflowBuilder(
         name="first_demo",
         input_schema=SchemaRef(type="object"),
-        state_schema=StateSchema(
-            fields={
+        state_schema=StateSchema.from_field_map(
+            {
                 "items": StateField(type="array"),
                 "item": StateField(type="object"),
             }
@@ -63,8 +63,8 @@ def _build_first_maybe_workflow():
     builder = WorkflowBuilder(
         name="first_maybe_demo",
         input_schema=SchemaRef(type="object"),
-        state_schema=StateSchema(
-            fields={
+        state_schema=StateSchema.from_field_map(
+            {
                 "items": StateField(type="array"),
                 "item": StateField(type="object"),
                 "missing": StateField(type="boolean"),

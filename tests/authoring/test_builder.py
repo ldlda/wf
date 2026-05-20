@@ -4,6 +4,8 @@ import pytest
 
 from wf_authoring import WorkflowBuilder, state
 from wf_core import END, RunStatus, WorkflowExecutionError
+from wf_core.models.steps import InputPathBinding
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 from tests.authoring.helpers import (
     AutoBindInput,
@@ -28,14 +30,16 @@ def test_builder_auto_binds_matching_node_inputs_and_outputs_to_state() -> None:
         {"text": "hello", "count": 1},
     )
 
-    assert step.in_map == {
-        "state.text": "text",
-        "state.count": "count",
-    }
-    assert step.out_map == {
-        "text": "state.text",
-        "count": "state.count",
-    }
+    assert isinstance(step.input[0], InputPathBinding)
+    assert step.input[0].path == GraphSourcePath.state("text")
+    assert step.input[0].target == LocalPath.of("text")
+    assert isinstance(step.input[1], InputPathBinding)
+    assert step.input[1].path == GraphSourcePath.state("count")
+    assert step.input[1].target == LocalPath.of("count")
+    assert step.output[0].source == LocalPath.of("text")
+    assert step.output[0].target == StatePath.of("text")
+    assert step.output[1].source == LocalPath.of("count")
+    assert step.output[1].target == StatePath.of("count")
     assert run.status == RunStatus.COMPLETED
     assert run.state["text"] == "HELLO"
     assert run.state["count"] == 2
@@ -55,8 +59,11 @@ def test_builder_preserves_explicit_nested_node_local_maps() -> None:
         out_map={"payload.text": "state.text"},
     )
 
-    assert step.in_map == {"state.text": "payload.text"}
-    assert step.out_map == {"payload.text": "state.text"}
+    assert isinstance(step.input[0], InputPathBinding)
+    assert step.input[0].path == GraphSourcePath.state("text")
+    assert step.input[0].target == LocalPath.of("payload.text")
+    assert step.output[0].source == LocalPath.of("payload.text")
+    assert step.output[0].target == StatePath.of("text")
 
 
 def test_builder_preserves_explicit_root_node_local_maps() -> None:
@@ -73,8 +80,38 @@ def test_builder_preserves_explicit_root_node_local_maps() -> None:
         out_map={".": "state.text"},
     )
 
-    assert step.in_map == {"state.text": "."}
-    assert step.out_map == {".": "state.text"}
+    assert isinstance(step.input[0], InputPathBinding)
+    assert step.input[0].path == GraphSourcePath.state("text")
+    assert step.input[0].target == LocalPath.root()
+    assert step.output[0].source == LocalPath.root()
+    assert step.output[0].target == StatePath.of("text")
+
+
+def test_builder_emits_canonical_node_bindings() -> None:
+    builder = WorkflowBuilder(
+        name="canonical_bindings",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+        start="update",
+    )
+    step = builder.use(
+        auto_bind_node,
+        id="update",
+        in_map={"input.text": "text"},
+        out_map={"text": "state.text"},
+    )
+    builder.connect(step, "ok", END)
+
+    dumped_node = builder.compile().model_dump(mode="json")["nodes"][0]
+
+    assert dumped_node["input"][0]["path"] == "input.text"
+    assert dumped_node["input"][0]["target"] == "text"
+    assert dumped_node["output"][0]["source"] == "text"
+    assert dumped_node["output"][0]["target"] == "state.text"
+    assert "in_map" not in dumped_node
+    assert "input_values" not in dumped_node
+    assert "out_map" not in dumped_node
 
 
 def test_builder_can_auto_id_node_uses_from_spec_name() -> None:
@@ -208,6 +245,9 @@ def test_builder_use_ref_creates_external_node_use_without_node_def() -> None:
     workflow = builder.compile()
 
     assert step.node == "demo.echo"
-    assert step.in_map["input.text"] == "text"
-    assert step.out_map["echoed"] == "state.echoed"
+    assert isinstance(step.input[0], InputPathBinding)
+    assert step.input[0].path == GraphSourcePath.input("text")
+    assert step.input[0].target == LocalPath.of("text")
+    assert step.output[0].source == LocalPath.of("echoed")
+    assert step.output[0].target == StatePath.of("echoed")
     assert workflow.node_defs == []

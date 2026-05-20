@@ -6,6 +6,7 @@ from wf_artifacts.drafts import WorkflowDraft
 from wf_artifacts.drafts.api import compile_workflow_draft, validate_workflow_draft
 from wf_artifacts.drafts.adapter import build_workflow_from_draft
 from wf_core import ConditionNode, NodeUse
+from wf_core.models.steps import InputValueBinding
 
 
 def test_adapter_lowers_keyed_use_steps_and_routes_through_builder() -> None:
@@ -56,8 +57,10 @@ def test_adapter_lowers_static_inputs_for_constant_like_steps() -> None:
 
     assert isinstance(node, NodeUse)
     assert node.node == "wf.std.constant"
-    assert node.input_values["value"] == "CLICKED"
-    assert node.in_map == {}
+    assert len(node.input) == 1
+    assert isinstance(node.input[0], InputValueBinding)
+    assert str(node.input[0].target) == "value"
+    assert node.input[0].value == "CLICKED"
 
 
 def test_invalid_literal_input_map_does_not_fall_through_to_join() -> None:

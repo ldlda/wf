@@ -3,15 +3,15 @@ from __future__ import annotations
 from copy import deepcopy
 
 from wf_core.models.workflow import Workflow
+from wf_core.paths import set_nested_value
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, RunStatus
 
 
 def create_run_state(workflow: Workflow, workflow_input: dict[str, object]) -> RunState:
-    state = {
-        name: deepcopy(field.default)
-        for name, field in workflow.state_schema.fields.items()
-        if field.default is not None
-    }
+    state: dict[str, object] = {}
+    for field in workflow.state_schema.fields:
+        if field.default is not None:
+            set_nested_value(state, list(field.path.parts), deepcopy(field.default))
     state.update(dict(workflow_input))
     run = RunState(
         workflow_name=workflow.name,

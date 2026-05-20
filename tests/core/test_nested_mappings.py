@@ -136,7 +136,7 @@ def test_root_node_local_paths_map_whole_input_and_output_payloads() -> None:
                 "properties": {"rates": {"type": "object"}},
             }
         ),
-        state_schema=StateSchema(fields={"rates": StateField(type="object")}),
+        state_schema=StateSchema.from_field_map({"rates": StateField(type="object")}),
         output_schema=SchemaRef(type="object", properties={}),
         node_defs=[
             NodeDef(
@@ -191,7 +191,7 @@ def test_static_input_values_are_merged_into_node_local_input() -> None:
     workflow = Workflow(
         name="static_input_values",
         input_schema=SchemaRef.model_validate({"type": "object", "properties": {}}),
-        state_schema=StateSchema(fields={"message": StateField(type="string")}),
+        state_schema=StateSchema.from_field_map({"message": StateField(type="string")}),
         output_schema=SchemaRef(type="object", properties={}),
         node_defs=[
             NodeDef(
@@ -253,8 +253,8 @@ def _nested_mapping_workflow() -> Workflow:
                 },
             }
         ),
-        state_schema=StateSchema(
-            fields={
+        state_schema=StateSchema.from_field_map(
+            {
                 "person": StateField(type="object"),
                 "experience": StateField(type="object"),
             }

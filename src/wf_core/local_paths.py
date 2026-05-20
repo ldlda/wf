@@ -49,7 +49,9 @@ def set_local_value(payload: dict[str, Any], path: str | LocalPath, value: Any) 
     for part in parts[:-1]:
         next_value = current.setdefault(part, {})
         if not isinstance(next_value, dict):
-            raise LocalPathError(f"local path {str(parsed)!r} overlaps an existing value")
+            raise LocalPathError(
+                f"local path {str(parsed)!r} overlaps an existing value"
+            )
         current = next_value
     current[parts[-1]] = value
 

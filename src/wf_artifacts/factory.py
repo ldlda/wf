@@ -89,11 +89,15 @@ def _required_reducers_from_plan(plan: JsonObject) -> dict[str, RequiredCapabili
     if not isinstance(state_schema, dict):
         return {}
     fields = state_schema.get("fields")
-    if not isinstance(fields, dict):
+    if isinstance(fields, dict):
+        field_values = fields.values()
+    elif isinstance(fields, list):
+        field_values = fields
+    else:
         return {}
 
     requirements: dict[str, RequiredCapability] = {}
-    for field in fields.values():
+    for field in field_values:
         if not isinstance(field, dict):
             continue
         reducer_payload = field.get("reducer", "wf.std.replace")

@@ -22,7 +22,14 @@ from wf_core import (
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.conditions import Condition as CoreCondition
 from wf_core.models.conditions import BinaryCondition, ExistsCondition, PathOperand
-from wf_core.models.steps import Step
+from wf_core.models.steps import (
+    InputBinding,
+    InputPathBinding,
+    InputValueBinding,
+    OutputBinding,
+    Step,
+)
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_core.runtime.ops.merges import ReducerDefinition
 
 from ..dsl import Expr, PathArg, PathExpr, compile_condition
@@ -52,12 +59,39 @@ from .refs import (
 def _condition_base(condition: CoreCondition) -> str:
     """Return a small source-derived id base when one path is obvious."""
     if isinstance(condition, ExistsCondition):
-        return slug_id(condition.path)
+        return slug_id(str(condition.path))
     if isinstance(condition, BinaryCondition) and isinstance(
         condition.left, PathOperand
     ):
-        return slug_id(condition.left.path)
+        return slug_id(str(condition.left.path))
     return "condition"
+
+
+def _canonical_input_bindings(
+    in_map: Mapping[str, str],
+    input_values: Mapping[str, Any],
+) -> list[InputBinding]:
+    """Convert authoring compatibility maps into canonical core input bindings."""
+    value_bindings = [
+        InputValueBinding(target=LocalPath.parse(target), value=value)
+        for target, value in input_values.items()
+    ]
+    path_bindings = [
+        InputPathBinding(
+            target=LocalPath.parse(target),
+            path=GraphSourcePath.parse(path),
+        )
+        for path, target in in_map.items()
+    ]
+    return [*value_bindings, *path_bindings]
+
+
+def _canonical_output_bindings(out_map: Mapping[str, str]) -> list[OutputBinding]:
+    """Convert authoring compatibility maps into canonical core output bindings."""
+    return [
+        OutputBinding(source=LocalPath.parse(source), target=StatePath.parse(target))
+        for source, target in out_map.items()
+    ]
 
 
 @dataclass(slots=True)
@@ -91,26 +125,31 @@ class WorkflowBuilder:
         self.node_specs[spec.name] = spec
         normalized_input_schema = cast(SchemaRef, self.input_schema)
         normalized_state_schema = cast(StateSchema, self.state_schema)
+        normalized_in_map = (
+            auto_input_map(
+                spec,
+                input_schema=normalized_input_schema,
+                state_schema=normalized_state_schema,
+            )
+            if in_map is None
+            else normalize_mapping(in_map)
+        )
+        normalized_input_values = dict(input_values or {})
+        normalized_out_map = (
+            auto_output_map(spec, state_schema=normalized_state_schema)
+            if out_map is None
+            else normalize_mapping(out_map)
+        )
         node = NodeUse(
             id=id or self._next_step_id(slug_id(spec.name)),
             type="node",
             node=spec.name,
             desc=desc or spec.description,
-            in_map=(
-                auto_input_map(
-                    spec,
-                    input_schema=normalized_input_schema,
-                    state_schema=normalized_state_schema,
-                )
-                if in_map is None
-                else normalize_mapping(in_map)
+            input=_canonical_input_bindings(
+                normalized_in_map,
+                normalized_input_values,
             ),
-            input_values=dict(input_values or {}),
-            out_map=(
-                auto_output_map(spec, state_schema=normalized_state_schema)
-                if out_map is None
-                else normalize_mapping(out_map)
-            ),
+            output=_canonical_output_bindings(normalized_out_map),
         )
         self.nodes.append(node)
         return node
@@ -132,14 +171,19 @@ class WorkflowBuilder:
         hatch for MCP/saved-workflow capability refs that are resolved later by
         the environment runner into node definitions and registry handlers.
         """
+        normalized_in_map = normalize_mapping(in_map)
+        normalized_input_values = dict(input_values or {})
+        normalized_out_map = normalize_mapping(out_map)
         node = NodeUse(
             id=id or self._next_step_id(slug_id(name)),
             type="node",
             node=name,
             desc=desc,
-            in_map=normalize_mapping(in_map),
-            input_values=dict(input_values or {}),
-            out_map=normalize_mapping(out_map),
+            input=_canonical_input_bindings(
+                normalized_in_map,
+                normalized_input_values,
+            ),
+            output=_canonical_output_bindings(normalized_out_map),
         )
         self.nodes.append(node)
         return node
@@ -326,7 +370,7 @@ class WorkflowBuilder:
         conditions: list[ConditionNode] = []
         default_target = self._resolve_branch_ref(default)
         previous_condition: ConditionNode | None = None
-        condition_base = id or slug_id(value.path)
+        condition_base = id or slug_id(str(value.path))
         for case_value, target in cases.items():
             condition = self.condition(
                 id=self._next_step_id(condition_base),

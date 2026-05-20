@@ -12,15 +12,16 @@ from wf_core.models.conditions import (
     PathOperand,
     VariadicCondition,
 )
+from wf_core.paths import GraphSourcePath
 
 from .paths import GraphPath, context_path, input_path, state_path
 
 
 def _operand(value: object) -> PathOperand | LiteralOperand:
     if isinstance(value, PathExpr):
-        return PathOperand(path=value.path)
+        return PathOperand(path=GraphSourcePath.parse(value.path))
     if isinstance(value, GraphPath):
-        return PathOperand(path=value.value)
+        return PathOperand(path=GraphSourcePath.parse(value.value))
     return LiteralOperand(value=value)
 
 
@@ -61,7 +62,7 @@ class PathExpr:
         return Expr(
             BinaryCondition(
                 op=op,
-                left=PathOperand(path=self.path),
+                left=PathOperand(path=GraphSourcePath.parse(self.path)),
                 right=_operand(other),
             )
         )
@@ -126,7 +127,9 @@ def context(field: str) -> PathExpr:
 
 
 def exists(value: PathExpr | GraphPath) -> Expr:
-    return Expr(ExistsCondition(op="exists", path=_path_str(value)))
+    return Expr(
+        ExistsCondition(op="exists", path=GraphSourcePath.parse(_path_str(value)))
+    )
 
 
 def not_(value: Condition | Expr) -> Expr:

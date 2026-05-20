@@ -62,7 +62,9 @@ def test_validation_rejects_invalid_canonical_input_source_path() -> None:
     )
 
 
-def test_validation_allows_canonical_input_source_under_declared_state_field_root() -> None:
+def test_validation_allows_canonical_input_source_under_declared_state_field_root() -> (
+    None
+):
     report = _workflow(
         input=[{"target": "user.name", "path": "state.person.name"}],
         output=[],
@@ -179,8 +181,8 @@ def _workflow(
         input_schema=SchemaRef.model_validate(
             {"type": "object", "properties": {"person": {"type": "object"}}}
         ),
-        state_schema=StateSchema(
-            fields=state_fields or {"person": StateField(type="object")}
+        state_schema=StateSchema.from_field_map(
+            state_fields or {"person": StateField(type="object")}
         ),
         output_schema=SchemaRef(type="object", properties={}),
         node_defs=[

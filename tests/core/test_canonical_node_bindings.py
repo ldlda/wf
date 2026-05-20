@@ -57,6 +57,30 @@ def test_node_use_converts_old_maps_to_canonical_bindings():
     assert dumped["output"][0]["target"] == "state.echoed"
 
 
+def test_node_use_serializes_canonical_binding_paths_as_strings_in_all_dump_modes():
+    node = NodeUse.model_validate(
+        {
+            "id": "echo",
+            "type": "node",
+            "node": "echo",
+            "input": [{"target": "message", "path": "input.message"}],
+            "output": [{"source": "echoed", "target": "state.echoed"}],
+        }
+    )
+
+    python_dumped = node.model_dump()
+    json_dumped = node.model_dump(mode="json")
+
+    assert python_dumped["input"][0]["target"] == "message"
+    assert python_dumped["input"][0]["path"] == "input.message"
+    assert python_dumped["output"][0]["source"] == "echoed"
+    assert python_dumped["output"][0]["target"] == "state.echoed"
+    assert json_dumped["input"][0]["target"] == "message"
+    assert json_dumped["input"][0]["path"] == "input.message"
+    assert json_dumped["output"][0]["source"] == "echoed"
+    assert json_dumped["output"][0]["target"] == "state.echoed"
+
+
 def test_node_use_rejects_mixed_old_and_new_binding_styles():
     with pytest.raises(ValidationError):
         NodeUse.model_validate(
@@ -77,9 +101,7 @@ def test_input_binding_rejects_path_and_value_together():
                 "id": "bad",
                 "type": "node",
                 "node": "bad",
-                "input": [
-                    {"target": "message", "path": "input.message", "value": "x"}
-                ],
+                "input": [{"target": "message", "path": "input.message", "value": "x"}],
             }
         )
 

@@ -64,7 +64,7 @@ def resolve_operand(
     if isinstance(operand, LiteralOperand):
         return operand.value
     return safe_resolve_path(
-        operand.path,
+        str(operand.path),
         state=state,
         workflow_input=workflow_input,
         context={"prior_outcome": context_data},

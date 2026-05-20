@@ -26,10 +26,11 @@ def test_builder_accepts_basemodel_classes_for_workflow_schemas() -> None:
 
     assert workflow.input_schema.properties["text"]["type"] == "string"
     assert workflow.output_schema.properties["text"]["type"] == "string"
-    assert set(workflow.state_schema.fields) == {"text", "count", "tags"}
-    assert workflow.state_schema.fields["text"].type == "string"
-    assert workflow.state_schema.fields["count"].type == "integer"
-    assert workflow.state_schema.fields["tags"].type == "array"
+    fields = workflow.state_schema.field_map()
+    assert set(fields) == {"text", "count", "tags"}
+    assert fields["text"].type == "string"
+    assert fields["count"].type == "integer"
+    assert fields["tags"].type == "array"
 
 
 def test_builder_accepts_typeddict_for_json_schema_refs() -> None:
@@ -57,8 +58,9 @@ def test_state_basemodel_can_declare_reducer_with_annotated_metadata() -> None:
 
     workflow = builder.compile()
 
-    assert workflow.state_schema.fields["items"].type == "array"
-    assert workflow.state_schema.fields["items"].reducer.name == "wf.std.append"
+    fields = workflow.state_schema.field_map()
+    assert fields["items"].type == "array"
+    assert fields["items"].reducer.name == "wf.std.append"
 
 
 def test_state_basemodel_seeds_safe_initial_defaults() -> None:
@@ -72,9 +74,10 @@ def test_state_basemodel_seeds_safe_initial_defaults() -> None:
 
     workflow = builder.compile()
 
-    assert workflow.state_schema.fields["items"].default == []
-    assert workflow.state_schema.fields["metadata"].default == {}
-    assert workflow.state_schema.fields["explicit"].default == 3
+    fields = workflow.state_schema.field_map()
+    assert fields["items"].default == []
+    assert fields["metadata"].default == {}
+    assert fields["explicit"].default == 3
 
 
 def test_nested_state_basemodel_projects_parent_and_child_paths() -> None:
@@ -88,13 +91,14 @@ def test_nested_state_basemodel_projects_parent_and_child_paths() -> None:
 
     workflow = builder.compile()
 
-    assert set(workflow.state_schema.fields) == {
+    fields = workflow.state_schema.field_map()
+    assert set(fields) == {
         "person",
         "person.name",
         "person.tags",
     }
-    assert workflow.state_schema.fields["person"].type == "object"
-    assert workflow.state_schema.fields["person.name"].type == "string"
-    assert workflow.state_schema.fields["person.tags"].type == "array"
-    assert workflow.state_schema.fields["person"].reducer.name == "wf.std.replace"
-    assert workflow.state_schema.fields["person.tags"].reducer.name == "wf.std.append"
+    assert fields["person"].type == "object"
+    assert fields["person.name"].type == "string"
+    assert fields["person.tags"].type == "array"
+    assert fields["person"].reducer.name == "wf.std.replace"
+    assert fields["person.tags"].reducer.name == "wf.std.append"

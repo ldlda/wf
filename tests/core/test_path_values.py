@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 from pydantic import BaseModel, ValidationError
 
+from wf_core.models.conditions import PathOperand
 from wf_core.paths import (
     GraphSourcePath,
     LocalPath,
@@ -96,7 +97,9 @@ def test_path_objects_are_immutable_and_hashable() -> None:
         (LocalPath, (("items[0]",),)),
     ],
 )
-def test_direct_constructors_enforce_path_invariants(factory, args: tuple[object, ...]) -> None:
+def test_direct_constructors_enforce_path_invariants(
+    factory, args: tuple[object, ...]
+) -> None:
     with pytest.raises(PathResolutionError):
         factory(*args)
 
@@ -118,11 +121,29 @@ def test_pydantic_revalidates_existing_path_objects() -> None:
     object.__setattr__(local, "parts", ("items[0]",))
 
     with pytest.raises(ValidationError):
-        Payload.model_validate({"source": source, "target": StatePath.of("person"), "local": LocalPath.root()})
+        Payload.model_validate(
+            {
+                "source": source,
+                "target": StatePath.of("person"),
+                "local": LocalPath.root(),
+            }
+        )
     with pytest.raises(ValidationError):
-        Payload.model_validate({"source": GraphSourcePath.input("user"), "target": target, "local": LocalPath.root()})
+        Payload.model_validate(
+            {
+                "source": GraphSourcePath.input("user"),
+                "target": target,
+                "local": LocalPath.root(),
+            }
+        )
     with pytest.raises(ValidationError):
-        Payload.model_validate({"source": GraphSourcePath.input("user"), "target": StatePath.of("person"), "local": local})
+        Payload.model_validate(
+            {
+                "source": GraphSourcePath.input("user"),
+                "target": StatePath.of("person"),
+                "local": local,
+            }
+        )
 
 
 def test_pydantic_accepts_path_strings_and_serializes_strings() -> None:
@@ -143,6 +164,18 @@ def test_pydantic_accepts_path_strings_and_serializes_strings() -> None:
     assert dumped["source"] == "input.user"
     assert dumped["target"] == "state.person"
     assert dumped["local"] == "user"
+
+    python_dumped = payload.model_dump()
+    assert python_dumped["source"] == "input.user"
+    assert python_dumped["target"] == "state.person"
+    assert python_dumped["local"] == "user"
+
+
+def test_condition_path_operand_serializes_path_as_string_in_all_dump_modes() -> None:
+    operand = PathOperand.model_validate({"path": "state.x"})
+
+    assert operand.model_dump()["path"] == "state.x"
+    assert operand.model_dump(mode="json")["path"] == "state.x"
 
 
 def test_pydantic_accepts_existing_path_objects() -> None:

@@ -54,7 +54,7 @@ def _validate_nodes(
     report: ValidationReport,
 ) -> dict[str, Step]:
     nodes_by_id: dict[str, Step] = {}
-    state_root_fields = set(workflow.state_schema.fields)
+    state_root_fields = workflow.state_schema.root_fields()
     input_root_fields = set(workflow.input_schema.properties)
 
     for index, node in enumerate(workflow.nodes):

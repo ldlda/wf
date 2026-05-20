@@ -61,7 +61,7 @@ def state_schema_from(value: StateSchemaLike) -> StateSchema:
         )
         for path, property_schema in _flatten_state_properties(schema)
     }
-    return StateSchema(fields=fields)
+    return StateSchema.from_field_map(fields)
 
 
 def _reducer_ref_from(value: ReducerLike) -> ReducerRef:

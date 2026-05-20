@@ -51,10 +51,11 @@ def auto_output_map(
     state_schema: StateSchema,
 ) -> dict[str, str]:
     """Map node output fields back into matching state fields."""
+    state_fields = state_schema.field_map()
     return {
         field: f"state.{field}"
         for field in spec.output_model.model_json_schema().get("properties", {})
-        if field in state_schema.fields
+        if field in state_fields
     }
 
 
@@ -64,7 +65,7 @@ def _auto_source_path(
     input_schema: SchemaRef,
     state_schema: StateSchema,
 ) -> str:
-    if field in state_schema.fields:
+    if field in state_schema.root_fields():
         return f"state.{field}"
     if field in input_schema.properties:
         return f"input.{field}"

@@ -7,6 +7,7 @@ from typing import Any
 from wf_core.errors import WorkflowExecutionError
 from wf_core.local_paths import LocalPathError, get_local_value, has_overlapping_paths
 from wf_core.models.reducers import ReducerRef
+from wf_core.models.schemas import StateFieldDecl
 from wf_core.models.steps import NodeUse, OutputBinding
 from wf_core.models.workflow import Workflow
 from wf_core.paths import (
@@ -59,6 +60,7 @@ def apply_output_bindings(
             "mapped state patch has overlapping destination paths"
         )
 
+    state_fields = workflow.state_schema.field_map()
     resolved_patch: dict[StatePath, Any] = {}
     for binding in bindings:
         try:
@@ -77,6 +79,7 @@ def apply_output_bindings(
             destination_path,
             value,
             reducers=reducers,
+            state_fields=state_fields,
         )
         prepared_patch[destination_path] = (key_path, merged_value)
 
@@ -137,6 +140,7 @@ def prepare_state_value(
     value: Any,
     *,
     reducers: Mapping[str, ReducerDefinition] | None = None,
+    state_fields: Mapping[str, StateFieldDecl] | None = None,
 ) -> tuple[list[str], Any]:
     """Resolve reducer output for a state write without mutating state."""
     try:
@@ -150,7 +154,10 @@ def prepare_state_value(
         )
 
     declared_path = ".".join(parts)
-    declared_field = workflow.state_schema.fields.get(declared_path)
+    fields = (
+        state_fields if state_fields is not None else workflow.state_schema.field_map()
+    )
+    declared_field = fields.get(declared_path)
     reducer = (
         declared_field.reducer if declared_field else ReducerRef(name="wf.std.replace")
     )

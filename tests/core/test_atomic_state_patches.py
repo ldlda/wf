@@ -138,8 +138,8 @@ def _workflow(
     return Workflow(
         name="patch",
         input_schema=SchemaRef(type="object", properties={}),
-        state_schema=StateSchema(
-            fields=fields
+        state_schema=StateSchema.from_field_map(
+            fields
             or {
                 "person": StateField(type="object"),
                 "person.name": StateField(type="string"),
@@ -157,8 +157,12 @@ def _workflow_with_node() -> Workflow:
     return Workflow(
         name="canonical_output",
         input_schema=SchemaRef(type="object", properties={}),
-        state_schema=StateSchema(fields={"person.name": StateField(type="string")}),
-        output_schema=SchemaRef(type="object", properties={"person": {"type": "object"}}),
+        state_schema=StateSchema.from_field_map(
+            {"person.name": StateField(type="string")}
+        ),
+        output_schema=SchemaRef(
+            type="object", properties={"person": {"type": "object"}}
+        ),
         node_defs=[
             NodeDef(
                 name="rename",
@@ -177,7 +181,9 @@ def _workflow_with_node() -> Workflow:
                     "id": "rename",
                     "type": "node",
                     "node": "rename",
-                    "output": [{"source": "person.name", "target": "state.person.name"}],
+                    "output": [
+                        {"source": "person.name", "target": "state.person.name"}
+                    ],
                 }
             )
         ],

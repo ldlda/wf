@@ -78,14 +78,15 @@ class NodeUse(BaseModel):
         input_values = cls._deprecated_mapping(
             normalized.pop("input_values", {}), field_name="input_values"
         )
-        in_map = cls._deprecated_mapping(normalized.pop("in_map", {}), field_name="in_map")
+        in_map = cls._deprecated_mapping(
+            normalized.pop("in_map", {}), field_name="in_map"
+        )
         out_map = cls._deprecated_mapping(
             normalized.pop("out_map", {}), field_name="out_map"
         )
 
         input_bindings.extend(
-            {"target": target, "value": value}
-            for target, value in input_values.items()
+            {"target": target, "value": value} for target, value in input_values.items()
         )
         input_bindings.extend(
             {"target": target, "path": path} for path, target in in_map.items()

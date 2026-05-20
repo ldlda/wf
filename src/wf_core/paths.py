@@ -90,7 +90,7 @@ class LocalPath:
         return core_schema.no_info_plain_validator_function(
             validate,
             serialization=core_schema.plain_serializer_function_ser_schema(
-                str, when_used="json"
+                str,
             ),
         )
 
@@ -112,9 +112,7 @@ class GraphSourcePath:
     parts: tuple[str, ...] = ()
 
     _ROOTS: ClassVar[set[str]] = {"input", "state", "context"}
-    _JSON_PATTERN: ClassVar[str] = (
-        r"^(input|state|context)(\.[A-Za-z_][A-Za-z0-9_]*)*$"
-    )
+    _JSON_PATTERN: ClassVar[str] = r"^(input|state|context)(\.[A-Za-z_][A-Za-z0-9_]*)*$"
 
     def __post_init__(self) -> None:
         if self.root not in self._ROOTS:
@@ -123,8 +121,7 @@ class GraphSourcePath:
             self,
             "parts",
             tuple(
-                _validate_segment(part, path_kind="graph source")
-                for part in self.parts
+                _validate_segment(part, path_kind="graph source") for part in self.parts
             ),
         )
 
@@ -167,7 +164,7 @@ class GraphSourcePath:
         return core_schema.no_info_plain_validator_function(
             validate,
             serialization=core_schema.plain_serializer_function_ser_schema(
-                str, when_used="json"
+                str,
             ),
         )
 
@@ -187,7 +184,9 @@ class StatePath:
 
     parts: tuple[str, ...]
 
-    _JSON_PATTERN: ClassVar[str] = r"^state\.[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$"
+    _JSON_PATTERN: ClassVar[str] = (
+        r"^state\.[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$"
+    )
 
     def __post_init__(self) -> None:
         parts = tuple(_validate_segment(part, path_kind="state") for part in self.parts)
@@ -226,7 +225,7 @@ class StatePath:
         return core_schema.no_info_plain_validator_function(
             validate,
             serialization=core_schema.plain_serializer_function_ser_schema(
-                str, when_used="json"
+                str,
             ),
         )
 

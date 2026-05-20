@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from wf_authoring import exists, expr, not_, state, state_path
 from wf_core.conditions import eval_condition
+from wf_core.models.conditions import BinaryCondition, ExistsCondition, PathOperand
+from wf_core.paths import GraphSourcePath
 
 
 def test_condition_dsl_compiles_to_core_condition() -> None:
@@ -9,20 +11,27 @@ def test_condition_dsl_compiles_to_core_condition() -> None:
         state_path("summary")
     )
 
-    assert condition.to_condition().model_dump() == {
-        "op": "and",
-        "args": [
-            {
-                "op": "eq",
-                "left": {"path": "state.should_email"},
-                "right": {"value": True},
-            },
-            {
-                "op": "exists",
-                "path": "state.summary",
-            },
-        ],
-    }
+    dumped = condition.to_condition().model_dump(mode="json")
+
+    assert dumped["op"] == "and"
+    assert dumped["args"][0]["left"]["path"] == "state.should_email"
+    assert dumped["args"][0]["right"]["value"] is True
+    assert dumped["args"][1]["path"] == "state.summary"
+
+
+def test_condition_dsl_compiles_authoring_paths_to_typed_core_paths() -> None:
+    comparison = state("score").gt(expr(state_path("threshold"))).to_condition()
+    existence = exists(state_path("summary")).to_condition()
+
+    assert isinstance(comparison, BinaryCondition)
+    assert isinstance(comparison.left, PathOperand)
+    assert isinstance(comparison.right, PathOperand)
+    assert comparison.left.path == GraphSourcePath.state("score")
+    assert comparison.right.path == GraphSourcePath.state("threshold")
+    assert comparison.model_dump(mode="json")["left"]["path"] == "state.score"
+    assert isinstance(existence, ExistsCondition)
+    assert existence.path == GraphSourcePath.state("summary")
+    assert existence.model_dump(mode="json")["path"] == "state.summary"
 
 
 def test_condition_dsl_supports_not_ge_and_ne() -> None:

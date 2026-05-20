@@ -47,8 +47,7 @@ def validate_node_use(
 
     input_fields = set(node_def.input_schema.properties)
     output_fields = set(node_def.output_schema.properties)
-    state_fields = set(workflow.state_schema.fields)
-    state_root_fields = {field.split(".", maxsplit=1)[0] for field in state_fields}
+    state_root_fields = workflow.state_schema.root_fields()
     input_root_fields = set(workflow.input_schema.properties)
 
     input_targets = []
