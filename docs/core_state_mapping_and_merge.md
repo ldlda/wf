@@ -22,68 +22,86 @@ future nested execution:
 - nested state reducers can become a differentiator over systems that only merge
   whole top-level values
 
-## Canonical Mapping Rule
+## Canonical Binding Rule
 
-The graph-facing side of a map is a graph path. The node-facing side is a
-node-local path.
+The graph-facing side of a binding is a graph path. The node-facing side is a
+node-local path. Core stores node use-site wiring as explicit lists of binding
+objects, not as path-keyed maps.
 
 ```text
-in_map:
-  graph source path -> node-local input path
+NodeUse.input:
+  path binding:  graph source path -> node-local input path
+  value binding: JSON value -> node-local input path
 
-out_map:
+NodeUse.output:
   node-local output path -> graph state destination path
 ```
 
 Examples:
 
-```python
-in_map = {
-    "state.person.name": "user.name",
-    "state.digital.email": "user.email",
-    "state.job.title": "job.title",
-}
-
-out_map = {
-    "job.wage": "state.job.wage",
-    "job.years": "state.experience.years",
-    "user.age": "state.person.age",
+```json
+{
+  "input": [
+    {"target": "user.name", "path": "state.person.name"},
+    {"target": "user.email", "path": "state.digital.email"},
+    {"target": "job.title", "path": "state.job.title"},
+    {"target": "mode", "value": "fast"}
+  ],
+  "output": [
+    {"source": "job.wage", "target": "state.job.wage"},
+    {"source": "job.years", "target": "state.experience.years"},
+    {"source": "user.age", "target": "state.person.age"}
+  ]
 }
 ```
 
 Whole-object mapping remains valid:
 
-```python
-in_map = {"state.person": "user"}
-out_map = {"user": "state.person"}
+```json
+{
+  "input": [{"target": "user", "path": "state.person"}],
+  "output": [{"source": "user", "target": "state.person"}]
+}
 ```
 
-The change from the current implementation is only on the node-local sides:
-today they are top-level fields; in the target model they may be nested paths.
+Whole-payload mapping uses the local root path `"."`:
+
+```json
+{
+  "input": [{"target": ".", "path": "state.rates"}],
+  "output": [{"source": ".", "target": "state.rates"}]
+}
+```
+
+Deprecated compatibility inputs are still accepted at model-parse boundaries:
+`in_map`, `input_values`, and `out_map`. Validated `NodeUse` models store and
+dump only canonical `input` and `output` bindings. `wf_authoring` may still
+accept `in_map` and `out_map` as builder convenience parameters, but it compiles
+them into canonical bindings.
 
 ## Explicitness Rules
 
 ### Node-local writes must not overlap
 
-`in_map` constructs node input payloads. Its destination node-local paths must
+`NodeUse.input` constructs node input payloads. Its target node-local paths must
 be pairwise non-overlapping.
 
 Valid:
 
-```python
-{
-    "state.person.name": "user.name",
-    "state.person.email": "user.email",
-}
+```json
+[
+  {"target": "user.name", "path": "state.person.name"},
+  {"target": "user.email", "path": "state.person.email"}
+]
 ```
 
 Invalid:
 
-```python
-{
-    "state.person": "user",
-    "state.person.name": "user.name",
-}
+```json
+[
+  {"target": "user", "path": "state.person"},
+  {"target": "user.name", "path": "state.person.name"}
+]
 ```
 
 The invalid form would require implicit object patch precedence. Authors must
@@ -91,16 +109,16 @@ choose either whole-object mapping or explicit child mapping.
 
 ### State writes must not overlap in one commit
 
-`out_map` mutates workflow state. Its destination graph paths must be pairwise
-non-overlapping inside one logical commit.
+`NodeUse.output` mutates workflow state. Its target graph paths must be
+pairwise non-overlapping inside one logical commit.
 
 Invalid:
 
-```python
-{
-    "user": "state.person",
-    "user.name": "state.person.name",
-}
+```json
+[
+  {"source": "user", "target": "state.person"},
+  {"source": "user.name", "target": "state.person.name"}
+]
 ```
 
 The target model rejects these writes before mutating state.
@@ -115,8 +133,9 @@ target overlaps.
 
 Mapped paths are assertions by the workflow author.
 
-- a missing graph source path in `in_map` is a runtime error
-- a missing node-local output path in `out_map` is a runtime error
+- a missing graph source path in an input path binding is a runtime error
+- a missing node-local output path in an output binding is a runtime error
+- an explicit `null` value is different from a missing path
 - optional/default behavior must be modeled explicitly later, not inferred from
   a missing path
 
@@ -140,19 +159,43 @@ creates a reusable boundary for:
 
 ## State Declarations and Merge Rules
 
-State merge behavior is attached to declared exact state paths while keeping the
-internal representation flat:
+State merge behavior is attached to declared exact state paths. The canonical
+schema shape is a list of declarations:
 
-```python
-fields = {
-    "person.name": StateField(type="string", reducer="wf.std.replace"),
-    "person.tags": StateField(type="array", reducer="wf.std.append"),
-    "profile": StateField(type="object", reducer="wf.std.merge_object"),
+```json
+{
+  "fields": [
+    {
+      "path": "state.person.name",
+      "schema": {"type": "string"},
+      "reducer": {"name": "wf.std.replace"}
+    },
+    {
+      "path": "state.person.tags",
+      "schema": {"type": "array"},
+      "reducer": {"name": "wf.std.append"}
+    },
+    {
+      "path": "state.profile",
+      "schema": {"type": "object"},
+      "reducer": {"name": "wf.std.merge_object"}
+    }
+  ]
 }
 ```
 
-Presentation layers may rebuild a tree for humans. Core should keep the simpler
-path-keyed representation.
+Deprecated dict-shaped state fields are still accepted at parse boundaries:
+
+```json
+{
+  "fields": {
+    "person.name": {"type": "string", "reducer": "wf.std.replace"}
+  }
+}
+```
+
+Validated `StateSchema` models store and dump the canonical list shape.
+Presentation layers may rebuild a tree for humans.
 
 `wf_authoring` keeps authored schemas nested for humans and LLM clients, but
 projects nested authored state into this flat exact-path index. For example, a
@@ -242,15 +285,15 @@ Examples a future reducer library could support:
 
 ### Phase 1: Nested node-local mappings
 
-- allow nested node-local paths on the destination side of `in_map`
-- allow nested node-local paths on the source side of `out_map`
+- allow nested node-local paths on canonical input binding targets
+- allow nested node-local paths on canonical output binding sources
 - reject overlapping write targets
 - commit node output through a validated state patch
 - validate top-level node-local roots statically; validate deeper shape when the
   existing node schema makes that practical
 
-This phase immediately helps wrappers and structured tools while preserving
-current state merge behavior.
+This phase is implemented in core. It helps wrappers and structured tools while
+preserving explicit state merge behavior.
 
 ### Phase 2: Nested declared state paths
 

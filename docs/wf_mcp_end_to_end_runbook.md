@@ -244,11 +244,14 @@ arguments:
       "required": ["text"]
     },
     "state_schema": {
-      "fields": {
-        "echoed": {
-          "type": "string"
+      "fields": [
+        {
+          "path": "state.echoed",
+          "schema": {
+            "type": "string"
+          }
         }
-      }
+      ]
     },
     "output_schema": {
       "type": "object",

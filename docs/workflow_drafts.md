@@ -48,11 +48,14 @@ A minimal draft looks like this:
     "required": ["text"]
   },
   "state_schema": {
-    "fields": {
-      "echoed": {
-        "type": "string"
+    "fields": [
+      {
+        "path": "state.echoed",
+        "schema": {
+          "type": "string"
+        }
       }
-    }
+    ]
   },
   "output_schema": {
     "type": "object",
@@ -108,6 +111,12 @@ Both maps are source-to-destination.
 | --- | --- | --- | --- |
 | `in` | graph source path | node-local input path | `"input.text": "message"` |
 | `out` | node-local output path | graph state destination path | `"echoed": "state.echoed"` |
+
+Draft `in` and `out` maps are an authoring-layer shape. When a draft is
+compiled, the core workflow uses canonical `NodeUse.input` and
+`NodeUse.output` binding lists. The old core `in_map`, `input_values`, and
+`out_map` fields are parse-only compatibility inputs, not the preferred saved
+shape.
 
 Graph source paths in `in` normally start with `input.`, `state.`, or
 `context.`. Node-local paths do not use those prefixes; they are paths inside

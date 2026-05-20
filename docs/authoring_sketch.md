@@ -58,6 +58,20 @@ Typical entry points:
 - `connect(...)`
 - `compile()`
 
+`in_map` and `out_map` remain authoring convenience parameters. The compiled
+core `NodeUse` shape is canonical `input` and `output` binding lists:
+
+```json
+{
+  "input": [{"target": "text", "path": "input.text"}],
+  "output": [{"source": "echoed", "target": "state.echoed"}]
+}
+```
+
+Authoring should not teach client LLMs that `in_map`, `input_values`, or
+`out_map` are the preferred core model. Those names are compatibility inputs
+and Python-builder sugar.
+
 ### `NodeCatalog`
 
 LLM-facing registry of available nodes.
@@ -90,7 +104,7 @@ that references those known nodes. It should not usually generate new raw
 2. client LLM selects nodes from the catalog
 3. client LLM emits graph structure:
    - node uses
-   - mappings
+   - canonical input/output bindings
    - conditions
    - foreach nodes
    - interrupt nodes
