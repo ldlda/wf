@@ -6,16 +6,18 @@ from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 
 def test_node_use_accepts_canonical_input_and_output_bindings():
-    node = NodeUse.model_validate({
-        "id": "echo",
-        "type": "node",
-        "node": "echo",
-        "input": [
-            {"target": "message", "path": "input.message"},
-            {"target": "mode", "value": None},
-        ],
-        "output": [{"source": "echoed", "target": "state.echoed"}],
-    })
+    node = NodeUse.model_validate(
+        {
+            "id": "echo",
+            "type": "node",
+            "node": "echo",
+            "input": [
+                {"target": "message", "path": "input.message"},
+                {"target": "mode", "value": None},
+            ],
+            "output": [{"source": "echoed", "target": "state.echoed"}],
+        }
+    )
 
     path_binding = node.input[0]
     assert isinstance(path_binding, InputPathBinding)
@@ -32,78 +34,112 @@ def test_node_use_accepts_canonical_input_and_output_bindings():
 
 
 def test_node_use_converts_old_maps_to_canonical_bindings():
-    node = NodeUse.model_validate({
-        "id": "echo",
-        "type": "node",
-        "node": "echo",
-        "in_map": {"input.message": "message"},
-        "input_values": {"mode": "fast"},
-        "out_map": {"echoed": "state.echoed"},
-    })
+    node = NodeUse.model_validate(
+        {
+            "id": "echo",
+            "type": "node",
+            "node": "echo",
+            "in_map": {"input.message": "message"},
+            "input_values": {"mode": "fast"},
+            "out_map": {"echoed": "state.echoed"},
+        }
+    )
 
     dumped = node.model_dump(mode="json")
     assert "in_map" not in dumped
     assert "input_values" not in dumped
     assert "out_map" not in dumped
     assert dumped["input"][0]["value"] == "fast"
-    assert dumped["input"][0]["target"] == "mode"
-    assert dumped["input"][1]["path"] == "input.message"
-    assert dumped["input"][1]["target"] == "message"
-    assert dumped["output"][0]["source"] == "echoed"
-    assert dumped["output"][0]["target"] == "state.echoed"
+    assert dumped["input"][0]["target"] == {"root": "local", "parts": ["mode"]}
+    assert dumped["input"][1]["path"] == {"root": "input", "parts": ["message"]}
+    assert dumped["input"][1]["target"] == {"root": "local", "parts": ["message"]}
+    assert dumped["output"][0]["source"] == {"root": "local", "parts": ["echoed"]}
+    assert dumped["output"][0]["target"] == {"root": "state", "parts": ["echoed"]}
 
 
-def test_node_use_serializes_canonical_binding_paths_as_strings_in_all_dump_modes():
-    node = NodeUse.model_validate({
-        "id": "echo",
-        "type": "node",
-        "node": "echo",
-        "input": [{"target": "message", "path": "input.message"}],
-        "output": [{"source": "echoed", "target": "state.echoed"}],
-    })
-
-    python_dumped = node.model_dump()
-    json_dumped = node.model_dump(mode="json")
-
-    assert python_dumped["input"][0]["target"] == "message"
-    assert python_dumped["input"][0]["path"] == "input.message"
-    assert python_dumped["output"][0]["source"] == "echoed"
-    assert python_dumped["output"][0]["target"] == "state.echoed"
-    assert json_dumped["input"][0]["target"] == "message"
-    assert json_dumped["input"][0]["path"] == "input.message"
-    assert json_dumped["output"][0]["source"] == "echoed"
-    assert json_dumped["output"][0]["target"] == "state.echoed"
-
-
-def test_node_use_rejects_mixed_old_and_new_binding_styles():
-    with pytest.raises(ValidationError):
-        NodeUse.model_validate({
+def test_node_use_serializes_canonical_binding_paths_as_structural_json():
+    node = NodeUse.model_validate(
+        {
             "id": "echo",
             "type": "node",
             "node": "echo",
             "input": [{"target": "message", "path": "input.message"}],
-            "in_map": {"input.other": "other"},
-        })
+            "output": [{"source": "echoed", "target": "state.echoed"}],
+        }
+    )
+
+    python_dumped = node.model_dump()
+    json_dumped = node.model_dump(mode="json")
+
+    assert python_dumped["input"][0]["target"] == {
+        "root": "local",
+        "parts": ["message"],
+    }
+    assert python_dumped["input"][0]["path"] == {
+        "root": "input",
+        "parts": ["message"],
+    }
+    assert python_dumped["output"][0]["source"] == {
+        "root": "local",
+        "parts": ["echoed"],
+    }
+    assert python_dumped["output"][0]["target"] == {
+        "root": "state",
+        "parts": ["echoed"],
+    }
+    assert json_dumped["input"][0]["target"] == {
+        "root": "local",
+        "parts": ["message"],
+    }
+    assert json_dumped["input"][0]["path"] == {
+        "root": "input",
+        "parts": ["message"],
+    }
+    assert json_dumped["output"][0]["source"] == {
+        "root": "local",
+        "parts": ["echoed"],
+    }
+    assert json_dumped["output"][0]["target"] == {
+        "root": "state",
+        "parts": ["echoed"],
+    }
+
+
+def test_node_use_rejects_mixed_old_and_new_binding_styles():
+    with pytest.raises(ValidationError):
+        NodeUse.model_validate(
+            {
+                "id": "echo",
+                "type": "node",
+                "node": "echo",
+                "input": [{"target": "message", "path": "input.message"}],
+                "in_map": {"input.other": "other"},
+            }
+        )
 
 
 def test_input_binding_rejects_path_and_value_together():
     with pytest.raises(ValidationError):
-        NodeUse.model_validate({
-            "id": "bad",
-            "type": "node",
-            "node": "bad",
-            "input": [{"target": "message", "path": "input.message", "value": "x"}],
-        })
+        NodeUse.model_validate(
+            {
+                "id": "bad",
+                "type": "node",
+                "node": "bad",
+                "input": [{"target": "message", "path": "input.message", "value": "x"}],
+            }
+        )
 
 
 def test_input_binding_rejects_neither_path_nor_value():
     with pytest.raises(ValidationError):
-        NodeUse.model_validate({
-            "id": "bad",
-            "type": "node",
-            "node": "bad",
-            "input": [{"target": "message"}],
-        })
+        NodeUse.model_validate(
+            {
+                "id": "bad",
+                "type": "node",
+                "node": "bad",
+                "input": [{"target": "message"}],
+            }
+        )
 
 
 @pytest.mark.parametrize(
@@ -115,12 +151,14 @@ def test_input_binding_rejects_neither_path_nor_value():
 )
 def test_bindings_reject_extra_fields(field: str, binding: dict[str, object]):
     with pytest.raises(ValidationError):
-        NodeUse.model_validate({
-            "id": "bad",
-            "type": "node",
-            "node": "bad",
-            field: [binding],
-        })
+        NodeUse.model_validate(
+            {
+                "id": "bad",
+                "type": "node",
+                "node": "bad",
+                field: [binding],
+            }
+        )
 
 
 @pytest.mark.parametrize(
@@ -133,46 +171,52 @@ def test_bindings_reject_extra_fields(field: str, binding: dict[str, object]):
 )
 def test_deprecated_maps_reject_non_mapping_values(field: str, value: object):
     with pytest.raises(ValidationError):
-        NodeUse.model_validate({
-            "id": "bad",
-            "type": "node",
-            "node": "bad",
-            field: value,
-        })
+        NodeUse.model_validate(
+            {
+                "id": "bad",
+                "type": "node",
+                "node": "bad",
+                field: value,
+            }
+        )
 
 
 def test_deprecated_conversion_preserves_input_value_then_in_map_order():
-    node = NodeUse.model_validate({
-        "id": "ordered",
-        "type": "node",
-        "node": "ordered",
-        "input_values": {"first": 1, "second": 2},
-        "in_map": {"input.third": "third", "state.fourth": "fourth"},
-    })
+    node = NodeUse.model_validate(
+        {
+            "id": "ordered",
+            "type": "node",
+            "node": "ordered",
+            "input_values": {"first": 1, "second": 2},
+            "in_map": {"input.third": "third", "state.fourth": "fourth"},
+        }
+    )
 
     dumped_input = node.model_dump(mode="json")["input"]
-    assert dumped_input[0]["target"] == "first"
+    assert dumped_input[0]["target"] == {"root": "local", "parts": ["first"]}
     assert dumped_input[0]["value"] == 1
-    assert dumped_input[1]["target"] == "second"
+    assert dumped_input[1]["target"] == {"root": "local", "parts": ["second"]}
     assert dumped_input[1]["value"] == 2
-    assert dumped_input[2]["target"] == "third"
-    assert dumped_input[2]["path"] == "input.third"
-    assert dumped_input[3]["target"] == "fourth"
-    assert dumped_input[3]["path"] == "state.fourth"
+    assert dumped_input[2]["target"] == {"root": "local", "parts": ["third"]}
+    assert dumped_input[2]["path"] == {"root": "input", "parts": ["third"]}
+    assert dumped_input[3]["target"] == {"root": "local", "parts": ["fourth"]}
+    assert dumped_input[3]["path"] == {"root": "state", "parts": ["fourth"]}
 
 
 def test_deprecated_input_value_preserves_explicit_null():
-    node = NodeUse.model_validate({
-        "id": "null",
-        "type": "node",
-        "node": "null",
-        "input_values": {"maybe": None},
-    })
+    node = NodeUse.model_validate(
+        {
+            "id": "null",
+            "type": "node",
+            "node": "null",
+            "input_values": {"maybe": None},
+        }
+    )
 
     value_binding = node.input[0]
     assert isinstance(value_binding, InputValueBinding)
     assert value_binding.value is None
 
     dumped_input = node.model_dump(mode="json")["input"]
-    assert dumped_input[0]["target"] == "maybe"
+    assert dumped_input[0]["target"] == {"root": "local", "parts": ["maybe"]}
     assert dumped_input[0]["value"] is None

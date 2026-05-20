@@ -5,7 +5,7 @@ import shutil
 from typing import Any, cast
 
 from wf_artifacts import FileDraftWorkspaceStore, WorkflowDeployment
-from wf_authoring import NodeSpec, build_async_registry
+from wf_authoring import NodeSpec, build_async_registry, node
 from wf_core import END, NodeUse, RunStatus, RuntimeContext
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
@@ -20,12 +20,19 @@ from wf_platform import (
 )
 
 from .test_support import (
+    EchoInput,
+    EchoOutput,
     FailingDiscoveryAdapter,
     FakeAdapter,
     echo_tool,
     finalize_tool,
     local_temp_root,
 )
+
+
+@node(name="foo.bar")
+def pro_dotted_echo_tool(payload: EchoInput) -> EchoOutput:
+    return EchoOutput(echoed=f"pro:{payload.text}")
 
 
 def _single_echo_plan(plan_name: str, node_name: str) -> RawWorkflowPlan:
@@ -474,6 +481,50 @@ def test_service_runs_logical_source_plan_with_dotted_local_name() -> None:
 
     assert run.status == RunStatus.COMPLETED
     assert run.output["echoed"] == "hello"
+
+
+def test_service_binds_longest_logical_source_prefix_first() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "longest_logical_source_prefix")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_connection(
+        ConnectionConfig(
+            id="demo.pro.personal",
+            server="demo",
+            account="pro.personal",
+        )
+    )
+    service.register_specs("demo.personal", echo_tool)
+    service.register_specs("demo.pro.personal", pro_dotted_echo_tool)
+    plan = _single_echo_plan(
+        "longest_logical_source_prefix_plan",
+        "demo.pro.foo.bar",
+    )
+
+    run = asyncio.run(
+        service.run_workflow_from_plan(
+            plan,
+            {"text": "hello"},
+            deployment=WorkflowDeployment(
+                id="longest_logical_source_prefix.personal",
+                artifact_id="longest_logical_source_prefix",
+                artifact_version=1,
+                bindings=[
+                    {"logical_source": "demo", "concrete_source": "demo.personal"},
+                    {
+                        "logical_source": "demo.pro",
+                        "concrete_source": "demo.pro.personal",
+                    },
+                ],
+            ),
+        )
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.output["echoed"] == "pro:hello"
 
 
 def test_service_does_not_resolve_specs_hidden_from_planner() -> None:

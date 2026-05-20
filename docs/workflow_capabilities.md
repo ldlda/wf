@@ -6,6 +6,11 @@ things a workflow should usually consume.
 For the short operator/client workflow using these concepts, see
 [`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md).
 
+For the identifier rule behind source/capability names, see
+[`structural_refs.md`](structural_refs.md). In short: dotted qualified names
+are display strings and compatibility input only; saved refs should be
+structural.
+
 The short version:
 
 ```text

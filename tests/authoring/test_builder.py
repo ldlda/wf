@@ -105,10 +105,10 @@ def test_builder_emits_canonical_node_bindings() -> None:
 
     dumped_node = builder.compile().model_dump(mode="json")["nodes"][0]
 
-    assert dumped_node["input"][0]["path"] == "input.text"
-    assert dumped_node["input"][0]["target"] == "text"
-    assert dumped_node["output"][0]["source"] == "text"
-    assert dumped_node["output"][0]["target"] == "state.text"
+    assert dumped_node["input"][0]["path"] == {"root": "input", "parts": ["text"]}
+    assert dumped_node["input"][0]["target"] == {"root": "local", "parts": ["text"]}
+    assert dumped_node["output"][0]["source"] == {"root": "local", "parts": ["text"]}
+    assert dumped_node["output"][0]["target"] == {"root": "state", "parts": ["text"]}
     assert "in_map" not in dumped_node
     assert "input_values" not in dumped_node
     assert "out_map" not in dumped_node

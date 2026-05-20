@@ -14,9 +14,12 @@ def test_condition_dsl_compiles_to_core_condition() -> None:
     dumped = condition.to_condition().model_dump(mode="json")
 
     assert dumped["op"] == "and"
-    assert dumped["args"][0]["left"]["path"] == "state.should_email"
+    assert dumped["args"][0]["left"]["path"] == {
+        "root": "state",
+        "parts": ["should_email"],
+    }
     assert dumped["args"][0]["right"]["value"] is True
-    assert dumped["args"][1]["path"] == "state.summary"
+    assert dumped["args"][1]["path"] == {"root": "state", "parts": ["summary"]}
 
 
 def test_condition_dsl_compiles_authoring_paths_to_typed_core_paths() -> None:
@@ -28,10 +31,16 @@ def test_condition_dsl_compiles_authoring_paths_to_typed_core_paths() -> None:
     assert isinstance(comparison.right, PathOperand)
     assert comparison.left.path == GraphSourcePath.state("score")
     assert comparison.right.path == GraphSourcePath.state("threshold")
-    assert comparison.model_dump(mode="json")["left"]["path"] == "state.score"
+    assert comparison.model_dump(mode="json")["left"]["path"] == {
+        "root": "state",
+        "parts": ["score"],
+    }
     assert isinstance(existence, ExistsCondition)
     assert existence.path == GraphSourcePath.state("summary")
-    assert existence.model_dump(mode="json")["path"] == "state.summary"
+    assert existence.model_dump(mode="json")["path"] == {
+        "root": "state",
+        "parts": ["summary"],
+    }
 
 
 def test_condition_dsl_supports_not_ge_and_ne() -> None:

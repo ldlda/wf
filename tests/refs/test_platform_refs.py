@@ -33,16 +33,47 @@ def test_platform_refs_validate_and_serialize_through_pydantic() -> None:
         source: SourceRef
         capability: CapabilityRef
 
-    payload = Payload.model_validate({
-        "source": "demo.personal",
-        "capability": "demo.personal.echo_tool",
-    })
+    payload = Payload.model_validate(
+        {
+            "source": "demo.personal",
+            "capability": "demo.personal.echo_tool",
+        }
+    )
 
     assert payload.source == SourceRef.parse("demo.personal")
     assert payload.capability == CapabilityRef.parse("demo.personal.echo_tool")
     assert payload.model_dump(mode="json") == {
         "source": "demo.personal",
-        "capability": "demo.personal.echo_tool",
+        "capability": {
+            "source": "demo.personal",
+            "capability_key": "echo_tool",
+        },
+    }
+
+
+def test_capability_ref_accepts_structural_input() -> None:
+    class Payload(BaseModel):
+        capability: CapabilityRef
+
+    payload = Payload.model_validate(
+        {"capability": {"source": "demo", "capability_key": "foo.bar"}}
+    )
+
+    assert payload.capability.source == SourceRef.parse("demo")
+    assert payload.capability.name == "foo.bar"
+
+
+def test_capability_ref_serializes_structurally() -> None:
+    class Payload(BaseModel):
+        capability: CapabilityRef
+
+    payload = Payload(
+        capability=CapabilityRef(source=SourceRef.parse("demo"), name="foo.bar")
+    )
+
+    assert payload.model_dump(mode="json")["capability"] == {
+        "source": "demo",
+        "capability_key": "foo.bar",
     }
 
 

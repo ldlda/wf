@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pydantic import BaseModel
+
 from wf_artifacts import WorkflowCapabilityRef
 
 
@@ -15,6 +17,40 @@ def test_workflow_capability_ref_preserves_dotted_artifact_ids() -> None:
 
     assert ref.artifact_id == "crm.lookup"
     assert ref.version == 3
+
+
+def test_workflow_capability_ref_validates_legacy_string_input() -> None:
+    class Payload(BaseModel):
+        ref: WorkflowCapabilityRef
+
+    payload = Payload.model_validate({"ref": "workflow.echo_wrapper.v1"})
+
+    assert payload.ref.artifact_id == "echo_wrapper"
+    assert payload.ref.version == 1
+
+
+def test_workflow_capability_ref_validates_structural_input() -> None:
+    class Payload(BaseModel):
+        ref: WorkflowCapabilityRef
+
+    payload = Payload.model_validate(
+        {"ref": {"artifact_id": "echo_wrapper", "version": 1}}
+    )
+
+    assert payload.ref.artifact_id == "echo_wrapper"
+    assert payload.ref.version == 1
+
+
+def test_workflow_capability_ref_serializes_structurally() -> None:
+    class Payload(BaseModel):
+        ref: WorkflowCapabilityRef
+
+    payload = Payload(ref=WorkflowCapabilityRef("echo_wrapper", 1))
+
+    assert payload.model_dump(mode="json")["ref"] == {
+        "artifact_id": "echo_wrapper",
+        "version": 1,
+    }
 
 
 def test_workflow_capability_ref_rejects_other_namespaces() -> None:

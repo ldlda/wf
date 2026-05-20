@@ -41,7 +41,10 @@ def test_workflow_artifact_serializes_required_capability_contract() -> None:
     assert dumped["version"] == 1
     assert dumped["outcomes"] == ["done", "failed"]
     required = dumped["required_capabilities"][0]
-    assert required["ref"] == "context7.query-docs"
+    assert required["ref"] == {
+        "source": "context7",
+        "capability_key": "query-docs",
+    }
     assert required["input_schema_hash"] == "sha256:input"
     assert artifact.required_capability_map()["context7.query-docs"] == capability
 
@@ -66,33 +69,78 @@ def test_workflow_artifact_can_be_marked_as_wrapper_intent() -> None:
 def test_workflow_artifact_accepts_legacy_required_capability_map_and_dumps_list() -> (
     None
 ):
-    artifact = WorkflowArtifact.model_validate({
-        "id": "legacy_capabilities",
-        "version": 1,
-        "title": "Legacy Capabilities",
-        "input_schema": {"type": "object", "properties": {}},
-        "output_schema": {"type": "object", "properties": {}},
-        "outcomes": ["done"],
-        "plan": {"name": "legacy_capabilities", "nodes": [], "edges": []},
-        "required_capabilities": {
-            "demo.echo": {
-                "kind": "tool",
-                "input_schema_hash": "sha256:input",
-                "output_schema_hash": "sha256:output",
-                "observed_concrete_source": "demo.personal",
-            }
-        },
-    })
+    artifact = WorkflowArtifact.model_validate(
+        {
+            "id": "legacy_capabilities",
+            "version": 1,
+            "title": "Legacy Capabilities",
+            "input_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "outcomes": ["done"],
+            "plan": {"name": "legacy_capabilities", "nodes": [], "edges": []},
+            "required_capabilities": {
+                "demo.echo": {
+                    "kind": "tool",
+                    "input_schema_hash": "sha256:input",
+                    "output_schema_hash": "sha256:output",
+                    "observed_concrete_source": "demo.personal",
+                }
+            },
+        }
+    )
 
     dumped = artifact.model_dump(mode="json")
     required = dumped["required_capabilities"][0]
 
     assert isinstance(dumped["required_capabilities"], list)
-    assert required["ref"] == "demo.echo"
+    assert required["ref"] == {"source": "demo", "capability_key": "echo"}
     assert required["observed_concrete_source"] == "demo.personal"
     assert "logical_source" not in required
     assert "capability_name" not in required
     assert artifact.required_capability_map()["demo.echo"].logical_source == "demo"
+
+
+def test_required_capability_accepts_legacy_logical_fields_but_dumps_ref_object() -> (
+    None
+):
+    capability = RequiredCapability.model_validate(
+        {
+            "logical_source": "demo",
+            "capability_name": "foo.bar",
+            "kind": "node_spec",
+        }
+    )
+
+    assert capability.logical_source == "demo"
+    assert capability.capability_name == "foo.bar"
+    assert capability.model_dump(mode="json")["ref"] == {
+        "source": "demo",
+        "capability_key": "foo.bar",
+    }
+
+
+def test_workflow_artifact_legacy_required_capability_map_is_best_effort() -> None:
+    artifact = WorkflowArtifact.model_validate(
+        {
+            "id": "legacy_dotted_capability",
+            "version": 1,
+            "title": "Legacy Dotted Capability",
+            "input_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "outcomes": ["done"],
+            "plan": {"name": "legacy_dotted_capability", "nodes": [], "edges": []},
+            "required_capabilities": {
+                "demo.foo.bar": {"kind": "node_spec"},
+            },
+        }
+    )
+
+    required = artifact.model_dump(mode="json")["required_capabilities"][0]
+
+    assert required["ref"] == {
+        "source": "demo.foo",
+        "capability_key": "bar",
+    }
 
 
 def test_workflow_deployment_binds_logical_sources_to_concrete_sources() -> None:
@@ -118,12 +166,14 @@ def test_workflow_deployment_binds_logical_sources_to_concrete_sources() -> None
 
 
 def test_workflow_deployment_accepts_legacy_binding_map_and_dumps_list() -> None:
-    deployment = WorkflowDeployment.model_validate({
-        "id": "legacy_bindings.personal",
-        "artifact_id": "legacy_bindings",
-        "artifact_version": 1,
-        "bindings": {"demo": "demo.personal"},
-    })
+    deployment = WorkflowDeployment.model_validate(
+        {
+            "id": "legacy_bindings.personal",
+            "artifact_id": "legacy_bindings",
+            "artifact_version": 1,
+            "bindings": {"demo": "demo.personal"},
+        }
+    )
 
     dumped = deployment.model_dump(mode="json")
     binding = dumped["bindings"][0]

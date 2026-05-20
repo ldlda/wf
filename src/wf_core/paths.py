@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-import re
 from collections.abc import Mapping, MutableMapping
+from dataclasses import dataclass
 from typing import Any, ClassVar, Literal
 
 from pydantic_core import core_schema
@@ -12,12 +11,11 @@ class PathResolutionError(ValueError):
     pass
 
 
-SEGMENT_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 GraphRoot = Literal["input", "state", "context"]
 
 
 def _validate_segment(segment: str, *, path_kind: str) -> str:
-    if not SEGMENT_RE.fullmatch(segment):
+    if not segment or not segment.strip():
         raise PathResolutionError(f"invalid {path_kind} segment {segment!r}")
     return segment
 
@@ -36,8 +34,52 @@ def _parse_fragments(*fragments: str, path_kind: str) -> tuple[str, ...]:
     return tuple(parts)
 
 
-def _json_schema(pattern: str, description: str) -> dict[str, Any]:
-    return {"type": "string", "pattern": pattern, "description": description}
+def _path_json_schema(root: str | list[str], description: str) -> dict[str, Any]:
+    """Return the canonical structural schema for saved path fields."""
+    root_schema: dict[str, Any]
+    if isinstance(root, str):
+        root_schema = {"const": root}
+    else:
+        root_schema = {"enum": root}
+    return {
+        "type": "object",
+        "description": description,
+        "properties": {
+            "root": root_schema,
+            "parts": {
+                "type": "array",
+                "items": {"type": "string", "minLength": 1},
+            },
+        },
+        "required": ["root", "parts"],
+        "additionalProperties": False,
+    }
+
+
+def _structural_parts(
+    value: Mapping[object, object], *, path_kind: str
+) -> tuple[str, ...]:
+    """Validate literal path segments from canonical structural JSON.
+
+    Old string paths keep dotted parsing for compatibility. Structural `parts`
+    are different: each item is already one field name and may contain dots or
+    spaces, so this helper validates only that segments are non-empty strings.
+    """
+    raw_parts = value.get("parts", [])
+    if not isinstance(raw_parts, list):
+        raise PathResolutionError(f"{path_kind} path parts must be a list")
+    return tuple(
+        _validate_segment(part, path_kind=path_kind)
+        for part in raw_parts
+        if isinstance(part, str)
+    )
+
+
+def _reject_non_string_parts(value: Mapping[object, object], *, path_kind: str) -> None:
+    raw_parts = value.get("parts", [])
+    if isinstance(raw_parts, list) and all(isinstance(part, str) for part in raw_parts):
+        return
+    raise PathResolutionError(f"{path_kind} path parts must be strings")
 
 
 @dataclass(frozen=True)
@@ -85,22 +127,32 @@ class LocalPath:
                 return cls(value.parts)
             if isinstance(value, str):
                 return cls.parse(value)
-            raise ValueError("expected local path string")
+            if isinstance(value, Mapping):
+                if value.get("root") != "local":
+                    raise ValueError("expected local path root")
+                _reject_non_string_parts(value, path_kind="local")
+                return cls(_structural_parts(value, path_kind="local"))
+            raise ValueError("expected local path string or structural object")
 
         return core_schema.no_info_plain_validator_function(
             validate,
             serialization=core_schema.plain_serializer_function_ser_schema(
-                str,
+                cls._serialize,
             ),
         )
+
+    @staticmethod
+    def _serialize(value: LocalPath) -> dict[str, str | list[str]]:
+        """Serialize canonical path JSON without relying on dotted display text."""
+        return {"root": "local", "parts": list(value.parts)}
 
     @classmethod
     def __get_pydantic_json_schema__(
         cls, _core_schema: core_schema.CoreSchema, _handler: object
     ) -> dict[str, Any]:
-        return _json_schema(
-            cls._JSON_PATTERN,
-            "Node-local dotted path or root marker `.`.",
+        return _path_json_schema(
+            "local",
+            "Node-local path. Use an empty parts list for the whole payload.",
         )
 
 
@@ -159,21 +211,32 @@ class GraphSourcePath:
                 return cls(value.root, value.parts)
             if isinstance(value, str):
                 return cls.parse(value)
-            raise ValueError("expected graph source path string")
+            if isinstance(value, Mapping):
+                root = value.get("root")
+                if root not in cls._ROOTS:
+                    raise ValueError("expected graph source path root")
+                _reject_non_string_parts(value, path_kind="graph source")
+                return cls(root, _structural_parts(value, path_kind="graph source"))  # type: ignore[arg-type]
+            raise ValueError("expected graph source path string or structural object")
 
         return core_schema.no_info_plain_validator_function(
             validate,
             serialization=core_schema.plain_serializer_function_ser_schema(
-                str,
+                cls._serialize,
             ),
         )
+
+    @staticmethod
+    def _serialize(value: GraphSourcePath) -> dict[str, str | list[str]]:
+        """Serialize canonical path JSON without relying on dotted display text."""
+        return {"root": value.root, "parts": list(value.parts)}
 
     @classmethod
     def __get_pydantic_json_schema__(
         cls, _core_schema: core_schema.CoreSchema, _handler: object
     ) -> dict[str, Any]:
-        return _json_schema(
-            cls._JSON_PATTERN,
+        return _path_json_schema(
+            sorted(cls._ROOTS),
             "Readable graph path rooted at input, state, or context.",
         )
 
@@ -220,20 +283,30 @@ class StatePath:
                 return cls(value.parts)
             if isinstance(value, str):
                 return cls.parse(value)
-            raise ValueError("expected state path string")
+            if isinstance(value, Mapping):
+                if value.get("root") != "state":
+                    raise ValueError("expected state path root")
+                _reject_non_string_parts(value, path_kind="state")
+                return cls(_structural_parts(value, path_kind="state"))
+            raise ValueError("expected state path string or structural object")
 
         return core_schema.no_info_plain_validator_function(
             validate,
             serialization=core_schema.plain_serializer_function_ser_schema(
-                str,
+                cls._serialize,
             ),
         )
+
+    @staticmethod
+    def _serialize(value: StatePath) -> dict[str, str | list[str]]:
+        """Serialize canonical path JSON without relying on dotted display text."""
+        return {"root": "state", "parts": list(value.parts)}
 
     @classmethod
     def __get_pydantic_json_schema__(
         cls, _core_schema: core_schema.CoreSchema, _handler: object
     ) -> dict[str, Any]:
-        return _json_schema(cls._JSON_PATTERN, "Writable state path such as state.foo.")
+        return _path_json_schema("state", "Writable workflow state path.")
 
 
 def split_graph_path(path: str | GraphSourcePath | StatePath) -> tuple[str, list[str]]:

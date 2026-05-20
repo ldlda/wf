@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
+
+from pydantic_core import core_schema
 
 
 @dataclass(frozen=True, slots=True)
@@ -31,3 +34,39 @@ class WorkflowCapabilityRef:
 
     def __str__(self) -> str:
         return f"workflow.{self.artifact_id}.v{self.version}"
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: object,
+        _handler: object,
+    ) -> core_schema.CoreSchema:
+        """Validate legacy display strings but save workflow refs structurally."""
+        return core_schema.no_info_plain_validator_function(
+            cls._validate,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                cls._serialize,
+                when_used="json",
+            ),
+        )
+
+    @classmethod
+    def _validate(cls, value: Any) -> WorkflowCapabilityRef:
+        if isinstance(value, WorkflowCapabilityRef):
+            return value
+        if isinstance(value, str):
+            return cls.parse(value)
+        if isinstance(value, dict):
+            artifact_id = value.get("artifact_id")
+            version = value.get("version")
+            if isinstance(artifact_id, str) and isinstance(version, int):
+                return cls(artifact_id=artifact_id, version=version)
+        raise TypeError(
+            "workflow capability ref must be a workflow.<artifact>.v<version> "
+            "string or {'artifact_id': str, 'version': int}"
+        )
+
+    @staticmethod
+    def _serialize(value: WorkflowCapabilityRef) -> dict[str, int | str]:
+        """Serialize canonical saved workflow refs without a display-name parser."""
+        return {"artifact_id": value.artifact_id, "version": value.version}

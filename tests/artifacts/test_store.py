@@ -73,21 +73,23 @@ def test_file_store_loads_legacy_artifact_and_rewrites_canonical_shape(
     artifact_dir.mkdir(parents=True)
     artifact_path = artifact_dir / "1.json"
     artifact_path.write_text(
-        json.dumps({
-            "id": "legacy_capabilities",
-            "version": 1,
-            "title": "Legacy Capabilities",
-            "input_schema": {"type": "object", "properties": {}},
-            "output_schema": {"type": "object", "properties": {}},
-            "outcomes": ["done"],
-            "plan": {"name": "legacy_capabilities", "nodes": [], "edges": []},
-            "required_capabilities": {
-                "demo.echo": {
-                    "kind": "tool",
-                    "input_schema_hash": "sha256:input",
-                }
-            },
-        }),
+        json.dumps(
+            {
+                "id": "legacy_capabilities",
+                "version": 1,
+                "title": "Legacy Capabilities",
+                "input_schema": {"type": "object", "properties": {}},
+                "output_schema": {"type": "object", "properties": {}},
+                "outcomes": ["done"],
+                "plan": {"name": "legacy_capabilities", "nodes": [], "edges": []},
+                "required_capabilities": {
+                    "demo.echo": {
+                        "kind": "tool",
+                        "input_schema_hash": "sha256:input",
+                    }
+                },
+            }
+        ),
         encoding="utf-8",
     )
 
@@ -96,7 +98,7 @@ def test_file_store_loads_legacy_artifact_and_rewrites_canonical_shape(
     rewritten = json.loads(artifact_path.read_text(encoding="utf-8"))
 
     required = rewritten["required_capabilities"][0]
-    assert required["ref"] == "demo.echo"
+    assert required["ref"] == {"source": "demo", "capability_key": "echo"}
     assert required["kind"] == "tool"
     assert "logical_source" not in required
     assert "capability_name" not in required
@@ -108,12 +110,14 @@ def test_file_store_loads_legacy_deployment_and_rewrites_canonical_shape(
     store = FileWorkflowArtifactStore(tmp_path)
     deployment_path = store.deployments_dir / "legacy_bindings.personal.json"
     deployment_path.write_text(
-        json.dumps({
-            "id": "legacy_bindings.personal",
-            "artifact_id": "legacy_bindings",
-            "artifact_version": 1,
-            "bindings": {"demo": "demo.personal"},
-        }),
+        json.dumps(
+            {
+                "id": "legacy_bindings.personal",
+                "artifact_id": "legacy_bindings",
+                "artifact_version": 1,
+                "bindings": {"demo": "demo.personal"},
+            }
+        ),
         encoding="utf-8",
     )
 

@@ -88,7 +88,7 @@ class CapabilityRef:
         return core_schema.no_info_plain_validator_function(
             cls._validate,
             serialization=core_schema.plain_serializer_function_ser_schema(
-                str,
+                cls._serialize,
                 when_used="json",
             ),
         )
@@ -99,4 +99,16 @@ class CapabilityRef:
             return value
         if isinstance(value, str):
             return cls.parse(value)
-        raise TypeError("capability ref must be a string")
+        if isinstance(value, dict):
+            source = value.get("source")
+            name = value.get("capability_key")
+            if isinstance(source, str) and isinstance(name, str):
+                return cls(source=SourceRef.parse(source), name=name)
+        raise TypeError(
+            "capability ref must be a string or {'source': str, 'capability_key': str}"
+        )
+
+    @staticmethod
+    def _serialize(value: CapabilityRef) -> dict[str, str]:
+        """Serialize canonical saved refs structurally; `str(ref)` is display-only."""
+        return {"source": str(value.source), "capability_key": value.name}

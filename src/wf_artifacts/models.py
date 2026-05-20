@@ -29,7 +29,12 @@ class DiagnosticSeverity(StrEnum):
 
 
 class RequiredCapability(BaseModel):
-    """Saved contract for one capability an artifact references."""
+    """Saved contract for one capability an artifact references.
+
+    `ref` is canonical structure. Old dotted strings are accepted as
+    compatibility input, but new saves should preserve the source/capability
+    boundary because capability keys may contain dots.
+    """
 
     ref: CapabilityRefInput
     kind: Literal["tool", "resource", "prompt", "node_spec", "reducer", "workflow"]
@@ -68,7 +73,12 @@ class RequiredCapability(BaseModel):
             logical_source = data.pop("logical_source", None)
             capability_name = data.pop("capability_name", None)
             if isinstance(logical_source, str) and isinstance(capability_name, str):
-                data["ref"] = f"{logical_source}.{capability_name}"
+                # Preserve the source/capability boundary; capability names may
+                # contain dots, so joining then reparsing would corrupt the ref.
+                data["ref"] = {
+                    "source": logical_source,
+                    "capability_key": capability_name,
+                }
         return data
 
 
@@ -90,7 +100,12 @@ class AvailableSource(BaseModel):
 
 
 class SourceBinding(BaseModel):
-    """Deployment-time mapping from artifact logical source to concrete source."""
+    """Deployment-time mapping from artifact logical source to concrete source.
+
+    `logical_source` is the artifact-local alias used by saved refs.
+    `concrete_source` is the deployment-selected source id. Neither field is a
+    capability name.
+    """
 
     logical_source: SourceRefInput
     concrete_source: SourceRefInput

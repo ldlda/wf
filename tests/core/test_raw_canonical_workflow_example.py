@@ -29,10 +29,10 @@ def test_raw_canonical_workflow_serializes_new_shape() -> None:
     assert "in_map" not in node
     assert "input_values" not in node
     assert "out_map" not in node
-    assert node["input"][0]["path"] == "input.text"
-    assert node["input"][0]["target"] == "text"
+    assert node["input"][0]["path"] == {"root": "input", "parts": ["text"]}
+    assert node["input"][0]["target"] == {"root": "local", "parts": ["text"]}
     assert node["input"][1]["value"] == "raw:"
-    assert node["output"][0]["source"] == "message"
-    assert node["output"][0]["target"] == "state.message"
+    assert node["output"][0]["source"] == {"root": "local", "parts": ["message"]}
+    assert node["output"][0]["target"] == {"root": "state", "parts": ["message"]}
     assert message_schema["type"] == "string"
     assert message_schema["reducer"] == "wf.std.replace"
