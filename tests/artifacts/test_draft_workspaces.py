@@ -277,8 +277,13 @@ def _draft() -> dict[str, Any]:
         "steps": {
             "echo": {
                 "use": "demo.echo",
-                "in": {},
-                "out": {"echoed": "state.echoed"},
+                "input": [],
+                "output": [
+                    {
+                        "source": {"root": "local", "parts": ["echoed"]},
+                        "target": {"root": "state", "parts": ["echoed"]},
+                    }
+                ],
             }
         },
         "routes": {"echo": {"ok": "__end__"}},

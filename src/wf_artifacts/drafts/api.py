@@ -73,6 +73,8 @@ def patch_workflow_draft(draft: JsonObject, patch: JsonPatch) -> JsonObject:
             )
         )
     result = validate_workflow_draft(patched)
+    if result["status"] == "valid":
+        patched = WorkflowDraft.model_validate(patched).model_dump(mode="json")
     return {"draft": patched, **result}
 
 

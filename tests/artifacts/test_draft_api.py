@@ -17,14 +17,17 @@ def test_patch_workflow_draft_uses_stable_step_paths() -> None:
         [
             {
                 "op": "replace",
-                "path": "/steps/echo/in/input.text",
+                "path": "/steps/echo/input/0/target/parts/0",
                 "value": "message",
             }
         ],
     )
 
     assert result["status"] == "valid"
-    assert result["draft"]["steps"]["echo"]["in"]["input.text"] == "message"
+    assert result["draft"]["steps"]["echo"]["input"][0]["target"] == {
+        "root": "local",
+        "parts": ["message"],
+    }
 
 
 def _keyed_echo_draft() -> dict[str, object]:
@@ -37,8 +40,18 @@ def _keyed_echo_draft() -> dict[str, object]:
         "steps": {
             "echo": {
                 "use": "demo.echo",
-                "in": {"input.text": "text"},
-                "out": {"echoed": "state.echoed"},
+                "input": [
+                    {
+                        "target": {"root": "local", "parts": ["text"]},
+                        "path": {"root": "input", "parts": ["text"]},
+                    }
+                ],
+                "output": [
+                    {
+                        "source": {"root": "local", "parts": ["echoed"]},
+                        "target": {"root": "state", "parts": ["echoed"]},
+                    }
+                ],
             }
         },
         "routes": {"echo": {"ok": "__end__"}},

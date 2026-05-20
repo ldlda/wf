@@ -44,8 +44,18 @@ def test_adapter_lowers_use_steps_to_canonical_bindings() -> None:
             "steps": {
                 "echo": {
                     "use": "demo.echo",
-                    "in": {"input.text": "text"},
-                    "out": {"echoed": "state.echoed"},
+                    "input": [
+                        {
+                            "target": {"root": "local", "parts": ["text"]},
+                            "path": {"root": "input", "parts": ["text"]},
+                        }
+                    ],
+                    "output": [
+                        {
+                            "source": {"root": "local", "parts": ["echoed"]},
+                            "target": {"root": "state", "parts": ["echoed"]},
+                        }
+                    ],
                 }
             },
             "routes": {"echo": {"ok": "__end__"}},
@@ -76,8 +86,18 @@ def test_adapter_lowers_static_inputs_for_constant_like_steps() -> None:
             "steps": {
                 "constant": {
                     "use": "wf.std.constant",
-                    "with": {"value": "CLICKED"},
-                    "out": {"value": "state.message"},
+                    "input": [
+                        {
+                            "target": {"root": "local", "parts": ["value"]},
+                            "value": "CLICKED",
+                        }
+                    ],
+                    "output": [
+                        {
+                            "source": {"root": "local", "parts": ["value"]},
+                            "target": {"root": "state", "parts": ["message"]},
+                        }
+                    ],
                 }
             },
             "routes": {"constant": {"ok": "__end__"}},

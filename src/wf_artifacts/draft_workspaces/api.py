@@ -3,7 +3,11 @@ from __future__ import annotations
 import time
 from typing import Any
 
-from wf_artifacts.drafts import patch_workflow_draft, validate_workflow_draft
+from wf_artifacts.drafts import (
+    WorkflowDraft,
+    patch_workflow_draft,
+    validate_workflow_draft,
+)
 
 from .models import WorkflowDraftWorkspace, summarize_draft_workspace
 from .store import DraftWorkspaceConflictError, DraftWorkspaceStore
@@ -22,11 +26,14 @@ def create_draft_workspace(
     """Validate and save a new mutable draft workspace."""
     now = _now_ms()
     validation = validate_workflow_draft(draft)
+    normalized_draft = _canonical_draft_if_valid(
+        draft, validation_status=validation["status"]
+    )
     workspace = WorkflowDraftWorkspace(
         id=workspace_id,
         revision=1,
         title=title,
-        draft=draft,
+        draft=normalized_draft,
         status=validation["status"],
         diagnostics=validation["diagnostics"],
         created_at_epoch_ms=now,
@@ -66,7 +73,10 @@ def patch_draft_workspace(
     next_workspace = workspace.model_copy(
         update={
             "revision": workspace.revision + 1,
-            "draft": patched["draft"],
+            "draft": _canonical_draft_if_valid(
+                patched["draft"],
+                validation_status=patched["status"],
+            ),
             "status": patched["status"],
             "diagnostics": patched["diagnostics"],
             "updated_at_epoch_ms": _now_ms(),
@@ -94,6 +104,23 @@ def get_draft_workspace(
 
 def _now_ms() -> int:
     return int(time.time() * 1000)
+
+
+def _canonical_draft_if_valid(
+    draft: JsonObject,
+    *,
+    validation_status: object,
+) -> JsonObject:
+    """Persist valid drafts in the canonical model shape.
+
+    Invalid drafts remain as-authored so diagnostics can still point at the
+    payload the client sent. Once validation passes, legacy `in`/`with`/`out`
+    maps become canonical `input`/`output` binding lists on disk and in MCP
+    responses.
+    """
+    if validation_status != "valid":
+        return draft
+    return WorkflowDraft.model_validate(draft).model_dump(mode="json")
 
 
 def _revision_conflict_payload(

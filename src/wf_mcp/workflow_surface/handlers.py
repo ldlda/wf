@@ -38,6 +38,7 @@ from wf_core.models.steps import (
     InputValueBinding,
     OutputBinding,
 )
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 from ..events import make_event
 from ..models import RawWorkflowPlan
@@ -603,8 +604,8 @@ class WorkflowSurfaceHandlers:
             patch=[
                 {
                     "op": "replace",
-                    "path": f"/steps/{_escape_json_pointer(step_id)}/in",
-                    "value": input_map,
+                    "path": f"/steps/{_escape_json_pointer(step_id)}/input",
+                    "value": _draft_input_bindings_payload(input_map, {}),
                 }
             ],
         )
@@ -623,8 +624,8 @@ class WorkflowSurfaceHandlers:
             patch=[
                 {
                     "op": "replace",
-                    "path": f"/steps/{_escape_json_pointer(step_id)}/out",
-                    "value": output_map,
+                    "path": f"/steps/{_escape_json_pointer(step_id)}/output",
+                    "value": _draft_output_bindings_payload(output_map),
                 }
             ],
         )
@@ -657,9 +658,8 @@ class WorkflowSurfaceHandlers:
         steps: dict[str, Any] = {
             DEFAULT_CALL_STEP_ID: {
                 "use": capability_name,
-                "in": draft_input,
-                "with": draft_with,
-                "out": draft_output,
+                "input": _draft_input_bindings_payload(draft_input, draft_with),
+                "output": _draft_output_bindings_payload(draft_output),
             }
         }
         routes: dict[str, dict[str, str]] = {
@@ -672,8 +672,13 @@ class WorkflowSurfaceHandlers:
             # exposes, a concrete state path that can become a runtime message.
             steps[DEFAULT_ERROR_STEP_ID] = {
                 "use": RUNTIME_ERROR_CAPABILITY,
-                "in": {error_source: "message"},
-                "out": {},
+                "input": [
+                    {
+                        "target": {"root": "local", "parts": ["message"]},
+                        "path": _graph_path_payload(error_source),
+                    }
+                ],
+                "output": [],
             }
             routes[DEFAULT_CALL_STEP_ID][DEFAULT_ERROR_OUTCOME] = DEFAULT_ERROR_STEP_ID
             routes[DEFAULT_ERROR_STEP_ID] = {DEFAULT_OK_OUTCOME: "__end__"}
@@ -1078,6 +1083,40 @@ def _draft_output_map(
     if output is None:
         return dict(output_map or {})
     return {str(binding.source): str(binding.target) for binding in output}
+
+
+def _draft_input_bindings_payload(
+    input_map: dict[str, str],
+    input_values: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Serialize draft input maps into canonical structural binding payloads."""
+    return [
+        {"target": _local_path_payload(target), "value": value}
+        for target, value in input_values.items()
+    ] + [
+        {"target": _local_path_payload(target), "path": _graph_path_payload(source)}
+        for source, target in input_map.items()
+    ]
+
+
+def _draft_output_bindings_payload(output_map: dict[str, str]) -> list[dict[str, Any]]:
+    """Serialize draft output maps into canonical structural binding payloads."""
+    return [
+        {"source": _local_path_payload(source), "target": _state_path_payload(target)}
+        for source, target in output_map.items()
+    ]
+
+
+def _graph_path_payload(value: str) -> dict[str, str | list[str]]:
+    return GraphSourcePath._serialize(GraphSourcePath.parse(value))
+
+
+def _local_path_payload(value: str) -> dict[str, str | list[str]]:
+    return LocalPath._serialize(LocalPath.parse(value))
+
+
+def _state_path_payload(value: str) -> dict[str, str | list[str]]:
+    return StatePath._serialize(StatePath.parse(value))
 
 
 def _escape_json_pointer(value: str) -> str:

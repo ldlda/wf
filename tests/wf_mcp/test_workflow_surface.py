@@ -435,7 +435,7 @@ def test_workflow_surface_patches_draft_without_saving() -> None:
             patch=[
                 {
                     "op": "replace",
-                    "path": "/steps/echo/in/input.text",
+                    "path": "/steps/echo/input/0/target/parts/0",
                     "value": "message",
                 }
             ],
@@ -443,7 +443,10 @@ def test_workflow_surface_patches_draft_without_saving() -> None:
     )
 
     assert payload["status"] == "valid"
-    assert payload["draft"]["steps"]["echo"]["in"]["input.text"] == "message"
+    assert payload["draft"]["steps"]["echo"]["input"][0]["target"] == {
+        "root": "local",
+        "parts": ["message"],
+    }
     assert not artifact_store.list_artifacts()
 
 
@@ -579,8 +582,18 @@ def test_workflow_surface_patch_helpers_update_draft_workspace() -> None:
     assert output_mapped["revision"] == 5
     assert fetched["draft"]["name"] == "echo_v2"
     assert fetched["draft"]["routes"]["echo"]["error"] == "__end__"
-    assert fetched["draft"]["steps"]["echo"]["in"] == {"input.text": "message"}
-    assert fetched["draft"]["steps"]["echo"]["out"] == {"echoed": "state.echoed"}
+    assert fetched["draft"]["steps"]["echo"]["input"] == [
+        {
+            "target": {"root": "local", "parts": ["message"]},
+            "path": {"root": "input", "parts": ["text"]},
+        }
+    ]
+    assert fetched["draft"]["steps"]["echo"]["output"] == [
+        {
+            "source": {"root": "local", "parts": ["echoed"]},
+            "target": {"root": "state", "parts": ["echoed"]},
+        }
+    ]
 
 
 def test_workflow_surface_validates_draft_workspace_with_live_outcomes() -> None:
@@ -654,7 +667,7 @@ def test_workflow_surface_creates_minimal_draft_workspace_with_error_route() -> 
 
     result = asyncio.run(
         handlers.create_minimal_draft_workspace(
-            workspace_id="echo_draft",
+            workspace_id="echo_draft_canonical_error",
             name="echo",
             capability_name="demo.personal.mcp_echo_tool",
             input_schema={
@@ -673,13 +686,20 @@ def test_workflow_surface_creates_minimal_draft_workspace_with_error_route() -> 
         )
     )
     assert service.draft_workspace_store is not None
-    workspace = service.draft_workspace_store.get_workspace("echo_draft")
+    workspace = service.draft_workspace_store.get_workspace(
+        "echo_draft_canonical_error"
+    )
 
-    assert result["workspace_id"] == "echo_draft"
+    assert result["workspace_id"] == "echo_draft_canonical_error"
     assert workspace.draft["routes"]["call"]["ok"] == "__end__"
     assert workspace.draft["routes"]["call"]["error"] == "tool_error"
     assert workspace.draft["steps"]["tool_error"]["use"] == "wf.std.runtime_error"
-    assert workspace.draft["steps"]["tool_error"]["in"] == {"state.echoed": "message"}
+    assert workspace.draft["steps"]["tool_error"]["input"] == [
+        {
+            "target": {"root": "local", "parts": ["message"]},
+            "path": {"root": "state", "parts": ["echoed"]},
+        }
+    ]
 
 
 def test_workflow_surface_accepts_canonical_bindings_for_minimal_workspace() -> None:
@@ -693,7 +713,7 @@ def test_workflow_surface_accepts_canonical_bindings_for_minimal_workspace() -> 
 
     result = asyncio.run(
         handlers.create_minimal_draft_workspace(
-            workspace_id="echo_draft",
+            workspace_id="echo_draft_canonical",
             name="echo",
             capability_name="demo.personal.echo_tool",
             input_schema={"type": "object"},
@@ -714,11 +734,21 @@ def test_workflow_surface_accepts_canonical_bindings_for_minimal_workspace() -> 
         )
     )
     assert service.draft_workspace_store is not None
-    workspace = service.draft_workspace_store.get_workspace("echo_draft")
+    workspace = service.draft_workspace_store.get_workspace("echo_draft_canonical")
 
-    assert result["workspace_id"] == "echo_draft"
-    assert workspace.draft["steps"]["call"]["in"] == {"input.text": "text"}
-    assert workspace.draft["steps"]["call"]["out"] == {"echoed": "state.echoed"}
+    assert result["workspace_id"] == "echo_draft_canonical"
+    assert workspace.draft["steps"]["call"]["input"] == [
+        {
+            "target": {"root": "local", "parts": ["text"]},
+            "path": {"root": "input", "parts": ["text"]},
+        }
+    ]
+    assert workspace.draft["steps"]["call"]["output"] == [
+        {
+            "source": {"root": "local", "parts": ["echoed"]},
+            "target": {"root": "state", "parts": ["echoed"]},
+        }
+    ]
 
 
 def test_workflow_surface_creates_draft_workspace_from_capability_hints() -> None:
@@ -737,20 +767,32 @@ def test_workflow_surface_creates_draft_workspace_from_capability_hints() -> Non
 
     result = asyncio.run(
         handlers.create_draft_workspace_from_capability(
-            workspace_id="echo_from_capability",
+            workspace_id="echo_from_capability_canonical",
             capability_name="demo.personal.echo_tool",
             name="echo_from_capability",
         )
     )
     assert service.draft_workspace_store is not None
-    workspace = service.draft_workspace_store.get_workspace("echo_from_capability")
+    workspace = service.draft_workspace_store.get_workspace(
+        "echo_from_capability_canonical"
+    )
 
-    assert result["workspace_id"] == "echo_from_capability"
+    assert result["workspace_id"] == "echo_from_capability_canonical"
     assert result["wrapper_hints"]["input_map"] == {"input.text": "text"}
     assert result["wrapper_hints"]["output_map"] == {"echoed": "state.echoed"}
     assert workspace.draft["steps"]["call"]["use"] == "demo.personal.echo_tool"
-    assert workspace.draft["steps"]["call"]["in"] == {"input.text": "text"}
-    assert workspace.draft["steps"]["call"]["out"] == {"echoed": "state.echoed"}
+    assert workspace.draft["steps"]["call"]["input"] == [
+        {
+            "target": {"root": "local", "parts": ["text"]},
+            "path": {"root": "input", "parts": ["text"]},
+        }
+    ]
+    assert workspace.draft["steps"]["call"]["output"] == [
+        {
+            "source": {"root": "local", "parts": ["echoed"]},
+            "target": {"root": "state", "parts": ["echoed"]},
+        }
+    ]
 
 
 def test_workflow_surface_creates_artifact_from_workspace() -> None:
@@ -1262,8 +1304,18 @@ def _echo_draft() -> dict[str, Any]:
         "steps": {
             "echo": {
                 "use": "demo.personal.echo_tool",
-                "in": {"input.text": "text"},
-                "out": {"echoed": "state.echoed"},
+                "input": [
+                    {
+                        "target": {"root": "local", "parts": ["text"]},
+                        "path": {"root": "input", "parts": ["text"]},
+                    }
+                ],
+                "output": [
+                    {
+                        "source": {"root": "local", "parts": ["echoed"]},
+                        "target": {"root": "state", "parts": ["echoed"]},
+                    }
+                ],
             }
         },
         "routes": {"echo": {"ok": "__end__"}},

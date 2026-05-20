@@ -69,12 +69,18 @@ A minimal draft looks like this:
   "steps": {
     "echo": {
       "use": "demo.personal.echo_tool",
-      "in": {
-        "input.text": "text"
-      },
-      "out": {
-        "echoed": "state.echoed"
-      }
+      "input": [
+        {
+          "target": {"root": "local", "parts": ["text"]},
+          "path": {"root": "input", "parts": ["text"]}
+        }
+      ],
+      "output": [
+        {
+          "source": {"root": "local", "parts": ["echoed"]},
+          "target": {"root": "state", "parts": ["echoed"]}
+        }
+      ]
     }
   },
   "routes": {
@@ -95,44 +101,63 @@ Important details:
 - When saved with source bindings, concrete refs can be normalized to logical
   refs such as `demo.echo_tool`.
 
-## Mapping Shape
+## Binding Shape
 
-Draft maps are JSON objects whose keys and values are strings:
+Draft `use` steps use the same canonical binding structs as core `NodeUse`:
 
-```ts
-type InMap = Record<string, string>
-type OutMap = Record<string, string>
+```json
+{
+  "input": [
+    {
+      "target": {"root": "local", "parts": ["message"]},
+      "path": {"root": "input", "parts": ["text"]}
+    },
+    {
+      "target": {"root": "local", "parts": ["limit"]},
+      "value": 3
+    }
+  ],
+  "output": [
+    {
+      "source": {"root": "local", "parts": ["echoed"]},
+      "target": {"root": "state", "parts": ["echoed"]}
+    }
+  ]
+}
 ```
 
-Both maps are source-to-destination.
-
-| Map | Key | Value | Example |
-| --- | --- | --- | --- |
-| `in` | graph source path | node-local input path | `"input.text": "message"` |
-| `out` | node-local output path | graph state destination path | `"echoed": "state.echoed"` |
-
-Draft `in` and `out` maps are an authoring-layer shape. When a draft is
-compiled, the core workflow uses canonical `NodeUse.input` and
-`NodeUse.output` binding lists. The old core `in_map`, `input_values`, and
-`out_map` fields are parse-only compatibility inputs, not the preferred saved
-shape.
+Legacy draft maps `in`, `with`, and `out` are still accepted as parse-only
+compatibility input. Valid drafts are saved and returned with canonical
+`input` and `output` binding lists.
 
 Graph source paths in `in` normally start with `input.`, `state.`, or
 `context.`. Node-local paths do not use those prefixes; they are paths inside
 the target capability's input or output payload.
 
-For example:
+For example, this canonical input/output pair:
 
 ```json
 {
-  "in": {
-    "input.user.name": "user.name",
-    "state.job.title": "job.title"
-  },
-  "out": {
-    "user.age": "state.person.age",
-    "job.years": "state.experience.years"
-  }
+  "input": [
+    {
+      "target": {"root": "local", "parts": ["user", "name"]},
+      "path": {"root": "input", "parts": ["user", "name"]}
+    },
+    {
+      "target": {"root": "local", "parts": ["job", "title"]},
+      "path": {"root": "state", "parts": ["job", "title"]}
+    }
+  ],
+  "output": [
+    {
+      "source": {"root": "local", "parts": ["user", "age"]},
+      "target": {"root": "state", "parts": ["person", "age"]}
+    },
+    {
+      "source": {"root": "local", "parts": ["job", "years"]},
+      "target": {"root": "state", "parts": ["experience", "years"]}
+    }
+  ]
 }
 ```
 
@@ -147,28 +172,32 @@ Do not reverse the direction. This is wrong:
 
 ```json
 {
-  "in": {
-    "message": "input.text"
-  }
+  "input": [
+    {
+      "target": {"root": "input", "parts": ["text"]},
+      "path": {"root": "local", "parts": ["message"]}
+    }
+  ]
 }
 ```
 
 That asks the runtime to read from graph path `message` and write into a
 node-local input field literally named `input.text`.
 
-Do not put constants in `in`. This is also wrong:
+Do not put constants in path bindings. This is wrong:
 
 ```json
 {
-  "in": {
-    "value": {
-      "value": "CLICKED"
+  "input": [
+    {
+      "target": {"root": "local", "parts": ["value"]},
+      "path": {"root": "input", "parts": ["CLICKED"]}
     }
-  }
+  ]
 }
 ```
 
-Use `with` for static node-local values instead.
+Use an input value binding for static node-local values instead.
 
 ## Step Kinds
 
@@ -179,38 +208,49 @@ Calls a workflow capability.
 ```json
 {
   "use": "demo.personal.echo_tool",
-  "in": {
-    "input.text": "text"
-  },
-  "out": {
-    "echoed": "state.echoed"
-  }
+  "input": [
+    {
+      "target": {"root": "local", "parts": ["text"]},
+      "path": {"root": "input", "parts": ["text"]}
+    }
+  ],
+  "output": [
+    {
+      "source": {"root": "local", "parts": ["echoed"]},
+      "target": {"root": "state", "parts": ["echoed"]}
+    }
+  ]
 }
 ```
 
 Use this for normal node calls, including generated workflow wrappers around
 MCP tools and local `wf.std` capabilities.
 
-`use` steps can also provide static node-local input values with `with`.
+`use` steps can also provide static node-local input values.
 Use this for hardcoded strings, booleans, numbers, and small JSON values that
 are part of the graph definition:
 
 ```json
 {
   "use": "wf.std.constant",
-  "with": {
-    "value": "CLICKED"
-  },
-  "out": {
-    "value": "state.wait_text"
-  }
+  "input": [
+    {
+      "target": {"root": "local", "parts": ["value"]},
+      "value": "CLICKED"
+    }
+  ],
+  "output": [
+    {
+      "source": {"root": "local", "parts": ["value"]},
+      "target": {"root": "state", "parts": ["wait_text"]}
+    }
+  ]
 }
 ```
 
-Static values are not path mappings. Do not put `{"value": "CLICKED"}` inside
-`in`. The `in` object only maps graph paths such as `input.url` or
-`state.wait_text` to node-local input fields. Invalid draft step shapes are
-rejected instead of silently compiling to `join`.
+Static values are not path mappings. Use `{"target": ..., "value": ...}` for
+literal JSON values. Invalid draft step shapes are rejected instead of silently
+compiling to `join`.
 
 Generated MCP tool wrappers are intentionally naive. They normally expose both
 `ok` and `error` outcomes, because MCP tool calls can report transport/provider

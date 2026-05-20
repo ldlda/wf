@@ -21,6 +21,40 @@ def test_workflow_draft_uses_keyed_steps() -> None:
     assert draft.steps["echo"].use == "demo.echo"
 
 
+def test_workflow_draft_accepts_legacy_use_maps_but_dumps_canonical_bindings() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "steps": {
+                "echo": {
+                    "use": "demo.echo",
+                    "in": {"input.text": "text"},
+                    "with": {"limit": 3},
+                    "out": {"echoed": "state.echoed"},
+                }
+            },
+        }
+    )
+
+    dumped = draft.model_dump(mode="json")
+
+    assert "in" not in dumped["steps"]["echo"]
+    assert "with" not in dumped["steps"]["echo"]
+    assert "out" not in dumped["steps"]["echo"]
+    assert dumped["steps"]["echo"]["input"][0]["target"] == {
+        "root": "local",
+        "parts": ["limit"],
+    }
+    assert dumped["steps"]["echo"]["input"][1]["path"] == {
+        "root": "input",
+        "parts": ["text"],
+    }
+    assert dumped["steps"]["echo"]["output"][0]["target"] == {
+        "root": "state",
+        "parts": ["echoed"],
+    }
+
+
 def test_draft_step_requires_exactly_one_kind_key() -> None:
     draft = _keyed_echo_draft()
     steps = draft["steps"]
@@ -36,72 +70,78 @@ def test_draft_step_requires_exactly_one_kind_key() -> None:
 
 
 def test_workflow_draft_accepts_when_step() -> None:
-    draft = WorkflowDraft.model_validate({
-        **_keyed_echo_draft(),
-        "start": "decide",
-        "steps": {
-            **_keyed_echo_draft()["steps"],
-            "decide": {
-                "when": {
-                    "if": {
-                        "op": "ge",
-                        "left": {"path": "state.count"},
-                        "right": {"value": 1},
-                    },
-                    "then": "echo",
-                    "otherwise": "__end__",
-                }
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "start": "decide",
+            "steps": {
+                **_keyed_echo_draft()["steps"],
+                "decide": {
+                    "when": {
+                        "if": {
+                            "op": "ge",
+                            "left": {"path": "state.count"},
+                            "right": {"value": 1},
+                        },
+                        "then": "echo",
+                        "otherwise": "__end__",
+                    }
+                },
             },
-        },
-    })
+        }
+    )
 
     assert isinstance(draft.steps["decide"], DraftWhenStep)
 
 
 def test_workflow_draft_accepts_choose_step() -> None:
-    draft = WorkflowDraft.model_validate({
-        **_keyed_echo_draft(),
-        "start": "choose_next",
-        "steps": {
-            **_keyed_echo_draft()["steps"],
-            "choose_next": {
-                "choose": {
-                    "clauses": [
-                        {
-                            "if": {
-                                "op": "exists",
-                                "path": "state.text",
-                            },
-                            "then": "echo",
-                        }
-                    ],
-                    "default": "__end__",
-                }
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "start": "choose_next",
+            "steps": {
+                **_keyed_echo_draft()["steps"],
+                "choose_next": {
+                    "choose": {
+                        "clauses": [
+                            {
+                                "if": {
+                                    "op": "exists",
+                                    "path": "state.text",
+                                },
+                                "then": "echo",
+                            }
+                        ],
+                        "default": "__end__",
+                    }
+                },
             },
-        },
-    })
+        }
+    )
 
     assert isinstance(draft.steps["choose_next"], DraftChooseStep)
 
 
 def test_workflow_draft_accepts_match_step() -> None:
-    draft = WorkflowDraft.model_validate({
-        **_keyed_echo_draft(),
-        "start": "match_status",
-        "steps": {
-            **_keyed_echo_draft()["steps"],
-            "match_status": {
-                "match": {
-                    "value": "state.status",
-                    "cases": [
-                        {"equals": "ready", "then": "echo"},
-                        {"equals": "done", "then": "__end__"},
-                    ],
-                    "default": "__end__",
-                }
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "start": "match_status",
+            "steps": {
+                **_keyed_echo_draft()["steps"],
+                "match_status": {
+                    "match": {
+                        "value": "state.status",
+                        "cases": [
+                            {"equals": "ready", "then": "echo"},
+                            {"equals": "done", "then": "__end__"},
+                        ],
+                        "default": "__end__",
+                    }
+                },
             },
-        },
-    })
+        }
+    )
 
     assert isinstance(draft.steps["match_status"], DraftMatchStep)
 
@@ -116,8 +156,18 @@ def _keyed_echo_draft() -> dict[str, Any]:
         "steps": {
             "echo": {
                 "use": "demo.echo",
-                "in": {"input.text": "text"},
-                "out": {"echoed": "state.echoed"},
+                "input": [
+                    {
+                        "target": {"root": "local", "parts": ["text"]},
+                        "path": {"root": "input", "parts": ["text"]},
+                    }
+                ],
+                "output": [
+                    {
+                        "source": {"root": "local", "parts": ["echoed"]},
+                        "target": {"root": "state", "parts": ["echoed"]},
+                    }
+                ],
             }
         },
         "routes": {"echo": {"ok": "__end__"}},

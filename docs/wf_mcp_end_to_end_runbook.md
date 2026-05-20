@@ -265,12 +265,18 @@ arguments:
     "steps": {
       "echo": {
         "use": "demo.personal.echo_tool",
-        "in": {
-          "input.text": "text"
-        },
-        "out": {
-          "echoed": "state.echoed"
-        }
+        "input": [
+          {
+            "target": {"root": "local", "parts": ["text"]},
+            "path": {"root": "input", "parts": ["text"]}
+          }
+        ],
+        "output": [
+          {
+            "source": {"root": "local", "parts": ["echoed"]},
+            "target": {"root": "state", "parts": ["echoed"]}
+          }
+        ]
       }
     },
     "routes": {

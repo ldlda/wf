@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from wf_authoring import WorkflowBuilder
 from wf_authoring.dsl import PathExpr
 from wf_core import JoinNode, Workflow
@@ -44,8 +42,8 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
         return builder.use_ref(
             step.use,
             id=step_id,
-            input=_draft_input_bindings(step),
-            output=_draft_output_bindings(step),
+            input=step.input,
+            output=step.output,
             desc=step.desc,
         )
     if isinstance(step, DraftForeachStep):
@@ -89,24 +87,3 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
             default=step.match.default,
         ).entry
     raise TypeError(f"unsupported draft step {type(step)!r}")
-
-
-def _draft_input_bindings(step: DraftUseStep) -> list[dict[str, Any]]:
-    """Translate draft input maps into canonical core input binding structs.
-
-    Draft JSON keeps `in` and `with` because they are compact patch targets for
-    LLM clients. The compiled workflow should not re-emit deprecated builder map
-    sugar, so this adapter boundary converts them to `NodeUse.input`.
-    """
-    literal_bindings = [
-        {"target": target, "value": value} for target, value in step.with_.items()
-    ]
-    path_bindings = [
-        {"target": target, "path": source} for source, target in step.in_.items()
-    ]
-    return [*literal_bindings, *path_bindings]
-
-
-def _draft_output_bindings(step: DraftUseStep) -> list[dict[str, str]]:
-    """Translate draft output maps into canonical core output binding structs."""
-    return [{"source": source, "target": target} for source, target in step.out.items()]

@@ -5,17 +5,20 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from wf_core.models.conditions import Condition
+from wf_core.models.steps import InputBinding, OutputBinding
 
 JsonObject = dict[str, Any]
-STEP_KIND_KEYS = frozenset({
-    "use",
-    "foreach",
-    "interrupt",
-    "join",
-    "when",
-    "choose",
-    "match",
-})
+STEP_KIND_KEYS = frozenset(
+    {
+        "use",
+        "foreach",
+        "interrupt",
+        "join",
+        "when",
+        "choose",
+        "match",
+    }
+)
 
 
 class DraftUseStep(BaseModel):
@@ -24,33 +27,66 @@ class DraftUseStep(BaseModel):
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
     use: str
-    in_: dict[str, str] = Field(
-        default_factory=dict,
-        alias="in",
+    input: list[InputBinding] = Field(
+        default_factory=list,
         description=(
-            "Source-to-destination map from graph paths to node-local input "
-            "paths. Example: {'input.text': 'message'}. Values must be strings; "
-            "use 'with' for literals."
+            "Canonical input bindings for this capability. Use path bindings "
+            "for graph-to-local input and value bindings for literals."
         ),
     )
-    with_: dict[str, Any] = Field(
-        default_factory=dict,
-        alias="with",
+    output: list[OutputBinding] = Field(
+        default_factory=list,
         description=(
-            "Static node-local input values keyed by destination input field/path. "
-            "Example: {'value': 'CLICKED'}."
-        ),
-    )
-    out: dict[str, str] = Field(
-        default_factory=dict,
-        description=(
-            "Source-to-destination map from node-local output paths to workflow "
-            "state destinations. Example: {'echoed': 'state.echoed'}."
+            "Canonical output bindings from node-local output paths to workflow "
+            "state destinations."
         ),
     )
     desc: str | None = None
     retry: int | None = Field(default=None, ge=0)
     timeout_seconds: int | None = Field(default=None, gt=0)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_legacy_maps(cls, value: object) -> object:
+        """Accept draft `in`/`with`/`out` maps as parse-only compatibility."""
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+        legacy_input = data.pop("in", None)
+        legacy_with = data.pop("with", None)
+        legacy_output = data.pop("out", None)
+        if "input" in data and (legacy_input is not None or legacy_with is not None):
+            raise ValueError("cannot mix canonical input with legacy in/with maps")
+        if "output" in data and legacy_output is not None:
+            raise ValueError("cannot mix canonical output with legacy out map")
+
+        input_bindings = list(data.get("input", []))
+        output_bindings = list(data.get("output", []))
+        if legacy_with is not None:
+            if not isinstance(legacy_with, dict):
+                raise ValueError("draft use 'with' must be a mapping")
+            input_bindings.extend(
+                {"target": target, "value": literal}
+                for target, literal in legacy_with.items()
+            )
+        if legacy_input is not None:
+            if not isinstance(legacy_input, dict):
+                raise ValueError("draft use 'in' must be a mapping")
+            input_bindings.extend(
+                {"target": target, "path": source}
+                for source, target in legacy_input.items()
+            )
+        if legacy_output is not None:
+            if not isinstance(legacy_output, dict):
+                raise ValueError("draft use 'out' must be a mapping")
+            output_bindings.extend(
+                {"source": source, "target": target}
+                for source, target in legacy_output.items()
+            )
+        data["input"] = input_bindings
+        data["output"] = output_bindings
+        return data
 
 
 class DraftForeachPayload(BaseModel):
