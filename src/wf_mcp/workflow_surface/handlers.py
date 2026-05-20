@@ -42,7 +42,7 @@ from .constants import (
     DEFAULT_OK_OUTCOME,
     RUNTIME_ERROR_CAPABILITY,
 )
-from .refs import WorkflowSurfaceCapabilityId
+from .refs import parse_workflow_surface_capability_id
 
 if TYPE_CHECKING:
     from ..broker.service import WfMcpService
@@ -161,20 +161,18 @@ class WorkflowSurfaceHandlers:
     ) -> WorkflowArtifact | None:
         """Resolve a saved node-like wrapper artifact from its stable capability name."""
         try:
-            capability_id = WorkflowSurfaceCapabilityId.parse(qualified_name)
+            capability_id = parse_workflow_surface_capability_id(qualified_name)
         except ValueError:
             return None
         if (
-            not capability_id.is_wrapper_artifact
+            not isinstance(capability_id, WorkflowCapabilityRef)
             or self.service.artifact_store is None
-            or capability_id.artifact_id is None
-            or capability_id.artifact_version is None
         ):
             return None
         try:
             artifact = self.service.artifact_store.get_artifact(
                 capability_id.artifact_id,
-                capability_id.artifact_version,
+                capability_id.version,
             )
         except KeyError:
             return None
@@ -995,12 +993,12 @@ def _source_id_for_capability(
 def _capability_name(qualified_name: str) -> str | None:
     """Return the local name of one qualified capability ref if it is valid."""
     try:
-        parsed = WorkflowSurfaceCapabilityId.parse(qualified_name)
+        parsed = parse_workflow_surface_capability_id(qualified_name)
     except ValueError:
         return None
-    if parsed.is_wrapper_artifact:
+    if isinstance(parsed, WorkflowCapabilityRef):
         return None
-    return parsed.live_name
+    return parsed.name
 
 
 def _artifact_capability_id(artifact: WorkflowArtifact) -> str:

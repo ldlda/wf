@@ -1,22 +1,23 @@
 from __future__ import annotations
 
-from wf_mcp.workflow_surface.refs import WorkflowSurfaceCapabilityId
+from wf_artifacts import WorkflowCapabilityRef
+from wf_mcp.workflow_surface.refs import parse_workflow_surface_capability_id
+from wf_platform import CapabilityRef
 
 
 def test_workflow_surface_capability_id_parses_live_capability_ref() -> None:
-    capability = WorkflowSurfaceCapabilityId.parse("demo.personal.echo_tool")
+    capability = parse_workflow_surface_capability_id("demo.personal.echo_tool")
 
-    assert capability.qualified_name == "demo.personal.echo_tool"
-    assert capability.source_id == "demo.personal"
-    assert capability.live_name == "echo_tool"
-    assert capability.is_wrapper_artifact is False
+    assert isinstance(capability, CapabilityRef)
+    assert str(capability) == "demo.personal.echo_tool"
+    assert str(capability.source) == "demo.personal"
+    assert capability.name == "echo_tool"
 
 
 def test_workflow_surface_capability_id_parses_saved_wrapper_ref() -> None:
-    capability = WorkflowSurfaceCapabilityId.parse("workflow.echo_wrapper.v2")
+    capability = parse_workflow_surface_capability_id("workflow.echo_wrapper.v2")
 
-    assert capability.qualified_name == "workflow.echo_wrapper.v2"
-    assert capability.source_id == "workflow"
+    assert isinstance(capability, WorkflowCapabilityRef)
+    assert str(capability) == "workflow.echo_wrapper.v2"
     assert capability.artifact_id == "echo_wrapper"
-    assert capability.artifact_version == 2
-    assert capability.is_wrapper_artifact is True
+    assert capability.version == 2
