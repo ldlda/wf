@@ -143,6 +143,22 @@ Use these categories:
 
 Add a small checklist under this task before implementation. Do not blindly replace all strings.
 
+Findings from the first inventory pass:
+
+- `src/wf_artifacts/drafts/adapter.py` is the highest-value runtime hit: it still
+  calls `WorkflowBuilder.use_ref(..., in_map=..., input_values=..., out_map=...)`
+  and `WorkflowBuilder.use(..., out_map=...)`, causing deprecation warnings from
+  MCP draft/workspace tests. This should be changed to canonical binding lists.
+- Raw workflow-plan tests in `tests/wf_mcp/test_service.py`,
+  `tests/wf_mcp/test_broker_server.py`, `tests/wf_mcp/test_workflow_surface.py`,
+  and `tests/artifacts/test_factory.py` intentionally exercise raw-plan
+  compatibility. Do not bulk-rewrite those while raw-plan escape hatches remain.
+- Draft model tests still use `state_schema.fields` as compatibility input. That
+  can stay as parse input, but new docs/examples should prefer JSON Schema
+  `properties`.
+- Docs already explain parse-only compatibility in several places, but older
+  operator/runbook examples still need canonical `input` / `output` examples.
+
 ---
 
 ## Task 2: Draft Adapter Emits Canonical Builder Bindings

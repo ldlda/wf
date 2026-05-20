@@ -6,6 +6,7 @@ from pydantic import BaseModel
 from wf_authoring import NodeSpec
 from wf_core import ReducerSpec
 from wf_core.runtime.ops.merges import ReducerDefinition
+from wf_platform.refs import CapabilityRef
 
 SourceKind = Literal["system", "connection"]
 JsonObject = dict[str, Any]
@@ -59,6 +60,7 @@ class ReducerInventory(BaseModel):
     """Serializable public contract for one pure reducer."""
 
     name: str
+    ref: CapabilityRef
     description: str | None = None
     config_schema: JsonObject
 
@@ -200,6 +202,7 @@ class CapabilitySource:
                 reducer_details=tuple(
                     ReducerInventory(
                         name=reducer.name,
+                        ref=CapabilityRef.parse(reducer.name),
                         description=reducer.description,
                         config_schema=reducer.config_schema,
                     )

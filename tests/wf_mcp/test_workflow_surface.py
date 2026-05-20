@@ -16,6 +16,8 @@ from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig, RawWorkflowPlan
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
+from wf_core.models.steps import InputPathBinding, OutputBinding
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -678,6 +680,45 @@ def test_workflow_surface_creates_minimal_draft_workspace_with_error_route() -> 
     assert workspace.draft["routes"]["call"]["error"] == "tool_error"
     assert workspace.draft["steps"]["tool_error"]["use"] == "wf.std.runtime_error"
     assert workspace.draft["steps"]["tool_error"]["in"] == {"state.echoed": "message"}
+
+
+def test_workflow_surface_accepts_canonical_bindings_for_minimal_workspace() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_minimal_canonical_mcp"),
+        artifact_store=FileWorkflowArtifactStore(
+            local_temp_root() / "surface_minimal_canonical"
+        ),
+    )
+    handlers = WorkflowSurfaceHandlers(service)
+
+    result = asyncio.run(
+        handlers.create_minimal_draft_workspace(
+            workspace_id="echo_draft",
+            name="echo",
+            capability_name="demo.personal.echo_tool",
+            input_schema={"type": "object"},
+            state_schema={"fields": {"echoed": {"type": "string"}}},
+            output_schema={"type": "object"},
+            input=[
+                InputPathBinding(
+                    target=LocalPath(("text",)),
+                    path=GraphSourcePath("input", ("text",)),
+                )
+            ],
+            output=[
+                OutputBinding(
+                    source=LocalPath(("echoed",)),
+                    target=StatePath(("echoed",)),
+                )
+            ],
+        )
+    )
+    assert service.draft_workspace_store is not None
+    workspace = service.draft_workspace_store.get_workspace("echo_draft")
+
+    assert result["workspace_id"] == "echo_draft"
+    assert workspace.draft["steps"]["call"]["in"] == {"input.text": "text"}
+    assert workspace.draft["steps"]["call"]["out"] == {"echoed": "state.echoed"}
 
 
 def test_workflow_surface_creates_draft_workspace_from_capability_hints() -> None:

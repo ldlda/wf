@@ -504,7 +504,7 @@ Concrete MCP sequence:
 2. `wf.workflow.call_capability` with a small payload to verify the selected
    capability behaves as expected.
 3. `wf.workflow.create_minimal_draft_workspace` with a `request` object that
-   contains schemas, `input_map`, and `output_map`.
+   contains schemas plus canonical `input` and `output` binding lists.
 4. `wf.workflow.list_draft_workspaces` if the client needs to rediscover
    existing workspace ids.
 5. `wf.workflow.get_draft_workspace` with `include_draft=true` if the client

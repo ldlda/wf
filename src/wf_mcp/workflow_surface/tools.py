@@ -340,7 +340,10 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     @server.tool(
         name="wf.workflow.set_step_input_map",
         title="Set Step Input Map",
-        description="Replace one step input map in a draft workspace.",
+        description=(
+            "Replace one compatibility step input map in a draft workspace. "
+            "New one-capability bootstraps should prefer canonical input bindings."
+        ),
     )
     async def set_step_input_map(
         request: SetStepInputMapRequest,
@@ -357,7 +360,10 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     @server.tool(
         name="wf.workflow.set_step_output_map",
         title="Set Step Output Map",
-        description="Replace one step output map in a draft workspace.",
+        description=(
+            "Replace one compatibility step output map in a draft workspace. "
+            "New one-capability bootstraps should prefer canonical output bindings."
+        ),
     )
     async def set_step_output_map(
         request: SetStepOutputMapRequest,
@@ -376,7 +382,8 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Create Minimal Draft Workspace",
         description=(
             "Bootstrap a patchable draft workspace around one inspected capability. "
-            "Use this before patch helpers when authoring from MCP clients."
+            "Use canonical input/output binding lists for new MCP clients; "
+            "input_map/output_map remain compatibility fields."
         ),
     )
     async def create_minimal_draft_workspace(
@@ -390,6 +397,8 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 input_schema=request.input_schema,
                 state_schema=request.state_schema,
                 output_schema=request.output_schema,
+                input=request.input,
+                output=request.output,
                 input_map=request.input_map,
                 output_map=request.output_map,
                 error_message_source=request.error_message_source,
@@ -417,6 +426,8 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 input_schema=request.input_schema,
                 state_schema=request.state_schema,
                 output_schema=request.output_schema,
+                input=request.input,
+                output=request.output,
                 input_map=request.input_map,
                 output_map=request.output_map,
                 error_message_source=request.error_message_source,

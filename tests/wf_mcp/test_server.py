@@ -138,6 +138,9 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             minimal_request = minimal_workspace_input["properties"]["request"]
             assert minimal_request["properties"]["workspace_id"]["pattern"]
             assert "error_message_source" in minimal_request["properties"]
+            assert "input" in minimal_request["properties"]
+            assert "output" in minimal_request["properties"]
+            assert "input_map" in minimal_request["properties"]
             assert (
                 minimal_request["properties"]["input_schema"]["description"]
                 == "Public input JSON Schema for the workflow or wrapper being "
@@ -149,6 +152,8 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             from_capability_request = from_capability_input["properties"]["request"]
             assert "capability_name" in from_capability_request["properties"]
             assert "input_schema" in from_capability_request["properties"]
+            assert "input" in from_capability_request["properties"]
+            assert "output" in from_capability_request["properties"]
             assert "output_map" in from_capability_request["properties"]
             from_capability_output = tools_by_name[
                 "wf.workflow.create_draft_workspace_from_capability"
@@ -526,22 +531,24 @@ def test_server_reload_syncs_service_connection_source_enabled_state() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps({
-            "store_root": ".wf_mcp_store",
-            "connections": [
-                {
-                    "id": "fixture.personal",
-                    "server": "fixture",
-                    "account": "personal",
-                    "enabled": False,
-                    "metadata": {
-                        "transport": "stdio",
-                        "command": sys.executable,
-                        "args": [fixture_server_path()],
-                    },
-                }
-            ],
-        }),
+        json.dumps(
+            {
+                "store_root": ".wf_mcp_store",
+                "connections": [
+                    {
+                        "id": "fixture.personal",
+                        "server": "fixture",
+                        "account": "personal",
+                        "enabled": False,
+                        "metadata": {
+                            "transport": "stdio",
+                            "command": sys.executable,
+                            "args": [fixture_server_path()],
+                        },
+                    }
+                ],
+            }
+        ),
         encoding="utf-8",
     )
     config = load_broker_config(config_path)

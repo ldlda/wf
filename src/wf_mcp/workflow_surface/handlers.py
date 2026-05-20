@@ -32,6 +32,12 @@ from wf_platform import (
 )
 from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
+from wf_core.models.steps import (
+    InputBinding,
+    InputPathBinding,
+    InputValueBinding,
+    OutputBinding,
+)
 
 from ..events import make_event
 from ..models import RawWorkflowPlan
@@ -214,19 +220,21 @@ class WorkflowSurfaceHandlers:
                 query=query,
             ):
                 continue
-            rows.append({
-                "name": name,
-                "source_id": "workflow",
-                "kind": "wrapper_artifact",
-                "artifact_id": artifact.id,
-                "version": artifact.version,
-                "title": artifact.title,
-                "description": artifact.description,
-                "outcomes": list(artifact.outcomes),
-                "is_async": True,
-                "input_fields": _schema_field_names(artifact.input_schema),
-                "output_fields": _schema_field_names(artifact.output_schema),
-            })
+            rows.append(
+                {
+                    "name": name,
+                    "source_id": "workflow",
+                    "kind": "wrapper_artifact",
+                    "artifact_id": artifact.id,
+                    "version": artifact.version,
+                    "title": artifact.title,
+                    "description": artifact.description,
+                    "outcomes": list(artifact.outcomes),
+                    "is_async": True,
+                    "input_fields": _schema_field_names(artifact.input_schema),
+                    "output_fields": _schema_field_names(artifact.output_schema),
+                }
+            )
         return rows
 
     def _wrapper_capability_detail(
@@ -445,10 +453,12 @@ class WorkflowSurfaceHandlers:
                 },
             )
         )
-        required_sources = sorted({
-            capability.logical_source
-            for capability in workflow_artifact.required_capability_map().values()
-        })
+        required_sources = sorted(
+            {
+                capability.logical_source
+                for capability in workflow_artifact.required_capability_map().values()
+            }
+        )
         return {
             "artifact_id": workflow_artifact.id,
             "version": workflow_artifact.version,
@@ -628,26 +638,34 @@ class WorkflowSurfaceHandlers:
         input_schema: dict[str, Any],
         state_schema: dict[str, Any],
         output_schema: dict[str, Any],
-        input_map: dict[str, str],
-        output_map: dict[str, str],
+        input: Sequence[InputBinding] | None = None,
+        output: Sequence[OutputBinding] | None = None,
+        input_map: dict[str, str] | None = None,
+        output_map: dict[str, str] | None = None,
         error_message_source: str | None = None,
         title: str | None = None,
     ) -> dict[str, Any]:
         """Bootstrap the smallest patchable draft around one workflow capability."""
+        draft_input, draft_with = _draft_input_maps(
+            input=input,
+            input_map=input_map,
+        )
+        draft_output = _draft_output_map(output=output, output_map=output_map)
         outcomes = self._outcomes_for_capability(capability_name) or (
             DEFAULT_OK_OUTCOME,
         )
         steps: dict[str, Any] = {
             DEFAULT_CALL_STEP_ID: {
                 "use": capability_name,
-                "in": input_map,
-                "out": output_map,
+                "in": draft_input,
+                "with": draft_with,
+                "out": draft_output,
             }
         }
         routes: dict[str, dict[str, str]] = {
             DEFAULT_CALL_STEP_ID: {DEFAULT_OK_OUTCOME: "__end__"}
         }
-        error_source = error_message_source or _first_state_path(output_map)
+        error_source = error_message_source or _first_state_path(draft_output)
         if DEFAULT_ERROR_OUTCOME in outcomes and error_source is not None:
             # The bootstrapper cannot infer provider-specific error envelopes.
             # It only wires an error route when the caller gave, or output_map
@@ -684,6 +702,8 @@ class WorkflowSurfaceHandlers:
         input_schema: dict[str, Any] | None = None,
         state_schema: dict[str, Any] | None = None,
         output_schema: dict[str, Any] | None = None,
+        input: Sequence[InputBinding] | None = None,
+        output: Sequence[OutputBinding] | None = None,
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
         error_message_source: str | None = None,
@@ -698,8 +718,12 @@ class WorkflowSurfaceHandlers:
             input_schema=input_schema or hints["input_schema"],
             state_schema=state_schema or hints["state_schema"],
             output_schema=output_schema or hints["output_schema"],
-            input_map=input_map or hints["input_map"],
-            output_map=output_map or hints["output_map"],
+            input=input,
+            output=output,
+            input_map=None if input is not None else (input_map or hints["input_map"]),
+            output_map=None
+            if output is not None
+            else (output_map or hints["output_map"]),
             error_message_source=error_message_source,
             title=title,
         )
@@ -905,14 +929,16 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
             if (capability_name := _capability_name(spec.name)) is not None
             if (detail := node_spec_details.get(spec.name)) is not None
         }
-        capabilities.update({
-            capability_name: AvailableCapability(
-                name=capability_name,
-                kind="reducer",
-            )
-            for reducer in source.capabilities.reducers.values()
-            if (capability_name := _capability_name(reducer.name)) is not None
-        })
+        capabilities.update(
+            {
+                capability_name: AvailableCapability(
+                    name=capability_name,
+                    kind="reducer",
+                )
+                for reducer in source.capabilities.reducers.values()
+                if (capability_name := _capability_name(reducer.name)) is not None
+            }
+        )
         sources.append(
             AvailableSource(
                 id=source.id,
@@ -976,9 +1002,9 @@ def _observed_node_specs(service: WfMcpService) -> dict[str, NodeSpecInventory]:
     observed: dict[str, NodeSpecInventory] = {}
     for source in service.capability_sources.values():
         inventory = source.as_inventory()
-        observed.update({
-            detail.name: detail for detail in inventory.capabilities.node_spec_details
-        })
+        observed.update(
+            {detail.name: detail for detail in inventory.capabilities.node_spec_details}
+        )
     return observed
 
 
@@ -1011,6 +1037,47 @@ def _first_state_path(output_map: dict[str, str]) -> str | None:
         if target.startswith("state."):
             return target
     return None
+
+
+def _draft_input_maps(
+    *,
+    input: Sequence[InputBinding] | None,
+    input_map: dict[str, str] | None,
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """Convert canonical MCP input bindings into draft `in` and `with` maps.
+
+    Draft workspaces intentionally keep compact maps as patch targets, while
+    MCP-facing request models prefer the canonical core binding structs. This
+    helper keeps that translation explicit at the frontend boundary.
+    """
+    if input is not None and input_map is not None:
+        raise ValueError("cannot mix canonical input bindings with input_map")
+    if input is None:
+        return dict(input_map or {}), {}
+
+    mapped_inputs: dict[str, str] = {}
+    literal_inputs: dict[str, Any] = {}
+    for binding in input:
+        if isinstance(binding, InputPathBinding):
+            mapped_inputs[str(binding.path)] = str(binding.target)
+        elif isinstance(binding, InputValueBinding):
+            literal_inputs[str(binding.target)] = binding.value
+        else:  # pragma: no cover - defensive against future input binding variants.
+            raise TypeError(f"unsupported input binding {binding!r}")
+    return mapped_inputs, literal_inputs
+
+
+def _draft_output_map(
+    *,
+    output: Sequence[OutputBinding] | None,
+    output_map: dict[str, str] | None,
+) -> dict[str, str]:
+    """Convert canonical MCP output bindings into the draft `out` map."""
+    if output is not None and output_map is not None:
+        raise ValueError("cannot mix canonical output bindings with output_map")
+    if output is None:
+        return dict(output_map or {})
+    return {str(binding.source): str(binding.target) for binding in output}
 
 
 def _escape_json_pointer(value: str) -> str:
@@ -1057,15 +1124,17 @@ def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
 
 def _raw_plan_from_artifact(artifact: WorkflowArtifact) -> RawWorkflowPlan:
     """Validate the stored plan shape expected by the broker workflow runner."""
-    return RawWorkflowPlan.model_validate({
-        "name": _plan_field(artifact, "name"),
-        "input_schema": _plan_field(artifact, "input_schema"),
-        "state_schema": _plan_field(artifact, "state_schema"),
-        "output_schema": _plan_field(artifact, "output_schema"),
-        "start": _plan_field(artifact, "start"),
-        "nodes": _plan_field(artifact, "nodes"),
-        "edges": _plan_field(artifact, "edges"),
-    })
+    return RawWorkflowPlan.model_validate(
+        {
+            "name": _plan_field(artifact, "name"),
+            "input_schema": _plan_field(artifact, "input_schema"),
+            "state_schema": _plan_field(artifact, "state_schema"),
+            "output_schema": _plan_field(artifact, "output_schema"),
+            "start": _plan_field(artifact, "start"),
+            "nodes": _plan_field(artifact, "nodes"),
+            "edges": _plan_field(artifact, "edges"),
+        }
+    )
 
 
 def _plan_field(artifact: WorkflowArtifact, field_name: str) -> Any:

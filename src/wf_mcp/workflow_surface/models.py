@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 
 from wf_artifacts import ArtifactKind
 from wf_artifacts.draft_workspaces.models import WORKSPACE_ID_PATTERN
+from wf_core.models.steps import InputBinding, OutputBinding
 
 WorkspaceId = Annotated[
     str,
@@ -27,8 +28,29 @@ DraftPathMap = Annotated[
     dict[str, str],
     Field(
         description=(
-            "Map local draft paths to workflow paths, for example "
-            "{'input.text': 'text'} or {'echoed': 'state.echoed'}."
+            "Compatibility map form for draft paths. Prefer canonical input/output "
+            "binding lists for new MCP/JSON clients."
+        )
+    ),
+]
+DraftInputBindings = Annotated[
+    list[InputBinding],
+    Field(
+        description=(
+            "Canonical node input bindings. Use path bindings such as "
+            "{'target': {'root': 'local', 'parts': ['text']}, "
+            "'path': {'root': 'input', 'parts': ['text']}} or value bindings "
+            "with {'target': ..., 'value': ...}."
+        )
+    ),
+]
+DraftOutputBindings = Annotated[
+    list[OutputBinding],
+    Field(
+        description=(
+            "Canonical node output bindings. Example: {'source': {'root': "
+            "'local', 'parts': ['echoed']}, 'target': {'root': 'state', "
+            "'parts': ['echoed']}}."
         )
     ),
 ]
@@ -203,25 +225,40 @@ class CreateMinimalDraftWorkspaceRequest(BaseModel):
     )
     state_schema: JsonSchemaObject = Field(
         description=(
-            "Workflow state schema. The current core state schema uses a fields "
-            "object; keep it small and explicit."
+            "Workflow state JSON Schema. Prefer object properties with reducer "
+            "extension keywords; legacy fields input is compatibility-only."
         )
     )
     output_schema: JsonSchemaObject = Field(
         description="Public output JSON Schema for the workflow or wrapper being drafted."
     )
-    input_map: DraftPathMap = Field(
+    input: DraftInputBindings | None = Field(
+        default=None,
         description=(
-            "Map public workflow input paths to local capability input paths. "
-            "Example: {'input.text': 'message'} sends workflow input.text to "
-            "capability field message."
-        )
+            "Preferred canonical input bindings for the called capability. "
+            "Use this instead of input_map for new clients."
+        ),
     )
-    output_map: DraftPathMap = Field(
+    output: DraftOutputBindings | None = Field(
+        default=None,
         description=(
-            "Map local capability output paths to workflow state paths. Example: "
-            "{'echoed': 'state.echoed'} stores capability output echoed in state.echoed."
-        )
+            "Preferred canonical output bindings for writes into workflow state. "
+            "Use this instead of output_map for new clients."
+        ),
+    )
+    input_map: DraftPathMap | None = Field(
+        default=None,
+        description=(
+            "Deprecated compatibility map from workflow paths to local capability "
+            "input paths, for example {'input.text': 'message'}."
+        ),
+    )
+    output_map: DraftPathMap | None = Field(
+        default=None,
+        description=(
+            "Deprecated compatibility map from local capability output paths to "
+            "workflow state paths, for example {'echoed': 'state.echoed'}."
+        ),
     )
     error_message_source: str | None = Field(
         default=None,
@@ -260,13 +297,23 @@ class CreateDraftWorkspaceFromCapabilityRequest(BaseModel):
         default=None,
         description="Optional override for the hinted public output schema.",
     )
+    input: DraftInputBindings | None = Field(
+        default=None,
+        description="Optional canonical override for the hinted workflow input bindings.",
+    )
+    output: DraftOutputBindings | None = Field(
+        default=None,
+        description="Optional canonical override for the hinted capability output bindings.",
+    )
     input_map: DraftPathMap | None = Field(
         default=None,
-        description="Optional override for the hinted workflow input map.",
+        description="Deprecated compatibility override for the hinted workflow input map.",
     )
     output_map: DraftPathMap | None = Field(
         default=None,
-        description="Optional override for the hinted capability output map.",
+        description=(
+            "Deprecated compatibility override for the hinted capability output map."
+        ),
     )
     error_message_source: str | None = Field(
         default=None,

@@ -364,7 +364,7 @@ Workspace patches are optimistic-concurrency guarded. Pass the current
 
 Workspace mutation tools use a single `request` object in MCP Inspector. That
 keeps the form grouped and lets the schema describe fields like
-`input_schema`, `output_map`, and `error_message_source`.
+`input_schema`, canonical `output`, and `error_message_source`.
 
 Use `create_wrapper_from_workspace` when the draft is meant to normalize a raw
 capability into a reusable workflow-facing wrapper. It is the same validation
@@ -406,12 +406,18 @@ Minimal example:
       },
       "required": ["echoed"]
     },
-    "input_map": {
-      "input.text": "text"
-    },
-    "output_map": {
-      "echoed": "state.echoed"
-    }
+    "input": [
+      {
+        "target": {"root": "local", "parts": ["text"]},
+        "path": {"root": "input", "parts": ["text"]}
+      }
+    ],
+    "output": [
+      {
+        "source": {"root": "local", "parts": ["echoed"]},
+        "target": {"root": "state", "parts": ["echoed"]}
+      }
+    ]
   }
 }
 ```

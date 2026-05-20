@@ -64,5 +64,10 @@ def test_source_inventory_exposes_serializable_reducer_details() -> None:
 
     assert isinstance(detail, ReducerInventory)
     assert detail.name == "wf.std.max"
+    assert str(detail.ref.source) == "wf.std"
+    assert detail.ref.name == "max"
     assert detail.description == "Keep the greater value."
     assert detail.config_schema == {"type": "object", "properties": {}}
+    assert source.as_inventory().model_dump(mode="json")["capabilities"][
+        "reducer_details"
+    ][0]["ref"] == {"source": "wf.std", "capability_key": "max"}

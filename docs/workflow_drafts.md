@@ -406,7 +406,8 @@ Patch calls must include the current `revision`; stale revisions return
 
 `create_minimal_draft_workspace` is intentionally only a bootstrapper. It wires
 an `error` outcome for naive MCP wrappers only when `error_message_source` is
-provided or a state path can be derived from `output_map`. Provider-specific
+provided or a state path can be derived from canonical `output` bindings or the
+compatibility `output_map`. Provider-specific
 error envelopes still belong in saved wrapper artifacts or follow-up patches.
 
 In MCP Inspector, workspace mutation tools accept a single `request` object.
