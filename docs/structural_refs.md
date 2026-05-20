@@ -159,16 +159,16 @@ being split again.
 Reducer refs are capability refs, not graph paths. `wf.std.add` is shorthand for
 source `wf.std` and capability key `add`.
 
-The reducer cleanup should move `ReducerRef` toward structural `CapabilityRef`
-while keeping string reducer names as parse-only shorthand. Reducer config stays
-part of the reducer reference payload:
+Configured reducer refs now use a structural `CapabilityRef` while keeping
+string reducer names as parse-only shorthand and display keys. Reducer config
+stays part of the reducer reference payload:
 
 ```json
 {
-  "name": "wf.std.modulo_add",
+  "ref": {"source": "wf.std", "capability_key": "modulo_add"},
   "config": {"modulus": 10}
 }
 ```
 
-That future cleanup must not reuse graph path parsing rules. Reducer names live
-in the capability/source domain.
+That shape must not reuse graph path parsing rules. Reducer names live in the
+capability/source domain.

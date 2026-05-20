@@ -51,6 +51,37 @@ def test_create_workflow_artifact_from_plan_adds_reducer_dependencies() -> None:
     )
 
     reducer = artifact.required_capability_map()["wf.std.max"]
+    assert str(reducer.capability_ref().source) == "wf.std"
+    assert reducer.capability_ref().name == "max"
+    assert reducer.logical_source == "wf.std"
+    assert reducer.capability_name == "max"
+    assert reducer.kind == "reducer"
+
+
+def test_create_workflow_artifact_from_plan_accepts_structural_reducer_ref() -> None:
+    plan = _plan()
+    plan["state_schema"] = {
+        "type": "object",
+        "properties": {
+            "score": {
+                "type": "integer",
+                "reducer": {
+                    "ref": {"source": "wf.std", "capability_key": "max"},
+                    "config": {},
+                },
+            }
+        },
+    }
+
+    artifact = create_workflow_artifact_from_plan(
+        artifact_id="score",
+        version=1,
+        title="Score",
+        plan=plan,
+        outcomes=("done",),
+    )
+
+    reducer = artifact.required_capability_map()["wf.std.max"]
     assert reducer.logical_source == "wf.std"
     assert reducer.capability_name == "max"
     assert reducer.kind == "reducer"

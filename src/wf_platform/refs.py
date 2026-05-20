@@ -46,6 +46,12 @@ class SourceRef:
             return value
         if isinstance(value, str):
             return cls.parse(value)
+        if isinstance(value, Mapping):
+            parts = value.get("parts")
+            if isinstance(parts, list | tuple) and all(
+                isinstance(part, str) for part in parts
+            ):
+                return cls(tuple(parts))
         raise TypeError("source ref must be a string")
 
 
@@ -101,9 +107,9 @@ class CapabilityRef:
             return cls.parse(value)
         if isinstance(value, dict):
             source = value.get("source")
-            name = value.get("capability_key")
-            if isinstance(source, str) and isinstance(name, str):
-                return cls(source=SourceRef.parse(source), name=name)
+            name = value.get("capability_key", value.get("name"))
+            if isinstance(name, str):
+                return cls(source=SourceRef._validate(source), name=name)
         raise TypeError(
             "capability ref must be a string or {'source': str, 'capability_key': str}"
         )

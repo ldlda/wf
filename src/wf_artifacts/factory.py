@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from wf_core import ReducerRef, Workflow
-from wf_platform import CapabilityRef, NodeSpecInventory
+from wf_platform import NodeSpecInventory
 
 from .models import ArtifactKind, JsonObject, RequiredCapability, WorkflowArtifact
 from .references import normalize_plan_node_refs
@@ -99,12 +99,8 @@ def _required_reducers_from_plan(plan: JsonObject) -> dict[str, RequiredCapabili
                 reducer = ReducerRef.model_validate(reducer_payload)
             except ValueError:
                 continue
-        try:
-            reducer_ref = CapabilityRef.parse(reducer.name)
-        except ValueError:
-            continue
         requirements[reducer.name] = RequiredCapability(
-            ref=reducer_ref,
+            ref=reducer.ref,
             kind="reducer",
         )
     return requirements

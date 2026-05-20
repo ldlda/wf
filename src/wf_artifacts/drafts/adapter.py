@@ -3,6 +3,7 @@ from __future__ import annotations
 from wf_authoring import WorkflowBuilder
 from wf_authoring.dsl import PathExpr
 from wf_core import JoinNode, Workflow
+from wf_core.paths import GraphSourcePath
 
 from .models import (
     DraftChooseStep,
@@ -81,7 +82,7 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
         ).entry
     if isinstance(step, DraftMatchStep):
         return builder.match(
-            PathExpr(step.match.value),
+            PathExpr(GraphSourcePath.parse(step.match.value)),
             {case.equals: case.then for case in step.match.cases},
             id=step_id,
             default=step.match.default,

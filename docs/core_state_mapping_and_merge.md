@@ -249,14 +249,17 @@ Reducers are a capability family, similar to reusable node specs:
 - dependency-trackable
 
 State fields reference reducers declaratively. String reducer names are accepted
-as shorthand for unconfigured reducers; configured reducers use a `name` plus
-JSON-compatible `config`. Workflow artifacts do not embed arbitrary Python
-callables.
+as shorthand for unconfigured reducers; configured reducers use a structural
+`ref` plus JSON-compatible `config`. Workflow artifacts do not embed arbitrary
+Python callables.
 
 ```python
 StateField(
     type="integer",
-    reducer={"name": "wf.std.modulo_add", "config": {"modulus": 10}},
+    reducer={
+        "ref": {"source": "wf.std", "capability_key": "modulo_add"},
+        "config": {"modulus": 10},
+    },
 )
 ```
 

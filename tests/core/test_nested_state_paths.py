@@ -13,6 +13,7 @@ from wf_core.paths import StatePath
 from wf_core.runtime.ops.merges import ReducerDefinition, apply_reducer
 from wf_core.runtime.ops.runs import create_run_state
 from wf_core.runtime.ops.state import write_state_value
+from wf_platform import CapabilityRef
 
 
 def test_exact_nested_state_path_uses_declared_reducer() -> None:
@@ -313,6 +314,44 @@ def test_state_field_accepts_configured_reducer_reference() -> None:
     # PYLINT!!!! what is u on ts is so clear
     assert field.reducer.name == "wf.std.max"  # pylint: disable=no-member
     assert field.reducer.config == {"sample": True}  # pylint: disable=no-member
+    assert field.model_dump(mode="json")["reducer"] == {
+        "ref": {"source": "wf.std", "capability_key": "max"},
+        "config": {"sample": True},
+    }
+
+
+def test_reducer_ref_accepts_string_shorthand_and_dumps_structural_ref() -> None:
+    reducer = ReducerRef.model_validate("wf.std.add")
+
+    assert reducer.ref == CapabilityRef.parse("wf.std.add")
+    assert reducer.name == "wf.std.add"
+    assert reducer.model_dump(mode="json") == {
+        "ref": {"source": "wf.std", "capability_key": "add"},
+        "config": {},
+    }
+
+
+def test_reducer_ref_accepts_legacy_name_object_with_config() -> None:
+    reducer = ReducerRef.model_validate(
+        {
+            "name": "wf.std.modulo_add",
+            "config": {"modulus": 10},
+        }
+    )
+
+    assert reducer.ref == CapabilityRef.parse("wf.std.modulo_add")
+    assert reducer.name == "wf.std.modulo_add"
+    assert reducer.config == {"modulus": 10}
+
+
+def test_reducer_ref_accepts_canonical_ref_object() -> None:
+    reducer = ReducerRef.model_validate(
+        {
+            "ref": {"source": "wf.std", "capability_key": "append"},
+        }
+    )
+
+    assert reducer.name == "wf.std.append"
 
 
 def test_unknown_state_reducer_fails_clearly() -> None:
