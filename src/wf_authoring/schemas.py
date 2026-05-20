@@ -52,9 +52,9 @@ def state_schema_from(value: StateSchemaLike) -> StateSchema:
 
     schema = schema_ref_from(value)
     schema_payload = schema.model_dump(mode="json", exclude_none=True)
-    metadata_by_name = _state_metadata_by_name(value)
+    metadata_by_path = _state_metadata_by_path(value)
     for path, property_schema in _flatten_state_properties(schema):
-        metadata = metadata_by_name.get(path, StateFieldMetadata())
+        metadata = metadata_by_path.get(path, StateFieldMetadata())
         extension_schema = _lookup_mutable_property_schema(schema_payload, path)
         if extension_schema is None:
             extension_schema = property_schema
@@ -75,7 +75,7 @@ def _reducer_ref_from(value: ReducerLike) -> ReducerRef:
     return ReducerRef.model_validate(value)
 
 
-def _state_metadata_by_name(value: object) -> dict[str, StateFieldMetadata]:
+def _state_metadata_by_path(value: object) -> dict[tuple[str, ...], StateFieldMetadata]:
     if not isinstance(value, type) or not issubclass(value, BaseModel):
         return {}
 
@@ -85,10 +85,11 @@ def _state_metadata_by_name(value: object) -> dict[str, StateFieldMetadata]:
 def _iter_model_metadata(
     model_type: type[BaseModel],
     *,
-    prefix: str = "",
-) -> Iterator[tuple[str, StateFieldMetadata]]:
+    prefix: tuple[str, ...] = (),
+) -> Iterator[tuple[tuple[str, ...], StateFieldMetadata]]:
     for name, field_info in model_type.model_fields.items():
-        path = f"{prefix}.{name}" if prefix else name
+        field_name = field_info.alias or name
+        path = (*prefix, field_name)
         for item in field_info.metadata:
             if isinstance(item, StateFieldMetadata):
                 yield path, item
@@ -100,24 +101,28 @@ def _iter_model_metadata(
 
 def _flatten_state_properties(
     schema: SchemaRef,
-) -> Iterator[tuple[str, dict[str, Any]]]:
+) -> Iterator[tuple[tuple[str, ...], dict[str, Any]]]:
     raw_schema = schema.model_dump(exclude_none=True)
-    yield from _iter_state_properties(raw_schema.get("properties", {}), raw_schema)
+    yield from _iter_state_properties(
+        raw_schema.get("properties", {}),
+        raw_schema,
+        prefix=(),
+    )
 
 
 def _iter_state_properties(
     properties: object,
     root_schema: dict[str, Any],
     *,
-    prefix: str = "",
-) -> Iterator[tuple[str, dict[str, Any]]]:
+    prefix: tuple[str, ...],
+) -> Iterator[tuple[tuple[str, ...], dict[str, Any]]]:
     if not isinstance(properties, dict):
         return
 
     for name, property_schema in properties.items():
         if not isinstance(property_schema, dict):
             continue
-        path = f"{prefix}.{name}" if prefix else name
+        path = (*prefix, name)
         resolved_schema = _resolve_property_schema(property_schema, root_schema)
         yield path, resolved_schema
         yield from _iter_state_properties(
@@ -150,11 +155,11 @@ def _dump_reducer(reducer: ReducerRef) -> str | dict[str, Any]:
 
 def _lookup_mutable_property_schema(
     schema: dict[str, Any],
-    path: str,
+    path: tuple[str, ...],
 ) -> dict[str, Any] | None:
     """Find a property schema, following local Pydantic ``$defs`` references."""
     current: dict[str, Any] = schema
-    for part in path.split("."):
+    for part in path:
         properties = current.get("properties")
         if not isinstance(properties, dict):
             return None
@@ -181,16 +186,29 @@ def _resolve_mutable_property_schema(
 
 def _state_field_default(
     value: object,
-    field_name: str,
+    field_path: tuple[str, ...],
     property_schema: object,
 ) -> object:
     if (
-        "." not in field_name
+        len(field_path) == 1
         and isinstance(value, type)
         and issubclass(value, BaseModel)
     ):
-        field_info = value.model_fields[field_name]
+        field_info = _model_field_by_schema_name(value, field_path[0])
+        if field_info is None:
+            return None
         if not field_info.is_required():
             return field_info.get_default(call_default_factory=True)
 
+    return None
+
+
+def _model_field_by_schema_name(model_type: type[BaseModel], name: str) -> Any | None:
+    """Return a model field by Python name or serialized alias."""
+    field_info = model_type.model_fields.get(name)
+    if field_info is not None:
+        return field_info
+    for candidate in model_type.model_fields.values():
+        if candidate.alias == name:
+            return candidate
     return None

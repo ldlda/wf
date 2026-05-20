@@ -98,8 +98,8 @@ class StateFieldDecl(BaseModel):
         return schema_type if isinstance(schema_type, str) else None
 
     @field_serializer("path")
-    def _serialize_path(self, path: StatePath) -> str:
-        return str(path)
+    def _serialize_path(self, path: StatePath) -> dict[str, str | list[str]]:
+        return StatePath._serialize(path)
 
     @model_validator(mode="before")
     @classmethod
@@ -147,18 +147,24 @@ class StateSchema(BaseModel):
     @property
     def fields(self) -> list[StateFieldDecl]:
         """Return the compiled field declarations for compatibility callers."""
-        return list(self.field_map().values())
+        return list(self.field_index().values())
 
-    def field_map(self) -> dict[str, StateFieldDecl]:
-        """Return reducer-aware declarations keyed by rootless dotted path."""
+    def field_index(self) -> dict[StatePath, StateFieldDecl]:
+        """Return reducer-aware declarations keyed by exact typed state path."""
         root_schema = self.model_dump(mode="json", exclude_none=True)
         return {
             path: field
             for path, field in _iter_state_field_declarations(
                 self.properties,
                 root_schema,
-                prefix="",
+                prefix=(),
             )
+        }
+
+    def field_map(self) -> dict[str, StateFieldDecl]:
+        """Return reducer-aware declarations keyed by rootless dotted path."""
+        return {
+            ".".join(path.parts): field for path, field in self.field_index().items()
         }
 
     def root_fields(self) -> set[str]:
@@ -245,18 +251,21 @@ def _iter_state_field_declarations(
     properties: Mapping[str, Any],
     root_schema: Mapping[str, Any],
     *,
-    prefix: str,
-) -> Iterator[tuple[str, StateFieldDecl]]:
+    prefix: tuple[str, ...],
+) -> Iterator[tuple[StatePath, StateFieldDecl]]:
     for name, property_schema in properties.items():
         if not isinstance(property_schema, Mapping):
             continue
-        path = f"{prefix}.{name}" if prefix else name
+        path = StatePath((*prefix, name))
+        display_path = ".".join(path.parts)
         resolved_schema = _resolve_local_ref(property_schema, root_schema)
-        reducer = _reducer_from_property(path, property_schema)
+        reducer = _reducer_from_property(display_path, property_schema)
         trace = property_schema.get("trace", True)
         default = property_schema.get("default")
         if not isinstance(trace, bool):
-            raise ValueError(f"invalid trace for state field {path!r}: expected bool")
+            raise ValueError(
+                f"invalid trace for state field {display_path!r}: expected bool"
+            )
         validation_schema = {
             key: value
             for key, value in resolved_schema.items()
@@ -265,20 +274,22 @@ def _iter_state_field_declarations(
         _attach_root_schema_context(validation_schema, root_schema)
         yield (
             path,
-            StateFieldDecl.model_validate({
-                "path": StatePath.of(path),
-                "schema": SchemaRef.model_validate(validation_schema),
-                "reducer": reducer,
-                "trace": trace,
-                "default": default,
-            }),
+            StateFieldDecl.model_validate(
+                {
+                    "path": path,
+                    "schema": SchemaRef.model_validate(validation_schema),
+                    "reducer": reducer,
+                    "trace": trace,
+                    "default": default,
+                }
+            ),
         )
         child_properties = resolved_schema.get("properties")
         if isinstance(child_properties, Mapping):
             yield from _iter_state_field_declarations(
                 child_properties,
                 root_schema,
-                prefix=path,
+                prefix=path.parts,
             )
 
 

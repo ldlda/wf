@@ -153,3 +153,22 @@ JSON/MCP or when path segments contain display punctuation.
 Old strings are accepted at parse boundaries for compatibility. Structural
 `parts` are literal field names, so a part may contain dots or spaces without
 being split again.
+
+## Reducer Refs
+
+Reducer refs are capability refs, not graph paths. `wf.std.add` is shorthand for
+source `wf.std` and capability key `add`.
+
+The reducer cleanup should move `ReducerRef` toward structural `CapabilityRef`
+while keeping string reducer names as parse-only shorthand. Reducer config stays
+part of the reducer reference payload:
+
+```json
+{
+  "name": "wf.std.modulo_add",
+  "config": {"modulus": 10}
+}
+```
+
+That future cleanup must not reuse graph path parsing rules. Reducer names live
+in the capability/source domain.

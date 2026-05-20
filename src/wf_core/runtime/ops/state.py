@@ -63,7 +63,7 @@ def apply_output_bindings(
             "mapped state patch has overlapping destination paths"
         )
 
-    state_fields = workflow.state_schema.field_map()
+    state_fields = workflow.state_schema.field_index()
     resolved_patch: dict[StatePath, Any] = {}
     for binding in bindings:
         try:
@@ -139,7 +139,7 @@ def write_state_value(
     validate_staged_state_patch(
         staged_state,
         {StatePath.parse(destination_path): (key_path, merged_value)},
-        workflow.state_schema.field_map(),
+        workflow.state_schema.field_index(),
     )
     state.clear()
     state.update(staged_state)
@@ -152,7 +152,7 @@ def prepare_state_value(
     value: Any,
     *,
     reducers: Mapping[str, ReducerDefinition] | None = None,
-    state_fields: Mapping[str, StateFieldDecl] | None = None,
+    state_fields: Mapping[StatePath, StateFieldDecl] | None = None,
 ) -> tuple[list[str], Any]:
     """Resolve reducer output for a state write without mutating state."""
     try:
@@ -165,9 +165,11 @@ def prepare_state_value(
             f"executor only supports writes into state.*, got {destination_path!r}"
         )
 
-    declared_path = ".".join(parts)
+    declared_path = StatePath(tuple(parts))
     fields = (
-        state_fields if state_fields is not None else workflow.state_schema.field_map()
+        state_fields
+        if state_fields is not None
+        else workflow.state_schema.field_index()
     )
     declared_field = fields.get(declared_path)
     reducer = (
@@ -194,7 +196,7 @@ def project_output(workflow: Workflow, state: dict[str, Any]) -> dict[str, Any]:
 def validate_staged_state_patch(
     staged_state: dict[str, Any],
     prepared_patch: Mapping[StatePath, tuple[list[str], Any]],
-    state_fields: Mapping[str, StateFieldDecl],
+    state_fields: Mapping[StatePath, StateFieldDecl],
 ) -> None:
     """Validate affected declared state schemas before committing a patch.
 
@@ -217,18 +219,18 @@ def validate_staged_state_patch(
 
 def _affected_state_fields(
     prepared_patch: Mapping[StatePath, tuple[list[str], Any]],
-    state_fields: Mapping[str, StateFieldDecl],
+    state_fields: Mapping[StatePath, StateFieldDecl],
 ) -> list[StateFieldDecl]:
-    affected: dict[str, StateFieldDecl] = {}
+    affected: dict[StatePath, StateFieldDecl] = {}
     for destination_path in prepared_patch:
         destination_parts = destination_path.parts
-        for key, field in state_fields.items():
+        for path, field in state_fields.items():
             field_parts = field.path.parts
             if _is_prefix(field_parts, destination_parts) or _is_prefix(
                 destination_parts,
                 field_parts,
             ):
-                affected[key] = field
+                affected[path] = field
     return sorted(
         affected.values(),
         key=lambda field: len(field.path.parts),

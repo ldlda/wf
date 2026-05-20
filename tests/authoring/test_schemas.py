@@ -1,6 +1,11 @@
 from __future__ import annotations
 
-from wf_authoring import WorkflowBuilder
+from typing import Annotated
+
+from pydantic import BaseModel, Field
+
+from wf_authoring import WorkflowBuilder, state_field
+from wf_core.paths import StatePath
 
 from tests.authoring.helpers import (
     AppendState,
@@ -11,6 +16,14 @@ from tests.authoring.helpers import (
     WorkflowOutput,
     WorkflowState,
 )
+
+
+class DotAliasState(BaseModel):
+    person_tags: Annotated[
+        list[str],
+        Field(alias="person.name"),
+        state_field(reducer="wf.std.append"),
+    ]
 
 
 def test_builder_accepts_basemodel_classes_for_workflow_schemas() -> None:
@@ -102,3 +115,19 @@ def test_nested_state_basemodel_projects_parent_and_child_paths() -> None:
     assert fields["person.tags"].type == "array"
     assert fields["person"].reducer.name == "wf.std.replace"
     assert fields["person.tags"].reducer.name == "wf.std.append"
+
+
+def test_state_schema_from_preserves_literal_dotted_alias_paths() -> None:
+    builder = WorkflowBuilder(
+        name="dotted_alias_state_schema_demo",
+        input_schema=WorkflowInput,
+        state_schema=DotAliasState,
+        output_schema=WorkflowOutput,
+        start="start",
+    )
+
+    workflow = builder.compile()
+    fields = workflow.state_schema.field_index()
+
+    assert StatePath(("person.name",)) in fields
+    assert fields[StatePath(("person.name",))].reducer.name == "wf.std.append"
