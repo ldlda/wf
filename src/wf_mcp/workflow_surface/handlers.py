@@ -43,6 +43,7 @@ from .constants import (
     RUNTIME_ERROR_CAPABILITY,
 )
 from .refs import parse_workflow_surface_capability_id
+from .wrapper_hints import wrapper_hints_for_capability
 
 if TYPE_CHECKING:
     from ..broker.service import WfMcpService
@@ -117,7 +118,14 @@ class WorkflowSurfaceHandlers:
                 continue
             for detail in source.as_inventory().capabilities.node_spec_details:
                 if detail.name == qualified_name:
-                    return detail.model_dump(mode="json")
+                    detail_payload = detail.model_dump(mode="json")
+                    detail_payload["wrapper_hints"] = wrapper_hints_for_capability(
+                        capability_name=detail.name,
+                        input_schema=detail.input_schema,
+                        output_schema=detail.output_schema,
+                        outcomes=detail.outcomes,
+                    ).model_dump(mode="json")
+                    return detail_payload
         wrapper_detail = self._wrapper_capability_detail(qualified_name)
         if wrapper_detail is not None:
             return wrapper_detail
@@ -246,6 +254,12 @@ class WorkflowSurfaceHandlers:
             "required_capabilities": _required_capability_payloads(
                 artifact.required_capability_map()
             ),
+            "wrapper_hints": wrapper_hints_for_capability(
+                capability_name=_artifact_capability_id(artifact),
+                input_schema=artifact.input_schema,
+                output_schema=artifact.output_schema,
+                outcomes=list(artifact.outcomes),
+            ).model_dump(mode="json"),
         }
 
     async def _call_wrapper_artifact(

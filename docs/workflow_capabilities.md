@@ -267,6 +267,8 @@ authoring loop:
     names, but not full schemas
 - `wf.workflow.inspect_capability`
   - returns one full workflow capability contract with schemas and outcomes
+  - includes `wrapper_hints`, a conservative scaffold for creating a wrapper
+    draft from the inspected capability
 - `wf.workflow.call_capability`
   - executes one such capability once for direct testing
   - returns `qualified_name`, `source_id`, `kind`, optional `deployment_id`,
@@ -286,6 +288,29 @@ Recommended discovery order:
    schema contract.
 4. Use `wf.workflow.call_capability` with a plain input object to test the
    selected contract once before composing it into a draft.
+
+## Wrapper Authoring Hints
+
+`wf.workflow.inspect_capability` returns `wrapper_hints` for planner-visible
+capabilities. These hints are scaffolding for draft creation, not semantic
+guarantees.
+
+Declared capability outcomes are authoritative and are preserved by default.
+Boolean output fields may appear as `outcome_candidates` when they have
+control-like names such as `success`, `error`, `approved`, or `has_more`, but
+they are never wired automatically. A wrapper author must explicitly confirm
+whether those fields should become routing conditions.
+
+`confidence` is intentionally coarse:
+
+- `high`: simple object input/output schemas and no missing decisions.
+- `medium`: usable scaffold with candidate decisions, such as boolean outcome
+  candidates.
+- `low`: missing or nested output choices require explicit authoring.
+
+`missing_decisions` is a typed list of decisions the author should resolve
+before saving a wrapper. MCP clients should show these prominently rather than
+treating the scaffold as complete.
 
 ## Relationship To Capability Sources
 

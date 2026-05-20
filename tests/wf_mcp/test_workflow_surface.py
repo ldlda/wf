@@ -160,6 +160,31 @@ def test_workflow_surface_inspects_one_capability() -> None:
     assert "input_schema" in payload
 
 
+def test_workflow_surface_inspect_capability_includes_wrapper_hints() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_wrapper_hints_mcp"),
+        artifact_store=FileWorkflowArtifactStore(
+            local_temp_root() / "surface_wrapper_hints_artifacts"
+        ),
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.inspect_capability(qualified_name="demo.personal.echo_tool")
+    )
+
+    hints = payload["wrapper_hints"]
+    assert hints["capability_name"] == "demo.personal.echo_tool"
+    assert hints["declared_outcomes"] == ["ok"]
+    assert hints["input_map"] == {"input.text": "text"}
+    assert hints["output_map"] == {"echoed": "state.echoed"}
+    assert hints["outcome_policy"] == "preserve_declared"
+
+
 def test_workflow_surface_inspects_saved_wrapper_capability() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "surface_inspect_wrapper_cap"
@@ -179,6 +204,12 @@ def test_workflow_surface_inspects_saved_wrapper_capability() -> None:
     assert payload["artifact_id"] == "echo_wrapper"
     assert payload["outcomes"] == ["completed"]
     assert "input_schema" in payload
+    hints = payload["wrapper_hints"]
+    assert hints["capability_name"] == "workflow.echo_wrapper.v1"
+    assert hints["declared_outcomes"] == ["completed"]
+    assert hints["suggested_wrapper_outcomes"] == ["completed"]
+    assert hints["input_map"] == {"input.text": "text"}
+    assert hints["output_map"] == {"echoed": "state.echoed"}
 
 
 def test_workflow_surface_validates_deployment_dependencies() -> None:
