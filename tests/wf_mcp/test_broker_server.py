@@ -204,7 +204,9 @@ def test_broker_validates_workflow_deployment_from_artifact_store() -> None:
             id="summarize_docs.personal",
             artifact_id="summarize_docs",
             artifact_version=1,
-            bindings={"context7": "context7.personal"},
+            bindings=[
+                {"logical_source": "context7", "concrete_source": "context7.personal"}
+            ],
         )
     )
     service = WfMcpService(
@@ -290,7 +292,7 @@ def test_broker_creates_workflow_artifact_from_plan() -> None:
     assert payload["saved"] is True
     assert loaded.input_schema["properties"]["text"]["type"] == "string"
     assert loaded.output_schema["properties"]["echoed"]["type"] == "string"
-    assert loaded.required_capabilities["demo.echo_tool"].logical_source == "demo"
+    assert loaded.required_capability_map()["demo.echo_tool"].logical_source == "demo"
 
 
 def test_broker_saves_and_lists_workflow_deployments() -> None:
@@ -311,7 +313,12 @@ def test_broker_saves_and_lists_workflow_deployments() -> None:
                     id="summarize_docs.personal",
                     artifact_id="summarize_docs",
                     artifact_version=1,
-                    bindings={"context7": "context7.personal"},
+                    bindings=[
+                        {
+                            "logical_source": "context7",
+                            "concrete_source": "context7.personal",
+                        }
+                    ],
                 ).model_dump(mode="json")
             },
         )
@@ -324,7 +331,9 @@ def test_broker_saves_and_lists_workflow_deployments() -> None:
 
     assert save_payload["deployment_id"] == "summarize_docs.personal"
     assert list_payload["deployments"][0]["id"] == "summarize_docs.personal"
-    assert list_payload["deployments"][0]["bindings"]["context7"] == "context7.personal"
+    binding = list_payload["deployments"][0]["bindings"][0]
+    assert binding["logical_source"] == "context7"
+    assert binding["concrete_source"] == "context7.personal"
 
 
 def test_broker_runs_non_interrupting_workflow_deployment() -> None:
@@ -337,7 +346,7 @@ def test_broker_runs_non_interrupting_workflow_deployment() -> None:
             id="echo.personal",
             artifact_id="echo",
             artifact_version=1,
-            bindings={"demo": "demo.personal"},
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
         )
     )
     service = WfMcpService(
@@ -379,7 +388,9 @@ def test_broker_run_deployment_returns_unrunnable_for_dependency_errors() -> Non
             id="summarize_docs.personal",
             artifact_id="summarize_docs",
             artifact_version=1,
-            bindings={"context7": "context7.personal"},
+            bindings=[
+                {"logical_source": "context7", "concrete_source": "context7.personal"}
+            ],
         )
     )
     service = WfMcpService(
@@ -414,7 +425,7 @@ def test_broker_run_deployment_rejects_interrupting_artifacts() -> None:
             id="approval.personal",
             artifact_id="approval",
             artifact_version=1,
-            bindings={},
+            bindings=[],
         )
     )
     service = WfMcpService(
@@ -464,8 +475,7 @@ def _artifact() -> WorkflowArtifact:
         plan={"name": "summarize_docs", "nodes": [], "edges": []},
         required_capabilities={
             "context7.query-docs": RequiredCapability(
-                logical_source="context7",
-                capability_name="query-docs",
+                ref="context7.query-docs",
                 kind="tool",
                 input_schema_hash="sha256:input",
                 output_schema_hash="sha256:output",
@@ -518,8 +528,7 @@ def _echo_artifact() -> WorkflowArtifact:
         },
         required_capabilities={
             "demo.echo_tool": RequiredCapability(
-                logical_source="demo",
-                capability_name="echo_tool",
+                ref="demo.echo_tool",
                 kind="node_spec",
             )
         },

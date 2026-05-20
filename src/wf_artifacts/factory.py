@@ -30,6 +30,11 @@ def create_workflow_artifact_from_plan(
         observed_node_specs,
     )
     _validate_workflow_plan(normalized_plan)
+    required = {
+        **_required_reducers_from_plan(normalized_plan),
+        **node_requirements,
+        **dict(required_capabilities or {}),
+    }
     return WorkflowArtifact(
         id=artifact_id,
         version=version,
@@ -40,11 +45,7 @@ def create_workflow_artifact_from_plan(
         output_schema=_required_object_field(normalized_plan, "output_schema"),
         outcomes=outcomes,
         plan=normalized_plan,
-        required_capabilities={
-            **_required_reducers_from_plan(normalized_plan),
-            **node_requirements,
-            **dict(required_capabilities or {}),
-        },
+        required_capabilities=list(required.values()),
         created_from_catalog_version=created_from_catalog_version,
     )
 
@@ -103,8 +104,7 @@ def _required_reducers_from_plan(plan: JsonObject) -> dict[str, RequiredCapabili
         except ValueError:
             continue
         requirements[reducer.name] = RequiredCapability(
-            logical_source=str(reducer_ref.source),
-            capability_name=reducer_ref.name,
+            ref=reducer_ref,
             kind="reducer",
         )
     return requirements

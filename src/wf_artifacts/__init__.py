@@ -28,6 +28,7 @@ from .models import (
     DiagnosticSeverity,
     DriftPolicy,
     RequiredCapability,
+    SourceBinding,
     WorkflowArtifact,
     WorkflowDeployment,
 )
@@ -48,6 +49,7 @@ __all__ = [
     "FileDraftWorkspaceStore",
     "FileWorkflowArtifactStore",
     "RequiredCapability",
+    "SourceBinding",
     "WorkflowArtifact",
     "WorkflowArtifactCatalogEntry",
     "WorkflowCapabilityRef",

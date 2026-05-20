@@ -207,10 +207,10 @@ async def create_and_run_echo_deployment(root: Path, *, text: str) -> dict[str, 
             id="mcp_echo.personal",
             artifact_id="mcp_echo",
             artifact_version=1,
-            bindings={
-                "demo": "demo.personal",
-                "wf.std": "wf.std",
-            },
+            bindings=[
+                {"logical_source": "demo", "concrete_source": "demo.personal"},
+                {"logical_source": "wf.std", "concrete_source": "wf.std"},
+            ],
         )
     )
     return await handlers.run_deployment(

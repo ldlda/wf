@@ -46,8 +46,7 @@ def normalize_plan_node_refs(
             else None
         )
         requirements[logical_ref] = RequiredCapability(
-            logical_source=logical_source,
-            capability_name=capability_name,
+            ref=CapabilityRef.parse(logical_ref),
             kind="node_spec",
             input_schema_hash=(
                 hash_json_schema(observed.input_schema)
@@ -65,7 +64,7 @@ def normalize_plan_node_refs(
             output_schema_snapshot=(
                 observed.output_schema if observed is not None else None
             ),
-            observed_concrete_source=concrete_source,
+            observed_concrete_source=SourceRef.parse(concrete_source),
         )
 
     return normalized, requirements

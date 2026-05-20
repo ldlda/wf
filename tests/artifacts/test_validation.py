@@ -19,8 +19,7 @@ def required_capability(
     output_hash: str = "sha256:output",
 ) -> RequiredCapability:
     return RequiredCapability(
-        logical_source=logical_source,
-        capability_name=capability_name,
+        ref=f"{logical_source}.{capability_name}",
         kind="tool",
         input_schema_hash=input_hash,
         input_schema_snapshot={"type": "object", "properties": {}},
@@ -38,9 +37,7 @@ def artifact_with(capability: RequiredCapability) -> WorkflowArtifact:
         output_schema={"type": "object", "properties": {}},
         outcomes=("done",),
         plan={"name": "summarize_docs", "nodes": [], "edges": []},
-        required_capabilities={
-            f"{capability.logical_source}.{capability.capability_name}": capability
-        },
+        required_capabilities=[capability],
     )
 
 
@@ -53,7 +50,14 @@ def deployment(
         id="summarize_docs.personal",
         artifact_id="summarize_docs",
         artifact_version=1,
-        bindings={"context7": "context7.personal"} if bindings is None else bindings,
+        bindings=(
+            [{"logical_source": "context7", "concrete_source": "context7.personal"}]
+            if bindings is None
+            else [
+                {"logical_source": logical, "concrete_source": concrete}
+                for logical, concrete in bindings.items()
+            ]
+        ),
         drift_policy=drift_policy,
     )
 
@@ -180,8 +184,7 @@ def test_validate_deployment_allows_changed_schema_when_policy_allows() -> None:
 
 def test_validate_deployment_accepts_reducer_capability() -> None:
     reducer = RequiredCapability(
-        logical_source="wf.std",
-        capability_name="set_union",
+        ref="wf.std.set_union",
         kind="reducer",
     )
     diagnostics = validate_deployment_dependencies(

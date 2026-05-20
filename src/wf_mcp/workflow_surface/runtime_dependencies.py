@@ -44,7 +44,7 @@ def resolve_runtime_dependencies(
         node_name_bindings[node_name] = concrete_name
         node_specs[concrete_name] = spec
     reducers = _resolve_reducers(
-        required_capabilities=artifact.required_capabilities,
+        required_capabilities=artifact.required_capability_map(),
         deployment=deployment,
         sources=sources,
     )
@@ -68,7 +68,7 @@ def _resolve_node_spec(
 
     if deployment is not None:
         try:
-            bound_ref = CapabilityRef.parse(node_name).bind(deployment.bindings)
+            bound_ref = CapabilityRef.parse(node_name).bind(deployment.binding_map())
         except ValueError:
             bound_ref = None
         if bound_ref is not None:
@@ -104,7 +104,7 @@ def _resolve_reducers(
     for logical_ref, required in required_capabilities.items():
         if required.kind != "reducer":
             continue
-        bound_source_id = deployment.bindings.get(required.logical_source)
+        bound_source_id = deployment.binding_map().get(required.logical_source)
         if bound_source_id is None:
             continue
         source = sources.get(bound_source_id)

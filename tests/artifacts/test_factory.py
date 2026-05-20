@@ -16,8 +16,7 @@ def test_create_workflow_artifact_from_plan_derives_boundary_schemas() -> None:
         outcomes=("done",),
         required_capabilities={
             "demo.echo_tool": RequiredCapability(
-                logical_source="demo",
-                capability_name="echo_tool",
+                ref="demo.echo_tool",
                 kind="node_spec",
             )
         },
@@ -32,7 +31,7 @@ def test_create_workflow_artifact_from_plan_derives_boundary_schemas() -> None:
     assert artifact.output_schema["properties"]["echoed"]["type"] == "string"
     assert artifact.outcomes == ("done",)
     assert artifact.plan["name"] == "echo"
-    assert "demo.echo_tool" in artifact.required_capabilities
+    assert "demo.echo_tool" in artifact.required_capability_map()
     assert artifact.created_from_catalog_version == "catalog-1"
 
 
@@ -51,7 +50,7 @@ def test_create_workflow_artifact_from_plan_adds_reducer_dependencies() -> None:
         outcomes=("done",),
     )
 
-    reducer = artifact.required_capabilities["wf.std.max"]
+    reducer = artifact.required_capability_map()["wf.std.max"]
     assert reducer.logical_source == "wf.std"
     assert reducer.capability_name == "max"
     assert reducer.kind == "reducer"
@@ -71,12 +70,12 @@ def test_create_workflow_artifact_from_plan_rewrites_bound_node_specs() -> None:
     )
 
     node = artifact.plan["nodes"][0]
-    required = artifact.required_capabilities["demo.echo_tool"]
+    required = artifact.required_capability_map()["demo.echo_tool"]
     assert node["node"] == "demo.echo_tool"
     assert required.logical_source == "demo"
     assert required.capability_name == "echo_tool"
     assert required.kind == "node_spec"
-    assert required.observed_concrete_source == "demo.personal"
+    assert str(required.observed_concrete_source) == "demo.personal"
 
 
 def test_create_workflow_artifact_from_plan_snapshots_observed_node_spec() -> None:
@@ -108,7 +107,7 @@ def test_create_workflow_artifact_from_plan_snapshots_observed_node_spec() -> No
         },
     )
 
-    required = artifact.required_capabilities["demo.echo_tool"]
+    required = artifact.required_capability_map()["demo.echo_tool"]
     assert required.input_schema_snapshot == {
         "type": "object",
         "properties": {"text": {"type": "string"}},
@@ -136,15 +135,14 @@ def test_create_workflow_artifact_from_plan_keeps_explicit_capability_metadata()
         source_bindings={"demo": "demo.personal"},
         required_capabilities={
             "demo.echo_tool": RequiredCapability(
-                logical_source="demo",
-                capability_name="echo_tool",
+                ref="demo.echo_tool",
                 kind="node_spec",
                 input_schema_hash="sha256:explicit",
             )
         },
     )
 
-    required = artifact.required_capabilities["demo.echo_tool"]
+    required = artifact.required_capability_map()["demo.echo_tool"]
     assert required.input_schema_hash == "sha256:explicit"
 
 

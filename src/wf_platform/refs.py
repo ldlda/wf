@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from typing import Any
+
+from pydantic_core import core_schema
 
 
 @dataclass(frozen=True, slots=True)
@@ -11,7 +14,7 @@ class SourceRef:
     parts: tuple[str, ...]
 
     def __post_init__(self) -> None:
-        if not self.parts or any(not part for part in self.parts):
+        if not self.parts or any(not part or not part.strip() for part in self.parts):
             raise ValueError("source ref requires non-empty path segments")
 
     @classmethod
@@ -21,6 +24,29 @@ class SourceRef:
 
     def __str__(self) -> str:
         return ".".join(self.parts)
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: object,
+        _handler: object,
+    ) -> core_schema.CoreSchema:
+        """Validate refs from strings while serializing back to wire strings."""
+        return core_schema.no_info_plain_validator_function(
+            cls._validate,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                str,
+                when_used="json",
+            ),
+        )
+
+    @classmethod
+    def _validate(cls, value: Any) -> SourceRef:
+        if isinstance(value, SourceRef):
+            return value
+        if isinstance(value, str):
+            return cls.parse(value)
+        raise TypeError("source ref must be a string")
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,3 +77,26 @@ class CapabilityRef:
 
     def __str__(self) -> str:
         return f"{self.source}.{self.name}"
+
+    @classmethod
+    def __get_pydantic_core_schema__(
+        cls,
+        _source_type: object,
+        _handler: object,
+    ) -> core_schema.CoreSchema:
+        """Validate refs from strings while serializing back to wire strings."""
+        return core_schema.no_info_plain_validator_function(
+            cls._validate,
+            serialization=core_schema.plain_serializer_function_ser_schema(
+                str,
+                when_used="json",
+            ),
+        )
+
+    @classmethod
+    def _validate(cls, value: Any) -> CapabilityRef:
+        if isinstance(value, CapabilityRef):
+            return value
+        if isinstance(value, str):
+            return cls.parse(value)
+        raise TypeError("capability ref must be a string")

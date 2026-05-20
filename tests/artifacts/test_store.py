@@ -50,7 +50,9 @@ def test_file_store_round_trips_deployment(tmp_path) -> None:
         id="summarize_docs.personal",
         artifact_id="summarize_docs",
         artifact_version=1,
-        bindings={"context7": "context7.personal"},
+        bindings=[
+            {"logical_source": "context7", "concrete_source": "context7.personal"}
+        ],
     )
 
     store.save_deployment(deployment)
@@ -58,7 +60,7 @@ def test_file_store_round_trips_deployment(tmp_path) -> None:
 
     assert loaded.id == "summarize_docs.personal"
     assert loaded.artifact_id == "summarize_docs"
-    assert loaded.bindings["context7"] == "context7.personal"
+    assert loaded.binding_map()["context7"] == "context7.personal"
 
 
 def test_file_store_lists_deployments_in_id_order(tmp_path) -> None:
@@ -68,7 +70,9 @@ def test_file_store_lists_deployments_in_id_order(tmp_path) -> None:
             id="summarize_docs.work",
             artifact_id="summarize_docs",
             artifact_version=1,
-            bindings={"context7": "context7.work"},
+            bindings=[
+                {"logical_source": "context7", "concrete_source": "context7.work"}
+            ],
         )
     )
     store.save_deployment(
@@ -76,7 +80,9 @@ def test_file_store_lists_deployments_in_id_order(tmp_path) -> None:
             id="summarize_docs.personal",
             artifact_id="summarize_docs",
             artifact_version=1,
-            bindings={"context7": "context7.personal"},
+            bindings=[
+                {"logical_source": "context7", "concrete_source": "context7.personal"}
+            ],
         )
     )
 
@@ -86,4 +92,4 @@ def test_file_store_lists_deployments_in_id_order(tmp_path) -> None:
         "summarize_docs.personal",
         "summarize_docs.work",
     ]
-    assert deployments[0].bindings["context7"] == "context7.personal"
+    assert deployments[0].binding_map()["context7"] == "context7.personal"

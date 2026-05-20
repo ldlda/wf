@@ -41,7 +41,7 @@ def artifact_catalog_entry(
     required_sources = sorted(
         {
             capability.logical_source
-            for capability in artifact.required_capabilities.values()
+            for capability in artifact.required_capability_map().values()
         }
     )
     return WorkflowArtifactCatalogEntry(

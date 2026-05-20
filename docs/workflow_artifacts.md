@@ -221,12 +221,12 @@ step:
   node_ref: context7.query-docs
 
 required_capabilities:
-  context7.query-docs:
+  - ref: context7.query-docs
     kind: tool
-    input_schema_hash
-    input_schema_snapshot
-    output_schema_hash
-    output_schema_snapshot
+    input_schema_hash: ...
+    input_schema_snapshot: ...
+    output_schema_hash: ...
+    output_schema_snapshot: ...
 ```
 
 This is similar to import resolution. The artifact stores stable logical
@@ -286,8 +286,7 @@ actually use:
 
 ```text
 RequiredCapability
-  logical_source: context7
-  capability_name: query-docs
+  ref: context7.query-docs
   kind: tool
   input_schema
   output_schema
@@ -446,8 +445,7 @@ and the artifact should declare a matching required capability:
 
 ```text
 RequiredCapability(
-  logical_source="demo",
-  capability_name="echo_tool",
+  ref="demo.echo_tool",
   kind="node_spec"
 )
 ```
@@ -456,7 +454,8 @@ The deployment then chooses the concrete account or connection profile:
 
 ```text
 bindings:
-  demo: demo.personal
+  - logical_source: demo
+    concrete_source: demo.personal
 ```
 
 This keeps reusable artifacts portable across accounts while still letting
@@ -494,7 +493,8 @@ WorkflowDeployment
   artifact_version: 1
   deployment_id: summarize_docs.context7_default
   bindings:
-    context7: context7.default
+    - logical_source: context7
+      concrete_source: context7.default
   drift_policy: block
 ```
 
@@ -510,12 +510,14 @@ logical sources to different MCP accounts or connection profiles:
 deployment: summarize_docs.personal
 artifact:   summarize_docs@1
 bindings:
-  context7: context7.personal
+  - logical_source: context7
+    concrete_source: context7.personal
 
 deployment: summarize_docs.work
 artifact:   summarize_docs@1
 bindings:
-  context7: context7.work
+  - logical_source: context7
+    concrete_source: context7.work
 ```
 
 This gives the stable MCP run tool a concrete target without requiring one MCP
@@ -598,6 +600,15 @@ platform refs: `SourceRef(parts=...)` and `CapabilityRef(source=..., name=...)`.
 Dot-joined names remain the wire/presentation format, but new runtime code
 should parse or format through those refs instead of rediscovering source/name
 boundaries with ad hoc string splits.
+
+Persisted artifact/deployment models use explicit list-of-struct shapes for
+source and capability contracts. Dict-key shapes such as
+`bindings: {"demo": "demo.personal"}` and
+`required_capabilities: {"demo.echo_tool": {...}}` are accepted at parse
+boundaries for compatibility, but model dumps emit the explicit list shapes.
+Runtime code that needs lookup tables should use helper indexes such as
+`WorkflowDeployment.binding_map()` and
+`WorkflowArtifact.required_capability_map()`.
 
 Saved workflow artifact names use a separate grammar and ref type:
 `WorkflowCapabilityRef(artifact_id, version)` serializes as

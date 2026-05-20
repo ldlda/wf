@@ -23,13 +23,12 @@ def artifact() -> WorkflowArtifact:
         },
         outcomes=("done", "failed"),
         plan={"name": "summarize_docs", "nodes": [{"id": "hidden"}]},
-        required_capabilities={
-            "context7.query-docs": RequiredCapability(
-                logical_source="context7",
-                capability_name="query-docs",
+        required_capabilities=[
+            RequiredCapability(
+                ref="context7.query-docs",
                 kind="tool",
             )
-        },
+        ],
     )
 
 

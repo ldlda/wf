@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pydantic import BaseModel
+
 from wf_platform import CapabilityRef, SourceRef
 
 
@@ -24,6 +26,35 @@ def test_capability_ref_binds_logical_source_to_concrete_source() -> None:
     bound = ref.bind({"demo": "demo.personal"})
 
     assert str(bound) == "demo.personal.echo_tool"
+
+
+def test_platform_refs_validate_and_serialize_through_pydantic() -> None:
+    class Payload(BaseModel):
+        source: SourceRef
+        capability: CapabilityRef
+
+    payload = Payload.model_validate(
+        {
+            "source": "demo.personal",
+            "capability": "demo.personal.echo_tool",
+        }
+    )
+
+    assert payload.source == SourceRef.parse("demo.personal")
+    assert payload.capability == CapabilityRef.parse("demo.personal.echo_tool")
+    assert payload.model_dump(mode="json") == {
+        "source": "demo.personal",
+        "capability": "demo.personal.echo_tool",
+    }
+
+
+def test_source_ref_rejects_whitespace_segments() -> None:
+    try:
+        SourceRef.parse("demo. .personal")
+    except ValueError as exc:
+        assert "non-empty path segments" in str(exc)
+    else:
+        raise AssertionError("expected whitespace source segment to fail")
 
 
 def test_capability_ref_rejects_missing_capability_name() -> None:

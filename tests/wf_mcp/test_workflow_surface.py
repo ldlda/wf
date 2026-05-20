@@ -189,7 +189,9 @@ def test_workflow_surface_validates_deployment_dependencies() -> None:
             id="summarize_docs.personal",
             artifact_id="summarize_docs",
             artifact_version=1,
-            bindings={"context7": "context7.personal"},
+            bindings=[
+                {"logical_source": "context7", "concrete_source": "context7.personal"}
+            ],
         )
     )
     handlers = _handlers(artifact_store)
@@ -215,7 +217,9 @@ def test_workflow_surface_records_artifact_and_deployment_save_events() -> None:
                 id="echo.personal",
                 artifact_id="echo",
                 artifact_version=1,
-                bindings={"demo": "demo.personal"},
+                bindings=[
+                    {"logical_source": "demo", "concrete_source": "demo.personal"}
+                ],
             ).model_dump(mode="json")
         )
     )
@@ -274,7 +278,7 @@ def test_workflow_surface_creates_artifact_with_logical_node_refs() -> None:
     artifact = artifact_store.get_artifact("echo_logical", 1)
 
     assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
-    assert artifact.required_capabilities["demo.echo_tool"].logical_source == "demo"
+    assert artifact.required_capability_map()["demo.echo_tool"].logical_source == "demo"
 
 
 def test_workflow_surface_validates_draft_without_saving() -> None:
@@ -349,7 +353,7 @@ def test_workflow_surface_creates_artifact_from_draft_with_binding_suggestions()
     assert payload["required_logical_sources"] == ["demo", "wf.std"]
     assert payload["suggested_bindings"]["wf.std"] == "wf.std"
     assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
-    assert artifact.required_capabilities["demo.echo_tool"].logical_source == "demo"
+    assert artifact.required_capability_map()["demo.echo_tool"].logical_source == "demo"
 
 
 def test_workflow_surface_draft_artifact_requires_std_self_binding() -> None:
@@ -373,7 +377,7 @@ def test_workflow_surface_draft_artifact_requires_std_self_binding() -> None:
             id="draft_echo_missing_std.personal",
             artifact_id="draft_echo_missing_std",
             artifact_version=1,
-            bindings={"demo": "demo.personal"},
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
         )
     )
 
@@ -733,7 +737,7 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
             id="echo.personal",
             artifact_id="echo",
             artifact_version=1,
-            bindings={"demo": "demo.personal"},
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
         )
     )
     service = WfMcpService(
@@ -766,7 +770,7 @@ def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency() -> N
             id="echo.personal",
             artifact_id="logical_echo",
             artifact_version=1,
-            bindings={"demo": "demo.personal"},
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
         )
     )
     service = WfMcpService(
@@ -836,7 +840,7 @@ def test_workflow_surface_runs_artifact_created_from_concrete_node_ref() -> None
     artifact = artifact_store.get_artifact("created_echo", 1)
 
     assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
-    assert artifact.required_capabilities["demo.echo_tool"].logical_source == "demo"
+    assert artifact.required_capability_map()["demo.echo_tool"].logical_source == "demo"
     assert payload["status"] == "completed"
     assert payload["output"]["echoed"] == "hello"
     assert payload["diagnostics"] == []
@@ -881,7 +885,7 @@ def test_workflow_surface_detects_drift_from_saved_node_spec_snapshot() -> None:
     required = artifact_store.get_artifact(
         "created_echo_drift",
         1,
-    ).required_capabilities["demo.echo_tool"]
+    ).required_capability_map()["demo.echo_tool"]
     assert required.input_schema_hash is not None
 
     service.register_connection(
@@ -1034,7 +1038,7 @@ def test_workflow_surface_calls_saved_wrapper_artifact_with_deployment_bindings(
             id="logical_echo_wrapper.personal",
             artifact_id="logical_echo_wrapper",
             artifact_version=1,
-            bindings={"demo": "demo.personal"},
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
         )
     )
     service = WfMcpService(
@@ -1084,8 +1088,7 @@ def _artifact() -> WorkflowArtifact:
         plan={"name": "summarize_docs", "nodes": [], "edges": []},
         required_capabilities={
             "context7.query-docs": RequiredCapability(
-                logical_source="context7",
-                capability_name="query-docs",
+                ref="context7.query-docs",
                 kind="tool",
                 input_schema_hash="sha256:input",
                 output_schema_hash="sha256:output",
@@ -1130,8 +1133,7 @@ def _echo_artifact() -> WorkflowArtifact:
         plan=plan,
         required_capabilities={
             "demo.echo_tool": RequiredCapability(
-                logical_source="demo",
-                capability_name="echo_tool",
+                ref="demo.echo_tool",
                 kind="node_spec",
             )
         },
@@ -1196,7 +1198,7 @@ def _custom_reducer_artifact() -> WorkflowArtifact:
                     "type": "integer",
                     "reducer": "custom.multiply",
                 }
-            }
+            },
         },
         "output_schema": {
             "type": "object",
@@ -1225,13 +1227,11 @@ def _custom_reducer_artifact() -> WorkflowArtifact:
         plan=plan,
         required_capabilities={
             "demo.amount_tool": RequiredCapability(
-                logical_source="demo",
-                capability_name="amount_tool",
+                ref="demo.amount_tool",
                 kind="node_spec",
             ),
             "custom.multiply": RequiredCapability(
-                logical_source="custom",
-                capability_name="multiply",
+                ref="custom.multiply",
                 kind="reducer",
             ),
         },

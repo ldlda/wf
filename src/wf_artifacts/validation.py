@@ -19,10 +19,11 @@ def validate_deployment_dependencies(
 ) -> list[DependencyDiagnostic]:
     """Validate that a deployment can satisfy an artifact's required contracts."""
     sources_by_id = {source.id: source for source in sources}
+    bindings = deployment.binding_map()
     diagnostics: list[DependencyDiagnostic] = []
 
-    for logical_ref, required in artifact.required_capabilities.items():
-        bound_source_id = deployment.bindings.get(required.logical_source)
+    for logical_ref, required in artifact.required_capability_map().items():
+        bound_source_id = bindings.get(required.logical_source)
         if bound_source_id is None:
             diagnostics.append(
                 _diagnostic(

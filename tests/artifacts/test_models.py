@@ -12,8 +12,7 @@ from wf_artifacts import (
 
 def test_workflow_artifact_serializes_required_capability_contract() -> None:
     capability = RequiredCapability(
-        logical_source="context7",
-        capability_name="query-docs",
+        ref="context7.query-docs",
         kind="tool",
         input_schema_hash="sha256:input",
         input_schema_snapshot={"type": "object", "properties": {}},
@@ -31,7 +30,7 @@ def test_workflow_artifact_serializes_required_capability_contract() -> None:
         output_schema={"type": "object", "properties": {}},
         outcomes=("done", "failed"),
         plan={"name": "summarize_docs", "nodes": [], "edges": []},
-        required_capabilities={"context7.query-docs": capability},
+        required_capabilities=[capability],
         created_from_catalog_version="catalog-1",
     )
 
@@ -41,9 +40,10 @@ def test_workflow_artifact_serializes_required_capability_contract() -> None:
     assert dumped["kind"] == "workflow"
     assert dumped["version"] == 1
     assert dumped["outcomes"] == ["done", "failed"]
-    required = dumped["required_capabilities"]["context7.query-docs"]
-    assert required["logical_source"] == "context7"
+    required = dumped["required_capabilities"][0]
+    assert required["ref"] == "context7.query-docs"
     assert required["input_schema_hash"] == "sha256:input"
+    assert artifact.required_capability_map()["context7.query-docs"] == capability
 
 
 def test_workflow_artifact_can_be_marked_as_wrapper_intent() -> None:
@@ -68,7 +68,9 @@ def test_workflow_deployment_binds_logical_sources_to_concrete_sources() -> None
         id="summarize_docs.personal",
         artifact_id="summarize_docs",
         artifact_version=1,
-        bindings={"context7": "context7.personal"},
+        bindings=[
+            {"logical_source": "context7", "concrete_source": "context7.personal"}
+        ],
         drift_policy=DriftPolicy.BLOCK,
     )
 
@@ -77,8 +79,10 @@ def test_workflow_deployment_binds_logical_sources_to_concrete_sources() -> None
     assert dumped["id"] == "summarize_docs.personal"
     assert dumped["artifact_id"] == "summarize_docs"
     assert dumped["artifact_version"] == 1
-    assert dumped["bindings"]["context7"] == "context7.personal"
+    assert dumped["bindings"][0]["logical_source"] == "context7"
+    assert dumped["bindings"][0]["concrete_source"] == "context7.personal"
     assert dumped["drift_policy"] == "block"
+    assert deployment.binding_map()["context7"] == "context7.personal"
 
 
 def test_dependency_diagnostic_is_structured() -> None:

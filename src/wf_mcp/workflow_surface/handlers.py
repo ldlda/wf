@@ -234,10 +234,9 @@ class WorkflowSurfaceHandlers:
             "is_async": True,
             "input_schema": artifact.input_schema,
             "output_schema": artifact.output_schema,
-            "required_capabilities": {
-                name: capability.model_dump(mode="json")
-                for name, capability in sorted(artifact.required_capabilities.items())
-            },
+            "required_capabilities": _required_capability_payloads(
+                artifact.required_capability_map()
+            ),
         }
 
     async def _call_wrapper_artifact(
@@ -428,7 +427,7 @@ class WorkflowSurfaceHandlers:
         required_sources = sorted(
             {
                 capability.logical_source
-                for capability in dict(workflow_artifact.required_capabilities).values()
+                for capability in workflow_artifact.required_capability_map().values()
             }
         )
         return {
@@ -892,7 +891,7 @@ def _required_capabilities_for_plan(
         source_bindings=source_bindings,
         observed_node_specs=_observed_node_specs(service),
     )
-    requirements = dict(artifact.required_capabilities)
+    requirements = artifact.required_capability_map()
     for node in _plan_nodes(artifact):
         raw_ref = node.get("node")
         if not isinstance(raw_ref, str) or raw_ref in requirements:
@@ -902,8 +901,7 @@ def _required_capabilities_for_plan(
         except ValueError:
             continue
         requirements[raw_ref] = RequiredCapability(
-            logical_source=str(parsed.source),
-            capability_name=parsed.name,
+            ref=parsed,
             kind="node_spec",
         )
     return requirements
