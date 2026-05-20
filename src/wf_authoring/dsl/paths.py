@@ -4,30 +4,41 @@ from dataclasses import dataclass
 
 from wf_core.paths import GraphSourcePath
 
+from .path_inputs import PathInput, coerce_graph_path
+
 
 @dataclass(frozen=True, slots=True)
 class GraphPath:
-    value: str
+    path: GraphSourcePath
 
-    def __post_init__(self) -> None:
-        """Validate authoring paths at construction so invalid roots fail early."""
-        object.__setattr__(self, "value", str(GraphSourcePath.parse(self.value)))
+    @property
+    def value(self) -> str:
+        """Display compatibility for older authoring helpers."""
+        return str(self.path)
 
     def __str__(self) -> str:
         return self.value
 
 
-def graph_path(value: str) -> GraphPath:
-    return GraphPath(value)
+def graph_path(value: PathInput | GraphPath) -> GraphPath:
+    if isinstance(value, GraphPath):
+        return value
+    return GraphPath(coerce_graph_path(value))
 
 
-def input_path(*parts: str) -> GraphPath:
-    return GraphPath(str(GraphSourcePath.input(*parts)))
+def input_path(first: PathInput | None = None, *parts: object) -> GraphPath:
+    if first is None:
+        return GraphPath(GraphSourcePath("input"))
+    return GraphPath(coerce_graph_path(first, *parts, root="input"))
 
 
-def state_path(*parts: str) -> GraphPath:
-    return GraphPath(str(GraphSourcePath.state(*parts)))
+def state_path(first: PathInput | None = None, *parts: object) -> GraphPath:
+    if first is None:
+        return GraphPath(GraphSourcePath("state"))
+    return GraphPath(coerce_graph_path(first, *parts, root="state"))
 
 
-def context_path(*parts: str) -> GraphPath:
-    return GraphPath(str(GraphSourcePath.context(*parts)))
+def context_path(first: PathInput | None = None, *parts: object) -> GraphPath:
+    if first is None:
+        return GraphPath(GraphSourcePath("context"))
+    return GraphPath(coerce_graph_path(first, *parts, root="context"))

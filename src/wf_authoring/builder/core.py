@@ -44,7 +44,10 @@ from .mapping import (
     auto_input_map,
     auto_output_map,
     coerce_path,
+    normalize_input_mapping,
+    normalize_input_values,
     normalize_mapping,
+    normalize_output_mapping,
 )
 from .refs import (
     BranchRef,
@@ -68,28 +71,30 @@ def _condition_base(condition: CoreCondition) -> str:
 
 
 def _canonical_input_bindings(
-    in_map: Mapping[str, str],
-    input_values: Mapping[str, Any],
+    in_map: Mapping[GraphSourcePath, LocalPath],
+    input_values: Mapping[LocalPath, Any],
 ) -> list[InputBinding]:
-    """Convert authoring compatibility maps into canonical core input bindings."""
+    """Convert typed authoring maps into canonical core input bindings."""
     value_bindings = [
-        InputValueBinding(target=LocalPath.parse(target), value=value)
+        InputValueBinding(target=target, value=value)
         for target, value in input_values.items()
     ]
     path_bindings = [
         InputPathBinding(
-            target=LocalPath.parse(target),
-            path=GraphSourcePath.parse(path),
+            target=target,
+            path=path,
         )
         for path, target in in_map.items()
     ]
     return [*value_bindings, *path_bindings]
 
 
-def _canonical_output_bindings(out_map: Mapping[str, str]) -> list[OutputBinding]:
-    """Convert authoring compatibility maps into canonical core output bindings."""
+def _canonical_output_bindings(
+    out_map: Mapping[LocalPath, StatePath],
+) -> list[OutputBinding]:
+    """Convert typed authoring maps into canonical core output bindings."""
     return [
-        OutputBinding(source=LocalPath.parse(source), target=StatePath.parse(target))
+        OutputBinding(source=source, target=target)
         for source, target in out_map.items()
     ]
 
@@ -118,28 +123,30 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         in_map: MapArg | None = None,
-        input_values: Mapping[str, Any] | None = None,
+        input_values: Mapping[Any, Any] | None = None,
         out_map: MapArg | None = None,
         desc: str | None = None,
     ) -> NodeUse:
         self.node_specs[spec.name] = spec
         normalized_input_schema = cast(SchemaRef, self.input_schema)
         normalized_state_schema = cast(StateSchema, self.state_schema)
-        normalized_in_map = (
+        raw_in_map = (
             auto_input_map(
                 spec,
                 input_schema=normalized_input_schema,
                 state_schema=normalized_state_schema,
             )
             if in_map is None
-            else normalize_mapping(in_map)
+            else in_map
         )
-        normalized_input_values = dict(input_values or {})
-        normalized_out_map = (
+        normalized_in_map = normalize_input_mapping(raw_in_map)
+        normalized_input_values = normalize_input_values(input_values)
+        raw_out_map = (
             auto_output_map(spec, state_schema=normalized_state_schema)
             if out_map is None
-            else normalize_mapping(out_map)
+            else out_map
         )
+        normalized_out_map = normalize_output_mapping(raw_out_map)
         node = NodeUse(
             id=id or self._next_step_id(slug_id(spec.name)),
             type="node",
@@ -160,7 +167,7 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         in_map: MapArg | None = None,
-        input_values: Mapping[str, Any] | None = None,
+        input_values: Mapping[Any, Any] | None = None,
         out_map: MapArg | None = None,
         desc: str | None = None,
     ) -> NodeUse:
@@ -171,9 +178,9 @@ class WorkflowBuilder:
         hatch for MCP/saved-workflow capability refs that are resolved later by
         the environment runner into node definitions and registry handlers.
         """
-        normalized_in_map = normalize_mapping(in_map)
-        normalized_input_values = dict(input_values or {})
-        normalized_out_map = normalize_mapping(out_map)
+        normalized_in_map = normalize_input_mapping(in_map)
+        normalized_input_values = normalize_input_values(input_values)
+        normalized_out_map = normalize_output_mapping(out_map)
         node = NodeUse(
             id=id or self._next_step_id(slug_id(name)),
             type="node",
@@ -254,6 +261,8 @@ class WorkflowBuilder:
         mode: Literal["serial", "parallel"] = "serial",
         on_item_error: Literal["fail", "collect", "skip"] = "fail",
     ) -> ForeachNode:
+        # Core foreach still stores `over` as a string. Keep this compatibility
+        # path isolated until ForeachNode grows a typed GraphSourcePath field.
         node = ForeachNode.model_validate({
             "id": id or self._next_step_id(f"foreach_{slug_id(as_)}"),
             "type": "foreach",

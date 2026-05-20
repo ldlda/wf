@@ -87,6 +87,41 @@ New canonical graph path JSON uses root/parts objects:
 }
 ```
 
+## Authoring Path Inputs
+
+`wf_authoring` accepts ergonomic path inputs and normalizes them into the core
+path objects before building canonical node bindings.
+
+Single string arguments are TOML key expressions:
+
+```python
+state("person.name")          # state -> person -> name
+state('"person.name"')        # state -> "person.name"
+state('person."full name"')   # state -> person -> "full name"
+```
+
+Varargs and iterables are literal path segments:
+
+```python
+state("person.name", "email") # state -> "person.name" -> email
+state(("person.name",))       # state -> "person.name"
+```
+
+Builder maps use the path kind implied by position:
+
+```python
+g.use(
+    node,
+    in_map={input_path('"email.address"'): ("payload.email",)},
+    out_map={("result.score",): state_path("score")},
+)
+```
+
+In an input map, the key is a graph source path and the value is a node-local
+input path. In an output map, the key is a node-local output path and the value
+is a workflow state destination path. This lets authors keep concise helpers
+without forcing saved workflow JSON back through dotted display strings.
+
 ```json
 {
   "root": "state",

@@ -15,20 +15,15 @@ from wf_core.models.conditions import (
 from wf_core.paths import GraphSourcePath
 
 from .paths import GraphPath, context_path, input_path, state_path
+from .path_inputs import PathInput
 
 
 def _operand(value: object) -> PathOperand | LiteralOperand:
     if isinstance(value, PathExpr):
-        return PathOperand(path=GraphSourcePath.parse(value.path))
+        return PathOperand(path=value.source)
     if isinstance(value, GraphPath):
-        return PathOperand(path=GraphSourcePath.parse(value.value))
+        return PathOperand(path=value.path)
     return LiteralOperand(value=value)
-
-
-def _path_str(value: PathExpr | GraphPath) -> str:
-    if isinstance(value, PathExpr):
-        return value.path
-    return value.value
 
 
 @dataclass(frozen=True, slots=True)
@@ -54,7 +49,11 @@ class Expr:
 
 @dataclass(frozen=True, slots=True)
 class PathExpr:
-    path: str
+    source: GraphSourcePath
+
+    @property
+    def path(self) -> str:
+        return str(self.source)
 
     def _binary(
         self, op: Literal["eq", "ne", "gt", "ge", "lt", "le"], other: object
@@ -62,7 +61,7 @@ class PathExpr:
         return Expr(
             BinaryCondition(
                 op=op,
-                left=PathOperand(path=GraphSourcePath.parse(self.path)),
+                left=PathOperand(path=self.source),
                 right=_operand(other),
             )
         )
@@ -111,25 +110,24 @@ class PathExpr:
 def expr(value: PathExpr | GraphPath) -> PathExpr:
     if isinstance(value, PathExpr):
         return value
-    return PathExpr(path=value.value)
+    return PathExpr(source=value.path)
 
 
-def state(field: str) -> PathExpr:
-    return expr(state_path(field))
+def state(first: PathInput, *parts: object) -> PathExpr:
+    return expr(state_path(first, *parts))
 
 
-def input(field: str) -> PathExpr:
-    return expr(input_path(field))
+def input(first: PathInput, *parts: object) -> PathExpr:
+    return expr(input_path(first, *parts))
 
 
-def context(field: str) -> PathExpr:
-    return expr(context_path(field))
+def context(first: PathInput, *parts: object) -> PathExpr:
+    return expr(context_path(first, *parts))
 
 
 def exists(value: PathExpr | GraphPath) -> Expr:
-    return Expr(
-        ExistsCondition(op="exists", path=GraphSourcePath.parse(_path_str(value)))
-    )
+    path = value.source if isinstance(value, PathExpr) else value.path
+    return Expr(ExistsCondition(op="exists", path=path))
 
 
 def not_(value: Condition | Expr) -> Expr:

@@ -4,11 +4,20 @@ from collections.abc import Mapping
 from typing import Any, TypeAlias
 
 from wf_core import SchemaRef, StateSchema
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 from ..dsl import GraphPath
+from ..dsl.path_inputs import (
+    coerce_graph_path,
+    coerce_local_path,
+    coerce_state_path,
+)
 from ..nodes import NodeSpec
 
 MapArg: TypeAlias = Mapping[Any, Any]
+InputMap: TypeAlias = dict[GraphSourcePath, LocalPath]
+OutputMap: TypeAlias = dict[LocalPath, StatePath]
+InputValues: TypeAlias = dict[LocalPath, Any]
 
 
 def coerce_path(value: object) -> str:
@@ -17,6 +26,8 @@ def coerce_path(value: object) -> str:
         return value
     if isinstance(value, GraphPath):
         return value.value
+    if isinstance(value, GraphSourcePath | StatePath | LocalPath):
+        return str(value)
     raise TypeError(f"unsupported graph path value {value!r}")
 
 
@@ -27,6 +38,38 @@ def normalize_mapping(mapping: MapArg | None) -> dict[str, str]:
     return {
         coerce_path(source): coerce_path(destination)
         for source, destination in mapping.items()
+    }
+
+
+def normalize_input_mapping(mapping: MapArg | None) -> InputMap:
+    """Normalize `in_map`: graph source path -> node-local input path."""
+    if mapping is None:
+        return {}
+    return {
+        coerce_graph_path(source.path if isinstance(source, GraphPath) else source): (
+            coerce_local_path(destination)
+        )
+        for source, destination in mapping.items()
+    }
+
+
+def normalize_input_values(mapping: Mapping[Any, Any] | None) -> InputValues:
+    """Normalize `input_values`: node-local input path -> literal value."""
+    if mapping is None:
+        return {}
+    return {coerce_local_path(target): value for target, value in mapping.items()}
+
+
+def normalize_output_mapping(mapping: MapArg | None) -> OutputMap:
+    """Normalize `out_map`: node-local output path -> workflow state path."""
+    if mapping is None:
+        return {}
+    return {
+        coerce_local_path(source): coerce_state_path(
+            target.path if isinstance(target, GraphPath) else target,
+            allow_legacy_root=True,
+        )
+        for source, target in mapping.items()
     }
 
 

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from wf_authoring import WorkflowBuilder, state
+from wf_authoring import WorkflowBuilder, input_path, state, state_path
 from wf_core import END, RunStatus, WorkflowExecutionError
 from wf_core.models.steps import InputPathBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
@@ -64,6 +64,27 @@ def test_builder_preserves_explicit_nested_node_local_maps() -> None:
     assert step.input[0].target == LocalPath.of("payload.text")
     assert step.output[0].source == LocalPath.of("payload.text")
     assert step.output[0].target == StatePath.of("text")
+
+
+def test_builder_use_accepts_typed_paths_and_literal_iterable_paths() -> None:
+    builder = WorkflowBuilder(
+        name="typed_path_maps",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    step = builder.use(
+        auto_bind_node,
+        in_map={input_path('"text.with.dot"'): ("payload.text",)},
+        out_map={("payload.text",): state_path(("state field",))},
+    )
+
+    assert isinstance(step.input[0], InputPathBinding)
+    assert step.input[0].path == GraphSourcePath("input", ("text.with.dot",))
+    assert step.input[0].target == LocalPath(("payload.text",))
+    assert step.output[0].source == LocalPath(("payload.text",))
+    assert step.output[0].target == StatePath(("state field",))
 
 
 def test_builder_preserves_explicit_root_node_local_maps() -> None:
