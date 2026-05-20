@@ -254,16 +254,14 @@ class WorkflowBuilder:
         mode: Literal["serial", "parallel"] = "serial",
         on_item_error: Literal["fail", "collect", "skip"] = "fail",
     ) -> ForeachNode:
-        node = ForeachNode.model_validate(
-            {
-                "id": id or self._next_step_id(f"foreach_{slug_id(as_)}"),
-                "type": "foreach",
-                "over": coerce_path(over),
-                "as": as_,
-                "mode": mode,
-                "on_item_error": on_item_error,
-            }
-        )
+        node = ForeachNode.model_validate({
+            "id": id or self._next_step_id(f"foreach_{slug_id(as_)}"),
+            "type": "foreach",
+            "over": coerce_path(over),
+            "as": as_,
+            "mode": mode,
+            "on_item_error": on_item_error,
+        })
         self.nodes.append(node)
         return node
 
@@ -297,13 +295,11 @@ class WorkflowBuilder:
         source = self._resolve_branch_ref(from_)
         target = self._resolve_branch_ref(to)
         self.edges.append(
-            Edge.model_validate(
-                {
-                    "from": step_id(source),
-                    "outcome": outcome,
-                    "to": step_id(target),
-                }
-            )
+            Edge.model_validate({
+                "from": step_id(source),
+                "outcome": outcome,
+                "to": step_id(target),
+            })
         )
         return source, target
 

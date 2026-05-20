@@ -66,25 +66,23 @@ def test_workflow_artifact_can_be_marked_as_wrapper_intent() -> None:
 def test_workflow_artifact_accepts_legacy_required_capability_map_and_dumps_list() -> (
     None
 ):
-    artifact = WorkflowArtifact.model_validate(
-        {
-            "id": "legacy_capabilities",
-            "version": 1,
-            "title": "Legacy Capabilities",
-            "input_schema": {"type": "object", "properties": {}},
-            "output_schema": {"type": "object", "properties": {}},
-            "outcomes": ["done"],
-            "plan": {"name": "legacy_capabilities", "nodes": [], "edges": []},
-            "required_capabilities": {
-                "demo.echo": {
-                    "kind": "tool",
-                    "input_schema_hash": "sha256:input",
-                    "output_schema_hash": "sha256:output",
-                    "observed_concrete_source": "demo.personal",
-                }
-            },
-        }
-    )
+    artifact = WorkflowArtifact.model_validate({
+        "id": "legacy_capabilities",
+        "version": 1,
+        "title": "Legacy Capabilities",
+        "input_schema": {"type": "object", "properties": {}},
+        "output_schema": {"type": "object", "properties": {}},
+        "outcomes": ["done"],
+        "plan": {"name": "legacy_capabilities", "nodes": [], "edges": []},
+        "required_capabilities": {
+            "demo.echo": {
+                "kind": "tool",
+                "input_schema_hash": "sha256:input",
+                "output_schema_hash": "sha256:output",
+                "observed_concrete_source": "demo.personal",
+            }
+        },
+    })
 
     dumped = artifact.model_dump(mode="json")
     required = dumped["required_capabilities"][0]
@@ -120,14 +118,12 @@ def test_workflow_deployment_binds_logical_sources_to_concrete_sources() -> None
 
 
 def test_workflow_deployment_accepts_legacy_binding_map_and_dumps_list() -> None:
-    deployment = WorkflowDeployment.model_validate(
-        {
-            "id": "legacy_bindings.personal",
-            "artifact_id": "legacy_bindings",
-            "artifact_version": 1,
-            "bindings": {"demo": "demo.personal"},
-        }
-    )
+    deployment = WorkflowDeployment.model_validate({
+        "id": "legacy_bindings.personal",
+        "artifact_id": "legacy_bindings",
+        "artifact_version": 1,
+        "bindings": {"demo": "demo.personal"},
+    })
 
     dumped = deployment.model_dump(mode="json")
     binding = dumped["bindings"][0]

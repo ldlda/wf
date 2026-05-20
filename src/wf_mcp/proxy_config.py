@@ -38,12 +38,10 @@ def connection_to_fastmcp_server_config(
 def broker_config_to_fastmcp_config(config: BrokerConfig) -> MCPConfig:
     """Convert broker config into FastMCP's multi-server config object."""
     validate_proxy_config(config)
-    return MCPConfig.from_dict(
-        {
-            "mcpServers": {
-                connection.id: connection_to_fastmcp_server_config(connection)
-                for connection in config.connections
-                if connection.enabled
-            }
+    return MCPConfig.from_dict({
+        "mcpServers": {
+            connection.id: connection_to_fastmcp_server_config(connection)
+            for connection in config.connections
+            if connection.enabled
         }
-    )
+    })

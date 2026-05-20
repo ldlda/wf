@@ -32,18 +32,16 @@ def test_load_broker_config_resolves_relative_store_root() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps(
-            {
-                "store_root": ".broker-store",
-                "connections": [
-                    {
-                        "id": "demo.personal",
-                        "server": "demo",
-                        "account": "personal",
-                    }
-                ],
-            }
-        ),
+        json.dumps({
+            "store_root": ".broker-store",
+            "connections": [
+                {
+                    "id": "demo.personal",
+                    "server": "demo",
+                    "account": "personal",
+                }
+            ],
+        }),
         encoding="utf-8",
     )
 

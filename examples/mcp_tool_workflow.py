@@ -34,47 +34,45 @@ async def run_example() -> dict[str, object]:
 
     await service.refresh_connection_catalog("fixture.personal")
 
-    plan = RawWorkflowPlan.model_validate(
-        {
-            "name": "mcp_echo_workflow",
-            "input_schema": {
-                "type": "object",
-                "properties": {"text": {"type": "string"}},
-                "required": ["text"],
+    plan = RawWorkflowPlan.model_validate({
+        "name": "mcp_echo_workflow",
+        "input_schema": {
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        "state_schema": {
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+            "required": ["echoed"],
+        },
+        "start": "echo",
+        "nodes": [
+            {
+                "id": "echo",
+                "type": "node",
+                "node": "fixture.personal.echo_tool",
+                "in_map": {"input.text": "text"},
+                "out_map": {"echoed": "state.echoed"},
             },
-            "state_schema": {
-                "type": "object",
-                "properties": {"echoed": {"type": "string"}},
+            {
+                "id": "raise_mcp_error",
+                "type": "node",
+                "node": "wf.std.runtime_error",
+                "in_map": {"input.text": "message"},
+                "out_map": {},
             },
-            "output_schema": {
-                "type": "object",
-                "properties": {"echoed": {"type": "string"}},
-                "required": ["echoed"],
-            },
-            "start": "echo",
-            "nodes": [
-                {
-                    "id": "echo",
-                    "type": "node",
-                    "node": "fixture.personal.echo_tool",
-                    "in_map": {"input.text": "text"},
-                    "out_map": {"echoed": "state.echoed"},
-                },
-                {
-                    "id": "raise_mcp_error",
-                    "type": "node",
-                    "node": "wf.std.runtime_error",
-                    "in_map": {"input.text": "message"},
-                    "out_map": {},
-                },
-            ],
-            "edges": [
-                {"from": "echo", "outcome": "ok", "to": END},
-                {"from": "echo", "outcome": "error", "to": "raise_mcp_error"},
-                {"from": "raise_mcp_error", "outcome": "ok", "to": END},
-            ],
-        }
-    )
+        ],
+        "edges": [
+            {"from": "echo", "outcome": "ok", "to": END},
+            {"from": "echo", "outcome": "error", "to": "raise_mcp_error"},
+            {"from": "raise_mcp_error", "outcome": "ok", "to": END},
+        ],
+    })
 
     run = await service.run_workflow_from_plan(plan, {"text": "hello from MCP"})
     return {

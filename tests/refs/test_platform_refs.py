@@ -33,12 +33,10 @@ def test_platform_refs_validate_and_serialize_through_pydantic() -> None:
         source: SourceRef
         capability: CapabilityRef
 
-    payload = Payload.model_validate(
-        {
-            "source": "demo.personal",
-            "capability": "demo.personal.echo_tool",
-        }
-    )
+    payload = Payload.model_validate({
+        "source": "demo.personal",
+        "capability": "demo.personal.echo_tool",
+    })
 
     assert payload.source == SourceRef.parse("demo.personal")
     assert payload.capability == CapabilityRef.parse("demo.personal.echo_tool")

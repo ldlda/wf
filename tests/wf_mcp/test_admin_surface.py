@@ -84,15 +84,13 @@ class FakeManager:
         metadata: dict[str, Any] | None = None,
         enabled: bool = True,
     ) -> dict[str, Any]:
-        self.added.append(
-            {
-                "connection_id": connection_id,
-                "server": server,
-                "account": account,
-                "metadata": metadata,
-                "enabled": enabled,
-            }
-        )
+        self.added.append({
+            "connection_id": connection_id,
+            "server": server,
+            "account": account,
+            "metadata": metadata,
+            "enabled": enabled,
+        })
         return {"action": "add_connection", "ok": True}
 
     def update_connection(

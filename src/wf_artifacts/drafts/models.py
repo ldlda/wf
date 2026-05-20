@@ -7,9 +7,15 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from wf_core.models.conditions import Condition
 
 JsonObject = dict[str, Any]
-STEP_KIND_KEYS = frozenset(
-    {"use", "foreach", "interrupt", "join", "when", "choose", "match"}
-)
+STEP_KIND_KEYS = frozenset({
+    "use",
+    "foreach",
+    "interrupt",
+    "join",
+    "when",
+    "choose",
+    "match",
+})
 
 
 class DraftUseStep(BaseModel):

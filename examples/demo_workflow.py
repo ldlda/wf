@@ -9,203 +9,201 @@ DemoHandler = Callable[[dict[str, object], RuntimeContext], dict[str, object]]
 
 
 def build_demo_workflow() -> Workflow:
-    return Workflow.model_validate(
-        {
-            "name": "drive_summary_demo",
-            "input_schema": {
-                "type": "object",
-                "properties": {
-                    "folder_id": {"type": "string"},
-                    "should_email": {"type": "boolean"},
-                },
-                "required": ["folder_id", "should_email"],
+    return Workflow.model_validate({
+        "name": "drive_summary_demo",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "folder_id": {"type": "string"},
+                "should_email": {"type": "boolean"},
             },
-            "state_schema": {
-                "fields": {
-                    "folder_id": {"type": "string"},
-                    "should_email": {"type": "boolean"},
-                    "documents": {"type": "array", "reducer": "wf.std.replace"},
-                    "item_summaries": {"type": "array", "reducer": "wf.std.append"},
-                    "summary": {"type": "string", "reducer": "wf.std.replace"},
-                    "approved": {"type": "boolean", "reducer": "wf.std.replace"},
-                    "approval_comment": {
-                        "type": "string",
-                        "reducer": "wf.std.replace",
-                    },
-                    "email_status": {"type": "string", "reducer": "wf.std.replace"},
-                }
+            "required": ["folder_id", "should_email"],
+        },
+        "state_schema": {
+            "fields": {
+                "folder_id": {"type": "string"},
+                "should_email": {"type": "boolean"},
+                "documents": {"type": "array", "reducer": "wf.std.replace"},
+                "item_summaries": {"type": "array", "reducer": "wf.std.append"},
+                "summary": {"type": "string", "reducer": "wf.std.replace"},
+                "approved": {"type": "boolean", "reducer": "wf.std.replace"},
+                "approval_comment": {
+                    "type": "string",
+                    "reducer": "wf.std.replace",
+                },
+                "email_status": {"type": "string", "reducer": "wf.std.replace"},
+            }
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string"},
+                "email_status": {"type": "string"},
             },
-            "output_schema": {
-                "type": "object",
-                "properties": {
-                    "summary": {"type": "string"},
-                    "email_status": {"type": "string"},
+            "required": ["summary", "email_status"],
+        },
+        "node_defs": [
+            {
+                "name": "drive_list_files",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"folder_id": {"type": "string"}},
+                    "required": ["folder_id"],
                 },
-                "required": ["summary", "email_status"],
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"documents": {"type": "array"}},
+                    "required": ["documents"],
+                },
+                "outcomes": ["ok"],
             },
-            "node_defs": [
-                {
-                    "name": "drive_list_files",
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {"folder_id": {"type": "string"}},
-                        "required": ["folder_id"],
-                    },
-                    "output_schema": {
-                        "type": "object",
-                        "properties": {"documents": {"type": "array"}},
-                        "required": ["documents"],
-                    },
-                    "outcomes": ["ok"],
+            {
+                "name": "summarize_document",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"document": {"type": "string"}},
+                    "required": ["document"],
                 },
-                {
-                    "name": "summarize_document",
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {"document": {"type": "string"}},
-                        "required": ["document"],
-                    },
-                    "output_schema": {
-                        "type": "object",
-                        "properties": {"item_summary": {"type": "string"}},
-                        "required": ["item_summary"],
-                    },
-                    "outcomes": ["ok"],
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"item_summary": {"type": "string"}},
+                    "required": ["item_summary"],
                 },
-                {
-                    "name": "combine_summaries",
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {"item_summaries": {"type": "array"}},
-                        "required": ["item_summaries"],
-                    },
-                    "output_schema": {
-                        "type": "object",
-                        "properties": {"summary": {"type": "string"}},
-                        "required": ["summary"],
-                    },
-                    "outcomes": ["ok"],
+                "outcomes": ["ok"],
+            },
+            {
+                "name": "combine_summaries",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"item_summaries": {"type": "array"}},
+                    "required": ["item_summaries"],
                 },
-                {
-                    "name": "send_email",
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {"summary": {"type": "string"}},
-                        "required": ["summary"],
-                    },
-                    "output_schema": {
-                        "type": "object",
-                        "properties": {"email_status": {"type": "string"}},
-                        "required": ["email_status"],
-                    },
-                    "outcomes": ["sent"],
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"summary": {"type": "string"}},
+                    "required": ["summary"],
                 },
-                {
-                    "name": "mark_email_skipped",
-                    "input_schema": {
-                        "type": "object",
-                        "properties": {},
-                    },
-                    "output_schema": {
-                        "type": "object",
-                        "properties": {"email_status": {"type": "string"}},
-                        "required": ["email_status"],
-                    },
-                    "outcomes": ["ok"],
+                "outcomes": ["ok"],
+            },
+            {
+                "name": "send_email",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {"summary": {"type": "string"}},
+                    "required": ["summary"],
                 },
-            ],
-            "start": "list_files",
-            "nodes": [
-                {
-                    "id": "list_files",
-                    "type": "node",
-                    "node": "drive_list_files",
-                    "desc": "List files from a Google Drive folder",
-                    "in_map": {"input.folder_id": "folder_id"},
-                    "out_map": {"documents": "state.documents"},
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"email_status": {"type": "string"}},
+                    "required": ["email_status"],
                 },
-                {
-                    "id": "summarize_each",
-                    "type": "foreach",
-                    "over": "state.documents",
-                    "as": "document",
-                    "mode": "serial",
-                    "on_item_error": "fail",
+                "outcomes": ["sent"],
+            },
+            {
+                "name": "mark_email_skipped",
+                "input_schema": {
+                    "type": "object",
+                    "properties": {},
                 },
-                {
-                    "id": "summarize_one",
-                    "type": "node",
-                    "node": "summarize_document",
-                    "desc": "Summarize one document",
-                    "in_map": {"context.document": "document"},
-                    "out_map": {"item_summary": "state.item_summaries"},
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"email_status": {"type": "string"}},
+                    "required": ["email_status"],
                 },
-                {
-                    "id": "combine_summaries",
-                    "type": "node",
-                    "node": "combine_summaries",
-                    "desc": "Combine item summaries into one final summary",
-                    "in_map": {"state.item_summaries": "item_summaries"},
-                    "out_map": {"summary": "state.summary"},
+                "outcomes": ["ok"],
+            },
+        ],
+        "start": "list_files",
+        "nodes": [
+            {
+                "id": "list_files",
+                "type": "node",
+                "node": "drive_list_files",
+                "desc": "List files from a Google Drive folder",
+                "in_map": {"input.folder_id": "folder_id"},
+                "out_map": {"documents": "state.documents"},
+            },
+            {
+                "id": "summarize_each",
+                "type": "foreach",
+                "over": "state.documents",
+                "as": "document",
+                "mode": "serial",
+                "on_item_error": "fail",
+            },
+            {
+                "id": "summarize_one",
+                "type": "node",
+                "node": "summarize_document",
+                "desc": "Summarize one document",
+                "in_map": {"context.document": "document"},
+                "out_map": {"item_summary": "state.item_summaries"},
+            },
+            {
+                "id": "combine_summaries",
+                "type": "node",
+                "node": "combine_summaries",
+                "desc": "Combine item summaries into one final summary",
+                "in_map": {"state.item_summaries": "item_summaries"},
+                "out_map": {"summary": "state.summary"},
+            },
+            {
+                "id": "should_email",
+                "type": "condition",
+                "check": {
+                    "op": "eq",
+                    "left": {"path": "state.should_email"},
+                    "right": {"value": True},
                 },
-                {
-                    "id": "should_email",
-                    "type": "condition",
-                    "check": {
-                        "op": "eq",
-                        "left": {"path": "state.should_email"},
-                        "right": {"value": True},
-                    },
+            },
+            {
+                "id": "send_email",
+                "type": "node",
+                "node": "send_email",
+                "desc": "Send the summary by email",
+                "in_map": {"state.summary": "summary"},
+                "out_map": {"email_status": "state.email_status"},
+            },
+            {
+                "id": "approve_email",
+                "type": "interrupt",
+                "kind": "approval",
+                "request_map": {
+                    "state.summary": "summary",
+                    "input.folder_id": "folder_id",
                 },
-                {
-                    "id": "send_email",
-                    "type": "node",
-                    "node": "send_email",
-                    "desc": "Send the summary by email",
-                    "in_map": {"state.summary": "summary"},
-                    "out_map": {"email_status": "state.email_status"},
+                "out_map": {
+                    "approved": "state.approved",
+                    "comment": "state.approval_comment",
                 },
-                {
-                    "id": "approve_email",
-                    "type": "interrupt",
-                    "kind": "approval",
-                    "request_map": {
-                        "state.summary": "summary",
-                        "input.folder_id": "folder_id",
-                    },
-                    "out_map": {
-                        "approved": "state.approved",
-                        "comment": "state.approval_comment",
-                    },
-                    "outcomes": ["submitted", "cancelled"],
-                },
-                {
-                    "id": "skip_email",
-                    "type": "node",
-                    "node": "mark_email_skipped",
-                    "desc": "Record that email delivery was skipped",
-                    "out_map": {"email_status": "state.email_status"},
-                },
-            ],
-            "edges": [
-                {"from": "list_files", "outcome": "ok", "to": "summarize_each"},
-                {"from": "summarize_each", "outcome": "loop", "to": "summarize_one"},
-                {
-                    "from": "summarize_each",
-                    "outcome": "done",
-                    "to": "combine_summaries",
-                },
-                {"from": "summarize_one", "outcome": "ok", "to": END},
-                {"from": "combine_summaries", "outcome": "ok", "to": "should_email"},
-                {"from": "should_email", "outcome": "true", "to": "approve_email"},
-                {"from": "should_email", "outcome": "false", "to": "skip_email"},
-                {"from": "approve_email", "outcome": "submitted", "to": "send_email"},
-                {"from": "approve_email", "outcome": "cancelled", "to": "skip_email"},
-                {"from": "send_email", "outcome": "sent", "to": END},
-                {"from": "skip_email", "outcome": "ok", "to": END},
-            ],
-        }
-    )
+                "outcomes": ["submitted", "cancelled"],
+            },
+            {
+                "id": "skip_email",
+                "type": "node",
+                "node": "mark_email_skipped",
+                "desc": "Record that email delivery was skipped",
+                "out_map": {"email_status": "state.email_status"},
+            },
+        ],
+        "edges": [
+            {"from": "list_files", "outcome": "ok", "to": "summarize_each"},
+            {"from": "summarize_each", "outcome": "loop", "to": "summarize_one"},
+            {
+                "from": "summarize_each",
+                "outcome": "done",
+                "to": "combine_summaries",
+            },
+            {"from": "summarize_one", "outcome": "ok", "to": END},
+            {"from": "combine_summaries", "outcome": "ok", "to": "should_email"},
+            {"from": "should_email", "outcome": "true", "to": "approve_email"},
+            {"from": "should_email", "outcome": "false", "to": "skip_email"},
+            {"from": "approve_email", "outcome": "submitted", "to": "send_email"},
+            {"from": "approve_email", "outcome": "cancelled", "to": "skip_email"},
+            {"from": "send_email", "outcome": "sent", "to": END},
+            {"from": "skip_email", "outcome": "ok", "to": END},
+        ],
+    })
 
 
 def drive_list_files(

@@ -265,15 +265,13 @@ def _iter_state_field_declarations(
         _attach_root_schema_context(validation_schema, root_schema)
         yield (
             path,
-            StateFieldDecl.model_validate(
-                {
-                    "path": StatePath.of(path),
-                    "schema": SchemaRef.model_validate(validation_schema),
-                    "reducer": reducer,
-                    "trace": trace,
-                    "default": default,
-                }
-            ),
+            StateFieldDecl.model_validate({
+                "path": StatePath.of(path),
+                "schema": SchemaRef.model_validate(validation_schema),
+                "reducer": reducer,
+                "trace": trace,
+                "default": default,
+            }),
         )
         child_properties = resolved_schema.get("properties")
         if isinstance(child_properties, Mapping):

@@ -121,29 +121,23 @@ def test_pydantic_revalidates_existing_path_objects() -> None:
     object.__setattr__(local, "parts", ("items[0]",))
 
     with pytest.raises(ValidationError):
-        Payload.model_validate(
-            {
-                "source": source,
-                "target": StatePath.of("person"),
-                "local": LocalPath.root(),
-            }
-        )
+        Payload.model_validate({
+            "source": source,
+            "target": StatePath.of("person"),
+            "local": LocalPath.root(),
+        })
     with pytest.raises(ValidationError):
-        Payload.model_validate(
-            {
-                "source": GraphSourcePath.input("user"),
-                "target": target,
-                "local": LocalPath.root(),
-            }
-        )
+        Payload.model_validate({
+            "source": GraphSourcePath.input("user"),
+            "target": target,
+            "local": LocalPath.root(),
+        })
     with pytest.raises(ValidationError):
-        Payload.model_validate(
-            {
-                "source": GraphSourcePath.input("user"),
-                "target": StatePath.of("person"),
-                "local": local,
-            }
-        )
+        Payload.model_validate({
+            "source": GraphSourcePath.input("user"),
+            "target": StatePath.of("person"),
+            "local": local,
+        })
 
 
 def test_pydantic_accepts_path_strings_and_serializes_strings() -> None:
@@ -152,9 +146,11 @@ def test_pydantic_accepts_path_strings_and_serializes_strings() -> None:
         target: StatePath
         local: LocalPath
 
-    payload = Payload.model_validate(
-        {"source": "input.user", "target": "state.person", "local": "user"}
-    )
+    payload = Payload.model_validate({
+        "source": "input.user",
+        "target": "state.person",
+        "local": "user",
+    })
 
     assert payload.source == GraphSourcePath.input("user")
     assert payload.target == StatePath.of("person")
@@ -184,13 +180,11 @@ def test_pydantic_accepts_existing_path_objects() -> None:
         target: StatePath
         local: LocalPath
 
-    payload = Payload.model_validate(
-        {
-            "source": GraphSourcePath.state("person"),
-            "target": StatePath.of("person.name"),
-            "local": LocalPath.root(),
-        }
-    )
+    payload = Payload.model_validate({
+        "source": GraphSourcePath.state("person"),
+        "target": StatePath.of("person.name"),
+        "local": LocalPath.root(),
+    })
 
     assert str(payload.source) == "state.person"
     assert str(payload.target) == "state.person.name"

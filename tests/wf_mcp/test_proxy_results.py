@@ -65,11 +65,9 @@ def test_rewrites_resource_links_inside_call_tool_result() -> None:
 
 def _resource_link(uri: str) -> mcp_types.ResourceLink:
     """Build ResourceLink through validation because Pydantic accepts URI strings."""
-    return mcp_types.ResourceLink.model_validate(
-        {
-            "type": "resource_link",
-            "name": "dynamic-text",
-            "uri": uri,
-            "mimeType": "text/plain",
-        }
-    )
+    return mcp_types.ResourceLink.model_validate({
+        "type": "resource_link",
+        "name": "dynamic-text",
+        "uri": uri,
+        "mimeType": "text/plain",
+    })

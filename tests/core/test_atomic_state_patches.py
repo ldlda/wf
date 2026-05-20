@@ -126,18 +126,16 @@ def test_output_bindings_validate_exact_state_schema_before_mutation() -> None:
 
 def test_output_bindings_validate_declared_parent_schema_before_mutation() -> None:
     workflow = _workflow_from_state_schema(
-        StateSchema.model_validate(
-            {
-                "type": "object",
-                "properties": {
-                    "person": {
-                        "type": "object",
-                        "properties": {"name": {"type": "string"}},
-                        "additionalProperties": False,
-                    }
-                },
-            }
-        )
+        StateSchema.model_validate({
+            "type": "object",
+            "properties": {
+                "person": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "additionalProperties": False,
+                }
+            },
+        })
     )
     state = {"person": {"name": "old"}}
 
@@ -206,9 +204,9 @@ def _workflow_with_node() -> Workflow:
     return Workflow(
         name="canonical_output",
         input_schema=SchemaRef(type="object", properties={}),
-        state_schema=StateSchema.from_field_map(
-            {"person.name": StateField(type="string")}
-        ),
+        state_schema=StateSchema.from_field_map({
+            "person.name": StateField(type="string")
+        }),
         output_schema=SchemaRef(
             type="object", properties={"person": {"type": "object"}}
         ),
@@ -225,16 +223,12 @@ def _workflow_with_node() -> Workflow:
         ],
         start="rename",
         nodes=[
-            NodeUse.model_validate(
-                {
-                    "id": "rename",
-                    "type": "node",
-                    "node": "rename",
-                    "output": [
-                        {"source": "person.name", "target": "state.person.name"}
-                    ],
-                }
-            )
+            NodeUse.model_validate({
+                "id": "rename",
+                "type": "node",
+                "node": "rename",
+                "output": [{"source": "person.name", "target": "state.person.name"}],
+            })
         ],
         edges=[Edge.model_validate({"from": "rename", "outcome": "ok", "to": END})],
     )

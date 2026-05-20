@@ -214,21 +214,19 @@ class WorkflowSurfaceHandlers:
                 query=query,
             ):
                 continue
-            rows.append(
-                {
-                    "name": name,
-                    "source_id": "workflow",
-                    "kind": "wrapper_artifact",
-                    "artifact_id": artifact.id,
-                    "version": artifact.version,
-                    "title": artifact.title,
-                    "description": artifact.description,
-                    "outcomes": list(artifact.outcomes),
-                    "is_async": True,
-                    "input_fields": _schema_field_names(artifact.input_schema),
-                    "output_fields": _schema_field_names(artifact.output_schema),
-                }
-            )
+            rows.append({
+                "name": name,
+                "source_id": "workflow",
+                "kind": "wrapper_artifact",
+                "artifact_id": artifact.id,
+                "version": artifact.version,
+                "title": artifact.title,
+                "description": artifact.description,
+                "outcomes": list(artifact.outcomes),
+                "is_async": True,
+                "input_fields": _schema_field_names(artifact.input_schema),
+                "output_fields": _schema_field_names(artifact.output_schema),
+            })
         return rows
 
     def _wrapper_capability_detail(
@@ -447,12 +445,10 @@ class WorkflowSurfaceHandlers:
                 },
             )
         )
-        required_sources = sorted(
-            {
-                capability.logical_source
-                for capability in workflow_artifact.required_capability_map().values()
-            }
-        )
+        required_sources = sorted({
+            capability.logical_source
+            for capability in workflow_artifact.required_capability_map().values()
+        })
         return {
             "artifact_id": workflow_artifact.id,
             "version": workflow_artifact.version,
@@ -909,16 +905,14 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
             if (capability_name := _capability_name(spec.name)) is not None
             if (detail := node_spec_details.get(spec.name)) is not None
         }
-        capabilities.update(
-            {
-                capability_name: AvailableCapability(
-                    name=capability_name,
-                    kind="reducer",
-                )
-                for reducer in source.capabilities.reducers.values()
-                if (capability_name := _capability_name(reducer.name)) is not None
-            }
-        )
+        capabilities.update({
+            capability_name: AvailableCapability(
+                name=capability_name,
+                kind="reducer",
+            )
+            for reducer in source.capabilities.reducers.values()
+            if (capability_name := _capability_name(reducer.name)) is not None
+        })
         sources.append(
             AvailableSource(
                 id=source.id,
@@ -982,9 +976,9 @@ def _observed_node_specs(service: WfMcpService) -> dict[str, NodeSpecInventory]:
     observed: dict[str, NodeSpecInventory] = {}
     for source in service.capability_sources.values():
         inventory = source.as_inventory()
-        observed.update(
-            {detail.name: detail for detail in inventory.capabilities.node_spec_details}
-        )
+        observed.update({
+            detail.name: detail for detail in inventory.capabilities.node_spec_details
+        })
     return observed
 
 
@@ -1063,17 +1057,15 @@ def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
 
 def _raw_plan_from_artifact(artifact: WorkflowArtifact) -> RawWorkflowPlan:
     """Validate the stored plan shape expected by the broker workflow runner."""
-    return RawWorkflowPlan.model_validate(
-        {
-            "name": _plan_field(artifact, "name"),
-            "input_schema": _plan_field(artifact, "input_schema"),
-            "state_schema": _plan_field(artifact, "state_schema"),
-            "output_schema": _plan_field(artifact, "output_schema"),
-            "start": _plan_field(artifact, "start"),
-            "nodes": _plan_field(artifact, "nodes"),
-            "edges": _plan_field(artifact, "edges"),
-        }
-    )
+    return RawWorkflowPlan.model_validate({
+        "name": _plan_field(artifact, "name"),
+        "input_schema": _plan_field(artifact, "input_schema"),
+        "state_schema": _plan_field(artifact, "state_schema"),
+        "output_schema": _plan_field(artifact, "output_schema"),
+        "start": _plan_field(artifact, "start"),
+        "nodes": _plan_field(artifact, "nodes"),
+        "edges": _plan_field(artifact, "edges"),
+    })
 
 
 def _plan_field(artifact: WorkflowArtifact, field_name: str) -> Any:

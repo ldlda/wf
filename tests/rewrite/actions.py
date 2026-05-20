@@ -109,37 +109,33 @@ class RateChange:
     @node(name="force 6* rating")
     @staticmethod
     def r80(r: Rates) -> Rates:
-        return Rates.model_validate(
-            {
-                "rates": {
-                    "r_1": 0,
-                    "r_10": 0,
-                    "r_80": r.rates["r_80"],
-                    "r_240": r.rates["r_240"],
-                }
+        return Rates.model_validate({
+            "rates": {
+                "r_1": 0,
+                "r_10": 0,
+                "r_80": r.rates["r_80"],
+                "r_240": r.rates["r_240"],
             }
-        )
+        })
 
     @node(name="force banner rating")
     @staticmethod
     def r240(_: Nothing) -> Rates:
-        return Rates.model_validate(
-            {"rates": {"r_1": 0, "r_10": 0, "r_80": 0, "r_240": 1}}
-        )
+        return Rates.model_validate({
+            "rates": {"r_1": 0, "r_10": 0, "r_80": 0, "r_240": 1}
+        })
 
     @node(name="force 5*+ rating")
     @staticmethod
     def r10(r: Rates) -> Rates:
-        return Rates.model_validate(
-            {
-                "rates": {
-                    "r_1": 0,
-                    "r_10": r.rates["r_10"],
-                    "r_80": r.rates["r_80"],
-                    "r_240": r.rates["r_240"],
-                }
+        return Rates.model_validate({
+            "rates": {
+                "r_1": 0,
+                "r_10": r.rates["r_10"],
+                "r_80": r.rates["r_80"],
+                "r_240": r.rates["r_240"],
             }
-        )
+        })
 
     @node(name="buff 6* rating")
     @staticmethod
@@ -157,16 +153,14 @@ class RateChange:
             r80 = br["r_80"] * (1 + rpn)
         r10 = br["r_10"]  # use initial rates because i dont know how this works
         r1 = 1 - r240 - r80 - r10
-        return Rates.model_validate(
-            {
-                "rates": {
-                    "r_1": r1,
-                    "r_10": r10,
-                    "r_80": r80,
-                    "r_240": r240,
-                }
+        return Rates.model_validate({
+            "rates": {
+                "r_1": r1,
+                "r_10": r10,
+                "r_80": r80,
+                "r_240": r240,
             }
-        )
+        })
 
     @node(name="reset rating")
     @staticmethod
@@ -178,28 +172,24 @@ class CounterUp:
     @node(name="counter 6* reset")
     @staticmethod
     def c80(_: Nothing) -> Counters:
-        return Counters.model_validate(
-            {
-                "counter": {
-                    "c_80": 0,
-                    "c_10": 0,
-                },
-                "simple_counter": 0,
-                # this is influenced by the add reducer.
-                # its top level. it doesnt reset. its a miracle. i hate this.
-            }
-        )
+        return Counters.model_validate({
+            "counter": {
+                "c_80": 0,
+                "c_10": 0,
+            },
+            "simple_counter": 0,
+            # this is influenced by the add reducer.
+            # its top level. it doesnt reset. its a miracle. i hate this.
+        })
 
     @node(name="counter 5* reset")
     @staticmethod
     def c10(c: Counters) -> Counters:
         c80 = c.counter["c_80"]
-        return Counters.model_validate(
-            {
-                "counter": {"c_10": 0, "c_80": c80},  # merge with or_!
-                "simple_counter": 0,
-            }
-        )
+        return Counters.model_validate({
+            "counter": {"c_10": 0, "c_80": c80},  # merge with or_!
+            "simple_counter": 0,
+        })
 
     @node(name="counting up")
     @staticmethod
@@ -238,12 +228,10 @@ def roll(state: CurrentPools) -> ThisStorage:
     r = state.current_pools
     (t,) = random.choices(r, weights=[*map(lambda p: p["rates"], r)])
     this = Entity(category=t["category"], name=random.choice(t["pool"]))
-    return ThisStorage.model_validate(
-        {
-            "this": this,
-            "storage": [this],  # I NEED MERGE
-        }
-    )
+    return ThisStorage.model_validate({
+        "this": this,
+        "storage": [this],  # I NEED MERGE
+    })
 
 
 @node(outcomes=("240", "80", "10", "1"))  # missed this! good job.

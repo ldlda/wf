@@ -14,27 +14,29 @@ from .test_support import local_temp_root
 
 def _write_config(path: Path) -> None:
     path.write_text(
-        json.dumps(
-            {
-                "store_root": ".wf_mcp_store",
-                "connections": [
-                    {
-                        "id": "demo.personal",
-                        "server": "demo",
-                        "account": "personal",
-                    }
-                ],
-            }
-        ),
+        json.dumps({
+            "store_root": ".wf_mcp_store",
+            "connections": [
+                {
+                    "id": "demo.personal",
+                    "server": "demo",
+                    "account": "personal",
+                }
+            ],
+        }),
         encoding="utf-8",
     )
 
 
 def test_build_parser_accepts_serve_transport() -> None:
     parser = build_parser()
-    args = parser.parse_args(
-        ["--config", "wf_mcp.config.json", "serve", "--transport", "streamable_http"]
-    )
+    args = parser.parse_args([
+        "--config",
+        "wf_mcp.config.json",
+        "serve",
+        "--transport",
+        "streamable_http",
+    ])
 
     assert args.command == "serve"
     assert args.transport == "streamable_http"
@@ -45,17 +47,15 @@ def test_build_parser_accepts_serve_transport() -> None:
 
 def test_build_parser_accepts_proxy_compatibility_flags() -> None:
     parser = build_parser()
-    args = parser.parse_args(
-        [
-            "--config",
-            "wf_mcp.config.json",
-            "serve",
-            "--resources-as-tools",
-            "--prompts-as-tools",
-            "--search-tools",
-            "--safe-tool-names",
-        ]
-    )
+    args = parser.parse_args([
+        "--config",
+        "wf_mcp.config.json",
+        "serve",
+        "--resources-as-tools",
+        "--prompts-as-tools",
+        "--search-tools",
+        "--safe-tool-names",
+    ])
 
     assert args.command == "serve"
     assert args.resources_as_tools is True
@@ -68,27 +68,23 @@ def test_build_parser_rejects_legacy_mode_flag() -> None:
     parser = build_parser()
 
     with pytest.raises(SystemExit):
-        parser.parse_args(
-            [
-                "--config",
-                "wf_mcp.config.json",
-                "serve",
-                "--mode",
-                "unified",
-            ]
-        )
+        parser.parse_args([
+            "--config",
+            "wf_mcp.config.json",
+            "serve",
+            "--mode",
+            "unified",
+        ])
 
 
 def test_build_parser_accepts_no_admin_tools_flag() -> None:
     parser = build_parser()
-    args = parser.parse_args(
-        [
-            "--config",
-            "wf_mcp.config.json",
-            "serve",
-            "--no-admin-tools",
-        ]
-    )
+    args = parser.parse_args([
+        "--config",
+        "wf_mcp.config.json",
+        "serve",
+        "--no-admin-tools",
+    ])
 
     assert args.command == "serve"
     assert args.admin_tools is False
@@ -158,23 +154,21 @@ def test_load_broker_config_normalizes_typed_stdio_metadata() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps(
-            {
-                "store_root": ".wf_mcp_store",
-                "connections": [
-                    {
-                        "id": "demo.personal",
-                        "server": "demo",
-                        "account": "personal",
-                        "metadata": {
-                            "command": "python",
-                            "args": ["server.py"],
-                            "env": {"TOKEN": "secret"},
-                        },
-                    }
-                ],
-            }
-        ),
+        json.dumps({
+            "store_root": ".wf_mcp_store",
+            "connections": [
+                {
+                    "id": "demo.personal",
+                    "server": "demo",
+                    "account": "personal",
+                    "metadata": {
+                        "command": "python",
+                        "args": ["server.py"],
+                        "env": {"TOKEN": "secret"},
+                    },
+                }
+            ],
+        }),
         encoding="utf-8",
     )
 
@@ -194,18 +188,16 @@ def test_load_broker_config_rejects_bad_metadata_shape() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps(
-            {
-                "connections": [
-                    {
-                        "id": "demo.personal",
-                        "server": "demo",
-                        "account": "personal",
-                        "metadata": {"transport": "stdio", "args": "server.py"},
-                    }
-                ],
-            }
-        ),
+        json.dumps({
+            "connections": [
+                {
+                    "id": "demo.personal",
+                    "server": "demo",
+                    "account": "personal",
+                    "metadata": {"transport": "stdio", "args": "server.py"},
+                }
+            ],
+        }),
         encoding="utf-8",
     )
 

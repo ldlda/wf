@@ -36,78 +36,72 @@ def test_draft_step_requires_exactly_one_kind_key() -> None:
 
 
 def test_workflow_draft_accepts_when_step() -> None:
-    draft = WorkflowDraft.model_validate(
-        {
-            **_keyed_echo_draft(),
-            "start": "decide",
-            "steps": {
-                **_keyed_echo_draft()["steps"],
-                "decide": {
-                    "when": {
-                        "if": {
-                            "op": "ge",
-                            "left": {"path": "state.count"},
-                            "right": {"value": 1},
-                        },
-                        "then": "echo",
-                        "otherwise": "__end__",
-                    }
-                },
+    draft = WorkflowDraft.model_validate({
+        **_keyed_echo_draft(),
+        "start": "decide",
+        "steps": {
+            **_keyed_echo_draft()["steps"],
+            "decide": {
+                "when": {
+                    "if": {
+                        "op": "ge",
+                        "left": {"path": "state.count"},
+                        "right": {"value": 1},
+                    },
+                    "then": "echo",
+                    "otherwise": "__end__",
+                }
             },
-        }
-    )
+        },
+    })
 
     assert isinstance(draft.steps["decide"], DraftWhenStep)
 
 
 def test_workflow_draft_accepts_choose_step() -> None:
-    draft = WorkflowDraft.model_validate(
-        {
-            **_keyed_echo_draft(),
-            "start": "choose_next",
-            "steps": {
-                **_keyed_echo_draft()["steps"],
-                "choose_next": {
-                    "choose": {
-                        "clauses": [
-                            {
-                                "if": {
-                                    "op": "exists",
-                                    "path": "state.text",
-                                },
-                                "then": "echo",
-                            }
-                        ],
-                        "default": "__end__",
-                    }
-                },
+    draft = WorkflowDraft.model_validate({
+        **_keyed_echo_draft(),
+        "start": "choose_next",
+        "steps": {
+            **_keyed_echo_draft()["steps"],
+            "choose_next": {
+                "choose": {
+                    "clauses": [
+                        {
+                            "if": {
+                                "op": "exists",
+                                "path": "state.text",
+                            },
+                            "then": "echo",
+                        }
+                    ],
+                    "default": "__end__",
+                }
             },
-        }
-    )
+        },
+    })
 
     assert isinstance(draft.steps["choose_next"], DraftChooseStep)
 
 
 def test_workflow_draft_accepts_match_step() -> None:
-    draft = WorkflowDraft.model_validate(
-        {
-            **_keyed_echo_draft(),
-            "start": "match_status",
-            "steps": {
-                **_keyed_echo_draft()["steps"],
-                "match_status": {
-                    "match": {
-                        "value": "state.status",
-                        "cases": [
-                            {"equals": "ready", "then": "echo"},
-                            {"equals": "done", "then": "__end__"},
-                        ],
-                        "default": "__end__",
-                    }
-                },
+    draft = WorkflowDraft.model_validate({
+        **_keyed_echo_draft(),
+        "start": "match_status",
+        "steps": {
+            **_keyed_echo_draft()["steps"],
+            "match_status": {
+                "match": {
+                    "value": "state.status",
+                    "cases": [
+                        {"equals": "ready", "then": "echo"},
+                        {"equals": "done", "then": "__end__"},
+                    ],
+                    "default": "__end__",
+                }
             },
-        }
-    )
+        },
+    })
 
     assert isinstance(draft.steps["match_status"], DraftMatchStep)
 

@@ -373,14 +373,12 @@ def test_foreach_stress_with_many_documents() -> None:
     assert len(run.state["documents"]) == document_count
     assert len(run.state["item_summaries"]) == document_count
     assert (
-        len(
-            [
-                frame
-                for frame in run.frames.values()
-                if frame.kind == "foreach_iteration"
-                and frame.status == FrameStatus.COMPLETED
-            ]
-        )
+        len([
+            frame
+            for frame in run.frames.values()
+            if frame.kind == "foreach_iteration"
+            and frame.status == FrameStatus.COMPLETED
+        ])
         == document_count
     )
     assert len([entry for entry in run.trace if entry.step_type == "foreach"]) == (

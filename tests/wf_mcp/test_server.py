@@ -526,24 +526,22 @@ def test_server_reload_syncs_service_connection_source_enabled_state() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps(
-            {
-                "store_root": ".wf_mcp_store",
-                "connections": [
-                    {
-                        "id": "fixture.personal",
-                        "server": "fixture",
-                        "account": "personal",
-                        "enabled": False,
-                        "metadata": {
-                            "transport": "stdio",
-                            "command": sys.executable,
-                            "args": [fixture_server_path()],
-                        },
-                    }
-                ],
-            }
-        ),
+        json.dumps({
+            "store_root": ".wf_mcp_store",
+            "connections": [
+                {
+                    "id": "fixture.personal",
+                    "server": "fixture",
+                    "account": "personal",
+                    "enabled": False,
+                    "metadata": {
+                        "transport": "stdio",
+                        "command": sys.executable,
+                        "args": [fixture_server_path()],
+                    },
+                }
+            ],
+        }),
         encoding="utf-8",
     )
     config = load_broker_config(config_path)

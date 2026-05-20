@@ -6,18 +6,16 @@ from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 
 def test_node_use_accepts_canonical_input_and_output_bindings():
-    node = NodeUse.model_validate(
-        {
-            "id": "echo",
-            "type": "node",
-            "node": "echo",
-            "input": [
-                {"target": "message", "path": "input.message"},
-                {"target": "mode", "value": None},
-            ],
-            "output": [{"source": "echoed", "target": "state.echoed"}],
-        }
-    )
+    node = NodeUse.model_validate({
+        "id": "echo",
+        "type": "node",
+        "node": "echo",
+        "input": [
+            {"target": "message", "path": "input.message"},
+            {"target": "mode", "value": None},
+        ],
+        "output": [{"source": "echoed", "target": "state.echoed"}],
+    })
 
     path_binding = node.input[0]
     assert isinstance(path_binding, InputPathBinding)
@@ -34,16 +32,14 @@ def test_node_use_accepts_canonical_input_and_output_bindings():
 
 
 def test_node_use_converts_old_maps_to_canonical_bindings():
-    node = NodeUse.model_validate(
-        {
-            "id": "echo",
-            "type": "node",
-            "node": "echo",
-            "in_map": {"input.message": "message"},
-            "input_values": {"mode": "fast"},
-            "out_map": {"echoed": "state.echoed"},
-        }
-    )
+    node = NodeUse.model_validate({
+        "id": "echo",
+        "type": "node",
+        "node": "echo",
+        "in_map": {"input.message": "message"},
+        "input_values": {"mode": "fast"},
+        "out_map": {"echoed": "state.echoed"},
+    })
 
     dumped = node.model_dump(mode="json")
     assert "in_map" not in dumped
@@ -58,15 +54,13 @@ def test_node_use_converts_old_maps_to_canonical_bindings():
 
 
 def test_node_use_serializes_canonical_binding_paths_as_strings_in_all_dump_modes():
-    node = NodeUse.model_validate(
-        {
-            "id": "echo",
-            "type": "node",
-            "node": "echo",
-            "input": [{"target": "message", "path": "input.message"}],
-            "output": [{"source": "echoed", "target": "state.echoed"}],
-        }
-    )
+    node = NodeUse.model_validate({
+        "id": "echo",
+        "type": "node",
+        "node": "echo",
+        "input": [{"target": "message", "path": "input.message"}],
+        "output": [{"source": "echoed", "target": "state.echoed"}],
+    })
 
     python_dumped = node.model_dump()
     json_dumped = node.model_dump(mode="json")
@@ -83,39 +77,33 @@ def test_node_use_serializes_canonical_binding_paths_as_strings_in_all_dump_mode
 
 def test_node_use_rejects_mixed_old_and_new_binding_styles():
     with pytest.raises(ValidationError):
-        NodeUse.model_validate(
-            {
-                "id": "echo",
-                "type": "node",
-                "node": "echo",
-                "input": [{"target": "message", "path": "input.message"}],
-                "in_map": {"input.other": "other"},
-            }
-        )
+        NodeUse.model_validate({
+            "id": "echo",
+            "type": "node",
+            "node": "echo",
+            "input": [{"target": "message", "path": "input.message"}],
+            "in_map": {"input.other": "other"},
+        })
 
 
 def test_input_binding_rejects_path_and_value_together():
     with pytest.raises(ValidationError):
-        NodeUse.model_validate(
-            {
-                "id": "bad",
-                "type": "node",
-                "node": "bad",
-                "input": [{"target": "message", "path": "input.message", "value": "x"}],
-            }
-        )
+        NodeUse.model_validate({
+            "id": "bad",
+            "type": "node",
+            "node": "bad",
+            "input": [{"target": "message", "path": "input.message", "value": "x"}],
+        })
 
 
 def test_input_binding_rejects_neither_path_nor_value():
     with pytest.raises(ValidationError):
-        NodeUse.model_validate(
-            {
-                "id": "bad",
-                "type": "node",
-                "node": "bad",
-                "input": [{"target": "message"}],
-            }
-        )
+        NodeUse.model_validate({
+            "id": "bad",
+            "type": "node",
+            "node": "bad",
+            "input": [{"target": "message"}],
+        })
 
 
 @pytest.mark.parametrize(
@@ -127,9 +115,12 @@ def test_input_binding_rejects_neither_path_nor_value():
 )
 def test_bindings_reject_extra_fields(field: str, binding: dict[str, object]):
     with pytest.raises(ValidationError):
-        NodeUse.model_validate(
-            {"id": "bad", "type": "node", "node": "bad", field: [binding]}
-        )
+        NodeUse.model_validate({
+            "id": "bad",
+            "type": "node",
+            "node": "bad",
+            field: [binding],
+        })
 
 
 @pytest.mark.parametrize(
@@ -142,21 +133,22 @@ def test_bindings_reject_extra_fields(field: str, binding: dict[str, object]):
 )
 def test_deprecated_maps_reject_non_mapping_values(field: str, value: object):
     with pytest.raises(ValidationError):
-        NodeUse.model_validate(
-            {"id": "bad", "type": "node", "node": "bad", field: value}
-        )
+        NodeUse.model_validate({
+            "id": "bad",
+            "type": "node",
+            "node": "bad",
+            field: value,
+        })
 
 
 def test_deprecated_conversion_preserves_input_value_then_in_map_order():
-    node = NodeUse.model_validate(
-        {
-            "id": "ordered",
-            "type": "node",
-            "node": "ordered",
-            "input_values": {"first": 1, "second": 2},
-            "in_map": {"input.third": "third", "state.fourth": "fourth"},
-        }
-    )
+    node = NodeUse.model_validate({
+        "id": "ordered",
+        "type": "node",
+        "node": "ordered",
+        "input_values": {"first": 1, "second": 2},
+        "in_map": {"input.third": "third", "state.fourth": "fourth"},
+    })
 
     dumped_input = node.model_dump(mode="json")["input"]
     assert dumped_input[0]["target"] == "first"
@@ -170,14 +162,12 @@ def test_deprecated_conversion_preserves_input_value_then_in_map_order():
 
 
 def test_deprecated_input_value_preserves_explicit_null():
-    node = NodeUse.model_validate(
-        {
-            "id": "null",
-            "type": "node",
-            "node": "null",
-            "input_values": {"maybe": None},
-        }
-    )
+    node = NodeUse.model_validate({
+        "id": "null",
+        "type": "node",
+        "node": "null",
+        "input_values": {"maybe": None},
+    })
 
     value_binding = node.input[0]
     assert isinstance(value_binding, InputValueBinding)

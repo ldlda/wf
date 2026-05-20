@@ -26,14 +26,12 @@ async def echo_tool(
 async def resource_link_tool() -> list[mcp_types.ResourceLink]:
     """Return a link to a fixture resource so proxy URI rewriting is testable."""
     return [
-        mcp_types.ResourceLink.model_validate(
-            {
-                "type": "resource_link",
-                "name": "resource.welcome",
-                "uri": "fixture://docs/welcome",
-                "mimeType": "text/plain",
-            }
-        )
+        mcp_types.ResourceLink.model_validate({
+            "type": "resource_link",
+            "name": "resource.welcome",
+            "uri": "fixture://docs/welcome",
+            "mimeType": "text/plain",
+        })
     ]
 
 

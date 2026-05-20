@@ -319,26 +319,22 @@ class WfMcpService:
         statuses: list[dict[str, Any]] = []
         for connection in self.connections.list_all():
             snapshot = self.store.load_catalog(connection.id)
-            statuses.append(
-                {
-                    "connection_id": connection.id,
-                    "server": connection.server,
-                    "account": connection.account,
-                    "enabled": connection.enabled,
-                    "has_snapshot": snapshot is not None,
-                    "fetched_at_epoch_ms": None
-                    if snapshot is None
-                    else snapshot.fetched_at_epoch_ms,
-                    "max_age_seconds": None
-                    if snapshot is None
-                    else snapshot.max_age_seconds,
-                    "node_count": 0 if snapshot is None else len(snapshot.nodes),
-                    "resource_count": 0
-                    if snapshot is None
-                    else len(snapshot.resources),
-                    "prompt_count": 0 if snapshot is None else len(snapshot.prompts),
-                }
-            )
+            statuses.append({
+                "connection_id": connection.id,
+                "server": connection.server,
+                "account": connection.account,
+                "enabled": connection.enabled,
+                "has_snapshot": snapshot is not None,
+                "fetched_at_epoch_ms": None
+                if snapshot is None
+                else snapshot.fetched_at_epoch_ms,
+                "max_age_seconds": None
+                if snapshot is None
+                else snapshot.max_age_seconds,
+                "node_count": 0 if snapshot is None else len(snapshot.nodes),
+                "resource_count": 0 if snapshot is None else len(snapshot.resources),
+                "prompt_count": 0 if snapshot is None else len(snapshot.prompts),
+            })
         return statuses
 
     def list_resources(

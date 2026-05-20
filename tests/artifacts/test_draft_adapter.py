@@ -10,17 +10,15 @@ from wf_core.models.steps import InputValueBinding
 
 
 def test_adapter_lowers_keyed_use_steps_and_routes_through_builder() -> None:
-    draft = WorkflowDraft.model_validate(
-        {
-            "name": "echo",
-            "input_schema": {},
-            "state_schema": {"fields": {}},
-            "output_schema": {},
-            "start": "echo",
-            "steps": {"echo": {"use": "demo.echo"}},
-            "routes": {"echo": {"ok": "__end__"}},
-        }
-    )
+    draft = WorkflowDraft.model_validate({
+        "name": "echo",
+        "input_schema": {},
+        "state_schema": {"fields": {}},
+        "output_schema": {},
+        "start": "echo",
+        "steps": {"echo": {"use": "demo.echo"}},
+        "routes": {"echo": {"ok": "__end__"}},
+    })
 
     workflow = build_workflow_from_draft(draft)
 
@@ -34,23 +32,21 @@ def test_adapter_lowers_keyed_use_steps_and_routes_through_builder() -> None:
 
 
 def test_adapter_lowers_static_inputs_for_constant_like_steps() -> None:
-    draft = WorkflowDraft.model_validate(
-        {
-            "name": "constant",
-            "input_schema": {},
-            "state_schema": {"fields": {"message": {"type": "string"}}},
-            "output_schema": {},
-            "start": "constant",
-            "steps": {
-                "constant": {
-                    "use": "wf.std.constant",
-                    "with": {"value": "CLICKED"},
-                    "out": {"value": "state.message"},
-                }
-            },
-            "routes": {"constant": {"ok": "__end__"}},
-        }
-    )
+    draft = WorkflowDraft.model_validate({
+        "name": "constant",
+        "input_schema": {},
+        "state_schema": {"fields": {"message": {"type": "string"}}},
+        "output_schema": {},
+        "start": "constant",
+        "steps": {
+            "constant": {
+                "use": "wf.std.constant",
+                "with": {"value": "CLICKED"},
+                "out": {"value": "state.message"},
+            }
+        },
+        "routes": {"constant": {"ok": "__end__"}},
+    })
 
     workflow = build_workflow_from_draft(draft)
     node = workflow.nodes[0]
@@ -92,30 +88,28 @@ def test_invalid_literal_input_map_does_not_fall_through_to_join() -> None:
 
 
 def test_adapter_lowers_when_step_through_builder() -> None:
-    draft = WorkflowDraft.model_validate(
-        {
-            "name": "when_example",
-            "input_schema": {},
-            "state_schema": {"fields": {}},
-            "output_schema": {},
-            "start": "decide",
-            "steps": {
-                "decide": {
-                    "when": {
-                        "if": {
-                            "op": "ge",
-                            "left": {"path": "state.count"},
-                            "right": {"value": 1},
-                        },
-                        "then": "echo",
-                        "otherwise": "__end__",
-                    }
-                },
-                "echo": {"use": "demo.echo"},
+    draft = WorkflowDraft.model_validate({
+        "name": "when_example",
+        "input_schema": {},
+        "state_schema": {"fields": {}},
+        "output_schema": {},
+        "start": "decide",
+        "steps": {
+            "decide": {
+                "when": {
+                    "if": {
+                        "op": "ge",
+                        "left": {"path": "state.count"},
+                        "right": {"value": 1},
+                    },
+                    "then": "echo",
+                    "otherwise": "__end__",
+                }
             },
-            "routes": {"echo": {"ok": "__end__"}},
-        }
-    )
+            "echo": {"use": "demo.echo"},
+        },
+        "routes": {"echo": {"ok": "__end__"}},
+    })
 
     workflow = build_workflow_from_draft(draft)
     condition = workflow.nodes[0]
@@ -130,45 +124,43 @@ def test_adapter_lowers_when_step_through_builder() -> None:
 
 
 def test_adapter_lowers_choose_step_through_builder() -> None:
-    draft = WorkflowDraft.model_validate(
-        {
-            "name": "choose_example",
-            "input_schema": {},
-            "state_schema": {"fields": {}},
-            "output_schema": {},
-            "start": "pick",
-            "steps": {
-                "pick": {
-                    "choose": {
-                        "clauses": [
-                            {
-                                "if": {
-                                    "op": "gt",
-                                    "left": {"path": "state.score"},
-                                    "right": {"value": 80},
-                                },
-                                "then": "high",
+    draft = WorkflowDraft.model_validate({
+        "name": "choose_example",
+        "input_schema": {},
+        "state_schema": {"fields": {}},
+        "output_schema": {},
+        "start": "pick",
+        "steps": {
+            "pick": {
+                "choose": {
+                    "clauses": [
+                        {
+                            "if": {
+                                "op": "gt",
+                                "left": {"path": "state.score"},
+                                "right": {"value": 80},
                             },
-                            {
-                                "if": {
-                                    "op": "exists",
-                                    "path": "state.fallback",
-                                },
-                                "then": "fallback",
+                            "then": "high",
+                        },
+                        {
+                            "if": {
+                                "op": "exists",
+                                "path": "state.fallback",
                             },
-                        ],
-                        "default": "__end__",
-                    }
-                },
-                "high": {"use": "demo.high"},
-                "fallback": {"use": "demo.fallback"},
+                            "then": "fallback",
+                        },
+                    ],
+                    "default": "__end__",
+                }
             },
-            "routes": {
-                "high": {"ok": "__end__"},
-                "fallback": {"ok": "__end__"},
-            },
-        }
-    )
+            "high": {"use": "demo.high"},
+            "fallback": {"use": "demo.fallback"},
+        },
+        "routes": {
+            "high": {"ok": "__end__"},
+            "fallback": {"ok": "__end__"},
+        },
+    })
 
     workflow = build_workflow_from_draft(draft)
     condition_ids = [
@@ -186,33 +178,31 @@ def test_adapter_lowers_choose_step_through_builder() -> None:
 
 
 def test_adapter_lowers_match_step_through_builder() -> None:
-    draft = WorkflowDraft.model_validate(
-        {
-            "name": "match_example",
-            "input_schema": {},
-            "state_schema": {"fields": {}},
-            "output_schema": {},
-            "start": "match_status",
-            "steps": {
-                "match_status": {
-                    "match": {
-                        "value": "state.status",
-                        "cases": [
-                            {"equals": "ready", "then": "ready"},
-                            {"equals": "waiting", "then": "waiting"},
-                        ],
-                        "default": "__end__",
-                    }
-                },
-                "ready": {"use": "demo.ready"},
-                "waiting": {"use": "demo.waiting"},
+    draft = WorkflowDraft.model_validate({
+        "name": "match_example",
+        "input_schema": {},
+        "state_schema": {"fields": {}},
+        "output_schema": {},
+        "start": "match_status",
+        "steps": {
+            "match_status": {
+                "match": {
+                    "value": "state.status",
+                    "cases": [
+                        {"equals": "ready", "then": "ready"},
+                        {"equals": "waiting", "then": "waiting"},
+                    ],
+                    "default": "__end__",
+                }
             },
-            "routes": {
-                "ready": {"ok": "__end__"},
-                "waiting": {"ok": "__end__"},
-            },
-        }
-    )
+            "ready": {"use": "demo.ready"},
+            "waiting": {"use": "demo.waiting"},
+        },
+        "routes": {
+            "ready": {"ok": "__end__"},
+            "waiting": {"ok": "__end__"},
+        },
+    })
 
     workflow = build_workflow_from_draft(draft)
     condition_ids = [
