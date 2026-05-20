@@ -63,6 +63,40 @@ def test_workflow_artifact_can_be_marked_as_wrapper_intent() -> None:
     assert dumped["kind"] == "wrapper"
 
 
+def test_workflow_artifact_accepts_legacy_required_capability_map_and_dumps_list() -> (
+    None
+):
+    artifact = WorkflowArtifact.model_validate(
+        {
+            "id": "legacy_capabilities",
+            "version": 1,
+            "title": "Legacy Capabilities",
+            "input_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "outcomes": ["done"],
+            "plan": {"name": "legacy_capabilities", "nodes": [], "edges": []},
+            "required_capabilities": {
+                "demo.echo": {
+                    "kind": "tool",
+                    "input_schema_hash": "sha256:input",
+                    "output_schema_hash": "sha256:output",
+                    "observed_concrete_source": "demo.personal",
+                }
+            },
+        }
+    )
+
+    dumped = artifact.model_dump(mode="json")
+    required = dumped["required_capabilities"][0]
+
+    assert isinstance(dumped["required_capabilities"], list)
+    assert required["ref"] == "demo.echo"
+    assert required["observed_concrete_source"] == "demo.personal"
+    assert "logical_source" not in required
+    assert "capability_name" not in required
+    assert artifact.required_capability_map()["demo.echo"].logical_source == "demo"
+
+
 def test_workflow_deployment_binds_logical_sources_to_concrete_sources() -> None:
     deployment = WorkflowDeployment(
         id="summarize_docs.personal",
@@ -83,6 +117,25 @@ def test_workflow_deployment_binds_logical_sources_to_concrete_sources() -> None
     assert dumped["bindings"][0]["concrete_source"] == "context7.personal"
     assert dumped["drift_policy"] == "block"
     assert deployment.binding_map()["context7"] == "context7.personal"
+
+
+def test_workflow_deployment_accepts_legacy_binding_map_and_dumps_list() -> None:
+    deployment = WorkflowDeployment.model_validate(
+        {
+            "id": "legacy_bindings.personal",
+            "artifact_id": "legacy_bindings",
+            "artifact_version": 1,
+            "bindings": {"demo": "demo.personal"},
+        }
+    )
+
+    dumped = deployment.model_dump(mode="json")
+    binding = dumped["bindings"][0]
+
+    assert isinstance(dumped["bindings"], list)
+    assert binding["logical_source"] == "demo"
+    assert binding["concrete_source"] == "demo.personal"
+    assert deployment.binding_map()["demo"] == "demo.personal"
 
 
 def test_dependency_diagnostic_is_structured() -> None:

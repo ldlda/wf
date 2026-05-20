@@ -8,6 +8,16 @@
 
 **Tech Stack:** Python 3.14, Pydantic v2, pytest, jsonschema, basedpyright, ruff.
 
+**Current status as of 2026-05-20:** The implementation has moved past the
+original checklist. Typed path values, canonical node bindings, canonical
+runtime input/output handling, atomic state patches, canonical validation,
+JSON-Schema-native state reducers, schema validation, and authoring canonical
+emission are present in the tree. The remaining checklist item is the full
+compatibility/regression pass in Task 9. If future code changes touch this area,
+prefer adding focused tests to the existing `tests/core/test_*path*`,
+`tests/core/test_*mapping*`, and `tests/authoring/test_builder.py` coverage
+rather than reimplementing the earlier tasks.
+
 ---
 
 ## File Structure
