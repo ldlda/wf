@@ -4,7 +4,7 @@ import asyncio
 import shutil
 from typing import Any, cast
 
-from wf_artifacts import FileDraftWorkspaceStore
+from wf_artifacts import FileDraftWorkspaceStore, WorkflowDeployment
 from wf_authoring import NodeSpec, build_async_registry
 from wf_core import END, NodeUse, RunStatus, RuntimeContext
 from wf_mcp.broker import WfMcpService
@@ -433,6 +433,45 @@ def test_service_resolves_registered_spec_with_dotted_local_name() -> None:
     first_node = workflow.nodes[0]
     assert isinstance(first_node, NodeUse)
     assert first_node.node == "demo.personal.foo.bar"
+    assert run.status == RunStatus.COMPLETED
+    assert run.output["echoed"] == "hello"
+
+
+def test_service_runs_logical_source_plan_with_dotted_local_name() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "logical_dotted_spec"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    dotted_echo_tool = NodeSpec(
+        name="foo.bar",
+        input_model=echo_tool.input_model,
+        output_model=echo_tool.output_model,
+        outcomes=echo_tool.outcomes,
+        fn=echo_tool.fn,
+        description=echo_tool.description,
+        is_async=echo_tool.is_async,
+        accepts_context=echo_tool.accepts_context,
+        input_schema_contract=echo_tool.input_schema_contract,
+        output_schema_contract=echo_tool.output_schema_contract,
+    )
+    service.register_specs("demo.personal", dotted_echo_tool)
+    plan = _single_echo_plan("logical_dotted_local_name_plan", "demo.foo.bar")
+
+    run = asyncio.run(
+        service.run_workflow_from_plan(
+            plan,
+            {"text": "hello"},
+            deployment=WorkflowDeployment(
+                id="logical_dotted.personal",
+                artifact_id="logical_dotted",
+                artifact_version=1,
+                bindings=[
+                    {"logical_source": "demo", "concrete_source": "demo.personal"}
+                ],
+            ),
+        )
+    )
+
     assert run.status == RunStatus.COMPLETED
     assert run.output["echoed"] == "hello"
 

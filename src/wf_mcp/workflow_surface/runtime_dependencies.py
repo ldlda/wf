@@ -67,17 +67,36 @@ def _resolve_node_spec(
         return node_name, concrete
 
     if deployment is not None:
-        try:
-            bound_ref = CapabilityRef.parse(node_name).bind(deployment.binding_map())
-        except ValueError:
-            bound_ref = None
-        if bound_ref is not None:
-            bound_name = str(bound_ref)
+        for bound_name in _bound_node_names(node_name, deployment.binding_map()):
             concrete = _find_node_spec(bound_name, sources)
             if concrete is not None:
                 return bound_name, concrete
 
     raise KeyError(f"unknown node spec {node_name!r}")
+
+
+def _bound_node_names(
+    node_name: str,
+    bindings: dict[str, str],
+) -> tuple[str, ...]:
+    """Return concrete names made by replacing known logical source prefixes.
+
+    CapabilityRef parses by splitting on the last dot, which is correct for
+    simple tool names but wrong for local names that also contain dots
+    (`demo.foo.bar` with logical source `demo`). Runtime binding is source-aware:
+    deployment bindings define the allowed source prefixes, and everything after
+    the matched prefix remains the local capability name.
+    """
+    candidates: list[str] = []
+    for logical_source, concrete_source in sorted(
+        bindings.items(),
+        key=lambda item: len(item[0]),
+        reverse=True,
+    ):
+        prefix = f"{logical_source}."
+        if node_name.startswith(prefix):
+            candidates.append(f"{concrete_source}.{node_name[len(prefix) :]}")
+    return tuple(candidates)
 
 
 def _find_node_spec(
