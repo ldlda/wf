@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
+from copy import deepcopy
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.local_paths import LocalPathError, get_local_value, has_overlapping_paths
 from wf_core.models.reducers import ReducerRef
-from wf_core.models.steps import NodeUse
+from wf_core.models.steps import NodeUse, OutputBinding
 from wf_core.models.workflow import Workflow
 from wf_core.paths import (
     PathResolutionError,
+    StatePath,
     get_nested_value,
     set_nested_value,
     split_graph_path,
@@ -24,14 +26,67 @@ def apply_output_map(
     state: dict[str, Any],
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> dict[str, Any]:
-    return apply_mapped_state(
-        workflow,
-        node_output,
-        node.out_map,
-        state,
-        reducers=reducers,
-        missing_field_message=f"node {node.id!r} did not return required mapped field {{field}}",
-    )
+    """Compatibility wrapper for callers that still invoke the old helper."""
+    try:
+        return apply_output_bindings(
+            workflow,
+            node.output,
+            node_output,
+            state,
+            reducers=reducers,
+            missing_field_message=(
+                f"node {node.id!r} did not return required mapped field {{field}}"
+            ),
+        )
+    except AttributeError as exc:
+        raise WorkflowExecutionError(
+            "apply_output_map requires NodeUse.output canonical bindings"
+        ) from exc
+
+
+def apply_output_bindings(
+    workflow: Workflow,
+    bindings: Sequence[OutputBinding],
+    node_output: dict[str, Any],
+    state: dict[str, Any],
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+    missing_field_message: str = "node output did not include required field {field}",
+) -> dict[str, Any]:
+    """Prepare and commit one atomic state patch from canonical output bindings."""
+    if has_overlapping_paths(str(binding.target) for binding in bindings):
+        raise WorkflowExecutionError(
+            "mapped state patch has overlapping destination paths"
+        )
+
+    resolved_patch: dict[StatePath, Any] = {}
+    for binding in bindings:
+        try:
+            value = get_local_value(node_output, binding.source)
+        except LocalPathError:
+            raise WorkflowExecutionError(
+                missing_field_message.format(field=repr(str(binding.source)))
+            ) from None
+        resolved_patch[binding.target] = value
+
+    prepared_patch: dict[StatePath, tuple[list[str], Any]] = {}
+    for destination_path, value in resolved_patch.items():
+        key_path, merged_value = prepare_state_value(
+            workflow,
+            state,
+            destination_path,
+            value,
+            reducers=reducers,
+        )
+        prepared_patch[destination_path] = (key_path, merged_value)
+
+    # Stage writes on a copy so commit-time path errors cannot partially mutate state.
+    staged_state = deepcopy(state)
+    for _destination_path, (key_path, merged_value) in prepared_patch.items():
+        safe_set_nested_value(staged_state, key_path, merged_value)
+    state.clear()
+    state.update(staged_state)
+    return {str(path): value for path, value in resolved_patch.items()}
 
 
 def apply_mapped_state(
@@ -43,30 +98,18 @@ def apply_mapped_state(
     reducers: Mapping[str, ReducerDefinition] | None = None,
     missing_field_message: str,
 ) -> dict[str, Any]:
-    if has_overlapping_paths(mapping.values()):
-        raise WorkflowExecutionError(
-            "mapped state patch has overlapping destination paths"
-        )
-
-    patch: dict[str, Any] = {}
-    for source_field, destination_path in mapping.items():
-        try:
-            value = get_local_value(source_data, source_field)
-        except LocalPathError:
-            raise WorkflowExecutionError(
-                missing_field_message.format(field=repr(source_field))
-            ) from None
-        patch[destination_path] = value
-
-    for destination_path, value in patch.items():
-        write_state_value(
-            workflow,
-            state,
-            destination_path,
-            value,
-            reducers=reducers,
-        )
-    return dict(patch)
+    bindings = [
+        OutputBinding.model_validate({"source": source, "target": target})
+        for source, target in mapping.items()
+    ]
+    return apply_output_bindings(
+        workflow,
+        bindings,
+        source_data,
+        state,
+        reducers=reducers,
+        missing_field_message=missing_field_message,
+    )
 
 
 def write_state_value(
@@ -77,6 +120,25 @@ def write_state_value(
     *,
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> None:
+    key_path, merged_value = prepare_state_value(
+        workflow,
+        state,
+        destination_path,
+        value,
+        reducers=reducers,
+    )
+    safe_set_nested_value(state, key_path, merged_value)
+
+
+def prepare_state_value(
+    workflow: Workflow,
+    state: dict[str, Any],
+    destination_path: str | StatePath,
+    value: Any,
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+) -> tuple[list[str], Any]:
+    """Resolve reducer output for a state write without mutating state."""
     try:
         root, parts = split_graph_path(destination_path)
     except PathResolutionError as exc:
@@ -98,10 +160,10 @@ def write_state_value(
         reducer=reducer,
         current_value=current_value,
         incoming_value=value,
-        destination_path=destination_path,
+        destination_path=str(destination_path),
         reducers=reducers,
     )
-    safe_set_nested_value(state, key_path, merged_value)
+    return key_path, merged_value
 
 
 def project_output(workflow: Workflow, state: dict[str, Any]) -> dict[str, Any]:

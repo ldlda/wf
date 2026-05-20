@@ -11,9 +11,21 @@ from wf_core.models.conditions import (
 )
 from wf_core.local_paths import LocalPathError, has_overlapping_paths, split_local_path
 from wf_core.models.schemas import NodeDef
-from wf_core.models.steps import ConditionNode, ForeachNode, InterruptNode, NodeUse
+from wf_core.models.steps import (
+    ConditionNode,
+    ForeachNode,
+    InputPathBinding,
+    InterruptNode,
+    NodeUse,
+)
 from wf_core.models.workflow import Workflow
-from wf_core.paths import is_valid_destination_path, is_valid_source_path
+from wf_core.paths import (
+    LocalPath,
+    PathResolutionError,
+    StatePath,
+    is_valid_destination_path,
+    is_valid_source_path,
+)
 from wf_core.validation.issues import ValidationIssueCode, ValidationReport
 
 
@@ -36,81 +48,78 @@ def validate_node_use(
     input_fields = set(node_def.input_schema.properties)
     output_fields = set(node_def.output_schema.properties)
     state_fields = set(workflow.state_schema.fields)
+    state_root_fields = {field.split(".", maxsplit=1)[0] for field in state_fields}
     input_root_fields = set(workflow.input_schema.properties)
 
-    for destination_field in node.input_values:
-        destination_root = _local_root(destination_field)
+    input_targets = []
+    for input_index, binding in enumerate(node.input):
+        input_targets.append(binding.target)
+        destination_root = _local_root(binding.target)
         if destination_root is None or (
             destination_root != "." and destination_root not in input_fields
         ):
             report.add(
                 ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
-                f"nodes[{index}].input_values[{destination_field!r}]",
-                f"destination field {destination_field!r} is not declared in node input schema",
+                f"nodes[{index}].input[{input_index}].target",
+                f"destination field {str(binding.target)!r} is not declared in node input schema",
             )
 
-    for source_path, destination_field in node.in_map.items():
-        destination_root = _local_root(destination_field)
-        if destination_root is None or (
-            destination_root != "." and destination_root not in input_fields
-        ):
-            report.add(
-                ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
-                f"nodes[{index}].in_map[{source_path!r}]",
-                f"destination field {destination_field!r} is not declared in node input schema",
-            )
-        if not is_valid_source_path(
-            source_path, state_fields, input_root_fields, allow_context=True
+        if isinstance(binding, InputPathBinding) and not is_valid_source_path(
+            binding.path, state_root_fields, input_root_fields, allow_context=True
         ):
             report.add(
                 ValidationIssueCode.INVALID_SOURCE_PATH,
-                f"nodes[{index}].in_map[{source_path!r}]",
+                f"nodes[{index}].input[{input_index}].path",
                 "source path must start with input., state., or context. and reference a declared root field when applicable",
             )
 
-    if has_overlapping_paths(node.in_map.values()):
+    if has_overlapping_paths(input_targets):
         report.add(
             ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
-            f"nodes[{index}].in_map",
-            "in_map has overlapping node-local input paths",
-        )
-    if has_overlapping_paths([*node.input_values, *node.in_map.values()]):
-        report.add(
-            ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
-            f"nodes[{index}].input_values",
-            "static input_values overlap with path-based in_map destinations",
+            f"nodes[{index}].input",
+            "input has overlapping node-local input paths",
         )
 
-    for source_field, destination_path in node.out_map.items():
-        source_root = _local_root(source_field)
+    output_targets = []
+    for output_index, binding in enumerate(node.output):
+        output_targets.append(str(binding.target))
+        source_root = _local_root(binding.source)
         if source_root is None or (
             source_root != "." and source_root not in output_fields
         ):
             report.add(
                 ValidationIssueCode.INVALID_NODE_OUTPUT_FIELD,
-                f"nodes[{index}].out_map[{source_field!r}]",
-                f"source field {source_field!r} is not declared in node output schema",
+                f"nodes[{index}].output[{output_index}].source",
+                f"source field {str(binding.source)!r} is not declared in node output schema",
             )
-        if not is_valid_destination_path(destination_path):
+        destination_root = _state_destination_root(binding.target)
+        if destination_root is None or destination_root not in state_root_fields:
             report.add(
                 ValidationIssueCode.INVALID_DESTINATION_PATH,
-                f"nodes[{index}].out_map[{source_field!r}]",
-                "destination path must start with state.",
+                f"nodes[{index}].output[{output_index}].target",
+                "destination path must start with state. and reference a declared root field",
             )
-    if has_overlapping_paths(node.out_map.values()):
+    if has_overlapping_paths(output_targets):
         report.add(
             ValidationIssueCode.INVALID_DESTINATION_PATH,
-            f"nodes[{index}].out_map",
-            "out_map has overlapping state destination paths",
+            f"nodes[{index}].output",
+            "output has overlapping state destination paths",
         )
 
 
-def _local_root(path: str) -> str | None:
+def _local_root(path: str | LocalPath) -> str | None:
     try:
         parts = split_local_path(path)
     except LocalPathError:
         return None
     return "." if not parts else parts[0]
+
+
+def _state_destination_root(path: object) -> str | None:
+    try:
+        return StatePath.parse(str(path)).parts[0]
+    except PathResolutionError:
+        return None
 
 
 def validate_condition_node(

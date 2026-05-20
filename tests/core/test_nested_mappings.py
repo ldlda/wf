@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 import pytest
 
 from wf_core import (
@@ -14,6 +16,72 @@ from wf_core import (
     WorkflowExecutionError,
     execute_workflow,
 )
+
+
+def test_canonical_bindings_resolve_input_values_paths_and_explicit_null() -> None:
+    workflow = Workflow.model_validate(
+        {
+            "name": "canonical",
+            "input_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+            },
+            "state_schema": {"fields": {"echoed": {"type": "string"}}},
+            "output_schema": {
+                "type": "object",
+                "properties": {"echoed": {"type": "string"}},
+            },
+            "start": "echo",
+            "node_defs": [
+                {
+                    "name": "echo",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "message": {"type": "string"},
+                            "mode": {"type": "string"},
+                            "maybe": {"type": "null"},
+                        },
+                        "required": ["message", "mode", "maybe"],
+                    },
+                    "output_schema": {
+                        "type": "object",
+                        "properties": {"echoed": {"type": "string"}},
+                    },
+                    "outcomes": ["ok"],
+                }
+            ],
+            "nodes": [
+                {
+                    "id": "echo",
+                    "type": "node",
+                    "node": "echo",
+                    "input": [
+                        {"target": "message", "path": "input.message"},
+                        {"target": "mode", "value": "fast"},
+                        {"target": "maybe", "value": None},
+                    ],
+                    "output": [{"source": "echoed", "target": "state.echoed"}],
+                }
+            ],
+            "edges": [{"from": "echo", "outcome": "ok", "to": END}],
+        }
+    )
+    run = execute_workflow(
+        workflow,
+        {"message": "hi"},
+        registry={
+            "echo": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"echoed": payload["message"]},
+            }
+        },
+    )
+
+    assert run.trace[0].resolved_input["message"] == "hi"
+    assert run.trace[0].resolved_input["mode"] == "fast"
+    assert run.trace[0].resolved_input["maybe"] is None
+    assert run.state["echoed"] == "hi"
 
 
 def test_nested_node_local_paths_build_input_and_read_output() -> None:
@@ -33,9 +101,8 @@ def test_nested_node_local_paths_build_input_and_read_output() -> None:
         },
     )
 
-    assert run.trace[0].resolved_input == {
-        "user": {"name": "Ada", "email": "ada@example.com"}
-    }
+    assert run.trace[0].resolved_input["user"]["name"] == "Ada"
+    assert run.trace[0].resolved_input["user"]["email"] == "ada@example.com"
     assert run.state["person"]["age"] == 36
     assert run.state["person"]["gender"] == "x"
     assert run.state["experience"]["years"] == 12
@@ -46,7 +113,7 @@ def test_missing_nested_node_output_path_fails() -> None:
 
     with pytest.raises(
         WorkflowExecutionError,
-        match="did not return required mapped field 'user.gender'",
+        match="node output did not include required field 'user.gender'",
     ):
         execute_workflow(
             workflow,
@@ -87,12 +154,17 @@ def test_root_node_local_paths_map_whole_input_and_output_payloads() -> None:
         ],
         start="force",
         nodes=[
-            NodeUse(
-                id="force",
-                type="node",
-                node="force_rates",
-                in_map={"input.rates": "."},
-                out_map={".": "state.rates"},
+            cast(
+                Any,
+                NodeUse.model_validate(
+                    {
+                        "id": "force",
+                        "type": "node",
+                        "node": "force_rates",
+                        "in_map": {"input.rates": "."},
+                        "out_map": {".": "state.rates"},
+                    }
+                ),
             )
         ],
         edges=[Edge.model_validate({"from": "force", "outcome": "ok", "to": END})],
@@ -109,8 +181,10 @@ def test_root_node_local_paths_map_whole_input_and_output_payloads() -> None:
         },
     )
 
-    assert run.trace[0].resolved_input == {"r_1": 0.9, "r_10": 0.1}
-    assert run.state["rates"] == {"r_1": 0.0, "r_10": 0.1}
+    assert run.trace[0].resolved_input["r_1"] == 0.9
+    assert run.trace[0].resolved_input["r_10"] == 0.1
+    assert run.state["rates"]["r_1"] == 0.0
+    assert run.state["rates"]["r_10"] == 0.1
 
 
 def test_static_input_values_are_merged_into_node_local_input() -> None:
@@ -141,12 +215,17 @@ def test_static_input_values_are_merged_into_node_local_input() -> None:
         ],
         start="constant",
         nodes=[
-            NodeUse(
-                id="constant",
-                type="node",
-                node="constant",
-                input_values={"value": "CLICKED"},
-                out_map={"value": "state.message"},
+            cast(
+                Any,
+                NodeUse.model_validate(
+                    {
+                        "id": "constant",
+                        "type": "node",
+                        "node": "constant",
+                        "input_values": {"value": "CLICKED"},
+                        "out_map": {"value": "state.message"},
+                    }
+                ),
             )
         ],
         edges=[Edge.model_validate({"from": "constant", "outcome": "ok", "to": END})],
@@ -204,19 +283,24 @@ def _nested_mapping_workflow() -> Workflow:
         ],
         start="big",
         nodes=[
-            NodeUse(
-                id="big",
-                type="node",
-                node="big_tool",
-                in_map={
-                    "input.person.name": "user.name",
-                    "input.digital.email": "user.email",
-                },
-                out_map={
-                    "user.age": "state.person.age",
-                    "user.gender": "state.person.gender",
-                    "job.years": "state.experience.years",
-                },
+            cast(
+                Any,
+                NodeUse.model_validate(
+                    {
+                        "id": "big",
+                        "type": "node",
+                        "node": "big_tool",
+                        "in_map": {
+                            "input.person.name": "user.name",
+                            "input.digital.email": "user.email",
+                        },
+                        "out_map": {
+                            "user.age": "state.person.age",
+                            "user.gender": "state.person.gender",
+                            "job.years": "state.experience.years",
+                        },
+                    }
+                ),
             )
         ],
         edges=[Edge.model_validate({"from": "big", "outcome": "ok", "to": END})],

@@ -3,36 +3,42 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from wf_core.paths import LocalPath, PathResolutionError
+
 
 class LocalPathError(ValueError):
     """Raised when a node-local dotted path cannot be parsed or resolved."""
 
 
-def split_local_path(path: str) -> list[str]:
-    """Split one dotted node-local path, rejecting empty segments."""
-    if path == ".":
-        return []
-    parts = path.split(".")
-    if not path or any(not part for part in parts):
-        raise LocalPathError(f"invalid local path {path!r}")
-    return parts
+def _coerce_local_path(path: str | LocalPath) -> LocalPath:
+    try:
+        return path if isinstance(path, LocalPath) else LocalPath.parse(path)
+    except PathResolutionError as exc:
+        raise LocalPathError(str(exc)) from exc
 
 
-def get_local_value(payload: Mapping[str, Any], path: str) -> Any:
+def split_local_path(path: str | LocalPath) -> list[str]:
+    """Split one node-local path, accepting the new typed path object."""
+    return list(_coerce_local_path(path).parts)
+
+
+def get_local_value(payload: Mapping[str, Any], path: str | LocalPath) -> Any:
     """Resolve one node-local path from a nested mapping payload."""
-    if path == ".":
+    parsed = _coerce_local_path(path)
+    if not parsed.parts:
         return dict(payload)
     current: Any = payload
-    for part in split_local_path(path):
+    for part in parsed.parts:
         if not isinstance(current, Mapping) or part not in current:
-            raise LocalPathError(f"local path {path!r} could not be resolved")
+            raise LocalPathError(f"local path {str(parsed)!r} could not be resolved")
         current = current[part]
     return current
 
 
-def set_local_value(payload: dict[str, Any], path: str, value: Any) -> None:
+def set_local_value(payload: dict[str, Any], path: str | LocalPath, value: Any) -> None:
     """Write one value into a nested node-local mapping payload."""
-    parts = split_local_path(path)
+    parsed = _coerce_local_path(path)
+    parts = list(parsed.parts)
     if not parts:
         if not isinstance(value, Mapping):
             raise LocalPathError("root local path requires a mapping value")
@@ -43,12 +49,12 @@ def set_local_value(payload: dict[str, Any], path: str, value: Any) -> None:
     for part in parts[:-1]:
         next_value = current.setdefault(part, {})
         if not isinstance(next_value, dict):
-            raise LocalPathError(f"local path {path!r} overlaps an existing value")
+            raise LocalPathError(f"local path {str(parsed)!r} overlaps an existing value")
         current = next_value
     current[parts[-1]] = value
 
 
-def paths_overlap(left: str, right: str) -> bool:
+def paths_overlap(left: str | LocalPath, right: str | LocalPath) -> bool:
     """Return whether two dotted paths overlap by equality or ancestry."""
     left_parts = split_local_path(left)
     right_parts = split_local_path(right)
@@ -56,9 +62,9 @@ def paths_overlap(left: str, right: str) -> bool:
     return left_parts[:shortest] == right_parts[:shortest]
 
 
-def has_overlapping_paths(paths: Iterable[str]) -> bool:
+def has_overlapping_paths(paths: Iterable[str | LocalPath]) -> bool:
     """Return whether any pair of dotted paths overlaps."""
-    seen: list[str] = []
+    seen: list[str | LocalPath] = []
     for path in paths:
         if any(paths_overlap(path, prior) for prior in seen):
             return True

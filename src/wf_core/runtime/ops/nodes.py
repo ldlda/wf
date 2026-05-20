@@ -8,13 +8,13 @@ from wf_core.errors import WorkflowExecutionError
 from wf_core.local_paths import LocalPathError, set_local_value
 from wf_core.models.results import NodeResult
 from wf_core.models.schemas import NodeDef
-from wf_core.models.steps import NodeUse
+from wf_core.models.steps import InputPathBinding, InputValueBinding, NodeUse
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import RunState, RuntimeContext, StepExecutionResult
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
-from wf_core.runtime.ops.state import apply_output_map
+from wf_core.runtime.ops.state import apply_output_bindings
 
 NodeHandler = Callable[[dict[str, Any], RuntimeContext], NodeResult | dict[str, Any]]
 AsyncNodeHandler = Callable[
@@ -33,20 +33,22 @@ def _resolve_node_execution(
     frame = run.current_frame()
     context_values = frame_context_values(frame)
     resolved_input: dict[str, Any] = {}
-    for destination_field, value in node.input_values.items():
+    for binding in node.input:
+        if isinstance(binding, InputValueBinding):
+            value = binding.value
+        elif isinstance(binding, InputPathBinding):
+            value = safe_resolve_path(
+                str(binding.path),
+                state=run.state,
+                workflow_input=run.workflow_input,
+                context=context_values,
+            )
+        else:
+            raise WorkflowExecutionError(
+                f"unsupported input binding for node {node.id!r}"
+            )
         try:
-            set_local_value(resolved_input, destination_field, value)
-        except LocalPathError as exc:
-            raise WorkflowExecutionError(str(exc)) from exc
-    for source_path, destination_field in node.in_map.items():
-        value = safe_resolve_path(
-            source_path,
-            state=run.state,
-            workflow_input=run.workflow_input,
-            context=context_values,
-        )
-        try:
-            set_local_value(resolved_input, destination_field, value)
+            set_local_value(resolved_input, binding.target, value)
         except LocalPathError as exc:
             raise WorkflowExecutionError(str(exc)) from exc
     validate_payload_against_schema(
@@ -83,9 +85,9 @@ def _finalize_node_execution(
     validate_payload_against_schema(
         node_def.output_schema, result.output, f"node output for {node.id}"
     )
-    state_changes = apply_output_map(
+    state_changes = apply_output_bindings(
         workflow,
-        node,
+        node.output,
         result.output,
         run.state,
         reducers=reducers,
