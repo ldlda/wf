@@ -109,6 +109,49 @@ def test_output_bindings_commit_to_staged_state_before_mutating_original() -> No
     assert state["blocked"] == "not-an-object"
 
 
+def test_output_bindings_validate_exact_state_schema_before_mutation() -> None:
+    workflow = _workflow(fields={"person.name": StateField(type="string")})
+    state = {"person": {"name": "old"}}
+
+    with pytest.raises(WorkflowExecutionError, match="state write state.person.name"):
+        apply_output_bindings(
+            workflow,
+            [_binding("person.name", "state.person.name")],
+            {"person": {"name": 7}},
+            state,
+        )
+
+    assert state["person"]["name"] == "old"
+
+
+def test_output_bindings_validate_declared_parent_schema_before_mutation() -> None:
+    workflow = _workflow_from_state_schema(
+        StateSchema.model_validate(
+            {
+                "type": "object",
+                "properties": {
+                    "person": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
+                        "additionalProperties": False,
+                    }
+                },
+            }
+        )
+    )
+    state = {"person": {"name": "old"}}
+
+    with pytest.raises(WorkflowExecutionError, match="state write state.person"):
+        apply_output_bindings(
+            workflow,
+            [_binding("person.extra", "state.person.extra")],
+            {"person": {"extra": "bad"}},
+            state,
+        )
+
+    assert state["person"] == {"name": "old"}
+
+
 def test_full_workflow_execution_writes_canonical_output_bindings() -> None:
     workflow = _workflow_with_node()
     run = create_run_state(workflow, {})
@@ -135,17 +178,23 @@ def _binding(source: str, target: str) -> OutputBinding:
 def _workflow(
     fields: dict[str, StateField] | None = None,
 ) -> Workflow:
-    return Workflow(
-        name="patch",
-        input_schema=SchemaRef(type="object", properties={}),
-        state_schema=StateSchema.from_field_map(
+    return _workflow_from_state_schema(
+        StateSchema.from_field_map(
             fields
             or {
                 "person": StateField(type="object"),
                 "person.name": StateField(type="string"),
                 "person.extra": StateField(type="string"),
             }
-        ),
+        )
+    )
+
+
+def _workflow_from_state_schema(state_schema: StateSchema) -> Workflow:
+    return Workflow(
+        name="patch",
+        input_schema=SchemaRef(type="object", properties={}),
+        state_schema=state_schema,
         output_schema=SchemaRef(type="object", properties={}),
         start="n",
         nodes=[],

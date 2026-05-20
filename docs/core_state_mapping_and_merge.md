@@ -147,7 +147,9 @@ A successful step should produce a logical state patch before state is mutated:
 2. ensure every required output path exists
 3. ensure destination state paths do not overlap
 4. prepare the complete write set
-5. commit the write set according to state merge rules
+5. stage the write set on a copy
+6. validate affected declared state schemas
+7. commit the write set according to state merge rules
 
 This preserves the existing “no partial state commit before success” rule and
 creates a reusable boundary for:
@@ -156,6 +158,12 @@ creates a reusable boundary for:
 - serial foreach iteration completion
 - future parallel foreach result combination
 - future subgraph completion
+
+State validation happens against the staged state before the original state is
+mutated. Runtime validates the exact destination schema when declared, declared
+ancestor schemas that could reject the write, and declared descendant schemas
+that exist after a parent replacement. This lets strict object schemas reject
+bad partial writes without committing half a patch.
 
 ## State Declarations and Merge Rules
 

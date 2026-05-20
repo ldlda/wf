@@ -18,6 +18,9 @@ from wf_core.paths import (
     split_graph_path,
 )
 from wf_core.runtime.ops.merges import ReducerDefinition, apply_reducer
+from wf_core.runtime.ops.schemas import validate_payload_against_schema
+
+_MISSING = object()
 
 
 def apply_output_map(
@@ -87,6 +90,7 @@ def apply_output_bindings(
     staged_state = deepcopy(state)
     for _destination_path, (key_path, merged_value) in prepared_patch.items():
         safe_set_nested_value(staged_state, key_path, merged_value)
+    validate_staged_state_patch(staged_state, prepared_patch, state_fields)
     state.clear()
     state.update(staged_state)
     return {str(path): value for path, value in resolved_patch.items()}
@@ -130,7 +134,15 @@ def write_state_value(
         value,
         reducers=reducers,
     )
-    safe_set_nested_value(state, key_path, merged_value)
+    staged_state = deepcopy(state)
+    safe_set_nested_value(staged_state, key_path, merged_value)
+    validate_staged_state_patch(
+        staged_state,
+        {StatePath.parse(destination_path): (key_path, merged_value)},
+        workflow.state_schema.field_map(),
+    )
+    state.clear()
+    state.update(staged_state)
 
 
 def prepare_state_value(
@@ -177,6 +189,64 @@ def project_output(workflow: Workflow, state: dict[str, Any]) -> dict[str, Any]:
     return {
         key: state[key] for key in workflow.output_schema.properties if key in state
     }
+
+
+def validate_staged_state_patch(
+    staged_state: dict[str, Any],
+    prepared_patch: Mapping[StatePath, tuple[list[str], Any]],
+    state_fields: Mapping[str, StateFieldDecl],
+) -> None:
+    """Validate affected declared state schemas before committing a patch.
+
+    Runtime writes are path-based, while JSON Schema is tree-based. A child
+    write can violate a declared parent schema, and a parent replacement can
+    violate declared child schemas. This helper validates every declared schema
+    that is on either side of a staged write path, without mutating the original
+    state first.
+    """
+    for field in _affected_state_fields(prepared_patch, state_fields):
+        value = _get_existing_nested_value(staged_state, list(field.path.parts))
+        if value is _MISSING:
+            continue
+        validate_payload_against_schema(
+            field.validation_schema,
+            value,
+            f"state write state.{'.'.join(field.path.parts)}",
+        )
+
+
+def _affected_state_fields(
+    prepared_patch: Mapping[StatePath, tuple[list[str], Any]],
+    state_fields: Mapping[str, StateFieldDecl],
+) -> list[StateFieldDecl]:
+    affected: dict[str, StateFieldDecl] = {}
+    for destination_path in prepared_patch:
+        destination_parts = destination_path.parts
+        for key, field in state_fields.items():
+            field_parts = field.path.parts
+            if _is_prefix(field_parts, destination_parts) or _is_prefix(
+                destination_parts,
+                field_parts,
+            ):
+                affected[key] = field
+    return sorted(
+        affected.values(),
+        key=lambda field: len(field.path.parts),
+        reverse=True,
+    )
+
+
+def _is_prefix(prefix: tuple[str, ...], value: tuple[str, ...]) -> bool:
+    return len(prefix) <= len(value) and value[: len(prefix)] == prefix
+
+
+def _get_existing_nested_value(state: Mapping[str, Any], path_parts: list[str]) -> Any:
+    current: Any = state
+    for part in path_parts:
+        if not isinstance(current, Mapping) or part not in current:
+            return _MISSING
+        current = current[part]
+    return current
 
 
 def safe_set_nested_value(
