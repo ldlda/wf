@@ -160,31 +160,30 @@ creates a reusable boundary for:
 ## State Declarations and Merge Rules
 
 State merge behavior is attached to declared exact state paths. The canonical
-schema shape is a list of declarations:
+schema shape is ordinary JSON Schema. `reducer` is a wf_core extension keyword
+on property schemas; JSON Schema validators ignore it, while wf_core validates
+and uses it for state writes.
 
 ```json
 {
-  "fields": [
-    {
-      "path": "state.person.name",
-      "schema": {"type": "string"},
-      "reducer": {"name": "wf.std.replace"}
+  "type": "object",
+  "properties": {
+    "person": {
+      "type": "object",
+      "properties": {
+        "name": {"type": "string", "reducer": "wf.std.replace"},
+        "tags": {"type": "array", "reducer": "wf.std.append"}
+      }
     },
-    {
-      "path": "state.person.tags",
-      "schema": {"type": "array"},
-      "reducer": {"name": "wf.std.append"}
-    },
-    {
-      "path": "state.profile",
-      "schema": {"type": "object"},
-      "reducer": {"name": "wf.std.merge_object"}
+    "profile": {
+      "type": "object",
+      "reducer": "wf.std.merge_object"
     }
-  ]
+  }
 }
 ```
 
-Deprecated dict-shaped state fields are still accepted at parse boundaries:
+Deprecated `fields` state declarations are still accepted at parse boundaries:
 
 ```json
 {
@@ -194,14 +193,15 @@ Deprecated dict-shaped state fields are still accepted at parse boundaries:
 }
 ```
 
-Validated `StateSchema` models store and dump the canonical list shape.
-Presentation layers may rebuild a tree for humans.
+Validated `StateSchema` models store and dump the canonical JSON Schema shape.
+`StateSchema.field_map()` compiles an internal exact-path index for runtime
+reducer lookup.
 
-`wf_authoring` keeps authored schemas nested for humans and LLM clients, but
-projects nested authored state into this flat exact-path index. For example, a
-Pydantic `person: Person` field may produce declarations for `person`,
-`person.name`, and `person.tags` without forcing the author to spell those
-paths manually.
+`wf_authoring` keeps authored schemas nested for humans and LLM clients, and
+injects state metadata such as `reducer` into the generated JSON Schema
+properties. For example, a Pydantic `person: Person` field can produce nested
+properties for `person.name` and `person.tags` without forcing the author to
+spell those paths manually.
 
 ### Exact-path ownership
 

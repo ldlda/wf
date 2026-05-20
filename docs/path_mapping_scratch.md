@@ -139,7 +139,7 @@ Overlap rules:
 
 State path validation and write behavior:
 
-- writable `StatePath` must have its root declared in `state_schema.fields`
+- writable `StatePath` must have its root declared in `state_schema.properties`
 - whole-state write targets such as bare `state` stay out of scope for now
 - nested state subpaths are allowed once the root exists in the schema
 - exact nested state declarations are reducer/schema hints, not root ownership
@@ -476,29 +476,28 @@ Core explicitness:
 
 State schema fields:
 
-- move toward list-of-structs instead of dict keys
-- canonical shape:
+- canonical shape is normal JSON Schema
+- state field metadata such as `reducer` lives as a wf_core extension keyword on
+  each property schema
+- JSON Schema validators ignore `reducer`; wf_core validates it separately and
+  compiles it into an exact-path runtime index
+- accept old `fields` shapes at parse time for compatibility:
 
 ```text
-StateSchema.fields: list[StateFieldDecl]
-
-StateFieldDecl:
-  path: StatePath
-  type: string
-  reducer: ReducerRef
-```
-
-- serialized field paths include `state.` prefix, e.g. `state.person.tags`
-- accept old dict shape at parse time for compatibility:
-
-```text
-fields = {
-  "person.tags": {"type": "array", "reducer": "wf.std.append"}
+state_schema = {
+  "type": "object",
+  "properties": {
+    "person": {
+      "type": "object",
+      "properties": {
+        "tags": {"type": "array", "reducer": "wf.std.append"}
+      }
+    }
+  }
 }
 ```
 
-- normalize old shape to canonical list internally
-- canonical serialization emits list shape
+- canonical serialization emits JSON Schema shape
 - duplicate field paths are validation errors
 - exact reducer matching uses exact `StatePath`
 

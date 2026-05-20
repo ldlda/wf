@@ -6,7 +6,7 @@ from typing import Any, Iterator
 
 from pydantic import BaseModel, TypeAdapter
 
-from wf_core import ReducerRef, SchemaRef, StateField, StateSchema
+from wf_core import ReducerRef, SchemaRef, StateSchema
 
 SchemaLike = SchemaRef | type[BaseModel] | type[Any] | dict[str, Any]
 StateSchemaLike = StateSchema | type[BaseModel] | type[Any] | dict[str, Any]
@@ -47,21 +47,24 @@ def state_schema_from(value: StateSchemaLike) -> StateSchema:
     """Coerce an authoring state declaration into a core state schema."""
     if isinstance(value, StateSchema):
         return value
-    if isinstance(value, dict) and "fields" in value:
+    if isinstance(value, dict):
         return StateSchema.model_validate(value)
 
     schema = schema_ref_from(value)
+    schema_payload = schema.model_dump(mode="json", exclude_none=True)
     metadata_by_name = _state_metadata_by_name(value)
-    fields = {
-        path: StateField(
-            type=_state_field_type(property_schema),
-            reducer=metadata_by_name.get(path, StateFieldMetadata()).reducer,
-            trace=metadata_by_name.get(path, StateFieldMetadata()).trace,
-            default=_state_field_default(value, path, property_schema),
-        )
-        for path, property_schema in _flatten_state_properties(schema)
-    }
-    return StateSchema.from_field_map(fields)
+    for path, property_schema in _flatten_state_properties(schema):
+        metadata = metadata_by_name.get(path, StateFieldMetadata())
+        extension_schema = _lookup_mutable_property_schema(schema_payload, path)
+        if extension_schema is None:
+            extension_schema = property_schema
+        extension_schema["reducer"] = _dump_reducer(metadata.reducer)
+        if not metadata.trace:
+            extension_schema["trace"] = False
+        default = _state_field_default(value, path, property_schema)
+        if default is not None:
+            extension_schema["default"] = default
+    return StateSchema.model_validate(schema_payload)
 
 
 def _reducer_ref_from(value: ReducerLike) -> ReducerRef:
@@ -139,17 +142,41 @@ def _resolve_property_schema(
     return resolved if isinstance(resolved, dict) else property_schema
 
 
-def _state_field_type(property_schema: object) -> str:
-    if not isinstance(property_schema, dict):
-        return "object"
-    field_type = property_schema.get("type")
-    if isinstance(field_type, str):
-        return field_type
-    if "$ref" in property_schema or "properties" in property_schema:
-        return "object"
-    if "items" in property_schema:
-        return "array"
-    return "object"
+def _dump_reducer(reducer: ReducerRef) -> str | dict[str, Any]:
+    if not reducer.config:
+        return reducer.name
+    return reducer.model_dump(mode="json")
+
+
+def _lookup_mutable_property_schema(
+    schema: dict[str, Any],
+    path: str,
+) -> dict[str, Any] | None:
+    """Find a property schema, following local Pydantic ``$defs`` references."""
+    current: dict[str, Any] = schema
+    for part in path.split("."):
+        properties = current.get("properties")
+        if not isinstance(properties, dict):
+            return None
+        raw_child = properties.get(part)
+        if not isinstance(raw_child, dict):
+            return None
+        current = _resolve_mutable_property_schema(raw_child, schema)
+    return current
+
+
+def _resolve_mutable_property_schema(
+    property_schema: dict[str, Any],
+    root_schema: dict[str, Any],
+) -> dict[str, Any]:
+    ref = property_schema.get("$ref")
+    if not isinstance(ref, str) or not ref.startswith("#/$defs/"):
+        return property_schema
+    definitions = root_schema.get("$defs", {})
+    if not isinstance(definitions, dict):
+        return property_schema
+    resolved = definitions.get(ref.removeprefix("#/$defs/"))
+    return resolved if isinstance(resolved, dict) else property_schema
 
 
 def _state_field_default(

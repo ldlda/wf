@@ -15,13 +15,13 @@ def build_raw_canonical_workflow() -> Workflow:
                 "required": ["text"],
             },
             "state_schema": {
-                "fields": [
-                    {
-                        "path": "state.message",
-                        "schema": {"type": "string"},
-                        "reducer": {"name": "wf.std.replace"},
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "reducer": "wf.std.replace",
                     }
-                ]
+                },
             },
             "output_schema": {
                 "type": "object",

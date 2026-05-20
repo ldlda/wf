@@ -39,7 +39,8 @@ def test_create_workflow_artifact_from_plan_derives_boundary_schemas() -> None:
 def test_create_workflow_artifact_from_plan_adds_reducer_dependencies() -> None:
     plan = _plan()
     plan["state_schema"] = {
-        "fields": {"best_score": {"type": "integer", "reducer": "wf.std.max"}}
+        "type": "object",
+        "properties": {"best_score": {"type": "integer", "reducer": "wf.std.max"}},
     }
 
     artifact = create_workflow_artifact_from_plan(
@@ -180,7 +181,7 @@ def test_create_workflow_artifact_from_plan_rejects_missing_boundary_schema() ->
 
 def test_create_workflow_artifact_from_plan_rejects_invalid_workflow_shape() -> None:
     plan = _plan()
-    plan["state_schema"] = {"fields": {"echoed": {"schema": {"type": "string"}}}}
+    plan["state_schema"] = {"type": 123}
 
     try:
         create_workflow_artifact_from_plan(

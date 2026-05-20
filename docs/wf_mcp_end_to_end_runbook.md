@@ -244,14 +244,13 @@ arguments:
       "required": ["text"]
     },
     "state_schema": {
-      "fields": [
-        {
-          "path": "state.echoed",
-          "schema": {
-            "type": "string"
-          }
+      "type": "object",
+      "properties": {
+        "echoed": {
+          "type": "string",
+          "reducer": "wf.std.replace"
         }
-      ]
+      }
     },
     "output_schema": {
       "type": "object",

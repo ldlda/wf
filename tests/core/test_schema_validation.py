@@ -146,3 +146,26 @@ def test_state_field_decl_dump_omits_nested_schema_none_fields() -> None:
     assert dumped["schema"]["type"] == "object"
     assert "title" not in dumped["schema"]
     Draft202012Validator.check_schema(dumped["schema"])
+
+
+def test_state_schema_dump_is_valid_json_schema_with_reducer_keyword() -> None:
+    from wf_core import StateSchema
+
+    schema = StateSchema.model_validate(
+        {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "description": "Running count",
+                    "reducer": "wf.std.add",
+                }
+            },
+        }
+    )
+
+    dumped = schema.model_dump(mode="json")
+    assert dumped["type"] == "object"
+    assert dumped["properties"]["count"]["description"] == "Running count"
+    assert dumped["properties"]["count"]["reducer"] == "wf.std.add"
+    Draft202012Validator.check_schema(dumped)

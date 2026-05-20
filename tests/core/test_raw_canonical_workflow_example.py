@@ -22,7 +22,7 @@ def test_raw_canonical_workflow_serializes_new_shape() -> None:
     workflow = build_raw_canonical_workflow()
     dumped = workflow.model_dump(mode="json")
     node = dumped["nodes"][0]
-    state_field = dumped["state_schema"]["fields"][0]
+    message_schema = dumped["state_schema"]["properties"]["message"]
 
     assert "input" in node
     assert "output" in node
@@ -34,5 +34,5 @@ def test_raw_canonical_workflow_serializes_new_shape() -> None:
     assert node["input"][1]["value"] == "raw:"
     assert node["output"][0]["source"] == "message"
     assert node["output"][0]["target"] == "state.message"
-    assert state_field["path"] == "state.message"
-    assert state_field["schema"]["type"] == "string"
+    assert message_schema["type"] == "string"
+    assert message_schema["reducer"] == "wf.std.replace"

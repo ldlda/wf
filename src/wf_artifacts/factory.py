@@ -88,19 +88,9 @@ def _required_reducers_from_plan(plan: JsonObject) -> dict[str, RequiredCapabili
     state_schema = plan.get("state_schema")
     if not isinstance(state_schema, dict):
         return {}
-    fields = state_schema.get("fields")
-    if isinstance(fields, dict):
-        field_values = fields.values()
-    elif isinstance(fields, list):
-        field_values = fields
-    else:
-        return {}
 
     requirements: dict[str, RequiredCapability] = {}
-    for field in field_values:
-        if not isinstance(field, dict):
-            continue
-        reducer_payload = field.get("reducer", "wf.std.replace")
+    for reducer_payload in _iter_state_schema_reducer_payloads(state_schema):
         if isinstance(reducer_payload, str):
             reducer = ReducerRef(name=reducer_payload)
         else:
@@ -118,3 +108,36 @@ def _required_reducers_from_plan(plan: JsonObject) -> dict[str, RequiredCapabili
             kind="reducer",
         )
     return requirements
+
+
+def _iter_state_schema_reducer_payloads(state_schema: JsonObject) -> list[object]:
+    """Read reducer refs from canonical JSON Schema and legacy field metadata."""
+    reducer_payloads: list[object] = []
+    properties = state_schema.get("properties")
+    if isinstance(properties, dict):
+        reducer_payloads.extend(_iter_property_reducer_payloads(properties))
+
+    fields = state_schema.get("fields")
+    if isinstance(fields, dict):
+        field_values = fields.values()
+    elif isinstance(fields, list):
+        field_values = fields
+    else:
+        field_values = []
+
+    for field in field_values:
+        if isinstance(field, dict):
+            reducer_payloads.append(field.get("reducer", "wf.std.replace"))
+    return reducer_payloads
+
+
+def _iter_property_reducer_payloads(properties: JsonObject) -> list[object]:
+    payloads: list[object] = []
+    for property_schema in properties.values():
+        if not isinstance(property_schema, dict):
+            continue
+        payloads.append(property_schema.get("reducer", "wf.std.replace"))
+        child_properties = property_schema.get("properties")
+        if isinstance(child_properties, dict):
+            payloads.extend(_iter_property_reducer_payloads(child_properties))
+    return payloads

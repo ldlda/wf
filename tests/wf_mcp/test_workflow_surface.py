@@ -1190,7 +1190,8 @@ def _custom_reducer_artifact() -> WorkflowArtifact:
             "required": ["total", "amount"],
         },
         "state_schema": {
-            "fields": {
+            "type": "object",
+            "properties": {
                 "total": {
                     "type": "integer",
                     "reducer": "custom.multiply",

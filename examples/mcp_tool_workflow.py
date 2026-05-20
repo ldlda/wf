@@ -42,7 +42,10 @@ async def run_example() -> dict[str, object]:
                 "properties": {"text": {"type": "string"}},
                 "required": ["text"],
             },
-            "state_schema": {"fields": {"echoed": {"type": "string"}}},
+            "state_schema": {
+                "type": "object",
+                "properties": {"echoed": {"type": "string"}},
+            },
             "output_schema": {
                 "type": "object",
                 "properties": {"echoed": {"type": "string"}},
