@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal, cast
 import warnings
@@ -40,13 +40,17 @@ from ..schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema
 from ..nodes import NodeSpec
 from .ids import next_step_id, slug_id
 from .mapping import (
+    InputBindingArg,
     MapArg,
+    OutputBindingArg,
     auto_input_map,
     auto_output_map,
     coerce_path,
+    normalize_input_bindings,
     normalize_input_mapping,
     normalize_input_values,
     normalize_mapping,
+    normalize_output_bindings,
     normalize_output_mapping,
 )
 from .refs import (
@@ -99,6 +103,49 @@ def _canonical_output_bindings(
     ]
 
 
+def _reject_mixed_binding_styles(
+    *,
+    input: object | None,
+    output: object | None,
+    in_map: object | None,
+    input_values: object | None,
+    out_map: object | None,
+) -> None:
+    """Keep canonical binding lists and deprecated map sugar from mixing."""
+    if input is not None and (in_map is not None or input_values is not None):
+        raise TypeError(
+            "cannot mix canonical input with deprecated in_map/input_values"
+        )
+    if output is not None and out_map is not None:
+        raise TypeError("cannot mix canonical output with deprecated out_map")
+
+
+def _warn_deprecated_binding_sugar(
+    *,
+    in_map: object | None,
+    input_values: object | None,
+    out_map: object | None,
+) -> None:
+    """Warn when callers explicitly use map sugar instead of canonical bindings."""
+    used = [
+        name
+        for name, value in (
+            ("in_map", in_map),
+            ("input_values", input_values),
+            ("out_map", out_map),
+        )
+        if value is not None
+    ]
+    if not used:
+        return
+    warnings.warn(
+        f"{', '.join(used)} are deprecated WorkflowBuilder sugar; use canonical "
+        "input/output binding lists instead",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+
+
 @dataclass(slots=True)
 class WorkflowBuilder:
     name: str
@@ -122,41 +169,62 @@ class WorkflowBuilder:
         spec: NodeSpec[Any, Any],
         *,
         id: str | None = None,
+        input: Sequence[InputBindingArg] | None = None,
+        output: Sequence[OutputBindingArg] | None = None,
         in_map: MapArg | None = None,
         input_values: Mapping[Any, Any] | None = None,
         out_map: MapArg | None = None,
         desc: str | None = None,
     ) -> NodeUse:
+        _reject_mixed_binding_styles(
+            input=input,
+            output=output,
+            in_map=in_map,
+            input_values=input_values,
+            out_map=out_map,
+        )
+        _warn_deprecated_binding_sugar(
+            in_map=in_map,
+            input_values=input_values,
+            out_map=out_map,
+        )
         self.node_specs[spec.name] = spec
         normalized_input_schema = cast(SchemaRef, self.input_schema)
         normalized_state_schema = cast(StateSchema, self.state_schema)
-        raw_in_map = (
-            auto_input_map(
-                spec,
-                input_schema=normalized_input_schema,
-                state_schema=normalized_state_schema,
+        if input is not None:
+            node_input = normalize_input_bindings(input)
+        else:
+            raw_in_map = (
+                auto_input_map(
+                    spec,
+                    input_schema=normalized_input_schema,
+                    state_schema=normalized_state_schema,
+                )
+                if in_map is None
+                else in_map
             )
-            if in_map is None
-            else in_map
-        )
-        normalized_in_map = normalize_input_mapping(raw_in_map)
-        normalized_input_values = normalize_input_values(input_values)
-        raw_out_map = (
-            auto_output_map(spec, state_schema=normalized_state_schema)
-            if out_map is None
-            else out_map
-        )
-        normalized_out_map = normalize_output_mapping(raw_out_map)
+            node_input = _canonical_input_bindings(
+                normalize_input_mapping(raw_in_map),
+                normalize_input_values(input_values),
+            )
+        if output is not None:
+            node_output = normalize_output_bindings(output)
+        else:
+            raw_out_map = (
+                auto_output_map(spec, state_schema=normalized_state_schema)
+                if out_map is None
+                else out_map
+            )
+            node_output = _canonical_output_bindings(
+                normalize_output_mapping(raw_out_map)
+            )
         node = NodeUse(
             id=id or self._next_step_id(slug_id(spec.name)),
             type="node",
             node=spec.name,
             desc=desc or spec.description,
-            input=_canonical_input_bindings(
-                normalized_in_map,
-                normalized_input_values,
-            ),
-            output=_canonical_output_bindings(normalized_out_map),
+            input=node_input,
+            output=node_output,
         )
         self.nodes.append(node)
         return node
@@ -166,6 +234,8 @@ class WorkflowBuilder:
         name: str,
         *,
         id: str | None = None,
+        input: Sequence[InputBindingArg] | None = None,
+        output: Sequence[OutputBindingArg] | None = None,
         in_map: MapArg | None = None,
         input_values: Mapping[Any, Any] | None = None,
         out_map: MapArg | None = None,
@@ -178,19 +248,38 @@ class WorkflowBuilder:
         hatch for MCP/saved-workflow capability refs that are resolved later by
         the environment runner into node definitions and registry handlers.
         """
-        normalized_in_map = normalize_input_mapping(in_map)
-        normalized_input_values = normalize_input_values(input_values)
-        normalized_out_map = normalize_output_mapping(out_map)
+        _reject_mixed_binding_styles(
+            input=input,
+            output=output,
+            in_map=in_map,
+            input_values=input_values,
+            out_map=out_map,
+        )
+        _warn_deprecated_binding_sugar(
+            in_map=in_map,
+            input_values=input_values,
+            out_map=out_map,
+        )
+        node_input = (
+            normalize_input_bindings(input)
+            if input is not None
+            else _canonical_input_bindings(
+                normalize_input_mapping(in_map),
+                normalize_input_values(input_values),
+            )
+        )
+        node_output = (
+            normalize_output_bindings(output)
+            if output is not None
+            else _canonical_output_bindings(normalize_output_mapping(out_map))
+        )
         node = NodeUse(
             id=id or self._next_step_id(slug_id(name)),
             type="node",
             node=name,
             desc=desc,
-            input=_canonical_input_bindings(
-                normalized_in_map,
-                normalized_input_values,
-            ),
-            output=_canonical_output_bindings(normalized_out_map),
+            input=node_input,
+            output=node_output,
         )
         self.nodes.append(node)
         return node
@@ -263,14 +352,16 @@ class WorkflowBuilder:
     ) -> ForeachNode:
         # Core foreach still stores `over` as a string. Keep this compatibility
         # path isolated until ForeachNode grows a typed GraphSourcePath field.
-        node = ForeachNode.model_validate({
-            "id": id or self._next_step_id(f"foreach_{slug_id(as_)}"),
-            "type": "foreach",
-            "over": coerce_path(over),
-            "as": as_,
-            "mode": mode,
-            "on_item_error": on_item_error,
-        })
+        node = ForeachNode.model_validate(
+            {
+                "id": id or self._next_step_id(f"foreach_{slug_id(as_)}"),
+                "type": "foreach",
+                "over": coerce_path(over),
+                "as": as_,
+                "mode": mode,
+                "on_item_error": on_item_error,
+            }
+        )
         self.nodes.append(node)
         return node
 
@@ -304,11 +395,13 @@ class WorkflowBuilder:
         source = self._resolve_branch_ref(from_)
         target = self._resolve_branch_ref(to)
         self.edges.append(
-            Edge.model_validate({
-                "from": step_id(source),
-                "outcome": outcome,
-                "to": step_id(target),
-            })
+            Edge.model_validate(
+                {
+                    "from": step_id(source),
+                    "outcome": outcome,
+                    "to": step_id(target),
+                }
+            )
         )
         return source, target
 

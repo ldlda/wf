@@ -107,20 +107,34 @@ state("person.name", "email") # state -> "person.name" -> email
 state(("person.name",))       # state -> "person.name"
 ```
 
-Builder maps use the path kind implied by position:
+Builder canonical bindings use the path kind implied by position:
 
 ```python
 g.use(
     node,
-    in_map={input_path('"email.address"'): ("payload.email",)},
-    out_map={("result.score",): state_path("score")},
+    input=[
+        {
+            "target": {"root": "local", "parts": ["payload.email"]},
+            "path": {"root": "input", "parts": ["email.address"]},
+        }
+    ],
+    output=[
+        {
+            "source": {"root": "local", "parts": ["result.score"]},
+            "target": {"root": "state", "parts": ["score"]},
+        }
+    ],
 )
 ```
 
-In an input map, the key is a graph source path and the value is a node-local
-input path. In an output map, the key is a node-local output path and the value
-is a workflow state destination path. This lets authors keep concise helpers
-without forcing saved workflow JSON back through dotted display strings.
+In an input binding, `path` is a graph source path and `target` is a
+node-local input path. In an output binding, `source` is a node-local output
+path and `target` is a workflow state destination path.
+
+`in_map`, `input_values`, and `out_map` remain deprecated Python sugar for
+concise authoring. Structural path dicts are not valid map keys because Python
+dict keys must be hashable. Use canonical binding lists when working from
+JSON/MCP or when path segments contain display punctuation.
 
 ```json
 {

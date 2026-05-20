@@ -22,9 +22,9 @@ def normalize_path(path: PathArg) -> str:
 
 def bind_fields(**mapping: PathArg) -> dict[str, str]:
     return {
-        str(coerce_graph_path(source.path if isinstance(source, GraphPath) else source)): (
-            destination
-        )
+        str(
+            coerce_graph_path(source.path if isinstance(source, GraphPath) else source)
+        ): (destination)
         for destination, source in mapping.items()
     }
 

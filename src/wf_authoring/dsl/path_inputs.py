@@ -7,12 +7,7 @@ from typing import TypeAlias, cast
 from wf_core.paths import GraphRoot, GraphSourcePath, LocalPath, StatePath
 
 PathInput: TypeAlias = (
-    str
-    | Iterable[str]
-    | Mapping[str, object]
-    | GraphSourcePath
-    | StatePath
-    | LocalPath
+    str | Iterable[str] | Mapping[str, object] | GraphSourcePath | StatePath | LocalPath
 )
 
 

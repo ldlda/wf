@@ -75,9 +75,9 @@ Whole-payload mapping uses the local root path `"."`:
 
 Deprecated compatibility inputs are still accepted at model-parse boundaries:
 `in_map`, `input_values`, and `out_map`. Validated `NodeUse` models store and
-dump only canonical `input` and `output` bindings. `wf_authoring` may still
-accept `in_map` and `out_map` as builder convenience parameters, but it compiles
-them into canonical bindings.
+dump only canonical `input` and `output` bindings. `wf_authoring` exposes the
+same canonical binding lists and keeps `in_map`, `input_values`, and `out_map`
+only as deprecated Python-builder sugar that compiles into canonical bindings.
 
 ## Explicitness Rules
 

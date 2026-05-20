@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import warnings
+from collections.abc import Iterator, Mapping
+
 import pytest
 
 from wf_authoring import WorkflowBuilder, input_path, state, state_path
 from wf_core import END, RunStatus, WorkflowExecutionError
-from wf_core.models.steps import InputPathBinding
+from wf_core.models.steps import InputPathBinding, InputValueBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 from tests.authoring.helpers import (
@@ -13,6 +16,7 @@ from tests.authoring.helpers import (
     AutoBindState,
     auto_bind_node,
 )
+from wf_authoring.builder.mapping import normalize_input_mapping
 
 
 def test_builder_auto_binds_matching_node_inputs_and_outputs_to_state() -> None:
@@ -85,6 +89,44 @@ def test_builder_use_accepts_typed_paths_and_literal_iterable_paths() -> None:
     assert step.input[0].target == LocalPath(("payload.text",))
     assert step.output[0].source == LocalPath(("payload.text",))
     assert step.output[0].target == StatePath(("state field",))
+
+
+def test_builder_use_accepts_canonical_binding_dicts_with_structural_paths() -> None:
+    builder = WorkflowBuilder(
+        name="canonical_binding_dicts",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    step = builder.use(
+        auto_bind_node,
+        input=[
+            {
+                "target": {"root": "local", "parts": ["payload.text"]},
+                "path": {"root": "input", "parts": ["text.with.dot"]},
+            },
+            {
+                "target": {"root": "local", "parts": ["static.limit"]},
+                "value": 3,
+            },
+        ],
+        output=[
+            {
+                "source": {"root": "local", "parts": ["payload.text"]},
+                "target": {"root": "state", "parts": ["text.with.dot"]},
+            }
+        ],
+    )
+
+    assert isinstance(step.input[0], InputPathBinding)
+    assert step.input[0].path == GraphSourcePath("input", ("text.with.dot",))
+    assert step.input[0].target == LocalPath(("payload.text",))
+    assert isinstance(step.input[1], InputValueBinding)
+    assert step.input[1].target == LocalPath(("static.limit",))
+    assert step.input[1].value == 3
+    assert step.output[0].source == LocalPath(("payload.text",))
+    assert step.output[0].target == StatePath(("text.with.dot",))
 
 
 def test_builder_preserves_explicit_root_node_local_maps() -> None:
@@ -272,3 +314,119 @@ def test_builder_use_ref_creates_external_node_use_without_node_def() -> None:
     assert step.output[0].source == LocalPath.of("echoed")
     assert step.output[0].target == StatePath.of("echoed")
     assert workflow.node_defs == []
+
+
+def test_builder_use_ref_accepts_canonical_binding_dicts() -> None:
+    builder = WorkflowBuilder(
+        name="external_ref_canonical_bindings",
+        input_schema={},
+        state_schema={"fields": {}},
+        output_schema={},
+    )
+
+    step = builder.use_ref(
+        "demo.echo",
+        id="echo",
+        input=[
+            {
+                "target": {"root": "local", "parts": ["text"]},
+                "path": {"root": "input", "parts": ["text"]},
+            }
+        ],
+        output=[
+            {
+                "source": {"root": "local", "parts": ["echoed"]},
+                "target": {"root": "state", "parts": ["echoed"]},
+            }
+        ],
+    )
+
+    assert step.node == "demo.echo"
+    assert isinstance(step.input[0], InputPathBinding)
+    assert step.input[0].path == GraphSourcePath.input("text")
+    assert step.output[0].target == StatePath.of("echoed")
+
+
+def test_builder_warns_when_explicit_deprecated_maps_are_used() -> None:
+    builder = WorkflowBuilder(
+        name="deprecated_maps",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    with pytest.warns(DeprecationWarning, match="canonical input/output"):
+        builder.use(
+            auto_bind_node,
+            in_map={"input.text": "text"},
+            out_map={"text": "state.text"},
+        )
+
+
+def test_builder_auto_mapping_does_not_warn() -> None:
+    builder = WorkflowBuilder(
+        name="auto_map_no_warning",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", DeprecationWarning)
+        builder.use(auto_bind_node)
+
+
+def test_builder_rejects_mixed_canonical_and_deprecated_input_styles() -> None:
+    builder = WorkflowBuilder(
+        name="mixed_input_styles",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    with pytest.raises(TypeError, match="cannot mix canonical input"):
+        builder.use(
+            auto_bind_node,
+            input=[{"target": "text", "path": "input.text"}],
+            in_map={"input.text": "text"},
+        )
+
+
+def test_builder_rejects_mixed_canonical_and_deprecated_output_styles() -> None:
+    builder = WorkflowBuilder(
+        name="mixed_output_styles",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    with pytest.raises(TypeError, match="cannot mix canonical output"):
+        builder.use(
+            auto_bind_node,
+            output=[{"source": "text", "target": "state.text"}],
+            out_map={"text": "state.text"},
+        )
+
+
+class _StructuralKeyMap(Mapping[object, object]):
+    def __getitem__(self, key: object) -> object:
+        raise KeyError(key)
+
+    def __iter__(self) -> Iterator[object]:
+        return iter(())
+
+    def __len__(self) -> int:
+        return 1
+
+    def items(self) -> list[tuple[dict[str, object], str]]:
+        return [
+            (
+                {"root": "input", "parts": ["email.address"]},
+                "payload.email",
+            )
+        ]
+
+
+def test_input_map_rejects_structural_dict_keys_with_clear_message() -> None:
+    with pytest.raises(TypeError, match="structural path dicts cannot be map keys"):
+        normalize_input_mapping(_StructuralKeyMap())

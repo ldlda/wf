@@ -51,26 +51,26 @@ Responsibilities:
 
 Typical entry points:
 
-- `use(node_spec, id=..., in_map=..., out_map=...)`
+- `use(node_spec, id=..., input=[...], output=[...])`
 - `condition(...)`
 - `foreach(...)`
 - `interrupt(...)`
 - `connect(...)`
 - `compile()`
 
-`in_map` and `out_map` remain authoring convenience parameters. The compiled
-core `NodeUse` shape is canonical `input` and `output` binding lists:
+`input` and `output` use the same canonical binding-list shape as core
+`NodeUse`:
 
 ```json
 {
-  "input": [{"target": "text", "path": "input.text"}],
-  "output": [{"source": "echoed", "target": "state.echoed"}]
+  "input": [{"target": {"root": "local", "parts": ["text"]}, "path": {"root": "input", "parts": ["text"]}}],
+  "output": [{"source": {"root": "local", "parts": ["echoed"]}, "target": {"root": "state", "parts": ["echoed"]}}]
 }
 ```
 
-Authoring should not teach client LLMs that `in_map`, `input_values`, or
-`out_map` are the preferred core model. Those names are compatibility inputs
-and Python-builder sugar.
+`in_map`, `input_values`, and `out_map` are deprecated compatibility sugar for
+Python authors. Client LLMs and MCP/JSON callers should use canonical binding
+lists so structural paths live inside structs, not as unhashable map keys.
 
 ### `NodeCatalog`
 
