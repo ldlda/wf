@@ -42,6 +42,7 @@ from .constants import (
     DEFAULT_OK_OUTCOME,
     RUNTIME_ERROR_CAPABILITY,
 )
+from .refs import WorkflowSurfaceCapabilityId
 
 if TYPE_CHECKING:
     from ..broker.service import WfMcpService
@@ -159,12 +160,22 @@ class WorkflowSurfaceHandlers:
         qualified_name: str,
     ) -> WorkflowArtifact | None:
         """Resolve a saved node-like wrapper artifact from its stable capability name."""
-        parsed = _parse_artifact_capability_id(qualified_name)
-        if parsed is None or self.service.artifact_store is None:
-            return None
-        artifact_id, version = parsed
         try:
-            artifact = self.service.artifact_store.get_artifact(artifact_id, version)
+            capability_id = WorkflowSurfaceCapabilityId.parse(qualified_name)
+        except ValueError:
+            return None
+        if (
+            not capability_id.is_wrapper_artifact
+            or self.service.artifact_store is None
+            or capability_id.artifact_id is None
+            or capability_id.artifact_version is None
+        ):
+            return None
+        try:
+            artifact = self.service.artifact_store.get_artifact(
+                capability_id.artifact_id,
+                capability_id.artifact_version,
+            )
         except KeyError:
             return None
         if artifact.kind != "wrapper":
@@ -984,9 +995,12 @@ def _source_id_for_capability(
 def _capability_name(qualified_name: str) -> str | None:
     """Return the local name of one qualified capability ref if it is valid."""
     try:
-        return CapabilityRef.parse(qualified_name).name
+        parsed = WorkflowSurfaceCapabilityId.parse(qualified_name)
     except ValueError:
         return None
+    if parsed.is_wrapper_artifact:
+        return None
+    return parsed.live_name
 
 
 def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
@@ -997,15 +1011,6 @@ def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
             version=artifact.version,
         )
     )
-
-
-def _parse_artifact_capability_id(qualified_name: str) -> tuple[str, int] | None:
-    """Parse the stable `workflow.<artifact_id>.v<version>` capability name."""
-    try:
-        ref = WorkflowCapabilityRef.parse(qualified_name)
-    except ValueError:
-        return None
-    return ref.artifact_id, ref.version
 
 
 def _raw_plan_from_artifact(artifact: WorkflowArtifact) -> RawWorkflowPlan:

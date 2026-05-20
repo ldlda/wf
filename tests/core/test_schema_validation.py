@@ -169,3 +169,34 @@ def test_state_schema_dump_is_valid_json_schema_with_reducer_keyword() -> None:
     assert dumped["properties"]["count"]["description"] == "Running count"
     assert dumped["properties"]["count"]["reducer"] == "wf.std.add"
     Draft202012Validator.check_schema(dumped)
+
+
+def test_state_field_validation_schema_preserves_root_defs_for_local_refs() -> None:
+    from wf_core import StateSchema
+
+    schema = StateSchema.model_validate(
+        {
+            "type": "object",
+            "$defs": {
+                "PoolByCategory": {
+                    "type": "object",
+                    "properties": {"category": {"type": "string"}},
+                    "required": ["category"],
+                }
+            },
+            "properties": {
+                "current_pools": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/PoolByCategory"},
+                }
+            },
+        }
+    )
+
+    field_schema = schema.field_map()["current_pools"].validation_schema
+
+    validate_payload_against_schema(
+        field_schema,
+        [{"category": "1"}],
+        "state write state.current_pools",
+    )

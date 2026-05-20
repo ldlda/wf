@@ -29,7 +29,6 @@ from wf_core import (
     RunStatus,
     RuntimeContext,
     SchemaRef,
-    StateField,
     StateSchema,
     execute_workflow,
 )
@@ -40,10 +39,13 @@ def _build_first_workflow(use_safe_first: bool = False):
     builder = WorkflowBuilder(
         name="first_demo",
         input_schema=SchemaRef(type="object"),
-        state_schema=StateSchema.from_field_map(
+        state_schema=StateSchema.model_validate(
             {
-                "items": StateField(type="array"),
-                "item": StateField(type="object"),
+                "type": "object",
+                "properties": {
+                    "items": {"type": "array"},
+                    "item": {"type": ["string", "null"]},
+                },
             }
         ),
         output_schema=SchemaRef(type="object"),
@@ -63,11 +65,14 @@ def _build_first_maybe_workflow():
     builder = WorkflowBuilder(
         name="first_maybe_demo",
         input_schema=SchemaRef(type="object"),
-        state_schema=StateSchema.from_field_map(
+        state_schema=StateSchema.model_validate(
             {
-                "items": StateField(type="array"),
-                "item": StateField(type="object"),
-                "missing": StateField(type="boolean"),
+                "type": "object",
+                "properties": {
+                    "items": {"type": "array"},
+                    "item": {"type": ["string", "null"]},
+                    "missing": {"type": "boolean"},
+                },
             }
         ),
         output_schema=SchemaRef(type="object"),

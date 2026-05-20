@@ -262,6 +262,7 @@ def _iter_state_field_declarations(
             for key, value in resolved_schema.items()
             if key not in {"reducer", "trace"}
         }
+        _attach_root_schema_context(validation_schema, root_schema)
         yield (
             path,
             StateFieldDecl.model_validate(
@@ -390,6 +391,24 @@ def _resolve_local_ref(
         return property_schema
     resolved = definitions.get(ref.removeprefix("#/$defs/"))
     return resolved if isinstance(resolved, Mapping) else property_schema
+
+
+def _attach_root_schema_context(
+    field_schema: dict[str, Any],
+    root_schema: Mapping[str, Any],
+) -> None:
+    """Keep local JSON Schema refs valid after extracting one state field.
+
+    Runtime state writes validate one declared state path at a time. If a field
+    schema contains a Pydantic-style local ref such as ``#/$defs/Thing``, the
+    extracted subschema still needs the root ``$defs`` table to resolve it.
+    """
+    definitions = root_schema.get("$defs")
+    if isinstance(definitions, Mapping):
+        field_schema.setdefault("$defs", dict(definitions))
+    schema_dialect = root_schema.get("$schema")
+    if isinstance(schema_dialect, str):
+        field_schema.setdefault("$schema", schema_dialect)
 
 
 class NodeDef(BaseModel):
