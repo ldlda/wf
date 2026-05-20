@@ -680,6 +680,38 @@ def test_workflow_surface_creates_minimal_draft_workspace_with_error_route() -> 
     assert workspace.draft["steps"]["tool_error"]["in"] == {"state.echoed": "message"}
 
 
+def test_workflow_surface_creates_draft_workspace_from_capability_hints() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_from_capability"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_workspace_from_capability_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    result = asyncio.run(
+        handlers.create_draft_workspace_from_capability(
+            workspace_id="echo_from_capability",
+            capability_name="demo.personal.echo_tool",
+            name="echo_from_capability",
+        )
+    )
+    assert service.draft_workspace_store is not None
+    workspace = service.draft_workspace_store.get_workspace("echo_from_capability")
+
+    assert result["workspace_id"] == "echo_from_capability"
+    assert result["wrapper_hints"]["input_map"] == {"input.text": "text"}
+    assert result["wrapper_hints"]["output_map"] == {"echoed": "state.echoed"}
+    assert workspace.draft["steps"]["call"]["use"] == "demo.personal.echo_tool"
+    assert workspace.draft["steps"]["call"]["in"] == {"input.text": "text"}
+    assert workspace.draft["steps"]["call"]["out"] == {"echoed": "state.echoed"}
+
+
 def test_workflow_surface_creates_artifact_from_workspace() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "surface_workspace_artifact"

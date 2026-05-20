@@ -269,6 +269,11 @@ authoring loop:
   - returns one full workflow capability contract with schemas and outcomes
   - includes `wrapper_hints`, a conservative scaffold for creating a wrapper
     draft from the inspected capability
+- `wf.workflow.create_draft_workspace_from_capability`
+  - inspects one workflow capability, applies its `wrapper_hints`, and creates a
+    patchable draft workspace
+  - returns the hints it used so clients can immediately patch uncertain maps,
+    schemas, or routes by revision
 - `wf.workflow.call_capability`
   - executes one such capability once for direct testing
   - returns `qualified_name`, `source_id`, `kind`, optional `deployment_id`,

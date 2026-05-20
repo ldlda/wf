@@ -12,6 +12,8 @@ from .handlers import WorkflowSurfaceHandlers
 from .models import (
     CallCapabilityResult,
     CreateArtifactFromWorkspaceRequest,
+    CreateDraftWorkspaceFromCapabilityRequest,
+    CreateDraftWorkspaceFromCapabilityResult,
     CreateDraftWorkspaceRequest,
     CreateMinimalDraftWorkspaceRequest,
     CreateWrapperFromWorkspaceRequest,
@@ -392,6 +394,32 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 output_map=request.output_map,
                 error_message_source=request.error_message_source,
                 title=request.title,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.create_draft_workspace_from_capability",
+        title="Create Draft Workspace From Capability",
+        description=(
+            "Inspect one capability, use its wrapper_hints to bootstrap a "
+            "patchable draft workspace, and return the hints used."
+        ),
+    )
+    async def create_draft_workspace_from_capability(
+        request: CreateDraftWorkspaceFromCapabilityRequest,
+    ) -> CreateDraftWorkspaceFromCapabilityResult:
+        return CreateDraftWorkspaceFromCapabilityResult.model_validate(
+            await handlers.create_draft_workspace_from_capability(
+                workspace_id=request.workspace_id,
+                capability_name=request.capability_name,
+                name=request.name,
+                title=request.title,
+                input_schema=request.input_schema,
+                state_schema=request.state_schema,
+                output_schema=request.output_schema,
+                input_map=request.input_map,
+                output_map=request.output_map,
+                error_message_source=request.error_message_source,
             )
         )
 

@@ -233,6 +233,61 @@ class CreateMinimalDraftWorkspaceRequest(BaseModel):
     title: str | None = Field(default=None, description="Optional workspace title.")
 
 
+class CreateDraftWorkspaceFromCapabilityRequest(BaseModel):
+    """Typed MCP request for bootstrapping a draft from wrapper hints."""
+
+    workspace_id: WorkspaceId
+    capability_name: str = Field(
+        description=(
+            "Workflow capability to inspect and call, such as "
+            "demo.default.echo_tool or workflow.echo_wrapper.v1."
+        )
+    )
+    name: str | None = Field(
+        default=None,
+        description="Optional workflow draft name. Defaults to a safe capability name.",
+    )
+    title: str | None = Field(default=None, description="Optional workspace title.")
+    input_schema: JsonSchemaObject | None = Field(
+        default=None,
+        description="Optional override for the hinted public input schema.",
+    )
+    state_schema: JsonSchemaObject | None = Field(
+        default=None,
+        description="Optional override for the hinted workflow state schema.",
+    )
+    output_schema: JsonSchemaObject | None = Field(
+        default=None,
+        description="Optional override for the hinted public output schema.",
+    )
+    input_map: DraftPathMap | None = Field(
+        default=None,
+        description="Optional override for the hinted workflow input map.",
+    )
+    output_map: DraftPathMap | None = Field(
+        default=None,
+        description="Optional override for the hinted capability output map.",
+    )
+    error_message_source: str | None = Field(
+        default=None,
+        description=(
+            "Optional state path used as runtime_error.message when the capability "
+            "has an error outcome, for example state.error_message."
+        ),
+    )
+
+
+class CreateDraftWorkspaceFromCapabilityResult(DraftWorkspaceResult):
+    """Draft workspace result plus the wrapper hints used to bootstrap it."""
+
+    wrapper_hints: dict[str, Any] = Field(
+        description=(
+            "The wrapper_hints payload used before applying request overrides. "
+            "Use this to patch uncertain maps or schemas by revision."
+        )
+    )
+
+
 class CreateArtifactFromWorkspaceRequest(BaseModel):
     """Typed MCP request payload for saving a draft workspace as an artifact."""
 

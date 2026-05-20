@@ -115,6 +115,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.set_step_input_map" in names
             assert "wf.workflow.set_step_output_map" in names
             assert "wf.workflow.create_minimal_draft_workspace" in names
+            assert "wf.workflow.create_draft_workspace_from_capability" in names
             assert "wf.workflow.create_artifact_from_workspace" in names
             assert "wf.workflow.create_wrapper_from_workspace" in names
             assert "wf.workflow.run_deployment" in names
@@ -142,6 +143,18 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
                 == "Public input JSON Schema for the workflow or wrapper being "
                 "drafted."
             )
+            from_capability_input = tools_by_name[
+                "wf.workflow.create_draft_workspace_from_capability"
+            ].inputSchema
+            from_capability_request = from_capability_input["properties"]["request"]
+            assert "capability_name" in from_capability_request["properties"]
+            assert "input_schema" in from_capability_request["properties"]
+            assert "output_map" in from_capability_request["properties"]
+            from_capability_output = tools_by_name[
+                "wf.workflow.create_draft_workspace_from_capability"
+            ].outputSchema
+            assert from_capability_output is not None
+            assert "wrapper_hints" in from_capability_output["properties"]
             wrapper_workspace_input = tools_by_name[
                 "wf.workflow.create_wrapper_from_workspace"
             ].inputSchema

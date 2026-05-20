@@ -678,6 +678,37 @@ class WorkflowSurfaceHandlers:
             draft=draft,
         )
 
+    async def create_draft_workspace_from_capability(
+        self,
+        *,
+        workspace_id: str,
+        capability_name: str,
+        name: str | None = None,
+        title: str | None = None,
+        input_schema: dict[str, Any] | None = None,
+        state_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        input_map: dict[str, str] | None = None,
+        output_map: dict[str, str] | None = None,
+        error_message_source: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a patchable draft workspace from inspect_capability hints."""
+        capability = await self.inspect_capability(qualified_name=capability_name)
+        hints = capability["wrapper_hints"]
+        result = await self.create_minimal_draft_workspace(
+            workspace_id=workspace_id,
+            name=name or _draft_name_from_capability(capability_name),
+            capability_name=capability_name,
+            input_schema=input_schema or hints["input_schema"],
+            state_schema=state_schema or hints["state_schema"],
+            output_schema=output_schema or hints["output_schema"],
+            input_map=input_map or hints["input_map"],
+            output_map=output_map or hints["output_map"],
+            error_message_source=error_message_source,
+            title=title,
+        )
+        return {**result, "wrapper_hints": hints}
+
     async def create_artifact_from_workspace(
         self,
         *,
@@ -991,6 +1022,11 @@ def _first_state_path(output_map: dict[str, str]) -> str | None:
 def _escape_json_pointer(value: str) -> str:
     """Escape one JSON Pointer path segment for generated JSON Patch helpers."""
     return value.replace("~", "~0").replace("/", "~1")
+
+
+def _draft_name_from_capability(capability_name: str) -> str:
+    """Return a stable draft name when caller does not provide one."""
+    return capability_name.replace(".", "_").replace("-", "_")
 
 
 def _source_id_for_capability(
