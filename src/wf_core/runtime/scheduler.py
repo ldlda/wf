@@ -184,8 +184,26 @@ def resolve_no_ready_frames(run: RunState) -> RunStatus:
     ):
         return RunStatus.COMPLETED
     if any(frame.status == FrameStatus.BLOCKED for frame in run.frames.values()):
-        raise WorkflowExecutionError("run has no ready frames and is deadlocked")
-    raise WorkflowExecutionError("run has no ready frames")
+        raise WorkflowExecutionError(
+            "run has no ready frames and is deadlocked; "
+            f"{_scheduler_state_summary(run)}"
+        )
+    raise WorkflowExecutionError(
+        f"run has no ready frames; {_scheduler_state_summary(run)}"
+    )
+
+
+def _scheduler_state_summary(run: RunState) -> str:
+    """Return compact scheduler state for no-ready-frame diagnostics."""
+    frame_summary = ", ".join(
+        f"{frame.id}:{frame.status.value}@{frame.node_id}"
+        for frame in run.frames.values()
+    )
+    return (
+        f"ready_frame_ids={run.ready_frame_ids!r}; "
+        f"current_frame_id={run.current_frame_id!r}; "
+        f"frames=[{frame_summary}]"
+    )
 
 
 def _frame(run: RunState, frame_id: str) -> ExecutionFrame:

@@ -13,6 +13,7 @@ from wf_core.runtime.scheduler import (
     block_frame_on_children,
     enqueue_frame,
     select_next_frame,
+    resolve_no_ready_frames,
     wake_frame,
     wake_parent_if_children_complete,
 )
@@ -162,3 +163,17 @@ def test_resume_wakes_interrupted_frame_at_front() -> None:
     wake_frame(run, "waiting", front=True)
 
     assert run.ready_frame_ids == ["waiting", "sibling"]
+
+
+def test_deadlock_error_includes_ready_queue_and_frame_summary() -> None:
+    run = _run()
+    add_frame(run, ExecutionFrame(id="parent", kind="root", node_id="foreach"))
+    block_frame_on_children(run, "parent", ("missing_child",))
+
+    with pytest.raises(WorkflowExecutionError) as exc_info:
+        resolve_no_ready_frames(run)
+
+    message = str(exc_info.value)
+    assert "deadlocked" in message
+    assert "ready_frame_ids=[]" in message
+    assert "parent:blocked@foreach" in message
