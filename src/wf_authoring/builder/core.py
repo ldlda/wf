@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal, cast
+from typing import Any, Literal, overload, cast
 import warnings
 from warnings import deprecated
 
@@ -163,6 +163,30 @@ class WorkflowBuilder:
         self.state_schema = state_schema_from(self.state_schema)
         self.output_schema = schema_ref_from(self.output_schema)
 
+    @overload
+    def use(
+        self,
+        spec: NodeSpec[Any, Any],
+        *,
+        id: str | None = None,
+        input: Sequence[InputBindingArg] | None = None,
+        output: Sequence[OutputBindingArg] | None = None,
+        desc: str | None = None,
+    ) -> NodeUse: ...
+
+    @overload
+    @deprecated("use input/output canonical binding lists instead")
+    def use(
+        self,
+        spec: NodeSpec[Any, Any],
+        *,
+        id: str | None = None,
+        in_map: MapArg | None = None,
+        input_values: Mapping[Any, Any] | None = None,
+        out_map: MapArg | None = None,
+        desc: str | None = None,
+    ) -> NodeUse: ...
+
     def use(
         self,
         spec: NodeSpec[Any, Any],
@@ -227,6 +251,30 @@ class WorkflowBuilder:
         )
         self.nodes.append(node)
         return node
+
+    @overload
+    def use_ref(
+        self,
+        name: str,
+        *,
+        id: str | None = None,
+        input: Sequence[InputBindingArg] | None = None,
+        output: Sequence[OutputBindingArg] | None = None,
+        desc: str | None = None,
+    ) -> NodeUse: ...
+
+    @overload
+    @deprecated("use input/output canonical binding lists instead")
+    def use_ref(
+        self,
+        name: str,
+        *,
+        id: str | None = None,
+        in_map: MapArg | None = None,
+        input_values: Mapping[Any, Any] | None = None,
+        out_map: MapArg | None = None,
+        desc: str | None = None,
+    ) -> NodeUse: ...
 
     def use_ref(
         self,
@@ -363,6 +411,29 @@ class WorkflowBuilder:
         )
         self.nodes.append(node)
         return node
+
+    @overload
+    def interrupt(
+        self,
+        *,
+        id: str | None = None,
+        kind: str,
+        request: Sequence[InputBindingArg] | None = None,
+        resume: Sequence[OutputBindingArg] | None = None,
+        outcomes: list[str] | None = None,
+    ) -> InterruptNode: ...
+
+    @overload
+    @deprecated("use request/resume canonical binding lists instead")
+    def interrupt(
+        self,
+        *,
+        id: str | None = None,
+        kind: str,
+        request_map: MapArg | None = None,
+        out_map: MapArg | None = None,
+        outcomes: list[str] | None = None,
+    ) -> InterruptNode: ...
 
     def interrupt(
         self,

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import warnings
 from collections.abc import Iterator, Mapping
+from typing import Any, cast
 
 import pytest
 
@@ -413,7 +414,7 @@ def test_builder_rejects_mixed_canonical_and_deprecated_input_styles() -> None:
     )
 
     with pytest.raises(TypeError, match="cannot mix canonical input"):
-        builder.use(
+        cast(Any, builder.use)(
             auto_bind_node,
             input=[{"target": "text", "path": "input.text"}],
             in_map={"input.text": "text"},
@@ -429,7 +430,7 @@ def test_builder_rejects_mixed_canonical_and_deprecated_output_styles() -> None:
     )
 
     with pytest.raises(TypeError, match="cannot mix canonical output"):
-        builder.use(
+        cast(Any, builder.use)(
             auto_bind_node,
             output=[{"source": "text", "target": "state.text"}],
             out_map={"text": "state.text"},
