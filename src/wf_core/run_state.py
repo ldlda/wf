@@ -16,6 +16,7 @@ class RunStatus(StrEnum):
 class FrameStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
+    BLOCKED = "blocked"
     COMPLETED = "completed"
     FAILED = "failed"
     INTERRUPTED = "interrupted"
@@ -83,6 +84,7 @@ class RunState:
     output: dict[str, Any] = field(default_factory=dict)
     trace: list[TraceEntry] = field(default_factory=list)
     frames: dict[str, ExecutionFrame] = field(default_factory=dict)
+    ready_frame_ids: list[str] = field(default_factory=list)
     current_frame_id: str | None = None
     current_node_id: str | None = None
     prior_outcome: str | None = None

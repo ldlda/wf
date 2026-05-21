@@ -8,6 +8,11 @@ from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecuti
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.index import WorkflowIndex
+from wf_core.runtime.scheduler import (
+    ForeachIterationMetadata,
+    add_frame,
+    block_frame_on_children,
+)
 
 
 def step_foreach(
@@ -61,20 +66,25 @@ def step_foreach(
     item = iterable[loop_index]
     progress["index"] = loop_index + 1
     child_id = f"{frame.id}:{step.id}:{loop_index}"
-    child_metadata = {
-        "foreach_node_id": step.id,
-        "loop_index": loop_index,
-        "loop_item": item,
-        "loop_alias": step.as_,
-    }
-    run.frames[child_id] = ExecutionFrame(
-        id=child_id,
-        kind="foreach_iteration",
-        node_id=loop_start,
-        status=FrameStatus.PENDING,
-        parent_frame_id=frame.id,
-        metadata=child_metadata,
+    child_metadata = ForeachIterationMetadata(
+        foreach_node_id=step.id,
+        loop_index=loop_index,
+        loop_item=item,
+        loop_alias=step.as_,
     )
+    add_frame(
+        run,
+        ExecutionFrame(
+            id=child_id,
+            kind="foreach_iteration",
+            node_id=loop_start,
+            status=FrameStatus.PENDING,
+            parent_frame_id=frame.id,
+            metadata=child_metadata.to_metadata(),
+        ),
+        ready=True,
+    )
+    block_frame_on_children(run, frame.id, (child_id,))
     append_step_result_trace(
         run,
         frame_id=frame.id,
@@ -88,6 +98,5 @@ def step_foreach(
             state_changes={},
         ),
     )
-    run.current_frame_id = child_id
     run.sync_from_current_frame()
     return run

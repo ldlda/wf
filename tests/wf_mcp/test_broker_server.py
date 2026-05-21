@@ -333,9 +333,7 @@ def test_broker_saves_and_lists_workflow_deployments() -> None:
 
     assert save_payload["deployment_id"] == "summarize_docs.personal"
     assert list_payload["deployments"][0]["id"] == "summarize_docs.personal"
-    binding = list_payload["deployments"][0]["bindings"][0]
-    assert binding["logical_source"] == "context7"
-    assert binding["concrete_source"] == "context7.personal"
+    assert "bindings" not in list_payload["deployments"][0]
 
 
 def test_broker_runs_non_interrupting_workflow_deployment() -> None:

@@ -5,11 +5,11 @@ from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.workflow import Workflow
-from wf_core.runtime.ops.frames import collapse_completed_frames
 from wf_core.runtime.ops.index import WorkflowIndex, build_workflow_index
 from wf_core.runtime.ops.interrupts import resume_interrupt
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
+from wf_core.runtime.scheduler import wake_frame
 from wf_core.run_state import FrameStatus, RunState, RunStatus
 from wf_core.tokens import END
 
@@ -43,7 +43,6 @@ def prepare_resume(
 
     if run.current_frame_id is None:
         raise WorkflowExecutionError("run has no current frame")
-    collapse_completed_frames(run)
 
     if run.current_node_id is None:
         raise WorkflowExecutionError("run has no current node")
@@ -64,13 +63,13 @@ def prepare_resume(
             resume_outcome=resume_outcome,
             reducers=reducers,
         )
-        collapse_completed_frames(run)
-        if run.current_node_id == END:
-            return None
+        if run.current_frame_id is not None:
+            frame = run.current_frame()
+            if frame.status == FrameStatus.INTERRUPTED:
+                wake_frame(run, frame.id, front=True)
 
     run.status = RunStatus.RUNNING
     run.error = None
-    run.current_frame().status = FrameStatus.RUNNING
     return index
 
 
@@ -83,7 +82,6 @@ def prepare_step(
     if run.current_frame_id is None:
         raise WorkflowExecutionError("run has no current frame")
 
-    collapse_completed_frames(run)
     if run.current_node_id is None or run.current_node_id == END:
         return None
     if run.status == RunStatus.INTERRUPTED:

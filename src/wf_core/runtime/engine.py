@@ -5,10 +5,10 @@ from typing import Any
 
 from wf_core.models.workflow import Workflow
 from wf_core.runtime.ops.flow import finalize_run
-from wf_core.runtime.ops.frames import collapse_completed_frames
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.nodes import AsyncNodeHandler, NodeHandler
 from wf_core.runtime.ops.runs import create_run_state
+from wf_core.runtime.scheduler import resolve_no_ready_frames, select_next_frame
 from wf_core.run_state import RunState, RunStatus
 from wf_core.tokens import END
 
@@ -77,9 +77,12 @@ def resume_workflow(
         return run
 
     while True:
-        collapse_completed_frames(run)
-        if run.current_node_id == END:
-            break
+        frame = select_next_frame(run)
+        if frame is None:
+            status = resolve_no_ready_frames(run)
+            if status == RunStatus.COMPLETED:
+                break
+            return run
         step_workflow(
             workflow,
             run,
@@ -116,9 +119,12 @@ async def resume_workflow_async(
         return run
 
     while True:
-        collapse_completed_frames(run)
-        if run.current_node_id == END:
-            break
+        frame = select_next_frame(run)
+        if frame is None:
+            status = resolve_no_ready_frames(run)
+            if status == RunStatus.COMPLETED:
+                break
+            return run
         await step_workflow_async(
             workflow,
             run,

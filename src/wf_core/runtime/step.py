@@ -27,7 +27,8 @@ from wf_core.runtime.ops.nodes import (
     execute_node_use,
     execute_node_use_async,
 )
-from wf_core.run_state import RunState
+from wf_core.runtime.scheduler import select_next_frame
+from wf_core.run_state import FrameStatus, RunState
 
 from .preparation import prepare_step
 
@@ -71,6 +72,10 @@ def step_workflow(
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
     """Execute at most one synchronous workflow step."""
+    frame = run.current_frame() if run.current_frame_id is not None else None
+    if frame is None or frame.status != FrameStatus.RUNNING:
+        if select_next_frame(run) is None:
+            return run
     prepared = prepare_step(workflow, run, index)
     if prepared is None:
         return run
@@ -120,6 +125,10 @@ async def step_workflow_async(
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
     """Execute at most one async workflow step."""
+    frame = run.current_frame() if run.current_frame_id is not None else None
+    if frame is None or frame.status != FrameStatus.RUNNING:
+        if select_next_frame(run) is None:
+            return run
     prepared = prepare_step(workflow, run, index)
     if prepared is None:
         return run

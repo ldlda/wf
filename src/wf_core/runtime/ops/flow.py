@@ -13,6 +13,10 @@ from wf_core.run_state import (
 )
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
 from wf_core.runtime.ops.state import project_output
+from wf_core.runtime.scheduler import (
+    mark_frame_pending,
+    wake_parent_if_children_complete,
+)
 from wf_core.tokens import END
 
 
@@ -77,8 +81,10 @@ def advance_frame(
     if next_node_id == END:
         frame.status = FrameStatus.COMPLETED
         frame.finished_at_node_id = END
+        wake_parent_if_children_complete(run, frame.id)
     else:
         frame.finished_at_node_id = None
+        mark_frame_pending(run, frame.id)
     run.sync_from_current_frame()
 
 
