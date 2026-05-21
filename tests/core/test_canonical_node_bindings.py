@@ -1,7 +1,12 @@
 import pytest
 from pydantic import ValidationError
 
-from wf_core.models.steps import InputPathBinding, InputValueBinding, NodeUse
+from wf_core.models.steps import (
+    InputPathBinding,
+    InputValueBinding,
+    InterruptNode,
+    NodeUse,
+)
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 
@@ -220,3 +225,54 @@ def test_deprecated_input_value_preserves_explicit_null():
     dumped_input = node.model_dump(mode="json")["input"]
     assert dumped_input[0]["target"] == {"root": "local", "parts": ["maybe"]}
     assert dumped_input[0]["value"] is None
+
+
+def test_interrupt_node_accepts_canonical_request_and_resume_bindings():
+    node = InterruptNode.model_validate(
+        {
+            "id": "approval",
+            "type": "interrupt",
+            "kind": "approval",
+            "request": [{"target": "summary", "path": "state.summary"}],
+            "resume": [{"source": "approved", "target": "state.approved"}],
+        }
+    )
+
+    assert isinstance(node.request[0], InputPathBinding)
+    assert node.request[0].path == GraphSourcePath.state("summary")
+    assert node.request[0].target == LocalPath.of("summary")
+    assert node.resume[0].source == LocalPath.of("approved")
+    assert node.resume[0].target == StatePath.of("approved")
+
+
+def test_interrupt_node_converts_old_maps_to_canonical_bindings():
+    node = InterruptNode.model_validate(
+        {
+            "id": "approval",
+            "type": "interrupt",
+            "kind": "approval",
+            "request_map": {"input.message": "message"},
+            "out_map": {"approved": "state.approved"},
+        }
+    )
+
+    dumped = node.model_dump(mode="json")
+    assert "request_map" not in dumped
+    assert "out_map" not in dumped
+    assert dumped["request"][0]["path"] == {"root": "input", "parts": ["message"]}
+    assert dumped["request"][0]["target"] == {"root": "local", "parts": ["message"]}
+    assert dumped["resume"][0]["source"] == {"root": "local", "parts": ["approved"]}
+    assert dumped["resume"][0]["target"] == {"root": "state", "parts": ["approved"]}
+
+
+def test_interrupt_node_rejects_mixed_old_and_new_binding_styles():
+    with pytest.raises(ValidationError):
+        InterruptNode.model_validate(
+            {
+                "id": "approval",
+                "type": "interrupt",
+                "kind": "approval",
+                "request": [{"target": "message", "path": "input.message"}],
+                "request_map": {"input.other": "other"},
+            }
+        )

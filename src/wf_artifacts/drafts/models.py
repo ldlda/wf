@@ -114,9 +114,29 @@ class DraftInterruptPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     kind: str
-    request: dict[str, str] = Field(default_factory=dict)
-    resume: dict[str, str] = Field(default_factory=dict)
+    request: list[InputBinding] = Field(default_factory=list)
+    resume: list[OutputBinding] = Field(default_factory=list)
     outcomes: list[str] = Field(default_factory=lambda: ["submitted"])
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_legacy_maps(cls, data: object) -> object:
+        """Accept old draft interrupt maps but save canonical binding lists."""
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        request = data.get("request", [])
+        resume = data.get("resume", [])
+        if isinstance(request, dict):
+            data["request"] = [
+                {"target": target, "path": path} for path, target in request.items()
+            ]
+        if isinstance(resume, dict):
+            data["resume"] = [
+                {"source": source, "target": target}
+                for source, target in resume.items()
+            ]
+        return data
 
 
 class DraftInterruptStep(BaseModel):

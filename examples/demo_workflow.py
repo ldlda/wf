@@ -209,14 +209,29 @@ def build_demo_workflow() -> Workflow:
                     "id": "approve_email",
                     "type": "interrupt",
                     "kind": "approval",
-                    "request_map": {
-                        "state.summary": "summary",
-                        "input.folder_id": "folder_id",
-                    },
-                    "out_map": {
-                        "approved": "state.approved",
-                        "comment": "state.approval_comment",
-                    },
+                    "request": [
+                        {
+                            "target": {"root": "local", "parts": ["summary"]},
+                            "path": {"root": "state", "parts": ["summary"]},
+                        },
+                        {
+                            "target": {"root": "local", "parts": ["folder_id"]},
+                            "path": {"root": "input", "parts": ["folder_id"]},
+                        },
+                    ],
+                    "resume": [
+                        {
+                            "source": {"root": "local", "parts": ["approved"]},
+                            "target": {"root": "state", "parts": ["approved"]},
+                        },
+                        {
+                            "source": {"root": "local", "parts": ["comment"]},
+                            "target": {
+                                "root": "state",
+                                "parts": ["approval_comment"],
+                            },
+                        },
+                    ],
                     "outcomes": ["submitted", "cancelled"],
                 },
                 {

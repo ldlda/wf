@@ -58,8 +58,8 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
         return builder.interrupt(
             id=step_id,
             kind=step.interrupt.kind,
-            request_map=step.interrupt.request,
-            out_map=step.interrupt.resume,
+            request=step.interrupt.request,
+            resume=step.interrupt.resume,
             outcomes=step.interrupt.outcomes,
         )
     if isinstance(step, DraftJoinStep):

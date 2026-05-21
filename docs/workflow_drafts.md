@@ -296,16 +296,28 @@ Declares an interrupting step.
 {
   "interrupt": {
     "kind": "input",
-    "request": {
-      "state.question": "question"
-    },
-    "resume": {
-      "answer": "state.answer"
-    },
+    "request": [
+      {
+        "target": {"root": "local", "parts": ["question"]},
+        "path": {"root": "state", "parts": ["question"]}
+      }
+    ],
+    "resume": [
+      {
+        "source": {"root": "local", "parts": ["answer"]},
+        "target": {"root": "state", "parts": ["answer"]}
+      }
+    ],
     "outcomes": ["resumed", "cancelled"]
   }
 }
 ```
+
+Draft interrupts use the same binding shapes as core interrupt nodes:
+`request` builds the public interrupt payload, while `resume` maps the payload
+provided on resume back into workflow state. Older map-shaped `request` and
+`resume` values are accepted only as parse compatibility and dump back to the
+canonical list shape.
 
 Saved interrupting artifacts are still limited in the current execution
 surface. If a deployment reports `interrupting_artifact_unsupported`, that is a

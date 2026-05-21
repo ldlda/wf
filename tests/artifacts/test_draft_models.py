@@ -55,6 +55,46 @@ def test_workflow_draft_accepts_legacy_use_maps_but_dumps_canonical_bindings() -
     }
 
 
+def test_workflow_draft_accepts_legacy_interrupt_maps_but_dumps_canonical_bindings() -> (
+    None
+):
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "start": "approval",
+            "steps": {
+                "approval": {
+                    "interrupt": {
+                        "kind": "approval",
+                        "request": {"input.text": "message"},
+                        "resume": {"approved": "state.approved"},
+                    }
+                },
+            },
+            "routes": {"approval": {"submitted": "__end__"}},
+        }
+    )
+
+    dumped = draft.model_dump(mode="json")
+
+    assert dumped["steps"]["approval"]["interrupt"]["request"][0]["path"] == {
+        "root": "input",
+        "parts": ["text"],
+    }
+    assert dumped["steps"]["approval"]["interrupt"]["request"][0]["target"] == {
+        "root": "local",
+        "parts": ["message"],
+    }
+    assert dumped["steps"]["approval"]["interrupt"]["resume"][0]["source"] == {
+        "root": "local",
+        "parts": ["approved"],
+    }
+    assert dumped["steps"]["approval"]["interrupt"]["resume"][0]["target"] == {
+        "root": "state",
+        "parts": ["approved"],
+    }
+
+
 def test_draft_step_requires_exactly_one_kind_key() -> None:
     draft = _keyed_echo_draft()
     steps = draft["steps"]

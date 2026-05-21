@@ -277,6 +277,27 @@ def test_builder_can_auto_id_condition_foreach_and_interrupt() -> None:
     assert interrupt.id == "interrupt_approval"
 
 
+def test_builder_interrupt_accepts_canonical_request_and_resume_bindings() -> None:
+    builder = WorkflowBuilder(
+        name="interrupt_bindings",
+        input_schema=AutoBindInput,
+        state_schema=AutoBindState,
+        output_schema=AutoBindOutput,
+    )
+
+    interrupt = builder.interrupt(
+        kind="approval",
+        request=[input_from(input_path("text"), "message")],
+        resume=[output_to("text", state_path("text"))],
+    )
+
+    assert isinstance(interrupt.request[0], InputPathBinding)
+    assert interrupt.request[0].path == GraphSourcePath.input("text")
+    assert interrupt.request[0].target == LocalPath.of("message")
+    assert interrupt.resume[0].source == LocalPath.of("text")
+    assert interrupt.resume[0].target == StatePath.of("text")
+
+
 def test_builder_connect_can_use_node_specs_and_returns_resolved_refs() -> None:
     builder = WorkflowBuilder(
         name="connect_specs_demo",

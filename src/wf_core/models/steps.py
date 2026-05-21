@@ -143,9 +143,47 @@ class InterruptNode(BaseModel):
     id: str
     type: Literal["interrupt"]
     kind: str
-    request_map: dict[str, str] = Field(default_factory=dict)
-    out_map: dict[str, str] = Field(default_factory=dict)
+    request: list[InputBinding] = Field(default_factory=list)
+    resume: list[OutputBinding] = Field(default_factory=list)
     outcomes: list[str] = Field(default_factory=lambda: ["submitted"])
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_deprecated_maps(cls, data: object) -> object:
+        """Normalize legacy interrupt maps into canonical parse-only bindings."""
+        if not isinstance(data, Mapping):
+            return data
+
+        old_fields = ("request_map", "out_map")
+        has_canonical = "request" in data or "resume" in data
+        present_old_fields = [field for field in old_fields if field in data]
+        if has_canonical and present_old_fields:
+            old_names = ", ".join(present_old_fields)
+            raise ValueError(
+                f"cannot mix canonical request/resume with deprecated fields: {old_names}"
+            )
+
+        normalized = dict(data)
+        request_bindings = list(normalized.pop("request", []))
+        resume_bindings = list(normalized.pop("resume", []))
+
+        request_map = NodeUse._deprecated_mapping(
+            normalized.pop("request_map", {}), field_name="request_map"
+        )
+        out_map = NodeUse._deprecated_mapping(
+            normalized.pop("out_map", {}), field_name="out_map"
+        )
+
+        request_bindings.extend(
+            {"target": target, "path": path} for path, target in request_map.items()
+        )
+        resume_bindings.extend(
+            {"source": source, "target": target} for source, target in out_map.items()
+        )
+
+        normalized["request"] = request_bindings
+        normalized["resume"] = resume_bindings
+        return normalized
 
 
 Step = Annotated[

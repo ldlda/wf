@@ -564,8 +564,8 @@ def _interrupt_artifact() -> WorkflowArtifact:
                     "id": "approval",
                     "type": "interrupt",
                     "kind": "approval",
-                    "request_map": {"input.message": "message"},
-                    "out_map": {},
+                    "request": [input_binding("input.message", "message")],
+                    "resume": [],
                     "outcomes": ["submitted"],
                 }
             ],

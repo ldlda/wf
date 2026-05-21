@@ -49,7 +49,6 @@ from .mapping import (
     normalize_input_bindings,
     normalize_input_mapping,
     normalize_input_values,
-    normalize_mapping,
     normalize_output_bindings,
     normalize_output_mapping,
 )
@@ -370,16 +369,42 @@ class WorkflowBuilder:
         *,
         id: str | None = None,
         kind: str,
+        request: Sequence[InputBindingArg] | None = None,
+        resume: Sequence[OutputBindingArg] | None = None,
         request_map: MapArg | None = None,
         out_map: MapArg | None = None,
         outcomes: list[str] | None = None,
     ) -> InterruptNode:
+        if request is not None and request_map is not None:
+            raise TypeError("cannot mix canonical request with deprecated request_map")
+        if resume is not None and out_map is not None:
+            raise TypeError("cannot mix canonical resume with deprecated out_map")
+        if request_map is not None or out_map is not None:
+            warnings.warn(
+                "request_map/out_map are deprecated interrupt sugar; use canonical "
+                "request/resume binding lists instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        request_bindings = (
+            normalize_input_bindings(request)
+            if request is not None
+            else _canonical_input_bindings(
+                normalize_input_mapping(request_map),
+                {},
+            )
+        )
+        resume_bindings = (
+            normalize_output_bindings(resume)
+            if resume is not None
+            else _canonical_output_bindings(normalize_output_mapping(out_map))
+        )
         node = InterruptNode(
             id=id or self._next_step_id(f"interrupt_{slug_id(kind)}"),
             type="interrupt",
             kind=kind,
-            request_map=normalize_mapping(request_map),
-            out_map=normalize_mapping(out_map),
+            request=request_bindings,
+            resume=resume_bindings,
             outcomes=outcomes or ["submitted"],
         )
         self.nodes.append(node)

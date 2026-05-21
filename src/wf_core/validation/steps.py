@@ -165,31 +165,38 @@ def validate_interrupt_node(
     state_root_fields: set[str],
     input_root_fields: set[str],
 ) -> None:
-    for source_path, payload_field in node.request_map.items():
-        if not payload_field:
+    for binding_index, binding in enumerate(node.request):
+        field_path = f"nodes[{index}].request[{binding_index}]"
+        if not str(binding.target):
             report.add(
                 ValidationIssueCode.INVALID_INTERRUPT_SOURCE,
-                f"nodes[{index}].request_map[{source_path!r}]",
+                field_path,
                 "interrupt request payload field must not be empty",
             )
-        if not is_valid_source_path(source_path, state_root_fields, input_root_fields):
+        if isinstance(binding, InputPathBinding) and not is_valid_source_path(
+            binding.path,
+            state_root_fields,
+            input_root_fields,
+            allow_context=True,
+        ):
             report.add(
                 ValidationIssueCode.INVALID_INTERRUPT_SOURCE,
-                f"nodes[{index}].request_map[{source_path!r}]",
-                "interrupt request source must start with input. or state. and reference a declared root field",
+                field_path,
+                "interrupt request source must start with input., state., or context. and reference a declared root field when applicable",
             )
 
-    for resume_field, destination_path in node.out_map.items():
-        if not resume_field:
+    for binding_index, binding in enumerate(node.resume):
+        field_path = f"nodes[{index}].resume[{binding_index}]"
+        if not str(binding.source):
             report.add(
                 ValidationIssueCode.INVALID_INTERRUPT_DESTINATION,
-                f"nodes[{index}].out_map[{resume_field!r}]",
+                field_path,
                 "interrupt resume field must not be empty",
             )
-        if not is_valid_destination_path(destination_path):
+        if not is_valid_destination_path(binding.target):
             report.add(
                 ValidationIssueCode.INVALID_INTERRUPT_DESTINATION,
-                f"nodes[{index}].out_map[{resume_field!r}]",
+                field_path,
                 "interrupt resume destination must start with state.",
             )
 

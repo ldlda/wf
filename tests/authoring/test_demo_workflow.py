@@ -18,8 +18,6 @@ from examples.demo_workflow import build_demo_registry, build_demo_workflow
 from wf_authoring import (
     NodeReturn,
     WorkflowBuilder,
-    bind_fields,
-    bind_state,
     build_registry,
     input_from,
     state,
@@ -192,14 +190,14 @@ def build_authoring_demo_workflow():
     approve_email = builder.interrupt(
         id="approve_email",
         kind="approval",
-        request_map=bind_fields(
-            summary=state_path("summary"),
-            folder_id=input_path("folder_id"),
-        ),
-        out_map=bind_state(
-            approved=state_path("approved"),
-            comment=state_path("approval_comment"),
-        ),
+        request=[
+            input_from(state_path("summary"), "summary"),
+            input_from(input_path("folder_id"), "folder_id"),
+        ],
+        resume=[
+            output_to("approved", state_path("approved")),
+            output_to("comment", state_path("approval_comment")),
+        ],
         outcomes=["submitted", "cancelled"],
     )
     skip_email = builder.use(

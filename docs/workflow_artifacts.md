@@ -150,16 +150,18 @@ metadata at runtime without becoming a declared schema field.
 Current core interrupt semantics are node-level. An `InterruptNode` has:
 
 - `kind`
-- `request_map`, mapping state/input/context paths to public interrupt payload
-  fields
-- `out_map`, mapping resume payload fields back into state
+- `request`, a canonical input-binding list mapping state/input/context paths
+  or literal values to public interrupt payload fields
+- `resume`, a canonical output-binding list mapping resume payload fields back
+  into workflow state
 - declared resume `outcomes`
 
 That means an artifact can document interrupt boundaries by scanning its
 declarative plan for interrupt nodes and deriving their request/resume payload
-schemas from the maps and workflow state/input schemas. It should not need to
-store unrelated child graph internals just to describe the public interrupt
-points.
+schemas from the bindings and workflow state/input schemas. Legacy
+`request_map` and `out_map` inputs are parse-only compatibility shapes; saved
+artifacts should write `request` and `resume`. They should not need to store
+unrelated child graph internals just to describe the public interrupt points.
 
 ## Composition Rule
 

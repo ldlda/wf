@@ -79,6 +79,12 @@ dump only canonical `input` and `output` bindings. `wf_authoring` exposes the
 same canonical binding lists and keeps `in_map`, `input_values`, and `out_map`
 only as deprecated Python-builder sugar that compiles into canonical bindings.
 
+Interrupts follow the same pattern with different field names: `request` uses
+canonical input bindings to build the public interrupt payload, and `resume`
+uses canonical output bindings to write resume payload fields back into state.
+Legacy interrupt `request_map` and `out_map` inputs are accepted only as
+parse compatibility and should not be written by new plans.
+
 ## Explicitness Rules
 
 ### Node-local writes must not overlap
