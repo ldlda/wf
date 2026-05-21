@@ -71,15 +71,17 @@ limits and intended adapter seam.
 
 ## What This Cleanup Does Not Solve Yet
 
-- Node-local mapping paths are still top-level only in the current runtime.
-  The intended direction for nested node-local paths, patch commits, and future
-  nested merge metadata is documented in
+- Node-local input/output bindings now support nested local paths and atomic
+  state patch commits. The remaining mapping design notes for future reducer
+  metadata are documented in
   [`core_state_mapping_and_merge.md`](core_state_mapping_and_merge.md).
 - Foreach is still serial-only. Parallel foreach needs an explicit scheduling
-  model, not just `asyncio.gather`.
+  model, not just `asyncio.gather`. `ForeachNode.over` is typed as a
+  `GraphSourcePath`, but execution is still serial.
 - Interrupt lifecycle is still node-level and run-state-level. Long-lived
   external subscriptions or notification streams need a separate lifecycle
-  design.
+  design. Interrupt `request` and `resume` are canonical binding lists; nested
+  child-workflow resume is still future work.
 - Native subgraphs are not part of `wf_core` yet. The core `Step` model only
   includes node, condition, foreach, join, and interrupt steps; `Workflow` does
   not contain nested workflow/subgraph steps.

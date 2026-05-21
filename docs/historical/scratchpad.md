@@ -1,5 +1,9 @@
 # Graph as struct? workflow as struct
 
+> Historical note: this file preserves older design notes. Current binding
+> shapes are documented in `core_state_mapping_and_merge.md`,
+> `structural_refs.md`, and `workflow_drafts.md`.
+
 This file is now mostly a working design note.
 
 The original top section was rough brainstorming around a few ideas that did end

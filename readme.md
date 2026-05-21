@@ -8,7 +8,7 @@
 - [docs/schema_validation.md](docs/schema_validation.md): current payload schema validation limits and intended validation seam.
 - [docs/wf_mcp_plan.md](docs/wf_mcp_plan.md): `wf_mcp` direction as a namespaced MCP capability broker plus workflow build/run layer.
 - [docs/wf_mcp_architecture.md](docs/wf_mcp_architecture.md): current `wf_mcp` package boundaries and dependency rules.
-- [docs/scratchpad.md](docs/scratchpad.md): rougher design history and intermediate spec notes that fed the current model.
+- [docs/historical/scratchpad.md](docs/historical/scratchpad.md): historical design notes that fed the current model.
 
 ## What is this
 
@@ -112,18 +112,41 @@ NodeUse
   .type: "node"
   .node               // reference to NodeDef
   .desc?
-  .in_map             // graph path -> node input field
-  .out_map            // node output field -> graph state path
+  .input[]            // graph/value -> node-local input bindings
+  .output[]           // node-local output -> graph state bindings
   .retry?             // optional override
   .timeout_seconds?   // optional override
 ```
 
 The node does not get ambient access to all workflow state. It receives:
 
-- mapped input
+- the payload built by explicit `input` bindings
 - runtime context
 
 This keeps nodes reusable instead of graph-coupled.
+
+Path bindings use structural paths in saved JSON:
+
+```json
+{
+  "input": [
+    {
+      "target": {"root": "local", "parts": ["text"]},
+      "path": {"root": "input", "parts": ["text"]}
+    }
+  ],
+  "output": [
+    {
+      "source": {"root": "local", "parts": ["echoed"]},
+      "target": {"root": "state", "parts": ["echoed"]}
+    }
+  ]
+}
+```
+
+Legacy `in_map`, `input_values`, and `out_map` shapes remain parse-only
+compatibility inputs. New authored or saved plans should write `input` and
+`output`.
 
 ### Control-flow nodes
 
@@ -161,8 +184,8 @@ Conditions are structured JSON, not freeform code strings.
 .id
 .type: "interrupt"
 .kind               // approval | text_input | choice | tool_auth | ...
-.request_map        // graph state/input path -> interrupt payload field
-.out_map            // resume payload field -> graph state path
+.request[]          // graph/value -> public interrupt payload bindings
+.resume[]           // resume payload -> graph state bindings
 .outcomes[]         // ex: submitted, cancelled
 ```
 
@@ -247,9 +270,9 @@ State fields carry metadata, especially merge behavior.
 
 ```text
 StateField
-  .type
-  .merge_strategy     // replace | append | merge_object
-  .trace?
+  .path
+  .schema            // JSON Schema with reducer extension metadata
+  .reducer           // wf.std.replace | wf.std.append | ...
 ```
 
 Rules:
@@ -272,7 +295,7 @@ Executor steps:
 2. Validate workflow input
 3. Copy input into state
 4. Start at the declared `start` node
-5. Resolve node input snapshot from `in_map`
+5. Resolve node input snapshot from canonical `input` bindings
 6. Execute node with mapped input plus runtime context
 7. Validate typed node output
 8. Commit mapped output into state
@@ -394,7 +417,7 @@ Resume should not jump back into the middle of arbitrary Python code.
 Instead:
 
 - resume data is delivered to the interrupt node
-- the interrupt node maps resume fields back into state through explicit `out_map`
+- the interrupt node maps resume fields back into state through explicit `resume` bindings
 - graph routing continues normally from that node
 
 This means the primary interrupt design is node-based, not line-based.
@@ -463,8 +486,8 @@ Before execution, the validator should be able to check:
 - every edge outcome is declared by its source node
 - each source + outcome pair is wired at most once
 - every reachable outcome is wired
-- every `in_map` destination exists in node input schema
-- every `out_map` source exists in node output schema
+- every `input` binding target is a valid node-local path
+- every `output` binding source exists in node output schema where schema detail is known
 - every condition path references valid `input`, `state`, or `context`
 - every `foreach.over` path references valid `input` or `state`
 

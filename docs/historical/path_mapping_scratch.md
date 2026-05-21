@@ -1,5 +1,9 @@
 # Path And Mapping Scratch
 
+> Historical note: this scratchpad records how the mapping model evolved.
+> Current core behavior uses canonical `input`/`output` and interrupt
+> `request`/`resume` binding lists. See `core_state_mapping_and_merge.md`.
+
 This is a focused scratchpad for the `wf_core` path/mapping design thread.
 Clean this into real docs later.
 
