@@ -26,7 +26,7 @@
 - Modify: `src/wf_core/runtime/ops/frames.py`
   - Keep context helpers; demote stack-collapse usage or leave compatibility wrappers that call scheduler helpers.
 - Modify: `src/wf_core/runtime/preparation.py`
-  - Stop relying on `collapse_completed_frames()` for selection.
+  - Stop relying on stack-style frame collapse for selection.
   - Resume interrupt by waking/enqueueing the resumed frame.
 - Modify: `src/wf_core/runtime/engine.py`
   - Use scheduler loop for sync and async resume.
@@ -527,9 +527,9 @@ while True:
 
 Use the same selection flow in the async loop before `await step_workflow_async(...)`.
 
-- [ ] **Step 3: Remove stack collapse from step preparation**
+- [ ] **Step 3: Remove stack-style frame collapse from step preparation**
 
-In `prepare_step`, remove `collapse_completed_frames(run)` and keep it focused on resolving the selected frame’s node. It should still return `None` for interrupted/end states.
+In `prepare_step`, remove old stack-style frame collapse and keep it focused on resolving the selected frame’s node. It should still return `None` for interrupted/end states.
 
 - [ ] **Step 4: Verify serial workflows**
 

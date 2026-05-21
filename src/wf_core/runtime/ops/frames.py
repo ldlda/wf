@@ -1,23 +1,6 @@
 from __future__ import annotations
 
-from wf_core.run_state import ExecutionFrame, FrameStatus, RunState
-from wf_core.tokens import END
-
-
-def collapse_completed_frames(run: RunState) -> None:
-    while run.current_frame_id is not None:
-        frame = run.current_frame()
-        if frame.node_id == END and frame.status != FrameStatus.COMPLETED:
-            frame.status = FrameStatus.COMPLETED
-            frame.finished_at_node_id = END
-        if frame.status != FrameStatus.COMPLETED or frame.parent_frame_id is None:
-            run.sync_from_current_frame()
-            return
-        run.current_frame_id = frame.parent_frame_id
-        parent = run.current_frame()
-        if parent.status == FrameStatus.PENDING:
-            parent.status = FrameStatus.RUNNING
-        run.sync_from_current_frame()
+from wf_core.run_state import ExecutionFrame
 
 
 def frame_context_values(frame: ExecutionFrame) -> dict[str, object | None]:

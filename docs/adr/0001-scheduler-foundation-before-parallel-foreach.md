@@ -81,6 +81,8 @@ they are enabled:
 
 - A future foreach policy must define batching, `max_concurrency`, item failure
   handling, and cancellation/drain behavior.
+- Parallel foreach should be bounded by default so workflows do not spawn
+  unbounded MCP, HTTP, browser, or external service calls.
 - A future barrier must wait for multiple child or upstream frames and merge
   their lineage patches.
 - Missing reducers mean replace only within one serial lineage. At a barrier,
