@@ -14,6 +14,7 @@ and user-facing control belong in `wf_mcp`.
 | `wf_core.models` | Pydantic workflow schema package: schemas, condition expressions, executable steps, workflow graph, and node results. |
 | `wf_core.run_state` | Serializable execution state: run status, frames, trace entries, interrupt requests, and runtime context. |
 | `wf_core.runtime` | Public execution interface: execute, resume, and step in sync or async mode. |
+| `wf_core.runtime.scheduler` | Internal frame scheduler: ready queue, selected cursor, frame creation, block/wake helpers, and typed foreach frame metadata. |
 | `wf_core.runtime.ops` | Executor-only operations used behind `wf_core.runtime`: node execution, state writes, frame movement, foreach, interrupts, indexes, and schema checks. |
 | `wf_core.validation` | Structural workflow validation split by validation concern. |
 | `wf_core.conditions` | Runtime evaluation of condition expressions. |
@@ -28,15 +29,57 @@ flat modules.
 
 1. `execute_workflow` creates a run state and delegates to resume.
 2. `prepare_new_run` validates workflow shape and workflow input.
-3. `resume_workflow` loops until completion, interruption, or failure.
-4. `step_workflow` resolves the active frame and dispatches by step type.
-5. `runtime.ops.nodes` handles `NodeUse` input projection, handler invocation,
+3. `resume_workflow` loops until completion, interruption, failure, or no
+   schedulable frame.
+4. `runtime.scheduler.select_next_frame` pops the next frame id from
+   `RunState.ready_frame_ids`, marks that frame `RUNNING`, and updates
+   compatibility cursor fields such as `current_frame_id`.
+5. `step_workflow` resolves the selected frame and dispatches by step type.
+6. A normal non-terminal step marks the same frame `PENDING` and puts it back at
+   the end of the ready queue.
+7. Terminal, blocked, interrupted, and failed frames are not re-enqueued.
+8. `runtime.ops.nodes` handles `NodeUse` input projection, handler invocation,
    output validation, and state writes.
-6. `runtime.ops.flow` records trace entries and advances frames.
-7. Completion projects workflow output from state and validates it.
+9. `runtime.ops.flow` records trace entries and advances frames.
+10. Completion projects workflow output from state and validates it.
 
 Async execution shares the same runtime model. The async seam is handler
 invocation; control-flow steps are still synchronous state transitions.
+
+## Scheduler Model
+
+`RunState.frames` is the frame set: it contains lifecycle records for root,
+foreach iteration, and future child frames. `RunState.ready_frame_ids` is the
+explicit FIFO scheduling order. `current_frame_id` and `current_node_id` still
+exist for compatibility and step-local convenience, but they are the selected
+cursor, not the source of all runnable work.
+
+Frame lifecycle rules:
+
+- `PENDING` frames may be placed in the ready queue.
+- Selecting a frame removes it from the ready queue and marks it `RUNNING`.
+- A still-runnable frame is marked `PENDING` and re-enqueued after one step.
+- `BLOCKED` frames are live but waiting on a typed block reason, currently child
+  frame completion.
+- `INTERRUPTED` frames are waiting on external resume input and pause the whole
+  run.
+- `COMPLETED` and `FAILED` frames are terminal for scheduling.
+
+When the ready queue is empty, the scheduler classifies the run as completed,
+interrupted, failed, or deadlocked. This replaces the older assumption that
+`current_node_id == END` alone is enough to decide runtime completion.
+
+## Serial Foreach
+
+Foreach remains serial-only. A serial foreach parent frame creates one iteration
+child frame, records typed `ForeachIterationMetadata`, blocks on that child, and
+enqueues the child. When the child reaches `END`, `wake_parent_if_children_complete`
+wakes the blocked parent so it can create the next iteration or emit `done`.
+
+This preserves current serial behavior while making the hidden parent/child
+relationship explicit. `foreach(mode="parallel")` is still unsupported because
+parallel execution needs policy, barrier, lineage, and state-patch semantics
+that are not implemented yet.
 
 ## Validation Flow
 
@@ -75,9 +118,10 @@ limits and intended adapter seam.
   state patch commits. The remaining mapping design notes for future reducer
   metadata are documented in
   [`core_state_mapping_and_merge.md`](core_state_mapping_and_merge.md).
-- Foreach is still serial-only. Parallel foreach needs an explicit scheduling
-  model, not just `asyncio.gather`. `ForeachNode.over` is typed as a
-  `GraphSourcePath`, but execution is still serial.
+- Foreach is still serial-only. The scheduler foundation exists, but parallel
+  foreach still needs explicit policy, implicit barrier state, lineage-aware
+  patch commits, and quiescent interrupt handling. `ForeachNode.over` is typed
+  as a `GraphSourcePath`, but execution is still serial.
 - Interrupt lifecycle is still node-level and run-state-level. Long-lived
   external subscriptions or notification streams need a separate lifecycle
   design. Interrupt `request` and `resume` are canonical binding lists; nested
@@ -92,12 +136,10 @@ limits and intended adapter seam.
 - Saved workflow-as-node execution with interrupts requires a core runtime
   upgrade: nested run state, child-frame trace preservation, interrupt bubbling
   with path metadata, and resume back into the child workflow.
-- Frames are currently a serial execution stack. That is enough for root
-  workflow execution, serial foreach, and node-level interrupts, but async
-  parallel foreach and native subgraphs will stress the model. In particular,
-  `RunState.current_frame_id` assumes one active cursor, `ExecutionFrame.metadata`
-  is ad hoc, and subgraph frames will need explicit child workflow/deployment
-  identity.
+- Frames are no longer only a serial execution stack: the runtime has a ready
+  queue and `BLOCKED` frame state. Async parallel foreach and native subgraphs
+  still need more work: lineage isolation, barrier merge semantics, pending
+  child results, and explicit child workflow/deployment identity.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer
   error payload can be added later, but should be designed as part of trace/run
   state rather than scattered exceptions.
