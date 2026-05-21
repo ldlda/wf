@@ -162,6 +162,35 @@ def test_workflow_draft_accepts_choose_step() -> None:
     assert isinstance(draft.steps["choose_next"], DraftChooseStep)
 
 
+def test_workflow_draft_foreach_over_dumps_structural_path() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "start": "each_item",
+            "steps": {
+                **_keyed_echo_draft()["steps"],
+                "each_item": {
+                    "foreach": {
+                        "over": "state.items",
+                        "as": "item",
+                    }
+                },
+            },
+            "routes": {
+                "each_item": {"loop": "echo", "done": "__end__"},
+                "echo": {"ok": "__end__"},
+            },
+        }
+    )
+
+    dumped = draft.model_dump(mode="json")
+
+    assert dumped["steps"]["each_item"]["foreach"]["over"] == {
+        "root": "state",
+        "parts": ["items"],
+    }
+
+
 def test_workflow_draft_accepts_match_step() -> None:
     draft = WorkflowDraft.model_validate(
         {

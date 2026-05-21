@@ -4,6 +4,7 @@ from pydantic import ValidationError
 from wf_core.models.steps import (
     InputPathBinding,
     InputValueBinding,
+    ForeachNode,
     InterruptNode,
     NodeUse,
 )
@@ -276,3 +277,20 @@ def test_interrupt_node_rejects_mixed_old_and_new_binding_styles():
                 "request_map": {"input.other": "other"},
             }
         )
+
+
+def test_foreach_node_serializes_over_path_as_structural_json():
+    node = ForeachNode.model_validate(
+        {
+            "id": "each_item",
+            "type": "foreach",
+            "over": "state.items",
+            "as": "item",
+        }
+    )
+
+    assert node.over == GraphSourcePath.state("items")
+    assert node.model_dump(mode="json")["over"] == {
+        "root": "state",
+        "parts": ["items"],
+    }

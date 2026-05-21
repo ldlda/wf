@@ -124,7 +124,7 @@ class ForeachNode(BaseModel):
 
     id: str
     type: Literal["foreach"]
-    over: str
+    over: GraphSourcePath
     as_: str = Field(alias="as")
     mode: Literal["serial", "parallel"] = "serial"
     on_item_error: Literal["fail", "collect", "skip"] = "fail"

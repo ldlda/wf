@@ -137,7 +137,7 @@ def build_demo_workflow() -> Workflow:
                 {
                     "id": "summarize_each",
                     "type": "foreach",
-                    "over": "state.documents",
+                    "over": {"root": "state", "parts": ["documents"]},
                     "as": "document",
                     "mode": "serial",
                     "on_item_error": "fail",

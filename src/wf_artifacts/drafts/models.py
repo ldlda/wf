@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from wf_core.models.conditions import Condition
 from wf_core.models.steps import InputBinding, OutputBinding
+from wf_core.paths import GraphSourcePath
 
 JsonObject = dict[str, Any]
 STEP_KIND_KEYS = frozenset(
@@ -94,7 +95,7 @@ class DraftForeachPayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
 
-    over: str
+    over: GraphSourcePath
     as_: str = Field(alias="as")
     mode: Literal["serial", "parallel"] = "serial"
     on_item_error: Literal["fail", "collect", "skip"] = "fail"

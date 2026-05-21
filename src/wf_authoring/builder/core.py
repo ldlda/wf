@@ -397,8 +397,6 @@ class WorkflowBuilder:
         mode: Literal["serial", "parallel"] = "serial",
         on_item_error: Literal["fail", "collect", "skip"] = "fail",
     ) -> ForeachNode:
-        # Core foreach still stores `over` as a string. Keep this compatibility
-        # path isolated until ForeachNode grows a typed GraphSourcePath field.
         node = ForeachNode.model_validate(
             {
                 "id": id or self._next_step_id(f"foreach_{slug_id(as_)}"),

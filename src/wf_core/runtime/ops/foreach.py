@@ -26,14 +26,14 @@ def step_foreach(
     progress = progress_map.setdefault(step.id, {"index": 0})
 
     iterable = safe_resolve_path(
-        step.over,
+        str(step.over),
         state=run.state,
         workflow_input=run.workflow_input,
         context=frame_context_values(frame),
     )
     if not isinstance(iterable, list):
         raise WorkflowExecutionError(
-            f"foreach source {step.over!r} must resolve to a list"
+            f"foreach source {str(step.over)!r} must resolve to a list"
         )
 
     loop_index = progress["index"]

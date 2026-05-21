@@ -277,7 +277,7 @@ Runs a child body over items.
 ```json
 {
   "foreach": {
-    "over": "state.items",
+    "over": {"root": "state", "parts": ["items"]},
     "as": "item",
     "mode": "serial",
     "on_item_error": "fail"
