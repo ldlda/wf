@@ -39,6 +39,8 @@ implementation state.
 
 ## Runtime and Platform Roadmap
 
+- Scheduler foundation decision record:
+  [ADR 0001](./adr/0001-scheduler-foundation-before-parallel-foreach.md).
 - **Native subgraphs / graph-as-node**: add child run state, child trace
   preservation, interrupt bubbling, and resume back into the child workflow.
   Wrapper artifacts currently execute as deployments and return run status;
