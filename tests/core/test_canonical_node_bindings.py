@@ -118,18 +118,15 @@ def test_canonical_binding_json_schema_describes_nested_fields():
     input_value = defs["InputValueBinding"]
     output = defs["OutputBinding"]
 
-    assert "whole node input payload" in input_path["properties"]["target"][
-        "description"
-    ]
-    assert "input, state, or context" in input_path["properties"]["path"][
-        "description"
-    ]
-    assert "Literal JSON-compatible value" in input_value["properties"]["value"][
-        "description"
-    ]
-    assert "whole node output payload" in output["properties"]["source"][
-        "description"
-    ]
+    assert (
+        "whole node input payload" in input_path["properties"]["target"]["description"]
+    )
+    assert "input, state, or context" in input_path["properties"]["path"]["description"]
+    assert (
+        "Literal JSON-compatible value"
+        in input_value["properties"]["value"]["description"]
+    )
+    assert "whole node output payload" in output["properties"]["source"]["description"]
     assert "Bare state is invalid" in output["properties"]["target"]["description"]
 
 

@@ -284,9 +284,7 @@ def test_workflow_surface_lists_compact_deployment_summaries_and_inspects_detail
     artifact_store.save_deployment(deployment)
 
     listed = asyncio.run(handlers.list_deployments())
-    inspected = asyncio.run(
-        handlers.inspect_deployment(deployment_id="echo.personal")
-    )
+    inspected = asyncio.run(handlers.inspect_deployment(deployment_id="echo.personal"))
 
     assert listed["deployments"][0]["id"] == "echo.personal"
     assert listed["deployments"][0]["binding_count"] == 1

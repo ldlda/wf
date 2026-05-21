@@ -174,9 +174,7 @@ class CapabilitySource:
                 reducers=_preview_names(
                     self.capabilities.reducers, SOURCE_PREVIEW_LIMIT
                 ),
-                prompts=_preview_names(
-                    self.capabilities.prompts, SOURCE_PREVIEW_LIMIT
-                ),
+                prompts=_preview_names(self.capabilities.prompts, SOURCE_PREVIEW_LIMIT),
                 resources=_preview_names(
                     self.capabilities.resources, SOURCE_PREVIEW_LIMIT
                 ),

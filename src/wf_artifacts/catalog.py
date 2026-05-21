@@ -38,10 +38,12 @@ def artifact_catalog_entry(
     diagnostics: list[DependencyDiagnostic] | tuple[DependencyDiagnostic, ...] = (),
 ) -> WorkflowArtifactCatalogEntry:
     """Project an artifact as a catalog entry without exposing its internal plan."""
-    required_sources = sorted({
-        capability.logical_source
-        for capability in artifact.required_capability_map().values()
-    })
+    required_sources = sorted(
+        {
+            capability.logical_source
+            for capability in artifact.required_capability_map().values()
+        }
+    )
     return WorkflowArtifactCatalogEntry(
         name=artifact_node_name(artifact),
         artifact_id=artifact.id,

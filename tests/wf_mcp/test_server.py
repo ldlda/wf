@@ -133,13 +133,15 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "workspace_id" in create_workspace_schema["properties"]
             assert "revision" in create_workspace_schema["properties"]
             list_sources_schema = tools_by_name["wf.admin.list_sources"].inputSchema
-            assert "inspect_source" in list_sources_schema["properties"]["limit"][
-                "description"
-            ]
+            assert (
+                "inspect_source"
+                in list_sources_schema["properties"]["limit"]["description"]
+            )
             inspect_source_schema = tools_by_name["wf.admin.inspect_source"].inputSchema
-            assert "Exact source id" in inspect_source_schema["properties"][
-                "source_id"
-            ]["description"]
+            assert (
+                "Exact source id"
+                in inspect_source_schema["properties"]["source_id"]["description"]
+            )
             minimal_workspace_input = tools_by_name[
                 "wf.workflow.create_minimal_draft_workspace"
             ].inputSchema
@@ -399,9 +401,7 @@ def test_workflow_tools_have_human_metadata() -> None:
             assert run_deployment.title == "Run Workflow Deployment"
             assert "deployment_id" in (run_deployment.description or "")
             assert "trace_range" in run_deployment.inputSchema["properties"]
-            trace_range_schema = run_deployment.inputSchema["properties"][
-                "trace_range"
-            ]
+            trace_range_schema = run_deployment.inputSchema["properties"]["trace_range"]
             assert "Debug traces" in trace_range_schema.get("description", "")
             assert "null" in [
                 option.get("type") for option in trace_range_schema["anyOf"]

@@ -6,61 +6,63 @@ from wf_core.run_state import RunState
 
 def build_raw_canonical_workflow() -> Workflow:
     """Build a raw core workflow using the canonical post-migration shape."""
-    return Workflow.model_validate({
-        "name": "raw_canonical_echo",
-        "input_schema": {
-            "type": "object",
-            "properties": {"text": {"type": "string"}},
-            "required": ["text"],
-        },
-        "state_schema": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "reducer": "wf.std.replace",
-                }
+    return Workflow.model_validate(
+        {
+            "name": "raw_canonical_echo",
+            "input_schema": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
             },
-        },
-        "output_schema": {
-            "type": "object",
-            "properties": {"message": {"type": "string"}},
-            "required": ["message"],
-        },
-        "node_defs": [
-            {
-                "name": "format_text",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "text": {"type": "string"},
-                        "prefix": {"type": "string"},
+            "state_schema": {
+                "type": "object",
+                "properties": {
+                    "message": {
+                        "type": "string",
+                        "reducer": "wf.std.replace",
+                    }
+                },
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+            },
+            "node_defs": [
+                {
+                    "name": "format_text",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "text": {"type": "string"},
+                            "prefix": {"type": "string"},
+                        },
+                        "required": ["text", "prefix"],
                     },
-                    "required": ["text", "prefix"],
-                },
-                "output_schema": {
-                    "type": "object",
-                    "properties": {"message": {"type": "string"}},
-                    "required": ["message"],
-                },
-                "outcomes": ["ok"],
-            }
-        ],
-        "start": "format",
-        "nodes": [
-            {
-                "id": "format",
-                "type": "node",
-                "node": "format_text",
-                "input": [
-                    {"target": "text", "path": "input.text"},
-                    {"target": "prefix", "value": "raw:"},
-                ],
-                "output": [{"source": "message", "target": "state.message"}],
-            }
-        ],
-        "edges": [{"from": "format", "outcome": "ok", "to": END}],
-    })
+                    "output_schema": {
+                        "type": "object",
+                        "properties": {"message": {"type": "string"}},
+                        "required": ["message"],
+                    },
+                    "outcomes": ["ok"],
+                }
+            ],
+            "start": "format",
+            "nodes": [
+                {
+                    "id": "format",
+                    "type": "node",
+                    "node": "format_text",
+                    "input": [
+                        {"target": "text", "path": "input.text"},
+                        {"target": "prefix", "value": "raw:"},
+                    ],
+                    "output": [{"source": "message", "target": "state.message"}],
+                }
+            ],
+            "edges": [{"from": "format", "outcome": "ok", "to": END}],
+        }
+    )
 
 
 def build_raw_canonical_registry():

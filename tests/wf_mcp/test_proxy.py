@@ -389,17 +389,19 @@ def test_proxy_admin_tools_mutate_config_file() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps({
-            "store_root": ".wf_mcp_store",
-            "connections": [
-                {
-                    "id": "fixture.personal",
-                    "server": "fixture",
-                    "account": "personal",
-                    "enabled": False,
-                }
-            ],
-        }),
+        json.dumps(
+            {
+                "store_root": ".wf_mcp_store",
+                "connections": [
+                    {
+                        "id": "fixture.personal",
+                        "server": "fixture",
+                        "account": "personal",
+                        "enabled": False,
+                    }
+                ],
+            }
+        ),
         encoding="utf-8",
     )
     config = load_broker_config(config_path)
@@ -484,10 +486,12 @@ def test_proxy_admin_reload_remounts_connections() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps({
-            "store_root": ".wf_mcp_store",
-            "connections": [],
-        }),
+        json.dumps(
+            {
+                "store_root": ".wf_mcp_store",
+                "connections": [],
+            }
+        ),
         encoding="utf-8",
     )
     config = load_broker_config(config_path)
@@ -544,10 +548,12 @@ def test_proxy_admin_reload_sends_list_changed_notifications() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps({
-            "store_root": ".wf_mcp_store",
-            "connections": [],
-        }),
+        json.dumps(
+            {
+                "store_root": ".wf_mcp_store",
+                "connections": [],
+            }
+        ),
         encoding="utf-8",
     )
     config = load_broker_config(config_path)
@@ -576,10 +582,12 @@ def test_proxy_config_mutation_does_not_notify_before_reload() -> None:
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
-        json.dumps({
-            "store_root": ".wf_mcp_store",
-            "connections": [],
-        }),
+        json.dumps(
+            {
+                "store_root": ".wf_mcp_store",
+                "connections": [],
+            }
+        ),
         encoding="utf-8",
     )
     config = load_broker_config(config_path)

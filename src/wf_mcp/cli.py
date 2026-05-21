@@ -94,20 +94,26 @@ async def _refresh_all(service, connection_id: str | None) -> list[dict[str, Any
         try:
             await service.refresh_connection_catalog(target_id)
             snapshot = service.get_connection_snapshot(target_id)
-            results.append({
-                "connection_id": target_id,
-                "refreshed": snapshot is not None,
-                "node_count": 0 if snapshot is None else len(snapshot.nodes),
-                "resource_count": 0 if snapshot is None else len(snapshot.resources),
-                "prompt_count": 0 if snapshot is None else len(snapshot.prompts),
-            })
+            results.append(
+                {
+                    "connection_id": target_id,
+                    "refreshed": snapshot is not None,
+                    "node_count": 0 if snapshot is None else len(snapshot.nodes),
+                    "resource_count": 0
+                    if snapshot is None
+                    else len(snapshot.resources),
+                    "prompt_count": 0 if snapshot is None else len(snapshot.prompts),
+                }
+            )
         except Exception as exc:
-            results.append({
-                "connection_id": target_id,
-                "refreshed": False,
-                "error_type": type(exc).__name__,
-                "error": str(exc),
-            })
+            results.append(
+                {
+                    "connection_id": target_id,
+                    "refreshed": False,
+                    "error_type": type(exc).__name__,
+                    "error": str(exc),
+                }
+            )
     return results
 
 
@@ -132,16 +138,18 @@ def main(argv: list[str] | None = None) -> int:
     service = _service_from_config(args.config)
 
     if args.command == "connections":
-        _json_dump([
-            {
-                "id": connection.id,
-                "server": connection.server,
-                "account": connection.account,
-                "enabled": connection.enabled,
-                "metadata": connection.metadata,
-            }
-            for connection in service.connections.list_all()
-        ])
+        _json_dump(
+            [
+                {
+                    "id": connection.id,
+                    "server": connection.server,
+                    "account": connection.account,
+                    "enabled": connection.enabled,
+                    "metadata": connection.metadata,
+                }
+                for connection in service.connections.list_all()
+            ]
+        )
         return 0
 
     if args.command == "status":
@@ -154,10 +162,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "refresh":
         results = asyncio.run(_refresh_all(service, args.connection_id))
-        _json_dump({
-            "results": results,
-            "catalog": service.get_catalog().as_payload(),
-        })
+        _json_dump(
+            {
+                "results": results,
+                "catalog": service.get_catalog().as_payload(),
+            }
+        )
         if any(not result["refreshed"] for result in results):
             return 1
         return 0

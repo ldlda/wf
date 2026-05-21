@@ -38,9 +38,7 @@ def test_mcp_workflow_surface_example_runs_happy_path(tmp_path) -> None:
     assert payload["diagnostics"] == []
 
 
-def test_mcp_wrapper_authoring_flow_example_creates_and_calls_wrapper(tmp_path) -> (
-    None
-):
+def test_mcp_wrapper_authoring_flow_example_creates_and_calls_wrapper(tmp_path) -> None:
     payload = asyncio.run(author_echo_wrapper_from_capability(tmp_path))
 
     assert payload["inspected_hints"]["capability_name"] == "demo.personal.echo_tool"

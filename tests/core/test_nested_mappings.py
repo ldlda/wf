@@ -19,52 +19,54 @@ from wf_core import (
 
 
 def test_canonical_bindings_resolve_input_values_paths_and_explicit_null() -> None:
-    workflow = Workflow.model_validate({
-        "name": "canonical",
-        "input_schema": {
-            "type": "object",
-            "properties": {"message": {"type": "string"}},
-        },
-        "state_schema": {"fields": {"echoed": {"type": "string"}}},
-        "output_schema": {
-            "type": "object",
-            "properties": {"echoed": {"type": "string"}},
-        },
-        "start": "echo",
-        "node_defs": [
-            {
-                "name": "echo",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "message": {"type": "string"},
-                        "mode": {"type": "string"},
-                        "maybe": {"type": "null"},
+    workflow = Workflow.model_validate(
+        {
+            "name": "canonical",
+            "input_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+            },
+            "state_schema": {"fields": {"echoed": {"type": "string"}}},
+            "output_schema": {
+                "type": "object",
+                "properties": {"echoed": {"type": "string"}},
+            },
+            "start": "echo",
+            "node_defs": [
+                {
+                    "name": "echo",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {
+                            "message": {"type": "string"},
+                            "mode": {"type": "string"},
+                            "maybe": {"type": "null"},
+                        },
+                        "required": ["message", "mode", "maybe"],
                     },
-                    "required": ["message", "mode", "maybe"],
-                },
-                "output_schema": {
-                    "type": "object",
-                    "properties": {"echoed": {"type": "string"}},
-                },
-                "outcomes": ["ok"],
-            }
-        ],
-        "nodes": [
-            {
-                "id": "echo",
-                "type": "node",
-                "node": "echo",
-                "input": [
-                    {"target": "message", "path": "input.message"},
-                    {"target": "mode", "value": "fast"},
-                    {"target": "maybe", "value": None},
-                ],
-                "output": [{"source": "echoed", "target": "state.echoed"}],
-            }
-        ],
-        "edges": [{"from": "echo", "outcome": "ok", "to": END}],
-    })
+                    "output_schema": {
+                        "type": "object",
+                        "properties": {"echoed": {"type": "string"}},
+                    },
+                    "outcomes": ["ok"],
+                }
+            ],
+            "nodes": [
+                {
+                    "id": "echo",
+                    "type": "node",
+                    "node": "echo",
+                    "input": [
+                        {"target": "message", "path": "input.message"},
+                        {"target": "mode", "value": "fast"},
+                        {"target": "maybe", "value": None},
+                    ],
+                    "output": [{"source": "echoed", "target": "state.echoed"}],
+                }
+            ],
+            "edges": [{"from": "echo", "outcome": "ok", "to": END}],
+        }
+    )
     run = execute_workflow(
         workflow,
         {"message": "hi"},
@@ -128,10 +130,12 @@ def test_missing_nested_node_output_path_fails() -> None:
 def test_root_node_local_paths_map_whole_input_and_output_payloads() -> None:
     workflow = Workflow(
         name="root_mapping",
-        input_schema=SchemaRef.model_validate({
-            "type": "object",
-            "properties": {"rates": {"type": "object"}},
-        }),
+        input_schema=SchemaRef.model_validate(
+            {
+                "type": "object",
+                "properties": {"rates": {"type": "object"}},
+            }
+        ),
         state_schema=StateSchema.from_field_map({"rates": StateField(type="object")}),
         output_schema=SchemaRef(type="object", properties={}),
         node_defs=[
@@ -152,13 +156,15 @@ def test_root_node_local_paths_map_whole_input_and_output_payloads() -> None:
         nodes=[
             cast(
                 Any,
-                NodeUse.model_validate({
-                    "id": "force",
-                    "type": "node",
-                    "node": "force_rates",
-                    "in_map": {"input.rates": "."},
-                    "out_map": {".": "state.rates"},
-                }),
+                NodeUse.model_validate(
+                    {
+                        "id": "force",
+                        "type": "node",
+                        "node": "force_rates",
+                        "in_map": {"input.rates": "."},
+                        "out_map": {".": "state.rates"},
+                    }
+                ),
             )
         ],
         edges=[Edge.model_validate({"from": "force", "outcome": "ok", "to": END})],
@@ -190,16 +196,20 @@ def test_static_input_values_are_merged_into_node_local_input() -> None:
         node_defs=[
             NodeDef(
                 name="constant",
-                input_schema=SchemaRef.model_validate({
-                    "type": "object",
-                    "properties": {"value": {"type": "string"}},
-                    "required": ["value"],
-                }),
-                output_schema=SchemaRef.model_validate({
-                    "type": "object",
-                    "properties": {"value": {"type": "string"}},
-                    "required": ["value"],
-                }),
+                input_schema=SchemaRef.model_validate(
+                    {
+                        "type": "object",
+                        "properties": {"value": {"type": "string"}},
+                        "required": ["value"],
+                    }
+                ),
+                output_schema=SchemaRef.model_validate(
+                    {
+                        "type": "object",
+                        "properties": {"value": {"type": "string"}},
+                        "required": ["value"],
+                    }
+                ),
                 outcomes=["ok"],
             )
         ],
@@ -207,13 +217,15 @@ def test_static_input_values_are_merged_into_node_local_input() -> None:
         nodes=[
             cast(
                 Any,
-                NodeUse.model_validate({
-                    "id": "constant",
-                    "type": "node",
-                    "node": "constant",
-                    "input_values": {"value": "CLICKED"},
-                    "out_map": {"value": "state.message"},
-                }),
+                NodeUse.model_validate(
+                    {
+                        "id": "constant",
+                        "type": "node",
+                        "node": "constant",
+                        "input_values": {"value": "CLICKED"},
+                        "out_map": {"value": "state.message"},
+                    }
+                ),
             )
         ],
         edges=[Edge.model_validate({"from": "constant", "outcome": "ok", "to": END})],
@@ -232,32 +244,40 @@ def test_static_input_values_are_merged_into_node_local_input() -> None:
 def _nested_mapping_workflow() -> Workflow:
     return Workflow(
         name="nested_mapping",
-        input_schema=SchemaRef.model_validate({
-            "type": "object",
-            "properties": {
-                "person": {"type": "object"},
-                "digital": {"type": "object"},
-            },
-        }),
-        state_schema=StateSchema.from_field_map({
-            "person": StateField(type="object"),
-            "experience": StateField(type="object"),
-        }),
+        input_schema=SchemaRef.model_validate(
+            {
+                "type": "object",
+                "properties": {
+                    "person": {"type": "object"},
+                    "digital": {"type": "object"},
+                },
+            }
+        ),
+        state_schema=StateSchema.from_field_map(
+            {
+                "person": StateField(type="object"),
+                "experience": StateField(type="object"),
+            }
+        ),
         output_schema=SchemaRef(type="object", properties={}),
         node_defs=[
             NodeDef(
                 name="big_tool",
-                input_schema=SchemaRef.model_validate({
-                    "type": "object",
-                    "properties": {"user": {"type": "object"}},
-                }),
-                output_schema=SchemaRef.model_validate({
-                    "type": "object",
-                    "properties": {
-                        "user": {"type": "object"},
-                        "job": {"type": "object"},
-                    },
-                }),
+                input_schema=SchemaRef.model_validate(
+                    {
+                        "type": "object",
+                        "properties": {"user": {"type": "object"}},
+                    }
+                ),
+                output_schema=SchemaRef.model_validate(
+                    {
+                        "type": "object",
+                        "properties": {
+                            "user": {"type": "object"},
+                            "job": {"type": "object"},
+                        },
+                    }
+                ),
                 outcomes=["ok"],
             )
         ],
@@ -265,20 +285,22 @@ def _nested_mapping_workflow() -> Workflow:
         nodes=[
             cast(
                 Any,
-                NodeUse.model_validate({
-                    "id": "big",
-                    "type": "node",
-                    "node": "big_tool",
-                    "in_map": {
-                        "input.person.name": "user.name",
-                        "input.digital.email": "user.email",
-                    },
-                    "out_map": {
-                        "user.age": "state.person.age",
-                        "user.gender": "state.person.gender",
-                        "job.years": "state.experience.years",
-                    },
-                }),
+                NodeUse.model_validate(
+                    {
+                        "id": "big",
+                        "type": "node",
+                        "node": "big_tool",
+                        "in_map": {
+                            "input.person.name": "user.name",
+                            "input.digital.email": "user.email",
+                        },
+                        "out_map": {
+                            "user.age": "state.person.age",
+                            "user.gender": "state.person.gender",
+                            "job.years": "state.experience.years",
+                        },
+                    }
+                ),
             )
         ],
         edges=[Edge.model_validate({"from": "big", "outcome": "ok", "to": END})],

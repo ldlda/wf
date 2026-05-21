@@ -10,14 +10,16 @@ from wf_core.runtime.ops.schemas import validate_payload_against_schema
 
 
 def test_schema_validation_rejects_wrong_property_type() -> None:
-    schema = SchemaRef.model_validate({
-        "type": "object",
-        "properties": {
-            "name": {"type": "string"},
-            "count": {"type": "integer"},
-        },
-        "required": ["name", "count"],
-    })
+    schema = SchemaRef.model_validate(
+        {
+            "type": "object",
+            "properties": {
+                "name": {"type": "string"},
+                "count": {"type": "integer"},
+            },
+            "required": ["name", "count"],
+        }
+    )
 
     with pytest.raises(WorkflowExecutionError, match=r"count.*not of type 'integer'"):
         validate_payload_against_schema(
@@ -28,17 +30,19 @@ def test_schema_validation_rejects_wrong_property_type() -> None:
 
 
 def test_schema_validation_rejects_nested_missing_required_field() -> None:
-    schema = SchemaRef.model_validate({
-        "type": "object",
-        "properties": {
-            "profile": {
-                "type": "object",
-                "properties": {"email": {"type": "string"}},
-                "required": ["email"],
-            }
-        },
-        "required": ["profile"],
-    })
+    schema = SchemaRef.model_validate(
+        {
+            "type": "object",
+            "properties": {
+                "profile": {
+                    "type": "object",
+                    "properties": {"email": {"type": "string"}},
+                    "required": ["email"],
+                }
+            },
+            "required": ["profile"],
+        }
+    )
 
     with pytest.raises(WorkflowExecutionError, match=r"profile.*email.*required"):
         validate_payload_against_schema(
@@ -49,31 +53,35 @@ def test_schema_validation_rejects_nested_missing_required_field() -> None:
 
 
 def test_schema_validation_accepts_valid_payload() -> None:
-    schema = SchemaRef.model_validate({
-        "type": "object",
-        "properties": {
-            "tags": {"type": "array", "items": {"type": "string"}},
-        },
-        "required": ["tags"],
-    })
+    schema = SchemaRef.model_validate(
+        {
+            "type": "object",
+            "properties": {
+                "tags": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["tags"],
+        }
+    )
 
     validate_payload_against_schema(schema, {"tags": ["a", "b"]}, "node input")
 
 
 def test_schema_ref_accepts_and_preserves_schema_with_defs_and_ref() -> None:
-    schema = SchemaRef.model_validate({
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
-        "$defs": {
-            "tag": {
-                "type": "object",
-                "properties": {"name": {"type": "string"}},
-                "required": ["name"],
-            }
-        },
-        "type": "object",
-        "properties": {"tag": {"$ref": "#/$defs/tag"}},
-        "required": ["tag"],
-    })
+    schema = SchemaRef.model_validate(
+        {
+            "$schema": "https://json-schema.org/draft/2020-12/schema",
+            "$defs": {
+                "tag": {
+                    "type": "object",
+                    "properties": {"name": {"type": "string"}},
+                    "required": ["name"],
+                }
+            },
+            "type": "object",
+            "properties": {"tag": {"$ref": "#/$defs/tag"}},
+            "required": ["tag"],
+        }
+    )
 
     dumped = schema.model_dump(mode="json")
 
@@ -89,11 +97,13 @@ def test_schema_ref_rejects_invalid_json_schema_shape() -> None:
 
 
 def test_schema_ref_defaults_to_draft_2020_12_without_schema_keyword() -> None:
-    schema = SchemaRef.model_validate({
-        "type": "object",
-        "properties": {"count": {"type": "integer"}},
-        "required": ["count"],
-    })
+    schema = SchemaRef.model_validate(
+        {
+            "type": "object",
+            "properties": {"count": {"type": "integer"}},
+            "required": ["count"],
+        }
+    )
 
     dumped = schema.model_dump(mode="json")
 
@@ -103,11 +113,13 @@ def test_schema_ref_defaults_to_draft_2020_12_without_schema_keyword() -> None:
 
 
 def test_schema_ref_preserves_extra_json_schema_keywords() -> None:
-    schema = SchemaRef.model_validate({
-        "type": "object",
-        "properties": {"name": {"type": "string"}},
-        "additionalProperties": False,
-    })
+    schema = SchemaRef.model_validate(
+        {
+            "type": "object",
+            "properties": {"name": {"type": "string"}},
+            "additionalProperties": False,
+        }
+    )
 
     dumped = schema.model_dump(mode="json")
 
@@ -125,10 +137,12 @@ def test_schema_ref_dump_omits_none_fields_and_stays_valid_json_schema() -> None
 
 
 def test_state_field_decl_dump_omits_nested_schema_none_fields() -> None:
-    field = StateFieldDecl.model_validate({
-        "path": "state.person",
-        "schema": {"type": "object"},
-    })
+    field = StateFieldDecl.model_validate(
+        {
+            "path": "state.person",
+            "schema": {"type": "object"},
+        }
+    )
 
     dumped = field.model_dump(mode="json")
 
@@ -140,16 +154,18 @@ def test_state_field_decl_dump_omits_nested_schema_none_fields() -> None:
 def test_state_schema_dump_is_valid_json_schema_with_reducer_keyword() -> None:
     from wf_core import StateSchema
 
-    schema = StateSchema.model_validate({
-        "type": "object",
-        "properties": {
-            "count": {
-                "type": "integer",
-                "description": "Running count",
-                "reducer": "wf.std.add",
-            }
-        },
-    })
+    schema = StateSchema.model_validate(
+        {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer",
+                    "description": "Running count",
+                    "reducer": "wf.std.add",
+                }
+            },
+        }
+    )
 
     dumped = schema.model_dump(mode="json")
     assert dumped["type"] == "object"
@@ -161,22 +177,24 @@ def test_state_schema_dump_is_valid_json_schema_with_reducer_keyword() -> None:
 def test_state_field_validation_schema_preserves_root_defs_for_local_refs() -> None:
     from wf_core import StateSchema
 
-    schema = StateSchema.model_validate({
-        "type": "object",
-        "$defs": {
-            "PoolByCategory": {
-                "type": "object",
-                "properties": {"category": {"type": "string"}},
-                "required": ["category"],
-            }
-        },
-        "properties": {
-            "current_pools": {
-                "type": "array",
-                "items": {"$ref": "#/$defs/PoolByCategory"},
-            }
-        },
-    })
+    schema = StateSchema.model_validate(
+        {
+            "type": "object",
+            "$defs": {
+                "PoolByCategory": {
+                    "type": "object",
+                    "properties": {"category": {"type": "string"}},
+                    "required": ["category"],
+                }
+            },
+            "properties": {
+                "current_pools": {
+                    "type": "array",
+                    "items": {"$ref": "#/$defs/PoolByCategory"},
+                }
+            },
+        }
+    )
 
     field_schema = schema.field_map()["current_pools"].validation_schema
 

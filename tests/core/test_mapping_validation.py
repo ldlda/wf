@@ -178,10 +178,12 @@ def _workflow(
 
     return Workflow(
         name="mapping_validation",
-        input_schema=SchemaRef.model_validate({
-            "type": "object",
-            "properties": {"person": {"type": "object"}},
-        }),
+        input_schema=SchemaRef.model_validate(
+            {
+                "type": "object",
+                "properties": {"person": {"type": "object"}},
+            }
+        ),
         state_schema=StateSchema.from_field_map(
             state_fields or {"person": StateField(type="object")}
         ),
@@ -189,14 +191,18 @@ def _workflow(
         node_defs=[
             NodeDef(
                 name="tool",
-                input_schema=SchemaRef.model_validate({
-                    "type": "object",
-                    "properties": {"user": {"type": "object"}},
-                }),
-                output_schema=SchemaRef.model_validate({
-                    "type": "object",
-                    "properties": {"user": {"type": "object"}},
-                }),
+                input_schema=SchemaRef.model_validate(
+                    {
+                        "type": "object",
+                        "properties": {"user": {"type": "object"}},
+                    }
+                ),
+                output_schema=SchemaRef.model_validate(
+                    {
+                        "type": "object",
+                        "properties": {"user": {"type": "object"}},
+                    }
+                ),
                 outcomes=["ok"],
             )
         ],

@@ -46,11 +46,13 @@ class ResourceLinkRewritingTool(Tool):
         rewrite_uri: Callable[[str], str],
     ) -> ResourceLinkRewritingTool:
         """Copy one tool's public schema while replacing only execution."""
-        return cls.model_validate({
-            **tool.model_dump(),
-            "parent_tool": tool,
-            "rewrite_uri": rewrite_uri,
-        })
+        return cls.model_validate(
+            {
+                **tool.model_dump(),
+                "parent_tool": tool,
+                "rewrite_uri": rewrite_uri,
+            }
+        )
 
 
 class ResourceLinkNamespace(Transform):

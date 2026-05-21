@@ -72,15 +72,17 @@ def test():
     assert d.status == RunStatus.COMPLETED, "oops"
     state = State.model_validate(d.state)
     pprint(state.storage)
-    pprint([
-        t
-        for t in d.trace
-        if t.node_id
-        in (
-            "counter_up",
-            "tick",
-        )
-    ])
+    pprint(
+        [
+            t
+            for t in d.trace
+            if t.node_id
+            in (
+                "counter_up",
+                "tick",
+            )
+        ]
+    )
     pprint(d.state)
     assert any(
         i["name"] in context["pool"]["n_240"]
