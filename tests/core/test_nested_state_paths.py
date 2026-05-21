@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from wf_core import (
     ReducerRef,
     ReducerSpec,
@@ -352,6 +354,22 @@ def test_reducer_ref_accepts_canonical_ref_object() -> None:
     )
 
     assert reducer.name == "wf.std.append"
+
+
+def test_reducer_ref_rejects_conflicting_ref_and_name() -> None:
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        ReducerRef(
+            ref={"source": "wf.std", "capability_key": "append"},
+            name="wf.std.add",
+        )
+
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        ReducerRef.model_validate(
+            {
+                "ref": {"source": "wf.std", "capability_key": "append"},
+                "name": "wf.std.add",
+            }
+        )
 
 
 def test_unknown_state_reducer_fails_clearly() -> None:

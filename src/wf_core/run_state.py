@@ -93,7 +93,14 @@ class RunState:
     def current_frame(self) -> ExecutionFrame:
         if self.current_frame_id is None:
             raise ValueError("run has no current frame")
-        return self.frames[self.current_frame_id]
+        frame = self.frames.get(self.current_frame_id)
+        if frame is None:
+            raise ValueError(
+                "run current frame id is missing from frames: "
+                f"current_frame_id={self.current_frame_id!r}, "
+                f"frames={sorted(self.frames)!r}"
+            )
+        return frame
 
     def sync_from_current_frame(self) -> None:
         frame = self.current_frame()

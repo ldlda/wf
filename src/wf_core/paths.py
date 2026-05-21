@@ -406,6 +406,8 @@ def get_nested_value(state: Mapping[str, Any], path_parts: list[str]) -> Any:
 def set_nested_value(
     state: MutableMapping[str, Any], path_parts: list[str], value: Any
 ) -> None:
+    if not path_parts:
+        raise PathResolutionError("cannot set value with empty path")
     current: MutableMapping[str, Any] = state
     for part in path_parts[:-1]:
         next_value = current.get(part)

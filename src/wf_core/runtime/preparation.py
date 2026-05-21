@@ -9,15 +9,17 @@ from wf_core.runtime.ops.frames import collapse_completed_frames
 from wf_core.runtime.ops.index import WorkflowIndex, build_workflow_index
 from wf_core.runtime.ops.interrupts import resume_interrupt
 from wf_core.runtime.ops.merges import ReducerDefinition
-from wf_core.runtime.ops.runs import create_run_state
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
 from wf_core.run_state import FrameStatus, RunState, RunStatus
 from wf_core.tokens import END
 
 
-def prepare_new_run(workflow: Workflow, workflow_input: dict[str, Any]) -> RunState:
+def prepare_new_run(
+    workflow: Workflow,
+    workflow_input: dict[str, Any],
+    run: RunState,
+) -> RunState:
     """Create and validate a fresh run state for a workflow invocation."""
-    run = create_run_state(workflow, workflow_input)
     workflow.validate_structure().raise_for_errors()
     validate_payload_against_schema(
         workflow.input_schema, workflow_input, "workflow input"

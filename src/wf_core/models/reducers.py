@@ -8,6 +8,11 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from wf_platform.refs import CapabilityRef
 
 
+def _raise_conflicting_ref_and_name() -> None:
+    """Reject ambiguous reducer references before compatibility coercion."""
+    raise ValueError("reducer ref and name are mutually exclusive")
+
+
 class ReducerRef(BaseModel):
     """Reference to one reducer capability plus JSON-compatible configuration."""
 
@@ -28,6 +33,8 @@ class ReducerRef(BaseModel):
         `ReducerRef(name="wf.std.add")`. That remains source-compatible, but
         the model state is now the structural capability reference.
         """
+        if ref is not None and name is not None:
+            _raise_conflicting_ref_and_name()
         payload: dict[str, object] = {"config": config or {}}
         if ref is not None:
             payload["ref"] = ref
@@ -45,6 +52,8 @@ class ReducerRef(BaseModel):
         if not isinstance(value, Mapping):
             return value
         data = dict(value)
+        if "ref" in data and "name" in data:
+            _raise_conflicting_ref_and_name()
         if "ref" not in data and "name" in data:
             data["ref"] = CapabilityRef.parse(str(data.pop("name")))
         return data

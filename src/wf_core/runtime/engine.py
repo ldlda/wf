@@ -27,7 +27,7 @@ def execute_workflow(
     run = create_run_state(workflow, workflow_input)
 
     try:
-        run = prepare_new_run(workflow, workflow_input)
+        prepare_new_run(workflow, workflow_input, run)
         return resume_workflow(workflow, run, registry, reducers=reducers)
     except Exception as exc:
         run.status = RunStatus.FAILED
@@ -46,7 +46,7 @@ async def execute_workflow_async(
     run = create_run_state(workflow, workflow_input)
 
     try:
-        run = prepare_new_run(workflow, workflow_input)
+        prepare_new_run(workflow, workflow_input, run)
         return await resume_workflow_async(workflow, run, registry, reducers=reducers)
     except Exception as exc:
         run.status = RunStatus.FAILED
