@@ -14,8 +14,19 @@ class InputPathBinding(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    target: LocalPath
-    path: GraphSourcePath
+    target: LocalPath = Field(
+        description=(
+            "Node-local input path to populate. Use {'root': 'local', "
+            "'parts': ['field']} or {'root': 'local', 'parts': []} for the "
+            "whole node input payload."
+        )
+    )
+    path: GraphSourcePath = Field(
+        description=(
+            "Workflow source path to read from input, state, or context. "
+            "Example: {'root': 'input', 'parts': ['text']}."
+        )
+    )
 
 
 class InputValueBinding(BaseModel):
@@ -23,13 +34,26 @@ class InputValueBinding(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    target: LocalPath
-    value: object
+    target: LocalPath = Field(
+        description="Node-local input path that receives this literal JSON value."
+    )
+    value: object = Field(
+        description=(
+            "Literal JSON-compatible value to pass to the node. Use this for "
+            "constants, not for values read from workflow input or state."
+        )
+    )
 
 
 InputBinding = Annotated[
     InputPathBinding | InputValueBinding,
-    Field(union_mode="left_to_right"),
+    Field(
+        union_mode="left_to_right",
+        description=(
+            "Canonical node input binding. Use either a path binding with "
+            "`path`, or a literal binding with `value`; do not provide both."
+        ),
+    ),
 ]
 """Canonical node input binding, distinguished by `path` vs `value` shape."""
 
@@ -39,8 +63,18 @@ class OutputBinding(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    source: LocalPath
-    target: StatePath
+    source: LocalPath = Field(
+        description=(
+            "Node-local output path to read. Use {'root': 'local', 'parts': []} "
+            "to write the whole node output payload."
+        )
+    )
+    target: StatePath = Field(
+        description=(
+            "Writable workflow state path. Bare state is invalid; use a field "
+            "path such as {'root': 'state', 'parts': ['echoed']}."
+        )
+    )
 
 
 class NodeUse(BaseModel):
@@ -50,8 +84,20 @@ class NodeUse(BaseModel):
     type: Literal["node"]
     node: str
     desc: str | None = None
-    input: list[InputBinding] = Field(default_factory=list)
-    output: list[OutputBinding] = Field(default_factory=list)
+    input: list[InputBinding] = Field(
+        default_factory=list,
+        description=(
+            "Bindings that build the node-local input payload from workflow "
+            "input/state/context paths or literal values."
+        ),
+    )
+    output: list[OutputBinding] = Field(
+        default_factory=list,
+        description=(
+            "Bindings that commit node-local output fields into workflow state "
+            "after the node returns successfully."
+        ),
+    )
     retry: int | None = Field(default=None, ge=0)
     timeout_seconds: int | None = Field(default=None, gt=0)
 
@@ -124,8 +170,10 @@ class ForeachNode(BaseModel):
 
     id: str
     type: Literal["foreach"]
-    over: GraphSourcePath
-    as_: str = Field(alias="as")
+    over: GraphSourcePath = Field(
+        description="Workflow input/state/context path that must resolve to a list."
+    )
+    as_: str = Field(alias="as", description="Context key for the current item.")
     mode: Literal["serial", "parallel"] = "serial"
     on_item_error: Literal["fail", "collect", "skip"] = "fail"
 
@@ -143,8 +191,18 @@ class InterruptNode(BaseModel):
     id: str
     type: Literal["interrupt"]
     kind: str
-    request: list[InputBinding] = Field(default_factory=list)
-    resume: list[OutputBinding] = Field(default_factory=list)
+    request: list[InputBinding] = Field(
+        default_factory=list,
+        description=(
+            "Bindings that build the interrupt request payload sent to the client."
+        ),
+    )
+    resume: list[OutputBinding] = Field(
+        default_factory=list,
+        description=(
+            "Bindings that commit resume payload fields back into workflow state."
+        ),
+    )
     outcomes: list[str] = Field(default_factory=lambda: ["submitted"])
 
     @model_validator(mode="before")

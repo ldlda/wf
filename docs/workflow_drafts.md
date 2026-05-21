@@ -134,6 +134,20 @@ Graph source paths in `in` normally start with `input.`, `state.`, or
 `context.`. Node-local paths do not use those prefixes; they are paths inside
 the target capability's input or output payload.
 
+In canonical structural paths, `parts` is a list of literal path segments. Do
+not put `"user.name"` in one segment unless the actual JSON property name is
+literally `user.name`. For normal nested objects, write:
+
+```json
+{"root": "input", "parts": ["user", "name"]}
+```
+
+not:
+
+```json
+{"root": "input", "parts": ["user.name"]}
+```
+
 For example, this canonical input/output pair:
 
 ```json

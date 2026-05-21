@@ -111,6 +111,28 @@ def test_node_use_serializes_canonical_binding_paths_as_structural_json():
     }
 
 
+def test_canonical_binding_json_schema_describes_nested_fields():
+    schema = NodeUse.model_json_schema()
+    defs = schema["$defs"]
+    input_path = defs["InputPathBinding"]
+    input_value = defs["InputValueBinding"]
+    output = defs["OutputBinding"]
+
+    assert "whole node input payload" in input_path["properties"]["target"][
+        "description"
+    ]
+    assert "input, state, or context" in input_path["properties"]["path"][
+        "description"
+    ]
+    assert "Literal JSON-compatible value" in input_value["properties"]["value"][
+        "description"
+    ]
+    assert "whole node output payload" in output["properties"]["source"][
+        "description"
+    ]
+    assert "Bare state is invalid" in output["properties"]["target"]["description"]
+
+
 def test_node_use_rejects_mixed_old_and_new_binding_styles():
     with pytest.raises(ValidationError):
         NodeUse.model_validate(

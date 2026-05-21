@@ -389,6 +389,14 @@ def test_workflow_tools_have_human_metadata() -> None:
             assert "saved workflow artifacts" in (list_artifacts.description or "")
             assert run_deployment.title == "Run Workflow Deployment"
             assert "deployment_id" in (run_deployment.description or "")
+            assert "trace_range" in run_deployment.inputSchema["properties"]
+            trace_range_schema = run_deployment.inputSchema["properties"][
+                "trace_range"
+            ]
+            assert "Debug traces" in trace_range_schema.get("description", "")
+            assert "null" in [
+                option.get("type") for option in trace_range_schema["anyOf"]
+            ]
 
     asyncio.run(run_proxy())
 

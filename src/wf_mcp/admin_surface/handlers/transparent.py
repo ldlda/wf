@@ -97,13 +97,13 @@ class TransparentAdminHandlers:
 
     def enable_connection(self, connection_id: str) -> dict[str, Any]:
         return self.runtime.require_manager().set_connection_enabled(
-            connection_id,
+            connection_id=connection_id,
             enabled=True,
         )
 
     def disable_connection(self, connection_id: str) -> dict[str, Any]:
         return self.runtime.require_manager().set_connection_enabled(
-            connection_id,
+            connection_id=connection_id,
             enabled=False,
         )
 

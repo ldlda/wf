@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, Mapping
+from typing import Annotated, Any, Mapping
 
 from fastmcp import FastMCP
+from pydantic import Field
 
 from wf_artifacts import ArtifactKind
 from wf_artifacts.models import RequiredCapability
@@ -546,7 +547,16 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     async def run_deployment(
         deployment_id: str,
         workflow_input: dict[str, Any],
-        trace_range: TraceRange | None = None,
+        trace_range: Annotated[
+            TraceRange | None,
+            Field(
+                description=(
+                    "Debug traces range to return. Omit for normal compact runs; "
+                    "trace entries can include resolved inputs, outputs, and "
+                    "state changes."
+                )
+            ),
+        ] = None,
     ) -> dict[str, Any]:
         return await handlers.run_deployment(
             deployment_id=deployment_id,
