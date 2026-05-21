@@ -514,10 +514,21 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     @server.tool(
         name="wf.workflow.list_deployments",
         title="List Workflow Deployments",
-        description="List saved workflow deployments and their source bindings.",
+        description=(
+            "List compact saved workflow deployment summaries. Use "
+            "inspect_deployment for full source bindings."
+        ),
     )
     async def list_deployments() -> dict[str, Any]:
         return await handlers.list_deployments()
+
+    @server.tool(
+        name="wf.workflow.inspect_deployment",
+        title="Inspect Workflow Deployment",
+        description="Return one full workflow deployment including source bindings.",
+    )
+    async def inspect_deployment(deployment_id: str) -> dict[str, Any]:
+        return await handlers.inspect_deployment(deployment_id=deployment_id)
 
     @server.tool(
         name="wf.workflow.save_deployment",

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Annotated, Any
+
+from pydantic import Field
 
 from wf_mcp.broker.service import WfMcpService
 
@@ -84,8 +86,26 @@ def register_service_admin_tools(
         description="List compact configured capability source summaries.",
     )
     async def list_sources(
-        cursor: str | None = None,
-        limit: int = 50,
+        cursor: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Opaque pagination cursor returned by a previous list_sources "
+                    "call. Omit for the first page."
+                )
+            ),
+        ] = None,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                le=100,
+                description=(
+                    "Maximum source summaries to return. Use inspect_source for "
+                    "one full source inventory."
+                ),
+            ),
+        ] = 50,
     ) -> dict[str, Any]:
         return handlers.list_sources(cursor=cursor, limit=limit)
 
@@ -94,7 +114,17 @@ def register_service_admin_tools(
         title="Inspect Source",
         description="Return the full inventory for one configured capability source.",
     )
-    async def inspect_source(source_id: str) -> dict[str, Any]:
+    async def inspect_source(
+        source_id: Annotated[
+            str,
+            Field(
+                description=(
+                    "Exact source id from list_sources, such as wf.std, wf.docs, "
+                    "or an enabled connection id like demo.personal."
+                )
+            ),
+        ],
+    ) -> dict[str, Any]:
         return handlers.inspect_source(source_id)
 
     @server.tool(

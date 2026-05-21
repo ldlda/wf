@@ -268,6 +268,33 @@ def test_workflow_surface_records_artifact_and_deployment_save_events() -> None:
     assert events[1].capability_id == "deployment.echo.personal"
 
 
+def test_workflow_surface_lists_compact_deployment_summaries_and_inspects_detail() -> (
+    None
+):
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_deployment_list"
+    )
+    handlers = _handlers(artifact_store)
+    deployment = WorkflowDeployment(
+        id="echo.personal",
+        artifact_id="echo",
+        artifact_version=1,
+        bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+    )
+    artifact_store.save_deployment(deployment)
+
+    listed = asyncio.run(handlers.list_deployments())
+    inspected = asyncio.run(
+        handlers.inspect_deployment(deployment_id="echo.personal")
+    )
+
+    assert listed["deployments"][0]["id"] == "echo.personal"
+    assert listed["deployments"][0]["binding_count"] == 1
+    assert "bindings" not in listed["deployments"][0]
+    assert inspected["bindings"][0]["logical_source"] == "demo"
+    assert inspected["bindings"][0]["concrete_source"] == "demo.personal"
+
+
 def test_workflow_surface_creates_wrapper_artifact_from_plan() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "surface_wrapper_plan"

@@ -819,10 +819,17 @@ class WorkflowSurfaceHandlers:
             return {"deployments": []}
         return {
             "deployments": [
-                deployment.model_dump(mode="json")
+                _deployment_summary(deployment)
                 for deployment in self.service.artifact_store.list_deployments()
             ]
         }
+
+    async def inspect_deployment(self, *, deployment_id: str) -> dict[str, Any]:
+        if self.service.artifact_store is None:
+            raise KeyError("workflow artifact store is not configured")
+        return self.service.artifact_store.get_deployment(deployment_id).model_dump(
+            mode="json"
+        )
 
     async def save_deployment(self, deployment: dict[str, Any]) -> dict[str, Any]:
         if self.service.artifact_store is None:
@@ -1262,3 +1269,14 @@ def _run_payload(
         payload["trace"] = trace
         payload["trace_truncated"] = trace_truncated
     return payload
+
+
+def _deployment_summary(deployment: WorkflowDeployment) -> dict[str, Any]:
+    """Return compact deployment metadata for progressive list responses."""
+    return {
+        "id": deployment.id,
+        "artifact_id": deployment.artifact_id,
+        "artifact_version": deployment.artifact_version,
+        "binding_count": len(deployment.binding_map()),
+        "drift_policy": deployment.drift_policy.value,
+    }

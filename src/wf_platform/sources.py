@@ -10,6 +10,7 @@ from wf_platform.refs import CapabilityRef
 
 SourceKind = Literal["system", "connection"]
 JsonObject = dict[str, Any]
+SOURCE_PREVIEW_LIMIT = 3
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,7 +144,6 @@ class CapabilitySource:
 
     def as_status(self) -> SourceStatus:
         """Return serializable source metadata without owned capability names."""
-        preview_limit = 3
         return SourceStatus(
             id=self.id,
             kind=self.kind,
@@ -166,21 +166,29 @@ class CapabilitySource:
             prompt_count=len(self.capabilities.prompts),
             resource_count=len(self.capabilities.resources),
             preview=SourceCapabilityPreview(
-                tools=_preview_names(self.capabilities.tools, preview_limit),
+                tools=_preview_names(self.capabilities.tools, SOURCE_PREVIEW_LIMIT),
                 node_specs=_preview_names(
                     self.capabilities.node_specs,
-                    preview_limit,
+                    SOURCE_PREVIEW_LIMIT,
                 ),
-                reducers=_preview_names(self.capabilities.reducers, preview_limit),
-                prompts=_preview_names(self.capabilities.prompts, preview_limit),
-                resources=_preview_names(self.capabilities.resources, preview_limit),
+                reducers=_preview_names(
+                    self.capabilities.reducers, SOURCE_PREVIEW_LIMIT
+                ),
+                prompts=_preview_names(
+                    self.capabilities.prompts, SOURCE_PREVIEW_LIMIT
+                ),
+                resources=_preview_names(
+                    self.capabilities.resources, SOURCE_PREVIEW_LIMIT
+                ),
             ),
             has_more=SourceCapabilityHasMore(
-                tools=_has_more(self.capabilities.tools, preview_limit),
-                node_specs=_has_more(self.capabilities.node_specs, preview_limit),
-                reducers=_has_more(self.capabilities.reducers, preview_limit),
-                prompts=_has_more(self.capabilities.prompts, preview_limit),
-                resources=_has_more(self.capabilities.resources, preview_limit),
+                tools=_has_more(self.capabilities.tools, SOURCE_PREVIEW_LIMIT),
+                node_specs=_has_more(
+                    self.capabilities.node_specs, SOURCE_PREVIEW_LIMIT
+                ),
+                reducers=_has_more(self.capabilities.reducers, SOURCE_PREVIEW_LIMIT),
+                prompts=_has_more(self.capabilities.prompts, SOURCE_PREVIEW_LIMIT),
+                resources=_has_more(self.capabilities.resources, SOURCE_PREVIEW_LIMIT),
             ),
         )
 

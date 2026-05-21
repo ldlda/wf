@@ -55,6 +55,7 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     "wf.workflow.create_wrapper_from_workspace",
     "wf.workflow.inspect_artifact",
     "wf.workflow.list_deployments",
+    "wf.workflow.inspect_deployment",
     "wf.workflow.save_deployment",
     "wf.workflow.validate_deployment",
     "wf.workflow.run_deployment",

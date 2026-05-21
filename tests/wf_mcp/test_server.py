@@ -132,6 +132,14 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert create_workspace_schema is not None
             assert "workspace_id" in create_workspace_schema["properties"]
             assert "revision" in create_workspace_schema["properties"]
+            list_sources_schema = tools_by_name["wf.admin.list_sources"].inputSchema
+            assert "inspect_source" in list_sources_schema["properties"]["limit"][
+                "description"
+            ]
+            inspect_source_schema = tools_by_name["wf.admin.inspect_source"].inputSchema
+            assert "Exact source id" in inspect_source_schema["properties"][
+                "source_id"
+            ]["description"]
             minimal_workspace_input = tools_by_name[
                 "wf.workflow.create_minimal_draft_workspace"
             ].inputSchema
@@ -274,6 +282,7 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.workflow.create_wrapper_from_workspace" in names
             assert "wf.workflow.inspect_artifact" in names
             assert "wf.workflow.list_deployments" in names
+            assert "wf.workflow.inspect_deployment" in names
             assert "wf.workflow.save_deployment" in names
             assert "wf.workflow.validate_deployment" in names
             assert "wf.workflow.run_deployment" in names

@@ -69,6 +69,21 @@ semantics.
 Dynamic projection of saved workflows as individual MCP tools can exist later,
 but it should be optional. The stable run tool is the reliable base layer.
 
+Current `run_deployment` calls are synchronous request/response executions. They
+return compact status, output, diagnostics, and `trace_count`; optional ranged
+trace detail is for debugging only.
+
+Future run history should introduce a stable `run_id` only when there is a real
+run store behind it. A `run_id` without persisted state, trace paging, and
+status lookup would be misleading. The likely shape is:
+
+- `run_deployment` starts or completes a run and returns `run_id`
+- `inspect_run(run_id)` returns status, output, diagnostics, and trace metadata
+- `read_run_trace(run_id, range)` returns bounded trace slices
+
+Until that exists, clients should treat the current response as the complete
+ephemeral run result for this request.
+
 For long-running workflow execution, prefer MCP-native execution mechanisms
 where available:
 

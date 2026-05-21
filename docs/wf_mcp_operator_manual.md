@@ -118,6 +118,9 @@ Supporting:
 - `wf.workflow.list_artifacts`: compact list of saved workflow and wrapper
   artifacts.
 - `wf.workflow.inspect_artifact`: full saved artifact payload.
+- `wf.workflow.list_deployments`: compact list of saved deployment summaries.
+- `wf.workflow.inspect_deployment`: full deployment payload including source
+  bindings.
 
 ### Draft Workspaces
 
@@ -173,6 +176,8 @@ Primary:
 
 - `wf.workflow.save_deployment`: bind one saved artifact version to concrete
   sources.
+- `wf.workflow.inspect_deployment`: inspect source bindings for one saved
+  deployment.
 - `wf.workflow.validate_deployment`: check dependency availability and drift.
 - `wf.workflow.run_deployment`: execute a saved deployment with input. The
   default response is compact and returns `trace_count`; pass `trace_range`
@@ -372,6 +377,9 @@ data.
 | Save a workflow definition from a draft | `wf.workflow.create_artifact_from_draft` |
 | Save a compiled raw workflow definition | `wf.workflow.create_artifact_from_plan` |
 | List saved workflows/wrappers | `wf.workflow.list_artifacts` |
+| Inspect one saved workflow/wrapper | `wf.workflow.inspect_artifact` |
+| List saved deployments | `wf.workflow.list_deployments` |
+| Inspect one saved deployment | `wf.workflow.inspect_deployment` |
 | Bind a saved workflow to concrete sources | `wf.workflow.save_deployment` |
 | Check whether a deployment can run | `wf.workflow.validate_deployment` |
 | Execute a saved workflow | `wf.workflow.run_deployment` |
