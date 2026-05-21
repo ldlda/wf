@@ -392,6 +392,11 @@ Expected shape:
 }
 ```
 
+Do not request trace detail by default. `run_deployment` returns `trace_count`
+as the total original trace length and supports explicit ranged debug reads such
+as `"trace_range": {"start": 0, "limit": 10}`. Trace entries may contain
+resolved inputs, outputs, and state changes.
+
 ## 10. Rebind The Same Artifact Later
 
 If another compatible account appears:
@@ -549,3 +554,151 @@ Concrete MCP sequence:
 `create_wrapper_from_workspace` accepts the same request shape except there is
 no `kind` field. It always saves `kind="wrapper"` and the result is discoverable
 as a workflow capability named `workflow.<artifact_id>.v<version>`.
+
+## Wrapper Happy Path
+
+Use this path when a raw/provider capability is callable but you want a reusable
+workflow-facing wrapper with explicit schemas, outcomes, and bindings.
+
+### 1. Inspect The Source Capability
+
+```yaml
+tool: wf.workflow.inspect_capability
+arguments:
+{
+  "qualified_name": "demo.personal.echo_tool"
+}
+```
+
+The response includes `wrapper_hints`. These hints are scaffolding, not final
+business logic. They suggest draft schemas and basic input/output bindings.
+
+### 2. Create A Draft Workspace From The Capability
+
+```yaml
+tool: wf.workflow.create_draft_workspace_from_capability
+arguments:
+{
+  "request": {
+    "workspace_id": "echo_wrapper_draft",
+    "capability_name": "demo.personal.echo_tool",
+    "name": "echo_wrapper",
+    "title": "Echo Wrapper Draft"
+  }
+}
+```
+
+This creates a mutable, revisioned workspace using the inspected
+`wrapper_hints`.
+
+### 3. Patch Or Validate The Workspace
+
+If the hints are good enough, validate:
+
+```yaml
+tool: wf.workflow.validate_draft_workspace
+arguments:
+{
+  "request": {
+    "workspace_id": "echo_wrapper_draft"
+  }
+}
+```
+
+If one field is wrong, use a focused helper or JSON Patch. For example, change
+one route:
+
+```yaml
+tool: wf.workflow.set_draft_route
+arguments:
+{
+  "request": {
+    "workspace_id": "echo_wrapper_draft",
+    "revision": 1,
+    "step_id": "echo",
+    "outcome": "error",
+    "target": "__end__"
+  }
+}
+```
+
+### 4. Save The Workspace As A Wrapper Artifact
+
+```yaml
+tool: wf.workflow.create_wrapper_from_workspace
+arguments:
+{
+  "request": {
+    "workspace_id": "echo_wrapper_draft",
+    "artifact_id": "echo_wrapper",
+    "version": 1,
+    "title": "Echo Wrapper",
+    "outcomes": ["ok", "error"],
+    "source_bindings": {
+      "demo": "demo.personal"
+    }
+  }
+}
+```
+
+The saved wrapper appears in workflow capability discovery as:
+
+```text
+workflow.echo_wrapper.v1
+```
+
+### 5. Deploy And Test The Wrapper
+
+Saved wrappers that use logical sources need a deployment binding when called:
+
+```yaml
+tool: wf.workflow.save_deployment
+arguments:
+{
+  "deployment": {
+    "id": "echo_wrapper.personal",
+    "artifact_id": "echo_wrapper",
+    "artifact_version": 1,
+    "bindings": {
+      "demo": "demo.personal",
+      "wf.std": "wf.std"
+    }
+  }
+}
+```
+
+Then test the wrapper through the workflow-facing REPL tool:
+
+```yaml
+tool: wf.workflow.call_capability
+arguments:
+{
+  "qualified_name": "workflow.echo_wrapper.v1",
+  "deployment_id": "echo_wrapper.personal",
+  "payload": {
+    "text": "hello"
+  }
+}
+```
+
+Expected shape:
+
+```json
+{
+  "qualified_name": "workflow.echo_wrapper.v1",
+  "kind": "wrapper_artifact",
+  "outcome": "completed",
+  "output": {
+    "echoed": "hello"
+  },
+  "diagnostics": []
+}
+```
+
+Current limitation: saved wrappers are executed through the deployment runtime,
+so `call_capability` reports the wrapper run status (`completed`, `failed`, or
+`interrupted`) rather than remapping inner node outcomes. True graph-as-node
+outcome propagation belongs in `wf_core` subgraph support.
+
+See `examples/mcp_wrapper_authoring_flow.py` for this same sequence through the
+Python handler layer.

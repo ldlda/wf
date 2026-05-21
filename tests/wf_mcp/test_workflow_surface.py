@@ -15,7 +15,7 @@ from wf_authoring import node, reducer
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig, RawWorkflowPlan
 from wf_mcp.storage import FileStore
-from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
+from wf_mcp.workflow_surface import TraceRange, WorkflowSurfaceHandlers
 from wf_core.models.steps import InputPathBinding, OutputBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_platform import (
@@ -906,6 +906,87 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     assert payload["status"] == "completed"
     assert payload["output"]["echoed"] == "hello"
     assert payload["diagnostics"] == []
+    assert payload["trace_count"] == 1
+    assert "trace" not in payload
+
+
+def test_workflow_surface_run_deployment_can_include_trace_detail() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_run_trace_detail"
+    )
+    artifact_store.save_artifact(_echo_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.personal",
+            artifact_id="echo",
+            artifact_version=1,
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_run_trace_detail_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.run_deployment(
+            deployment_id="echo.personal",
+            workflow_input={"text": "hello"},
+            trace_range=TraceRange(start=0, limit=10),
+        )
+    )
+
+    assert payload["status"] == "completed"
+    assert payload["trace_count"] == 1
+    assert payload["trace_start"] == 0
+    assert payload["trace_limit"] == 10
+    assert payload["trace_truncated"] is False
+    assert len(payload["trace"]) == 1
+    assert payload["trace"][0]["node_id"] == "echo"
+    assert payload["trace"][0]["outcome"] == "ok"
+
+
+def test_workflow_surface_run_deployment_can_read_empty_trace_range() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_run_trace_empty_range"
+    )
+    artifact_store.save_artifact(_echo_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.personal",
+            artifact_id="echo",
+            artifact_version=1,
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_run_trace_empty_range_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.run_deployment(
+            deployment_id="echo.personal",
+            workflow_input={"text": "hello"},
+            trace_range=TraceRange(start=5, limit=10),
+        )
+    )
+
+    assert payload["trace_count"] == 1
+    assert payload["trace_start"] == 5
+    assert payload["trace_limit"] == 10
+    assert payload["trace"] == []
+    assert payload["trace_truncated"] is False
 
 
 def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency() -> None:

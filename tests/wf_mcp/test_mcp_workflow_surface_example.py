@@ -7,6 +7,7 @@ from examples.mcp_workflow_surface import (
     create_and_run_echo_deployment,
     prepare_demo_service,
 )
+from examples.mcp_wrapper_authoring_flow import author_echo_wrapper_from_capability
 
 
 def test_mcp_workflow_surface_example_discovers_ok_and_error_outcomes(
@@ -35,3 +36,17 @@ def test_mcp_workflow_surface_example_runs_happy_path(tmp_path) -> None:
     assert payload["status"] == "completed"
     assert payload["output"]["echoed"] == "hello"
     assert payload["diagnostics"] == []
+
+
+def test_mcp_wrapper_authoring_flow_example_creates_and_calls_wrapper(tmp_path) -> (
+    None
+):
+    payload = asyncio.run(author_echo_wrapper_from_capability(tmp_path))
+
+    assert payload["inspected_hints"]["capability_name"] == "demo.personal.echo_tool"
+    assert payload["workspace"]["status"] == "valid"
+    assert payload["created"]["saved"] is True
+    assert payload["called"]["qualified_name"] == "workflow.echo_wrapper.v1"
+    assert payload["called"]["kind"] == "wrapper_artifact"
+    assert payload["called"]["outcome"] == "completed"
+    assert payload["called"]["output"]["echoed"] == "hello"

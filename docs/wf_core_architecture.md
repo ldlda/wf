@@ -92,6 +92,12 @@ limits and intended adapter seam.
 - Saved workflow-as-node execution with interrupts requires a core runtime
   upgrade: nested run state, child-frame trace preservation, interrupt bubbling
   with path metadata, and resume back into the child workflow.
+- Frames are currently a serial execution stack. That is enough for root
+  workflow execution, serial foreach, and node-level interrupts, but async
+  parallel foreach and native subgraphs will stress the model. In particular,
+  `RunState.current_frame_id` assumes one active cursor, `ExecutionFrame.metadata`
+  is ad hoc, and subgraph frames will need explicit child workflow/deployment
+  identity.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer
   error payload can be added later, but should be designed as part of trace/run
   state rather than scattered exceptions.

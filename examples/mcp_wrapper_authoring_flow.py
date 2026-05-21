@@ -6,7 +6,7 @@ from typing import Any
 from wf_artifacts import WorkflowDeployment
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 
-from mcp_workflow_surface import prepare_demo_service
+from examples.mcp_workflow_surface import prepare_demo_service
 
 
 async def author_echo_wrapper_from_capability(root: Path) -> dict[str, Any]:

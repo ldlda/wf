@@ -26,6 +26,7 @@ from .models import (
     SetDraftRouteRequest,
     SetStepInputMapRequest,
     SetStepOutputMapRequest,
+    TraceRange,
     ValidateDraftWorkspaceRequest,
 )
 
@@ -538,14 +539,17 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Run Workflow Deployment",
         description=(
             "Run deployment_id with workflow_input and return status, output, "
-            "diagnostics, and trace_count."
+            "diagnostics, and trace_count. Debug traces can include resolved "
+            "inputs and state changes; pass trace_range only when needed."
         ),
     )
     async def run_deployment(
         deployment_id: str,
         workflow_input: dict[str, Any],
+        trace_range: TraceRange | None = None,
     ) -> dict[str, Any]:
         return await handlers.run_deployment(
             deployment_id=deployment_id,
             workflow_input=workflow_input,
+            trace_range=trace_range,
         )

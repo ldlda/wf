@@ -14,6 +14,11 @@ on both the current docs and the implementation state.
    - Make the LLM/client path progressive: inspect sources, create a draft,
      patch, validate, compile, save, run.
    - Prefer smaller discovery/inspection responses over one huge payload.
+   - Done: the operator manual now categorizes workflow tools into discovery,
+     draft workspace, stateless draft, artifact/deployment, and raw escape
+     hatch groups.
+   - Next: tighten the actual tool responses around that map so list calls stay
+     compact and inspect/run calls carry the detailed payloads.
 
 3. **Wrapper creation ergonomics**
    - Help create workflow-ready wrappers from raw capabilities.
@@ -36,6 +41,19 @@ on both the current docs and the implementation state.
 - **Async parallel foreach**: add explicit scheduling, reducer/merge semantics,
   and failure policy. Do not model this as plain parallel calls over sync
   handlers.
+
+Frame stress points to solve before either feature:
+
+- `RunState.current_frame_id` currently models one active execution cursor.
+  Parallel foreach likely needs multiple runnable child frames.
+- `ExecutionFrame.metadata` currently carries ad hoc foreach data. Subgraphs and
+  parallel foreach should get typed frame payloads or strongly bounded helper
+  accessors before metadata grows more meanings.
+- Subgraph frames need child workflow identity/version/deployment binding, not
+  just a generic metadata dictionary.
+- `RunState.current_node_id` duplicates the current frame's node id for
+  convenience. Any multi-frame scheduler must either keep that as a selected
+  cursor or replace it with an explicit scheduling view.
 
 ## Why This Order
 

@@ -98,6 +98,22 @@ class CallCapabilityResult(BaseModel):
     )
 
 
+class TraceRange(BaseModel):
+    """Bounded debug trace slice request for deployment runs."""
+
+    start: int = Field(
+        default=0,
+        ge=0,
+        description="Zero-based trace entry offset to start reading from.",
+    )
+    limit: int = Field(
+        default=25,
+        ge=1,
+        le=100,
+        description="Maximum trace entries to return. Keep this small.",
+    )
+
+
 class DraftWorkspaceResult(BaseModel):
     """Inspector-visible response contract for draft workspace operations."""
 

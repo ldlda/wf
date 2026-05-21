@@ -97,6 +97,96 @@ Typical tools:
 - `wf.workflow.validate_deployment`
 - `wf.workflow.run_deployment`
 
+## Workflow Tool Map
+
+The workflow surface is intentionally split by job. Use the primary path first;
+the advanced tools exist for debugging, compatibility, or focused repair.
+
+### Discovery
+
+Primary:
+
+- `wf.workflow.list_capabilities`: compact, paged workflow capability search.
+  It returns names, source ids, outcomes, and top-level field names.
+- `wf.workflow.inspect_capability`: full contract for one selected capability,
+  including schemas, outcomes, and wrapper authoring hints.
+- `wf.workflow.call_capability`: REPL-style direct test of one workflow
+  capability or saved wrapper artifact.
+
+Supporting:
+
+- `wf.workflow.list_artifacts`: compact list of saved workflow and wrapper
+  artifacts.
+- `wf.workflow.inspect_artifact`: full saved artifact payload.
+
+### Draft Workspaces
+
+Primary:
+
+- `wf.workflow.create_draft_workspace_from_capability`: preferred wrapper
+  bootstrap. It inspects one capability, applies its hints, and creates a
+  revisioned draft workspace.
+- `wf.workflow.get_draft_workspace`: fetch current revision and optionally the
+  full draft document.
+- `wf.workflow.validate_draft_workspace`: refresh diagnostics without changing
+  revision.
+- `wf.workflow.create_wrapper_from_workspace`: save a validated draft workspace
+  as a callable wrapper capability.
+- `wf.workflow.create_artifact_from_workspace`: save a validated draft workspace
+  as a full workflow artifact.
+
+Focused repair helpers:
+
+- `wf.workflow.set_draft_name`
+- `wf.workflow.set_draft_route`
+- `wf.workflow.set_step_input_map`
+- `wf.workflow.set_step_output_map`
+
+These helpers are deliberately narrow. Prefer them over JSON Patch when the
+caller only needs to edit one common field.
+
+Advanced workspace tools:
+
+- `wf.workflow.list_draft_workspaces`: find mutable draft sessions.
+- `wf.workflow.patch_draft_workspace`: apply RFC 6902 JSON Patch with revision
+  checking.
+- `wf.workflow.delete_draft_workspace`: cleanup abandoned sessions.
+- `wf.workflow.create_draft_workspace`: store a caller-provided draft directly.
+- `wf.workflow.create_minimal_draft_workspace`: bootstrap around one capability
+  when the caller already knows schemas and bindings.
+
+### Stateless Draft Tools
+
+Use these when the caller can resend the whole draft on every call:
+
+- `wf.workflow.validate_draft`
+- `wf.workflow.compile_draft`
+- `wf.workflow.patch_draft`
+- `wf.workflow.create_artifact_from_draft`
+
+Draft workspaces are usually safer for LLM clients because they avoid a
+rewrite-the-whole-document loop and preserve optimistic-concurrency revisions.
+
+### Artifact And Deployment
+
+Primary:
+
+- `wf.workflow.save_deployment`: bind one saved artifact version to concrete
+  sources.
+- `wf.workflow.validate_deployment`: check dependency availability and drift.
+- `wf.workflow.run_deployment`: execute a saved deployment with input. The
+  default response is compact and returns `trace_count`; pass `trace_range`
+  only when debugging a failed or surprising run.
+
+Advanced:
+
+- `wf.workflow.save_artifact`: persist a complete artifact JSON document.
+- `wf.workflow.create_artifact_from_plan`: raw compiled-plan escape hatch.
+
+`create_artifact_from_plan` bypasses draft ergonomics. Use it only when the
+caller already has a trusted compiled raw workflow plan or is deliberately
+testing the lower-level artifact boundary.
+
 ### `wf.docs`
 
 Local documentation source.
@@ -252,6 +342,15 @@ wf.workflow.run_deployment
 Use `run_deployment` rather than expecting newly saved workflows to appear as
 brand-new MCP tools. Many LLM harnesses do not reliably refresh callable tool
 schemas mid-session.
+
+The default `run_deployment` response is intentionally compact. It includes run
+status, output, diagnostics, and `trace_count`, where `trace_count` is the total
+number of trace entries in the original run. If the caller needs node-level
+debug detail, pass an explicit `trace_range` object such as
+`{"start": 0, "limit": 10}`; otherwise trace entries stay out of the normal
+response. Trace entries may include resolved node inputs, node outputs, and
+state changes, so treat them as debug payloads rather than ordinary list/summary
+data.
 
 ## Which Tool Do I Use?
 

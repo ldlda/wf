@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
 
 from wf_artifacts import (
@@ -49,6 +50,7 @@ from .constants import (
     DEFAULT_OK_OUTCOME,
     RUNTIME_ERROR_CAPABILITY,
 )
+from .models import TraceRange
 from .refs import parse_workflow_surface_capability_id
 from .wrapper_hints import wrapper_hints_for_capability
 
@@ -862,6 +864,7 @@ class WorkflowSurfaceHandlers:
         *,
         deployment_id: str,
         workflow_input: dict[str, Any],
+        trace_range: TraceRange | None = None,
     ) -> dict[str, Any]:
         deployment, artifact, diagnostics = self._deployment_validation(deployment_id)
         if diagnostics:
@@ -894,6 +897,22 @@ class WorkflowSurfaceHandlers:
             status=run.status.value,
             output=run.output,
             trace_count=len(run.trace),
+            trace=(
+                [
+                    asdict(entry)
+                    for entry in run.trace[
+                        trace_range.start : trace_range.start + trace_range.limit
+                    ]
+                ]
+                if trace_range is not None
+                else None
+            ),
+            trace_start=trace_range.start if trace_range is not None else None,
+            trace_limit=trace_range.limit if trace_range is not None else None,
+            trace_truncated=(
+                trace_range is not None
+                and len(run.trace) > trace_range.start + trace_range.limit
+            ),
         )
 
     def _deployment_validation(
@@ -1219,8 +1238,12 @@ def _run_payload(
     diagnostics: list[DependencyDiagnostic] | None = None,
     output: dict[str, Any] | None = None,
     trace_count: int = 0,
+    trace: list[dict[str, Any]] | None = None,
+    trace_start: int | None = None,
+    trace_limit: int | None = None,
+    trace_truncated: bool = False,
 ) -> dict[str, Any]:
-    return {
+    payload = {
         "deployment_id": deployment.id,
         "artifact_id": artifact.id,
         "artifact_version": artifact.version,
@@ -1231,3 +1254,11 @@ def _run_payload(
         ],
         "trace_count": trace_count,
     }
+    if trace is not None:
+        # Trace entries can grow quickly, so the public run tool only includes
+        # a bounded debug slice when the caller explicitly asks for a range.
+        payload["trace_start"] = trace_start
+        payload["trace_limit"] = trace_limit
+        payload["trace"] = trace
+        payload["trace_truncated"] = trace_truncated
+    return payload
