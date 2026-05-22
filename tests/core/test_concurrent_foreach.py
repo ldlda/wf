@@ -200,7 +200,11 @@ def _workflow(
     if include_completed_with_errors:
         edges.append(
             Edge.model_validate(
-                {"from": "each", "outcome": "completed_with_errors", "to": END}
+                {
+                    "from": "each",
+                    "outcome": "completed_with_errors",
+                    "to": END,
+                }
             )
         )
     return Workflow(
@@ -338,10 +342,18 @@ def _multi_step_overlay_workflow() -> Workflow:
         ],
         edges=[
             Edge.model_validate(
-                {"from": "each", "outcome": "loop", "to": "stage_scratch"}
+                {
+                    "from": "each",
+                    "outcome": "loop",
+                    "to": "stage_scratch",
+                }
             ),
             Edge.model_validate(
-                {"from": "stage_scratch", "outcome": "ok", "to": "read_scratch"}
+                {
+                    "from": "stage_scratch",
+                    "outcome": "ok",
+                    "to": "read_scratch",
+                }
             ),
             Edge.model_validate({"from": "read_scratch", "outcome": "ok", "to": END}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
@@ -404,7 +416,11 @@ def _same_path_replace_workflow() -> Workflow:
         ],
         edges=[
             Edge.model_validate(
-                {"from": "each", "outcome": "loop", "to": "write_winner"}
+                {
+                    "from": "each",
+                    "outcome": "loop",
+                    "to": "write_winner",
+                }
             ),
             Edge.model_validate({"from": "write_winner", "outcome": "ok", "to": END}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),

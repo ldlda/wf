@@ -161,6 +161,11 @@ def validate_foreach_node(
         return
     collect_to = node.item_error.collect_to
     if collect_to is None:
+        report.add(
+            ValidationIssueCode.INVALID_FOREACH_COLLECT_DESTINATION,
+            f"nodes[{index}].item_error.collect_to",
+            "collect_to is required when item_error.action is 'collect'",
+        )
         return
     destination_root = _state_destination_root(collect_to)
     state_fields = workflow.state_schema.field_index()

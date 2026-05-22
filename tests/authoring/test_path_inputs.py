@@ -16,13 +16,19 @@ def test_single_string_path_input_uses_toml_dotted_key_syntax() -> None:
     assert coerce_state_path("person.name") == StatePath(("person", "name"))
     assert coerce_state_path('"person.name"') == StatePath(("person.name",))
     assert coerce_state_path('person."three and four"') == StatePath(
-        ("person", "three and four")
+        (
+            "person",
+            "three and four",
+        )
     )
 
 
 def test_vararg_path_input_treats_parts_as_literal_segments() -> None:
     assert coerce_state_path("person.name", "email address") == StatePath(
-        ("person.name", "email address")
+        (
+            "person.name",
+            "email address",
+        )
     )
 
 

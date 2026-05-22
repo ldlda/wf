@@ -142,7 +142,11 @@ def _workflow() -> Workflow:
             Edge.model_validate({"from": "each", "outcome": "loop", "to": "route"}),
             Edge.model_validate({"from": "route", "outcome": "ok", "to": END}),
             Edge.model_validate(
-                {"from": "route", "outcome": "needs_input", "to": "ask"}
+                {
+                    "from": "route",
+                    "outcome": "needs_input",
+                    "to": "ask",
+                }
             ),
             Edge.model_validate({"from": "ask", "outcome": "submitted", "to": END}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),

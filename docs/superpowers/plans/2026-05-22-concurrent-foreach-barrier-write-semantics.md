@@ -333,6 +333,8 @@ Add:
 def validate_barrier_writes(
     item_patches: Sequence[StatePatch],
     state_fields: Mapping[StatePath, StateFieldDecl],
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> None:
     """Reject ambiguous sibling writes before replaying a foreach barrier.
 
@@ -369,7 +371,7 @@ In `build_barrier_patch(...)`, after:
 add:
 
 ```python
-    validate_barrier_writes(item_patches, state_fields)
+    validate_barrier_writes(item_patches, state_fields, reducers=reducers)
 ```
 
 - [ ] **Step 7: Verify focused unit tests**

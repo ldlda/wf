@@ -241,17 +241,19 @@ async def _step_async_foreach_item_batch(
     deterministically.
     """
     frames = [first_frame, *_claim_matching_async_item_frames(run, index, first_frame)]
-    tasks = [
-        invoke_node_use_async_for_frame(
-            workflow,
-            run,
-            frame,
-            _node_use_for_frame(index, frame),
-            index.node_defs[_node_use_for_frame(index, frame).node],
-            registry,
+    tasks = []
+    for frame in frames:
+        node = _node_use_for_frame(index, frame)
+        tasks.append(
+            invoke_node_use_async_for_frame(
+                workflow,
+                run,
+                frame,
+                node,
+                index.node_defs[node.node],
+                registry,
+            )
         )
-        for frame in frames
-    ]
     results = await asyncio.gather(*tasks, return_exceptions=True)
     for frame, result in zip(frames, results, strict=True):
         run.current_frame_id = frame.id

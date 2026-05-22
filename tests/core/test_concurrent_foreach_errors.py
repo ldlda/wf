@@ -147,7 +147,11 @@ def _workflow(*, item_error: dict[str, object]) -> Workflow:
             Edge.model_validate({"from": "record", "outcome": "ok", "to": END}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
             Edge.model_validate(
-                {"from": "each", "outcome": "completed_with_errors", "to": END}
+                {
+                    "from": "each",
+                    "outcome": "completed_with_errors",
+                    "to": END,
+                }
             ),
         ],
     )

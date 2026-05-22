@@ -77,8 +77,7 @@ def resume_workflow(
         return run
 
     while True:
-        frame = select_next_frame(run)
-        if frame is None:
+        if select_next_frame(run) is None:
             status = resolve_no_ready_frames(run)
             if status == RunStatus.COMPLETED:
                 break
@@ -119,8 +118,7 @@ async def resume_workflow_async(
         return run
 
     while True:
-        frame = select_next_frame(run)
-        if frame is None:
+        if select_next_frame(run) is None:
             status = resolve_no_ready_frames(run)
             if status == RunStatus.COMPLETED:
                 break

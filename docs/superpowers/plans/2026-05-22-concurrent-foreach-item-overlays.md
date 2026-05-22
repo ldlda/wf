@@ -135,7 +135,11 @@ def test_sync_concurrent_foreach_item_reads_own_buffered_write() -> None:
     assert run.state["seen"] == ["scratch:a", "scratch:b", "scratch:c"]
 ```
 
-Important detail: update the existing `record` `NodeUse` in `_workflow(...)` or inside this test so it writes `scratch` to `state.scratch` for this workflow. If `_workflow(...)` is too fixed for that, create a small dedicated helper for this test instead of making `_workflow(...)` harder to read.
+Important detail: do not mutate the generic `_workflow(...)` helper for this test.
+Create a dedicated helper such as `_multi_step_overlay_workflow()` whose `record`
+`NodeUse` writes `scratch` to `state.scratch`. The test is specifically about an
+item-local write followed by an item-local read, so the workflow shape should be
+self-contained and obvious.
 
 - [ ] **Step 2: Add a sibling isolation test**
 
@@ -498,7 +502,8 @@ def test_sync_concurrent_foreach_allows_multi_step_item_body_with_overlay() -> N
     # Assert the workflow completes and output contains all expected values.
 ```
 
-Prefer not duplicating the full workflow; extract a helper:
+Prefer not duplicating the full workflow; reuse the dedicated helper introduced
+for the overlay read/write tests:
 
 ```python
 def _multi_step_overlay_workflow() -> Workflow:

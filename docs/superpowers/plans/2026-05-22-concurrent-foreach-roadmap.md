@@ -4,7 +4,7 @@
 
 **Goal:** Implement concurrent foreach incrementally without breaking serial workflows or duplicating state-write logic.
 
-**Architecture:** The work is split into four independently shippable layers: policy models, state patch extraction, barrier runtime state, and concurrent execution. Each layer preserves current serial behavior and adds tests before implementation. `foreach(mode="concurrent")` remains unsupported until the final layer. Sync runtime should support deterministic interleaving once the mode is enabled; async runtime can additionally run admitted async node handlers simultaneously.
+**Architecture:** The work was split into four independently shippable layers: policy models, state patch extraction, barrier runtime state, and concurrent execution. Each layer preserves current serial behavior and adds tests before implementation. Sync runtime supports deterministic interleaving for concurrent foreach; async runtime can additionally run admitted async node handlers simultaneously.
 
 **Tech Stack:** Python 3.14, Pydantic v2, dataclasses, pytest, basedpyright, ruff, existing `wf_core` scheduler/runtime modules.
 
@@ -19,10 +19,10 @@
 - Phase 3 is implemented: `wf_core.runtime.foreach_state` owns typed barrier
   metadata and serial foreach progress now uses that metadata instead of ad hoc
   `foreach_progress`.
-- Phase 4 is not implemented: `foreach(mode="concurrent")` still validates as a
-  model shape but runtime execution rejects it until concurrent scheduling,
-  barrier commits, and item failure handling are implemented.
-- Phase 4 is expanded into a dedicated roadmap:
+- Phase 4 is implemented: `foreach(mode="concurrent")` supports sync
+  interleaving, async item-node batching, barrier commits, item error policies,
+  and quiescent interrupt handling.
+- Phase 4 details live in the dedicated roadmap:
   [`2026-05-22-concurrent-foreach-phase4-roadmap.md`](2026-05-22-concurrent-foreach-phase4-roadmap.md).
   Start with
   [`2026-05-22-concurrent-foreach-v1-sync-fail-only.md`](2026-05-22-concurrent-foreach-v1-sync-fail-only.md).
@@ -466,7 +466,8 @@ async def test_async_runtime_accepts_concurrent_foreach() -> None:
     ...
 ```
 
-Expected before implementation: both tests fail because runtime still rejects concurrent mode.
+Historical expectation before Phase 4: both tests failed because runtime rejected
+concurrent mode. Current implementation status: these tests should pass.
 
 - [ ] **Step 2: Add capacity tests**
 
@@ -575,10 +576,10 @@ Ship these as separate commits/PRs:
 3. Phase 3: barrier metadata with serial behavior unchanged
 4. Phase 4: concurrent execution
 
-Do not start Phase 4 until Phase 2 and Phase 3 are stable. Concurrent foreach depends on patch extraction and resumable barrier state.
+Phase 4 depended on Phase 2 and Phase 3 because concurrent foreach needs patch extraction and resumable barrier state. Keep future fork/gather or native subgraph work layered on top of those runtime primitives instead of replacing them.
 
 ## Self-Review
 
 - Spec coverage: ADR 0002 decisions are represented across the four phases.
 - Intentional gaps: explicit Fork/Gather, lineage-token graph nodes, OpenTelemetry, platform source/tool caps, and full run persistence are not included.
-- Risk control: phases 1-3 preserve serial behavior and keep `mode="concurrent"` unsupported until phase 4.
+- Risk control: phases 1-3 preserved serial behavior until phase 4 enabled `mode="concurrent"`.

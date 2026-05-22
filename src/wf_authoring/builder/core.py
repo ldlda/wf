@@ -400,9 +400,9 @@ class WorkflowBuilder:
     ) -> ForeachNode:
         """Add a foreach step.
 
-        Concurrent mode is intentionally model-only for now: it validates saved
-        shape, but runtime execution still rejects it until barrier commits are
-        implemented.
+        Concurrent mode is supported by the runtime with deterministic barrier
+        commits, item error policies, and async item-node batching. See ADR 0002
+        for the exact merge and interrupt semantics.
         """
         node = ForeachNode.model_validate(
             {

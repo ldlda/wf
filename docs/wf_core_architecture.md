@@ -118,10 +118,11 @@ limits and intended adapter seam.
   state patch commits. The remaining mapping design notes for future reducer
   metadata are documented in
   [`core_state_mapping_and_merge.md`](core_state_mapping_and_merge.md).
-- Foreach is still serial-only. The scheduler foundation exists, but concurrent
-  foreach still needs explicit policy, implicit barrier state, lineage-aware
-  patch commits, and quiescent interrupt handling. `ForeachNode.over` is typed
-  as a `GraphSourcePath`, but execution is still serial.
+- Foreach supports serial and concurrent execution. Concurrent foreach uses
+  explicit policy, typed barrier state, lineage-aware patch commits, item error
+  policy, and quiescent interrupt handling. Remaining gaps are higher-level
+  graph constructs such as native subgraphs, explicit fork/gather nodes, and
+  advanced conflict strategies beyond exact-path mergeable reducers.
 - Interrupt lifecycle is still node-level and run-state-level. Long-lived
   external subscriptions or notification streams need a separate lifecycle
   design. Interrupt `request` and `resume` are canonical binding lists; nested

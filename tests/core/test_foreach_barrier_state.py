@@ -142,7 +142,11 @@ def test_pending_item_result_reports_missing_required_field() -> None:
 def test_pending_item_result_rejects_negative_index() -> None:
     with pytest.raises(WorkflowExecutionError, match="index"):
         PendingItemResult.from_metadata(
-            {"index": -1, "frame_id": "child", "status": "succeeded"}
+            {
+                "index": -1,
+                "frame_id": "child",
+                "status": "succeeded",
+            }
         )
 
 
