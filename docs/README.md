@@ -81,6 +81,7 @@ Two runtime features may come back after the platform/DX roadmap advances:
 
 - Native subgraph execution with child run state, interrupt bubbling, and resume
   back into the child workflow.
-- Async parallel foreach with explicit scheduling, reducer/merge semantics, and
-  failure policy. Do not implement this as plain `asyncio.gather` over sync
-  handlers.
+- Concurrent foreach with explicit scheduling, reducer/merge semantics, and
+  failure policy. Sync runtime can interleave item frames deterministically;
+  async runtime can add simultaneous async node handler execution. Do not
+  implement this as plain `asyncio.gather` over sync handlers.

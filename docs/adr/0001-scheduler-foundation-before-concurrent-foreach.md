@@ -1,10 +1,10 @@
-# Scheduler Foundation Before Parallel Foreach
+# Scheduler Foundation Before Concurrent Foreach
 
 Status: accepted
 
 We will introduce an explicit scheduler foundation in `wf_core` before enabling
-parallel foreach. The first implementation preserves deterministic serial
-behavior while adding ready/block/wake semantics, because parallel foreach and
+concurrent foreach. The first implementation preserves deterministic serial
+behavior while adding ready/block/wake semantics, because concurrent foreach and
 native subgraphs both require multiple runnable frames without treating
 `current_frame_id` as the whole runtime state.
 
@@ -15,9 +15,9 @@ The current runtime behaves like a stack cursor. `RunState.current_frame_id` and
 at a time before control collapses back to the parent. This works for serial
 execution, but it does not give the runtime a clear way to represent multiple
 runnable frames, blocked parent frames, interrupt resume priority, or future
-parallel branch merge semantics.
+concurrent branch merge semantics.
 
-Parallel foreach is not just `asyncio.gather` over node calls. It changes state
+Concurrent foreach is not just `asyncio.gather` over node calls. It changes state
 visibility, error handling, interrupt behavior, trace ordering, reducer rules,
 and parent completion semantics. Enabling it before those concepts exist would
 make the runtime fragile.
@@ -25,7 +25,7 @@ make the runtime fragile.
 ## Decision
 
 Add an internal scheduler foundation first. The first pass will keep serial
-workflow behavior intact and will not enable `foreach(mode="parallel")`.
+workflow behavior intact and will not enable `foreach(mode="concurrent")`.
 
 The scheduler model is:
 
@@ -56,7 +56,7 @@ the next item or finish.
 
 ## Rejected Alternatives
 
-**Patch parallelism directly into foreach.**
+**Patch concurrent execution directly into foreach.**
 This would keep the stack-cursor model and force foreach to own scheduling,
 interrupt, merge, and failure policy. It would not help native subgraphs.
 
@@ -74,22 +74,22 @@ refine this later.
 The future barrier semantics are larger than the current join node. `JoinNode`
 may be repurposed later, but not silently in this scheduler pass.
 
-## Future Parallel Semantics
+## Future Concurrent Semantics
 
-Parallel foreach and graph-level convergence require additional semantics before
+Concurrent foreach and graph-level convergence require additional semantics before
 they are enabled:
 
-- A future foreach policy must define batching, `max_concurrency`, item failure
-  handling, and cancellation/drain behavior.
-- Parallel foreach should be bounded by default so workflows do not spawn
+- A future foreach policy must define admission limits, item failure handling,
+  and quiescence behavior.
+- Concurrent foreach should be bounded by default so workflows do not spawn
   unbounded MCP, HTTP, browser, or external service calls.
 - A future barrier must wait for multiple child or upstream frames and merge
   their lineage patches.
 - Missing reducers mean replace only within one serial lineage. At a barrier,
   multiple writes to the same path without a reducer are conflicts.
-- Future parallel child frames should produce state patches that the scheduler
+- Future concurrent child frames should produce state patches that the scheduler
   commits atomically.
-- Parallel branches require lineage isolation: a child frame sees parent-visible
+- Concurrent branches require lineage isolation: a child frame sees parent-visible
   state plus its own ancestor writes, not sibling branch writes.
 - Public trace remains append-only chronological execution history. Scheduler
   block/wake events are not added to public trace in this pass.
@@ -104,7 +104,7 @@ Resume wakes the interrupted frame, clears the run interrupt, and places the
 resumed frame at the front of the ready queue. Ready sibling frames are preserved
 but do not run while the interrupt is outstanding.
 
-Future parallel execution should not assume in-flight node calls can be safely
+Future concurrent execution should not assume in-flight node calls can be safely
 cancelled. If one frame interrupts while sibling jobs are already started, the
 runtime should stop scheduling new work, let started jobs drain to pending
 results, and defer sibling state commits until resume/commit policy decides what
@@ -120,7 +120,7 @@ are graph control flow. Runtime failures stop scheduling unless a future policy
 explicitly handles them.
 
 In the first scheduler pass, any runtime failure fails the whole run. Future
-parallel foreach policies may support `collect` or `skip`, but those are policy
+concurrent foreach policies may support `collect` or `skip`, but those are policy
 features and should not be treated as implemented until runtime support exists.
 
 ## Compatibility Requirements

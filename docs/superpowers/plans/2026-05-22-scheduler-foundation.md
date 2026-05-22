@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Add the internal scheduler foundation needed for future parallel foreach and native subgraphs while preserving current serial workflow behavior.
+**Goal:** Add the internal scheduler foundation needed for future concurrent foreach and native subgraphs while preserving current serial workflow behavior.
 
 **Architecture:** `RunState.frames` remains the source of frame lifecycle state, and a new serialized `ready_frame_ids` queue defines deterministic scheduling order. A new internal `wf_core.runtime.scheduler` module owns frame creation, enqueue/select, block/wake, and no-ready-frame resolution. Existing sync and async engines both use scheduler selection before `prepare_step`; node execution stays split between sync and async paths.
 
@@ -734,7 +734,7 @@ Expected: ruff passes and basedpyright reports 0 errors.
 Check:
 
 ```bash
-git diff -- CONTEXT.md docs/adr/0001-scheduler-foundation-before-parallel-foreach.md docs/current_roadmap.md
+git diff -- CONTEXT.md docs/adr/0001-scheduler-foundation-before-concurrent-foreach.md docs/current_roadmap.md
 ```
 
 Expected: docs remain aligned with implemented first-pass behavior.
@@ -744,5 +744,5 @@ Expected: docs remain aligned with implemented first-pass behavior.
 ## Self-Review
 
 - Spec coverage: ADR decisions are covered by tasks for `BLOCKED`, ready queue, scheduler helpers, sync/async engine migration, serial foreach block/wake, interrupt resume priority, and verification.
-- Intentional gaps: no `foreach(mode="parallel")`, no `ParallelForeachPolicy`, no lineage patches, no BarrierNode, and no public scheduler exports.
+- Intentional gaps: no `foreach(mode="concurrent")`, no `ForeachConcurrentPolicy`, no lineage patches, no BarrierNode, and no public scheduler exports.
 - Type consistency: helper names are stable across tasks: `add_frame`, `enqueue_frame`, `select_next_frame`, `mark_frame_pending`, `block_frame_on_children`, `wake_frame`, `wake_parent_if_children_complete`, and `resolve_no_ready_frames`.

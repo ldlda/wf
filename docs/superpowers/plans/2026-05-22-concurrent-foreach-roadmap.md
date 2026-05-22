@@ -1,10 +1,10 @@
-# Parallel Foreach Roadmap Implementation Plan
+# Concurrent Foreach Roadmap Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Implement parallel foreach incrementally without breaking serial workflows or duplicating state-write logic.
+**Goal:** Implement concurrent foreach incrementally without breaking serial workflows or duplicating state-write logic.
 
-**Architecture:** The work is split into four independently shippable layers: policy models, state patch extraction, barrier runtime state, and async parallel execution. Each layer preserves current serial behavior and adds tests before implementation. `foreach(mode="parallel")` remains unsupported until the final layer.
+**Architecture:** The work is split into four independently shippable layers: policy models, state patch extraction, barrier runtime state, and concurrent execution. Each layer preserves current serial behavior and adds tests before implementation. `foreach(mode="concurrent")` remains unsupported until the final layer. Sync runtime should support deterministic interleaving once the mode is enabled; async runtime can additionally run admitted async node handlers simultaneously.
 
 **Tech Stack:** Python 3.14, Pydantic v2, dataclasses, pytest, basedpyright, ruff, existing `wf_core` scheduler/runtime modules.
 
@@ -48,7 +48,7 @@ def test_serial_foreach_defaults_to_fail_item_policy() -> None:
     assert node.mode == "serial"
     assert node.item_error.action == "fail"
     assert node.item_error.collect_to is None
-    assert node.parallel is None
+    assert node.concurrent is None
 
 
 def test_collect_item_policy_requires_collect_to() -> None:
@@ -64,20 +64,20 @@ def test_collect_item_policy_requires_collect_to() -> None:
         )
 
 
-def test_parallel_policy_requires_parallel_mode() -> None:
-    with pytest.raises(ValidationError, match="parallel policy"):
+def test_concurrent_policy_requires_concurrent_mode() -> None:
+    with pytest.raises(ValidationError, match="concurrent policy"):
         ForeachNode.model_validate(
             {
                 "id": "each",
                 "type": "foreach",
                 "over": {"root": "state", "parts": ["items"]},
                 "as": "item",
-                "parallel": {"max_active": 4, "max_outstanding": 20},
+                "concurrent": {"max_active": 4, "max_outstanding": 20},
             }
         )
 
 
-def test_parallel_policy_validates_capacity_order() -> None:
+def test_concurrent_policy_validates_capacity_order() -> None:
     with pytest.raises(ValidationError, match="max_outstanding"):
         ForeachNode.model_validate(
             {
@@ -85,8 +85,8 @@ def test_parallel_policy_validates_capacity_order() -> None:
                 "type": "foreach",
                 "over": {"root": "state", "parts": ["items"]},
                 "as": "item",
-                "mode": "parallel",
-                "parallel": {"max_active": 10, "max_outstanding": 4},
+                "mode": "concurrent",
+                "concurrent": {"max_active": 10, "max_outstanding": 4},
             }
         )
 ```
@@ -116,8 +116,8 @@ class ForeachItemErrorPolicy(BaseModel):
         return self
 
 
-class ForeachParallelPolicy(BaseModel):
-    """Concurrency policy for async parallel foreach execution."""
+class ForeachConcurrentPolicy(BaseModel):
+    """Concurrency policy for foreach frame admission."""
 
     model_config = ConfigDict(extra="forbid")
 
@@ -136,7 +136,7 @@ Update `ForeachNode`:
 
 ```python
 item_error: ForeachItemErrorPolicy = Field(default_factory=ForeachItemErrorPolicy)
-parallel: ForeachParallelPolicy | None = None
+concurrent: ForeachConcurrentPolicy | None = None
 on_item_error: Literal["fail", "collect", "skip"] | None = Field(
     default=None,
     exclude=True,
@@ -149,10 +149,10 @@ Add a `model_validator(mode="before")` that converts old `on_item_error` into `i
 Add a `model_validator(mode="after")` that enforces:
 
 ```python
-if self.mode == "parallel" and self.parallel is None:
-    raise ValueError("parallel foreach requires parallel policy")
-if self.mode == "serial" and self.parallel is not None:
-    raise ValueError("parallel policy is only valid when mode='parallel'")
+if self.mode == "concurrent" and self.concurrent is None:
+    raise ValueError("concurrent foreach requires concurrent policy")
+if self.mode == "serial" and self.concurrent is not None:
+    raise ValueError("concurrent policy is only valid when mode='concurrent'")
 ```
 
 - [ ] **Step 3: Update derived outcomes**
@@ -185,14 +185,14 @@ In `src/wf_core/runtime/ops/foreach.py`, keep:
 
 ```python
 if step.mode != "serial":
-    raise WorkflowExecutionError("parallel foreach execution is not implemented yet")
+    raise WorkflowExecutionError("concurrent foreach execution is not implemented yet")
 ```
 
 Add a comment:
 
 ```python
 # Policy models are accepted before execution support so saved workflows can
-# validate shape, but runtime must reject parallel until barrier commits exist.
+# validate shape, but runtime must reject concurrent until barrier commits exist.
 ```
 
 - [ ] **Step 6: Verify phase**
@@ -316,7 +316,7 @@ Expected: all pass; full suite should still pass before moving on.
 
 ## Phase 3: Foreach Barrier Runtime State
 
-**Goal:** Add resumable barrier metadata and pending result structures without enabling async parallel execution.
+**Goal:** Add resumable barrier metadata and pending result structures without enabling concurrent execution.
 
 **Files:**
 - Modify: `src/wf_core/runtime/scheduler.py`
@@ -422,9 +422,9 @@ Expected: pass.
 
 ---
 
-## Phase 4: Async Parallel Foreach
+## Phase 4: Concurrent Foreach Execution
 
-**Goal:** Enable `foreach(mode="parallel")` in async execution only, using policy limits, pending results, and barrier commits.
+**Goal:** Enable `foreach(mode="concurrent")` using policy limits, pending results, and barrier commits. Sync runtime interleaves admitted item frames one node call at a time; async runtime may run admitted async node handler calls simultaneously.
 
 **Files:**
 - Modify: `src/wf_core/runtime/ops/foreach.py`
@@ -432,22 +432,22 @@ Expected: pass.
 - Modify: `src/wf_core/runtime/engine.py`
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Modify: `src/wf_core/runtime/foreach_state.py`
-- Test: `tests/core/test_parallel_foreach.py`
+- Test: `tests/core/test_concurrent_foreach.py`
 
-- [ ] **Step 1: Add async-only rejection tests**
+- [ ] **Step 1: Add sync interleaving and async execution tests**
 
-Create `tests/core/test_parallel_foreach.py` with:
+Create `tests/core/test_concurrent_foreach.py` with:
 
 ```python
-def test_sync_runtime_rejects_parallel_foreach() -> None:
+def test_sync_runtime_interleaves_concurrent_foreach() -> None:
     ...
 
 
-async def test_async_runtime_accepts_parallel_foreach() -> None:
+async def test_async_runtime_accepts_concurrent_foreach() -> None:
     ...
 ```
 
-Expected before implementation: async test fails because runtime still rejects parallel.
+Expected before implementation: both tests fail because runtime still rejects concurrent mode.
 
 - [ ] **Step 2: Add capacity tests**
 
@@ -456,7 +456,7 @@ Use async node handlers that record start/completion order and block on `asyncio
 Test:
 
 ```python
-async def test_parallel_foreach_respects_max_active() -> None:
+async def test_concurrent_foreach_respects_max_active() -> None:
     ...
     assert max_seen_active == 2
 ```
@@ -481,11 +481,11 @@ This may require a small test-only node that blocks through the runtime-supporte
 Tests:
 
 ```python
-async def test_parallel_collect_writes_ordered_errors_and_emits_completed_with_errors() -> None:
+async def test_concurrent_collect_writes_ordered_errors_and_emits_completed_with_errors() -> None:
     ...
 
 
-async def test_parallel_skip_emits_completed_with_errors_without_hidden_state() -> None:
+async def test_concurrent_skip_emits_completed_with_errors_without_hidden_state() -> None:
     ...
 ```
 
@@ -502,17 +502,17 @@ Use nodes that complete out of order but write list-like results.
 
 Assert committed state is ordered by item index, not completion order.
 
-- [ ] **Step 6: Implement async parallel child scheduling**
+- [ ] **Step 6: Implement concurrent child scheduling**
 
 In `step_foreach`, branch by mode:
 
 ```python
 if step.mode == "serial":
     return step_foreach_serial(...)
-return step_foreach_parallel(...)
+return step_foreach_concurrent(...)
 ```
 
-`step_foreach_parallel` should:
+`step_foreach_concurrent` should:
 - inspect `ForeachBarrierState`
 - start children while `active < max_active` and `outstanding < max_outstanding`
 - block parent when waiting for children
@@ -530,14 +530,14 @@ class RuntimeLimits:
     max_active_node_calls: int = 16
 ```
 
-If this is too large for the first async parallel pass, leave global node-call budget as follow-up and rely on foreach `max_active`.
+If this is too large for the first concurrent pass, leave global node-call budget as follow-up and rely on foreach `max_active`.
 
 - [ ] **Step 8: Verify phase**
 
 Run:
 
 ```bash
-uv run pytest tests/core/test_parallel_foreach.py tests/authoring/test_demo_workflow.py -q
+uv run pytest tests/core/test_concurrent_foreach.py tests/authoring/test_demo_workflow.py -q
 uv run pytest -q
 uvx ruff check src tests
 uv run basedpyright --level error
@@ -554,12 +554,12 @@ Ship these as separate commits/PRs:
 1. Phase 1: policy shape and validation
 2. Phase 2: patch extraction with no behavior change
 3. Phase 3: barrier metadata with serial behavior unchanged
-4. Phase 4: async parallel execution
+4. Phase 4: concurrent execution
 
-Do not start Phase 4 until Phase 2 and Phase 3 are stable. Parallel foreach depends on patch extraction and resumable barrier state.
+Do not start Phase 4 until Phase 2 and Phase 3 are stable. Concurrent foreach depends on patch extraction and resumable barrier state.
 
 ## Self-Review
 
 - Spec coverage: ADR 0002 decisions are represented across the four phases.
 - Intentional gaps: explicit Fork/Gather, lineage-token graph nodes, OpenTelemetry, platform source/tool caps, and full run persistence are not included.
-- Risk control: phases 1-3 preserve serial behavior and keep `mode="parallel"` unsupported until phase 4.
+- Risk control: phases 1-3 preserve serial behavior and keep `mode="concurrent"` unsupported until phase 4.

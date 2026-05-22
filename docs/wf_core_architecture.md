@@ -77,8 +77,8 @@ enqueues the child. When the child reaches `END`, `wake_parent_if_children_compl
 wakes the blocked parent so it can create the next iteration or emit `done`.
 
 This preserves current serial behavior while making the hidden parent/child
-relationship explicit. `foreach(mode="parallel")` is still unsupported because
-parallel execution needs policy, barrier, lineage, and state-patch semantics
+relationship explicit. `foreach(mode="concurrent")` is still unsupported because
+concurrent execution needs policy, barrier, lineage, and state-patch semantics
 that are not implemented yet.
 
 ## Validation Flow
@@ -118,7 +118,7 @@ limits and intended adapter seam.
   state patch commits. The remaining mapping design notes for future reducer
   metadata are documented in
   [`core_state_mapping_and_merge.md`](core_state_mapping_and_merge.md).
-- Foreach is still serial-only. The scheduler foundation exists, but parallel
+- Foreach is still serial-only. The scheduler foundation exists, but concurrent
   foreach still needs explicit policy, implicit barrier state, lineage-aware
   patch commits, and quiescent interrupt handling. `ForeachNode.over` is typed
   as a `GraphSourcePath`, but execution is still serial.
@@ -137,9 +137,11 @@ limits and intended adapter seam.
   upgrade: nested run state, child-frame trace preservation, interrupt bubbling
   with path metadata, and resume back into the child workflow.
 - Frames are no longer only a serial execution stack: the runtime has a ready
-  queue and `BLOCKED` frame state. Async parallel foreach and native subgraphs
-  still need more work: lineage isolation, barrier merge semantics, pending
-  child results, and explicit child workflow/deployment identity.
+  queue and `BLOCKED` frame state. Concurrent foreach and native subgraphs still
+  need more work: lineage isolation, barrier merge semantics, pending child
+  results, and explicit child workflow/deployment identity. Async runtime can
+  later add simultaneous async node handler execution, but the workflow mode is
+  still concurrent foreach.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer
   error payload can be added later, but should be designed as part of trace/run
   state rather than scattered exceptions.

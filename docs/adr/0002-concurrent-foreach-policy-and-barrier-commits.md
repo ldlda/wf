@@ -1,36 +1,40 @@
-# Parallel Foreach Policy and Barrier Commits
+# Concurrent Foreach Policy and Barrier Commits
 
 Status: accepted
 
-Parallel foreach will use bounded scheduling, lineage-local pending state, and
-barrier-buffered commits. This keeps parallel item execution deterministic,
-resumable, and safe around reducers, interrupts, and external tool calls.
+Concurrent foreach will use bounded scheduling, lineage-local pending state, and
+barrier-buffered commits. This keeps item execution deterministic, resumable,
+and safe around reducers, interrupts, and external tool calls.
 
 ## Context
 
-The scheduler foundation makes multiple runnable frames possible, but parallel
-foreach needs more than concurrent node calls. Each item lineage may execute
+The scheduler foundation makes multiple runnable frames possible, but concurrent
+foreach needs more than multiple node calls. Each item lineage may execute
 several nodes, read its own pending writes, fail independently, block, or
 interrupt the whole run. Sibling item writes must not leak into each other, and
 state commits need deterministic merge behavior.
 
 ## Decision
 
-Parallel foreach will be async-runtime-only and bounded by policy.
+Concurrent foreach is a workflow mode and must be bounded by policy.
 
 The future foreach model should separate item error behavior from concurrency
 behavior:
 
-- `item_error` is foreach-wide and applies to serial and parallel foreach.
-- `parallel` is a nested policy object used only when `mode="parallel"`.
-- `parallel.max_active` defaults to `4`.
-- `parallel.max_outstanding` defaults to `20`.
+- `item_error` is foreach-wide and applies to serial and concurrent foreach.
+- `concurrent` is a nested policy object used only when
+  `mode="concurrent"`.
+- `concurrent.max_active` defaults to `4`.
+- `concurrent.max_outstanding` defaults to `20`.
 - Validation requires `max_outstanding >= max_active`.
 - Ready or running item frames consume active capacity.
 - Blocked item frames consume outstanding capacity but not active capacity.
 
-`foreach(mode="parallel")` requires async execution. Sync execution should reject
-it clearly rather than inventing thread/process semantics.
+`foreach(mode="concurrent")` should be executable by the sync runtime as
+deterministic frame interleaving: one admitted node handler call at a time. The
+async runtime may additionally run admitted async node handler calls
+simultaneously. Sync handlers should not be pushed into thread/process
+parallelism by default.
 
 ## Item Error Policy
 
@@ -71,7 +75,7 @@ failure as control flow, the outcome should be `failed`.
 
 ## Barrier-Buffered Commits
 
-Parallel foreach item writes are buffered as pending state patches/results, not
+Concurrent foreach item writes are buffered as pending state patches/results, not
 committed directly to `RunState.state`.
 
 The state model is:
@@ -88,8 +92,8 @@ Completion-order merging may exist later as an explicit barrier merge policy,
 not reducer behavior.
 
 Patch creation and commit must extract/reuse the existing node output
-validation, output binding, and reducer logic. Parallel foreach must not create
-a second write system.
+validation, output binding, and reducer logic. Concurrent foreach must not
+create a second write system.
 
 ## Merge and Reducer Rules
 
@@ -103,7 +107,7 @@ means item index order.
 
 ## Interrupt and Failure Quiescence
 
-Future parallel execution should not assume in-flight node calls can be safely
+Future concurrent execution should not assume in-flight node calls can be safely
 cancelled.
 
 If an interrupt or fail policy trips while sibling jobs are already started, the
@@ -131,7 +135,7 @@ node calls, and those waits keep the frame `RUNNING` rather than `BLOCKED`.
 
 ## Context and Lineage
 
-Parallel item frames need lineage-local pending state. Later nodes in the same
+Concurrent item frames need lineage-local pending state. Later nodes in the same
 item lineage can read earlier pending patches from that item, while siblings
 cannot.
 
@@ -157,5 +161,5 @@ Forks produce branch lineage tokens; gathers consume declared token sets and
 produce merged tokens. This supports partial gathers such as merging `a+b`
 before later merging with `c`.
 
-Parallel foreach remains the nearer target because its implicit lineage tokens
+Concurrent foreach remains the nearer target because its implicit lineage tokens
 are item indexes owned by one foreach activation.

@@ -40,15 +40,17 @@ implementation state.
 ## Runtime and Platform Roadmap
 
 - Scheduler foundation decision record:
-  [ADR 0001](./adr/0001-scheduler-foundation-before-parallel-foreach.md).
-- Parallel foreach policy decision record:
-  [ADR 0002](./adr/0002-parallel-foreach-policy-and-barrier-commits.md).
+  [ADR 0001](./adr/0001-scheduler-foundation-before-concurrent-foreach.md).
+- Concurrent foreach policy decision record:
+  [ADR 0002](./adr/0002-concurrent-foreach-policy-and-barrier-commits.md).
 - **Native subgraphs / graph-as-node**: add child run state, child trace
   preservation, interrupt bubbling, and resume back into the child workflow.
   Wrapper artifacts currently execute as deployments and return run status;
   true graph-as-node outcome propagation belongs here.
-- **Async parallel foreach**: add explicit scheduling, reducer/merge semantics,
-  and failure policy. Do not model this as plain parallel calls over sync
+- **Concurrent foreach**: add explicit scheduling, reducer/merge semantics, and
+  failure policy. Sync runtime can interleave admitted item frames one node at a
+  time; async runtime can additionally run admitted async node handlers
+  simultaneously. Do not model this as plain `asyncio.gather` over sync
   handlers.
 - **Persistent run history**: add a run store before adding stable `run_id`,
   `inspect_run`, or `read_run_trace(run_id, range)` APIs. Current traces are
@@ -64,10 +66,10 @@ implementation state.
 
 Frame stress points to solve before either feature:
 
-- `RunState.current_frame_id` currently models one active execution cursor.
-  Parallel foreach likely needs multiple runnable child frames.
+- `RunState.current_frame_id` currently models the selected execution cursor.
+  Concurrent foreach needs multiple runnable child frames.
 - `ExecutionFrame.metadata` currently carries ad hoc foreach data. Subgraphs and
-  parallel foreach should get typed frame payloads or strongly bounded helper
+  concurrent foreach should get typed frame payloads or strongly bounded helper
   accessors before metadata grows more meanings.
 - Subgraph frames need child workflow identity/version/deployment binding, not
   just a generic metadata dictionary.
@@ -79,6 +81,6 @@ Frame stress points to solve before either feature:
 
 The MCP workflow authoring path is now usable enough for real testing. The next
 bottleneck is runtime/platform correctness: resumable child execution,
-parallel scheduling, persistent run history, and protocol-native progress
+concurrent scheduling, persistent run history, and protocol-native progress
 reporting. Those pieces should come before adding more high-level authoring
 sugar.

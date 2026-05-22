@@ -7,7 +7,7 @@ This context defines the core workflow runtime language used by `wf_core`,
 
 **Scheduler Foundation**:
 The runtime model that selects runnable frames and advances workflow execution without assuming there is only one active cursor.
-_Avoid_: Concurrent foreach, parallel foreach foundation
+_Avoid_: Foreach feature, concurrent foreach implementation
 
 **Frame**:
 An execution cursor for one active portion of a workflow run.
@@ -26,7 +26,7 @@ The ordered list of runnable frame identifiers that defines deterministic schedu
 _Avoid_: Frame scan, implicit dict order
 
 **Foreach Policy**:
-The future runtime configuration that decides parallel foreach batching, item failure handling, and cancellation/drain behavior.
+The future runtime configuration that decides concurrent foreach admission, item failure handling, and quiescence behavior.
 _Avoid_: Parallel flag
 
 **Blocked Frame**:
@@ -62,7 +62,7 @@ The committed state a frame may read based on workflow topology and completed up
 _Avoid_: Shared live object
 
 **Lineage Isolation**:
-The rule that a parallel child frame sees parent-visible state plus its own ancestor writes, but not sibling branch writes.
+The rule that a concurrent child frame sees parent-visible state plus its own ancestor writes, but not sibling branch writes.
 _Avoid_: Global committed state
 
 **Barrier**:
@@ -92,15 +92,15 @@ _Avoid_: Job, invocation
   the child/event it waits on wakes it.
 - A **Blocked Frame** should carry a **Block Reason** so deadlocks and wakeups
   are explainable.
-- Parallel foreach and native subgraphs depend on the **Scheduler Foundation**.
-- Parallel foreach requires a **Foreach Policy** before public support is
+- Concurrent foreach and native subgraphs depend on the **Scheduler Foundation**.
+- Concurrent foreach requires a **Foreach Policy** before public support is
   enabled.
-- Future parallel foreach should be bounded by default. `max_active` and
+- Future concurrent foreach should be bounded by default. `max_active` and
   `max_outstanding` prevent one workflow from spawning unbounded MCP, HTTP,
   browser, or external service calls.
-- Future concurrency-specific foreach settings should live in a nested parallel
+- Future concurrency-specific foreach settings should live in a nested
   policy object rather than expanding `ForeachNode` with many top-level fields.
-- Item error handling is foreach-wide, not parallel-only. Serial and parallel
+- Item error handling is foreach-wide, not concurrent-only. Serial and concurrent
   foreach can both profit from `fail`, `skip`, or `collect` item failure policy.
 - `collect` item error policy must declare an explicit destination for
   structured item errors. Collected errors should be ordered by item index, not
@@ -137,7 +137,7 @@ _Avoid_: Job, invocation
   failure was collected.
 - `skip` emits `completed_with_errors` when one or more item failures were
   skipped. It emits `done` only when all items succeed.
-- Parallel `fail` item policy should stop scheduling new items, drain already
+- Concurrent `fail` item policy should stop scheduling new items, drain already
   started jobs to a quiescent point, capture their results safely, and then fail
   the run. It should not assume hard cancellation is safe.
 - After `fail` trips, drained sibling results are for trace/observability and
@@ -145,7 +145,7 @@ _Avoid_: Job, invocation
   boundary.
 - Foreach modes that continue after item failure, such as `collect` and `skip`,
   should buffer item state patches until the foreach barrier completes. Future
-  parallel foreach should always use barrier-buffered commits.
+  concurrent foreach should always use barrier-buffered commits.
 - Serial `fail` may keep immediate commits for compatibility. Commit strategy
   should be extracted into runtime helpers instead of being smeared through
   foreach execution code.
@@ -161,7 +161,7 @@ _Avoid_: Job, invocation
 - Pending barrier results must live in resumable `RunState`/frame metadata, not
   only in trace. Trace records history; runtime state is what resume/checkpoint
   uses.
-- Parallel item frames need lineage-local pending state: later nodes in the same
+- Concurrent item frames need lineage-local pending state: later nodes in the same
   item lineage can read earlier pending patches from that item, while sibling
   items cannot. The exact aggregate output API for committing item results to
   parent state is deferred.
@@ -224,10 +224,10 @@ _Avoid_: Job, invocation
   but structured foreach refs should be preferred for non-trivial authoring.
 - Future foreach policy shape should validate cross-field rules: `collect`
   requires `collect_to`, non-collect actions forbid `collect_to`,
-  `mode="parallel"` requires a parallel policy, and `mode="serial"` forbids a
-  parallel policy. Deprecated top-level `on_item_error` may parse into the
+  `mode="concurrent"` requires a concurrent policy, and `mode="serial"` forbids
+  a concurrent policy. Deprecated top-level `on_item_error` may parse into the
   nested item error policy, but canonical dumps should use the nested shape.
-- `ForeachParallelPolicy` should split limits into `max_active` and
+- `ForeachConcurrentPolicy` should split limits into `max_active` and
   `max_outstanding`. Defaults are `max_active=4` and `max_outstanding=20`;
   validation requires `max_outstanding >= max_active`. Ready or running item
   frames consume active capacity; blocked item frames consume outstanding
@@ -260,7 +260,7 @@ _Avoid_: Job, invocation
   backpressure inside the admitted node-call boundary, not workflow-level
   `BLOCKED` state that frees foreach active capacity.
 - An **Interrupt** pauses the whole **Run**, even if the interrupted frame is a
-  child of future parallel work.
+  child of future concurrent work.
 - A **Runtime Failure** is distinct from a node returning an `error` outcome.
   Outcomes are graph control flow; runtime failures are scheduler stops unless
   a policy handles them.
@@ -269,32 +269,34 @@ _Avoid_: Job, invocation
   **Runtime Failure**.
 - Missing edges for declared outcomes are validation errors, not normal runtime
   branch policy.
-- Unsupported parallel foreach semantics should be rejected by validation before
+- Unsupported concurrent foreach semantics should be rejected by validation before
   runtime. Runtime may stay defensive, but validation owns the user-facing gate.
 - `on_item_error="collect"` and `"skip"` are future policy shapes unless runtime
   support is explicitly implemented. Current scheduler work should make official
   support easier, not pretend it already exists.
 - A **Trace** records actual scheduler execution order; grouping or sorting by
   foreach index is a presentation concern.
-- Parallel child frames may write to the same state path only through a
+- Concurrent child frames may write to the same state path only through a
   **Reducer**.
-- Future parallel frames should produce **State Patches** that the scheduler
+- Future concurrent frames should produce **State Patches** that the scheduler
   commits atomically.
 - A frame's **State Visibility** excludes uncommitted sibling writes.
-- Future parallel branches require **Lineage Isolation**: sibling branch writes
+- Future concurrent branches require **Lineage Isolation**: sibling branch writes
   are invisible unless the graph explicitly joins or merges them.
-- A **Barrier** is the explicit merge boundary for parallel lineage patches.
+- A **Barrier** is the explicit merge boundary for concurrent lineage patches.
 - Foreach may own an implicit **Barrier**; future graph-level convergence may use
   an explicit barrier node.
 
 ## Example Dialogue
 
-> **Dev:** "Are we implementing parallel foreach now?"
+> **Dev:** "Are we implementing concurrent foreach now?"
 > **Domain expert:** "No. First we are implementing the **Scheduler Foundation** so a **Run** can eventually manage multiple runnable **Frames** safely."
 
 ## Flagged Ambiguities
 
-- "concurrent foreach" was used for the next task, but the resolved scope is **Scheduler Foundation**: deterministic internal runtime prep before public parallel foreach support.
+- "concurrent foreach" is the future workflow mode. The resolved current scope is
+  **Scheduler Foundation**: deterministic internal runtime prep before public
+  concurrent foreach support.
 - `current_frame_id` / `current_node_id` are compatibility fields for the selected cursor, not the source of truth for all runnable work.
 - `current_frame_id` remains persisted for compatibility, but means "the frame
   currently selected by the scheduler", not "the only live frame".
@@ -311,7 +313,7 @@ _Avoid_: Job, invocation
   interrupt reason, because it carries externally visible resume semantics.
 - Scheduling order should be explicit through a **Ready Queue**, not inferred
   from frame dictionary iteration.
-- `mode="parallel"` stays unsupported until **Foreach Policy** and parent
+- `mode="concurrent"` stays unsupported until **Foreach Policy** and parent
   completion semantics are explicit.
 - A **Run** has at most one outstanding **Interrupt**. Resume wakes the frame
   referenced by that interrupt and scheduling continues from the **Ready Queue**.
@@ -321,15 +323,16 @@ _Avoid_: Job, invocation
 - Ready sibling frames are preserved during an **Interrupt**, but the resumed
   frame is placed at the front of the **Ready Queue** before scheduling
   continues.
-- Future parallel execution should not assume in-flight node calls can be
+- Future concurrent execution should not assume in-flight node calls can be
   safely cancelled. When an **Interrupt** occurs, scheduling should stop; already
   started jobs should drain to pending results before resume/commit policy
   decides what becomes visible.
-- Future parallel interrupts should return control to the caller only at a
+- Future concurrent interrupts should return control to the caller only at a
   quiescent pause point: no new work is scheduled, already-started jobs have
   drained, and their results are captured without unsafe commits.
 - Future async execution must protect append-only **Trace** writes, but should
-  not change trace semantics.
+  not change trace semantics. Async runtime is an execution capability for
+  simultaneous async node handlers, not a separate foreach workflow mode.
 - Scheduler block/wake events should not be added to the public **Trace** in
   the first pass. Future observability, including OpenTelemetry-style spans, is
   a separate concern.
@@ -339,7 +342,7 @@ _Avoid_: Job, invocation
   but raise for malformed metadata on the right kind. Corrupt runtime metadata
   is a runtime invariant failure.
 - First-pass **Block Reason** support only needs child-frame blocking; future
-  interrupt, subgraph, and parallel barrier reasons can extend the same shape.
+  interrupt, subgraph, and concurrent barrier reasons can extend the same shape.
 - Frame creation must reject duplicate frame identifiers. The **Ready Queue**
   must contain only existing pending frames and must never contain duplicate
   frame identifiers.
@@ -378,10 +381,10 @@ _Avoid_: Job, invocation
 - Serial foreach blocks the parent on one iteration child at a time, so the
   child runs until completion/interruption/failure before the parent wakes.
 - Future async execution must protect shared state writes. Last-writer-wins is
-  not an acceptable merge policy for parallel child frames.
-- Serial execution may continue mutating state immediately until parallel
+  not an acceptable merge policy for concurrent child frames.
+- Serial execution may continue mutating state immediately until concurrent
   execution needs scheduler-controlled **State Patch** commits.
-- Parallel sibling frames must not depend on observing each other's writes. Use
+- Concurrent sibling frames must not depend on observing each other's writes. Use
   serial foreach or explicit graph structure for ordered dependencies.
 - Missing reducers mean replace only within a single serial lineage. At a
   **Barrier**, multiple writes to the same path without a reducer are conflicts,
@@ -390,10 +393,10 @@ _Avoid_: Job, invocation
   repurposed later only through an explicit design pass.
 - The first **Scheduler Foundation** implementation should create ready/block/wake
   seams only. **Lineage Isolation** and **Barrier** merge behavior are future
-  parallel semantics, not first-pass behavior.
+  concurrent semantics, not first-pass behavior.
 - First-pass scheduler code should add durable seams such as ready queue,
   block/wake helpers, and typed foreach metadata. It should not add public
-  parallel policy, barrier, snapshot, or lineage-patch fields before those
+  concurrent policy, barrier, snapshot, or lineage-patch fields before those
   semantics are enforced.
 - Scheduler rules are shared by sync and async runtime paths; only node handler
   execution differs.
