@@ -104,17 +104,19 @@ the foreach barrier commits.
 ## Merge and Reducer Rules
 
 At a barrier, missing reducer means default replace only for single-writer
-paths. Multiple sibling lineages writing the same state path require an explicit
-reducer. Ancestor/descendant overlapping writes across lineages are conflicts
-unless an explicit merge strategy covers them.
+paths. Multiple sibling lineages writing the same state path require a reducer
+whose metadata declares it `mergeable`. `replace` is an explicit reducer, but it
+is `exclusive`, so it is rejected for same-path sibling writes. Ancestor/
+descendant overlapping writes across lineages are conflicts unless an explicit
+future merge strategy covers them.
 
 Reducers apply incrementally in deterministic lineage order. For foreach, that
 means item index order.
 
 Current barrier validation enforces this policy for sibling foreach item
-lineages. Same-path sibling writes require an explicit non-`replace` reducer on
-the exact destination state path. Ancestor/descendant sibling writes are
-rejected until a future explicit deep merge policy exists.
+lineages. Same-path sibling writes require a `mergeable` reducer on the exact
+destination state path. Ancestor/descendant sibling writes are rejected until a
+future explicit deep merge policy exists.
 
 ## Interrupt and Failure Quiescence
 

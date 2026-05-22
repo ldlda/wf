@@ -6,7 +6,7 @@ from typing import Any, TypeVar, cast, overload
 
 from pydantic import BaseModel
 
-from wf_core import ReducerSpec
+from wf_core import ReducerSpec, SiblingWritePolicy
 from wf_core.runtime.ops.merges import ReducerDefinition
 
 from .callables import ConfigReducerCallable, ConfigT, PlainReducerCallable
@@ -28,6 +28,7 @@ def reducer(
     *,
     name: str | None = None,
     description: str | None = None,
+    sibling_write_policy: SiblingWritePolicy = SiblingWritePolicy.MERGEABLE,
 ) -> AuthoredReducer: ...
 
 
@@ -36,6 +37,7 @@ def reducer(
     *,
     name: str,
     description: str | None = None,
+    sibling_write_policy: SiblingWritePolicy = SiblingWritePolicy.MERGEABLE,
 ) -> Callable[[Callable[..., Any]], AuthoredReducer]: ...
 
 
@@ -45,6 +47,7 @@ def reducer(
     name: str,
     config_model: type[ConfigT],
     description: str | None = None,
+    sibling_write_policy: SiblingWritePolicy = SiblingWritePolicy.MERGEABLE,
 ) -> Callable[[Callable[..., Any]], AuthoredReducer]: ...
 
 
@@ -55,6 +58,7 @@ def reducer(
     name: str | None = None,
     config_model: type[BaseModel] | None = None,
     description: str | None = None,
+    sibling_write_policy: SiblingWritePolicy = SiblingWritePolicy.MERGEABLE,
 ) -> AuthoredReducer | Callable[[Callable[..., Any]], AuthoredReducer]:
     """Wrap a Python reducer function as a runtime reducer definition."""
 
@@ -67,6 +71,7 @@ def reducer(
                     spec=ReducerSpec(
                         name=reducer_name,
                         description=_clean_doc(reducer_description),
+                        sibling_write_policy=sibling_write_policy,
                     ),
                     fn=raw,
                 )
@@ -92,6 +97,7 @@ def reducer(
                     name=reducer_name,
                     description=_clean_doc(reducer_description),
                     config_schema=config_model.model_json_schema(),
+                    sibling_write_policy=sibling_write_policy,
                 ),
                 fn=runtime_fn,
                 accepts_config=True,

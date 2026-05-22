@@ -210,7 +210,7 @@ def test_sync_concurrent_foreach_sibling_overlays_do_not_leak() -> None:
 def test_sync_concurrent_foreach_rejects_sibling_replace_writes() -> None:
     workflow = _same_path_replace_workflow()
 
-    with pytest.raises(WorkflowExecutionError, match="explicit reducer"):
+    with pytest.raises(WorkflowExecutionError, match="mergeable reducer"):
         execute_workflow(
             workflow,
             {"items": ["a", "b"]},

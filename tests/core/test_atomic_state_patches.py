@@ -8,7 +8,9 @@ from wf_core import (
     NodeDef,
     NodeUse,
     ReducerRef,
+    ReducerSpec,
     SchemaRef,
+    SiblingWritePolicy,
     StateField,
     StateSchema,
     Workflow,
@@ -16,6 +18,7 @@ from wf_core import (
 )
 from wf_core.models.steps import OutputBinding
 from wf_core.runtime.engine import resume_workflow
+from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.runs import create_run_state
 from wf_core.runtime.ops.state import (
     StatePatch,
@@ -215,7 +218,7 @@ def test_build_and_commit_patch_matches_apply_output_bindings() -> None:
 def test_barrier_rejects_sibling_same_path_writes_without_reducer() -> None:
     workflow = _workflow(fields={"value": StateField(type="string")})
 
-    with pytest.raises(WorkflowExecutionError, match="explicit reducer"):
+    with pytest.raises(WorkflowExecutionError, match="mergeable reducer"):
         build_barrier_patch(
             workflow,
             [
@@ -236,7 +239,7 @@ def test_barrier_rejects_sibling_same_path_writes_with_explicit_replace() -> Non
         }
     )
 
-    with pytest.raises(WorkflowExecutionError, match="explicit reducer"):
+    with pytest.raises(WorkflowExecutionError, match="mergeable reducer"):
         build_barrier_patch(
             workflow,
             [
@@ -267,6 +270,62 @@ def test_barrier_allows_sibling_same_path_writes_with_non_replace_reducer() -> N
     )
 
     assert patch.changes["state.seen"] == ["a", "b"]
+
+
+def test_barrier_uses_reducer_policy_instead_of_reducer_name() -> None:
+    workflow = _workflow(
+        fields={
+            "value": StateField(
+                type="integer",
+                reducer=ReducerRef(name="test.keep_latest"),
+            )
+        }
+    )
+    reducer = ReducerDefinition(
+        spec=ReducerSpec(name="test.keep_latest"),
+        fn=lambda _current, incoming: incoming,
+    )
+
+    patch = build_barrier_patch(
+        workflow,
+        [
+            StatePatch(changes={"state.value": 1}),
+            StatePatch(changes={"state.value": 2}),
+        ],
+        {},
+        reducers={"test.keep_latest": reducer},
+    )
+
+    assert patch.changes["state.value"] == 2
+
+
+def test_barrier_rejects_custom_exclusive_reducer() -> None:
+    workflow = _workflow(
+        fields={
+            "value": StateField(
+                type="integer",
+                reducer=ReducerRef(name="test.last"),
+            )
+        }
+    )
+    reducer = ReducerDefinition(
+        spec=ReducerSpec(
+            name="test.last",
+            sibling_write_policy=SiblingWritePolicy.EXCLUSIVE,
+        ),
+        fn=lambda _current, incoming: incoming,
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="mergeable reducer"):
+        build_barrier_patch(
+            workflow,
+            [
+                StatePatch(changes={"state.value": 1}),
+                StatePatch(changes={"state.value": 2}),
+            ],
+            {},
+            reducers={"test.last": reducer},
+        )
 
 
 def test_barrier_rejects_sibling_ancestor_descendant_writes() -> None:

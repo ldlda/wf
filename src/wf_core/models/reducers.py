@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+from enum import StrEnum
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -64,6 +65,13 @@ class ReducerRef(BaseModel):
         return str(self.ref)
 
 
+class SiblingWritePolicy(StrEnum):
+    """Whether a reducer is safe for sibling foreach lineages at a barrier."""
+
+    EXCLUSIVE = "exclusive"
+    MERGEABLE = "mergeable"
+
+
 class ReducerSpec(BaseModel):
     """Inspectable metadata for one named pure state reducer."""
 
@@ -77,4 +85,12 @@ class ReducerSpec(BaseModel):
             "properties": {},
             "additionalProperties": False,
         }
+    )
+    sibling_write_policy: SiblingWritePolicy = Field(
+        default=SiblingWritePolicy.MERGEABLE,
+        description=(
+            "Whether sibling foreach item lineages may write this state path "
+            "at one barrier. Exclusive reducers are valid for ordinary writes "
+            "but ambiguous for sibling barrier commits."
+        ),
     )

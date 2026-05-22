@@ -19,7 +19,11 @@ from wf_core.paths import (
     set_nested_value,
     split_graph_path,
 )
-from wf_core.runtime.ops.merges import ReducerDefinition, apply_reducer
+from wf_core.runtime.ops.merges import (
+    ReducerDefinition,
+    apply_reducer,
+    reducer_allows_sibling_writes,
+)
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
 
 _MISSING = object()
@@ -175,7 +179,7 @@ def build_barrier_patch(
     values would hide what actually landed in `RunState.state`.
     """
     state_fields = workflow.state_schema.field_index()
-    validate_barrier_writes(item_patches, state_fields)
+    validate_barrier_writes(item_patches, state_fields, reducers=reducers)
     staged_state = deepcopy(state)
     prepared_patch: dict[StatePath, tuple[list[str], Any]] = {}
     committed_changes: dict[str, Any] = {}
@@ -204,6 +208,8 @@ def build_barrier_patch(
 def validate_barrier_writes(
     item_patches: Sequence[StatePatch],
     state_fields: Mapping[StatePath, StateFieldDecl],
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> None:
     """Reject ambiguous sibling writes before replaying a foreach barrier.
 
@@ -216,11 +222,11 @@ def validate_barrier_writes(
             if left.item_index == right.item_index:
                 continue
             if left.path == right.path:
-                if _has_explicit_non_replace_reducer(left.path, state_fields):
+                if _allows_sibling_writes(left.path, state_fields, reducers):
                     continue
                 raise WorkflowExecutionError(
                     "multiple sibling writes to "
-                    f"{left.source_key!r} require an explicit reducer"
+                    f"{left.source_key!r} require a mergeable reducer"
                 )
             if _state_paths_overlap(left.path, right.path):
                 raise WorkflowExecutionError(
@@ -244,14 +250,15 @@ def _barrier_writes(item_patches: Sequence[StatePatch]) -> list[_BarrierWrite]:
     return writes
 
 
-def _has_explicit_non_replace_reducer(
+def _allows_sibling_writes(
     path: StatePath,
     state_fields: Mapping[StatePath, StateFieldDecl],
+    reducers: Mapping[str, ReducerDefinition] | None,
 ) -> bool:
     field = state_fields.get(path)
     if field is None or field.reducer is None:
         return False
-    return field.reducer.name != "wf.std.replace"
+    return reducer_allows_sibling_writes(field.reducer, reducers)
 
 
 def _state_paths_overlap(left: StatePath, right: StatePath) -> bool:

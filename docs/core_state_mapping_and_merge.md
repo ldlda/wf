@@ -288,6 +288,16 @@ to `dict.update` or `operator.or_`. It is not a recursive deep merge.
 If recursive merge is ever needed, it should be explicit rather than hidden
 inside `merge_object`.
 
+Reducers also declare a sibling-write policy for concurrent barriers:
+
+- `exclusive`: valid for ordinary writes, rejected when multiple sibling
+  lineages write the same state path at one barrier.
+- `mergeable`: allowed for same-path sibling writes; the barrier still replays
+  writes in deterministic item-index order.
+
+`wf.std.replace` is `exclusive`. The other built-in reducers are currently
+`mergeable`.
+
 ## Future Reducers
 
 Reducers are a capability family, similar to reusable node specs:

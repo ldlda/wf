@@ -28,7 +28,7 @@ Already implemented:
   commits.
 - Multi-step concurrent item bodies are supported for fail-only item policy.
 - Barrier write validation rejects ambiguous sibling writes: same-path sibling
-  writes require an explicit non-`replace` reducer, and ancestor/descendant
+  writes require a `mergeable` reducer, and ancestor/descendant
   sibling writes are rejected.
 
 ## Non-Goals For Phase 4
@@ -88,7 +88,8 @@ Scope:
 
 - Detect sibling lineage writes to the same state path.
 - If exactly one lineage writes a destination path, default replace is allowed.
-- If multiple sibling lineages write the same destination path, a declared reducer is required.
+- If multiple sibling lineages write the same destination path, a declared
+  `mergeable` reducer is required.
 - Ancestor/descendant writes across sibling lineages are conflicts unless an explicit future merge strategy covers them.
 - Commit order is item index order, never completion order.
 

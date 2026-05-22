@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.models.reducers import ReducerRef, ReducerSpec
+from wf_core.models.reducers import ReducerRef, ReducerSpec, SiblingWritePolicy
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
 
 PlainReducer = Callable[[Any, Any], Any]
@@ -116,6 +116,7 @@ DEFAULT_REDUCER_DEFINITIONS: Mapping[str, ReducerDefinition] = {
         spec=ReducerSpec(
             name="wf.std.replace",
             description="Replace the current state value with the incoming value.",
+            sibling_write_policy=SiblingWritePolicy.EXCLUSIVE,
         ),
         fn=replace_reducer,
     ),
@@ -157,6 +158,33 @@ DEFAULT_REDUCER_DEFINITIONS: Mapping[str, ReducerDefinition] = {
 }
 
 
+def get_reducer_definition(
+    reducer: ReducerRef,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+) -> ReducerDefinition:
+    """Resolve a reducer from injected definitions plus built-ins."""
+    definition = None if reducers is None else reducers.get(reducer.name)
+    if definition is None:
+        definition = DEFAULT_REDUCER_DEFINITIONS.get(reducer.name)
+    if definition is None:
+        raise WorkflowExecutionError(f"unknown reducer {reducer.name!r}")
+    return definition
+
+
+def reducer_allows_sibling_writes(
+    reducer: ReducerRef,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+) -> bool:
+    """Return whether a reducer can merge sibling foreach item writes.
+
+    Reducers remain pure value functions. Barrier conflict rules live here as
+    metadata so `replace` can be exclusive without teaching the reducer about
+    foreach, frames, or item ordering.
+    """
+    definition = get_reducer_definition(reducer, reducers)
+    return definition.spec.sibling_write_policy is SiblingWritePolicy.MERGEABLE
+
+
 def apply_reducer(
     *,
     reducer: ReducerRef,
@@ -171,11 +199,7 @@ def apply_reducer(
     tests and local packages can provide custom reducers without re-registering
     every `wf.std.*` reducer.
     """
-    definition = None if reducers is None else reducers.get(reducer.name)
-    if definition is None:
-        definition = DEFAULT_REDUCER_DEFINITIONS.get(reducer.name)
-    if definition is None:
-        raise WorkflowExecutionError(f"unknown reducer {reducer.name!r}")
+    definition = get_reducer_definition(reducer, reducers)
     return definition.apply(
         reducer=reducer,
         current_value=current_value,

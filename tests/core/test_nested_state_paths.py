@@ -6,6 +6,7 @@ from wf_core import (
     ReducerRef,
     ReducerSpec,
     SchemaRef,
+    SiblingWritePolicy,
     StateField,
     StateSchema,
     Workflow,
@@ -466,6 +467,12 @@ def test_reducer_definition_can_wrap_plain_two_arg_callable() -> None:
     )
 
     assert result == 5
+
+
+def test_reducer_spec_defaults_to_mergeable_sibling_write_policy() -> None:
+    spec = ReducerSpec(name="test.reducer")
+
+    assert spec.sibling_write_policy is SiblingWritePolicy.MERGEABLE
 
 
 def test_reducer_definition_can_wrap_config_aware_callable() -> None:

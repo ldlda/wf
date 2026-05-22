@@ -4,7 +4,7 @@
 
 **Goal:** Enforce deterministic and explicit write semantics when concurrent foreach sibling item lineages commit at the barrier.
 
-**Architecture:** Keep per-node patch building unchanged. Add a barrier-only validation step before replaying item patches: inspect all item patch destination paths, reject ambiguous sibling writes, and allow multi-writer paths only when the exact declared state path has an explicit non-replace reducer. Barrier replay still happens in item-index order through existing reducer logic.
+**Architecture:** Keep per-node patch building unchanged. Add a barrier-only validation step before replaying item patches: inspect all item patch destination paths, reject ambiguous sibling writes, and allow multi-writer paths only when the exact declared state path has a reducer whose metadata is `mergeable`. Barrier replay still happens in item-index order through existing reducer logic.
 
 **Tech Stack:** Python 3.14, dataclasses, Pydantic v2 models, pytest, `StatePath`, `StateSchema.field_index()`, `StatePatch`, `ForeachBarrierState`, and existing reducer definitions.
 
@@ -17,14 +17,14 @@ This slice owns sibling write policy at a foreach barrier.
 Allowed:
 
 - A destination path written by exactly one item lineage uses normal state rules.
-- A destination path written by multiple item lineages is allowed only if that exact declared state path has an explicit reducer other than `wf.std.replace`.
+- A destination path written by multiple item lineages is allowed only if that exact declared state path has a `mergeable` reducer.
 - Multi-writer reducer replay is deterministic item-index order.
 - Multiple nodes inside the same item lineage may write multiple paths; that is item-local overlay behavior from Slice 2.
 
 Rejected:
 
 - Multiple sibling item lineages writing the same destination path with missing reducer/default replace.
-- Multiple sibling item lineages writing the same destination path with explicit `wf.std.replace`.
+- Multiple sibling item lineages writing the same destination path with an `exclusive` reducer such as `wf.std.replace`.
 - Sibling item lineages writing ancestor/descendant paths such as `state.person` and `state.person.name`.
 
 Important distinction:
@@ -508,9 +508,9 @@ In `docs/adr/0002-concurrent-foreach-policy-and-barrier-commits.md`, under
 
 ```markdown
 Current barrier validation enforces this policy for sibling foreach item
-lineages. Same-path sibling writes require an explicit non-`replace` reducer on
-the exact destination state path. Ancestor/descendant sibling writes are
-rejected until a future explicit deep merge policy exists.
+lineages. Same-path sibling writes require a `mergeable` reducer on the exact
+destination state path. Ancestor/descendant sibling writes are rejected until a
+future explicit deep merge policy exists.
 ```
 
 - [ ] **Step 2: Update roadmap Slice 3**
