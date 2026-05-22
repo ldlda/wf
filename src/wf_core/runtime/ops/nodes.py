@@ -31,7 +31,7 @@ def _resolve_node_execution(
     run: RunState,
     node: NodeUse,
     node_def: NodeDef,
-) -> tuple[dict[str, Any], RuntimeContext]:
+) -> tuple[dict[str, Any], RuntimeContext, dict[str, Any]]:
     frame = run.current_frame()
     context_values = frame_context_values(frame)
     state_view = state_view_for_frame(run, frame)
@@ -65,7 +65,7 @@ def _resolve_node_execution(
         activated_incoming_edge=frame.activated_incoming_edge,
         metadata=dict(frame.metadata),
     )
-    return resolved_input, context
+    return resolved_input, context, state_view
 
 
 def _finalize_node_execution(
@@ -76,6 +76,7 @@ def _finalize_node_execution(
     node_def: NodeDef,
     resolved_input: dict[str, Any],
     raw_result: NodeResult | dict[str, Any],
+    state_view: dict[str, Any],
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> StepExecutionResult:
     result = coerce_node_result(raw_result)
@@ -92,7 +93,7 @@ def _finalize_node_execution(
         workflow,
         node.output,
         result.output,
-        run.state,
+        state_view,
         reducers=reducers,
     )
     owner = item_frame_owner(run.current_frame())
@@ -134,7 +135,7 @@ def execute_node_use(
             f"no handler registered for node def {node.node!r}"
         )
 
-    resolved_input, context = _resolve_node_execution(
+    resolved_input, context, state_view = _resolve_node_execution(
         workflow=workflow,
         run=run,
         node=node,
@@ -148,6 +149,7 @@ def execute_node_use(
         node_def=node_def,
         resolved_input=resolved_input,
         raw_result=raw_result,
+        state_view=state_view,
         reducers=reducers,
     )
 
@@ -166,7 +168,7 @@ async def execute_node_use_async(
             f"no handler registered for node def {node.node!r}"
         )
 
-    resolved_input, context = _resolve_node_execution(
+    resolved_input, context, state_view = _resolve_node_execution(
         workflow=workflow,
         run=run,
         node=node,
@@ -184,6 +186,7 @@ async def execute_node_use_async(
         node_def=node_def,
         resolved_input=resolved_input,
         raw_result=cast(NodeResult | dict[str, Any], raw_result),
+        state_view=state_view,
         reducers=reducers,
     )
 

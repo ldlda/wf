@@ -4,7 +4,7 @@ from collections.abc import Mapping
 
 from wf_core.conditions import safe_resolve_path
 from wf_core.errors import WorkflowExecutionError
-from wf_core.models.steps import ForeachNode, NodeUse
+from wf_core.models.steps import ForeachNode
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
 from wf_core.runtime.foreach_state import ForeachBarrierState
@@ -18,7 +18,6 @@ from wf_core.runtime.scheduler import (
     add_frame,
     block_frame_on_children,
 )
-from wf_core.tokens import END
 
 
 def step_foreach(
@@ -127,8 +126,6 @@ def _step_foreach_concurrent(
         )
     if step.concurrent is None:
         raise WorkflowExecutionError("concurrent foreach requires concurrent policy")
-    _validate_single_node_loop_body(index, step)
-
     frame = run.current_frame()
     barrier = ForeachBarrierState.from_frame(frame, step.id)
     if barrier is None:
@@ -180,27 +177,6 @@ def _resolve_foreach_iterable(
             f"foreach source {str(step.over)!r} must resolve to a list"
         )
     return iterable
-
-
-def _validate_single_node_loop_body(index: WorkflowIndex, step: ForeachNode) -> None:
-    """Reject multi-step concurrent item bodies until item overlays are real.
-
-    The current slice has a no-op item-state overlay seam. Without a real overlay,
-    multi-node item bodies would read stale parent state after earlier item-local
-    writes, so V1 only allows loop -> one node -> END.
-    """
-    loop_start = index.next_node_id(step.id, "loop")
-    loop_step = index.nodes_by_id.get(loop_start)
-    if not isinstance(loop_step, NodeUse):
-        raise WorkflowExecutionError(
-            "concurrent foreach v1 only supports loop bodies with one node"
-        )
-    node_def = index.node_defs[loop_step.node]
-    for outcome in node_def.outcomes:
-        if index.next_node_id(loop_step.id, outcome) != END:
-            raise WorkflowExecutionError(
-                "concurrent foreach v1 only supports loop bodies with one node"
-            )
 
 
 def _finish_completed_children(run: RunState, barrier: ForeachBarrierState) -> None:

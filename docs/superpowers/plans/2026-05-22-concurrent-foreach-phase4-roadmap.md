@@ -24,10 +24,9 @@ Already implemented:
 - `ForeachBarrierState`, `PendingItemResult`, and `ItemErrorRecord` exist.
 - Serial foreach progress now uses `ForeachBarrierState`.
 - Sync `foreach(mode="concurrent")` runs with fail-only item policy, bounded
-  admission, deterministic interleaving, and barrier commits for single-node
-  item bodies.
-- Item-local overlays are not implemented yet, so multi-step concurrent item
-  bodies remain rejected until Slice 2.
+  admission, deterministic interleaving, item-local overlays, and barrier
+  commits.
+- Multi-step concurrent item bodies are supported for fail-only item policy.
 
 ## Non-Goals For Phase 4
 
@@ -58,9 +57,10 @@ Plan:
 
 ## Slice 2: Item-Local Overlays
 
-Implement next because Slice 1 intentionally supports only `loop -> one node ->
-END` item bodies. Overlays let later nodes in one item read earlier buffered
-writes from the same item without exposing those writes to siblings.
+Implemented after Slice 1 because fail-only concurrent foreach needed
+lineage-local reads before multi-step item bodies could be supported. Overlays
+let later nodes in one item read earlier buffered writes from the same item
+without exposing those writes to siblings.
 
 Scope:
 

@@ -287,6 +287,8 @@ Expected before implementation:
 FAILED with "already recorded"
 ```
 
+After this plan is implemented, both tests should pass.
+
 - [ ] **Step 3: Replace duplicate rejection with patch merge**
 
 In `src/wf_core/runtime/foreach_state.py`, change `add_success_patch(...)` to merge changes for the same item:

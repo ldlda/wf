@@ -165,55 +165,46 @@ def test_sync_concurrent_foreach_fails_run_on_item_runtime_error() -> None:
         execute_workflow(workflow, {"items": ["a", "b", "c"]}, {"record": fail_on_b})
 
 
-def test_sync_concurrent_foreach_rejects_multi_step_item_body_for_now() -> None:
-    workflow = _workflow(
-        state_schema=StateSchema.from_field_map(
-            {
-                "items": StateField(type="array"),
-                "seen": StateField(
-                    type="array",
-                    reducer=ReducerRef(name="wf.std.append"),
-                ),
-            }
-        ),
-        foreach=ForeachNode.model_validate(
-            {
-                "id": "each",
-                "type": "foreach",
-                "over": "state.items",
-                "as": "item",
-                "mode": "concurrent",
-                "concurrent": {"max_active": 2, "max_outstanding": 2},
-            }
-        ),
-    )
-    workflow.nodes.append(
-        NodeUse.model_validate(
-            {
-                "id": "after_record",
-                "type": "node",
-                "node": "record",
-                "input": [{"target": "value", "path": "state.seen"}],
-                "output": [{"source": "seen", "target": "state.seen"}],
-            }
-        )
-    )
-    workflow.edges = [
-        Edge.model_validate({"from": "each", "outcome": "loop", "to": "record"}),
-        Edge.model_validate({"from": "record", "outcome": "ok", "to": "after_record"}),
-        Edge.model_validate({"from": "after_record", "outcome": "ok", "to": END}),
-        Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
-    ]
+def test_sync_concurrent_foreach_item_reads_own_buffered_write() -> None:
+    workflow = _multi_step_overlay_workflow()
 
-    with pytest.raises(
-        WorkflowExecutionError,
-        match="only supports loop bodies with one node",
-    ):
-        execute_workflow(
-            workflow,
-            {"items": ["a"]},
-            {"record": lambda payload, _ctx: {"outcome": "ok", "output": payload}},
-        )
+    run = execute_workflow(
+        workflow,
+        {"items": ["a", "b", "c"]},
+        {
+            "stage_scratch": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"scratch": f"scratch:{payload['value']}"},
+            },
+            "read_scratch": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"seen": payload["scratch"]},
+            },
+        },
+    )
+
+    assert run.state["seen"] == ["scratch:a", "scratch:b", "scratch:c"]
+
+
+def test_sync_concurrent_foreach_sibling_overlays_do_not_leak() -> None:
+    workflow = _multi_step_overlay_workflow()
+
+    run = execute_workflow(
+        workflow,
+        {"items": ["a", "b"]},
+        {
+            "stage_scratch": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"scratch": payload["value"]},
+            },
+            "read_scratch": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"seen": payload["scratch"]},
+            },
+        },
+    )
+
+    assert run.state["seen"] == ["a", "b"]
 
 
 def _workflow(
@@ -277,4 +268,100 @@ def _workflow(
             ),
         ],
         edges=edges,
+    )
+
+
+def _multi_step_overlay_workflow() -> Workflow:
+    foreach = ForeachNode.model_validate(
+        {
+            "id": "each",
+            "type": "foreach",
+            "over": "state.items",
+            "as": "item",
+            "mode": "concurrent",
+            "concurrent": {"max_active": 2, "max_outstanding": 2},
+        }
+    )
+    return Workflow(
+        name="concurrent_foreach_overlay",
+        input_schema=SchemaRef(
+            type="object",
+            properties={"items": {"type": "array"}},
+        ),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "scratch": StateField(type="string"),
+                "seen": StateField(
+                    type="array",
+                    reducer=ReducerRef(name="wf.std.append"),
+                ),
+            }
+        ),
+        output_schema=SchemaRef(
+            type="object",
+            properties={"seen": {"type": "array"}},
+        ),
+        node_defs=[
+            NodeDef(
+                name="stage_scratch",
+                input_schema=SchemaRef(
+                    type="object",
+                    properties={"value": {}},
+                    required=["value"],
+                ),
+                output_schema=SchemaRef(
+                    type="object",
+                    properties={"scratch": {}},
+                    required=["scratch"],
+                ),
+                outcomes=["ok"],
+            ),
+            NodeDef(
+                name="read_scratch",
+                input_schema=SchemaRef(
+                    type="object",
+                    properties={"scratch": {}},
+                    required=["scratch"],
+                ),
+                output_schema=SchemaRef(
+                    type="object",
+                    properties={"seen": {}},
+                    required=["seen"],
+                ),
+                outcomes=["ok"],
+            ),
+        ],
+        start="each",
+        nodes=[
+            foreach,
+            NodeUse.model_validate(
+                {
+                    "id": "stage_scratch",
+                    "type": "node",
+                    "node": "stage_scratch",
+                    "input": [{"target": "value", "path": "context.item"}],
+                    "output": [{"source": "scratch", "target": "state.scratch"}],
+                }
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "read_scratch",
+                    "type": "node",
+                    "node": "read_scratch",
+                    "input": [{"target": "scratch", "path": "state.scratch"}],
+                    "output": [{"source": "seen", "target": "state.seen"}],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate(
+                {"from": "each", "outcome": "loop", "to": "stage_scratch"}
+            ),
+            Edge.model_validate(
+                {"from": "stage_scratch", "outcome": "ok", "to": "read_scratch"}
+            ),
+            Edge.model_validate({"from": "read_scratch", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
     )

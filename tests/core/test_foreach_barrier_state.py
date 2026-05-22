@@ -98,14 +98,27 @@ def test_foreach_barrier_rejects_finishing_unknown_child() -> None:
         barrier.finish_child("child-0")
 
 
-def test_foreach_barrier_rejects_duplicate_item_result() -> None:
-    barrier = ForeachBarrierState()
+def test_foreach_barrier_accumulates_multiple_patches_for_one_item() -> None:
+    barrier = ForeachBarrierState(mode="concurrent")
+    patch = StatePatch(changes={"state.count": 1})
+    second_patch = StatePatch(changes={"state.name": "a"})
+
+    barrier.add_success_patch(index=0, frame_id="child-0", patch=patch)
+    barrier.add_success_patch(index=0, frame_id="child-0", patch=second_patch)
+
+    result = barrier.pending_results[0]
+    assert result.patch.changes["state.count"] == 1
+    assert result.patch.changes["state.name"] == "a"
+
+
+def test_foreach_barrier_rejects_item_result_frame_mismatch() -> None:
+    barrier = ForeachBarrierState(mode="concurrent")
     patch = StatePatch(changes={"state.count": 1})
 
     barrier.add_success_patch(index=0, frame_id="child-0", patch=patch)
 
-    with pytest.raises(WorkflowExecutionError, match="already recorded"):
-        barrier.add_success_patch(index=0, frame_id="child-0", patch=patch)
+    with pytest.raises(WorkflowExecutionError, match="belongs to frame"):
+        barrier.add_success_patch(index=0, frame_id="child-1", patch=patch)
 
 
 def test_item_error_record_rejects_negative_index() -> None:

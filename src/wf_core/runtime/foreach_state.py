@@ -239,17 +239,28 @@ class ForeachBarrierState:
     def add_success_patch(
         self, *, index: int, frame_id: str, patch: StatePatch
     ) -> None:
-        """Buffer one successful item patch by item index."""
-        if index in self.pending_results:
-            raise WorkflowExecutionError(
-                f"foreach item result for index {index!r} already recorded"
+        """Buffer or extend successful item patches by item index.
+
+        A multi-step item body can produce multiple node patches. They are
+        accumulated for the same item lineage and replayed by the barrier in
+        item index order. Do not merge `_prepared_writes` here: the barrier
+        intentionally replays public changes against one staged parent state.
+        """
+        existing = self.pending_results.get(index)
+        if existing is None:
+            self.pending_results[index] = PendingItemResult(
+                index=index,
+                frame_id=frame_id,
+                status="succeeded",
+                patch=patch,
             )
-        self.pending_results[index] = PendingItemResult(
-            index=index,
-            frame_id=frame_id,
-            status="succeeded",
-            patch=patch,
-        )
+            return
+        if existing.frame_id != frame_id:
+            raise WorkflowExecutionError(
+                f"foreach item result for index {index!r} belongs to frame "
+                f"{existing.frame_id!r}, got {frame_id!r}"
+            )
+        existing.patch.changes.update(patch.changes)
 
 
 def item_frame_owner(frame: ExecutionFrame) -> tuple[str, str, int] | None:
