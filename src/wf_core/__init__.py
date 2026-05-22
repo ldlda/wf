@@ -1,6 +1,8 @@
 from .models import (
     ConditionNode,
     Edge,
+    ForeachConcurrentPolicy,
+    ForeachItemErrorPolicy,
     ForeachNode,
     InterruptNode,
     JoinNode,
@@ -47,6 +49,8 @@ from .validation import (
 __all__ = [
     "ConditionNode",
     "Edge",
+    "ForeachConcurrentPolicy",
+    "ForeachItemErrorPolicy",
     "ForeachNode",
     "InterruptNode",
     "JoinNode",

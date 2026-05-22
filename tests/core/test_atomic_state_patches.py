@@ -17,7 +17,11 @@ from wf_core import (
 from wf_core.models.steps import OutputBinding
 from wf_core.runtime.engine import resume_workflow
 from wf_core.runtime.ops.runs import create_run_state
-from wf_core.runtime.ops.state import apply_output_bindings
+from wf_core.runtime.ops.state import (
+    apply_output_bindings,
+    build_output_patch,
+    commit_state_patch,
+)
 
 
 def test_output_bindings_commit_patch_atomically_when_source_is_missing() -> None:
@@ -169,6 +173,41 @@ def test_full_workflow_execution_writes_canonical_output_bindings() -> None:
 
     assert run.state["person"]["name"] == "Ada"
     assert run.trace[0].state_changes["state.person.name"] == "Ada"
+
+
+def test_build_output_patch_does_not_mutate_until_commit() -> None:
+    workflow = _workflow(fields={"person.name": StateField(type="string")})
+    state = {"person": {"name": "old"}}
+
+    patch = build_output_patch(
+        workflow,
+        [_binding("person.name", "state.person.name")],
+        {"person": {"name": "Ada"}},
+        state,
+    )
+
+    assert state["person"]["name"] == "old"
+    assert patch.changes["state.person.name"] == "Ada"
+
+    committed = commit_state_patch(state, patch)
+
+    assert committed["state.person.name"] == "Ada"
+    assert state["person"]["name"] == "Ada"
+
+
+def test_build_and_commit_patch_matches_apply_output_bindings() -> None:
+    workflow = _workflow(fields={"person.name": StateField(type="string")})
+    state_from_apply = {"person": {"name": "old"}}
+    state_from_patch = {"person": {"name": "old"}}
+    bindings = [_binding("person.name", "state.person.name")]
+    output = {"person": {"name": "Ada"}}
+
+    applied = apply_output_bindings(workflow, bindings, output, state_from_apply)
+    patch = build_output_patch(workflow, bindings, output, state_from_patch)
+    committed = commit_state_patch(state_from_patch, patch)
+
+    assert applied["state.person.name"] == committed["state.person.name"]
+    assert state_from_apply["person"]["name"] == state_from_patch["person"]["name"]
 
 
 def _binding(source: str, target: str) -> OutputBinding:

@@ -97,8 +97,24 @@ class DraftForeachPayload(BaseModel):
 
     over: GraphSourcePath
     as_: str = Field(alias="as")
-    mode: Literal["serial", "parallel"] = "serial"
+    mode: Literal["serial", "concurrent"] = "serial"
     on_item_error: Literal["fail", "collect", "skip"] = "fail"
+    concurrent: JsonObject | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_legacy_parallel_policy(cls, data: object) -> object:
+        """Accept old draft foreach parallel names as parse-only compatibility."""
+        if not isinstance(data, dict):
+            return data
+        normalized = dict(data)
+        if normalized.get("mode") == "parallel":
+            normalized["mode"] = "concurrent"
+        if "parallel" in normalized:
+            if "concurrent" in normalized:
+                raise ValueError("cannot mix deprecated parallel with concurrent")
+            normalized["concurrent"] = normalized.pop("parallel")
+        return normalized
 
 
 class DraftForeachStep(BaseModel):

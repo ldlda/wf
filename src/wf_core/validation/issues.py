@@ -21,6 +21,7 @@ class ValidationIssueCode(StrEnum):
     EMPTY_CONDITION_ARGS = "empty_condition_args"
     INVALID_CONDITION_PATH = "invalid_condition_path"
     INVALID_FOREACH_SOURCE = "invalid_foreach_source"
+    INVALID_FOREACH_COLLECT_DESTINATION = "invalid_foreach_collect_destination"
     INVALID_INTERRUPT_SOURCE = "invalid_interrupt_source"
     INVALID_INTERRUPT_DESTINATION = "invalid_interrupt_destination"
 

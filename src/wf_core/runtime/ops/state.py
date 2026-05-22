@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from copy import deepcopy
+from dataclasses import dataclass, field as dataclass_field
 from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
@@ -21,6 +22,24 @@ from wf_core.runtime.ops.merges import ReducerDefinition, apply_reducer
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
 
 _MISSING = object()
+
+
+@dataclass(slots=True)
+class StatePatch:
+    """Validated state writes produced by one step before commit.
+
+    `changes` is the public trace-facing view: the incoming values keyed by
+    state path. `_prepared_writes` and `_staged_state` are the executor internals
+    needed to commit reducer-aware values atomically without recomputing the
+    patch.
+    """
+
+    changes: dict[str, Any] = dataclass_field(default_factory=dict)
+    _prepared_writes: dict[StatePath, tuple[list[str], Any]] = dataclass_field(
+        default_factory=dict,
+        repr=False,
+    )
+    _staged_state: dict[str, Any] = dataclass_field(default_factory=dict, repr=False)
 
 
 def apply_output_map(
@@ -58,6 +77,27 @@ def apply_output_bindings(
     missing_field_message: str = "node output did not include required field {field}",
 ) -> dict[str, Any]:
     """Prepare and commit one atomic state patch from canonical output bindings."""
+    patch = build_output_patch(
+        workflow,
+        bindings,
+        node_output,
+        state,
+        reducers=reducers,
+        missing_field_message=missing_field_message,
+    )
+    return commit_state_patch(state, patch)
+
+
+def build_output_patch(
+    workflow: Workflow,
+    bindings: Sequence[OutputBinding],
+    node_output: Mapping[str, Any],
+    state: dict[str, Any],
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+    missing_field_message: str = "node output did not include required field {field}",
+) -> StatePatch:
+    """Build and validate one reducer-aware state patch without mutating state."""
     if has_overlapping_paths(str(binding.target) for binding in bindings):
         raise WorkflowExecutionError(
             "mapped state patch has overlapping destination paths"
@@ -91,9 +131,18 @@ def apply_output_bindings(
     for _destination_path, (key_path, merged_value) in prepared_patch.items():
         safe_set_nested_value(staged_state, key_path, merged_value)
     validate_staged_state_patch(staged_state, prepared_patch, state_fields)
+    return StatePatch(
+        changes={str(path): value for path, value in resolved_patch.items()},
+        _prepared_writes=prepared_patch,
+        _staged_state=staged_state,
+    )
+
+
+def commit_state_patch(state: dict[str, Any], patch: StatePatch) -> dict[str, Any]:
+    """Commit a prevalidated patch to state and return trace-facing changes."""
     state.clear()
-    state.update(staged_state)
-    return {str(path): value for path, value in resolved_patch.items()}
+    state.update(patch._staged_state)
+    return dict(patch.changes)
 
 
 def apply_mapped_state(

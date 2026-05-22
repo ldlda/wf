@@ -75,7 +75,12 @@ def _validate_nodes(
             )
         elif isinstance(node, ForeachNode):
             validate_foreach_node(
-                node, index, report, state_root_fields, input_root_fields
+                node,
+                index,
+                report,
+                state_root_fields,
+                input_root_fields,
+                workflow,
             )
         elif isinstance(node, InterruptNode):
             validate_interrupt_node(

@@ -394,9 +394,16 @@ class WorkflowBuilder:
         id: str | None = None,
         over: PathArg,
         as_: str,
-        mode: Literal["serial", "parallel"] = "serial",
+        mode: Literal["serial", "concurrent"] = "serial",
         on_item_error: Literal["fail", "collect", "skip"] = "fail",
+        concurrent: Mapping[str, object] | None = None,
     ) -> ForeachNode:
+        """Add a foreach step.
+
+        Concurrent mode is intentionally model-only for now: it validates saved
+        shape, but runtime execution still rejects it until barrier commits are
+        implemented.
+        """
         node = ForeachNode.model_validate(
             {
                 "id": id or self._next_step_id(f"foreach_{slug_id(as_)}"),
@@ -405,6 +412,7 @@ class WorkflowBuilder:
                 "as": as_,
                 "mode": mode,
                 "on_item_error": on_item_error,
+                "concurrent": concurrent,
             }
         )
         self.nodes.append(node)

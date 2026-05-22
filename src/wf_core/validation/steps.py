@@ -149,12 +149,34 @@ def validate_foreach_node(
     report: ValidationReport,
     state_root_fields: set[str],
     input_root_fields: set[str],
+    workflow: Workflow,
 ) -> None:
     if not is_valid_source_path(node.over, state_root_fields, input_root_fields):
         report.add(
             ValidationIssueCode.INVALID_FOREACH_SOURCE,
             f"nodes[{index}].over",
             "foreach source path must start with input. or state. and reference a declared root field",
+        )
+    if node.item_error.action != "collect":
+        return
+    collect_to = node.item_error.collect_to
+    if collect_to is None:
+        return
+    destination_root = _state_destination_root(collect_to)
+    state_fields = workflow.state_schema.field_index()
+    field = state_fields.get(collect_to)
+    if destination_root is None or destination_root not in state_root_fields:
+        report.add(
+            ValidationIssueCode.INVALID_FOREACH_COLLECT_DESTINATION,
+            f"nodes[{index}].item_error.collect_to",
+            "collect_to must start with state. and reference a declared state field",
+        )
+        return
+    if field is None or field.type != "array":
+        report.add(
+            ValidationIssueCode.INVALID_FOREACH_COLLECT_DESTINATION,
+            f"nodes[{index}].item_error.collect_to",
+            "collect_to must reference a declared array state field",
         )
 
 

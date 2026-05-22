@@ -8,6 +8,21 @@
 
 **Tech Stack:** Python 3.14, Pydantic v2, dataclasses, pytest, basedpyright, ruff, existing `wf_core` scheduler/runtime modules.
 
+## Implementation Status
+
+- Phase 1 is implemented: foreach policy models, legacy `parallel` parse-only
+  compatibility, derived `completed_with_errors` outcomes, and collect
+  destination validation exist.
+- Phase 2 is implemented: node output writes can be split into
+  `build_output_patch(...)` and `commit_state_patch(...)`; the old
+  `apply_output_bindings(...)` helper remains as the compatibility wrapper.
+- Phase 3 is implemented: `wf_core.runtime.foreach_state` owns typed barrier
+  metadata and serial foreach progress now uses that metadata instead of ad hoc
+  `foreach_progress`.
+- Phase 4 is not implemented: `foreach(mode="concurrent")` still validates as a
+  model shape but runtime execution rejects it until concurrent scheduling,
+  barrier commits, and item failure handling are implemented.
+
 ---
 
 ## Phase 1: Foreach Policy Models

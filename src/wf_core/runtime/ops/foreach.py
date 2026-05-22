@@ -5,6 +5,7 @@ from wf_core.errors import WorkflowExecutionError
 from wf_core.models.steps import ForeachNode
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
+from wf_core.runtime.foreach_state import ForeachBarrierState
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.index import WorkflowIndex
@@ -23,12 +24,11 @@ def step_foreach(
 ) -> RunState:
     if step.mode != "serial":
         raise WorkflowExecutionError(
-            "parallel foreach execution is not implemented yet"
+            "concurrent foreach execution is not implemented yet"
         )
 
     frame = run.current_frame()
-    progress_map = frame.metadata.setdefault("foreach_progress", {})
-    progress = progress_map.setdefault(step.id, {"index": 0})
+    barrier = ForeachBarrierState.from_frame(frame, step.id) or ForeachBarrierState()
 
     iterable = safe_resolve_path(
         str(step.over),
@@ -41,7 +41,7 @@ def step_foreach(
             f"foreach source {str(step.over)!r} must resolve to a list"
         )
 
-    loop_index = progress["index"]
+    loop_index = barrier.next_index
     if loop_index >= len(iterable):
         outcome = "done"
         next_node_id = index.next_node_id(frame.node_id, outcome)
@@ -64,7 +64,8 @@ def step_foreach(
     loop_start = index.next_node_id(frame.node_id, "loop")
 
     item = iterable[loop_index]
-    progress["index"] = loop_index + 1
+    barrier.next_index = loop_index + 1
+    barrier.save_to_frame(frame, step.id)
     child_id = f"{frame.id}:{step.id}:{loop_index}"
     child_metadata = ForeachIterationMetadata(
         foreach_node_id=step.id,

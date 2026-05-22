@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
@@ -163,6 +163,44 @@ class ConditionNode(BaseModel):
     check: Condition
 
 
+class ForeachItemErrorPolicy(BaseModel):
+    """Policy for runtime failures inside one foreach item lineage."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    action: Literal["fail", "skip", "collect"] = "fail"
+    collect_to: StatePath | None = None
+
+    @model_validator(mode="after")
+    def _validate_collect_to(self) -> Self:
+        if self.action == "collect" and self.collect_to is None:
+            raise ValueError("collect item error policy requires collect_to")
+        if self.action != "collect" and self.collect_to is not None:
+            raise ValueError("collect_to is only valid when action='collect'")
+        return self
+
+
+class ForeachConcurrentPolicy(BaseModel):
+    """Concurrency policy for foreach frame admission.
+
+    This controls workflow-level child frame admission. It does not imply
+    thread/process execution for sync node handlers; async runtime can use the
+    same policy to admit simultaneous async handler calls later.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    max_active: int = Field(default=4, ge=1)
+    max_outstanding: int = Field(default=20, ge=1)
+    interrupt: Literal["quiesce"] = "quiesce"
+
+    @model_validator(mode="after")
+    def _validate_capacity(self) -> Self:
+        if self.max_outstanding < self.max_active:
+            raise ValueError("max_outstanding must be >= max_active")
+        return self
+
+
 class ForeachNode(BaseModel):
     """Control-flow step that iterates over an input or state list."""
 
@@ -174,8 +212,50 @@ class ForeachNode(BaseModel):
         description="Workflow input/state/context path that must resolve to a list."
     )
     as_: str = Field(alias="as", description="Context key for the current item.")
-    mode: Literal["serial", "parallel"] = "serial"
-    on_item_error: Literal["fail", "collect", "skip"] = "fail"
+    mode: Literal["serial", "concurrent"] = "serial"
+    item_error: ForeachItemErrorPolicy = Field(
+        default_factory=ForeachItemErrorPolicy
+    )
+    concurrent: ForeachConcurrentPolicy | None = None
+    on_item_error: Literal["fail", "collect", "skip"] | None = Field(
+        default=None,
+        exclude=True,
+        description="Deprecated parse-only shorthand; use item_error.action.",
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_legacy_policy_shape(cls, data: object) -> object:
+        """Accept old foreach policy names while saving the new canonical shape."""
+        if not isinstance(data, Mapping):
+            return data
+
+        normalized = dict(data)
+        if normalized.get("mode") == "parallel":
+            normalized["mode"] = "concurrent"
+
+        if "parallel" in normalized:
+            if "concurrent" in normalized:
+                raise ValueError("cannot mix deprecated parallel with concurrent")
+            normalized["concurrent"] = normalized.pop("parallel")
+
+        old_item_error = normalized.pop("on_item_error", None)
+        if old_item_error is not None:
+            if "item_error" in normalized:
+                raise ValueError("cannot mix deprecated on_item_error with item_error")
+            normalized["item_error"] = {"action": old_item_error}
+
+        return normalized
+
+    @model_validator(mode="after")
+    def _validate_concurrent_policy(self) -> Self:
+        if self.mode == "concurrent" and self.concurrent is None:
+            raise ValueError("concurrent foreach requires concurrent policy")
+        if self.mode == "serial" and self.concurrent is not None:
+            raise ValueError(
+                "concurrent policy is only valid when mode='concurrent'"
+            )
+        return self
 
 
 class JoinNode(BaseModel):
