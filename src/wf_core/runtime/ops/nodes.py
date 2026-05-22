@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable, Mapping
+from dataclasses import dataclass
 from typing import Any, cast
 
 from wf_core.conditions import safe_resolve_path
@@ -10,7 +11,12 @@ from wf_core.models.results import NodeResult
 from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import InputPathBinding, InputValueBinding, NodeUse
 from wf_core.models.workflow import Workflow
-from wf_core.run_state import RunState, RuntimeContext, StepExecutionResult
+from wf_core.run_state import (
+    ExecutionFrame,
+    RunState,
+    RuntimeContext,
+    StepExecutionResult,
+)
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
@@ -25,14 +31,26 @@ AsyncNodeHandler = Callable[
 ]
 
 
+@dataclass(slots=True)
+class PendingAsyncNodeResult:
+    """Async handler result captured before sequential state finalization."""
+
+    frame: ExecutionFrame
+    node: NodeUse
+    node_def: NodeDef
+    resolved_input: dict[str, Any]
+    raw_result: NodeResult | dict[str, Any]
+    state_view: dict[str, Any]
+
+
 def _resolve_node_execution(
     *,
     workflow: Workflow,
     run: RunState,
+    frame: ExecutionFrame,
     node: NodeUse,
     node_def: NodeDef,
 ) -> tuple[dict[str, Any], RuntimeContext, dict[str, Any]]:
-    frame = run.current_frame()
     context_values = frame_context_values(frame)
     state_view = state_view_for_frame(run, frame)
     resolved_input: dict[str, Any] = {}
@@ -72,6 +90,7 @@ def _finalize_node_execution(
     *,
     workflow: Workflow,
     run: RunState,
+    frame: ExecutionFrame,
     node: NodeUse,
     node_def: NodeDef,
     resolved_input: dict[str, Any],
@@ -96,7 +115,7 @@ def _finalize_node_execution(
         state_view,
         reducers=reducers,
     )
-    owner = item_frame_owner(run.current_frame())
+    owner = item_frame_owner(frame)
     if owner is None:
         state_changes = commit_state_patch(run.state, patch)
     else:
@@ -106,7 +125,7 @@ def _finalize_node_execution(
         if barrier is not None and barrier.mode == "concurrent":
             barrier.add_success_patch(
                 index=item_index,
-                frame_id=run.current_frame().id,
+                frame_id=frame.id,
                 patch=patch,
             )
             barrier.save_to_frame(parent_frame, foreach_node_id)
@@ -138,6 +157,7 @@ def execute_node_use(
     resolved_input, context, state_view = _resolve_node_execution(
         workflow=workflow,
         run=run,
+        frame=run.current_frame(),
         node=node,
         node_def=node_def,
     )
@@ -145,6 +165,7 @@ def execute_node_use(
     return _finalize_node_execution(
         workflow=workflow,
         run=run,
+        frame=run.current_frame(),
         node=node,
         node_def=node_def,
         resolved_input=resolved_input,
@@ -171,6 +192,7 @@ async def execute_node_use_async(
     resolved_input, context, state_view = _resolve_node_execution(
         workflow=workflow,
         run=run,
+        frame=run.current_frame(),
         node=node,
         node_def=node_def,
     )
@@ -182,11 +204,104 @@ async def execute_node_use_async(
     return _finalize_node_execution(
         workflow=workflow,
         run=run,
+        frame=run.current_frame(),
         node=node,
         node_def=node_def,
         resolved_input=resolved_input,
         raw_result=cast(NodeResult | dict[str, Any], raw_result),
         state_view=state_view,
+        reducers=reducers,
+    )
+
+
+async def invoke_node_use_async_for_frame(
+    workflow: Workflow,
+    run: RunState,
+    frame: ExecutionFrame,
+    node: NodeUse,
+    node_def: NodeDef,
+    registry: Mapping[str, AsyncNodeHandler],
+) -> PendingAsyncNodeResult:
+    """Resolve input, await the async handler, and defer state finalization.
+
+    Async concurrent foreach can run handler awaits concurrently, but state
+    patches and traces must still be finalized sequentially against `RunState`.
+    """
+    handler = registry.get(node.node)
+    if handler is None:
+        raise WorkflowExecutionError(
+            f"no handler registered for node def {node.node!r}"
+        )
+
+    resolved_input, context, state_view = _resolve_node_execution(
+        workflow=workflow,
+        run=run,
+        frame=frame,
+        node=node,
+        node_def=node_def,
+    )
+    raw_or_awaitable = handler(resolved_input, context)
+    if isinstance(raw_or_awaitable, Awaitable):
+        raw_result = await raw_or_awaitable
+    else:
+        raw_result = raw_or_awaitable
+    return PendingAsyncNodeResult(
+        frame=frame,
+        node=node,
+        node_def=node_def,
+        resolved_input=resolved_input,
+        raw_result=cast(NodeResult | dict[str, Any], raw_result),
+        state_view=state_view,
+    )
+
+
+def finalize_pending_async_node_result(
+    workflow: Workflow,
+    run: RunState,
+    pending: PendingAsyncNodeResult,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+) -> StepExecutionResult:
+    """Finalize a previously awaited async node result sequentially."""
+    return _finalize_node_execution(
+        workflow=workflow,
+        run=run,
+        frame=pending.frame,
+        node=pending.node,
+        node_def=pending.node_def,
+        resolved_input=pending.resolved_input,
+        raw_result=pending.raw_result,
+        state_view=pending.state_view,
+        reducers=reducers,
+    )
+
+
+async def execute_node_use_async_for_frame(
+    workflow: Workflow,
+    run: RunState,
+    frame: ExecutionFrame,
+    node: NodeUse,
+    node_def: NodeDef,
+    registry: Mapping[str, AsyncNodeHandler],
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+) -> StepExecutionResult:
+    """Execute one async node against an explicit frame.
+
+    Async concurrent foreach cannot rely on `run.current_frame()` while several
+    handlers are in flight. This explicit-frame helper keeps input resolution
+    and item-local overlay lookup tied to the frame that launched the handler.
+    """
+    pending = await invoke_node_use_async_for_frame(
+        workflow,
+        run,
+        frame=frame,
+        node=node,
+        node_def=node_def,
+        registry=registry,
+    )
+    return finalize_pending_async_node_result(
+        workflow=workflow,
+        run=run,
+        pending=pending,
         reducers=reducers,
     )
 

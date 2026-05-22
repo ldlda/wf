@@ -34,6 +34,9 @@ Already implemented:
 - `collect` writes ordered item error records to `collect_to`, writes an empty
   list on clean success, and emits `completed_with_errors` only when failures
   were collected.
+- Async runtime batches ready concurrent-foreach item node handlers so handler
+  awaits may overlap up to admitted `max_active` work. State finalization and
+  traces still happen sequentially after handler results return.
 
 ## Non-Goals For Phase 4
 
@@ -140,7 +143,7 @@ Key tests:
 
 ## Slice 5: Async Concurrent Foreach
 
-Implement only after sync semantics are stable.
+Implemented after sync semantics stabilized.
 
 Scope:
 

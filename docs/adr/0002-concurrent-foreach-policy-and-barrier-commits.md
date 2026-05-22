@@ -30,11 +30,16 @@ behavior:
 - Ready or running item frames consume active capacity.
 - Blocked item frames consume outstanding capacity but not active capacity.
 
-`foreach(mode="concurrent")` should be executable by the sync runtime as
-deterministic frame interleaving: one admitted node handler call at a time. The
-async runtime may additionally run admitted async node handler calls
-simultaneously. Sync handlers should not be pushed into thread/process
-parallelism by default.
+`foreach(mode="concurrent")` is executable by the sync runtime as deterministic
+frame interleaving: one admitted node handler call at a time. The async runtime
+may additionally run admitted async node handler calls simultaneously. Sync
+handlers are not pushed into thread/process parallelism by default.
+
+Current async execution batches ready concurrent-foreach item frames that are
+about to execute node handlers for the same foreach barrier. Input resolution
+happens before each handler is awaited, handler awaits may overlap, and state
+patch finalization/tracing happens sequentially afterward. This keeps `RunState`
+mutation deterministic while allowing async I/O overlap.
 
 ## Item Error Policy
 

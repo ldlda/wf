@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Mapping
 from typing import Any
 
@@ -19,14 +20,17 @@ from wf_core.runtime.ops.handlers import (
     handle_interrupt_step,
     handle_join_step,
 )
-from wf_core.runtime.ops.index import WorkflowIndex
+from wf_core.runtime.ops.index import WorkflowIndex, build_workflow_index
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.nodes import (
     AsyncNodeHandler,
     NodeHandler,
     execute_node_use,
     execute_node_use_async,
+    finalize_pending_async_node_result,
+    invoke_node_use_async_for_frame,
 )
+from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
 from wf_core.runtime.scheduler import (
     ForeachIterationMetadata,
     select_next_frame,
@@ -129,7 +133,7 @@ def _mark_handled_item_failure(
     run: RunState,
     index: WorkflowIndex,
     frame: ExecutionFrame,
-    exc: Exception,
+    exc: BaseException,
 ) -> bool:
     """Record skip/collect item failures without failing the whole run here."""
     metadata = ForeachIterationMetadata.from_frame(frame)
@@ -163,7 +167,18 @@ async def step_workflow_async(
     if frame is None or frame.status != FrameStatus.RUNNING:
         if select_next_frame(run) is None:
             return run
-    prepared = prepare_step(workflow, run, index)
+    frame = run.current_frame()
+    resolved_index = index or build_workflow_index(workflow)
+    if _can_batch_async_foreach_item(run, resolved_index, frame):
+        return await _step_async_foreach_item_batch(
+            workflow,
+            run,
+            registry,
+            index=resolved_index,
+            reducers=reducers,
+            first_frame=frame,
+        )
+    prepared = prepare_step(workflow, run, resolved_index)
     if prepared is None:
         return run
     index, step = prepared
@@ -206,3 +221,114 @@ async def step_workflow_async(
         step_type=step.type,
         step_result=step_result,
     )
+
+
+async def _step_async_foreach_item_batch(
+    workflow: Workflow,
+    run: RunState,
+    registry: Mapping[str, AsyncNodeHandler],
+    *,
+    index: WorkflowIndex,
+    first_frame: ExecutionFrame,
+    reducers: Mapping[str, ReducerDefinition] | None,
+) -> RunState:
+    """Run one batch of ready concurrent-foreach item node handlers.
+
+    Only handler awaits run concurrently. Finalization, tracing, and frame
+    advancement happen afterward in frame-id order so `RunState` is mutated
+    deterministically.
+    """
+    frames = [first_frame, *_claim_matching_async_item_frames(run, index, first_frame)]
+    tasks = [
+        invoke_node_use_async_for_frame(
+            workflow,
+            run,
+            frame,
+            _node_use_for_frame(index, frame),
+            index.node_defs[_node_use_for_frame(index, frame).node],
+            registry,
+        )
+        for frame in frames
+    ]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    for frame, result in zip(frames, results, strict=True):
+        run.current_frame_id = frame.id
+        run.sync_from_current_frame()
+        if isinstance(result, BaseException):
+            if _mark_handled_item_failure(run, index, frame, result):
+                continue
+            raise result
+        step_result = finalize_pending_async_node_result(
+            workflow,
+            run,
+            result,
+            reducers=reducers,
+        )
+        node = _node_use_for_frame(index, frame)
+        complete_step(
+            run=run,
+            index=index,
+            outcome=step_result.outcome,
+            frame_id=frame.id,
+            node_id=frame.node_id,
+            step_type=node.type,
+            step_result=step_result,
+        )
+    return run
+
+
+def _claim_matching_async_item_frames(
+    run: RunState,
+    index: WorkflowIndex,
+    first_frame: ExecutionFrame,
+) -> list[ExecutionFrame]:
+    owner = item_frame_owner(first_frame)
+    if owner is None:
+        return []
+    parent_frame_id, foreach_node_id, _item_index = owner
+    claimed: list[ExecutionFrame] = []
+    remaining_ready: list[str] = []
+    for frame_id in run.ready_frame_ids:
+        frame = run.frames[frame_id]
+        frame_owner = item_frame_owner(frame)
+        if (
+            frame.status == FrameStatus.PENDING
+            and frame_owner is not None
+            and frame_owner[:2] == (parent_frame_id, foreach_node_id)
+            and isinstance(index.nodes_by_id.get(frame.node_id), NodeUse)
+        ):
+            frame.status = FrameStatus.RUNNING
+            claimed.append(frame)
+        else:
+            remaining_ready.append(frame_id)
+    run.ready_frame_ids = remaining_ready
+    return claimed
+
+
+def _can_batch_async_foreach_item(
+    run: RunState,
+    index: WorkflowIndex,
+    frame: ExecutionFrame,
+) -> bool:
+    owner = item_frame_owner(frame)
+    if owner is None:
+        return False
+    parent_frame_id, foreach_node_id, _item_index = owner
+    parent_frame = run.frames.get(parent_frame_id)
+    if parent_frame is None:
+        return False
+    barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
+    return (
+        barrier is not None
+        and barrier.mode == "concurrent"
+        and isinstance(index.nodes_by_id.get(frame.node_id), NodeUse)
+    )
+
+
+def _node_use_for_frame(index: WorkflowIndex, frame: ExecutionFrame) -> NodeUse:
+    step = index.nodes_by_id[frame.node_id]
+    if not isinstance(step, NodeUse):
+        raise WorkflowExecutionError(
+            f"async foreach batch requires node frame, got {frame.node_id!r}"
+        )
+    return step
