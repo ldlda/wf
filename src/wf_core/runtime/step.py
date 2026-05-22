@@ -53,6 +53,7 @@ def complete_step(
 ) -> RunState:
     """Record a completed step and advance the active frame."""
     next_node_id = index.next_node_id(node_id, outcome)
+    next_step = index.nodes_by_id.get(next_node_id)
 
     append_step_result_trace(
         run,
@@ -67,6 +68,7 @@ def complete_step(
         run.frames[frame_id],
         outcome=outcome,
         next_node_id=next_node_id,
+        front=isinstance(next_step, InterruptNode),
     )
     return run
 

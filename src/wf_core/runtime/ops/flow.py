@@ -74,6 +74,7 @@ def advance_frame(
     *,
     outcome: str,
     next_node_id: str,
+    front: bool = False,
 ) -> None:
     frame.prior_outcome = outcome
     frame.activated_incoming_edge = frame.node_id
@@ -84,7 +85,7 @@ def advance_frame(
         wake_parent_for_child_progress(run, frame.id)
     else:
         frame.finished_at_node_id = None
-        mark_frame_pending(run, frame.id)
+        mark_frame_pending(run, frame.id, front=front)
     run.sync_from_current_frame()
 
 

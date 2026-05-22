@@ -131,7 +131,7 @@ future explicit deep merge policy exists.
 
 ## Interrupt and Failure Quiescence
 
-Future concurrent execution should not assume in-flight node calls can be safely
+Concurrent execution should not assume in-flight node calls can be safely
 cancelled.
 
 If an interrupt or fail policy trips while sibling jobs are already started, the
@@ -145,6 +145,14 @@ runtime should:
 
 For `fail`, drained sibling results are for observability/cleanup only and
 should not commit normal state progress after the failure boundary.
+
+Current async concurrent foreach implements the interrupt part of this by
+prioritizing item frames that route into an `InterruptNode`. If a batched async
+node result sends one item to an interrupt while a sibling completes, the
+interrupt-bound frame is placed at the front of the ready queue before the
+parent foreach can refill capacity. Already-started async handler calls from
+the batch are awaited first, then their results are finalized sequentially.
+The foreach barrier does not commit while an item frame remains interrupted.
 
 ## Capacity and Runtime Limits
 

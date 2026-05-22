@@ -168,7 +168,7 @@ Key tests:
 
 ## Slice 6: Interrupt Quiescence
 
-Implement after async execution exists.
+Implemented after async execution exists.
 
 Scope:
 
@@ -177,6 +177,10 @@ Scope:
 - Already-started async node calls drain to pending results.
 - The caller gets control only at a quiescent point.
 - Pending results do not commit until resume/commit policy allows it.
+- Item frames that route into an `InterruptNode` are prioritized before the
+  parent foreach can refill capacity.
+- Already-started async handler calls drain at the batch boundary; state
+  finalization remains sequential.
 
 Files likely touched:
 
@@ -188,7 +192,7 @@ Files likely touched:
 
 Key tests:
 
-- `test_concurrent_foreach_interrupt_returns_after_quiescence`
+- `test_concurrent_foreach_interrupt_returns_before_refill`
 - `test_resume_prioritizes_interrupted_item_frame_before_siblings`
 
 ## Execution Order
