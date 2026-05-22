@@ -158,6 +158,11 @@ def build_barrier_patch(
     writes cannot be blindly merged because reducers must see the value produced
     by earlier item patches. The barrier therefore replays trace-facing incoming
     changes against a single staged state in deterministic item order.
+
+    Unlike ordinary node patches, barrier patch `changes` report the final
+    committed aggregate values. A barrier trace is the single visible state
+    commit for all buffered item patches, so showing raw per-item incoming
+    values would hide what actually landed in `RunState.state`.
     """
     state_fields = workflow.state_schema.field_index()
     staged_state = deepcopy(state)

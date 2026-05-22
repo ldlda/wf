@@ -92,6 +92,7 @@ def test_sync_concurrent_foreach_respects_max_active_by_refill_trace() -> None:
     ]
     assert loop_entries[0].resolved_input["active_count"] == 0
     assert loop_entries[1].resolved_input["active_count"] == 1
+    assert any(entry.resolved_input["active_count"] > 0 for entry in loop_entries)
     assert all(entry.resolved_input["active_count"] < 2 for entry in loop_entries)
 
 

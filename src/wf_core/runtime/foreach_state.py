@@ -222,6 +222,13 @@ class ForeachBarrierState:
 
     def finish_child(self, frame_id: str) -> None:
         """Record one child frame as no longer active or outstanding."""
+        if (
+            frame_id not in self.active_frame_ids
+            or frame_id not in self.outstanding_frame_ids
+        ):
+            raise WorkflowExecutionError(
+                f"foreach child frame {frame_id!r} is not active"
+            )
         self.active_frame_ids = tuple(
             item for item in self.active_frame_ids if item != frame_id
         )
@@ -233,6 +240,10 @@ class ForeachBarrierState:
         self, *, index: int, frame_id: str, patch: StatePatch
     ) -> None:
         """Buffer one successful item patch by item index."""
+        if index in self.pending_results:
+            raise WorkflowExecutionError(
+                f"foreach item result for index {index!r} already recorded"
+            )
         self.pending_results[index] = PendingItemResult(
             index=index,
             frame_id=frame_id,

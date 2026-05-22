@@ -23,7 +23,11 @@ Already implemented:
 - `StatePatch`, `build_output_patch(...)`, and `commit_state_patch(...)` exist.
 - `ForeachBarrierState`, `PendingItemResult`, and `ItemErrorRecord` exist.
 - Serial foreach progress now uses `ForeachBarrierState`.
-- Runtime still rejects `foreach(mode="concurrent")`.
+- Sync `foreach(mode="concurrent")` runs with fail-only item policy, bounded
+  admission, deterministic interleaving, and barrier commits for single-node
+  item bodies.
+- Item-local overlays are not implemented yet, so multi-step concurrent item
+  bodies remain rejected until Slice 2.
 
 ## Non-Goals For Phase 4
 
@@ -52,9 +56,30 @@ Plan:
 
 - See [`2026-05-22-concurrent-foreach-v1-sync-fail-only.md`](2026-05-22-concurrent-foreach-v1-sync-fail-only.md).
 
-## Slice 2: Barrier Commit Conflict Semantics
+## Slice 2: Item-Local Overlays
 
-Implement after Slice 1 if V1 keeps conflict behavior too conservative.
+Implement next because Slice 1 intentionally supports only `loop -> one node ->
+END` item bodies. Overlays let later nodes in one item read earlier buffered
+writes from the same item without exposing those writes to siblings.
+
+Scope:
+
+- `state_view_for_frame(...)` returns committed parent state plus current item
+  overlay for concurrent foreach item frames.
+- Parent `RunState.state` remains unchanged until the barrier commits.
+- Item patches accumulate across multiple nodes in the same item lineage.
+- Multi-step concurrent item bodies are supported.
+- Sibling item overlays remain isolated.
+- Sibling write conflict policy remains deferred to Slice 3.
+
+Plan:
+
+- See [`2026-05-22-concurrent-foreach-item-overlays.md`](2026-05-22-concurrent-foreach-item-overlays.md).
+
+## Slice 3: Barrier Commit Conflict Semantics
+
+Implement after Slice 2 so conflict checks operate on real item-local overlays
+and multi-step item patches.
 
 Scope:
 
@@ -77,7 +102,7 @@ Key tests:
 - `test_concurrent_foreach_applies_reducer_in_item_index_order`
 - `test_concurrent_foreach_rejects_ancestor_descendant_write_conflict`
 
-## Slice 3: Item Error Policies
+## Slice 4: Item Error Policies
 
 Implement after barrier success commits are correct.
 
@@ -101,7 +126,7 @@ Key tests:
 - `test_concurrent_foreach_collect_writes_ordered_error_records`
 - `test_concurrent_foreach_collect_writes_empty_list_on_clean_success`
 
-## Slice 4: Async Concurrent Foreach
+## Slice 5: Async Concurrent Foreach
 
 Implement only after sync semantics are stable.
 
@@ -126,7 +151,7 @@ Key tests:
 - `test_async_concurrent_foreach_respects_max_active`
 - `test_async_concurrent_foreach_commits_in_item_index_order`
 
-## Slice 5: Interrupt Quiescence
+## Slice 6: Interrupt Quiescence
 
 Implement after async execution exists.
 
@@ -154,10 +179,11 @@ Key tests:
 ## Execution Order
 
 1. Sync concurrent foreach, fail-only.
-2. Barrier conflict semantics, if not fully covered by slice 1.
-3. `skip` / `collect` item error policies.
-4. Async concurrent foreach.
-5. Interrupt quiescence.
+2. Item-local overlays for multi-step item bodies.
+3. Barrier conflict semantics.
+4. `skip` / `collect` item error policies.
+5. Async concurrent foreach.
+6. Interrupt quiescence.
 
 ## Self-Review
 

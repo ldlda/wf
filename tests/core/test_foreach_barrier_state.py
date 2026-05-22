@@ -70,7 +70,13 @@ def test_foreach_barrier_tracks_active_and_outstanding_children() -> None:
     barrier = ForeachBarrierState()
 
     barrier.start_child("child-0")
+    assert barrier.active_frame_ids == ("child-0",)
+    assert barrier.outstanding_frame_ids == ("child-0",)
+
     barrier.start_child("child-1")
+    assert barrier.active_frame_ids == ("child-0", "child-1")
+    assert barrier.outstanding_frame_ids == ("child-0", "child-1")
+
     barrier.finish_child("child-0")
 
     assert barrier.active_frame_ids == ("child-1",)
@@ -83,6 +89,23 @@ def test_foreach_barrier_rejects_duplicate_child_start() -> None:
 
     with pytest.raises(WorkflowExecutionError, match="already active"):
         barrier.start_child("child-0")
+
+
+def test_foreach_barrier_rejects_finishing_unknown_child() -> None:
+    barrier = ForeachBarrierState()
+
+    with pytest.raises(WorkflowExecutionError, match="not active"):
+        barrier.finish_child("child-0")
+
+
+def test_foreach_barrier_rejects_duplicate_item_result() -> None:
+    barrier = ForeachBarrierState()
+    patch = StatePatch(changes={"state.count": 1})
+
+    barrier.add_success_patch(index=0, frame_id="child-0", patch=patch)
+
+    with pytest.raises(WorkflowExecutionError, match="already recorded"):
+        barrier.add_success_patch(index=0, frame_id="child-0", patch=patch)
 
 
 def test_item_error_record_rejects_negative_index() -> None:

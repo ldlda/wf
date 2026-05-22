@@ -223,11 +223,10 @@ def _admit_concurrent_children(
     index: WorkflowIndex,
     barrier: ForeachBarrierState,
     iterable: list[object],
-) -> int:
+) -> None:
     if step.concurrent is None:
         raise WorkflowExecutionError("concurrent foreach requires concurrent policy")
 
-    admitted = 0
     loop_start = index.next_node_id(frame.node_id, "loop")
     while (
         barrier.next_index < len(iterable)
@@ -274,8 +273,6 @@ def _admit_concurrent_children(
                 state_changes={},
             ),
         )
-        admitted += 1
-    return admitted
 
 
 def _finish_concurrent_foreach(
