@@ -55,6 +55,12 @@ Supported policy actions:
 writes the full ordered error list once. On clean completion, `collect` writes an
 empty list and emits `done`.
 
+Current sync concurrent foreach supports `skip` and `collect`. Item node
+exceptions under those policies mark the child item frame `FAILED`, store a
+pending failed item result on the parent barrier, and wake the parent to refill
+or finish. The failed frame stays visible for observability; the parent foreach
+is responsible for turning handled item failures into aggregate control flow.
+
 Collected error records include item index, frame id, failing node id, error
 type/message, and the item value when it can be represented safely.
 

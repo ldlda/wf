@@ -27,8 +27,12 @@ from wf_core.runtime.ops.nodes import (
     execute_node_use,
     execute_node_use_async,
 )
-from wf_core.runtime.scheduler import select_next_frame
-from wf_core.run_state import FrameStatus, RunState
+from wf_core.runtime.scheduler import (
+    ForeachIterationMetadata,
+    select_next_frame,
+    wake_parent_for_child_progress,
+)
+from wf_core.run_state import ExecutionFrame, FrameStatus, RunState
 
 from .preparation import prepare_step
 
@@ -84,14 +88,19 @@ def step_workflow(
 
     if isinstance(step, NodeUse):
         node_def = index.node_defs[step.node]
-        step_result = execute_node_use(
-            workflow,
-            run,
-            step,
-            node_def,
-            registry,
-            reducers=reducers,
-        )
+        try:
+            step_result = execute_node_use(
+                workflow,
+                run,
+                step,
+                node_def,
+                registry,
+                reducers=reducers,
+            )
+        except Exception as exc:
+            if _mark_handled_item_failure(run, index, frame, exc):
+                return run
+            raise
     elif isinstance(step, ConditionNode):
         step_result = handle_condition_step(run, step)
     elif isinstance(step, JoinNode):
@@ -116,6 +125,31 @@ def step_workflow(
     )
 
 
+def _mark_handled_item_failure(
+    run: RunState,
+    index: WorkflowIndex,
+    frame: ExecutionFrame,
+    exc: Exception,
+) -> bool:
+    """Record skip/collect item failures without failing the whole run here."""
+    metadata = ForeachIterationMetadata.from_frame(frame)
+    if metadata is None or frame.parent_frame_id is None:
+        return False
+    owner_step = index.nodes_by_id.get(metadata.foreach_node_id)
+    if not isinstance(owner_step, ForeachNode):
+        return False
+    if owner_step.item_error.action == "fail":
+        return False
+
+    frame.status = FrameStatus.FAILED
+    frame.metadata["error"] = str(exc)
+    frame.metadata["error_type"] = type(exc).__name__
+    frame.metadata["failed_at_node_id"] = frame.node_id
+    wake_parent_for_child_progress(run, frame.id)
+    run.sync_from_current_frame()
+    return True
+
+
 async def step_workflow_async(
     workflow: Workflow,
     run: RunState,
@@ -137,14 +171,19 @@ async def step_workflow_async(
 
     if isinstance(step, NodeUse):
         node_def = index.node_defs[step.node]
-        step_result = await execute_node_use_async(
-            workflow,
-            run,
-            step,
-            node_def,
-            registry,
-            reducers=reducers,
-        )
+        try:
+            step_result = await execute_node_use_async(
+                workflow,
+                run,
+                step,
+                node_def,
+                registry,
+                reducers=reducers,
+            )
+        except Exception as exc:
+            if _mark_handled_item_failure(run, index, frame, exc):
+                return run
+            raise
     elif isinstance(step, ConditionNode):
         step_result = handle_condition_step(run, step)
     elif isinstance(step, JoinNode):

@@ -262,6 +262,25 @@ class ForeachBarrierState:
             )
         existing.patch.changes.update(patch.changes)
 
+    def add_failure(self, *, error: ItemErrorRecord) -> None:
+        """Buffer one handled item failure for the foreach barrier.
+
+        The child frame stays `FAILED` for observability. The parent barrier
+        owns whether that failed child is skipped, collected, or treated as a
+        whole-run failure.
+        """
+        existing = self.pending_results.get(error.index)
+        if existing is not None:
+            raise WorkflowExecutionError(
+                f"foreach item result for index {error.index!r} already exists"
+            )
+        self.pending_results[error.index] = PendingItemResult(
+            index=error.index,
+            frame_id=error.frame_id,
+            status="failed",
+            error=error,
+        )
+
 
 def item_frame_owner(frame: ExecutionFrame) -> tuple[str, str, int] | None:
     """Return parent frame id, foreach node id, and item index for item frames."""

@@ -7,12 +7,16 @@ from wf_core.errors import WorkflowExecutionError
 from wf_core.models.steps import ForeachNode
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
-from wf_core.runtime.foreach_state import ForeachBarrierState
+from wf_core.runtime.foreach_state import ForeachBarrierState, ItemErrorRecord
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.index import WorkflowIndex
 from wf_core.runtime.ops.merges import ReducerDefinition
-from wf_core.runtime.ops.state import build_barrier_patch, commit_state_patch
+from wf_core.runtime.ops.state import (
+    StatePatch,
+    build_barrier_patch,
+    commit_state_patch,
+)
 from wf_core.runtime.scheduler import (
     ForeachIterationMetadata,
     add_frame,
@@ -120,10 +124,6 @@ def _step_foreach_concurrent(
     *,
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
-    if step.item_error.action != "fail":
-        raise WorkflowExecutionError(
-            "concurrent foreach v1 only supports item_error.action='fail'"
-        )
     if step.concurrent is None:
         raise WorkflowExecutionError("concurrent foreach requires concurrent policy")
     frame = run.current_frame()
@@ -133,7 +133,7 @@ def _step_foreach_concurrent(
     elif barrier.mode != "concurrent":
         raise WorkflowExecutionError("malformed concurrent foreach barrier mode")
 
-    _finish_completed_children(run, barrier)
+    _finish_completed_children(run, step, barrier)
     iterable = _resolve_foreach_iterable(run, frame, step)
     _admit_concurrent_children(
         run=run,
@@ -179,16 +179,47 @@ def _resolve_foreach_iterable(
     return iterable
 
 
-def _finish_completed_children(run: RunState, barrier: ForeachBarrierState) -> None:
+def _finish_completed_children(
+    run: RunState,
+    step: ForeachNode,
+    barrier: ForeachBarrierState,
+) -> None:
     for child_id in tuple(barrier.outstanding_frame_ids):
         child = run.frames[child_id]
         if child.status == FrameStatus.COMPLETED:
             barrier.finish_child(child_id)
         elif child.status == FrameStatus.FAILED:
+            if step.item_error.action in {"skip", "collect"}:
+                barrier.finish_child(child_id)
+                barrier.add_failure(error=_item_error_record(child))
+                continue
             message = child.metadata.get("error", "unknown item failure")
             raise WorkflowExecutionError(
                 f"concurrent foreach item frame {child_id!r} failed: {message}"
             )
+
+
+def _item_error_record(child: ExecutionFrame) -> ItemErrorRecord:
+    metadata = ForeachIterationMetadata.from_frame(child)
+    if metadata is None:
+        raise WorkflowExecutionError(
+            f"failed foreach item frame {child.id!r} is missing item metadata"
+        )
+    error_type = child.metadata.get("error_type", "Exception")
+    message = child.metadata.get("error", "unknown item failure")
+    node_id = child.metadata.get("failed_at_node_id", child.node_id)
+    if not all(isinstance(value, str) for value in (error_type, message, node_id)):
+        raise WorkflowExecutionError(
+            f"malformed failure metadata for foreach item frame {child.id!r}"
+        )
+    return ItemErrorRecord(
+        index=metadata.loop_index,
+        frame_id=child.id,
+        node_id=node_id,
+        error_type=error_type,
+        message=message,
+        item=metadata.loop_item,
+    )
 
 
 def _admit_concurrent_children(
@@ -261,13 +292,34 @@ def _finish_concurrent_foreach(
     barrier: ForeachBarrierState,
     reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> RunState:
-    next_node_id = index.next_node_id(frame.node_id, "done")
+    error_records = [
+        result.error.to_metadata()
+        for result in sorted(
+            barrier.pending_results.values(), key=lambda item: item.index
+        )
+        if result.status == "failed" and result.error is not None
+    ]
+    outcome = "completed_with_errors" if error_records else "done"
+    next_node_id = index.next_node_id(frame.node_id, outcome)
+    success_patches = [
+        result.patch
+        for result in (
+            barrier.pending_results[item_index]
+            for item_index in sorted(barrier.pending_results)
+        )
+        if result.status == "succeeded"
+    ]
+    item_patches = list(success_patches)
+    if step.item_error.action == "collect":
+        collect_to = step.item_error.collect_to
+        if collect_to is None:
+            raise WorkflowExecutionError(
+                "collect item error policy requires collect_to"
+            )
+        item_patches.append(StatePatch(changes={str(collect_to): error_records}))
     combined = build_barrier_patch(
         workflow,
-        [
-            barrier.pending_results[item_index].patch
-            for item_index in sorted(barrier.pending_results)
-        ],
+        item_patches,
         run.state,
         reducers=reducers,
     )
@@ -279,15 +331,16 @@ def _finish_concurrent_foreach(
         step_type=step.type,
         next_node_id=next_node_id,
         result=StepExecutionResult(
-            outcome="done",
+            outcome=outcome,
             resolved_input={
                 "count": barrier.next_index,
                 "index": barrier.next_index,
-                "committed_items": len(barrier.pending_results),
+                "committed_items": len(success_patches),
+                "failed_items": len(error_records),
             },
             output={},
             state_changes=state_changes,
         ),
     )
-    advance_frame(run, frame, outcome="done", next_node_id=next_node_id)
+    advance_frame(run, frame, outcome=outcome, next_node_id=next_node_id)
     return run

@@ -96,43 +96,6 @@ def test_sync_concurrent_foreach_respects_max_active_by_refill_trace() -> None:
     assert all(entry.resolved_input["active_count"] < 2 for entry in loop_entries)
 
 
-def test_sync_concurrent_foreach_rejects_non_fail_item_policy_for_now() -> None:
-    workflow = _workflow(
-        state_schema=StateSchema.from_field_map(
-            {
-                "items": StateField(type="array"),
-                "seen": StateField(
-                    type="array",
-                    reducer=ReducerRef(name="wf.std.append"),
-                ),
-                "errors": StateField(type="array"),
-            }
-        ),
-        foreach=ForeachNode.model_validate(
-            {
-                "id": "each",
-                "type": "foreach",
-                "over": "state.items",
-                "as": "item",
-                "mode": "concurrent",
-                "concurrent": {"max_active": 2, "max_outstanding": 2},
-                "item_error": {"action": "collect", "collect_to": "state.errors"},
-            }
-        ),
-        include_completed_with_errors=True,
-    )
-
-    with pytest.raises(
-        WorkflowExecutionError,
-        match="only supports item_error.action='fail'",
-    ):
-        execute_workflow(
-            workflow,
-            {"items": ["a"]},
-            {"record": lambda payload, _ctx: {"outcome": "ok", "output": payload}},
-        )
-
-
 def test_sync_concurrent_foreach_fails_run_on_item_runtime_error() -> None:
     workflow = _workflow(
         state_schema=StateSchema.from_field_map(

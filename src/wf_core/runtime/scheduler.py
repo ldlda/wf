@@ -196,6 +196,11 @@ def resolve_no_ready_frames(run: RunState) -> RunStatus:
     """Classify an empty ready queue into terminal, paused, or deadlocked state."""
     if run.status == RunStatus.INTERRUPTED:
         return RunStatus.INTERRUPTED
+    if any(
+        frame.parent_frame_id is None and frame.status == FrameStatus.COMPLETED
+        for frame in run.frames.values()
+    ):
+        return RunStatus.COMPLETED
     if any(frame.status == FrameStatus.FAILED for frame in run.frames.values()):
         return RunStatus.FAILED
     if run.frames and all(

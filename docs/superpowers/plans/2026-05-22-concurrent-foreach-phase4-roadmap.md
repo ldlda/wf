@@ -30,6 +30,10 @@ Already implemented:
 - Barrier write validation rejects ambiguous sibling writes: same-path sibling
   writes require a `mergeable` reducer, and ancestor/descendant
   sibling writes are rejected.
+- Concurrent `item_error.action="skip"` and `"collect"` are supported.
+- `collect` writes ordered item error records to `collect_to`, writes an empty
+  list on clean success, and emits `completed_with_errors` only when failures
+  were collected.
 
 ## Non-Goals For Phase 4
 
@@ -112,7 +116,7 @@ Plan:
 
 ## Slice 4: Item Error Policies
 
-Implement after barrier success commits are correct.
+Implemented after barrier success commits became correct.
 
 Scope:
 
