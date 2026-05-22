@@ -11,6 +11,7 @@ from wf_core.paths import (
     StatePath,
     is_valid_destination_path,
     is_valid_source_path,
+    path_parts_overlap,
     set_nested_value,
 )
 
@@ -260,3 +261,21 @@ def test_existing_source_and_destination_validation_helpers_use_new_parsers() ->
 def test_set_nested_value_rejects_empty_path() -> None:
     with pytest.raises(PathResolutionError, match="empty path"):
         set_nested_value({}, [], "value")
+
+
+@pytest.mark.parametrize(
+    ("left", "right", "expected"),
+    [
+        (("person",), ("person", "name"), True),
+        (("person", "name"), ("person",), True),
+        (("person", "name"), ("person", "email"), False),
+        (("person",), ("job",), False),
+        ((), ("person",), True),
+    ],
+)
+def test_path_parts_overlap_detects_equality_and_ancestry(
+    left: tuple[str, ...],
+    right: tuple[str, ...],
+    expected: bool,
+) -> None:
+    assert path_parts_overlap(left, right) is expected

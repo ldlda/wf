@@ -111,6 +111,11 @@ unless an explicit merge strategy covers them.
 Reducers apply incrementally in deterministic lineage order. For foreach, that
 means item index order.
 
+Current barrier validation enforces this policy for sibling foreach item
+lineages. Same-path sibling writes require an explicit non-`replace` reducer on
+the exact destination state path. Ancestor/descendant sibling writes are
+rejected until a future explicit deep merge policy exists.
+
 ## Interrupt and Failure Quiescence
 
 Future concurrent execution should not assume in-flight node calls can be safely

@@ -27,6 +27,9 @@ Already implemented:
   admission, deterministic interleaving, item-local overlays, and barrier
   commits.
 - Multi-step concurrent item bodies are supported for fail-only item policy.
+- Barrier write validation rejects ambiguous sibling writes: same-path sibling
+  writes require an explicit non-`replace` reducer, and ancestor/descendant
+  sibling writes are rejected.
 
 ## Non-Goals For Phase 4
 
@@ -101,6 +104,10 @@ Key tests:
 - `test_concurrent_foreach_rejects_sibling_writes_without_reducer`
 - `test_concurrent_foreach_applies_reducer_in_item_index_order`
 - `test_concurrent_foreach_rejects_ancestor_descendant_write_conflict`
+
+Plan:
+
+- See [`2026-05-22-concurrent-foreach-barrier-write-semantics.md`](2026-05-22-concurrent-foreach-barrier-write-semantics.md).
 
 ## Slice 4: Item Error Policies
 

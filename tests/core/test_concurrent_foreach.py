@@ -207,6 +207,22 @@ def test_sync_concurrent_foreach_sibling_overlays_do_not_leak() -> None:
     assert run.state["seen"] == ["a", "b"]
 
 
+def test_sync_concurrent_foreach_rejects_sibling_replace_writes() -> None:
+    workflow = _same_path_replace_workflow()
+
+    with pytest.raises(WorkflowExecutionError, match="explicit reducer"):
+        execute_workflow(
+            workflow,
+            {"items": ["a", "b"]},
+            {
+                "write_winner": lambda payload, _ctx: {
+                    "outcome": "ok",
+                    "output": {"winner": payload["value"]},
+                }
+            },
+        )
+
+
 def _workflow(
     *,
     state_schema: StateSchema,
@@ -291,7 +307,10 @@ def _multi_step_overlay_workflow() -> Workflow:
         state_schema=StateSchema.from_field_map(
             {
                 "items": StateField(type="array"),
-                "scratch": StateField(type="string"),
+                "scratch": StateField(
+                    type="array",
+                    reducer=ReducerRef(name="wf.std.append"),
+                ),
                 "seen": StateField(
                     type="array",
                     reducer=ReducerRef(name="wf.std.append"),
@@ -362,6 +381,69 @@ def _multi_step_overlay_workflow() -> Workflow:
                 {"from": "stage_scratch", "outcome": "ok", "to": "read_scratch"}
             ),
             Edge.model_validate({"from": "read_scratch", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
+    )
+
+
+def _same_path_replace_workflow() -> Workflow:
+    foreach = ForeachNode.model_validate(
+        {
+            "id": "each",
+            "type": "foreach",
+            "over": "state.items",
+            "as": "item",
+            "mode": "concurrent",
+            "concurrent": {"max_active": 2, "max_outstanding": 2},
+        }
+    )
+    return Workflow(
+        name="concurrent_foreach_replace_conflict",
+        input_schema=SchemaRef(
+            type="object",
+            properties={"items": {"type": "array"}},
+        ),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "winner": StateField(type="string"),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="write_winner",
+                input_schema=SchemaRef(
+                    type="object",
+                    properties={"value": {}},
+                    required=["value"],
+                ),
+                output_schema=SchemaRef(
+                    type="object",
+                    properties={"winner": {}},
+                    required=["winner"],
+                ),
+                outcomes=["ok"],
+            )
+        ],
+        start="each",
+        nodes=[
+            foreach,
+            NodeUse.model_validate(
+                {
+                    "id": "write_winner",
+                    "type": "node",
+                    "node": "write_winner",
+                    "input": [{"target": "value", "path": "context.item"}],
+                    "output": [{"source": "winner", "target": "state.winner"}],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate(
+                {"from": "each", "outcome": "loop", "to": "write_winner"}
+            ),
+            Edge.model_validate({"from": "write_winner", "outcome": "ok", "to": END}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
         ],
     )

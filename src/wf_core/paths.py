@@ -403,6 +403,14 @@ def get_nested_value(state: Mapping[str, Any], path_parts: list[str]) -> Any:
     return current
 
 
+def path_parts_overlap(
+    left_parts: tuple[str, ...], right_parts: tuple[str, ...]
+) -> bool:
+    """Return whether two parsed paths overlap by equality or ancestry."""
+    shortest = min(len(left_parts), len(right_parts))
+    return left_parts[:shortest] == right_parts[:shortest]
+
+
 def set_nested_value(
     state: MutableMapping[str, Any], path_parts: list[str], value: Any
 ) -> None:

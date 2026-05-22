@@ -15,6 +15,7 @@ from wf_core.paths import (
     PathResolutionError,
     StatePath,
     get_nested_value,
+    path_parts_overlap,
     set_nested_value,
     split_graph_path,
 )
@@ -40,6 +41,15 @@ class StatePatch:
         repr=False,
     )
     _staged_state: dict[str, Any] = dataclass_field(default_factory=dict, repr=False)
+
+
+@dataclass(slots=True, frozen=True)
+class _BarrierWrite:
+    """One item-lineage write observed before a barrier commit."""
+
+    item_index: int
+    path: StatePath
+    source_key: str
 
 
 def apply_output_map(
@@ -165,6 +175,7 @@ def build_barrier_patch(
     values would hide what actually landed in `RunState.state`.
     """
     state_fields = workflow.state_schema.field_index()
+    validate_barrier_writes(item_patches, state_fields)
     staged_state = deepcopy(state)
     prepared_patch: dict[StatePath, tuple[list[str], Any]] = {}
     committed_changes: dict[str, Any] = {}
@@ -188,6 +199,63 @@ def build_barrier_patch(
         _prepared_writes=prepared_patch,
         _staged_state=staged_state,
     )
+
+
+def validate_barrier_writes(
+    item_patches: Sequence[StatePatch],
+    state_fields: Mapping[StatePath, StateFieldDecl],
+) -> None:
+    """Reject ambiguous sibling writes before replaying a foreach barrier.
+
+    Normal node patch validation handles one node output. This helper handles
+    writes from different foreach item lineages that commit together.
+    """
+    writes = _barrier_writes(item_patches)
+    for index, left in enumerate(writes):
+        for right in writes[index + 1 :]:
+            if left.item_index == right.item_index:
+                continue
+            if left.path == right.path:
+                if _has_explicit_non_replace_reducer(left.path, state_fields):
+                    continue
+                raise WorkflowExecutionError(
+                    "multiple sibling writes to "
+                    f"{left.source_key!r} require an explicit reducer"
+                )
+            if _state_paths_overlap(left.path, right.path):
+                raise WorkflowExecutionError(
+                    "overlapping sibling writes are not supported at a foreach "
+                    f"barrier: {left.source_key!r} and {right.source_key!r}"
+                )
+
+
+def _barrier_writes(item_patches: Sequence[StatePatch]) -> list[_BarrierWrite]:
+    writes: list[_BarrierWrite] = []
+    for item_index, item_patch in enumerate(item_patches):
+        for destination in item_patch.changes:
+            path = StatePath.parse(destination)
+            writes.append(
+                _BarrierWrite(
+                    item_index=item_index,
+                    path=path,
+                    source_key=destination,
+                )
+            )
+    return writes
+
+
+def _has_explicit_non_replace_reducer(
+    path: StatePath,
+    state_fields: Mapping[StatePath, StateFieldDecl],
+) -> bool:
+    field = state_fields.get(path)
+    if field is None or field.reducer is None:
+        return False
+    return field.reducer.name != "wf.std.replace"
+
+
+def _state_paths_overlap(left: StatePath, right: StatePath) -> bool:
+    return path_parts_overlap(left.parts, right.parts)
 
 
 def apply_mapped_state(

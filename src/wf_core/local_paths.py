@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from wf_core.paths import LocalPath, PathResolutionError
+from wf_core.paths import LocalPath, PathResolutionError, path_parts_overlap
 
 
 class LocalPathError(ValueError):
@@ -58,10 +58,10 @@ def set_local_value(payload: dict[str, Any], path: str | LocalPath, value: Any) 
 
 def paths_overlap(left: str | LocalPath, right: str | LocalPath) -> bool:
     """Return whether two dotted paths overlap by equality or ancestry."""
-    left_parts = split_local_path(left)
-    right_parts = split_local_path(right)
-    shortest = min(len(left_parts), len(right_parts))
-    return left_parts[:shortest] == right_parts[:shortest]
+    return path_parts_overlap(
+        tuple(split_local_path(left)),
+        tuple(split_local_path(right)),
+    )
 
 
 def has_overlapping_paths(paths: Iterable[str | LocalPath]) -> bool:

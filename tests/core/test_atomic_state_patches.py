@@ -18,7 +18,9 @@ from wf_core.models.steps import OutputBinding
 from wf_core.runtime.engine import resume_workflow
 from wf_core.runtime.ops.runs import create_run_state
 from wf_core.runtime.ops.state import (
+    StatePatch,
     apply_output_bindings,
+    build_barrier_patch,
     build_output_patch,
     commit_state_patch,
 )
@@ -208,6 +210,89 @@ def test_build_and_commit_patch_matches_apply_output_bindings() -> None:
 
     assert applied["state.person.name"] == committed["state.person.name"]
     assert state_from_apply["person"]["name"] == state_from_patch["person"]["name"]
+
+
+def test_barrier_rejects_sibling_same_path_writes_without_reducer() -> None:
+    workflow = _workflow(fields={"value": StateField(type="string")})
+
+    with pytest.raises(WorkflowExecutionError, match="explicit reducer"):
+        build_barrier_patch(
+            workflow,
+            [
+                StatePatch(changes={"state.value": "a"}),
+                StatePatch(changes={"state.value": "b"}),
+            ],
+            {},
+        )
+
+
+def test_barrier_rejects_sibling_same_path_writes_with_explicit_replace() -> None:
+    workflow = _workflow(
+        fields={
+            "value": StateField(
+                type="string",
+                reducer=ReducerRef(name="wf.std.replace"),
+            )
+        }
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="explicit reducer"):
+        build_barrier_patch(
+            workflow,
+            [
+                StatePatch(changes={"state.value": "a"}),
+                StatePatch(changes={"state.value": "b"}),
+            ],
+            {},
+        )
+
+
+def test_barrier_allows_sibling_same_path_writes_with_non_replace_reducer() -> None:
+    workflow = _workflow(
+        fields={
+            "seen": StateField(
+                type="array",
+                reducer=ReducerRef(name="wf.std.append"),
+            )
+        }
+    )
+
+    patch = build_barrier_patch(
+        workflow,
+        [
+            StatePatch(changes={"state.seen": "a"}),
+            StatePatch(changes={"state.seen": "b"}),
+        ],
+        {},
+    )
+
+    assert patch.changes["state.seen"] == ["a", "b"]
+
+
+def test_barrier_rejects_sibling_ancestor_descendant_writes() -> None:
+    workflow = _workflow_from_state_schema(
+        StateSchema.model_validate(
+            {
+                "type": "object",
+                "properties": {
+                    "person": {
+                        "type": "object",
+                        "properties": {"name": {"type": "string"}},
+                    }
+                },
+            }
+        )
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="overlapping sibling writes"):
+        build_barrier_patch(
+            workflow,
+            [
+                StatePatch(changes={"state.person": {"name": "Ada"}}),
+                StatePatch(changes={"state.person.name": "Grace"}),
+            ],
+            {},
+        )
 
 
 def _binding(source: str, target: str) -> OutputBinding:
