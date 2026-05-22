@@ -145,6 +145,46 @@ def commit_state_patch(state: dict[str, Any], patch: StatePatch) -> dict[str, An
     return dict(patch.changes)
 
 
+def build_barrier_patch(
+    workflow: Workflow,
+    item_patches: Sequence[StatePatch],
+    state: dict[str, Any],
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+) -> StatePatch:
+    """Build one committed barrier patch by replaying item writes in order.
+
+    Item patches are built against the parent-visible state. Their prepared
+    writes cannot be blindly merged because reducers must see the value produced
+    by earlier item patches. The barrier therefore replays trace-facing incoming
+    changes against a single staged state in deterministic item order.
+    """
+    state_fields = workflow.state_schema.field_index()
+    staged_state = deepcopy(state)
+    prepared_patch: dict[StatePath, tuple[list[str], Any]] = {}
+    committed_changes: dict[str, Any] = {}
+    for item_patch in item_patches:
+        for destination, incoming_value in item_patch.changes.items():
+            destination_path = StatePath.parse(destination)
+            key_path, merged_value = prepare_state_value(
+                workflow,
+                staged_state,
+                destination_path,
+                incoming_value,
+                reducers=reducers,
+                state_fields=state_fields,
+            )
+            safe_set_nested_value(staged_state, key_path, merged_value)
+            prepared_patch[destination_path] = (key_path, merged_value)
+            committed_changes[destination] = merged_value
+    validate_staged_state_patch(staged_state, prepared_patch, state_fields)
+    return StatePatch(
+        changes=committed_changes,
+        _prepared_writes=prepared_patch,
+        _staged_state=staged_state,
+    )
+
+
 def apply_mapped_state(
     workflow: Workflow,
     source_data: dict[str, Any],

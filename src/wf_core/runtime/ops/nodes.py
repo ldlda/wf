@@ -11,10 +11,12 @@ from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import InputPathBinding, InputValueBinding, NodeUse
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import RunState, RuntimeContext, StepExecutionResult
+from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
+from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
-from wf_core.runtime.ops.state import apply_output_bindings
+from wf_core.runtime.ops.state import build_output_patch, commit_state_patch
 
 NodeHandler = Callable[[dict[str, Any], RuntimeContext], NodeResult | dict[str, Any]]
 AsyncNodeHandler = Callable[
@@ -32,6 +34,7 @@ def _resolve_node_execution(
 ) -> tuple[dict[str, Any], RuntimeContext]:
     frame = run.current_frame()
     context_values = frame_context_values(frame)
+    state_view = state_view_for_frame(run, frame)
     resolved_input: dict[str, Any] = {}
     for binding in node.input:
         if isinstance(binding, InputValueBinding):
@@ -39,7 +42,7 @@ def _resolve_node_execution(
         elif isinstance(binding, InputPathBinding):
             value = safe_resolve_path(
                 str(binding.path),
-                state=run.state,
+                state=state_view,
                 workflow_input=run.workflow_input,
                 context=context_values,
             )
@@ -85,13 +88,30 @@ def _finalize_node_execution(
     validate_payload_against_schema(
         node_def.output_schema, result.output, f"node output for {node.id}"
     )
-    state_changes = apply_output_bindings(
+    patch = build_output_patch(
         workflow,
         node.output,
         result.output,
         run.state,
         reducers=reducers,
     )
+    owner = item_frame_owner(run.current_frame())
+    if owner is None:
+        state_changes = commit_state_patch(run.state, patch)
+    else:
+        parent_frame_id, foreach_node_id, item_index = owner
+        parent_frame = run.frames[parent_frame_id]
+        barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
+        if barrier is not None and barrier.mode == "concurrent":
+            barrier.add_success_patch(
+                index=item_index,
+                frame_id=run.current_frame().id,
+                patch=patch,
+            )
+            barrier.save_to_frame(parent_frame, foreach_node_id)
+            state_changes = {}
+        else:
+            state_changes = commit_state_patch(run.state, patch)
     return StepExecutionResult(
         outcome=result.outcome,
         resolved_input=resolved_input,

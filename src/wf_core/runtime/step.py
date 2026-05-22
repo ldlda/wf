@@ -99,7 +99,7 @@ def step_workflow(
     elif isinstance(step, InterruptNode):
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
-        return step_foreach(workflow, run, step, index)
+        return step_foreach(workflow, run, step, index, reducers=reducers)
     else:
         raise WorkflowExecutionError(
             f"unsupported step type {getattr(step, 'type', type(step).__name__)!r}"
@@ -152,7 +152,7 @@ async def step_workflow_async(
     elif isinstance(step, InterruptNode):
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
-        return step_foreach(workflow, run, step, index)
+        return step_foreach(workflow, run, step, index, reducers=reducers)
     else:
         raise WorkflowExecutionError(
             f"unsupported step type {getattr(step, 'type', type(step).__name__)!r}"

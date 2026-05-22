@@ -66,6 +66,25 @@ def test_foreach_barrier_state_rejects_malformed_metadata() -> None:
         ForeachBarrierState.from_frame(frame, "each")
 
 
+def test_foreach_barrier_tracks_active_and_outstanding_children() -> None:
+    barrier = ForeachBarrierState()
+
+    barrier.start_child("child-0")
+    barrier.start_child("child-1")
+    barrier.finish_child("child-0")
+
+    assert barrier.active_frame_ids == ("child-1",)
+    assert barrier.outstanding_frame_ids == ("child-1",)
+
+
+def test_foreach_barrier_rejects_duplicate_child_start() -> None:
+    barrier = ForeachBarrierState()
+    barrier.start_child("child-0")
+
+    with pytest.raises(WorkflowExecutionError, match="already active"):
+        barrier.start_child("child-0")
+
+
 def test_item_error_record_rejects_negative_index() -> None:
     with pytest.raises(WorkflowExecutionError, match="index"):
         ItemErrorRecord.from_metadata(

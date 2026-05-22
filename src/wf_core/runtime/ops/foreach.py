@@ -1,19 +1,24 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from wf_core.conditions import safe_resolve_path
 from wf_core.errors import WorkflowExecutionError
-from wf_core.models.steps import ForeachNode
+from wf_core.models.steps import ForeachNode, NodeUse
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
 from wf_core.runtime.foreach_state import ForeachBarrierState
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.index import WorkflowIndex
+from wf_core.runtime.ops.merges import ReducerDefinition
+from wf_core.runtime.ops.state import build_barrier_patch, commit_state_patch
 from wf_core.runtime.scheduler import (
     ForeachIterationMetadata,
     add_frame,
     block_frame_on_children,
 )
+from wf_core.tokens import END
 
 
 def step_foreach(
@@ -21,25 +26,32 @@ def step_foreach(
     run: RunState,
     step: ForeachNode,
     index: WorkflowIndex,
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+) -> RunState:
+    if step.mode == "serial":
+        return _step_foreach_serial(workflow, run, step, index)
+    return _step_foreach_concurrent(
+        workflow,
+        run,
+        step,
+        index,
+        reducers=reducers,
+    )
+
+
+def _step_foreach_serial(
+    workflow: Workflow,
+    run: RunState,
+    step: ForeachNode,
+    index: WorkflowIndex,
 ) -> RunState:
     if step.mode != "serial":
-        raise WorkflowExecutionError(
-            "concurrent foreach execution is not implemented yet"
-        )
+        raise WorkflowExecutionError("serial foreach helper received non-serial mode")
 
     frame = run.current_frame()
     barrier = ForeachBarrierState.from_frame(frame, step.id) or ForeachBarrierState()
-
-    iterable = safe_resolve_path(
-        str(step.over),
-        state=run.state,
-        workflow_input=run.workflow_input,
-        context=frame_context_values(frame),
-    )
-    if not isinstance(iterable, list):
-        raise WorkflowExecutionError(
-            f"foreach source {str(step.over)!r} must resolve to a list"
-        )
+    iterable = _resolve_foreach_iterable(run, frame, step)
 
     loop_index = barrier.next_index
     if loop_index >= len(iterable):
@@ -62,17 +74,10 @@ def step_foreach(
         return run
 
     loop_start = index.next_node_id(frame.node_id, "loop")
-
     item = iterable[loop_index]
     barrier.next_index = loop_index + 1
     barrier.save_to_frame(frame, step.id)
     child_id = f"{frame.id}:{step.id}:{loop_index}"
-    child_metadata = ForeachIterationMetadata(
-        foreach_node_id=step.id,
-        loop_index=loop_index,
-        loop_item=item,
-        loop_alias=step.as_,
-    )
     add_frame(
         run,
         ExecutionFrame(
@@ -81,7 +86,12 @@ def step_foreach(
             node_id=loop_start,
             status=FrameStatus.PENDING,
             parent_frame_id=frame.id,
-            metadata=child_metadata.to_metadata(),
+            metadata=ForeachIterationMetadata(
+                foreach_node_id=step.id,
+                loop_index=loop_index,
+                loop_item=item,
+                loop_alias=step.as_,
+            ).to_metadata(),
         ),
         ready=True,
     )
@@ -100,4 +110,211 @@ def step_foreach(
         ),
     )
     run.sync_from_current_frame()
+    return run
+
+
+def _step_foreach_concurrent(
+    workflow: Workflow,
+    run: RunState,
+    step: ForeachNode,
+    index: WorkflowIndex,
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+) -> RunState:
+    if step.item_error.action != "fail":
+        raise WorkflowExecutionError(
+            "concurrent foreach v1 only supports item_error.action='fail'"
+        )
+    if step.concurrent is None:
+        raise WorkflowExecutionError("concurrent foreach requires concurrent policy")
+    _validate_single_node_loop_body(index, step)
+
+    frame = run.current_frame()
+    barrier = ForeachBarrierState.from_frame(frame, step.id)
+    if barrier is None:
+        barrier = ForeachBarrierState(mode="concurrent")
+    elif barrier.mode != "concurrent":
+        raise WorkflowExecutionError("malformed concurrent foreach barrier mode")
+
+    _finish_completed_children(run, barrier)
+    iterable = _resolve_foreach_iterable(run, frame, step)
+    _admit_concurrent_children(
+        run=run,
+        frame=frame,
+        step=step,
+        index=index,
+        barrier=barrier,
+        iterable=iterable,
+    )
+
+    if barrier.next_index >= len(iterable) and not barrier.outstanding_frame_ids:
+        return _finish_concurrent_foreach(
+            workflow=workflow,
+            run=run,
+            frame=frame,
+            step=step,
+            index=index,
+            barrier=barrier,
+            reducers=reducers,
+        )
+
+    barrier.save_to_frame(frame, step.id)
+    block_frame_on_children(run, frame.id, barrier.outstanding_frame_ids)
+    run.sync_from_current_frame()
+    return run
+
+
+def _resolve_foreach_iterable(
+    run: RunState,
+    frame: ExecutionFrame,
+    step: ForeachNode,
+) -> list[object]:
+    iterable = safe_resolve_path(
+        str(step.over),
+        state=run.state,
+        workflow_input=run.workflow_input,
+        context=frame_context_values(frame),
+    )
+    if not isinstance(iterable, list):
+        raise WorkflowExecutionError(
+            f"foreach source {str(step.over)!r} must resolve to a list"
+        )
+    return iterable
+
+
+def _validate_single_node_loop_body(index: WorkflowIndex, step: ForeachNode) -> None:
+    """Reject multi-step concurrent item bodies until item overlays are real.
+
+    The current slice has a no-op item-state overlay seam. Without a real overlay,
+    multi-node item bodies would read stale parent state after earlier item-local
+    writes, so V1 only allows loop -> one node -> END.
+    """
+    loop_start = index.next_node_id(step.id, "loop")
+    loop_step = index.nodes_by_id.get(loop_start)
+    if not isinstance(loop_step, NodeUse):
+        raise WorkflowExecutionError(
+            "concurrent foreach v1 only supports loop bodies with one node"
+        )
+    node_def = index.node_defs[loop_step.node]
+    for outcome in node_def.outcomes:
+        if index.next_node_id(loop_step.id, outcome) != END:
+            raise WorkflowExecutionError(
+                "concurrent foreach v1 only supports loop bodies with one node"
+            )
+
+
+def _finish_completed_children(run: RunState, barrier: ForeachBarrierState) -> None:
+    for child_id in tuple(barrier.outstanding_frame_ids):
+        child = run.frames[child_id]
+        if child.status == FrameStatus.COMPLETED:
+            barrier.finish_child(child_id)
+        elif child.status == FrameStatus.FAILED:
+            message = child.metadata.get("error", "unknown item failure")
+            raise WorkflowExecutionError(
+                f"concurrent foreach item frame {child_id!r} failed: {message}"
+            )
+
+
+def _admit_concurrent_children(
+    *,
+    run: RunState,
+    frame: ExecutionFrame,
+    step: ForeachNode,
+    index: WorkflowIndex,
+    barrier: ForeachBarrierState,
+    iterable: list[object],
+) -> int:
+    if step.concurrent is None:
+        raise WorkflowExecutionError("concurrent foreach requires concurrent policy")
+
+    admitted = 0
+    loop_start = index.next_node_id(frame.node_id, "loop")
+    while (
+        barrier.next_index < len(iterable)
+        and len(barrier.active_frame_ids) < step.concurrent.max_active
+        and len(barrier.outstanding_frame_ids) < step.concurrent.max_outstanding
+    ):
+        loop_index = barrier.next_index
+        item = iterable[loop_index]
+        child_id = f"{frame.id}:{step.id}:{loop_index}"
+        active_count = len(barrier.active_frame_ids)
+        barrier.next_index = loop_index + 1
+        barrier.start_child(child_id)
+        add_frame(
+            run,
+            ExecutionFrame(
+                id=child_id,
+                kind="foreach_iteration",
+                node_id=loop_start,
+                status=FrameStatus.PENDING,
+                parent_frame_id=frame.id,
+                metadata=ForeachIterationMetadata(
+                    foreach_node_id=step.id,
+                    loop_index=loop_index,
+                    loop_item=item,
+                    loop_alias=step.as_,
+                ).to_metadata(),
+            ),
+            ready=True,
+        )
+        append_step_result_trace(
+            run,
+            frame_id=frame.id,
+            node_id=frame.node_id,
+            step_type=step.type,
+            next_node_id=loop_start,
+            result=StepExecutionResult(
+                outcome="loop",
+                resolved_input={
+                    "item": item,
+                    "index": loop_index,
+                    "active_count": active_count,
+                },
+                output={},
+                state_changes={},
+            ),
+        )
+        admitted += 1
+    return admitted
+
+
+def _finish_concurrent_foreach(
+    *,
+    workflow: Workflow,
+    run: RunState,
+    frame: ExecutionFrame,
+    step: ForeachNode,
+    index: WorkflowIndex,
+    barrier: ForeachBarrierState,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+) -> RunState:
+    next_node_id = index.next_node_id(frame.node_id, "done")
+    combined = build_barrier_patch(
+        workflow,
+        [
+            barrier.pending_results[item_index].patch
+            for item_index in sorted(barrier.pending_results)
+        ],
+        run.state,
+        reducers=reducers,
+    )
+    state_changes = commit_state_patch(run.state, combined)
+    append_step_result_trace(
+        run,
+        frame_id=frame.id,
+        node_id=frame.node_id,
+        step_type=step.type,
+        next_node_id=next_node_id,
+        result=StepExecutionResult(
+            outcome="done",
+            resolved_input={
+                "count": barrier.next_index,
+                "index": barrier.next_index,
+                "committed_items": len(barrier.pending_results),
+            },
+            output={},
+            state_changes=state_changes,
+        ),
+    )
+    advance_frame(run, frame, outcome="done", next_node_id=next_node_id)
     return run

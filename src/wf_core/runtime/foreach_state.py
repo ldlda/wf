@@ -6,6 +6,7 @@ from typing import Any, Literal
 from wf_core.errors import WorkflowExecutionError
 from wf_core.run_state import ExecutionFrame
 from wf_core.runtime.ops.state import StatePatch
+from wf_core.runtime.scheduler import ForeachIterationMetadata
 
 _BARRIER_METADATA_KEY = "foreach_barriers"
 
@@ -120,6 +121,7 @@ class ForeachBarrierState:
     """Resumable state owned by one foreach parent frame."""
 
     next_index: int = 0
+    mode: Literal["serial", "concurrent"] = "serial"
     active_frame_ids: tuple[str, ...] = ()
     outstanding_frame_ids: tuple[str, ...] = ()
     pending_results: dict[int, PendingItemResult] = field(default_factory=dict)
@@ -156,11 +158,14 @@ class ForeachBarrierState:
         if not isinstance(raw, dict):
             raise WorkflowExecutionError("malformed foreach barrier state")
         next_index = raw.get("next_index")
+        mode = raw.get("mode", "serial")
         active_frame_ids = _string_tuple(raw.get("active_frame_ids", ()))
         outstanding_frame_ids = _string_tuple(raw.get("outstanding_frame_ids", ()))
         pending_results = raw.get("pending_results", {})
         if not isinstance(next_index, int):
             raise WorkflowExecutionError("malformed foreach barrier next_index")
+        if mode not in {"serial", "concurrent"}:
+            raise WorkflowExecutionError("malformed foreach barrier mode")
         if not isinstance(pending_results, dict):
             raise WorkflowExecutionError("malformed foreach barrier pending results")
         parsed_results: dict[int, PendingItemResult] = {}
@@ -174,6 +179,7 @@ class ForeachBarrierState:
             parsed_results[index] = PendingItemResult.from_metadata(raw_result)
         return cls(
             next_index=next_index,
+            mode=mode,
             active_frame_ids=active_frame_ids,
             outstanding_frame_ids=outstanding_frame_ids,
             pending_results=parsed_results,
@@ -196,6 +202,7 @@ class ForeachBarrierState:
     def to_metadata(self) -> dict[str, Any]:
         return {
             "next_index": self.next_index,
+            "mode": self.mode,
             "active_frame_ids": list(self.active_frame_ids),
             "outstanding_frame_ids": list(self.outstanding_frame_ids),
             "pending_results": {
@@ -203,6 +210,45 @@ class ForeachBarrierState:
                 for index, result in self.pending_results.items()
             },
         }
+
+    def start_child(self, frame_id: str) -> None:
+        """Record one admitted child frame as active and outstanding."""
+        if frame_id in self.active_frame_ids or frame_id in self.outstanding_frame_ids:
+            raise WorkflowExecutionError(
+                f"foreach child frame {frame_id!r} already active"
+            )
+        self.active_frame_ids = (*self.active_frame_ids, frame_id)
+        self.outstanding_frame_ids = (*self.outstanding_frame_ids, frame_id)
+
+    def finish_child(self, frame_id: str) -> None:
+        """Record one child frame as no longer active or outstanding."""
+        self.active_frame_ids = tuple(
+            item for item in self.active_frame_ids if item != frame_id
+        )
+        self.outstanding_frame_ids = tuple(
+            item for item in self.outstanding_frame_ids if item != frame_id
+        )
+
+    def add_success_patch(
+        self, *, index: int, frame_id: str, patch: StatePatch
+    ) -> None:
+        """Buffer one successful item patch by item index."""
+        self.pending_results[index] = PendingItemResult(
+            index=index,
+            frame_id=frame_id,
+            status="succeeded",
+            patch=patch,
+        )
+
+
+def item_frame_owner(frame: ExecutionFrame) -> tuple[str, str, int] | None:
+    """Return parent frame id, foreach node id, and item index for item frames."""
+    if frame.kind != "foreach_iteration" or frame.parent_frame_id is None:
+        return None
+    metadata = ForeachIterationMetadata.from_frame(frame)
+    if metadata is None:
+        return None
+    return frame.parent_frame_id, metadata.foreach_node_id, metadata.loop_index
 
 
 def _string_tuple(raw: object) -> tuple[str, ...]:

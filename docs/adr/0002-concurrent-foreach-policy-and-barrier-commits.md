@@ -95,6 +95,12 @@ Patch creation and commit must extract/reuse the existing node output
 validation, output binding, and reducer logic. Concurrent foreach must not
 create a second write system.
 
+Current sync V1 implements the barrier commit path only for `loop -> one node ->
+END` item bodies. The runtime includes an explicit no-op overlay seam
+(`state_view_for_frame`) so the next slice can add lineage-local reads without
+rewiring node execution. Until that seam becomes real, multi-step concurrent
+item bodies are rejected instead of reading stale parent state.
+
 ## Merge and Reducer Rules
 
 At a barrier, missing reducer means default replace only for single-writer

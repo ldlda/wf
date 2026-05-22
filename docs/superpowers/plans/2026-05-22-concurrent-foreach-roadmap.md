@@ -22,6 +22,10 @@
 - Phase 4 is not implemented: `foreach(mode="concurrent")` still validates as a
   model shape but runtime execution rejects it until concurrent scheduling,
   barrier commits, and item failure handling are implemented.
+- Phase 4 is expanded into a dedicated roadmap:
+  [`2026-05-22-concurrent-foreach-phase4-roadmap.md`](2026-05-22-concurrent-foreach-phase4-roadmap.md).
+  Start with
+  [`2026-05-22-concurrent-foreach-v1-sync-fail-only.md`](2026-05-22-concurrent-foreach-v1-sync-fail-only.md).
 
 ---
 

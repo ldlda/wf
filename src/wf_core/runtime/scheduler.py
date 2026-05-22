@@ -177,6 +177,21 @@ def wake_parent_if_children_complete(run: RunState, child_frame_id: str) -> None
         wake_frame(run, parent_id)
 
 
+def wake_parent_for_child_progress(run: RunState, child_frame_id: str) -> None:
+    """Wake a blocked parent after one child finishes so it can refill slots."""
+    child = _frame(run, child_frame_id)
+    parent_id = child.parent_frame_id
+    if parent_id is None:
+        return
+    parent = _frame(run, parent_id)
+    if parent.status != FrameStatus.BLOCKED:
+        return
+    block = BlockedOnChildren.from_frame(parent)
+    if block is None or child_frame_id not in block.child_frame_ids:
+        return
+    wake_frame(run, parent_id)
+
+
 def resolve_no_ready_frames(run: RunState) -> RunStatus:
     """Classify an empty ready queue into terminal, paused, or deadlocked state."""
     if run.status == RunStatus.INTERRUPTED:

@@ -15,6 +15,7 @@ from wf_core.runtime.scheduler import (
     select_next_frame,
     resolve_no_ready_frames,
     wake_frame,
+    wake_parent_for_child_progress,
     wake_parent_if_children_complete,
 )
 
@@ -155,6 +156,27 @@ def test_child_completion_wakes_blocked_parent() -> None:
     run.frames["child"].status = FrameStatus.COMPLETED
 
     wake_parent_if_children_complete(run, "child")
+
+    assert run.frames["parent"].status == FrameStatus.PENDING
+    assert run.ready_frame_ids == ["parent"]
+
+
+def test_wake_parent_when_child_finishes_for_refill() -> None:
+    run = _run()
+    add_frame(run, ExecutionFrame(id="parent", kind="root", node_id="foreach"))
+    add_frame(
+        run,
+        ExecutionFrame(
+            id="child",
+            kind="foreach_iteration",
+            node_id="__end__",
+            parent_frame_id="parent",
+        ),
+    )
+    block_frame_on_children(run, "parent", ("child", "other"))
+    run.frames["child"].status = FrameStatus.COMPLETED
+
+    wake_parent_for_child_progress(run, "child")
 
     assert run.frames["parent"].status == FrameStatus.PENDING
     assert run.ready_frame_ids == ["parent"]
