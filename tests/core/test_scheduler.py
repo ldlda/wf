@@ -96,6 +96,14 @@ def test_blocked_frame_is_not_selectable_until_woken() -> None:
     assert selected.id == "parent"
 
 
+def test_block_frame_on_children_rejects_empty_child_set() -> None:
+    run = _run()
+    add_frame(run, ExecutionFrame(id="parent", kind="root", node_id="foreach"))
+
+    with pytest.raises(WorkflowExecutionError, match="empty child set"):
+        block_frame_on_children(run, "parent", ())
+
+
 def test_create_run_state_queues_root_frame() -> None:
     workflow = Workflow(
         name="demo",

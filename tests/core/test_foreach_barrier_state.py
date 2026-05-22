@@ -64,3 +64,43 @@ def test_foreach_barrier_state_rejects_malformed_metadata() -> None:
 
     with pytest.raises(WorkflowExecutionError, match="next_index"):
         ForeachBarrierState.from_frame(frame, "each")
+
+
+def test_item_error_record_rejects_negative_index() -> None:
+    with pytest.raises(WorkflowExecutionError, match="index"):
+        ItemErrorRecord.from_metadata(
+            {
+                "index": -1,
+                "frame_id": "child",
+                "node_id": "work",
+                "error_type": "ValueError",
+                "message": "bad",
+            }
+        )
+
+
+def test_pending_item_result_reports_missing_required_field() -> None:
+    with pytest.raises(WorkflowExecutionError, match="missing 'frame_id'"):
+        PendingItemResult.from_metadata({"index": 0, "status": "succeeded"})
+
+
+def test_pending_item_result_rejects_negative_index() -> None:
+    with pytest.raises(WorkflowExecutionError, match="index"):
+        PendingItemResult.from_metadata(
+            {"index": -1, "frame_id": "child", "status": "succeeded"}
+        )
+
+
+def test_save_to_frame_rejects_corrupt_table_without_mutating() -> None:
+    frame = ExecutionFrame(
+        id="root",
+        kind="root",
+        node_id="each",
+        metadata={"foreach_barriers": "corrupt"},
+    )
+    barrier = ForeachBarrierState(next_index=1)
+
+    with pytest.raises(WorkflowExecutionError, match="barrier table"):
+        barrier.save_to_frame(frame, "each")
+
+    assert frame.metadata["foreach_barriers"] == "corrupt"

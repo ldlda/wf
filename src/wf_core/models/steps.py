@@ -213,9 +213,7 @@ class ForeachNode(BaseModel):
     )
     as_: str = Field(alias="as", description="Context key for the current item.")
     mode: Literal["serial", "concurrent"] = "serial"
-    item_error: ForeachItemErrorPolicy = Field(
-        default_factory=ForeachItemErrorPolicy
-    )
+    item_error: ForeachItemErrorPolicy = Field(default_factory=ForeachItemErrorPolicy)
     concurrent: ForeachConcurrentPolicy | None = None
     on_item_error: Literal["fail", "collect", "skip"] | None = Field(
         default=None,
@@ -252,9 +250,7 @@ class ForeachNode(BaseModel):
         if self.mode == "concurrent" and self.concurrent is None:
             raise ValueError("concurrent foreach requires concurrent policy")
         if self.mode == "serial" and self.concurrent is not None:
-            raise ValueError(
-                "concurrent policy is only valid when mode='concurrent'"
-            )
+            raise ValueError("concurrent policy is only valid when mode='concurrent'")
         return self
 
 

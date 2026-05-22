@@ -35,11 +35,10 @@ class ItemErrorRecord:
             raise WorkflowExecutionError(
                 f"malformed foreach item error record missing {exc.args[0]!r}"
             ) from exc
-        if not isinstance(index, int):
+        if not isinstance(index, int) or index < 0:
             raise WorkflowExecutionError("malformed foreach item error index")
         if not all(
-            isinstance(value, str)
-            for value in (frame_id, node_id, error_type, message)
+            isinstance(value, str) for value in (frame_id, node_id, error_type, message)
         ):
             raise WorkflowExecutionError("malformed foreach item error text fields")
         return cls(
@@ -76,11 +75,16 @@ class PendingItemResult:
     def from_metadata(cls, raw: object) -> PendingItemResult:
         if not isinstance(raw, dict):
             raise WorkflowExecutionError("malformed pending foreach result")
-        index = raw.get("index")
-        frame_id = raw.get("frame_id")
-        status = raw.get("status")
+        try:
+            index = raw["index"]
+            frame_id = raw["frame_id"]
+            status = raw["status"]
+        except KeyError as exc:
+            raise WorkflowExecutionError(
+                f"malformed pending foreach result missing {exc.args[0]!r}"
+            ) from exc
         patch_changes = raw.get("patch_changes", {})
-        if not isinstance(index, int):
+        if not isinstance(index, int) or index < 0:
             raise WorkflowExecutionError("malformed pending foreach result index")
         if not isinstance(frame_id, str):
             raise WorkflowExecutionError("malformed pending foreach result frame id")
@@ -93,10 +97,12 @@ class PendingItemResult:
             index=index,
             frame_id=frame_id,
             status=status,
-            patch=StatePatch(changes=dict(patch_changes)),
-            error=ItemErrorRecord.from_metadata(raw_error)
-            if raw_error is not None
-            else None,
+            patch=StatePatch(changes=patch_changes),
+            error=(
+                ItemErrorRecord.from_metadata(raw_error)
+                if raw_error is not None
+                else None
+            ),
         )
 
     def to_metadata(self) -> dict[str, Any]:
@@ -175,12 +181,17 @@ class ForeachBarrierState:
 
     def save_to_frame(self, frame: ExecutionFrame, foreach_node_id: str) -> None:
         """Store this barrier state in frame metadata under its foreach node id."""
-        raw = frame.metadata.setdefault(_BARRIER_METADATA_KEY, {})
-        if not isinstance(raw, dict):
+        existing = frame.metadata.get(_BARRIER_METADATA_KEY)
+        if existing is None:
+            frame.metadata[_BARRIER_METADATA_KEY] = {
+                foreach_node_id: self.to_metadata()
+            }
+            return
+        if not isinstance(existing, dict):
             raise WorkflowExecutionError(
                 f"malformed foreach barrier table for frame {frame.id!r}"
             )
-        raw[foreach_node_id] = self.to_metadata()
+        existing[foreach_node_id] = self.to_metadata()
 
     def to_metadata(self) -> dict[str, Any]:
         return {

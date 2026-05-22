@@ -136,6 +136,10 @@ def block_frame_on_children(
     run: RunState, frame_id: str, child_frame_ids: Sequence[str]
 ) -> None:
     """Mark a frame blocked on child completion and remove it from readiness."""
+    if not child_frame_ids:
+        raise WorkflowExecutionError(
+            f"cannot block frame {frame_id!r} on an empty child set"
+        )
     frame = _frame(run, frame_id)
     run.ready_frame_ids = [item for item in run.ready_frame_ids if item != frame_id]
     frame.status = FrameStatus.BLOCKED
