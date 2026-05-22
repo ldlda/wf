@@ -154,10 +154,11 @@ def execute_node_use(
             f"no handler registered for node def {node.node!r}"
         )
 
+    frame = run.current_frame()
     resolved_input, context, state_view = _resolve_node_execution(
         workflow=workflow,
         run=run,
-        frame=run.current_frame(),
+        frame=frame,
         node=node,
         node_def=node_def,
     )
@@ -165,7 +166,7 @@ def execute_node_use(
     return _finalize_node_execution(
         workflow=workflow,
         run=run,
-        frame=run.current_frame(),
+        frame=frame,
         node=node,
         node_def=node_def,
         resolved_input=resolved_input,
@@ -189,10 +190,11 @@ async def execute_node_use_async(
             f"no handler registered for node def {node.node!r}"
         )
 
+    frame = run.current_frame()
     resolved_input, context, state_view = _resolve_node_execution(
         workflow=workflow,
         run=run,
-        frame=run.current_frame(),
+        frame=frame,
         node=node,
         node_def=node_def,
     )
@@ -204,7 +206,7 @@ async def execute_node_use_async(
     return _finalize_node_execution(
         workflow=workflow,
         run=run,
-        frame=run.current_frame(),
+        frame=frame,
         node=node,
         node_def=node_def,
         resolved_input=resolved_input,

@@ -139,9 +139,8 @@ limits and intended adapter seam.
 - Frames are no longer only a serial execution stack: the runtime has a ready
   queue and `BLOCKED` frame state. Concurrent foreach and native subgraphs still
   need more work: lineage isolation, barrier merge semantics, pending child
-  results, and explicit child workflow/deployment identity. Async runtime can
-  later add simultaneous async node handler execution, but the workflow mode is
-  still concurrent foreach.
+  results, and explicit child workflow/deployment identity. Concurrent foreach
+  is the primary current use case for async concurrent node handler execution.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer
   error payload can be added later, but should be designed as part of trace/run
   state rather than scattered exceptions.

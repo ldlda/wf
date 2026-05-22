@@ -111,18 +111,18 @@ def enqueue_frame(run: RunState, frame_id: str, *, front: bool = False) -> None:
 
 def select_next_frame(run: RunState) -> ExecutionFrame | None:
     """Select the next ready frame and update compatibility cursor fields."""
-    while run.ready_frame_ids:
-        frame_id = run.ready_frame_ids.pop(0)
-        frame = _frame(run, frame_id)
-        if frame.status != FrameStatus.PENDING:
-            raise WorkflowExecutionError(
-                f"ready frame {frame_id!r} has status {frame.status!s}"
-            )
-        frame.status = FrameStatus.RUNNING
-        run.current_frame_id = frame.id
-        run.sync_from_current_frame()
-        return frame
-    return None
+    if not run.ready_frame_ids:
+        return None
+    frame_id = run.ready_frame_ids.pop(0)
+    frame = _frame(run, frame_id)
+    if frame.status != FrameStatus.PENDING:
+        raise WorkflowExecutionError(
+            f"ready frame {frame_id!r} has status {frame.status!s}"
+        )
+    frame.status = FrameStatus.RUNNING
+    run.current_frame_id = frame.id
+    run.sync_from_current_frame()
+    return frame
 
 
 def mark_frame_pending(run: RunState, frame_id: str, *, front: bool = False) -> None:

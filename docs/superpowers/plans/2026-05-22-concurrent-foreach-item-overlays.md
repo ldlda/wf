@@ -544,17 +544,8 @@ Expected: pass.
 
 - [ ] **Step 1: Update ADR current-state note**
 
-In `docs/adr/0002-concurrent-foreach-policy-and-barrier-commits.md`, replace the V1 limitation paragraph:
-
-```markdown
-Current sync V1 implements the barrier commit path only for `loop -> one node ->
-END` item bodies. The runtime includes an explicit no-op overlay seam
-(`state_view_for_frame`) so the next slice can add lineage-local reads without
-rewiring node execution. Until that seam becomes real, multi-step concurrent
-item bodies are rejected instead of reading stale parent state.
-```
-
-with:
+In `docs/adr/0002-concurrent-foreach-policy-and-barrier-commits.md`, verify the
+barrier commit section contains:
 
 ```markdown
 Current sync execution supports item-local read overlays for concurrent foreach
@@ -564,10 +555,10 @@ later nodes in the same item lineage. Sibling overlays remain invisible until
 the foreach barrier commits.
 ```
 
-- [ ] **Step 2: Update roadmap slice statuses**
+- [ ] **Step 2: Verify roadmap slice statuses**
 
 In `docs/superpowers/plans/2026-05-22-concurrent-foreach-phase4-roadmap.md`,
-mark Slice 1 as implemented and add/link this plan under Slice 2.
+verify Slice 1 is marked implemented and this plan is linked under Slice 2.
 
 Use:
 

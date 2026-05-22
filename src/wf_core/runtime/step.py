@@ -237,7 +237,7 @@ async def _step_async_foreach_item_batch(
     """Run one batch of ready concurrent-foreach item node handlers.
 
     Only handler awaits run concurrently. Finalization, tracing, and frame
-    advancement happen afterward in frame-id order so `RunState` is mutated
+    advancement happen afterward in ready-queue order so `RunState` is mutated
     deterministically.
     """
     frames = [first_frame, *_claim_matching_async_item_frames(run, index, first_frame)]

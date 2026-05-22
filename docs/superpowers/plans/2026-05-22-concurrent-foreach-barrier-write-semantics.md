@@ -120,7 +120,7 @@ def test_barrier_rejects_sibling_same_path_writes_with_explicit_replace() -> Non
         edges=[],
     )
 
-    with pytest.raises(WorkflowExecutionError, match="requires an explicit reducer"):
+    with pytest.raises(WorkflowExecutionError, match="mergeable reducer"):
         build_barrier_patch(
             workflow,
             [
@@ -131,7 +131,7 @@ def test_barrier_rejects_sibling_same_path_writes_with_explicit_replace() -> Non
         )
 ```
 
-- [ ] **Step 4: Add test for explicit reducer allowing same-path writes**
+- [ ] **Step 4: Add test for mergeable reducer allowing same-path writes**
 
 Append:
 
@@ -265,19 +265,20 @@ class _BarrierWrite:
     source_key: str
 ```
 
-- [ ] **Step 2: Add explicit reducer predicate**
+- [ ] **Step 2: Add reducer policy predicate**
 
 Add below `build_barrier_patch(...)` or near private helpers:
 
 ```python
-def _has_explicit_non_replace_reducer(
+def _allows_sibling_writes(
     path: StatePath,
     state_fields: Mapping[StatePath, StateFieldDecl],
+    reducers: Mapping[str, ReducerDefinition] | None,
 ) -> bool:
     field = state_fields.get(path)
     if field is None or field.reducer is None:
         return False
-    return field.reducer.name != "wf.std.replace"
+    return reducer_allows_sibling_writes(field.reducer, reducers)
 ```
 
 If `StateFieldDecl.reducer` is never `None` for undeclared/default fields, inspect the actual model and adjust:
@@ -286,7 +287,7 @@ If `StateFieldDecl.reducer` is never `None` for undeclared/default fields, inspe
     return field.reducer.name != "wf.std.replace"
 ```
 
-but preserve the rule: only an explicit declared non-replace reducer allows sibling same-path writes.
+but preserve the rule: only a mergeable reducer allows sibling same-path writes.
 
 - [ ] **Step 3: Add overlap predicate for barrier paths**
 
@@ -344,11 +345,11 @@ def validate_barrier_writes(
             if left.item_index == right.item_index:
                 continue
             if left.path == right.path:
-                if _has_explicit_non_replace_reducer(left.path, state_fields):
+                if _allows_sibling_writes(left.path, state_fields, reducers):
                     continue
                 raise WorkflowExecutionError(
                     "multiple sibling writes to "
-                    f"{left.source_key!r} require an explicit reducer"
+                    f"{left.source_key!r} require a mergeable reducer"
                 )
             if _state_paths_overlap(left.path, right.path):
                 raise WorkflowExecutionError(
@@ -464,7 +465,7 @@ Append:
 def test_sync_concurrent_foreach_rejects_sibling_replace_writes() -> None:
     workflow = _same_path_replace_workflow()
 
-    with pytest.raises(WorkflowExecutionError, match="explicit reducer"):
+    with pytest.raises(WorkflowExecutionError, match="mergeable reducer"):
         execute_workflow(
             workflow,
             {"items": ["a", "b"]},
@@ -501,10 +502,11 @@ Expected: pass.
 - Modify: `docs/adr/0002-concurrent-foreach-policy-and-barrier-commits.md`
 - Modify: `docs/superpowers/plans/2026-05-22-concurrent-foreach-phase4-roadmap.md`
 
-- [ ] **Step 1: Update ADR merge rules current state**
+- [ ] **Step 1: Verify ADR merge rules current state**
 
 In `docs/adr/0002-concurrent-foreach-policy-and-barrier-commits.md`, under
-`## Merge and Reducer Rules`, append:
+`## Merge and Reducer Rules`, verify that the implementation status is
+documented:
 
 ```markdown
 Current barrier validation enforces this policy for sibling foreach item
@@ -513,10 +515,10 @@ destination state path. Ancestor/descendant sibling writes are rejected until a
 future explicit deep merge policy exists.
 ```
 
-- [ ] **Step 2: Update roadmap Slice 3**
+- [ ] **Step 2: Verify roadmap Slice 3**
 
 In `docs/superpowers/plans/2026-05-22-concurrent-foreach-phase4-roadmap.md`,
-under Slice 3, add:
+under Slice 3, verify the plan points to this slice:
 
 ```markdown
 Plan:
@@ -531,7 +533,7 @@ If implementing immediately, also mark it as implemented in Current State after 
 Run:
 
 ```bash
-rg -n "sibling writes|ancestor/descendant|explicit reducer|barrier write" docs/adr/0002-concurrent-foreach-policy-and-barrier-commits.md docs/superpowers/plans/2026-05-22-concurrent-foreach-phase4-roadmap.md
+rg -n "sibling writes|ancestor/descendant|mergeable reducer|barrier write" docs/adr/0002-concurrent-foreach-policy-and-barrier-commits.md docs/superpowers/plans/2026-05-22-concurrent-foreach-phase4-roadmap.md
 ```
 
 Expected: the ADR and roadmap both mention the semantics.
@@ -589,6 +591,6 @@ Expected: all pass with 0 type errors.
 
 ## Self-Review
 
-- Spec coverage: the plan covers same-path sibling writes, explicit reducer requirements, replace rejection, ancestor/descendant rejection, deterministic reducer order, end-to-end foreach behavior, and docs.
+- Spec coverage: the plan covers same-path sibling writes, mergeable reducer requirements, replace rejection, ancestor/descendant rejection, deterministic reducer order, end-to-end foreach behavior, and docs.
 - Placeholder scan: all tasks include concrete code or exact commands; no TBD placeholders.
 - Type consistency: the plan uses existing `StatePatch`, `StatePath`, `StateFieldDecl`, `ReducerRef`, `StateSchema.from_field_map`, and `WorkflowExecutionError`.

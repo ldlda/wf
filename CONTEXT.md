@@ -100,8 +100,10 @@ _Avoid_: Job, invocation
   browser, or external service calls.
 - Future concurrency-specific foreach settings should live in a nested
   policy object rather than expanding `ForeachNode` with many top-level fields.
-- Item error handling is foreach-wide, not concurrent-only. Serial and concurrent
-  foreach can both profit from `fail`, `skip`, or `collect` item failure policy.
+- Item error handling is foreach-wide, not concurrent-only. Today, serial
+  foreach supports `fail`; concurrent foreach supports `fail`, `skip`, and
+  `collect`. Future serial foreach can reuse the same `skip`/`collect` policy
+  shape when its execution path is upgraded.
 - `collect` item error policy must declare an explicit destination for
   structured item errors. Collected errors should be ordered by item index, not
   async completion order.
@@ -271,9 +273,9 @@ _Avoid_: Job, invocation
   branch policy.
 - Unsupported concurrent foreach semantics should be rejected by validation before
   runtime. Runtime may stay defensive, but validation owns the user-facing gate.
-- `on_item_error="collect"` and `"skip"` are future policy shapes unless runtime
-  support is explicitly implemented. Current scheduler work should make official
-  support easier, not pretend it already exists.
+- `on_item_error="collect"` and `"skip"` are supported for concurrent foreach.
+  Serial foreach still behaves as fail-only until its execution path explicitly
+  adopts barrier-buffered item error handling.
 - A **Trace** records actual scheduler execution order; grouping or sorting by
   foreach index is a presentation concern.
 - Concurrent child frames may write to the same state path only through a

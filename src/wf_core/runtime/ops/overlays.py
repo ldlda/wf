@@ -30,6 +30,8 @@ def state_view_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]
     if pending is None:
         return run.state
 
+    # Correctness first: this full copy isolates sibling reads. If state grows
+    # large, replace this with a lazy/copy-on-write overlay.
     state_view = deepcopy(run.state)
     for destination, value in pending.patch.changes.items():
         path = StatePath.parse(destination)
