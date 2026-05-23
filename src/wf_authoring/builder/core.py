@@ -10,6 +10,7 @@ from wf_authoring.ops.values import runtime_error
 from wf_core import (
     ConditionNode,
     Edge,
+    ForeachConcurrentPolicy,
     ForeachItemErrorPolicy,
     ForeachNode,
     InterruptNode,
@@ -420,7 +421,7 @@ class WorkflowBuilder:
         as_: str,
         mode: Literal["serial", "concurrent"] = "serial",
         item_error: ForeachItemErrorPolicy | Mapping[str, object] | str | None = None,
-        concurrent: Mapping[str, object] | None = None,
+        concurrent: ForeachConcurrentPolicy | Mapping[str, object] | None = None,
     ) -> ForeachNode: ...
 
     @overload
@@ -433,7 +434,7 @@ class WorkflowBuilder:
         as_: str,
         mode: Literal["serial", "concurrent"] = "serial",
         on_item_error: Literal["fail", "collect", "skip"] = "fail",
-        concurrent: Mapping[str, object] | None = None,
+        concurrent: ForeachConcurrentPolicy | Mapping[str, object] | None = None,
     ) -> ForeachNode: ...
 
     def foreach(
@@ -445,7 +446,7 @@ class WorkflowBuilder:
         mode: Literal["serial", "concurrent"] = "serial",
         item_error: ForeachItemErrorPolicy | Mapping[str, object] | str | None = None,
         on_item_error: Literal["fail", "collect", "skip"] = "fail",
-        concurrent: Mapping[str, object] | None = None,
+        concurrent: ForeachConcurrentPolicy | Mapping[str, object] | None = None,
     ) -> ForeachNode:
         """Add a foreach step.
 

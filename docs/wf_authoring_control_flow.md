@@ -228,6 +228,12 @@ step with item-local child lineages:
 In async execution, admitted async item node handlers may run at the same time.
 Run-state mutation, tracing, and barrier commits remain deterministic.
 
+See `examples/authoring_concurrent_foreach.py` for a runnable example covering:
+
+- sync concurrent foreach with `item_error={"action": "collect", ...}`;
+- async item-node batching with deterministic output order;
+- `item_error` as a string, mapping, or `ForeachItemErrorPolicy` object.
+
 ## Deprecated `route`
 
 `route()` is a compatibility shim:
