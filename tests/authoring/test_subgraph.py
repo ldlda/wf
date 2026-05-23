@@ -1,10 +1,28 @@
 from __future__ import annotations
 
+import asyncio
+
 from pydantic import BaseModel
 
-from wf_authoring import build_registry, subgraph_node
-from wf_core import RuntimeContext
+from wf_authoring import (
+    WorkflowBuilder,
+    async_subgraph_node,
+    build_async_registry,
+    build_registry,
+    input_from,
+    input_path,
+    node,
+    output_to,
+    state_path,
+    subgraph_node,
+)
+from wf_core import END, RunStatus, RuntimeContext, execute_workflow_async
 from examples.demo_workflow import build_demo_registry, build_demo_workflow
+from examples.authoring_workflow_as_node import (
+    build_parent_workflow,
+    run_parent_workflow,
+    wrapped_demo_workflow,
+)
 
 
 def test_subgraph_node_wraps_compiled_workflow() -> None:
@@ -35,3 +53,92 @@ def test_subgraph_node_wraps_compiled_workflow() -> None:
     assert result["outcome"] == "ok"
     assert result["output"]["email_status"] == "skipped"
     assert "summary" in result["output"]
+
+
+def test_async_subgraph_node_wraps_async_compiled_workflow() -> None:
+    class ChildInput(BaseModel):
+        text: str
+
+    class ChildState(BaseModel):
+        text: str
+
+    class ChildOutput(BaseModel):
+        text: str
+
+    @node(name="child.async_upper", input_model=ChildInput, output_model=ChildOutput)
+    async def async_upper(payload: ChildInput) -> ChildOutput:
+        return ChildOutput(text=payload.text.upper())
+
+    child = WorkflowBuilder(
+        name="async_child",
+        input_schema=ChildInput,
+        state_schema=ChildState,
+        output_schema=ChildOutput,
+    )
+    upper = child.use(
+        async_upper,
+        id="upper",
+        input=[input_from(input_path("text"), "text")],
+        output=[output_to("text", state_path("text"))],
+    )
+    child.set_entry_point(upper)
+    child.connect(upper, "ok", END)
+
+    wrapped = async_subgraph_node(
+        name="wrapped_async_child",
+        workflow=child.compile(),
+        registry=build_async_registry(async_upper),
+        input_model=ChildInput,
+        output_model=ChildOutput,
+    )
+    parent = WorkflowBuilder(
+        name="async_parent",
+        input_schema=ChildInput,
+        state_schema=ChildState,
+        output_schema=ChildOutput,
+    )
+    step = parent.use(
+        wrapped,
+        id="run_async_child",
+        input=[input_from(input_path("text"), "text")],
+        output=[output_to("text", state_path("text"))],
+    )
+    parent.set_entry_point(step)
+    parent.connect(step, "ok", END)
+
+    run = asyncio.run(
+        execute_workflow_async(
+            parent.compile(),
+            {"text": "hello"},
+            build_async_registry(wrapped),
+        )
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.output["text"] == "HELLO"
+
+
+def test_workflow_as_node_example_runs_child_inside_parent_workflow() -> None:
+    run = run_parent_workflow()
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.output["email_status"] == "skipped"
+    assert "Summary of demo-folder/meeting-notes.md" in run.output["summary"]
+
+
+def test_workflow_as_node_example_parent_trace_is_one_node_call() -> None:
+    run = run_parent_workflow()
+
+    assert len(run.trace) == 1
+    assert run.trace[0].node_id == "run_child"
+    assert run.trace[0].step_type == "node"
+    assert run.trace[0].outcome == "ok"
+
+
+def test_workflow_as_node_example_compiles_to_normal_node_use() -> None:
+    workflow = build_parent_workflow().compile()
+    node = workflow.nodes[0]
+
+    assert node.type == "node"
+    assert node.node == wrapped_demo_workflow.name
+    assert workflow.node_defs[0].name == wrapped_demo_workflow.name

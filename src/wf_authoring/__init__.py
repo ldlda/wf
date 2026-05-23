@@ -66,12 +66,13 @@ from .nodes import (
 )
 from .reducers import AuthoredReducer, ReducerCatalog, reducer
 from .schemas import StateFieldMetadata, state_field
-from .subgraph import subgraph_node
+from .subgraph import async_subgraph_node, subgraph_node
 
 __all__ = [
     "NodeCatalog",
     "NodeCatalogEntry",
     "AuthoredReducer",
+    "async_subgraph_node",
     "BoolOutput",
     "CoalesceInput",
     "ConstantInput",

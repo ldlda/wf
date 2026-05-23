@@ -136,9 +136,11 @@ limits and intended adapter seam.
   includes node, condition, foreach, join, and interrupt steps; `Workflow` does
   not contain nested workflow/subgraph steps.
 - Nested subgraph interruption is not first-class yet. The current
-  `wf_authoring` subgraph helper wraps a child workflow as an ordinary node and
-  validates the child output; it does not preserve a child run state that can
-  interrupt, bubble to the parent, and later resume inside the child.
+  `wf_authoring` subgraph helpers wrap a child workflow as an ordinary sync or
+  async node and validate the child output; they do not preserve a child run
+  state that can interrupt, bubble to the parent, and later resume inside the
+  child. See `examples/authoring_workflow_as_node.py` for the current
+  wrapper-node shape.
 - Saved workflow-as-node execution with interrupts requires a core runtime
   upgrade: nested run state, child-frame trace preservation, interrupt bubbling
   with path metadata, and resume back into the child workflow.

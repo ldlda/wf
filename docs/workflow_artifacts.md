@@ -637,10 +637,16 @@ diagnostics before attempting persistent nested resume.
 
 Native subgraphs are not in `wf_core` yet. The current core `Step` model has
 node, condition, foreach, join, and interrupt steps, but no subgraph step. The
-current `wf_authoring.subgraph_node` helper executes a child workflow as a plain
-node and validates the child output. Future saved-workflow-as-node execution
+current `wf_authoring.subgraph_node` and `async_subgraph_node` helpers execute
+a child workflow as a plain node and validate the child output. The async helper
+is explicit because hiding `asyncio.run()` inside the sync wrapper would break
+inside already-running event loops. Future saved-workflow-as-node execution
 needs a real child run state if child interrupts should pause the parent and
 later resume the child.
+
+See `examples/authoring_workflow_as_node.py` for the current wrapper-node
+approach. In that example the parent trace sees one node call; the child
+workflow's internal trace is not embedded in the parent run state.
 
 Until that core upgrade exists, artifact tooling must not assume that an
 interrupting saved workflow can safely be used as a child node. Top-level saved
