@@ -20,6 +20,7 @@ from wf_core import (
     END,
     ForeachConcurrentPolicy,
     ForeachItemErrorPolicy,
+    WorkflowExecutionError,
     execute_workflow_async,
 )
 from wf_core.paths import StatePath
@@ -130,6 +131,47 @@ def run_collected_errors_example() -> RunState:
         ),
     )
     return builder.execute({"items": ["a", "bad", "c"]})
+
+
+def run_replace_conflict_example() -> None:
+    """Demonstrate the exact-path reducer rule for sibling item writes.
+
+    Concurrent sibling writes to the same state path need a mergeable reducer.
+    `errors` has the default replace semantics, so writing every successful item
+    to that path is rejected at the barrier.
+    """
+    builder = WorkflowBuilder(
+        name="authoring_concurrent_foreach_replace_conflict",
+        input_schema=ItemsInput,
+        state_schema=ConcurrentForeachState,
+        output_schema=ConcurrentForeachOutput,
+    )
+    each = builder.foreach(
+        id="each",
+        over=state_path("items"),
+        as_="item",
+        mode="concurrent",
+        item_error="fail",
+        concurrent={"max_active": 2, "max_outstanding": 2},
+    )
+    record = builder.use(
+        record_item,
+        id="record",
+        input=[
+            input_from(context_path("item"), "value"),
+            input_from(context_path("item"), "seen"),
+        ],
+        output=[output_to("seen", state_path("errors"))],
+    )
+    builder.set_entry_point(each)
+    builder.connect(each, "loop", record)
+    builder.connect(record, "ok", END)
+    builder.connect(each, "done", END)
+    try:
+        builder.execute({"items": ["a", "b"]})
+    except WorkflowExecutionError:
+        return
+    raise AssertionError("expected same-path sibling replace writes to fail")
 
 
 async def run_async_ordered_example() -> RunState:

@@ -69,17 +69,22 @@ When the ready queue is empty, the scheduler classifies the run as completed,
 interrupted, failed, or deadlocked. This replaces the older assumption that
 `current_node_id == END` alone is enough to decide runtime completion.
 
-## Serial Foreach
+## Foreach
 
-Foreach remains serial-only. A serial foreach parent frame creates one iteration
-child frame, records typed `ForeachIterationMetadata`, blocks on that child, and
-enqueues the child. When the child reaches `END`, `wake_parent_if_children_complete`
-wakes the blocked parent so it can create the next iteration or emit `done`.
+Serial foreach creates one iteration child frame, records typed
+`ForeachIterationMetadata`, blocks on that child, and enqueues the child. When
+the child reaches `END`, `wake_parent_if_children_complete` wakes the blocked
+parent so it can create the next iteration or emit `done`.
 
-This preserves current serial behavior while making the hidden parent/child
-relationship explicit. `foreach(mode="concurrent")` is still unsupported because
-concurrent execution needs policy, barrier, lineage, and state-patch semantics
-that are not implemented yet.
+Concurrent foreach uses the same frame machinery but admits multiple item
+lineages according to `ForeachConcurrentPolicy`. Each item lineage reads through
+its own overlay, successful item patches are buffered, and the parent foreach
+commits the barrier in item-index order. Sibling writes to the same state path
+require a mergeable reducer on that exact path; ancestor/descendant sibling
+writes are rejected until an explicit deep merge policy exists.
+
+See `examples/raw_concurrent_foreach.py` for the canonical raw workflow shape and
+`examples/authoring_concurrent_foreach.py` for the authoring-layer shape.
 
 ## Validation Flow
 

@@ -13,6 +13,7 @@ from examples.authoring_concurrent_foreach import (
     record_item,
     run_async_ordered_example,
     run_collected_errors_example,
+    run_replace_conflict_example,
 )
 from wf_authoring import WorkflowBuilder, state_path
 from wf_core import ForeachConcurrentPolicy
@@ -72,6 +73,10 @@ def test_authoring_foreach_accepts_concurrent_policy_object() -> None:
 
     assert foreach.model_dump(mode="json")["concurrent"]["max_active"] == 1
     assert foreach.model_dump(mode="json")["concurrent"]["max_outstanding"] == 3
+
+
+def test_authoring_concurrent_foreach_example_documents_replace_conflict() -> None:
+    run_replace_conflict_example()
 
 
 def test_authoring_foreach_deprecated_on_item_error_warns() -> None:

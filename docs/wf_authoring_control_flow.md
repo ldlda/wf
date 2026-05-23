@@ -233,6 +233,8 @@ See `examples/authoring_concurrent_foreach.py` for a runnable example covering:
 - sync concurrent foreach with `item_error={"action": "collect", ...}`;
 - async item-node batching with deterministic output order;
 - `item_error` as a string, mapping, or `ForeachItemErrorPolicy` object.
+- the replace-conflict case when sibling item writes target a non-mergeable
+  state path.
 
 ## Deprecated `route`
 
