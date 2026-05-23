@@ -9,7 +9,7 @@ more later
 
 ```bash
 uv run /* --env-file .env */ pytest -q
-(uv run / uvx) ruff check / format
+(uvx / uv run) ruff check / format
 uv run basedpyright --level error # error to cut spam
 # maybe uvx ty
 ```

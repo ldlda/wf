@@ -41,6 +41,36 @@ def test_deprecated_on_item_error_parses_to_nested_policy() -> None:
     assert dumped["item_error"]["action"] == "skip"
 
 
+def test_item_error_string_parses_to_policy_action() -> None:
+    node = ForeachNode.model_validate(
+        {
+            "id": "each",
+            "type": "foreach",
+            "over": "state.items",
+            "as": "item",
+            "item_error": "skip",
+        }
+    )
+
+    dumped = node.model_dump(mode="json", by_alias=True)
+
+    assert node.item_error.action == "skip"
+    assert dumped["item_error"]["action"] == "skip"
+
+
+def test_collect_item_error_string_explains_required_shape() -> None:
+    with pytest.raises(ValidationError, match="collect_to"):
+        ForeachNode.model_validate(
+            {
+                "id": "each",
+                "type": "foreach",
+                "over": "state.items",
+                "as": "item",
+                "item_error": "collect",
+            }
+        )
+
+
 def test_collect_item_policy_requires_collect_to() -> None:
     with pytest.raises(ValidationError, match="collect_to"):
         ForeachNode.model_validate(

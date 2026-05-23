@@ -185,6 +185,49 @@ creates a fresh `use()` step with auto-mapping and an auto id.
 Use existing step refs when the same node use should be shared. Pass a
 `NodeSpec` when you want a new use at that point in the graph.
 
+## Concurrent `foreach`
+
+Use `foreach(mode="concurrent")` when item lineages may make progress
+independently but should still commit their state writes at one deterministic
+barrier.
+
+```python
+each = g.foreach(
+    id="each",
+    over=state_path("items"),
+    as_="item",
+    mode="concurrent",
+    concurrent={"max_active": 2, "max_outstanding": 2},
+    item_error={
+        "action": "collect",
+        "collect_to": state_path("errors"),
+    },
+)
+```
+
+`item_error` is the canonical policy field. It accepts:
+
+- `"fail"` or `"skip"` when no extra policy fields are needed;
+- a mapping when fields such as `collect_to` are needed;
+- the core `ForeachItemErrorPolicy` object.
+
+`item_error="collect"` is intentionally incomplete and fails validation because
+`collect` must say where error records should be written. `on_item_error` is
+deprecated compatibility shorthand and should not appear in new examples.
+
+Concurrent foreach is not a general fork/gather node. It is still one foreach
+step with item-local child lineages:
+
+- each item sees its own buffered writes while it runs;
+- sibling item writes do not leak into each other before the barrier;
+- final barrier commits happen in item-index order;
+- same-path sibling writes require a mergeable reducer on that exact state path;
+- `item_error.action="collect"` requires `collect_to` to point at a declared
+  array state field.
+
+In async execution, admitted async item node handlers may run at the same time.
+Run-state mutation, tracing, and barrier commits remain deterministic.
+
 ## Deprecated `route`
 
 `route()` is a compatibility shim:

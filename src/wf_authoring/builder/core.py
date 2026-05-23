@@ -10,6 +10,7 @@ from wf_authoring.ops.values import runtime_error
 from wf_core import (
     ConditionNode,
     Edge,
+    ForeachItemErrorPolicy,
     ForeachNode,
     InterruptNode,
     NodeUse,
@@ -32,7 +33,7 @@ from wf_core.models.steps import (
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_core.runtime.ops.merges import ReducerDefinition
 
-from ..dsl import Expr, PathArg, PathExpr, compile_condition
+from ..dsl import Expr, GraphPath, PathArg, PathExpr, compile_condition
 from ..nodes.callables import SyncRegistryHandler
 from ..nodes.registry import build_registry
 from ..reducers import ReducerCatalog
@@ -143,6 +144,28 @@ def _warn_deprecated_binding_sugar(
         DeprecationWarning,
         stacklevel=3,
     )
+
+
+def _normalize_foreach_item_error(
+    item_error: ForeachItemErrorPolicy | Mapping[str, object] | str | None,
+) -> ForeachItemErrorPolicy | dict[str, object] | str | None:
+    """Coerce authoring path helpers inside the canonical item-error policy."""
+    if item_error is None or isinstance(item_error, ForeachItemErrorPolicy | str):
+        return item_error
+
+    normalized = dict(item_error)
+    collect_to = normalized.get("collect_to")
+    if isinstance(collect_to, PathExpr):
+        collect_to = collect_to.path
+    if isinstance(collect_to, GraphPath):
+        collect_to = collect_to.path
+    if isinstance(collect_to, GraphSourcePath):
+        if collect_to.root != "state":
+            raise ValueError("foreach item_error.collect_to must be a state path")
+        collect_to = StatePath(collect_to.parts)
+    if collect_to is not None:
+        normalized["collect_to"] = collect_to
+    return normalized
 
 
 @dataclass(slots=True)
@@ -388,6 +411,20 @@ class WorkflowBuilder:
         self.nodes.append(node)
         return node
 
+    @overload
+    def foreach(
+        self,
+        *,
+        id: str | None = None,
+        over: PathArg,
+        as_: str,
+        mode: Literal["serial", "concurrent"] = "serial",
+        item_error: ForeachItemErrorPolicy | Mapping[str, object] | str | None = None,
+        concurrent: Mapping[str, object] | None = None,
+    ) -> ForeachNode: ...
+
+    @overload
+    @deprecated("use item_error canonical policy instead")
     def foreach(
         self,
         *,
@@ -397,13 +434,36 @@ class WorkflowBuilder:
         mode: Literal["serial", "concurrent"] = "serial",
         on_item_error: Literal["fail", "collect", "skip"] = "fail",
         concurrent: Mapping[str, object] | None = None,
+    ) -> ForeachNode: ...
+
+    def foreach(
+        self,
+        *,
+        id: str | None = None,
+        over: PathArg,
+        as_: str,
+        mode: Literal["serial", "concurrent"] = "serial",
+        item_error: ForeachItemErrorPolicy | Mapping[str, object] | str | None = None,
+        on_item_error: Literal["fail", "collect", "skip"] = "fail",
+        concurrent: Mapping[str, object] | None = None,
     ) -> ForeachNode:
         """Add a foreach step.
 
         Concurrent mode is supported by the runtime with deterministic barrier
         commits, item error policies, and async item-node batching. See ADR 0002
-        for the exact merge and interrupt semantics.
+        for the exact merge and interrupt semantics. Prefer the canonical
+        `item_error` policy object/mapping; `on_item_error` is compatibility
+        shorthand for older callers.
         """
+        if item_error is not None and on_item_error != "fail":
+            raise TypeError("cannot mix item_error with deprecated on_item_error")
+        if item_error is None and on_item_error != "fail":
+            warnings.warn(
+                "on_item_error is deprecated WorkflowBuilder foreach sugar; "
+                "use item_error={'action': ...} instead",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         node = ForeachNode.model_validate(
             {
                 "id": id or self._next_step_id(f"foreach_{slug_id(as_)}"),
@@ -411,7 +471,9 @@ class WorkflowBuilder:
                 "over": coerce_path(over),
                 "as": as_,
                 "mode": mode,
-                "on_item_error": on_item_error,
+                "item_error": _normalize_foreach_item_error(item_error)
+                if item_error is not None
+                else {"action": on_item_error},
                 "concurrent": concurrent,
             }
         )

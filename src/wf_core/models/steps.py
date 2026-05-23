@@ -171,6 +171,14 @@ class ForeachItemErrorPolicy(BaseModel):
     action: Literal["fail", "skip", "collect"] = "fail"
     collect_to: StatePath | None = None
 
+    @model_validator(mode="before")
+    @classmethod
+    def _coerce_action_string(cls, data: object) -> object:
+        """Accept bare action strings for policies with no extra fields."""
+        if isinstance(data, str):
+            return {"action": data}
+        return data
+
     @model_validator(mode="after")
     def _validate_collect_to(self) -> Self:
         if self.action == "collect" and self.collect_to is None:
