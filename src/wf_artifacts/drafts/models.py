@@ -5,7 +5,12 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from wf_core.models.conditions import Condition
-from wf_core.models.steps import InputBinding, OutputBinding
+from wf_core.models.steps import (
+    ForeachConcurrentPolicy,
+    ForeachItemErrorPolicy,
+    InputBinding,
+    OutputBinding,
+)
 from wf_core.paths import GraphSourcePath
 
 JsonObject = dict[str, Any]
@@ -98,13 +103,18 @@ class DraftForeachPayload(BaseModel):
     over: GraphSourcePath
     as_: str = Field(alias="as")
     mode: Literal["serial", "concurrent"] = "serial"
-    on_item_error: Literal["fail", "collect", "skip"] = "fail"
-    concurrent: JsonObject | None = None
+    item_error: ForeachItemErrorPolicy = Field(default_factory=ForeachItemErrorPolicy)
+    concurrent: ForeachConcurrentPolicy | None = None
+    on_item_error: Literal["fail", "collect", "skip"] | None = Field(
+        default=None,
+        exclude=True,
+        description="Deprecated parse-only shorthand; use item_error.",
+    )
 
     @model_validator(mode="before")
     @classmethod
     def _coerce_legacy_parallel_policy(cls, data: object) -> object:
-        """Accept old draft foreach parallel names as parse-only compatibility."""
+        """Accept old foreach names while saving canonical policy fields."""
         if not isinstance(data, dict):
             return data
         normalized = dict(data)
@@ -114,6 +124,11 @@ class DraftForeachPayload(BaseModel):
             if "concurrent" in normalized:
                 raise ValueError("cannot mix deprecated parallel with concurrent")
             normalized["concurrent"] = normalized.pop("parallel")
+        old_item_error = normalized.pop("on_item_error", None)
+        if old_item_error is not None:
+            if "item_error" in normalized:
+                raise ValueError("cannot mix deprecated on_item_error with item_error")
+            normalized["item_error"] = old_item_error
         return normalized
 
 

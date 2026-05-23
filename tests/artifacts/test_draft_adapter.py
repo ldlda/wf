@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from wf_artifacts.drafts import WorkflowDraft
 from wf_artifacts.drafts.api import compile_workflow_draft, validate_workflow_draft
 from wf_artifacts.drafts.adapter import build_workflow_from_draft
-from wf_core import ConditionNode, NodeUse
+from wf_core import ConditionNode, ForeachNode, NodeUse
 from wf_core.models.steps import InputValueBinding
 
 
@@ -279,3 +279,53 @@ def test_adapter_lowers_match_step_through_builder() -> None:
         ("match_status_2", "true", "waiting"),
         ("match_status_2", "false", "__end__"),
     ]
+
+
+def test_adapter_lowers_foreach_policy_through_builder() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            "name": "foreach_policy",
+            "input_schema": {},
+            "state_schema": {
+                "type": "object",
+                "properties": {
+                    "items": {"type": "array"},
+                    "item_errors": {"type": "array"},
+                },
+            },
+            "output_schema": {},
+            "start": "each_item",
+            "steps": {
+                "each_item": {
+                    "foreach": {
+                        "over": "state.items",
+                        "as": "item",
+                        "mode": "concurrent",
+                        "concurrent": {"max_active": 2, "max_outstanding": 4},
+                        "item_error": {
+                            "action": "collect",
+                            "collect_to": "state.item_errors",
+                        },
+                    }
+                }
+            },
+            "routes": {
+                "each_item": {
+                    "loop": "__end__",
+                    "done": "__end__",
+                    "completed_with_errors": "__end__",
+                }
+            },
+        }
+    )
+
+    workflow = build_workflow_from_draft(draft)
+    foreach = workflow.nodes[0]
+
+    assert isinstance(foreach, ForeachNode)
+    assert foreach.mode == "concurrent"
+    assert foreach.concurrent is not None
+    assert foreach.concurrent.max_active == 2
+    assert foreach.concurrent.max_outstanding == 4
+    assert foreach.item_error.action == "collect"
+    assert str(foreach.item_error.collect_to) == "state.item_errors"

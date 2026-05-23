@@ -52,7 +52,7 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
             over=step.foreach.over,
             as_=step.foreach.as_,
             mode=step.foreach.mode,
-            on_item_error=step.foreach.on_item_error,
+            item_error=step.foreach.item_error,
             concurrent=step.foreach.concurrent,
         )
     if isinstance(step, DraftInterruptStep):

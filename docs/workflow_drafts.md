@@ -286,7 +286,8 @@ the generated `error` outcome dangling.
 
 ### `foreach`
 
-Runs a child body over items.
+Runs a child body over items. Draft foreach mirrors the core foreach policy
+model: use `item_error` and `concurrent`, not draft-only field names.
 
 ```json
 {
@@ -294,13 +295,35 @@ Runs a child body over items.
     "over": {"root": "state", "parts": ["items"]},
     "as": "item",
     "mode": "serial",
-    "on_item_error": "fail"
+    "item_error": "fail"
   }
 }
 ```
 
-Use `serial` unless the runtime explicitly supports a parallel async path for
-the target workflow.
+Concurrent foreach uses the same canonical policy shape as core:
+
+```json
+{
+  "foreach": {
+    "over": {"root": "state", "parts": ["items"]},
+    "as": "item",
+    "mode": "concurrent",
+    "concurrent": {
+      "max_active": 2,
+      "max_outstanding": 4
+    },
+    "item_error": {
+      "action": "collect",
+      "collect_to": {"root": "state", "parts": ["item_errors"]}
+    }
+  }
+}
+```
+
+`item_error` accepts `"fail"` and `"skip"` as shorthand. `collect` needs an
+explicit destination, so `item_error: "collect"` is invalid; use the object
+shape and provide `collect_to`. Deprecated `on_item_error` and `parallel` are
+accepted only as parse-only compatibility and dump back to canonical fields.
 
 ### `interrupt`
 

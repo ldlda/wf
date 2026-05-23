@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from wf_artifacts.drafts import (
     DraftChooseStep,
+    DraftForeachStep,
     DraftMatchStep,
     DraftUseStep,
     DraftWhenStep,
@@ -189,6 +190,82 @@ def test_workflow_draft_foreach_over_dumps_structural_path() -> None:
         "root": "state",
         "parts": ["items"],
     }
+
+
+def test_workflow_draft_foreach_accepts_canonical_item_error_policy() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "start": "each_item",
+            "steps": {
+                "each_item": {
+                    "foreach": {
+                        "over": "state.items",
+                        "as": "item",
+                        "mode": "concurrent",
+                        "concurrent": {"max_active": 2, "max_outstanding": 3},
+                        "item_error": {
+                            "action": "collect",
+                            "collect_to": "state.item_errors",
+                        },
+                    }
+                }
+            },
+            "routes": {"each_item": {"loop": "__end__", "done": "__end__"}},
+        }
+    )
+
+    step = draft.steps["each_item"]
+    dumped = draft.model_dump(mode="json")
+
+    assert isinstance(step, DraftForeachStep)
+    assert dumped["steps"]["each_item"]["foreach"]["item_error"] == {
+        "action": "collect",
+        "collect_to": {"root": "state", "parts": ["item_errors"]},
+    }
+    assert "on_item_error" not in dumped["steps"]["each_item"]["foreach"]
+
+
+def test_workflow_draft_foreach_accepts_item_error_action_string() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "start": "each_item",
+            "steps": {
+                "each_item": {
+                    "foreach": {
+                        "over": "state.items",
+                        "as": "item",
+                        "item_error": "skip",
+                    }
+                }
+            },
+            "routes": {"each_item": {"loop": "__end__", "done": "__end__"}},
+        }
+    )
+
+    dumped = draft.model_dump(mode="json")
+
+    assert dumped["steps"]["each_item"]["foreach"]["item_error"]["action"] == "skip"
+
+
+def test_workflow_draft_foreach_collect_string_requires_destination() -> None:
+    with pytest.raises(ValidationError, match="collect_to"):
+        WorkflowDraft.model_validate(
+            {
+                **_keyed_echo_draft(),
+                "start": "each_item",
+                "steps": {
+                    "each_item": {
+                        "foreach": {
+                            "over": "state.items",
+                            "as": "item",
+                            "item_error": "collect",
+                        }
+                    }
+                },
+            }
+        )
 
 
 def test_workflow_draft_accepts_match_step() -> None:
