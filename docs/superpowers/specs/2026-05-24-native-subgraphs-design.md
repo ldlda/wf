@@ -303,6 +303,22 @@ resolved dependency set.
 `wf_authoring` should expose native subgraph use separately from wrapper-node
 composition.
 
+Current helper:
+
+```python
+child = subgraph_ref(
+    id="run_child",
+    workflow=child_builder.compile(),
+    input=[input_from(state_path("request"), "request")],
+    output=[output_to("summary", state_path("child_summary"))],
+)
+```
+
+This copies the compiled child workflow contract into a core `SubgraphNode` but
+does not make the child executable yet. `workflow` is still a string reference
+inside the core model; higher layers need a structural workflow reference before
+saved/deployed workflow dependencies become stable.
+
 Possible API:
 
 ```python

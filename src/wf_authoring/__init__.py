@@ -66,7 +66,7 @@ from .nodes import (
 )
 from .reducers import AuthoredReducer, ReducerCatalog, reducer
 from .schemas import StateFieldMetadata, state_field
-from .subgraph import async_subgraph_node, subgraph_node
+from .subgraph import async_subgraph_node, subgraph_node, subgraph_ref
 
 __all__ = [
     "NodeCatalog",
@@ -136,5 +136,6 @@ __all__ = [
     "state_field",
     "state_path",
     "subgraph_node",
+    "subgraph_ref",
     "truthy",
 ]

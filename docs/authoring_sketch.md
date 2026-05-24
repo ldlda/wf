@@ -247,7 +247,17 @@ it.
 
 ### `Workflow -> NodeSpec`
 
-In the future, a compiled workflow or subgraph can be wrapped as a reusable
+Today there are two different authoring paths:
+
+- `subgraph_node` / `async_subgraph_node` wrap a compiled workflow as a normal
+  `NodeSpec`. The parent sees one node call and child frames/interrupts are not
+  native parent state.
+- `subgraph_ref` builds a native `SubgraphNode` contract from a compiled
+  `Workflow`: child input schema, output schema, and workflow outcomes are
+  copied into the boundary. Runtime execution still raises until native
+  subgraph scopes are implemented.
+
+In the future, a compiled workflow or subgraph can also be exposed as a reusable
 `NodeSpec`, likely by treating workflow input and output schemas as the node's
 input and output schemas.
 

@@ -5,12 +5,48 @@ from typing import Any, TypeVar
 
 from pydantic import BaseModel
 
-from wf_core import RuntimeContext, Workflow, execute_workflow, execute_workflow_async
+from wf_core import (
+    RuntimeContext,
+    SubgraphNode,
+    Workflow,
+    execute_workflow,
+    execute_workflow_async,
+)
+from wf_core.models.steps import InputBinding, OutputBinding
 
 from .nodes import NodeSpec
 
 InputT = TypeVar("InputT", bound=BaseModel)
 OutputT = TypeVar("OutputT", bound=BaseModel)
+
+
+def subgraph_ref(
+    *,
+    id: str,
+    workflow: Workflow,
+    input: list[InputBinding] | None = None,
+    output: list[OutputBinding] | None = None,
+    workflow_ref: str | None = None,
+    desc: str | None = None,
+) -> SubgraphNode:
+    """Create a native subgraph boundary from a compiled child workflow contract.
+
+    This does not make the child executable yet. It copies the child workflow's
+    public contract into `SubgraphNode` so parent graphs can validate mappings
+    and route child workflow outcomes before native child-scope runtime support
+    lands.
+    """
+    return SubgraphNode(
+        id=id,
+        type="subgraph",
+        workflow=workflow_ref or workflow.name,
+        desc=desc,
+        input_schema=workflow.input_schema,
+        output_schema=workflow.output_schema,
+        input=input or [],
+        output=output or [],
+        outcomes=list(workflow.outcomes),
+    )
 
 
 def subgraph_node(

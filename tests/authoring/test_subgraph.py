@@ -14,9 +14,17 @@ from wf_authoring import (
     node,
     output_to,
     state_path,
+    subgraph_ref,
     subgraph_node,
 )
-from wf_core import END, RunStatus, RuntimeContext, execute_workflow_async
+from wf_core import (
+    END,
+    Edge,
+    RunStatus,
+    RuntimeContext,
+    Workflow,
+    execute_workflow_async,
+)
 from examples.demo_workflow import build_demo_registry, build_demo_workflow
 from examples.authoring_workflow_as_node import (
     build_parent_workflow,
@@ -142,3 +150,53 @@ def test_workflow_as_node_example_compiles_to_normal_node_use() -> None:
     assert node.type == "node"
     assert node.node == wrapped_demo_workflow.name
     assert workflow.node_defs[0].name == wrapped_demo_workflow.name
+
+
+def test_subgraph_ref_copies_child_workflow_contract() -> None:
+    child = build_demo_workflow()
+
+    step = subgraph_ref(
+        id="run_child",
+        workflow=child,
+        input=[input_from(input_path("folder_id"), "folder_id")],
+        output=[output_to("summary", state_path("summary"))],
+    )
+
+    assert step.type == "subgraph"
+    assert step.workflow == child.name
+    assert step.input_schema == child.input_schema
+    assert step.output_schema == child.output_schema
+    assert step.outcomes == child.outcomes
+
+
+def test_subgraph_ref_contract_validates_in_parent_workflow() -> None:
+    child = build_demo_workflow()
+    step = subgraph_ref(
+        id="run_child",
+        workflow=child,
+        input=[input_from(input_path("folder_id"), "folder_id")],
+        output=[output_to("summary", state_path("summary"))],
+    )
+
+    parent = Workflow.model_validate(
+        {
+            "name": "native_subgraph_parent",
+            "input_schema": child.input_schema.model_dump(mode="json"),
+            "state_schema": {
+                "type": "object",
+                "properties": {"summary": {"type": "string"}},
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {"summary": {"type": "string"}},
+            },
+            "outcomes": ["ok"],
+            "start": "run_child",
+            "nodes": [step.model_dump(mode="json", by_alias=True)],
+            "edges": [
+                Edge.model_validate({"from": "run_child", "outcome": "ok", "to": END})
+            ],
+        }
+    )
+
+    assert parent.validate_structure().errors == []

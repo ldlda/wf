@@ -3,12 +3,27 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, TypeAlias, TypeGuard
 
-from wf_core import ConditionNode, ForeachNode, InterruptNode, JoinNode, NodeUse
+from wf_core import (
+    ConditionNode,
+    EndNode,
+    ForeachNode,
+    InterruptNode,
+    JoinNode,
+    NodeUse,
+    SubgraphNode,
+)
 
 from ..nodes import NodeSpec
 
 StepRef: TypeAlias = (
-    str | NodeUse | ConditionNode | ForeachNode | InterruptNode | JoinNode
+    str
+    | NodeUse
+    | SubgraphNode
+    | ConditionNode
+    | ForeachNode
+    | InterruptNode
+    | JoinNode
+    | EndNode
 )
 """A reference to a step, which can be either a string id or a node object
  that should be auto-used."""
