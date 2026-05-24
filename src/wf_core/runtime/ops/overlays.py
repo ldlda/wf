@@ -1,11 +1,39 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from dataclasses import dataclass
+from collections.abc import Mapping, Sequence
 from typing import Any
 
-from wf_core.run_state import ExecutionFrame, RunState
+from wf_core.run_state import ExecutionFrame, RunState, StateWrite
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
 from wf_core.runtime.ops.state import safe_set_nested_value
+
+
+@dataclass(slots=True)
+class LineageStateView:
+    """Committed state plus writes visible inside one child lineage.
+
+    Today concurrent foreach supplies the writes from barrier metadata. Future
+    native subgraphs and fork/gather should use the same primitive instead of
+    rebuilding foreach-specific overlay logic.
+    """
+
+    base_state: Mapping[str, Any]
+    writes: Sequence[StateWrite]
+
+    def to_state_dict(self) -> dict[str, Any]:
+        """Materialize the lineage-visible state as an isolated mutable dict."""
+        # Correctness first: this full copy isolates sibling reads. If state grows
+        # large, replace this with a lazy/copy-on-write overlay.
+        state_view = deepcopy(dict(self.base_state))
+        for write in self.writes:
+            safe_set_nested_value(
+                state_view,
+                list(write.path.parts),
+                write.visible_value,
+            )
+        return state_view
 
 
 def state_view_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]:
@@ -29,9 +57,4 @@ def state_view_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]
     if pending is None:
         return run.state
 
-    # Correctness first: this full copy isolates sibling reads. If state grows
-    # large, replace this with a lazy/copy-on-write overlay.
-    state_view = deepcopy(run.state)
-    for write in pending.patch.writes:
-        safe_set_nested_value(state_view, list(write.path.parts), write.visible_value)
-    return state_view
+    return LineageStateView(run.state, pending.patch.writes).to_state_dict()

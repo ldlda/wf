@@ -11,6 +11,7 @@ from wf_core.runtime.foreach_state import (
     ItemErrorRecord,
     PendingItemResult,
 )
+from wf_core.runtime.ops.overlays import LineageStateView
 from wf_core.runtime.ops.state import StatePatch
 
 
@@ -83,6 +84,34 @@ def test_foreach_barrier_state_round_trips_reducer_write_records() -> None:
     assert write.incoming_value == 3
     assert write.visible_value == 5
     assert write.reducer.name == "wf.std.add"
+
+
+def test_lineage_state_view_materializes_visible_values_without_mutating_base() -> None:
+    base_state = {"count": 2, "nested": {"value": "old"}}
+    view = LineageStateView(
+        base_state,
+        [
+            StateWrite(
+                path=StatePath(("count",)),
+                incoming_value=3,
+                visible_value=5,
+                reducer=ReducerRef(name="wf.std.add"),
+            ),
+            StateWrite(
+                path=StatePath(("nested", "value")),
+                incoming_value="new",
+                visible_value="new",
+                reducer=ReducerRef(name="wf.std.replace"),
+            ),
+        ],
+    )
+
+    state_view = view.to_state_dict()
+
+    assert state_view["count"] == 5
+    assert state_view["nested"]["value"] == "new"
+    assert base_state["count"] == 2
+    assert base_state["nested"]["value"] == "old"
 
 
 def test_foreach_barrier_state_returns_none_when_missing() -> None:
