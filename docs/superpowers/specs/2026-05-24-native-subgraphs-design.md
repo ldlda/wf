@@ -56,10 +56,18 @@ class SubgraphNode(BaseModel):
     id: str
     type: Literal["subgraph"]
     workflow: WorkflowRef
+    input_schema: SchemaRef
+    output_schema: SchemaRef
     input: list[InputBinding] = Field(default_factory=list)
     output: list[OutputBinding] = Field(default_factory=list)
     outcomes: list[str] = Field(default_factory=lambda: ["ok"])
 ```
+
+Current implementation status: `wf_core` has a first placeholder
+`SubgraphNode`, but `workflow` is still a plain string reference. The placeholder
+also carries `input_schema` and `output_schema` so validation can check parent
+bindings before native execution exists. Runtime execution intentionally raises
+until a later slice adds child scope/frame execution.
 
 `WorkflowRef` should be structural, not a dotted string parser:
 

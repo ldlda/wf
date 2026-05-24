@@ -49,7 +49,12 @@ class StatePatch:
     _staged_state: dict[str, Any] = dataclass_field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
-        """Keep legacy `StatePatch(changes=...)` usable during migration."""
+        """Keep legacy `StatePatch(changes=...)` usable during migration.
+
+        New runtime code should prefer ordered `writes`. `changes` stays as the
+        public trace-facing view and as parse compatibility for old barrier
+        metadata/tests that predate `StateWrite`.
+        """
         if not self.changes and self.writes:
             self.changes = {
                 str(write.path): write.incoming_value for write in self.writes

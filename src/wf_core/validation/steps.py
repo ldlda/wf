@@ -14,9 +14,12 @@ from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import (
     ConditionNode,
     ForeachNode,
+    InputBinding,
     InputPathBinding,
     InterruptNode,
     NodeUse,
+    OutputBinding,
+    SubgraphNode,
 )
 from wf_core.models.workflow import Workflow
 from wf_core.paths import (
@@ -45,21 +48,65 @@ def validate_node_use(
         )
         return
 
-    input_fields = set(node_def.input_schema.properties)
-    output_fields = set(node_def.output_schema.properties)
-    state_root_fields = workflow.state_schema.root_fields()
-    input_root_fields = set(workflow.input_schema.properties)
+    _validate_boundary_bindings(
+        input_bindings=node.input,
+        output_bindings=node.output,
+        input_fields=set(node_def.input_schema.properties),
+        output_fields=set(node_def.output_schema.properties),
+        state_root_fields=workflow.state_schema.root_fields(),
+        input_root_fields=set(workflow.input_schema.properties),
+        report=report,
+        path_prefix=f"nodes[{index}]",
+        input_error_code=ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
+        output_error_code=ValidationIssueCode.INVALID_NODE_OUTPUT_FIELD,
+    )
 
+
+def validate_subgraph_node(
+    node: SubgraphNode,
+    index: int,
+    workflow: Workflow,
+    report: ValidationReport,
+) -> None:
+    """Validate a subgraph boundary contract before runtime support exists."""
+    _validate_boundary_bindings(
+        input_bindings=node.input,
+        output_bindings=node.output,
+        input_fields=set(node.input_schema.properties),
+        output_fields=set(node.output_schema.properties),
+        state_root_fields=workflow.state_schema.root_fields(),
+        input_root_fields=set(workflow.input_schema.properties),
+        report=report,
+        path_prefix=f"nodes[{index}]",
+        input_error_code=ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
+        output_error_code=ValidationIssueCode.INVALID_NODE_OUTPUT_FIELD,
+    )
+
+
+def _validate_boundary_bindings(
+    *,
+    input_bindings: list[InputBinding],
+    output_bindings: list[OutputBinding],
+    input_fields: set[str],
+    output_fields: set[str],
+    state_root_fields: set[str],
+    input_root_fields: set[str],
+    report: ValidationReport,
+    path_prefix: str,
+    input_error_code: ValidationIssueCode,
+    output_error_code: ValidationIssueCode,
+) -> None:
+    """Validate bindings for node-like boundaries with declared I/O schemas."""
     input_targets = []
-    for input_index, binding in enumerate(node.input):
+    for input_index, binding in enumerate(input_bindings):
         input_targets.append(binding.target)
         destination_root = _local_root(binding.target)
         if destination_root is None or (
             destination_root != "." and destination_root not in input_fields
         ):
             report.add(
-                ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
-                f"nodes[{index}].input[{input_index}].target",
+                input_error_code,
+                f"{path_prefix}.input[{input_index}].target",
                 f"destination field {str(binding.target)!r} is not declared in node input schema",
             )
 
@@ -68,40 +115,40 @@ def validate_node_use(
         ):
             report.add(
                 ValidationIssueCode.INVALID_SOURCE_PATH,
-                f"nodes[{index}].input[{input_index}].path",
+                f"{path_prefix}.input[{input_index}].path",
                 "source path must start with input., state., or context. and reference a declared root field when applicable",
             )
 
     if has_overlapping_paths(input_targets):
         report.add(
-            ValidationIssueCode.INVALID_NODE_INPUT_FIELD,
-            f"nodes[{index}].input",
+            input_error_code,
+            f"{path_prefix}.input",
             "input has overlapping node-local input paths",
         )
 
     output_targets = []
-    for output_index, binding in enumerate(node.output):
+    for output_index, binding in enumerate(output_bindings):
         output_targets.append(str(binding.target))
         source_root = _local_root(binding.source)
         if source_root is None or (
             source_root != "." and source_root not in output_fields
         ):
             report.add(
-                ValidationIssueCode.INVALID_NODE_OUTPUT_FIELD,
-                f"nodes[{index}].output[{output_index}].source",
+                output_error_code,
+                f"{path_prefix}.output[{output_index}].source",
                 f"source field {str(binding.source)!r} is not declared in node output schema",
             )
         destination_root = _state_destination_root(binding.target)
         if destination_root is None or destination_root not in state_root_fields:
             report.add(
                 ValidationIssueCode.INVALID_DESTINATION_PATH,
-                f"nodes[{index}].output[{output_index}].target",
+                f"{path_prefix}.output[{output_index}].target",
                 "destination path must start with state. and reference a declared root field",
             )
     if has_overlapping_paths(output_targets):
         report.add(
             ValidationIssueCode.INVALID_DESTINATION_PATH,
-            f"nodes[{index}].output",
+            f"{path_prefix}.output",
             "output has overlapping state destination paths",
         )
 

@@ -55,6 +55,9 @@ def lineage_writes_for_frame(
             )
         )
 
+    # Compatibility fallback: concurrent foreach used barrier-local patches
+    # before `RunState.lineages` became the primary write store. Keep reading
+    # those patches so old serialized runs and direct barrier tests still work.
     owner = item_frame_owner(frame)
     if owner is None:
         return ()
@@ -127,7 +130,11 @@ def lineage_patch(
     scope_id: str,
     lineage_id: str,
 ) -> StatePatch:
-    """Return a replayable patch for one lineage's pending writes."""
+    """Return a replayable patch for one lineage's pending writes.
+
+    Barrier/gather code should consume this instead of reconstructing a patch
+    from visible state. Incoming values are the replay source of truth.
+    """
     lineage = _lineage(run, scope_id=scope_id, lineage_id=lineage_id)
     return StatePatch(writes=list(lineage.writes))
 

@@ -20,6 +20,7 @@ from wf_core.models.steps import (
     JoinNode,
     NodeUse,
     Step,
+    SubgraphNode,
 )
 from wf_core.models.workflow import Edge, Workflow
 
@@ -48,6 +49,7 @@ __all__ = [
     "StateField",
     "StateSchema",
     "Step",
+    "SubgraphNode",
     "VariadicCondition",
     "Workflow",
 ]

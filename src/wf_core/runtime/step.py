@@ -11,6 +11,7 @@ from wf_core.models.steps import (
     InterruptNode,
     JoinNode,
     NodeUse,
+    SubgraphNode,
 )
 from wf_core.models.workflow import Workflow
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
@@ -115,6 +116,11 @@ def step_workflow(
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
         return step_foreach(workflow, run, step, index, reducers=reducers)
+    elif isinstance(step, SubgraphNode):
+        raise WorkflowExecutionError(
+            f"subgraph step {step.id!r} references {step.workflow!r}, "
+            "but native subgraph execution is not implemented yet"
+        )
     else:
         raise WorkflowExecutionError(
             f"unsupported step type {getattr(step, 'type', type(step).__name__)!r}"
@@ -209,6 +215,11 @@ async def step_workflow_async(
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
         return step_foreach(workflow, run, step, index, reducers=reducers)
+    elif isinstance(step, SubgraphNode):
+        raise WorkflowExecutionError(
+            f"subgraph step {step.id!r} references {step.workflow!r}, "
+            "but native subgraph execution is not implemented yet"
+        )
     else:
         raise WorkflowExecutionError(
             f"unsupported step type {getattr(step, 'type', type(step).__name__)!r}"

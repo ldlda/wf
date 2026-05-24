@@ -6,6 +6,7 @@ from wf_core.models.steps import (
     InterruptNode,
     NodeUse,
     Step,
+    SubgraphNode,
 )
 from wf_core.models.schemas import NodeDef
 from wf_core.models.workflow import Edge, Workflow
@@ -17,6 +18,7 @@ from wf_core.validation.steps import (
     validate_foreach_node,
     validate_interrupt_node,
     validate_node_use,
+    validate_subgraph_node,
 )
 
 
@@ -69,6 +71,8 @@ def _validate_nodes(
 
         if isinstance(node, NodeUse):
             validate_node_use(node, index, node_defs, workflow, report)
+        elif isinstance(node, SubgraphNode):
+            validate_subgraph_node(node, index, workflow, report)
         elif isinstance(node, ConditionNode):
             validate_condition_node(
                 node, index, report, state_root_fields, input_root_fields

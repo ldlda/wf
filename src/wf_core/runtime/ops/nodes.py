@@ -124,6 +124,8 @@ def _finalize_node_execution(
         if is_root_lineage_frame(frame):
             state_changes = commit_state_patch(run.state, patch)
         else:
+            # Non-root frames are future subgraph/fork branch execution: writes
+            # become lineage-local until an explicit boundary/barrier commits.
             append_lineage_writes(
                 run,
                 scope_id=frame.scope_id,
@@ -136,6 +138,8 @@ def _finalize_node_execution(
         parent_frame = run.frames[parent_frame_id]
         barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
         if barrier is not None and barrier.mode == "concurrent":
+            # New concurrent foreach stores writes in the child lineage; the
+            # barrier keeps only result metadata plus old patch fallback.
             append_lineage_writes(
                 run,
                 scope_id=frame.scope_id,

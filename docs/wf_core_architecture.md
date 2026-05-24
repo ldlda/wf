@@ -132,9 +132,11 @@ limits and intended adapter seam.
   external subscriptions or notification streams need a separate lifecycle
   design. Interrupt `request` and `resume` are canonical binding lists; nested
   child-workflow resume is still future work.
-- Native subgraphs are not part of `wf_core` yet. The core `Step` model only
-  includes node, condition, foreach, join, and interrupt steps; `Workflow` does
-  not contain nested workflow/subgraph steps.
+- Native subgraphs have a core model placeholder, `SubgraphNode`, but runtime
+  execution is not implemented yet. The placeholder carries a child workflow
+  reference, declared input/output schemas, binding lists, and declared
+  outcomes so parent graph structure can validate before execution support
+  lands.
 - Nested subgraph interruption is not first-class yet. The current
   `wf_authoring` subgraph helpers wrap a child workflow as an ordinary sync or
   async node and validate the child output; they do not preserve a child run
@@ -145,10 +147,11 @@ limits and intended adapter seam.
   upgrade: nested run state, child-frame trace preservation, interrupt bubbling
   with path metadata, and resume back into the child workflow.
 - Frames are no longer only a serial execution stack: the runtime has a ready
-  queue and `BLOCKED` frame state. Concurrent foreach and native subgraphs still
-  need more work: lineage isolation, barrier merge semantics, pending child
-  results, and explicit child workflow/deployment identity. Concurrent foreach
-  is the primary current use case for async concurrent node handler execution.
+  queue, `BLOCKED` frame state, lineage isolation, barrier merge semantics, and
+  pending child results for concurrent foreach. Native subgraphs still need
+  explicit child workflow/deployment identity and child-scope execution.
+  Concurrent foreach is the primary current use case for async concurrent node
+  handler execution.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer
   error payload can be added later, but should be designed as part of trace/run
   state rather than scattered exceptions.

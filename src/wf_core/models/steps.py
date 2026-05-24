@@ -6,6 +6,7 @@ from typing import Annotated, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from wf_core.models.conditions import Condition
+from wf_core.models.schemas import SchemaRef
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 
@@ -153,6 +154,48 @@ class NodeUse(BaseModel):
         if not isinstance(value, Mapping):
             raise ValueError(f"{field_name} must be a mapping")
         return value
+
+
+class SubgraphNode(BaseModel):
+    """Workflow boundary step reserved for native subgraph execution.
+
+    This is a contract-bearing placeholder, not the implementation of nested
+    workflow execution yet. The core can validate the parent graph's bindings
+    and declared outcomes now; a later runtime slice will resolve ``workflow``
+    into a child graph, create a child scope/lineage, and commit its result.
+    """
+
+    id: str
+    type: Literal["subgraph"]
+    workflow: str = Field(
+        description=(
+            "Reference to the child workflow artifact or registry key. The core "
+            "does not resolve this reference until native subgraph runtime "
+            "execution is implemented."
+        )
+    )
+    desc: str | None = None
+    input_schema: SchemaRef = Field(
+        default_factory=lambda: SchemaRef(type="object"),
+        description="Declared child workflow input contract used to validate input bindings.",
+    )
+    output_schema: SchemaRef = Field(
+        default_factory=lambda: SchemaRef(type="object"),
+        description="Declared child workflow output contract used to validate output bindings.",
+    )
+    input: list[InputBinding] = Field(
+        default_factory=list,
+        description="Bindings that build the child workflow input payload.",
+    )
+    output: list[OutputBinding] = Field(
+        default_factory=list,
+        description="Bindings that commit child workflow output into parent state.",
+    )
+    outcomes: list[str] = Field(
+        default_factory=lambda: ["ok"],
+        min_length=1,
+        description="Outcomes the parent graph may wire from this subgraph boundary.",
+    )
 
 
 class ConditionNode(BaseModel):
@@ -329,7 +372,7 @@ class InterruptNode(BaseModel):
 
 
 Step = Annotated[
-    NodeUse | ConditionNode | ForeachNode | JoinNode | InterruptNode,
+    NodeUse | SubgraphNode | ConditionNode | ForeachNode | JoinNode | InterruptNode,
     Field(discriminator="type"),
 ]
 """Discriminated union of all executable workflow graph steps."""

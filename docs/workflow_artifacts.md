@@ -635,10 +635,12 @@ must not be parsed as a generic `CapabilityRef`.
 The first implementation should prefer artifact validation and dependency
 diagnostics before attempting persistent nested resume.
 
-Native subgraphs are not in `wf_core` yet. The current core `Step` model has
-node, condition, foreach, join, and interrupt steps, but no subgraph step. The
-current `wf_authoring.subgraph_node` and `async_subgraph_node` helpers execute
-a child workflow as a plain node and validate the child output. The async helper
+Native subgraphs now have a core `SubgraphNode` placeholder. It validates the
+parent-side contract: child workflow reference, declared child input/output
+schemas, binding lists, and declared outcomes. Runtime execution is still not
+implemented; reaching a subgraph step raises a clear runtime error. The current
+`wf_authoring.subgraph_node` and `async_subgraph_node` helpers still execute a
+child workflow as a plain node and validate the child output. The async helper
 is explicit because hiding `asyncio.run()` inside the sync wrapper would break
 inside already-running event loops. Future saved-workflow-as-node execution
 needs a real child run state if child interrupts should pause the parent and

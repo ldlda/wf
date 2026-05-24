@@ -45,11 +45,12 @@ implementation state.
   [ADR 0002](./adr/0002-concurrent-foreach-policy-and-barrier-commits.md).
 - Native subgraph design spec:
   [2026-05-24 native subgraphs](./superpowers/specs/2026-05-24-native-subgraphs-design.md).
-- **Native subgraphs / graph-as-node**: next major runtime feature. Add a
-  first-class subgraph step with child run/frame identity, child trace
-  preservation, interrupt bubbling, and resume back into the child workflow.
-  Wrapper helpers currently run child workflows as ordinary nodes; true
-  graph-as-node behavior belongs here.
+- **Native subgraphs / graph-as-node**: next major runtime feature. A
+  first-class `SubgraphNode` placeholder exists and validates parent-side
+  bindings/outcomes, but runtime execution still needs child run/frame identity,
+  child trace preservation, interrupt bubbling, and resume back into the child
+  workflow. Wrapper helpers currently run child workflows as ordinary nodes;
+  true graph-as-node behavior belongs here.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of

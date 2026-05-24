@@ -15,6 +15,7 @@ from .models import (
     SiblingWritePolicy,
     StateField,
     StateSchema,
+    SubgraphNode,
     Workflow,
 )
 from .runtime import (
@@ -64,6 +65,7 @@ __all__ = [
     "SiblingWritePolicy",
     "StateField",
     "StateSchema",
+    "SubgraphNode",
     "AsyncNodeHandler",
     "NodeHandler",
     "ExecutionFrame",

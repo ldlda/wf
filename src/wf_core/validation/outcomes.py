@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from wf_core.models.schemas import NodeDef
-from wf_core.models.steps import InterruptNode, NodeUse, Step
+from wf_core.models.steps import InterruptNode, NodeUse, Step, SubgraphNode
 from wf_core.models.workflow import Edge
 from wf_core.tokens import END
 
@@ -10,6 +10,8 @@ def declared_outcomes_for_step(step: Step, node_defs: dict[str, NodeDef]) -> set
     if isinstance(step, NodeUse):
         node_def = node_defs.get(step.node)
         return set(node_def.outcomes) if node_def else set()
+    if isinstance(step, SubgraphNode):
+        return set(step.outcomes)
     if step.type == "condition":
         return {"true", "false"}
     if step.type == "foreach":
