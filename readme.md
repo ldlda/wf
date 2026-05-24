@@ -207,7 +207,10 @@ Edge
 
 - source nodes declare which outcomes are possible
 - edges map those outcomes to next nodes
-- terminal routing can go to builtin `__end__`
+- terminal routing can go to builtin `__end__`, which is compatibility
+  shorthand for workflow outcome `ok`
+- explicit `EndNode` steps set non-`ok` workflow outcomes such as `error` or
+  `needs_input`
 
 Reaching an undeclared or unwired outcome is runtime failure.
 
@@ -302,7 +305,7 @@ Executor steps:
 7. Validate typed node output
 8. Commit mapped output into state
 9. Route by returned outcome
-10. Stop when routing reaches `__end__`
+10. Stop when routing reaches `__end__` or an explicit `EndNode`
 11. Derive and validate final output from state
 
 Commit rules:

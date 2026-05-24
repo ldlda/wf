@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from wf_core.models.steps import (
     ConditionNode,
+    EndNode,
     ForeachNode,
     InterruptNode,
     NodeUse,
@@ -9,7 +10,7 @@ from wf_core.models.steps import (
     SubgraphNode,
 )
 from wf_core.models.schemas import NodeDef
-from wf_core.models.workflow import Edge, Workflow
+from wf_core.models.workflow import Workflow
 from wf_core.tokens import END
 from wf_core.validation.issues import ValidationIssueCode, ValidationReport
 from wf_core.validation.outcomes import declared_outcomes_for_step, reachable_node_ids
@@ -28,7 +29,7 @@ def validate_workflow(workflow: Workflow) -> ValidationReport:
     node_defs = _collect_node_defs(workflow, report)
     nodes_by_id = _validate_nodes(workflow, node_defs, report)
     _validate_start(workflow, nodes_by_id, report)
-    outgoing = _validate_edges(workflow.edges, nodes_by_id, node_defs, report)
+    outgoing = _validate_edges(workflow, nodes_by_id, node_defs, report)
     _validate_reachable_outcomes(workflow, nodes_by_id, node_defs, outgoing, report)
 
     return report
@@ -73,6 +74,8 @@ def _validate_nodes(
             validate_node_use(node, index, node_defs, workflow, report)
         elif isinstance(node, SubgraphNode):
             validate_subgraph_node(node, index, workflow, report)
+        elif isinstance(node, EndNode):
+            _validate_end_node(node, index, workflow, report)
         elif isinstance(node, ConditionNode):
             validate_condition_node(
                 node, index, report, state_root_fields, input_root_fields
@@ -94,6 +97,21 @@ def _validate_nodes(
     return nodes_by_id
 
 
+def _validate_end_node(
+    node: EndNode,
+    index: int,
+    workflow: Workflow,
+    report: ValidationReport,
+) -> None:
+    """Validate explicit workflow terminal outcomes."""
+    if node.outcome not in workflow.outcomes:
+        report.add(
+            ValidationIssueCode.UNDECLARED_WORKFLOW_OUTCOME,
+            f"nodes[{index}].outcome",
+            f"workflow outcome {node.outcome!r} is not declared",
+        )
+
+
 def _validate_start(
     workflow: Workflow,
     nodes_by_id: dict[str, Step],
@@ -108,7 +126,7 @@ def _validate_start(
 
 
 def _validate_edges(
-    edges: list[Edge],
+    workflow: Workflow,
     nodes_by_id: dict[str, Step],
     node_defs: dict[str, NodeDef],
     report: ValidationReport,
@@ -116,7 +134,7 @@ def _validate_edges(
     outgoing: dict[str, set[str]] = {}
     edge_keys: set[tuple[str, str]] = set()
 
-    for index, edge in enumerate(edges):
+    for index, edge in enumerate(workflow.edges):
         edge_key = (edge.from_, edge.outcome)
         if edge_key in edge_keys:
             report.add(
@@ -149,6 +167,14 @@ def _validate_edges(
                 ValidationIssueCode.UNKNOWN_EDGE_DESTINATION,
                 f"edges[{index}].to",
                 f"unknown destination node {edge.to!r}",
+            )
+        if edge.to == END and "ok" not in workflow.outcomes:
+            # `__end__` is the legacy implicit end node for workflow outcome
+            # "ok". Explicit non-ok outcomes should use EndNode instead.
+            report.add(
+                ValidationIssueCode.UNDECLARED_WORKFLOW_OUTCOME,
+                f"edges[{index}].to",
+                "legacy __end__ requires workflow outcome 'ok' to be declared",
             )
 
     return outgoing

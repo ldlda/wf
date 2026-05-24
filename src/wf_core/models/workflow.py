@@ -28,6 +28,7 @@ class Workflow(BaseModel):
     state_schema: StateSchema
     output_schema: SchemaRef
     node_defs: list[NodeDef] = Field(default_factory=list)
+    outcomes: list[str] = Field(default_factory=lambda: ["ok"], min_length=1)
     start: str
     nodes: list[Step]
     edges: list[Edge]

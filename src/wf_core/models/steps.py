@@ -312,6 +312,20 @@ class JoinNode(BaseModel):
     type: Literal["join"]
 
 
+class EndNode(BaseModel):
+    """Explicit workflow terminal that sets the workflow-level outcome.
+
+    `__end__` remains the compatibility shorthand for outcome ``ok``. New
+    workflows that need business outcomes such as ``error`` or ``needs_input``
+    should route to explicit end nodes so the terminal contract is visible in
+    the graph.
+    """
+
+    id: str
+    type: Literal["end"]
+    outcome: str = "ok"
+
+
 class InterruptNode(BaseModel):
     """Control-flow step that pauses a run and waits for resume input."""
 
@@ -372,7 +386,13 @@ class InterruptNode(BaseModel):
 
 
 Step = Annotated[
-    NodeUse | SubgraphNode | ConditionNode | ForeachNode | JoinNode | InterruptNode,
+    NodeUse
+    | SubgraphNode
+    | ConditionNode
+    | ForeachNode
+    | JoinNode
+    | EndNode
+    | InterruptNode,
     Field(discriminator="type"),
 ]
 """Discriminated union of all executable workflow graph steps."""

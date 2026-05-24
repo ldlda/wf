@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from wf_core.models.schemas import NodeDef
-from wf_core.models.steps import InterruptNode, NodeUse, Step, SubgraphNode
+from wf_core.models.steps import EndNode, InterruptNode, NodeUse, Step, SubgraphNode
 from wf_core.models.workflow import Edge
 from wf_core.tokens import END
 
@@ -21,6 +21,8 @@ def declared_outcomes_for_step(step: Step, node_defs: dict[str, NodeDef]) -> set
         return outcomes
     if step.type == "join":
         return {"done"}
+    if isinstance(step, EndNode):
+        return set()
     if isinstance(step, InterruptNode):
         return set(step.outcomes)
     return set()

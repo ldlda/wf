@@ -132,6 +132,7 @@ class RunState:
     status: RunStatus
     workflow_input: dict[str, Any]
     state: dict[str, Any]
+    outcome: str | None = None
     output: dict[str, Any] = field(default_factory=dict)
     trace: list[TraceEntry] = field(default_factory=list)
     frames: dict[str, ExecutionFrame] = field(default_factory=dict)

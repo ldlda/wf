@@ -47,10 +47,12 @@ implementation state.
   [2026-05-24 native subgraphs](./superpowers/specs/2026-05-24-native-subgraphs-design.md).
 - **Native subgraphs / graph-as-node**: next major runtime feature. A
   first-class `SubgraphNode` placeholder exists and validates parent-side
-  bindings/outcomes, but runtime execution still needs child run/frame identity,
-  child trace preservation, interrupt bubbling, and resume back into the child
-  workflow. Wrapper helpers currently run child workflows as ordinary nodes;
-  true graph-as-node behavior belongs here.
+  bindings/outcomes. Core workflows now also declare workflow-level outcomes
+  and can terminate through explicit `EndNode` steps. Runtime subgraph execution
+  still needs child run/frame identity, child trace preservation, interrupt
+  bubbling, and resume back into the child workflow. Wrapper helpers currently
+  run child workflows as ordinary nodes; true graph-as-node behavior belongs
+  here.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of

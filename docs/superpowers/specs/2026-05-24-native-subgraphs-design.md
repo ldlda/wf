@@ -261,13 +261,13 @@ When the child workflow completes:
 2. Apply the subgraph step `output` bindings from child output into parent
    state.
 3. Record a parent `subgraph` trace entry with committed parent state changes.
-4. Advance the parent subgraph frame through outcome `ok`.
+4. Advance the parent subgraph frame through the child workflow outcome.
 
-For v1, a child workflow completion maps to one parent outcome: `ok`.
-Later, saved workflow artifacts may declare multiple outcomes, but core
-`Workflow.output_schema` is currently one output shape. Outcome-per-child-graph
-needs a separate design if we want a subgraph to behave exactly like a
-multi-outcome node.
+Core workflows now declare `Workflow.outcomes`, and explicit `EndNode` steps
+set `RunState.outcome`. The legacy `__end__` token remains compatibility
+shorthand for workflow outcome `ok`. Native subgraph execution should use that
+workflow-level outcome as the parent-visible subgraph outcome, instead of
+guessing from the child node that happened to route to a terminal.
 
 ## Failure Semantics
 

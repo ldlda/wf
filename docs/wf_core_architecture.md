@@ -95,6 +95,7 @@ See `examples/raw_concurrent_foreach.py` for the canonical raw workflow shape an
 - validate start node existence
 - validate edge sources, destinations, duplicate outcomes, and declared outcomes
 - validate reachable nodes have all required outcome edges
+- validate explicit `EndNode` outcomes against `Workflow.outcomes`
 
 Validation reports multiple issues through `ValidationReport` instead of
 raising at the first failure.

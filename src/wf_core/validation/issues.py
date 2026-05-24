@@ -13,6 +13,7 @@ class ValidationIssueCode(StrEnum):
     UNKNOWN_EDGE_DESTINATION = "unknown_edge_destination"
     UNDECLARED_EDGE_OUTCOME = "undeclared_edge_outcome"
     MISSING_OUTCOME_EDGE = "missing_outcome_edge"
+    UNDECLARED_WORKFLOW_OUTCOME = "undeclared_workflow_outcome"
     UNKNOWN_NODE_DEF = "unknown_node_def"
     INVALID_NODE_INPUT_FIELD = "invalid_node_input_field"
     INVALID_SOURCE_PATH = "invalid_source_path"

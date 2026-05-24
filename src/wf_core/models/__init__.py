@@ -13,6 +13,7 @@ from wf_core.models.reducers import ReducerRef, ReducerSpec, SiblingWritePolicy
 from wf_core.models.schemas import NodeDef, SchemaRef, StateField, StateSchema
 from wf_core.models.steps import (
     ConditionNode,
+    EndNode,
     ForeachConcurrentPolicy,
     ForeachItemErrorPolicy,
     ForeachNode,
@@ -29,6 +30,7 @@ __all__ = [
     "Condition",
     "ConditionNode",
     "Edge",
+    "EndNode",
     "ExistsCondition",
     "ForeachConcurrentPolicy",
     "ForeachItemErrorPolicy",

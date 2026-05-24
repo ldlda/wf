@@ -7,6 +7,7 @@ from typing import Any
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.steps import (
     ConditionNode,
+    EndNode,
     ForeachNode,
     InterruptNode,
     JoinNode,
@@ -37,7 +38,8 @@ from wf_core.runtime.scheduler import (
     select_next_frame,
     wake_parent_for_child_progress,
 )
-from wf_core.run_state import ExecutionFrame, FrameStatus, RunState
+from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
+from wf_core.tokens import END
 
 from .preparation import prepare_step
 
@@ -70,6 +72,33 @@ def complete_step(
         outcome=outcome,
         next_node_id=next_node_id,
         front=isinstance(next_step, InterruptNode),
+    )
+    return run
+
+
+def complete_end_step(
+    *,
+    run: RunState,
+    frame_id: str,
+    node_id: str,
+    outcome: str,
+) -> RunState:
+    """Record an explicit workflow terminal and complete the active frame."""
+    result = StepExecutionResult(outcome=outcome)
+    run.outcome = outcome
+    append_step_result_trace(
+        run,
+        frame_id=frame_id,
+        node_id=node_id,
+        step_type="end",
+        next_node_id=END,
+        result=result,
+    )
+    advance_frame(
+        run,
+        run.frames[frame_id],
+        outcome=outcome,
+        next_node_id=END,
     )
     return run
 
@@ -112,6 +141,13 @@ def step_workflow(
         step_result = handle_condition_step(run, step)
     elif isinstance(step, JoinNode):
         step_result = handle_join_step()
+    elif isinstance(step, EndNode):
+        return complete_end_step(
+            run=run,
+            frame_id=frame.id,
+            node_id=frame.node_id,
+            outcome=step.outcome,
+        )
     elif isinstance(step, InterruptNode):
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
@@ -211,6 +247,13 @@ async def step_workflow_async(
         step_result = handle_condition_step(run, step)
     elif isinstance(step, JoinNode):
         step_result = handle_join_step()
+    elif isinstance(step, EndNode):
+        return complete_end_step(
+            run=run,
+            frame_id=frame.id,
+            node_id=frame.node_id,
+            outcome=step.outcome,
+        )
     elif isinstance(step, InterruptNode):
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
