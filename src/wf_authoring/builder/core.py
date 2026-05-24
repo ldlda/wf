@@ -396,8 +396,9 @@ class WorkflowBuilder:
     ) -> SubgraphNode:
         """Add a native subgraph boundary using a compiled child workflow contract.
 
-        This only authors the graph boundary. Runtime execution still raises
-        until wf_core grows child workflow scope/frame execution.
+        Core executes local children when callers supply a matching
+        `PreparedSubgraph`; saved artifact resolution and child interrupt resume
+        remain higher-layer/future responsibilities.
         """
         node = subgraph_ref(
             id=id or self._next_step_id(_workflow_ref_base(workflow_ref, workflow)),
