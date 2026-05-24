@@ -41,6 +41,29 @@ class StateWrite:
 
 
 @dataclass(slots=True)
+class RuntimeScope:
+    """Committed workflow state root for one workflow activation.
+
+    During migration, the root scope intentionally shares `RunState.state` so
+    existing runtime code can keep using the compatibility state dict.
+    """
+
+    id: str
+    workflow_name: str
+    committed_state: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(slots=True)
+class LineageState:
+    """Ordered pending writes owned by one lineage inside a runtime scope."""
+
+    id: str
+    scope_id: str
+    parent_id: str | None = None
+    writes: list[StateWrite] = field(default_factory=list)
+
+
+@dataclass(slots=True)
 class ExecutionFrame:
     id: str
     kind: str
@@ -108,6 +131,8 @@ class RunState:
     output: dict[str, Any] = field(default_factory=dict)
     trace: list[TraceEntry] = field(default_factory=list)
     frames: dict[str, ExecutionFrame] = field(default_factory=dict)
+    scopes: dict[str, RuntimeScope] = field(default_factory=dict)
+    lineages: dict[str, LineageState] = field(default_factory=dict)
     ready_frame_ids: list[str] = field(default_factory=list)
     current_frame_id: str | None = None
     current_node_id: str | None = None
