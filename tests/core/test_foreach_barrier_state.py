@@ -170,6 +170,31 @@ def test_lineage_writes_for_frame_reads_current_foreach_pending_result() -> None
     assert writes[0].visible_value == 5
 
 
+def test_lineage_writes_for_frame_rejects_missing_compatibility_parent_frame() -> None:
+    child = ExecutionFrame(
+        id="missing:each:0",
+        kind="foreach_iteration",
+        node_id="work",
+        parent_frame_id="missing",
+        metadata={
+            "foreach_node_id": "each",
+            "loop_index": 0,
+            "loop_item": "a",
+            "loop_alias": "item",
+        },
+    )
+    run = RunState(
+        workflow_name="lineage",
+        status=RunStatus.PENDING,
+        workflow_input={},
+        state={},
+        frames={child.id: child},
+    )
+
+    with pytest.raises(WorkflowExecutionError, match="missing parent frame"):
+        lineage_writes_for_frame(run, child)
+
+
 def test_foreach_barrier_state_returns_none_when_missing() -> None:
     frame = ExecutionFrame(id="root", kind="root", node_id="each")
 

@@ -1,6 +1,6 @@
 # Native Subgraphs Design
 
-Status: proposed
+Status: scaffolding implemented; runtime execution planned
 
 Native subgraphs should make a workflow usable as a workflow step without
 collapsing the child run into one opaque Python node call. The current
@@ -8,7 +8,8 @@ collapsing the child run into one opaque Python node call. The current
 compatibility wrappers, but they hide the child trace, child frames, and child
 interrupt lifecycle from `wf_core`.
 
-This design defines the core runtime shape before implementation.
+This design defines the core runtime shape. The boundary model is implemented;
+child execution, interruption, and saved-workflow resolution remain planned.
 
 ## Goals
 
@@ -63,26 +64,32 @@ class SubgraphNode(BaseModel):
     outcomes: list[str] = Field(default_factory=lambda: ["ok"])
 ```
 
-Current implementation status: `wf_core` has a first placeholder
-`SubgraphNode`. Its `workflow` field is a structural `WorkflowRef`: local
-compiled workflows use `{"name": "child"}`, while saved artifacts can use
-`{"artifact_id": "child", "version": 1}`. Legacy strings still parse as input,
-but saved graphs should persist the structural shape. The placeholder also
-carries `input_schema` and `output_schema` so validation can check parent
-bindings before native execution exists. Runtime execution intentionally raises
-until a later slice adds child scope/frame execution.
+Current implementation status: the boundary scaffolding is implemented.
+`wf_core` has `SubgraphNode`; its `workflow` field is a structural
+`WorkflowRef`: local compiled workflows use `{"name": "child"}`, while saved
+artifacts can use `{"artifact_id": "child", "version": 1}`. Legacy strings
+still parse as input, but saved graphs persist the structural shape. The
+placeholder carries input/output schemas and bindings so validation can check
+the parent boundary before native execution exists. Core workflows also
+declare terminal outcomes through `Workflow.outcomes` and `EndNode`.
+`wf_authoring.subgraph_ref(...)` and `WorkflowBuilder.subgraph(...)` build the
+native boundary, while artifact helpers convert saved/capability workflow
+references into core `WorkflowRef` values.
+
+Runtime execution is deliberately not implemented: stepping a `SubgraphNode`
+fails explicitly until the next slice adds child scope/frame execution.
 
 `WorkflowRef` should be structural, not a dotted string parser:
 
 ```python
 class WorkflowRef(BaseModel):
-    source: str | None = None
+    name: str | None = None
     artifact_id: str | None = None
     version: int | None = None
-    inline_name: str | None = None
 ```
 
-The exact reference model can be smaller in v1, but it must not derive meaning
+The reference has two valid forms: local compiled `{"name": ...}` or saved
+artifact `{"artifact_id": ..., "version": ...}`. It must not derive meaning
 from formatted display names. Higher layers may resolve saved artifacts,
 deployments, or local builders into an executable child workflow before the
 core runtime starts.
@@ -336,11 +343,13 @@ child = parent.subgraph(
 parent.connect(child, "ok", END)
 ```
 
-For saved artifacts:
+For saved artifacts, use the lower-level helper with a structural core ref:
 
 ```python
-child = parent.subgraph_ref(
-    workflow=WorkflowCapabilityRef(artifact_id="demo_child", version=1),
+child = subgraph_ref(
+    id="run_child",
+    workflow=child_builder.compile(),
+    workflow_ref=WorkflowRef(artifact_id="demo_child", version=1),
     ...
 )
 ```
@@ -367,13 +376,29 @@ selection out of `wf_core`.
 
 ## Implementation Slices
 
-### Slice 1: Non-Interrupting Inline Subgraph
+### Completed Scaffold: Typed Native Boundary
 
-- Add `SubgraphNode` to the core `Step` union.
-- Add minimal `WorkflowRef` / inline child workflow dependency resolution.
+- `SubgraphNode` is part of the core `Step` union and validates its declared
+  parent-side boundary.
+- `WorkflowRef` is structural and supports local compiled or saved artifact
+  references without requiring runtime string parsing.
+- `Workflow.outcomes`, `EndNode`, and `RunState.outcome` define child terminal
+  outcome semantics before child execution exists.
+- `subgraph_ref(...)` and `WorkflowBuilder.subgraph(...)` produce native
+  boundaries; wrapper-node helpers remain compatibility APIs.
+- Artifact conversion helpers bridge saved workflow identities to core
+  `WorkflowRef` values.
+
+### Slice 1: Non-Interrupting Inline Subgraph Runtime
+
+- Resolve local/prepared child `WorkflowRef` dependencies at runtime; do not
+  load saved artifacts inside `wf_core`.
 - Execute child workflow to completion through child frames.
+- Give the child an explicit runtime scope/lineage so child state is isolated
+  from parent state until boundary completion.
 - Preserve child trace in a clearly-owned form.
 - Apply child output to parent state through existing output binding code.
+- Route the parent step through the child's terminal `RunState.outcome`.
 - Tests: child output mapping, child internal trace visibility, parent trace
   shape, child runtime failure fails parent.
 
@@ -387,16 +412,21 @@ selection out of `wf_core`.
 
 ### Slice 3: Saved Workflow References
 
+- Structural saved-workflow references and conversion helpers already exist;
+  this slice is execution resolution, not a new identity shape.
 - Add platform-level resolution for saved workflow artifacts.
 - Validate dependencies and source bindings before execution.
 - Tests: saved child workflow runs through a deployment binding, missing child
   artifact reports an unrunnable dependency.
 
-### Slice 4: Outcome and Policy Expansion
+### Slice 4: Optional Policy Expansion
 
-- Decide whether subgraphs can expose multiple outcomes.
-- Decide child failure handling policy, if any.
-- Keep default behavior strict until the use case is clear.
+- Workflow outcome propagation is settled: child `RunState.outcome` is the
+  parent-visible subgraph outcome; legacy `__end__` means `ok`, while explicit
+  `EndNode` carries other declared outcomes.
+- Keep child runtime failures as parent runtime failures by default.
+- Only add configurable child-failure policy or richer boundary result
+  semantics when an actual use case requires it.
 
 ## Risks
 
@@ -417,15 +447,14 @@ selection out of `wf_core`.
   fields, or should child traces live in a separate inspectable structure?
 - Is v1 allowed to reference only inline/compiled child workflows, or should it
   immediately accept artifact refs resolved by the platform?
-- Should subgraph completion always emit `ok` initially, or should child
-  workflow artifacts declare outcomes before native subgraphs ship?
 
 ## Recommendation
 
-Start with Slice 1 as a non-interrupting inline subgraph. It gives us native
-trace/frame semantics without taking on the hardest resume problem immediately.
-Do not delete the wrapper-node helpers yet; use them as compatibility and
-examples while native subgraphs mature.
+The typed boundary scaffold is complete. Start runtime work with Slice 1 as a
+non-interrupting inline/prepared subgraph. It gives us native trace/frame and
+scope/lineage semantics without taking on the hardest resume problem
+immediately. Do not delete the wrapper-node helpers yet; use them as
+compatibility and examples while native subgraphs mature.
 
 Then implement Slice 2 before exposing saved workflows as broadly reusable child
 graphs. Saved workflows without nested interrupt support would look reusable but

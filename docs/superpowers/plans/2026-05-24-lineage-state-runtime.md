@@ -39,9 +39,12 @@ explicit scope/lineage commit target, feasible once native subgraph completion
 can declare whether child writes commit to child scope, parent lineage, or only
 through boundary output bindings.
 
-Remaining work should avoid jumping straight into a broad rewrite. The next
-small slice can start native subgraph scaffolding using the current
-scope/lineage primitives.
+Remaining work should avoid jumping straight into a broad rewrite. Native
+subgraph scaffolding is now present (`SubgraphNode`, structural `WorkflowRef`,
+terminal workflow outcomes, and authoring helpers). The next runtime slice can
+execute a non-interrupting prepared child graph using the current scope/lineage
+primitives; interrupt bubbling and saved/deployed workflow resolution remain
+later work.
 
 ---
 

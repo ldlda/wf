@@ -5,6 +5,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
+from wf_core.errors import WorkflowExecutionError
 from wf_core.run_state import ExecutionFrame, LineageState, RunState, StateWrite
 from wf_core.run_state import ROOT_LINEAGE_ID, ROOT_SCOPE_ID
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
@@ -62,7 +63,12 @@ def lineage_writes_for_frame(
     if owner is None:
         return ()
     parent_frame_id, foreach_node_id, item_index = owner
-    parent_frame = run.frames[parent_frame_id]
+    parent_frame = run.frames.get(parent_frame_id)
+    if parent_frame is None:
+        raise WorkflowExecutionError(
+            "foreach lineage compatibility state references missing parent frame "
+            f"{parent_frame_id!r} for child frame {frame.id!r}"
+        )
     barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
     if barrier is None or barrier.mode != "concurrent":
         return ()

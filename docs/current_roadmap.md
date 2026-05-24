@@ -45,14 +45,17 @@ implementation state.
   [ADR 0002](./adr/0002-concurrent-foreach-policy-and-barrier-commits.md).
 - Native subgraph design spec:
   [2026-05-24 native subgraphs](./superpowers/specs/2026-05-24-native-subgraphs-design.md).
-- **Native subgraphs / graph-as-node**: next major runtime feature. A
-  first-class `SubgraphNode` placeholder exists and validates parent-side
-  bindings/outcomes. Core workflows now also declare workflow-level outcomes
-  and can terminate through explicit `EndNode` steps. Runtime subgraph execution
-  still needs child run/frame identity, child trace preservation, interrupt
-  bubbling, and resume back into the child workflow. Wrapper helpers currently
-  run child workflows as ordinary nodes; true graph-as-node behavior belongs
-  here.
+- **Native subgraphs / graph-as-node**: next major runtime feature. The
+  scaffolding slice is complete: core has `SubgraphNode`, structural
+  `WorkflowRef`, workflow-level outcomes plus explicit `EndNode` termination,
+  authoring helpers (`subgraph_ref` / `WorkflowBuilder.subgraph`), and artifact
+  reference conversion helpers. Runtime subgraph execution is still absent.
+  The next slice is non-interrupting child execution: resolve a prepared child
+  workflow, create a child scope/lineage, preserve child trace, map child
+  output back through the subgraph boundary, and route by the child's terminal
+  outcome. Interrupt bubbling/resume and saved/deployed child resolution follow
+  after that. Wrapper helpers currently run child workflows as ordinary nodes;
+  true graph-as-node behavior belongs here.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of
@@ -77,13 +80,14 @@ implementation state.
 - **Dashboard/source controls**: future UI should consume the same source
   inventory and deployment metadata instead of reverse-engineering MCP tools.
 
-Frame stress points to solve before either feature:
+Frame stress points remaining for native subgraphs and future fork/gather:
 
-- `RunState.current_frame_id` currently models the selected execution cursor.
-  Concurrent foreach needs multiple runnable child frames.
-- `ExecutionFrame.metadata` currently carries ad hoc foreach data. Subgraphs and
-  concurrent foreach should get typed frame payloads or strongly bounded helper
-  accessors before metadata grows more meanings.
+- `RunState.current_frame_id` remains the selected execution cursor even though
+  concurrent foreach now schedules multiple child frames. Native subgraphs
+  must preserve that cursor model while owning a nested child execution scope.
+- `ExecutionFrame.metadata` has typed foreach access paths, but subgraphs still
+  need typed child-workflow ownership and completion metadata rather than new
+  ad hoc dictionary fields.
 - Subgraph frames need child workflow identity/version/deployment binding, not
   just a generic metadata dictionary.
 - `RunState.current_node_id` duplicates the current frame's node id for
@@ -94,6 +98,7 @@ Frame stress points to solve before either feature:
 
 The MCP workflow authoring path is now usable enough for real testing. The next
 bottleneck is runtime/platform correctness: resumable child execution,
-concurrent scheduling, persistent run history, and protocol-native progress
-reporting. Those pieces should come before adding more high-level authoring
-sugar.
+native subgraph execution, persistent run history, and protocol-native
+progress reporting. Concurrent foreach supplies scheduler/lineage precedent;
+native child graphs are now the missing runtime boundary. Those pieces should
+come before adding more high-level authoring sugar.

@@ -324,7 +324,7 @@ class EndNode(BaseModel):
 
     id: str
     type: Literal["end"]
-    outcome: str = "ok"
+    outcome: str = Field(default="ok", min_length=1)
 
 
 class InterruptNode(BaseModel):

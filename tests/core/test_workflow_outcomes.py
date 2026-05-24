@@ -1,6 +1,9 @@
 from __future__ import annotations
 
-from wf_core import END, Workflow
+import pytest
+from pydantic import ValidationError
+
+from wf_core import END, EndNode, Workflow
 from wf_core.runtime import execute_workflow
 from wf_core.validation.issues import ValidationIssueCode
 
@@ -61,6 +64,11 @@ def test_validation_rejects_legacy_end_without_ok_workflow_outcome() -> None:
         and issue.path == "edges[0].to"
         for issue in report.errors
     )
+
+
+def test_end_node_rejects_empty_workflow_outcome() -> None:
+    with pytest.raises(ValidationError):
+        EndNode(id="end_empty", type="end", outcome="")
 
 
 def _finish(payload: dict[str, object], _ctx: object) -> dict[str, object]:
