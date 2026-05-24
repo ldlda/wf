@@ -66,7 +66,12 @@ class ItemErrorRecord:
 
 @dataclass(slots=True)
 class PendingItemResult:
-    """Buffered item result waiting for a future foreach barrier commit."""
+    """Buffered item result waiting for a future foreach barrier commit.
+
+    New concurrent foreach execution stores item writes in `RunState.lineages`
+    and records `lineage_id` here. `patch` remains for old serialized barrier
+    metadata and direct unit tests that still construct pending patches.
+    """
 
     index: int
     frame_id: str
@@ -266,10 +271,10 @@ class ForeachBarrierState:
     ) -> None:
         """Buffer or extend successful item patches by item index.
 
-        A multi-step item body can produce multiple node patches. They are
-        accumulated for the same item lineage and replayed by the barrier in
-        item index order. Do not merge `_prepared_writes` here: the barrier
-        intentionally replays public changes against one staged parent state.
+        New runtime paths pass an empty patch and use `lineage_id`; legacy
+        callers may still accumulate patches here and replay them at the
+        barrier. Do not merge `_prepared_writes`: the barrier replays public
+        write records against one staged parent state.
         """
         existing = self.pending_results.get(index)
         if existing is None:

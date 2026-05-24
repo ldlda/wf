@@ -23,7 +23,7 @@ from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
-from wf_core.runtime.ops.state import build_output_patch, commit_state_patch
+from wf_core.runtime.ops.state import StatePatch, build_output_patch, commit_state_patch
 
 NodeHandler = Callable[[dict[str, Any], RuntimeContext], NodeResult | dict[str, Any]]
 AsyncNodeHandler = Callable[
@@ -136,10 +136,16 @@ def _finalize_node_execution(
         parent_frame = run.frames[parent_frame_id]
         barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
         if barrier is not None and barrier.mode == "concurrent":
+            append_lineage_writes(
+                run,
+                scope_id=frame.scope_id,
+                lineage_id=frame.lineage_id,
+                writes=patch.writes,
+            )
             barrier.add_success_patch(
                 index=item_index,
                 frame_id=frame.id,
-                patch=patch,
+                patch=StatePatch(),
                 lineage_id=frame.lineage_id,
             )
             barrier.save_to_frame(parent_frame, foreach_node_id)

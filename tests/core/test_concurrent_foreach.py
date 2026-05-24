@@ -19,6 +19,7 @@ from wf_core import (
     execute_workflow,
 )
 from wf_core.run_state import ExecutionFrame, RunState, RuntimeContext
+from wf_core.runtime.foreach_state import ForeachBarrierState
 from wf_core.runtime.scheduler import ForeachIterationMetadata
 
 
@@ -263,6 +264,12 @@ def test_sync_concurrent_foreach_barrier_replays_add_reducer_inputs() -> None:
 
     assert run.state["number"] == 6
     assert run.output["number"] == 6
+    assert run.lineages["root/each[0]"].writes[0].incoming_value == 3
+    assert run.lineages["root/each[1]"].writes[0].incoming_value == 1
+    barrier = ForeachBarrierState.from_frame(run.frames["root"], "each")
+    assert barrier is not None
+    assert barrier.pending_results[0].lineage_id == "root/each[0]"
+    assert barrier.pending_results[0].patch.writes == []
     foreach_entries = [entry for entry in run.trace if entry.step_type == "foreach"]
     assert foreach_entries[-1].state_changes["state.number"] == 6
 

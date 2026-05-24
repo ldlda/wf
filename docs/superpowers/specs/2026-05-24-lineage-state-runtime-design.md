@@ -26,11 +26,13 @@ The first compatibility slices are implemented:
 - Frames and runtime context carry `scope_id`, `lineage_id`, and
   `parent_lineage_id`.
 - Generic non-root frame writes are buffered into `RunState.lineages`.
+- New concurrent foreach item writes are stored in `RunState.lineages`;
+  `ForeachBarrierState` keeps item result metadata plus compatibility patches
+  for old serialized barrier data.
 
-The full `RuntimeScope` / `LineageState` store is not implemented yet.
-Currently, foreach still owns pending write storage through
-`ForeachBarrierState`; the lineage ids are identity and diagnostics, not yet the
-primary storage key.
+The full native subgraph use of `RuntimeScope` is not implemented yet.
+`ForeachBarrierState` still owns scheduling/barrier metadata, but no longer has
+to be the primary write store for new concurrent foreach item results.
 
 Direct node commits currently use the explicit root-frame helper
 `is_root_lineage_frame(frame)`. That helper still means "root scope plus root

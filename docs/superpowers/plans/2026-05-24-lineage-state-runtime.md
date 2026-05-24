@@ -29,6 +29,9 @@ the compatibility subset needed before native subgraphs:
   including nested foreach frames.
 - `RunState` has root scope/lineage storage, scope-aware state views, and
   generic non-root node writes buffer into `RunState.lineages`.
+- New concurrent foreach item writes are stored in `RunState.lineages`.
+  `ForeachBarrierState` now keeps scheduling/result metadata plus compatibility
+  patches for old serialized barrier data.
 
 Direct commits currently go through `is_root_lineage_frame(frame)`, which is the
 migration shortcut for root scope/root lineage. The eventual better shape is an
@@ -36,10 +39,9 @@ explicit scope/lineage commit target, feasible once native subgraph completion
 can declare whether child writes commit to child scope, parent lineage, or only
 through boundary output bindings.
 
-Remaining work should avoid jumping straight to native subgraphs. The next
-small slice is to migrate foreach pending patch storage from
-`ForeachBarrierState` into `RunState.lineages`, or defer that and start native
-subgraph scaffolding using the current scope/lineage primitives.
+Remaining work should avoid jumping straight into a broad rewrite. The next
+small slice can start native subgraph scaffolding using the current
+scope/lineage primitives.
 
 ---
 
@@ -556,10 +558,10 @@ Expected: pass.
 
 ## Task 5: Migrate Concurrent Foreach to Lineages
 
-Status: partially implemented. Concurrent foreach child frames now have lineage
-ids, nested item lineages are tested, and pending item results persist
-`lineage_id`. Patch ownership still lives in `ForeachBarrierState`, not in a
-global lineage store.
+Status: implemented for new concurrent foreach results. Concurrent foreach
+child frames have lineage ids, nested item lineages are tested, item writes are
+stored in `RunState.lineages`, and pending item results persist `lineage_id`.
+`ForeachBarrierState.patch` remains as a compatibility fallback.
 
 **Files:**
 

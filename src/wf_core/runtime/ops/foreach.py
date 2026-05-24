@@ -7,7 +7,17 @@ from wf_core.errors import WorkflowExecutionError
 from wf_core.models.steps import ForeachNode
 from wf_core.models.workflow import Workflow
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
-from wf_core.runtime.foreach_state import ForeachBarrierState, ItemErrorRecord
+from wf_core.runtime.foreach_state import (
+    ForeachBarrierState,
+    ItemErrorRecord,
+    PendingItemResult,
+)
+from wf_core.runtime.lineage import (
+    add_lineage,
+    append_lineage_writes,
+    is_root_lineage_frame,
+    lineage_patch,
+)
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.index import WorkflowIndex
@@ -248,6 +258,12 @@ def _admit_concurrent_children(
         item = iterable[loop_index]
         child_id = f"{frame.id}:{step.id}:{loop_index}"
         child_lineage_id = _child_lineage_id(frame, step, loop_index)
+        add_lineage(
+            run,
+            scope_id=frame.scope_id,
+            lineage_id=child_lineage_id,
+            parent_id=frame.lineage_id,
+        )
         active_count = len(barrier.active_frame_ids)
         barrier.next_index = loop_index + 1
         barrier.start_child(child_id)
@@ -310,7 +326,7 @@ def _finish_concurrent_foreach(
     outcome = "completed_with_errors" if error_records else "done"
     next_node_id = index.next_node_id(frame.node_id, outcome)
     success_patches = [
-        result.patch
+        _patch_for_successful_item(run, frame, result)
         for result in (
             barrier.pending_results[item_index]
             for item_index in sorted(barrier.pending_results)
@@ -331,7 +347,16 @@ def _finish_concurrent_foreach(
         run.state,
         reducers=reducers,
     )
-    state_changes = commit_state_patch(run.state, combined)
+    if is_root_lineage_frame(frame):
+        state_changes = commit_state_patch(run.state, combined)
+    else:
+        append_lineage_writes(
+            run,
+            scope_id=frame.scope_id,
+            lineage_id=frame.lineage_id,
+            writes=combined.writes,
+        )
+        state_changes = {}
     append_step_result_trace(
         run,
         frame_id=frame.id,
@@ -361,3 +386,23 @@ def _child_lineage_id(frame: ExecutionFrame, step: ForeachNode, loop_index: int)
     full id, not parse it; future structured lineage refs can replace this.
     """
     return f"{frame.lineage_id}/{step.id}[{loop_index}]"
+
+
+def _patch_for_successful_item(
+    run: RunState,
+    frame: ExecutionFrame,
+    result: PendingItemResult,
+) -> StatePatch:
+    """Return the replayable patch for a completed foreach item.
+
+    New concurrent foreach results store writes in `RunState.lineages` and keep
+    only lineage metadata in the barrier. Old serialized barrier metadata may
+    still carry `result.patch`, so keep that as the compatibility fallback.
+    """
+    if result.lineage_id is not None and result.lineage_id in run.lineages:
+        return lineage_patch(
+            run,
+            scope_id=frame.scope_id,
+            lineage_id=result.lineage_id,
+        )
+    return result.patch
