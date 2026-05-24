@@ -17,6 +17,7 @@ from wf_core import (
     NodeUse,
     SchemaRef,
     StateSchema,
+    SubgraphNode,
     Workflow,
     RunState,
     execute_workflow,
@@ -39,6 +40,7 @@ from ..nodes.callables import SyncRegistryHandler
 from ..nodes.registry import build_registry
 from ..reducers import ReducerCatalog
 from ..schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_from
+from ..subgraph import subgraph_ref
 from ..nodes import NodeSpec
 from .ids import next_step_id, slug_id
 from .mapping import (
@@ -351,6 +353,32 @@ class WorkflowBuilder:
             desc=desc,
             input=node_input,
             output=node_output,
+        )
+        self.nodes.append(node)
+        return node
+
+    def subgraph(
+        self,
+        *,
+        workflow: Workflow,
+        id: str | None = None,
+        input: Sequence[InputBindingArg] | None = None,
+        output: Sequence[OutputBindingArg] | None = None,
+        workflow_ref: str | None = None,
+        desc: str | None = None,
+    ) -> SubgraphNode:
+        """Add a native subgraph boundary using a compiled child workflow contract.
+
+        This only authors the graph boundary. Runtime execution still raises
+        until wf_core grows child workflow scope/frame execution.
+        """
+        node = subgraph_ref(
+            id=id or self._next_step_id(slug_id(workflow_ref or workflow.name)),
+            workflow=workflow,
+            input=normalize_input_bindings(input),
+            output=normalize_output_bindings(output),
+            workflow_ref=workflow_ref,
+            desc=desc,
         )
         self.nodes.append(node)
         return node

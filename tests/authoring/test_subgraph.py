@@ -200,3 +200,42 @@ def test_subgraph_ref_contract_validates_in_parent_workflow() -> None:
     )
 
     assert parent.validate_structure().errors == []
+
+
+def test_workflow_builder_subgraph_adds_native_subgraph_node() -> None:
+    class ParentInput(BaseModel):
+        folder_id: str
+        should_email: bool
+
+    class ParentState(BaseModel):
+        summary: str
+
+    class ParentOutput(BaseModel):
+        summary: str
+
+    child = build_demo_workflow()
+    parent = WorkflowBuilder(
+        name="native_parent",
+        input_schema=ParentInput,
+        state_schema=ParentState,
+        output_schema=ParentOutput,
+    )
+
+    step = parent.subgraph(
+        workflow=child,
+        id="run_child",
+        input=[
+            input_from(input_path("folder_id"), "folder_id"),
+            input_from(input_path("should_email"), "should_email"),
+        ],
+        output=[output_to("summary", state_path("summary"))],
+    )
+    parent.set_entry_point(step)
+    parent.connect(step, "ok", END)
+
+    workflow = parent.compile()
+
+    assert workflow.nodes[0].type == "subgraph"
+    assert workflow.nodes[0].id == "run_child"
+    assert workflow.nodes[0].outcomes == child.outcomes
+    assert workflow.validate_structure().errors == []

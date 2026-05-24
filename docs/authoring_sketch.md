@@ -256,6 +256,9 @@ Today there are two different authoring paths:
   `Workflow`: child input schema, output schema, and workflow outcomes are
   copied into the boundary. Runtime execution still raises until native
   subgraph scopes are implemented.
+- `WorkflowBuilder.subgraph(...)` is the builder-facing version of
+  `subgraph_ref`: it appends the native boundary step and returns it as a
+  `StepRef` for `connect()` / `set_entry_point()`.
 
 In the future, a compiled workflow or subgraph can also be exposed as a reusable
 `NodeSpec`, likely by treating workflow input and output schemas as the node's

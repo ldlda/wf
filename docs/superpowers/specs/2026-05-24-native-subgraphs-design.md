@@ -306,7 +306,7 @@ composition.
 Current helper:
 
 ```python
-child = subgraph_ref(
+child = parent.subgraph(
     id="run_child",
     workflow=child_builder.compile(),
     input=[input_from(state_path("request"), "request")],
@@ -314,10 +314,12 @@ child = subgraph_ref(
 )
 ```
 
-This copies the compiled child workflow contract into a core `SubgraphNode` but
-does not make the child executable yet. `workflow` is still a string reference
-inside the core model; higher layers need a structural workflow reference before
-saved/deployed workflow dependencies become stable.
+This copies the compiled child workflow contract into a core `SubgraphNode`,
+appends it to the builder, and returns the step for normal routing. It does not
+make the child executable yet. `workflow` is still a string reference inside the
+core model; higher layers need a structural workflow reference before
+saved/deployed workflow dependencies become stable. The lower-level
+`subgraph_ref(...)` helper exists for code that wants only the core step object.
 
 Possible API:
 
