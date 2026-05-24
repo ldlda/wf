@@ -21,6 +21,7 @@ from wf_core.runtime.lineage import (
     lineage_state_view,
     scope_state_for_frame,
 )
+from wf_core.runtime.ops.nodes import execute_node_use
 from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.runs import create_run_state
 
@@ -157,6 +158,47 @@ def test_state_view_for_frame_overlays_writes_onto_frame_scope_state() -> None:
     assert run.state["value"] == "root"
 
 
+def test_non_root_frame_node_writes_are_buffered_in_lineage() -> None:
+    workflow = _write_value_workflow()
+    run = create_run_state(workflow, {"value": "root"})
+    run.scopes["child"] = RuntimeScope(
+        id="child",
+        workflow_name="child_workflow",
+        committed_state={"value": "child"},
+    )
+    run.lineages["child/root"] = LineageState(id="child/root", scope_id="child")
+    add_lineage(
+        run,
+        scope_id="child",
+        lineage_id="child/branch",
+        parent_id="child/root",
+    )
+    frame = ExecutionFrame(
+        id="child-frame",
+        kind="workflow",
+        node_id="write_value",
+        scope_id="child",
+        lineage_id="child/branch",
+        parent_lineage_id="child/root",
+    )
+    run.frames[frame.id] = frame
+    run.current_frame_id = frame.id
+
+    result = execute_node_use(
+        workflow,
+        run,
+        workflow.nodes[0],  # type: ignore[arg-type]
+        workflow.node_defs[0],
+        {"write_value": lambda payload, _ctx: {"value": f"{payload['value']}-next"}},
+    )
+
+    assert result.state_changes == {}
+    assert run.scopes["child"].committed_state["value"] == "child"
+    assert run.state["value"] == "root"
+    assert run.lineages["child/branch"].writes[0].incoming_value == "child-next"
+    assert state_view_for_frame(run, frame)["value"] == "child-next"
+
+
 def _minimal_workflow() -> Workflow:
     return Workflow(
         name="lineage_root",
@@ -181,4 +223,49 @@ def _minimal_workflow() -> Workflow:
             NodeUse.model_validate({"id": "finish", "type": "node", "node": "finish"})
         ],
         edges=[Edge.model_validate({"from": "finish", "outcome": "ok", "to": END})],
+    )
+
+
+def _write_value_workflow() -> Workflow:
+    return Workflow(
+        name="lineage_write",
+        input_schema=SchemaRef(
+            type="object",
+            properties={"value": {"type": "string"}},
+        ),
+        state_schema=StateSchema.from_field_map(
+            {"value": StateField(type="string", default="default")}
+        ),
+        output_schema=SchemaRef(type="object", properties={}),
+        node_defs=[
+            NodeDef(
+                name="write_value",
+                input_schema=SchemaRef(
+                    type="object",
+                    properties={"value": {"type": "string"}},
+                    required=["value"],
+                ),
+                output_schema=SchemaRef(
+                    type="object",
+                    properties={"value": {"type": "string"}},
+                    required=["value"],
+                ),
+                outcomes=["ok"],
+            )
+        ],
+        start="write_value",
+        nodes=[
+            NodeUse.model_validate(
+                {
+                    "id": "write_value",
+                    "type": "node",
+                    "node": "write_value",
+                    "input": [{"target": "value", "path": "state.value"}],
+                    "output": [{"source": "value", "target": "state.value"}],
+                }
+            )
+        ],
+        edges=[
+            Edge.model_validate({"from": "write_value", "outcome": "ok", "to": END})
+        ],
     )

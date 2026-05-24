@@ -25,11 +25,18 @@ The first compatibility slices are implemented:
 - Foreach pending result metadata persists write records and `lineage_id`.
 - Frames and runtime context carry `scope_id`, `lineage_id`, and
   `parent_lineage_id`.
+- Generic non-root frame writes are buffered into `RunState.lineages`.
 
 The full `RuntimeScope` / `LineageState` store is not implemented yet.
 Currently, foreach still owns pending write storage through
 `ForeachBarrierState`; the lineage ids are identity and diagnostics, not yet the
 primary storage key.
+
+Direct node commits currently use the explicit root-frame helper
+`is_root_lineage_frame(frame)`. That helper still means "root scope plus root
+lineage" during migration. The better long-term shape becomes feasible when
+native subgraph completion exists: direct commits should be decided by an
+explicit scope/lineage commit target, not by root ids.
 
 ## Problem
 

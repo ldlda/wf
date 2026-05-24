@@ -8,6 +8,9 @@ from wf_core.run_state import (
     ExecutionFrame,
     FrameStatus,
     LineageState,
+    ROOT_FRAME_ID,
+    ROOT_LINEAGE_ID,
+    ROOT_SCOPE_ID,
     RunState,
     RunStatus,
     RuntimeScope,
@@ -27,20 +30,25 @@ def create_run_state(workflow: Workflow, workflow_input: dict[str, object]) -> R
         workflow_input=dict(workflow_input),
         state=state,
         scopes={
-            "root": RuntimeScope(
-                id="root",
+            ROOT_SCOPE_ID: RuntimeScope(
+                id=ROOT_SCOPE_ID,
                 workflow_name=workflow.name,
                 committed_state=state,
             )
         },
-        lineages={"root": LineageState(id="root", scope_id="root")},
-        current_frame_id="root",
+        lineages={
+            ROOT_LINEAGE_ID: LineageState(
+                id=ROOT_LINEAGE_ID,
+                scope_id=ROOT_SCOPE_ID,
+            )
+        },
+        current_frame_id=ROOT_FRAME_ID,
         current_node_id=workflow.start,
     )
     add_frame(
         run,
         ExecutionFrame(
-            id="root",
+            id=ROOT_FRAME_ID,
             kind="workflow",
             node_id=workflow.start,
             status=FrameStatus.PENDING,

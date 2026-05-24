@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from wf_core.run_state import ExecutionFrame, LineageState, RunState, StateWrite
+from wf_core.run_state import ROOT_LINEAGE_ID, ROOT_SCOPE_ID
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
 from wf_core.runtime.ops.state import StatePatch
 from wf_core.runtime.ops.state import safe_set_nested_value
@@ -67,6 +68,16 @@ def lineage_writes_for_frame(
     if pending is None:
         return ()
     return pending.patch.writes
+
+
+def is_root_lineage_frame(frame: ExecutionFrame) -> bool:
+    """Return whether a frame currently commits directly to root run state.
+
+    This is a migration shortcut, not the final commit policy. Once native
+    subgraphs can complete, direct commits should be decided by an explicit
+    scope/lineage commit target rather than only by root ids.
+    """
+    return frame.scope_id == ROOT_SCOPE_ID and frame.lineage_id == ROOT_LINEAGE_ID
 
 
 def scope_state_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]:

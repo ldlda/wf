@@ -18,6 +18,7 @@ from wf_core.run_state import (
     StepExecutionResult,
 )
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
+from wf_core.runtime.lineage import append_lineage_writes, is_root_lineage_frame
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
@@ -120,7 +121,16 @@ def _finalize_node_execution(
     )
     owner = item_frame_owner(frame)
     if owner is None:
-        state_changes = commit_state_patch(run.state, patch)
+        if is_root_lineage_frame(frame):
+            state_changes = commit_state_patch(run.state, patch)
+        else:
+            append_lineage_writes(
+                run,
+                scope_id=frame.scope_id,
+                lineage_id=frame.lineage_id,
+                writes=patch.writes,
+            )
+            state_changes = {}
     else:
         parent_frame_id, foreach_node_id, item_index = owner
         parent_frame = run.frames[parent_frame_id]

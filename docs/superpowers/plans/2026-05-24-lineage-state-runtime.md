@@ -27,11 +27,19 @@ the compatibility subset needed before native subgraphs:
   `parent_lineage_id`.
 - Concurrent foreach child frames receive deterministic, opaque lineage ids,
   including nested foreach frames.
+- `RunState` has root scope/lineage storage, scope-aware state views, and
+  generic non-root node writes buffer into `RunState.lineages`.
+
+Direct commits currently go through `is_root_lineage_frame(frame)`, which is the
+migration shortcut for root scope/root lineage. The eventual better shape is an
+explicit scope/lineage commit target, feasible once native subgraph completion
+can declare whether child writes commit to child scope, parent lineage, or only
+through boundary output bindings.
 
 Remaining work should avoid jumping straight to native subgraphs. The next
-small slice is to centralize "which writes are visible to this frame" behind a
-helper, then later decide whether to add full `RunState.scopes` /
-`RunState.lineages`.
+small slice is to migrate foreach pending patch storage from
+`ForeachBarrierState` into `RunState.lineages`, or defer that and start native
+subgraph scaffolding using the current scope/lineage primitives.
 
 ---
 
@@ -530,8 +538,7 @@ For root scope/root lineage it may return `run.state` directly as an optimizatio
 
 In `_finalize_node_execution(...)`:
 
-- if `frame.scope_id == "root"` and `frame.lineage_id == "root"`, commit patch
-  to `run.state`
+- if `is_root_lineage_frame(frame)`, commit patch to `run.state`
 - otherwise append `patch.writes` to the frame lineage and return empty committed
   `state_changes`
 

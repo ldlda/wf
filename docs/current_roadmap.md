@@ -55,8 +55,11 @@ implementation state.
   quiescent interrupt behavior. Remaining work is polish and future reuse of
   its barrier/lineage machinery by native subgraphs and fork/gather. Current
   lineage progress includes ordered `StateWrite` records, `LineageStateView`,
-  foreach item `lineage_id`s, and nested foreach lineage identity. Full
-  `RuntimeScope` / `LineageState` storage is still future work.
+  foreach item `lineage_id`s, nested foreach lineage identity, root
+  `RuntimeScope` / `LineageState` storage, scope-aware reads, and non-root write
+  buffering. Current direct commits are still root-frame-only via an explicit
+  helper; native subgraph completion should replace that shortcut with an
+  explicit scope/lineage commit target.
 - **Persistent run history**: add a run store before adding stable `run_id`,
   `inspect_run`, or `read_run_trace(run_id, range)` APIs. Current traces are
   returned directly from immediate run responses.
