@@ -16,6 +16,8 @@ from wf_core import (
     Workflow,
     WorkflowExecutionError,
 )
+from wf_core.paths import StatePath
+from wf_core.run_state import StateWrite
 from wf_core.models.steps import OutputBinding
 from wf_core.runtime.engine import resume_workflow
 from wf_core.runtime.ops.merges import ReducerDefinition
@@ -198,6 +200,70 @@ def test_build_output_patch_does_not_mutate_until_commit() -> None:
 
     assert committed["state.person.name"] == "Ada"
     assert state["person"]["name"] == "Ada"
+
+
+def test_output_patch_records_incoming_and_visible_values() -> None:
+    workflow = _workflow(
+        fields={
+            "count": StateField(
+                type="integer",
+                reducer=ReducerRef(name="wf.std.add"),
+            )
+        }
+    )
+    state = {"count": 2}
+
+    patch = build_output_patch(
+        workflow,
+        [_binding("delta", "state.count")],
+        {"delta": 3},
+        state,
+    )
+
+    assert patch.changes["state.count"] == 3
+    assert patch.visible_values["state.count"] == 5
+    assert patch.writes[0].incoming_value == 3
+    assert patch.writes[0].visible_value == 5
+
+
+def test_barrier_replays_incoming_values_not_lineage_visible_values() -> None:
+    workflow = _workflow(
+        fields={
+            "number": StateField(
+                type="integer",
+                reducer=ReducerRef(name="wf.std.add"),
+            )
+        }
+    )
+    patch = build_barrier_patch(
+        workflow,
+        [
+            StatePatch(
+                writes=[
+                    StateWrite(
+                        path=StatePath(("number",)),
+                        incoming_value=3,
+                        visible_value=5,
+                        reducer=ReducerRef(name="wf.std.add"),
+                    )
+                ]
+            ),
+            StatePatch(
+                writes=[
+                    StateWrite(
+                        path=StatePath(("number",)),
+                        incoming_value=1,
+                        visible_value=3,
+                        reducer=ReducerRef(name="wf.std.add"),
+                    )
+                ]
+            ),
+        ],
+        {"number": 2},
+    )
+
+    assert patch.changes["state.number"] == 6
+    assert patch.visible_values["state.number"] == 6
 
 
 def test_build_and_commit_patch_matches_apply_output_bindings() -> None:

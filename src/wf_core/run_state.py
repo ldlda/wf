@@ -4,6 +4,9 @@ from dataclasses import asdict, dataclass, field
 from enum import StrEnum
 from typing import Any
 
+from wf_core.models.reducers import ReducerRef
+from wf_core.paths import StatePath
+
 
 class RunStatus(StrEnum):
     PENDING = "pending"
@@ -20,6 +23,21 @@ class FrameStatus(StrEnum):
     COMPLETED = "completed"
     FAILED = "failed"
     INTERRUPTED = "interrupted"
+
+
+@dataclass(slots=True)
+class StateWrite:
+    """One reducer-aware state write.
+
+    `incoming_value` is the value contributed by the node or lineage and is the
+    value barriers/gathers must replay. `visible_value` is what later steps in
+    the same lineage should read after reducer application.
+    """
+
+    path: StatePath
+    incoming_value: Any
+    visible_value: Any
+    reducer: ReducerRef
 
 
 @dataclass(slots=True)

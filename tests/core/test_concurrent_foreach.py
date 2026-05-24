@@ -170,6 +170,63 @@ def test_sync_concurrent_foreach_sibling_overlays_do_not_leak() -> None:
     assert run.state["seen"] == ["a", "b"]
 
 
+def test_sync_concurrent_foreach_barrier_replays_add_reducer_inputs() -> None:
+    workflow = _sum_items_workflow()
+
+    run = execute_workflow(
+        workflow,
+        {"items": [3, 1]},
+        {
+            "add_item": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"number": payload["value"]},
+            }
+        },
+    )
+
+    assert run.state["number"] == 6
+    assert run.output["number"] == 6
+    foreach_entries = [entry for entry in run.trace if entry.step_type == "foreach"]
+    assert foreach_entries[-1].state_changes["state.number"] == 6
+
+
+@pytest.mark.xfail(
+    reason=(
+        "Current foreach overlays use StatePatch.changes, which stores incoming "
+        "reducer values; lineage StateWrite.visible_value should make this pass."
+    ),
+    strict=True,
+)
+def test_sync_concurrent_foreach_same_item_reads_add_reducer_visible_value() -> None:
+    workflow = _same_item_reducer_visibility_workflow()
+
+    run = execute_workflow(
+        workflow,
+        {"items": [3]},
+        {
+            "add_item": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"number": payload["value"]},
+            },
+            "read_number": lambda payload, _ctx: {
+                "outcome": "ok",
+                "output": {"seen_number": payload["number"]},
+            },
+        },
+    )
+
+    stage_entry = next(entry for entry in run.trace if entry.node_id == "add_item")
+    assert stage_entry.resolved_input["value"] == 3
+    assert stage_entry.resolved_input["current_number"] == 2
+    assert stage_entry.state_changes == {}
+    read_entry = next(entry for entry in run.trace if entry.node_id == "read_number")
+    # Current limitation: foreach overlays use StatePatch.changes, which stores
+    # the incoming reducer value. The future lineage StateWrite model should let
+    # this same item read the reducer-visible value 5 instead.
+    assert read_entry.resolved_input["number"] == 5
+    assert run.state["seen_number"] == [5]
+
+
 def test_sync_concurrent_foreach_rejects_sibling_replace_writes() -> None:
     workflow = _same_path_replace_workflow()
 
@@ -184,6 +241,186 @@ def test_sync_concurrent_foreach_rejects_sibling_replace_writes() -> None:
                 }
             },
         )
+
+
+def _sum_items_workflow() -> Workflow:
+    foreach = ForeachNode.model_validate(
+        {
+            "id": "each",
+            "type": "foreach",
+            "over": "state.items",
+            "as": "item",
+            "mode": "concurrent",
+            "concurrent": {"max_active": 2, "max_outstanding": 2},
+        }
+    )
+    return Workflow(
+        name="concurrent_foreach_sum",
+        input_schema=SchemaRef(
+            type="object",
+            properties={"items": {"type": "array"}},
+        ),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "number": StateField(
+                    type="integer",
+                    default=2,
+                    reducer=ReducerRef(name="wf.std.add"),
+                ),
+            }
+        ),
+        output_schema=SchemaRef(
+            type="object",
+            properties={"number": {"type": "integer"}},
+        ),
+        node_defs=[
+            NodeDef(
+                name="add_item",
+                input_schema=SchemaRef(
+                    type="object",
+                    properties={
+                        "value": {"type": "integer"},
+                        "current_number": {"type": "integer"},
+                    },
+                    required=["value", "current_number"],
+                ),
+                output_schema=SchemaRef(
+                    type="object",
+                    properties={"number": {"type": "integer"}},
+                    required=["number"],
+                ),
+                outcomes=["ok"],
+            )
+        ],
+        start="each",
+        nodes=[
+            foreach,
+            NodeUse.model_validate(
+                {
+                    "id": "add_item",
+                    "type": "node",
+                    "node": "add_item",
+                    "input": [
+                        {"target": "value", "path": "context.item"},
+                        {"target": "current_number", "path": "state.number"},
+                    ],
+                    "output": [{"source": "number", "target": "state.number"}],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "each", "outcome": "loop", "to": "add_item"}),
+            Edge.model_validate({"from": "add_item", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
+    )
+
+
+def _same_item_reducer_visibility_workflow() -> Workflow:
+    foreach = ForeachNode.model_validate(
+        {
+            "id": "each",
+            "type": "foreach",
+            "over": "state.items",
+            "as": "item",
+            "mode": "concurrent",
+            "concurrent": {"max_active": 1, "max_outstanding": 1},
+        }
+    )
+    return Workflow(
+        name="concurrent_foreach_same_item_reducer_visibility",
+        input_schema=SchemaRef(
+            type="object",
+            properties={"items": {"type": "array"}},
+        ),
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "number": StateField(
+                    type="integer",
+                    default=2,
+                    reducer=ReducerRef(name="wf.std.add"),
+                ),
+                "seen_number": StateField(
+                    type="array",
+                    reducer=ReducerRef(name="wf.std.append"),
+                ),
+            }
+        ),
+        output_schema=SchemaRef(
+            type="object",
+            properties={"seen_number": {"type": "array"}},
+        ),
+        node_defs=[
+            NodeDef(
+                name="add_item",
+                input_schema=SchemaRef(
+                    type="object",
+                    properties={
+                        "value": {"type": "integer"},
+                        "current_number": {"type": "integer"},
+                    },
+                    required=["value", "current_number"],
+                ),
+                output_schema=SchemaRef(
+                    type="object",
+                    properties={"number": {"type": "integer"}},
+                    required=["number"],
+                ),
+                outcomes=["ok"],
+            ),
+            NodeDef(
+                name="read_number",
+                input_schema=SchemaRef(
+                    type="object",
+                    properties={"number": {"type": "integer"}},
+                    required=["number"],
+                ),
+                output_schema=SchemaRef(
+                    type="object",
+                    properties={"seen_number": {"type": "integer"}},
+                    required=["seen_number"],
+                ),
+                outcomes=["ok"],
+            ),
+        ],
+        start="each",
+        nodes=[
+            foreach,
+            NodeUse.model_validate(
+                {
+                    "id": "add_item",
+                    "type": "node",
+                    "node": "add_item",
+                    "input": [
+                        {"target": "value", "path": "context.item"},
+                        {"target": "current_number", "path": "state.number"},
+                    ],
+                    "output": [{"source": "number", "target": "state.number"}],
+                }
+            ),
+            NodeUse.model_validate(
+                {
+                    "id": "read_number",
+                    "type": "node",
+                    "node": "read_number",
+                    "input": [{"target": "number", "path": "state.number"}],
+                    "output": [
+                        {"source": "seen_number", "target": "state.seen_number"}
+                    ],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate({"from": "each", "outcome": "loop", "to": "add_item"}),
+            Edge.model_validate(
+                {"from": "add_item", "outcome": "ok", "to": "read_number"}
+            ),
+            Edge.model_validate({"from": "read_number", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
+        ],
+    )
 
 
 def _workflow(

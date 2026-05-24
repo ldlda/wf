@@ -43,15 +43,17 @@ implementation state.
   [ADR 0001](./adr/0001-scheduler-foundation-before-concurrent-foreach.md).
 - Concurrent foreach policy decision record:
   [ADR 0002](./adr/0002-concurrent-foreach-policy-and-barrier-commits.md).
-- **Native subgraphs / graph-as-node**: add child run state, child trace
+- Native subgraph design spec:
+  [2026-05-24 native subgraphs](./superpowers/specs/2026-05-24-native-subgraphs-design.md).
+- **Native subgraphs / graph-as-node**: next major runtime feature. Add a
+  first-class subgraph step with child run/frame identity, child trace
   preservation, interrupt bubbling, and resume back into the child workflow.
-  Wrapper artifacts currently execute as deployments and return run status;
-  true graph-as-node outcome propagation belongs here.
-- **Concurrent foreach**: add explicit scheduling, reducer/merge semantics, and
-  failure policy. Sync runtime can interleave admitted item frames one node at a
-  time; async runtime can additionally run admitted async node handlers
-  simultaneously. Do not model this as plain `asyncio.gather` over sync
-  handlers.
+  Wrapper helpers currently run child workflows as ordinary nodes; true
+  graph-as-node behavior belongs here.
+- **Concurrent foreach**: implemented in core with explicit scheduling,
+  reducer/merge semantics, item error policy, async handler batching, and
+  quiescent interrupt behavior. Remaining work is polish and future reuse of
+  its barrier/lineage machinery by native subgraphs and fork/gather.
 - **Persistent run history**: add a run store before adding stable `run_id`,
   `inspect_run`, or `read_run_trace(run_id, range)` APIs. Current traces are
   returned directly from immediate run responses.

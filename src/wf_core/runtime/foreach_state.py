@@ -260,7 +260,7 @@ class ForeachBarrierState:
                 f"foreach item result for index {index!r} belongs to frame "
                 f"{existing.frame_id!r}, got {frame_id!r}"
             )
-        existing.patch.changes.update(patch.changes)
+        existing.patch.extend(patch)
 
     def add_failure(self, *, error: ItemErrorRecord) -> None:
         """Buffer one handled item failure for the foreach barrier.

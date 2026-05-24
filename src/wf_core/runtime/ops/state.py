@@ -19,6 +19,7 @@ from wf_core.paths import (
     set_nested_value,
     split_graph_path,
 )
+from wf_core.run_state import StateWrite
 from wf_core.runtime.ops.merges import (
     ReducerDefinition,
     apply_reducer,
@@ -33,18 +34,51 @@ _MISSING = object()
 class StatePatch:
     """Validated state writes produced by one step before commit.
 
-    `changes` is the public trace-facing view: the incoming values keyed by
-    state path. `_prepared_writes` and `_staged_state` are the executor internals
-    needed to commit reducer-aware values atomically without recomputing the
-    patch.
+    `changes` is the public trace-facing incoming-value view. `writes` preserves
+    the reducer-aware records needed by lineage overlays and future gathers:
+    barriers replay `incoming_value`, while same-lineage reads use
+    `visible_value`.
     """
 
     changes: dict[str, Any] = dataclass_field(default_factory=dict)
+    writes: list[StateWrite] = dataclass_field(default_factory=list)
     _prepared_writes: dict[StatePath, tuple[list[str], Any]] = dataclass_field(
         default_factory=dict,
         repr=False,
     )
     _staged_state: dict[str, Any] = dataclass_field(default_factory=dict, repr=False)
+
+    def __post_init__(self) -> None:
+        """Keep legacy `StatePatch(changes=...)` usable during migration."""
+        if not self.changes and self.writes:
+            self.changes = {
+                str(write.path): write.incoming_value for write in self.writes
+            }
+        if not self.writes and self.changes:
+            self.writes = [
+                StateWrite(
+                    path=StatePath.parse(destination),
+                    incoming_value=value,
+                    visible_value=value,
+                    reducer=ReducerRef(name="wf.std.replace"),
+                )
+                for destination, value in self.changes.items()
+            ]
+
+    @property
+    def visible_values(self) -> dict[str, Any]:
+        """Final values visible to later reads in the same lineage."""
+        return {str(write.path): write.visible_value for write in self.writes}
+
+    def extend(self, patch: StatePatch) -> None:
+        """Append another patch from the same lineage.
+
+        Multi-step foreach item bodies accumulate several node patches before a
+        barrier sees them. Both the legacy trace view and the ordered reducer
+        write records must be preserved.
+        """
+        self.changes.update(patch.changes)
+        self.writes.extend(patch.writes)
 
 
 @dataclass(slots=True, frozen=True)
@@ -139,6 +173,15 @@ def build_output_patch(
             state_fields=state_fields,
         )
         prepared_patch[destination_path] = (key_path, merged_value)
+    writes = [
+        StateWrite(
+            path=destination_path,
+            incoming_value=resolved_patch[destination_path],
+            visible_value=merged_value,
+            reducer=reducer_for_state_path(destination_path, state_fields),
+        )
+        for destination_path, (_key_path, merged_value) in prepared_patch.items()
+    ]
 
     # Stage writes on a copy so commit-time path errors cannot partially mutate state.
     staged_state = deepcopy(state)
@@ -147,6 +190,7 @@ def build_output_patch(
     validate_staged_state_patch(staged_state, prepared_patch, state_fields)
     return StatePatch(
         changes={str(path): value for path, value in resolved_patch.items()},
+        writes=writes,
         _prepared_writes=prepared_patch,
         _staged_state=staged_state,
     )
@@ -184,22 +228,32 @@ def build_barrier_patch(
     prepared_patch: dict[StatePath, tuple[list[str], Any]] = {}
     committed_changes: dict[str, Any] = {}
     for item_patch in item_patches:
-        for destination, incoming_value in item_patch.changes.items():
-            destination_path = StatePath.parse(destination)
+        for write in item_patch.writes:
+            destination_path = write.path
             key_path, merged_value = prepare_state_value(
                 workflow,
                 staged_state,
                 destination_path,
-                incoming_value,
+                write.incoming_value,
                 reducers=reducers,
                 state_fields=state_fields,
             )
             safe_set_nested_value(staged_state, key_path, merged_value)
             prepared_patch[destination_path] = (key_path, merged_value)
-            committed_changes[destination] = merged_value
+            committed_changes[str(destination_path)] = merged_value
+    writes = [
+        StateWrite(
+            path=destination_path,
+            incoming_value=merged_value,
+            visible_value=merged_value,
+            reducer=reducer_for_state_path(destination_path, state_fields),
+        )
+        for destination_path, (_key_path, merged_value) in prepared_patch.items()
+    ]
     validate_staged_state_patch(staged_state, prepared_patch, state_fields)
     return StatePatch(
         changes=committed_changes,
+        writes=writes,
         _prepared_writes=prepared_patch,
         _staged_state=staged_state,
     )
@@ -354,6 +408,17 @@ def prepare_state_value(
         reducers=reducers,
     )
     return key_path, merged_value
+
+
+def reducer_for_state_path(
+    path: StatePath,
+    state_fields: Mapping[StatePath, StateFieldDecl],
+) -> ReducerRef:
+    """Return the reducer declared for one exact state path."""
+    declared_field = state_fields.get(path)
+    return (
+        declared_field.reducer if declared_field else ReducerRef(name="wf.std.replace")
+    )
 
 
 def project_output(workflow: Workflow, state: dict[str, Any]) -> dict[str, Any]:
