@@ -648,20 +648,22 @@ document, `WorkflowCapabilityRef` is the public callable capability name, and
 The first implementation should prefer artifact validation and dependency
 diagnostics before attempting persistent nested resume.
 
-Native subgraphs now have a core `SubgraphNode` placeholder. It validates the
+Native subgraphs now have a core `SubgraphNode` boundary. It validates the
 parent-side contract: child workflow reference, declared child input/output
-schemas, binding lists, and declared outcomes. Runtime execution is still not
-implemented; reaching a subgraph step raises a clear runtime error. The current
-`wf_authoring.subgraph_node` and `async_subgraph_node` helpers still execute a
-child workflow as a plain node and validate the child output. The async helper
-is explicit because hiding `asyncio.run()` inside the sync wrapper would break
-inside already-running event loops. Future saved-workflow-as-node execution
-needs a real child run state if child interrupts should pause the parent and
-later resume the child.
+schemas, binding lists, and declared outcomes. When callers resolve a local
+child into `PreparedSubgraph`, core executes it in child scope, preserves its
+trace, and can bubble and resume child interrupts without exposing child state
+as parent state. The current `wf_authoring.subgraph_node` and
+`async_subgraph_node` helpers still execute a child workflow as a plain node
+and validate the child output. The async helper is explicit because hiding
+`asyncio.run()` inside the sync wrapper would break inside already-running
+event loops. Saved workflow-as-node execution still needs platform-level
+artifact/deployment resolution into prepared children before core can run it.
 
-See `examples/authoring_workflow_as_node.py` for the current wrapper-node
-approach. In that example the parent trace sees one node call; the child
-workflow's internal trace is not embedded in the parent run state.
+See `examples/authoring_workflow_as_node.py` for the compatibility wrapper-node
+approach and `examples/authoring_native_subgraph.py` for native prepared-child
+execution. In the wrapper example the parent trace sees one node call; in the
+native example child trace entries remain in the parent run state.
 
 Until that core upgrade exists, artifact tooling must not assume that an
 interrupting saved workflow can safely be used as a child node. Top-level saved

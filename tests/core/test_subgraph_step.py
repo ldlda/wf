@@ -21,6 +21,8 @@ from wf_core import (
     WorkflowExecutionError,
     execute_workflow_async,
     execute_workflow,
+    resume_workflow_async,
+    resume_workflow,
 )
 from wf_core.validation.issues import ValidationIssueCode
 from wf_core.models.steps import Step
@@ -194,28 +196,70 @@ def test_subgraph_step_routes_through_child_terminal_outcome() -> None:
     )
 
 
-def test_subgraph_step_rejects_child_interrupt_until_resume_route_exists() -> None:
-    child = Workflow(
-        name="child.workflow",
-        input_schema=_schema({"text": {"type": "string"}}),
-        state_schema=StateSchema.from_field_map({}),
-        output_schema=_schema({}),
-        start="ask",
-        nodes=[
-            InterruptNode.model_validate(
-                {"id": "ask", "type": "interrupt", "kind": "input"}
-            )
-        ],
-        edges=[Edge.model_validate({"from": "ask", "outcome": "submitted", "to": END})],
+def test_subgraph_step_interrupts_and_resumes_inside_prepared_child() -> None:
+    child = _interrupting_child_workflow()
+    parent = _workflow(
+        node=_subgraph_node(input_bindings=[{"target": "text", "value": "child-only"}]),
+        output_schema=_schema({"answer": {"type": "string"}}),
+    )
+    prepared = PreparedSubgraph(workflow=child, registry={})
+
+    run = execute_workflow(
+        parent,
+        {"text": "hello"},
+        {},
+        subgraphs={"child.workflow": prepared},
     )
 
-    with pytest.raises(WorkflowExecutionError, match="child interrupts"):
-        execute_workflow(
-            _workflow(),
+    assert run.status == "interrupted"
+    assert run.interrupt is not None
+    assert run.interrupt.node_id == "child"
+    assert run.interrupt.payload["question"] == "child-only"
+    assert run.interrupt.route is not None
+    assert run.interrupt.route.node_id == "ask"
+    assert run.frames["root"].status == "blocked"
+
+    paused = resume_workflow(parent, run, {})
+
+    assert paused.status == "interrupted"
+    assert paused.interrupt is not None
+
+    resumed = resume_workflow(
+        parent,
+        run,
+        {},
+        resume_payload={"answer": "yes"},
+        subgraphs={"child.workflow": prepared},
+    )
+
+    assert resumed.status == "completed"
+    assert resumed.output["answer"] == "yes"
+    assert resumed.state["answer"] == "yes"
+
+
+def test_subgraph_step_resumes_interrupted_async_prepared_child() -> None:
+    async def run_child() -> RunState:
+        child = _interrupting_child_workflow()
+        parent = _workflow(output_schema=_schema({"answer": {"type": "string"}}))
+        prepared = PreparedSubgraph(workflow=child, registry={})
+        run = await execute_workflow_async(
+            parent,
             {"text": "hello"},
             {},
-            subgraphs={"child.workflow": PreparedSubgraph(workflow=child, registry={})},
+            subgraphs={"child.workflow": prepared},
         )
+        return await resume_workflow_async(
+            parent,
+            run,
+            {},
+            resume_payload={"answer": "async yes"},
+            subgraphs={"child.workflow": prepared},
+        )
+
+    resumed = asyncio.run(run_child())
+
+    assert resumed.status == "completed"
+    assert resumed.output["answer"] == "async yes"
 
 
 def _workflow(
@@ -296,6 +340,28 @@ def _child_workflow(
         nodes=[node] if terminal is None else [node, terminal],
         edges=edges
         or [Edge.model_validate({"from": "answer", "outcome": "ok", "to": END})],
+    )
+
+
+def _interrupting_child_workflow() -> Workflow:
+    return Workflow(
+        name="child.workflow",
+        input_schema=_schema({"text": {"type": "string"}}),
+        state_schema=StateSchema.from_field_map({"answer": StateField(type="string")}),
+        output_schema=_schema({"answer": {"type": "string"}}),
+        start="ask",
+        nodes=[
+            InterruptNode.model_validate(
+                {
+                    "id": "ask",
+                    "type": "interrupt",
+                    "kind": "input",
+                    "request": [{"target": "question", "path": "input.text"}],
+                    "resume": [{"source": "answer", "target": "state.answer"}],
+                }
+            )
+        ],
+        edges=[Edge.model_validate({"from": "ask", "outcome": "submitted", "to": END})],
     )
 
 

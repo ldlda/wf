@@ -37,6 +37,7 @@ from .runtime import (
 from .run_state import (
     ExecutionFrame,
     FrameStatus,
+    InterruptRoute,
     InterruptRequest,
     RunState,
     RunStatus,
@@ -81,6 +82,7 @@ __all__ = [
     "RuntimeContext",
     "StepExecutionResult",
     "TraceEntry",
+    "InterruptRoute",
     "InterruptRequest",
     "START",
     "END",

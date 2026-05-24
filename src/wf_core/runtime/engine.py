@@ -81,12 +81,17 @@ def resume_workflow(
     subgraphs: Mapping[str, PreparedSubgraph[NodeHandler]] | None = None,
 ) -> RunState:
     """Resume a synchronous run from its current state."""
+    interrupted_workflow, interrupted_reducers = _interrupt_resume_target(
+        workflow, reducers, run, subgraphs, resuming=resume_payload is not None
+    )
     index = prepare_resume(
         workflow,
         run,
         resume_payload=resume_payload,
         resume_outcome=resume_outcome,
         reducers=reducers,
+        interrupted_workflow=interrupted_workflow,
+        interrupted_reducers=interrupted_reducers,
     )
     if index is None:
         if run.current_node_id == END:
@@ -128,12 +133,17 @@ async def resume_workflow_async(
     subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
 ) -> RunState:
     """Resume an async run from its current state."""
+    interrupted_workflow, interrupted_reducers = _interrupt_resume_target(
+        workflow, reducers, run, subgraphs, resuming=resume_payload is not None
+    )
     index = prepare_resume(
         workflow,
         run,
         resume_payload=resume_payload,
         resume_outcome=resume_outcome,
         reducers=reducers,
+        interrupted_workflow=interrupted_workflow,
+        interrupted_reducers=interrupted_reducers,
     )
     if index is None:
         if run.current_node_id == END:
@@ -162,6 +172,21 @@ async def resume_workflow_async(
             return run
 
     return finalize_run(workflow, run)
+
+
+def _interrupt_resume_target(
+    root_workflow: Workflow,
+    root_reducers: Mapping[str, ReducerDefinition] | None,
+    run: RunState,
+    subgraphs: Mapping[str, PreparedSubgraph[Any]] | None,
+    *,
+    resuming: bool,
+) -> tuple[Workflow | None, Mapping[str, ReducerDefinition] | None]:
+    """Resolve the workflow that owns an outstanding routed child interrupt."""
+    if not resuming or run.interrupt is None or run.interrupt.route is None:
+        return None, root_reducers
+    child = resolve_prepared_subgraph(run.interrupt.route.workflow_ref, subgraphs)
+    return child.workflow, child.reducers
 
 
 def _sync_execution_target(

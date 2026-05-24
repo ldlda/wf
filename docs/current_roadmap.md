@@ -52,8 +52,10 @@ implementation state.
   reference conversion helpers. Core can now execute a prepared local child
   workflow through an isolated child scope/lineage, preserve its trace entries,
   map child output through the boundary, and route by the child's terminal
-  outcome. Interrupt bubbling/resume and saved/deployed child resolution remain
-  next. Wrapper helpers currently run child workflows as ordinary nodes; native
+  outcome. Prepared child interrupts now bubble through a typed internal route
+  and resume inside child scope while the public request identifies the parent
+  subgraph boundary. Saved/deployed child resolution remains next. Wrapper
+  helpers currently run child workflows as ordinary nodes; native
   `SubgraphNode` is now the graph-as-node path for prepared children.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
@@ -64,9 +66,9 @@ implementation state.
   `RuntimeScope` / `LineageState` storage, scope-aware reads, and non-root write
   buffering. New concurrent foreach item writes are stored in
   `RunState.lineages`, while `ForeachBarrierState` keeps scheduling/result
-  metadata and compatibility patches. Current direct commits are still
-  root-frame-only via an explicit helper; native subgraph completion should
-  replace that shortcut with an explicit scope/lineage commit target.
+  metadata and compatibility patches. Scope-root commits now apply to both the
+  root workflow and prepared native child scopes through the explicit
+  scope/lineage commit helper.
 - **Persistent run history**: add a run store before adding stable `run_id`,
   `inspect_run`, or `read_run_trace(run_id, range)` APIs. Current traces are
   returned directly from immediate run responses.

@@ -120,6 +120,23 @@ class StepExecutionResult:
 
 
 @dataclass(slots=True)
+class InterruptRoute:
+    """Internal resume route for an interrupt raised below a graph boundary.
+
+    `InterruptRequest.frame_id` and `.node_id` may describe the public parent
+    subgraph boundary. This route retains the actual interrupted child frame so
+    resume can continue inside its original workflow scope.
+    """
+
+    frame_id: str
+    node_id: str
+    scope_id: str
+    lineage_id: str
+    parent_frame_id: str
+    workflow_ref: WorkflowRef
+
+
+@dataclass(slots=True)
 class InterruptRequest:
     id: str
     frame_id: str
@@ -127,6 +144,7 @@ class InterruptRequest:
     kind: str
     payload: dict[str, Any] = field(default_factory=dict)
     resumable: bool = True
+    route: InterruptRoute | None = None
 
 
 @dataclass(slots=True)

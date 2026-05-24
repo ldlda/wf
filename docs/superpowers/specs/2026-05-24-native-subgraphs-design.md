@@ -1,6 +1,6 @@
 # Native Subgraphs Design
 
-Status: prepared-child execution implemented; interrupts/artifact resolution planned
+Status: prepared-child execution and interrupt resume implemented; artifact resolution planned
 
 Native subgraphs should make a workflow usable as a workflow step without
 collapsing the child run into one opaque Python node call. The current
@@ -8,9 +8,9 @@ collapsing the child run into one opaque Python node call. The current
 compatibility wrappers, but they hide the child trace, child frames, and child
 interrupt lifecycle from `wf_core`.
 
-This design defines the core runtime shape. The boundary model and
-non-interrupting prepared-child execution are implemented; interruption and
-saved-workflow resolution remain planned.
+This design defines the core runtime shape. The boundary model, prepared-child
+execution, and routed child interrupt resume are implemented; saved-workflow
+resolution remains planned.
 
 ## Goals
 
@@ -81,7 +81,8 @@ Runtime execution now accepts caller-supplied `PreparedSubgraph` dependencies
 for local workflow refs. It creates a child scope/lineage, schedules child
 frames in the parent run, retains child trace entries, and applies mapped
 output only at boundary completion. Saved artifact refs are not loaded by
-`wf_core`, and child interrupts fail explicitly until resume routing exists.
+`wf_core`. Prepared child interrupts bubble through a typed internal route and
+resume inside their original child scope.
 
 `WorkflowRef` should be structural, not a dotted string parser:
 
@@ -228,15 +229,16 @@ If a child frame reaches an `InterruptNode`:
 4. `RunState.interrupt` points to the child interrupt, with enough route data
    to resume into the child.
 
-The parent-facing interrupt request should include:
+The client-facing interrupt identity should remain the parent subgraph
+boundary: its frame/step identify the reusable graph node that asked for
+interaction, while `kind` and `payload` describe what the caller must supply.
+The runtime must separately retain the actual child route required for resume:
 
-- parent frame id
-- subgraph parent step id
+- parent frame id and subgraph parent step id for the public request identity
 - child workflow reference
-- child frame id
-- child interrupt node id
-- interrupt kind
-- payload
+- child scope and lineage ids
+- interrupted child frame id and interrupt node id
+- interrupt kind and payload
 
 Current `InterruptRequest` only has `id`, `frame_id`, `node_id`, `kind`,
 `payload`, and `resumable`. Native subgraphs need either:
@@ -245,9 +247,11 @@ Current `InterruptRequest` only has `id`, `frame_id`, `node_id`, `kind`,
   `lineage_id`, `parent_frame_id`, and `workflow_ref`, or
 - a typed nested route object, such as `InterruptRoute`.
 
-The preferred direction is explicit route structure. A generic metadata field
-would recreate the ad hoc frame metadata problem, while string parsing is
-exactly what the project has been moving away from.
+The preferred direction is a typed `InterruptRoute` stored by
+`InterruptRequest`. A generic metadata field would recreate the ad hoc frame
+metadata problem, while string parsing is exactly what the project has been
+moving away from. Root-workflow interrupts may omit the route and retain their
+existing direct frame/node identity.
 
 ## Resume Semantics
 
@@ -393,7 +397,7 @@ selection out of `wf_core`.
 - Artifact conversion helpers bridge saved workflow identities to core
   `WorkflowRef` values.
 
-### Completed Slice 1: Non-Interrupting Prepared Subgraph Runtime
+### Completed Slice 1: Prepared Subgraph Runtime
 
 - Local/prepared child `WorkflowRef` dependencies resolve through
   `PreparedSubgraph`; `wf_core` does not load saved artifacts.
@@ -404,9 +408,10 @@ selection out of `wf_core`.
   records the parent `subgraph` trace entry.
 - Child output maps to parent state through existing output binding machinery.
 - The parent step routes through the child's terminal workflow outcome.
-- Child interrupts reject explicitly until structural resume routing exists.
+- Child interrupts route structurally and preserve the blocked parent boundary
+  until the child resumes and completes.
 
-### Slice 2: Interrupt Bubbling and Resume
+### Completed Slice 2: Interrupt Bubbling and Resume
 
 - Extend `InterruptRequest` with explicit route structure.
 - Bubble child interrupts to the parent run.

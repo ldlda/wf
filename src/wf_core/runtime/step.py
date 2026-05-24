@@ -40,7 +40,6 @@ from wf_core.runtime.scheduler import (
 )
 from wf_core.runtime.subgraphs import PreparedSubgraph, step_subgraph
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
-from wf_core.run_state import ROOT_SCOPE_ID
 from wf_core.tokens import END
 
 from .preparation import prepare_step
@@ -155,10 +154,6 @@ def step_workflow(
             outcome=step.outcome,
         )
     elif isinstance(step, InterruptNode):
-        if frame.kind == "subgraph_root" or frame.scope_id != ROOT_SCOPE_ID:
-            raise WorkflowExecutionError(
-                "child interrupts are not supported until native subgraph resume routing exists"
-            )
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
         return step_foreach(workflow, run, step, index, reducers=reducers)
@@ -271,10 +266,6 @@ async def step_workflow_async(
             outcome=step.outcome,
         )
     elif isinstance(step, InterruptNode):
-        if frame.kind == "subgraph_root" or frame.scope_id != ROOT_SCOPE_ID:
-            raise WorkflowExecutionError(
-                "child interrupts are not supported until native subgraph resume routing exists"
-            )
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
         return step_foreach(workflow, run, step, index, reducers=reducers)

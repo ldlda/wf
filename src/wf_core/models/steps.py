@@ -161,8 +161,8 @@ class SubgraphNode(BaseModel):
     """Workflow boundary step for native prepared-child execution.
 
     The runtime can execute an already-prepared local child graph through a
-    child scope/lineage and commit only its mapped boundary output. Resolving
-    saved artifacts and resuming child interrupts remain platform/runtime work.
+    child scope/lineage, bubble and resume child interrupts, and commit only
+    its mapped boundary output. Resolving saved artifacts remains platform work.
     """
 
     id: str

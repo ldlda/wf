@@ -34,6 +34,8 @@ def prepare_resume(
     resume_payload: dict[str, Any] | None,
     resume_outcome: str,
     reducers: Mapping[str, ReducerDefinition] | None = None,
+    interrupted_workflow: Workflow | None = None,
+    interrupted_reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> WorkflowIndex | None:
     """Validate and normalize a run state before resume execution."""
     if run.workflow_name != workflow.name:
@@ -55,13 +57,21 @@ def prepare_resume(
     if run.status == RunStatus.INTERRUPTED:
         if resume_payload is None:
             return None
+        resume_workflow = interrupted_workflow or workflow
+        resume_index = (
+            index
+            if resume_workflow is workflow
+            else build_workflow_index(resume_workflow)
+        )
         resume_interrupt(
-            workflow,
+            resume_workflow,
             run,
-            index=index,
+            index=resume_index,
             resume_payload=resume_payload,
             resume_outcome=resume_outcome,
-            reducers=reducers,
+            reducers=(
+                reducers if interrupted_workflow is None else interrupted_reducers
+            ),
         )
         if run.current_frame_id is not None:
             frame = run.current_frame()

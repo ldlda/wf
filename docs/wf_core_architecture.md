@@ -131,29 +131,31 @@ limits and intended adapter seam.
   strategies beyond exact-path mergeable reducers.
 - Interrupt lifecycle is still node-level and run-state-level. Long-lived
   external subscriptions or notification streams need a separate lifecycle
-  design. Interrupt `request` and `resume` are canonical binding lists; nested
-  child-workflow resume is still future work.
+  design. Interrupt `request` and `resume` are canonical binding lists;
+  prepared child workflows retain a typed internal interrupt route so resume
+  continues in child scope while exposing the parent subgraph boundary to the
+  caller.
 - Native subgraphs use `SubgraphNode` plus caller-supplied `PreparedSubgraph`
   dependencies. A prepared local child executes through a child runtime scope
   and lineage; child output commits only through declared boundary bindings and
   the parent routes by the child's terminal workflow outcome. Saved/deployed
   workflow resolution remains outside core and is not implemented at this
   boundary yet.
-- Nested subgraph interruption is not first-class yet. The current
-  `wf_authoring` subgraph helpers wrap a child workflow as an ordinary sync or
-  async node and validate the child output; they do not preserve a child run
-  state that can interrupt, bubble to the parent, and later resume inside the
-  child. Native `SubgraphNode` preserves prepared-child execution and trace,
-  but rejects child interrupts until route-aware resume is implemented. See
-  `examples/authoring_workflow_as_node.py` for the wrapper-node shape.
-- Saved workflow-as-node execution with interrupts requires a core runtime
-  upgrade: nested run state, child-frame trace preservation, interrupt bubbling
-  with path metadata, and resume back into the child workflow.
+- The current `wf_authoring` wrapper helpers still run child workflows as
+  ordinary sync or async nodes and therefore do not preserve native child
+  state or resumable interrupts. Native `SubgraphNode` plus
+  `PreparedSubgraph` is the first-class path: prepared child interrupts now
+  bubble to the parent run and resume inside the original child scope. See
+  `examples/authoring_workflow_as_node.py` for the compatibility wrapper shape
+  and `examples/authoring_native_subgraph.py` for the native path.
+- Saved workflow-as-node execution with interrupts still requires platform
+  resolution of artifact/deployment references into prepared child
+  dependencies before core execution begins.
 - Frames are no longer only a serial execution stack: the runtime has a ready
   queue, `BLOCKED` frame state, lineage isolation, barrier merge semantics, and
   pending child results for concurrent foreach. Native prepared subgraphs now
-  use child-scope execution; saved/deployed child resolution and nested
-  interruption remain outstanding.
+  use child-scope execution and typed routed child interruption; saved/deployed
+  child resolution remains outstanding.
   Concurrent foreach is the primary current use case for async concurrent node
   handler execution.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer
