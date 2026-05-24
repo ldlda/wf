@@ -13,12 +13,15 @@ from wf_core import (
 from wf_core.models.reducers import ReducerRef
 from wf_core.paths import StatePath
 from wf_core.run_state import StateWrite
+from wf_core.run_state import ExecutionFrame, LineageState, RuntimeScope
 from wf_core.runtime.lineage import (
     add_lineage,
     append_lineage_writes,
     lineage_patch,
     lineage_state_view,
+    scope_state_for_frame,
 )
+from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.runs import create_run_state
 
 
@@ -87,6 +90,71 @@ def test_lineage_helpers_store_ordered_writes_and_preserve_replay_values() -> No
     patch = lineage_patch(run, scope_id="root", lineage_id="child")
     assert patch.writes[0].incoming_value == "incoming"
     assert patch.writes[0].visible_value == "visible"
+
+
+def test_state_view_for_frame_reads_from_frame_scope_state() -> None:
+    run = create_run_state(_minimal_workflow(), {"value": "root"})
+    run.scopes["child"] = RuntimeScope(
+        id="child",
+        workflow_name="child_workflow",
+        committed_state={"value": "child"},
+    )
+    run.lineages["child/root"] = LineageState(id="child/root", scope_id="child")
+    frame = ExecutionFrame(
+        id="child-frame",
+        kind="workflow",
+        node_id="finish",
+        scope_id="child",
+        lineage_id="child/root",
+    )
+
+    state_view = state_view_for_frame(run, frame)
+
+    assert scope_state_for_frame(run, frame)["value"] == "child"
+    assert state_view["value"] == "child"
+    assert run.state["value"] == "root"
+
+
+def test_state_view_for_frame_overlays_writes_onto_frame_scope_state() -> None:
+    run = create_run_state(_minimal_workflow(), {"value": "root"})
+    run.scopes["child"] = RuntimeScope(
+        id="child",
+        workflow_name="child_workflow",
+        committed_state={"value": "child"},
+    )
+    run.lineages["child/root"] = LineageState(id="child/root", scope_id="child")
+    add_lineage(
+        run,
+        scope_id="child",
+        lineage_id="child/branch",
+        parent_id="child/root",
+    )
+    append_lineage_writes(
+        run,
+        scope_id="child",
+        lineage_id="child/branch",
+        writes=[
+            StateWrite(
+                path=StatePath(("value",)),
+                incoming_value="incoming",
+                visible_value="visible",
+                reducer=ReducerRef(name="wf.std.replace"),
+            )
+        ],
+    )
+    frame = ExecutionFrame(
+        id="child-frame",
+        kind="workflow",
+        node_id="finish",
+        scope_id="child",
+        lineage_id="child/branch",
+    )
+
+    state_view = state_view_for_frame(run, frame)
+
+    assert state_view["value"] == "visible"
+    assert run.scopes["child"].committed_state["value"] == "child"
+    assert run.state["value"] == "root"
 
 
 def _minimal_workflow() -> Workflow:

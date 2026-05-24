@@ -46,6 +46,14 @@ def lineage_writes_for_frame(
     lookup here gives future `RunState.lineages` or subgraph scopes one place to
     plug in without making node execution understand foreach internals.
     """
+    lineage = run.lineages.get(frame.lineage_id)
+    if lineage is not None and lineage.scope_id == frame.scope_id and lineage.writes:
+        return tuple(
+            lineage_state_writes(
+                run, scope_id=frame.scope_id, lineage_id=frame.lineage_id
+            )
+        )
+
     owner = item_frame_owner(frame)
     if owner is None:
         return ()
@@ -59,6 +67,14 @@ def lineage_writes_for_frame(
     if pending is None:
         return ()
     return pending.patch.writes
+
+
+def scope_state_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]:
+    """Return the committed state root for the frame's runtime scope."""
+    scope = run.scopes.get(frame.scope_id)
+    if scope is None:
+        raise ValueError(f"unknown scope {frame.scope_id!r}")
+    return scope.committed_state
 
 
 def add_lineage(
@@ -119,6 +135,17 @@ def lineage_state_view(
     for lineage in _lineage_chain(run, scope_id=scope_id, lineage_id=lineage_id):
         writes.extend(lineage.writes)
     return LineageStateView(scope.committed_state, writes).to_state_dict()
+
+
+def lineage_state_writes(
+    run: RunState,
+    *,
+    scope_id: str,
+    lineage_id: str,
+) -> Iterator[StateWrite]:
+    """Yield ancestor and current lineage writes in read-visibility order."""
+    for lineage in _lineage_chain(run, scope_id=scope_id, lineage_id=lineage_id):
+        yield from lineage.writes
 
 
 def _lineage(run: RunState, *, scope_id: str, lineage_id: str) -> LineageState:
