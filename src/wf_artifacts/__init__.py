@@ -32,7 +32,12 @@ from .models import (
     WorkflowArtifact,
     WorkflowDeployment,
 )
-from .refs import WorkflowCapabilityRef
+from .refs import (
+    WorkflowCapabilityRef,
+    workflow_capability_ref_from_workflow_ref,
+    workflow_ref_from_artifact,
+    workflow_ref_from_capability,
+)
 from .store import FileWorkflowArtifactStore, WorkflowArtifactStore
 from .validation import validate_deployment_dependencies
 from .references import logical_ref_for_concrete_ref, normalize_plan_node_refs
@@ -70,4 +75,7 @@ __all__ = [
     "summarize_draft_workspace",
     "validate_deployment_dependencies",
     "validate_workflow_draft",
+    "workflow_capability_ref_from_workflow_ref",
+    "workflow_ref_from_artifact",
+    "workflow_ref_from_capability",
 ]

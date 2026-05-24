@@ -5,6 +5,10 @@ from typing import Any
 
 from pydantic_core import core_schema
 
+from wf_core import WorkflowRef
+
+from .models import WorkflowArtifact
+
 
 @dataclass(frozen=True, slots=True)
 class WorkflowCapabilityRef:
@@ -70,3 +74,22 @@ class WorkflowCapabilityRef:
     def _serialize(value: WorkflowCapabilityRef) -> dict[str, int | str]:
         """Serialize canonical saved workflow refs without a display-name parser."""
         return {"artifact_id": value.artifact_id, "version": value.version}
+
+
+def workflow_ref_from_artifact(artifact: WorkflowArtifact) -> WorkflowRef:
+    """Return the core child-workflow ref for one saved artifact version."""
+    return WorkflowRef(artifact_id=artifact.id, version=artifact.version)
+
+
+def workflow_ref_from_capability(ref: WorkflowCapabilityRef) -> WorkflowRef:
+    """Return the core child-workflow ref for a workflow capability identity."""
+    return WorkflowRef(artifact_id=ref.artifact_id, version=ref.version)
+
+
+def workflow_capability_ref_from_workflow_ref(
+    ref: WorkflowRef,
+) -> WorkflowCapabilityRef:
+    """Return the public capability ref for an artifact-backed workflow ref."""
+    if ref.artifact_id is None or ref.version is None:
+        raise ValueError("workflow capability refs require an artifact workflow ref")
+    return WorkflowCapabilityRef(artifact_id=ref.artifact_id, version=ref.version)

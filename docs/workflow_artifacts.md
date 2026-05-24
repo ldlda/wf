@@ -632,6 +632,19 @@ Saved workflow artifact names use a separate grammar and ref type:
 `workflow.<artifact_id>.v<version>`. Artifact ids may contain dots, so this
 must not be parsed as a generic `CapabilityRef`.
 
+When an artifact is used as a child workflow dependency, convert it to the core
+`WorkflowRef` shape instead of reusing display strings:
+
+```python
+workflow_ref_from_artifact(artifact)
+workflow_ref_from_capability(WorkflowCapabilityRef("echo_wrapper", 1))
+workflow_capability_ref_from_workflow_ref(ref)  # only for artifact-backed refs
+```
+
+This keeps the three identities separate: `WorkflowArtifact` is the saved
+document, `WorkflowCapabilityRef` is the public callable capability name, and
+`WorkflowRef` is the core subgraph dependency pointer.
+
 The first implementation should prefer artifact validation and dependency
 diagnostics before attempting persistent nested resume.
 

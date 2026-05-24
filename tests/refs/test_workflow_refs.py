@@ -3,7 +3,13 @@ from __future__ import annotations
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from wf_artifacts import WorkflowCapabilityRef
+from wf_artifacts import (
+    WorkflowArtifact,
+    WorkflowCapabilityRef,
+    workflow_capability_ref_from_workflow_ref,
+    workflow_ref_from_artifact,
+    workflow_ref_from_capability,
+)
 from wf_core import WorkflowRef
 
 
@@ -101,3 +107,51 @@ def test_core_workflow_ref_rejects_mixed_name_and_artifact_ref() -> None:
         CoreWorkflowRefPayload.model_validate(
             {"ref": {"name": "child", "artifact_id": "echo", "version": 1}}
         )
+
+
+def test_workflow_ref_from_artifact_uses_artifact_identity() -> None:
+    ref = workflow_ref_from_artifact(_artifact("echo_wrapper", 2))
+
+    assert ref.artifact_id == "echo_wrapper"
+    assert ref.version == 2
+    assert ref.name is None
+
+
+def test_workflow_ref_from_capability_uses_saved_workflow_identity() -> None:
+    ref = workflow_ref_from_capability(
+        WorkflowCapabilityRef(artifact_id="echo_wrapper", version=2)
+    )
+
+    assert ref.artifact_id == "echo_wrapper"
+    assert ref.version == 2
+
+
+def test_workflow_capability_ref_from_workflow_ref_requires_artifact_ref() -> None:
+    capability = workflow_capability_ref_from_workflow_ref(
+        WorkflowRef(artifact_id="echo_wrapper", version=2)
+    )
+
+    assert capability == WorkflowCapabilityRef(artifact_id="echo_wrapper", version=2)
+
+    with pytest.raises(ValueError, match="artifact"):
+        workflow_capability_ref_from_workflow_ref(WorkflowRef(name="local_child"))
+
+
+def _artifact(artifact_id: str, version: int) -> WorkflowArtifact:
+    return WorkflowArtifact(
+        id=artifact_id,
+        version=version,
+        title="Echo Wrapper",
+        input_schema={"type": "object"},
+        output_schema={"type": "object"},
+        outcomes=("ok",),
+        plan={
+            "name": "echo_wrapper",
+            "input_schema": {"type": "object"},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object"},
+            "start": "end",
+            "nodes": [{"id": "end", "type": "end", "outcome": "ok"}],
+            "edges": [],
+        },
+    )
