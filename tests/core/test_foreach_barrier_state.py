@@ -11,7 +11,7 @@ from wf_core.runtime.foreach_state import (
     ItemErrorRecord,
     PendingItemResult,
 )
-from wf_core.runtime.ops.overlays import LineageStateView, lineage_writes_for_frame
+from wf_core.runtime.lineage import LineageStateView, lineage_writes_for_frame
 from wf_core.runtime.ops.state import StatePatch
 
 

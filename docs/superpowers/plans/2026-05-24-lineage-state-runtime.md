@@ -373,9 +373,9 @@ Expected: pass.
 
 ## Task 3: Add Lineage Runtime Helpers
 
-Status: partially implemented. `LineageStateView` exists in
-`src/wf_core/runtime/ops/overlays.py`. The next incremental helper should be
-`lineage_writes_for_frame(run, frame)`, backed by current foreach metadata.
+Status: partially implemented. `LineageStateView` and
+`lineage_writes_for_frame(run, frame)` exist in `src/wf_core/runtime/lineage.py`,
+backed by current foreach metadata.
 
 **Files:**
 
