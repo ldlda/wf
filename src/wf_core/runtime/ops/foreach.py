@@ -81,6 +81,7 @@ def _step_foreach_serial(
     barrier.next_index = loop_index + 1
     barrier.save_to_frame(frame, step.id)
     child_id = f"{frame.id}:{step.id}:{loop_index}"
+    child_lineage_id = _child_lineage_id(frame, step, loop_index)
     add_frame(
         run,
         ExecutionFrame(
@@ -89,6 +90,9 @@ def _step_foreach_serial(
             node_id=loop_start,
             status=FrameStatus.PENDING,
             parent_frame_id=frame.id,
+            scope_id=frame.scope_id,
+            lineage_id=child_lineage_id,
+            parent_lineage_id=frame.lineage_id,
             metadata=ForeachIterationMetadata(
                 foreach_node_id=step.id,
                 loop_index=loop_index,
@@ -243,6 +247,7 @@ def _admit_concurrent_children(
         loop_index = barrier.next_index
         item = iterable[loop_index]
         child_id = f"{frame.id}:{step.id}:{loop_index}"
+        child_lineage_id = _child_lineage_id(frame, step, loop_index)
         active_count = len(barrier.active_frame_ids)
         barrier.next_index = loop_index + 1
         barrier.start_child(child_id)
@@ -254,6 +259,9 @@ def _admit_concurrent_children(
                 node_id=loop_start,
                 status=FrameStatus.PENDING,
                 parent_frame_id=frame.id,
+                scope_id=frame.scope_id,
+                lineage_id=child_lineage_id,
+                parent_lineage_id=frame.lineage_id,
                 metadata=ForeachIterationMetadata(
                     foreach_node_id=step.id,
                     loop_index=loop_index,
@@ -344,3 +352,12 @@ def _finish_concurrent_foreach(
     )
     advance_frame(run, frame, outcome=outcome, next_node_id=next_node_id)
     return run
+
+
+def _child_lineage_id(frame: ExecutionFrame, step: ForeachNode, loop_index: int) -> str:
+    """Return a deterministic opaque lineage id for one foreach child frame.
+
+    The readable shape is only for diagnostics. Runtime code should compare the
+    full id, not parse it; future structured lineage refs can replace this.
+    """
+    return f"{frame.lineage_id}/{step.id}[{loop_index}]"

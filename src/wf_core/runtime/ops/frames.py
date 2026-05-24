@@ -7,6 +7,9 @@ def frame_context_values(frame: ExecutionFrame) -> dict[str, object | None]:
     context: dict[str, object | None] = {
         "prior_outcome": frame.prior_outcome,
         "activated_incoming_edge": frame.activated_incoming_edge,
+        "scope_id": frame.scope_id,
+        "lineage_id": frame.lineage_id,
+        "parent_lineage_id": frame.parent_lineage_id,
     }
     if frame.kind == "foreach_iteration":
         loop_item = frame.metadata.get("loop_item")

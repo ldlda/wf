@@ -61,6 +61,7 @@ def test_foreach_barrier_state_round_trips_reducer_write_records() -> None:
                 index=0,
                 frame_id="child-0",
                 status="succeeded",
+                lineage_id="root/each[0]",
                 patch=StatePatch(
                     writes=[
                         StateWrite(
@@ -80,6 +81,7 @@ def test_foreach_barrier_state_round_trips_reducer_write_records() -> None:
 
     assert loaded is not None
     write = loaded.pending_results[0].patch.writes[0]
+    assert loaded.pending_results[0].lineage_id == "root/each[0]"
     assert write.path == StatePath(("count",))
     assert write.incoming_value == 3
     assert write.visible_value == 5
@@ -169,10 +171,21 @@ def test_foreach_barrier_accumulates_multiple_patches_for_one_item() -> None:
     patch = StatePatch(changes={"state.count": 1})
     second_patch = StatePatch(changes={"state.name": "a"})
 
-    barrier.add_success_patch(index=0, frame_id="child-0", patch=patch)
-    barrier.add_success_patch(index=0, frame_id="child-0", patch=second_patch)
+    barrier.add_success_patch(
+        index=0,
+        frame_id="child-0",
+        patch=patch,
+        lineage_id="root/each[0]",
+    )
+    barrier.add_success_patch(
+        index=0,
+        frame_id="child-0",
+        patch=second_patch,
+        lineage_id="root/each[0]",
+    )
 
     result = barrier.pending_results[0]
+    assert result.lineage_id == "root/each[0]"
     assert result.patch.changes["state.count"] == 1
     assert result.patch.changes["state.name"] == "a"
     assert len(result.patch.writes) == 2

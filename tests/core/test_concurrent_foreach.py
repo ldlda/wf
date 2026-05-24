@@ -18,6 +18,8 @@ from wf_core import (
     WorkflowExecutionError,
     execute_workflow,
 )
+from wf_core.run_state import ExecutionFrame, RunState, RuntimeContext
+from wf_core.runtime.scheduler import ForeachIterationMetadata
 
 
 def test_sync_concurrent_foreach_interleaves_items_and_commits_at_barrier() -> None:
@@ -94,6 +96,81 @@ def test_sync_concurrent_foreach_respects_max_active_by_refill_trace() -> None:
     assert loop_entries[1].resolved_input["active_count"] == 1
     assert any(entry.resolved_input["active_count"] > 0 for entry in loop_entries)
     assert all(entry.resolved_input["active_count"] < 2 for entry in loop_entries)
+
+
+def test_concurrent_foreach_item_frames_use_distinct_lineages() -> None:
+    workflow = _workflow(
+        state_schema=StateSchema.from_field_map(
+            {
+                "items": StateField(type="array"),
+                "seen": StateField(
+                    type="array",
+                    reducer=ReducerRef(name="wf.std.append"),
+                ),
+            }
+        ),
+        foreach=ForeachNode.model_validate(
+            {
+                "id": "each",
+                "type": "foreach",
+                "over": "state.items",
+                "as": "item",
+                "mode": "concurrent",
+                "concurrent": {"max_active": 2, "max_outstanding": 2},
+            }
+        ),
+    )
+
+    context_lineage_ids: list[str] = []
+
+    def record(payload: dict[str, Any], ctx: RuntimeContext) -> dict[str, Any]:
+        context_lineage_ids.append(ctx.lineage_id)
+        return {"outcome": "ok", "output": payload}
+
+    run = execute_workflow(
+        workflow,
+        {"items": ["a", "b"]},
+        {"record": record},
+    )
+
+    item_frames = [
+        frame for frame in run.frames.values() if frame.kind == "foreach_iteration"
+    ]
+    item_lineage_ids = {frame.lineage_id for frame in item_frames}
+
+    assert run.frames["root"].scope_id == "root"
+    assert run.frames["root"].lineage_id == "root"
+    assert run.frames["root"].parent_lineage_id is None
+    assert len(item_frames) == 2
+    assert item_lineage_ids == {"root/each[0]", "root/each[1]"}
+    assert set(context_lineage_ids) == item_lineage_ids
+    assert all(frame.scope_id == "root" for frame in item_frames)
+    assert all(frame.parent_lineage_id == "root" for frame in item_frames)
+
+
+def test_nested_concurrent_foreach_records_parent_child_lineages() -> None:
+    workflow = _nested_foreach_lineage_workflow()
+
+    run = execute_workflow(
+        workflow,
+        {"outer_items": ["a", "b"], "inner_items": [1, 2]},
+        {"record": lambda payload, _ctx: {"outcome": "ok", "output": payload}},
+    )
+
+    outer_frames = _foreach_frames(run, "outer_each")
+    inner_frames = _foreach_frames(run, "inner_each")
+
+    assert {frame.lineage_id for frame in outer_frames} == {
+        "root/outer_each[0]",
+        "root/outer_each[1]",
+    }
+    assert all(frame.parent_lineage_id == "root" for frame in outer_frames)
+    assert {(frame.parent_lineage_id, frame.lineage_id) for frame in inner_frames} == {
+        ("root/outer_each[0]", "root/outer_each[0]/inner_each[0]"),
+        ("root/outer_each[0]", "root/outer_each[0]/inner_each[1]"),
+        ("root/outer_each[1]", "root/outer_each[1]/inner_each[0]"),
+        ("root/outer_each[1]", "root/outer_each[1]/inner_each[1]"),
+    }
 
 
 def test_sync_concurrent_foreach_fails_run_on_item_runtime_error() -> None:
@@ -413,6 +490,91 @@ def _same_item_reducer_visibility_workflow() -> Workflow:
     )
 
 
+def _nested_foreach_lineage_workflow() -> Workflow:
+    outer = ForeachNode.model_validate(
+        {
+            "id": "outer_each",
+            "type": "foreach",
+            "over": "state.outer_items",
+            "as": "outer",
+            "mode": "concurrent",
+            "concurrent": {"max_active": 2, "max_outstanding": 2},
+        }
+    )
+    inner = ForeachNode.model_validate(
+        {
+            "id": "inner_each",
+            "type": "foreach",
+            "over": "state.inner_items",
+            "as": "inner",
+            "mode": "concurrent",
+            "concurrent": {"max_active": 2, "max_outstanding": 2},
+        }
+    )
+    return Workflow(
+        name="nested_foreach_lineages",
+        input_schema=SchemaRef(
+            type="object",
+            properties={
+                "outer_items": {"type": "array"},
+                "inner_items": {"type": "array"},
+            },
+        ),
+        state_schema=StateSchema.from_field_map(
+            {
+                "outer_items": StateField(type="array"),
+                "inner_items": StateField(type="array"),
+                "seen": StateField(
+                    type="array",
+                    reducer=ReducerRef(name="wf.std.append"),
+                ),
+            }
+        ),
+        output_schema=SchemaRef(type="object", properties={"seen": {"type": "array"}}),
+        node_defs=[
+            NodeDef(
+                name="record",
+                input_schema=SchemaRef(
+                    type="object",
+                    properties={"seen": {}},
+                    required=["seen"],
+                ),
+                output_schema=SchemaRef(
+                    type="object",
+                    properties={"seen": {}},
+                    required=["seen"],
+                ),
+                outcomes=["ok"],
+            )
+        ],
+        start="outer_each",
+        nodes=[
+            outer,
+            inner,
+            NodeUse.model_validate(
+                {
+                    "id": "record",
+                    "type": "node",
+                    "node": "record",
+                    "input": [{"target": "seen", "path": "context.inner"}],
+                    "output": [{"source": "seen", "target": "state.seen"}],
+                }
+            ),
+        ],
+        edges=[
+            Edge.model_validate(
+                {"from": "outer_each", "outcome": "loop", "to": "inner_each"}
+            ),
+            Edge.model_validate(
+                {"from": "inner_each", "outcome": "loop", "to": "record"}
+            ),
+            Edge.model_validate({"from": "record", "outcome": "ok", "to": END}),
+            Edge.model_validate({"from": "inner_each", "outcome": "done", "to": END}),
+            Edge.model_validate({"from": "outer_each", "outcome": "done", "to": END}),
+        ],
+    )
+
+
 def _workflow(
     *,
     state_schema: StateSchema,
@@ -479,6 +641,15 @@ def _workflow(
         ],
         edges=edges,
     )
+
+
+def _foreach_frames(run: RunState, foreach_node_id: str) -> list[ExecutionFrame]:
+    frames = []
+    for frame in run.frames.values():
+        metadata = ForeachIterationMetadata.from_frame(frame)
+        if metadata is not None and metadata.foreach_node_id == foreach_node_id:
+            frames.append(frame)
+    return frames
 
 
 def _multi_step_overlay_workflow() -> Workflow:

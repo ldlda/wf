@@ -79,6 +79,9 @@ def _resolve_node_execution(
     context = RuntimeContext(
         current_node_id=node.id,
         frame_id=frame.id,
+        scope_id=frame.scope_id,
+        lineage_id=frame.lineage_id,
+        parent_lineage_id=frame.parent_lineage_id,
         prior_outcome=frame.prior_outcome,
         activated_incoming_edge=frame.activated_incoming_edge,
         metadata=dict(frame.metadata),
@@ -127,6 +130,7 @@ def _finalize_node_execution(
                 index=item_index,
                 frame_id=frame.id,
                 patch=patch,
+                lineage_id=frame.lineage_id,
             )
             barrier.save_to_frame(parent_frame, foreach_node_id)
             state_changes = {}

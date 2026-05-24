@@ -47,6 +47,9 @@ class ExecutionFrame:
     node_id: str
     status: FrameStatus = FrameStatus.PENDING
     parent_frame_id: str | None = None
+    scope_id: str = "root"
+    lineage_id: str = "root"
+    parent_lineage_id: str | None = None
     prior_outcome: str | None = None
     activated_incoming_edge: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
@@ -57,6 +60,9 @@ class ExecutionFrame:
 class RuntimeContext:
     current_node_id: str
     frame_id: str = "root"
+    scope_id: str = "root"
+    lineage_id: str = "root"
+    parent_lineage_id: str | None = None
     retry_count: int = 0
     prior_outcome: str | None = None
     activated_incoming_edge: str | None = None

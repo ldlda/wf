@@ -71,6 +71,7 @@ class PendingItemResult:
     index: int
     frame_id: str
     status: Literal["succeeded", "failed"]
+    lineage_id: str | None = None
     patch: StatePatch = field(default_factory=StatePatch)
     error: ItemErrorRecord | None = None
 
@@ -88,10 +89,13 @@ class PendingItemResult:
             ) from exc
         patch_changes = raw.get("patch_changes", {})
         patch_writes = raw.get("patch_writes")
+        lineage_id = raw.get("lineage_id")
         if not isinstance(index, int) or index < 0:
             raise WorkflowExecutionError("malformed pending foreach result index")
         if not isinstance(frame_id, str):
             raise WorkflowExecutionError("malformed pending foreach result frame id")
+        if lineage_id is not None and not isinstance(lineage_id, str):
+            raise WorkflowExecutionError("malformed pending foreach result lineage id")
         if status not in {"succeeded", "failed"}:
             raise WorkflowExecutionError("malformed pending foreach result status")
         if not isinstance(patch_changes, dict):
@@ -103,6 +107,7 @@ class PendingItemResult:
             index=index,
             frame_id=frame_id,
             status=status,
+            lineage_id=lineage_id,
             patch=(
                 StatePatch(
                     writes=[_state_write_from_metadata(item) for item in patch_writes]
@@ -122,6 +127,7 @@ class PendingItemResult:
             "index": self.index,
             "frame_id": self.frame_id,
             "status": self.status,
+            "lineage_id": self.lineage_id,
             "patch_changes": dict(self.patch.changes),
             "patch_writes": [
                 _state_write_to_metadata(write) for write in self.patch.writes
@@ -251,7 +257,12 @@ class ForeachBarrierState:
         )
 
     def add_success_patch(
-        self, *, index: int, frame_id: str, patch: StatePatch
+        self,
+        *,
+        index: int,
+        frame_id: str,
+        patch: StatePatch,
+        lineage_id: str | None = None,
     ) -> None:
         """Buffer or extend successful item patches by item index.
 
@@ -266,6 +277,7 @@ class ForeachBarrierState:
                 index=index,
                 frame_id=frame_id,
                 status="succeeded",
+                lineage_id=lineage_id,
                 patch=patch,
             )
             return
@@ -274,6 +286,13 @@ class ForeachBarrierState:
                 f"foreach item result for index {index!r} belongs to frame "
                 f"{existing.frame_id!r}, got {frame_id!r}"
             )
+        if lineage_id is not None and existing.lineage_id not in {None, lineage_id}:
+            raise WorkflowExecutionError(
+                f"foreach item result for index {index!r} belongs to lineage "
+                f"{existing.lineage_id!r}, got {lineage_id!r}"
+            )
+        if existing.lineage_id is None:
+            existing.lineage_id = lineage_id
         existing.patch.extend(patch)
 
     def add_failure(self, *, error: ItemErrorRecord) -> None:
