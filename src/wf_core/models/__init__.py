@@ -24,6 +24,7 @@ from wf_core.models.steps import (
     SubgraphNode,
 )
 from wf_core.models.workflow import Edge, Workflow
+from wf_core.models.workflow_refs import WorkflowRef, workflow_ref_from
 
 __all__ = [
     "BinaryCondition",
@@ -54,4 +55,6 @@ __all__ = [
     "SubgraphNode",
     "VariadicCondition",
     "Workflow",
+    "WorkflowRef",
+    "workflow_ref_from",
 ]

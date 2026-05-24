@@ -64,8 +64,11 @@ class SubgraphNode(BaseModel):
 ```
 
 Current implementation status: `wf_core` has a first placeholder
-`SubgraphNode`, but `workflow` is still a plain string reference. The placeholder
-also carries `input_schema` and `output_schema` so validation can check parent
+`SubgraphNode`. Its `workflow` field is a structural `WorkflowRef`: local
+compiled workflows use `{"name": "child"}`, while saved artifacts can use
+`{"artifact_id": "child", "version": 1}`. Legacy strings still parse as input,
+but saved graphs should persist the structural shape. The placeholder also
+carries `input_schema` and `output_schema` so validation can check parent
 bindings before native execution exists. Runtime execution intentionally raises
 until a later slice adds child scope/frame execution.
 
@@ -316,10 +319,10 @@ child = parent.subgraph(
 
 This copies the compiled child workflow contract into a core `SubgraphNode`,
 appends it to the builder, and returns the step for normal routing. It does not
-make the child executable yet. `workflow` is still a string reference inside the
-core model; higher layers need a structural workflow reference before
-saved/deployed workflow dependencies become stable. The lower-level
-`subgraph_ref(...)` helper exists for code that wants only the core step object.
+make the child executable yet. The core `workflow` field is structural, but
+higher layers still need dependency resolution before saved/deployed workflow
+refs can run. The lower-level `subgraph_ref(...)` helper exists for code that
+wants only the core step object.
 
 Possible API:
 

@@ -1,8 +1,14 @@
 from __future__ import annotations
 
-from pydantic import BaseModel
+import pytest
+from pydantic import BaseModel, ValidationError
 
 from wf_artifacts import WorkflowCapabilityRef
+from wf_core import WorkflowRef
+
+
+class CoreWorkflowRefPayload(BaseModel):
+    ref: WorkflowRef
 
 
 def test_workflow_capability_ref_round_trips() -> None:
@@ -60,3 +66,38 @@ def test_workflow_capability_ref_rejects_other_namespaces() -> None:
         assert "workflow" in str(exc)
     else:
         raise AssertionError("expected non-workflow ref to be rejected")
+
+
+def test_core_workflow_ref_accepts_local_name_string() -> None:
+    payload = CoreWorkflowRefPayload.model_validate({"ref": "child_workflow"})
+
+    assert payload.ref.name == "child_workflow"
+    assert payload.ref.artifact_id is None
+    assert payload.model_dump(mode="json")["ref"]["name"] == "child_workflow"
+
+
+def test_core_workflow_ref_accepts_legacy_saved_artifact_display_string() -> None:
+    payload = CoreWorkflowRefPayload.model_validate({"ref": "workflow.echo.wrapper.v2"})
+
+    assert payload.ref.name is None
+    assert payload.ref.artifact_id == "echo.wrapper"
+    assert payload.ref.version == 2
+    assert payload.model_dump(mode="json")["ref"]["artifact_id"] == "echo.wrapper"
+    assert payload.model_dump(mode="json")["ref"]["version"] == 2
+
+
+def test_core_workflow_ref_accepts_structural_saved_artifact_ref() -> None:
+    payload = CoreWorkflowRefPayload.model_validate(
+        {"ref": {"artifact_id": "echo_wrapper", "version": 2}}
+    )
+
+    assert payload.ref.artifact_id == "echo_wrapper"
+    assert payload.ref.version == 2
+    assert payload.ref.display == "workflow.echo_wrapper.v2"
+
+
+def test_core_workflow_ref_rejects_mixed_name_and_artifact_ref() -> None:
+    with pytest.raises(ValidationError, match="exactly one"):
+        CoreWorkflowRefPayload.model_validate(
+            {"ref": {"name": "child", "artifact_id": "echo", "version": 1}}
+        )

@@ -19,6 +19,7 @@ from wf_core import (
     StateSchema,
     SubgraphNode,
     Workflow,
+    WorkflowRef,
     RunState,
     execute_workflow,
 )
@@ -34,6 +35,7 @@ from wf_core.models.steps import (
 )
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_core.runtime.ops.merges import ReducerDefinition
+from wf_platform import CapabilityRef
 
 from ..dsl import Expr, GraphPath, PathArg, PathExpr, compile_condition
 from ..nodes.callables import SyncRegistryHandler
@@ -75,6 +77,30 @@ def _condition_base(condition: CoreCondition) -> str:
     ):
         return slug_id(str(condition.left.path))
     return "condition"
+
+
+def _workflow_ref_base(
+    workflow_ref: WorkflowRef | str | Mapping[str, object] | None,
+    workflow: Workflow,
+) -> str:
+    """Return an auto-id base for a subgraph ref without parsing display names."""
+    if isinstance(workflow_ref, WorkflowRef):
+        return slug_id(workflow_ref.name or workflow_ref.artifact_id or workflow.name)
+    if isinstance(workflow_ref, Mapping):
+        raw_name = workflow_ref.get("name") or workflow_ref.get("artifact_id")
+        return slug_id(str(raw_name or workflow.name))
+    return slug_id(workflow_ref or workflow.name)
+
+
+def _capability_ref_name(name: str | CapabilityRef) -> str:
+    """Return the current core NodeUse string for an authored capability ref.
+
+    `NodeUse.node` is still a string boundary because node definitions and
+    registries are keyed by string today. Accepting `CapabilityRef` here keeps
+    authoring code structural while confining display-name conversion to this
+    compatibility seam.
+    """
+    return str(name)
 
 
 def _canonical_input_bindings(
@@ -281,7 +307,7 @@ class WorkflowBuilder:
     @overload
     def use_ref(
         self,
-        name: str,
+        name: str | CapabilityRef,
         *,
         id: str | None = None,
         input: Sequence[InputBindingArg] | None = None,
@@ -293,7 +319,7 @@ class WorkflowBuilder:
     @deprecated("use input/output canonical binding lists instead")
     def use_ref(
         self,
-        name: str,
+        name: str | CapabilityRef,
         *,
         id: str | None = None,
         in_map: MapArg | None = None,
@@ -304,7 +330,7 @@ class WorkflowBuilder:
 
     def use_ref(
         self,
-        name: str,
+        name: str | CapabilityRef,
         *,
         id: str | None = None,
         input: Sequence[InputBindingArg] | None = None,
@@ -346,10 +372,11 @@ class WorkflowBuilder:
             if output is not None
             else _canonical_output_bindings(normalize_output_mapping(out_map))
         )
+        node_name = _capability_ref_name(name)
         node = NodeUse(
-            id=id or self._next_step_id(slug_id(name)),
+            id=id or self._next_step_id(slug_id(node_name)),
             type="node",
-            node=name,
+            node=node_name,
             desc=desc,
             input=node_input,
             output=node_output,
@@ -364,7 +391,7 @@ class WorkflowBuilder:
         id: str | None = None,
         input: Sequence[InputBindingArg] | None = None,
         output: Sequence[OutputBindingArg] | None = None,
-        workflow_ref: str | None = None,
+        workflow_ref: WorkflowRef | str | Mapping[str, object] | None = None,
         desc: str | None = None,
     ) -> SubgraphNode:
         """Add a native subgraph boundary using a compiled child workflow contract.
@@ -373,7 +400,7 @@ class WorkflowBuilder:
         until wf_core grows child workflow scope/frame execution.
         """
         node = subgraph_ref(
-            id=id or self._next_step_id(slug_id(workflow_ref or workflow.name)),
+            id=id or self._next_step_id(_workflow_ref_base(workflow_ref, workflow)),
             workflow=workflow,
             input=normalize_input_bindings(input),
             output=normalize_output_bindings(output),

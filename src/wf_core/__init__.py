@@ -18,6 +18,8 @@ from .models import (
     StateSchema,
     SubgraphNode,
     Workflow,
+    WorkflowRef,
+    workflow_ref_from,
 )
 from .runtime import (
     AsyncNodeHandler,
@@ -84,6 +86,7 @@ __all__ = [
     "ValidationIssueCode",
     "ValidationReport",
     "Workflow",
+    "WorkflowRef",
     "WorkflowExecutionError",
     "coerce_node_result",
     "execute_workflow_async",
@@ -93,4 +96,5 @@ __all__ = [
     "step_workflow_async",
     "step_workflow",
     "validate_workflow",
+    "workflow_ref_from",
 ]

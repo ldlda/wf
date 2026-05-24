@@ -254,8 +254,10 @@ Today there are two different authoring paths:
   native parent state.
 - `subgraph_ref` builds a native `SubgraphNode` contract from a compiled
   `Workflow`: child input schema, output schema, and workflow outcomes are
-  copied into the boundary. Runtime execution still raises until native
-  subgraph scopes are implemented.
+  copied into the boundary. The workflow reference is structural: local
+  workflows use `{"name": "child"}`, saved artifacts can use
+  `{"artifact_id": "child", "version": 1}`. Runtime execution still raises
+  until native subgraph scopes are implemented.
 - `WorkflowBuilder.subgraph(...)` is the builder-facing version of
   `subgraph_ref`: it appends the native boundary step and returns it as a
   `StepRef` for `connect()` / `set_entry_point()`.

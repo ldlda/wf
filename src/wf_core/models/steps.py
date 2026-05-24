@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from wf_core.models.conditions import Condition
 from wf_core.models.schemas import SchemaRef
+from wf_core.models.workflow_refs import WorkflowRef
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 
@@ -167,7 +168,7 @@ class SubgraphNode(BaseModel):
 
     id: str
     type: Literal["subgraph"]
-    workflow: str = Field(
+    workflow: WorkflowRef = Field(
         description=(
             "Reference to the child workflow artifact or registry key. The core "
             "does not resolve this reference until native subgraph runtime "

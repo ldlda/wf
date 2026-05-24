@@ -17,6 +17,7 @@ from wf_authoring import (
 from wf_core import END, RunStatus, WorkflowExecutionError
 from wf_core.models.steps import InputPathBinding, InputValueBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
+from wf_platform import CapabilityRef
 
 from tests.authoring.helpers import (
     AutoBindInput,
@@ -374,6 +375,23 @@ def test_builder_use_ref_accepts_canonical_binding_dicts() -> None:
     assert isinstance(step.input[0], InputPathBinding)
     assert step.input[0].path == GraphSourcePath.input("text")
     assert step.output[0].target == StatePath.of("echoed")
+
+
+def test_builder_use_ref_accepts_structural_capability_ref() -> None:
+    builder = WorkflowBuilder(
+        name="external_ref_structural",
+        input_schema={},
+        state_schema={"fields": {}},
+        output_schema={},
+    )
+
+    step = builder.use_ref(
+        CapabilityRef.parse("demo.personal.echo"),
+        input=[input_from(input_path("text"), "text")],
+    )
+
+    assert step.node == "demo.personal.echo"
+    assert step.id == "demo_personal_echo"
 
 
 def test_builder_warns_when_explicit_deprecated_maps_are_used() -> None:

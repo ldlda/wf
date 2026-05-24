@@ -163,7 +163,7 @@ def test_subgraph_ref_copies_child_workflow_contract() -> None:
     )
 
     assert step.type == "subgraph"
-    assert step.workflow == child.name
+    assert step.workflow.name == child.name
     assert step.input_schema == child.input_schema
     assert step.output_schema == child.output_schema
     assert step.outcomes == child.outcomes
@@ -200,6 +200,21 @@ def test_subgraph_ref_contract_validates_in_parent_workflow() -> None:
     )
 
     assert parent.validate_structure().errors == []
+
+
+def test_subgraph_ref_accepts_structural_saved_workflow_reference() -> None:
+    child = build_demo_workflow()
+
+    step = subgraph_ref(
+        id="run_child",
+        workflow=child,
+        workflow_ref={"artifact_id": "demo_child", "version": 2},
+    )
+
+    dumped = step.model_dump(mode="json")
+    assert dumped["workflow"]["artifact_id"] == "demo_child"
+    assert dumped["workflow"]["version"] == 2
+    assert "name" not in dumped["workflow"]
 
 
 def test_workflow_builder_subgraph_adds_native_subgraph_node() -> None:

@@ -9,8 +9,10 @@ from wf_core import (
     RuntimeContext,
     SubgraphNode,
     Workflow,
+    WorkflowRef,
     execute_workflow,
     execute_workflow_async,
+    workflow_ref_from,
 )
 from wf_core.models.steps import InputBinding, OutputBinding
 
@@ -26,7 +28,7 @@ def subgraph_ref(
     workflow: Workflow,
     input: list[InputBinding] | None = None,
     output: list[OutputBinding] | None = None,
-    workflow_ref: str | None = None,
+    workflow_ref: WorkflowRef | str | Mapping[str, object] | None = None,
     desc: str | None = None,
 ) -> SubgraphNode:
     """Create a native subgraph boundary from a compiled child workflow contract.
@@ -39,7 +41,7 @@ def subgraph_ref(
     return SubgraphNode(
         id=id,
         type="subgraph",
-        workflow=workflow_ref or workflow.name,
+        workflow=workflow_ref_from(workflow_ref or {"name": workflow.name}),
         desc=desc,
         input_schema=workflow.input_schema,
         output_schema=workflow.output_schema,
