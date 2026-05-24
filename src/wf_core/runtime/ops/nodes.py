@@ -18,12 +18,16 @@ from wf_core.run_state import (
     StepExecutionResult,
 )
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
-from wf_core.runtime.lineage import append_lineage_writes, is_root_lineage_frame
+from wf_core.runtime.lineage import (
+    append_lineage_writes,
+    commit_patch_for_frame,
+    scope_input_for_frame,
+)
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.schemas import validate_payload_against_schema
-from wf_core.runtime.ops.state import StatePatch, build_output_patch, commit_state_patch
+from wf_core.runtime.ops.state import StatePatch, build_output_patch
 
 NodeHandler = Callable[[dict[str, Any], RuntimeContext], NodeResult | dict[str, Any]]
 AsyncNodeHandler = Callable[
@@ -62,7 +66,7 @@ def _resolve_node_execution(
             value = safe_resolve_path(
                 str(binding.path),
                 state=state_view,
-                workflow_input=run.workflow_input,
+                workflow_input=scope_input_for_frame(run, frame),
                 context=context_values,
             )
         else:
@@ -121,18 +125,7 @@ def _finalize_node_execution(
     )
     owner = item_frame_owner(frame)
     if owner is None:
-        if is_root_lineage_frame(frame):
-            state_changes = commit_state_patch(run.state, patch)
-        else:
-            # Non-root frames are future subgraph/fork branch execution: writes
-            # become lineage-local until an explicit boundary/barrier commits.
-            append_lineage_writes(
-                run,
-                scope_id=frame.scope_id,
-                lineage_id=frame.lineage_id,
-                writes=patch.writes,
-            )
-            state_changes = {}
+        state_changes = commit_patch_for_frame(run, frame, patch)
     else:
         parent_frame_id, foreach_node_id, item_index = owner
         parent_frame = run.frames[parent_frame_id]
@@ -155,7 +148,7 @@ def _finalize_node_execution(
             barrier.save_to_frame(parent_frame, foreach_node_id)
             state_changes = {}
         else:
-            state_changes = commit_state_patch(run.state, patch)
+            state_changes = commit_patch_for_frame(run, parent_frame, patch)
     return StepExecutionResult(
         outcome=result.outcome,
         resolved_input=resolved_input,

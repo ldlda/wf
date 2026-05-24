@@ -18,12 +18,20 @@ from wf_core.run_state import (
 from wf_core.runtime.scheduler import add_frame
 
 
-def create_run_state(workflow: Workflow, workflow_input: dict[str, object]) -> RunState:
+def initial_state(
+    workflow: Workflow, workflow_input: dict[str, object]
+) -> dict[str, object]:
+    """Create one scope's committed state from defaults plus workflow input."""
     state: dict[str, object] = {}
     for field in workflow.state_schema.fields:
         if field.default is not None:
             set_nested_value(state, list(field.path.parts), deepcopy(field.default))
     state.update(dict(workflow_input))
+    return state
+
+
+def create_run_state(workflow: Workflow, workflow_input: dict[str, object]) -> RunState:
+    state = initial_state(workflow, workflow_input)
     run = RunState(
         workflow_name=workflow.name,
         status=RunStatus.PENDING,
@@ -33,6 +41,7 @@ def create_run_state(workflow: Workflow, workflow_input: dict[str, object]) -> R
             ROOT_SCOPE_ID: RuntimeScope(
                 id=ROOT_SCOPE_ID,
                 workflow_name=workflow.name,
+                workflow_input=dict(workflow_input),
                 committed_state=state,
             )
         },

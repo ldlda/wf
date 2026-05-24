@@ -7,10 +7,9 @@ from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.run_state import ExecutionFrame, LineageState, RunState, StateWrite
-from wf_core.run_state import ROOT_LINEAGE_ID, ROOT_SCOPE_ID
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
 from wf_core.runtime.ops.state import StatePatch
-from wf_core.runtime.ops.state import safe_set_nested_value
+from wf_core.runtime.ops.state import commit_state_patch, safe_set_nested_value
 
 
 @dataclass(slots=True)
@@ -79,14 +78,34 @@ def lineage_writes_for_frame(
     return pending.patch.writes
 
 
-def is_root_lineage_frame(frame: ExecutionFrame) -> bool:
-    """Return whether a frame currently commits directly to root run state.
+def is_scope_root_lineage_frame(run: RunState, frame: ExecutionFrame) -> bool:
+    """Return whether writes from this frame commit to its scope state root."""
+    lineage = run.lineages.get(frame.lineage_id)
+    return (
+        lineage is not None
+        and lineage.scope_id == frame.scope_id
+        and lineage.parent_id is None
+    )
 
-    This is a migration shortcut, not the final commit policy. Once native
-    subgraphs can complete, direct commits should be decided by an explicit
-    scope/lineage commit target rather than only by root ids.
+
+def commit_patch_for_frame(
+    run: RunState, frame: ExecutionFrame, patch: StatePatch
+) -> dict[str, Any]:
+    """Commit at a scope root or buffer writes in the frame lineage.
+
+    Child workflow root frames own a committed child-state root just like the
+    top-level root frame owns `RunState.state`. Descendant branch/item frames
+    remain isolated until an explicit barrier or future gather commits them.
     """
-    return frame.scope_id == ROOT_SCOPE_ID and frame.lineage_id == ROOT_LINEAGE_ID
+    if is_scope_root_lineage_frame(run, frame):
+        return commit_state_patch(scope_state_for_frame(run, frame), patch)
+    append_lineage_writes(
+        run,
+        scope_id=frame.scope_id,
+        lineage_id=frame.lineage_id,
+        writes=patch.writes,
+    )
+    return {}
 
 
 def scope_state_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]:
@@ -95,6 +114,14 @@ def scope_state_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any
     if scope is None:
         raise ValueError(f"unknown scope {frame.scope_id!r}")
     return scope.committed_state
+
+
+def scope_input_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]:
+    """Return the invocation input associated with the frame's workflow scope."""
+    scope = run.scopes.get(frame.scope_id)
+    if scope is None:
+        raise ValueError(f"unknown scope {frame.scope_id!r}")
+    return scope.workflow_input
 
 
 def add_lineage(

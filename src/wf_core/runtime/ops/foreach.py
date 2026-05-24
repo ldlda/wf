@@ -14,18 +14,18 @@ from wf_core.runtime.foreach_state import (
 )
 from wf_core.runtime.lineage import (
     add_lineage,
-    append_lineage_writes,
-    is_root_lineage_frame,
+    commit_patch_for_frame,
     lineage_patch,
+    scope_input_for_frame,
 )
 from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.index import WorkflowIndex
 from wf_core.runtime.ops.merges import ReducerDefinition
+from wf_core.runtime.ops.overlays import state_view_for_frame
 from wf_core.runtime.ops.state import (
     StatePatch,
     build_barrier_patch,
-    commit_state_patch,
 )
 from wf_core.runtime.scheduler import (
     ForeachIterationMetadata,
@@ -182,8 +182,8 @@ def _resolve_foreach_iterable(
 ) -> list[object]:
     iterable = safe_resolve_path(
         str(step.over),
-        state=run.state,
-        workflow_input=run.workflow_input,
+        state=state_view_for_frame(run, frame),
+        workflow_input=scope_input_for_frame(run, frame),
         context=frame_context_values(frame),
     )
     if not isinstance(iterable, list):
@@ -346,19 +346,10 @@ def _finish_concurrent_foreach(
     combined = build_barrier_patch(
         workflow,
         item_patches,
-        run.state,
+        state_view_for_frame(run, frame),
         reducers=reducers,
     )
-    if is_root_lineage_frame(frame):
-        state_changes = commit_state_patch(run.state, combined)
-    else:
-        append_lineage_writes(
-            run,
-            scope_id=frame.scope_id,
-            lineage_id=frame.lineage_id,
-            writes=combined.writes,
-        )
-        state_changes = {}
+    state_changes = commit_patch_for_frame(run, frame, combined)
     append_step_result_trace(
         run,
         frame_id=frame.id,

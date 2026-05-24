@@ -68,7 +68,7 @@ def validate_subgraph_node(
     workflow: Workflow,
     report: ValidationReport,
 ) -> None:
-    """Validate a subgraph boundary contract before runtime support exists."""
+    """Validate a subgraph boundary independently of runtime child resolution."""
     _validate_boundary_bindings(
         input_bindings=node.input,
         output_bindings=node.output,

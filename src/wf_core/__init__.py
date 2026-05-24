@@ -24,6 +24,7 @@ from .models import (
 from .runtime import (
     AsyncNodeHandler,
     NodeHandler,
+    PreparedSubgraph,
     WorkflowExecutionError,
     coerce_node_result,
     execute_workflow_async,
@@ -72,6 +73,7 @@ __all__ = [
     "SubgraphNode",
     "AsyncNodeHandler",
     "NodeHandler",
+    "PreparedSubgraph",
     "ExecutionFrame",
     "FrameStatus",
     "RunState",

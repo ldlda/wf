@@ -38,7 +38,9 @@ from wf_core.runtime.scheduler import (
     select_next_frame,
     wake_parent_for_child_progress,
 )
+from wf_core.runtime.subgraphs import PreparedSubgraph, step_subgraph
 from wf_core.run_state import ExecutionFrame, FrameStatus, RunState, StepExecutionResult
+from wf_core.run_state import ROOT_SCOPE_ID
 from wf_core.tokens import END
 
 from .preparation import prepare_step
@@ -85,7 +87,10 @@ def complete_end_step(
 ) -> RunState:
     """Record an explicit workflow terminal and complete the active frame."""
     result = StepExecutionResult(outcome=outcome)
-    run.outcome = outcome
+    frame = run.frames[frame_id]
+    frame.metadata["workflow_outcome"] = outcome
+    if frame.parent_frame_id is None:
+        run.outcome = outcome
     append_step_result_trace(
         run,
         frame_id=frame_id,
@@ -96,7 +101,7 @@ def complete_end_step(
     )
     advance_frame(
         run,
-        run.frames[frame_id],
+        frame,
         outcome=outcome,
         next_node_id=END,
     )
@@ -110,6 +115,7 @@ def step_workflow(
     *,
     index: WorkflowIndex | None = None,
     reducers: Mapping[str, ReducerDefinition] | None = None,
+    subgraphs: Mapping[str, PreparedSubgraph[NodeHandler]] | None = None,
 ) -> RunState:
     """Execute at most one synchronous workflow step."""
     frame = run.current_frame() if run.current_frame_id is not None else None
@@ -149,14 +155,23 @@ def step_workflow(
             outcome=step.outcome,
         )
     elif isinstance(step, InterruptNode):
+        if frame.kind == "subgraph_root" or frame.scope_id != ROOT_SCOPE_ID:
+            raise WorkflowExecutionError(
+                "child interrupts are not supported until native subgraph resume routing exists"
+            )
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
         return step_foreach(workflow, run, step, index, reducers=reducers)
     elif isinstance(step, SubgraphNode):
-        raise WorkflowExecutionError(
-            f"subgraph step {step.id!r} references {step.workflow!r}, "
-            "but native subgraph execution is not implemented yet"
+        step_result = step_subgraph(
+            workflow,
+            run,
+            step,
+            subgraphs=subgraphs,
+            reducers=reducers,
         )
+        if step_result is None:
+            return run
     else:
         raise WorkflowExecutionError(
             f"unsupported step type {getattr(step, 'type', type(step).__name__)!r}"
@@ -205,6 +220,7 @@ async def step_workflow_async(
     *,
     index: WorkflowIndex | None = None,
     reducers: Mapping[str, ReducerDefinition] | None = None,
+    subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
 ) -> RunState:
     """Execute at most one async workflow step."""
     frame = run.current_frame() if run.current_frame_id is not None else None
@@ -255,14 +271,23 @@ async def step_workflow_async(
             outcome=step.outcome,
         )
     elif isinstance(step, InterruptNode):
+        if frame.kind == "subgraph_root" or frame.scope_id != ROOT_SCOPE_ID:
+            raise WorkflowExecutionError(
+                "child interrupts are not supported until native subgraph resume routing exists"
+            )
         return handle_interrupt_step(run, step)
     elif isinstance(step, ForeachNode):
         return step_foreach(workflow, run, step, index, reducers=reducers)
     elif isinstance(step, SubgraphNode):
-        raise WorkflowExecutionError(
-            f"subgraph step {step.id!r} references {step.workflow!r}, "
-            "but native subgraph execution is not implemented yet"
+        step_result = step_subgraph(
+            workflow,
+            run,
+            step,
+            subgraphs=subgraphs,
+            reducers=reducers,
         )
+        if step_result is None:
+            return run
     else:
         raise WorkflowExecutionError(
             f"unsupported step type {getattr(step, 'type', type(step).__name__)!r}"

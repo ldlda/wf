@@ -49,13 +49,12 @@ implementation state.
   scaffolding slice is complete: core has `SubgraphNode`, structural
   `WorkflowRef`, workflow-level outcomes plus explicit `EndNode` termination,
   authoring helpers (`subgraph_ref` / `WorkflowBuilder.subgraph`), and artifact
-  reference conversion helpers. Runtime subgraph execution is still absent.
-  The next slice is non-interrupting child execution: resolve a prepared child
-  workflow, create a child scope/lineage, preserve child trace, map child
-  output back through the subgraph boundary, and route by the child's terminal
-  outcome. Interrupt bubbling/resume and saved/deployed child resolution follow
-  after that. Wrapper helpers currently run child workflows as ordinary nodes;
-  true graph-as-node behavior belongs here.
+  reference conversion helpers. Core can now execute a prepared local child
+  workflow through an isolated child scope/lineage, preserve its trace entries,
+  map child output through the boundary, and route by the child's terminal
+  outcome. Interrupt bubbling/resume and saved/deployed child resolution remain
+  next. Wrapper helpers currently run child workflows as ordinary nodes; native
+  `SubgraphNode` is now the graph-as-node path for prepared children.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of
@@ -98,7 +97,7 @@ Frame stress points remaining for native subgraphs and future fork/gather:
 
 The MCP workflow authoring path is now usable enough for real testing. The next
 bottleneck is runtime/platform correctness: resumable child execution,
-native subgraph execution, persistent run history, and protocol-native
-progress reporting. Concurrent foreach supplies scheduler/lineage precedent;
-native child graphs are now the missing runtime boundary. Those pieces should
-come before adding more high-level authoring sugar.
+saved/deployed child resolution, persistent run history, and protocol-native
+progress reporting. Concurrent foreach and prepared native child execution now
+supply scheduler/lineage precedent. Those remaining pieces should come before
+adding more high-level authoring sugar.

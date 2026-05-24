@@ -13,6 +13,7 @@ from .engine import (
     resume_workflow,
     resume_workflow_async,
 )
+from .subgraphs import PreparedSubgraph
 from .step import complete_step, step_workflow, step_workflow_async
 
 __all__ = [
@@ -29,4 +30,5 @@ __all__ = [
     "resume_workflow_async",
     "step_workflow",
     "step_workflow_async",
+    "PreparedSubgraph",
 ]

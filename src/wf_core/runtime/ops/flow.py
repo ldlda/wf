@@ -80,6 +80,10 @@ def advance_frame(
     frame.activated_incoming_edge = frame.node_id
     frame.node_id = next_node_id
     if next_node_id == END:
+        if frame.kind in {"workflow", "subgraph_root"}:
+            # Legacy terminal routing emits the workflow-level `ok` outcome.
+            # Explicit EndNode execution stores its declared outcome first.
+            frame.metadata.setdefault("workflow_outcome", "ok")
         frame.status = FrameStatus.COMPLETED
         frame.finished_at_node_id = END
         wake_parent_for_child_progress(run, frame.id)

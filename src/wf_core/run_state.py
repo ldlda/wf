@@ -5,6 +5,7 @@ from enum import StrEnum
 from typing import Any
 
 from wf_core.models.reducers import ReducerRef
+from wf_core.models.workflow_refs import WorkflowRef
 from wf_core.paths import StatePath
 
 ROOT_SCOPE_ID = "root"
@@ -54,7 +55,9 @@ class RuntimeScope:
 
     id: str
     workflow_name: str
+    workflow_input: dict[str, Any] = field(default_factory=dict)
     committed_state: dict[str, Any] = field(default_factory=dict)
+    workflow_ref: WorkflowRef | None = None
 
 
 @dataclass(slots=True)

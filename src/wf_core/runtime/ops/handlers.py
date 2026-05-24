@@ -3,9 +3,11 @@ from __future__ import annotations
 from wf_core.conditions import eval_condition
 from wf_core.models.steps import ConditionNode, InterruptNode
 from wf_core.run_state import FrameStatus, RunState, RunStatus, StepExecutionResult
+from wf_core.runtime.lineage import scope_input_for_frame
 from wf_core.runtime.ops.flow import append_trace
 from wf_core.runtime.ops.frames import frame_context_values
 from wf_core.runtime.ops.interrupts import build_interrupt_request
+from wf_core.runtime.ops.overlays import state_view_for_frame
 
 
 def handle_condition_step(
@@ -15,8 +17,8 @@ def handle_condition_step(
     frame = run.current_frame()
     predicate = eval_condition(
         step.check,
-        run.state,
-        run.workflow_input,
+        state_view_for_frame(run, frame),
+        scope_input_for_frame(run, frame),
         frame.prior_outcome,
     )
     outcome = "true" if predicate else "false"

@@ -34,11 +34,10 @@ The full native subgraph use of `RuntimeScope` is not implemented yet.
 `ForeachBarrierState` still owns scheduling/barrier metadata, but no longer has
 to be the primary write store for new concurrent foreach item results.
 
-Direct node commits currently use the explicit root-frame helper
-`is_root_lineage_frame(frame)`. That helper still means "root scope plus root
-lineage" during migration. The better long-term shape becomes feasible when
-native subgraph completion exists: direct commits should be decided by an
-explicit scope/lineage commit target, not by root ids.
+Direct node commits now use a scope-root decision: the top-level root commits
+to `RunState.state`, while a prepared native-subgraph root commits to its child
+scope state. Descendant item/branch lineages buffer writes until a barrier or
+future gather commits them.
 
 ## Problem
 

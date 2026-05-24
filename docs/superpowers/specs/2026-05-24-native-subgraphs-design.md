@@ -1,6 +1,6 @@
 # Native Subgraphs Design
 
-Status: scaffolding implemented; runtime execution planned
+Status: prepared-child execution implemented; interrupts/artifact resolution planned
 
 Native subgraphs should make a workflow usable as a workflow step without
 collapsing the child run into one opaque Python node call. The current
@@ -8,8 +8,9 @@ collapsing the child run into one opaque Python node call. The current
 compatibility wrappers, but they hide the child trace, child frames, and child
 interrupt lifecycle from `wf_core`.
 
-This design defines the core runtime shape. The boundary model is implemented;
-child execution, interruption, and saved-workflow resolution remain planned.
+This design defines the core runtime shape. The boundary model and
+non-interrupting prepared-child execution are implemented; interruption and
+saved-workflow resolution remain planned.
 
 ## Goals
 
@@ -76,8 +77,11 @@ declare terminal outcomes through `Workflow.outcomes` and `EndNode`.
 native boundary, while artifact helpers convert saved/capability workflow
 references into core `WorkflowRef` values.
 
-Runtime execution is deliberately not implemented: stepping a `SubgraphNode`
-fails explicitly until the next slice adds child scope/frame execution.
+Runtime execution now accepts caller-supplied `PreparedSubgraph` dependencies
+for local workflow refs. It creates a child scope/lineage, schedules child
+frames in the parent run, retains child trace entries, and applies mapped
+output only at boundary completion. Saved artifact refs are not loaded by
+`wf_core`, and child interrupts fail explicitly until resume routing exists.
 
 `WorkflowRef` should be structural, not a dotted string parser:
 
@@ -325,11 +329,11 @@ child = parent.subgraph(
 ```
 
 This copies the compiled child workflow contract into a core `SubgraphNode`,
-appends it to the builder, and returns the step for normal routing. It does not
-make the child executable yet. The core `workflow` field is structural, but
-higher layers still need dependency resolution before saved/deployed workflow
-refs can run. The lower-level `subgraph_ref(...)` helper exists for code that
-wants only the core step object.
+appends it to the builder, and returns the step for normal routing. Runtime
+execution requires the child graph and its handlers to be supplied as a
+`PreparedSubgraph`; higher layers still need dependency resolution before
+saved/deployed workflow refs can run. The lower-level `subgraph_ref(...)`
+helper exists for code that wants only the core step object.
 
 Possible API:
 
@@ -389,18 +393,18 @@ selection out of `wf_core`.
 - Artifact conversion helpers bridge saved workflow identities to core
   `WorkflowRef` values.
 
-### Slice 1: Non-Interrupting Inline Subgraph Runtime
+### Completed Slice 1: Non-Interrupting Prepared Subgraph Runtime
 
-- Resolve local/prepared child `WorkflowRef` dependencies at runtime; do not
-  load saved artifacts inside `wf_core`.
-- Execute child workflow to completion through child frames.
-- Give the child an explicit runtime scope/lineage so child state is isolated
+- Local/prepared child `WorkflowRef` dependencies resolve through
+  `PreparedSubgraph`; `wf_core` does not load saved artifacts.
+- Child workflows execute through child frames in the parent scheduler.
+- Each activation owns a child runtime scope/lineage so child state is isolated
   from parent state until boundary completion.
-- Preserve child trace in a clearly-owned form.
-- Apply child output to parent state through existing output binding code.
-- Route the parent step through the child's terminal `RunState.outcome`.
-- Tests: child output mapping, child internal trace visibility, parent trace
-  shape, child runtime failure fails parent.
+- Child trace entries remain in the parent run with child frame ids; completion
+  records the parent `subgraph` trace entry.
+- Child output maps to parent state through existing output binding machinery.
+- The parent step routes through the child's terminal workflow outcome.
+- Child interrupts reject explicitly until structural resume routing exists.
 
 ### Slice 2: Interrupt Bubbling and Resume
 
@@ -450,12 +454,10 @@ selection out of `wf_core`.
 
 ## Recommendation
 
-The typed boundary scaffold is complete. Start runtime work with Slice 1 as a
-non-interrupting inline/prepared subgraph. It gives us native trace/frame and
-scope/lineage semantics without taking on the hardest resume problem
-immediately. Do not delete the wrapper-node helpers yet; use them as
-compatibility and examples while native subgraphs mature.
+The typed boundary scaffold and non-interrupting prepared-child runtime are
+complete. Do not delete the wrapper-node helpers yet; use them as compatibility
+and examples while native subgraphs mature.
 
-Then implement Slice 2 before exposing saved workflows as broadly reusable child
-graphs. Saved workflows without nested interrupt support would look reusable but
-break at exactly the moment users need persistence and resume.
+Implement Slice 2 before exposing saved workflows as broadly reusable child
+graphs. Saved workflows without nested interrupt support would look reusable
+but break at exactly the moment users need persistence and resume.

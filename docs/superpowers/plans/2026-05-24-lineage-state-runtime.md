@@ -33,18 +33,17 @@ the compatibility subset needed before native subgraphs:
   `ForeachBarrierState` now keeps scheduling/result metadata plus compatibility
   patches for old serialized barrier data.
 
-Direct commits currently go through `is_root_lineage_frame(frame)`, which is the
-migration shortcut for root scope/root lineage. The eventual better shape is an
-explicit scope/lineage commit target, feasible once native subgraph completion
-can declare whether child writes commit to child scope, parent lineage, or only
-through boundary output bindings.
+Direct commits now go through a scope-root commit decision: top-level frames
+commit to root state, and prepared native-child root frames commit to their
+child scope state. Descendant item/branch lineages still buffer writes until a
+barrier or future gather commits them.
 
 Remaining work should avoid jumping straight into a broad rewrite. Native
-subgraph scaffolding is now present (`SubgraphNode`, structural `WorkflowRef`,
-terminal workflow outcomes, and authoring helpers). The next runtime slice can
-execute a non-interrupting prepared child graph using the current scope/lineage
-primitives; interrupt bubbling and saved/deployed workflow resolution remain
-later work.
+subgraph scaffolding and non-interrupting prepared-child execution are now
+present (`SubgraphNode`, structural `WorkflowRef`, terminal workflow outcomes,
+authoring helpers, and `PreparedSubgraph`). Child graphs execute through their
+own scope/lineage and map output back at completion. Interrupt bubbling and
+saved/deployed workflow resolution remain later work.
 
 ---
 

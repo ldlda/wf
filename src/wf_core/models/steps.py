@@ -158,12 +158,11 @@ class NodeUse(BaseModel):
 
 
 class SubgraphNode(BaseModel):
-    """Workflow boundary step reserved for native subgraph execution.
+    """Workflow boundary step for native prepared-child execution.
 
-    This is a contract-bearing placeholder, not the implementation of nested
-    workflow execution yet. The core can validate the parent graph's bindings
-    and declared outcomes now; a later runtime slice will resolve ``workflow``
-    into a child graph, create a child scope/lineage, and commit its result.
+    The runtime can execute an already-prepared local child graph through a
+    child scope/lineage and commit only its mapped boundary output. Resolving
+    saved artifacts and resuming child interrupts remain platform/runtime work.
     """
 
     id: str
@@ -171,8 +170,8 @@ class SubgraphNode(BaseModel):
     workflow: WorkflowRef = Field(
         description=(
             "Reference to the child workflow artifact or registry key. The core "
-            "does not resolve this reference until native subgraph runtime "
-            "execution is implemented."
+            "executes local references only when a PreparedSubgraph dependency "
+            "is supplied; it does not load saved artifacts."
         )
     )
     desc: str | None = None
