@@ -44,6 +44,7 @@
 ### Task 1: Add RunState Scheduler Fields
 
 **Files:**
+
 - Modify: `src/wf_core/run_state.py`
 - Test: `tests/core/test_scheduler.py`
 
@@ -120,6 +121,7 @@ Expected: pass.
 ### Task 2: Create Internal Scheduler Helpers
 
 **Files:**
+
 - Create: `src/wf_core/runtime/scheduler.py`
 - Test: `tests/core/test_scheduler.py`
 
@@ -360,6 +362,7 @@ Expected: pass.
 ### Task 3: Initialize Root Through Scheduler
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/runs.py`
 - Test: `tests/core/test_scheduler.py`
 
@@ -421,6 +424,7 @@ Expected: pass.
 ### Task 4: Re-Enqueue Normal Frame Advances
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/flow.py`
 - Modify: `src/wf_core/runtime/step.py`
 - Test: `tests/core/test_scheduler.py`
@@ -493,6 +497,7 @@ Expected: pass.
 ### Task 5: Migrate Engine Loops To Scheduler Selection
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/engine.py`
 - Modify: `src/wf_core/runtime/preparation.py`
 - Modify: `src/wf_core/runtime/step.py`
@@ -546,6 +551,7 @@ Expected: pass.
 ### Task 6: Make Serial Foreach Use Block/Wake
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/foreach.py`
 - Modify: `src/wf_core/runtime/ops/frames.py`
 - Create or extend: `tests/core/test_scheduler.py`
@@ -647,6 +653,7 @@ Expected: pass.
 ### Task 7: Resume Interrupt Through Ready Queue
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/preparation.py`
 - Modify: `src/wf_core/runtime/ops/interrupts.py`
 - Test: existing interrupt tests or new focused tests
@@ -696,6 +703,7 @@ Expected: pass.
 ### Task 8: Full Verification
 
 **Files:**
+
 - Potentially update docs if implementation differs from ADR.
 
 - [ ] **Step 1: Run focused workflow tests**

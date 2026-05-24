@@ -10,6 +10,31 @@
 
 ---
 
+## Current Implementation Status
+
+This plan is being implemented incrementally. The full `RuntimeScope` /
+`LineageState` storage model below is still future work, but the runtime now has
+the compatibility subset needed before native subgraphs:
+
+- `StateWrite` exists and records `incoming_value` for replay plus
+  `visible_value` for same-lineage reads.
+- `StatePatch` stores ordered `writes` while preserving `changes` as the
+  trace/compatibility view.
+- `LineageStateView` materializes committed state plus visible lineage writes.
+- Concurrent foreach item overlays read `StateWrite.visible_value`.
+- Foreach pending result metadata persists write records and `lineage_id`.
+- `ExecutionFrame` and `RuntimeContext` carry `scope_id`, `lineage_id`, and
+  `parent_lineage_id`.
+- Concurrent foreach child frames receive deterministic, opaque lineage ids,
+  including nested foreach frames.
+
+Remaining work should avoid jumping straight to native subgraphs. The next
+small slice is to centralize "which writes are visible to this frame" behind a
+helper, then later decide whether to add full `RunState.scopes` /
+`RunState.lineages`.
+
+---
+
 ## File Structure
 
 - Modify: `src/wf_core/run_state.py`
@@ -102,7 +127,11 @@ flattened final values.
 
 ## Task 1: Add Ordered StateWrite Records to StatePatch
 
+Status: implemented as the compatibility shape. `StatePatch.changes` remains a
+stored compatibility dict rather than a derived-only property for now.
+
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/state.py`
 - Test: `tests/core/test_atomic_state_patches.py`
 
@@ -254,7 +283,13 @@ Expected: pass.
 
 ## Task 2: Add Runtime Scopes and Root Lineage
 
+Status: partially implemented. Frames and runtime context carry `scope_id`,
+`lineage_id`, and `parent_lineage_id`, but `RunState.scopes`,
+`RunState.lineages`, `RuntimeScope`, and `LineageState` are not implemented yet.
+This is deliberate; foreach still stores pending writes in barrier metadata.
+
 **Files:**
+
 - Modify: `src/wf_core/run_state.py`
 - Modify: `src/wf_core/runtime/ops/runs.py`
 - Test: `tests/core/test_lineage_state.py`
@@ -338,7 +373,12 @@ Expected: pass.
 
 ## Task 3: Add Lineage Runtime Helpers
 
+Status: partially implemented. `LineageStateView` exists in
+`src/wf_core/runtime/ops/overlays.py`. The next incremental helper should be
+`lineage_writes_for_frame(run, frame)`, backed by current foreach metadata.
+
 **Files:**
+
 - Create: `src/wf_core/runtime/lineage.py`
 - Test: `tests/core/test_lineage_state.py`
 
@@ -448,6 +488,7 @@ Expected: pass.
 ## Task 4: Route Node Reads and Non-Root Writes Through Lineage
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/overlays.py`
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Test: `tests/core/test_lineage_state.py`
@@ -508,7 +549,13 @@ Expected: pass.
 
 ## Task 5: Migrate Concurrent Foreach to Lineages
 
+Status: partially implemented. Concurrent foreach child frames now have lineage
+ids, nested item lineages are tested, and pending item results persist
+`lineage_id`. Patch ownership still lives in `ForeachBarrierState`, not in a
+global lineage store.
+
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/foreach.py`
 - Modify: `src/wf_core/runtime/foreach_state.py`
 - Test: `tests/core/test_concurrent_foreach.py`
@@ -585,6 +632,7 @@ Expected: pass.
 ## Task 6: Remove Foreach-Specific Overlay Coupling
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/overlays.py`
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Test: `tests/core`
@@ -609,6 +657,7 @@ Expected: pass.
 ## Task 7: Update Docs
 
 **Files:**
+
 - Modify: `docs/wf_core_architecture.md`
 - Modify: `docs/current_roadmap.md`
 - Modify: `docs/superpowers/specs/2026-05-24-native-subgraphs-design.md`

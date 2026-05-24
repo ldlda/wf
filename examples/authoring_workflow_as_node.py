@@ -98,7 +98,10 @@ def build_parent_workflow() -> WorkflowBuilder:
 def run_parent_workflow() -> RunState:
     """Run the parent workflow around the wrapped child workflow."""
     return build_parent_workflow().execute(
-        {"folder_id": "demo-folder", "should_email": False}
+        {
+            "folder_id": "demo-folder",
+            "should_email": False,
+        }
     )
 
 

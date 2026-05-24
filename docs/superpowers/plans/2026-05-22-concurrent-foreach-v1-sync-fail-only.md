@@ -38,6 +38,7 @@
 ### Task 1: Add Failing Sync Concurrent Foreach Tests
 
 **Files:**
+
 - Create: `tests/core/test_concurrent_foreach.py`
 
 - [ ] **Step 1: Add the test file**
@@ -267,6 +268,7 @@ FAILED with message containing "concurrent foreach execution is not implemented 
 ### Task 2: Add Barrier Admission Helpers
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/foreach_state.py`
 - Test: `tests/core/test_foreach_barrier_state.py`
 
@@ -345,6 +347,7 @@ Expected: pass.
 ### Task 3: Wake Foreach Parent After Each Child Completion
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/scheduler.py`
 - Test: `tests/core/test_scheduler.py`
 
@@ -442,6 +445,7 @@ Expected: pass.
 ### Task 4: Buffer Node Writes Inside Concurrent Foreach Item Frames
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Modify: `src/wf_core/runtime/foreach_state.py`
 - Test: `tests/core/test_concurrent_foreach.py`
@@ -540,6 +544,7 @@ Expected:
 ### Task 5: Split Serial and Concurrent Foreach Runtime
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/foreach.py`
 - Modify: `src/wf_core/runtime/step.py`
 - Test: `tests/core/test_concurrent_foreach.py`
@@ -696,6 +701,7 @@ Expected: pass.
 ### Task 6: Admit Concurrent Child Frames
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/foreach.py`
 - Test: `tests/core/test_concurrent_foreach.py`
 
@@ -837,6 +843,7 @@ Expected: failure after first admitted children complete, likely deadlock or no 
 ### Task 7: Refill and Finish Concurrent Foreach
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/state.py`
 - Modify: `src/wf_core/runtime/ops/foreach.py`
 - Modify: `src/wf_core/runtime/ops/flow.py` or current child-completion caller if needed
@@ -1004,6 +1011,7 @@ Expected: the first two tests pass; runtime-error test may still need failure pr
 ### Task 8: Preserve Runtime Failure Semantics
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/engine.py`
 - Modify: `src/wf_core/runtime/ops/foreach.py`
 - Test: `tests/core/test_concurrent_foreach.py`
@@ -1059,6 +1067,7 @@ Expected: pass.
 ### Task 9: Regression and Verification
 
 **Files:**
+
 - Modify: docs only if implementation differs from plan.
 
 - [ ] **Step 1: Run focused core tests**

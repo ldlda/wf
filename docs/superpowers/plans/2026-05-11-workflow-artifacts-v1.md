@@ -21,6 +21,7 @@
 ## Task 1: Artifact Models
 
 **Files:**
+
 - Create: `src/wf_artifacts/models.py`
 - Create: `src/wf_artifacts/__init__.py`
 - Test: `tests/artifacts/test_models.py`
@@ -214,6 +215,7 @@ Expected: pass.
 ## Task 2: File Artifact Store
 
 **Files:**
+
 - Modify: `src/wf_artifacts/store.py`
 - Modify: `src/wf_artifacts/__init__.py`
 - Test: `tests/artifacts/test_store.py`
@@ -401,6 +403,7 @@ Expected: pass.
 ## Task 3: Verification
 
 **Files:**
+
 - No production changes unless verification exposes issues.
 
 - [ ] **Step 1: Run focused artifact tests**

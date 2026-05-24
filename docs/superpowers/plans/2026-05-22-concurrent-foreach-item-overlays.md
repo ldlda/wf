@@ -51,6 +51,7 @@ Those are Slice 3 write semantics. Do not add broad write-conflict policy here e
 ### Task 1: Add Failing Multi-Step Overlay Tests
 
 **Files:**
+
 - Modify: `tests/core/test_concurrent_foreach.py`
 
 - [ ] **Step 1: Add a two-node item body test**
@@ -250,6 +251,7 @@ FAILED because state.scratch is missing/stale
 ### Task 2: Accumulate Per-Item Patches
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/foreach_state.py`
 - Modify: `tests/core/test_foreach_barrier_state.py`
 
@@ -358,6 +360,7 @@ Expected: pass.
 ### Task 3: Build Item-Local State Views
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/overlays.py`
 - Test: `tests/core/test_concurrent_foreach.py`
 
@@ -422,6 +425,7 @@ Expected: if the single-node guard is still present, failure remains the guard. 
 ### Task 4: Build Output Patches Against Frame State View
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Test: `tests/core/test_concurrent_foreach.py`
 
@@ -486,6 +490,7 @@ Expected: still fails until the single-node guard is removed.
 ### Task 5: Lift The Single-Node Concurrent Body Restriction
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/foreach.py`
 - Modify: `tests/core/test_concurrent_foreach.py`
 
@@ -544,6 +549,7 @@ Expected: pass.
 ### Task 6: Document Overlay Semantics
 
 **Files:**
+
 - Modify: `docs/adr/0002-concurrent-foreach-policy-and-barrier-commits.md`
 - Modify: `docs/superpowers/plans/2026-05-22-concurrent-foreach-phase4-roadmap.md`
 
@@ -588,6 +594,7 @@ Expected: no stale claims except historical plan text in the already-completed V
 ### Task 7: Verification
 
 **Files:**
+
 - No new files unless tests require helper extraction.
 
 - [ ] **Step 1: Run focused core tests**

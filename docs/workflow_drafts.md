@@ -71,14 +71,14 @@ A minimal draft looks like this:
       "use": "demo.personal.echo_tool",
       "input": [
         {
-          "target": {"root": "local", "parts": ["text"]},
-          "path": {"root": "input", "parts": ["text"]}
+          "target": { "root": "local", "parts": ["text"] },
+          "path": { "root": "input", "parts": ["text"] }
         }
       ],
       "output": [
         {
-          "source": {"root": "local", "parts": ["echoed"]},
-          "target": {"root": "state", "parts": ["echoed"]}
+          "source": { "root": "local", "parts": ["echoed"] },
+          "target": { "root": "state", "parts": ["echoed"] }
         }
       ]
     }
@@ -109,18 +109,18 @@ Draft `use` steps use the same canonical binding structs as core `NodeUse`:
 {
   "input": [
     {
-      "target": {"root": "local", "parts": ["message"]},
-      "path": {"root": "input", "parts": ["text"]}
+      "target": { "root": "local", "parts": ["message"] },
+      "path": { "root": "input", "parts": ["text"] }
     },
     {
-      "target": {"root": "local", "parts": ["limit"]},
+      "target": { "root": "local", "parts": ["limit"] },
       "value": 3
     }
   ],
   "output": [
     {
-      "source": {"root": "local", "parts": ["echoed"]},
-      "target": {"root": "state", "parts": ["echoed"]}
+      "source": { "root": "local", "parts": ["echoed"] },
+      "target": { "root": "state", "parts": ["echoed"] }
     }
   ]
 }
@@ -139,13 +139,13 @@ not put `"user.name"` in one segment unless the actual JSON property name is
 literally `user.name`. For normal nested objects, write:
 
 ```json
-{"root": "input", "parts": ["user", "name"]}
+{ "root": "input", "parts": ["user", "name"] }
 ```
 
 not:
 
 ```json
-{"root": "input", "parts": ["user.name"]}
+{ "root": "input", "parts": ["user.name"] }
 ```
 
 For example, this canonical input/output pair:
@@ -154,22 +154,22 @@ For example, this canonical input/output pair:
 {
   "input": [
     {
-      "target": {"root": "local", "parts": ["user", "name"]},
-      "path": {"root": "input", "parts": ["user", "name"]}
+      "target": { "root": "local", "parts": ["user", "name"] },
+      "path": { "root": "input", "parts": ["user", "name"] }
     },
     {
-      "target": {"root": "local", "parts": ["job", "title"]},
-      "path": {"root": "state", "parts": ["job", "title"]}
+      "target": { "root": "local", "parts": ["job", "title"] },
+      "path": { "root": "state", "parts": ["job", "title"] }
     }
   ],
   "output": [
     {
-      "source": {"root": "local", "parts": ["user", "age"]},
-      "target": {"root": "state", "parts": ["person", "age"]}
+      "source": { "root": "local", "parts": ["user", "age"] },
+      "target": { "root": "state", "parts": ["person", "age"] }
     },
     {
-      "source": {"root": "local", "parts": ["job", "years"]},
-      "target": {"root": "state", "parts": ["experience", "years"]}
+      "source": { "root": "local", "parts": ["job", "years"] },
+      "target": { "root": "state", "parts": ["experience", "years"] }
     }
   ]
 }
@@ -188,8 +188,8 @@ Do not reverse the direction. This is wrong:
 {
   "input": [
     {
-      "target": {"root": "input", "parts": ["text"]},
-      "path": {"root": "local", "parts": ["message"]}
+      "target": { "root": "input", "parts": ["text"] },
+      "path": { "root": "local", "parts": ["message"] }
     }
   ]
 }
@@ -204,8 +204,8 @@ Do not put constants in path bindings. This is wrong:
 {
   "input": [
     {
-      "target": {"root": "local", "parts": ["value"]},
-      "path": {"root": "input", "parts": ["CLICKED"]}
+      "target": { "root": "local", "parts": ["value"] },
+      "path": { "root": "input", "parts": ["CLICKED"] }
     }
   ]
 }
@@ -224,14 +224,14 @@ Calls a workflow capability.
   "use": "demo.personal.echo_tool",
   "input": [
     {
-      "target": {"root": "local", "parts": ["text"]},
-      "path": {"root": "input", "parts": ["text"]}
+      "target": { "root": "local", "parts": ["text"] },
+      "path": { "root": "input", "parts": ["text"] }
     }
   ],
   "output": [
     {
-      "source": {"root": "local", "parts": ["echoed"]},
-      "target": {"root": "state", "parts": ["echoed"]}
+      "source": { "root": "local", "parts": ["echoed"] },
+      "target": { "root": "state", "parts": ["echoed"] }
     }
   ]
 }
@@ -249,14 +249,14 @@ are part of the graph definition:
   "use": "wf.std.constant",
   "input": [
     {
-      "target": {"root": "local", "parts": ["value"]},
+      "target": { "root": "local", "parts": ["value"] },
       "value": "CLICKED"
     }
   ],
   "output": [
     {
-      "source": {"root": "local", "parts": ["value"]},
-      "target": {"root": "state", "parts": ["wait_text"]}
+      "source": { "root": "local", "parts": ["value"] },
+      "target": { "root": "state", "parts": ["wait_text"] }
     }
   ]
 }
@@ -292,7 +292,7 @@ model: use `item_error` and `concurrent`, not draft-only field names.
 ```json
 {
   "foreach": {
-    "over": {"root": "state", "parts": ["items"]},
+    "over": { "root": "state", "parts": ["items"] },
     "as": "item",
     "mode": "serial",
     "item_error": "fail"
@@ -305,7 +305,7 @@ Concurrent foreach uses the same canonical policy shape as core:
 ```json
 {
   "foreach": {
-    "over": {"root": "state", "parts": ["items"]},
+    "over": { "root": "state", "parts": ["items"] },
     "as": "item",
     "mode": "concurrent",
     "concurrent": {
@@ -314,7 +314,7 @@ Concurrent foreach uses the same canonical policy shape as core:
     },
     "item_error": {
       "action": "collect",
-      "collect_to": {"root": "state", "parts": ["item_errors"]}
+      "collect_to": { "root": "state", "parts": ["item_errors"] }
     }
   }
 }
@@ -335,14 +335,14 @@ Declares an interrupting step.
     "kind": "input",
     "request": [
       {
-        "target": {"root": "local", "parts": ["question"]},
-        "path": {"root": "state", "parts": ["question"]}
+        "target": { "root": "local", "parts": ["question"] },
+        "path": { "root": "state", "parts": ["question"] }
       }
     ],
     "resume": [
       {
-        "source": {"root": "local", "parts": ["answer"]},
-        "target": {"root": "state", "parts": ["answer"]}
+        "source": { "root": "local", "parts": ["answer"] },
+        "target": { "root": "state", "parts": ["answer"] }
       }
     ],
     "outcomes": ["resumed", "cancelled"]

@@ -55,23 +55,23 @@ proxied:  demo://everything/default/resource/static/document/instructions.md
 - Resource links embedded inside tool results are not rewritten by the proxy.
   For example, `get-resource-links` returns raw upstream URIs such as:
 
-```text
-demo://resource/dynamic/text/2
-```
+  ```text
+  demo://resource/dynamic/text/2
+  ```
 
   `wf-mcp` cannot read that raw URI. The manually namespaced URI works for
   normal dynamic resources:
 
-```text
-demo://everything/default/resource/dynamic/text/2
-```
+  ```text
+  demo://everything/default/resource/dynamic/text/2
+  ```
 
 - Session resource links from `gzip-file-as-resource` are not currently usable
   through `wf-mcp`. The tool returned:
 
-```text
-demo://resource/session/probe.txt
-```
+  ```text
+  demo://resource/session/probe.txt
+  ```
 
   Neither the raw URI nor the manually namespaced URI was readable through
   `wf-mcp` during the live probe. Direct `everything` read also failed in this
@@ -80,9 +80,9 @@ demo://resource/session/probe.txt
 
 - `simulate-research-query` is discovered, but calling it fails cleanly:
 
-```text
-Tool simulate-research-query requires task augmentation (taskSupport: 'required')
-```
+  ```text
+  Tool simulate-research-query requires task augmentation (taskSupport: 'required')
+  ```
 
   This is a task/protocol support gap, not an ordinary tool-call failure.
 
@@ -334,13 +334,13 @@ prompts_changed   -> PromptListChangedNotification
 This layer should not know about FastMCP sessions. It should be easy to test
 with plain `mcp.types` objects.
 
-2. Done: add a fake/test notification sink.
+1. Done: add a fake/test notification sink.
 
 The first sink should only record which MCP notification objects would be sent.
 This proves the event-to-notification mapping without depending on Codex,
 Inspector, stdio behavior, or Streamable HTTP behavior.
 
-3. Done: add a FastMCP `Context` notification sink.
+1. Done: add a FastMCP `Context` notification sink.
 
 This sink can call:
 
@@ -352,7 +352,7 @@ It is only valid while handling a request that has an active FastMCP context.
 This should be treated as a session-scoped projection, not a global broadcast
 system.
 
-4. Partly done: wire local admin operations first.
+1. Partly done: wire local admin operations first.
 
 Best first live target:
 
@@ -375,7 +375,7 @@ Remaining cleanup:
 This is intentionally local. It does not require solving upstream notification
 forwarding.
 
-5. Verify with Inspector/Codex.
+1. Verify with Inspector/Codex.
 
 Expected outcomes:
 
@@ -384,7 +384,7 @@ Expected outcomes:
 - clients that ignore notifications can still manually call list/search tools
 - no workflow or broker correctness depends on notification delivery
 
-6. Done: investigate baseline upstream notification forwarding.
+1. Done: investigate baseline upstream notification forwarding.
 
 Direct fixture-server tests show that list-changed, resource-updated, and
 logging notifications are emitted upstream but are not forwarded automatically

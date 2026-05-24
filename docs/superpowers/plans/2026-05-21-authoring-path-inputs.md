@@ -15,7 +15,7 @@
 The core now supports structural path objects:
 
 ```json
-{"root": "state", "parts": ["person.name", "three and four"]}
+{ "root": "state", "parts": ["person.name", "three and four"] }
 ```
 
 But `wf_authoring` still stores paths as strings:
@@ -137,6 +137,7 @@ into display strings just to pass through `wf_authoring`.
 ## Task 1: Add Path Input Coercion Module
 
 **Files:**
+
 - Create: `src/wf_authoring/dsl/path_inputs.py`
 - Test: `tests/authoring/test_path_inputs.py`
 
@@ -241,6 +242,7 @@ Expected: all tests pass.
 ## Task 2: Make DSL Path Helpers Typed
 
 **Files:**
+
 - Modify: `src/wf_authoring/dsl/paths.py`
 - Modify: `src/wf_authoring/dsl/conditions.py`
 - Test: `tests/authoring/test_path_inputs.py`
@@ -333,6 +335,7 @@ Expected: all pass.
 ## Task 3: Make Builder Maps Accept Typed Path Inputs
 
 **Files:**
+
 - Modify: `src/wf_authoring/builder/mapping.py`
 - Modify: `src/wf_authoring/builder/core.py`
 - Modify: `src/wf_authoring/dsl/mapping.py`
@@ -434,6 +437,7 @@ Expected: all pass.
 ## Task 3.5: Foreach Boundary Check
 
 **Files:**
+
 - Inspect: `src/wf_authoring/builder/core.py`
 - Inspect: `src/wf_core/models/steps.py` or current foreach model location
 
@@ -463,6 +467,7 @@ Do not document foreach as fully structural until the core field is structural.
 ## Task 4: Docs and Examples
 
 **Files:**
+
 - Modify: `docs/structural_refs.md`
 - Modify or create an authoring docs/example if one already exists.
 

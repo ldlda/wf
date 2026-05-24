@@ -515,14 +515,14 @@ Minimal example:
     },
     "input": [
       {
-        "target": {"root": "local", "parts": ["text"]},
-        "path": {"root": "input", "parts": ["text"]}
+        "target": { "root": "local", "parts": ["text"] },
+        "path": { "root": "input", "parts": ["text"] }
       }
     ],
     "output": [
       {
-        "source": {"root": "local", "parts": ["echoed"]},
-        "target": {"root": "state", "parts": ["echoed"]}
+        "source": { "root": "local", "parts": ["echoed"] },
+        "target": { "root": "state", "parts": ["echoed"] }
       }
     ]
   }

@@ -156,6 +156,7 @@ Default response stays compact. If `include_draft=True`, include the full draft.
 ## Task 1: Add Draft Workspace Domain Models
 
 **Files:**
+
 - Create: `src/wf_artifacts/draft_workspaces/models.py`
 - Create: `src/wf_artifacts/draft_workspaces/__init__.py`
 - Modify: `src/wf_artifacts/__init__.py`
@@ -333,6 +334,7 @@ git commit -m "feat: add draft workspace models"
 ## Task 2: Add File-Backed Draft Workspace Store
 
 **Files:**
+
 - Create: `src/wf_artifacts/draft_workspaces/store.py`
 - Modify: `src/wf_artifacts/draft_workspaces/__init__.py`
 - Modify: `src/wf_artifacts/__init__.py`
@@ -499,6 +501,7 @@ git commit -m "feat: persist draft workspaces"
 ## Task 3: Add Draft Workspace API Functions
 
 **Files:**
+
 - Create: `src/wf_artifacts/draft_workspaces/api.py`
 - Modify: `src/wf_artifacts/draft_workspaces/__init__.py`
 - Modify: `src/wf_artifacts/__init__.py`
@@ -712,6 +715,7 @@ git commit -m "feat: patch draft workspaces by revision"
 ## Task 4: Wire Draft Workspace Store Into WfMcpService
 
 **Files:**
+
 - Modify: `src/wf_mcp/broker/service/core.py`
 - Modify: `src/wf_mcp/broker/config.py`
 - Test: `tests/wf_mcp/test_service.py`
@@ -800,6 +804,7 @@ git commit -m "feat: attach draft workspace store to service"
 ## Task 5: Add Workflow Surface Workspace Handlers
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Test: `tests/wf_mcp/test_workflow_surface.py`
 
@@ -964,6 +969,7 @@ git commit -m "feat: expose draft workspace handlers"
 ## Task 6: Add Minimal Draft Workspace Bootstrapper
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Test: `tests/wf_mcp/test_workflow_surface.py`
 
@@ -1100,6 +1106,7 @@ git commit -m "feat: bootstrap minimal draft workspaces"
 ## Task 7: Add Artifact Creation From Workspace
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Test: `tests/wf_mcp/test_workflow_surface.py`
 
@@ -1219,6 +1226,7 @@ git commit -m "feat: save artifacts from draft workspaces"
 ## Task 8: Register MCP Workspace Tools
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/tools.py`
 - Modify: `src/wf_mcp/workflow_surface/models.py`
 - Modify: `src/wf_mcp/transparent_proxy/runtime.py`
@@ -1335,6 +1343,7 @@ git commit -m "feat: expose draft workspace mcp tools"
 ## Task 9: Documentation
 
 **Files:**
+
 - Modify: `docs/workflow_drafts.md`
 - Modify: `docs/wf_mcp_operator_manual.md`
 - Modify: `docs/wf_mcp_end_to_end_runbook.md`
@@ -1413,6 +1422,7 @@ git commit -m "docs: describe draft workspace authoring loop"
 ## Task 10: Final Verification
 
 **Files:**
+
 - No code changes unless failures require fixes.
 
 - [ ] **Step 1: Run focused test suite**

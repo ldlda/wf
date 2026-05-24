@@ -30,3 +30,6 @@ package = true
 
 [tool.basedpyright]
 typeCheckingMode = "basic"
+
+[tool.ruff.format]
+preview = false

@@ -41,6 +41,7 @@ rather than reimplementing the earlier tasks.
 ## Task 1: Add Typed Path Values
 
 **Files:**
+
 - Modify: `src/wf_core/paths.py`
 - Modify: `src/wf_core/local_paths.py`
 - Create: `tests/core/test_path_values.py`
@@ -218,6 +219,7 @@ Expected: all tests in `test_path_values.py` pass.
 ## Task 2: Add Canonical Node Binding Models
 
 **Files:**
+
 - Modify: `src/wf_core/models/steps.py`
 - Test: `tests/core/test_canonical_node_bindings.py`
 
@@ -380,6 +382,7 @@ Expected: all tests in `test_canonical_node_bindings.py` pass.
 ## Task 3: Move Runtime Node Input Resolution To Canonical Bindings
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Test: `tests/core/test_nested_mappings.py`
 - Test: `tests/core/test_canonical_node_bindings.py`
@@ -474,6 +477,7 @@ Expected: pass.
 ## Task 4: Move Runtime Output Writes To Canonical Bindings And Atomic Patches
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/state.py`
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Test: `tests/core/test_atomic_state_patches.py`
@@ -592,6 +596,7 @@ Expected: pass.
 ## Task 5: Update Validation For Canonical Bindings
 
 **Files:**
+
 - Modify: `src/wf_core/validation/steps.py`
 - Test: `tests/core/test_mapping_validation.py`
 - Test: `tests/core/test_canonical_node_bindings.py`
@@ -651,6 +656,7 @@ Expected: pass.
 ## Task 6: Add Canonical State Schema Fields
 
 **Files:**
+
 - Modify: `src/wf_core/models/schemas.py`
 - Modify: `src/wf_core/runtime/ops/state.py`
 - Modify: `src/wf_core/validation/steps.py`
@@ -747,6 +753,7 @@ Expected: pass.
 ## Task 7: Harden SchemaRef With JSON Schema Validation
 
 **Files:**
+
 - Modify: `src/wf_core/models/schemas.py`
 - Modify: `src/wf_core/runtime/ops/schemas.py`
 - Test: `tests/core/test_schema_validation.py`
@@ -819,6 +826,7 @@ Expected: pass.
 ## Task 8: Update Authoring Helpers To Emit Canonical Bindings
 
 **Files:**
+
 - Modify: `src/wf_authoring/dsl/paths.py`
 - Modify: `src/wf_authoring/dsl/conditions.py`
 - Modify: `src/wf_authoring/builder/core.py`
@@ -886,6 +894,7 @@ Expected: authoring tests pass.
 ## Task 9: Full Compatibility And Regression Pass
 
 **Files:**
+
 - Modify docs/examples only if tests show stale serialized shapes.
 - Test: full repo.
 

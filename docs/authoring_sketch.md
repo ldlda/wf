@@ -63,8 +63,18 @@ Typical entry points:
 
 ```json
 {
-  "input": [{"target": {"root": "local", "parts": ["text"]}, "path": {"root": "input", "parts": ["text"]}}],
-  "output": [{"source": {"root": "local", "parts": ["echoed"]}, "target": {"root": "state", "parts": ["echoed"]}}]
+  "input": [
+    {
+      "target": { "root": "local", "parts": ["text"] },
+      "path": { "root": "input", "parts": ["text"] }
+    }
+  ],
+  "output": [
+    {
+      "source": { "root": "local", "parts": ["echoed"] },
+      "target": { "root": "state", "parts": ["echoed"] }
+    }
+  ]
 }
 ```
 

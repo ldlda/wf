@@ -51,15 +51,8 @@
   ],
   "tools_generated": true,
   "prompts_generated": true,
-  "keywords": [
-    "mcp",
-    "workflow",
-    "proxy",
-    "local-dev"
-  ],
+  "keywords": ["mcp", "workflow", "proxy", "local-dev"],
   "compatibility": {
-    "platforms": [
-      "win32"
-    ]
+    "platforms": ["win32"]
   }
 }

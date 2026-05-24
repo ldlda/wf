@@ -5,13 +5,13 @@ import pytest
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.reducers import ReducerRef
 from wf_core.paths import StatePath
-from wf_core.run_state import ExecutionFrame, StateWrite
+from wf_core.run_state import ExecutionFrame, RunState, RunStatus, StateWrite
 from wf_core.runtime.foreach_state import (
     ForeachBarrierState,
     ItemErrorRecord,
     PendingItemResult,
 )
-from wf_core.runtime.ops.overlays import LineageStateView
+from wf_core.runtime.ops.overlays import LineageStateView, lineage_writes_for_frame
 from wf_core.runtime.ops.state import StatePatch
 
 
@@ -114,6 +114,60 @@ def test_lineage_state_view_materializes_visible_values_without_mutating_base() 
     assert state_view["nested"]["value"] == "new"
     assert base_state["count"] == 2
     assert base_state["nested"]["value"] == "old"
+
+
+def test_lineage_writes_for_frame_reads_current_foreach_pending_result() -> None:
+    parent = ExecutionFrame(id="root", kind="workflow", node_id="each")
+    child = ExecutionFrame(
+        id="root:each:0",
+        kind="foreach_iteration",
+        node_id="work",
+        parent_frame_id="root",
+        lineage_id="root/each[0]",
+        parent_lineage_id="root",
+        metadata={
+            "foreach_node_id": "each",
+            "loop_index": 0,
+            "loop_item": "a",
+            "loop_alias": "item",
+        },
+    )
+    patch = StatePatch(
+        writes=[
+            StateWrite(
+                path=StatePath(("count",)),
+                incoming_value=3,
+                visible_value=5,
+                reducer=ReducerRef(name="wf.std.add"),
+            )
+        ]
+    )
+    barrier = ForeachBarrierState(
+        mode="concurrent",
+        pending_results={
+            0: PendingItemResult(
+                index=0,
+                frame_id=child.id,
+                status="succeeded",
+                lineage_id=child.lineage_id,
+                patch=patch,
+            )
+        },
+    )
+    barrier.save_to_frame(parent, "each")
+    run = RunState(
+        workflow_name="lineage",
+        status=RunStatus.PENDING,
+        workflow_input={},
+        state={"count": 2},
+        frames={parent.id: parent, child.id: child},
+    )
+
+    writes = lineage_writes_for_frame(run, child)
+
+    assert len(writes) == 1
+    assert writes[0].incoming_value == 3
+    assert writes[0].visible_value == 5
 
 
 def test_foreach_barrier_state_returns_none_when_missing() -> None:

@@ -44,6 +44,7 @@
 ### Task 1: Pin Node-Local Path Behavior
 
 **Files:**
+
 - Modify: `tests/core/test_validation.py`
 - Modify: `tests/core/test_runtime.py`
 
@@ -100,6 +101,7 @@ Expected: FAIL because node-local map sides are top-level-only today.
 ### Task 2: Add Node-Local Path Helpers
 
 **Files:**
+
 - Create: `src/wf_core/local_paths.py`
 - Modify: `src/wf_core/validation/steps.py`
 
@@ -148,6 +150,7 @@ Expected: PASS for validation-specific cases.
 ### Task 3: Execute Nested Local Mappings
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Modify: `src/wf_core/runtime/ops/state.py`
 
@@ -184,6 +187,7 @@ Expected: PASS for nested mapping behavior.
 ### Task 4: Introduce Prepared Patch Commits and Extract Merge Dispatch
 
 **Files:**
+
 - Create: `src/wf_core/runtime/ops/merges.py`
 - Modify: `src/wf_core/runtime/ops/state.py`
 - Modify: `tests/core/test_state_ops.py`
@@ -248,6 +252,7 @@ Expected: PASS.
 ### Task 5: Keep Authoring and Docs Aligned
 
 **Files:**
+
 - Modify: `src/wf_authoring/builder/mapping.py`
 - Modify: `docs/core_state_mapping_and_merge.md` if implementation details differ
 - Modify: `docs/scratchpad.md` only if wording drift appears
@@ -272,6 +277,7 @@ declarations yet.
 ### Task 6: Verify the Whole Project
 
 **Files:**
+
 - No additional files.
 
 - [ ] **Step 1: Run focused suites**

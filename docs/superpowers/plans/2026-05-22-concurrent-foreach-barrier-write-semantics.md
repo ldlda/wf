@@ -54,6 +54,7 @@ Important distinction:
 ### Task 1: Add Focused Barrier Same-Path Tests
 
 **Files:**
+
 - Modify: `tests/core/test_atomic_state_patches.py`
 
 - [ ] **Step 1: Add imports**
@@ -188,6 +189,7 @@ The reducer test may already pass.
 ### Task 2: Add Ancestor/Descendant Conflict Tests
 
 **Files:**
+
 - Modify: `tests/core/test_atomic_state_patches.py`
 
 - [ ] **Step 1: Add ancestor/descendant conflict test**
@@ -249,6 +251,7 @@ FAILED because current barrier replays both writes
 ### Task 3: Implement Barrier Write Analysis
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/state.py`
 
 - [ ] **Step 1: Add helper dataclass**
@@ -389,6 +392,7 @@ Expected: pass.
 ### Task 4: Add End-To-End Concurrent Foreach Coverage
 
 **Files:**
+
 - Modify: `tests/core/test_concurrent_foreach.py`
 
 - [ ] **Step 1: Add same-path no-reducer workflow helper**
@@ -501,6 +505,7 @@ Expected: pass.
 ### Task 5: Update Docs
 
 **Files:**
+
 - Modify: `docs/adr/0002-concurrent-foreach-policy-and-barrier-commits.md`
 - Modify: `docs/superpowers/plans/2026-05-22-concurrent-foreach-phase4-roadmap.md`
 
@@ -545,6 +550,7 @@ Expected: the ADR and roadmap both mention the semantics.
 ### Task 6: Verification
 
 **Files:**
+
 - No new source files.
 
 - [ ] **Step 1: Run focused core tests**

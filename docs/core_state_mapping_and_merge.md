@@ -43,18 +43,18 @@ Examples:
 {
   "input": [
     {
-      "target": {"root": "local", "parts": ["user", "name"]},
-      "path": {"root": "state", "parts": ["person", "name"]}
+      "target": { "root": "local", "parts": ["user", "name"] },
+      "path": { "root": "state", "parts": ["person", "name"] }
     },
     {
-      "target": {"root": "local", "parts": ["mode"]},
+      "target": { "root": "local", "parts": ["mode"] },
       "value": "fast"
     }
   ],
   "output": [
     {
-      "source": {"root": "local", "parts": ["job", "wage"]},
-      "target": {"root": "state", "parts": ["job", "wage"]}
+      "source": { "root": "local", "parts": ["job", "wage"] },
+      "target": { "root": "state", "parts": ["job", "wage"] }
     }
   ]
 }
@@ -66,14 +66,14 @@ Whole-object mapping remains valid:
 {
   "input": [
     {
-      "target": {"root": "local", "parts": ["user"]},
-      "path": {"root": "state", "parts": ["person"]}
+      "target": { "root": "local", "parts": ["user"] },
+      "path": { "root": "state", "parts": ["person"] }
     }
   ],
   "output": [
     {
-      "source": {"root": "local", "parts": ["user"]},
-      "target": {"root": "state", "parts": ["person"]}
+      "source": { "root": "local", "parts": ["user"] },
+      "target": { "root": "state", "parts": ["person"] }
     }
   ]
 }
@@ -85,14 +85,14 @@ Whole-payload mapping uses the local root path `"."`:
 {
   "input": [
     {
-      "target": {"root": "local", "parts": []},
-      "path": {"root": "state", "parts": ["rates"]}
+      "target": { "root": "local", "parts": [] },
+      "path": { "root": "state", "parts": ["rates"] }
     }
   ],
   "output": [
     {
-      "source": {"root": "local", "parts": []},
-      "target": {"root": "state", "parts": ["rates"]}
+      "source": { "root": "local", "parts": [] },
+      "target": { "root": "state", "parts": ["rates"] }
     }
   ]
 }
@@ -122,12 +122,12 @@ Valid:
 ```json
 [
   {
-    "target": {"root": "local", "parts": ["user", "name"]},
-    "path": {"root": "state", "parts": ["person", "name"]}
+    "target": { "root": "local", "parts": ["user", "name"] },
+    "path": { "root": "state", "parts": ["person", "name"] }
   },
   {
-    "target": {"root": "local", "parts": ["user", "email"]},
-    "path": {"root": "state", "parts": ["person", "email"]}
+    "target": { "root": "local", "parts": ["user", "email"] },
+    "path": { "root": "state", "parts": ["person", "email"] }
   }
 ]
 ```
@@ -137,12 +137,12 @@ Invalid:
 ```json
 [
   {
-    "target": {"root": "local", "parts": ["user"]},
-    "path": {"root": "state", "parts": ["person"]}
+    "target": { "root": "local", "parts": ["user"] },
+    "path": { "root": "state", "parts": ["person"] }
   },
   {
-    "target": {"root": "local", "parts": ["user", "name"]},
-    "path": {"root": "state", "parts": ["person", "name"]}
+    "target": { "root": "local", "parts": ["user", "name"] },
+    "path": { "root": "state", "parts": ["person", "name"] }
   }
 ]
 ```
@@ -160,12 +160,12 @@ Invalid:
 ```json
 [
   {
-    "source": {"root": "local", "parts": ["user"]},
-    "target": {"root": "state", "parts": ["person"]}
+    "source": { "root": "local", "parts": ["user"] },
+    "target": { "root": "state", "parts": ["person"] }
   },
   {
-    "source": {"root": "local", "parts": ["user", "name"]},
-    "target": {"root": "state", "parts": ["person", "name"]}
+    "source": { "root": "local", "parts": ["user", "name"] },
+    "target": { "root": "state", "parts": ["person", "name"] }
   }
 ]
 ```
@@ -228,8 +228,8 @@ and uses it for state writes.
     "person": {
       "type": "object",
       "properties": {
-        "name": {"type": "string", "reducer": "wf.std.replace"},
-        "tags": {"type": "array", "reducer": "wf.std.append"}
+        "name": { "type": "string", "reducer": "wf.std.replace" },
+        "tags": { "type": "array", "reducer": "wf.std.append" }
       }
     },
     "profile": {
@@ -245,7 +245,7 @@ Deprecated `fields` state declarations are still accepted at parse boundaries:
 ```json
 {
   "fields": {
-    "person.name": {"type": "string", "reducer": "wf.std.replace"}
+    "person.name": { "type": "string", "reducer": "wf.std.replace" }
   }
 }
 ```

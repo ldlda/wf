@@ -165,8 +165,8 @@ stays part of the reducer reference payload:
 
 ```json
 {
-  "ref": {"source": "wf.std", "capability_key": "modulo_add"},
-  "config": {"modulus": 10}
+  "ref": { "source": "wf.std", "capability_key": "modulo_add" },
+  "config": { "modulus": 10 }
 }
 ```
 

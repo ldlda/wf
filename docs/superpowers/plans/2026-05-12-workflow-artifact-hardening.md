@@ -30,37 +30,40 @@ merge MCP server modes and does not add native subgraphs.
 ### Task 1: Validate Plan Shape During Artifact Creation
 
 **Files:**
+
 - Modify: `src/wf_artifacts/factory.py`
 - Test: `tests/artifacts/test_factory.py`
 
 - [ ] Add a failing test proving `create_workflow_artifact_from_plan` rejects a
-  plan that cannot become a `wf_core.Workflow`.
+      plan that cannot become a `wf_core.Workflow`.
 - [ ] Implement validation by constructing `wf_core.Workflow.model_validate`
-  from the plan fields.
+      from the plan fields.
 - [ ] Keep the validation dependency one-way: `wf_artifacts` may import
-  `wf_core`, but `wf_core` must not import `wf_artifacts`.
+      `wf_core`, but `wf_core` must not import `wf_artifacts`.
 - [ ] Return `ValueError` with a concise message containing the failing field
-  path or Pydantic error message.
+      path or Pydantic error message.
 - [ ] Run `uv run --with pytest pytest tests\artifacts\test_factory.py -q`.
 
 ### Task 2: Add Artifact Creation Diagnostics
 
 **Files:**
+
 - Modify: `src/wf_artifacts/models.py`
 - Modify: `src/wf_artifacts/factory.py`
 - Test: `tests/artifacts/test_factory.py`
 
 - [ ] Decide whether creation failures should raise exceptions only or also
-  expose a `validate_workflow_artifact_plan(...) -> list[DependencyDiagnostic]`
-  style function.
+      expose a `validate_workflow_artifact_plan(...) -> list[DependencyDiagnostic]`
+      style function.
 - [ ] Recommended v1: add a separate `validate_workflow_artifact_plan(plan)`
-  that returns structured diagnostics, while the factory still raises on errors.
+      that returns structured diagnostics, while the factory still raises on errors.
 - [ ] Add tests for missing `input_schema`, missing `output_schema`, invalid
-  state schema, and missing start node.
+      state schema, and missing start node.
 
 ### Task 3: Validate Direct Workflow Dependencies
 
 **Files:**
+
 - Modify: `src/wf_artifacts/validation.py`
 - Test: `tests/artifacts/test_validation.py`
 
@@ -68,35 +71,37 @@ merge MCP server modes and does not add native subgraphs.
 - [ ] Validate exact artifact-version pins.
 - [ ] Return `dependency_missing` when a child artifact version does not exist.
 - [ ] Return `dependency_cycle` when direct/transitive workflow artifact
-  dependencies cycle.
+      dependencies cycle.
 - [ ] Do not copy child dependency snapshots into the parent.
 
 ### Task 4: Improve Capability Contract Checking
 
 **Files:**
+
 - Modify: `src/wf_artifacts/validation.py`
 - Test: `tests/artifacts/test_validation.py`
 - Optional: `src/wf_mcp/broker/artifact_tools.py`
 
 - [ ] Preserve current hash comparison behavior.
 - [ ] Add tests for kind mismatch, for example required `tool` but available
-  `node_spec`.
+      `node_spec`.
 - [ ] Decide whether `node_spec` can satisfy `tool` when the provider is an MCP
-  wrapper. Recommended: no implicit kind coercion in `wf_artifacts`; adapters
-  should present the available kind they mean to expose.
+      wrapper. Recommended: no implicit kind coercion in `wf_artifacts`; adapters
+      should present the available kind they mean to expose.
 - [ ] Add diagnostics with `code="capability_kind_mismatch"`.
 
 ### Task 5: Document Current Runtime Limitations In Tool Responses
 
 **Files:**
+
 - Modify: `src/wf_mcp/broker/artifact_tools.py`
 - Test: `tests/wf_mcp/test_broker_server.py`
 
 - [ ] Keep interrupting artifacts rejected by `run_workflow_deployment`.
 - [ ] Add `repair_hint` text explaining native subgraphs/nested resume are not
-  implemented yet.
+      implemented yet.
 - [ ] Add a test proving unsupported interrupt artifacts return a diagnostic
-  instead of raising.
+      instead of raising.
 
 ## Verification
 

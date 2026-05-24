@@ -55,6 +55,7 @@
 ## Task 1: Split Draft Code Into Focused Modules
 
 **Files:**
+
 - Create: `src/wf_artifacts/drafts/models.py`
 - Create: `src/wf_artifacts/drafts/api.py`
 - Create: `src/wf_artifacts/drafts/adapter.py`
@@ -232,6 +233,7 @@ git commit -m "refactor: add keyed workflow draft models"
 ## Task 2: Add `use_ref` And Thin Adapter Over `WorkflowBuilder`
 
 **Files:**
+
 - Create: `src/wf_artifacts/drafts/adapter.py`
 - Modify only if needed: `src/wf_authoring/builder/core.py`
 - Modify only if needed: `src/wf_authoring/ops/*`
@@ -349,6 +351,7 @@ git commit -m "feat: adapt workflow drafts through workflow builder"
 ## Task 3: Replace Prototype Public API
 
 **Files:**
+
 - Create: `src/wf_artifacts/drafts/api.py`
 - Modify: `src/wf_artifacts/drafts.py`
 - Modify: `src/wf_artifacts/__init__.py`
@@ -441,6 +444,7 @@ git commit -m "feat: replace draft prototype with keyed public api"
 ## Task 4: Update MCP Workflow Surface
 
 **Files:**
+
 - Modify: `tests/wf_mcp/test_workflow_surface.py`
 - Modify: `tests/wf_mcp/test_server.py`
 - Modify only if needed: `src/wf_mcp/workflow_surface/handlers.py`
@@ -507,6 +511,7 @@ git commit -m "feat: accept keyed workflow drafts over mcp"
 ## Task 5: Add Outcome Validation When Capability Contracts Are Available
 
 **Files:**
+
 - Modify: `src/wf_artifacts/drafts/api.py`
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Test: `tests/wf_mcp/test_workflow_surface.py`
@@ -569,6 +574,7 @@ git commit -m "feat: validate draft routes against known outcomes"
 ## Task 6: Update Documentation
 
 **Files:**
+
 - Modify: `docs/workflow_drafts.md`
 - Modify: `docs/wf_mcp_end_to_end_runbook.md`
 - Modify: `docs/wf_mcp_operator_manual.md`
@@ -624,6 +630,7 @@ git commit -m "docs: describe keyed workflow draft surface"
 ## Task 7: Full Verification
 
 **Files:**
+
 - No new files
 
 - [ ] **Step 1: Run focused verification**

@@ -37,7 +37,7 @@ New canonical reducer ref:
 
 ```json
 {
-  "ref": {"source": "wf.std", "capability_key": "add"},
+  "ref": { "source": "wf.std", "capability_key": "add" },
   "config": {}
 }
 ```
@@ -49,7 +49,7 @@ Compatibility inputs:
 ```
 
 ```json
-{"name": "wf.std.add", "config": {"modulus": 10}}
+{ "name": "wf.std.add", "config": { "modulus": 10 } }
 ```
 
 For now, `ReducerRef.name` remains available as a display/registry key compatibility property. Runtime reducer registries are still keyed by strings such as `wf.std.add`.
@@ -83,6 +83,7 @@ For now, `ReducerRef.name` remains available as a display/registry key compatibi
 ## Task 1: Pin ReducerRef Compatibility and Canonical Dump
 
 **Files:**
+
 - Modify: `tests/core/test_nested_state_paths.py`
 
 - [ ] **Step 1: Add reducer ref tests**
@@ -136,6 +137,7 @@ Expected: fail because `ReducerRef` does not parse strings and has no `ref`.
 ## Task 2: Implement Structural ReducerRef
 
 **Files:**
+
 - Modify: `src/wf_core/models/reducers.py`
 
 - [ ] **Step 1: Update imports**
@@ -207,6 +209,7 @@ Expected: pass.
 ## Task 3: Update Reducer Field Serializers and Existing Expectations
 
 **Files:**
+
 - Modify: `src/wf_core/models/schemas.py`
 - Modify tests that assert reducer dumps
 
@@ -228,8 +231,8 @@ Decide canonical output:
 
 ```json
 {
-  "ref": {"source": "wf.std", "capability_key": "modulo_add"},
-  "config": {"modulus": 10}
+  "ref": { "source": "wf.std", "capability_key": "modulo_add" },
+  "config": { "modulus": 10 }
 }
 ```
 
@@ -261,6 +264,7 @@ Expected: pass after updating expectations for configured reducer dumps if neede
 ## Task 4: Update Artifact Reducer Dependency Extraction
 
 **Files:**
+
 - Modify: `src/wf_artifacts/factory.py`
 - Modify: `tests/artifacts/test_factory.py`
 
@@ -330,6 +334,7 @@ Expected: pass.
 ## Task 5: Runtime Compatibility Check
 
 **Files:**
+
 - Tests only unless failures require runtime changes
 
 - [ ] **Step 1: Run reducer runtime tests**
@@ -349,6 +354,7 @@ Only if needed, update lookup code to use `reducer.name` as the compatibility st
 ## Task 6: Docs
 
 **Files:**
+
 - Modify: `docs/structural_refs.md`
 - Modify: `docs/core_state_mapping_and_merge.md`
 

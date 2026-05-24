@@ -43,18 +43,32 @@ def state_view_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]
     foreach barrier commits. Later nodes in the same item must read those
     earlier writes, while sibling item frames must not see them.
     """
-    owner = item_frame_owner(frame)
-    if owner is None:
+    writes = lineage_writes_for_frame(run, frame)
+    if not writes:
         return run.state
 
+    return LineageStateView(run.state, writes).to_state_dict()
+
+
+def lineage_writes_for_frame(
+    run: RunState, frame: ExecutionFrame
+) -> Sequence[StateWrite]:
+    """Return writes visible to this frame's current lineage.
+
+    This is still backed by concurrent foreach barrier metadata. Keeping the
+    lookup here gives future `RunState.lineages` or subgraph scopes one place to
+    plug in without making node execution understand foreach internals.
+    """
+    owner = item_frame_owner(frame)
+    if owner is None:
+        return ()
     parent_frame_id, foreach_node_id, item_index = owner
     parent_frame = run.frames[parent_frame_id]
     barrier = ForeachBarrierState.from_frame(parent_frame, foreach_node_id)
     if barrier is None or barrier.mode != "concurrent":
-        return run.state
+        return ()
 
     pending = barrier.pending_results.get(item_index)
     if pending is None:
-        return run.state
-
-    return LineageStateView(run.state, pending.patch.writes).to_state_dict()
+        return ()
+    return pending.patch.writes

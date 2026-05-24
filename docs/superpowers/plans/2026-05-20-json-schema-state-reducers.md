@@ -13,6 +13,7 @@
 ### Task 1: Add Canonical State Schema Tests
 
 **Files:**
+
 - Modify: `tests/core/test_nested_state_paths.py`
 - Modify: `tests/core/test_schema_validation.py`
 
@@ -100,6 +101,7 @@ Expected: new tests fail because `StateSchema` still serializes as `fields: [...
 ### Task 2: Implement JSON-Schema-Native `StateSchema`
 
 **Files:**
+
 - Modify: `src/wf_core/models/schemas.py`
 
 - [ ] **Step 1: Make `StateSchema` inherit JSON Schema fields directly**
@@ -118,19 +120,26 @@ required: list[str] = Field(default_factory=list)
 Keep accepting:
 
 ```json
-{"fields": [{"path": "state.count", "type": "integer", "reducer": "wf.std.add"}]}
+{
+  "fields": [
+    { "path": "state.count", "type": "integer", "reducer": "wf.std.add" }
+  ]
+}
 ```
 
 and:
 
 ```json
-{"fields": {"count": {"type": "integer", "reducer": "wf.std.add"}}}
+{ "fields": { "count": { "type": "integer", "reducer": "wf.std.add" } } }
 ```
 
 by converting both into:
 
 ```json
-{"type": "object", "properties": {"count": {"type": "integer", "reducer": "wf.std.add"}}}
+{
+  "type": "object",
+  "properties": { "count": { "type": "integer", "reducer": "wf.std.add" } }
+}
 ```
 
 - [ ] **Step 3: Add `field_map()` as an internal compiled index**
@@ -154,6 +163,7 @@ Use `SchemaRef`/`jsonschema` validation for the complete state schema. Add expli
 ### Task 3: Update Artifact Reducer Extraction
 
 **Files:**
+
 - Modify: `src/wf_artifacts/factory.py`
 
 - [ ] **Step 1: Extract reducer dependencies from `state_schema.properties`**
@@ -177,6 +187,7 @@ is included in required capabilities.
 ### Task 4: Update Authoring Conversion
 
 **Files:**
+
 - Modify: `src/wf_authoring/schemas.py`
 - Modify: `tests/authoring/test_schemas.py`
 
@@ -191,6 +202,7 @@ Return `StateSchema.model_validate(schema_with_reducer_keywords)` so generated s
 ### Task 5: Update Docs and Examples
 
 **Files:**
+
 - Modify: `docs/core_state_mapping_and_merge.md`
 - Modify: `docs/workflow_drafts.md`
 - Modify: `docs/wf_mcp_operator_manual.md`
@@ -221,6 +233,7 @@ State clearly that `reducer` is not standard JSON Schema behavior. JSON Schema v
 ### Task 6: Verification
 
 **Files:**
+
 - All touched files
 
 - [ ] **Step 1: Run focused tests**

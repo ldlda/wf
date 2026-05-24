@@ -23,7 +23,7 @@ same thing
 ```python
 class OutputMap(BaseModel, Generic[TypeT]):
   output: Pathexpr
-  key (give me a better key name): SupportToValue[TypeT] 
+  key (give me a better key name): SupportToValue[TypeT]
 ```
 
 look at this support to value, or use another fitting name.

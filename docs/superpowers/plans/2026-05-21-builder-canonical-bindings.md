@@ -39,14 +39,14 @@ That matters because structural path dicts cannot be Python dict keys. The JSON/
 {
   "input": [
     {
-      "target": {"root": "local", "parts": ["payload.email"]},
-      "path": {"root": "input", "parts": ["email.address"]}
+      "target": { "root": "local", "parts": ["payload.email"] },
+      "path": { "root": "input", "parts": ["email.address"] }
     }
   ],
   "output": [
     {
-      "source": {"root": "local", "parts": ["result.score"]},
-      "target": {"root": "state", "parts": ["score"]}
+      "source": { "root": "local", "parts": ["result.score"] },
+      "target": { "root": "state", "parts": ["score"] }
     }
   ]
 }
@@ -211,6 +211,7 @@ Map sugar is for hashable Python authoring values only.
 ## Task 1: Add Canonical Binding Normalizers
 
 **Files:**
+
 - Modify: `src/wf_authoring/builder/mapping.py`
 - Test: `tests/authoring/test_builder.py`
 
@@ -336,6 +337,7 @@ Expected: still fails until builder signatures are updated.
 ## Task 2: Add `input` / `output` to `use()`
 
 **Files:**
+
 - Modify: `src/wf_authoring/builder/core.py`
 - Test: `tests/authoring/test_builder.py`
 
@@ -457,6 +459,7 @@ Expected: pass.
 ## Task 3: Add `input` / `output` to `use_ref()`
 
 **Files:**
+
 - Modify: `src/wf_authoring/builder/core.py`
 - Test: `tests/authoring/test_builder.py`
 
@@ -542,6 +545,7 @@ Expected: pass.
 ## Task 4: Deprecate Map Sugar Explicitly
 
 **Files:**
+
 - Modify: `src/wf_authoring/builder/core.py`
 - Test: `tests/authoring/test_builder.py`
 
@@ -642,6 +646,7 @@ Expected: both pass.
 ## Task 5: Reject Mixed Styles and Dict Keys Clearly
 
 **Files:**
+
 - Modify: `src/wf_authoring/builder/core.py`
 - Modify: `src/wf_authoring/builder/mapping.py`
 - Test: `tests/authoring/test_builder.py`
@@ -742,6 +747,7 @@ Expected: all pass.
 ## Task 6: Docs
 
 **Files:**
+
 - Modify: `docs/structural_refs.md`
 - Modify: `docs/authoring_sketch.md`
 - Modify: `docs/core_state_mapping_and_merge.md`
@@ -812,6 +818,7 @@ level.
 ## Task 7: Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused authoring builder tests**

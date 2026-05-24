@@ -64,6 +64,7 @@ MCP JSON still serializes those enum values as strings.
 ## Task 1: Add Enum-Backed Hint Models
 
 **Files:**
+
 - Create: `src/wf_mcp/workflow_surface/wrapper_hints.py`
 - Test: `tests/wf_mcp/test_workflow_wrapper_hints.py`
 
@@ -229,6 +230,7 @@ Expected: pass.
 ## Task 2: Derive Simple Wrapper Hints From Capability Schemas
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/wrapper_hints.py`
 - Test: `tests/wf_mcp/test_workflow_wrapper_hints.py`
 
@@ -466,6 +468,7 @@ Expected: pass.
 ## Task 3: Add Boolean Outcome Candidate Tests
 
 **Files:**
+
 - Modify: `tests/wf_mcp/test_workflow_wrapper_hints.py`
 - Modify: `src/wf_mcp/workflow_surface/wrapper_hints.py` only if tests reveal gaps.
 
@@ -535,6 +538,7 @@ Expected: pass. If arbitrary boolean fields produce candidates, fix `CONTROL_BOO
 ## Task 4: Add Complex Output Missing Decision Tests
 
 **Files:**
+
 - Modify: `tests/wf_mcp/test_workflow_wrapper_hints.py`
 - Modify: `src/wf_mcp/workflow_surface/wrapper_hints.py` only if tests reveal gaps.
 
@@ -598,6 +602,7 @@ Expected: pass.
 ## Task 5: Wire Hints Into `inspect_capability`
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Test: `tests/wf_mcp/test_workflow_surface.py`
 
@@ -675,6 +680,7 @@ Expected: pass.
 ## Task 6: Add Hints For Saved Wrapper Artifact Inspection
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Test: `tests/wf_mcp/test_workflow_surface.py`
 
@@ -727,6 +733,7 @@ Expected: pass.
 ## Task 7: Document Hint Semantics
 
 **Files:**
+
 - Modify: `docs/workflow_capabilities.md`
 
 - [ ] **Step 1: Add documentation section**
@@ -771,6 +778,7 @@ Expected: pass.
 ## Task 8: Final Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused tests**
@@ -811,4 +819,3 @@ Expected: ruff passes, basedpyright has 0 errors, and formatting is clean.
 - Placeholder scan: No `TBD`, `TODO`, or unspecified implementation steps remain.
 - Type consistency: `WrapperHintConfidence`, `WrapperOutcomePolicy`, `OutcomeCandidateKind`, and `MissingDecisionKind` are defined before use and serialize through Pydantic models.
 - Scope check: This plan does not create or save wrappers automatically; it only adds hint payloads for authoring.
-

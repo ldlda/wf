@@ -46,18 +46,18 @@ Recommended node use shape:
   "node": "demo.echo",
   "input": [
     {
-      "target": {"root": "local", "parts": ["text"]},
-      "path": {"root": "input", "parts": ["text"]}
+      "target": { "root": "local", "parts": ["text"] },
+      "path": { "root": "input", "parts": ["text"] }
     },
     {
-      "target": {"root": "local", "parts": ["limit"]},
+      "target": { "root": "local", "parts": ["limit"] },
       "value": 3
     }
   ],
   "output": [
     {
-      "source": {"root": "local", "parts": ["echoed"]},
-      "target": {"root": "state", "parts": ["echoed"]}
+      "source": { "root": "local", "parts": ["echoed"] },
+      "target": { "root": "state", "parts": ["echoed"] }
     }
   ]
 }
@@ -67,8 +67,8 @@ Recommended configured reducer shape:
 
 ```json
 {
-  "ref": {"source": "wf.std", "capability_key": "modulo_add"},
-  "config": {"modulus": 10}
+  "ref": { "source": "wf.std", "capability_key": "modulo_add" },
+  "config": { "modulus": 10 }
 }
 ```
 
@@ -116,6 +116,7 @@ Compact unconfigured reducer shorthand remains accepted:
 ## Task 1: Inventory MCP/Draft Surfaces That Emit Map Sugar
 
 **Files:**
+
 - Read-only first:
   - `src/wf_mcp/workflow_surface/models.py`
   - `src/wf_mcp/workflow_surface/handlers.py`
@@ -164,6 +165,7 @@ Findings from the first inventory pass:
 ## Task 2: Draft Adapter Emits Canonical Builder Bindings
 
 **Files:**
+
 - Modify: `src/wf_artifacts/drafts/adapter.py`
 - Modify: `tests/artifacts/test_draft_adapter.py`
 
@@ -212,6 +214,7 @@ Expected: pass and no new deprecation warnings from the adapter.
 ## Task 3: Workflow Surface Requests Prefer Canonical Shapes
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/models.py`
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Modify: `tests/wf_mcp/test_workflow_surface.py`
@@ -262,6 +265,7 @@ Expected: pass.
 ## Task 4: Inspect/List Outputs Show Canonical Refs and Display Strings Separately
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Modify: `src/wf_platform/sources.py` if inventory models need fields
 - Modify: tests in `tests/wf_mcp`
@@ -273,7 +277,7 @@ For source/capability inspection responses, assert reducers include enough info:
 ```json
 {
   "name": "wf.std.add",
-  "ref": {"source": "wf.std", "capability_key": "add"},
+  "ref": { "source": "wf.std", "capability_key": "add" },
   "description": "..."
 }
 ```
@@ -305,6 +309,7 @@ Expected: pass.
 ## Task 5: Docs and MCP Tool Descriptions
 
 **Files:**
+
 - Modify: `docs/wf_mcp_operator_manual.md`
 - Modify: `docs/workflow_drafts.md`
 - Modify: `docs/wf_mcp_end_to_end_runbook.md`

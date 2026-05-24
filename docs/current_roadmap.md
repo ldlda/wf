@@ -53,7 +53,10 @@ implementation state.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of
-  its barrier/lineage machinery by native subgraphs and fork/gather.
+  its barrier/lineage machinery by native subgraphs and fork/gather. Current
+  lineage progress includes ordered `StateWrite` records, `LineageStateView`,
+  foreach item `lineage_id`s, and nested foreach lineage identity. Full
+  `RuntimeScope` / `LineageState` storage is still future work.
 - **Persistent run history**: add a run store before adding stable `run_id`,
   `inspect_run`, or `read_run_trace(run_id, range)` APIs. Current traces are
   returned directly from immediate run responses.

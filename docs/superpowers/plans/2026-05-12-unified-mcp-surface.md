@@ -212,6 +212,7 @@ config_reloaded
 ## Phase 1: Inventory And Adapter Reality Check
 
 **Files:**
+
 - Create: `docs/mcp_protocol_proxy_inventory.md`
 - Inspect: `src/wf_mcp/sdk/adapter.py`
 - Inspect: `src/wf_mcp/transparent_proxy/runtime.py`
@@ -228,12 +229,13 @@ config_reloaded
   - sampling
   - tasks
 - [ ] Identify SDK gaps before implementation. If an MCP feature is not
-  accessible through FastMCP/MCP SDK at our current version, document it instead
-  of inventing a fake abstraction.
+      accessible through FastMCP/MCP SDK at our current version, document it instead
+      of inventing a fake abstraction.
 
 ## Phase 2: Extract Shared Workflow/Admin Handlers
 
 **Files:**
+
 - Create: `src/wf_mcp/workflow_surface/handlers.py`
 - Create: `src/wf_mcp/admin_surface/handlers.py`
 - Modify: `src/wf_mcp/broker/artifact_tools.py`
@@ -243,17 +245,18 @@ config_reloaded
 - Test: `tests/wf_mcp/test_transparent_proxy.py`
 
 - [ ] Move workflow artifact list/save/inspect/validate/run logic into shared
-  handler functions/classes.
+      handler functions/classes.
 - [x] Move admin list/refresh/config/reload logic into shared handler
-  functions/classes.
+      functions/classes.
 - [x] Keep broker compatibility tool names working.
 - [x] Keep transparent proxy admin tool names working.
 - [ ] Do not change behavior in this phase; only remove duplicated logic and
-  create a single implementation path.
+      create a single implementation path.
 
 ## Phase 3: Unified Server Factory
 
 **Files:**
+
 - Create: `src/wf_mcp/server/unified.py`
 - Modify: `src/wf_mcp/cli.py`
 - Modify: `src/wf_mcp/broker/server.py`
@@ -277,6 +280,7 @@ config_reloaded
 ## Phase 4: Namespacing And Collision Policy
 
 **Files:**
+
 - Modify: `src/wf_mcp/shared/names.py`
 - Test: `tests/wf_mcp/test_names.py`
 - Test: `tests/wf_mcp/test_unified_server.py`
@@ -286,28 +290,30 @@ config_reloaded
 - [ ] Keep `wf.mcp.*` for workflow runtime helpers, not admin.
 - [ ] Keep upstream proxy names collision-safe.
 - [ ] Reject configured connection ids that collide with reserved local
-  namespaces.
+      namespaces.
 - [ ] Decide whether compatibility broker names remain visible by default in
-  unified mode. Recommended: yes during migration, no after migration.
+      unified mode. Recommended: yes during migration, no after migration.
 
 ## Phase 5: Tool/Resource/Prompt Projection Parity
 
 **Files:**
+
 - Modify: `src/wf_mcp/transparent_proxy/runtime.py`
 - Modify: unified server files from Phase 3.
 - Test: `tests/wf_mcp/test_unified_server.py`
 
 - [ ] Ensure upstream tools and stable workflow/admin tools both appear in
-  `tools/list`.
+      `tools/list`.
 - [ ] Ensure upstream resources appear in `resources/list` and can be read.
 - [ ] Ensure upstream prompts appear in `prompts/list` and can be rendered.
 - [ ] Ensure resources-as-tools and prompts-as-tools remain optional projection
-  modes, not the only way to access resources/prompts.
+      modes, not the only way to access resources/prompts.
 - [ ] Ensure search/pagination includes stable local tools and upstream tools.
 
 ## Phase 6: Local Notification Bus
 
 **Files:**
+
 - Create: `src/wf_mcp/events/bus.py`
 - Modify: `src/wf_mcp/broker/events.py`
 - Modify: `src/wf_mcp/broker/service/core.py`
@@ -330,17 +336,18 @@ config_reloaded
   - [x] `resources_changed`
   - [x] `prompts_changed`
 - [ ] Do not emit MCP notifications yet unless the server/session API is
-  clearly available. This phase creates the source of truth.
+      clearly available. This phase creates the source of truth.
 
 ## Phase 7: MCP Notifications
 
 **Files:**
+
 - Modify: unified server files from Phase 3.
 - Modify: `src/wf_mcp/events/bus.py`
 - Test: `tests/wf_mcp/test_unified_server.py`
 
 - [ ] Emit MCP list-changed notifications when local or upstream catalogs
-  change, if supported:
+      change, if supported:
   - `notifications/tools/list_changed`
   - `notifications/resources/list_changed`
   - `notifications/prompts/list_changed`
@@ -348,61 +355,64 @@ config_reloaded
 - [ ] Proxy upstream logging notifications where supported.
 - [ ] Ensure clients that ignore notifications can still poll/list manually.
 - [ ] Add tests that assert notifications are requested/emitted through whatever
-  FastMCP/MCP SDK surface is available. If no testable surface exists, document
-  the limitation in `docs/mcp_protocol_proxy_inventory.md`.
+      FastMCP/MCP SDK surface is available. If no testable surface exists, document
+      the limitation in `docs/mcp_protocol_proxy_inventory.md`.
 
 ## Phase 8: Elicitation And Sampling Routing
 
 **Files:**
+
 - Create: `src/wf_mcp/protocol/elicitation.py`
 - Create: `src/wf_mcp/protocol/sampling.py`
 - Modify: SDK adapter/session layer if supported.
 - Test: `tests/wf_mcp/test_protocol_proxy.py`
 
 - [ ] Determine how upstream MCP SDK exposes server-to-client elicitation
-  requests.
+      requests.
 - [ ] Determine how FastMCP exposes downstream client elicitation responses.
 - [ ] Route upstream elicitation requests to the downstream client only when the
-  downstream client advertised support.
+      downstream client advertised support.
 - [ ] Route upstream sampling requests to the downstream client only when the
-  downstream client advertised support.
+      downstream client advertised support.
 - [ ] Preserve request ids/correlation ids so responses return to the correct
-  upstream session.
+      upstream session.
 - [ ] Return structured unsupported diagnostics when routing is impossible.
 - [ ] Do not convert elicitation/sampling into normal tools as the primary
-  behavior.
+      behavior.
 
 ## Phase 9: Tasks And Long-Running Workflow Runs
 
 **Files:**
+
 - Create: `src/wf_mcp/workflow_surface/runs.py`
 - Modify: unified server files from Phase 3.
 - Test: `tests/wf_mcp/test_workflow_tasks.py`
 
 - [ ] Prefer MCP Tasks for long-running `wf.workflow.run_deployment` when the
-  client/server support task execution.
+      client/server support task execution.
 - [ ] Keep synchronous run behavior for short/manual local tests.
 - [ ] Add a compatibility run store only if MCP Tasks are unavailable or
-  insufficient for Codex/Inspector.
+      insufficient for Codex/Inspector.
 - [ ] Map workflow interrupts to task status such as `input_required` only after
-  the runtime supports the needed resume model.
+      the runtime supports the needed resume model.
 - [ ] Do not implement durable scheduling/cron here.
 
 ## Phase 10: Mode Migration
 
 **Files:**
+
 - Modify: `docs/wf_mcp_architecture.md`
 - Modify: `docs/wf_mcp_capability_sources.md`
 - Modify: `src/wf_mcp/cli.py`
 - Test: `tests/wf_mcp/test_cli.py`
 
 - [ ] Document unified mode as the recommended local mode once it passes manual
-  Codex and Inspector checks.
+      Codex and Inspector checks.
 - [ ] Keep broker/proxy modes as compatibility modes.
 - [ ] Mark compatibility broker tool names as legacy once namespaced local tools
-  work in unified mode.
+      work in unified mode.
 - [ ] Do not delete compatibility modes until tests cover every important
-  surface.
+      surface.
 
 > **Superseded on 2026-05-16:** the compatibility period is now considered long
 > enough. The current plan is to retire the public broker/proxy mode split in
@@ -420,9 +430,9 @@ config_reloaded
 - [ ] Inspector shows upstream resources and prompts.
 - [ ] Inspector shows local workflow tools with useful names/descriptions.
 - [ ] If everything-server elicitation is triggered, the proxy either routes it
-  correctly or returns a clear unsupported diagnostic.
+      correctly or returns a clear unsupported diagnostic.
 - [ ] If everything-server progress/logging is triggered, the proxy either
-  forwards it correctly or documents why not.
+      forwards it correctly or documents why not.
 
 ## Non-Goals
 

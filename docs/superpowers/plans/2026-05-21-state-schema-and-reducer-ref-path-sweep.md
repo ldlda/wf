@@ -15,7 +15,7 @@
 We just moved graph/node bindings toward structural paths:
 
 ```json
-{"root": "state", "parts": ["person.name"]}
+{ "root": "state", "parts": ["person.name"] }
 ```
 
 But state schema indexing still builds rootless dotted strings in places:
@@ -31,7 +31,7 @@ That can corrupt JSON Schema property names containing dots:
 {
   "type": "object",
   "properties": {
-    "person.name": {"type": "string", "reducer": "wf.std.replace"}
+    "person.name": { "type": "string", "reducer": "wf.std.replace" }
   }
 }
 ```
@@ -106,6 +106,7 @@ Reducer name: source capability ref, should use CapabilityRef later
 ## Task 1: Pin Literal Dotted State Property Behavior
 
 **Files:**
+
 - Test: `tests/core/test_nested_state_paths.py`
 - Test: `tests/core/test_schema_validation.py`
 
@@ -164,6 +165,7 @@ Expected: fail before implementation.
 ## Task 2: Add Typed State Field Index
 
 **Files:**
+
 - Modify: `src/wf_core/models/schemas.py`
 - Test: `tests/core/test_nested_state_paths.py`
 
@@ -272,6 +274,7 @@ Expected: pass.
 ## Task 3: Move Runtime Lookup to Typed State Paths
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/state.py`
 - Test: `tests/core/test_nested_state_paths.py`
 - Test: `tests/core/test_atomic_state_patches.py`
@@ -341,6 +344,7 @@ Expected: pass.
 ## Task 4: Structural `StateFieldDecl.path` Dump
 
 **Files:**
+
 - Modify: `src/wf_core/models/schemas.py`
 - Test: `tests/core/test_nested_state_paths.py`
 - Test: `tests/core/test_schema_validation.py`
@@ -356,7 +360,7 @@ Existing tests may expect:
 Decide based on current path model direction. Since `StatePath` now serializes structurally elsewhere, prefer:
 
 ```json
-{"path": {"root": "state", "parts": ["person.name"]}}
+{ "path": { "root": "state", "parts": ["person.name"] } }
 ```
 
 - [ ] **Step 2: Change serializer**
@@ -405,6 +409,7 @@ Expected: pass after expectation updates.
 ## Task 5: Authoring State Metadata Path Sweep
 
 **Files:**
+
 - Modify: `src/wf_authoring/schemas.py`
 - Test: `tests/authoring/test_schemas.py`
 
@@ -481,6 +486,7 @@ Expected: pass.
 ## Task 6: ReducerRef Capability Ref Plan Stub
 
 **Files:**
+
 - Modify: `docs/structural_refs.md`
 - Create: `docs/superpowers/plans/YYYY-MM-DD-reducer-ref-structural-capability.md`
 
@@ -511,6 +517,7 @@ Do not implement reducer structural refs in the state-schema path sweep unless t
 ## Task 7: Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused core tests**

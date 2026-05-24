@@ -114,12 +114,10 @@ Examples:
 ```json
 {
   "input": [
-    {"target": "user.email", "path": "state.person.email"},
-    {"target": "mode", "value": "fast"}
+    { "target": "user.email", "path": "state.person.email" },
+    { "target": "mode", "value": "fast" }
   ],
-  "output": [
-    {"source": "result", "target": "state.result"}
-  ]
+  "output": [{ "source": "result", "target": "state.result" }]
 }
 ```
 
@@ -127,9 +125,7 @@ Whole payload input:
 
 ```json
 {
-  "input": [
-    {"target": ".", "path": "state.rates"}
-  ]
+  "input": [{ "target": ".", "path": "state.rates" }]
 }
 ```
 
@@ -137,9 +133,7 @@ Whole payload literal input:
 
 ```json
 {
-  "input": [
-    {"target": ".", "value": {"mode": "fast"}}
-  ]
+  "input": [{ "target": ".", "value": { "mode": "fast" } }]
 }
 ```
 
@@ -177,7 +171,7 @@ Old dict-shaped fields can be accepted at parse time and normalized:
 ```json
 {
   "fields": {
-    "person.tags": {"type": "array", "reducer": "wf.std.append"}
+    "person.tags": { "type": "array", "reducer": "wf.std.append" }
   }
 }
 ```

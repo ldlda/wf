@@ -311,7 +311,11 @@ contracts:
   "node_spec_count": 12,
   "reducer_count": 6,
   "preview": {
-    "node_specs": ["wf.std.coalesce", "wf.std.constant", "wf.std.default_if_none"],
+    "node_specs": [
+      "wf.std.coalesce",
+      "wf.std.constant",
+      "wf.std.default_if_none"
+    ],
     "reducers": ["wf.std.add", "wf.std.append", "wf.std.max"]
   },
   "has_more": {

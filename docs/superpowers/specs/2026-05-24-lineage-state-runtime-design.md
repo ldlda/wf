@@ -1,6 +1,6 @@
 # Lineage State Runtime Design
 
-Status: proposed
+Status: partially implemented
 
 Lineage is the missing primitive between the scheduler frame model and future
 native subgraphs / fork-gather. A frame says where execution is. A scope says
@@ -11,6 +11,25 @@ The current runtime stores committed state directly on `RunState.state` and uses
 foreach-specific barrier metadata to emulate item-local overlays. That worked
 for concurrent foreach, but native subgraphs and future fork/gather need the
 same state-visibility rule in a reusable core concept.
+
+## Current Implementation Status
+
+The first compatibility slices are implemented:
+
+- `StateWrite` records reducer-aware `incoming_value` and `visible_value`.
+- `StatePatch` preserves ordered writes while keeping `changes` for trace and
+  compatibility.
+- `LineageStateView` materializes committed state plus lineage-visible writes.
+- Concurrent foreach item reads use `visible_value`, while barriers replay
+  `incoming_value`.
+- Foreach pending result metadata persists write records and `lineage_id`.
+- Frames and runtime context carry `scope_id`, `lineage_id`, and
+  `parent_lineage_id`.
+
+The full `RuntimeScope` / `LineageState` store is not implemented yet.
+Currently, foreach still owns pending write storage through
+`ForeachBarrierState`; the lineage ids are identity and diagnostics, not yet the
+primary storage key.
 
 ## Problem
 

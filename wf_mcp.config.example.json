@@ -9,9 +9,7 @@
       "metadata": {
         "transport": "stdio",
         "command": "pnpx",
-        "args": [
-          "@modelcontextprotocol/server-everything"
-        ]
+        "args": ["@modelcontextprotocol/server-everything"]
       }
     }
   ]

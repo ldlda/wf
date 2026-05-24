@@ -28,6 +28,7 @@
 ### Task 1: Add Canonical Capability Source Model
 
 **Files:**
+
 - Create: `src/wf_mcp/broker/service/capability_sources.py`
 - Modify: `src/wf_mcp/broker/service/sources.py`
 - Test: `tests/wf_mcp/test_service.py`
@@ -201,6 +202,7 @@ Expected: fail until service stores `capability_sources`; pass after Task 2.
 ### Task 2: Make `WfMcpService` Store Capability Sources
 
 **Files:**
+
 - Modify: `src/wf_mcp/broker/service/core.py`
 - Modify: `src/wf_mcp/broker/service/specs.py`
 - Test: `tests/wf_mcp/test_service.py`
@@ -310,6 +312,7 @@ Expected: pass.
 ### Task 3: Move All Authoring Ops Into `wf.std`
 
 **Files:**
+
 - Modify: `src/wf_mcp/broker/service/builtins.py`
 - Test: `tests/wf_mcp/test_service.py`
 
@@ -426,6 +429,7 @@ Expected: pass.
 ### Task 4: Add `wf.admin` Source Without MCP Exposure
 
 **Files:**
+
 - Create: `src/wf_mcp/broker/admin_capabilities.py`
 - Modify: `src/wf_mcp/broker/service/core.py`
 - Test: `tests/wf_mcp/test_service.py`
@@ -554,6 +558,7 @@ Expected: pass.
 ### Task 5: Project Broker Admin Tools From `wf.admin`
 
 **Files:**
+
 - Modify: `src/wf_mcp/broker/tools.py`
 - Test: `tests/wf_mcp/test_broker_server.py`
 
@@ -627,6 +632,7 @@ Expected: pass.
 ### Task 6: Normalize Transparent Proxy Admin Naming Strategy
 
 **Files:**
+
 - Modify: `src/wf_mcp/shared/names.py`
 - Modify: `src/wf_mcp/transparent_proxy/runtime.py`
 - Test: `tests/wf_mcp/test_names.py`
@@ -710,6 +716,7 @@ Expected: pass if `LdaNamespace` preserves dotted names. If FastMCP still emits 
 ### Task 7: Update Docs And Full Verification
 
 **Files:**
+
 - Modify: `docs/wf_mcp_capability_sources.md`
 - Modify: `docs/wf_mcp_architecture.md`
 - Test: full verification commands

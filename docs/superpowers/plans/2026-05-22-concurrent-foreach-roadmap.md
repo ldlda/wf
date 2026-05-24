@@ -34,6 +34,7 @@
 **Goal:** Add the future policy shape while keeping runtime behavior serial-only.
 
 **Files:**
+
 - Modify: `src/wf_core/models/steps.py`
 - Modify: `src/wf_core/validation/outcomes.py`
 - Modify: `src/wf_core/validation/steps.py`
@@ -233,6 +234,7 @@ Expected: all pass.
 **Goal:** Split current node output writes into reusable “build patch” and “commit patch” operations without changing current serial behavior.
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/state.py`
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Test: `tests/core/test_atomic_state_patches.py`
@@ -272,6 +274,7 @@ def build_output_patch(
 ```
 
 This function should:
+
 - validate source paths
 - validate destination paths
 - calculate reducer-aware changes
@@ -338,6 +341,7 @@ Expected: all pass; full suite should still pass before moving on.
 **Goal:** Add resumable barrier metadata and pending result structures without enabling concurrent execution.
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/scheduler.py`
 - Create: `src/wf_core/runtime/foreach_state.py`
 - Modify: `src/wf_core/runtime/ops/foreach.py`
@@ -446,6 +450,7 @@ Expected: pass.
 **Goal:** Enable `foreach(mode="concurrent")` using policy limits, pending results, and barrier commits. Sync runtime interleaves admitted item frames one node call at a time; async runtime may run admitted async node handler calls simultaneously.
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/foreach.py`
 - Modify: `src/wf_core/runtime/step.py`
 - Modify: `src/wf_core/runtime/engine.py`
@@ -533,6 +538,7 @@ return step_foreach_concurrent(...)
 ```
 
 `step_foreach_concurrent` should:
+
 - inspect `ForeachBarrierState`
 - start children while `active < max_active` and `outstanding < max_outstanding`
 - block parent when waiting for children

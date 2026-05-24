@@ -482,7 +482,11 @@ def _same_item_reducer_visibility_workflow() -> Workflow:
         edges=[
             Edge.model_validate({"from": "each", "outcome": "loop", "to": "add_item"}),
             Edge.model_validate(
-                {"from": "add_item", "outcome": "ok", "to": "read_number"}
+                {
+                    "from": "add_item",
+                    "outcome": "ok",
+                    "to": "read_number",
+                }
             ),
             Edge.model_validate({"from": "read_number", "outcome": "ok", "to": END}),
             Edge.model_validate({"from": "each", "outcome": "done", "to": END}),
@@ -563,10 +567,18 @@ def _nested_foreach_lineage_workflow() -> Workflow:
         ],
         edges=[
             Edge.model_validate(
-                {"from": "outer_each", "outcome": "loop", "to": "inner_each"}
+                {
+                    "from": "outer_each",
+                    "outcome": "loop",
+                    "to": "inner_each",
+                }
             ),
             Edge.model_validate(
-                {"from": "inner_each", "outcome": "loop", "to": "record"}
+                {
+                    "from": "inner_each",
+                    "outcome": "loop",
+                    "to": "record",
+                }
             ),
             Edge.model_validate({"from": "record", "outcome": "ok", "to": END}),
             Edge.model_validate({"from": "inner_each", "outcome": "done", "to": END}),

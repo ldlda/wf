@@ -16,12 +16,8 @@ Canonical node bindings already exist:
 
 ```json
 {
-  "input": [
-    {"path": "input.message", "target": "message"}
-  ],
-  "output": [
-    {"source": "echoed", "target": "state.echoed"}
-  ]
+  "input": [{ "path": "input.message", "target": "message" }],
+  "output": [{ "source": "echoed", "target": "state.echoed" }]
 }
 ```
 
@@ -38,25 +34,25 @@ The remaining problem is serialization. These path objects currently dump as str
 Graph source paths:
 
 ```json
-{"root": "state", "parts": ["person", "name"]}
+{ "root": "state", "parts": ["person", "name"] }
 ```
 
 State write paths:
 
 ```json
-{"root": "state", "parts": ["person", "name"]}
+{ "root": "state", "parts": ["person", "name"] }
 ```
 
 Local node paths:
 
 ```json
-{"root": "local", "parts": ["payload", "text"]}
+{ "root": "local", "parts": ["payload", "text"] }
 ```
 
 Local root remains explicit:
 
 ```json
-{"root": "local", "parts": []}
+{ "root": "local", "parts": [] }
 ```
 
 Old strings such as `"state.person.name"` and `"."` remain accepted input.
@@ -66,6 +62,7 @@ Old strings such as `"state.person.name"` and `"."` remain accepted input.
 ## Task 1: Add Structural Serialization for Path Types
 
 **Files:**
+
 - Modify: `src/wf_core/paths.py`
 - Test: `tests/core/test_path_values.py`
 
@@ -131,6 +128,7 @@ Expected: all tests pass.
 ## Task 2: Update Canonical Node Binding Dumps
 
 **Files:**
+
 - Test: `tests/core/test_canonical_node_bindings.py`
 - Test: `tests/authoring/test_builder.py`
 
@@ -166,6 +164,7 @@ Expected: all tests pass.
 ## Task 3: Update Docs
 
 **Files:**
+
 - Modify: `docs/structural_refs.md`
 - Modify: any path/core docs if directly relevant.
 

@@ -13,6 +13,7 @@
 ### Task 1: Pin Wrapper-Artifact Call Semantics
 
 **Files:**
+
 - Modify: `tests/wf_mcp/test_service.py`
 
 - [ ] **Step 1: Write the failing test**
@@ -28,11 +29,13 @@ Expected: FAIL because `call_capability()` only resolves live specs today.
 ### Task 2: Resolve Wrapper Artifacts in the Workflow Surface
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 
 - [ ] **Step 1: Implement minimal wrapper-artifact resolution**
 
 Add a small helper that:
+
 - recognizes stable artifact node names
 - loads the artifact from the store
 - rejects non-wrapper artifacts
@@ -49,6 +52,7 @@ Expected: PASS.
 ### Task 3: Verify the Whole Project
 
 **Files:**
+
 - No additional files.
 
 - [ ] **Step 1: Run focused workflow-surface tests**

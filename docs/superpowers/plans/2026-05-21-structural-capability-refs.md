@@ -120,6 +120,7 @@ The display string `workflow.echo_wrapper.v1` remains computable for list output
 ## Task 1: Make `CapabilityRef` Serialize Structurally
 
 **Files:**
+
 - Modify: `src/wf_platform/refs.py`
 - Test: `tests/wf_platform/test_refs.py`
 
@@ -200,6 +201,7 @@ Expected: all tests pass.
 ## Task 2: Make `WorkflowCapabilityRef` Structural
 
 **Files:**
+
 - Modify: `src/wf_artifacts/refs.py`
 - Test: `tests/wf_artifacts/test_refs.py`
 
@@ -269,6 +271,7 @@ Expected: all tests pass.
 ## Task 3: Save Required Capabilities in New Shape
 
 **Files:**
+
 - Modify: `src/wf_artifacts/models.py`
 - Modify: `src/wf_artifacts/references.py`
 - Test: `tests/wf_artifacts/test_models.py`
@@ -374,6 +377,7 @@ Expected: artifact creation still works; saved dumps use structural refs.
 ## Task 4: Make Deployment Bindings Structural on Save
 
 **Files:**
+
 - Modify: `src/wf_artifacts/models.py`
 - Test: `tests/wf_artifacts/test_models.py`
 - Test: `tests/wf_mcp/test_workflow_surface.py`
@@ -434,6 +438,7 @@ Expected: all tests pass.
 ## Task 5: Stop Parsing Workflow Capability Strings as Generic Capabilities
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/refs.py`
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Test: `tests/wf_mcp/test_workflow_surface_refs.py`
@@ -504,6 +509,7 @@ Expected: all tests pass.
 ## Task 6: Keep Runtime Binding Source-Aware
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/runtime_dependencies.py`
 - Test: `tests/wf_mcp/test_service.py`
 
@@ -550,6 +556,7 @@ Expected: all tests pass.
 ## Task 7: Update Docs to State the Rule
 
 **Files:**
+
 - Modify: `docs/workflow_capabilities.md`
 - Create or modify: `docs/structural_refs.md`
 
@@ -568,15 +575,15 @@ Old strings are accepted at API boundaries only for compatibility.
 Include examples for:
 
 ```json
-{"source": "demo", "capability_key": "foo.bar"}
+{ "source": "demo", "capability_key": "foo.bar" }
 ```
 
 ```json
-{"artifact_id": "echo_wrapper", "version": 1}
+{ "artifact_id": "echo_wrapper", "version": 1 }
 ```
 
 ```json
-{"logical_source": "demo", "concrete_source": "demo.personal"}
+{ "logical_source": "demo", "concrete_source": "demo.personal" }
 ```
 
 - [ ] **Step 3: Mention path refs are separate**
@@ -593,6 +600,7 @@ state.person.name should migrate separately to path models.
 ## Task 8: Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused tests**

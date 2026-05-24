@@ -13,6 +13,7 @@
 ### Task 1: Make Platform Refs Pydantic Boundary Types
 
 **Files:**
+
 - Modify: `src/wf_platform/refs.py`
 - Modify: `tests/refs/test_platform_refs.py`
 
@@ -48,6 +49,7 @@ Reject whitespace-only refs and empty segments. Do not over-restrict valid MCP/s
 ### Task 2: Convert Deployment Bindings to List-of-Struct
 
 **Files:**
+
 - Modify: `src/wf_artifacts/models.py`
 - Modify: `tests/artifacts/test_models.py`
 - Modify: `tests/artifacts/test_store.py`
@@ -71,13 +73,15 @@ bindings: list[SourceBinding] = Field(default_factory=list)
 Parse-only compatibility:
 
 ```json
-{"bindings": {"demo": "demo.personal"}}
+{ "bindings": { "demo": "demo.personal" } }
 ```
 
 should normalize to:
 
 ```json
-{"bindings": [{"logical_source": "demo", "concrete_source": "demo.personal"}]}
+{
+  "bindings": [{ "logical_source": "demo", "concrete_source": "demo.personal" }]
+}
 ```
 
 - [ ] **Step 3: Add `binding_map()`**
@@ -95,6 +99,7 @@ Reject duplicate `logical_source` values during validation.
 ### Task 3: Convert Required Capabilities to List-of-Struct
 
 **Files:**
+
 - Modify: `src/wf_artifacts/models.py`
 - Modify: `src/wf_artifacts/factory.py`
 - Modify: `src/wf_artifacts/references.py`
@@ -168,6 +173,7 @@ Reject duplicate `ref` values during validation.
 ### Task 4: Update Call Sites to Use Helper Maps
 
 **Files:**
+
 - Modify: `src/wf_artifacts/validation.py`
 - Modify: `src/wf_artifacts/catalog.py`
 - Modify: `src/wf_mcp/workflow_surface/runtime_dependencies.py`
@@ -201,6 +207,7 @@ MCP tools that accept `required_capabilities` from callers may still accept dict
 ### Task 5: Update Docs
 
 **Files:**
+
 - Modify: `docs/workflow_artifacts.md`
 
 - [ ] **Step 1: Replace dict binding examples**
@@ -210,7 +217,7 @@ Use:
 ```json
 {
   "bindings": [
-    {"logical_source": "context7", "concrete_source": "context7.default"}
+    { "logical_source": "context7", "concrete_source": "context7.default" }
   ]
 }
 ```
@@ -236,6 +243,7 @@ State that old dict shapes are accepted at parse boundaries but not emitted by m
 ### Task 6: Verification
 
 **Files:**
+
 - All touched files
 
 - [ ] **Step 1: Run focused tests**
