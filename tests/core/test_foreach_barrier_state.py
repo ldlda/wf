@@ -3,7 +3,9 @@ from __future__ import annotations
 import pytest
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.run_state import ExecutionFrame
+from wf_core.models.reducers import ReducerRef
+from wf_core.paths import StatePath
+from wf_core.run_state import ExecutionFrame, StateWrite
 from wf_core.runtime.foreach_state import (
     ForeachBarrierState,
     ItemErrorRecord,
@@ -46,6 +48,41 @@ def test_foreach_barrier_state_round_trips_through_frame_metadata() -> None:
     assert loaded.pending_results[1].patch.changes["state.count"] == 1
     assert loaded.pending_results[1].error is not None
     assert loaded.pending_results[1].error.message == "bad item"
+
+
+def test_foreach_barrier_state_round_trips_reducer_write_records() -> None:
+    frame = ExecutionFrame(id="root", kind="root", node_id="each")
+    barrier = ForeachBarrierState(
+        next_index=1,
+        mode="concurrent",
+        pending_results={
+            0: PendingItemResult(
+                index=0,
+                frame_id="child-0",
+                status="succeeded",
+                patch=StatePatch(
+                    writes=[
+                        StateWrite(
+                            path=StatePath(("count",)),
+                            incoming_value=3,
+                            visible_value=5,
+                            reducer=ReducerRef(name="wf.std.add"),
+                        )
+                    ]
+                ),
+            )
+        },
+    )
+
+    barrier.save_to_frame(frame, "each")
+    loaded = ForeachBarrierState.from_frame(frame, "each")
+
+    assert loaded is not None
+    write = loaded.pending_results[0].patch.writes[0]
+    assert write.path == StatePath(("count",))
+    assert write.incoming_value == 3
+    assert write.visible_value == 5
+    assert write.reducer.name == "wf.std.add"
 
 
 def test_foreach_barrier_state_returns_none_when_missing() -> None:
@@ -109,6 +146,7 @@ def test_foreach_barrier_accumulates_multiple_patches_for_one_item() -> None:
     result = barrier.pending_results[0]
     assert result.patch.changes["state.count"] == 1
     assert result.patch.changes["state.name"] == "a"
+    assert len(result.patch.writes) == 2
 
 
 def test_foreach_barrier_rejects_item_result_frame_mismatch() -> None:

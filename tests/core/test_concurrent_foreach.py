@@ -190,13 +190,6 @@ def test_sync_concurrent_foreach_barrier_replays_add_reducer_inputs() -> None:
     assert foreach_entries[-1].state_changes["state.number"] == 6
 
 
-@pytest.mark.xfail(
-    reason=(
-        "Current foreach overlays use StatePatch.changes, which stores incoming "
-        "reducer values; lineage StateWrite.visible_value should make this pass."
-    ),
-    strict=True,
-)
 def test_sync_concurrent_foreach_same_item_reads_add_reducer_visible_value() -> None:
     workflow = _same_item_reducer_visibility_workflow()
 
@@ -220,9 +213,6 @@ def test_sync_concurrent_foreach_same_item_reads_add_reducer_visible_value() -> 
     assert stage_entry.resolved_input["current_number"] == 2
     assert stage_entry.state_changes == {}
     read_entry = next(entry for entry in run.trace if entry.node_id == "read_number")
-    # Current limitation: foreach overlays use StatePatch.changes, which stores
-    # the incoming reducer value. The future lineage StateWrite model should let
-    # this same item read the reducer-visible value 5 instead.
     assert read_entry.resolved_input["number"] == 5
     assert run.state["seen_number"] == [5]
 

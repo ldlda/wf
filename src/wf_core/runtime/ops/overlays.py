@@ -3,7 +3,6 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-from wf_core.paths import StatePath
 from wf_core.run_state import ExecutionFrame, RunState
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
 from wf_core.runtime.ops.state import safe_set_nested_value
@@ -33,7 +32,6 @@ def state_view_for_frame(run: RunState, frame: ExecutionFrame) -> dict[str, Any]
     # Correctness first: this full copy isolates sibling reads. If state grows
     # large, replace this with a lazy/copy-on-write overlay.
     state_view = deepcopy(run.state)
-    for destination, value in pending.patch.changes.items():
-        path = StatePath.parse(destination)
-        safe_set_nested_value(state_view, list(path.parts), value)
+    for write in pending.patch.writes:
+        safe_set_nested_value(state_view, list(write.path.parts), write.visible_value)
     return state_view

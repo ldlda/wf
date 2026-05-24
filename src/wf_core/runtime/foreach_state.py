@@ -4,7 +4,9 @@ from dataclasses import dataclass, field
 from typing import Any, Literal
 
 from wf_core.errors import WorkflowExecutionError
-from wf_core.run_state import ExecutionFrame
+from wf_core.models.reducers import ReducerRef
+from wf_core.paths import StatePath
+from wf_core.run_state import ExecutionFrame, StateWrite
 from wf_core.runtime.ops.state import StatePatch
 from wf_core.runtime.scheduler import ForeachIterationMetadata
 
@@ -85,6 +87,7 @@ class PendingItemResult:
                 f"malformed pending foreach result missing {exc.args[0]!r}"
             ) from exc
         patch_changes = raw.get("patch_changes", {})
+        patch_writes = raw.get("patch_writes")
         if not isinstance(index, int) or index < 0:
             raise WorkflowExecutionError("malformed pending foreach result index")
         if not isinstance(frame_id, str):
@@ -93,12 +96,20 @@ class PendingItemResult:
             raise WorkflowExecutionError("malformed pending foreach result status")
         if not isinstance(patch_changes, dict):
             raise WorkflowExecutionError("malformed pending foreach result patch")
+        if patch_writes is not None and not isinstance(patch_writes, list):
+            raise WorkflowExecutionError("malformed pending foreach result writes")
         raw_error = raw.get("error")
         return cls(
             index=index,
             frame_id=frame_id,
             status=status,
-            patch=StatePatch(changes=patch_changes),
+            patch=(
+                StatePatch(
+                    writes=[_state_write_from_metadata(item) for item in patch_writes]
+                )
+                if patch_writes is not None
+                else StatePatch(changes=patch_changes)
+            ),
             error=(
                 ItemErrorRecord.from_metadata(raw_error)
                 if raw_error is not None
@@ -112,6 +123,9 @@ class PendingItemResult:
             "frame_id": self.frame_id,
             "status": self.status,
             "patch_changes": dict(self.patch.changes),
+            "patch_writes": [
+                _state_write_to_metadata(write) for write in self.patch.writes
+            ],
             "error": self.error.to_metadata() if self.error is not None else None,
         }
 
@@ -298,3 +312,53 @@ def _string_tuple(raw: object) -> tuple[str, ...]:
     if isinstance(raw, list) and all(isinstance(item, str) for item in raw):
         return tuple(raw)
     raise WorkflowExecutionError("malformed foreach barrier frame id list")
+
+
+def _state_write_from_metadata(raw: object) -> StateWrite:
+    """Parse one persisted item-lineage write record.
+
+    Barrier metadata must keep reducer-visible values across interrupt/resume;
+    reconstructing from `patch_changes` would downgrade reducer writes to
+    replace-style incoming values.
+    """
+    if not isinstance(raw, dict):
+        raise WorkflowExecutionError("malformed pending foreach write")
+    try:
+        path = raw["path"]
+        incoming_value = raw["incoming_value"]
+        visible_value = raw["visible_value"]
+        reducer = raw["reducer"]
+    except KeyError as exc:
+        raise WorkflowExecutionError(
+            f"malformed pending foreach write missing {exc.args[0]!r}"
+        ) from exc
+    try:
+        return StateWrite(
+            path=_state_path_from_metadata(path),
+            incoming_value=incoming_value,
+            visible_value=visible_value,
+            reducer=ReducerRef.model_validate(reducer),
+        )
+    except Exception as exc:
+        raise WorkflowExecutionError("malformed pending foreach write") from exc
+
+
+def _state_write_to_metadata(write: StateWrite) -> dict[str, Any]:
+    """Serialize one item-lineage write without relying on dotted display paths."""
+    return {
+        "path": {"root": "state", "parts": list(write.path.parts)},
+        "incoming_value": write.incoming_value,
+        "visible_value": write.visible_value,
+        "reducer": write.reducer.model_dump(mode="json"),
+    }
+
+
+def _state_path_from_metadata(raw: object) -> StatePath:
+    if isinstance(raw, str):
+        return StatePath.parse(raw)
+    if not isinstance(raw, dict) or raw.get("root") != "state":
+        raise WorkflowExecutionError("malformed pending foreach write path")
+    parts = raw.get("parts")
+    if not isinstance(parts, list) or not all(isinstance(part, str) for part in parts):
+        raise WorkflowExecutionError("malformed pending foreach write path")
+    return StatePath(tuple(parts))
