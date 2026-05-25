@@ -45,8 +45,7 @@ implementation state.
   [ADR 0002](./adr/0002-concurrent-foreach-policy-and-barrier-commits.md).
 - Native subgraph design spec:
   [2026-05-24 native subgraphs](./superpowers/specs/2026-05-24-native-subgraphs-design.md).
-- **Native subgraphs / graph-as-node**: next major runtime feature. The
-  scaffolding slice is complete: core has `SubgraphNode`, structural
+- **Native subgraphs / graph-as-node**: core has `SubgraphNode`, structural
   `WorkflowRef`, workflow-level outcomes plus explicit `EndNode` termination,
   authoring helpers (`subgraph_ref` / `WorkflowBuilder.subgraph`), and artifact
   reference conversion helpers. Core can now execute a prepared local child
@@ -54,11 +53,16 @@ implementation state.
   map child output through the boundary, and route by the child's terminal
   outcome. Prepared child interrupts now bubble through a typed internal route
   and resume inside child scope while the public request identifies the parent
-  subgraph boundary. Saved/deployed child resolution remains next. Wrapper
-  helpers currently run child workflows as ordinary nodes; native
+  subgraph boundary. The workflow platform now resolves non-interrupting saved
+  child artifact refs into native prepared dependencies; descendant logical
+  capabilities inherit the root deployment binding environment, and missing or
+  cyclic saved children fail validation before a run starts. Wrapper helpers
+  currently run child workflows as ordinary nodes; native
   `SubgraphNode` is now the graph-as-node path for prepared children.
   `WorkflowBuilder.prepare_subgraph()` and `WorkflowBuilder.resume()` make the
   local runnable/resumable path available without core-runtime plumbing.
+  Saved interrupting artifacts remain unrunnable through one-shot
+  `run_deployment` until the platform exposes persisted resume.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of
@@ -100,8 +104,9 @@ Frame stress points remaining for native subgraphs and future fork/gather:
 ## Why This Order
 
 The MCP workflow authoring path is now usable enough for real testing. The next
-bottleneck is runtime/platform correctness: resumable child execution,
-saved/deployed child resolution, persistent run history, and protocol-native
-progress reporting. Concurrent foreach and prepared native child execution now
-supply scheduler/lineage precedent. Those remaining pieces should come before
-adding more high-level authoring sugar.
+bottleneck is runtime/platform correctness: persisted resume for saved
+interrupting children, optional per-use-site child deployment overrides,
+persistent run history, and protocol-native progress reporting. Concurrent
+foreach and native saved child execution now supply scheduler/lineage
+precedent. Those remaining pieces should come before adding more high-level
+authoring sugar.

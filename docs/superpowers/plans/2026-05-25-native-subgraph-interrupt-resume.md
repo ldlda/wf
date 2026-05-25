@@ -13,6 +13,7 @@
 ### Task 1: Child Interrupt Contract
 
 **Files:**
+
 - Modify: `src/wf_core/run_state.py`
 - Modify: `tests/core/test_subgraph_step.py`
 
@@ -54,6 +55,7 @@ to use `route=None`.
 ### Task 2: Scope-Aware Interrupt Creation and Resume
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/ops/handlers.py`
 - Modify: `src/wf_core/runtime/ops/interrupts.py`
 - Modify: `src/wf_core/runtime/preparation.py`
@@ -83,6 +85,7 @@ output into parent state.
 ### Task 3: Verification and Documentation
 
 **Files:**
+
 - Modify: `docs/wf_core_architecture.md`
 - Modify: `docs/current_roadmap.md`
 

@@ -1,6 +1,7 @@
 # Native Subgraphs Design
 
-Status: prepared-child execution and interrupt resume implemented; artifact resolution planned
+Status: prepared-child execution and interrupt resume implemented; saved-artifact
+resolution scoped for platform implementation
 
 Native subgraphs should make a workflow usable as a workflow step without
 collapsing the child run into one opaque Python node call. The current
@@ -9,8 +10,10 @@ compatibility wrappers, but they hide the child trace, child frames, and child
 interrupt lifecycle from `wf_core`.
 
 This design defines the core runtime shape. The boundary model, prepared-child
-execution, and routed child interrupt resume are implemented; saved-workflow
-resolution remains planned.
+execution, and routed child interrupt resume are implemented. The remaining
+saved-workflow work is platform preparation: load immutable child artifact
+versions, resolve their runtime dependencies, and supply prepared children to
+the already-implemented core runtime.
 
 ## Goals
 
@@ -333,9 +336,10 @@ child = parent.subgraph(
 ```
 
 This copies the compiled child workflow contract into a core `SubgraphNode`,
-appends it to the builder, and returns the step for normal routing. Runtime
-execution requires the child graph and its handlers to be supplied as a
-`PreparedSubgraph`; higher layers still need dependency resolution before
+appends it to the builder, and returns the step for normal routing. For a local
+child builder, `parent.prepare_subgraph(child_builder)` registers the compiled
+graph, handlers, and reducers required by `parent.execute(...)` and
+`parent.resume(...)`. Higher layers still need dependency resolution before
 saved/deployed workflow refs can run. The lower-level `subgraph_ref(...)`
 helper exists for code that wants only the core step object.
 
@@ -382,6 +386,37 @@ The platform layer should:
 This keeps auth, source availability, deployment binding, and MCP account
 selection out of `wf_core`.
 
+### Saved Child Deployment Environment
+
+For the first saved-subgraph slice, one deployment defines the runnable
+environment for the full graph tree. A parent deployment that loads a
+structural child ref such as `{"artifact_id": "child", "version": 2}` must:
+
+1. load exactly that immutable child artifact version
+2. resolve the child's logical node and reducer dependencies using the same
+   deployment bindings as the parent
+3. recursively prepare non-interrupting descendant child artifacts using that
+   same environment
+4. detect missing artifacts, missing bound capabilities, and saved-child
+   reference cycles before execution
+
+This intentionally does not add a child deployment id to `WorkflowRef`.
+Supporting an explicit per-child deployment override later remains compatible
+with the structural child reference and preparation boundary. Such an override
+must be keyed by the parent subgraph dependency/use site, not only by child
+artifact id: one parent graph may intentionally invoke the same immutable
+child artifact twice against different accounts or capability bindings.
+
+### Saved Child Interrupt Limitation
+
+Native prepared children can interrupt and resume in core. The current
+workflow-surface `run_deployment` entrypoint is still a one-shot execution
+call, however, and does not expose persisted platform resume for a saved run.
+Therefore this slice preserves the existing unrunnable behavior for saved
+artifacts containing interrupts, including interrupting descendant artifacts.
+The platform must report that diagnostic before execution rather than starting
+a run it cannot resume through its public surface.
+
 ## Implementation Slices
 
 ### Completed Scaffold: Typed Native Boundary
@@ -424,9 +459,13 @@ selection out of `wf_core`.
 - Structural saved-workflow references and conversion helpers already exist;
   this slice is execution resolution, not a new identity shape.
 - Add platform-level resolution for saved workflow artifacts.
-- Validate dependencies and source bindings before execution.
-- Tests: saved child workflow runs through a deployment binding, missing child
-  artifact reports an unrunnable dependency.
+- Apply the parent deployment binding environment transitively to each exact
+  saved child artifact version.
+- Validate dependencies, missing artifacts, saved-child cycles, and existing
+  unsupported interrupt diagnostics before execution.
+- Tests: saved child workflow runs through a deployment binding, nested saved
+  child dependencies use the same binding environment, and missing,
+  cyclic, or interrupting child artifacts report an unrunnable dependency.
 
 ### Slice 4: Optional Policy Expansion
 
@@ -440,11 +479,8 @@ selection out of `wf_core`.
 ## Risks
 
 - Trace shape can become confusing if child entries are flattened too early.
-- Interrupt resume can become string-parsing-heavy if `InterruptRequest` is not
-  extended structurally.
 - Storing nested run state directly may bloat persisted runs unless inspection
   APIs paginate trace/state detail.
-- Recursive saved workflows need explicit cycle detection.
 - Multiple child workflow dependency registries can make runtime dependencies
   complex; keep the boundary typed early.
 
@@ -454,15 +490,15 @@ selection out of `wf_core`.
   frame metadata plus shared parent `RunState.frames`?
 - Should `TraceEntry` gain explicit `scope_id`, `lineage_id`, and parent-trace
   fields, or should child traces live in a separate inspectable structure?
-- Is v1 allowed to reference only inline/compiled child workflows, or should it
-  immediately accept artifact refs resolved by the platform?
 
 ## Recommendation
 
-The typed boundary scaffold and non-interrupting prepared-child runtime are
-complete. Do not delete the wrapper-node helpers yet; use them as compatibility
-and examples while native subgraphs mature.
+The typed boundary scaffold, prepared-child runtime, and routed interrupt
+resume are complete. Implement Slice 3 in the platform layer: prepare saved
+non-interrupting child artifacts recursively under one deployment environment
+and pass those prepared dependencies into core execution.
 
-Implement Slice 2 before exposing saved workflows as broadly reusable child
-graphs. Saved workflows without nested interrupt support would look reusable
-but break at exactly the moment users need persistence and resume.
+Do not broaden saved interrupt support through `run_deployment` until the
+platform has a public persisted resume path. Do not delete wrapper-node
+helpers yet; they remain compatibility APIs while saved native execution
+matures.

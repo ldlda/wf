@@ -9,7 +9,6 @@ from wf_artifacts import (
     AvailableCapability,
     AvailableSource,
     DependencyDiagnostic,
-    DiagnosticSeverity,
     DraftWorkspaceStore,
     RequiredCapability,
     WorkflowArtifact,
@@ -52,6 +51,11 @@ from .constants import (
 )
 from .models import TraceRange
 from .refs import parse_workflow_surface_capability_id
+from .saved_subgraphs import (
+    interrupting_artifact_diagnostic,
+    resolve_saved_subgraph_tree,
+    validate_saved_subgraph_tree,
+)
 from .wrapper_hints import wrapper_hints_for_capability
 
 if TYPE_CHECKING:
@@ -279,13 +283,13 @@ class WorkflowSurfaceHandlers:
         deployment_id: str | None,
     ) -> dict[str, Any]:
         """Execute a saved wrapper artifact through the workflow runner."""
-        unsupported = _unsupported_interrupt_diagnostic(artifact)
+        unsupported = interrupting_artifact_diagnostic(artifact)
         if unsupported is not None:
             raise ValueError(unsupported.message)
 
-        # For now only wrapper artifacts are honest node capabilities here.
-        # Full saved workflows stay on `run_deployment` until core supports
-        # graph-as-node semantics instead of us faking subgraphs at this layer.
+        # Direct capability calls remain wrapper-only. Full saved workflows run
+        # through deployments, where native subgraph dependencies and bindings
+        # are prepared before core execution.
         plan = _raw_plan_from_artifact(artifact)
         deployment = None
         if deployment_id is not None:
@@ -882,7 +886,7 @@ class WorkflowSurfaceHandlers:
                 diagnostics=diagnostics,
             )
 
-        unsupported = _unsupported_interrupt_diagnostic(artifact)
+        unsupported = interrupting_artifact_diagnostic(artifact)
         if unsupported is not None:
             return _run_payload(
                 deployment=deployment,
@@ -933,10 +937,22 @@ class WorkflowSurfaceHandlers:
             deployment.artifact_id,
             deployment.artifact_version,
         )
+        available_sources = _available_sources(self.service)
         diagnostics = validate_deployment_dependencies(
             artifact=artifact,
             deployment=deployment,
-            sources=_available_sources(self.service),
+            sources=available_sources,
+        )
+        tree = resolve_saved_subgraph_tree(
+            root_artifact=artifact,
+            artifact_store=self.service.artifact_store,
+        )
+        diagnostics.extend(
+            validate_saved_subgraph_tree(
+                tree=tree,
+                deployment=deployment,
+                sources=available_sources,
+            )
         )
         return deployment, artifact, diagnostics
 
@@ -1210,26 +1226,6 @@ def _plan_field(artifact: WorkflowArtifact, field_name: str) -> Any:
             f"workflow artifact {artifact.id}@{artifact.version} "
             f"is missing plan field {field_name!r}"
         ) from exc
-
-
-def _unsupported_interrupt_diagnostic(
-    artifact: WorkflowArtifact,
-) -> DependencyDiagnostic | None:
-    if not any(node.get("type") == "interrupt" for node in _plan_nodes(artifact)):
-        return None
-    return DependencyDiagnostic(
-        severity=DiagnosticSeverity.ERROR,
-        code="interrupting_artifact_unsupported",
-        logical_ref=f"workflow.{artifact.id}.v{artifact.version}",
-        message=(
-            "Running saved workflow artifacts with interrupt nodes is unsupported "
-            "until nested run-state resume is implemented."
-        ),
-        repair_hint=(
-            "Run this workflow as a top-level core workflow or remove interrupt "
-            "nodes before saving it as a runnable deployment."
-        ),
-    )
 
 
 def _plan_nodes(artifact: WorkflowArtifact) -> list[dict[str, Any]]:

@@ -96,15 +96,17 @@ def resolve_prepared_subgraph(
     ref: WorkflowRef,
     subgraphs: Mapping[str, PreparedSubgraph[HandlerT]] | None,
 ) -> PreparedSubgraph[HandlerT]:
-    """Resolve a prepared local child; artifact loading is not a core concern."""
-    if ref.name is None:
-        raise WorkflowExecutionError(
-            f"saved child workflow reference {ref.display!r} is not prepared for core execution"
-        )
-    prepared = None if subgraphs is None else subgraphs.get(ref.name)
+    """Resolve a caller-prepared child; artifact loading is not a core concern.
+
+    Local refs use their registry name. Saved refs use their structural display
+    key only as an already-prepared dependency lookup key; loading immutable
+    artifacts and resolving deployment bindings remains platform work.
+    """
+    key = ref.name if ref.name is not None else ref.display
+    prepared = None if subgraphs is None else subgraphs.get(key)
     if prepared is None:
         raise WorkflowExecutionError(
-            f"no prepared child workflow registered for {ref.name!r}"
+            f"no prepared child workflow registered for {ref.display!r}"
         )
     return prepared
 

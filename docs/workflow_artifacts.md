@@ -73,6 +73,17 @@ Current `run_deployment` calls are synchronous request/response executions. They
 return compact status, output, diagnostics, and `trace_count`; optional ranged
 trace detail is for debugging only.
 
+Non-interrupting saved workflow children can now execute natively through this
+deployment surface. A parent deployment resolves its saved descendants by exact
+artifact version, and the parent binding environment supplies logical source
+bindings for the whole child tree. This is intentionally one configured graph
+environment; future per-child deployment overrides, if added, must be keyed by
+the subgraph use site rather than only the child artifact id.
+
+Interrupting saved artifacts remain unrunnable through `run_deployment`.
+Although core prepared children can interrupt and resume, this one-shot public
+surface does not yet persist a run for a later resume request.
+
 Future run history should introduce a stable `run_id` only when there is a real
 run store behind it. A `run_id` without persisted state, trace paging, and
 status lookup would be misleading. The likely shape is:

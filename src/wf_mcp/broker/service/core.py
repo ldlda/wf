@@ -48,6 +48,10 @@ from ...shared.names import RESERVED_CONNECTION_IDS
 from ...storage import Store
 from ...workflow.wrappers import _model_from_schema
 from ...workflow_surface.runtime_dependencies import resolve_runtime_dependencies
+from ...workflow_surface.saved_subgraphs import (
+    prepare_saved_subgraphs,
+    resolve_saved_subgraph_tree,
+)
 from ..admin_capabilities import admin_source
 from ..catalog import CombinedCatalog, snapshot_from_specs
 from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
@@ -698,12 +702,25 @@ class WfMcpService:
             sources=self.capability_sources,
             plan_node_names=plan_node_names,
         )
+        prepared_subgraphs = {}
+        if artifact is not None and self.artifact_store is not None:
+            tree = resolve_saved_subgraph_tree(
+                root_artifact=artifact,
+                artifact_store=self.artifact_store,
+            )
+            prepared_subgraphs = prepare_saved_subgraphs(
+                tree=tree,
+                deployment=deployment,
+                sources=self.capability_sources,
+                compile_plan=self.compile_plan,
+            )
         workflow = self.compile_plan(plan, dependencies.node_name_bindings)
         run = await execute_workflow_async(
             workflow,
             workflow_input,
             dependencies.node_registry,
             reducers=dependencies.reducers,
+            subgraphs=prepared_subgraphs,
         )
         self._record_event(
             make_event(

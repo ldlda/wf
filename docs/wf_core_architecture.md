@@ -139,8 +139,10 @@ limits and intended adapter seam.
   dependencies. A prepared local child executes through a child runtime scope
   and lineage; child output commits only through declared boundary bindings and
   the parent routes by the child's terminal workflow outcome. Saved/deployed
-  workflow resolution remains outside core and is not implemented at this
-  boundary yet. For local authoring, `WorkflowBuilder.prepare_subgraph()`
+  workflow resolution remains outside core; the workflow platform can now
+  supply non-interrupting saved child artifacts as prepared dependencies using
+  one inherited deployment binding environment. For local authoring,
+  `WorkflowBuilder.prepare_subgraph()`
   registers a child builder and `WorkflowBuilder.resume()` continues a paused
   prepared-child interrupt without requiring direct core-runtime calls.
 - The current `wf_authoring` wrapper helpers still run child workflows as
@@ -151,14 +153,14 @@ limits and intended adapter seam.
   `examples/authoring_workflow_as_node.py` for the compatibility wrapper shape
   and `examples/authoring_native_subgraph.py` plus
   `examples/authoring_native_subgraph_interrupt.py` for the native path.
-- Saved workflow-as-node execution with interrupts still requires platform
-  resolution of artifact/deployment references into prepared child
-  dependencies before core execution begins.
+- Saved workflow-as-node execution with interrupts still requires a persisted
+  platform resume surface. The current one-shot deployment tool rejects those
+  artifacts before execution even though core prepared children can resume.
 - Frames are no longer only a serial execution stack: the runtime has a ready
   queue, `BLOCKED` frame state, lineage isolation, barrier merge semantics, and
   pending child results for concurrent foreach. Native prepared subgraphs now
-  use child-scope execution and typed routed child interruption; saved/deployed
-  child resolution remains outstanding.
+  use child-scope execution and typed routed child interruption; the platform
+  resolves non-interrupting saved/deployed child artifacts before core starts.
   Concurrent foreach is the primary current use case for async concurrent node
   handler execution.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer

@@ -129,6 +129,35 @@ def test_subgraph_step_executes_prepared_child_in_isolated_scope() -> None:
     assert run.trace[-1].step_type == "subgraph"
 
 
+def test_subgraph_step_executes_caller_prepared_saved_child_ref() -> None:
+    payload = _subgraph_node().model_dump(mode="json")
+    payload["workflow"] = {"artifact_id": "child", "version": 1}
+    workflow = _workflow(
+        node=SubgraphNode.model_validate(payload),
+        output_schema=_schema({"answer": {"type": "string"}}),
+    )
+
+    run = execute_workflow(
+        workflow,
+        {"text": "hello"},
+        {},
+        subgraphs={
+            "workflow.child.v1": PreparedSubgraph(
+                workflow=_child_workflow(),
+                registry={
+                    "answer": lambda child_input, _ctx: {
+                        "answer": f"saved:{child_input['text']}"
+                    }
+                },
+            )
+        },
+    )
+
+    assert run.output["answer"] == "saved:hello"
+    assert run.trace[-1].node_id == "child"
+    assert run.trace[-1].step_type == "subgraph"
+
+
 def test_subgraph_step_executes_prepared_async_child() -> None:
     async def answer(payload: dict[str, object], _ctx: object) -> dict[str, object]:
         return {"answer": f"async:{payload['text']}"}
