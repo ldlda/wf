@@ -5,7 +5,7 @@ from pydantic import ValidationError
 from wf_artifacts.drafts import WorkflowDraft
 from wf_artifacts.drafts.api import compile_workflow_draft, validate_workflow_draft
 from wf_artifacts.drafts.adapter import build_workflow_from_draft
-from wf_core import ConditionNode, ForeachNode, NodeUse
+from wf_core import ConditionNode, EndNode, ForeachNode, NodeUse
 from wf_core.models.steps import InputValueBinding
 
 
@@ -211,6 +211,33 @@ def test_adapter_lowers_when_step_through_builder() -> None:
         ("decide", "true", "echo"),
         ("decide", "false", "__end__"),
     ]
+
+
+def test_adapter_lowers_explicit_end_step() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            "name": "end_example",
+            "input_schema": {},
+            "state_schema": {"fields": {}},
+            "output_schema": {},
+            "outcomes": ["ok", "error"],
+            "start": "echo",
+            "steps": {
+                "echo": {"use": "demo.echo"},
+                "end_error": {"end": {"outcome": "error"}},
+            },
+            "routes": {"echo": {"error": "end_error"}},
+        }
+    )
+
+    workflow = build_workflow_from_draft(draft)
+    terminal = workflow.nodes[1]
+
+    assert isinstance(terminal, EndNode)
+    assert terminal.id == "end_error"
+    assert terminal.outcome == "error"
+    assert workflow.outcomes == ["ok", "error"]
+    assert workflow.edges[0].to == "end_error"
 
 
 def test_adapter_lowers_choose_step_through_builder() -> None:

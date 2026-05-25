@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from wf_artifacts.drafts import (
     DraftChooseStep,
+    DraftEndStep,
     DraftForeachStep,
     DraftMatchStep,
     DraftUseStep,
@@ -133,6 +134,25 @@ def test_workflow_draft_accepts_when_step() -> None:
     )
 
     assert isinstance(draft.steps["decide"], DraftWhenStep)
+
+
+def test_workflow_draft_accepts_explicit_end_step() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "outcomes": ["ok", "error"],
+            "steps": {
+                **_keyed_echo_draft()["steps"],
+                "end_error": {"end": {"outcome": "error"}},
+            },
+            "routes": {"echo": {"error": "end_error"}},
+        }
+    )
+
+    terminal = draft.steps["end_error"]
+
+    assert isinstance(terminal, DraftEndStep)
+    assert terminal.end.outcome == "error"
 
 
 def test_workflow_draft_accepts_choose_step() -> None:

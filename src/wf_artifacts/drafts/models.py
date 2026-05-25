@@ -20,6 +20,7 @@ STEP_KIND_KEYS = frozenset(
         "foreach",
         "interrupt",
         "join",
+        "end",
         "when",
         "choose",
         "match",
@@ -191,6 +192,26 @@ class DraftJoinStep(BaseModel):
     join: JsonObject = Field(default_factory=dict)
 
 
+class DraftEndPayload(BaseModel):
+    """Payload for one explicit workflow terminal outcome."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    outcome: str = Field(default="ok", min_length=1)
+
+
+class DraftEndStep(BaseModel):
+    """Draft step that lowers to core `EndNode`.
+
+    Route to this step when the workflow should finish with a non-`ok` public
+    outcome. Routing directly to `__end__` remains the shorthand for `ok`.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    end: DraftEndPayload = Field(default_factory=DraftEndPayload)
+
+
 class DraftWhenPayload(BaseModel):
     """Payload for one boolean draft decision."""
 
@@ -267,6 +288,7 @@ DraftStep = (
     | DraftForeachStep
     | DraftInterruptStep
     | DraftJoinStep
+    | DraftEndStep
     | DraftWhenStep
     | DraftChooseStep
     | DraftMatchStep
@@ -285,6 +307,7 @@ class WorkflowDraft(BaseModel):
     input_schema: JsonObject
     state_schema: JsonObject
     output_schema: JsonObject
+    outcomes: list[str] = Field(default_factory=lambda: ["ok"], min_length=1)
     output: list[InputBinding] = Field(default_factory=list)
     start: str
     steps: dict[str, DraftStep]

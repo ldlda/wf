@@ -7,6 +7,7 @@ from wf_core.paths import GraphSourcePath
 
 from .models import (
     DraftChooseStep,
+    DraftEndStep,
     DraftForeachStep,
     DraftInterruptStep,
     DraftJoinStep,
@@ -29,6 +30,7 @@ def build_workflow_from_draft(draft: WorkflowDraft) -> Workflow:
         input_schema=draft.input_schema,
         state_schema=draft.state_schema,
         output_schema=draft.output_schema,
+        outcomes=draft.outcomes,
     )
     step_refs = {
         step_id: _add_step(builder, step_id, step)
@@ -72,6 +74,8 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
         node = JoinNode(id=step_id, type="join")
         builder.nodes.append(node)
         return node
+    if isinstance(step, DraftEndStep):
+        return builder.end(step.end.outcome, id=step_id)
     if isinstance(step, DraftWhenStep):
         return builder.when(
             step.when.if_,

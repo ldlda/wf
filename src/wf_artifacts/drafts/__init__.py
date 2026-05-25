@@ -8,6 +8,7 @@ from .api import (
 from .models import (
     DraftChooseClause,
     DraftChooseStep,
+    DraftEndStep,
     DraftForeachStep,
     DraftInterruptStep,
     DraftJoinStep,
@@ -22,6 +23,7 @@ __all__ = [
     "DraftDiagnostic",
     "DraftChooseClause",
     "DraftChooseStep",
+    "DraftEndStep",
     "DraftForeachStep",
     "DraftInterruptStep",
     "DraftJoinStep",

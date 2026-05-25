@@ -14,7 +14,7 @@ from wf_authoring import (
     state,
     state_path,
 )
-from wf_core import END, RunStatus, WorkflowExecutionError
+from wf_core import END, EndNode, RunStatus, WorkflowExecutionError
 from wf_core.models.steps import InputPathBinding, InputValueBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_platform import CapabilityRef
@@ -453,6 +453,25 @@ def test_builder_rejects_mixed_canonical_and_deprecated_output_styles() -> None:
             output=[{"source": "text", "target": "state.text"}],
             out_map={"text": "state.text"},
         )
+
+
+def test_builder_adds_explicit_end_node() -> None:
+    builder = WorkflowBuilder(
+        name="explicit_end",
+        input_schema={},
+        state_schema={"fields": {}},
+        output_schema={},
+        outcomes=["ok", "error"],
+    )
+
+    terminal = builder.end("error", id="end_error")
+
+    assert isinstance(terminal, EndNode)
+    assert terminal.id == "end_error"
+    assert terminal.outcome == "error"
+    assert builder.nodes[-1] is terminal
+    builder.set_entry_point(terminal)
+    assert builder.compile().outcomes == ["ok", "error"]
 
 
 class _StructuralKeyMap(Mapping[object, object]):

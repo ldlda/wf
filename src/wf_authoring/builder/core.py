@@ -10,6 +10,7 @@ from wf_authoring.ops.values import runtime_error
 from wf_core import (
     ConditionNode,
     Edge,
+    EndNode,
     ForeachConcurrentPolicy,
     ForeachItemErrorPolicy,
     ForeachNode,
@@ -206,6 +207,7 @@ class WorkflowBuilder:
     input_schema: SchemaLike
     state_schema: StateSchemaLike
     output_schema: SchemaLike
+    outcomes: Sequence[str] | None = None
     start: str | None = None
     reducers: ReducerCatalog | Mapping[str, ReducerDefinition] | None = None
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
@@ -220,6 +222,7 @@ class WorkflowBuilder:
         self.input_schema = schema_ref_from(self.input_schema)
         self.state_schema = state_schema_from(self.state_schema)
         self.output_schema = schema_ref_from(self.output_schema)
+        self.outcomes = list(self.outcomes or ["ok"])
 
     @overload
     def use(
@@ -414,6 +417,20 @@ class WorkflowBuilder:
             output=normalize_output_bindings(output),
             workflow_ref=workflow_ref,
             desc=desc,
+        )
+        self.nodes.append(node)
+        return node
+
+    def end(self, outcome: str = "ok", *, id: str | None = None) -> EndNode:
+        """Add an explicit workflow terminal for a declared public outcome.
+
+        Routing to `__end__` is still the compact `ok` shorthand. Use this when
+        the graph should expose a non-`ok` terminal such as `error`.
+        """
+        node = EndNode(
+            id=id or self._next_step_id(f"end_{slug_id(outcome)}"),
+            type="end",
+            outcome=outcome,
         )
         self.nodes.append(node)
         return node
@@ -854,6 +871,7 @@ class WorkflowBuilder:
             input_schema=cast(SchemaRef, self.input_schema),
             state_schema=cast(StateSchema, self.state_schema),
             output_schema=cast(SchemaRef, self.output_schema),
+            outcomes=list(self.outcomes or ["ok"]),
             node_defs=node_defs,
             start=self.start,
             nodes=self.nodes,
