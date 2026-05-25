@@ -39,10 +39,43 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     @server.tool(
         name="wf.workflow.list_artifacts",
         title="List Workflow Artifacts",
-        description="List saved workflow artifacts available to run or inspect.",
+        description=(
+            "List compact saved workflow artifacts. Use query/kind for "
+            "discovery, then inspect or run a selected artifact for detail."
+        ),
     )
-    async def list_artifacts() -> dict[str, Any]:
-        return await handlers.list_artifacts()
+    async def list_artifacts(
+        query: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Optional case-insensitive search across artifact name, id, "
+                    "display name, description, and kind."
+                )
+            ),
+        ] = None,
+        kind: Annotated[
+            ArtifactKind | None,
+            Field(description="Optional artifact kind filter: workflow or wrapper."),
+        ] = None,
+        cursor: Annotated[
+            str | None,
+            Field(description="Opaque offset cursor returned by a previous page."),
+        ] = None,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                description="Maximum artifact summaries to return in this page.",
+            ),
+        ] = 50,
+    ) -> dict[str, Any]:
+        return await handlers.list_artifacts(
+            query=query,
+            kind=kind,
+            cursor=cursor,
+            limit=limit,
+        )
 
     @server.tool(
         name="wf.workflow.list_capabilities",
@@ -54,10 +87,30 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         ),
     )
     async def list_capabilities(
-        query: str | None = None,
-        source_id: str | None = None,
-        cursor: str | None = None,
-        limit: int = 50,
+        query: Annotated[
+            str | None,
+            Field(
+                description=(
+                    "Optional case-insensitive search across capability name and "
+                    "description."
+                )
+            ),
+        ] = None,
+        source_id: Annotated[
+            str | None,
+            Field(description="Optional capability source id filter, such as wf.std."),
+        ] = None,
+        cursor: Annotated[
+            str | None,
+            Field(description="Opaque offset cursor returned by a previous page."),
+        ] = None,
+        limit: Annotated[
+            int,
+            Field(
+                ge=1,
+                description="Maximum capability summaries to return in this page.",
+            ),
+        ] = 50,
     ) -> dict[str, Any]:
         return await handlers.list_capabilities(
             query=query,

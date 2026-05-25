@@ -28,7 +28,6 @@ from wf_platform import (
     CapabilitySource,
     NodeSpecInventory,
     hash_json_schema,
-    page_items,
 )
 from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
@@ -42,6 +41,7 @@ from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 from ..events import make_event
 from ..models import RawWorkflowPlan
+from ..shared import matches_query, paged_list_payload
 from .constants import (
     DEFAULT_CALL_STEP_ID,
     DEFAULT_ERROR_OUTCOME,
@@ -68,16 +68,42 @@ class WorkflowSurfaceHandlers:
     def __init__(self, service: WfMcpService) -> None:
         self.service = service
 
-    async def list_artifacts(self) -> dict[str, Any]:
+    async def list_artifacts(
+        self,
+        *,
+        query: str | None = None,
+        kind: ArtifactKind | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Return compact paged saved artifact summaries.
+
+        Saved artifacts can contain full raw workflow plans, so list results
+        deliberately stay summary-only. Use inspect/run tools for detail.
+        """
         if self.service.artifact_store is None:
-            return {"nodes": []}
+            return paged_list_payload("nodes", [], cursor=cursor, limit=limit)
         entries = [
             self.service.workflow_artifact_catalog_entry(artifact).model_dump(
                 mode="json"
             )
             for artifact in self.service.artifact_store.list_artifacts()
+            if kind is None or artifact.kind == kind
         ]
-        return {"nodes": entries}
+        entries = [
+            entry
+            for entry in entries
+            if matches_query(
+                entry.get("name"),
+                entry.get("artifact_id"),
+                entry.get("display_name"),
+                entry.get("description"),
+                entry.get("kind"),
+                query=query,
+            )
+        ]
+        entries.sort(key=lambda entry: str(entry["name"]))
+        return paged_list_payload("nodes", entries, cursor=cursor, limit=limit)
 
     async def list_capabilities(
         self,
@@ -106,23 +132,22 @@ class WorkflowSurfaceHandlers:
             if source.enabled and source.visibility.planner
             if source_id is None or source.id == source_id
             for detail in source.as_inventory().capabilities.node_spec_details
-            if query is None
-            or query.casefold() in detail.name.casefold()
-            or (
-                detail.description is not None
-                and query.casefold() in detail.description.casefold()
+            if matches_query(
+                detail.name,
+                detail.description,
+                query=query,
             )
         ]
         capabilities.extend(
             self._wrapper_capability_summaries(query=query, source_id=source_id)
         )
         capabilities.sort(key=lambda capability: capability["name"])
-        page = page_items(capabilities, cursor=cursor, limit=limit)
-        return {
-            "capabilities": list(page.items),
-            "next_cursor": page.next_cursor,
-            "total": page.total,
-        }
+        return paged_list_payload(
+            "capabilities",
+            capabilities,
+            cursor=cursor,
+            limit=limit,
+        )
 
     async def inspect_capability(self, *, qualified_name: str) -> dict[str, Any]:
         """Return one planner-visible workflow capability contract."""
@@ -221,7 +246,7 @@ class WorkflowSurfaceHandlers:
             if artifact.kind != "wrapper":
                 continue
             name = _artifact_capability_id(artifact)
-            if not _matches_capability_query(
+            if not matches_query(
                 name,
                 artifact.description,
                 query=query,
@@ -1061,21 +1086,6 @@ def _schema_field_names(schema: dict[str, Any]) -> list[str]:
     if not isinstance(properties, dict):
         return []
     return sorted(str(name) for name in properties)
-
-
-def _matches_capability_query(
-    name: str,
-    description: str | None,
-    *,
-    query: str | None,
-) -> bool:
-    """Apply the same compact capability search semantics to every row kind."""
-    if query is None:
-        return True
-    lowered = query.casefold()
-    return lowered in name.casefold() or (
-        description is not None and lowered in description.casefold()
-    )
 
 
 def _first_state_path(output_map: dict[str, str]) -> str | None:

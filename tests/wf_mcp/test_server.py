@@ -193,6 +193,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
 
             assert _structured(echo_result)["echoed"] == "hello"
             assert _structured(artifacts_result)["nodes"] == []
+            assert _structured(artifacts_result)["total"] == 0
             assert _structured(capability_result)["outcome"] == "ok"
             assert _structured(capability_result)["output"] == {"value": "hello"}
             source_ids = {
@@ -423,6 +424,7 @@ def test_server_safe_tool_names_adapts_dotted_runtime_names() -> None:
             )
 
             assert artifacts["nodes"] == []
+            assert artifacts["total"] == 0
             assert echo["echoed"] == "hello"
 
     asyncio.run(run_proxy())
@@ -444,6 +446,10 @@ def test_workflow_tools_have_human_metadata() -> None:
 
             assert list_artifacts.title == "List Workflow Artifacts"
             assert "saved workflow artifacts" in (list_artifacts.description or "")
+            assert "query" in list_artifacts.inputSchema["properties"]
+            assert "kind" in list_artifacts.inputSchema["properties"]
+            assert "cursor" in list_artifacts.inputSchema["properties"]
+            assert "limit" in list_artifacts.inputSchema["properties"]
             assert run_deployment.title == "Run Workflow Deployment"
             assert "deployment_id" in (run_deployment.description or "")
             assert "trace_range" in run_deployment.inputSchema["properties"]
