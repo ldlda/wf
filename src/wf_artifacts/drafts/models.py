@@ -30,9 +30,8 @@ STEP_KIND_KEYS = frozenset(
 class DraftUseStep(BaseModel):
     """Draft step that calls one externally resolvable workflow capability.
 
-    `output` writes node-local output fields into workflow state. It does not
-    define final workflow output; core currently projects final output from
-    state keys whose names match `WorkflowDraft.output_schema.properties`.
+    `output` writes node-local output fields into workflow state. Root
+    workflow output bindings live on `WorkflowDraft.output`.
     """
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)
@@ -277,16 +276,16 @@ DraftStep = (
 class WorkflowDraft(BaseModel):
     """Patch-friendly JSON authoring document for one workflow graph.
 
-    There is intentionally no top-level output map in this draft shape. Final
-    workflow output is projected from state by matching output-schema property
-    names, so terminal steps should write required output fields to same-named
-    state paths.
+    Step `output` writes node results into state. Top-level `output` projects
+    final workflow output from graph paths. If top-level `output` is empty, core
+    falls back to same-name top-level state projection.
     """
 
     name: str
     input_schema: JsonObject
     state_schema: JsonObject
     output_schema: JsonObject
+    output: list[InputBinding] = Field(default_factory=list)
     start: str
     steps: dict[str, DraftStep]
     routes: dict[str, dict[str, str]] = Field(default_factory=dict)

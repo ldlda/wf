@@ -41,7 +41,9 @@ flat modules.
 8. `runtime.ops.nodes` handles `NodeUse` input projection, handler invocation,
    output validation, and state writes.
 9. `runtime.ops.flow` records trace entries and advances frames.
-10. Completion projects workflow output from state and validates it.
+10. Completion projects workflow output and validates it. Explicit
+    `Workflow.output` bindings are used when present; older workflows fall back
+    to same-name top-level state projection from `output_schema.properties`.
 
 Async execution shares the same runtime model. The async seam is handler
 invocation; control-flow steps are still synchronous state transitions.

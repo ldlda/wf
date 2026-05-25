@@ -30,6 +30,15 @@ This means schema fields are contracts for authoring, planning, documentation,
 and mapping validation. Runtime state merge behavior is separate metadata on
 declared exact state paths; undeclared paths still use `replace`.
 
+Final workflow output has two projection modes:
+
+- If `Workflow.output` contains bindings, those bindings build the public output
+  payload from graph paths such as `state.result.message`.
+- If `Workflow.output` is empty, legacy projection copies same-named top-level
+  state keys listed in `workflow.output_schema.properties`.
+
+The projected payload is then validated against `workflow.output_schema`.
+
 ## Why This Matters
 
 Node and workflow boundaries can now reject wrong primitive/container types when

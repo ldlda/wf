@@ -249,7 +249,11 @@ def _finish_subgraph(
         raise WorkflowExecutionError(
             f"subgraph step {step.id!r} child completed without a workflow outcome"
         )
-    child_output = project_output(prepared.workflow, child_scope.committed_state)
+    child_output = project_output(
+        prepared.workflow,
+        child_scope.committed_state,
+        workflow_input=child_scope.workflow_input,
+    )
     validate_payload_against_schema(
         prepared.workflow.output_schema,
         child_output,

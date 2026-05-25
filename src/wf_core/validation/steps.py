@@ -16,6 +16,7 @@ from wf_core.models.steps import (
     ForeachNode,
     InputBinding,
     InputPathBinding,
+    InputValueBinding,
     InterruptNode,
     NodeUse,
     OutputBinding,
@@ -150,6 +151,56 @@ def _validate_boundary_bindings(
             ValidationIssueCode.INVALID_DESTINATION_PATH,
             f"{path_prefix}.output",
             "output has overlapping state destination paths",
+        )
+
+
+def validate_workflow_output_bindings(
+    bindings: list[InputBinding],
+    workflow: Workflow,
+    report: ValidationReport,
+) -> None:
+    """Validate final workflow output projection bindings.
+
+    Root output bindings reuse input-binding shape: graph paths flow into a
+    local output payload that is later validated against `output_schema`.
+    """
+    output_fields = set(workflow.output_schema.properties)
+    state_root_fields = workflow.state_schema.root_fields()
+    input_root_fields = set(workflow.input_schema.properties)
+    output_targets = []
+    for output_index, binding in enumerate(bindings):
+        output_targets.append(binding.target)
+        destination_root = _local_root(binding.target)
+        if destination_root is None or (
+            destination_root != "." and destination_root not in output_fields
+        ):
+            report.add(
+                ValidationIssueCode.INVALID_WORKFLOW_OUTPUT_FIELD,
+                f"output[{output_index}].target",
+                "destination field is not declared in workflow output schema",
+            )
+        if isinstance(binding, InputPathBinding) and not is_valid_source_path(
+            binding.path,
+            state_root_fields,
+            input_root_fields,
+            allow_context=True,
+        ):
+            report.add(
+                ValidationIssueCode.INVALID_SOURCE_PATH,
+                f"output[{output_index}].path",
+                "source path must start with input., state., or context. and reference a declared root field when applicable",
+            )
+        elif not isinstance(binding, (InputPathBinding, InputValueBinding)):
+            report.add(
+                ValidationIssueCode.INVALID_WORKFLOW_OUTPUT_FIELD,
+                f"output[{output_index}]",
+                "unsupported workflow output binding",
+            )
+    if has_overlapping_paths(output_targets):
+        report.add(
+            ValidationIssueCode.INVALID_WORKFLOW_OUTPUT_FIELD,
+            "output",
+            "workflow output has overlapping output payload paths",
         )
 
 

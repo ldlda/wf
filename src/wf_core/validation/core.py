@@ -20,6 +20,7 @@ from wf_core.validation.steps import (
     validate_interrupt_node,
     validate_node_use,
     validate_subgraph_node,
+    validate_workflow_output_bindings,
 )
 
 
@@ -27,6 +28,7 @@ def validate_workflow(workflow: Workflow) -> ValidationReport:
     report = ValidationReport()
 
     node_defs = _collect_node_defs(workflow, report)
+    validate_workflow_output_bindings(workflow.output, workflow, report)
     nodes_by_id = _validate_nodes(workflow, node_defs, report)
     _validate_start(workflow, nodes_by_id, report)
     outgoing = _validate_edges(workflow, nodes_by_id, node_defs, report)

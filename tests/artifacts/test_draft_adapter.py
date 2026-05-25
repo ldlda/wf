@@ -75,6 +75,38 @@ def test_adapter_lowers_use_steps_to_canonical_bindings() -> None:
     assert dumped["output"][0]["target"] == {"root": "state", "parts": ["echoed"]}
 
 
+def test_adapter_lowers_root_workflow_output_bindings() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            "name": "echo",
+            "input_schema": {},
+            "state_schema": {
+                "type": "object",
+                "properties": {
+                    "raw": {
+                        "type": "object",
+                        "properties": {"echoed": {"type": "string"}},
+                    }
+                },
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+            },
+            "output": [{"target": "message", "path": "state.raw.echoed"}],
+            "start": "echo",
+            "steps": {"echo": {"use": "demo.echo"}},
+            "routes": {"echo": {"ok": "__end__"}},
+        }
+    )
+
+    workflow = build_workflow_from_draft(draft)
+    dumped = workflow.model_dump(mode="json")
+
+    assert dumped["output"][0]["target"] == {"root": "local", "parts": ["message"]}
+    assert dumped["output"][0]["path"] == {"root": "state", "parts": ["raw", "echoed"]}
+
+
 def test_adapter_lowers_static_inputs_for_constant_like_steps() -> None:
     draft = WorkflowDraft.model_validate(
         {

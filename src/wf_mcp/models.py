@@ -4,9 +4,9 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from wf_core import Edge
-from wf_core.models.steps import Step
+from wf_core.models.steps import InputBinding, Step
 
 from .capabilities import CatalogNodeEntry, CatalogPromptEntry, CatalogResourceEntry
 
@@ -49,6 +49,13 @@ class RawWorkflowPlan(BaseModel):
     input_schema: dict[str, Any]
     state_schema: dict[str, Any]
     output_schema: dict[str, Any]
+    output: list[InputBinding] = Field(
+        default_factory=list,
+        description=(
+            "Optional root workflow output bindings. Sources read graph paths "
+            "such as state.result and targets write the public output payload."
+        ),
+    )
     start: str
     nodes: list[Step]
     edges: list[Edge]

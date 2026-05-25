@@ -18,6 +18,7 @@ class ValidationIssueCode(StrEnum):
     INVALID_NODE_INPUT_FIELD = "invalid_node_input_field"
     INVALID_SOURCE_PATH = "invalid_source_path"
     INVALID_NODE_OUTPUT_FIELD = "invalid_node_output_field"
+    INVALID_WORKFLOW_OUTPUT_FIELD = "invalid_workflow_output_field"
     INVALID_DESTINATION_PATH = "invalid_destination_path"
     EMPTY_CONDITION_ARGS = "empty_condition_args"
     INVALID_CONDITION_PATH = "invalid_condition_path"

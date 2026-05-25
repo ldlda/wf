@@ -33,6 +33,81 @@ def test_explicit_end_node_sets_workflow_outcome() -> None:
     assert run.outcome == "error"
 
 
+def test_root_workflow_output_bindings_project_final_output() -> None:
+    workflow = Workflow.model_validate(
+        {
+            "name": "root_output_bindings",
+            "input_schema": {
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            },
+            "state_schema": {
+                "type": "object",
+                "properties": {
+                    "result": {
+                        "type": "object",
+                        "properties": {"echoed": {"type": "string"}},
+                    }
+                },
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {"echoed": {"type": "string"}},
+                "required": ["echoed"],
+            },
+            "output": [{"target": "echoed", "path": "state.result.echoed"}],
+            "node_defs": [
+                {
+                    "name": "finish",
+                    "input_schema": {
+                        "type": "object",
+                        "properties": {"text": {"type": "string"}},
+                        "required": ["text"],
+                    },
+                    "output_schema": {
+                        "type": "object",
+                        "properties": {"echoed": {"type": "string"}},
+                        "required": ["echoed"],
+                    },
+                    "outcomes": ["done"],
+                }
+            ],
+            "start": "finish",
+            "nodes": [
+                {
+                    "id": "finish",
+                    "type": "node",
+                    "node": "finish",
+                    "input": [{"target": "text", "path": "input.text"}],
+                    "output": [{"source": "echoed", "target": "state.result.echoed"}],
+                }
+            ],
+            "edges": [{"from": "finish", "outcome": "done", "to": END}],
+        }
+    )
+
+    run = execute_workflow(workflow, {"text": "hello"}, {"finish": _finish})
+
+    assert run.output["echoed"] == "hello"
+    assert run.state["result"]["echoed"] == "hello"
+
+
+def test_validation_rejects_root_workflow_output_target_not_declared() -> None:
+    workflow = _workflow(
+        edges=[{"from": "finish", "outcome": "done", "to": END}],
+        output=[{"target": "missing", "path": "state.echoed"}],
+    )
+
+    report = workflow.validate_structure()
+
+    assert any(
+        issue.code == ValidationIssueCode.INVALID_WORKFLOW_OUTPUT_FIELD
+        and issue.path == "output[0].target"
+        for issue in report.errors
+    )
+
+
 def test_validation_rejects_end_node_outcome_not_declared_by_workflow() -> None:
     workflow = _workflow(
         nodes=[
@@ -80,6 +155,7 @@ def _workflow(
     outcomes: list[str] | None = None,
     nodes: list[dict[str, object]] | None = None,
     edges: list[dict[str, object]],
+    output: list[dict[str, object]] | None = None,
 ) -> Workflow:
     return Workflow.model_validate(
         {
@@ -115,6 +191,7 @@ def _workflow(
                 }
             ],
             "outcomes": outcomes or ["ok"],
+            "output": [] if output is None else output,
             "start": "finish",
             "nodes": [_finish_node_data()] if nodes is None else nodes,
             "edges": edges,

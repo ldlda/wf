@@ -21,9 +21,8 @@ from .models import (
 def build_workflow_from_draft(draft: WorkflowDraft) -> Workflow:
     """Adapt one typed draft through `WorkflowBuilder` into a core workflow.
 
-    Draft step `output` bindings become node-output-to-state writes. Final
-    workflow output projection stays in core runtime and uses output schema
-    property names as state keys.
+    Draft step `output` bindings become node-output-to-state writes. Draft
+    top-level `output` bindings become core root workflow output projection.
     """
     builder = WorkflowBuilder(
         name=draft.name,
@@ -39,7 +38,8 @@ def build_workflow_from_draft(draft: WorkflowDraft) -> Workflow:
     for source_id, routes in draft.routes.items():
         for outcome, target in routes.items():
             builder.connect(step_refs[source_id], outcome, target)
-    return builder.compile()
+    workflow = builder.compile()
+    return workflow.model_copy(update={"output": list(draft.output)})
 
 
 def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):

@@ -663,6 +663,7 @@ class WfMcpService:
             "input_schema": plan.input_schema,
             "state_schema": plan.state_schema,
             "output_schema": plan.output_schema,
+            "output": [binding.model_dump(mode="json") for binding in plan.output],
             "start": plan.start,
             "node_defs": [node.model_dump() for node in node_defs.values()],
             "nodes": nodes,

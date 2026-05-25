@@ -96,7 +96,11 @@ def advance_frame(
 def finalize_run(workflow: Workflow, run: RunState) -> RunState:
     if run.outcome is None:
         run.outcome = "ok"
-    run.output = project_output(workflow, run.state)
+    run.output = project_output(
+        workflow,
+        run.state,
+        workflow_input=run.workflow_input,
+    )
     validate_payload_against_schema(
         workflow.output_schema, run.output, "workflow output"
     )

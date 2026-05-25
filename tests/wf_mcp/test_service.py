@@ -388,6 +388,55 @@ def test_service_compiles_and_runs_raw_plan() -> None:
     assert "workflow_run_completed" in event_kinds
 
 
+def test_service_preserves_raw_plan_root_output_bindings() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "root_output_store"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+
+    plan = _raw_plan(
+        name="demo_root_output_plan",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        state_schema={
+            "type": "object",
+            "properties": {
+                "raw": {
+                    "type": "object",
+                    "properties": {"echoed": {"type": "string"}},
+                }
+            },
+        },
+        output_schema={
+            "type": "object",
+            "properties": {"message": {"type": "string"}},
+            "required": ["message"],
+        },
+        output=[{"target": "message", "path": "state.raw.echoed"}],
+        start="echo",
+        nodes=[
+            {
+                "id": "echo",
+                "type": "node",
+                "node": "demo.personal.echo_tool",
+                "input": [input_binding("input.text", "text")],
+                "output": [output_binding("echoed", "state.raw.echoed")],
+            }
+        ],
+        edges=[{"from": "echo", "outcome": "ok", "to": END}],
+    )
+
+    run = asyncio.run(service.run_workflow_from_plan(plan, {"text": "hello"}))
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.output["message"] == "hello"
+    assert run.state["raw"]["echoed"] == "hello"
+
+
 def test_service_resolves_registered_spec_with_dotted_local_name() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "dotted_spec_store"))
     service.register_connection(

@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING, cast
 from pydantic import BaseModel, Field
 
 from wf_core.models.schemas import NodeDef, SchemaRef, StateSchema
-from wf_core.models.steps import Step
+from wf_core.models.steps import InputBinding, Step
 
 if TYPE_CHECKING:
     from wf_core.validation.issues import ValidationReport
@@ -27,6 +27,15 @@ class Workflow(BaseModel):
     input_schema: SchemaRef
     state_schema: StateSchema
     output_schema: SchemaRef
+    output: list[InputBinding] = Field(
+        default_factory=list,
+        description=(
+            "Optional final output projection bindings. Sources read from graph "
+            "paths such as state.result, and targets write into the workflow "
+            "output payload. When omitted, legacy same-name top-level state "
+            "projection is used."
+        ),
+    )
     node_defs: list[NodeDef] = Field(default_factory=list)
     outcomes: list[str] = Field(default_factory=lambda: ["ok"], min_length=1)
     start: str

@@ -5,11 +5,22 @@ from copy import deepcopy
 from dataclasses import dataclass, field as dataclass_field
 from typing import Any
 
+from wf_core.conditions import safe_resolve_path
 from wf_core.errors import WorkflowExecutionError
-from wf_core.local_paths import LocalPathError, get_local_value, has_overlapping_paths
+from wf_core.local_paths import (
+    LocalPathError,
+    get_local_value,
+    has_overlapping_paths,
+    set_local_value,
+)
 from wf_core.models.reducers import ReducerRef
 from wf_core.models.schemas import StateFieldDecl
-from wf_core.models.steps import NodeUse, OutputBinding
+from wf_core.models.steps import (
+    InputPathBinding,
+    InputValueBinding,
+    NodeUse,
+    OutputBinding,
+)
 from wf_core.models.workflow import Workflow
 from wf_core.paths import (
     PathResolutionError,
@@ -437,12 +448,38 @@ def reducer_for_state_path(
     )
 
 
-def project_output(workflow: Workflow, state: dict[str, Any]) -> dict[str, Any]:
-    """Project final workflow output from same-named state fields.
+def project_output(
+    workflow: Workflow,
+    state: dict[str, Any],
+    *,
+    workflow_input: Mapping[str, Any] | None = None,
+    context: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Project final workflow output from explicit bindings or state fields.
 
-    Node output bindings write into state during execution. At END, the runtime
-    exposes only state keys declared by `workflow.output_schema.properties`.
+    `workflow.output` is the canonical root-output mapping for workflows whose
+    public output shape does not mirror top-level state keys. Older workflows
+    without explicit output bindings keep the same-name state projection.
     """
+    if workflow.output:
+        output: dict[str, Any] = {}
+        for binding in workflow.output:
+            if isinstance(binding, InputValueBinding):
+                value = binding.value
+            elif isinstance(binding, InputPathBinding):
+                value = safe_resolve_path(
+                    str(binding.path),
+                    state=state,
+                    workflow_input=workflow_input or {},
+                    context=context or {},
+                )
+            else:
+                raise WorkflowExecutionError("unsupported workflow output binding")
+            try:
+                set_local_value(output, binding.target, value)
+            except LocalPathError as exc:
+                raise WorkflowExecutionError(str(exc)) from exc
+        return output
     return {
         key: state[key] for key in workflow.output_schema.properties if key in state
     }
