@@ -662,8 +662,10 @@ artifact/deployment resolution into prepared children before core can run it.
 
 See `examples/authoring_workflow_as_node.py` for the compatibility wrapper-node
 approach and `examples/authoring_native_subgraph.py` for native prepared-child
-execution. In the wrapper example the parent trace sees one node call; in the
-native example child trace entries remain in the parent run state.
+execution. `examples/authoring_native_subgraph_interrupt.py` demonstrates a
+native child pause and builder-driven resume. In the wrapper example the
+parent trace sees one node call; in the native examples child trace entries
+remain in the parent run state.
 
 Until that core upgrade exists, artifact tooling must not assume that an
 interrupting saved workflow can safely be used as a child node. Top-level saved

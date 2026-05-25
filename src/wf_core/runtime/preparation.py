@@ -37,7 +37,13 @@ def prepare_resume(
     interrupted_workflow: Workflow | None = None,
     interrupted_reducers: Mapping[str, ReducerDefinition] | None = None,
 ) -> WorkflowIndex | None:
-    """Validate and normalize a run state before resume execution."""
+    """Validate and normalize a run state before resume execution.
+
+    `workflow` and `reducers` always describe the outer run. For a routed
+    child interrupt, `interrupted_workflow` and `interrupted_reducers` identify
+    the child scope that owns the interrupt step, so resume bindings commit
+    inside that scope before outer scheduling continues.
+    """
     if run.workflow_name != workflow.name:
         raise WorkflowExecutionError(
             f"run state belongs to workflow {run.workflow_name!r}, not {workflow.name!r}"

@@ -10,7 +10,7 @@ from wf_authoring import (
     output_to,
     state_path,
 )
-from wf_core import END, PreparedSubgraph, RunState, Workflow, execute_workflow
+from wf_core import END, RunState
 
 
 class ChildInput(BaseModel):
@@ -74,14 +74,15 @@ def build_child_workflow() -> WorkflowBuilder:
     return child
 
 
-def build_parent_workflow(child_workflow: Workflow) -> WorkflowBuilder:
-    """Build a parent graph with one native child-workflow boundary."""
+def build_parent_workflow(child: WorkflowBuilder) -> WorkflowBuilder:
+    """Build a parent graph with one registered native child workflow."""
     parent = WorkflowBuilder(
         name="native_parent",
         input_schema=ParentInput,
         state_schema=ParentState,
         output_schema=ParentOutput,
     )
+    child_workflow = parent.prepare_subgraph(child)
     run_child = parent.subgraph(
         workflow=child_workflow,
         id="run_child",
@@ -94,28 +95,16 @@ def build_parent_workflow(child_workflow: Workflow) -> WorkflowBuilder:
 
 
 def run_native_subgraph_example(prompt: str = "hello") -> RunState:
-    """Execute a native subgraph using its prepared local runtime dependency.
+    """Execute a native subgraph using builder-managed local dependencies.
 
     `WorkflowBuilder.subgraph()` records the child contract in the parent graph.
-    `PreparedSubgraph` separately supplies the Python handlers needed to execute
-    that contract; saved artifact/deployment resolution belongs above wf_core.
+    `prepare_subgraph()` separately registers the Python handlers needed to
+    execute that contract; saved artifact/deployment resolution belongs above
+    this local authoring helper.
     """
     child = build_child_workflow()
-    child_workflow = child.compile()
-    parent = build_parent_workflow(child_workflow)
-    return execute_workflow(
-        parent.compile(),
-        {"prompt": prompt},
-        parent.registry(),
-        reducers=parent.reducer_registry(),
-        subgraphs={
-            child_workflow.name: PreparedSubgraph(
-                workflow=child_workflow,
-                registry=child.registry(),
-                reducers=child.reducer_registry(),
-            )
-        },
-    )
+    parent = build_parent_workflow(child)
+    return parent.execute({"prompt": prompt})
 
 
 def main() -> None:

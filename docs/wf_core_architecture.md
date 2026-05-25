@@ -140,14 +140,17 @@ limits and intended adapter seam.
   and lineage; child output commits only through declared boundary bindings and
   the parent routes by the child's terminal workflow outcome. Saved/deployed
   workflow resolution remains outside core and is not implemented at this
-  boundary yet.
+  boundary yet. For local authoring, `WorkflowBuilder.prepare_subgraph()`
+  registers a child builder and `WorkflowBuilder.resume()` continues a paused
+  prepared-child interrupt without requiring direct core-runtime calls.
 - The current `wf_authoring` wrapper helpers still run child workflows as
   ordinary sync or async nodes and therefore do not preserve native child
   state or resumable interrupts. Native `SubgraphNode` plus
   `PreparedSubgraph` is the first-class path: prepared child interrupts now
   bubble to the parent run and resume inside the original child scope. See
   `examples/authoring_workflow_as_node.py` for the compatibility wrapper shape
-  and `examples/authoring_native_subgraph.py` for the native path.
+  and `examples/authoring_native_subgraph.py` plus
+  `examples/authoring_native_subgraph_interrupt.py` for the native path.
 - Saved workflow-as-node execution with interrupts still requires platform
   resolution of artifact/deployment references into prepared child
   dependencies before core execution begins.

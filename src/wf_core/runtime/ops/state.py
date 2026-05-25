@@ -53,8 +53,19 @@ class StatePatch:
 
         New runtime code should prefer ordered `writes`. `changes` stays as the
         public trace-facing view and as parse compatibility for old barrier
-        metadata/tests that predate `StateWrite`.
+        metadata/tests that predate `StateWrite`. If both are supplied, they
+        must describe identical incoming writes; otherwise trace and replay
+        semantics would disagree.
         """
+        if self.changes and self.writes:
+            derived_changes = {
+                str(write.path): write.incoming_value for write in self.writes
+            }
+            if self.changes != derived_changes:
+                raise ValueError(
+                    "StatePatch constructed with inconsistent changes and writes"
+                )
+            return
         if not self.changes and self.writes:
             self.changes = {
                 str(write.path): write.incoming_value for write in self.writes

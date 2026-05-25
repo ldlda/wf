@@ -158,6 +158,24 @@ def test_state_view_for_frame_overlays_writes_onto_frame_scope_state() -> None:
     assert run.state["value"] == "root"
 
 
+def test_lineage_state_view_handles_deep_ancestry_without_recursion() -> None:
+    run = create_run_state(_minimal_workflow(), {"value": "root"})
+    parent_id = "root"
+    for index in range(1100):
+        lineage_id = f"child-{index}"
+        add_lineage(
+            run,
+            scope_id="root",
+            lineage_id=lineage_id,
+            parent_id=parent_id,
+        )
+        parent_id = lineage_id
+
+    state_view = lineage_state_view(run, scope_id="root", lineage_id=parent_id)
+
+    assert state_view["value"] == "root"
+
+
 def test_non_root_frame_node_writes_are_buffered_in_lineage() -> None:
     workflow = _write_value_workflow()
     run = create_run_state(workflow, {"value": "root"})

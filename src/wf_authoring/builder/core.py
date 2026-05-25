@@ -14,7 +14,9 @@ from wf_core import (
     ForeachItemErrorPolicy,
     ForeachNode,
     InterruptNode,
+    NodeHandler,
     NodeUse,
+    PreparedSubgraph,
     SchemaRef,
     StateSchema,
     SubgraphNode,
@@ -22,6 +24,7 @@ from wf_core import (
     WorkflowRef,
     RunState,
     execute_workflow,
+    resume_workflow,
 )
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.conditions import Condition as CoreCondition
@@ -208,6 +211,9 @@ class WorkflowBuilder:
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
     nodes: list[Step] = field(default_factory=list)
     edges: list[Edge] = field(default_factory=list)
+    prepared_subgraphs: dict[str, PreparedSubgraph[NodeHandler]] = field(
+        default_factory=dict
+    )
 
     def __post_init__(self) -> None:
         """Normalize authoring-friendly schema declarations into core schemas."""
@@ -397,8 +403,9 @@ class WorkflowBuilder:
         """Add a native subgraph boundary using a compiled child workflow contract.
 
         Core executes local children when callers supply a matching
-        `PreparedSubgraph`; saved artifact resolution and child interrupt resume
-        remain higher-layer/future responsibilities.
+        `PreparedSubgraph`; call `prepare_subgraph()` when the child is another
+        local `WorkflowBuilder`. Saved artifact resolution remains a platform
+        responsibility.
         """
         node = subgraph_ref(
             id=id or self._next_step_id(_workflow_ref_base(workflow_ref, workflow)),
@@ -410,6 +417,21 @@ class WorkflowBuilder:
         )
         self.nodes.append(node)
         return node
+
+    def prepare_subgraph(self, child: WorkflowBuilder) -> Workflow:
+        """Register a local child builder for native execution and return its graph.
+
+        The compiled child contract is passed to `subgraph()`, while its Python
+        registry/reducers stay in this parent builder's local execution
+        environment. Saved artifacts should be resolved above this helper.
+        """
+        workflow = child.compile()
+        self.prepared_subgraphs[workflow.name] = PreparedSubgraph(
+            workflow=workflow,
+            registry=child.registry(),
+            reducers=child.reducer_registry(),
+        )
+        return workflow
 
     def _next_step_id(self, base: str) -> str:
         """Return a stable unused step id based on the requested base name."""
@@ -454,6 +476,25 @@ class WorkflowBuilder:
             workflow_input,
             self.registry(),
             reducers=self.reducer_registry(),
+            subgraphs=self.prepared_subgraphs,
+        )
+
+    def resume(
+        self,
+        run: RunState,
+        *,
+        payload: dict[str, Any] | None = None,
+        outcome: str = "submitted",
+    ) -> RunState:
+        """Resume a locally executed workflow, including prepared child interrupts."""
+        return resume_workflow(
+            self.compile(),
+            run,
+            self.registry(),
+            resume_payload=payload,
+            resume_outcome=outcome,
+            reducers=self.reducer_registry(),
+            subgraphs=self.prepared_subgraphs,
         )
 
     def condition(

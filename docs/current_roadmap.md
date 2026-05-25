@@ -57,6 +57,8 @@ implementation state.
   subgraph boundary. Saved/deployed child resolution remains next. Wrapper
   helpers currently run child workflows as ordinary nodes; native
   `SubgraphNode` is now the graph-as-node path for prepared children.
+  `WorkflowBuilder.prepare_subgraph()` and `WorkflowBuilder.resume()` make the
+  local runnable/resumable path available without core-runtime plumbing.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of

@@ -215,6 +215,10 @@ def _lineage_chain(
     run: RunState, *, scope_id: str, lineage_id: str
 ) -> Iterator[LineageState]:
     lineage = _lineage(run, scope_id=scope_id, lineage_id=lineage_id)
-    if lineage.parent_id is not None:
-        yield from _lineage_chain(run, scope_id=scope_id, lineage_id=lineage.parent_id)
-    yield lineage
+    reverse_chain: list[LineageState] = []
+    while True:
+        reverse_chain.append(lineage)
+        if lineage.parent_id is None:
+            break
+        lineage = _lineage(run, scope_id=scope_id, lineage_id=lineage.parent_id)
+    yield from reversed(reverse_chain)

@@ -281,6 +281,21 @@ def test_build_and_commit_patch_matches_apply_output_bindings() -> None:
     assert state_from_apply["person"]["name"] == state_from_patch["person"]["name"]
 
 
+def test_state_patch_rejects_inconsistent_trace_changes_and_writes() -> None:
+    with pytest.raises(ValueError, match="inconsistent changes and writes"):
+        StatePatch(
+            changes={"state.value": "trace"},
+            writes=[
+                StateWrite(
+                    path=StatePath(("value",)),
+                    incoming_value="actual",
+                    visible_value="actual",
+                    reducer=ReducerRef(name="wf.std.replace"),
+                )
+            ],
+        )
+
+
 def test_barrier_rejects_sibling_same_path_writes_without_reducer() -> None:
     workflow = _workflow(fields={"value": StateField(type="string")})
 
