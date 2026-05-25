@@ -7,9 +7,8 @@ from pathlib import Path
 from typing import Any, Generic, TypeVar
 
 from fastmcp import FastMCP
-from fastmcp.client import Client
 from fastmcp.client.transports.config import MCPConfigTransport
-from fastmcp.server import create_proxy
+from fastmcp.server.providers.proxy import FastMCPProxy, StatefulProxyClient
 from ..models import BrokerConfig, ConnectionConfig
 from ..proxy_results import ResourceLinkNamespace
 from ..proxy_config import broker_config_to_fastmcp_config
@@ -90,13 +89,23 @@ def create_proxy_mount(
     connection: ConnectionConfig,
     store_root: Path,
 ) -> ProxyMount[FastMCP[Any]]:
-    """Create one FastMCP proxy mount for an enabled upstream connection."""
+    """Create one interactive stateful FastMCP proxy mount for a connection.
+
+    FastMCP's `StatefulProxyClient` owns the upstream session per downstream
+    MCP client and restores request context for relayed progress, logging,
+    elicitation, and sampling interactions. Offline workflow executions use
+    the separate runtime pool because they do not have an interactive client
+    session to scope this lifetime to.
+    """
     server_config = broker_config_to_fastmcp_config(
         BrokerConfig(store_root=store_root, connections=[connection])
     )
     transport = MCPConfigTransport(server_config, name_as_prefix=False)
-    client = Client(transport=transport, name=f"wf-mcp:{connection.id}")
-    proxy: FastMCP[Any] = create_proxy(client, name=f"Proxy-{connection.id}")
+    client = StatefulProxyClient(transport=transport, name=f"wf-mcp:{connection.id}")
+    proxy: FastMCP[Any] = FastMCPProxy(
+        client_factory=client.new_stateful,
+        name=f"Proxy-{connection.id}",
+    )
     proxy.add_transform(ProxyNamespace(connection.id))
     proxy.add_transform(ResourceLinkNamespace(connection.id))
     return ProxyMount(

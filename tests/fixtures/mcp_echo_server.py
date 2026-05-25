@@ -9,6 +9,7 @@ from pydantic import Field
 
 
 server = FastMCP("echo-fixture")
+_remembered_value: str | None = None
 
 
 class EchoToolResult(TypedDict):
@@ -20,6 +21,22 @@ async def echo_tool(
     text: Annotated[str, Field(description="Text to echo")],
 ) -> EchoToolResult:
     return {"echoed": text}
+
+
+@server.tool(title="Remember value tool")
+async def remember_value_tool(
+    value: Annotated[str, Field(description="Value held in this server process.")],
+) -> dict[str, str]:
+    """Store state so proxy tests can distinguish reused and fresh sessions."""
+    global _remembered_value
+    _remembered_value = value
+    return {"remembered": value}
+
+
+@server.tool(title="Recall value tool")
+async def recall_value_tool() -> dict[str, str | None]:
+    """Return process-local state written by `remember_value_tool`."""
+    return {"remembered": _remembered_value}
 
 
 @server.tool(title="Resource link tool")

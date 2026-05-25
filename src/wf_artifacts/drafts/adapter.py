@@ -19,7 +19,12 @@ from .models import (
 
 
 def build_workflow_from_draft(draft: WorkflowDraft) -> Workflow:
-    """Adapt one typed draft through `WorkflowBuilder` into a core workflow."""
+    """Adapt one typed draft through `WorkflowBuilder` into a core workflow.
+
+    Draft step `output` bindings become node-output-to-state writes. Final
+    workflow output projection stays in core runtime and uses output schema
+    property names as state keys.
+    """
     builder = WorkflowBuilder(
         name=draft.name,
         input_schema=draft.input_schema,

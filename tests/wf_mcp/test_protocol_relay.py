@@ -70,7 +70,7 @@ def test_fixture_server_emits_observable_protocol_notifications_directly() -> No
     assert "notifications/message" in methods
 
 
-def test_proxy_does_not_relay_upstream_protocol_notifications_yet() -> None:
+def _fixture_proxy_notification_methods() -> list[str]:
     config = BrokerConfig(
         store_root=local_temp_root() / "protocol_relay_store",
         connections=[
@@ -102,5 +102,29 @@ def test_proxy_does_not_relay_upstream_protocol_notifications_yet() -> None:
     except PermissionError as exc:
         pytest.skip(f"stdio MCP transport is not permitted in this environment: {exc}")
 
-    methods = _notification_methods(notifications)
-    assert methods == []
+    return _notification_methods(notifications)
+
+
+def test_proxy_does_not_relay_generic_upstream_notifications_yet() -> None:
+    methods = _fixture_proxy_notification_methods()
+
+    # Stateful proxy sessions preserve FastMCP's supported request callbacks,
+    # but generic upstream change/update notification rebroadcast is separate
+    # protocol relay work.
+    assert "notifications/tools/list_changed" not in methods
+    assert "notifications/resources/list_changed" not in methods
+    assert "notifications/prompts/list_changed" not in methods
+    assert "notifications/resources/updated" not in methods
+
+
+@pytest.mark.xfail(
+    strict=True,
+    reason=(
+        "FastMCP StatefulProxyClient log forwarding assumes mapping-valued log "
+        "data; valid string-valued MCP logging data is rejected upstream."
+    ),
+)
+def test_proxy_relays_string_valued_upstream_log_when_fastmcp_supports_it() -> None:
+    methods = _fixture_proxy_notification_methods()
+
+    assert "notifications/message" in methods

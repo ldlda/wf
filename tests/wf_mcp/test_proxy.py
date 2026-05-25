@@ -83,14 +83,16 @@ def test_proxy_lists_and_calls_upstream_tools() -> None:
             proxy_tools_payload = _structured(proxy_tools_result)
             proxy_tools = proxy_tools_payload["tools"]
             assert proxy_tools_payload["nextCursor"] is None
-            assert proxy_tools_payload["total"] == 3
-            assert len(proxy_tools) == 3
+            assert proxy_tools_payload["total"] == 5
+            assert len(proxy_tools) == 5
             assert proxy_tools[0]["proxy_name"] == "fixture.personal.echo_tool"
             assert proxy_tools[0]["connection_id"] == "fixture.personal"
             assert proxy_tools[0]["local_name"] == "echo_tool"
             assert proxy_tools[0]["enabled"] is True
             proxy_names = [tool["proxy_name"] for tool in proxy_tools]
             assert "fixture.personal.emit_notifications_tool" in proxy_names
+            assert "fixture.personal.remember_value_tool" in proxy_names
+            assert "fixture.personal.recall_value_tool" in proxy_names
             assert "fixture.personal.resource_link_tool" in proxy_names
 
             proxy_tool_result = await client.call_tool(
@@ -149,6 +151,39 @@ def test_proxy_rewrites_resource_links_returned_by_tools() -> None:
             contents = await client.read_resource(str(link.uri))
             assert isinstance(contents[0], mcp_types.TextResourceContents)
             assert contents[0].text == "Welcome from the fixture MCP server."
+
+    asyncio.run(run_proxy())
+
+
+def test_proxy_reuses_one_upstream_session_for_stateful_tools() -> None:
+    """Visible proxy tools must share server-local state for one MCP client."""
+    config = BrokerConfig(
+        store_root=local_temp_root() / "proxy_stateful_session_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    async def run_proxy() -> None:
+        client = create_proxy_client(config)
+        async with client:
+            written = await client.call_tool(
+                "fixture.personal.remember_value_tool",
+                {"value": "held"},
+            )
+            recalled = await client.call_tool("fixture.personal.recall_value_tool")
+
+            assert _structured(written)["remembered"] == "held"
+            assert _structured(recalled)["remembered"] == "held"
 
     asyncio.run(run_proxy())
 
@@ -355,7 +390,7 @@ def test_proxy_proxy_tool_listing_supports_filters_and_cursor() -> None:
             first_page = _structured(first_page_result)
             assert len(first_page["tools"]) == 1
             assert first_page["nextCursor"] is not None
-            assert first_page["total"] == 6
+            assert first_page["total"] == 10
 
             second_page_result = await client.call_tool(
                 "wf.admin.list_proxy_tools",

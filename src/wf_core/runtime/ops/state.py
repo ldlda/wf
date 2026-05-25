@@ -438,6 +438,11 @@ def reducer_for_state_path(
 
 
 def project_output(workflow: Workflow, state: dict[str, Any]) -> dict[str, Any]:
+    """Project final workflow output from same-named state fields.
+
+    Node output bindings write into state during execution. At END, the runtime
+    exposes only state keys declared by `workflow.output_schema.properties`.
+    """
     return {
         key: state[key] for key in workflow.output_schema.properties if key in state
     }
