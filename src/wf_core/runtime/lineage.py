@@ -216,7 +216,13 @@ def _lineage_chain(
 ) -> Iterator[LineageState]:
     lineage = _lineage(run, scope_id=scope_id, lineage_id=lineage_id)
     reverse_chain: list[LineageState] = []
+    seen: set[str] = set()
     while True:
+        if lineage.id in seen:
+            raise WorkflowExecutionError(
+                f"cycle detected in lineage chain at {lineage.id!r}"
+            )
+        seen.add(lineage.id)
         reverse_chain.append(lineage)
         if lineage.parent_id is None:
             break

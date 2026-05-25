@@ -207,7 +207,7 @@ class WorkflowBuilder:
     input_schema: SchemaLike
     state_schema: StateSchemaLike
     output_schema: SchemaLike
-    outcomes: Sequence[str] | None = None
+    outcomes: Sequence[str] = ("ok",)
     start: str | None = None
     reducers: ReducerCatalog | Mapping[str, ReducerDefinition] | None = None
     node_specs: dict[str, NodeSpec[Any, Any]] = field(default_factory=dict)
@@ -222,7 +222,6 @@ class WorkflowBuilder:
         self.input_schema = schema_ref_from(self.input_schema)
         self.state_schema = state_schema_from(self.state_schema)
         self.output_schema = schema_ref_from(self.output_schema)
-        self.outcomes = list(self.outcomes or ["ok"])
 
     @overload
     def use(
@@ -871,7 +870,7 @@ class WorkflowBuilder:
             input_schema=cast(SchemaRef, self.input_schema),
             state_schema=cast(StateSchema, self.state_schema),
             output_schema=cast(SchemaRef, self.output_schema),
-            outcomes=list(self.outcomes or ["ok"]),
+            outcomes=list(self.outcomes),
             node_defs=node_defs,
             start=self.start,
             nodes=self.nodes,

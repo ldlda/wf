@@ -253,6 +253,7 @@ def _finish_subgraph(
         prepared.workflow,
         child_scope.committed_state,
         workflow_input=child_scope.workflow_input,
+        context=frame_context_values(child_frame),
     )
     validate_payload_against_schema(
         prepared.workflow.output_schema,

@@ -363,8 +363,10 @@ def _state_write_from_metadata(raw: object) -> StateWrite:
             visible_value=visible_value,
             reducer=ReducerRef.model_validate(reducer),
         )
-    except Exception as exc:
-        raise WorkflowExecutionError("malformed pending foreach write") from exc
+    except WorkflowExecutionError:
+        raise
+    except (TypeError, ValueError) as exc:
+        raise WorkflowExecutionError(f"malformed pending foreach write: {exc}") from exc
 
 
 def _state_write_to_metadata(write: StateWrite) -> dict[str, Any]:

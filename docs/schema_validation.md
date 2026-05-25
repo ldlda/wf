@@ -37,6 +37,9 @@ Final workflow output has two projection modes:
 - If `Workflow.output` is empty, legacy projection copies same-named top-level
   state keys listed in `workflow.output_schema.properties`.
 
+Prefer explicit `Workflow.output` bindings for new workflows. The same-named
+state projection exists for compatibility with older plans.
+
 The projected payload is then validated against `workflow.output_schema`.
 
 ## Why This Matters

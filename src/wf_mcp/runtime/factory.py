@@ -141,7 +141,7 @@ class _SessionOwner:
         tool_name: str,
         payload: dict[str, object],
     ) -> CallToolResult:
-        """Submit a tool call for execution in the transport owner task."""
+        """Submit a call and fail promptly if its transport owner exits."""
         task = self._task
         if task is None:
             raise RuntimeError("persistent MCP session is not started")
@@ -152,7 +152,13 @@ class _SessionOwner:
         await self._requests.put(
             _ToolCallRequest(tool_name=tool_name, payload=payload, result=result)
         )
-        return await result
+        done, _pending = await asyncio.wait(
+            {result, task}, return_when=asyncio.FIRST_COMPLETED
+        )
+        if result in done:
+            return result.result()
+        await task
+        raise RuntimeError("persistent MCP session stopped unexpectedly")
 
     async def close(self) -> None:
         """Ask the owner task to close the MCP transport in its own scope."""
@@ -187,5 +193,11 @@ class _SessionOwner:
         except BaseException as exc:
             if not ready.done():
                 ready.set_exception(exc)
-            else:
-                raise
+                return
+            # Calls already queued behind the failing request cannot otherwise
+            # observe that their sole transport owner has exited.
+            while not self._requests.empty():
+                pending = self._requests.get_nowait()
+                if pending is not None and not pending.result.done():
+                    pending.result.set_exception(exc)
+            raise

@@ -62,8 +62,9 @@ implementation state.
   `WorkflowBuilder.prepare_subgraph()` and `WorkflowBuilder.resume()` make the
   local runnable/resumable path available without core-runtime plumbing.
   Saved interrupting artifacts can now pause and resume through
-  `run_deployment`/`resume_run` while the MCP server process stays alive.
-  Persisted resume remains future work.
+  `run_deployment`/`resume_run` for the duration of the MCP server process
+  (in-memory only). Persisted resume across process restarts remains future
+  work.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of

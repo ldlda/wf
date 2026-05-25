@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from typing import Any, cast
 
@@ -11,6 +12,7 @@ from wf_core import RuntimeContext
 from wf_mcp.capabilities import DiscoveredTool
 from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.runtime import McpRuntimePool, PersistentMcpSession
+from wf_mcp.runtime.factory import PersistentSessionFactory
 from wf_mcp.sdk import ToolCallResult
 from wf_mcp.workflow import wrap_discovered_tool
 
@@ -71,6 +73,36 @@ class FakeStatefulClient:
 
     async def close(self) -> None:
         self.closed = True
+
+
+class OwnerCrash(BaseException):
+    """Simulate transport-owner death outside normal per-request exceptions."""
+
+
+@dataclass(slots=True)
+class CrashingClient:
+    started: asyncio.Event
+    crash: asyncio.Event
+
+    async def call_tool(
+        self, tool_name: str, payload: dict[str, object]
+    ) -> CallToolResult:
+        self.started.set()
+        await self.crash.wait()
+        raise OwnerCrash("transport owner died")
+
+
+class CrashingSessionFactory(PersistentSessionFactory):
+    def __init__(self, client: CrashingClient) -> None:
+        self.client = client
+
+    async def _create_with_stack(
+        self,
+        stack: AsyncExitStack,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> ClientSession:
+        return cast(ClientSession, self.client)
 
 
 def _tool(name: str) -> DiscoveredTool:
@@ -199,3 +231,35 @@ def test_runtime_pool_replaces_session_when_fingerprint_changes() -> None:
 
     assert len(created_clients) == 2
     assert created_clients[0].closed is True
+
+
+def test_persistent_session_fails_inflight_and_queued_calls_if_owner_dies() -> None:
+    connection = ConnectionConfig(
+        id="failing.default",
+        server="failing",
+        account="default",
+        metadata={},
+    )
+
+    async def exercise() -> tuple[
+        BaseException | ToolCallResult, BaseException | ToolCallResult
+    ]:
+        started = asyncio.Event()
+        crash = asyncio.Event()
+        session = await CrashingSessionFactory(
+            CrashingClient(started=started, crash=crash)
+        ).create(connection, None)
+        first = asyncio.create_task(session.call_tool("first", {}))
+        await started.wait()
+        second = asyncio.create_task(session.call_tool("second", {}))
+        await asyncio.sleep(0)
+        crash.set()
+        return await asyncio.wait_for(
+            asyncio.gather(first, second, return_exceptions=True),
+            timeout=0.2,
+        )
+
+    results = asyncio.run(exercise())
+
+    assert isinstance(results[0], OwnerCrash)
+    assert isinstance(results[1], OwnerCrash)

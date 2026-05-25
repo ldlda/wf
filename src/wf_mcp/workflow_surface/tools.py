@@ -604,8 +604,9 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Run Workflow Deployment",
         description=(
             "Run deployment_id with workflow_input and return status, terminal "
-            "outcome, output, diagnostics, and trace_count. Debug traces can include resolved "
-            "inputs and state changes; pass trace_range only when needed."
+            "outcome when completed, output, diagnostics, and trace_count. "
+            "Debug traces can include resolved inputs and state changes; pass "
+            "trace_range only when needed."
         ),
     )
     async def run_deployment(

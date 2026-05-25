@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from wf_core import (
     END,
     Edge,
@@ -9,6 +11,7 @@ from wf_core import (
     StateField,
     StateSchema,
     Workflow,
+    WorkflowExecutionError,
 )
 from wf_core.models.reducers import ReducerRef
 from wf_core.paths import StatePath
@@ -156,6 +159,14 @@ def test_state_view_for_frame_overlays_writes_onto_frame_scope_state() -> None:
     assert state_view["value"] == "visible"
     assert run.scopes["child"].committed_state["value"] == "child"
     assert run.state["value"] == "root"
+
+
+def test_lineage_state_view_rejects_corrupt_parent_cycle() -> None:
+    run = create_run_state(_minimal_workflow(), {"value": "root"})
+    run.lineages["root"].parent_id = "root"
+
+    with pytest.raises(WorkflowExecutionError, match="cycle"):
+        lineage_state_view(run, scope_id="root", lineage_id="root")
 
 
 def test_lineage_state_view_handles_deep_ancestry_without_recursion() -> None:

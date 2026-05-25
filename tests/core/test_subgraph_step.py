@@ -24,8 +24,9 @@ from wf_core import (
     resume_workflow_async,
     resume_workflow,
 )
+from wf_core.models.steps import InputPathBinding, Step
+from wf_core.paths import GraphSourcePath, LocalPath
 from wf_core.validation.issues import ValidationIssueCode
-from wf_core.models.steps import Step
 
 
 def test_subgraph_step_validates_boundary_bindings_and_outcomes() -> None:
@@ -156,6 +157,34 @@ def test_subgraph_step_executes_caller_prepared_saved_child_ref() -> None:
     assert run.output["answer"] == "saved:hello"
     assert run.trace[-1].node_id == "child"
     assert run.trace[-1].step_type == "subgraph"
+
+
+def test_subgraph_step_projects_child_context_output() -> None:
+    child = Workflow(
+        name="context_child",
+        input_schema=_schema({"text": {"type": "string"}}),
+        state_schema=StateSchema.from_field_map({}),
+        output_schema=_schema({"answer": {"type": "string"}}),
+        output=[
+            InputPathBinding(
+                target=LocalPath.of("answer"),
+                path=GraphSourcePath.parse("context.scope_id"),
+            )
+        ],
+        outcomes=["ok"],
+        start="done",
+        nodes=[EndNode(id="done", type="end", outcome="ok")],
+        edges=[],
+    )
+
+    run = execute_workflow(
+        _workflow(output_schema=_schema({"answer": {"type": "string"}})),
+        {"text": "hello"},
+        {},
+        subgraphs={"child.workflow": PreparedSubgraph(workflow=child, registry={})},
+    )
+
+    assert run.output["answer"] == "root:subgraph:child"
 
 
 def test_subgraph_step_executes_prepared_async_child() -> None:

@@ -10,6 +10,7 @@ from wf_core.runtime.foreach_state import (
     ForeachBarrierState,
     ItemErrorRecord,
     PendingItemResult,
+    _state_write_from_metadata,
 )
 from wf_core.runtime.lineage import LineageStateView, lineage_writes_for_frame
 from wf_core.runtime.ops.state import StatePatch
@@ -86,6 +87,21 @@ def test_foreach_barrier_state_round_trips_reducer_write_records() -> None:
     assert write.incoming_value == 3
     assert write.visible_value == 5
     assert write.reducer.name == "wf.std.add"
+
+
+def test_pending_write_metadata_preserves_invalid_reducer_detail() -> None:
+    with pytest.raises(WorkflowExecutionError, match="mutually exclusive"):
+        _state_write_from_metadata(
+            {
+                "path": {"root": "state", "parts": ["count"]},
+                "incoming_value": 1,
+                "visible_value": 1,
+                "reducer": {
+                    "name": "wf.std.add",
+                    "ref": {"source": "wf.std", "capability_key": "add"},
+                },
+            }
+        )
 
 
 def test_lineage_state_view_materializes_visible_values_without_mutating_base() -> None:
