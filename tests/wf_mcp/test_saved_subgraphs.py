@@ -94,18 +94,44 @@ def test_saved_child_missing_parent_binding_is_unrunnable() -> None:
     assert result["diagnostics"][0]["logical_ref"] == "demo.echo_tool"
 
 
-def test_interrupting_saved_child_remains_unrunnable_on_deployment_surface() -> None:
+def test_interrupting_saved_child_pauses_and_resumes_through_deployment_surface() -> (
+    None
+):
     store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_interrupt")
     store.save_artifact(_parent_artifact())
     store.save_artifact(_interrupting_child_artifact())
     store.save_deployment(_deployment())
     handlers = _handlers(store)
 
-    result = asyncio.run(handlers.validate_deployment(deployment_id="parent.personal"))
+    validation = asyncio.run(
+        handlers.validate_deployment(deployment_id="parent.personal")
+    )
 
-    assert result["status"] == "unrunnable"
-    assert result["diagnostics"][0]["code"] == "interrupting_artifact_unsupported"
-    assert result["diagnostics"][0]["logical_ref"] == "workflow.child.v1"
+    assert validation["status"] == "runnable"
+    assert validation["diagnostics"] == []
+
+    paused = asyncio.run(
+        handlers.run_deployment(
+            deployment_id="parent.personal",
+            workflow_input={"text": "hello"},
+        )
+    )
+
+    assert paused["status"] == "interrupted"
+    assert isinstance(paused["run_id"], str)
+    assert paused["interrupt"]["node_id"] == "child_step"
+    assert paused["interrupt"]["payload"]["question"] == "hello"
+
+    resumed = asyncio.run(
+        handlers.resume_run(
+            run_id=paused["run_id"],
+            resume_payload={"answer": "world"},
+        )
+    )
+
+    assert resumed["status"] == "completed"
+    assert resumed["outcome"] == "ok"
+    assert resumed["output"]["echoed"] == "world"
 
 
 def test_missing_saved_child_is_unrunnable_on_deployment_surface() -> None:

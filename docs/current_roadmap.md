@@ -61,8 +61,9 @@ implementation state.
   `SubgraphNode` is now the graph-as-node path for prepared children.
   `WorkflowBuilder.prepare_subgraph()` and `WorkflowBuilder.resume()` make the
   local runnable/resumable path available without core-runtime plumbing.
-  Saved interrupting artifacts remain unrunnable through one-shot
-  `run_deployment` until the platform exposes persisted resume.
+  Saved interrupting artifacts can now pause and resume through
+  `run_deployment`/`resume_run` while the MCP server process stays alive.
+  Persisted resume remains future work.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of
@@ -104,9 +105,8 @@ Frame stress points remaining for native subgraphs and future fork/gather:
 ## Why This Order
 
 The MCP workflow authoring path is now usable enough for real testing. The next
-bottleneck is runtime/platform correctness: persisted resume for saved
-interrupting children, optional per-use-site child deployment overrides,
-persistent run history, and protocol-native progress reporting. Concurrent
-foreach and native saved child execution now supply scheduler/lineage
-precedent. Those remaining pieces should come before adding more high-level
-authoring sugar.
+bottleneck is runtime/platform correctness: durable resume/run history,
+optional per-use-site child deployment overrides, and protocol-native progress
+reporting. Concurrent foreach, native saved child execution, and process-local
+interrupt resume now supply scheduler/lineage precedent. Those remaining pieces
+should come before adding more high-level authoring sugar.

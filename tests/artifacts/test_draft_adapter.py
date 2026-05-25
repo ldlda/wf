@@ -5,7 +5,15 @@ from pydantic import ValidationError
 from wf_artifacts.drafts import WorkflowDraft
 from wf_artifacts.drafts.api import compile_workflow_draft, validate_workflow_draft
 from wf_artifacts.drafts.adapter import build_workflow_from_draft
-from wf_core import ConditionNode, EndNode, ForeachNode, NodeUse
+from wf_core import (
+    ConditionNode,
+    EndNode,
+    ForeachNode,
+    NodeDef,
+    NodeUse,
+    SchemaRef,
+    execute_workflow,
+)
 from wf_core.models.steps import InputValueBinding
 
 
@@ -105,6 +113,88 @@ def test_adapter_lowers_root_workflow_output_bindings() -> None:
 
     assert dumped["output"][0]["target"] == {"root": "local", "parts": ["message"]}
     assert dumped["output"][0]["path"] == {"root": "state", "parts": ["raw", "echoed"]}
+
+
+def test_adapter_golden_draft_executes_ok_and_error_outcomes() -> None:
+    draft = WorkflowDraft.model_validate(
+        {
+            "name": "golden_echo",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "text": {"type": "string"},
+                    "fail": {"type": "boolean"},
+                },
+                "required": ["text"],
+            },
+            "state_schema": {
+                "type": "object",
+                "properties": {"raw": {"type": "object"}},
+            },
+            "output_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+            },
+            "outcomes": ["ok", "error"],
+            "output": [{"target": "message", "path": "state.raw.echoed"}],
+            "start": "call",
+            "steps": {
+                "call": {
+                    "use": "demo.echo",
+                    "input": [
+                        {"target": "text", "path": "input.text"},
+                        {"target": "fail", "path": "input.fail"},
+                    ],
+                    "output": [{"source": "echoed", "target": "state.raw.echoed"}],
+                },
+                "end_error": {"end": {"outcome": "error"}},
+            },
+            "routes": {
+                "call": {"ok": "__end__", "error": "end_error"},
+            },
+        }
+    )
+    workflow = build_workflow_from_draft(draft)
+    workflow = workflow.model_copy(
+        update={
+            "node_defs": [
+                NodeDef(
+                    name="demo.echo",
+                    input_schema=SchemaRef.model_validate(draft.input_schema),
+                    output_schema=SchemaRef.model_validate(
+                        {
+                            "type": "object",
+                            "properties": {"echoed": {"type": "string"}},
+                        }
+                    ),
+                    outcomes=["ok", "error"],
+                )
+            ]
+        }
+    )
+
+    def echo(payload: dict[str, object], _ctx: object) -> dict[str, object]:
+        if payload.get("fail") is True:
+            return {"outcome": "error", "output": {"echoed": "failed"}}
+        return {"outcome": "ok", "output": {"echoed": str(payload["text"])}}
+
+    ok = execute_workflow(
+        workflow,
+        {"text": "hello", "fail": False},
+        {"demo.echo": echo},
+    )
+    error = execute_workflow(
+        workflow,
+        {"text": "hello", "fail": True},
+        {"demo.echo": echo},
+    )
+
+    assert ok.status == "completed"
+    assert ok.outcome == "ok"
+    assert ok.output["message"] == "hello"
+    assert error.status == "completed"
+    assert error.outcome == "error"
+    assert error.output["message"] == "failed"
 
 
 def test_adapter_lowers_static_inputs_for_constant_like_steps() -> None:

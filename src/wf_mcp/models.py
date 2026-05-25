@@ -49,6 +49,13 @@ class RawWorkflowPlan(BaseModel):
     input_schema: dict[str, Any]
     state_schema: dict[str, Any]
     output_schema: dict[str, Any]
+    outcomes: list[str] = Field(
+        default_factory=lambda: ["ok"],
+        description=(
+            "Declared public workflow outcomes. Legacy plans without this field "
+            "default to ok."
+        ),
+    )
     output: list[InputBinding] = Field(
         default_factory=list,
         description=(

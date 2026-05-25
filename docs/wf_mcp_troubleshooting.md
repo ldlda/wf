@@ -298,18 +298,28 @@ Inspect the returned diagnostics first. Then use the matching section above:
 
 Do not debug runtime behavior before dependency validation is clean.
 
-## `run_deployment` Refuses An Interrupting Artifact
+## `run_deployment` Returns `interrupted`
 
-Interrupting saved artifacts are not fully supported through the current saved
-artifact execution path yet.
-
-Expected diagnostic:
+The deployment paused at an interrupt node. The response should include:
 
 ```text
-interrupting_artifact_unsupported
+status: interrupted
+outcome: null
+run_id: <process-local id>
+interrupt: <request payload and metadata>
 ```
 
-That is a known platform limitation, not a missing deployment binding.
+Send the requested resume payload to:
+
+```text
+wf.workflow.resume_run
+```
+
+The `run_id` is intentionally process-local. It is valid only while the current
+MCP server process keeps the paused run in memory. If the server restarts,
+there is no durable run store yet; rerun the deployment from the beginning.
+After resume completes, `status` is `completed` and `outcome` reports the
+workflow terminal outcome such as `ok` or `error`.
 
 ## A Raw MCP Tool Works But The Workflow Version Is Awkward
 

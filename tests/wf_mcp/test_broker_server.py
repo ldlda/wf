@@ -415,7 +415,7 @@ def test_broker_run_deployment_returns_unrunnable_for_dependency_errors() -> Non
     assert payload["diagnostics"][0]["code"] == "source_missing"
 
 
-def test_broker_run_deployment_rejects_interrupting_artifacts() -> None:
+def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "broker_run_interrupt_artifacts"
     )
@@ -445,9 +445,25 @@ def test_broker_run_deployment_rejects_interrupting_artifacts() -> None:
     )
     payload = cast(dict[str, Any], cast(object, structured))
 
-    assert payload["status"] == "unsupported"
-    assert payload["output"] is None
-    assert payload["diagnostics"][0]["code"] == "interrupting_artifact_unsupported"
+    assert payload["status"] == "interrupted"
+    assert payload["output"] == {}
+    assert isinstance(payload["run_id"], str)
+    assert payload["interrupt"]["payload"]["message"] == "send?"
+
+    _content, structured = asyncio.run(
+        server.call_tool(
+            "resume_workflow_run",
+            {
+                "run_id": payload["run_id"],
+                "resume_payload": {},
+            },
+        )
+    )
+    resumed = cast(dict[str, Any], cast(object, structured))
+
+    assert resumed["status"] == "completed"
+    assert resumed["outcome"] == "submitted"
+    assert resumed["run_id"] is None
 
 
 def test_build_service_from_config_uses_store_root_for_artifacts() -> None:
@@ -556,6 +572,7 @@ def _interrupt_artifact() -> WorkflowArtifact:
             },
             "state_schema": {"fields": {}},
             "output_schema": {"type": "object", "properties": {}},
+            "outcomes": ["submitted"],
             "start": "approval",
             "nodes": [
                 {
@@ -565,8 +582,11 @@ def _interrupt_artifact() -> WorkflowArtifact:
                     "request": [input_binding("input.message", "message")],
                     "resume": [],
                     "outcomes": ["submitted"],
-                }
+                },
+                {"id": "end_submitted", "type": "end", "outcome": "submitted"},
             ],
-            "edges": [{"from": "approval", "outcome": "submitted", "to": "__end__"}],
+            "edges": [
+                {"from": "approval", "outcome": "submitted", "to": "end_submitted"}
+            ],
         },
     )

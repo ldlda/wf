@@ -83,9 +83,6 @@ def validate_saved_subgraph_tree(
                 sources=sources,
             )
         )
-        interrupt_diagnostic = interrupting_artifact_diagnostic(child)
-        if interrupt_diagnostic is not None:
-            diagnostics.append(interrupt_diagnostic)
     return diagnostics
 
 
@@ -125,24 +122,25 @@ def prepare_saved_subgraphs(
     return prepared
 
 
-def interrupting_artifact_diagnostic(
+def direct_wrapper_interrupt_diagnostic(
     artifact: WorkflowArtifact,
 ) -> DependencyDiagnostic | None:
-    """Reject saved interrupt workflows until the platform exposes resume."""
+    """Reject direct wrapper calls that cannot return a resumable run handle.
+
+    Deployment execution supports interrupt/resume through an in-memory
+    `run_id`; `call_capability` remains a single-call authoring probe.
+    """
     if not any(isinstance(node, InterruptNode) for node in _artifact_steps(artifact)):
         return None
     return DependencyDiagnostic(
         severity=DiagnosticSeverity.ERROR,
-        code="interrupting_artifact_unsupported",
+        code="interrupting_wrapper_call_unsupported",
         logical_ref=f"workflow.{artifact.id}.v{artifact.version}",
         message=(
-            "Running saved workflow artifacts with interrupt nodes is unsupported "
-            "until nested run-state resume is implemented."
+            "Direct wrapper calls cannot pause for interrupt input; run the "
+            "artifact through a deployment to receive a resumable run_id."
         ),
-        repair_hint=(
-            "Run this workflow as a top-level core workflow or remove interrupt "
-            "nodes before saving it as a runnable deployment."
-        ),
+        repair_hint="Save a deployment and call wf.workflow.run_deployment instead.",
     )
 
 

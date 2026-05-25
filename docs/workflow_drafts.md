@@ -96,10 +96,100 @@ Important details:
 - `steps` are keyed by stable ids so patches do not depend on array positions.
 - `start` names one step id.
 - `routes` map step outcomes to another step id or `__end__`.
+- top-level `outcomes` declares public workflow terminal outcomes; if omitted,
+  it defaults to `["ok"]`.
+- top-level `output` maps final graph values such as `state.result` into the
+  public workflow output payload. Step-level `output` only writes a node result
+  into workflow state.
 - `capability` may be concrete during exploration, such as
   `demo.personal.echo_tool`.
 - When saved with source bindings, concrete refs can be normalized to logical
   refs such as `demo.echo_tool`.
+
+## Explicit Outputs And Error Outcomes
+
+Use `__end__` as the compact terminal path for the normal `ok` workflow outcome.
+For any other public terminal outcome, add an explicit `end` step and route to
+it. The end step itself is terminal; do not add an edge out of it.
+
+This complete draft shape:
+
+```json
+{
+  "name": "echo_with_error",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "text": { "type": "string" },
+      "fail": { "type": "boolean" }
+    },
+    "required": ["text"]
+  },
+  "state_schema": {
+    "type": "object",
+    "properties": {
+      "raw": {
+        "type": "object",
+        "properties": {
+          "echoed": { "type": "string" }
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "message": { "type": "string" }
+    }
+  },
+  "outcomes": ["ok", "error"],
+  "output": [
+    {
+      "target": { "root": "local", "parts": ["message"] },
+      "path": { "root": "state", "parts": ["raw", "echoed"] }
+    }
+  ],
+  "start": "call",
+  "steps": {
+    "call": {
+      "use": "demo.echo",
+      "input": [
+        {
+          "target": { "root": "local", "parts": ["text"] },
+          "path": { "root": "input", "parts": ["text"] }
+        },
+        {
+          "target": { "root": "local", "parts": ["fail"] },
+          "path": { "root": "input", "parts": ["fail"] }
+        }
+      ],
+      "output": [
+        {
+          "source": { "root": "local", "parts": ["echoed"] },
+          "target": { "root": "state", "parts": ["raw", "echoed"] }
+        }
+      ]
+    },
+    "end_error": {
+      "end": { "outcome": "error" }
+    }
+  },
+  "routes": {
+    "call": {
+      "ok": "__end__",
+      "error": "end_error"
+    }
+  }
+}
+```
+
+Read it as:
+
+- `call.ok` finishes the workflow with outcome `ok`.
+- `call.error` executes `end_error`, which finishes the workflow with outcome
+  `error`.
+- both terminal paths project `state.raw.echoed` into public output field
+  `message`.
 
 ## Binding Shape
 
@@ -356,9 +446,26 @@ provided on resume back into workflow state. Older map-shaped `request` and
 `resume` values are accepted only as parse compatibility and dump back to the
 canonical list shape.
 
-Saved interrupting artifacts are still limited in the current execution
-surface. If a deployment reports `interrupting_artifact_unsupported`, that is a
-known platform limitation rather than a draft bug.
+Saved interrupting artifacts can pause and resume through deployment runs while
+the MCP server process stays alive. The run response includes a process-local
+`run_id`; pass that to `wf.workflow.resume_run` with the resume payload.
+Persisted run storage is still future work, so a server restart invalidates
+that in-memory run id.
+
+### `end`
+
+Declares an explicit workflow terminal outcome.
+
+```json
+{
+  "end": {
+    "outcome": "error"
+  }
+}
+```
+
+Use explicit `end` steps for non-`ok` workflow outcomes. The legacy `__end__`
+destination remains the shorthand for public workflow outcome `ok`.
 
 ### `join`
 

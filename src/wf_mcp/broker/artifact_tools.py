@@ -79,3 +79,16 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
             deployment_id=deployment_id,
             workflow_input=workflow_input,
         )
+
+    @server.tool()
+    async def resume_workflow_run(
+        run_id: str,
+        resume_payload: dict[str, Any],
+        resume_outcome: str = "submitted",
+    ) -> dict[str, Any]:
+        """Resume a process-local interrupted deployment run."""
+        return await handlers.resume_run(
+            run_id=run_id,
+            resume_payload=resume_payload,
+            resume_outcome=resume_outcome,
+        )

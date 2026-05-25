@@ -603,8 +603,8 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         name="wf.workflow.run_deployment",
         title="Run Workflow Deployment",
         description=(
-            "Run deployment_id with workflow_input and return status, output, "
-            "diagnostics, and trace_count. Debug traces can include resolved "
+            "Run deployment_id with workflow_input and return status, terminal "
+            "outcome, output, diagnostics, and trace_count. Debug traces can include resolved "
             "inputs and state changes; pass trace_range only when needed."
         ),
     )
@@ -625,5 +625,34 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         return await handlers.run_deployment(
             deployment_id=deployment_id,
             workflow_input=workflow_input,
+            trace_range=trace_range,
+        )
+
+    @server.tool(
+        name="wf.workflow.resume_run",
+        title="Resume Workflow Run",
+        description=(
+            "Resume an interrupted in-memory deployment run returned by "
+            "run_deployment. Run IDs are process-local and are not durable."
+        ),
+    )
+    async def resume_run(
+        run_id: str,
+        resume_payload: dict[str, Any],
+        resume_outcome: str = "submitted",
+        trace_range: Annotated[
+            TraceRange | None,
+            Field(
+                description=(
+                    "Debug traces range to return after resume. Omit for the "
+                    "normal compact response."
+                )
+            ),
+        ] = None,
+    ) -> dict[str, Any]:
+        return await handlers.resume_run(
+            run_id=run_id,
+            resume_payload=resume_payload,
+            resume_outcome=resume_outcome,
             trace_range=trace_range,
         )

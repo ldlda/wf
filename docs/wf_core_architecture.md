@@ -142,8 +142,9 @@ limits and intended adapter seam.
   and lineage; child output commits only through declared boundary bindings and
   the parent routes by the child's terminal workflow outcome. Saved/deployed
   workflow resolution remains outside core; the workflow platform can now
-  supply non-interrupting saved child artifacts as prepared dependencies using
-  one inherited deployment binding environment. For local authoring,
+  supply saved child artifacts as prepared dependencies using one inherited
+  deployment binding environment, including process-local pause/resume for
+  child interrupts. For local authoring,
   `WorkflowBuilder.prepare_subgraph()`
   registers a child builder and `WorkflowBuilder.resume()` continues a paused
   prepared-child interrupt without requiring direct core-runtime calls.
@@ -162,7 +163,8 @@ limits and intended adapter seam.
   queue, `BLOCKED` frame state, lineage isolation, barrier merge semantics, and
   pending child results for concurrent foreach. Native prepared subgraphs now
   use child-scope execution and typed routed child interruption; the platform
-  resolves non-interrupting saved/deployed child artifacts before core starts.
+  resolves saved/deployed child artifacts before core starts and retains paused
+  deployment runs in memory for resume.
   Concurrent foreach is the primary current use case for async concurrent node
   handler execution.
 - Runtime errors are still ordinary exceptions plus failed run status. A richer

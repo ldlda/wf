@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 from wf_artifacts import (
     ArtifactKind,
@@ -52,14 +53,31 @@ from .constants import (
 from .models import TraceRange
 from .refs import parse_workflow_surface_capability_id
 from .saved_subgraphs import (
-    interrupting_artifact_diagnostic,
+    direct_wrapper_interrupt_diagnostic,
     resolve_saved_subgraph_tree,
     validate_saved_subgraph_tree,
 )
 from .wrapper_hints import wrapper_hints_for_capability
 
 if TYPE_CHECKING:
+    from wf_core import RunState
+
     from ..broker.service import WfMcpService
+
+
+@dataclass(slots=True)
+class ActiveWorkflowRun:
+    """In-memory paused deployment run.
+
+    This is intentionally not durable. It only makes interrupt/resume usable
+    while the current MCP server process is alive; persisted run storage remains
+    a separate platform concern.
+    """
+
+    deployment: WorkflowDeployment
+    artifact: WorkflowArtifact
+    plan: RawWorkflowPlan
+    run: "RunState"
 
 
 class WorkflowSurfaceHandlers:
@@ -67,6 +85,7 @@ class WorkflowSurfaceHandlers:
 
     def __init__(self, service: WfMcpService) -> None:
         self.service = service
+        self._active_runs: dict[str, ActiveWorkflowRun] = {}
 
     async def list_artifacts(
         self,
@@ -308,7 +327,7 @@ class WorkflowSurfaceHandlers:
         deployment_id: str | None,
     ) -> dict[str, Any]:
         """Execute a saved wrapper artifact through the workflow runner."""
-        unsupported = interrupting_artifact_diagnostic(artifact)
+        unsupported = direct_wrapper_interrupt_diagnostic(artifact)
         if unsupported is not None:
             raise ValueError(unsupported.message)
 
@@ -911,15 +930,6 @@ class WorkflowSurfaceHandlers:
                 diagnostics=diagnostics,
             )
 
-        unsupported = interrupting_artifact_diagnostic(artifact)
-        if unsupported is not None:
-            return _run_payload(
-                deployment=deployment,
-                artifact=artifact,
-                status="unsupported",
-                diagnostics=[unsupported],
-            )
-
         plan = _raw_plan_from_artifact(artifact)
         run = await self.service.run_workflow_from_plan(
             plan,
@@ -927,10 +937,19 @@ class WorkflowSurfaceHandlers:
             deployment=deployment,
             artifact=artifact,
         )
+        run_id = self._save_active_run(
+            deployment=deployment,
+            artifact=artifact,
+            plan=plan,
+            run=run,
+        )
         return _run_payload(
             deployment=deployment,
             artifact=artifact,
             status=run.status.value,
+            run_id=run_id,
+            interrupt=_interrupt_payload(run),
+            outcome=run.outcome,
             output=run.output,
             trace_count=len(run.trace),
             trace=(
@@ -950,6 +969,82 @@ class WorkflowSurfaceHandlers:
                 and len(run.trace) > trace_range.start + trace_range.limit
             ),
         )
+
+    async def resume_run(
+        self,
+        *,
+        run_id: str,
+        resume_payload: dict[str, Any],
+        resume_outcome: str = "submitted",
+        trace_range: TraceRange | None = None,
+    ) -> dict[str, Any]:
+        """Resume one interrupted in-memory deployment run."""
+        active = self._active_runs[run_id]
+        run = await self.service.resume_workflow_from_plan(
+            active.plan,
+            active.run,
+            resume_payload=resume_payload,
+            resume_outcome=resume_outcome,
+            deployment=active.deployment,
+            artifact=active.artifact,
+        )
+        active.run = run
+        next_run_id = self._save_active_run(
+            deployment=active.deployment,
+            artifact=active.artifact,
+            plan=active.plan,
+            run=run,
+            run_id=run_id,
+        )
+        return _run_payload(
+            deployment=active.deployment,
+            artifact=active.artifact,
+            status=run.status.value,
+            run_id=next_run_id,
+            interrupt=_interrupt_payload(run),
+            outcome=run.outcome,
+            output=run.output,
+            trace_count=len(run.trace),
+            trace=(
+                [
+                    asdict(entry)
+                    for entry in run.trace[
+                        trace_range.start : trace_range.start + trace_range.limit
+                    ]
+                ]
+                if trace_range is not None
+                else None
+            ),
+            trace_start=trace_range.start if trace_range is not None else None,
+            trace_limit=trace_range.limit if trace_range is not None else None,
+            trace_truncated=(
+                trace_range is not None
+                and len(run.trace) > trace_range.start + trace_range.limit
+            ),
+        )
+
+    def _save_active_run(
+        self,
+        *,
+        deployment: WorkflowDeployment,
+        artifact: WorkflowArtifact,
+        plan: RawWorkflowPlan,
+        run: RunState,
+        run_id: str | None = None,
+    ) -> str | None:
+        """Store only interrupted runs; terminal runs leave no resume handle."""
+        if run.status.value != "interrupted":
+            if run_id is not None:
+                self._active_runs.pop(run_id, None)
+            return None
+        key = run_id or f"run_{uuid4().hex}"
+        self._active_runs[key] = ActiveWorkflowRun(
+            deployment=deployment,
+            artifact=artifact,
+            plan=plan,
+            run=run,
+        )
+        return key
 
     def _deployment_validation(
         self,
@@ -1221,6 +1316,8 @@ def _raw_plan_from_artifact(artifact: WorkflowArtifact) -> RawWorkflowPlan:
             "input_schema": _plan_field(artifact, "input_schema"),
             "state_schema": _plan_field(artifact, "state_schema"),
             "output_schema": _plan_field(artifact, "output_schema"),
+            "outcomes": artifact.plan.get("outcomes", ["ok"]),
+            "output": artifact.plan.get("output", []),
             "start": _plan_field(artifact, "start"),
             "nodes": _plan_field(artifact, "nodes"),
             "edges": _plan_field(artifact, "edges"),
@@ -1248,6 +1345,9 @@ def _run_payload(
     deployment: WorkflowDeployment,
     artifact: WorkflowArtifact,
     status: str,
+    run_id: str | None = None,
+    interrupt: dict[str, Any] | None = None,
+    outcome: str | None = None,
     diagnostics: list[DependencyDiagnostic] | None = None,
     output: dict[str, Any] | None = None,
     trace_count: int = 0,
@@ -1261,6 +1361,9 @@ def _run_payload(
         "artifact_id": artifact.id,
         "artifact_version": artifact.version,
         "status": status,
+        "run_id": run_id,
+        "interrupt": interrupt,
+        "outcome": outcome,
         "output": output,
         "diagnostics": [
             diagnostic.model_dump(mode="json") for diagnostic in diagnostics or []
@@ -1274,6 +1377,19 @@ def _run_payload(
         payload["trace_limit"] = trace_limit
         payload["trace"] = trace
         payload["trace_truncated"] = trace_truncated
+    return payload
+
+
+def _interrupt_payload(run: RunState) -> dict[str, Any] | None:
+    """Return a JSON-safe interrupt payload for the current run, if paused."""
+    if run.interrupt is None:
+        return None
+    payload = asdict(run.interrupt)
+    route = payload.get("route")
+    if isinstance(route, dict) and "workflow_ref" in route:
+        workflow_ref = route["workflow_ref"]
+        if hasattr(workflow_ref, "model_dump"):
+            route["workflow_ref"] = workflow_ref.model_dump(mode="json")
     return payload
 
 

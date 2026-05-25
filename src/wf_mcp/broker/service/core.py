@@ -18,7 +18,13 @@ from wf_artifacts import (
     artifact_catalog_entry,
 )
 from wf_authoring import NodeReturn, NodeSpec
-from wf_core import NodeUse, Workflow, execute_workflow_async
+from wf_core import (
+    NodeUse,
+    RunState,
+    Workflow,
+    execute_workflow_async,
+    resume_workflow_async,
+)
 
 from wf_platform import (
     CapabilityBuckets,
@@ -664,6 +670,7 @@ class WfMcpService:
             "state_schema": plan.state_schema,
             "output_schema": plan.output_schema,
             "output": [binding.model_dump(mode="json") for binding in plan.output],
+            "outcomes": plan.outcomes,
             "start": plan.start,
             "node_defs": [node.model_dump() for node in node_defs.values()],
             "nodes": nodes,
@@ -671,20 +678,19 @@ class WfMcpService:
         }
         return Workflow.model_validate(payload)
 
-    async def run_workflow_from_plan(
+    def _prepare_workflow_runtime(
         self,
         plan: RawWorkflowPlan,
-        workflow_input: dict[str, Any],
-        deployment: WorkflowDeployment | None = None,
-        artifact: WorkflowArtifact | None = None,
-    ):
-        self._record_event(
-            make_event(
-                "workflow_run_started",
-                workflow_name=plan.name,
-                payload={"input_keys": sorted(workflow_input.keys())},
-            )
-        )
+        *,
+        deployment: WorkflowDeployment | None,
+        artifact: WorkflowArtifact | None,
+    ) -> tuple[Workflow, dict[str, Any], dict[str, Any], dict[str, Any]]:
+        """Resolve bindings once into the executable pieces core expects.
+
+        Saved-run resume must rebuild prepared dependencies from the current
+        in-memory service state. Durable resume will need a stricter snapshot,
+        but this keeps the current platform boundary explicit.
+        """
         plan_node_names = [
             node.node for node in plan.nodes if isinstance(node, NodeUse)
         ]
@@ -716,11 +722,39 @@ class WfMcpService:
                 compile_plan=self.compile_plan,
             )
         workflow = self.compile_plan(plan, dependencies.node_name_bindings)
+        return (
+            workflow,
+            dependencies.node_registry,
+            dependencies.reducers,
+            prepared_subgraphs,
+        )
+
+    async def run_workflow_from_plan(
+        self,
+        plan: RawWorkflowPlan,
+        workflow_input: dict[str, Any],
+        deployment: WorkflowDeployment | None = None,
+        artifact: WorkflowArtifact | None = None,
+    ):
+        self._record_event(
+            make_event(
+                "workflow_run_started",
+                workflow_name=plan.name,
+                payload={"input_keys": sorted(workflow_input.keys())},
+            )
+        )
+        workflow, registry, reducers, prepared_subgraphs = (
+            self._prepare_workflow_runtime(
+                plan,
+                deployment=deployment,
+                artifact=artifact,
+            )
+        )
         run = await execute_workflow_async(
             workflow,
             workflow_input,
-            dependencies.node_registry,
-            reducers=dependencies.reducers,
+            registry,
+            reducers=reducers,
             subgraphs=prepared_subgraphs,
         )
         self._record_event(
@@ -731,6 +765,42 @@ class WfMcpService:
             )
         )
         return run
+
+    async def resume_workflow_from_plan(
+        self,
+        plan: RawWorkflowPlan,
+        run: RunState,
+        *,
+        resume_payload: dict[str, Any],
+        resume_outcome: str = "submitted",
+        deployment: WorkflowDeployment | None = None,
+        artifact: WorkflowArtifact | None = None,
+    ) -> RunState:
+        """Resume one in-memory run using freshly resolved runtime dependencies."""
+        workflow, registry, reducers, prepared_subgraphs = (
+            self._prepare_workflow_runtime(
+                plan,
+                deployment=deployment,
+                artifact=artifact,
+            )
+        )
+        resumed = await resume_workflow_async(
+            workflow,
+            run,
+            registry,
+            resume_payload=resume_payload,
+            resume_outcome=resume_outcome,
+            reducers=reducers,
+            subgraphs=prepared_subgraphs,
+        )
+        self._record_event(
+            make_event(
+                "workflow_run_resumed",
+                workflow_name=plan.name,
+                payload={"status": resumed.status.value},
+            )
+        )
+        return resumed
 
     def list_events(self) -> list[McpEvent]:
         return self.event_bus.list_events()

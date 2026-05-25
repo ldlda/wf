@@ -69,9 +69,13 @@ semantics.
 Dynamic projection of saved workflows as individual MCP tools can exist later,
 but it should be optional. The stable run tool is the reliable base layer.
 
-Current `run_deployment` calls are synchronous request/response executions. They
-return compact status, output, diagnostics, and `trace_count`; optional ranged
-trace detail is for debugging only.
+Current `run_deployment` calls are synchronous request/response executions until
+the workflow pauses or completes. They return compact execution status,
+terminal workflow outcome, output, diagnostics, and `trace_count`; optional
+ranged trace detail is for debugging
+only. If a run pauses at an interrupt, the response includes a process-local
+`run_id` and interrupt payload. Use `wf.workflow.resume_run` with that `run_id`
+to continue while the same MCP server process is alive.
 
 Non-interrupting saved workflow children can now execute natively through this
 deployment surface. A parent deployment resolves its saved descendants by exact
@@ -80,20 +84,21 @@ bindings for the whole child tree. This is intentionally one configured graph
 environment; future per-child deployment overrides, if added, must be keyed by
 the subgraph use site rather than only the child artifact id.
 
-Interrupting saved artifacts remain unrunnable through `run_deployment`.
-Although core prepared children can interrupt and resume, this one-shot public
-surface does not yet persist a run for a later resume request.
+Interrupting saved artifacts can pause and resume through the current
+deployment surface, including interrupts raised inside saved child workflows.
+This support is in-memory only: server restart, reload that replaces process
+state, or another frontend process invalidates the `run_id`.
 
-Future run history should introduce a stable `run_id` only when there is a real
-run store behind it. A `run_id` without persisted state, trace paging, and
-status lookup would be misleading. The likely shape is:
+Future run history should replace process-local `run_id` values with durable
+run records. The likely shape is:
 
 - `run_deployment` starts or completes a run and returns `run_id`
 - `inspect_run(run_id)` returns status, output, diagnostics, and trace metadata
 - `read_run_trace(run_id, range)` returns bounded trace slices
 
 Until that exists, clients should treat the current response as the complete
-ephemeral run result for this request.
+ephemeral run result for this request, or as a process-local resume handle when
+`status` is `interrupted`.
 
 For long-running workflow execution, prefer MCP-native execution mechanisms
 where available:
@@ -664,12 +669,13 @@ parent-side contract: child workflow reference, declared child input/output
 schemas, binding lists, and declared outcomes. When callers resolve a local
 child into `PreparedSubgraph`, core executes it in child scope, preserves its
 trace, and can bubble and resume child interrupts without exposing child state
-as parent state. The current `wf_authoring.subgraph_node` and
+as parent state. Saved child artifacts are resolved by the workflow surface into
+the same `PreparedSubgraph` shape before execution. The current
+`wf_authoring.subgraph_node` and
 `async_subgraph_node` helpers still execute a child workflow as a plain node
 and validate the child output. The async helper is explicit because hiding
 `asyncio.run()` inside the sync wrapper would break inside already-running
-event loops. Saved workflow-as-node execution still needs platform-level
-artifact/deployment resolution into prepared children before core can run it.
+event loops.
 
 See `examples/authoring_workflow_as_node.py` for the compatibility wrapper-node
 approach and `examples/authoring_native_subgraph.py` for native prepared-child
@@ -678,10 +684,10 @@ native child pause and builder-driven resume. In the wrapper example the
 parent trace sees one node call; in the native examples child trace entries
 remain in the parent run state.
 
-Until that core upgrade exists, artifact tooling must not assume that an
-interrupting saved workflow can safely be used as a child node. Top-level saved
-workflows with interrupt nodes are valid, but nested interrupting workflows
-should be reported as unsupported for composition.
+Persisted resume is still not implemented. In-memory resume works because the
+server keeps the paused `RunState`; a durable run store will need to snapshot
+the root workflow, prepared child dependencies, deployment bindings, and trace
+metadata before this can survive restart or move across processes.
 
 Blocking dependency failures happen before workflow execution and are not normal
 workflow outcomes. A missing source, disabled source, unresolved binding, or
