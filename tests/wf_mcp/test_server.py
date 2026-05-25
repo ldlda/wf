@@ -205,6 +205,52 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
     asyncio.run(run_proxy())
 
 
+def test_server_reuses_real_upstream_session_across_workflow_requests() -> None:
+    """Workflow node calls may share one stateful MCP session across requests."""
+    config = BrokerConfig(
+        store_root=local_temp_root() / "workflow_persistent_fixture_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(config)
+        async with client:
+            await client.call_tool(
+                "wf.admin.refresh_connection_catalog",
+                {"connection_id": "fixture.personal"},
+            )
+            first = await client.call_tool(
+                "wf.workflow.call_capability",
+                {
+                    "qualified_name": "fixture.personal.echo_tool",
+                    "payload": {"text": "one"},
+                },
+            )
+            second = await client.call_tool(
+                "wf.workflow.call_capability",
+                {
+                    "qualified_name": "fixture.personal.echo_tool",
+                    "payload": {"text": "two"},
+                },
+            )
+
+            assert _structured(first)["output"]["echoed"] == "one"
+            assert _structured(second)["output"]["echoed"] == "two"
+
+    asyncio.run(run_proxy())
+
+
 def test_server_can_hide_admin_tools() -> None:
     config = BrokerConfig(
         store_root=local_temp_root() / "unified_no_admin_store",

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import AsyncExitStack
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
 from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
+from mcp.types import CallToolResult
 
 from ..models import AuthRecord, ConnectionConfig
 from .session import PersistentMcpSession
@@ -37,17 +39,13 @@ class PersistentSessionFactory:
         connection: ConnectionConfig,
         auth: AuthRecord | None,
     ) -> PersistentMcpSession:
-        stack = AsyncExitStack()
-        try:
-            session = await self._create_with_stack(stack, connection, auth)
-        except BaseException:
-            await stack.aclose()
-            raise
+        owner = _SessionOwner(factory=self, connection=connection, auth=auth)
+        await owner.start()
         return PersistentMcpSession(
             connection=connection,
             auth=auth,
-            client=session,
-            close_callback=stack.aclose,
+            call_callback=owner.call_tool,
+            close_callback=owner.close,
         )
 
     async def _create_with_stack(
@@ -99,3 +97,95 @@ class PersistentSessionFactory:
             return session
 
         raise ValueError(f"unsupported MCP transport {transport!r}")
+
+
+@dataclass(slots=True)
+class _ToolCallRequest:
+    """One request submitted to the task that owns the MCP transport."""
+
+    tool_name: str
+    payload: dict[str, object]
+    result: asyncio.Future[CallToolResult]
+
+
+@dataclass(slots=True)
+class _SessionOwner:
+    """Run one MCP client session entirely inside its owning asyncio task.
+
+    MCP SDK transports open AnyIO cancel scopes. Entering a transport in one
+    inbound MCP request and reusing it from another causes
+    `ClosedResourceError`/cancel-scope ownership failures. This actor keeps
+    transport creation, calls, and cleanup in one stable task while the public
+    workflow surface submits requests through a queue.
+    """
+
+    factory: PersistentSessionFactory
+    connection: ConnectionConfig
+    auth: AuthRecord | None
+    _requests: asyncio.Queue[_ToolCallRequest | None] = field(
+        default_factory=asyncio.Queue
+    )
+    _task: asyncio.Task[None] | None = None
+
+    async def start(self) -> None:
+        """Start the owner task and wait until its MCP session is initialized."""
+        ready = asyncio.get_running_loop().create_future()
+        self._task = asyncio.create_task(
+            self._run(ready),
+            name=f"wf-mcp-session:{self.connection.id}",
+        )
+        await ready
+
+    async def call_tool(
+        self,
+        tool_name: str,
+        payload: dict[str, object],
+    ) -> CallToolResult:
+        """Submit a tool call for execution in the transport owner task."""
+        task = self._task
+        if task is None:
+            raise RuntimeError("persistent MCP session is not started")
+        if task.done():
+            await task
+            raise RuntimeError("persistent MCP session stopped unexpectedly")
+        result = asyncio.get_running_loop().create_future()
+        await self._requests.put(
+            _ToolCallRequest(tool_name=tool_name, payload=payload, result=result)
+        )
+        return await result
+
+    async def close(self) -> None:
+        """Ask the owner task to close the MCP transport in its own scope."""
+        task = self._task
+        if task is None:
+            return
+        if not task.done():
+            await self._requests.put(None)
+        await task
+        self._task = None
+
+    async def _run(self, ready: asyncio.Future[None]) -> None:
+        """Own the complete MCP transport lifecycle and serialized call loop."""
+        try:
+            async with AsyncExitStack() as stack:
+                session = await self.factory._create_with_stack(
+                    stack, self.connection, self.auth
+                )
+                ready.set_result(None)
+                while True:
+                    request = await self._requests.get()
+                    if request is None:
+                        return
+                    try:
+                        response = await session.call_tool(
+                            request.tool_name, request.payload
+                        )
+                    except Exception as exc:
+                        request.result.set_exception(exc)
+                    else:
+                        request.result.set_result(response)
+        except BaseException as exc:
+            if not ready.done():
+                ready.set_exception(exc)
+            else:
+                raise
