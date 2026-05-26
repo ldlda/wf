@@ -10,14 +10,15 @@ from wf_core import PersistedRunState
 
 from ..models import DependencyDiagnostic, WorkflowArtifact, WorkflowDeployment
 
-RUN_ID_PATTERN = r"^[A-Za-z0-9_.-]+$"
+RUN_ID_PATTERN = r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
 
 
 def ensure_run_id(run_id: str) -> str:
     """Reject ids that cannot safely identify one local run directory."""
     if not re.fullmatch(RUN_ID_PATTERN, run_id):
         raise ValueError(
-            "run_id must match [A-Za-z0-9_.-]+; path separators are not allowed"
+            "run_id must start with alphanumeric or underscore and contain only "
+            "[A-Za-z0-9_.-]"
         )
     return run_id
 
@@ -65,7 +66,7 @@ class WorkflowRunRecord(BaseModel):
     status: StoredRunStatus
     resume_readiness: ResumeReadiness
     environment: PinnedRunEnvironment
-    latest_checkpoint_id: str
+    latest_checkpoint_id: str = Field(pattern=RUN_ID_PATTERN)
     diagnostics: list[DependencyDiagnostic] = Field(default_factory=list)
     created_at: datetime
     updated_at: datetime

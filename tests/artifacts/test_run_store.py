@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 
 import pytest
+from pydantic import ValidationError
 
 from wf_artifacts import (
     CheckpointReason,
@@ -106,5 +107,13 @@ def test_file_run_store_lists_runs_and_checkpoints_in_order(tmp_path) -> None:
 def test_file_run_store_rejects_unsafe_run_id(tmp_path) -> None:
     store = FileRunStore(tmp_path)
 
-    with pytest.raises(ValueError, match="run_id must match"):
+    with pytest.raises(ValueError, match="run_id must start"):
         store.get_run("../outside")
+
+    with pytest.raises(ValueError, match="run_id must start"):
+        store.get_run(".hidden_run")
+
+
+def test_workflow_run_record_validates_latest_checkpoint_id() -> None:
+    with pytest.raises(ValidationError):
+        run_record("run_123", "../outside")
