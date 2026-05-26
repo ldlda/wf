@@ -463,7 +463,8 @@ def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts() -> No
 
     assert resumed["status"] == "completed"
     assert resumed["outcome"] == "submitted"
-    assert resumed["run_id"] is None
+    assert resumed["run_id"] == payload["run_id"]
+    assert resumed["resume_readiness"] == "not_applicable"
 
 
 def test_build_service_from_config_uses_store_root_for_artifacts() -> None:

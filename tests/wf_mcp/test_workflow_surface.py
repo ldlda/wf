@@ -975,10 +975,29 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     )
 
     assert payload["status"] == "completed"
+    assert isinstance(payload["run_id"], str)
     assert payload["output"]["echoed"] == "hello"
     assert payload["diagnostics"] == []
     assert payload["trace_count"] == 1
     assert "trace" not in payload
+
+    inspected = asyncio.run(handlers.inspect_run(run_id=payload["run_id"]))
+    traced = asyncio.run(
+        handlers.read_run_trace(
+            run_id=payload["run_id"],
+            trace_range=TraceRange(start=0, limit=1),
+        )
+    )
+
+    assert inspected["run_id"] == payload["run_id"]
+    assert inspected["status"] == "completed"
+    assert inspected["trace_count"] == 1
+    assert "trace" not in inspected
+    assert traced["trace_count"] == 1
+    assert traced["trace_start"] == 0
+    assert traced["trace_limit"] == 1
+    assert traced["trace"][0]["node_id"] == "echo"
+    assert traced["trace_truncated"] is False
 
 
 def test_workflow_surface_run_deployment_can_include_trace_detail() -> None:

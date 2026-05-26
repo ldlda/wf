@@ -1,6 +1,6 @@
 # Durable Workflow Runs and Resume Design
 
-Status: design approved for implementation planning
+Status: v1 implemented; future protocol-native progress and broader recovery remain
 
 Durable workflow runs turn the current process-local `run_deployment` /
 `resume_run` behavior into platform state. The runtime already exposes the
@@ -376,16 +376,16 @@ Once stopped-run persistence is stable:
 5. Add general cross-run memory separately if nodes need it; it is not a
    replacement for checkpoints.
 
-## Recommendation
+## Implemented V1
 
-Implement durable stopped-run snapshots first:
+Durable stopped-run snapshots now provide:
 
-1. Add a validated persisted `RunState` codec.
-2. Add `WorkflowRun`, `RunCheckpoint`, and `RunStore`.
-3. Save interrupted, completed, and failed runs after start/resume returns.
-4. Replace process-local `_active_runs` lookup with durable run retrieval.
-5. Add compact `inspect_run` and bounded `read_run_trace`.
-6. Revalidate pinned dependencies before resuming interrupted runs.
+1. A validated persisted `RunState` codec.
+2. `WorkflowRunRecord`, `RunCheckpoint`, and `RunStore`.
+3. Checkpoints for interrupted, completed, and failed public executions.
+4. Durable resume retrieval instead of process-local `_active_runs`.
+5. Compact `inspect_run` and bounded `read_run_trace` tools.
+6. Pinned dependency revalidation before interrupted runs resume.
 
 This delivers durable human-in-the-loop execution and run inspection while
 preserving the correctness boundary that live external-call failures are not

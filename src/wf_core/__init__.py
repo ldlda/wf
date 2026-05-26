@@ -28,8 +28,10 @@ from .runtime import (
     WorkflowExecutionError,
     coerce_node_result,
     execute_workflow_async,
+    execute_workflow_result_async,
     execute_workflow,
     resume_workflow_async,
+    resume_workflow_result_async,
     resume_workflow,
     step_workflow_async,
     step_workflow,
@@ -45,6 +47,7 @@ from .run_state import (
     StepExecutionResult,
     TraceEntry,
 )
+from .run_codec import PersistedRunState, dump_run_state, load_run_state
 from .tokens import END, START
 from .validation import (
     ValidationIssue,
@@ -84,6 +87,9 @@ __all__ = [
     "TraceEntry",
     "InterruptRoute",
     "InterruptRequest",
+    "PersistedRunState",
+    "dump_run_state",
+    "load_run_state",
     "START",
     "END",
     "ValidationIssue",
@@ -94,8 +100,10 @@ __all__ = [
     "WorkflowExecutionError",
     "coerce_node_result",
     "execute_workflow_async",
+    "execute_workflow_result_async",
     "execute_workflow",
     "resume_workflow_async",
+    "resume_workflow_result_async",
     "resume_workflow",
     "step_workflow_async",
     "step_workflow",

@@ -62,9 +62,8 @@ implementation state.
   `WorkflowBuilder.prepare_subgraph()` and `WorkflowBuilder.resume()` make the
   local runnable/resumable path available without core-runtime plumbing.
   Saved interrupting artifacts can now pause and resume through
-  `run_deployment`/`resume_run` for the duration of the MCP server process
-  (in-memory only). Persisted resume across process restarts remains future
-  work.
+  `run_deployment`/`resume_run` across handler/server recreation by restoring
+  stopped checkpoints and pinned root/child artifact definitions.
 - **Concurrent foreach**: implemented in core with explicit scheduling,
   reducer/merge semantics, item error policy, async handler batching, and
   quiescent interrupt behavior. Remaining work is polish and future reuse of
@@ -77,14 +76,14 @@ implementation state.
   metadata and compatibility patches. Scope-root commits now apply to both the
   root workflow and prepared native child scopes through the explicit
   scope/lineage commit helper.
-- **Durable run history and resume**: design is recorded in
+- **Durable run history and resume**: the design is recorded in
   [2026-05-26 durable workflow runs](./superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md).
-  Add a validated `RunState` storage codec and dedicated run/checkpoint store.
-  Persist stopped snapshots for interrupted, completed, and failed executions;
-  replace process-local resume handles with stable `run_id` values; add compact
-  `inspect_run` and bounded `read_run_trace` APIs. Resuming an interrupted run
-  must revalidate its pinned dependency environment; ordinary live tool/source
-  failures remain failed runs, not implicit pauses.
+  A validated `RunState` codec and dedicated run/checkpoint store now persist
+  interrupted, completed, and failed stopped snapshots. Stable `run_id` values
+  support compact `inspect_run` and bounded `read_run_trace` reads. Resume
+  revalidates its pinned dependency environment and reports `blocked` without
+  consuming input when a required source is unavailable. Ordinary live
+  tool/source failures remain failed runs, not implicit pauses.
 - **Protocol-native long-running runs**: investigate MCP tasks/progress
   notifications for long-running workflow execution. Avoid inventing a custom
   "start" convention unless protocol-native behavior is insufficient.
@@ -111,8 +110,9 @@ Frame stress points remaining for native subgraphs and future fork/gather:
 ## Why This Order
 
 The MCP workflow authoring path is now usable enough for real testing. The next
-bottleneck is runtime/platform correctness: durable resume/run history,
-optional per-use-site child deployment overrides, and protocol-native progress
-reporting. Concurrent foreach, native saved child execution, and process-local
-interrupt resume now supply scheduler/lineage precedent. Those remaining pieces
-should come before adding more high-level authoring sugar.
+bottleneck is runtime/platform correctness: optional per-use-site child
+deployment overrides, protocol-native progress reporting, and stronger durable
+run operations beyond stopped checkpoints. Concurrent foreach, native saved
+child execution, and durable interrupt resume now supply scheduler/lineage
+precedent. Those remaining pieces should come before adding more high-level
+authoring sugar.

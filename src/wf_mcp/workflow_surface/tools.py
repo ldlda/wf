@@ -633,8 +633,9 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         name="wf.workflow.resume_run",
         title="Resume Workflow Run",
         description=(
-            "Resume an interrupted in-memory deployment run returned by "
-            "run_deployment. Run IDs are process-local and are not durable."
+            "Resume an interrupted durable deployment run returned by "
+            "run_deployment. Resume can remain blocked when a pinned source "
+            "dependency is unavailable."
         ),
     )
     async def resume_run(
@@ -655,5 +656,38 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
             run_id=run_id,
             resume_payload=resume_payload,
             resume_outcome=resume_outcome,
+            trace_range=trace_range,
+        )
+
+    @server.tool(
+        name="wf.workflow.inspect_run",
+        title="Inspect Workflow Run",
+        description=(
+            "Return a durable stopped-run summary and result without debug trace "
+            "entries. Use read_run_trace only when trace detail is required."
+        ),
+    )
+    async def inspect_run(run_id: str) -> dict[str, Any]:
+        return await handlers.inspect_run(run_id=run_id)
+
+    @server.tool(
+        name="wf.workflow.read_run_trace",
+        title="Read Workflow Run Trace",
+        description="Read an explicit bounded debug trace slice for a durable run.",
+    )
+    async def read_run_trace(
+        run_id: str,
+        trace_range: Annotated[
+            TraceRange,
+            Field(
+                description=(
+                    "Debug traces range to return. Keep the range small because "
+                    "entries can include resolved inputs, outputs, and state changes."
+                )
+            ),
+        ],
+    ) -> dict[str, Any]:
+        return await handlers.read_run_trace(
+            run_id=run_id,
             trace_range=trace_range,
         )

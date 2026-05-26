@@ -40,6 +40,19 @@ class SavedSubgraphTree:
     diagnostics: list[DependencyDiagnostic]
 
 
+def saved_subgraph_tree_from_snapshots(
+    child_artifacts: list[WorkflowArtifact],
+) -> SavedSubgraphTree:
+    """Restore the exact saved-child definitions pinned by a durable run."""
+    return SavedSubgraphTree(
+        artifacts_by_ref={
+            f"workflow.{artifact.id}.v{artifact.version}": artifact
+            for artifact in child_artifacts
+        },
+        diagnostics=[],
+    )
+
+
 def resolve_saved_subgraph_tree(
     *,
     root_artifact: WorkflowArtifact,
@@ -127,8 +140,8 @@ def direct_wrapper_interrupt_diagnostic(
 ) -> DependencyDiagnostic | None:
     """Reject direct wrapper calls that cannot return a resumable run handle.
 
-    Deployment execution supports interrupt/resume through an in-memory
-    `run_id`; `call_capability` remains a single-call authoring probe.
+    Deployment execution supports interrupt/resume through a durable `run_id`;
+    `call_capability` remains a single-call authoring probe.
     """
     if not any(isinstance(node, InterruptNode) for node in _artifact_steps(artifact)):
         return None

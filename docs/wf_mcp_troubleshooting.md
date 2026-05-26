@@ -305,7 +305,8 @@ The deployment paused at an interrupt node. The response should include:
 ```text
 status: interrupted
 outcome: null
-run_id: <process-local id>
+run_id: <durable id>
+resume_readiness: ready
 interrupt: <request payload and metadata>
 ```
 
@@ -315,11 +316,17 @@ Send the requested resume payload to:
 wf.workflow.resume_run
 ```
 
-The `run_id` is intentionally process-local. It is valid only while the current
-MCP server process keeps the paused run in memory. If the server restarts,
-there is no durable run store yet; rerun the deployment from the beginning.
-After resume completes, `status` is `completed` and `outcome` reports the
-workflow terminal outcome such as `ok` or `error`.
+The `run_id` identifies a stored stopped-state checkpoint and survives handler
+or server recreation. Before applying the resume payload, the platform
+revalidates the pinned deployment/source environment. If it returns
+`resume_readiness: blocked`, inspect the diagnostics, restore the missing or
+disabled source, and call `resume_run` again; the blocked attempt has not
+advanced workflow state. After resume completes, `status` is `completed` and
+`outcome` reports the workflow terminal outcome such as `ok` or `error`.
+
+For debugging a completed, failed, or interrupted run, call
+`wf.workflow.inspect_run` first. Only call `wf.workflow.read_run_trace` with a
+small explicit range when node-level detail is necessary.
 
 ## A Raw MCP Tool Works But The Workflow Version Is Awkward
 

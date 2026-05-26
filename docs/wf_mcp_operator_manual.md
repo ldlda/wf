@@ -182,6 +182,11 @@ Primary:
 - `wf.workflow.run_deployment`: execute a saved deployment with input. The
   default response is compact and returns `trace_count`; pass `trace_range`
   only when debugging a failed or surprising run.
+- `wf.workflow.inspect_run`: inspect a durable stopped run without trace detail.
+- `wf.workflow.read_run_trace`: retrieve only an explicit bounded debug trace
+  slice for a durable run.
+- `wf.workflow.resume_run`: resume an interrupted durable run when its pinned
+  dependencies remain available.
 
 Advanced:
 
@@ -357,6 +362,13 @@ response. Trace entries may include resolved node inputs, node outputs, and
 state changes, so treat them as debug payloads rather than ordinary list/summary
 data.
 
+Every started deployment receives a durable `run_id`, including completed and
+failed runs. Use `inspect_run` for the compact stored result and
+`read_run_trace` only for an explicit bounded debug range. Interrupted runs can
+be resumed after server/handler recreation; if a pinned source is missing or
+disabled, `resume_run` returns `resume_readiness="blocked"` without advancing
+the execution checkpoint.
+
 ## Which Tool Do I Use?
 
 | I want to... | Use |
@@ -383,6 +395,9 @@ data.
 | Bind a saved workflow to concrete sources | `wf.workflow.save_deployment` |
 | Check whether a deployment can run | `wf.workflow.validate_deployment` |
 | Execute a saved workflow | `wf.workflow.run_deployment` |
+| Inspect a stopped workflow run | `wf.workflow.inspect_run` |
+| Read bounded debug trace entries | `wf.workflow.read_run_trace` |
+| Resume an interrupted workflow run | `wf.workflow.resume_run` |
 
 ## Common Confusions
 

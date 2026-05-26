@@ -6,6 +6,7 @@ from typing import Any
 from wf_artifacts import (
     FileWorkflowArtifactStore,
     RequiredCapability,
+    ResumeReadiness,
     WorkflowArtifact,
     WorkflowDeployment,
 )
@@ -122,6 +123,8 @@ def test_interrupting_saved_child_pauses_and_resumes_through_deployment_surface(
     assert paused["interrupt"]["node_id"] == "child_step"
     assert paused["interrupt"]["payload"]["question"] == "hello"
 
+    # Durable resume must not rely on the process-local handler instance.
+    handlers = _handlers(store)
     resumed = asyncio.run(
         handlers.resume_run(
             run_id=paused["run_id"],
@@ -132,6 +135,52 @@ def test_interrupting_saved_child_pauses_and_resumes_through_deployment_surface(
     assert resumed["status"] == "completed"
     assert resumed["outcome"] == "ok"
     assert resumed["output"]["echoed"] == "world"
+
+
+def test_interrupted_saved_child_blocks_resume_until_pinned_source_returns() -> None:
+    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_blocked")
+    store.save_artifact(_parent_artifact())
+    store.save_artifact(_interrupting_child_artifact(requires_demo=True))
+    store.save_deployment(_deployment())
+    handlers = _handlers(store)
+
+    paused = asyncio.run(
+        handlers.run_deployment(
+            deployment_id="parent.personal",
+            workflow_input={"text": "hello"},
+        )
+    )
+    run_store = handlers.service.run_store
+    assert run_store is not None
+
+    handlers.service.capability_sources["demo.personal"].enabled = False
+    blocked = asyncio.run(
+        handlers.resume_run(
+            run_id=paused["run_id"],
+            resume_payload={"answer": "world"},
+        )
+    )
+
+    assert blocked["status"] == "interrupted"
+    assert blocked["resume_readiness"] == "blocked"
+    assert blocked["diagnostics"][0]["code"] == "source_disabled"
+    assert (
+        run_store.get_run(paused["run_id"]).resume_readiness is ResumeReadiness.BLOCKED
+    )
+    assert run_store.get_latest_checkpoint(paused["run_id"]).sequence == 1
+
+    handlers.service.capability_sources["demo.personal"].enabled = True
+    resumed = asyncio.run(
+        handlers.resume_run(
+            run_id=paused["run_id"],
+            resume_payload={"answer": "world"},
+        )
+    )
+
+    assert resumed["status"] == "completed"
+    assert resumed["resume_readiness"] == "not_applicable"
+    assert resumed["output"]["echoed"] == "world"
+    assert run_store.get_latest_checkpoint(paused["run_id"]).sequence == 2
 
 
 def test_missing_saved_child_is_unrunnable_on_deployment_surface() -> None:
@@ -288,7 +337,7 @@ def _io_schema(field: str) -> dict[str, Any]:
     }
 
 
-def _interrupting_child_artifact() -> WorkflowArtifact:
+def _interrupting_child_artifact(*, requires_demo: bool = False) -> WorkflowArtifact:
     plan: dict[str, Any] = {
         "name": "child",
         "input_schema": _io_schema("text"),
@@ -314,6 +363,11 @@ def _interrupting_child_artifact() -> WorkflowArtifact:
         output_schema=plan["output_schema"],
         outcomes=("completed",),
         plan=plan,
+        required_capabilities=(
+            [RequiredCapability(ref="demo.echo_tool", kind="node_spec")]
+            if requires_demo
+            else []
+        ),
     )
 
 

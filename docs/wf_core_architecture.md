@@ -143,8 +143,8 @@ limits and intended adapter seam.
   the parent routes by the child's terminal workflow outcome. Saved/deployed
   workflow resolution remains outside core; the workflow platform can now
   supply saved child artifacts as prepared dependencies using one inherited
-  deployment binding environment, including process-local pause/resume for
-  child interrupts. For local authoring,
+  deployment binding environment, including durable stopped-run pause/resume
+  for child interrupts. For local authoring,
   `WorkflowBuilder.prepare_subgraph()`
   registers a child builder and `WorkflowBuilder.resume()` continues a paused
   prepared-child interrupt without requiring direct core-runtime calls.

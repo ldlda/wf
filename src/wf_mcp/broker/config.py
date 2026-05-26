@@ -3,7 +3,11 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
+from wf_artifacts import (
+    FileDraftWorkspaceStore,
+    FileRunStore,
+    FileWorkflowArtifactStore,
+)
 
 from ..control import BrokerConfigFile
 from ..models import BrokerConfig
@@ -27,6 +31,7 @@ def build_service_from_config(config: BrokerConfig) -> WfMcpService:
         store=FileStore(config.store_root),
         artifact_store=FileWorkflowArtifactStore(config.store_root),
         draft_workspace_store=FileDraftWorkspaceStore(config.store_root),
+        run_store=FileRunStore(config.store_root),
         # Discovery can use short-lived SDK sessions. Workflow execution needs
         # a persistent runtime so stateful MCP servers keep session/page state
         # across sequential workflow nodes.

@@ -10,7 +10,9 @@ from pydantic import BaseModel
 from wf_artifacts import (
     DraftWorkspaceStore,
     FileDraftWorkspaceStore,
+    FileRunStore,
     FileWorkflowArtifactStore,
+    RunStore,
     WorkflowArtifact,
     WorkflowArtifactCatalogEntry,
     WorkflowArtifactStore,
@@ -22,8 +24,8 @@ from wf_core import (
     NodeUse,
     RunState,
     Workflow,
-    execute_workflow_async,
-    resume_workflow_async,
+    execute_workflow_result_async,
+    resume_workflow_result_async,
 )
 
 from wf_platform import (
@@ -55,6 +57,7 @@ from ...storage import Store
 from ...workflow.wrappers import _model_from_schema
 from ...workflow_surface.runtime_dependencies import resolve_runtime_dependencies
 from ...workflow_surface.saved_subgraphs import (
+    SavedSubgraphTree,
     prepare_saved_subgraphs,
     resolve_saved_subgraph_tree,
 )
@@ -83,6 +86,7 @@ class WfMcpService:
     include_builtin_specs: bool = True
     artifact_store: WorkflowArtifactStore | None = None
     draft_workspace_store: DraftWorkspaceStore | None = None
+    run_store: RunStore | None = None
     tool_executor: ToolExecutor | None = None
 
     def __post_init__(self) -> None:
@@ -93,6 +97,8 @@ class WfMcpService:
             self.draft_workspace_store = FileDraftWorkspaceStore(
                 _store_root(self.store)
             )
+        if self.run_store is None:
+            self.run_store = FileRunStore(_store_root(self.store))
         if self.include_builtin_specs:
             for source in builtin_sources().values():
                 self.register_capability_source(source)
@@ -684,6 +690,7 @@ class WfMcpService:
         *,
         deployment: WorkflowDeployment | None,
         artifact: WorkflowArtifact | None,
+        saved_subgraph_tree: SavedSubgraphTree | None = None,
     ) -> tuple[Workflow, dict[str, Any], dict[str, Any], dict[str, Any]]:
         """Resolve bindings once into the executable pieces core expects.
 
@@ -710,7 +717,15 @@ class WfMcpService:
             plan_node_names=plan_node_names,
         )
         prepared_subgraphs = {}
-        if artifact is not None and self.artifact_store is not None:
+        if saved_subgraph_tree is not None:
+            tree = saved_subgraph_tree
+            prepared_subgraphs = prepare_saved_subgraphs(
+                tree=tree,
+                deployment=deployment,
+                sources=self.capability_sources,
+                compile_plan=self.compile_plan,
+            )
+        elif artifact is not None and self.artifact_store is not None:
             tree = resolve_saved_subgraph_tree(
                 root_artifact=artifact,
                 artifact_store=self.artifact_store,
@@ -735,6 +750,7 @@ class WfMcpService:
         workflow_input: dict[str, Any],
         deployment: WorkflowDeployment | None = None,
         artifact: WorkflowArtifact | None = None,
+        saved_subgraph_tree: SavedSubgraphTree | None = None,
     ):
         self._record_event(
             make_event(
@@ -748,9 +764,10 @@ class WfMcpService:
                 plan,
                 deployment=deployment,
                 artifact=artifact,
+                saved_subgraph_tree=saved_subgraph_tree,
             )
         )
-        run = await execute_workflow_async(
+        run = await execute_workflow_result_async(
             workflow,
             workflow_input,
             registry,
@@ -775,16 +792,18 @@ class WfMcpService:
         resume_outcome: str = "submitted",
         deployment: WorkflowDeployment | None = None,
         artifact: WorkflowArtifact | None = None,
+        saved_subgraph_tree: SavedSubgraphTree | None = None,
     ) -> RunState:
-        """Resume one in-memory run using freshly resolved runtime dependencies."""
+        """Resume one stopped run using its prepared runtime dependency boundary."""
         workflow, registry, reducers, prepared_subgraphs = (
             self._prepare_workflow_runtime(
                 plan,
                 deployment=deployment,
                 artifact=artifact,
+                saved_subgraph_tree=saved_subgraph_tree,
             )
         )
-        resumed = await resume_workflow_async(
+        resumed = await resume_workflow_result_async(
             workflow,
             run,
             registry,

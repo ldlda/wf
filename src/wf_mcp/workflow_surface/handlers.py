@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
-from uuid import uuid4
 
 from wf_artifacts import (
     ArtifactKind,
@@ -12,6 +11,7 @@ from wf_artifacts import (
     DependencyDiagnostic,
     DraftWorkspaceStore,
     RequiredCapability,
+    RunStore,
     WorkflowArtifact,
     WorkflowCapabilityRef,
     WorkflowDeployment,
@@ -53,9 +53,20 @@ from .constants import (
 from .models import TraceRange
 from .refs import parse_workflow_surface_capability_id
 from .saved_subgraphs import (
+    SavedSubgraphTree,
     direct_wrapper_interrupt_diagnostic,
     resolve_saved_subgraph_tree,
+    saved_subgraph_tree_from_snapshots,
     validate_saved_subgraph_tree,
+)
+from .run_lifecycle import (
+    create_pinned_environment,
+    has_blocking_diagnostics,
+    mark_resume_blocked,
+    persist_stopped_run,
+    load_stored_run,
+    restore_interrupted_run,
+    validate_pinned_resume_environment,
 )
 from .wrapper_hints import wrapper_hints_for_capability
 
@@ -65,27 +76,11 @@ if TYPE_CHECKING:
     from ..broker.service import WfMcpService
 
 
-@dataclass(slots=True)
-class ActiveWorkflowRun:
-    """In-memory paused deployment run.
-
-    This is intentionally not durable. It only makes interrupt/resume usable
-    while the current MCP server process is alive; persisted run storage remains
-    a separate platform concern.
-    """
-
-    deployment: WorkflowDeployment
-    artifact: WorkflowArtifact
-    plan: RawWorkflowPlan
-    run: "RunState"
-
-
 class WorkflowSurfaceHandlers:
     """Reusable implementation behind MCP workflow artifact tools."""
 
     def __init__(self, service: WfMcpService) -> None:
         self.service = service
-        self._active_runs: dict[str, ActiveWorkflowRun] = {}
 
     async def list_artifacts(
         self,
@@ -903,7 +898,9 @@ class WorkflowSurfaceHandlers:
         }
 
     async def validate_deployment(self, *, deployment_id: str) -> dict[str, Any]:
-        deployment, artifact, diagnostics = self._deployment_validation(deployment_id)
+        deployment, artifact, diagnostics, _tree = self._deployment_validation(
+            deployment_id
+        )
         return {
             "deployment_id": deployment.id,
             "artifact_id": artifact.id,
@@ -921,7 +918,9 @@ class WorkflowSurfaceHandlers:
         workflow_input: dict[str, Any],
         trace_range: TraceRange | None = None,
     ) -> dict[str, Any]:
-        deployment, artifact, diagnostics = self._deployment_validation(deployment_id)
+        deployment, artifact, diagnostics, tree = self._deployment_validation(
+            deployment_id
+        )
         if diagnostics:
             return _run_payload(
                 deployment=deployment,
@@ -936,18 +935,23 @@ class WorkflowSurfaceHandlers:
             workflow_input,
             deployment=deployment,
             artifact=artifact,
+            saved_subgraph_tree=tree,
         )
-        run_id = self._save_active_run(
-            deployment=deployment,
-            artifact=artifact,
-            plan=plan,
+        record = persist_stopped_run(
+            store=self._run_store(),
+            environment=create_pinned_environment(
+                deployment=deployment,
+                artifact=artifact,
+                tree=tree,
+            ),
             run=run,
         )
         return _run_payload(
             deployment=deployment,
             artifact=artifact,
             status=run.status.value,
-            run_id=run_id,
+            run_id=record.id,
+            resume_readiness=record.resume_readiness.value,
             interrupt=_interrupt_payload(run),
             outcome=run.outcome,
             output=run.output,
@@ -978,29 +982,54 @@ class WorkflowSurfaceHandlers:
         resume_outcome: str = "submitted",
         trace_range: TraceRange | None = None,
     ) -> dict[str, Any]:
-        """Resume one interrupted in-memory deployment run."""
-        active = self._active_runs[run_id]
+        """Resume one durable interrupted deployment run."""
+        record, stopped_run = restore_interrupted_run(self._run_store(), run_id)
+        environment = record.environment
+        diagnostics = validate_pinned_resume_environment(
+            record=record,
+            sources=_available_sources(self.service),
+        )
+        if has_blocking_diagnostics(diagnostics):
+            blocked = mark_resume_blocked(
+                store=self._run_store(),
+                record=record,
+                diagnostics=diagnostics,
+            )
+            return _run_payload(
+                deployment=environment.deployment,
+                artifact=environment.root_artifact,
+                status=stopped_run.status.value,
+                run_id=blocked.id,
+                resume_readiness=blocked.resume_readiness.value,
+                interrupt=_interrupt_payload(stopped_run),
+                outcome=stopped_run.outcome,
+                output=stopped_run.output,
+                diagnostics=diagnostics,
+                trace_count=len(stopped_run.trace),
+            )
+        plan = _raw_plan_from_artifact(environment.root_artifact)
+        tree = saved_subgraph_tree_from_snapshots(environment.child_artifacts)
         run = await self.service.resume_workflow_from_plan(
-            active.plan,
-            active.run,
+            plan,
+            stopped_run,
             resume_payload=resume_payload,
             resume_outcome=resume_outcome,
-            deployment=active.deployment,
-            artifact=active.artifact,
+            deployment=environment.deployment,
+            artifact=environment.root_artifact,
+            saved_subgraph_tree=tree,
         )
-        active.run = run
-        next_run_id = self._save_active_run(
-            deployment=active.deployment,
-            artifact=active.artifact,
-            plan=active.plan,
+        next_record = persist_stopped_run(
+            store=self._run_store(),
+            environment=environment,
             run=run,
             run_id=run_id,
         )
         return _run_payload(
-            deployment=active.deployment,
-            artifact=active.artifact,
+            deployment=environment.deployment,
+            artifact=environment.root_artifact,
             status=run.status.value,
-            run_id=next_run_id,
+            run_id=next_record.id,
+            resume_readiness=next_record.resume_readiness.value,
             interrupt=_interrupt_payload(run),
             outcome=run.outcome,
             output=run.output,
@@ -1023,33 +1052,62 @@ class WorkflowSurfaceHandlers:
             ),
         )
 
-    def _save_active_run(
+    async def inspect_run(self, *, run_id: str) -> dict[str, Any]:
+        """Return one durable stopped-run summary without debug trace entries."""
+        record, run = load_stored_run(self._run_store(), run_id)
+        environment = record.environment
+        return _run_payload(
+            deployment=environment.deployment,
+            artifact=environment.root_artifact,
+            status=record.status.value,
+            run_id=record.id,
+            resume_readiness=record.resume_readiness.value,
+            interrupt=_interrupt_payload(run),
+            outcome=run.outcome,
+            output=run.output,
+            diagnostics=record.diagnostics,
+            trace_count=len(run.trace),
+        )
+
+    async def read_run_trace(
         self,
         *,
-        deployment: WorkflowDeployment,
-        artifact: WorkflowArtifact,
-        plan: RawWorkflowPlan,
-        run: RunState,
-        run_id: str | None = None,
-    ) -> str | None:
-        """Store only interrupted runs; terminal runs leave no resume handle."""
-        if run.status.value != "interrupted":
-            if run_id is not None:
-                self._active_runs.pop(run_id, None)
-            return None
-        key = run_id or f"run_{uuid4().hex}"
-        self._active_runs[key] = ActiveWorkflowRun(
-            deployment=deployment,
-            artifact=artifact,
-            plan=plan,
-            run=run,
+        run_id: str,
+        trace_range: TraceRange,
+    ) -> dict[str, Any]:
+        """Return only a caller-bounded debug trace slice from a stopped run."""
+        record, run = load_stored_run(self._run_store(), run_id)
+        environment = record.environment
+        end = trace_range.start + trace_range.limit
+        return _run_payload(
+            deployment=environment.deployment,
+            artifact=environment.root_artifact,
+            status=record.status.value,
+            run_id=record.id,
+            resume_readiness=record.resume_readiness.value,
+            diagnostics=record.diagnostics,
+            trace_count=len(run.trace),
+            trace=[asdict(entry) for entry in run.trace[trace_range.start : end]],
+            trace_start=trace_range.start,
+            trace_limit=trace_range.limit,
+            trace_truncated=len(run.trace) > end,
         )
-        return key
+
+    def _run_store(self) -> RunStore:
+        """Return the configured durable run store required by workflow runs."""
+        if self.service.run_store is None:
+            raise KeyError("workflow run store is not configured")
+        return self.service.run_store
 
     def _deployment_validation(
         self,
         deployment_id: str,
-    ) -> tuple[WorkflowDeployment, WorkflowArtifact, list[DependencyDiagnostic]]:
+    ) -> tuple[
+        WorkflowDeployment,
+        WorkflowArtifact,
+        list[DependencyDiagnostic],
+        SavedSubgraphTree,
+    ]:
         if self.service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
         deployment = self.service.artifact_store.get_deployment(deployment_id)
@@ -1074,7 +1132,7 @@ class WorkflowSurfaceHandlers:
                 sources=available_sources,
             )
         )
-        return deployment, artifact, diagnostics
+        return deployment, artifact, diagnostics, tree
 
 
 def _available_sources(service: WfMcpService) -> list[AvailableSource]:
@@ -1346,6 +1404,7 @@ def _run_payload(
     artifact: WorkflowArtifact,
     status: str,
     run_id: str | None = None,
+    resume_readiness: str | None = None,
     interrupt: dict[str, Any] | None = None,
     outcome: str | None = None,
     diagnostics: list[DependencyDiagnostic] | None = None,
@@ -1362,6 +1421,7 @@ def _run_payload(
         "artifact_version": artifact.version,
         "status": status,
         "run_id": run_id,
+        "resume_readiness": resume_readiness,
         "interrupt": interrupt,
         "outcome": outcome,
         "output": output,

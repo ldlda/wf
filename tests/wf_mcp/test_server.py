@@ -443,6 +443,8 @@ def test_workflow_tools_have_human_metadata() -> None:
             by_name = {tool.name: tool for tool in tools}
             list_artifacts = by_name["wf.workflow.list_artifacts"]
             run_deployment = by_name["wf.workflow.run_deployment"]
+            inspect_run = by_name["wf.workflow.inspect_run"]
+            read_run_trace = by_name["wf.workflow.read_run_trace"]
 
             assert list_artifacts.title == "List Workflow Artifacts"
             assert "saved workflow artifacts" in (list_artifacts.description or "")
@@ -458,6 +460,10 @@ def test_workflow_tools_have_human_metadata() -> None:
             assert "null" in [
                 option.get("type") for option in trace_range_schema["anyOf"]
             ]
+            assert inspect_run.title == "Inspect Workflow Run"
+            assert "trace" in (inspect_run.description or "").lower()
+            read_trace_schema = read_run_trace.inputSchema["properties"]["trace_range"]
+            assert "Debug traces" in read_trace_schema.get("description", "")
 
     asyncio.run(run_proxy())
 

@@ -1,7 +1,7 @@
 # Native Subgraphs Design
 
-Status: prepared-child execution, saved-artifact resolution, and process-local
-interrupt resume implemented; durable resume specified separately
+Status: prepared-child execution, saved-artifact resolution, and durable
+stopped-run interrupt resume implemented
 
 Native subgraphs should make a workflow usable as a workflow step without
 collapsing the child run into one opaque Python node call. The current
@@ -409,10 +409,11 @@ child artifact twice against different accounts or capability bindings.
 ### Saved Child Interrupt Status
 
 Native prepared children can interrupt and resume in core. The workflow surface
-now exposes process-local `run_deployment` / `resume_run` support for saved
+now exposes durable `run_deployment` / `resume_run` support for saved
 interrupting artifacts, including interrupts raised by saved descendants.
-That support does not survive process restart yet. Durable run persistence is
-specified separately in
+Stopped checkpoints pin the deployment and exact root/child artifact
+definitions; dependency drift can block resume without mutating the stopped
+execution. Durable run persistence is specified in
 [`2026-05-26-durable-workflow-runs-and-resume-design.md`](2026-05-26-durable-workflow-runs-and-resume-design.md).
 
 ## Implementation Slices
@@ -462,8 +463,8 @@ specified separately in
 - Dependencies, missing artifacts, and saved-child cycles validate before
   execution.
 - Tests cover saved child execution through deployment bindings, nested saved
-  child dependencies, missing/cyclic diagnostics, and process-local
-  interrupt/resume for saved children.
+  child dependencies, missing/cyclic diagnostics, and durable interrupt/resume
+  for saved children.
 
 ### Slice 4: Optional Policy Expansion
 
@@ -491,12 +492,8 @@ specified separately in
 
 ## Recommendation
 
-The typed boundary scaffold, prepared-child runtime, and routed interrupt
-resume are complete. Implement Slice 3 in the platform layer: prepare saved
-non-interrupting child artifacts recursively under one deployment environment
-and pass those prepared dependencies into core execution.
-
-The process-local saved-interrupt execution path is complete. Next add durable
-run/checkpoint persistence so interrupted saved children survive process
-restart. Do not delete wrapper-node helpers yet; they remain compatibility APIs
-while saved native execution matures.
+The typed boundary scaffold, prepared-child runtime, saved-child resolution,
+and durable routed interrupt resume are complete. Do not delete wrapper-node
+helpers yet; they remain compatibility APIs while saved native execution
+matures. Next policy work is optional per-use-site child deployment overrides
+and richer protocol-native long-running progress/reporting.

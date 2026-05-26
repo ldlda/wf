@@ -446,11 +446,11 @@ provided on resume back into workflow state. Older map-shaped `request` and
 `resume` values are accepted only as parse compatibility and dump back to the
 canonical list shape.
 
-Saved interrupting artifacts can pause and resume through deployment runs while
-the MCP server process stays alive. The run response includes a process-local
-`run_id`; pass that to `wf.workflow.resume_run` with the resume payload.
-Persisted run storage is still future work, so a server restart invalidates
-that in-memory run id.
+Saved interrupting artifacts can pause and resume through deployment runs. The
+run response includes a durable `run_id`; pass that to
+`wf.workflow.resume_run` with the resume payload. Before advancing a resumed
+run, the platform revalidates its pinned dependency environment and can return
+`resume_readiness="blocked"` without consuming input.
 
 ### `end`
 

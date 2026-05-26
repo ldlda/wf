@@ -39,6 +39,17 @@ from .refs import (
     workflow_ref_from_capability,
 )
 from .store import FileWorkflowArtifactStore, WorkflowArtifactStore
+from .runs import (
+    CheckpointReason,
+    FileRunStore,
+    PinnedRunEnvironment,
+    ResumeReadiness,
+    RunCheckpoint,
+    RunStore,
+    StoredRunStatus,
+    WorkflowRunRecord,
+    ensure_run_id,
+)
 from .validation import validate_deployment_dependencies
 from .references import logical_ref_for_concrete_ref, normalize_plan_node_refs
 
@@ -53,6 +64,7 @@ __all__ = [
     "DraftWorkspaceStore",
     "FileDraftWorkspaceStore",
     "FileWorkflowArtifactStore",
+    "FileRunStore",
     "RequiredCapability",
     "SourceBinding",
     "WorkflowArtifact",
@@ -60,7 +72,15 @@ __all__ = [
     "WorkflowCapabilityRef",
     "WorkflowDraftWorkspace",
     "WorkflowArtifactStore",
+    "WorkflowRunRecord",
     "WorkflowDeployment",
+    "RunStore",
+    "RunCheckpoint",
+    "CheckpointReason",
+    "PinnedRunEnvironment",
+    "ResumeReadiness",
+    "StoredRunStatus",
+    "ensure_run_id",
     "artifact_catalog_entry",
     "artifact_node_name",
     "create_draft_workspace",

@@ -70,6 +70,32 @@ async def execute_workflow_async(
         raise
 
 
+async def execute_workflow_result_async(
+    workflow: Workflow,
+    workflow_input: dict[str, Any],
+    registry: Mapping[str, AsyncNodeHandler],
+    *,
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+    subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
+) -> RunState:
+    """Execute asynchronously and return failed state instead of raising failures."""
+    run = create_run_state(workflow, workflow_input)
+
+    try:
+        prepare_new_run(workflow, workflow_input, run)
+        return await resume_workflow_async(
+            workflow,
+            run,
+            registry,
+            reducers=reducers,
+            subgraphs=subgraphs,
+        )
+    except Exception as exc:
+        run.status = RunStatus.FAILED
+        run.error = str(exc)
+        return run
+
+
 def resume_workflow(
     workflow: Workflow,
     run: RunState,
@@ -172,6 +198,33 @@ async def resume_workflow_async(
             return run
 
     return finalize_run(workflow, run)
+
+
+async def resume_workflow_result_async(
+    workflow: Workflow,
+    run: RunState,
+    registry: Mapping[str, AsyncNodeHandler],
+    *,
+    resume_payload: dict[str, Any] | None = None,
+    resume_outcome: str = "submitted",
+    reducers: Mapping[str, ReducerDefinition] | None = None,
+    subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
+) -> RunState:
+    """Resume asynchronously and return failed state instead of raising failures."""
+    try:
+        return await resume_workflow_async(
+            workflow,
+            run,
+            registry,
+            resume_payload=resume_payload,
+            resume_outcome=resume_outcome,
+            reducers=reducers,
+            subgraphs=subgraphs,
+        )
+    except Exception as exc:
+        run.status = RunStatus.FAILED
+        run.error = str(exc)
+        return run
 
 
 def _interrupt_resume_target(

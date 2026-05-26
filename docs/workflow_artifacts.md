@@ -70,12 +70,10 @@ Dynamic projection of saved workflows as individual MCP tools can exist later,
 but it should be optional. The stable run tool is the reliable base layer.
 
 Current `run_deployment` calls are synchronous request/response executions until
-the workflow pauses or completes. They return compact execution status,
-terminal workflow outcome, output, diagnostics, and `trace_count`; optional
-ranged trace detail is for debugging
-only. If a run pauses at an interrupt, the response includes a process-local
-`run_id` and interrupt payload. Use `wf.workflow.resume_run` with that `run_id`
-to continue while the same MCP server process is alive.
+the workflow pauses or completes. They return a durable `run_id`, compact
+execution status, terminal workflow outcome when available, output, diagnostics,
+and `trace_count`; optional ranged trace detail is for debugging only. If a run
+pauses at an interrupt, use `wf.workflow.resume_run` with that `run_id`.
 
 Non-interrupting saved workflow children can now execute natively through this
 deployment surface. A parent deployment resolves its saved descendants by exact
@@ -86,21 +84,21 @@ the subgraph use site rather than only the child artifact id.
 
 Interrupting saved artifacts can pause and resume through the current
 deployment surface, including interrupts raised inside saved child workflows.
-This support is in-memory only: server restart, reload that replaces process
-state, or another frontend process invalidates the `run_id`.
+Stopped snapshots pin the deployment, root artifact, and saved child artifact
+definitions so handler/server recreation does not invalidate the `run_id`.
 
 Durable run history is specified in
 [`2026-05-26-durable-workflow-runs-and-resume-design.md`](superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md).
-It should replace process-local `run_id` values with durable run records. The
-planned surface is:
+The implemented surface is:
 
 - `run_deployment` starts or completes a run and returns `run_id`
 - `inspect_run(run_id)` returns status, output, diagnostics, and trace metadata
 - `read_run_trace(run_id, range)` returns bounded trace slices
 
-Until that exists, clients should treat the current response as the complete
-ephemeral run result for this request, or as a process-local resume handle when
-`status` is `interrupted`.
+Before applying a resume payload, the pinned dependency environment is
+revalidated. If it is unavailable or incompatible, the run stays
+`interrupted`, returns `resume_readiness="blocked"` and diagnostics, and does
+not append a new execution checkpoint.
 
 For long-running workflow execution, prefer MCP-native execution mechanisms
 where available:
@@ -686,12 +684,10 @@ native child pause and builder-driven resume. In the wrapper example the
 parent trace sees one node call; in the native examples child trace entries
 remain in the parent run state.
 
-Persisted resume is still not implemented. In-memory resume works because the
-server keeps the paused `RunState`; the durable run design persists stopped
-snapshots for interrupted, completed, and failed runs and pins root workflow,
-prepared child dependencies, deployment bindings, and trace metadata before a
-paused run can survive restart or move across processes. Only declared
-interrupts become resumable pauses; live tool/source failures remain failures.
+Durable resume persists stopped snapshots for interrupted, completed, and
+failed runs and pins root workflow, prepared child dependencies, deployment
+bindings, and trace metadata. Only declared interrupts become resumable
+pauses; live tool/source failures remain failures.
 
 Blocking dependency failures happen before workflow execution and are not normal
 workflow outcomes. A missing source, disabled source, unresolved binding, or
