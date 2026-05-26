@@ -89,8 +89,10 @@ deployment surface, including interrupts raised inside saved child workflows.
 This support is in-memory only: server restart, reload that replaces process
 state, or another frontend process invalidates the `run_id`.
 
-Future run history should replace process-local `run_id` values with durable
-run records. The likely shape is:
+Durable run history is specified in
+[`2026-05-26-durable-workflow-runs-and-resume-design.md`](superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md).
+It should replace process-local `run_id` values with durable run records. The
+planned surface is:
 
 - `run_deployment` starts or completes a run and returns `run_id`
 - `inspect_run(run_id)` returns status, output, diagnostics, and trace metadata
@@ -685,9 +687,11 @@ parent trace sees one node call; in the native examples child trace entries
 remain in the parent run state.
 
 Persisted resume is still not implemented. In-memory resume works because the
-server keeps the paused `RunState`; a durable run store will need to snapshot
-the root workflow, prepared child dependencies, deployment bindings, and trace
-metadata before this can survive restart or move across processes.
+server keeps the paused `RunState`; the durable run design persists stopped
+snapshots for interrupted, completed, and failed runs and pins root workflow,
+prepared child dependencies, deployment bindings, and trace metadata before a
+paused run can survive restart or move across processes. Only declared
+interrupts become resumable pauses; live tool/source failures remain failures.
 
 Blocking dependency failures happen before workflow execution and are not normal
 workflow outcomes. A missing source, disabled source, unresolved binding, or

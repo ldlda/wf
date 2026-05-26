@@ -77,9 +77,14 @@ implementation state.
   metadata and compatibility patches. Scope-root commits now apply to both the
   root workflow and prepared native child scopes through the explicit
   scope/lineage commit helper.
-- **Persistent run history**: add a run store before adding stable `run_id`,
-  `inspect_run`, or `read_run_trace(run_id, range)` APIs. Current traces are
-  returned directly from immediate run responses.
+- **Durable run history and resume**: design is recorded in
+  [2026-05-26 durable workflow runs](./superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md).
+  Add a validated `RunState` storage codec and dedicated run/checkpoint store.
+  Persist stopped snapshots for interrupted, completed, and failed executions;
+  replace process-local resume handles with stable `run_id` values; add compact
+  `inspect_run` and bounded `read_run_trace` APIs. Resuming an interrupted run
+  must revalidate its pinned dependency environment; ordinary live tool/source
+  failures remain failed runs, not implicit pauses.
 - **Protocol-native long-running runs**: investigate MCP tasks/progress
   notifications for long-running workflow execution. Avoid inventing a custom
   "start" convention unless protocol-native behavior is insufficient.

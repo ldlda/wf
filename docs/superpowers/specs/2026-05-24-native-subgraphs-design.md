@@ -1,7 +1,7 @@
 # Native Subgraphs Design
 
-Status: prepared-child execution and interrupt resume implemented; saved-artifact
-resolution scoped for platform implementation
+Status: prepared-child execution, saved-artifact resolution, and process-local
+interrupt resume implemented; durable resume specified separately
 
 Native subgraphs should make a workflow usable as a workflow step without
 collapsing the child run into one opaque Python node call. The current
@@ -10,10 +10,9 @@ compatibility wrappers, but they hide the child trace, child frames, and child
 interrupt lifecycle from `wf_core`.
 
 This design defines the core runtime shape. The boundary model, prepared-child
-execution, and routed child interrupt resume are implemented. The remaining
-saved-workflow work is platform preparation: load immutable child artifact
-versions, resolve their runtime dependencies, and supply prepared children to
-the already-implemented core runtime.
+execution, routed child interrupt resume, and platform loading of immutable
+saved-child artifact versions are implemented. Durable persisted resume is the
+remaining run-lifecycle concern and is specified separately.
 
 ## Goals
 
@@ -407,15 +406,14 @@ must be keyed by the parent subgraph dependency/use site, not only by child
 artifact id: one parent graph may intentionally invoke the same immutable
 child artifact twice against different accounts or capability bindings.
 
-### Saved Child Interrupt Limitation
+### Saved Child Interrupt Status
 
-Native prepared children can interrupt and resume in core. The current
-workflow-surface `run_deployment` entrypoint is still a one-shot execution
-call, however, and does not expose persisted platform resume for a saved run.
-Therefore this slice preserves the existing unrunnable behavior for saved
-artifacts containing interrupts, including interrupting descendant artifacts.
-The platform must report that diagnostic before execution rather than starting
-a run it cannot resume through its public surface.
+Native prepared children can interrupt and resume in core. The workflow surface
+now exposes process-local `run_deployment` / `resume_run` support for saved
+interrupting artifacts, including interrupts raised by saved descendants.
+That support does not survive process restart yet. Durable run persistence is
+specified separately in
+[`2026-05-26-durable-workflow-runs-and-resume-design.md`](2026-05-26-durable-workflow-runs-and-resume-design.md).
 
 ## Implementation Slices
 
@@ -454,18 +452,18 @@ a run it cannot resume through its public surface.
 - Tests: child interrupt pauses parent, resume continues child, parent completes,
   wrong resume target fails clearly.
 
-### Slice 3: Saved Workflow References
+### Completed Slice 3: Saved Workflow References
 
-- Structural saved-workflow references and conversion helpers already exist;
-  this slice is execution resolution, not a new identity shape.
-- Add platform-level resolution for saved workflow artifacts.
-- Apply the parent deployment binding environment transitively to each exact
+- Structural saved-workflow references and conversion helpers identify exact
+  saved child versions without runtime string parsing.
+- Platform-level resolution prepares saved workflow artifacts before runtime.
+- The parent deployment binding environment applies transitively to each exact
   saved child artifact version.
-- Validate dependencies, missing artifacts, saved-child cycles, and existing
-  unsupported interrupt diagnostics before execution.
-- Tests: saved child workflow runs through a deployment binding, nested saved
-  child dependencies use the same binding environment, and missing,
-  cyclic, or interrupting child artifacts report an unrunnable dependency.
+- Dependencies, missing artifacts, and saved-child cycles validate before
+  execution.
+- Tests cover saved child execution through deployment bindings, nested saved
+  child dependencies, missing/cyclic diagnostics, and process-local
+  interrupt/resume for saved children.
 
 ### Slice 4: Optional Policy Expansion
 
@@ -498,7 +496,7 @@ resume are complete. Implement Slice 3 in the platform layer: prepare saved
 non-interrupting child artifacts recursively under one deployment environment
 and pass those prepared dependencies into core execution.
 
-Do not broaden saved interrupt support through `run_deployment` until the
-platform has a public persisted resume path. Do not delete wrapper-node
-helpers yet; they remain compatibility APIs while saved native execution
-matures.
+The process-local saved-interrupt execution path is complete. Next add durable
+run/checkpoint persistence so interrupted saved children survive process
+restart. Do not delete wrapper-node helpers yet; they remain compatibility APIs
+while saved native execution matures.
