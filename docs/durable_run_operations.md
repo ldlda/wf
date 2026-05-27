@@ -36,6 +36,10 @@ wf.workflow.run_deployment
 projected as newly-created MCP tools in the current session; many clients do
 not rebuild callable schemas after `tools/list` changes.
 
+These run tools are MCP control tools, not graph-usable workflow capabilities.
+They are discovered through MCP `tools/list` or harness search-tools, not through
+`wf.workflow.list_capabilities`.
+
 ## `run_deployment`
 
 Starts one deployment execution:

@@ -199,6 +199,13 @@ while the graph wants:
 }
 ```
 
+MCP text content blocks are a common provider-envelope case. When an MCP tool
+returns exactly one text content block, the SDK keeps the raw `content` list and
+also exposes a convenience `text` field. Wrapper hints prefer `text` so a string
+state field can map the actual text without writing the raw content-block list.
+Multiple content blocks or non-text content still require explicit wrapper
+decisions.
+
 ### Human-Friendly Versus Graph-Friendly Inputs
 
 A raw tool may be good for interactive human use but awkward for stateful graph

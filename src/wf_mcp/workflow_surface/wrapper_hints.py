@@ -103,22 +103,26 @@ def wrapper_hints_for_capability(
     create routes by itself.
     """
     input_properties = _object_properties(input_schema)
-    output_properties = _object_properties(output_schema)
+    hint_output_schema = workflow_output_schema_for_authoring(output_schema)
+    output_properties = _object_properties(hint_output_schema)
     input_map = {f"input.{name}": name for name in sorted(input_properties)}
-    output_map = {name: f"state.{name}" for name in sorted(output_properties)}
+    output_map_properties = _default_output_map_properties(
+        output_schema, output_properties
+    )
+    output_map = {name: f"state.{name}" for name in sorted(output_map_properties)}
     state_schema = {
         "type": "object",
         "properties": {
-            name: schema for name, schema in sorted(output_properties.items())
+            name: schema for name, schema in sorted(output_map_properties.items())
         },
     }
     wrapper_output_schema = {
         "type": "object",
         "properties": {
-            name: schema for name, schema in sorted(output_properties.items())
+            name: schema for name, schema in sorted(output_map_properties.items())
         },
     }
-    missing_decisions = _missing_decisions_for_output(output_schema)
+    missing_decisions = _missing_decisions_for_output(hint_output_schema)
     outcome_candidates = _boolean_outcome_candidates(output_properties)
     if outcome_candidates:
         missing_decisions.append(
@@ -132,10 +136,23 @@ def wrapper_hints_for_capability(
         )
     confidence = _confidence_for_hint(
         input_schema=input_schema,
-        output_schema=output_schema,
+        output_schema=hint_output_schema,
         missing_decisions=missing_decisions,
         outcome_candidates=outcome_candidates,
     )
+    notes = [
+        "Hints are scaffolding, not semantic guarantees.",
+        (
+            "Declared outcomes are preserved; output-field outcome "
+            "inference is not automatic."
+        ),
+    ]
+    if _has_raw_mcp_content(output_schema):
+        notes.append(
+            "Raw MCP content blocks are not workflow-shaped. Use an explicit "
+            "wrapper or extraction node to handle TextContent, ResourceLink, "
+            "images, or mixed content before writing to typed state."
+        )
     return WrapperAuthoringHints(
         capability_name=capability_name,
         confidence=confidence,
@@ -149,14 +166,18 @@ def wrapper_hints_for_capability(
         output_map=output_map,
         outcome_candidates=outcome_candidates,
         missing_decisions=missing_decisions,
-        notes=[
-            "Hints are scaffolding, not semantic guarantees.",
-            (
-                "Declared outcomes are preserved; output-field outcome "
-                "inference is not automatic."
-            ),
-        ],
+        notes=notes,
     )
+
+
+def workflow_output_schema_for_authoring(output_schema: JsonObject) -> JsonObject:
+    """Return the workflow-author-facing output schema for one capability.
+
+    Raw MCP ``content`` blocks stay raw. A wrapper may choose to extract
+    ``content[0].text`` or handle resources/images, but the authoring surface
+    must not invent that decision as a top-level schema field.
+    """
+    return {"type": "object", "properties": _object_properties(output_schema)}
 
 
 def _object_properties(schema: JsonObject) -> dict[str, JsonObject]:
@@ -169,6 +190,32 @@ def _object_properties(schema: JsonObject) -> dict[str, JsonObject]:
         for name, value in properties.items()
         if isinstance(value, dict)
     }
+
+
+def _has_raw_mcp_content(schema: JsonObject) -> bool:
+    """Return true when schema exposes MCP's raw content-block envelope."""
+    properties = _object_properties(schema)
+    content_schema = properties.get("content")
+    return isinstance(content_schema, dict) and content_schema.get("type") == "array"
+
+
+def _default_output_map_properties(
+    raw_output_schema: JsonObject,
+    output_properties: dict[str, JsonObject],
+) -> dict[str, JsonObject]:
+    """Return fields safe enough to wire by default in generated hints.
+
+    Raw MCP ``content`` is a protocol envelope, not a workflow value. Keeping it
+    out of the default map prevents the scaffold from writing text/image/resource
+    blocks into typed state without an explicit extraction wrapper.
+    """
+    if _has_raw_mcp_content(raw_output_schema):
+        return {
+            name: schema
+            for name, schema in output_properties.items()
+            if name != "content"
+        }
+    return output_properties
 
 
 def _missing_decisions_for_output(output_schema: JsonObject) -> list[MissingDecision]:

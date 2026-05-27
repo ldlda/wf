@@ -447,6 +447,11 @@ wf.workflow.validate_deployment
 wf.workflow.run_deployment
 ```
 
+`wf.workflow.list_capabilities` only lists graph-usable workflow capabilities.
+Control tools such as `wf.workflow.inspect_run`, `wf.workflow.read_run_trace`,
+draft workspace mutation helpers, and admin operations are discovered through
+MCP `tools/list` or the client's search-tools surface.
+
 ## Common Failure Points
 
 ### The connection exists but nothing is discoverable

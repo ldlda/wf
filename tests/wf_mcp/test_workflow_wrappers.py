@@ -29,6 +29,28 @@ class RecordingAdapter:
         return ToolCallResult(outcome="ok", output={})
 
 
+class TextContentAdapter:
+    async def call_tool(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        tool_name: str,
+        payload: dict[str, Any],
+    ) -> ToolCallResult:
+        message = payload.get("message", "")
+        return ToolCallResult(
+            outcome="ok",
+            output={
+                "content": [
+                    {
+                        "type": "text",
+                        "text": f"Echo: {message}",
+                    }
+                ],
+            },
+        )
+
+
 def test_discovered_tool_wrapper_omits_unset_optional_arguments() -> None:
     adapter = RecordingAdapter()
     spec = wrap_discovered_tool(
@@ -66,3 +88,43 @@ def test_discovered_tool_wrapper_omits_unset_optional_arguments() -> None:
 
     assert adapter.payloads[0] == {}
     assert adapter.payloads[1] == {"target": "main"}
+
+
+def test_discovered_tool_wrapper_preserves_raw_mcp_content_output() -> None:
+    spec = wrap_discovered_tool(
+        connection=ConnectionConfig(
+            id="everything.default",
+            server="everything",
+            account="default",
+        ),
+        auth=None,
+        executor=cast(ToolExecutor, TextContentAdapter()),
+        tool=DiscoveredTool(
+            name="echo",
+            title="Echo",
+            description=None,
+            input_schema={
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+            },
+            output_schema={
+                "type": "object",
+                "properties": {"content": {"type": "array"}},
+            },
+        ),
+    )
+    handler = build_async_registry(spec)[spec.name]
+
+    async def run_call() -> dict[str, Any]:
+        return await handler(
+            {"message": "hello"},
+            RuntimeContext(current_node_id="echo"),
+        )
+
+    result = asyncio.run(run_call())
+
+    assert result["outcome"] == "ok"
+    assert "text" not in result["output"]
+    assert result["output"]["content"][0]["type"] == "text"
+    assert result["output"]["content"][0]["text"] == "Echo: hello"

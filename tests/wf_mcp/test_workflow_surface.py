@@ -13,11 +13,14 @@ from wf_artifacts import (
 )
 from wf_authoring import node, reducer
 from wf_mcp.broker import WfMcpService
-from wf_mcp.models import ConnectionConfig, RawWorkflowPlan
+from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
+from wf_mcp.sdk import ToolCallResult
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import TraceRange, WorkflowSurfaceHandlers
+from wf_mcp.workflow_surface.models import CreateMinimalDraftWorkspaceRequest
 from wf_core.models.steps import InputPathBinding, OutputBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
+from wf_mcp.capabilities import DiscoveredTool
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -63,6 +66,102 @@ def mcp_echo_tool(payload: ChangedEchoInput) -> ChangedEchoOutput:
 @node(name="failing_tool")
 def failing_tool(payload: ChangedEchoInput) -> ChangedEchoOutput:
     raise RuntimeError("upstream exploded")
+
+
+class ContentOnlyOutputAdapter:
+    """MCP-like adapter whose tool exposes raw content blocks as output schema."""
+
+    async def list_tools(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredTool]:
+        return [
+            DiscoveredTool(
+                name="echo",
+                title="Echo",
+                description="Echo a message as an MCP text content block.",
+                input_schema={
+                    "type": "object",
+                    "properties": {"message": {"type": "string"}},
+                    "required": ["message"],
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"content": {"type": "array"}},
+                    "required": ["content"],
+                },
+            )
+        ]
+
+    async def list_resources(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[Any]:
+        return []
+
+    async def list_prompts(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[Any]:
+        return []
+
+    async def get_connection_metadata(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> dict[str, Any]:
+        return {"server": connection.server}
+
+    async def call_tool(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        tool_name: str,
+        payload: dict[str, Any],
+    ) -> ToolCallResult:
+        message = payload.get("message", "")
+        return ToolCallResult(
+            outcome="ok",
+            output={"content": [{"type": "text", "text": f"Echo: {message}"}]},
+        )
+
+    async def read_resource(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        uri: str,
+    ) -> dict[str, Any]:
+        raise KeyError(uri)
+
+    async def get_prompt(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        prompt_name: str,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        raise KeyError(prompt_name)
+
+    async def invoke_method(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        raise KeyError(method)
+
+    async def send_notification(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> None:
+        raise KeyError(method)
 
 
 @reducer(name="custom.default.multiply")
@@ -830,7 +929,7 @@ def test_workflow_surface_minimal_draft_honors_explicit_error_message_source() -
             output_schema={"type": "object"},
             input_map={"input.text": "text"},
             output_map={"echoed": "state.echoed"},
-            error_message_source="state.error_message",
+            error_message_source=GraphSourcePath.state("error_message"),
         )
     )
     assert service.draft_workspace_store is not None
@@ -842,6 +941,27 @@ def test_workflow_surface_minimal_draft_honors_explicit_error_message_source() -
             "path": {"root": "state", "parts": ["error_message"]},
         }
     ]
+
+
+def test_minimal_draft_request_accepts_structural_error_message_source() -> None:
+    request = CreateMinimalDraftWorkspaceRequest.model_validate(
+        {
+            "workspace_id": "echo_draft_structural_error",
+            "name": "echo",
+            "capability_name": "demo.personal.mcp_echo_tool",
+            "input_schema": {"type": "object"},
+            "state_schema": {"type": "object"},
+            "output_schema": {"type": "object"},
+            "error_message_source": {
+                "root": "state",
+                "parts": ["error_message"],
+            },
+        }
+    )
+
+    assert isinstance(request.error_message_source, GraphSourcePath)
+    assert request.error_message_source.root == "state"
+    assert request.error_message_source.parts == ("error_message",)
 
 
 def test_workflow_surface_accepts_canonical_bindings_for_minimal_workspace() -> None:
@@ -935,6 +1055,42 @@ def test_workflow_surface_creates_draft_workspace_from_capability_hints() -> Non
             "target": {"root": "state", "parts": ["echoed"]},
         }
     ]
+
+
+def test_workflow_surface_does_not_auto_map_raw_mcp_content_blocks() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_content_only_content_hint"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_content_only_content_hint_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(
+            id="everything.default", server="everything", account="default"
+        )
+    )
+    service.register_adapter("everything", ContentOnlyOutputAdapter())
+    asyncio.run(service.refresh_connection_catalog("everything.default"))
+    handlers = WorkflowSurfaceHandlers(service)
+
+    inspected = asyncio.run(
+        handlers.inspect_capability(qualified_name="everything.default.echo")
+    )
+    created = asyncio.run(
+        handlers.create_draft_workspace_from_capability(
+            workspace_id="content_blocks",
+            capability_name="everything.default.echo",
+            name="content_blocks",
+        )
+    )
+
+    assert inspected["wrapper_hints"]["output_map"] == {}
+    assert created["wrapper_hints"]["output_map"] == {}
+    assert inspected["wrapper_hints"]["missing_decisions"][0]["kind"] == (
+        "review_nested_output"
+    )
+    assert "Raw MCP content blocks" in inspected["wrapper_hints"]["notes"][2]
 
 
 def test_workflow_surface_creates_artifact_from_workspace() -> None:

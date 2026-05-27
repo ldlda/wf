@@ -69,7 +69,10 @@ from .run_lifecycle import (
     restore_interrupted_run,
     validate_pinned_resume_environment,
 )
-from .wrapper_hints import wrapper_hints_for_capability
+from .wrapper_hints import (
+    workflow_output_schema_for_authoring,
+    wrapper_hints_for_capability,
+)
 
 if TYPE_CHECKING:
     from wf_core import RunState
@@ -138,7 +141,9 @@ class WorkflowSurfaceHandlers:
                 "outcomes": list(detail.outcomes),
                 "is_async": detail.is_async,
                 "input_fields": _schema_field_names(detail.input_schema),
-                "output_fields": _schema_field_names(detail.output_schema),
+                "output_fields": _schema_field_names(
+                    workflow_output_schema_for_authoring(detail.output_schema)
+                ),
             }
             for source in sorted(
                 self.service.capability_sources.values(),
@@ -716,7 +721,7 @@ class WorkflowSurfaceHandlers:
         output: Sequence[OutputBinding] | None = None,
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
-        error_message_source: str | None = None,
+        error_message_source: str | GraphSourcePath | None = None,
         title: str | None = None,
     ) -> dict[str, Any]:
         """Bootstrap the smallest patchable draft around one workflow capability."""
@@ -787,7 +792,7 @@ class WorkflowSurfaceHandlers:
         output: Sequence[OutputBinding] | None = None,
         input_map: dict[str, str] | None = None,
         output_map: dict[str, str] | None = None,
-        error_message_source: str | None = None,
+        error_message_source: str | GraphSourcePath | None = None,
     ) -> dict[str, Any]:
         """Create a patchable draft workspace from inspect_capability hints."""
         capability = await self.inspect_capability(qualified_name=capability_name)
@@ -1339,8 +1344,9 @@ def _draft_output_bindings_payload(output_map: dict[str, str]) -> list[dict[str,
     ]
 
 
-def _graph_path_payload(value: str) -> dict[str, str | list[str]]:
-    return GraphSourcePath._serialize(GraphSourcePath.parse(value))
+def _graph_path_payload(value: str | GraphSourcePath) -> dict[str, str | list[str]]:
+    path = value if isinstance(value, GraphSourcePath) else GraphSourcePath.parse(value)
+    return GraphSourcePath._serialize(path)
 
 
 def _local_path_payload(value: str) -> dict[str, str | list[str]]:

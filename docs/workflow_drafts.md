@@ -607,6 +607,11 @@ It does not guess that a normal output state path is also an error message.
 Provider-specific error envelopes still belong in saved wrapper artifacts or
 follow-up patches.
 
+`error_message_source` accepts the same structural graph path shape used by
+other mapping fields, for example
+`{"root": "state", "parts": ["error_message"]}`. Legacy strings such as
+`state.error_message` remain accepted for compatibility.
+
 In MCP Inspector, workspace mutation tools accept a single `request` object.
 This is deliberate: the request object carries descriptions and validation for
 the authoring envelope while raw JSON Schema fields remain plain JSON objects.

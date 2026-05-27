@@ -8,6 +8,7 @@ from wf_artifacts import FileDraftWorkspaceStore, WorkflowDeployment
 from wf_authoring import NodeSpec, build_async_registry, node
 from wf_core import END, NodeUse, RunStatus, RuntimeContext
 from wf_mcp.broker import WfMcpService
+from wf_mcp.capabilities import DiscoveredTool
 from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
 from wf_mcp.runtime import ToolExecutor
 from wf_mcp.sdk import ToolCallResult
@@ -35,6 +36,46 @@ from .test_support import (
 @node(name="foo.bar")
 def pro_dotted_echo_tool(payload: EchoInput) -> EchoOutput:
     return EchoOutput(echoed=f"pro:{payload.text}")
+
+
+class ContentOnlyOutputAdapter(FakeAdapter):
+    """Adapter fixture for MCP tools that expose the raw content envelope."""
+
+    async def list_tools(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredTool]:
+        return [
+            DiscoveredTool(
+                name="echo_tool",
+                title="Echo Tool",
+                description="Echo text back",
+                input_schema={
+                    "type": "object",
+                    "properties": {"message": {"type": "string"}},
+                    "required": ["message"],
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"content": {"type": "array"}},
+                    "required": ["content"],
+                },
+            )
+        ]
+
+    async def call_tool(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+        tool_name: str,
+        payload: dict[str, Any],
+    ) -> ToolCallResult:
+        message = payload.get("message", "")
+        return ToolCallResult(
+            outcome="ok",
+            output={"content": [{"type": "text", "text": f"Echo: {message}"}]},
+        )
 
 
 def _single_echo_plan(plan_name: str, node_name: str) -> RawWorkflowPlan:
@@ -855,6 +896,28 @@ def test_service_catalog_preserves_json_schema_description_metadata() -> None:
     assert isinstance(node["output_schema"]["properties"], dict)
 
 
+def test_service_preserves_content_only_tool_output_schema_for_workflows() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "content_only_output_schema_store")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", ContentOnlyOutputAdapter())
+
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+
+    catalog_node = service.get_catalog().as_payload()["nodes"][0]
+    source = service.capability_sources["demo.personal"]
+    spec = source.capabilities.node_specs["demo.personal.echo_tool"]
+
+    assert catalog_node["output_schema"]["properties"]["content"]["type"] == "array"
+    assert "text" not in catalog_node["output_schema"]["properties"]
+    assert spec.output_schema_contract is not None
+    assert spec.output_schema_contract["properties"]["content"]["type"] == "array"
+    assert "text" not in spec.output_schema_contract["properties"]
+
+
 def test_service_wrapped_tool_adapter_model_validates_simple_schema_types() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "schema_model_store"))
     service.register_connection(
@@ -937,6 +1000,55 @@ def test_service_records_tool_call_events() -> None:
     ]
     assert tool_events[0].capability_id == "demo.personal.echo_tool"
     assert tool_events[1].payload["outcome"] == "ok"
+
+
+def test_service_rejects_text_binding_for_raw_mcp_content_contract() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "raw_content_contract"))
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", ContentOnlyOutputAdapter())
+    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+    plan = _raw_plan(
+        name="raw_content_contract",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        state_schema={"properties": {"outline": {"type": "string"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"outline": {"type": "string"}},
+            "required": ["outline"],
+        },
+        output=[
+            {
+                "target": {"root": "local", "parts": ["outline"]},
+                "path": {"root": "state", "parts": ["outline"]},
+            }
+        ],
+        start="echo",
+        nodes=[
+            {
+                "id": "echo",
+                "type": "node",
+                "node": "demo.personal.echo_tool",
+                "input": [input_binding("input.text", "message")],
+                "output": [output_binding("text", "state.outline")],
+            }
+        ],
+        edges=[{"from": "echo", "outcome": "ok", "to": END}],
+    )
+
+    workflow = service.compile_plan(plan)
+    report = workflow.validate_structure()
+
+    assert not report.ok
+    assert any(
+        "source field 'text' is not declared in node output schema" in issue.message
+        for issue in report.errors
+    )
 
 
 def test_service_can_inspect_resources_and_prompts() -> None:

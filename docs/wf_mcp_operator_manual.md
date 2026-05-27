@@ -102,6 +102,15 @@ Typical tools:
 The workflow surface is intentionally split by job. Use the primary path first;
 the advanced tools exist for debugging, compatibility, or focused repair.
 
+There are two discovery paths:
+
+- `wf.workflow.list_capabilities` / `inspect_capability` discover
+  workflow-facing node specs and saved wrappers that can be placed in graphs.
+- MCP `tools/list` or harness search-tools discover control tools such as
+  `wf.workflow.inspect_run`, `wf.workflow.read_run_trace`, draft workspace
+  mutators, and admin operations. These are not workflow capabilities and will
+  not appear in `list_capabilities`.
+
 ### Discovery
 
 Primary:
@@ -279,6 +288,11 @@ nodes rather than source ownership. Its rows include `source_id`, outcomes, and
 top-level input/output field names, while full JSON schemas stay behind
 `wf.workflow.inspect_capability`.
 
+Do not use `list_capabilities` to find MCP control tools. Run/debug helpers such
+as `wf.workflow.inspect_run` and `wf.workflow.read_run_trace` are ordinary MCP
+tools, not graph nodes. Discover them through MCP `tools/list`, search-tools, or
+the tool map in this manual.
+
 `wf.workflow.call_capability` is the REPL-style test step. Its result is
 self-describing: `kind` is either `node_spec` or `wrapper_artifact`,
 `source_id` identifies the owner when applicable, and `diagnostics` is empty for
@@ -316,6 +330,10 @@ wf.workflow.inspect_capability
 ```
 
 Use the compact list first, then inspect only the likely candidates.
+
+This list intentionally excludes control-plane MCP tools. If the client needs
+to inspect a run, patch a workspace, or call an admin operation, use MCP
+tool/search discovery instead of workflow capability discovery.
 
 ### 3. Test One Capability Directly
 
@@ -445,6 +463,12 @@ graph composition.
 A raw tool can be directly callable and still be an awkward workflow node if it
 uses provider-specific result envelopes, status strings, or transport-level
 errors where a graph wants explicit outcomes.
+
+For the common MCP shape `content: [{type: "text", text: "..."}]`, generated
+workflow capabilities keep `output.content` raw. `content` may contain text,
+images, resources, or mixed blocks, so wrapper hints do not invent a top-level
+`output.text`. Add an explicit wrapper/extraction node when a workflow wants a
+specific content-block field.
 
 ### Artifact Versus Deployment
 

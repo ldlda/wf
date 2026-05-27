@@ -154,6 +154,58 @@ def test_wrapper_hints_mark_nested_outputs_as_low_confidence() -> None:
     assert dumped["output_map"] == {"results": "state.results"}
 
 
+def test_wrapper_hints_do_not_auto_map_raw_mcp_content_blocks() -> None:
+    hints = wrapper_hints_for_capability(
+        capability_name="everything.default.echo",
+        input_schema={
+            "type": "object",
+            "properties": {"message": {"type": "string"}},
+            "required": ["message"],
+        },
+        output_schema={
+            "type": "object",
+            "properties": {
+                "content": {"type": "array"},
+            },
+        },
+        outcomes=["ok", "error"],
+    )
+
+    dumped = hints.model_dump(mode="json")
+
+    assert dumped["confidence"] == "low"
+    assert dumped["output_map"] == {}
+    assert "content" not in dumped["state_schema"]["properties"]
+    assert dumped["missing_decisions"][0]["kind"] == "review_nested_output"
+    assert "Raw MCP content blocks" in dumped["notes"][2]
+
+
+def test_wrapper_hints_keep_content_only_mcp_output_explicit() -> None:
+    hints = wrapper_hints_for_capability(
+        capability_name="everything.default.echo",
+        input_schema={
+            "type": "object",
+            "properties": {"message": {"type": "string"}},
+            "required": ["message"],
+        },
+        output_schema={
+            "type": "object",
+            "properties": {"content": {"type": "array"}},
+            "required": ["content"],
+        },
+        outcomes=["ok", "error"],
+    )
+
+    dumped = hints.model_dump(mode="json")
+
+    assert dumped["confidence"] == "low"
+    assert dumped["output_map"] == {}
+    assert "content" not in dumped["state_schema"]["properties"]
+    assert dumped["output_schema"]["properties"] == {}
+    assert dumped["missing_decisions"][0]["kind"] == "review_nested_output"
+    assert "TextContent" in dumped["notes"][2]
+
+
 def test_wrapper_hints_mark_empty_output_schema_as_low_confidence() -> None:
     hints = wrapper_hints_for_capability(
         capability_name="demo.personal.no_output",

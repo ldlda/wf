@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 from mcp.types import CallToolResult as McpCallToolResult
 from mcp.types import Prompt as McpPrompt
 from mcp.types import Resource as McpResource
@@ -11,10 +13,7 @@ from .base import ToolCallResult
 
 def tool_to_discovered(tool: McpTool) -> DiscoveredTool:
     """Convert an MCP SDK tool into the broker discovery model."""
-    output_schema = tool.outputSchema or {
-        "type": "object",
-        "properties": {"content": {"type": "array"}},
-    }
+    output_schema = workflow_output_schema_from_mcp_tool_schema(tool.outputSchema)
     display_name = (
         tool.annotations.title
         if tool.annotations is not None and tool.annotations.title
@@ -29,6 +28,22 @@ def tool_to_discovered(tool: McpTool) -> DiscoveredTool:
         outcomes=("ok", "error"),
         metadata=tool.model_dump(by_alias=True, mode="json"),
     )
+
+
+def workflow_output_schema_from_mcp_tool_schema(
+    schema: dict[str, Any] | None,
+) -> dict[str, Any]:
+    """Return the MCP tool output schema without inventing workflow fields.
+
+    MCP tools without structured output expose raw content blocks. Those blocks
+    can be text, images, resource links, or mixed results, so wf_mcp must not
+    pretend there is a stable top-level ``text`` field. Workflow authors should
+    add an explicit wrapper/extraction node for the block shape they expect.
+    """
+    return schema or {
+        "type": "object",
+        "properties": {"content": {"type": "array"}},
+    }
 
 
 def resource_to_discovered(resource: McpResource) -> DiscoveredResource:
@@ -64,7 +79,7 @@ def tool_result_to_call_result(result: McpCallToolResult) -> ToolCallResult:
     if result.structuredContent is not None:
         output = result.structuredContent
     else:
-        output = {
+        output: dict[str, Any] = {
             "content": [item.model_dump(by_alias=True) for item in result.content]
         }
     return ToolCallResult(

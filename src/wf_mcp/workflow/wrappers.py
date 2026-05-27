@@ -13,6 +13,7 @@ from wf_mcp.broker.events import McpEvent, make_event
 from ..capabilities import DiscoveredTool
 from ..models import AuthRecord, ConnectionConfig
 from ..runtime import ToolExecutor
+from ..sdk.converters import workflow_output_schema_from_mcp_tool_schema
 
 
 _JSON_TYPE_MAP: dict[str, object] = {
@@ -128,9 +129,10 @@ def wrap_discovered_tool(
         f"{connection.id}_{tool.name}_Input",
         tool.input_schema,
     )
+    output_schema = workflow_output_schema_from_mcp_tool_schema(tool.output_schema)
     output_model = _model_from_schema(
         f"{connection.id}_{tool.name}_Output",
-        tool.output_schema,
+        output_schema,
     )
 
     async def invoke_tool(
@@ -180,5 +182,5 @@ def wrap_discovered_tool(
         description=tool.description,
         is_async=True,
         input_schema_contract=tool.input_schema,
-        output_schema_contract=tool.output_schema,
+        output_schema_contract=output_schema,
     )

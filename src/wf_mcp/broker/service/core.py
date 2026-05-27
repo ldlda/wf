@@ -50,6 +50,7 @@ from ...models import (
     RawWorkflowPlan,
 )
 from ...runtime import ToolExecutor
+from ...sdk.converters import workflow_output_schema_from_mcp_tool_schema
 from ...sdk import BackendAdapter
 from ...shared.errors import error_payload
 from ...shared.names import RESERVED_CONNECTION_IDS
@@ -875,7 +876,8 @@ class WfMcpService:
         """
         model_prefix = entry.qualified_name.replace(".", "_").replace("-", "_")
         input_model = _model_from_schema(f"{model_prefix}_Input", entry.input_schema)
-        output_model = _model_from_schema(f"{model_prefix}_Output", entry.output_schema)
+        output_schema = workflow_output_schema_from_mcp_tool_schema(entry.output_schema)
+        output_model = _model_from_schema(f"{model_prefix}_Output", output_schema)
 
         async def invoke_tool(payload: BaseModel) -> NodeReturn[BaseModel]:
             connection = self.connections.get(entry.connection_id)
@@ -901,7 +903,7 @@ class WfMcpService:
             is_async=True,
             accepts_context=False,
             input_schema_contract=entry.input_schema,
-            output_schema_contract=entry.output_schema,
+            output_schema_contract=output_schema,
         )
 
     def _get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:

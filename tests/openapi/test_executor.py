@@ -11,7 +11,7 @@ from wf_openapi.executor import OpenApiOperationOutput
 from wf_openapi.spec import load_openapi_operations
 from wf_openapi.validation import load_openapi_app
 
-FIXTURE = Path("tests/openapi/fixtures/petstore_minimal.openapi.json")
+FIXTURE = Path(__file__).parent / "fixtures" / "petstore_minimal.openapi.json"
 
 
 def test_call_openapi_operation_maps_success() -> None:

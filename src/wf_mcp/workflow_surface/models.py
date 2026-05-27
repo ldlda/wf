@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field
 from wf_artifacts import ArtifactKind
 from wf_artifacts.draft_workspaces.models import WORKSPACE_ID_PATTERN
 from wf_core.models.steps import InputBinding, OutputBinding
+from wf_core.paths import GraphSourcePath
 
 WorkspaceId = Annotated[
     str,
@@ -64,6 +65,16 @@ SourceBindings = Annotated[
         description=(
             "Map logical source ids in the draft/artifact to concrete runtime "
             "sources, for example {'demo': 'demo.personal', 'wf.std': 'wf.std'}."
+        )
+    ),
+]
+ErrorMessageSource = Annotated[
+    GraphSourcePath | str,
+    Field(
+        description=(
+            "State path for runtime_error.message. Prefer structural paths such "
+            "as {'root': 'state', 'parts': ['error_message']}; strings like "
+            "state.error_message remain compatibility input."
         )
     ),
 ]
@@ -276,7 +287,7 @@ class CreateMinimalDraftWorkspaceRequest(BaseModel):
             "workflow state paths, for example {'echoed': 'state.echoed'}."
         ),
     )
-    error_message_source: str | None = Field(
+    error_message_source: ErrorMessageSource | None = Field(
         default=None,
         description=(
             "Optional state path used as runtime_error.message when the capability "
@@ -332,7 +343,7 @@ class CreateDraftWorkspaceFromCapabilityRequest(BaseModel):
             "Deprecated compatibility override for the hinted capability output map."
         ),
     )
-    error_message_source: str | None = Field(
+    error_message_source: ErrorMessageSource | None = Field(
         default=None,
         description=(
             "Optional state path used as runtime_error.message when the capability "
