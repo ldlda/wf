@@ -60,6 +60,11 @@ def mcp_echo_tool(payload: ChangedEchoInput) -> ChangedEchoOutput:
     return ChangedEchoOutput(echoed=payload.message)
 
 
+@node(name="failing_tool")
+def failing_tool(payload: ChangedEchoInput) -> ChangedEchoOutput:
+    raise RuntimeError("upstream exploded")
+
+
 @reducer(name="custom.default.multiply")
 def multiply(current: int | None, incoming: int) -> int:
     return (current or 1) * incoming
@@ -160,6 +165,37 @@ def test_workflow_surface_filters_stdlib_capabilities_by_source() -> None:
         "wf.std.truthy"
     ]
     assert payload["capabilities"][0]["source_id"] == "wf.std"
+
+
+def test_workflow_surface_call_capability_returns_structured_error() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_call_capability_error_mcp"),
+        artifact_store=FileWorkflowArtifactStore(
+            local_temp_root() / "surface_call_capability_error"
+        ),
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", failing_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.call_capability(
+            qualified_name="demo.personal.failing_tool",
+            payload={"message": "hello"},
+        )
+    )
+
+    assert payload["qualified_name"] == "demo.personal.failing_tool"
+    assert payload["source_id"] == "demo.personal"
+    assert payload["kind"] == "node_spec"
+    assert payload["outcome"] == "runtime_error"
+    assert payload["output"] is None
+    assert payload["diagnostics"][0]["code"] == "capability_call_failed"
+    assert payload["diagnostics"][0]["severity"] == "error"
+    assert "demo.personal.failing_tool" in payload["diagnostics"][0]["message"]
+    assert "upstream exploded" in payload["diagnostics"][0]["message"]
 
 
 def test_workflow_surface_lists_saved_wrapper_capabilities() -> None:
@@ -738,7 +774,7 @@ def test_workflow_surface_creates_minimal_draft_workspace_with_error_route() -> 
 
     result = asyncio.run(
         handlers.create_minimal_draft_workspace(
-            workspace_id="echo_draft_canonical_error",
+            workspace_id="echo_draft_static_error",
             name="echo",
             capability_name="demo.personal.mcp_echo_tool",
             input_schema={
@@ -757,18 +793,53 @@ def test_workflow_surface_creates_minimal_draft_workspace_with_error_route() -> 
         )
     )
     assert service.draft_workspace_store is not None
-    workspace = service.draft_workspace_store.get_workspace(
-        "echo_draft_canonical_error"
-    )
+    workspace = service.draft_workspace_store.get_workspace("echo_draft_static_error")
 
-    assert result["workspace_id"] == "echo_draft_canonical_error"
+    assert result["workspace_id"] == "echo_draft_static_error"
     assert workspace.draft["routes"]["call"]["ok"] == "__end__"
     assert workspace.draft["routes"]["call"]["error"] == "tool_error"
     assert workspace.draft["steps"]["tool_error"]["use"] == "wf.std.runtime_error"
     assert workspace.draft["steps"]["tool_error"]["input"] == [
         {
             "target": {"root": "local", "parts": ["message"]},
-            "path": {"root": "state", "parts": ["echoed"]},
+            "value": "Capability call failed",
+        }
+    ]
+
+
+def test_workflow_surface_minimal_draft_honors_explicit_error_message_source() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_minimal_explicit_error_mcp"),
+        artifact_store=FileWorkflowArtifactStore(
+            local_temp_root() / "surface_minimal_explicit_error"
+        ),
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", mcp_echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    asyncio.run(
+        handlers.create_minimal_draft_workspace(
+            workspace_id="echo_draft_explicit_error",
+            name="echo",
+            capability_name="demo.personal.mcp_echo_tool",
+            input_schema={"type": "object"},
+            state_schema={"fields": {"error_message": {"type": "string"}}},
+            output_schema={"type": "object"},
+            input_map={"input.text": "text"},
+            output_map={"echoed": "state.echoed"},
+            error_message_source="state.error_message",
+        )
+    )
+    assert service.draft_workspace_store is not None
+    workspace = service.draft_workspace_store.get_workspace("echo_draft_explicit_error")
+
+    assert workspace.draft["steps"]["tool_error"]["input"] == [
+        {
+            "target": {"root": "local", "parts": ["message"]},
+            "path": {"root": "state", "parts": ["error_message"]},
         }
     ]
 
@@ -900,6 +971,49 @@ def test_workflow_surface_creates_artifact_from_workspace() -> None:
     artifact = artifact_store.get_artifact("workspace_echo", 1)
     assert result["saved"] is True
     assert artifact.id == "workspace_echo"
+    assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
+    required = artifact.required_capability_map()["demo.echo_tool"]
+    assert required.kind == "node_spec"
+    assert str(required.observed_concrete_source) == "demo.personal"
+    assert required.input_schema_snapshot is not None
+    assert required.output_schema_snapshot is not None
+
+
+def test_workflow_surface_workspace_artifact_infers_raw_concrete_dependency() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_artifact_raw_dependency"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_workspace_artifact_raw_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+    asyncio.run(
+        handlers.create_draft_workspace(
+            workspace_id="echo_draft",
+            draft=_echo_draft(),
+        )
+    )
+
+    asyncio.run(
+        handlers.create_artifact_from_workspace(
+            workspace_id="echo_draft",
+            artifact_id="workspace_echo_raw_dependency",
+            version=1,
+            title="Workspace Echo Raw Dependency",
+            outcomes=("completed",),
+        )
+    )
+
+    artifact = artifact_store.get_artifact("workspace_echo_raw_dependency", 1)
+    required = artifact.required_capability_map()["demo.personal.echo_tool"]
+    assert required.kind == "node_spec"
+    assert required.input_schema_snapshot is not None
+    assert required.output_schema_snapshot is not None
 
 
 def test_workflow_surface_creates_wrapper_from_workspace() -> None:
@@ -998,6 +1112,44 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     assert traced["trace_limit"] == 1
     assert traced["trace"][0]["node_id"] == "echo"
     assert traced["trace_truncated"] is False
+
+
+def test_workflow_surface_failed_deployment_exposes_error_on_run_and_inspect() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_failed_run_error"
+    )
+    artifact_store.save_artifact(_failing_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="fail.personal",
+            artifact_id="fail",
+            artifact_version=1,
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_failed_run_error_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", failing_tool)
+    handlers = WorkflowSurfaceHandlers(service)
+
+    payload = asyncio.run(
+        handlers.run_deployment(
+            deployment_id="fail.personal",
+            workflow_input={"message": "hello"},
+        )
+    )
+    inspected = asyncio.run(handlers.inspect_run(run_id=payload["run_id"]))
+
+    assert payload["status"] == "failed"
+    assert "upstream exploded" in payload["error"]
+    assert payload["trace_count"] == 0
+    assert inspected["status"] == "failed"
+    assert inspected["error"] == payload["error"]
 
 
 def test_workflow_surface_run_deployment_can_include_trace_detail() -> None:
@@ -1504,6 +1656,48 @@ def _logical_echo_artifact() -> WorkflowArtifact:
             "id": "logical_echo",
             "plan": plan,
         }
+    )
+
+
+def _failing_artifact() -> WorkflowArtifact:
+    plan: dict[str, Any] = {
+        "name": "fail",
+        "input_schema": {
+            "type": "object",
+            "properties": {"message": {"type": "string"}},
+            "required": ["message"],
+        },
+        "state_schema": {"fields": {"echoed": {"type": "string"}}},
+        "output_schema": {
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+        },
+        "start": "fail",
+        "nodes": [
+            {
+                "id": "fail",
+                "type": "node",
+                "node": "demo.personal.failing_tool",
+                "input": [input_binding("input.message", "message")],
+                "output": [output_binding("echoed", "state.echoed")],
+            }
+        ],
+        "edges": [{"from": "fail", "outcome": "ok", "to": "__end__"}],
+    }
+    return WorkflowArtifact(
+        id="fail",
+        version=1,
+        title="Fail",
+        input_schema=plan["input_schema"],
+        output_schema=plan["output_schema"],
+        outcomes=("completed",),
+        plan=plan,
+        required_capabilities={
+            "demo.failing_tool": RequiredCapability(
+                ref="demo.failing_tool",
+                kind="node_spec",
+            )
+        },
     )
 
 

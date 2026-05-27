@@ -9,6 +9,7 @@ from wf_artifacts import (
     AvailableCapability,
     AvailableSource,
     DependencyDiagnostic,
+    DiagnosticSeverity,
     DraftWorkspaceStore,
     RequiredCapability,
     RunStore,
@@ -201,13 +202,40 @@ class WorkflowSurfaceHandlers:
 
         spec = self.service._get_qualified_spec(qualified_name)
         handler = build_async_registry(spec)[spec.name]
-        result = await handler(payload, RuntimeContext(current_node_id=spec.name))
+        source_id = _source_id_for_capability(
+            self.service.capability_sources,
+            spec.name,
+        )
+        try:
+            result = await handler(payload, RuntimeContext(current_node_id=spec.name))
+        except Exception as exc:
+            return {
+                "qualified_name": spec.name,
+                "source_id": source_id,
+                "kind": "node_spec",
+                "deployment_id": None,
+                "outcome": "runtime_error",
+                "output": None,
+                "diagnostics": [
+                    DependencyDiagnostic(
+                        severity=DiagnosticSeverity.ERROR,
+                        code="capability_call_failed",
+                        logical_ref=spec.name,
+                        bound_source=source_id,
+                        message=(
+                            f"Capability {spec.name!r} failed during test call: {exc}"
+                        ),
+                        repair_hint=(
+                            "Check the source runtime, then retry the capability "
+                            "or inspect the deployment run if this happened inside "
+                            "a workflow."
+                        ),
+                    ).model_dump(mode="json")
+                ],
+            }
         return {
             "qualified_name": spec.name,
-            "source_id": _source_id_for_capability(
-                self.service.capability_sources,
-                spec.name,
-            ),
+            "source_id": source_id,
             "kind": "node_spec",
             "deployment_id": None,
             "outcome": result["outcome"],
@@ -710,19 +738,22 @@ class WorkflowSurfaceHandlers:
         routes: dict[str, dict[str, str]] = {
             DEFAULT_CALL_STEP_ID: {DEFAULT_OK_OUTCOME: "__end__"}
         }
-        error_source = error_message_source or _first_state_path(draft_output)
-        if DEFAULT_ERROR_OUTCOME in outcomes and error_source is not None:
+        if DEFAULT_ERROR_OUTCOME in outcomes:
             # The bootstrapper cannot infer provider-specific error envelopes.
-            # It only wires an error route when the caller gave, or output_map
-            # exposes, a concrete state path that can become a runtime message.
+            # Use a static default unless the caller explicitly supplies the
+            # state path containing a better provider error message.
+            error_input: dict[str, Any] = {
+                "target": {"root": "local", "parts": ["message"]},
+                "value": "Capability call failed",
+            }
+            if error_message_source is not None:
+                error_input = {
+                    "target": {"root": "local", "parts": ["message"]},
+                    "path": _graph_path_payload(error_message_source),
+                }
             steps[DEFAULT_ERROR_STEP_ID] = {
                 "use": RUNTIME_ERROR_CAPABILITY,
-                "input": [
-                    {
-                        "target": {"root": "local", "parts": ["message"]},
-                        "path": _graph_path_payload(error_source),
-                    }
-                ],
+                "input": [error_input],
                 "output": [],
             }
             routes[DEFAULT_CALL_STEP_ID][DEFAULT_ERROR_OUTCOME] = DEFAULT_ERROR_STEP_ID
@@ -954,6 +985,7 @@ class WorkflowSurfaceHandlers:
             resume_readiness=record.resume_readiness.value,
             interrupt=_interrupt_payload(run),
             outcome=run.outcome,
+            error=run.error,
             output=run.output,
             trace_count=len(run.trace),
             trace=(
@@ -1003,6 +1035,7 @@ class WorkflowSurfaceHandlers:
                 resume_readiness=blocked.resume_readiness.value,
                 interrupt=_interrupt_payload(stopped_run),
                 outcome=stopped_run.outcome,
+                error=stopped_run.error,
                 output=stopped_run.output,
                 diagnostics=diagnostics,
                 trace_count=len(stopped_run.trace),
@@ -1032,6 +1065,7 @@ class WorkflowSurfaceHandlers:
             resume_readiness=next_record.resume_readiness.value,
             interrupt=_interrupt_payload(run),
             outcome=run.outcome,
+            error=run.error,
             output=run.output,
             trace_count=len(run.trace),
             trace=(
@@ -1064,6 +1098,7 @@ class WorkflowSurfaceHandlers:
             resume_readiness=record.resume_readiness.value,
             interrupt=_interrupt_payload(run),
             outcome=run.outcome,
+            error=run.error,
             output=run.output,
             diagnostics=record.diagnostics,
             trace_count=len(run.trace),
@@ -1241,14 +1276,6 @@ def _schema_field_names(schema: dict[str, Any]) -> list[str]:
     return sorted(str(name) for name in properties)
 
 
-def _first_state_path(output_map: dict[str, str]) -> str | None:
-    """Return the first mapped state path for minimal error-route bootstraps."""
-    for target in output_map.values():
-        if target.startswith("state."):
-            return target
-    return None
-
-
 def _draft_input_maps(
     *,
     input: Sequence[InputBinding] | None,
@@ -1407,6 +1434,7 @@ def _run_payload(
     resume_readiness: str | None = None,
     interrupt: dict[str, Any] | None = None,
     outcome: str | None = None,
+    error: str | None = None,
     diagnostics: list[DependencyDiagnostic] | None = None,
     output: dict[str, Any] | None = None,
     trace_count: int = 0,
@@ -1424,6 +1452,7 @@ def _run_payload(
         "resume_readiness": resume_readiness,
         "interrupt": interrupt,
         "outcome": outcome,
+        "error": error,
         "output": output,
         "diagnostics": [
             diagnostic.model_dump(mode="json") for diagnostic in diagnostics or []

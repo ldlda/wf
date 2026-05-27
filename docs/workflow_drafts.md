@@ -600,11 +600,12 @@ Workspaces are mutable and revisioned. Artifacts are immutable and versioned.
 Patch calls must include the current `revision`; stale revisions return
 `revision_conflict` and do not mutate the workspace.
 
-`create_minimal_draft_workspace` is intentionally only a bootstrapper. It wires
-an `error` outcome for naive MCP wrappers only when `error_message_source` is
-provided or a state path can be derived from canonical `output` bindings or the
-compatibility `output_map`. Provider-specific
-error envelopes still belong in saved wrapper artifacts or follow-up patches.
+`create_minimal_draft_workspace` is intentionally only a bootstrapper. For
+naive MCP wrappers with an `error` outcome, it wires `wf.std.runtime_error` with
+a static default message unless `error_message_source` is explicitly provided.
+It does not guess that a normal output state path is also an error message.
+Provider-specific error envelopes still belong in saved wrapper artifacts or
+follow-up patches.
 
 In MCP Inspector, workspace mutation tools accept a single `request` object.
 This is deliberate: the request object carries descriptions and validation for

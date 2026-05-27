@@ -52,6 +52,7 @@ The compact response includes:
 - `run_id`: durable handle for this execution attempt
 - `status`: runtime status such as `completed`, `failed`, or `interrupted`
 - `outcome`: terminal workflow outcome when available
+- `error`: failed-run error text when execution failed before a terminal outcome
 - `output`: projected workflow output when available
 - `diagnostics`: dependency/runtime diagnostics
 - `trace_count`: total trace entry count
@@ -70,8 +71,8 @@ Reads one stopped run by `run_id` without returning trace entries:
 ```
 
 Use this when a client already has a `run_id` and needs the current durable
-summary: status, outcome/output if available, diagnostics, and checkpoint
-metadata.
+summary: status, outcome/output if available, failed-run error text,
+diagnostics, and checkpoint metadata.
 
 ## `read_run_trace`
 
@@ -129,6 +130,8 @@ the core rule that external callers resume by `run_id`.
 - Prefer `inspect_run` before reading trace detail.
 - Use `read_run_trace` with explicit small ranges.
 - Treat `trace_count` as metadata, not an instruction to fetch the entire trace.
+- If a run failed with `trace_count: 0`, read the top-level `error` first; the
+  failure may have happened before any trace entry could be emitted.
 - If `resume_run` is blocked, repair the reported dependency issue and retry
   with the same `run_id`.
 - If the run failed because a live source errored during execution, do not retry
@@ -141,4 +144,3 @@ the core rule that external callers resume by `run_id`.
 - No protocol-native MCP Tasks integration yet.
 - No dynamic saved-workflow-as-tool projection requirement.
 - No automatic pause on disconnected sources; source failures are failed runs.
-

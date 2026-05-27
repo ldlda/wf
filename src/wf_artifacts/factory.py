@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from wf_core import ReducerRef, Workflow
-from wf_platform import NodeSpecInventory
+from wf_platform import CapabilityRef, NodeSpecInventory, hash_json_schema
 
 from .models import ArtifactKind, JsonObject, RequiredCapability, WorkflowArtifact
 from .references import normalize_plan_node_refs
@@ -32,6 +32,7 @@ def create_workflow_artifact_from_plan(
     _validate_workflow_plan(normalized_plan)
     required = {
         **_required_reducers_from_plan(normalized_plan),
+        **_required_node_specs_from_plan(normalized_plan, observed_node_specs),
         **node_requirements,
         **dict(required_capabilities or {}),
     }
@@ -102,6 +103,60 @@ def _required_reducers_from_plan(plan: JsonObject) -> dict[str, RequiredCapabili
         requirements[reducer.name] = RequiredCapability(
             ref=reducer.ref,
             kind="reducer",
+        )
+    return requirements
+
+
+def _required_node_specs_from_plan(
+    plan: JsonObject,
+    observed_node_specs: Mapping[str, NodeSpecInventory] | None,
+) -> dict[str, RequiredCapability]:
+    """Infer direct node-spec dependencies that were not rewritten by bindings.
+
+    Bound artifact creation already records concrete-to-logical rewrites in
+    `normalize_plan_node_refs`. This fallback covers drafts saved with concrete
+    refs and no source bindings, so validation still knows the workflow depends
+    on that live source capability.
+    """
+    requirements: dict[str, RequiredCapability] = {}
+    nodes = plan.get("nodes")
+    if not isinstance(nodes, list):
+        return requirements
+
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        raw_ref = node.get("node")
+        if not isinstance(raw_ref, str):
+            continue
+        try:
+            parsed = CapabilityRef.parse(raw_ref)
+        except ValueError:
+            continue
+        observed = (
+            observed_node_specs.get(raw_ref)
+            if observed_node_specs is not None
+            else None
+        )
+        requirements[raw_ref] = RequiredCapability(
+            ref=parsed,
+            kind="node_spec",
+            input_schema_hash=(
+                hash_json_schema(observed.input_schema)
+                if observed is not None
+                else None
+            ),
+            input_schema_snapshot=(
+                observed.input_schema if observed is not None else None
+            ),
+            output_schema_hash=(
+                hash_json_schema(observed.output_schema)
+                if observed is not None
+                else None
+            ),
+            output_schema_snapshot=(
+                observed.output_schema if observed is not None else None
+            ),
         )
     return requirements
 

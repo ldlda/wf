@@ -282,7 +282,8 @@ top-level input/output field names, while full JSON schemas stay behind
 `wf.workflow.call_capability` is the REPL-style test step. Its result is
 self-describing: `kind` is either `node_spec` or `wrapper_artifact`,
 `source_id` identifies the owner when applicable, and `diagnostics` is empty for
-successful calls.
+successful calls. Failed test calls return a structured diagnostic with
+`outcome="runtime_error"` instead of leaking raw transport exceptions.
 
 ### 4. Manage Saved Workflows
 
@@ -354,9 +355,10 @@ brand-new MCP tools. Many LLM harnesses do not reliably refresh callable tool
 schemas mid-session.
 
 The default `run_deployment` response is intentionally compact. It includes run
-status, output, diagnostics, and `trace_count`, where `trace_count` is the total
-number of trace entries in the original run. If the caller needs node-level
-debug detail, pass an explicit `trace_range` object such as
+status, terminal outcome when available, failed-run `error` text when available,
+output, diagnostics, and `trace_count`, where `trace_count` is the total number
+of trace entries in the original run. If the caller needs node-level debug
+detail, pass an explicit `trace_range` object such as
 `{"start": 0, "limit": 10}`; otherwise trace entries stay out of the normal
 response. Trace entries may include resolved node inputs, node outputs, and
 state changes, so treat them as debug payloads rather than ordinary list/summary

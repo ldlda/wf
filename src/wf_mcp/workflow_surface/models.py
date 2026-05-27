@@ -280,7 +280,8 @@ class CreateMinimalDraftWorkspaceRequest(BaseModel):
         default=None,
         description=(
             "Optional state path used as runtime_error.message when the capability "
-            "has an error outcome, for example state.error_message."
+            "has an error outcome, for example state.error_message. If omitted, "
+            "the generated error route uses a static default message."
         ),
     )
     title: str | None = Field(default=None, description="Optional workspace title.")
@@ -335,7 +336,8 @@ class CreateDraftWorkspaceFromCapabilityRequest(BaseModel):
         default=None,
         description=(
             "Optional state path used as runtime_error.message when the capability "
-            "has an error outcome, for example state.error_message."
+            "has an error outcome, for example state.error_message. If omitted, "
+            "the generated error route uses a static default message."
         ),
     )
 
