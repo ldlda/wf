@@ -8,6 +8,8 @@ from openapi_core import OpenAPI
 
 from wf_authoring import NodeReturn
 from wf_core import RuntimeContext
+from wf_mcp.broker import WfMcpService
+from wf_mcp.storage import FileStore
 from wf_openapi import source as source_module
 from wf_openapi.executor import OpenApiExecutionConfig, OpenApiOperationOutput
 from wf_openapi.models import OpenApiOperation
@@ -48,6 +50,49 @@ def test_build_openapi_capability_source_exposes_operations_as_node_specs() -> N
         "unexpected_status",
         "validation_error",
         "transport_error",
+    )
+
+
+def test_openapi_source_can_be_registered_and_inspected_by_service(
+    tmp_path: Path,
+) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "store"))
+    source = build_openapi_capability_source(
+        source_id="petstore.default",
+        document_path=FIXTURE,
+        base_url="https://api.example.test",
+    )
+
+    service.register_capability_source(source)
+
+    source_summaries = service.list_source_summaries(limit=100)
+    source_by_id = {
+        source_summary["id"]: source_summary
+        for source_summary in source_summaries["sources"]
+    }
+    summary = source_by_id["petstore.default"]
+    assert summary["kind"] == "connection"
+    assert summary["node_spec_count"] == 2
+    assert summary["preview"]["node_specs"] == [
+        "petstore.default.create_pet",
+        "petstore.default.get_pet",
+    ]
+
+    inventory = service.inspect_source("petstore.default")
+    assert inventory["capabilities"]["node_specs"] == [
+        "petstore.default.create_pet",
+        "petstore.default.get_pet",
+    ]
+    detail_by_name = {
+        detail["name"]: detail
+        for detail in inventory["capabilities"]["node_spec_details"]
+    }
+    get_pet = detail_by_name["petstore.default.get_pet"]
+    assert get_pet["is_async"] is True
+    assert "transport_error" in get_pet["outcomes"]
+    assert (
+        get_pet["input_schema"]["properties"]["path"]["properties"]["petId"]["type"]
+        == "string"
     )
 
 
