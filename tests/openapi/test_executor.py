@@ -149,6 +149,39 @@ def test_call_openapi_operation_maps_invalid_response_to_validation_error() -> N
     assert result.output.validation_errors
 
 
+def test_call_openapi_operation_maps_malformed_json_response_to_validation_error() -> (
+    None
+):
+    app = load_openapi_app(FIXTURE)
+    operation = next(
+        op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
+    )
+
+    async def handler(request: httpx.Request) -> httpx.Response:
+        _ = request
+        return httpx.Response(
+            200,
+            headers={"content-type": "application/json"},
+            content=b"{not json",
+        )
+
+    async def run() -> NodeReturn[OpenApiOperationOutput]:
+        async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
+            return await call_openapi_operation(
+                app,
+                operation,
+                OpenApiExecutionConfig(base_url="https://api.example.test"),
+                {"path": {"petId": "pet-1"}},
+                client=client,
+            )
+
+    result = asyncio.run(run())
+
+    assert result.outcome == "validation_error"
+    assert result.output.status_code == 200
+    assert result.output.validation_errors
+
+
 def test_call_openapi_operation_maps_transport_error() -> None:
     app = load_openapi_app(FIXTURE)
     operation = next(

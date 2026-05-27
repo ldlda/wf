@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from json import JSONDecodeError
 from typing import Any
 
 import httpx
@@ -82,14 +83,16 @@ async def call_openapi_operation(
         if close_client:
             await active_client.aclose()
 
-    body = _response_body(response)
+    body, body_errors = _response_body(response)
     headers = {str(key): str(value) for key, value in response.headers.items()}
     output = OpenApiOperationOutput(
         status_code=response.status_code,
         headers=headers,
         body=body,
-        validation_errors=[],
+        validation_errors=body_errors,
     )
+    if body_errors:
+        return NodeReturn(outcome="validation_error", output=output)
 
     if not _status_declared(operation, response.status_code):
         output.validation_errors = [
@@ -134,13 +137,17 @@ async def _send_request(
     return await client.request(**kwargs)
 
 
-def _response_body(response: httpx.Response) -> Any:
+def _response_body(response: httpx.Response) -> tuple[Any, list[str]]:
+    """Parse response body while keeping malformed JSON in validation flow."""
     content_type = response.headers.get("content-type", "").lower()
     if not response.content:
-        return None
+        return None, []
     if "json" in content_type:
-        return response.json()
-    return response.text
+        try:
+            return response.json(), []
+        except JSONDecodeError as exc:
+            return response.text, [str(exc)]
+    return response.text, []
 
 
 def _status_declared(operation: OpenApiOperation, status_code: int) -> bool:
