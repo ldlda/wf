@@ -84,6 +84,13 @@ implementation state.
   revalidates its pinned dependency environment and reports `blocked` without
   consuming input when a required source is unavailable. Ordinary live
   tool/source failures remain failed runs, not implicit pauses.
+- **OpenAPI capability sources**: raw OpenAPI operations can be represented as
+  workflow-facing capabilities using the OpenAPI document as the source of
+  truth. Runtime execution now follows the `openapi-core` plan: public payloads
+  keep OpenAPI names, generic `httpx` builds requests, and `openapi-core`
+  validates/unmarshals requests and responses. Generated Python client parsing
+  is explicitly retired. See
+  [OpenAPI capability sources](./openapi_capability_source.md).
 - **Protocol-native long-running runs**: investigate MCP tasks/progress
   notifications for long-running workflow execution. Avoid inventing a custom
   "start" convention unless protocol-native behavior is insufficient.

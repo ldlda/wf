@@ -7,9 +7,11 @@ authors = [{ name = "lda", email = "lda@ldlda.com" }]
 requires-python = ">=3.14"
 dependencies = [
     "fastmcp>=3.2.4",
+    "httpx>=0.28",
     "jsonpatch>=1.33",
     "jsonschema>=4.26",
     "mcp[cli,rich]>=1",
+    "openapi-core>=0.19",
     "pydantic>=2",
 ]
 
