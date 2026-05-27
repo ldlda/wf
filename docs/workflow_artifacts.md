@@ -89,6 +89,8 @@ definitions so handler/server recreation does not invalidate the `run_id`.
 
 Durable run history is specified in
 [`2026-05-26-durable-workflow-runs-and-resume-design.md`](superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md).
+The operator-facing run contract is summarized in
+[`durable_run_operations.md`](durable_run_operations.md).
 The implemented surface is:
 
 - `run_deployment` starts or completes a run and returns `run_id`

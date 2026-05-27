@@ -26,6 +26,8 @@ implementation plans are kept for context, not as active instructions.
   and current payload validation limits.
 - [`workflow_artifacts.md`](workflow_artifacts.md): saved workflow artifacts,
   deployments, dependency compatibility, and interrupt limitations.
+- [`durable_run_operations.md`](durable_run_operations.md): `run_deployment`,
+  `inspect_run`, bounded trace reads, and `resume_run` behavior.
 - [`workflow_drafts.md`](workflow_drafts.md): LLM/human draft authoring format
   above raw workflow plans.
 
@@ -75,13 +77,19 @@ implementation plans are kept for context, not as active instructions.
 - [`superpowers/specs/`](superpowers/specs/): design specs produced during
   planning sessions.
 
-## Future Runtime Work
+## Runtime References
 
-Two runtime features may come back after the platform/DX roadmap advances:
+Native subgraphs, concurrent foreach, lineage state, and durable stopped-run
+resume now have implemented foundations. Use the current roadmap and ADR/spec
+docs as the active references:
 
-- Native subgraph execution with child run state, interrupt bubbling, and resume
-  back into the child workflow.
-- Concurrent foreach with explicit scheduling, reducer/merge semantics, and
-  failure policy. Sync runtime can interleave item frames deterministically;
-  async runtime can add simultaneous async node handler execution. Do not
-  implement this as plain `asyncio.gather` over sync handlers.
+- [`current_roadmap.md`](current_roadmap.md): active implementation status and
+  next-work list.
+- [`adr/0001-scheduler-foundation-before-concurrent-foreach.md`](adr/0001-scheduler-foundation-before-concurrent-foreach.md):
+  scheduler foundation decision.
+- [`adr/0002-concurrent-foreach-policy-and-barrier-commits.md`](adr/0002-concurrent-foreach-policy-and-barrier-commits.md):
+  concurrent foreach policy and barrier commit semantics.
+- [`superpowers/specs/2026-05-24-native-subgraphs-design.md`](superpowers/specs/2026-05-24-native-subgraphs-design.md):
+  native subgraph design.
+- [`superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md`](superpowers/specs/2026-05-26-durable-workflow-runs-and-resume-design.md):
+  durable run/checkpoint design.

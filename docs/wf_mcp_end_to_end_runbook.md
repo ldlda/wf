@@ -397,6 +397,12 @@ as the total original trace length and supports explicit ranged debug reads such
 as `"trace_range": {"start": 0, "limit": 10}`. Trace entries may contain
 resolved inputs, outputs, and state changes.
 
+Capture the returned `run_id`. Use `wf.workflow.inspect_run` to read the stored
+summary later, `wf.workflow.read_run_trace` for small debug slices, and
+`wf.workflow.resume_run` only when the run status is `interrupted`. The full
+operational contract lives in
+[`durable_run_operations.md`](durable_run_operations.md).
+
 ## 10. Rebind The Same Artifact Later
 
 If another compatible account appears:

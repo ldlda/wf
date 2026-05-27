@@ -369,6 +369,11 @@ be resumed after server/handler recreation; if a pinned source is missing or
 disabled, `resume_run` returns `resume_readiness="blocked"` without advancing
 the execution checkpoint.
 
+The detailed run contract is documented in
+[`durable_run_operations.md`](durable_run_operations.md). The short rule is:
+capture `run_id`, inspect summaries first, read bounded trace slices only when
+debugging, and resume only runs that are actually interrupted.
+
 ## Which Tool Do I Use?
 
 | I want to... | Use |
