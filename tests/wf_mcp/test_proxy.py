@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import sys
 from typing import Any
 
@@ -140,6 +141,29 @@ def test_proxy_listing_degrades_when_one_source_has_transport_error() -> None:
         assert result == []
 
     asyncio.run(run_failure())
+
+
+def test_proxy_listing_degrades_when_one_source_has_connection_error(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def connection_failed_listing() -> list[Any]:
+        raise ConnectionError("connection refused")
+
+    async def run_failure() -> None:
+        result = await _bounded_proxy_list(
+            connection_failed_listing(),
+            connection_id="serena.default",
+            operation="tools/list",
+            timeout_seconds=1,
+        )
+        assert result == []
+
+    with caplog.at_level(logging.WARNING, logger="wf_mcp.proxy.mounts"):
+        asyncio.run(run_failure())
+
+    assert "ConnectionError" in caplog.text
+    assert "serena.default" in caplog.text
+    assert "tools/list" in caplog.text
 
 
 def test_proxy_registers_admin_tools_on_local_provider() -> None:

@@ -18,6 +18,9 @@ from ..shared.names import ProxyNamespace
 
 ProxyT = TypeVar("ProxyT")
 ProxyMountFactory = Callable[[ConnectionConfig, Path], "ProxyMount[ProxyT]"]
+# Bound proxy listing so one unresponsive upstream source cannot stall the
+# whole broker. Eight seconds is intentionally longer than normal local stdio
+# startup/handshake time, but short enough to make a broken source visible.
 _PROXY_LIST_TIMEOUT_SECONDS = 8.0
 logger = logging.getLogger(__name__)
 
@@ -182,9 +185,10 @@ async def _bounded_proxy_list(
         return await asyncio.wait_for(listing, timeout=timeout_seconds)
     except (TimeoutError, OSError, ConnectionError) as exc:
         logger.warning(
-            "Skipping %s for connection %s after listing failure: %s",
+            "Skipping %s for connection %s after %s listing failure: %s",
             operation,
             connection_id,
+            type(exc).__name__,
             exc,
         )
         return []

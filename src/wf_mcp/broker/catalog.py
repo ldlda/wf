@@ -130,9 +130,7 @@ class CombinedCatalog:
                     "description": entry.description,
                     "outcomes": list(entry.outcomes),
                     "input_schema": entry.input_schema,
-                    "output_schema": workflow_output_schema_from_mcp_tool_schema(
-                        entry.output_schema
-                    ),
+                    "output_schema": entry.output_schema,
                 }
                 for entry in self.entries()
             ],
