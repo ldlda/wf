@@ -12,6 +12,7 @@ from wf_mcp.broker import load_broker_config
 from wf_mcp.events import EventBus, InMemoryEventSink
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy import ProxyRuntime, create_proxy_client
+from wf_mcp.proxy.mounts import _bounded_proxy_list
 from wf_mcp.proxy.reload_events import (
     ProxyReloadResult,
     reload_change_events,
@@ -106,6 +107,39 @@ def test_proxy_lists_and_calls_upstream_tools() -> None:
             assert proxy_tool["input_schema"]["properties"]["text"]["type"] == "string"
 
     asyncio.run(run_proxy())
+
+
+def test_proxy_listing_degrades_when_one_source_hangs() -> None:
+    async def stuck_listing() -> list[Any]:
+        await asyncio.sleep(1)
+        return [{"name": "unreachable"}]
+
+    async def run_timeout() -> None:
+        result = await _bounded_proxy_list(
+            stuck_listing(),
+            connection_id="serena.default",
+            operation="tools/list",
+            timeout_seconds=0.01,
+        )
+        assert result == []
+
+    asyncio.run(run_timeout())
+
+
+def test_proxy_listing_degrades_when_one_source_has_transport_error() -> None:
+    async def broken_listing() -> list[Any]:
+        raise OSError("stdio process exited")
+
+    async def run_failure() -> None:
+        result = await _bounded_proxy_list(
+            broken_listing(),
+            connection_id="serena.default",
+            operation="tools/list",
+            timeout_seconds=1,
+        )
+        assert result == []
+
+    asyncio.run(run_failure())
 
 
 def test_proxy_registers_admin_tools_on_local_provider() -> None:

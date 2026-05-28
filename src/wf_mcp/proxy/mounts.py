@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import json
-from collections.abc import Callable
+import logging
+from collections.abc import Callable, Coroutine
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar
@@ -16,6 +18,8 @@ from ..shared.names import ProxyNamespace
 
 ProxyT = TypeVar("ProxyT")
 ProxyMountFactory = Callable[[ConnectionConfig, Path], "ProxyMount[ProxyT]"]
+_PROXY_LIST_TIMEOUT_SECONDS = 8.0
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True, slots=True)
@@ -102,9 +106,10 @@ def create_proxy_mount(
     )
     transport = MCPConfigTransport(server_config, name_as_prefix=False)
     client = StatefulProxyClient(transport=transport, name=f"wf-mcp:{connection.id}")
-    proxy: FastMCP[Any] = FastMCPProxy(
+    proxy: FastMCP[Any] = ResilientFastMCPProxy(
         client_factory=client.new_stateful,
         name=f"Proxy-{connection.id}",
+        connection_id=connection.id,
     )
     proxy.add_transform(ProxyNamespace(connection.id))
     proxy.add_transform(ResourceLinkNamespace(connection.id))
@@ -113,3 +118,73 @@ def create_proxy_mount(
         fingerprint=connection_fingerprint(connection),
         proxy=proxy,
     )
+
+
+class ResilientFastMCPProxy(FastMCPProxy):
+    """FastMCP proxy that keeps discovery/listing best-effort per source.
+
+    FastMCP's aggregate provider skips providers that raise, but it still waits
+    for each mounted provider to finish listing. A dead stdio server can
+    therefore make top-level `tools/list` look broken for the whole broker. This
+    wrapper bounds list operations only; actual calls still use FastMCPProxy's
+    normal behavior and surface source failures. Timeout cancellation is also
+    the cleanup signal for FastMCP/MCP's stdio transport owner; this layer does
+    not launch or reap subprocesses directly.
+    """
+
+    def __init__(self, *, connection_id: str, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self._wf_mcp_connection_id = connection_id
+
+    async def list_tools(self, *, run_middleware: bool = True) -> Any:
+        return await _bounded_proxy_list(
+            super().list_tools(run_middleware=run_middleware),
+            connection_id=self._wf_mcp_connection_id,
+            operation="tools/list",
+        )
+
+    async def list_resources(self, *, run_middleware: bool = True) -> Any:
+        return await _bounded_proxy_list(
+            super().list_resources(run_middleware=run_middleware),
+            connection_id=self._wf_mcp_connection_id,
+            operation="resources/list",
+        )
+
+    async def list_resource_templates(self, *, run_middleware: bool = True) -> Any:
+        return await _bounded_proxy_list(
+            super().list_resource_templates(run_middleware=run_middleware),
+            connection_id=self._wf_mcp_connection_id,
+            operation="resources/templates/list",
+        )
+
+    async def list_prompts(self, *, run_middleware: bool = True) -> Any:
+        return await _bounded_proxy_list(
+            super().list_prompts(run_middleware=run_middleware),
+            connection_id=self._wf_mcp_connection_id,
+            operation="prompts/list",
+        )
+
+
+async def _bounded_proxy_list(
+    listing: Coroutine[Any, Any, Any],
+    *,
+    connection_id: str,
+    operation: str,
+    timeout_seconds: float = _PROXY_LIST_TIMEOUT_SECONDS,
+) -> Any:
+    """Return proxy list results or empty list for source/transport failures.
+
+    Only timeout and transport-ish failures are swallowed. Programming errors
+    should still escape to FastMCP's aggregate provider, which logs and skips the
+    mounted provider without hiding the bug from local tests.
+    """
+    try:
+        return await asyncio.wait_for(listing, timeout=timeout_seconds)
+    except (TimeoutError, OSError, ConnectionError) as exc:
+        logger.warning(
+            "Skipping %s for connection %s after listing failure: %s",
+            operation,
+            connection_id,
+            exc,
+        )
+        return []
