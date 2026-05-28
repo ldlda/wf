@@ -6,8 +6,11 @@ import logging
 import sys
 from typing import Any
 
+import anyio
+import httpx
 import mcp.types as mcp_types
 import pytest
+from mcp.shared.exceptions import McpError
 
 from wf_mcp.broker import load_broker_config
 from wf_mcp.events import EventBus, InMemoryEventSink
@@ -164,6 +167,47 @@ def test_proxy_listing_degrades_when_one_source_has_connection_error(
     assert "ConnectionError" in caplog.text
     assert "serena.default" in caplog.text
     assert "tools/list" in caplog.text
+
+
+@pytest.mark.parametrize(
+    ("exc", "expected_log_name"),
+    [
+        (
+            McpError(
+                mcp_types.ErrorData(
+                    code=mcp_types.INTERNAL_ERROR,
+                    message="connection closed",
+                )
+            ),
+            "McpError",
+        ),
+        (anyio.ClosedResourceError(), "ClosedResourceError"),
+        (anyio.EndOfStream(), "EndOfStream"),
+        (httpx.ConnectError("connection refused"), "ConnectError"),
+    ],
+)
+def test_proxy_listing_degrades_when_session_transport_closes(
+    exc: Exception,
+    expected_log_name: str,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    async def failed_listing() -> list[Any]:
+        raise exc
+
+    async def run_failure() -> None:
+        result = await _bounded_proxy_list(
+            failed_listing(),
+            connection_id="remote.default",
+            operation="tools/list",
+            timeout_seconds=1,
+        )
+        assert result == []
+
+    with caplog.at_level(logging.WARNING, logger="wf_mcp.proxy.mounts"):
+        asyncio.run(run_failure())
+
+    assert expected_log_name in caplog.text
+    assert "remote.default" in caplog.text
 
 
 def test_proxy_registers_admin_tools_on_local_provider() -> None:

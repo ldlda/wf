@@ -8,9 +8,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Generic, TypeVar
 
+import anyio
+import httpx
 from fastmcp import FastMCP
 from fastmcp.client.transports.config import MCPConfigTransport
 from fastmcp.server.providers.proxy import FastMCPProxy, StatefulProxyClient
+from mcp.client.streamable_http import StreamableHTTPError
+from mcp.shared.exceptions import McpError
+
 from ..models import BrokerConfig, ConnectionConfig
 from ..proxy_results import ResourceLinkNamespace
 from ..proxy_config import broker_config_to_fastmcp_config
@@ -22,6 +27,16 @@ ProxyMountFactory = Callable[[ConnectionConfig, Path], "ProxyMount[ProxyT]"]
 # whole broker. Eight seconds is intentionally longer than normal local stdio
 # startup/handshake time, but short enough to make a broken source visible.
 _PROXY_LIST_TIMEOUT_SECONDS = 8.0
+_PROXY_LIST_FAILURES = (
+    TimeoutError,
+    OSError,
+    anyio.ClosedResourceError,
+    anyio.EndOfStream,
+    anyio.BrokenResourceError,
+    httpx.HTTPError,
+    McpError,
+    StreamableHTTPError,
+)
 logger = logging.getLogger(__name__)
 
 
@@ -183,7 +198,7 @@ async def _bounded_proxy_list(
     """
     try:
         return await asyncio.wait_for(listing, timeout=timeout_seconds)
-    except (TimeoutError, OSError, ConnectionError) as exc:
+    except _PROXY_LIST_FAILURES as exc:
         logger.warning(
             "Skipping %s for connection %s after %s listing failure: %s",
             operation,
