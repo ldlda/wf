@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 from pydantic import BaseModel
@@ -9,26 +8,16 @@ from wf_artifacts import (
     FileWorkflowArtifactStore,
     RequiredCapability,
     WorkflowArtifact,
-    WorkflowDeployment,
 )
 from wf_authoring import node, reducer
 from wf_mcp.broker import WfMcpService
-from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
+from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.sdk import ToolCallResult
 from wf_mcp.storage import FileStore
-from wf_mcp.workflow_surface import TraceRange, WorkflowSurfaceHandlers
-from wf_mcp.workflow_surface.models import CreateMinimalDraftWorkspaceRequest
-from wf_core.models.steps import InputPathBinding, OutputBinding
-from wf_core.paths import GraphSourcePath, LocalPath, StatePath
+from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 from wf_mcp.capabilities import DiscoveredTool
-from wf_platform import (
-    CapabilityBuckets,
-    CapabilitySource,
-    SourcePermissions,
-    SourceVisibility,
-)
 
-from ..test_support import echo_tool, input_binding, local_temp_root, output_binding
+from ..test_support import input_binding, output_binding
 
 
 class AmountInput(BaseModel):

@@ -4,7 +4,6 @@ import sys
 from typing import Any
 
 from wf_mcp.models import BrokerConfig, ConnectionConfig
-from wf_mcp.proxy import create_proxy_client
 
 from ..test_support import fixture_server_path, local_temp_root
 

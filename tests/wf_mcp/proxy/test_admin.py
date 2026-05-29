@@ -3,12 +3,10 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
-from pathlib import Path
 
 import mcp.types as mcp_types
 
 from wf_mcp.broker import load_broker_config
-from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy import create_proxy_client
 
 from ..test_support import fixture_server_path, local_temp_root

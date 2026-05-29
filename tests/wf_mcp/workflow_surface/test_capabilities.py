@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from wf_artifacts import FileWorkflowArtifactStore, WorkflowArtifact
+from wf_artifacts import FileWorkflowArtifactStore
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
@@ -37,13 +37,9 @@ def test_workflow_surface_lists_planner_visible_capabilities() -> None:
 
 
 def test_workflow_surface_filters_stdlib_capabilities_by_source() -> None:
-    h = handlers(
-        FileWorkflowArtifactStore(local_temp_root() / "surface_filtered_caps")
-    )
+    h = handlers(FileWorkflowArtifactStore(local_temp_root() / "surface_filtered_caps"))
 
-    payload = asyncio.run(
-        h.list_capabilities(source_id="wf.std", query="truthy")
-    )
+    payload = asyncio.run(h.list_capabilities(source_id="wf.std", query="truthy"))
 
     assert [capability["name"] for capability in payload["capabilities"]] == [
         "wf.std.truthy"
@@ -98,9 +94,7 @@ def test_workflow_surface_lists_saved_wrapper_capabilities() -> None:
     artifact_store.save_artifact(echo_artifact())
     h = handlers(artifact_store)
 
-    payload = asyncio.run(
-        h.list_capabilities(source_id="workflow", query="echo")
-    )
+    payload = asyncio.run(h.list_capabilities(source_id="workflow", query="echo"))
 
     names = [capability["name"] for capability in payload["capabilities"]]
     assert names == ["workflow.echo_wrapper.v1"]
@@ -115,13 +109,9 @@ def test_workflow_surface_lists_saved_wrapper_capabilities() -> None:
 
 
 def test_workflow_surface_inspects_one_capability() -> None:
-    h = handlers(
-        FileWorkflowArtifactStore(local_temp_root() / "surface_inspect_cap")
-    )
+    h = handlers(FileWorkflowArtifactStore(local_temp_root() / "surface_inspect_cap"))
 
-    payload = asyncio.run(
-        h.inspect_capability(qualified_name="wf.std.runtime_error")
-    )
+    payload = asyncio.run(h.inspect_capability(qualified_name="wf.std.runtime_error"))
 
     assert payload["name"] == "wf.std.runtime_error"
     assert payload["outcomes"] == ["ok"]

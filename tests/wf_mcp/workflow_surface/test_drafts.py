@@ -13,7 +13,6 @@ from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 from ..test_support import echo_tool, local_temp_root
 from .conftest import (
-    echo_artifact,
     echo_draft,
     handlers,
     mcp_echo_tool,
@@ -222,9 +221,7 @@ def test_workflow_surface_deletes_draft_workspace() -> None:
     )
 
     deleted = asyncio.run(h.delete_draft_workspace(workspace_id="echo_draft"))
-    deleted_again = asyncio.run(
-        h.delete_draft_workspace(workspace_id="echo_draft")
-    )
+    deleted_again = asyncio.run(h.delete_draft_workspace(workspace_id="echo_draft"))
     listed = asyncio.run(h.list_draft_workspaces())
 
     assert deleted["deleted"] is True

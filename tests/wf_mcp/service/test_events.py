@@ -20,10 +20,9 @@ from ..test_support import (
 
 
 def test_service_records_tool_call_events() -> None:
-    from wf_authoring import node
     from wf_core import END, RunStatus
 
-    from ..test_support import echo_tool, input_binding, output_binding
+    from ..test_support import input_binding, output_binding
     from .conftest import raw_plan
 
     service = WfMcpService(store=FileStore(local_temp_root() / "tool_event_store"))
@@ -75,7 +74,6 @@ def test_service_records_tool_call_events() -> None:
 
 
 def test_service_rejects_text_binding_for_raw_mcp_content_contract() -> None:
-    from wf_authoring import node
     from wf_core import END
 
     from ..test_support import input_binding, output_binding

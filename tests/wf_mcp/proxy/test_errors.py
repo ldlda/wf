@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-import asyncio
-import json
 import sys
-from pathlib import Path
-from typing import Any
 
-from wf_mcp.broker import load_broker_config
 from wf_mcp.events import EventBus, InMemoryEventSink
 from wf_mcp.models import BrokerConfig, ConnectionConfig
-from wf_mcp.proxy import ProxyRuntime, create_proxy_client
+from wf_mcp.proxy import ProxyRuntime
 from wf_mcp.proxy.reload_events import (
     ProxyReloadResult,
     reload_change_events,
@@ -17,7 +12,6 @@ from wf_mcp.proxy.reload_events import (
 from wf_mcp.proxy.tools import ProxyToolPayload, ProxyToolsPage
 
 from ..test_support import fixture_server_path, local_temp_root
-from .conftest import structured
 
 
 def test_proxy_runtime_reload_publishes_local_change_events() -> None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from wf_authoring import NodeSpec, node
+from wf_authoring import NodeSpec
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
@@ -47,8 +47,18 @@ def test_service_compiles_and_runs_raw_plan() -> None:
                 "id": "echo",
                 "type": "node",
                 "node": "demo.personal.echo_tool",
-                "input": [{"target": {"root": "local", "parts": ["text"]}, "path": {"root": "input", "parts": ["text"]}}],
-                "output": [{"source": {"root": "local", "parts": ["echoed"]}, "target": {"root": "state", "parts": ["echoed"]}}],
+                "input": [
+                    {
+                        "target": {"root": "local", "parts": ["text"]},
+                        "path": {"root": "input", "parts": ["text"]},
+                    }
+                ],
+                "output": [
+                    {
+                        "source": {"root": "local", "parts": ["echoed"]},
+                        "target": {"root": "state", "parts": ["echoed"]},
+                    }
+                ],
             }
         ],
         edges=[{"from": "echo", "outcome": "ok", "to": "__end__"}],
@@ -69,17 +79,35 @@ def test_service_preserves_raw_plan_root_output_bindings() -> None:
 
     plan = raw_plan(
         name="root_output_plan",
-        input_schema={"type": "object", "properties": {"text": {"type": "string"}}, "required": ["text"]},
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
         state_schema={"fields": {"echoed": {"type": "string"}}},
-        output_schema={"type": "object", "properties": {"echoed": {"type": "string"}}, "required": ["echoed"]},
+        output_schema={
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+            "required": ["echoed"],
+        },
         start="echo",
         nodes=[
             {
                 "id": "echo",
                 "type": "node",
                 "node": "demo.personal.echo_tool",
-                "input": [{"target": {"root": "local", "parts": ["text"]}, "path": {"root": "input", "parts": ["text"]}}],
-                "output": [{"source": {"root": "local", "parts": ["echoed"]}, "target": {"root": "state", "parts": ["echoed"]}}],
+                "input": [
+                    {
+                        "target": {"root": "local", "parts": ["text"]},
+                        "path": {"root": "input", "parts": ["text"]},
+                    }
+                ],
+                "output": [
+                    {
+                        "source": {"root": "local", "parts": ["echoed"]},
+                        "target": {"root": "state", "parts": ["echoed"]},
+                    }
+                ],
             }
         ],
         edges=[{"from": "echo", "outcome": "ok", "to": "__end__"}],

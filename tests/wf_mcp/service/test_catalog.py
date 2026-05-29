@@ -4,7 +4,7 @@ import asyncio
 import shutil
 
 from wf_artifacts import FileDraftWorkspaceStore
-from wf_authoring import NodeSpec, node
+from wf_authoring import NodeSpec
 from wf_core import RunStatus
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig

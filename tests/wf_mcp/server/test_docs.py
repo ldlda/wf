@@ -7,11 +7,11 @@ import sys
 from mcp import types as mcp_types
 
 from wf_mcp.broker.config import load_broker_config
-from wf_mcp.models import BrokerConfig, ConnectionConfig
+from wf_mcp.models import BrokerConfig
 from wf_mcp.server import create_server_client
 
 from ..test_support import fixture_server_path, local_temp_root
-from .conftest import server_config, structured
+from .conftest import structured
 
 
 def test_server_exposes_platform_documentation_resources() -> None:

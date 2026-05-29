@@ -5,7 +5,7 @@ import asyncio
 from wf_artifacts import FileWorkflowArtifactStore
 
 from ..test_support import local_temp_root
-from .conftest import artifact, echo_artifact, handlers
+from .conftest import artifact, handlers
 
 
 def test_workflow_surface_lists_artifact_catalog_entries() -> None:

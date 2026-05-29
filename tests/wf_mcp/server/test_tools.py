@@ -1,15 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-import re
-import sys
-from typing import Any
 
-from wf_mcp.models import BrokerConfig, ConnectionConfig
+from wf_mcp.models import BrokerConfig
 from wf_mcp.server import create_server_client
 
-from ..test_support import fixture_server_path, local_temp_root
-from .conftest import assert_safe_tool_maps, server_config, structured
+from ..test_support import local_temp_root
+from .conftest import assert_safe_tool_maps, server_config
 
 
 def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
