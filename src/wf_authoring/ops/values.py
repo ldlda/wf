@@ -73,6 +73,19 @@ class RuntimeErrorInput(BaseModel):
     details: dict[str, Any] = Field(default_factory=dict)
 
 
+class ConcatInput(BaseModel):
+    """Input model for joining string values."""
+
+    items: list[str]
+    separator: str = ""
+
+
+class TextOutput(BaseModel):
+    """Output model for ops that emit text."""
+
+    text: str
+
+
 @node(
     name="authoring.coalesce",
     input_model=CoalesceInput,
@@ -178,6 +191,17 @@ def truthy(input: TruthyInput) -> NodeReturn[ValueOutput]:
     value = bool(input.value)
     outcome = "truthy" if value else "falsey"
     return NodeReturn(outcome=outcome, output=ValueOutput(value=value))
+
+
+@node(
+    name="authoring.concat",
+    input_model=ConcatInput,
+    output_model=TextOutput,
+    description="Join string items using separator.",
+)
+def concat(input: ConcatInput) -> TextOutput:
+    """Join string items using separator."""
+    return TextOutput(text=input.separator.join(input.items))
 
 
 @node(

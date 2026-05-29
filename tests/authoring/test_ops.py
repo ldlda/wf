@@ -8,6 +8,10 @@ from wf_authoring import (
     coalesce,
     constant,
     default_if_none,
+    concat,
+    extract_field,
+    filter_items,
+    filter_items_present,
     first_item,
     first_item_maybe,
     first_item_or_none,
@@ -301,6 +305,80 @@ def test_rename_fields_remaps_existing_keys() -> None:
         "outcome": "ok",
         "output": {"mapping": {"status": "done", "message": "ok"}},
     }
+
+
+def test_filter_items_selects_mapping_items_by_exact_match() -> None:
+    registry = build_registry(filter_items)
+
+    result = registry["authoring.filter_items"](
+        {
+            "items": [
+                {"type": "text", "text": "a"},
+                {"type": "image", "url": "img://1"},
+                {"type": "text", "text": "b"},
+            ],
+            "key": "type",
+            "value": "text",
+        },
+        RuntimeContext(current_node_id="filter_items"),
+    )
+
+    output = result["output"]
+    assert result["outcome"] == "ok"
+    assert output["items"][0]["text"] == "a"
+    assert output["items"][1]["text"] == "b"
+
+
+def test_filter_items_present_selects_mapping_items_containing_key() -> None:
+    registry = build_registry(filter_items_present)
+
+    result = registry["authoring.filter_items_present"](
+        {
+            "items": [
+                {"text": "a"},
+                {"url": "img://1"},
+                {"text": None},
+            ],
+            "key": "text",
+        },
+        RuntimeContext(current_node_id="filter_items_present"),
+    )
+
+    output = result["output"]
+    assert result["outcome"] == "ok"
+    assert output["items"][0]["text"] == "a"
+    assert output["items"][1]["text"] is None
+
+
+def test_extract_field_returns_existing_field_values() -> None:
+    registry = build_registry(extract_field)
+
+    result = registry["authoring.extract_field"](
+        {
+            "items": [
+                {"text": "a"},
+                {"url": "img://1"},
+                {"text": "b"},
+            ],
+            "field": "text",
+        },
+        RuntimeContext(current_node_id="extract_field"),
+    )
+
+    assert result["outcome"] == "ok"
+    assert result["output"]["values"] == ["a", "b"]
+
+
+def test_concat_joins_strings_with_separator() -> None:
+    registry = build_registry(concat)
+
+    result = registry["authoring.concat"](
+        {"items": ["a", "b", "c"], "separator": "\n"},
+        RuntimeContext(current_node_id="concat"),
+    )
+
+    assert result["outcome"] == "ok"
+    assert result["output"]["text"] == "a\nb\nc"
 
 
 def test_truthy_routes_truthy_and_falsey_outcomes() -> None:

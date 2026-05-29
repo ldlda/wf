@@ -37,6 +37,40 @@ class BoolOutput(BaseModel):
     value: bool
 
 
+class FilterItemsInput(BaseModel):
+    """Input model for filtering mapping items by exact key/value match."""
+
+    items: list[dict[str, Any]]
+    key: str
+    value: Any
+
+
+class FilterItemsPresentInput(BaseModel):
+    """Input model for filtering mapping items that contain a key."""
+
+    items: list[dict[str, Any]]
+    key: str
+
+
+class MappingItemsOutput(BaseModel):
+    """Output model for ops that return mapping items."""
+
+    items: list[dict[str, Any]]
+
+
+class ExtractFieldInput(BaseModel):
+    """Input model for extracting one field from mapping items."""
+
+    items: list[dict[str, Any]]
+    field: str
+
+
+class ValuesOutput(BaseModel):
+    """Output model for ops that return arbitrary values."""
+
+    values: list[Any]
+
+
 @node(
     name="authoring.first_item",
     input_model=SequenceInput,
@@ -119,3 +153,40 @@ def length(input: SequenceInput) -> CountOutput:
 def is_empty(input: SequenceInput) -> BoolOutput:
     """Return whether a sequence has no items."""
     return BoolOutput(value=not input.items)
+
+
+@node(
+    name="authoring.filter_items",
+    input_model=FilterItemsInput,
+    output_model=MappingItemsOutput,
+    description="Filter mapping items by exact key/value match.",
+)
+def filter_items(input: FilterItemsInput) -> MappingItemsOutput:
+    """Return items where item[key] exactly equals value."""
+    return MappingItemsOutput(
+        items=[item for item in input.items if item.get(input.key) == input.value]
+    )
+
+
+@node(
+    name="authoring.filter_items_present",
+    input_model=FilterItemsPresentInput,
+    output_model=MappingItemsOutput,
+    description="Filter mapping items to those containing the requested key.",
+)
+def filter_items_present(input: FilterItemsPresentInput) -> MappingItemsOutput:
+    """Return items that contain key, regardless of the stored value."""
+    return MappingItemsOutput(items=[item for item in input.items if input.key in item])
+
+
+@node(
+    name="authoring.extract_field",
+    input_model=ExtractFieldInput,
+    output_model=ValuesOutput,
+    description="Extract one field from each mapping item that contains it.",
+)
+def extract_field(input: ExtractFieldInput) -> ValuesOutput:
+    """Return item[field] for each item containing field."""
+    return ValuesOutput(
+        values=[item[input.field] for item in input.items if input.field in item]
+    )

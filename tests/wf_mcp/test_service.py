@@ -237,6 +237,10 @@ def test_wf_std_source_contains_authoring_ops() -> None:
         "wf.std.last_item_or_none",
         "wf.std.length",
         "wf.std.is_empty",
+        "wf.std.filter_items",
+        "wf.std.filter_items_present",
+        "wf.std.extract_field",
+        "wf.std.concat",
     }
     assert set(specs) == expected
 

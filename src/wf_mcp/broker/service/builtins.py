@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from wf_authoring import NodeSpec, coalesce, constant, default_if_none, first_item
+from wf_authoring import NodeSpec, coalesce, concat, constant, default_if_none
+from wf_authoring import extract_field, filter_items, filter_items_present, first_item
 from wf_authoring import first_item_maybe, first_item_or_none, is_empty, last_item
 from wf_authoring import last_item_or_none, length, node, pick_key, pick_path
 from wf_authoring import project_fields, rename_fields, runtime_error, truthy
@@ -43,6 +44,10 @@ AUTHORING_STD_SPECS: tuple[NodeSpec[Any, Any], ...] = (
     last_item_or_none,
     length,
     is_empty,
+    filter_items,
+    filter_items_present,
+    extract_field,
+    concat,
 )
 """Existing authoring ops that are also exposed through the workflow stdlib."""
 
