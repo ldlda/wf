@@ -10,6 +10,7 @@ from wf_authoring import (
     default_if_none,
     concat,
     extract_field,
+    extract_text_content,
     filter_items,
     filter_items_present,
     first_item,
@@ -379,6 +380,25 @@ def test_concat_joins_strings_with_separator() -> None:
 
     assert result["outcome"] == "ok"
     assert result["output"]["text"] == "a\nb\nc"
+
+
+def test_extract_text_content_recipe_filters_extracts_and_joins_text_blocks() -> None:
+    registry = build_registry(extract_text_content)
+
+    result = registry["authoring.extract_text_content"](
+        {
+            "content": [
+                {"type": "text", "text": "hello"},
+                {"type": "image", "url": "img://1"},
+                {"type": "text", "text": "world"},
+            ],
+            "separator": " ",
+        },
+        RuntimeContext(current_node_id="extract_text_content"),
+    )
+
+    assert result["outcome"] == "ok"
+    assert result["output"]["text"] == "hello world"
 
 
 def test_truthy_routes_truthy_and_falsey_outcomes() -> None:

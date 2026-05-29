@@ -273,6 +273,16 @@ def test_service_sources_have_visibility_and_capability_buckets() -> None:
     assert not std_source.capabilities.tools
 
 
+def test_wf_recipes_source_contains_composed_capabilities() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "recipes_source_store"))
+    specs = service.capability_sources["wf.recipes"].capabilities.node_specs
+
+    assert set(specs) == {"wf.recipes.extract_text_content"}
+    assert (
+        service.capability_sources["wf.recipes"].permissions.safe_for_workflow is True
+    )
+
+
 def test_wf_admin_source_exists_but_is_not_planner_visible() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "admin_source_store"))
     source = service.capability_sources["wf.admin"]
@@ -298,6 +308,7 @@ def test_service_can_disable_builtin_stdlib_specs() -> None:
     )
 
     assert "wf.std" not in service.capability_sources
+    assert "wf.recipes" not in service.capability_sources
 
 
 def test_service_planner_catalog_excludes_hidden_sources() -> None:

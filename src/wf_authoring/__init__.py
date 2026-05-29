@@ -75,6 +75,14 @@ from .nodes import (
     outcome,
 )
 from .reducers import AuthoredReducer, ReducerCatalog, reducer
+from .recipes import (
+    ExtractTextContentInput,
+    ExtractTextContentOutput,
+    ExtractTextContentState,
+    build_extract_text_content_spec,
+    build_extract_text_content_workflow,
+    extract_text_content,
+)
 from .schemas import StateFieldMetadata, state_field
 from .subgraph import async_subgraph_node, subgraph_node, subgraph_ref
 
@@ -89,6 +97,9 @@ __all__ = [
     "ConstantInput",
     "CountOutput",
     "ExtractFieldInput",
+    "ExtractTextContentInput",
+    "ExtractTextContentOutput",
+    "ExtractTextContentState",
     "FilterItemsInput",
     "FilterItemsPresentInput",
     "GraphPath",
@@ -117,12 +128,15 @@ __all__ = [
     "bind_fields",
     "build_async_registry",
     "build_registry",
+    "build_extract_text_content_spec",
+    "build_extract_text_content_workflow",
     "bind_state",
     "coalesce",
     "concat",
     "constant",
     "default_if_none",
     "extract_field",
+    "extract_text_content",
     "filter_items",
     "filter_items_present",
     "merge_maps",
