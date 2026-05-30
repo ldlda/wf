@@ -1,0 +1,114 @@
+--- stuff\diagram-og.lua	2026-05-30 03:52:48.703616700 +0700
++++ stuff\diagram.lua	2026-05-30 06:45:13.472927700 +0700
+@@ -6,6 +6,14 @@
+ -- The filter uses the Figure AST element, which was added in pandoc 3.
+ PANDOC_VERSION:must_be_at_least '3.0'
+ 
++warn = warn or function (...)
++  local parts = {}
++  for i = 1, select('#', ...) do
++    parts[#parts+1] = tostring(select(i, ...))
++  end
++  io.stderr:write(table.concat(parts, '') .. '\n')
++end
++
+ local version = pandoc.types.Version '1.2.0'
+ 
+ -- Report Lua warnings to stderr if the `warn` function is not plugged into
+@@ -148,7 +156,7 @@
+ local mermaid = {
+   line_comment_start = '%%',
+   mime_types = mime_types_set{'pdf', 'png', 'svg'},
+-  compile = function (self, code)
++  compile = function (self, code, user_opts)
+     local mime_type = self.mime_type or 'image/svg+xml'
+     local file_extension = extension_for_mimetype[mime_type]
+     return with_temporary_directory("diagram", function (tmpdir)
+@@ -156,11 +164,30 @@
+         local infile = 'diagram.mmd'
+         local outfile = 'diagram.' .. file_extension
+         write_file(infile, code)
+-        pipe(
+-          self.execpath or 'mmdc',
+-          {"--pdfFit", "--input", infile, "--output", outfile},
+-          ''
+-        )
++
++        local args = {"--pdfFit", "--input", infile, "--output", outfile}
++
++        -- Map YAML options to mmdc flags
++        if user_opts then
++          local opt_map = {
++            theme           = '--theme',
++            backgroundColor = '--backgroundColor',
++            width           = '--width',
++            height          = '--height',
++            scale           = '--scale',
++            configFile      = '--configFile',
++            cssFile         = '--cssFile',
++            outputFormat    = '--outputFormat',
++          }
++          for key, flag in pairs(opt_map) do
++            if user_opts[key] then
++              table.insert(args, flag)
++              table.insert(args, stringify(user_opts[key]))
++            end
++          end
++        end
++
++        pipe(self.execpath or 'mmdc', args, '')
+         return read_file(outfile), mime_type
+       end)
+     end)
+@@ -223,11 +250,11 @@
+           ''
+         )
+         if not success then
+-          warn(string.format(
+-                 "The call\n%s\nfailed with error code %s. Output:\n%s",
+-                 result.command,
+-                 result.error_code,
+-                 result.output
++          io.stderr:write(string.format(
++                 "The call\n%s\nfailed with error code %s. Output:\n%s\n",
++                 tostring(result and result.command),
++                 tostring(result and result.error_code),
++                 tostring(result and result.output)
+           ))
+         end
+         return read_file(pdf_file), 'application/pdf'
+@@ -385,7 +412,7 @@
+ 
+   -- Sanity check
+   if not engine then
+-    warn(PANDOC_SCRIPT_FILE, ": No such engine '", name, "'.")
++    io.stderr:write(PANDOC_SCRIPT_FILE .. ": No such engine '" .. name .. "'.\n")
+     return nil
+   elseif engopts == false then
+     -- engine is disabled
+@@ -402,7 +429,7 @@
+     engopts['mime-type'] or engopts['mime-types']
+   )
+   if not mime_type then
+-    warn(PANDOC_SCRIPT_FILE, ": Cannot use ", name, " with ", format.name)
++    io.stderr:write(PANDOC_SCRIPT_FILE .. ": Cannot use " .. name .. " with " .. format.name .. "\n")
+     return nil
+   end
+ 
+@@ -600,13 +627,13 @@
+       -- Bail if an error occurred; imgdata contains the error message
+       -- when that happens.
+       if not success then
+-        warn(PANDOC_SCRIPT_FILE, ': ', tostring(imgdata))
++        io.stderr:write(PANDOC_SCRIPT_FILE .. ': ' .. tostring(imgdata) .. '\n')
+         return nil
+       elseif not imgdata then
+-        warn(PANDOC_SCRIPT_FILE, ': Diagram engine returned no image data.')
++        io.stderr:write(PANDOC_SCRIPT_FILE .. ': Diagram engine returned no image data.\n')
+         return nil
+       elseif not imgtype then
+-        warn(PANDOC_SCRIPT_FILE, ': Diagram engine did not return a MIME type.')
++        io.stderr:write(PANDOC_SCRIPT_FILE .. ': Diagram engine did not return a MIME type.\n')
+         return nil
+       end
+ 
