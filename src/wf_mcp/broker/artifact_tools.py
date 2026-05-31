@@ -67,6 +67,11 @@ def register_artifact_tools(server: FastMCP, service: WfMcpService) -> None:
         return await handlers.save_deployment(deployment)
 
     @server.tool()
+    async def delete_workflow_deployment(deployment_id: str) -> dict[str, Any]:
+        """Delete one mutable deployment environment binding."""
+        return await handlers.delete_deployment(deployment_id=deployment_id)
+
+    @server.tool()
     async def validate_workflow_deployment(deployment_id: str) -> dict[str, Any]:
         return await handlers.validate_deployment(deployment_id=deployment_id)
 

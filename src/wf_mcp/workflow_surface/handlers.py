@@ -953,6 +953,20 @@ class WorkflowSurfaceHandlers:
             "saved": True,
         }
 
+    async def delete_deployment(self, *, deployment_id: str) -> dict[str, Any]:
+        """Delete one mutable deployment environment binding."""
+        if self.service.artifact_store is None:
+            raise KeyError("workflow artifact store is not configured")
+        self.service.artifact_store.delete_deployment(deployment_id)
+        self.service._record_event(
+            make_event(
+                "workflow_deployment_deleted",
+                capability_id=f"deployment.{deployment_id}",
+                payload={"deployment_id": deployment_id},
+            )
+        )
+        return {"deployment_id": deployment_id, "deleted": True}
+
     async def validate_deployment(
         self,
         *,

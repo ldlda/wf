@@ -57,6 +57,7 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     "wf.workflow.list_deployments",
     "wf.workflow.inspect_deployment",
     "wf.workflow.save_deployment",
+    "wf.workflow.delete_deployment",
     "wf.workflow.validate_deployment",
     "wf.workflow.run_deployment",
 ]

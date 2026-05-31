@@ -30,6 +30,9 @@ class WorkflowArtifactStore:
     def list_deployments(self) -> list[WorkflowDeployment]:
         raise NotImplementedError
 
+    def delete_deployment(self, deployment_id: str) -> None:
+        raise NotImplementedError
+
 
 class FileWorkflowArtifactStore(WorkflowArtifactStore):
     """JSON file-backed artifact store for local development and tests."""
@@ -100,3 +103,10 @@ class FileWorkflowArtifactStore(WorkflowArtifactStore):
                 WorkflowDeployment.model_validate_json(path.read_text(encoding="utf-8"))
             )
         return deployments
+
+    def delete_deployment(self, deployment_id: str) -> None:
+        """Remove one mutable deployment binding record from the store."""
+        path = self.deployments_dir / f"{deployment_id}.json"
+        if not path.exists():
+            raise KeyError(f"unknown workflow deployment {deployment_id!r}")
+        path.unlink()

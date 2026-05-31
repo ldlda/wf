@@ -47,6 +47,7 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.workflow.list_deployments" in names
             assert "wf.workflow.inspect_deployment" in names
             assert "wf.workflow.save_deployment" in names
+            assert "wf.workflow.delete_deployment" in names
             assert "wf.workflow.validate_deployment" in names
             assert "wf.workflow.run_deployment" in names
 

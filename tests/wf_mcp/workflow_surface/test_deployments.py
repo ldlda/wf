@@ -205,6 +205,26 @@ def test_workflow_surface_save_deployment_accepts_deployment_id_alias() -> None:
     assert saved.id == "echo.personal"
 
 
+def test_workflow_surface_deletes_deployment() -> None:
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_delete")
+    h = handlers(artifact_store)
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.personal",
+            artifact_id="echo",
+            artifact_version=1,
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+        )
+    )
+
+    payload = asyncio.run(h.delete_deployment(deployment_id="echo.personal"))
+
+    assert payload["deployment_id"] == "echo.personal"
+    assert payload["deleted"] is True
+    assert artifact_store.list_deployments() == []
+    assert h.service.list_events()[-1].kind == "workflow_deployment_deleted"
+
+
 def test_workflow_surface_save_deployment_rejects_id_and_deployment_id() -> None:
     artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_alias_xor")
     h = handlers(artifact_store)

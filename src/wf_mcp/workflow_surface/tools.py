@@ -592,6 +592,22 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         return await handlers.save_deployment(deployment)
 
     @server.tool(
+        name="wf.workflow.delete_deployment",
+        title="Delete Workflow Deployment",
+        description=(
+            "Delete one saved workflow deployment. This removes the mutable "
+            "environment binding only; workflow artifacts remain immutable."
+        ),
+    )
+    async def delete_deployment(
+        deployment_id: Annotated[
+            str,
+            Field(description="Saved workflow deployment id to delete."),
+        ],
+    ) -> dict[str, Any]:
+        return await handlers.delete_deployment(deployment_id=deployment_id)
+
+    @server.tool(
         name="wf.workflow.validate_deployment",
         title="Validate Workflow Deployment",
         description="Check whether a deployment_id can run with currently enabled sources.",

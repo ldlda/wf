@@ -161,3 +161,21 @@ def test_file_store_lists_deployments_in_id_order(tmp_path) -> None:
         "summarize_docs.work",
     ]
     assert deployments[0].binding_map()["context7"] == "context7.personal"
+
+
+def test_file_store_deletes_deployment(tmp_path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path)
+    store.save_deployment(
+        WorkflowDeployment(
+            id="summarize_docs.personal",
+            artifact_id="summarize_docs",
+            artifact_version=1,
+            bindings=[
+                {"logical_source": "context7", "concrete_source": "context7.personal"}
+            ],
+        )
+    )
+
+    store.delete_deployment("summarize_docs.personal")
+
+    assert store.list_deployments() == []
