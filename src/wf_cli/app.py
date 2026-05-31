@@ -15,6 +15,7 @@ app = typer.Typer(
 
 @app.callback()
 def root(
+    ctx: typer.Context,
     config: Annotated[
         str,
         typer.Option(
@@ -24,9 +25,7 @@ def root(
     ] = "wf_mcp.config.json",
 ) -> None:
     """Run workflow platform commands."""
-    # The root callback owns global options only. Command modules should load
-    # context explicitly so tests can call command functions without Typer state.
-    _ = config
+    ctx.obj = {"config_path": config}
 
 
 app.add_typer(caps.app, name="cap")

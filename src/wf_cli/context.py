@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
+import typer
+
 from wf_mcp.broker import build_service_from_config, load_broker_config
 from wf_mcp.broker.service import WfMcpService
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
@@ -21,6 +23,13 @@ class CliContext:
     config_path: Path
     service: WfMcpService
     handlers: WorkflowSurfaceHandlers
+
+
+def config_path_from_context(ctx: typer.Context) -> str:
+    """Return the root --config path captured by the Typer callback."""
+    obj = ctx.obj if isinstance(ctx.obj, dict) else {}
+    value = obj.get("config_path", "wf_mcp.config.json")
+    return value if isinstance(value, str) else "wf_mcp.config.json"
 
 
 def load_cli_context(config_path: str | Path) -> CliContext:

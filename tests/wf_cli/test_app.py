@@ -27,3 +27,24 @@ def test_wf_run_group_help_exists() -> None:
 
     assert result.exit_code == 0
     assert "Run workflow deployments" in result.output
+
+
+def test_root_config_flag_accepted_before_subcommand() -> None:
+    result = runner.invoke(app, ["--config", "custom.json", "run", "--help"])
+
+    assert result.exit_code == 0
+    assert "Run workflow deployments" in result.output
+
+
+def test_wf_deploy_validate_help_exists() -> None:
+    result = runner.invoke(app, ["deploy", "validate", "--help"])
+
+    assert result.exit_code == 0
+    assert "Validate one saved workflow deployment" in result.output
+
+
+def test_wf_run_start_help_exists() -> None:
+    result = runner.invoke(app, ["run", "start", "--help"])
+
+    assert result.exit_code == 0
+    assert "--input-file" in result.output
