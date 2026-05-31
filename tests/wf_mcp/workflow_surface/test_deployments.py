@@ -1,13 +1,39 @@
 from __future__ import annotations
 
 import asyncio
+from typing import cast
 
 import pytest
 
 from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
+from wf_mcp.models import AuthRecord, ConnectionConfig
+from wf_mcp.capabilities import DiscoveredTool
+from wf_mcp.sdk import BackendAdapter
 
-from ..test_support import local_temp_root
+from ..test_support import echo_tool, local_temp_root
 from .conftest import artifact, echo_artifact, handlers
+
+
+class FailingLivenessAdapter:
+    async def list_tools(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredTool]:
+        raise OSError("stdio process exited")
+
+
+class RecordingLivenessAdapter:
+    def __init__(self) -> None:
+        self.calls = 0
+
+    async def list_tools(
+        self,
+        connection: ConnectionConfig,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredTool]:
+        self.calls += 1
+        return []
 
 
 def test_workflow_surface_validates_deployment_dependencies() -> None:
@@ -31,6 +57,99 @@ def test_workflow_surface_validates_deployment_dependencies() -> None:
 
     assert payload["status"] == "unrunnable"
     assert payload["diagnostics"][0]["code"] == "source_missing"
+
+
+def test_workflow_surface_validate_deployment_live_check_is_opt_in() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_live_opt_in"
+    )
+    artifact_store.save_artifact(echo_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.personal",
+            artifact_id="echo",
+            artifact_version=1,
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+        )
+    )
+    h = handlers(artifact_store)
+    adapter = RecordingLivenessAdapter()
+    h.service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    h.service.register_specs("demo.personal", echo_tool)
+    h.service.register_adapter("demo", cast(BackendAdapter, adapter))
+
+    payload = asyncio.run(h.validate_deployment(deployment_id="echo.personal"))
+
+    assert payload["status"] == "runnable"
+    assert payload["diagnostics"] == []
+    assert adapter.calls == 0
+
+
+def test_workflow_surface_validate_deployment_live_check_reports_unreachable_source() -> (
+    None
+):
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_live_fail")
+    artifact_store.save_artifact(echo_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.personal",
+            artifact_id="echo",
+            artifact_version=1,
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+        )
+    )
+    h = handlers(artifact_store)
+    h.service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    h.service.register_specs("demo.personal", echo_tool)
+    h.service.register_adapter(
+        "demo",
+        cast(BackendAdapter, FailingLivenessAdapter()),
+    )
+
+    payload = asyncio.run(
+        h.validate_deployment(deployment_id="echo.personal", live_check=True)
+    )
+
+    assert payload["status"] == "unrunnable"
+    assert payload["diagnostics"][0]["code"] == "source_unreachable"
+    assert payload["diagnostics"][0]["bound_source"] == "demo.personal"
+    assert "stdio process exited" in payload["diagnostics"][0]["message"]
+
+
+def test_workflow_surface_validate_deployment_live_check_reports_missing_connection() -> (
+    None
+):
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_live_missing_connection"
+    )
+    artifact_store.save_artifact(echo_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.personal",
+            artifact_id="echo",
+            artifact_version=1,
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+        )
+    )
+    h = handlers(artifact_store)
+    h.service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    h.service.register_specs("demo.personal", echo_tool)
+    del h.service.connections.connections["demo.personal"]
+
+    payload = asyncio.run(
+        h.validate_deployment(deployment_id="echo.personal", live_check=True)
+    )
+
+    assert payload["status"] == "unrunnable"
+    assert payload["diagnostics"][0]["code"] == "source_unreachable"
+    assert payload["diagnostics"][0]["bound_source"] == "demo.personal"
+    assert "KeyError" in payload["diagnostics"][0]["message"]
 
 
 def test_workflow_surface_records_artifact_and_deployment_save_events() -> None:

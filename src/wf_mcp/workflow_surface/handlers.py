@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import asyncio
 from collections.abc import Sequence
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
+
+import anyio
+import httpx
+from mcp.client.streamable_http import StreamableHTTPError
+from mcp.shared.exceptions import McpError
 
 from wf_artifacts import (
     ArtifactKind,
@@ -41,6 +47,7 @@ from wf_core.models.steps import (
 )
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
+from ..broker.service.adapters import require_adapter
 from ..events import make_event
 from ..models import RawWorkflowPlan
 from ..shared import matches_query, paged_list_payload
@@ -72,6 +79,19 @@ from .run_lifecycle import (
 from .wrapper_hints import (
     workflow_output_schema_for_authoring,
     wrapper_hints_for_capability,
+)
+
+LIVE_SOURCE_CHECK_TIMEOUT_SECONDS = 8.0
+_LIVE_SOURCE_CHECK_FAILURES = (
+    KeyError,
+    TimeoutError,
+    OSError,
+    anyio.ClosedResourceError,
+    anyio.EndOfStream,
+    anyio.BrokenResourceError,
+    httpx.HTTPError,
+    McpError,
+    StreamableHTTPError,
 )
 
 if TYPE_CHECKING:
@@ -933,10 +953,23 @@ class WorkflowSurfaceHandlers:
             "saved": True,
         }
 
-    async def validate_deployment(self, *, deployment_id: str) -> dict[str, Any]:
-        deployment, artifact, diagnostics, _tree = self._deployment_validation(
+    async def validate_deployment(
+        self,
+        *,
+        deployment_id: str,
+        live_check: bool = False,
+    ) -> dict[str, Any]:
+        deployment, artifact, diagnostics, tree = self._deployment_validation(
             deployment_id
         )
+        if live_check:
+            diagnostics.extend(
+                await _live_source_diagnostics(
+                    self.service,
+                    deployment=deployment,
+                    artifacts=[artifact, *tree.artifacts_by_ref.values()],
+                )
+            )
         return {
             "deployment_id": deployment.id,
             "artifact_id": artifact.id,
@@ -1212,6 +1245,70 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
             )
         )
     return sources
+
+
+async def _live_source_diagnostics(
+    service: WfMcpService,
+    *,
+    deployment: WorkflowDeployment,
+    artifacts: Sequence[WorkflowArtifact],
+) -> list[DependencyDiagnostic]:
+    """Return opt-in diagnostics for bound upstream sources that cannot answer.
+
+    Static deployment validation only checks the last known source catalog.
+    This probe intentionally performs live upstream I/O, so MCP tools keep it
+    disabled by default and only run it when the caller asks for liveness.
+    """
+    diagnostics: list[DependencyDiagnostic] = []
+    for source_id, logical_ref in _required_live_sources(deployment, artifacts).items():
+        source = service.capability_sources.get(source_id)
+        if (
+            source is None
+            or not source.enabled
+            or not source.permissions.calls_upstream
+        ):
+            continue
+        try:
+            connection = service.connections.get(source_id)
+            adapter = require_adapter(connection, service.adapters)
+            auth = service.load_auth(source_id)
+            await asyncio.wait_for(
+                adapter.list_tools(connection, auth),
+                timeout=LIVE_SOURCE_CHECK_TIMEOUT_SECONDS,
+            )
+        except _LIVE_SOURCE_CHECK_FAILURES as exc:
+            diagnostics.append(
+                DependencyDiagnostic(
+                    severity=DiagnosticSeverity.ERROR,
+                    code="source_unreachable",
+                    logical_ref=logical_ref,
+                    bound_source=source_id,
+                    message=(
+                        f"Live check for upstream source {source_id!r} failed: "
+                        f"{type(exc).__name__}: {exc}"
+                    ),
+                    repair_hint=(
+                        "Start or reconnect the source, fix its transport/auth "
+                        "configuration, or bind this deployment to another source."
+                    ),
+                )
+            )
+    return diagnostics
+
+
+def _required_live_sources(
+    deployment: WorkflowDeployment,
+    artifacts: Sequence[WorkflowArtifact],
+) -> dict[str, str]:
+    """Return concrete upstream source ids to live-check, with one logical ref."""
+    bindings = deployment.binding_map()
+    required: dict[str, str] = {}
+    for artifact in artifacts:
+        for logical_ref, capability in artifact.required_capability_map().items():
+            source_id = bindings.get(capability.logical_source)
+            if source_id is not None:
+                required.setdefault(source_id, logical_ref)
+    return required
 
 
 def _required_capabilities_for_plan(

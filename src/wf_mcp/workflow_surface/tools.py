@@ -596,8 +596,26 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         title="Validate Workflow Deployment",
         description="Check whether a deployment_id can run with currently enabled sources.",
     )
-    async def validate_deployment(deployment_id: str) -> dict[str, Any]:
-        return await handlers.validate_deployment(deployment_id=deployment_id)
+    async def validate_deployment(
+        deployment_id: Annotated[
+            str,
+            Field(description="Saved workflow deployment id to validate."),
+        ],
+        live_check: Annotated[
+            bool,
+            Field(
+                description=(
+                    "When true, also contact each required upstream source to "
+                    "verify it is reachable. Defaults false because this may "
+                    "spawn stdio servers or perform network I/O."
+                )
+            ),
+        ] = False,
+    ) -> dict[str, Any]:
+        return await handlers.validate_deployment(
+            deployment_id=deployment_id,
+            live_check=live_check,
+        )
 
     @server.tool(
         name="wf.workflow.run_deployment",

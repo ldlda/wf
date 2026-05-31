@@ -128,6 +128,7 @@ def test_workflow_tools_have_human_metadata() -> None:
             tools = await client.list_tools()
             by_name = {tool.name: tool for tool in tools}
             list_artifacts = by_name["wf.workflow.list_artifacts"]
+            validate_deployment = by_name["wf.workflow.validate_deployment"]
             run_deployment = by_name["wf.workflow.run_deployment"]
             inspect_run = by_name["wf.workflow.inspect_run"]
             read_run_trace = by_name["wf.workflow.read_run_trace"]
@@ -138,6 +139,10 @@ def test_workflow_tools_have_human_metadata() -> None:
             assert "kind" in list_artifacts.inputSchema["properties"]
             assert "cursor" in list_artifacts.inputSchema["properties"]
             assert "limit" in list_artifacts.inputSchema["properties"]
+            live_check_schema = validate_deployment.inputSchema["properties"][
+                "live_check"
+            ]
+            assert "upstream" in live_check_schema.get("description", "")
             assert run_deployment.title == "Run Workflow Deployment"
             assert "deployment_id" in (run_deployment.description or "")
             assert "trace_range" in run_deployment.inputSchema["properties"]
