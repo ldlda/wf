@@ -346,6 +346,14 @@ whether those fields should become routing conditions.
 before saving a wrapper. MCP clients should show these prominently rather than
 treating the scaffold as complete.
 
+`create_draft_workspace_from_capability` also returns `next_actions`.
+This is advisory guidance for clients that cannot easily read the full docs.
+It summarizes whether the scaffold is safe-looking enough to validate, which
+tool to call next, and concrete patch examples for common missing decisions.
+
+`next_actions.can_save_now` is not enforced. A caller can still save a low
+confidence draft, but the field exists to make that risk explicit.
+
 ## Relationship To Capability Sources
 
 Sources own capability kinds:

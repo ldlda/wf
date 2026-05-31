@@ -353,13 +353,55 @@ class CreateDraftWorkspaceFromCapabilityRequest(BaseModel):
     )
 
 
+class WrapperDraftPatchExample(BaseModel):
+    """Concrete patch-workspace example for a likely next authoring edit."""
+
+    description: str = Field(description="Human-readable reason for this patch.")
+    tool: str = Field(description="MCP tool to call for this example.")
+    request: dict[str, Any] = Field(
+        description="JSON request payload to pass to the tool."
+    )
+
+
+class WrapperDraftNextActions(BaseModel):
+    """Advisory continuation hints after bootstrapping a wrapper draft."""
+
+    can_save_now: bool = Field(
+        description=(
+            "Advisory only. False means the scaffold likely needs review before "
+            "saving, but the server does not enforce this."
+        )
+    )
+    recommended_next_tool: str = Field(
+        description=(
+            "Suggested next MCP tool, usually wf.workflow.validate_draft_workspace "
+            "or wf.workflow.patch_draft_workspace."
+        )
+    )
+    reason: str = Field(description="Short explanation for the recommendation.")
+    patch_examples: list[WrapperDraftPatchExample] = Field(
+        default_factory=list,
+        description="Concrete JSON Patch examples for common missing decisions.",
+    )
+    warnings: list[str] = Field(
+        default_factory=list,
+        description="Non-blocking warnings copied from low-confidence wrapper hints.",
+    )
+
+
 class CreateDraftWorkspaceFromCapabilityResult(DraftWorkspaceResult):
-    """Draft workspace result plus the wrapper hints used to bootstrap it."""
+    """Draft workspace result plus wrapper hints and advisory next actions."""
 
     wrapper_hints: dict[str, Any] = Field(
         description=(
             "The wrapper_hints payload used before applying request overrides. "
             "Use this to patch uncertain maps or schemas by revision."
+        )
+    )
+    next_actions: WrapperDraftNextActions = Field(
+        description=(
+            "Advisory next step guidance derived from wrapper_hints. "
+            "The server does not enforce can_save_now."
         )
     )
 

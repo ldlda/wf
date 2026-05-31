@@ -112,6 +112,14 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             ].outputSchema
             assert from_capability_output is not None
             assert "wrapper_hints" in from_capability_output["properties"]
+            assert "next_actions" in from_capability_output["properties"]
+            next_actions_schema = from_capability_output["properties"]["next_actions"]
+            assert "recommended_next_tool" in next_actions_schema["properties"]
+            assert "patch_examples" in next_actions_schema["properties"]
+            assert (
+                "Advisory"
+                in next_actions_schema["properties"]["can_save_now"]["description"]
+            )
             wrapper_workspace_input = tools_by_name[
                 "wf.workflow.create_wrapper_from_workspace"
             ].inputSchema

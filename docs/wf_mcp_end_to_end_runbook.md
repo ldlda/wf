@@ -649,6 +649,12 @@ arguments:
 This creates a mutable, revisioned workspace using the inspected
 `wrapper_hints`.
 
+After `create_draft_workspace_from_capability`, inspect `next_actions`.
+If `recommended_next_tool` is `wf.workflow.patch_draft_workspace`, apply or
+adapt the returned `patch_examples` before saving. If it recommends
+`wf.workflow.validate_draft_workspace`, validate the draft before creating an
+artifact.
+
 ### 3. Patch Or Validate The Workspace
 
 If the hints are good enough, validate:

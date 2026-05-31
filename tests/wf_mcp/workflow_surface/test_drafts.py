@@ -13,6 +13,7 @@ from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 from ..test_support import echo_tool, local_temp_root
 from .conftest import (
+    ContentOnlyOutputAdapter,
     echo_draft,
     handlers,
     mcp_echo_tool,
@@ -539,6 +540,14 @@ def test_workflow_surface_creates_draft_workspace_from_capability_hints() -> Non
     assert result["workspace_id"] == "echo_from_capability_canonical"
     assert result["wrapper_hints"]["input_map"] == {"input.text": "text"}
     assert result["wrapper_hints"]["output_map"] == {"echoed": "state.echoed"}
+    next_actions = result["next_actions"]
+    assert next_actions["can_save_now"] is True
+    assert (
+        next_actions["recommended_next_tool"] == "wf.workflow.validate_draft_workspace"
+    )
+    assert "high confidence" in next_actions["reason"]
+    assert next_actions["patch_examples"] == []
+    assert next_actions["warnings"] == []
     assert workspace.draft["steps"]["call"]["use"] == "demo.personal.echo_tool"
     assert workspace.draft["steps"]["call"]["input"] == [
         {
@@ -668,3 +677,45 @@ def test_workflow_surface_creates_wrapper_from_workspace() -> None:
     assert result["saved"] is True
     assert artifact.kind == "wrapper"
     assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
+
+
+def test_workflow_surface_low_confidence_draft_returns_patch_guidance() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "surface_workspace_low_confidence"
+    )
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "surface_workspace_low_confidence_mcp"),
+        artifact_store=artifact_store,
+    )
+    service.register_connection(
+        ConnectionConfig(
+            id="everything.default", server="everything", account="default"
+        )
+    )
+    service.register_adapter("everything", ContentOnlyOutputAdapter())
+    asyncio.run(service.refresh_connection_catalog("everything.default"))
+    h = WorkflowSurfaceHandlers(service)
+
+    result = asyncio.run(
+        h.create_draft_workspace_from_capability(
+            workspace_id="content_wrapper",
+            capability_name="everything.default.echo",
+            name="content_wrapper",
+        )
+    )
+
+    next_actions = result["next_actions"]
+    assert next_actions["can_save_now"] is False
+    assert next_actions["recommended_next_tool"] == "wf.workflow.patch_draft_workspace"
+    assert "missing wrapper decisions" in next_actions["reason"]
+    assert (
+        next_actions["patch_examples"][0]["tool"] == "wf.workflow.patch_draft_workspace"
+    )
+    assert (
+        next_actions["patch_examples"][0]["request"]["workspace_id"]
+        == "content_wrapper"
+    )
+    assert (
+        next_actions["patch_examples"][0]["request"]["revision"] == result["revision"]
+    )
+    assert next_actions["warnings"]
