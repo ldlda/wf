@@ -7,6 +7,7 @@ from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import TraceRange, WorkflowSurfaceHandlers
+from wf_mcp.workflow_surface.models import RunDeploymentResult
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -70,6 +71,9 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     assert payload["diagnostics"] == []
     assert payload["trace_count"] == 1
     assert "trace" not in payload
+    assert payload["next_actions"]["can_continue"] is False
+    assert payload["next_actions"]["recommended_next_tool"] is None
+    assert "completed" in payload["next_actions"]["reason"]
 
     inspected = asyncio.run(h.inspect_run(run_id=payload["run_id"]))
     traced = asyncio.run(
@@ -83,6 +87,8 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     assert inspected["status"] == "completed"
     assert inspected["trace_count"] == 1
     assert "trace" not in inspected
+    assert inspected["next_actions"]["can_continue"] is False
+    assert inspected["next_actions"]["recommended_next_tool"] is None
     assert traced["trace_count"] == 1
     assert traced["trace_start"] == 0
     assert traced["trace_limit"] == 1
@@ -124,8 +130,11 @@ def test_workflow_surface_failed_deployment_exposes_error_on_run_and_inspect() -
     assert payload["status"] == "failed"
     assert "upstream exploded" in payload["error"]
     assert payload["trace_count"] == 0
+    assert payload["next_actions"]["recommended_next_tool"] is None
+    assert "before producing trace" in payload["next_actions"]["reason"]
     assert inspected["status"] == "failed"
     assert inspected["error"] == payload["error"]
+    assert inspected["next_actions"]["recommended_next_tool"] is None
 
 
 def test_workflow_surface_run_deployment_can_include_trace_detail() -> None:
@@ -167,6 +176,13 @@ def test_workflow_surface_run_deployment_can_include_trace_detail() -> None:
     assert len(payload["trace"]) == 1
     assert payload["trace"][0]["node_id"] == "echo"
     assert payload["trace"][0]["outcome"] == "ok"
+    assert payload["next_actions"]["can_continue"] is False
+    assert payload["next_actions"]["patch_examples"] == []
+    validated = RunDeploymentResult.model_validate(payload).model_dump(mode="json")
+    assert validated["trace"][0]["node_id"] == "echo"
+    assert validated["trace_start"] == 0
+    assert validated["trace_limit"] == 10
+    assert validated["trace_truncated"] is False
 
 
 def test_workflow_surface_run_deployment_can_read_empty_trace_range() -> None:

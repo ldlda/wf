@@ -1001,6 +1001,10 @@ class WorkflowSurfaceHandlers:
             "diagnostics": [
                 diagnostic.model_dump(mode="json") for diagnostic in diagnostics
             ],
+            "next_actions": NextActions.from_deployment_validation(
+                deployment_id=deployment.id,
+                diagnostics=diagnostics,
+            ).model_dump(mode="json"),
         }
 
     async def run_deployment(
@@ -1584,6 +1588,12 @@ def _run_payload(
             diagnostic.model_dump(mode="json") for diagnostic in diagnostics or []
         ],
         "trace_count": trace_count,
+        "next_actions": NextActions.from_run_result(
+            run_id=run_id,
+            status=status,
+            trace_count=trace_count,
+            diagnostics=diagnostics or [],
+        ).model_dump(mode="json"),
     }
     if trace is not None:
         # Trace entries can grow quickly, so the public run tool only includes

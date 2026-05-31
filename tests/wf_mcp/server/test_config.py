@@ -125,6 +125,24 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
                 "Advisory"
                 in next_actions_schema["properties"]["can_save_now"]["description"]
             )
+            validate_deployment = tools_by_name["wf.workflow.validate_deployment"]
+            run_deployment = tools_by_name["wf.workflow.run_deployment"]
+
+            validate_output = validate_deployment.outputSchema
+            run_output = run_deployment.outputSchema
+
+            assert validate_output is not None
+            assert "next_actions" in validate_output["properties"]
+            assert (
+                "recommended_next_tool"
+                in validate_output["properties"]["next_actions"]["properties"]
+            )
+            assert run_output is not None
+            assert "next_actions" in run_output["properties"]
+            assert (
+                "recommended_next_tool"
+                in run_output["properties"]["next_actions"]["properties"]
+            )
             wrapper_workspace_input = tools_by_name[
                 "wf.workflow.create_wrapper_from_workspace"
             ].inputSchema

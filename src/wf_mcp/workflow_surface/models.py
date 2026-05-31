@@ -377,6 +377,64 @@ class CreateDraftWorkspaceFromCapabilityResult(DraftWorkspaceResult):
     )
 
 
+class ValidateDeploymentResult(BaseModel):
+    """Response contract for validate_deployment."""
+
+    deployment_id: str = Field(description="Deployment that was validated.")
+    artifact_id: str = Field(description="Artifact targeted by the deployment.")
+    artifact_version: int = Field(description="Artifact version.")
+    status: Literal["runnable", "unrunnable"] = Field(
+        description="Whether the deployment can be run."
+    )
+    diagnostics: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Structured diagnostics for unrunnable deployments.",
+    )
+    next_actions: NextActions = Field(description="Advisory next step guidance.")
+
+
+class RunDeploymentResult(BaseModel):
+    """Response contract for run_deployment, inspect_run, resume_run, and read_run_trace."""
+
+    deployment_id: str = Field(description="Deployment that was run.")
+    artifact_id: str = Field(description="Artifact targeted by the deployment.")
+    artifact_version: int = Field(description="Artifact version.")
+    status: str = Field(description="Run status, such as completed, failed, or interrupted.")
+    run_id: str | None = Field(default=None, description="Durable run identifier.")
+    resume_readiness: str | None = Field(
+        default=None, description="Resume readiness state."
+    )
+    interrupt: dict[str, Any] | None = Field(
+        default=None, description="Interrupt payload if paused."
+    )
+    outcome: str | None = Field(default=None, description="Terminal outcome label.")
+    error: str | None = Field(default=None, description="Error message if failed.")
+    output: dict[str, Any] | None = Field(
+        default=None, description="Workflow output payload."
+    )
+    diagnostics: list[dict[str, Any]] = Field(
+        default_factory=list, description="Structured diagnostics."
+    )
+    trace_count: int = Field(default=0, description="Total trace entries.")
+    next_actions: NextActions = Field(description="Advisory next step guidance.")
+    trace_start: int | None = Field(
+        default=None,
+        description="First trace entry offset included when a trace slice was requested.",
+    )
+    trace_limit: int | None = Field(
+        default=None,
+        description="Maximum trace entries requested when a trace slice was included.",
+    )
+    trace: list[dict[str, Any]] | None = Field(
+        default=None,
+        description="Bounded debug trace slice, present only when explicitly requested.",
+    )
+    trace_truncated: bool = Field(
+        default=False,
+        description="Whether more trace entries exist after the returned slice.",
+    )
+
+
 class CreateArtifactFromWorkspaceRequest(BaseModel):
     """Typed MCP request payload for saving a draft workspace as an artifact."""
 

@@ -361,6 +361,12 @@ clients a compact "what should I call next?" pointer, while diagnostics,
 artifact validation, deployment validation, and runtime status remain the
 source of truth.
 
+Deployment validation and run lifecycle responses also expose `next_actions`.
+For runnable deployments this points to `wf.workflow.run_deployment`; for
+unrunnable deployments it points back to validation after the caller repairs
+bindings, sources, or schema drift. Failed runs never suggest reading an
+unbounded trace; trace guidance always uses a bounded `trace_range`.
+
 ## Relationship To Capability Sources
 
 Sources own capability kinds:

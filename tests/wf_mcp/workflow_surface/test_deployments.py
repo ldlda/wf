@@ -57,6 +57,11 @@ def test_workflow_surface_validates_deployment_dependencies() -> None:
 
     assert payload["status"] == "unrunnable"
     assert payload["diagnostics"][0]["code"] == "source_missing"
+    assert payload["next_actions"]["can_continue"] is True
+    assert payload["next_actions"]["recommended_next_tool"] == (
+        "wf.workflow.validate_deployment"
+    )
+    assert payload["next_actions"]["warnings"][0] == "source_missing: context7.personal"
 
 
 def test_workflow_surface_validate_deployment_live_check_is_opt_in() -> None:
@@ -85,6 +90,10 @@ def test_workflow_surface_validate_deployment_live_check_is_opt_in() -> None:
     assert payload["status"] == "runnable"
     assert payload["diagnostics"] == []
     assert adapter.calls == 0
+    assert payload["next_actions"]["can_continue"] is True
+    assert payload["next_actions"]["recommended_next_tool"] == (
+        "wf.workflow.run_deployment"
+    )
 
 
 def test_workflow_surface_validate_deployment_live_check_reports_unreachable_source() -> (

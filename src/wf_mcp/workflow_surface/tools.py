@@ -23,11 +23,13 @@ from .models import (
     DraftWorkspaceListResult,
     DraftWorkspaceResult,
     PatchDraftWorkspaceRequest,
+    RunDeploymentResult,
     SetDraftNameRequest,
     SetDraftRouteRequest,
     SetStepInputMapRequest,
     SetStepOutputMapRequest,
     TraceRange,
+    ValidateDeploymentResult,
     ValidateDraftWorkspaceRequest,
 )
 
@@ -627,10 +629,12 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 )
             ),
         ] = False,
-    ) -> dict[str, Any]:
-        return await handlers.validate_deployment(
-            deployment_id=deployment_id,
-            live_check=live_check,
+    ) -> ValidateDeploymentResult:
+        return ValidateDeploymentResult.model_validate(
+            await handlers.validate_deployment(
+                deployment_id=deployment_id,
+                live_check=live_check,
+            )
         )
 
     @server.tool(
@@ -656,11 +660,13 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 )
             ),
         ] = None,
-    ) -> dict[str, Any]:
-        return await handlers.run_deployment(
-            deployment_id=deployment_id,
-            workflow_input=workflow_input,
-            trace_range=trace_range,
+    ) -> RunDeploymentResult:
+        return RunDeploymentResult.model_validate(
+            await handlers.run_deployment(
+                deployment_id=deployment_id,
+                workflow_input=workflow_input,
+                trace_range=trace_range,
+            )
         )
 
     @server.tool(
@@ -685,12 +691,14 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 )
             ),
         ] = None,
-    ) -> dict[str, Any]:
-        return await handlers.resume_run(
-            run_id=run_id,
-            resume_payload=resume_payload,
-            resume_outcome=resume_outcome,
-            trace_range=trace_range,
+    ) -> RunDeploymentResult:
+        return RunDeploymentResult.model_validate(
+            await handlers.resume_run(
+                run_id=run_id,
+                resume_payload=resume_payload,
+                resume_outcome=resume_outcome,
+                trace_range=trace_range,
+            )
         )
 
     @server.tool(
@@ -701,8 +709,10 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
             "entries. Use read_run_trace only when trace detail is required."
         ),
     )
-    async def inspect_run(run_id: str) -> dict[str, Any]:
-        return await handlers.inspect_run(run_id=run_id)
+    async def inspect_run(run_id: str) -> RunDeploymentResult:
+        return RunDeploymentResult.model_validate(
+            await handlers.inspect_run(run_id=run_id)
+        )
 
     @server.tool(
         name="wf.workflow.read_run_trace",
@@ -720,8 +730,10 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 )
             ),
         ],
-    ) -> dict[str, Any]:
-        return await handlers.read_run_trace(
-            run_id=run_id,
-            trace_range=trace_range,
+    ) -> RunDeploymentResult:
+        return RunDeploymentResult.model_validate(
+            await handlers.read_run_trace(
+                run_id=run_id,
+                trace_range=trace_range,
+            )
         )
