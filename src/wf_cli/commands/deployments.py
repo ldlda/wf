@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from wf_cli.context import config_path_from_context, load_cli_context
-from wf_cli.io import emit_json
+from wf_cli.formats import ListOutputFormat, emit_list_payload
+from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_input
 
 app = typer.Typer(
     name="deploy",
@@ -36,3 +38,105 @@ def validate_deployment(
         )
     )
     emit_json(payload)
+
+
+@app.command("list")
+def list_deployments(
+    ctx: typer.Context,
+    output_format: Annotated[
+        ListOutputFormat, typer.Option("--format", help="Output format.")
+    ] = ListOutputFormat.JSON,
+) -> None:
+    """List saved workflow deployments."""
+    context = load_cli_context(config_path_from_context(ctx))
+    payload = asyncio.run(context.handlers.list_deployments())
+    emit_list_payload(
+        payload,
+        collection_key="deployments",
+        output_format=output_format,
+        id_field="id",
+        summary_fields=("artifact_id", "artifact_version", "drift_policy"),
+    )
+
+
+@app.command("inspect")
+def inspect_deployment(
+    ctx: typer.Context,
+    deployment_id: Annotated[str, typer.Argument(help="Deployment id.")],
+) -> None:
+    """Inspect one saved deployment."""
+    context = load_cli_context(config_path_from_context(ctx))
+    emit_json(
+        asyncio.run(context.handlers.inspect_deployment(deployment_id=deployment_id))
+    )
+
+
+@app.command("save")
+def save_deployment(
+    ctx: typer.Context,
+    deployment_id: Annotated[str | None, typer.Argument(help="Deployment id.")] = None,
+    artifact_id: Annotated[
+        str | None, typer.Option("--artifact", help="Artifact id.")
+    ] = None,
+    version: Annotated[
+        int | None, typer.Option("--version", min=1, help="Artifact version.")
+    ] = None,
+    binding: Annotated[
+        list[str] | None,
+        typer.Option("--binding", help="Logical=concrete source binding. Repeatable."),
+    ] = None,
+    input_json: Annotated[
+        str | None, typer.Option("--input", help="Full deployment JSON object.")
+    ] = None,
+    input_file: Annotated[
+        Path | None,
+        typer.Option("--input-file", help="Path to full deployment JSON object."),
+    ] = None,
+) -> None:
+    """Save a workflow deployment from flags or a JSON object."""
+    try:
+        if input_json is not None or input_file is not None:
+            payload = parse_json_input(input_json=input_json, input_file=input_file)
+        else:
+            payload = _deployment_payload_from_flags(
+                deployment_id=deployment_id,
+                artifact_id=artifact_id,
+                version=version,
+                bindings=binding or [],
+            )
+    except CliInputError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    context = load_cli_context(config_path_from_context(ctx))
+    emit_json(asyncio.run(context.handlers.save_deployment(payload)))
+
+
+@app.command("delete")
+def delete_deployment(
+    ctx: typer.Context,
+    deployment_id: Annotated[str, typer.Argument(help="Deployment id.")],
+) -> None:
+    """Delete one saved deployment."""
+    context = load_cli_context(config_path_from_context(ctx))
+    emit_json(
+        asyncio.run(context.handlers.delete_deployment(deployment_id=deployment_id))
+    )
+
+
+def _deployment_payload_from_flags(
+    *,
+    deployment_id: str | None,
+    artifact_id: str | None,
+    version: int | None,
+    bindings: list[str],
+) -> dict[str, object]:
+    """Build deployment JSON from ergonomic flags without hiding the model shape."""
+    if deployment_id is None or artifact_id is None or version is None:
+        raise CliInputError(
+            "deployment_id, --artifact, and --version are required without --input"
+        )
+    return {
+        "deployment_id": deployment_id,
+        "artifact_id": artifact_id,
+        "artifact_version": version,
+        "bindings": parse_bindings(bindings),
+    }

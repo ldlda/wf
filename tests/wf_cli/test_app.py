@@ -57,3 +57,32 @@ def test_wf_explain_help_shows_input_modes() -> None:
     assert "--input-file" in result.output
     assert "--stdin" in result.output
     assert "--list" in result.output
+
+
+def test_wf_cap_list_help_exists() -> None:
+    result = runner.invoke(app, ["cap", "list", "--help"])
+
+    assert result.exit_code == 0
+    assert "--format" in result.output
+    assert "--source" in result.output
+
+
+def test_wf_artifact_list_help_exists() -> None:
+    result = runner.invoke(app, ["artifact", "list", "--help"])
+
+    assert result.exit_code == 0
+    assert "--format" in result.output
+
+
+def test_wf_deploy_save_help_exists() -> None:
+    result = runner.invoke(app, ["deploy", "save", "--help"])
+
+    assert result.exit_code == 0
+    assert "--binding" in result.output
+
+
+def test_wf_draft_create_from_capability_help_exists() -> None:
+    result = runner.invoke(app, ["draft", "create-from-capability", "--help"])
+
+    assert result.exit_code == 0
+    assert "--title" in result.output
