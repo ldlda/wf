@@ -35,7 +35,7 @@ app.add_typer(deployments.app, name="deploy")
 app.add_typer(runs.app, name="run")
 app.add_typer(docs.app, name="docs")
 app.add_typer(schema.app, name="schema")
-app.add_typer(explain.app, name="explain")
+app.command("explain")(explain.explain_command)
 
 
 def main() -> None:

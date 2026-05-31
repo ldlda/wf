@@ -207,17 +207,25 @@ returns the same conceptual shape as the workflow MCP tool:
 }
 ```
 
-Optional formats can come later:
+Output format policy:
 
 ```text
---format json      # default
---format compact
---format ids
---format table
+--format json       # default, complete machine-readable payload
+--format compact    # terse human/agent summary where useful
+--format ids        # identifier-only output for list/discovery commands
+--format markdown   # prose-oriented output for explain/docs commands
 ```
 
-The first implementation should not spend time on table formatting unless it is
-already trivial.
+Do not add every format to every command. `json` is always valid. `compact` and
+`ids` are useful for list/discovery commands such as `cap list`, `draft list`,
+`artifact list`, and `deploy list`. `markdown` is useful for prose surfaces such
+as `explain` and `docs read`. Do not implement `table` in v1; agents do not need
+it, and it creates formatting maintenance before the command contracts are
+stable.
+
+The concrete implementation plans should state the formats supported by each
+command they add. Prefer a shared CLI formatting helper over per-command string
+formatting once more than one command needs the same non-JSON shape.
 
 ## Lifecycle Flow
 
@@ -518,6 +526,12 @@ wf deploy delete
 This slice completes the minimum authoring loop. Targeted authoring helpers such
 as `wf draft step add`, `wf draft route set`, and `wf draft output set` should
 follow only after raw lifecycle coverage is proven.
+
+The Slice 4 implementation plan should include the per-command output contract.
+At minimum, list-style commands should support `--format json` and may support
+`--format ids` or `--format compact` when the returned identifiers are stable.
+Inspect, validate, save, delete, and patch commands should remain JSON-only
+unless a concrete agent workflow benefits from another format.
 
 ## Testing
 

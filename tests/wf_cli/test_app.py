@@ -48,3 +48,12 @@ def test_wf_run_start_help_exists() -> None:
 
     assert result.exit_code == 0
     assert "--input-file" in result.output
+
+
+def test_wf_explain_help_shows_input_modes() -> None:
+    result = runner.invoke(app, ["explain", "--help"])
+
+    assert result.exit_code == 0
+    assert "--input-file" in result.output
+    assert "--stdin" in result.output
+    assert "--list" in result.output
