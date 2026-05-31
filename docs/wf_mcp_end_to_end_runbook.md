@@ -28,6 +28,28 @@ demo.personal.echo_tool
 The saved artifact uses the logical source alias `demo`, so the same workflow can
 later be deployed against `demo.work` or another compatible account.
 
+## Minimal Lifecycle Summary
+
+The shortest dependable lifecycle is:
+
+```text
+list_capabilities
+inspect_capability
+create_draft_workspace_from_capability
+patch_draft_workspace
+validate_draft_workspace
+create_artifact_from_workspace
+save_deployment
+validate_deployment
+run_deployment
+inspect_run or read_run_trace only when needed
+resume_run only when status is interrupted
+delete_deployment for temporary deployments
+```
+
+Do not expect a newly saved workflow to appear as a new MCP tool in an existing
+client session. Use `run_deployment` and `call_capability` as stable front doors.
+
 ## 0. Know The Three Names
 
 This example deliberately uses three related names:
@@ -364,7 +386,32 @@ Validation catches problems such as:
 
 - a bound source is disabled or missing
 - a required capability disappeared
-- the saved dependency schema snapshot drifted from the live capability
+- the saved dependency schema drifted from the live capability
+
+### Optional Live Source Check
+
+Use this before a real run when you need to know whether the bound upstream
+source can currently answer.
+
+```yaml
+tool: wf.workflow.validate_deployment
+arguments:
+  deployment_id: "echo.personal"
+  live_check: true
+```
+
+Expected successful shape:
+
+```json
+{
+  "deployment_id": "echo.personal",
+  "status": "runnable",
+  "diagnostics": []
+}
+```
+
+If a bound upstream source is down, expect `status="unrunnable"` and a diagnostic
+with `code="source_unreachable"`.
 
 ## 9. Run The Deployment
 
@@ -713,3 +760,22 @@ outcome propagation belongs in `wf_core` subgraph support.
 
 See `examples/mcp_wrapper_authoring_flow.py` for this same sequence through the
 Python handler layer.
+
+### Cleanup Temporary Deployments
+
+Temporary test deployments can be removed without touching immutable artifacts.
+
+```yaml
+tool: wf.workflow.delete_deployment
+arguments:
+  deployment_id: "echo.personal"
+```
+
+Expected:
+
+```json
+{
+  "deployment_id": "echo.personal",
+  "deleted": true
+}
+```

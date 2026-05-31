@@ -32,6 +32,9 @@ def test_server_exposes_platform_documentation_resources() -> None:
             result = await client.read_resource("wf://docs/operator-manual")
             assert isinstance(result[0], mcp_types.TextResourceContents)
             assert "wf_mcp Operator Manual" in result[0].text
+            assert "Primary Workflow Lifecycle" in result[0].text
+            assert "live_check" in result[0].text
+            assert "delete_deployment" in result[0].text
 
     asyncio.run(run_proxy())
 

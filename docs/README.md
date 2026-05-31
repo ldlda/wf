@@ -40,19 +40,21 @@ implementation plans are kept for context, not as active instructions.
 
 ## MCP Platform
 
-- [`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md): operator/client
-  guide for connections, catalog discovery, drafts, artifacts, deployments, and
-  troubleshooting flow.
-- [`wf_mcp_end_to_end_runbook.md`](wf_mcp_end_to_end_runbook.md): full run from
-  connection setup to capability discovery to deployment execution.
+- [`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md): start here for
+  the MCP-facing workflow lifecycle and tool families.
+- [`wf_mcp_end_to_end_runbook.md`](wf_mcp_end_to_end_runbook.md): concrete
+  tool-call runbook from capability discovery through deployment, run, resume,
+  and cleanup.
+- [`wf_mcp_troubleshooting.md`](wf_mcp_troubleshooting.md): diagnostics and
+  repair steps for source, deployment, run, and resume failures.
+- [`durable_run_operations.md`](durable_run_operations.md): durable run
+  records, compact inspection, bounded traces, and resume semantics.
 - [`wf_mcp_capability_sources.md`](wf_mcp_capability_sources.md): source model
   for raw capabilities, workflow-ready node specs, admin tools, and docs.
 - [`workflow_capabilities.md`](workflow_capabilities.md): distinction between
   raw capabilities, workflow capabilities, wrappers, artifacts, and deployments.
 - [`wf_mcp_proxy_reality_and_roadmap.md`](wf_mcp_proxy_reality_and_roadmap.md):
   practical proxy behavior, FastMCP gaps, and local workaround boundaries.
-- [`wf_mcp_troubleshooting.md`](wf_mcp_troubleshooting.md): common MCP/server
-  failure modes.
 
 ## Protocol Notes
 

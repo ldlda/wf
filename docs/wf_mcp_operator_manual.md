@@ -188,6 +188,11 @@ Primary:
 - `wf.workflow.inspect_deployment`: inspect source bindings for one saved
   deployment.
 - `wf.workflow.validate_deployment`: check dependency availability and drift.
+  By default, validates against the broker's current source inventory and saved
+  catalog snapshots. This is cheap and side-effect-light. Pass `live_check=true`
+  only when you explicitly want to contact each required upstream source. A live
+  check may spawn stdio MCP servers or perform network I/O. Live-check failures
+  are returned as `source_unreachable` diagnostics.
 - `wf.workflow.run_deployment`: execute a saved deployment with input. The
   default response is compact and returns `trace_count`; pass `trace_range`
   only when debugging a failed or surprising run.
@@ -196,6 +201,7 @@ Primary:
   slice for a durable run.
 - `wf.workflow.resume_run`: resume an interrupted durable run when its pinned
   dependencies remain available.
+- `wf.workflow.delete_deployment`: remove one mutable deployment binding.
 
 Advanced:
 
@@ -205,6 +211,9 @@ Advanced:
 `create_artifact_from_plan` bypasses draft ergonomics. Use it only when the
 caller already has a trusted compiled raw workflow plan or is deliberately
 testing the lower-level artifact boundary.
+
+`delete_deployment` removes the saved deployment binding only. It does not delete
+workflow artifacts, wrapper artifacts, or run checkpoints.
 
 ### `wf.docs`
 
@@ -394,6 +403,33 @@ The detailed run contract is documented in
 capture `run_id`, inspect summaries first, read bounded trace slices only when
 debugging, and resume only runs that are actually interrupted.
 
+## Primary Workflow Lifecycle
+
+Use this path when an LLM client needs to build, test, and run a saved workflow.
+
+1. Discover workflow-ready capabilities with `wf.workflow.list_capabilities`.
+2. Inspect the selected capability with `wf.workflow.inspect_capability`.
+3. Create a patchable draft with
+   `wf.workflow.create_draft_workspace_from_capability`.
+4. Patch the draft with `wf.workflow.patch_draft_workspace`.
+5. Validate the draft with `wf.workflow.validate_draft_workspace`.
+6. Save an immutable workflow or wrapper artifact with
+   `wf.workflow.create_artifact_from_workspace` or
+   `wf.workflow.create_wrapper_from_workspace`.
+7. Save a mutable deployment with `wf.workflow.save_deployment`.
+8. Validate the deployment with `wf.workflow.validate_deployment`.
+9. Optionally call `wf.workflow.validate_deployment` with `live_check=true`
+   before a real run.
+10. Run with `wf.workflow.run_deployment`.
+11. If the run returns `interrupted`, resume with `wf.workflow.resume_run`.
+12. Inspect stopped runs with `wf.workflow.inspect_run`; read bounded trace
+    slices with `wf.workflow.read_run_trace`.
+13. Delete temporary deployments with `wf.workflow.delete_deployment`.
+
+Artifacts are immutable saved definitions. Deployments are mutable environment
+bindings. Runs are durable stopped execution records. Deleting a deployment does
+not delete artifacts or existing run records.
+
 ## Which Tool Do I Use?
 
 | I want to... | Use |
@@ -421,6 +457,7 @@ debugging, and resume only runs that are actually interrupted.
 | Check whether a deployment can run | `wf.workflow.validate_deployment` |
 | Execute a saved workflow | `wf.workflow.run_deployment` |
 | Inspect a stopped workflow run | `wf.workflow.inspect_run` |
+| Delete a temporary deployment binding | `wf.workflow.delete_deployment` |
 | Read bounded debug trace entries | `wf.workflow.read_run_trace` |
 | Resume an interrupted workflow run | `wf.workflow.resume_run` |
 

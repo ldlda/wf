@@ -131,8 +131,9 @@ the core rule that external callers resume by `run_id`.
 ## Debugging Rules For LLM Clients
 
 - Always capture `run_id` from `run_deployment`.
-- Prefer `inspect_run` before reading trace detail.
-- Use `read_run_trace` with explicit small ranges.
+- Use `inspect_run` for compact stopped-run summaries.
+- Use `read_run_trace` only when trace entries are needed, and always request a
+  bounded `trace_range`.
 - Treat `trace_count` as metadata, not an instruction to fetch the entire trace.
 - If a run failed with `trace_count: 0`, read the top-level `error` first; the
   failure may have happened before any trace entry could be emitted.
@@ -140,6 +141,20 @@ the core rule that external callers resume by `run_id`.
   with the same `run_id`.
 - If the run failed because a live source errored during execution, do not retry
   through `resume_run`; start a new run after repairing the source/problem.
+
+## Deployment Deletion Boundary
+
+`wf.workflow.delete_deployment` removes the mutable deployment binding. It does
+not delete:
+
+- immutable workflow artifacts
+- wrapper artifacts
+- stored run records
+- run checkpoints
+
+Existing run records keep the pinned deployment and artifact environment captured
+at run time. Deleting a deployment prevents future runs through that deployment
+id, but it does not erase historical stopped-run inspection data.
 
 ## Current Limits
 

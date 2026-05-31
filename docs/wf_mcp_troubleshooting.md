@@ -282,6 +282,28 @@ Current drift policies:
 
 Prefer `block` unless a human has actually reviewed the changed contract.
 
+## `validate_deployment(live_check=true)` Says `source_unreachable`
+
+Meaning: static deployment validation found a matching saved source/catalog, but
+the live upstream source could not answer when contacted.
+
+Common causes:
+
+- stdio MCP server command is missing or exits during startup
+- network MCP server is offline
+- auth/config changed outside the broker
+- source process starts too slowly and hits the live-check timeout
+
+What to do:
+
+1. Check the connection with `wf.admin.get_connection_statuses`.
+2. Refresh or reload the config if the source was recently enabled.
+3. Fix the source command/auth/network outside the workflow artifact.
+4. Run `wf.workflow.validate_deployment` again with `live_check=true`.
+
+Do not fix this by editing the workflow artifact unless the source capability
+itself changed. This is an environment problem, not workflow business logic.
+
 ## `run_deployment` Returns `unrunnable`
 
 `run_deployment` validates dependencies before execution. If blocking
@@ -397,6 +419,22 @@ wf.admin.inspect_source
 
 If the source has tools but no prompts/resources, that may be completely valid.
 MCP servers are not required to implement every capability family.
+
+## Test Deployment Clutter
+
+Symptom: `wf.workflow.list_deployments` shows temporary deployments from earlier
+tests or LLM attempts.
+
+Use:
+
+```yaml
+tool: wf.workflow.delete_deployment
+arguments:
+  deployment_id: "test_alias_check"
+```
+
+This deletes only the mutable deployment binding. Saved artifacts and durable run
+records remain.
 
 ## What To Capture In A Bug Report
 
