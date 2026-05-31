@@ -1,0 +1,29 @@
+from __future__ import annotations
+
+from typer.testing import CliRunner
+
+from wf_cli.app import app
+
+
+runner = CliRunner()
+
+
+def test_wf_help_lists_lifecycle_groups() -> None:
+    result = runner.invoke(app, ["--help"])
+
+    assert result.exit_code == 0
+    assert "cap" in result.output
+    assert "draft" in result.output
+    assert "artifact" in result.output
+    assert "deploy" in result.output
+    assert "run" in result.output
+    assert "docs" in result.output
+    assert "schema" in result.output
+    assert "explain" in result.output
+
+
+def test_wf_run_group_help_exists() -> None:
+    result = runner.invoke(app, ["run", "--help"])
+
+    assert result.exit_code == 0
+    assert "Run workflow deployments" in result.output

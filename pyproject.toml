@@ -17,6 +17,7 @@ dependencies = [
 ]
 
 [project.scripts]
+wf = "wf_cli.app:main"
 wf-mcp = "wf_mcp.cli:main"
 
 [dependency-groups]
