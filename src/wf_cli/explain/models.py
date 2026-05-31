@@ -9,10 +9,11 @@ class ExplainCard(BaseModel):
     code: str = Field(min_length=1, description="Stable diagnostic or CLI error code.")
     summary: str = Field(min_length=1, description="One-sentence explanation.")
     why_it_happens: list[str] = Field(
-        description="Common causes, ordered from most likely to least likely."
+        min_length=1,
+        description="Common causes, ordered from most likely to least likely.",
     )
     how_to_fix: list[str] = Field(
-        description="Concrete next steps an agent or user can try."
+        min_length=1, description="Concrete next steps an agent or user can try."
     )
     related_docs: list[str] = Field(
         default_factory=list,

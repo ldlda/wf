@@ -13,7 +13,7 @@ def parse_explain_input(raw: str) -> list[str]:
     stripped = raw.strip()
     if not stripped:
         raise ExplainInputError("explain input is empty")
-    if stripped.startswith("{") or stripped.startswith("["):
+    if stripped.startswith(("{", "[")):
         try:
             value = json.loads(stripped)
         except json.JSONDecodeError as exc:

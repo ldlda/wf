@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from wf_cli.context import load_cli_context
 
-from ..wf_mcp.test_support import local_temp_root
 
-
-def test_load_cli_context_builds_service_and_handlers() -> None:
-    tmp_path = local_temp_root() / "wf_cli_context"
-    tmp_path.mkdir(parents=True, exist_ok=True)
-    config_path = tmp_path / "wf_mcp.config.json"
+def test_load_cli_context_builds_service_and_handlers(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_context"
+    root.mkdir()
+    config_path = root / "wf_mcp.config.json"
     config_path.write_text(
         json.dumps(
             {

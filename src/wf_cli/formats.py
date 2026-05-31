@@ -24,9 +24,17 @@ def render_list_payload(
     """Render a handler list payload without changing the JSON contract."""
     if output_format is ListOutputFormat.JSON:
         return json.dumps(payload, indent=2, sort_keys=True)
-    items = payload.get(collection_key, [])
+    if collection_key not in payload:
+        raise ValueError(
+            f"list payload missing required field {collection_key!r}: "
+            f"available fields are {sorted(payload)}"
+        )
+    items = payload[collection_key]
     if not isinstance(items, list):
-        raise ValueError(f"list payload missing array field {collection_key!r}")
+        raise ValueError(
+            f"list payload field {collection_key!r} must be an array, "
+            f"got {type(items).__name__}"
+        )
     if output_format is ListOutputFormat.IDS:
         return "\n".join(_item_id(item, id_field=id_field) for item in items)
     return "\n".join(

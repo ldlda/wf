@@ -52,6 +52,8 @@ def parse_bindings(bindings: list[str]) -> dict[str, str]:
         logical, separator, concrete = item.partition("=")
         if separator != "=" or not logical or not concrete:
             raise CliInputError("--binding must use logical=concrete")
+        if logical in parsed:
+            raise CliInputError(f"duplicate --binding for {logical!r}")
         parsed[logical] = concrete
     return parsed
 

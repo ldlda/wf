@@ -215,4 +215,4 @@ def test_wf_run_start_reports_bad_json() -> None:
         )
 
     assert result.exit_code != 0
-    assert "invalid JSON" in result.output
+    assert "invalid JSON" in result.stderr

@@ -19,7 +19,7 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Run `wf deploy validate <deployment_id> --live` after changing bindings.",
         ],
         related_docs=[
-            "docs/wf_cli_usage.md#deployment-validation",
+            "docs/superpowers/specs/2026-06-01-wf-cli-design.md",
             "docs/workflow_capabilities.md",
         ],
     ),
@@ -38,8 +38,8 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Run `wf deploy validate <deployment_id> --live` again after fixing the source.",
         ],
         related_docs=[
-            "docs/wf_cli_usage.md#deployment-validation",
-            "docs/wf_mcp_unified_proxy_plan.md",
+            "docs/wf_mcp_operator_manual.md",
+            "docs/wf_mcp_proxy_reality_and_roadmap.md",
         ],
     ),
     ExplainCard(
@@ -57,7 +57,7 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Use `wf deploy validate <deployment_id>` to confirm the binding set.",
         ],
         related_docs=[
-            "docs/wf_cli_usage.md#save-and-validate-a-deployment",
+            "docs/workflow_artifacts.md",
             "docs/workflow_capabilities.md#sources",
         ],
     ),
@@ -77,7 +77,7 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
         ],
         related_docs=[
             "docs/workflow_capabilities.md",
-            "docs/wf_cli_usage.md#capability-discovery",
+            "docs/superpowers/specs/2026-06-01-wf-cli-design.md",
         ],
     ),
     ExplainCard(
@@ -114,7 +114,7 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Re-run validation before starting the deployment.",
         ],
         related_docs=[
-            "docs/wf_cli_usage.md#deployment-validation",
+            "docs/wf_mcp_end_to_end_runbook.md",
             "docs/current_roadmap.md",
         ],
     ),

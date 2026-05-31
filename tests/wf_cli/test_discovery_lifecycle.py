@@ -66,6 +66,26 @@ def test_render_list_payload_json_returns_pretty_json() -> None:
     assert parsed["deployments"][0]["id"] == "echo.personal"
 
 
+def test_render_list_payload_rejects_missing_collection_key() -> None:
+    with pytest.raises(ValueError, match="missing required field 'nodes'"):
+        render_list_payload(
+            {"capabilities": []},
+            collection_key="nodes",
+            output_format=ListOutputFormat.IDS,
+            id_field="name",
+        )
+
+
+def test_render_list_payload_rejects_non_array_collection() -> None:
+    with pytest.raises(ValueError, match="field 'nodes' must be an array"):
+        render_list_payload(
+            {"nodes": {}},
+            collection_key="nodes",
+            output_format=ListOutputFormat.IDS,
+            id_field="name",
+        )
+
+
 def test_parse_json_value_accepts_arrays_for_json_patch() -> None:
     value = parse_json_value(
         input_json='[{"op":"replace","path":"/name","value":"x"}]', input_file=None
@@ -86,6 +106,11 @@ def test_parse_json_value_rejects_both_input_modes(tmp_path) -> None:
 def test_parse_bindings_rejects_invalid_shape() -> None:
     with pytest.raises(CliInputError, match="logical=concrete"):
         parse_bindings(["demo.personal"])
+
+
+def test_parse_bindings_rejects_duplicate_logical_source() -> None:
+    with pytest.raises(CliInputError, match="duplicate --binding"):
+        parse_bindings(["demo=demo.personal", "demo=demo.work"])
 
 
 runner = CliRunner()

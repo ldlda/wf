@@ -177,7 +177,7 @@ def save_draft(
                 version=version,
                 title=title,
                 outcomes=tuple(outcome or ["ok"]),
-                kind="workflow",
+                kind=kind,
                 description=description,
                 source_bindings=source_bindings or None,
             )
