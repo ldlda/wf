@@ -356,6 +356,11 @@ tool to call next, and concrete patch examples for common missing decisions.
 `next_actions.can_save_now` is not enforced. A caller can still save a low
 confidence draft, but the field exists to make that risk explicit.
 
+`next_actions` is advisory guidance, not validation authority. It gives MCP
+clients a compact "what should I call next?" pointer, while diagnostics,
+artifact validation, deployment validation, and runtime status remain the
+source of truth.
+
 ## Relationship To Capability Sources
 
 Sources own capability kinds:

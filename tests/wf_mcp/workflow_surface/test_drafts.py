@@ -541,6 +541,7 @@ def test_workflow_surface_creates_draft_workspace_from_capability_hints() -> Non
     assert result["wrapper_hints"]["input_map"] == {"input.text": "text"}
     assert result["wrapper_hints"]["output_map"] == {"echoed": "state.echoed"}
     next_actions = result["next_actions"]
+    assert next_actions["can_continue"] is True
     assert next_actions["can_save_now"] is True
     assert (
         next_actions["recommended_next_tool"] == "wf.workflow.validate_draft_workspace"
@@ -705,6 +706,7 @@ def test_workflow_surface_low_confidence_draft_returns_patch_guidance() -> None:
     )
 
     next_actions = result["next_actions"]
+    assert next_actions["can_continue"] is True
     assert next_actions["can_save_now"] is False
     assert next_actions["recommended_next_tool"] == "wf.workflow.patch_draft_workspace"
     assert "missing wrapper decisions" in next_actions["reason"]

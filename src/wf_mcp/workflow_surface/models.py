@@ -4,6 +4,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
+from .next_actions import NextActionPatchExample, NextActions
 from wf_artifacts import ArtifactKind
 from wf_artifacts.draft_workspaces.models import WORKSPACE_ID_PATTERN
 from wf_core.models.steps import InputBinding, OutputBinding
@@ -353,40 +354,10 @@ class CreateDraftWorkspaceFromCapabilityRequest(BaseModel):
     )
 
 
-class WrapperDraftPatchExample(BaseModel):
-    """Concrete patch-workspace example for a likely next authoring edit."""
-
-    description: str = Field(description="Human-readable reason for this patch.")
-    tool: str = Field(description="MCP tool to call for this example.")
-    request: dict[str, Any] = Field(
-        description="JSON request payload to pass to the tool."
-    )
-
-
-class WrapperDraftNextActions(BaseModel):
-    """Advisory continuation hints after bootstrapping a wrapper draft."""
-
-    can_save_now: bool = Field(
-        description=(
-            "Advisory only. False means the scaffold likely needs review before "
-            "saving, but the server does not enforce this."
-        )
-    )
-    recommended_next_tool: str = Field(
-        description=(
-            "Suggested next MCP tool, usually wf.workflow.validate_draft_workspace "
-            "or wf.workflow.patch_draft_workspace."
-        )
-    )
-    reason: str = Field(description="Short explanation for the recommendation.")
-    patch_examples: list[WrapperDraftPatchExample] = Field(
-        default_factory=list,
-        description="Concrete JSON Patch examples for common missing decisions.",
-    )
-    warnings: list[str] = Field(
-        default_factory=list,
-        description="Non-blocking warnings copied from low-confidence wrapper hints.",
-    )
+# Compatibility aliases for older imports. The JSON fields are now generic
+# workflow-surface guidance, not wrapper-only policy.
+WrapperDraftPatchExample = NextActionPatchExample
+WrapperDraftNextActions = NextActions
 
 
 class CreateDraftWorkspaceFromCapabilityResult(DraftWorkspaceResult):
@@ -398,7 +369,7 @@ class CreateDraftWorkspaceFromCapabilityResult(DraftWorkspaceResult):
             "Use this to patch uncertain maps or schemas by revision."
         )
     )
-    next_actions: WrapperDraftNextActions = Field(
+    next_actions: NextActions = Field(
         description=(
             "Advisory next step guidance derived from wrapper_hints. "
             "The server does not enforce can_save_now."

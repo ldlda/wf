@@ -59,6 +59,7 @@ from .constants import (
     RUNTIME_ERROR_CAPABILITY,
 )
 from .models import TraceRange
+from .next_actions import NextActions
 from .refs import parse_workflow_surface_capability_id
 from .saved_subgraphs import (
     SavedSubgraphTree,
@@ -836,11 +837,11 @@ class WorkflowSurfaceHandlers:
         return {
             **result,
             "wrapper_hints": hints,
-            "next_actions": _wrapper_draft_next_actions(
+            "next_actions": NextActions.from_wrapper_hints(
                 workspace_id=workspace_id,
                 revision=int(result["revision"]),
                 hints=hints,
-            ),
+            ).model_dump(mode="json"),
         }
 
     async def create_artifact_from_workspace(
@@ -1484,98 +1485,6 @@ def _escape_json_pointer(value: str) -> str:
 def _draft_name_from_capability(capability_name: str) -> str:
     """Return a stable draft name when caller does not provide one."""
     return capability_name.replace(".", "_").replace("-", "_")
-
-
-def _wrapper_draft_next_actions(
-    *,
-    workspace_id: str,
-    revision: int,
-    hints: dict[str, Any],
-) -> dict[str, Any]:
-    """Convert wrapper_hints into advisory next-tool guidance for MCP clients."""
-    confidence = str(hints.get("confidence", "low"))
-    missing_decisions = hints.get("missing_decisions")
-    notes = [str(note) for note in hints.get("notes", []) if isinstance(note, str)]
-    has_missing = isinstance(missing_decisions, list) and len(missing_decisions) > 0
-    can_save_now = confidence == "high" and not has_missing
-    if can_save_now:
-        return {
-            "can_save_now": True,
-            "recommended_next_tool": "wf.workflow.validate_draft_workspace",
-            "reason": "Wrapper hints are high confidence and have no missing decisions.",
-            "patch_examples": [],
-            "warnings": [],
-        }
-
-    return {
-        "can_save_now": False,
-        "recommended_next_tool": "wf.workflow.patch_draft_workspace",
-        "reason": "Review missing wrapper decisions before saving.",
-        "patch_examples": _wrapper_draft_patch_examples(
-            workspace_id=workspace_id,
-            revision=revision,
-            hints=hints,
-        ),
-        "warnings": notes,
-    }
-
-
-def _wrapper_draft_patch_examples(
-    *,
-    workspace_id: str,
-    revision: int,
-    hints: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Return conservative JSON Patch examples without guessing semantics."""
-    examples: list[dict[str, Any]] = []
-    missing_decisions = hints.get("missing_decisions")
-    if not isinstance(missing_decisions, list):
-        return examples
-    decision_kinds = {
-        str(decision.get("kind"))
-        for decision in missing_decisions
-        if isinstance(decision, dict)
-    }
-    if {
-        "choose_output_fields",
-        "review_nested_output",
-    } & decision_kinds:
-        examples.append(
-            {
-                "description": (
-                    "Replace output bindings after choosing which capability "
-                    "outputs should be written to workflow state."
-                ),
-                "tool": "wf.workflow.patch_draft_workspace",
-                "request": {
-                    "workspace_id": workspace_id,
-                    "revision": revision,
-                    "patch": [
-                        {
-                            "op": "replace",
-                            "path": "/draft/steps/call/output",
-                            "value": [],
-                        }
-                    ],
-                },
-            }
-        )
-    if "confirm_boolean_outcomes" in decision_kinds:
-        examples.append(
-            {
-                "description": (
-                    "Review boolean output candidates before adding routing; "
-                    "do not route on boolean fields automatically."
-                ),
-                "tool": "wf.workflow.patch_draft_workspace",
-                "request": {
-                    "workspace_id": workspace_id,
-                    "revision": revision,
-                    "patch": [],
-                },
-            }
-        )
-    return examples
 
 
 def _source_id_for_capability(

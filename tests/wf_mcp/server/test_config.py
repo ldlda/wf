@@ -116,6 +116,11 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             next_actions_schema = from_capability_output["properties"]["next_actions"]
             assert "recommended_next_tool" in next_actions_schema["properties"]
             assert "patch_examples" in next_actions_schema["properties"]
+            assert "can_continue" in next_actions_schema["properties"]
+            assert (
+                "Advisory"
+                in next_actions_schema["properties"]["can_continue"]["description"]
+            )
             assert (
                 "Advisory"
                 in next_actions_schema["properties"]["can_save_now"]["description"]
