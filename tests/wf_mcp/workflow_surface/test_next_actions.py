@@ -51,6 +51,7 @@ def test_next_actions_from_low_confidence_wrapper_hints_can_patch() -> None:
     assert dumped["recommended_next_tool"] == NextActionTool.PATCH_DRAFT_WORKSPACE.value
     assert "missing wrapper decisions" in dumped["reason"]
     assert dumped["warnings"][0] == "Raw MCP tool output is not workflow-shaped."
+    assert len(dumped["patch_examples"]) == 2
     assert dumped["patch_examples"][0]["tool"] == (
         NextActionTool.PATCH_DRAFT_WORKSPACE.value
     )

@@ -149,7 +149,7 @@ def test_workflow_surface_validate_deployment_live_check_reports_missing_connect
     assert payload["status"] == "unrunnable"
     assert payload["diagnostics"][0]["code"] == "source_unreachable"
     assert payload["diagnostics"][0]["bound_source"] == "demo.personal"
-    assert "KeyError" in payload["diagnostics"][0]["message"]
+    assert "demo.personal" in payload["diagnostics"][0]["message"]
 
 
 def test_workflow_surface_records_artifact_and_deployment_save_events() -> None:

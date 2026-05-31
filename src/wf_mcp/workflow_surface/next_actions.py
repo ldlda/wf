@@ -80,9 +80,7 @@ class NextActions(BaseModel):
         )
         confidence = str(payload.get("confidence", "low"))
         missing_decisions = payload.get("missing_decisions")
-        notes = [
-            str(note) for note in payload.get("notes", []) if isinstance(note, str)
-        ]
+        notes = [note for note in payload.get("notes", []) if isinstance(note, str)]
         has_missing = isinstance(missing_decisions, list) and len(missing_decisions) > 0
         can_save_now = confidence == "high" and not has_missing
         if can_save_now:
