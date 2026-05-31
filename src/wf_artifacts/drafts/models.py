@@ -308,7 +308,14 @@ class WorkflowDraft(BaseModel):
     state_schema: JsonObject
     output_schema: JsonObject
     outcomes: list[str] = Field(default_factory=lambda: ["ok"], min_length=1)
-    output: list[InputBinding] = Field(default_factory=list)
+    output: list[InputBinding] = Field(
+        default_factory=list,
+        description=(
+            "Top-level workflow output projection. Uses input-binding shape: "
+            "`path` reads from input/state/context and `target` writes to the "
+            "local public output payload. Do not use step output `source` here."
+        ),
+    )
     start: str
     steps: dict[str, DraftStep]
     routes: dict[str, dict[str, str]] = Field(default_factory=dict)

@@ -30,10 +30,11 @@ class Workflow(BaseModel):
     output: list[InputBinding] = Field(
         default_factory=list,
         description=(
-            "Optional final output projection bindings. Sources read from graph "
-            "paths such as state.result, and targets write into the workflow "
-            "output payload. When omitted, legacy same-name top-level state "
-            "projection is used."
+            "Optional final output projection bindings. Uses input-binding shape: "
+            "`path` reads from graph paths such as state.result, and `target` "
+            "writes into the workflow output payload. Use `path`, not `source`; "
+            "`source` belongs to step-level node output bindings. When omitted, "
+            "legacy same-name top-level state projection is used."
         ),
     )
     node_defs: list[NodeDef] = Field(default_factory=list)

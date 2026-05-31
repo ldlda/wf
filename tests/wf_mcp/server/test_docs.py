@@ -36,6 +36,14 @@ def test_server_exposes_platform_documentation_resources() -> None:
             assert "live_check" in result[0].text
             assert "delete_deployment" in result[0].text
 
+            drafts_result = await client.read_resource("wf://docs/workflow-drafts")
+            assert isinstance(drafts_result[0], mcp_types.TextResourceContents)
+            assert "Two Outputs, Different Shapes" in drafts_result[0].text
+            assert (
+                "Do not use step output `source` here" in drafts_result[0].text
+                or "Do not use `source` at top level" in drafts_result[0].text
+            )
+
     asyncio.run(run_proxy())
 
 

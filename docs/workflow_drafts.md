@@ -106,6 +106,53 @@ Important details:
 - When saved with source bindings, concrete refs can be normalized to logical
   refs such as `demo.echo_tool`.
 
+## Two Outputs, Different Shapes
+
+Drafts have two fields named `output`, but they do different jobs.
+
+### Step-Level `steps.<id>.output`
+
+Step output writes a node's local return payload into workflow state. It uses
+`source` / `target`:
+
+```json
+{
+  "source": { "root": "local", "parts": ["text"] },
+  "target": { "root": "state", "parts": ["result_text"] }
+}
+```
+
+Read this as:
+
+```text
+node output.text -> state.result_text
+```
+
+### Top-Level `output`
+
+Top-level workflow output projects graph values into the final public workflow
+output payload. It uses input-binding shape: `path` / `target`, not
+`source` / `target`. Do not use step output `source` here; it belongs to
+step-level node output bindings only.
+
+```json
+{
+  "path": { "root": "state", "parts": ["result_text"] },
+  "target": { "root": "local", "parts": ["result_text"] }
+}
+```
+
+Read this as:
+
+```text
+state.result_text -> workflow output.result_text
+```
+
+If top-level `output` is empty, the runtime keeps the legacy same-name fallback:
+for every field in `output_schema`, it copies the top-level state field with the
+same name when present. That fallback is convenient, but explicit output
+projection is clearer for new workflows.
+
 ## Explicit Outputs And Error Outcomes
 
 Use `__end__` as the compact terminal path for the normal `ok` workflow outcome.

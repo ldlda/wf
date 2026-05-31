@@ -657,6 +657,22 @@ artifact.
 
 ### 3. Patch Or Validate The Workspace
 
+When patching output bindings, keep the two levels separate:
+
+- Step-level `steps.<id>.output` uses `source` local -> `target` state.
+- Top-level `output` uses `path` graph -> `target` local output payload.
+
+For explicit final output projection from state, use:
+
+```json
+{
+  "path": { "root": "state", "parts": ["result_text"] },
+  "target": { "root": "local", "parts": ["result_text"] }
+}
+```
+
+Do not use `source` at top level. `source` belongs to step output bindings.
+
 If the hints are good enough, validate:
 
 ```yaml
