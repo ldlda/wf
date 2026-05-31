@@ -30,5 +30,9 @@ class ExplainRegistry:
             for entry in self._entries.values()
         ]
 
+    def list_full_entries(self) -> list[ExplainCard]:
+        """Return full cards for internal validation/tests."""
+        return list(self._entries.values())
+
 
 DEFAULT_EXPLAIN_REGISTRY = ExplainRegistry()

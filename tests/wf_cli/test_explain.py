@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -156,3 +157,18 @@ def test_wf_explain_list_rejects_other_input_modes() -> None:
 
     assert result.exit_code != 0
     assert "--list cannot be combined" in result.output
+
+
+def test_explain_related_docs_do_not_point_to_planning_artifacts() -> None:
+    for entry in DEFAULT_EXPLAIN_REGISTRY.list_full_entries():
+        for related_doc in entry.related_docs:
+            assert "docs/superpowers/" not in related_doc
+
+
+def test_explain_related_doc_files_exist() -> None:
+    repo_root = Path(__file__).resolve().parents[2]
+    for entry in DEFAULT_EXPLAIN_REGISTRY.list_full_entries():
+        for related_doc in entry.related_docs:
+            path_text = related_doc.split("#", 1)[0]
+            if path_text.startswith("docs/"):
+                assert (repo_root / path_text).exists(), path_text

@@ -19,7 +19,7 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Run `wf deploy validate <deployment_id> --live` after changing bindings.",
         ],
         related_docs=[
-            "docs/superpowers/specs/2026-06-01-wf-cli-design.md",
+            "docs/wf_cli.md#common-diagnostics",
             "docs/workflow_capabilities.md",
         ],
     ),
@@ -38,8 +38,8 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Run `wf deploy validate <deployment_id> --live` again after fixing the source.",
         ],
         related_docs=[
-            "docs/wf_mcp_operator_manual.md",
-            "docs/wf_mcp_proxy_reality_and_roadmap.md",
+            "docs/wf_cli.md#deployments",
+            "docs/wf_mcp_troubleshooting.md",
         ],
     ),
     ExplainCard(
@@ -57,8 +57,8 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Use `wf deploy validate <deployment_id>` to confirm the binding set.",
         ],
         related_docs=[
+            "docs/wf_cli.md#deployments",
             "docs/workflow_artifacts.md",
-            "docs/workflow_capabilities.md#sources",
         ],
     ),
     ExplainCard(
@@ -76,8 +76,8 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Rebuild or patch the artifact if the capability was intentionally renamed.",
         ],
         related_docs=[
+            "docs/wf_cli.md#capability-discovery",
             "docs/workflow_capabilities.md",
-            "docs/superpowers/specs/2026-06-01-wf-cli-design.md",
         ],
     ),
     ExplainCard(
@@ -95,7 +95,7 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Save a new artifact version and deployment after validating the change.",
         ],
         related_docs=[
-            "docs/workflow_capabilities.md#dependency-validation",
+            "docs/wf_cli.md#common-diagnostics",
             "docs/schema_validation.md",
         ],
     ),
@@ -114,7 +114,7 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "Re-run validation before starting the deployment.",
         ],
         related_docs=[
-            "docs/wf_mcp_end_to_end_runbook.md",
+            "docs/wf_cli.md#common-diagnostics",
             "docs/current_roadmap.md",
         ],
     ),

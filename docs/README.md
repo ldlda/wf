@@ -38,6 +38,11 @@ implementation plans are kept for context, not as active instructions.
 - [`wf_authoring_control_flow.md`](wf_authoring_control_flow.md): when to use
   `branch`, `handle`, `match`, `when`, and `choose`.
 
+## CLI
+
+- [`wf_cli.md`](wf_cli.md): workflow platform CLI commands, output formats,
+  lifecycle flow, and common diagnostics.
+
 ## MCP Platform
 
 - [`wf_mcp_operator_manual.md`](wf_mcp_operator_manual.md): start here for
