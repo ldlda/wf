@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
 
 from ..test_support import local_temp_root
@@ -82,6 +84,29 @@ def test_workflow_surface_save_deployment_accepts_deployment_id_alias() -> None:
     saved = artifact_store.get_deployment("echo.personal")
     assert payload["deployment_id"] == "echo.personal"
     assert saved.id == "echo.personal"
+
+
+def test_workflow_surface_save_deployment_rejects_id_and_deployment_id() -> None:
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_alias_xor")
+    h = handlers(artifact_store)
+
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        asyncio.run(
+            h.save_deployment(
+                {
+                    "id": "echo.personal",
+                    "deployment_id": "echo.other",
+                    "artifact_id": "echo",
+                    "artifact_version": 1,
+                    "bindings": [
+                        {
+                            "logical_source": "demo",
+                            "concrete_source": "demo.personal",
+                        }
+                    ],
+                }
+            )
+        )
 
 
 def test_workflow_surface_lists_compact_deployment_summaries_and_inspects_detail() -> (

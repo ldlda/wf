@@ -237,7 +237,11 @@ class WorkflowDeployment(BaseModel):
         data = dict(value)
         # MCP tools consistently ask for deployment_id. Persisted artifact
         # records still use the shorter canonical model field `id`.
-        if "deployment_id" in data and "id" not in data:
+        if "deployment_id" in data and "id" in data:
+            raise ValueError(
+                "deployment fields 'id' and 'deployment_id' are mutually exclusive"
+            )
+        if "deployment_id" in data:
             data["id"] = data.pop("deployment_id")
         bindings = data.get("bindings")
         if not isinstance(bindings, dict):
