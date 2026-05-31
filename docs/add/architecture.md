@@ -29,7 +29,7 @@ header-includes:
   - \setlength{\parindent}{0pt}
   - \setkeys{Gin}{width=\linewidth,height=0.55\textheight,keepaspectratio}
   - \renewcommand{\arraystretch}{1.3}
-  - '\newcommand{\status}[1]{\hfill\textsc{\small #1}}'
+  - \newcommand{\status}[1]{\texorpdfstring{\hfill{\normalfont\small\textsc{#1}}}{}}
 diagram:
   engine:
     mermaid:
@@ -422,7 +422,7 @@ and generates the `NodeDef` with schema refs.
 ```mermaid
 flowchart TB
     subgraph Server["Unified MCP Server"]
-        Admin["wf_admin.*"]
+        Admin["wf.admin.*"]
         Wf["wf.workflow.*"]
         Proxy["connection.tool_name"]
     end
@@ -521,7 +521,8 @@ caught, final output validates against `output_schema`.
 
 # Open Questions
 
-- Output derivation: direct projection vs explicit final output mapping?
+- Should the legacy same-name top-level state output fallback be removed once
+  explicit final output bindings are used everywhere?
 - Trace model for raw extra node output?
 - Isolated pure-Python execution: node type, tool backend, or separate API?
 - Retry policy vs non-idempotent side-effecting tools?
@@ -534,7 +535,7 @@ caught, final output validates against `output_schema`.
 | Validation | Pydantic v2 |
 | Tool protocol | MCP |
 | MCP framework | FastMCP 3.2.4+ |
-| Storage | SQLite/PostgreSQL (planned) |
+| Storage | File-backed JSON stores today; SQLite/PostgreSQL planned |
 
 ---
 

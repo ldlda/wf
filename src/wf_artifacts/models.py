@@ -231,10 +231,14 @@ class WorkflowDeployment(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def _coerce_legacy_binding_map(cls, value: object) -> object:
+    def _coerce_legacy_shapes(cls, value: object) -> object:
         if not isinstance(value, dict):
             return value
         data = dict(value)
+        # MCP tools consistently ask for deployment_id. Persisted artifact
+        # records still use the shorter canonical model field `id`.
+        if "deployment_id" in data and "id" not in data:
+            data["id"] = data.pop("deployment_id")
         bindings = data.get("bindings")
         if not isinstance(bindings, dict):
             return data
