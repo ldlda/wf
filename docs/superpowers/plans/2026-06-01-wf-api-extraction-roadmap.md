@@ -406,6 +406,42 @@ imports or behavior drift.
 
 Remove remaining protocol-neutral utilities from MCP-named packages.
 
+### Current Recommendation
+
+Split this into two different concerns. Listing/helper consolidation is
+behavior-preserving cleanup and should happen first. Event migration changes
+domain vocabulary and should remain separate until lifecycle event semantics are
+clearer.
+
+### Slice 5A/5B: Listing And Workflow Helper Consolidation
+
+Concrete plan:
+
+```text
+docs/superpowers/plans/2026-06-02-wf-api-slice-5a-5b-helper-consolidation.md
+```
+
+Planned moves:
+
+```text
+wf_api.capabilities._matches_query          -> wf_api.listing.matches_query
+wf_api.artifacts._matches_query             -> wf_api.listing.matches_query
+wf_api.capabilities._paged_list_payload     -> wf_api.listing.paged_list_payload
+wf_api.artifacts._paged_list_payload        -> wf_api.listing.paged_list_payload
+wf_mcp.workflow_surface.handlers fallback   -> wf_api.listing.paged_list_payload
+
+wf_api.runs._raw_plan_from_artifact         -> wf_api.artifact_plans.raw_plan_from_artifact
+wf_api.capabilities._raw_plan_from_artifact -> wf_api.artifact_plans.raw_plan_from_artifact
+wf_api.capabilities._artifact_capability_id -> wf_api.artifact_refs.artifact_capability_id
+wf_api.artifacts._artifact_capability_id    -> wf_api.artifact_refs.artifact_capability_id
+wf_api.{drafts,artifacts,capabilities} requirement helpers
+                                             -> wf_api.capability_requirements
+```
+
+Do not move `wf_mcp.shared.pagination` in this slice. It is still used by proxy
+tool search/listing code, so treating it as dead workflow-surface debt would be
+incorrect.
+
 ### Candidate Moves
 
 ```text

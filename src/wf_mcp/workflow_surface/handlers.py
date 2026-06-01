@@ -5,7 +5,6 @@ from typing import TYPE_CHECKING, Any
 
 from wf_artifacts import (
     ArtifactKind,
-    DraftWorkspaceStore,
 )
 from wf_core.models.steps import (
     InputBinding,
@@ -174,11 +173,6 @@ class WorkflowSurfaceHandlers:
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
         return await self._drafts.patch_draft(draft=draft, patch=patch)
-
-    def _draft_store(self) -> DraftWorkspaceStore:
-        if self.service.draft_workspace_store is None:
-            raise KeyError("draft workspace store is not configured")
-        return self.service.draft_workspace_store
 
     async def list_draft_workspaces(self) -> dict[str, Any]:
         """Return compact summaries for stored draft workspaces."""
