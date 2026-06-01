@@ -13,12 +13,11 @@ from wf_artifacts import (
     WorkflowArtifactStore,
     WorkflowDeployment,
 )
-from wf_authoring import AsyncRegistryHandler
 from wf_core import RunState
-from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_platform import CapabilitySource
 
 from .models import RawWorkflowPlan
+from .saved_subgraphs import SavedSubgraphTree
 
 
 class WorkflowEventRecorder(Protocol):
@@ -68,12 +67,10 @@ class WorkflowRuntimeRunner(Protocol):
     async def run_workflow_from_plan(
         self,
         plan: RawWorkflowPlan,
-        *,
         workflow_input: dict[str, Any],
-        node_name_bindings: dict[str, str] | None = None,
-        registry: dict[str, AsyncRegistryHandler] | None = None,
-        reducers: dict[str, ReducerDefinition] | None = None,
-        prepared_subgraphs: dict[str, object] | None = None,
+        deployment: WorkflowDeployment | None = None,
+        artifact: WorkflowArtifact | None = None,
+        saved_subgraph_tree: SavedSubgraphTree | None = None,
     ) -> RunState:
         """Execute one raw workflow plan and return its run state."""
         ...
@@ -81,14 +78,13 @@ class WorkflowRuntimeRunner(Protocol):
     async def resume_workflow_from_plan(
         self,
         plan: RawWorkflowPlan,
-        *,
         run: RunState,
+        *,
         resume_payload: dict[str, Any],
         resume_outcome: str,
-        node_name_bindings: dict[str, str] | None = None,
-        registry: dict[str, AsyncRegistryHandler] | None = None,
-        reducers: dict[str, ReducerDefinition] | None = None,
-        prepared_subgraphs: dict[str, object] | None = None,
+        deployment: WorkflowDeployment | None = None,
+        artifact: WorkflowArtifact | None = None,
+        saved_subgraph_tree: SavedSubgraphTree | None = None,
     ) -> RunState:
         """Resume one interrupted raw workflow plan and return its run state."""
         ...

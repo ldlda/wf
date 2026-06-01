@@ -13,6 +13,7 @@ from .deployments import WorkflowDeploymentApi
 from .drafts import WorkflowDraftApi
 from .next_actions import NextActionPatchExample, NextActionTool, NextActions
 from .refs import WorkflowSurfaceCapabilityId, parse_workflow_surface_capability_id
+from .runs import WorkflowRunApi
 from .service import WorkflowApi
 from .wrapper_hints import (
     MissingDecision,
@@ -62,6 +63,7 @@ __all__ = [
     "WorkflowLiveSourceChecker",
     "WorkflowOperationContext",
     "WorkflowRuntimeRunner",
+    "WorkflowRunApi",
     "WorkflowSpecProvider",
     "WorkflowSurfaceCapabilityId",
     "WrapperAuthoringHints",

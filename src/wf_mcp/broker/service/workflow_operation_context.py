@@ -70,11 +70,42 @@ class WfMcpWorkflowRuntimeRunner(WorkflowRuntimeRunner):
 
     service: WfMcpService
 
-    async def run_workflow_from_plan(self, plan, **kwargs):
-        return await self.service.run_workflow_from_plan(plan, **kwargs)
+    async def run_workflow_from_plan(
+        self,
+        plan,
+        workflow_input,
+        deployment=None,
+        artifact=None,
+        saved_subgraph_tree=None,
+    ):
+        return await self.service.run_workflow_from_plan(
+            plan,
+            workflow_input,
+            deployment=deployment,
+            artifact=artifact,
+            saved_subgraph_tree=saved_subgraph_tree,
+        )
 
-    async def resume_workflow_from_plan(self, plan, **kwargs):
-        return await self.service.resume_workflow_from_plan(plan, **kwargs)
+    async def resume_workflow_from_plan(
+        self,
+        plan,
+        run,
+        *,
+        resume_payload,
+        resume_outcome,
+        deployment=None,
+        artifact=None,
+        saved_subgraph_tree=None,
+    ):
+        return await self.service.resume_workflow_from_plan(
+            plan,
+            run,
+            resume_payload=resume_payload,
+            resume_outcome=resume_outcome,
+            deployment=deployment,
+            artifact=artifact,
+            saved_subgraph_tree=saved_subgraph_tree,
+        )
 
 
 @dataclass(frozen=True, slots=True)
