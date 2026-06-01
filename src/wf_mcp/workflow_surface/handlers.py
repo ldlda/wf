@@ -61,7 +61,7 @@ from ..events import make_event
 from ..models import RawWorkflowPlan
 from ..shared import matches_query, paged_list_payload
 from .models import TraceRange
-from .next_actions import NextActions
+from wf_api.next_actions import NextActions
 from .saved_subgraphs import (
     SavedSubgraphTree,
     direct_wrapper_interrupt_diagnostic,
@@ -78,7 +78,7 @@ from .run_lifecycle import (
     restore_interrupted_run,
     validate_pinned_resume_environment,
 )
-from .wrapper_hints import (
+from wf_api.wrapper_hints import (
     workflow_output_schema_for_authoring,
     wrapper_hints_for_capability,
 )

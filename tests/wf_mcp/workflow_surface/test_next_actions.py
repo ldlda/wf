@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from wf_artifacts import DependencyDiagnostic, DiagnosticSeverity
 
-from wf_mcp.workflow_surface.next_actions import NextActionTool, NextActions
+from wf_api.next_actions import NextActionTool, NextActions
 
 
 def test_next_actions_from_high_confidence_wrapper_hints_can_validate() -> None:
@@ -146,3 +146,10 @@ def test_next_actions_from_interrupted_run_recommends_resume() -> None:
     assert dumped["recommended_next_tool"] == NextActionTool.RESUME_RUN.value
     assert "resume_run" in dumped["reason"]
     assert dumped["patch_examples"] == []
+
+
+def test_workflow_surface_next_actions_shim_reexports_canonical_model() -> None:
+    from wf_api.next_actions import NextActions
+    from wf_mcp.workflow_surface.next_actions import NextActions as NextActionsShim
+
+    assert NextActionsShim is NextActions

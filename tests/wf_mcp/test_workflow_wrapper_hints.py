@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from wf_mcp.workflow_surface.wrapper_hints import (
+from wf_api.wrapper_hints import (
     MissingDecision,
     MissingDecisionKind,
     OutcomeCandidate,
@@ -220,3 +220,12 @@ def test_wrapper_hints_mark_empty_output_schema_as_low_confidence() -> None:
     assert dumped["input_map"] == {"input.text": "text"}
     assert dumped["output_map"] == {}
     assert dumped["missing_decisions"][0]["kind"] == "choose_output_fields"
+
+
+def test_workflow_surface_wrapper_hints_shim_reexports_canonical_helper() -> None:
+    from wf_api.wrapper_hints import wrapper_hints_for_capability
+    from wf_mcp.workflow_surface.wrapper_hints import (
+        wrapper_hints_for_capability as wrapper_hints_for_capability_shim,
+    )
+
+    assert wrapper_hints_for_capability_shim is wrapper_hints_for_capability

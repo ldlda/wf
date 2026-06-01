@@ -4,7 +4,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, Field
 
-from .next_actions import NextActionPatchExample, NextActions
+from wf_api.next_actions import NextActionPatchExample, NextActions
 from wf_artifacts import ArtifactKind
 from wf_artifacts.draft_workspaces.models import WORKSPACE_ID_PATTERN
 from wf_core.models.steps import InputBinding, OutputBinding
