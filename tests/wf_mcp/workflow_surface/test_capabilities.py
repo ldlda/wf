@@ -11,7 +11,6 @@ from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 from ..test_support import echo_tool, local_temp_root
 from .conftest import (
     ContentOnlyOutputAdapter,
-    echo_artifact,
     failing_tool,
     handlers,
 )
@@ -21,30 +20,13 @@ def test_workflow_surface_lists_planner_visible_capabilities() -> None:
     h = handlers(FileWorkflowArtifactStore(local_temp_root() / "surface_caps"))
 
     payload = asyncio.run(h.list_capabilities(limit=2))
-    names = [capability["name"] for capability in payload["capabilities"]]
     first = payload["capabilities"][0]
 
-    assert len(names) == 2
+    assert len(payload["capabilities"]) == 2
     assert payload["total"] >= 2
     assert payload["next_cursor"] == "2"
-    assert "description" in first
-    assert "source_id" in first
     assert first["kind"] == "node_spec"
-    assert "input_fields" in first
-    assert "output_fields" in first
     assert "input_schema" not in first
-    assert "wf.admin.list_sources" not in names
-
-
-def test_workflow_surface_filters_stdlib_capabilities_by_source() -> None:
-    h = handlers(FileWorkflowArtifactStore(local_temp_root() / "surface_filtered_caps"))
-
-    payload = asyncio.run(h.list_capabilities(source_id="wf.std", query="truthy"))
-
-    assert [capability["name"] for capability in payload["capabilities"]] == [
-        "wf.std.truthy"
-    ]
-    assert payload["capabilities"][0]["source_id"] == "wf.std"
 
 
 def test_workflow_surface_call_capability_returns_structured_error() -> None:
@@ -76,36 +58,6 @@ def test_workflow_surface_call_capability_returns_structured_error() -> None:
     assert payload["diagnostics"][0]["severity"] == "error"
     assert "demo.personal.failing_tool" in payload["diagnostics"][0]["message"]
     assert "upstream exploded" in payload["diagnostics"][0]["message"]
-
-
-def test_workflow_surface_lists_saved_wrapper_capabilities() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "surface_wrapper_caps"
-    )
-    artifact_store.save_artifact(
-        echo_artifact().model_copy(
-            update={
-                "id": "echo_wrapper",
-                "kind": "wrapper",
-                "description": "Reusable echo wrapper.",
-            }
-        )
-    )
-    artifact_store.save_artifact(echo_artifact())
-    h = handlers(artifact_store)
-
-    payload = asyncio.run(h.list_capabilities(source_id="workflow", query="echo"))
-
-    names = [capability["name"] for capability in payload["capabilities"]]
-    assert names == ["workflow.echo_wrapper.v1"]
-    assert payload["capabilities"][0]["source_id"] == "workflow"
-    assert payload["capabilities"][0]["kind"] == "wrapper_artifact"
-    assert payload["capabilities"][0]["artifact_id"] == "echo_wrapper"
-    assert payload["capabilities"][0]["version"] == 1
-    assert payload["capabilities"][0]["title"] == "Echo"
-    assert payload["capabilities"][0]["outcomes"] == ["completed"]
-    assert payload["capabilities"][0]["input_fields"] == ["text"]
-    assert payload["capabilities"][0]["output_fields"] == ["echoed"]
 
 
 def test_workflow_surface_inspects_one_capability() -> None:
@@ -141,33 +93,6 @@ def test_workflow_surface_inspect_capability_includes_wrapper_hints() -> None:
     assert hints["input_map"] == {"input.text": "text"}
     assert hints["output_map"] == {"echoed": "state.echoed"}
     assert hints["outcome_policy"] == "preserve_declared"
-
-
-def test_workflow_surface_inspects_saved_wrapper_capability() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "surface_inspect_wrapper_cap"
-    )
-    artifact_store.save_artifact(
-        echo_artifact().model_copy(update={"id": "echo_wrapper", "kind": "wrapper"})
-    )
-    h = handlers(artifact_store)
-
-    payload = asyncio.run(
-        h.inspect_capability(qualified_name="workflow.echo_wrapper.v1")
-    )
-
-    assert payload["name"] == "workflow.echo_wrapper.v1"
-    assert payload["source_id"] == "workflow"
-    assert payload["kind"] == "wrapper_artifact"
-    assert payload["artifact_id"] == "echo_wrapper"
-    assert payload["outcomes"] == ["completed"]
-    assert "input_schema" in payload
-    hints = payload["wrapper_hints"]
-    assert hints["capability_name"] == "workflow.echo_wrapper.v1"
-    assert hints["declared_outcomes"] == ["completed"]
-    assert hints["suggested_wrapper_outcomes"] == ["completed"]
-    assert hints["input_map"] == {"input.text": "text"}
-    assert hints["output_map"] == {"echoed": "state.echoed"}
 
 
 def test_workflow_surface_does_not_auto_map_raw_mcp_content_blocks() -> None:

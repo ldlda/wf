@@ -108,6 +108,67 @@ def test_create_draft_workspace_creates_workspace() -> None:
 
     assert result["workspace_id"] == "echo_ws"
     assert result["revision"] == 1
+    fetched = asyncio.run(
+        api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
+    )
+    assert fetched["workspace_id"] == "echo_ws"
+    assert fetched["title"] == "Echo Workspace"
+    assert fetched["draft"]["steps"]["echo"]["use"] == "demo.personal.echo_tool"
+
+
+def test_list_draft_workspaces_returns_sorted_summaries_without_drafts() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "drafts_list_workspaces"
+    )
+    api, _service = _draft_api(artifact_store)
+    asyncio.run(
+        api.create_draft_workspace(
+            workspace_id="b_draft",
+            title="B Draft",
+            draft=_echo_draft(),
+        )
+    )
+    asyncio.run(
+        api.create_draft_workspace(
+            workspace_id="a_draft",
+            title="A Draft",
+            draft=_echo_draft(),
+        )
+    )
+
+    result = asyncio.run(api.list_draft_workspaces())
+
+    assert [workspace["workspace_id"] for workspace in result["workspaces"]] == [
+        "a_draft",
+        "b_draft",
+    ]
+    assert result["workspaces"][0]["title"] == "A Draft"
+    assert "draft" not in result["workspaces"][0]
+
+
+def test_delete_draft_workspace_is_idempotent() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "drafts_delete_workspace"
+    )
+    api, _service = _draft_api(artifact_store)
+    asyncio.run(
+        api.create_draft_workspace(
+            workspace_id="echo_ws",
+            draft=_echo_draft(),
+        )
+    )
+
+    deleted = asyncio.run(api.delete_draft_workspace(workspace_id="echo_ws"))
+    deleted_again = asyncio.run(api.delete_draft_workspace(workspace_id="echo_ws"))
+    listed = asyncio.run(api.list_draft_workspaces())
+
+    assert deleted["workspace_id"] == "echo_ws"
+    assert deleted["deleted"] is True
+    assert deleted["status"] == "deleted"
+    assert deleted_again["workspace_id"] == "echo_ws"
+    assert deleted_again["deleted"] is False
+    assert deleted_again["status"] == "not_found"
+    assert listed["workspaces"] == []
 
 
 def test_patch_draft_workspace_updates_revision() -> None:
@@ -132,6 +193,74 @@ def test_patch_draft_workspace_updates_revision() -> None:
 
     assert patched["revision"] == 2
     assert patched["status"] == "valid"
+
+
+def test_draft_workspace_patch_helpers_update_revision_and_bindings() -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        local_temp_root() / "drafts_patch_helpers"
+    )
+    api, _service = _draft_api(artifact_store)
+    asyncio.run(
+        api.create_draft_workspace(
+            workspace_id="echo_ws",
+            draft=_echo_draft(),
+        )
+    )
+
+    named = asyncio.run(
+        api.set_draft_name(
+            workspace_id="echo_ws",
+            revision=1,
+            name="echo_v2",
+        )
+    )
+    routed = asyncio.run(
+        api.set_draft_route(
+            workspace_id="echo_ws",
+            revision=2,
+            step_id="echo",
+            outcome="error",
+            target="__end__",
+        )
+    )
+    input_mapped = asyncio.run(
+        api.set_step_input_map(
+            workspace_id="echo_ws",
+            revision=3,
+            step_id="echo",
+            input_map={"input.text": "message"},
+        )
+    )
+    output_mapped = asyncio.run(
+        api.set_step_output_map(
+            workspace_id="echo_ws",
+            revision=4,
+            step_id="echo",
+            output_map={"echoed": "state.echoed"},
+        )
+    )
+    fetched = asyncio.run(
+        api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
+    )
+
+    assert named["revision"] == 2
+    assert routed["revision"] == 3
+    assert input_mapped["revision"] == 4
+    assert output_mapped["revision"] == 5
+    assert fetched["draft"]["name"] == "echo_v2"
+    assert fetched["draft"]["routes"]["echo"]["error"] == "__end__"
+    assert fetched["draft"]["steps"]["echo"]["input"] == [
+        {
+            "target": {"root": "local", "parts": ["message"]},
+            "path": {"root": "input", "parts": ["text"]},
+        }
+    ]
+    assert fetched["draft"]["steps"]["echo"]["output"] == [
+        {
+            "source": {"root": "local", "parts": ["echoed"]},
+            "target": {"root": "state", "parts": ["echoed"]},
+        }
+    ]
 
 
 def test_validate_draft_workspace_refreshes_status() -> None:

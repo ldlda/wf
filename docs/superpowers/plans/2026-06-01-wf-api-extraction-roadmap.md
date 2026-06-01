@@ -442,6 +442,26 @@ Do not move `wf_mcp.shared.pagination` in this slice. It is still used by proxy
 tool search/listing code, so treating it as dead workflow-surface debt would be
 incorrect.
 
+### Post-5 Helper Cleanup: Workflow Surface Test Thinning
+
+Concrete plan:
+
+```text
+docs/superpowers/plans/2026-06-02-wf-mcp-workflow-surface-test-thinning.md
+```
+
+Intent:
+
+```text
+wf_api tests                 = canonical application behavior tests
+wf_mcp.workflow_surface tests = adapter/schema/live-source/integration smoke tests
+```
+
+Do not replace stronger workflow-surface integration tests with weaker unit
+tests. Only remove a handler test when an equal-or-stronger `wf_api` test exists
+and at least one handler-level smoke/delegation test still protects the adapter
+path.
+
 ### Candidate Moves
 
 ```text

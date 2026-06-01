@@ -157,6 +157,11 @@ def test_list_capabilities_includes_saved_wrapper() -> None:
     assert row["kind"] == "wrapper_artifact"
     assert row["artifact_id"] == "echo_wrapper"
     assert row["version"] == 1
+    assert row["title"] == "Echo"
+    assert row["description"] == "Reusable echo wrapper."
+    assert row["outcomes"] == ["completed"]
+    assert row["input_fields"] == ["text"]
+    assert row["output_fields"] == ["echoed"]
 
 
 def test_inspect_capability_saved_wrapper() -> None:
@@ -177,8 +182,15 @@ def test_inspect_capability_saved_wrapper() -> None:
     assert detail["kind"] == "wrapper_artifact"
     assert detail["artifact_id"] == "echo_wrapper"
     assert detail["outcomes"] == ["completed"]
+    assert "input_schema" in detail
+    assert detail["input_schema"]["properties"]["text"]["type"] == "string"
+    assert detail["output_schema"]["properties"]["echoed"]["type"] == "string"
     hints = detail["wrapper_hints"]
     assert hints["capability_name"] == "workflow.echo_wrapper.v1"
+    assert hints["declared_outcomes"] == ["completed"]
+    assert hints["suggested_wrapper_outcomes"] == ["completed"]
+    assert hints["input_map"] == {"input.text": "text"}
+    assert hints["output_map"] == {"echoed": "state.echoed"}
 
 
 def test_call_capability_saved_wrapper() -> None:
