@@ -20,7 +20,7 @@ from wf_api.models import RawWorkflowPlan
 from wf_api.runs import WorkflowRunApi
 
 from ..broker.service.workflow_operation_context import context_from_service
-from ..shared import paged_list_payload
+from wf_api.listing import paged_list_payload
 from .models import TraceRange
 
 if TYPE_CHECKING:

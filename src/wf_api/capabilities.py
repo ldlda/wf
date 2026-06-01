@@ -6,7 +6,6 @@ from typing import Any
 from wf_artifacts import (
     DependencyDiagnostic,
     DiagnosticSeverity,
-    RequiredCapability,
     WorkflowArtifact,
     WorkflowCapabilityRef,
 )
@@ -14,10 +13,13 @@ from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
 from wf_core.models.steps import InputBinding, OutputBinding
 from wf_core.paths import GraphSourcePath
-from wf_platform import CapabilitySource, page_items
+from wf_platform import CapabilitySource
 
+from .artifact_plans import raw_plan_from_artifact
+from .artifact_refs import artifact_capability_id
+from .capability_requirements import required_capability_payloads
 from .drafts import WorkflowDraftApi
-from .models import RawWorkflowPlan
+from .listing import matches_query, paged_list_payload
 from .next_actions import NextActions
 from .operation_context import WorkflowOperationContext
 from .refs import parse_workflow_surface_capability_id
@@ -28,51 +30,12 @@ from .wrapper_hints import (
 )
 
 
-def _matches_query(*values: object, query: str | None) -> bool:
-    if query is None:
-        return True
-    needle = query.strip().casefold()
-    if not needle:
-        return True
-    return any(needle in str(value).casefold() for value in values if value is not None)
-
-
-def _paged_list_payload(
-    key: str,
-    items: Sequence[dict[str, Any]],
-    *,
-    cursor: str | None,
-    limit: int,
-) -> dict[str, Any]:
-    page = page_items(items, cursor=cursor, limit=limit)
-    return {key: list(page.items), "next_cursor": page.next_cursor, "total": page.total}
-
-
 def _schema_field_names(schema: dict[str, Any]) -> list[str]:
     """Return top-level JSON object property names for compact discovery rows."""
     properties = schema.get("properties")
     if not isinstance(properties, dict):
         return []
     return sorted(str(name) for name in properties)
-
-
-def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
-    """Use the same stable name shape as workflow artifact catalog entries."""
-    return str(
-        WorkflowCapabilityRef(
-            artifact_id=artifact.id,
-            version=artifact.version,
-        )
-    )
-
-
-def _required_capability_payloads(
-    requirements: dict[str, RequiredCapability],
-) -> dict[str, dict[str, Any]]:
-    return {
-        name: capability.model_dump(mode="json")
-        for name, capability in sorted(requirements.items())
-    }
 
 
 def _source_id_for_capability(
@@ -84,33 +47,6 @@ def _source_id_for_capability(
         if qualified_name in source.capabilities.node_specs:
             return source.id
     return None
-
-
-def _raw_plan_from_artifact(artifact: WorkflowArtifact) -> RawWorkflowPlan:
-    """Validate the stored plan shape expected by the broker workflow runner."""
-    return RawWorkflowPlan.model_validate(
-        {
-            "name": _plan_field(artifact, "name"),
-            "input_schema": _plan_field(artifact, "input_schema"),
-            "state_schema": _plan_field(artifact, "state_schema"),
-            "output_schema": _plan_field(artifact, "output_schema"),
-            "outcomes": artifact.plan.get("outcomes", ["ok"]),
-            "output": artifact.plan.get("output", []),
-            "start": _plan_field(artifact, "start"),
-            "nodes": _plan_field(artifact, "nodes"),
-            "edges": _plan_field(artifact, "edges"),
-        }
-    )
-
-
-def _plan_field(artifact: WorkflowArtifact, field_name: str) -> Any:
-    try:
-        return artifact.plan[field_name]
-    except KeyError as exc:
-        raise ValueError(
-            f"workflow artifact {artifact.id}@{artifact.version} "
-            f"is missing plan field {field_name!r}"
-        ) from exc
 
 
 def _draft_name_from_capability(capability_name: str) -> str:
@@ -158,7 +94,7 @@ class WorkflowCapabilityApi:
             if source.enabled and source.visibility.planner
             if source_id is None or source.id == source_id
             for detail in source.as_inventory().capabilities.node_spec_details
-            if _matches_query(
+            if matches_query(
                 detail.name,
                 detail.description,
                 query=query,
@@ -168,7 +104,7 @@ class WorkflowCapabilityApi:
             self._wrapper_capability_summaries(query=query, source_id=source_id)
         )
         capabilities.sort(key=lambda capability: capability["name"])
-        return _paged_list_payload(
+        return paged_list_payload(
             "capabilities",
             capabilities,
             cursor=cursor,
@@ -298,8 +234,8 @@ class WorkflowCapabilityApi:
         for artifact in self.context.artifact_store.list_artifacts():
             if artifact.kind != "wrapper":
                 continue
-            name = _artifact_capability_id(artifact)
-            if not _matches_query(
+            name = artifact_capability_id(artifact)
+            if not matches_query(
                 name,
                 artifact.description,
                 query=query,
@@ -331,7 +267,7 @@ class WorkflowCapabilityApi:
         if artifact is None:
             return None
         return {
-            "name": _artifact_capability_id(artifact),
+            "name": artifact_capability_id(artifact),
             "source_id": "workflow",
             "kind": "wrapper_artifact",
             "artifact_id": artifact.id,
@@ -342,11 +278,11 @@ class WorkflowCapabilityApi:
             "is_async": True,
             "input_schema": artifact.input_schema,
             "output_schema": artifact.output_schema,
-            "required_capabilities": _required_capability_payloads(
+            "required_capabilities": required_capability_payloads(
                 artifact.required_capability_map()
             ),
             "wrapper_hints": wrapper_hints_for_capability(
-                capability_name=_artifact_capability_id(artifact),
+                capability_name=artifact_capability_id(artifact),
                 input_schema=artifact.input_schema,
                 output_schema=artifact.output_schema,
                 outcomes=list(artifact.outcomes),
@@ -368,7 +304,7 @@ class WorkflowCapabilityApi:
         # Direct capability calls remain wrapper-only. Full saved workflows run
         # through deployments, where native subgraph dependencies and bindings
         # are prepared before core execution.
-        plan = _raw_plan_from_artifact(artifact)
+        plan = raw_plan_from_artifact(artifact)
         deployment = None
         if deployment_id is not None:
             if self.context.artifact_store is None:
@@ -389,7 +325,7 @@ class WorkflowCapabilityApi:
             artifact=artifact,
         )
         return {
-            "qualified_name": _artifact_capability_id(artifact),
+            "qualified_name": artifact_capability_id(artifact),
             "source_id": "workflow",
             "kind": "wrapper_artifact",
             "deployment_id": deployment_id,

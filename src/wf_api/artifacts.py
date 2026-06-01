@@ -7,48 +7,21 @@ WorkflowOperationContext so this module stays protocol-neutral.
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import Any, TypeVar
+from typing import Any
 
 from wf_artifacts import (
     ArtifactKind,
     RequiredCapability,
     WorkflowArtifact,
-    WorkflowCapabilityRef,
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
 )
-from wf_platform import NodeSpecInventory, page_items
 
+from .artifact_refs import artifact_capability_id
+from .capability_requirements import observed_node_specs
 from .drafts import WorkflowDraftApi
+from .listing import matches_query, paged_list_payload
 from .models import RawWorkflowPlan
 from .operation_context import WorkflowOperationContext
-
-T = TypeVar("T")
-
-
-def _matches_query(*values: object, query: str | None) -> bool:
-    """Return whether a compact discovery row matches a human search query."""
-    if query is None:
-        return True
-    needle = query.strip().casefold()
-    if not needle:
-        return True
-    return any(needle in str(value).casefold() for value in values if value is not None)
-
-
-def _paged_list_payload(
-    key: str,
-    items: Sequence[T],
-    *,
-    cursor: str | None,
-    limit: int,
-) -> dict[str, Any]:
-    """Build the common workflow-surface list response shape."""
-    page = page_items(items, cursor=cursor, limit=limit)
-    return {
-        key: list(page.items),
-        "next_cursor": page.next_cursor,
-        "total": page.total,
-    }
 
 
 class WorkflowArtifactApi:
@@ -81,7 +54,7 @@ class WorkflowArtifactApi:
         deliberately stay summary-only. Use inspect/run tools for detail.
         """
         if self.context.artifact_store is None:
-            return _paged_list_payload("nodes", [], cursor=cursor, limit=limit)
+            return paged_list_payload("nodes", [], cursor=cursor, limit=limit)
         entries = [
             self.context.artifacts.workflow_artifact_catalog_entry(artifact).model_dump(
                 mode="json"
@@ -92,7 +65,7 @@ class WorkflowArtifactApi:
         entries = [
             entry
             for entry in entries
-            if _matches_query(
+            if matches_query(
                 entry.get("name"),
                 entry.get("artifact_id"),
                 entry.get("display_name"),
@@ -102,14 +75,14 @@ class WorkflowArtifactApi:
             )
         ]
         entries.sort(key=lambda entry: str(entry["name"]))
-        return _paged_list_payload("nodes", entries, cursor=cursor, limit=limit)
+        return paged_list_payload("nodes", entries, cursor=cursor, limit=limit)
 
     async def save_artifact(self, artifact: dict[str, Any]) -> dict[str, Any]:
         workflow_artifact = WorkflowArtifact.model_validate(artifact)
         self._artifact_store().save_artifact(workflow_artifact)
         self.context.events.record_workflow_event(
             "workflow_artifact_saved",
-            capability_id=_artifact_capability_id(workflow_artifact),
+            capability_id=artifact_capability_id(workflow_artifact),
             payload={
                 "artifact_id": workflow_artifact.id,
                 "version": workflow_artifact.version,
@@ -153,13 +126,13 @@ class WorkflowArtifactApi:
                 for name, capability in (required_capabilities or {}).items()
             },
             source_bindings=source_bindings,
-            observed_node_specs=_observed_node_specs(self.context),
+            observed_node_specs=observed_node_specs(self.context),
             created_from_catalog_version=created_from_catalog_version,
         )
         self._artifact_store().save_artifact(workflow_artifact)
         self.context.events.record_workflow_event(
             "workflow_artifact_saved",
-            capability_id=_artifact_capability_id(workflow_artifact),
+            capability_id=artifact_capability_id(workflow_artifact),
             payload={
                 "artifact_id": workflow_artifact.id,
                 "version": workflow_artifact.version,
@@ -202,13 +175,13 @@ class WorkflowArtifactApi:
                 for name, capability in (required_capabilities or {}).items()
             },
             source_bindings=source_bindings,
-            observed_node_specs=_observed_node_specs(self.context),
+            observed_node_specs=observed_node_specs(self.context),
             created_from_catalog_version=created_from_catalog_version,
         )
         self._artifact_store().save_artifact(workflow_artifact)
         self.context.events.record_workflow_event(
             "workflow_artifact_saved",
-            capability_id=_artifact_capability_id(workflow_artifact),
+            capability_id=artifact_capability_id(workflow_artifact),
             payload={
                 "artifact_id": workflow_artifact.id,
                 "version": workflow_artifact.version,
@@ -303,48 +276,11 @@ class WorkflowArtifactApi:
         return artifact.model_dump(mode="json")
 
 
-def _required_capability_payloads(
-    requirements: dict[str, RequiredCapability],
-) -> dict[str, dict[str, Any]]:
-    return {
-        name: capability.model_dump(mode="json")
-        for name, capability in sorted(requirements.items())
-    }
-
-
 def _suggested_self_bindings(required_sources: Sequence[str]) -> dict[str, str]:
     """Suggest local bindings for built-in sources that deploy to themselves."""
     return {
         source: source for source in required_sources if source in {"wf.std", "wf.mcp"}
     }
-
-
-def _observed_node_specs(
-    context: WorkflowOperationContext,
-) -> dict[str, NodeSpecInventory]:
-    """Project current executable specs into serializable observed contracts."""
-    observed: dict[str, NodeSpecInventory] = {}
-    for source in context.capability_sources.values():
-        inventory = source.as_inventory()
-        observed.update(
-            {detail.name: detail for detail in inventory.capabilities.node_spec_details}
-        )
-    return observed
-
-
-def _plan_nodes(artifact: WorkflowArtifact) -> list[dict[str, Any]]:
-    nodes = artifact.plan.get("nodes", [])
-    return [node for node in nodes if isinstance(node, dict)]
-
-
-def _artifact_capability_id(artifact: WorkflowArtifact) -> str:
-    """Use the same stable name shape as workflow artifact catalog entries."""
-    return str(
-        WorkflowCapabilityRef(
-            artifact_id=artifact.id,
-            version=artifact.version,
-        )
-    )
 
 
 __all__ = [

@@ -11,8 +11,8 @@ from wf_artifacts import (
 )
 from wf_core import RunState
 
+from .artifact_plans import raw_plan_from_artifact
 from .deployments import WorkflowDeploymentApi, _available_sources
-from .models import RawWorkflowPlan
 from .next_actions import NextActions
 from .run_lifecycle import (
     create_pinned_environment,
@@ -68,7 +68,7 @@ class WorkflowRunApi:
                 diagnostics=diagnostics,
             )
 
-        plan = _raw_plan_from_artifact(artifact)
+        plan = raw_plan_from_artifact(artifact)
         run = await self.context.runtime.run_workflow_from_plan(
             plan,
             workflow_input,
@@ -148,7 +148,7 @@ class WorkflowRunApi:
                 diagnostics=diagnostics,
                 trace_count=len(stopped_run.trace),
             )
-        plan = _raw_plan_from_artifact(environment.root_artifact)
+        plan = raw_plan_from_artifact(environment.root_artifact)
         tree = saved_subgraph_tree_from_snapshots(environment.child_artifacts)
         run = await self.context.runtime.resume_workflow_from_plan(
             plan,
@@ -235,33 +235,6 @@ class WorkflowRunApi:
             trace_limit=trace_range.limit,
             trace_truncated=len(run.trace) > end,
         )
-
-
-def _raw_plan_from_artifact(artifact: WorkflowArtifact) -> RawWorkflowPlan:
-    """Validate the stored plan shape expected by the broker workflow runner."""
-    return RawWorkflowPlan.model_validate(
-        {
-            "name": _plan_field(artifact, "name"),
-            "input_schema": _plan_field(artifact, "input_schema"),
-            "state_schema": _plan_field(artifact, "state_schema"),
-            "output_schema": _plan_field(artifact, "output_schema"),
-            "outcomes": artifact.plan.get("outcomes", ["ok"]),
-            "output": artifact.plan.get("output", []),
-            "start": _plan_field(artifact, "start"),
-            "nodes": _plan_field(artifact, "nodes"),
-            "edges": _plan_field(artifact, "edges"),
-        }
-    )
-
-
-def _plan_field(artifact: WorkflowArtifact, field_name: str) -> Any:
-    try:
-        return artifact.plan[field_name]
-    except KeyError as exc:
-        raise ValueError(
-            f"workflow artifact {artifact.id}@{artifact.version} "
-            f"is missing plan field {field_name!r}"
-        ) from exc
 
 
 def _run_payload(

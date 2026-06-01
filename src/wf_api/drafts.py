@@ -5,11 +5,8 @@ from typing import Any
 
 from wf_artifacts import (
     DraftWorkspaceStore,
-    RequiredCapability,
-    WorkflowArtifact,
     compile_workflow_draft,
     create_draft_workspace as create_draft_workspace_record,
-    create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
     get_draft_workspace as get_draft_workspace_record,
     patch_draft_workspace as patch_draft_workspace_record,
     patch_workflow_draft,
@@ -22,8 +19,11 @@ from wf_core.models.steps import (
     OutputBinding,
 )
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
-from wf_platform import CapabilityRef, NodeSpecInventory
 
+from .capability_requirements import (
+    required_capabilities_for_plan,
+    required_capability_payloads,
+)
 from .constants import (
     DEFAULT_CALL_STEP_ID,
     DEFAULT_ERROR_OUTCOME,
@@ -68,8 +68,8 @@ class WorkflowDraftApi:
         plan = compile_workflow_draft(draft)
         return {
             "compiled_plan": plan,
-            "required_capabilities": _required_capability_payloads(
-                _required_capabilities_for_plan(
+            "required_capabilities": required_capability_payloads(
+                required_capabilities_for_plan(
                     plan,
                     source_bindings=None,
                     context=self.context,
@@ -303,65 +303,6 @@ class WorkflowDraftApi:
             title=title,
             draft=draft,
         )
-
-
-def _required_capabilities_for_plan(
-    plan: dict[str, Any],
-    *,
-    source_bindings: dict[str, str] | None,
-    context: WorkflowOperationContext,
-) -> dict[str, RequiredCapability]:
-    """Infer a draft dependency summary without persisting an artifact."""
-    artifact = build_workflow_artifact_from_plan(
-        artifact_id="draft_preview",
-        version=1,
-        title="Draft Preview",
-        plan=plan,
-        outcomes=("completed",),
-        source_bindings=source_bindings,
-        observed_node_specs=_observed_node_specs(context),
-    )
-    requirements = artifact.required_capability_map()
-    for node in _plan_nodes(artifact):
-        raw_ref = node.get("node")
-        if not isinstance(raw_ref, str) or raw_ref in requirements:
-            continue
-        try:
-            parsed = CapabilityRef.parse(raw_ref)
-        except ValueError:
-            continue
-        requirements[raw_ref] = RequiredCapability(
-            ref=parsed,
-            kind="node_spec",
-        )
-    return requirements
-
-
-def _required_capability_payloads(
-    requirements: dict[str, RequiredCapability],
-) -> dict[str, dict[str, Any]]:
-    return {
-        name: capability.model_dump(mode="json")
-        for name, capability in sorted(requirements.items())
-    }
-
-
-def _observed_node_specs(
-    context: WorkflowOperationContext,
-) -> dict[str, NodeSpecInventory]:
-    """Project current executable specs into serializable observed contracts."""
-    observed: dict[str, NodeSpecInventory] = {}
-    for source in context.capability_sources.values():
-        inventory = source.as_inventory()
-        observed.update(
-            {detail.name: detail for detail in inventory.capabilities.node_spec_details}
-        )
-    return observed
-
-
-def _plan_nodes(artifact: WorkflowArtifact) -> list[dict[str, Any]]:
-    nodes = artifact.plan.get("nodes", [])
-    return [node for node in nodes if isinstance(node, dict)]
 
 
 def _draft_input_maps(

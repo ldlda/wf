@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .listing import matches_query, paged_list_payload
 from .artifacts import WorkflowArtifactApi
 from .backend import TraceRange, WorkflowApiBackend
 from .capabilities import WorkflowCapabilityApi
@@ -41,6 +42,8 @@ from .runtime_dependencies import RuntimeDependencies, resolve_runtime_dependenc
 
 __all__ = [
     "DEFAULT_CALL_STEP_ID",
+    "matches_query",
+    "paged_list_payload",
     "DEFAULT_ERROR_OUTCOME",
     "DEFAULT_ERROR_STEP_ID",
     "DEFAULT_OK_OUTCOME",
