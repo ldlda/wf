@@ -37,6 +37,13 @@ implementation state.
    - Source inventory distinguishes external sources, local workflow-facing
      sources, docs/resources, and admin-only control surfaces.
 
+6. **Workflow API seam**
+   - `wf_api.WorkflowApi` is now the process-local application-facing workflow
+     API used by both CLI commands and MCP workflow tools.
+   - `wf_api` imports no `wf_mcp` modules. The current adapter,
+     `WfMcpWorkflowApiBackend`, still wraps the existing MCP service stack while
+     later slices extract protocol-neutral logic behind that seam.
+
 ## Runtime and Platform Roadmap
 
 - Scheduler foundation decision record:
@@ -99,6 +106,11 @@ implementation state.
   `wf.workflow.run_deployment` remains the dependable front door.
 - **Dashboard/source controls**: future UI should consume the same source
   inventory and deployment metadata instead of reverse-engineering MCP tools.
+- **Workflow API extraction**: continue the staged extraction in
+  [wf_api extraction roadmap](./superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md).
+  The next useful slice is naming/documentation cleanup around
+  `WorkflowSurfaceHandlers` versus `wf_api.WorkflowApi`, before moving helper
+  modules or splitting the large operation implementation.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 

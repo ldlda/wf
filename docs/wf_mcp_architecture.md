@@ -26,6 +26,8 @@ relevant concern package directly.
 
 ## Dependency Rules
 
+- `wf_api` is the process-local workflow application API. `wf_mcp` may import
+  and adapt it; `wf_api` must not import `wf_mcp`.
 - `wf_mcp.sdk` should not import `wf_core` or `wf_authoring`.
 - `wf_mcp.proxy` should not import `wf_mcp.workflow`.
 - `wf_mcp.workflow` is the only layer that converts MCP capabilities into node specs.
@@ -33,6 +35,30 @@ relevant concern package directly.
 - `wf_mcp.control` should not know about live MCP clients or workflow execution.
 - `wf_mcp.shared` should stay pure and should not import other `wf_mcp` concern packages.
 - Root compatibility shims should stay thin: import and re-export only.
+
+## Workflow API Boundary
+
+Workflow lifecycle operations now have a protocol-neutral front door:
+
+```text
+wf_cli ─┐
+        ├──> wf_api.WorkflowApi ───> WorkflowApiBackend
+wf_mcp ─┘
+```
+
+The current backend is `wf_mcp.broker.service.WfMcpWorkflowApiBackend`, which
+wraps the existing `wf_mcp.workflow_surface.WorkflowSurfaceHandlers`. That
+handler class still contains most workflow-surface logic and still depends on
+`WfMcpService`; it is kept for compatibility and incremental extraction.
+
+New code should treat `wf_api.WorkflowApi` as the application-facing API. Do not
+add new callers that import `WorkflowSurfaceHandlers` directly unless they are
+inside the MCP backend adapter or compatibility tests.
+
+This is a dependency-direction cleanup, not a full domain split. Most API
+methods still mirror the old workflow-surface payloads and return
+`dict[str, Any]`. Stronger domain models and helper-module moves belong in later
+`wf_api` extraction slices.
 
 ## Broker Catalogs
 
