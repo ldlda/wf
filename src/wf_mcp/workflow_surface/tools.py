@@ -7,9 +7,10 @@ from pydantic import Field
 
 from wf_artifacts import ArtifactKind
 from wf_artifacts.models import RequiredCapability
+from wf_api import WorkflowApi
+from wf_api.backend import TraceRange as ApiTraceRange
 from wf_mcp.broker.service import WfMcpService
-
-from .handlers import WorkflowSurfaceHandlers
+from wf_mcp.broker.service.workflow_api_backend import WfMcpWorkflowApiBackend
 from .models import (
     CallCapabilityResult,
     CreateArtifactFromWorkspaceRequest,
@@ -36,7 +37,10 @@ from .models import (
 
 def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None:
     """Register stable workflow tools on the public MCP server surface."""
-    handlers = WorkflowSurfaceHandlers(service)
+    handlers = WorkflowApi(WfMcpWorkflowApiBackend(service))
+
+    def _to_api_trace_range(tr: TraceRange) -> ApiTraceRange:
+        return ApiTraceRange(start=tr.start, limit=tr.limit)
 
     @server.tool(
         name="wf.workflow.list_artifacts",
@@ -665,7 +669,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
             await handlers.run_deployment(
                 deployment_id=deployment_id,
                 workflow_input=workflow_input,
-                trace_range=trace_range,
+                trace_range=_to_api_trace_range(trace_range) if trace_range is not None else None,
             )
         )
 
@@ -697,7 +701,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 run_id=run_id,
                 resume_payload=resume_payload,
                 resume_outcome=resume_outcome,
-                trace_range=trace_range,
+                trace_range=_to_api_trace_range(trace_range) if trace_range is not None else None,
             )
         )
 
@@ -734,6 +738,6 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         return RunDeploymentResult.model_validate(
             await handlers.read_run_trace(
                 run_id=run_id,
-                trace_range=trace_range,
+                trace_range=_to_api_trace_range(trace_range),
             )
         )

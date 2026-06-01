@@ -8,7 +8,7 @@ import typer
 
 from wf_cli.context import config_path_from_context, load_cli_context
 from wf_cli.io import CliInputError, emit_json, parse_json_input
-from wf_mcp.workflow_surface import TraceRange
+from wf_api.backend import TraceRange
 
 app = typer.Typer(
     name="run",

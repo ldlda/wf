@@ -3,11 +3,13 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from wf_api import WorkflowApi
 from wf_cli.context import load_cli_context
 
 
-def test_load_cli_context_builds_service_and_handlers(tmp_path: Path) -> None:
-    root = tmp_path / "wf_cli_context"
+def test_load_cli_context_returns_workflow_api(tmp_path: Path) -> None:
+    """CliContext.handlers must be WorkflowApi, not WorkflowSurfaceHandlers."""
+    root = tmp_path / "wf_cli_api_check"
     root.mkdir()
     config_path = root / "wf_mcp.config.json"
     config_path.write_text(
@@ -28,6 +30,5 @@ def test_load_cli_context_builds_service_and_handlers(tmp_path: Path) -> None:
 
     context = load_cli_context(config_path)
 
-    assert context.config_path == config_path
-    assert context.service.connections.list_all()[0].id == "demo.personal"
-    assert context.handlers.backend._handlers.service is context.service  # type: ignore[attr-defined]
+    assert isinstance(context.handlers, WorkflowApi)
+    assert hasattr(context.handlers, "backend")

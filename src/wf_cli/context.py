@@ -5,9 +5,10 @@ from pathlib import Path
 
 import typer
 
+from wf_api import WorkflowApi
 from wf_mcp.broker import build_service_from_config, load_broker_config
 from wf_mcp.broker.service import WfMcpService
-from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
+from wf_mcp.broker.service.workflow_api_backend import WfMcpWorkflowApiBackend
 
 
 @dataclass(frozen=True)
@@ -22,7 +23,7 @@ class CliContext:
 
     config_path: Path
     service: WfMcpService
-    handlers: WorkflowSurfaceHandlers
+    handlers: WorkflowApi
 
 
 def config_path_from_context(ctx: typer.Context) -> str:
@@ -40,5 +41,5 @@ def load_cli_context(config_path: str | Path) -> CliContext:
     return CliContext(
         config_path=resolved_config_path,
         service=service,
-        handlers=WorkflowSurfaceHandlers(service),
+        handlers=WorkflowApi(WfMcpWorkflowApiBackend(service)),
     )
