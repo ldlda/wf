@@ -5,7 +5,8 @@ from typing import Any
 from wf_authoring import node
 from wf_core import END
 from wf_mcp.capabilities import DiscoveredTool
-from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
+from wf_api.models import RawWorkflowPlan
+from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.sdk import ToolCallResult
 
 from ..test_support import (

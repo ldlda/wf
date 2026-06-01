@@ -29,7 +29,7 @@ from .conftest import (
 
 
 def test_raw_workflow_plan_uses_core_step_and_edge_models() -> None:
-    from wf_mcp.models import RawWorkflowPlan
+    from wf_api.models import RawWorkflowPlan
 
     plan = RawWorkflowPlan.model_validate(echo_artifact().plan)
 

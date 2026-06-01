@@ -27,7 +27,8 @@ from wf_core import (
     execute_workflow_result_async,
     resume_workflow_result_async,
 )
-
+from wf_api.models import RawWorkflowPlan
+from wf_api.runtime_dependencies import resolve_runtime_dependencies
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -47,7 +48,6 @@ from ...models import (
     CatalogSnapshot,
     BrokerConfig,
     ConnectionConfig,
-    RawWorkflowPlan,
 )
 from ...sdk import BackendAdapter
 from ...runtime import ToolExecutor
@@ -55,7 +55,6 @@ from ...shared.errors import error_payload
 from ...shared.names import RESERVED_CONNECTION_IDS
 from ...storage import Store
 from ...workflow.wrappers import _model_from_schema
-from wf_api.runtime_dependencies import resolve_runtime_dependencies
 from ...workflow_surface.saved_subgraphs import (
     SavedSubgraphTree,
     prepare_saved_subgraphs,

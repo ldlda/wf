@@ -4,8 +4,9 @@ from typing import Any
 
 from mcp.server.fastmcp import FastMCP
 
+from wf_api.models import RawWorkflowPlan
+
 from ..workflow_surface import WorkflowSurfaceHandlers
-from ..models import RawWorkflowPlan
 from .service import WfMcpService
 
 
