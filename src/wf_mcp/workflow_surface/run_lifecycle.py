@@ -26,7 +26,7 @@ from wf_core import (
     load_run_state,
 )
 
-from .saved_subgraphs import SavedSubgraphTree
+from wf_api.saved_subgraphs import SavedSubgraphTree
 
 
 def create_pinned_environment(

@@ -55,7 +55,7 @@ from ...shared.errors import error_payload
 from ...shared.names import RESERVED_CONNECTION_IDS
 from ...storage import Store
 from ...workflow.wrappers import _model_from_schema
-from ...workflow_surface.saved_subgraphs import (
+from wf_api.saved_subgraphs import (
     SavedSubgraphTree,
     prepare_saved_subgraphs,
     resolve_saved_subgraph_tree,
