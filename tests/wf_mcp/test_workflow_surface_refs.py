@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from wf_api.refs import parse_workflow_surface_capability_id
 from wf_artifacts import WorkflowCapabilityRef
-from wf_mcp.workflow_surface.refs import parse_workflow_surface_capability_id
+from wf_mcp.workflow_surface.refs import (
+    parse_workflow_surface_capability_id as parse_workflow_surface_capability_id_shim,
+)
 from wf_platform import CapabilityRef
 
 
@@ -46,3 +49,17 @@ def test_workflow_surface_capability_id_parses_structural_saved_wrapper_ref() ->
 
     assert isinstance(capability, WorkflowCapabilityRef)
     assert str(capability) == "workflow.echo_wrapper.v2"
+
+
+def test_workflow_surface_refs_shim_reexports_canonical_parser() -> None:
+    assert parse_workflow_surface_capability_id_shim is parse_workflow_surface_capability_id
+
+
+def test_workflow_surface_constants_shim_reexports_canonical_literals() -> None:
+    from wf_api.constants import DEFAULT_CALL_STEP_ID
+    from wf_mcp.workflow_surface.constants import (
+        DEFAULT_CALL_STEP_ID as DEFAULT_CALL_STEP_ID_SHIM,
+    )
+
+    assert DEFAULT_CALL_STEP_ID_SHIM == DEFAULT_CALL_STEP_ID
+

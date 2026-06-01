@@ -1,10 +1,16 @@
-"""Shared workflow-surface literals used by generated draft helpers."""
+"""Compatibility shim for workflow API constants.
 
-DEFAULT_CALL_STEP_ID = "call"
-DEFAULT_ERROR_STEP_ID = "tool_error"
-DEFAULT_OK_OUTCOME = "ok"
-DEFAULT_ERROR_OUTCOME = "error"
-RUNTIME_ERROR_CAPABILITY = "wf.std.runtime_error"
+New code should import these literals from `wf_api.constants`. This module stays
+so older MCP workflow-surface imports keep working during extraction.
+"""
+
+from wf_api.constants import (
+    DEFAULT_CALL_STEP_ID,
+    DEFAULT_ERROR_OUTCOME,
+    DEFAULT_ERROR_STEP_ID,
+    DEFAULT_OK_OUTCOME,
+    RUNTIME_ERROR_CAPABILITY,
+)
 
 __all__ = [
     "DEFAULT_CALL_STEP_ID",
