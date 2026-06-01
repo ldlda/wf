@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from wf_artifacts import DependencyDiagnostic, WorkflowArtifact, WorkflowDeployment
 from wf_api.operation_context import (
     WorkflowArtifactCataloger,
     WorkflowEventRecorder,
@@ -11,8 +13,10 @@ from wf_api.operation_context import (
     WorkflowRuntimeRunner,
     WorkflowSpecProvider,
 )
+from wf_mcp.events import make_event
 
 from .core import WfMcpService
+from .workflow_live_checks import live_source_diagnostics
 
 
 @dataclass(frozen=True, slots=True)
@@ -23,6 +27,17 @@ class WfMcpWorkflowEventRecorder(WorkflowEventRecorder):
 
     def record_event(self, event: Any) -> None:
         self.service._record_event(event)  # noqa: SLF001
+
+    def record_workflow_event(
+        self,
+        event_type: str,
+        *,
+        capability_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        self.service._record_event(  # noqa: SLF001
+            make_event(event_type, capability_id=capability_id, payload=payload)
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,20 +79,21 @@ class WfMcpWorkflowRuntimeRunner(WorkflowRuntimeRunner):
 
 @dataclass(frozen=True, slots=True)
 class WfMcpWorkflowLiveSourceChecker(WorkflowLiveSourceChecker):
-    """Placeholder live source checker while Slice 4A only defines the seam.
-
-    See `docs/superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md`.
-    Real live source checks still live in workflow handlers until a later
-    capability-domain extraction can move them without dragging MCP adapters
-    into `wf_api`.
-    """
+    """Adapter-owned live source checker backed by WfMcpService."""
 
     service: WfMcpService
 
-    async def available_sources(self) -> list[object]:
-        # Existing live source availability logic still lives near handlers.
-        # Slice 4A only creates the seam; it does not move live-check behavior.
-        return []
+    async def deployment_diagnostics(
+        self,
+        *,
+        deployment: WorkflowDeployment,
+        artifacts: Sequence[WorkflowArtifact],
+    ) -> list[DependencyDiagnostic]:
+        return await live_source_diagnostics(
+            self.service,
+            deployment=deployment,
+            artifacts=artifacts,
+        )
 
 
 def context_from_service(service: WfMcpService) -> WorkflowOperationContext:

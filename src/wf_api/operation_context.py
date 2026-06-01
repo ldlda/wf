@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any, Protocol
 
 from wf_artifacts import (
+    DependencyDiagnostic,
     DraftWorkspaceStore,
     RunStore,
     WorkflowArtifact,
     WorkflowArtifactCatalogEntry,
     WorkflowArtifactStore,
+    WorkflowDeployment,
 )
 from wf_authoring import AsyncRegistryHandler
 from wf_core import RunState
@@ -23,7 +25,17 @@ class WorkflowEventRecorder(Protocol):
     """Records workflow lifecycle events without exposing MCP event types."""
 
     def record_event(self, event: object) -> None:
-        """Record one event object supplied by an adapter-owned event factory."""
+        """Record one adapter-native event object."""
+        ...
+
+    def record_workflow_event(
+        self,
+        event_type: str,
+        *,
+        capability_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        """Record one workflow lifecycle event by protocol-neutral fields."""
         ...
 
 
@@ -85,8 +97,13 @@ class WorkflowRuntimeRunner(Protocol):
 class WorkflowLiveSourceChecker(Protocol):
     """Optional hook for validating live external source availability."""
 
-    async def available_sources(self) -> list[object]:
-        """Return source availability records understood by the caller."""
+    async def deployment_diagnostics(
+        self,
+        *,
+        deployment: WorkflowDeployment,
+        artifacts: Sequence[WorkflowArtifact],
+    ) -> list[DependencyDiagnostic]:
+        """Return opt-in live-source diagnostics for a deployment tree."""
         ...
 
 

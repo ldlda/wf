@@ -74,3 +74,25 @@ def test_context_from_service_delegates_specs_and_events(tmp_path: Path) -> None
     operation_context.events.record_event(event)
 
     assert cli_context.service.list_events()[-1] is event
+
+
+def test_context_from_service_record_workflow_event(tmp_path: Path) -> None:
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps({"store_root": ".wf_mcp_store", "connections": []}),
+        encoding="utf-8",
+    )
+    cli_context = load_cli_context(config_path)
+    operation_context = context_from_service(cli_context.service)
+
+    operation_context.events.record_workflow_event(
+        "workflow_artifact_saved",
+        capability_id="workflow.demo.v1",
+        payload={"artifact_id": "demo", "version": 1},
+    )
+
+    recorded = cli_context.service.list_events()[-1]
+    assert recorded.kind == "workflow_artifact_saved"
+    assert recorded.capability_id == "workflow.demo.v1"
+    assert recorded.payload["artifact_id"] == "demo"
+    assert recorded.payload["version"] == 1

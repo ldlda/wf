@@ -1,14 +1,8 @@
 from __future__ import annotations
 
-import asyncio
 from collections.abc import Sequence
 from dataclasses import asdict
 from typing import TYPE_CHECKING, Any
-
-import anyio
-import httpx
-from mcp.client.streamable_http import StreamableHTTPError
-from mcp.shared.exceptions import McpError
 
 from wf_artifacts import (
     ArtifactKind,
@@ -22,14 +16,9 @@ from wf_artifacts import (
     WorkflowArtifact,
     WorkflowCapabilityRef,
     WorkflowDeployment,
-    compile_workflow_draft,
-    create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
-    validate_deployment_dependencies,
 )
 from wf_platform import (
-    CapabilityRef,
     CapabilitySource,
-    NodeSpecInventory,
     hash_json_schema,
 )
 from wf_authoring import build_async_registry
@@ -40,25 +29,22 @@ from wf_core.models.steps import (
 )
 from wf_core.paths import GraphSourcePath
 
+from wf_api.artifacts import WorkflowArtifactApi
+from wf_api.deployments import WorkflowDeploymentApi
 from wf_api.drafts import WorkflowDraftApi
 from wf_api.models import RawWorkflowPlan
 from wf_api.next_actions import NextActions
 from wf_api.refs import parse_workflow_surface_capability_id
 from wf_api.saved_subgraphs import (
-    SavedSubgraphTree,
     direct_wrapper_interrupt_diagnostic,
-    resolve_saved_subgraph_tree,
     saved_subgraph_tree_from_snapshots,
-    validate_saved_subgraph_tree,
 )
 from wf_api.wrapper_hints import (
     workflow_output_schema_for_authoring,
     wrapper_hints_for_capability,
 )
 
-from ..broker.service.adapters import require_adapter
 from ..broker.service.workflow_operation_context import context_from_service
-from ..events import make_event
 from ..shared import matches_query, paged_list_payload
 from .models import TraceRange
 from wf_api.run_lifecycle import (
@@ -69,19 +55,6 @@ from wf_api.run_lifecycle import (
     persist_stopped_run,
     restore_interrupted_run,
     validate_pinned_resume_environment,
-)
-
-LIVE_SOURCE_CHECK_TIMEOUT_SECONDS = 8.0
-_LIVE_SOURCE_CHECK_FAILURES = (
-    KeyError,
-    TimeoutError,
-    OSError,
-    anyio.ClosedResourceError,
-    anyio.EndOfStream,
-    anyio.BrokenResourceError,
-    httpx.HTTPError,
-    McpError,
-    StreamableHTTPError,
 )
 
 if TYPE_CHECKING:
@@ -95,7 +68,10 @@ class WorkflowSurfaceHandlers:
 
     def __init__(self, service: WfMcpService) -> None:
         self.service = service
-        self._drafts = WorkflowDraftApi(context_from_service(service))
+        context = context_from_service(service)
+        self._drafts = WorkflowDraftApi(context)
+        self._artifacts = WorkflowArtifactApi(context)
+        self._deployments = WorkflowDeploymentApi(context)
 
     async def list_artifacts(
         self,
@@ -112,27 +88,12 @@ class WorkflowSurfaceHandlers:
         """
         if self.service.artifact_store is None:
             return paged_list_payload("nodes", [], cursor=cursor, limit=limit)
-        entries = [
-            self.service.workflow_artifact_catalog_entry(artifact).model_dump(
-                mode="json"
-            )
-            for artifact in self.service.artifact_store.list_artifacts()
-            if kind is None or artifact.kind == kind
-        ]
-        entries = [
-            entry
-            for entry in entries
-            if matches_query(
-                entry.get("name"),
-                entry.get("artifact_id"),
-                entry.get("display_name"),
-                entry.get("description"),
-                entry.get("kind"),
-                query=query,
-            )
-        ]
-        entries.sort(key=lambda entry: str(entry["name"]))
-        return paged_list_payload("nodes", entries, cursor=cursor, limit=limit)
+        return await self._artifacts.list_artifacts(
+            query=query,
+            kind=kind,
+            cursor=cursor,
+            limit=limit,
+        )
 
     async def list_capabilities(
         self,
@@ -406,23 +367,7 @@ class WorkflowSurfaceHandlers:
     async def save_artifact(self, artifact: dict[str, Any]) -> dict[str, Any]:
         if self.service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
-        workflow_artifact = WorkflowArtifact.model_validate(artifact)
-        self.service.artifact_store.save_artifact(workflow_artifact)
-        self.service._record_event(
-            make_event(
-                "workflow_artifact_saved",
-                capability_id=_artifact_capability_id(workflow_artifact),
-                payload={
-                    "artifact_id": workflow_artifact.id,
-                    "version": workflow_artifact.version,
-                },
-            )
-        )
-        return {
-            "artifact_id": workflow_artifact.id,
-            "version": workflow_artifact.version,
-            "saved": True,
-        }
+        return await self._artifacts.save_artifact(artifact)
 
     async def create_artifact_from_plan(
         self,
@@ -440,44 +385,18 @@ class WorkflowSurfaceHandlers:
     ) -> dict[str, Any]:
         if self.service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
-        typed_plan = (
-            plan
-            if isinstance(plan, RawWorkflowPlan)
-            else RawWorkflowPlan.model_validate(plan)
-        )
-        workflow_artifact = build_workflow_artifact_from_plan(
+        return await self._artifacts.create_artifact_from_plan(
             artifact_id=artifact_id,
             version=version,
             title=title,
+            plan=plan,
+            outcomes=outcomes,
             kind=kind,
             description=description,
-            plan=typed_plan.model_dump(mode="json", by_alias=True),
-            outcomes=tuple(outcomes),
-            required_capabilities={
-                name: RequiredCapability.model_validate(capability)
-                for name, capability in (required_capabilities or {}).items()
-            },
+            required_capabilities=required_capabilities,
             source_bindings=source_bindings,
-            observed_node_specs=_observed_node_specs(self.service),
             created_from_catalog_version=created_from_catalog_version,
         )
-        self.service.artifact_store.save_artifact(workflow_artifact)
-        self.service._record_event(
-            make_event(
-                "workflow_artifact_saved",
-                capability_id=_artifact_capability_id(workflow_artifact),
-                payload={
-                    "artifact_id": workflow_artifact.id,
-                    "version": workflow_artifact.version,
-                    "created_from_plan": True,
-                },
-            )
-        )
-        return {
-            "artifact_id": workflow_artifact.id,
-            "version": workflow_artifact.version,
-            "saved": True,
-        }
 
     async def validate_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
         return await self._drafts.validate_draft(draft=draft)
@@ -501,48 +420,18 @@ class WorkflowSurfaceHandlers:
     ) -> dict[str, Any]:
         if self.service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
-        plan = compile_workflow_draft(draft)
-        workflow_artifact = build_workflow_artifact_from_plan(
+        return await self._artifacts.create_artifact_from_draft(
             artifact_id=artifact_id,
             version=version,
             title=title,
+            draft=draft,
+            outcomes=outcomes,
             kind=kind,
             description=description,
-            plan=plan,
-            outcomes=tuple(outcomes),
-            required_capabilities={
-                name: RequiredCapability.model_validate(capability)
-                for name, capability in (required_capabilities or {}).items()
-            },
+            required_capabilities=required_capabilities,
             source_bindings=source_bindings,
-            observed_node_specs=_observed_node_specs(self.service),
             created_from_catalog_version=created_from_catalog_version,
         )
-        self.service.artifact_store.save_artifact(workflow_artifact)
-        self.service._record_event(
-            make_event(
-                "workflow_artifact_saved",
-                capability_id=_artifact_capability_id(workflow_artifact),
-                payload={
-                    "artifact_id": workflow_artifact.id,
-                    "version": workflow_artifact.version,
-                    "created_from_draft": True,
-                },
-            )
-        )
-        required_sources = sorted(
-            {
-                capability.logical_source
-                for capability in workflow_artifact.required_capability_map().values()
-            }
-        )
-        return {
-            "artifact_id": workflow_artifact.id,
-            "version": workflow_artifact.version,
-            "saved": True,
-            "required_logical_sources": required_sources,
-            "suggested_bindings": _suggested_self_bindings(required_sources),
-        }
 
     async def patch_draft(
         self,
@@ -756,24 +645,16 @@ class WorkflowSurfaceHandlers:
         source_bindings: dict[str, str] | None = None,
         created_from_catalog_version: str | None = None,
     ) -> dict[str, Any]:
-        workspace = self._draft_store().get_workspace(workspace_id)
-        validation = await self.validate_draft(draft=workspace.draft)
-        if validation["status"] != "valid":
-            return {
-                "saved": False,
-                "workspace_id": workspace_id,
-                "revision": workspace.revision,
-                "status": validation["status"],
-                "diagnostics": validation["diagnostics"],
-            }
-        return await self.create_artifact_from_draft(
+        if self.service.artifact_store is None:
+            raise KeyError("workflow artifact store is not configured")
+        return await self._artifacts.create_artifact_from_workspace(
+            workspace_id=workspace_id,
             artifact_id=artifact_id,
             version=version,
             title=title,
+            outcomes=outcomes,
             kind=kind,
             description=description,
-            draft=workspace.draft,
-            outcomes=outcomes,
             required_capabilities=required_capabilities,
             source_bindings=source_bindings,
             created_from_catalog_version=created_from_catalog_version,
@@ -793,13 +674,14 @@ class WorkflowSurfaceHandlers:
         created_from_catalog_version: str | None = None,
     ) -> dict[str, Any]:
         """Save the current draft workspace as a callable wrapper artifact."""
-        return await self.create_artifact_from_workspace(
+        if self.service.artifact_store is None:
+            raise KeyError("workflow artifact store is not configured")
+        return await self._artifacts.create_wrapper_from_workspace(
             workspace_id=workspace_id,
             artifact_id=artifact_id,
             version=version,
             title=title,
             outcomes=outcomes,
-            kind="wrapper",
             description=description,
             required_capabilities=required_capabilities,
             source_bindings=source_bindings,
@@ -811,62 +693,35 @@ class WorkflowSurfaceHandlers:
     ) -> dict[str, Any]:
         if self.service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
-        artifact = self.service.artifact_store.get_artifact(artifact_id, version)
-        return artifact.model_dump(mode="json")
+        return await self._artifacts.inspect_artifact(
+            artifact_id=artifact_id,
+            version=version,
+        )
 
     async def list_deployments(self) -> dict[str, Any]:
         if self.service.artifact_store is None:
             return {"deployments": []}
-        return {
-            "deployments": [
-                _deployment_summary(deployment)
-                for deployment in self.service.artifact_store.list_deployments()
-            ]
-        }
+        return await self._deployments.list_deployments()
 
     async def inspect_deployment(self, *, deployment_id: str) -> dict[str, Any]:
         if self.service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
-        return self.service.artifact_store.get_deployment(deployment_id).model_dump(
-            mode="json"
+        return await self._deployments.inspect_deployment(
+            deployment_id=deployment_id,
         )
 
     async def save_deployment(self, deployment: dict[str, Any]) -> dict[str, Any]:
         if self.service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
-        workflow_deployment = WorkflowDeployment.model_validate(deployment)
-        self.service.artifact_store.save_deployment(workflow_deployment)
-        self.service._record_event(
-            make_event(
-                "workflow_deployment_saved",
-                capability_id=f"deployment.{workflow_deployment.id}",
-                payload={
-                    "deployment_id": workflow_deployment.id,
-                    "artifact_id": workflow_deployment.artifact_id,
-                    "artifact_version": workflow_deployment.artifact_version,
-                },
-            )
-        )
-        return {
-            "deployment_id": workflow_deployment.id,
-            "artifact_id": workflow_deployment.artifact_id,
-            "artifact_version": workflow_deployment.artifact_version,
-            "saved": True,
-        }
+        return await self._deployments.save_deployment(deployment)
 
     async def delete_deployment(self, *, deployment_id: str) -> dict[str, Any]:
         """Delete one mutable deployment environment binding."""
         if self.service.artifact_store is None:
             raise KeyError("workflow artifact store is not configured")
-        self.service.artifact_store.delete_deployment(deployment_id)
-        self.service._record_event(
-            make_event(
-                "workflow_deployment_deleted",
-                capability_id=f"deployment.{deployment_id}",
-                payload={"deployment_id": deployment_id},
-            )
+        return await self._deployments.delete_deployment(
+            deployment_id=deployment_id,
         )
-        return {"deployment_id": deployment_id, "deleted": True}
 
     async def validate_deployment(
         self,
@@ -874,30 +729,12 @@ class WorkflowSurfaceHandlers:
         deployment_id: str,
         live_check: bool = False,
     ) -> dict[str, Any]:
-        deployment, artifact, diagnostics, tree = self._deployment_validation(
-            deployment_id
+        if self.service.artifact_store is None:
+            raise KeyError("workflow artifact store is not configured")
+        return await self._deployments.validate_deployment(
+            deployment_id=deployment_id,
+            live_check=live_check,
         )
-        if live_check:
-            diagnostics.extend(
-                await _live_source_diagnostics(
-                    self.service,
-                    deployment=deployment,
-                    artifacts=[artifact, *tree.artifacts_by_ref.values()],
-                )
-            )
-        return {
-            "deployment_id": deployment.id,
-            "artifact_id": artifact.id,
-            "artifact_version": artifact.version,
-            "status": "unrunnable" if diagnostics else "runnable",
-            "diagnostics": [
-                diagnostic.model_dump(mode="json") for diagnostic in diagnostics
-            ],
-            "next_actions": NextActions.from_deployment_validation(
-                deployment_id=deployment.id,
-                diagnostics=diagnostics,
-            ).model_dump(mode="json"),
-        }
 
     async def run_deployment(
         self,
@@ -906,7 +743,7 @@ class WorkflowSurfaceHandlers:
         workflow_input: dict[str, Any],
         trace_range: TraceRange | None = None,
     ) -> dict[str, Any]:
-        deployment, artifact, diagnostics, tree = self._deployment_validation(
+        deployment, artifact, diagnostics, tree = self._deployments.deployment_validation(
             deployment_id
         )
         if diagnostics:
@@ -1091,41 +928,6 @@ class WorkflowSurfaceHandlers:
             raise KeyError("workflow run store is not configured")
         return self.service.run_store
 
-    def _deployment_validation(
-        self,
-        deployment_id: str,
-    ) -> tuple[
-        WorkflowDeployment,
-        WorkflowArtifact,
-        list[DependencyDiagnostic],
-        SavedSubgraphTree,
-    ]:
-        if self.service.artifact_store is None:
-            raise KeyError("workflow artifact store is not configured")
-        deployment = self.service.artifact_store.get_deployment(deployment_id)
-        artifact = self.service.artifact_store.get_artifact(
-            deployment.artifact_id,
-            deployment.artifact_version,
-        )
-        available_sources = _available_sources(self.service)
-        diagnostics = validate_deployment_dependencies(
-            artifact=artifact,
-            deployment=deployment,
-            sources=available_sources,
-        )
-        tree = resolve_saved_subgraph_tree(
-            root_artifact=artifact,
-            artifact_store=self.service.artifact_store,
-        )
-        diagnostics.extend(
-            validate_saved_subgraph_tree(
-                tree=tree,
-                deployment=deployment,
-                sources=available_sources,
-            )
-        )
-        return deployment, artifact, diagnostics, tree
-
 
 def _available_sources(service: WfMcpService) -> list[AvailableSource]:
     """Convert broker capability sources into artifact validation snapshots."""
@@ -1166,102 +968,6 @@ def _available_sources(service: WfMcpService) -> list[AvailableSource]:
     return sources
 
 
-async def _live_source_diagnostics(
-    service: WfMcpService,
-    *,
-    deployment: WorkflowDeployment,
-    artifacts: Sequence[WorkflowArtifact],
-) -> list[DependencyDiagnostic]:
-    """Return opt-in diagnostics for bound upstream sources that cannot answer.
-
-    Static deployment validation only checks the last known source catalog.
-    This probe intentionally performs live upstream I/O, so MCP tools keep it
-    disabled by default and only run it when the caller asks for liveness.
-    """
-    diagnostics: list[DependencyDiagnostic] = []
-    for source_id, logical_ref in _required_live_sources(deployment, artifacts).items():
-        source = service.capability_sources.get(source_id)
-        if (
-            source is None
-            or not source.enabled
-            or not source.permissions.calls_upstream
-        ):
-            continue
-        try:
-            connection = service.connections.get(source_id)
-            adapter = require_adapter(connection, service.adapters)
-            auth = service.load_auth(source_id)
-            await asyncio.wait_for(
-                adapter.list_tools(connection, auth),
-                timeout=LIVE_SOURCE_CHECK_TIMEOUT_SECONDS,
-            )
-        except _LIVE_SOURCE_CHECK_FAILURES as exc:
-            diagnostics.append(
-                DependencyDiagnostic(
-                    severity=DiagnosticSeverity.ERROR,
-                    code="source_unreachable",
-                    logical_ref=logical_ref,
-                    bound_source=source_id,
-                    message=(
-                        f"Live check for upstream source {source_id!r} failed: "
-                        f"{type(exc).__name__}: {exc}"
-                    ),
-                    repair_hint=(
-                        "Start or reconnect the source, fix its transport/auth "
-                        "configuration, or bind this deployment to another source."
-                    ),
-                )
-            )
-    return diagnostics
-
-
-def _required_live_sources(
-    deployment: WorkflowDeployment,
-    artifacts: Sequence[WorkflowArtifact],
-) -> dict[str, str]:
-    """Return concrete upstream source ids to live-check, with one logical ref."""
-    bindings = deployment.binding_map()
-    required: dict[str, str] = {}
-    for artifact in artifacts:
-        for logical_ref, capability in artifact.required_capability_map().items():
-            source_id = bindings.get(capability.logical_source)
-            if source_id is not None:
-                required.setdefault(source_id, logical_ref)
-    return required
-
-
-def _required_capabilities_for_plan(
-    plan: dict[str, Any],
-    *,
-    source_bindings: dict[str, str] | None,
-    service: WfMcpService,
-) -> dict[str, RequiredCapability]:
-    """Infer a draft dependency summary without persisting an artifact."""
-    artifact = build_workflow_artifact_from_plan(
-        artifact_id="draft_preview",
-        version=1,
-        title="Draft Preview",
-        plan=plan,
-        outcomes=("completed",),
-        source_bindings=source_bindings,
-        observed_node_specs=_observed_node_specs(service),
-    )
-    requirements = artifact.required_capability_map()
-    for node in _plan_nodes(artifact):
-        raw_ref = node.get("node")
-        if not isinstance(raw_ref, str) or raw_ref in requirements:
-            continue
-        try:
-            parsed = CapabilityRef.parse(raw_ref)
-        except ValueError:
-            continue
-        requirements[raw_ref] = RequiredCapability(
-            ref=parsed,
-            kind="node_spec",
-        )
-    return requirements
-
-
 def _required_capability_payloads(
     requirements: dict[str, RequiredCapability],
 ) -> dict[str, dict[str, Any]]:
@@ -1269,24 +975,6 @@ def _required_capability_payloads(
         name: capability.model_dump(mode="json")
         for name, capability in sorted(requirements.items())
     }
-
-
-def _suggested_self_bindings(required_sources: Sequence[str]) -> dict[str, str]:
-    """Suggest local bindings for built-in sources that deploy to themselves."""
-    return {
-        source: source for source in required_sources if source in {"wf.std", "wf.mcp"}
-    }
-
-
-def _observed_node_specs(service: WfMcpService) -> dict[str, NodeSpecInventory]:
-    """Project current executable specs into serializable observed contracts."""
-    observed: dict[str, NodeSpecInventory] = {}
-    for source in service.capability_sources.values():
-        inventory = source.as_inventory()
-        observed.update(
-            {detail.name: detail for detail in inventory.capabilities.node_spec_details}
-        )
-    return observed
 
 
 def _schema_field_names(schema: dict[str, Any]) -> list[str]:
@@ -1361,11 +1049,6 @@ def _plan_field(artifact: WorkflowArtifact, field_name: str) -> Any:
         ) from exc
 
 
-def _plan_nodes(artifact: WorkflowArtifact) -> list[dict[str, Any]]:
-    nodes = artifact.plan.get("nodes", [])
-    return [node for node in nodes if isinstance(node, dict)]
-
-
 def _run_payload(
     *,
     deployment: WorkflowDeployment,
@@ -1427,14 +1110,3 @@ def _interrupt_payload(run: RunState) -> dict[str, Any] | None:
         if hasattr(workflow_ref, "model_dump"):
             route["workflow_ref"] = workflow_ref.model_dump(mode="json")
     return payload
-
-
-def _deployment_summary(deployment: WorkflowDeployment) -> dict[str, Any]:
-    """Return compact deployment metadata for progressive list responses."""
-    return {
-        "id": deployment.id,
-        "artifact_id": deployment.artifact_id,
-        "artifact_version": deployment.artifact_version,
-        "binding_count": len(deployment.binding_map()),
-        "drift_policy": deployment.drift_policy.value,
-    }

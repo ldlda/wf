@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .artifacts import WorkflowArtifactApi
 from .backend import TraceRange, WorkflowApiBackend
 from .constants import (
     DEFAULT_CALL_STEP_ID,
@@ -8,6 +9,7 @@ from .constants import (
     DEFAULT_OK_OUTCOME,
     RUNTIME_ERROR_CAPABILITY,
 )
+from .deployments import WorkflowDeploymentApi
 from .drafts import WorkflowDraftApi
 from .next_actions import NextActionPatchExample, NextActionTool, NextActions
 from .refs import WorkflowSurfaceCapabilityId, parse_workflow_surface_capability_id
@@ -52,7 +54,9 @@ __all__ = [
     "TraceRange",
     "WorkflowApi",
     "WorkflowApiBackend",
+    "WorkflowArtifactApi",
     "WorkflowArtifactCataloger",
+    "WorkflowDeploymentApi",
     "WorkflowDraftApi",
     "WorkflowEventRecorder",
     "WorkflowLiveSourceChecker",
