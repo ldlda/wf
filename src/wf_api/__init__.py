@@ -23,6 +23,15 @@ from .wrapper_hints import (
     wrapper_hints_for_capability,
 )
 
+from .operation_context import (
+    WorkflowArtifactCataloger,
+    WorkflowEventRecorder,
+    WorkflowLiveSourceChecker,
+    WorkflowOperationContext,
+    WorkflowRuntimeRunner,
+    WorkflowSpecProvider,
+)
+
 from .runtime_dependencies import RuntimeDependencies, resolve_runtime_dependencies
 
 __all__ = [
@@ -42,6 +51,12 @@ __all__ = [
     "TraceRange",
     "WorkflowApi",
     "WorkflowApiBackend",
+    "WorkflowArtifactCataloger",
+    "WorkflowEventRecorder",
+    "WorkflowLiveSourceChecker",
+    "WorkflowOperationContext",
+    "WorkflowRuntimeRunner",
+    "WorkflowSpecProvider",
     "WorkflowSurfaceCapabilityId",
     "WrapperAuthoringHints",
     "WrapperHintConfidence",

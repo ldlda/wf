@@ -273,6 +273,91 @@ async def list_capabilities(...):
     return await self.capabilities.list_capabilities(...)
 ```
 
+### Planned Domain Split Order
+
+After Slice 4A proves the operation-context seam, split method groups in small
+behavior-preserving slices:
+
+#### Slice 4B: Drafts First
+
+Move stateless draft and draft workspace operations first:
+
+```text
+validate_draft
+compile_draft
+patch_draft
+list_draft_workspaces
+create_draft_workspace
+get_draft_workspace
+delete_draft_workspace
+validate_draft_workspace
+patch_draft_workspace
+set_draft_name
+set_draft_route
+set_step_input_map
+set_step_output_map
+create_minimal_draft_workspace
+create_draft_workspace_from_capability
+```
+
+Reason: drafts mostly use the draft workspace store, workflow draft compiler,
+wrapper hints, and deterministic patch helpers. They have the lowest live-source
+and durable-runtime coupling.
+
+#### Slice 4C: Artifacts And Deployments
+
+Move saved artifact and deployment operations next:
+
+```text
+list_artifacts
+save_artifact
+create_artifact_from_plan
+create_artifact_from_draft
+create_artifact_from_workspace
+create_wrapper_from_workspace
+inspect_artifact
+list_deployments
+inspect_deployment
+save_deployment
+delete_deployment
+validate_deployment
+```
+
+Reason: this group is store-heavy and introduces dependency validation, saved
+subgraph tree resolution, and event recording. It should move only after drafts
+prove the context seam.
+
+#### Slice 4D: Runs
+
+Move run lifecycle operations after artifacts/deployments:
+
+```text
+run_deployment
+resume_run
+inspect_run
+read_run_trace
+```
+
+Reason: runs are runtime-sensitive. They touch durable checkpoints, pinned
+dependency environments, resume readiness, prepared saved subgraphs, trace
+slicing, and compact next-action guidance. This should not be the first method
+move.
+
+#### Slice 4E: Capabilities Last
+
+Move workflow capability operations last:
+
+```text
+list_capabilities
+inspect_capability
+call_capability
+```
+
+Reason: capabilities look simple but are the messiest boundary. They combine
+planner-visible source inventory, wrapper artifacts, direct wrapper calls,
+external live source calls, source visibility, and schema/wrapper hints. Keep
+them in the MCP-backed implementation until the other domain services are stable.
+
 ### If/Then
 
 - If the context starts mirroring all of `WfMcpService`, stop and split it into
