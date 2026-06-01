@@ -73,12 +73,12 @@ from ..broker.service.adapters import require_adapter
 from ..events import make_event
 from ..shared import matches_query, paged_list_payload
 from .models import TraceRange
-from .run_lifecycle import (
+from wf_api.run_lifecycle import (
     create_pinned_environment,
     has_blocking_diagnostics,
+    load_stored_run,
     mark_resume_blocked,
     persist_stopped_run,
-    load_stored_run,
     restore_interrupted_run,
     validate_pinned_resume_environment,
 )
