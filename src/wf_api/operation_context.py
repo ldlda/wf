@@ -13,6 +13,7 @@ from wf_artifacts import (
     WorkflowArtifactStore,
     WorkflowDeployment,
 )
+from wf_authoring import NodeSpec
 from wf_core import RunState
 from wf_platform import CapabilitySource
 
@@ -46,7 +47,7 @@ class WorkflowSpecProvider(Protocol):
         """Planner-visible capability sources keyed by source id."""
         ...
 
-    def get_qualified_spec(self, qualified_name: str) -> object:
+    def get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
         """Return the node spec for one fully qualified capability name."""
         ...
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .artifacts import WorkflowArtifactApi
 from .backend import TraceRange, WorkflowApiBackend
+from .capabilities import WorkflowCapabilityApi
 from .constants import (
     DEFAULT_CALL_STEP_ID,
     DEFAULT_ERROR_OUTCOME,
@@ -56,6 +57,7 @@ __all__ = [
     "WorkflowApi",
     "WorkflowApiBackend",
     "WorkflowArtifactApi",
+    "WorkflowCapabilityApi",
     "WorkflowArtifactCataloger",
     "WorkflowDeploymentApi",
     "WorkflowDraftApi",
