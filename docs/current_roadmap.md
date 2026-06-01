@@ -112,9 +112,11 @@ implementation state.
   inventory and deployment metadata instead of reverse-engineering MCP tools.
 - **Workflow API extraction**: continue the staged extraction in
   [wf_api extraction roadmap](./superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md).
-  The next useful slice is splitting the large `WorkflowSurfaceHandlers`
-  implementation by domain behind `wf_api`, while leaving MCP tool schemas and
-  tool registration in `wf_mcp`.
+  The next useful slice is scaffolding a protocol-neutral operation context for
+  stores, capability sources, event recording, and live source calls. Only after
+  that seam exists should the large `WorkflowSurfaceHandlers` implementation be
+  split by domain behind `wf_api`; MCP tool schemas and tool registration stay
+  in `wf_mcp`.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 

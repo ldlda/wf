@@ -71,6 +71,13 @@ The remaining extraction work is the large operation implementation:
 deployment, and run methods. Split that implementation by domain only after the
 current helper shims are stable.
 
+Do not move those method bodies directly into `wf_api` while they still depend
+on the whole `WfMcpService`. The next extraction step should define a
+protocol-neutral operation context/protocol seam for stores, capability sources,
+event recording, and live source calls. MCP-owned code can adapt `WfMcpService`
+into that seam; domain services can then depend on the seam rather than on MCP
+service internals.
+
 ## Broker Catalogs
 
 The broker keeps two related catalog views:

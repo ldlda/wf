@@ -214,11 +214,40 @@ models. Move or split those only when the MCP schema boundary is clearer.
 
 Reduce the large `WorkflowApi` class after the package boundary is correct.
 
+### Slice 4A: Operation Context Scaffolding
+
+Do not move handler methods first. `WorkflowSurfaceHandlers` methods currently
+reach through `self.service` for stores, capability sources, events, live source
+calls, adapter lookup, and catalog helpers. Moving method bodies before defining
+that dependency surface would either make `wf_api` import `wf_mcp` or produce a
+fake split where every domain service still depends on the whole MCP service.
+
+First introduce a small protocol-neutral operation context in `wf_api`:
+
+```text
+src/wf_api/
+  operation_context.py  # protocols/dataclass for stores, sources, events, live calls
+```
+
+The exact names may change, but the context should answer these questions:
+
+- How does workflow API code access artifact, draft workspace, deployment, and run stores?
+- How does it read planner-visible `CapabilitySource` objects?
+- How does it record artifact/deployment/run lifecycle events without importing MCP event types?
+- How does it perform live source validation or live capability calls without importing MCP adapters/auth?
+- Which existing `WfMcpService` helpers are still required by moved domain methods?
+
+`WfMcpWorkflowApiBackend` or another MCP-owned adapter can build this context
+from `WfMcpService`. The context is scaffolding only: Slice 4A should not move
+capability/draft/artifact/deployment/run method bodies yet and should not change
+public payloads.
+
 ### Candidate Shape
 
 ```text
 src/wf_api/
   service.py        # facade that composes domain services
+  operation_context.py
   capabilities.py
   drafts.py
   artifacts.py
@@ -246,12 +275,20 @@ async def list_capabilities(...):
 
 ### If/Then
 
+- If the context starts mirroring all of `WfMcpService`, stop and split it into
+  smaller protocols rather than creating a new god object.
 - If callers benefit from flat methods, keep the facade flat and split internals only.
 - If domain APIs are clean enough, expose nested services later.
 - If a method spans domains, keep it in the facade until a better boundary appears.
+- If live source calls cannot be abstracted cleanly yet, leave capability
+  calling in the MCP backend and move drafts/artifacts first.
 
 ### Success Criteria
 
+- `wf_api` has an explicit operation context/protocol seam that imports no
+  `wf_mcp` modules.
+- `WfMcpWorkflowApiBackend` can adapt `WfMcpService` into that seam.
+- No workflow method behavior changes in Slice 4A.
 - Each domain file is readable on its own.
 - Public payloads remain unchanged.
 - `wf_cli` and `wf_mcp` do not care about the internal split.
