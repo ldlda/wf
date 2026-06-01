@@ -13,6 +13,7 @@ from wf_platform import (
 def build_local_documentation_source(repo_root: Path) -> CapabilitySource:
     """Load project manuals into a provider-neutral local documentation source."""
     docs_dir = repo_root / "docs"
+    skills_dir = repo_root / "skills"
     return build_documentation_source(
         [
             _markdown_resource(
@@ -52,6 +53,50 @@ def build_local_documentation_source(repo_root: Path) -> CapabilitySource:
                 uri="wf://docs/workflow-drafts",
                 title="Workflow Drafts",
                 description="Draft and workspace authoring model for workflows.",
+            ),
+            _markdown_resource(
+                path=skills_dir / "wf-workflow" / "SKILL.md",
+                name="wf.skills.wf_workflow.skill",
+                uri="wf://skills/wf-workflow/SKILL.md",
+                title="wf-workflow Skill",
+                description="Agent-facing workflow lifecycle skill entrypoint.",
+            ),
+            _markdown_resource(
+                path=skills_dir
+                / "wf-workflow"
+                / "references"
+                / "workflow-lifecycle.md",
+                name="wf.skills.wf_workflow.workflow_lifecycle",
+                uri="wf://skills/wf-workflow/references/workflow-lifecycle.md",
+                title="wf-workflow Workflow Lifecycle Reference",
+                description="Agent-facing workflow lifecycle and tool order.",
+            ),
+            _markdown_resource(
+                path=skills_dir
+                / "wf-workflow"
+                / "references"
+                / "capabilities-and-wrappers.md",
+                name="wf.skills.wf_workflow.capabilities_and_wrappers",
+                uri=("wf://skills/wf-workflow/references/capabilities-and-wrappers.md"),
+                title="wf-workflow Capabilities And Wrappers Reference",
+                description=(
+                    "Agent-facing raw capability, workflow capability, and "
+                    "wrapper guidance."
+                ),
+            ),
+            _markdown_resource(
+                path=skills_dir / "wf-workflow" / "references" / "draft-workspaces.md",
+                name="wf.skills.wf_workflow.draft_workspaces",
+                uri="wf://skills/wf-workflow/references/draft-workspaces.md",
+                title="wf-workflow Draft Workspaces Reference",
+                description="Agent-facing draft workspace authoring guidance.",
+            ),
+            _markdown_resource(
+                path=skills_dir / "wf-workflow" / "references" / "troubleshooting.md",
+                name="wf.skills.wf_workflow.troubleshooting",
+                uri="wf://skills/wf-workflow/references/troubleshooting.md",
+                title="wf-workflow Troubleshooting Reference",
+                description="Agent-facing workflow troubleshooting ladder.",
             ),
         ],
         prompts=[

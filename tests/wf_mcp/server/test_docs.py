@@ -28,6 +28,8 @@ def test_server_exposes_platform_documentation_resources() -> None:
             assert "wf://docs/operator-manual" in uris
             assert "wf://docs/workflow-capabilities" in uris
             assert "wf://docs/workflow-drafts" in uris
+            assert "wf://skills/wf-workflow/SKILL.md" in uris
+            assert "wf://skills/wf-workflow/references/workflow-lifecycle.md" in uris
 
             result = await client.read_resource("wf://docs/operator-manual")
             assert isinstance(result[0], mcp_types.TextResourceContents)
@@ -43,6 +45,13 @@ def test_server_exposes_platform_documentation_resources() -> None:
                 "Do not use step output `source` here" in drafts_result[0].text
                 or "Do not use `source` at top level" in drafts_result[0].text
             )
+
+            skill_result = await client.read_resource(
+                "wf://skills/wf-workflow/SKILL.md"
+            )
+            assert isinstance(skill_result[0], mcp_types.TextResourceContents)
+            assert "name: wf-workflow" in skill_result[0].text
+            assert "Workflow Lifecycle" in skill_result[0].text
 
     asyncio.run(run_proxy())
 
