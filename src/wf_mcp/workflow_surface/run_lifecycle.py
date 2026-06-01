@@ -5,6 +5,7 @@ This module re-exports every public symbol so that existing
 continue to work unchanged. New code should import from ``wf_api.run_lifecycle``
 directly.
 """
+
 from __future__ import annotations
 
 from wf_api.run_lifecycle import (

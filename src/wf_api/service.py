@@ -31,7 +31,10 @@ class WorkflowApi:
         limit: int = 50,
     ) -> dict[str, Any]:
         return await self.backend.list_capabilities(
-            query=query, source_id=source_id, cursor=cursor, limit=limit,
+            query=query,
+            source_id=source_id,
+            cursor=cursor,
+            limit=limit,
         )
 
     async def inspect_capability(
@@ -49,7 +52,9 @@ class WorkflowApi:
         deployment_id: str | None = None,
     ) -> dict[str, Any]:
         return await self.backend.call_capability(
-            qualified_name=qualified_name, payload=payload, deployment_id=deployment_id,
+            qualified_name=qualified_name,
+            payload=payload,
+            deployment_id=deployment_id,
         )
 
     # -- artifacts --
@@ -63,7 +68,10 @@ class WorkflowApi:
         limit: int = 50,
     ) -> dict[str, Any]:
         return await self.backend.list_artifacts(
-            query=query, kind=kind, cursor=cursor, limit=limit,
+            query=query,
+            kind=kind,
+            cursor=cursor,
+            limit=limit,
         )
 
     async def inspect_artifact(
@@ -73,7 +81,8 @@ class WorkflowApi:
         version: int,
     ) -> dict[str, Any]:
         return await self.backend.inspect_artifact(
-            artifact_id=artifact_id, version=version,
+            artifact_id=artifact_id,
+            version=version,
         )
 
     async def save_artifact(
@@ -225,7 +234,9 @@ class WorkflowApi:
         title: str | None = None,
     ) -> dict[str, Any]:
         return await self.backend.create_draft_workspace(
-            workspace_id=workspace_id, draft=draft, title=title,
+            workspace_id=workspace_id,
+            draft=draft,
+            title=title,
         )
 
     async def get_draft_workspace(
@@ -235,7 +246,8 @@ class WorkflowApi:
         include_draft: bool = False,
     ) -> dict[str, Any]:
         return await self.backend.get_draft_workspace(
-            workspace_id=workspace_id, include_draft=include_draft,
+            workspace_id=workspace_id,
+            include_draft=include_draft,
         )
 
     async def delete_draft_workspace(
@@ -260,7 +272,9 @@ class WorkflowApi:
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
         return await self.backend.patch_draft_workspace(
-            workspace_id=workspace_id, revision=revision, patch=patch,
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
         )
 
     async def set_draft_name(
@@ -271,7 +285,9 @@ class WorkflowApi:
         name: str,
     ) -> dict[str, Any]:
         return await self.backend.set_draft_name(
-            workspace_id=workspace_id, revision=revision, name=name,
+            workspace_id=workspace_id,
+            revision=revision,
+            name=name,
         )
 
     async def set_draft_route(
@@ -415,7 +431,8 @@ class WorkflowApi:
         live_check: bool = False,
     ) -> dict[str, Any]:
         return await self.backend.validate_deployment(
-            deployment_id=deployment_id, live_check=live_check,
+            deployment_id=deployment_id,
+            live_check=live_check,
         )
 
     # -- runs --
@@ -462,5 +479,6 @@ class WorkflowApi:
         trace_range: TraceRange,
     ) -> dict[str, Any]:
         return await self.backend.read_run_trace(
-            run_id=run_id, trace_range=trace_range,
+            run_id=run_id,
+            trace_range=trace_range,
         )

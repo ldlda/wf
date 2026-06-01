@@ -10,7 +10,9 @@ from wf_mcp.broker.service.workflow_operation_context import context_from_servic
 
 
 def test_wf_api_operation_context_imports_no_wf_mcp() -> None:
-    path = Path(__file__).resolve().parents[2] / "src" / "wf_api" / "operation_context.py"
+    path = (
+        Path(__file__).resolve().parents[2] / "src" / "wf_api" / "operation_context.py"
+    )
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
 
     violations: list[str] = []
@@ -49,9 +51,14 @@ def test_context_from_service_exposes_existing_store_objects(tmp_path: Path) -> 
 
     assert isinstance(operation_context, WorkflowOperationContext)
     assert operation_context.artifact_store is cli_context.service.artifact_store
-    assert operation_context.draft_workspace_store is cli_context.service.draft_workspace_store
+    assert (
+        operation_context.draft_workspace_store
+        is cli_context.service.draft_workspace_store
+    )
     assert operation_context.run_store is cli_context.service.run_store
-    assert operation_context.capability_sources is cli_context.service.capability_sources
+    assert (
+        operation_context.capability_sources is cli_context.service.capability_sources
+    )
 
 
 def test_context_from_service_delegates_specs_and_events(tmp_path: Path) -> None:

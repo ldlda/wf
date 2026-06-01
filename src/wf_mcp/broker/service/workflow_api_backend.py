@@ -32,7 +32,10 @@ class WfMcpWorkflowApiBackend:
         limit: int = 50,
     ) -> dict[str, Any]:
         return await self._handlers.list_capabilities(
-            query=query, source_id=source_id, cursor=cursor, limit=limit,
+            query=query,
+            source_id=source_id,
+            cursor=cursor,
+            limit=limit,
         )
 
     async def inspect_capability(
@@ -50,7 +53,9 @@ class WfMcpWorkflowApiBackend:
         deployment_id: str | None = None,
     ) -> dict[str, Any]:
         return await self._handlers.call_capability(
-            qualified_name=qualified_name, payload=payload, deployment_id=deployment_id,
+            qualified_name=qualified_name,
+            payload=payload,
+            deployment_id=deployment_id,
         )
 
     # -- artifacts --
@@ -64,7 +69,10 @@ class WfMcpWorkflowApiBackend:
         limit: int = 50,
     ) -> dict[str, Any]:
         return await self._handlers.list_artifacts(
-            query=query, kind=kind, cursor=cursor, limit=limit,
+            query=query,
+            kind=kind,
+            cursor=cursor,
+            limit=limit,
         )
 
     async def inspect_artifact(
@@ -74,7 +82,8 @@ class WfMcpWorkflowApiBackend:
         version: int,
     ) -> dict[str, Any]:
         return await self._handlers.inspect_artifact(
-            artifact_id=artifact_id, version=version,
+            artifact_id=artifact_id,
+            version=version,
         )
 
     async def save_artifact(
@@ -226,7 +235,9 @@ class WfMcpWorkflowApiBackend:
         title: str | None = None,
     ) -> dict[str, Any]:
         return await self._handlers.create_draft_workspace(
-            workspace_id=workspace_id, draft=draft, title=title,
+            workspace_id=workspace_id,
+            draft=draft,
+            title=title,
         )
 
     async def get_draft_workspace(
@@ -236,7 +247,8 @@ class WfMcpWorkflowApiBackend:
         include_draft: bool = False,
     ) -> dict[str, Any]:
         return await self._handlers.get_draft_workspace(
-            workspace_id=workspace_id, include_draft=include_draft,
+            workspace_id=workspace_id,
+            include_draft=include_draft,
         )
 
     async def delete_draft_workspace(
@@ -261,7 +273,9 @@ class WfMcpWorkflowApiBackend:
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
         return await self._handlers.patch_draft_workspace(
-            workspace_id=workspace_id, revision=revision, patch=patch,
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
         )
 
     async def set_draft_name(
@@ -272,7 +286,9 @@ class WfMcpWorkflowApiBackend:
         name: str,
     ) -> dict[str, Any]:
         return await self._handlers.set_draft_name(
-            workspace_id=workspace_id, revision=revision, name=name,
+            workspace_id=workspace_id,
+            revision=revision,
+            name=name,
         )
 
     async def set_draft_route(
@@ -416,7 +432,8 @@ class WfMcpWorkflowApiBackend:
         live_check: bool = False,
     ) -> dict[str, Any]:
         return await self._handlers.validate_deployment(
-            deployment_id=deployment_id, live_check=live_check,
+            deployment_id=deployment_id,
+            live_check=live_check,
         )
 
     # -- runs --
@@ -431,7 +448,9 @@ class WfMcpWorkflowApiBackend:
         return await self._handlers.run_deployment(
             deployment_id=deployment_id,
             workflow_input=workflow_input,
-            trace_range=_to_handler_trace_range(trace_range) if trace_range is not None else None,
+            trace_range=_to_handler_trace_range(trace_range)
+            if trace_range is not None
+            else None,
         )
 
     async def resume_run(
@@ -446,7 +465,9 @@ class WfMcpWorkflowApiBackend:
             run_id=run_id,
             resume_payload=resume_payload,
             resume_outcome=resume_outcome,
-            trace_range=_to_handler_trace_range(trace_range) if trace_range is not None else None,
+            trace_range=_to_handler_trace_range(trace_range)
+            if trace_range is not None
+            else None,
         )
 
     async def inspect_run(
@@ -463,5 +484,6 @@ class WfMcpWorkflowApiBackend:
         trace_range: ApiTraceRange,
     ) -> dict[str, Any]:
         return await self._handlers.read_run_trace(
-            run_id=run_id, trace_range=_to_handler_trace_range(trace_range),
+            run_id=run_id,
+            trace_range=_to_handler_trace_range(trace_range),
         )

@@ -297,12 +297,16 @@ set_draft_route
 set_step_input_map
 set_step_output_map
 create_minimal_draft_workspace
-create_draft_workspace_from_capability
 ```
 
 Reason: drafts mostly use the draft workspace store, workflow draft compiler,
 wrapper hints, and deterministic patch helpers. They have the lowest live-source
 and durable-runtime coupling.
+
+Leave `create_draft_workspace_from_capability` in the MCP-backed handler during
+4B. It depends on `inspect_capability`, wrapper hints, and capability source
+inspection, so it should move with either a small follow-up capability bootstrap
+slice or Slice 4E.
 
 #### Slice 4C: Artifacts And Deployments
 

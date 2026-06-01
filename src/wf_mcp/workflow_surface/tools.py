@@ -669,7 +669,9 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
             await handlers.run_deployment(
                 deployment_id=deployment_id,
                 workflow_input=workflow_input,
-                trace_range=_to_api_trace_range(trace_range) if trace_range is not None else None,
+                trace_range=_to_api_trace_range(trace_range)
+                if trace_range is not None
+                else None,
             )
         )
 
@@ -701,7 +703,9 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 run_id=run_id,
                 resume_payload=resume_payload,
                 resume_outcome=resume_outcome,
-                trace_range=_to_api_trace_range(trace_range) if trace_range is not None else None,
+                trace_range=_to_api_trace_range(trace_range)
+                if trace_range is not None
+                else None,
             )
         )
 

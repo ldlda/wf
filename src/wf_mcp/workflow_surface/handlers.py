@@ -23,12 +23,7 @@ from wf_artifacts import (
     WorkflowCapabilityRef,
     WorkflowDeployment,
     compile_workflow_draft,
-    create_draft_workspace as create_draft_workspace_record,
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
-    get_draft_workspace as get_draft_workspace_record,
-    patch_draft_workspace as patch_draft_workspace_record,
-    patch_workflow_draft,
-    validate_workflow_draft,
     validate_deployment_dependencies,
 )
 from wf_platform import (
@@ -41,19 +36,11 @@ from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
 from wf_core.models.steps import (
     InputBinding,
-    InputPathBinding,
-    InputValueBinding,
     OutputBinding,
 )
-from wf_core.paths import GraphSourcePath, LocalPath, StatePath
+from wf_core.paths import GraphSourcePath
 
-from wf_api.constants import (
-    DEFAULT_CALL_STEP_ID,
-    DEFAULT_ERROR_OUTCOME,
-    DEFAULT_ERROR_STEP_ID,
-    DEFAULT_OK_OUTCOME,
-    RUNTIME_ERROR_CAPABILITY,
-)
+from wf_api.drafts import WorkflowDraftApi
 from wf_api.models import RawWorkflowPlan
 from wf_api.next_actions import NextActions
 from wf_api.refs import parse_workflow_surface_capability_id
@@ -70,6 +57,7 @@ from wf_api.wrapper_hints import (
 )
 
 from ..broker.service.adapters import require_adapter
+from ..broker.service.workflow_operation_context import context_from_service
 from ..events import make_event
 from ..shared import matches_query, paged_list_payload
 from .models import TraceRange
@@ -107,6 +95,7 @@ class WorkflowSurfaceHandlers:
 
     def __init__(self, service: WfMcpService) -> None:
         self.service = service
+        self._drafts = WorkflowDraftApi(context_from_service(service))
 
     async def list_artifacts(
         self,
@@ -491,23 +480,10 @@ class WorkflowSurfaceHandlers:
         }
 
     async def validate_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
-        return validate_workflow_draft(
-            draft,
-            outcome_lookup=self._outcomes_for_capability,
-        )
+        return await self._drafts.validate_draft(draft=draft)
 
     async def compile_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
-        plan = compile_workflow_draft(draft)
-        return {
-            "compiled_plan": plan,
-            "required_capabilities": _required_capability_payloads(
-                _required_capabilities_for_plan(
-                    plan,
-                    source_bindings=None,
-                    service=self.service,
-                )
-            ),
-        }
+        return await self._drafts.compile_draft(draft=draft)
 
     async def create_artifact_from_draft(
         self,
@@ -574,7 +550,7 @@ class WorkflowSurfaceHandlers:
         draft: dict[str, Any],
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        return patch_workflow_draft(draft, patch)
+        return await self._drafts.patch_draft(draft=draft, patch=patch)
 
     def _draft_store(self) -> DraftWorkspaceStore:
         if self.service.draft_workspace_store is None:
@@ -583,13 +559,7 @@ class WorkflowSurfaceHandlers:
 
     async def list_draft_workspaces(self) -> dict[str, Any]:
         """Return compact summaries for stored draft workspaces."""
-        store = self._draft_store()
-        return {
-            "workspaces": [
-                get_draft_workspace_record(store, workspace_id=workspace.id)
-                for workspace in store.list_workspaces()
-            ]
-        }
+        return await self._drafts.list_draft_workspaces()
 
     async def create_draft_workspace(
         self,
@@ -598,8 +568,7 @@ class WorkflowSurfaceHandlers:
         draft: dict[str, Any],
         title: str | None = None,
     ) -> dict[str, Any]:
-        return create_draft_workspace_record(
-            self._draft_store(),
+        return await self._drafts.create_draft_workspace(
             workspace_id=workspace_id,
             draft=draft,
             title=title,
@@ -611,33 +580,17 @@ class WorkflowSurfaceHandlers:
         workspace_id: str,
         include_draft: bool = False,
     ) -> dict[str, Any]:
-        return get_draft_workspace_record(
-            self._draft_store(),
+        return await self._drafts.get_draft_workspace(
             workspace_id=workspace_id,
             include_draft=include_draft,
         )
 
     async def delete_draft_workspace(self, *, workspace_id: str) -> dict[str, Any]:
-        deleted = self._draft_store().delete_workspace(workspace_id)
-        return {
-            "workspace_id": workspace_id,
-            "deleted": deleted,
-            "status": "deleted" if deleted else "not_found",
-        }
+        return await self._drafts.delete_draft_workspace(workspace_id=workspace_id)
 
     async def validate_draft_workspace(self, *, workspace_id: str) -> dict[str, Any]:
         """Refresh stored validation status without changing draft revision."""
-        store = self._draft_store()
-        workspace = store.get_workspace(workspace_id)
-        validation = await self.validate_draft(draft=workspace.draft)
-        refreshed = workspace.model_copy(
-            update={
-                "status": validation["status"],
-                "diagnostics": validation["diagnostics"],
-            }
-        )
-        store.save_workspace(refreshed)
-        return get_draft_workspace_record(store, workspace_id=workspace_id)
+        return await self._drafts.validate_draft_workspace(workspace_id=workspace_id)
 
     async def patch_draft_workspace(
         self,
@@ -646,8 +599,7 @@ class WorkflowSurfaceHandlers:
         revision: int,
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        return patch_draft_workspace_record(
-            self._draft_store(),
+        return await self._drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
             patch=patch,
@@ -660,10 +612,10 @@ class WorkflowSurfaceHandlers:
         revision: int,
         name: str,
     ) -> dict[str, Any]:
-        return await self.patch_draft_workspace(
+        return await self._drafts.set_draft_name(
             workspace_id=workspace_id,
             revision=revision,
-            patch=[{"op": "replace", "path": "/name", "value": name}],
+            name=name,
         )
 
     async def set_draft_route(
@@ -675,19 +627,12 @@ class WorkflowSurfaceHandlers:
         outcome: str,
         target: str,
     ) -> dict[str, Any]:
-        return await self.patch_draft_workspace(
+        return await self._drafts.set_draft_route(
             workspace_id=workspace_id,
             revision=revision,
-            patch=[
-                {
-                    "op": "add",
-                    "path": (
-                        f"/routes/{_escape_json_pointer(step_id)}/"
-                        f"{_escape_json_pointer(outcome)}"
-                    ),
-                    "value": target,
-                }
-            ],
+            step_id=step_id,
+            outcome=outcome,
+            target=target,
         )
 
     async def set_step_input_map(
@@ -698,16 +643,11 @@ class WorkflowSurfaceHandlers:
         step_id: str,
         input_map: dict[str, str],
     ) -> dict[str, Any]:
-        return await self.patch_draft_workspace(
+        return await self._drafts.set_step_input_map(
             workspace_id=workspace_id,
             revision=revision,
-            patch=[
-                {
-                    "op": "replace",
-                    "path": f"/steps/{_escape_json_pointer(step_id)}/input",
-                    "value": _draft_input_bindings_payload(input_map, {}),
-                }
-            ],
+            step_id=step_id,
+            input_map=input_map,
         )
 
     async def set_step_output_map(
@@ -718,16 +658,11 @@ class WorkflowSurfaceHandlers:
         step_id: str,
         output_map: dict[str, str],
     ) -> dict[str, Any]:
-        return await self.patch_draft_workspace(
+        return await self._drafts.set_step_output_map(
             workspace_id=workspace_id,
             revision=revision,
-            patch=[
-                {
-                    "op": "replace",
-                    "path": f"/steps/{_escape_json_pointer(step_id)}/output",
-                    "value": _draft_output_bindings_payload(output_map),
-                }
-            ],
+            step_id=step_id,
+            output_map=output_map,
         )
 
     async def create_minimal_draft_workspace(
@@ -747,57 +682,19 @@ class WorkflowSurfaceHandlers:
         title: str | None = None,
     ) -> dict[str, Any]:
         """Bootstrap the smallest patchable draft around one workflow capability."""
-        draft_input, draft_with = _draft_input_maps(
-            input=input,
-            input_map=input_map,
-        )
-        draft_output = _draft_output_map(output=output, output_map=output_map)
-        outcomes = self._outcomes_for_capability(capability_name) or (
-            DEFAULT_OK_OUTCOME,
-        )
-        steps: dict[str, Any] = {
-            DEFAULT_CALL_STEP_ID: {
-                "use": capability_name,
-                "input": _draft_input_bindings_payload(draft_input, draft_with),
-                "output": _draft_output_bindings_payload(draft_output),
-            }
-        }
-        routes: dict[str, dict[str, str]] = {
-            DEFAULT_CALL_STEP_ID: {DEFAULT_OK_OUTCOME: "__end__"}
-        }
-        if DEFAULT_ERROR_OUTCOME in outcomes:
-            # The bootstrapper cannot infer provider-specific error envelopes.
-            # Use a static default unless the caller explicitly supplies the
-            # state path containing a better provider error message.
-            error_input: dict[str, Any] = {
-                "target": {"root": "local", "parts": ["message"]},
-                "value": "Capability call failed",
-            }
-            if error_message_source is not None:
-                error_input = {
-                    "target": {"root": "local", "parts": ["message"]},
-                    "path": _graph_path_payload(error_message_source),
-                }
-            steps[DEFAULT_ERROR_STEP_ID] = {
-                "use": RUNTIME_ERROR_CAPABILITY,
-                "input": [error_input],
-                "output": [],
-            }
-            routes[DEFAULT_CALL_STEP_ID][DEFAULT_ERROR_OUTCOME] = DEFAULT_ERROR_STEP_ID
-            routes[DEFAULT_ERROR_STEP_ID] = {DEFAULT_OK_OUTCOME: "__end__"}
-        draft = {
-            "name": name,
-            "input_schema": input_schema,
-            "state_schema": state_schema,
-            "output_schema": output_schema,
-            "start": DEFAULT_CALL_STEP_ID,
-            "steps": steps,
-            "routes": routes,
-        }
-        return await self.create_draft_workspace(
+        return await self._drafts.create_minimal_draft_workspace(
             workspace_id=workspace_id,
+            name=name,
+            capability_name=capability_name,
+            input_schema=input_schema,
+            state_schema=state_schema,
+            output_schema=output_schema,
+            input=input,
+            output=output,
+            input_map=input_map,
+            output_map=output_map,
+            error_message_source=error_message_source,
             title=title,
-            draft=draft,
         )
 
     async def create_draft_workspace_from_capability(
@@ -908,12 +805,6 @@ class WorkflowSurfaceHandlers:
             source_bindings=source_bindings,
             created_from_catalog_version=created_from_catalog_version,
         )
-
-    def _outcomes_for_capability(self, qualified_name: str) -> tuple[str, ...] | None:
-        try:
-            return self.service._get_qualified_spec(qualified_name).outcomes
-        except KeyError:
-            return None
 
     async def inspect_artifact(
         self, *, artifact_id: str, version: int
@@ -1404,87 +1295,6 @@ def _schema_field_names(schema: dict[str, Any]) -> list[str]:
     if not isinstance(properties, dict):
         return []
     return sorted(str(name) for name in properties)
-
-
-def _draft_input_maps(
-    *,
-    input: Sequence[InputBinding] | None,
-    input_map: dict[str, str] | None,
-) -> tuple[dict[str, str], dict[str, Any]]:
-    """Convert canonical MCP input bindings into draft `in` and `with` maps.
-
-    Draft workspaces intentionally keep compact maps as patch targets, while
-    MCP-facing request models prefer the canonical core binding structs. This
-    helper keeps that translation explicit at the frontend boundary.
-    """
-    if input is not None and input_map is not None:
-        raise ValueError("cannot mix canonical input bindings with input_map")
-    if input is None:
-        return dict(input_map or {}), {}
-
-    mapped_inputs: dict[str, str] = {}
-    literal_inputs: dict[str, Any] = {}
-    for binding in input:
-        if isinstance(binding, InputPathBinding):
-            mapped_inputs[str(binding.path)] = str(binding.target)
-        elif isinstance(binding, InputValueBinding):
-            literal_inputs[str(binding.target)] = binding.value
-        else:  # pragma: no cover - defensive against future input binding variants.
-            raise TypeError(f"unsupported input binding {binding!r}")
-    return mapped_inputs, literal_inputs
-
-
-def _draft_output_map(
-    *,
-    output: Sequence[OutputBinding] | None,
-    output_map: dict[str, str] | None,
-) -> dict[str, str]:
-    """Convert canonical MCP output bindings into the draft `out` map."""
-    if output is not None and output_map is not None:
-        raise ValueError("cannot mix canonical output bindings with output_map")
-    if output is None:
-        return dict(output_map or {})
-    return {str(binding.source): str(binding.target) for binding in output}
-
-
-def _draft_input_bindings_payload(
-    input_map: dict[str, str],
-    input_values: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Serialize draft input maps into canonical structural binding payloads."""
-    return [
-        {"target": _local_path_payload(target), "value": value}
-        for target, value in input_values.items()
-    ] + [
-        {"target": _local_path_payload(target), "path": _graph_path_payload(source)}
-        for source, target in input_map.items()
-    ]
-
-
-def _draft_output_bindings_payload(output_map: dict[str, str]) -> list[dict[str, Any]]:
-    """Serialize draft output maps into canonical structural binding payloads."""
-    return [
-        {"source": _local_path_payload(source), "target": _state_path_payload(target)}
-        for source, target in output_map.items()
-    ]
-
-
-def _graph_path_payload(value: str | GraphSourcePath) -> dict[str, str | list[str]]:
-    path = value if isinstance(value, GraphSourcePath) else GraphSourcePath.parse(value)
-    return GraphSourcePath._serialize(path)
-
-
-def _local_path_payload(value: str) -> dict[str, str | list[str]]:
-    return LocalPath._serialize(LocalPath.parse(value))
-
-
-def _state_path_payload(value: str) -> dict[str, str | list[str]]:
-    return StatePath._serialize(StatePath.parse(value))
-
-
-def _escape_json_pointer(value: str) -> str:
-    """Escape one JSON Pointer path segment for generated JSON Patch helpers."""
-    return value.replace("~", "~0").replace("/", "~1")
 
 
 def _draft_name_from_capability(capability_name: str) -> str:

@@ -399,7 +399,9 @@ class RunDeploymentResult(BaseModel):
     deployment_id: str = Field(description="Deployment that was run.")
     artifact_id: str = Field(description="Artifact targeted by the deployment.")
     artifact_version: int = Field(description="Artifact version.")
-    status: str = Field(description="Run status, such as completed, failed, or interrupted.")
+    status: str = Field(
+        description="Run status, such as completed, failed, or interrupted."
+    )
     run_id: str | None = Field(default=None, description="Durable run identifier.")
     resume_readiness: str | None = Field(
         default=None, description="Resume readiness state."

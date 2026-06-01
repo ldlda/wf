@@ -8,6 +8,7 @@ from .constants import (
     DEFAULT_OK_OUTCOME,
     RUNTIME_ERROR_CAPABILITY,
 )
+from .drafts import WorkflowDraftApi
 from .next_actions import NextActionPatchExample, NextActionTool, NextActions
 from .refs import WorkflowSurfaceCapabilityId, parse_workflow_surface_capability_id
 from .service import WorkflowApi
@@ -52,6 +53,7 @@ __all__ = [
     "WorkflowApi",
     "WorkflowApiBackend",
     "WorkflowArtifactCataloger",
+    "WorkflowDraftApi",
     "WorkflowEventRecorder",
     "WorkflowLiveSourceChecker",
     "WorkflowOperationContext",

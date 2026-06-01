@@ -52,7 +52,10 @@ def test_workflow_surface_capability_id_parses_structural_saved_wrapper_ref() ->
 
 
 def test_workflow_surface_refs_shim_reexports_canonical_parser() -> None:
-    assert parse_workflow_surface_capability_id_shim is parse_workflow_surface_capability_id
+    assert (
+        parse_workflow_surface_capability_id_shim
+        is parse_workflow_surface_capability_id
+    )
 
 
 def test_workflow_surface_constants_shim_reexports_canonical_literals() -> None:
@@ -62,4 +65,3 @@ def test_workflow_surface_constants_shim_reexports_canonical_literals() -> None:
     )
 
     assert DEFAULT_CALL_STEP_ID_SHIM == DEFAULT_CALL_STEP_ID
-
