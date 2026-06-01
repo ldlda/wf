@@ -23,6 +23,8 @@ from .wrapper_hints import (
     wrapper_hints_for_capability,
 )
 
+from .runtime_dependencies import RuntimeDependencies, resolve_runtime_dependencies
+
 __all__ = [
     "DEFAULT_CALL_STEP_ID",
     "DEFAULT_ERROR_OUTCOME",
@@ -36,6 +38,7 @@ __all__ = [
     "OutcomeCandidate",
     "OutcomeCandidateKind",
     "RUNTIME_ERROR_CAPABILITY",
+    "RuntimeDependencies",
     "TraceRange",
     "WorkflowApi",
     "WorkflowApiBackend",
@@ -46,4 +49,5 @@ __all__ = [
     "parse_workflow_surface_capability_id",
     "workflow_output_schema_for_authoring",
     "wrapper_hints_for_capability",
+    "resolve_runtime_dependencies",
 ]

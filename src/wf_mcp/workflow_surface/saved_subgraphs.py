@@ -27,7 +27,7 @@ from wf_core.models.workflow_refs import WorkflowRef
 from wf_platform import CapabilitySource
 
 from ..models import RawWorkflowPlan
-from .runtime_dependencies import resolve_runtime_dependencies
+from wf_api.runtime_dependencies import resolve_runtime_dependencies
 
 _STEPS_ADAPTER = TypeAdapter(list[Step])
 
