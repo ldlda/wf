@@ -1,0 +1,15 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "lsp": {
+    "python": {
+      "command": ["uv", "run", "pyright", "--stdio"],
+      "extensions": [".py"]
+    }
+  },
+  "mcp": {
+    "serena": {
+      "type": "local",
+      "command": ["serena", "start-mcp-server", "--project-from-cwd"],
+    }
+  }
+}

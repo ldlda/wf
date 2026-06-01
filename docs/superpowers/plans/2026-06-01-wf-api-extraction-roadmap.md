@@ -1,0 +1,359 @@
+# wf_api Extraction Roadmap
+
+> **For agentic workers:** This is an architecture roadmap, not a deterministic implementation checklist. Use it to choose and scope future focused implementation plans. Do not execute multiple slices at once.
+
+**Goal:** Extract a protocol-neutral workflow application API from `wf_mcp` while preserving current process-local behavior and avoiding a large semantic rewrite.
+
+**Architecture:** `wf_api` becomes the long-lived in-process application service layer. `wf_mcp`, `wf_cli`, and future HTTP/UI adapters call `wf_api`; `wf_api` must not import `wf_mcp`.
+
+**Current Constraint:** `WorkflowSurfaceHandlers` is large and currently depends on `WfMcpService`. The first slice fixes dependency direction only; later slices can split and rename once the boundary is correct.
+
+---
+
+## Target Shape
+
+```text
+wf_core       = workflow execution kernel
+wf_authoring = Python authoring sugar and NodeSpec construction
+wf_artifacts = saved workflow/deployment/run models and stores
+wf_platform  = source/capability/event platform primitives
+wf_api       = process-local workflow application service/use cases
+wf_mcp       = MCP adapter and MCP runtime/proxy/admin surface
+wf_cli       = CLI adapter
+```
+
+Desired dependency direction:
+
+```text
+wf_cli ─┐
+        ├──> wf_api ───> wf_artifacts / wf_platform / wf_core / wf_authoring
+wf_mcp ─┘
+```
+
+Forbidden dependency direction:
+
+```text
+wf_api -> wf_mcp
+```
+
+Process-local behavior remains the default:
+
+```python
+config = load_broker_config(path)
+service = build_service_from_config(config)
+api = WorkflowApi(WfMcpWorkflowApiBackend(service))
+```
+
+No FastAPI, daemon, socket, auth redesign, or network boundary is required for this extraction.
+
+## Slice 1: Dependency Direction Cleanup
+
+### Goal
+
+Make both CLI and MCP call a protocol-neutral `WorkflowApi`, while `WorkflowApi`
+does not import `wf_mcp`.
+
+### Allowed
+
+- Create `src/wf_api/`.
+- Add `WorkflowApiBackend` protocol.
+- Add `WorkflowApi`.
+- Add `WfMcpWorkflowApiBackend` adapter around `WfMcpService`.
+- Update `wf_cli.context` to construct `WorkflowApi`.
+- Update MCP workflow tool registration to use `WorkflowApi`.
+- Keep compatibility aliases if existing imports need a transition.
+- Keep payloads and behavior unchanged.
+
+### Not Allowed
+
+- Do not split `WorkflowApi` by domain yet.
+- Do not move every helper module yet.
+- Do not rename events yet.
+- Do not redesign stores.
+- Do not add FastAPI.
+- Do not change response payloads.
+- Do not change command/tool names.
+
+### Shape
+
+```text
+src/wf_api/
+  __init__.py
+  backend.py       # WorkflowApiBackend protocol
+  service.py       # WorkflowApi, initially large
+
+src/wf_mcp/workflow_surface/
+  handlers.py      # compatibility alias or thin import shim
+  tools.py         # MCP adapter; calls WorkflowApi
+
+src/wf_mcp/broker/service/
+  workflow_api_backend.py  # WfMcpWorkflowApiBackend
+```
+
+`WorkflowApiBackend` should expose only what `WorkflowApi` currently uses:
+
+```python
+artifact_store
+draft_workspace_store
+run_store
+capability_sources
+get_qualified_spec(...)
+record_event(...)
+run_workflow_from_plan(...)
+resume_workflow_from_plan(...)
+workflow_artifact_catalog_entry(...)
+```
+
+Live source validation is the awkward part because it touches MCP connections,
+adapters, and auth. In Slice 1, it can stay behind backend methods/callbacks
+without making `wf_api` import `wf_mcp`.
+
+### Success Criteria
+
+- `wf_api` imports no `wf_mcp` modules.
+- `wf_cli` uses `WorkflowApi`.
+- `wf_mcp.workflow_surface.tools` uses `WorkflowApi`.
+- Existing MCP workflow-surface tests pass.
+- Existing CLI tests pass.
+- Behavior and payloads are unchanged.
+
+## Slice 2: Stabilize API Names And Compatibility Shims
+
+### Goal
+
+Make naming honest without breaking callers.
+
+### Likely Work
+
+- Rename `WorkflowSurfaceHandlers` usage to `WorkflowApi` in tests and CLI code.
+- Keep a temporary import shim:
+
+```python
+from wf_api import WorkflowApi as WorkflowSurfaceHandlers
+```
+
+- Update docs to say:
+
+```text
+MCP tools and CLI commands are adapters over wf_api.
+```
+
+- Rename test fixture helpers from `handlers(...)` to `api(...)` if useful.
+
+### If/Then
+
+- If shims create confusion, remove them quickly after imports are migrated.
+- If too many downstream imports still expect `WorkflowSurfaceHandlers`, keep the shim for one release/work session and document it as deprecated.
+
+### Success Criteria
+
+- New code imports `WorkflowApi`.
+- Old name remains only in compatibility modules or is gone.
+- Docs describe `wf_api` as the application service layer.
+
+## Slice 3: Move Protocol-Neutral Workflow Surface Modules
+
+### Goal
+
+Move helper modules that are not MCP-specific out of `wf_mcp.workflow_surface`.
+
+### Candidate Moves
+
+```text
+wf_mcp.workflow_surface.models                -> wf_api.models
+wf_mcp.workflow_surface.next_actions          -> wf_api.next_actions
+wf_mcp.workflow_surface.wrapper_hints         -> wf_api.wrapper_hints
+wf_mcp.workflow_surface.refs                  -> wf_api.refs
+wf_mcp.workflow_surface.run_lifecycle         -> wf_api.run_lifecycle
+wf_mcp.workflow_surface.runtime_dependencies  -> wf_api.runtime_dependencies
+wf_mcp.workflow_surface.saved_subgraphs       -> wf_api.saved_subgraphs
+wf_mcp.workflow_surface.constants             -> wf_api.constants
+```
+
+### If/Then
+
+- If a module imports MCP connection/adapters/auth, do not move it in this slice.
+- If imports become circular, leave a shim in the old location and move one module at a time.
+- If a helper is really platform vocabulary, consider `wf_platform` instead of `wf_api`.
+
+### Success Criteria
+
+- `wf_api` owns workflow API helper models.
+- `wf_mcp.workflow_surface` keeps only MCP adapter/shim code.
+- Tests still pass with import-only or near-import-only changes.
+
+## Slice 4: Split The Big API By Domain
+
+### Goal
+
+Reduce the large `WorkflowApi` class after the package boundary is correct.
+
+### Candidate Shape
+
+```text
+src/wf_api/
+  service.py        # facade that composes domain services
+  capabilities.py
+  drafts.py
+  artifacts.py
+  deployments.py
+  runs.py
+```
+
+Possible facade:
+
+```python
+class WorkflowApi:
+    capabilities: CapabilityApi
+    drafts: DraftApi
+    artifacts: ArtifactApi
+    deployments: DeploymentApi
+    runs: RunApi
+```
+
+Compatibility can keep flat methods:
+
+```python
+async def list_capabilities(...):
+    return await self.capabilities.list_capabilities(...)
+```
+
+### If/Then
+
+- If callers benefit from flat methods, keep the facade flat and split internals only.
+- If domain APIs are clean enough, expose nested services later.
+- If a method spans domains, keep it in the facade until a better boundary appears.
+
+### Success Criteria
+
+- Each domain file is readable on its own.
+- Public payloads remain unchanged.
+- `wf_cli` and `wf_mcp` do not care about the internal split.
+
+## Slice 5: Move Listing/Event Primitives To Better Homes
+
+### Goal
+
+Remove remaining protocol-neutral utilities from MCP-named packages.
+
+### Candidate Moves
+
+```text
+wf_mcp.shared.listing.matches_query       -> wf_platform.listing or wf_api.listing
+wf_mcp.shared.listing.paged_list_payload  -> wf_platform.listing or wf_api.listing
+wf_mcp.events.McpEvent                    -> wf_platform.events.DomainEvent
+wf_mcp.events.EventBus                    -> wf_platform.events.EventBus
+```
+
+### If/Then
+
+- If events are only used by MCP admin/proxy code, leave them in `wf_mcp`.
+- If events describe artifact/deployment/run lifecycle, move or fork them into `wf_platform`.
+- If renaming `McpEvent` causes churn, introduce `DomainEvent` first and keep `McpEvent` as an alias temporarily.
+
+### Success Criteria
+
+- Workflow API lifecycle events no longer require MCP naming.
+- Listing helpers used by CLI/API are not imported from `wf_mcp`.
+
+## Slice 6: Store Construction And Config Boundary
+
+### Goal
+
+Make store/runtime construction less MCP-owned.
+
+### Current Problem
+
+`build_service_from_config` and `WfMcpService.__post_init__` currently build or own protocol-neutral stores. CLI uses this path because it is pragmatic, but long term config/store construction should be reusable without MCP server assumptions.
+
+### Candidate Work
+
+- Extract config-to-store construction into a neutral builder.
+- Keep MCP connection config in `wf_mcp`.
+- Let `wf_cli` and future API/server adapters reuse the neutral store builder.
+
+### If/Then
+
+- If extraction creates too many config model moves, defer it.
+- If CLI needs only current config behavior, keep using `wf_mcp` builder until FastAPI/UI pressure appears.
+
+### Success Criteria
+
+- Artifact/draft/run stores can be constructed without starting MCP concepts.
+- Current `wf_mcp.config.json` remains supported.
+
+## Slice 7: Future HTTP/FastAPI Adapter
+
+### Goal
+
+Expose `WorkflowApi` over HTTP only after the in-process API is stable.
+
+### Not Yet
+
+Do not start this until:
+
+- `wf_api` exists.
+- CLI and MCP both call `wf_api`.
+- Run/draft/deployment payloads are stable enough.
+- Auth and multi-client lifecycle questions are explicit.
+
+### Future Shape
+
+```text
+wf_http or wf_server
+  routes/
+    capabilities.py
+    drafts.py
+    artifacts.py
+    deployments.py
+    runs.py
+```
+
+Routes should be thin:
+
+```python
+@router.post("/runs")
+async def start_run(...):
+    return await api.run_deployment(...)
+```
+
+### Success Criteria
+
+- HTTP is an adapter, not a new source of workflow logic.
+- Process-local API remains usable without HTTP.
+
+## Open Questions
+
+1. Should `WorkflowApiBackend` be one protocol or several domain protocols?
+   - Recommendation for Slice 1: one protocol. Split later only if it hurts.
+
+2. Should live source validation live in `wf_api`?
+   - Recommendation: `wf_api` owns the operation, backend owns the live-check implementation.
+
+3. Should `wf_api` expose flat methods or nested services?
+   - Recommendation for Slice 1: flat methods for compatibility. Consider nested internals later.
+
+4. Should `WorkflowSurfaceHandlers` disappear immediately?
+   - Recommendation: no. Keep a short-lived shim if it reduces churn.
+
+5. Should `wf_cli` stop importing `wf_mcp` after Slice 1?
+   - Not fully. It may still use `wf_mcp` config/service construction until store/config extraction happens.
+
+## Immediate Next Plan
+
+Write a focused implementation plan for Slice 1 only:
+
+```text
+docs/superpowers/plans/YYYY-MM-DD-wf-api-slice-1-dependency-direction.md
+```
+
+That plan should be code-level and deterministic:
+
+- add `wf_api.backend`
+- add `wf_api.service`
+- add `WfMcpWorkflowApiBackend`
+- update CLI/MCP construction
+- keep compatibility import
+- run focused MCP workflow-surface and CLI tests
+
+Do not include Slice 2+ work in that implementation plan.

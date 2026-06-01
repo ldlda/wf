@@ -1,5 +1,1 @@
-*
-!diagram.patch
-!pandoc-diagram.ps1
-!diagram.lua
-!.gitignore
+diagram-og.lua
