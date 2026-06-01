@@ -13,6 +13,12 @@ Both CLI and MCP workflow tools now call `WorkflowApi`; `wf_api` imports no
 operation implementation and still depends on `WfMcpService`, but it is now
 MCP-owned backend plumbing rather than the public application API.
 
+Slice 3 moved the protocol-neutral workflow helpers into `wf_api`: constants,
+capability refs, wrapper hints, next actions, raw workflow plan model, runtime
+dependency resolution, saved subgraph preparation, and durable run lifecycle
+helpers. The old `wf_mcp.workflow_surface.*` module paths remain compatibility
+shims for those helpers.
+
 **Current Constraint:** `WorkflowSurfaceHandlers` is large and still carries
 most workflow-surface logic. Slice 1 fixed dependency direction only; later
 slices can split and rename once the boundary is correct.
@@ -171,18 +177,22 @@ MCP tools and CLI commands are adapters over wf_api.
 
 Move helper modules that are not MCP-specific out of `wf_mcp.workflow_surface`.
 
-### Candidate Moves
+### Completed Moves
 
 ```text
-wf_mcp.workflow_surface.models                -> wf_api.models
-wf_mcp.workflow_surface.next_actions          -> wf_api.next_actions
-wf_mcp.workflow_surface.wrapper_hints         -> wf_api.wrapper_hints
+wf_mcp.workflow_surface.constants             -> wf_api.constants
 wf_mcp.workflow_surface.refs                  -> wf_api.refs
-wf_mcp.workflow_surface.run_lifecycle         -> wf_api.run_lifecycle
+wf_mcp.workflow_surface.wrapper_hints         -> wf_api.wrapper_hints
+wf_mcp.workflow_surface.next_actions          -> wf_api.next_actions
+wf_mcp.models.RawWorkflowPlan                 -> wf_api.models.RawWorkflowPlan
 wf_mcp.workflow_surface.runtime_dependencies  -> wf_api.runtime_dependencies
 wf_mcp.workflow_surface.saved_subgraphs       -> wf_api.saved_subgraphs
-wf_mcp.workflow_surface.constants             -> wf_api.constants
+wf_mcp.workflow_surface.run_lifecycle         -> wf_api.run_lifecycle
 ```
+
+The full `wf_mcp.workflow_surface.models` module did not move. It still holds
+MCP tool request/response schemas such as `TraceRange` and workflow tool result
+models. Move or split those only when the MCP schema boundary is clearer.
 
 ### If/Then
 
@@ -192,9 +202,11 @@ wf_mcp.workflow_surface.constants             -> wf_api.constants
 
 ### Success Criteria
 
-- `wf_api` owns workflow API helper models.
-- `wf_mcp.workflow_surface` keeps only MCP adapter/shim code.
-- Tests still pass with import-only or near-import-only changes.
+- `wf_api` owns protocol-neutral workflow API helpers. **Done.**
+- `wf_mcp.workflow_surface` keeps MCP adapter/schema code plus compatibility
+  shims. **Mostly done.**
+- Tests still pass with import-only or near-import-only changes. **Done at
+  implementation time.**
 
 ## Slice 4: Split The Big API By Domain
 

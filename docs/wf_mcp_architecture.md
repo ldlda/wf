@@ -57,8 +57,19 @@ inside the MCP backend adapter or compatibility tests.
 
 This is a dependency-direction cleanup, not a full domain split. Most API
 methods still mirror the old workflow-surface payloads and return
-`dict[str, Any]`. Stronger domain models and helper-module moves belong in later
-`wf_api` extraction slices.
+`dict[str, Any]`.
+
+Protocol-neutral workflow helpers have moved to `wf_api`: constants, capability
+refs, wrapper hints, next actions, raw workflow plans, runtime dependency
+resolution, saved subgraph preparation, and durable run lifecycle helpers. The
+old `wf_mcp.workflow_surface.*` helper modules are compatibility shims. MCP
+tool schemas and registration still live in `wf_mcp.workflow_surface.models` and
+`wf_mcp.workflow_surface.tools`.
+
+The remaining extraction work is the large operation implementation:
+`WorkflowSurfaceHandlers` still owns most capability, draft, artifact,
+deployment, and run methods. Split that implementation by domain only after the
+current helper shims are stable.
 
 ## Broker Catalogs
 

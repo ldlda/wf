@@ -43,6 +43,10 @@ implementation state.
    - `wf_api` imports no `wf_mcp` modules. The current adapter,
      `WfMcpWorkflowApiBackend`, still wraps the existing MCP service stack while
      later slices extract protocol-neutral logic behind that seam.
+   - Protocol-neutral helpers now live in `wf_api`: refs/constants, wrapper
+     hints, next actions, raw workflow plans, runtime dependencies, saved
+     subgraph preparation, and durable run lifecycle helpers. Old
+     `wf_mcp.workflow_surface` helper paths remain compatibility shims.
 
 ## Runtime and Platform Roadmap
 
@@ -108,9 +112,9 @@ implementation state.
   inventory and deployment metadata instead of reverse-engineering MCP tools.
 - **Workflow API extraction**: continue the staged extraction in
   [wf_api extraction roadmap](./superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md).
-  The next useful slice is naming/documentation cleanup around
-  `WorkflowSurfaceHandlers` versus `wf_api.WorkflowApi`, before moving helper
-  modules or splitting the large operation implementation.
+  The next useful slice is splitting the large `WorkflowSurfaceHandlers`
+  implementation by domain behind `wf_api`, while leaving MCP tool schemas and
+  tool registration in `wf_mcp`.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 
