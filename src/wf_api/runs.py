@@ -57,8 +57,8 @@ class WorkflowRunApi:
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
     ) -> dict[str, Any]:
-        deployment, artifact, diagnostics, tree = self.deployments.deployment_validation(
-            deployment_id
+        deployment, artifact, diagnostics, tree = (
+            self.deployments.deployment_validation(deployment_id)
         )
         if diagnostics:
             return _run_payload(

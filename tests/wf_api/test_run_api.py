@@ -12,7 +12,11 @@ from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 
 from tests.wf_mcp.test_support import echo_tool, local_temp_root
-from tests.wf_mcp.workflow_surface.conftest import echo_artifact, failing_artifact, failing_tool
+from tests.wf_mcp.workflow_surface.conftest import (
+    echo_artifact,
+    failing_artifact,
+    failing_tool,
+)
 
 
 class SimpleTraceRange:

@@ -18,7 +18,12 @@ import httpx
 from mcp.client.streamable_http import StreamableHTTPError
 from mcp.shared.exceptions import McpError
 
-from wf_artifacts import DependencyDiagnostic, DiagnosticSeverity, WorkflowArtifact, WorkflowDeployment
+from wf_artifacts import (
+    DependencyDiagnostic,
+    DiagnosticSeverity,
+    WorkflowArtifact,
+    WorkflowDeployment,
+)
 
 from .adapters import require_adapter
 from .core import WfMcpService

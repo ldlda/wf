@@ -112,7 +112,9 @@ def _artifact_api(
     register_echo: bool = False,
 ) -> tuple[WorkflowArtifactApi, WfMcpService]:
     service = WfMcpService(
-        store=FileStore(artifact_store.root / "artifacts_mcp" / str(id(artifact_store))),
+        store=FileStore(
+            artifact_store.root / "artifacts_mcp" / str(id(artifact_store))
+        ),
         artifact_store=artifact_store,
     )
     if register_echo:
@@ -236,9 +238,7 @@ def test_create_wrapper_from_workspace_saves_kind_wrapper() -> None:
 
 
 def test_inspect_artifact_returns_stable_fields() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "artifacts_inspect"
-    )
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "artifacts_inspect")
     api, _service = _artifact_api(artifact_store)
     artifact_store.save_artifact(_echo_artifact())
 

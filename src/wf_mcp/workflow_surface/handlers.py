@@ -765,6 +765,7 @@ class WorkflowSurfaceHandlers:
             trace_range=trace_range,
         )
 
+
 def _required_capability_payloads(
     requirements: dict[str, RequiredCapability],
 ) -> dict[str, dict[str, Any]]:

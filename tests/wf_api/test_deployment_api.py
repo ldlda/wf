@@ -83,7 +83,9 @@ def _deployment_api(
     register_echo: bool = False,
 ) -> tuple[WorkflowDeploymentApi, WfMcpService]:
     service = WfMcpService(
-        store=FileStore(artifact_store.root / "deployments_mcp" / str(id(artifact_store))),
+        store=FileStore(
+            artifact_store.root / "deployments_mcp" / str(id(artifact_store))
+        ),
         artifact_store=artifact_store,
     )
     if register_echo:
@@ -105,7 +107,9 @@ def test_save_deployment_stores_and_returns_stable_fields() -> None:
                 id="echo.personal",
                 artifact_id="echo",
                 artifact_version=1,
-                bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+                bindings=[
+                    {"logical_source": "demo", "concrete_source": "demo.personal"}
+                ],
             ).model_dump(mode="json")
         )
     )
@@ -227,9 +231,7 @@ def test_validate_deployment_live_check_calls_live_checker() -> None:
 
 def test_handler_delegation_for_validate_deployment() -> None:
     """WorkflowSurfaceHandlers.validate_deployment delegates to WorkflowDeploymentApi."""
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "deploy_delegation"
-    )
+    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "deploy_delegation")
     service = WfMcpService(
         store=FileStore(artifact_store.root / "delegation_mcp"),
         artifact_store=artifact_store,
@@ -248,12 +250,8 @@ def test_handler_delegation_for_validate_deployment() -> None:
     context = context_from_service(service)
     api = WorkflowDeploymentApi(context)
 
-    handler_result = asyncio.run(
-        h.validate_deployment(deployment_id="echo.personal")
-    )
-    api_result = asyncio.run(
-        api.validate_deployment(deployment_id="echo.personal")
-    )
+    handler_result = asyncio.run(h.validate_deployment(deployment_id="echo.personal"))
+    api_result = asyncio.run(api.validate_deployment(deployment_id="echo.personal"))
 
     assert handler_result["status"] == api_result["status"]
     assert len(handler_result["diagnostics"]) == len(api_result["diagnostics"])

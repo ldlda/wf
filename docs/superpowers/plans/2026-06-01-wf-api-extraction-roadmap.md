@@ -355,12 +355,30 @@ Move workflow capability operations last:
 list_capabilities
 inspect_capability
 call_capability
+create_draft_workspace_from_capability
 ```
 
 Reason: capabilities look simple but are the messiest boundary. They combine
 planner-visible source inventory, wrapper artifacts, direct wrapper calls,
-external live source calls, source visibility, and schema/wrapper hints. Keep
-them in the MCP-backed implementation until the other domain services are stable.
+external live source calls, source visibility, and schema/wrapper hints.
+`create_draft_workspace_from_capability` also belongs here because it is driven
+by `inspect_capability` wrapper hints. Keep them in the MCP-backed
+implementation until the other domain services are stable.
+
+#### After Slice 4E: Helper Promotion Cleanup
+
+Once the handler is mostly a compatibility adapter, promote duplicated helper
+symbols into stable homes instead of leaving long-term cross-domain private
+imports:
+
+```text
+raw_plan_from_artifact                 -> wf_api.artifact_plans or wf_artifacts
+artifact_capability_id                 -> wf_api artifact/capability refs helper
+available_sources_from_capability_sources -> wf_api source snapshot helper
+```
+
+This should be a cleanup slice, not part of 4E unless required to avoid circular
+imports or behavior drift.
 
 ### If/Then
 

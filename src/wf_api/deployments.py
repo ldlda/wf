@@ -42,8 +42,8 @@ class WorkflowDeploymentApi:
         }
 
     async def inspect_deployment(self, *, deployment_id: str) -> dict[str, Any]:
-        return self._artifact_store().get_deployment(deployment_id).model_dump(
-            mode="json"
+        return (
+            self._artifact_store().get_deployment(deployment_id).model_dump(mode="json")
         )
 
     async def save_deployment(self, deployment: dict[str, Any]) -> dict[str, Any]:
