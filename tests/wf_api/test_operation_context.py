@@ -105,7 +105,7 @@ def test_context_from_service_record_workflow_event(tmp_path: Path) -> None:
         payload={"artifact_id": "demo", "version": 1},
     )
 
-    recorded = cli_context.service.list_events()[-1]
+    recorded = cli_context.service.events.list_events()[-1]
     assert recorded.kind == "workflow_artifact_saved"
     assert recorded.capability_id == "workflow.demo.v1"
     assert recorded.payload["artifact_id"] == "demo"

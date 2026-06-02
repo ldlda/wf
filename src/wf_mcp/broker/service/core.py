@@ -40,6 +40,7 @@ from wf_api.saved_subgraphs import SavedSubgraphTree
 from ..admin_capabilities import admin_source
 from ..catalog import CombinedCatalog
 from .builtins import builtin_sources
+from .events import BrokerEventRecorder
 from .source_catalog import SourceCatalogService
 from .upstream_transport import UpstreamTransportService
 from .workflow_runtime import WorkflowRuntimeService
@@ -56,6 +57,7 @@ class WfMcpService:
     draft_workspace_store: DraftWorkspaceStore | None = None
     run_store: RunStore | None = None
     tool_executor: ToolExecutor | None = None
+    events: BrokerEventRecorder = field(init=False)
     upstream: UpstreamTransportService = field(init=False)
     source_catalog: SourceCatalogService = field(init=False)
     workflow_runtime: WorkflowRuntimeService = field(init=False)
@@ -67,9 +69,10 @@ class WfMcpService:
         must not guess workflow persistence from the MCP catalog/auth store because
         CLI, MCP, and future HTTP frontends may share or swap those stores.
         """
+        self.events = BrokerEventRecorder(self.event_bus)
         self.upstream = UpstreamTransportService(
             store=self.store,
-            event_sink=self._record_event,
+            event_sink=self.events.record_event,
             tool_executor=self.tool_executor,
         )
         self.source_catalog = SourceCatalogService(
@@ -79,7 +82,7 @@ class WfMcpService:
             connection_list_all=self.connections.list_all,
             tool_executor_for=self.upstream.tool_executor_for,
             load_auth=self.upstream.load_auth,
-            emit_event=self._record_event,
+            emit_event=self.events.record_event,
             default_catalog_max_age_seconds=self.default_catalog_max_age_seconds,
         )
         if self.include_builtin_specs:
@@ -89,7 +92,7 @@ class WfMcpService:
         self.workflow_runtime = WorkflowRuntimeService(
             source_catalog=self.source_catalog,
             artifact_store=self.artifact_store,
-            emit_event=self._record_event,
+            emit_event=self.events.record_event,
         )
 
     @property
@@ -412,7 +415,7 @@ class WfMcpService:
         )
 
     def list_events(self) -> list[McpEvent]:
-        return self.event_bus.list_events()
+        return self.events.list_events()
 
     def register_capability_source(self, source: CapabilitySource) -> None:
         """Register a capability source as canonical service state."""
@@ -422,7 +425,7 @@ class WfMcpService:
         return self.source_catalog.get_qualified_spec(qualified_name)
 
     def _record_event(self, event: McpEvent) -> None:
-        self.event_bus.publish(event)
+        self.events.record_event(event)
 
     def _record_catalog_change_events(
         self,
@@ -432,42 +435,8 @@ class WfMcpService:
         reason: str,
     ) -> None:
         """Emit local change events that future MCP notifications can project."""
-        counts = {
-            "node_count": len(snapshot.nodes),
-            "resource_count": len(snapshot.resources),
-            "prompt_count": len(snapshot.prompts),
-        }
-        if snapshot.nodes:
-            self._record_event(
-                make_event(
-                    "tools_changed",
-                    connection_id=connection_id,
-                    payload={"reason": reason, "node_count": counts["node_count"]},
-                )
-            )
-        if snapshot.resources:
-            self._record_event(
-                make_event(
-                    "resources_changed",
-                    connection_id=connection_id,
-                    payload={
-                        "reason": reason,
-                        "resource_count": counts["resource_count"],
-                    },
-                )
-            )
-        if snapshot.prompts:
-            self._record_event(
-                make_event(
-                    "prompts_changed",
-                    connection_id=connection_id,
-                    payload={"reason": reason, "prompt_count": counts["prompt_count"]},
-                )
-            )
-        self._record_event(
-            make_event(
-                "catalog_changed",
-                connection_id=connection_id,
-                payload={"reason": reason, **counts},
-            )
+        self.events.record_catalog_change_events(
+            connection_id,
+            snapshot,
+            reason=reason,
         )

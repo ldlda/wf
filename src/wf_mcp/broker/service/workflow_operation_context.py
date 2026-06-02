@@ -14,20 +14,19 @@ from wf_api.operation_context import (
     WorkflowRuntimeRunner,
     WorkflowSpecProvider,
 )
-from wf_mcp.events import make_event
-
 from .core import WfMcpService
+from .events import BrokerEventRecorder
 from .workflow_runtime import WorkflowRuntimeService
 
 
 @dataclass(frozen=True, slots=True)
 class WfMcpWorkflowEventRecorder(WorkflowEventRecorder):
-    """Adapter-owned event recorder backed by WfMcpService."""
+    """Adapter-owned event recorder backed by BrokerEventRecorder."""
 
-    service: WfMcpService
+    events: BrokerEventRecorder
 
     def record_event(self, event: Any) -> None:
-        self.service._record_event(event)  # noqa: SLF001
+        self.events.record_event(event)
 
     def record_workflow_event(
         self,
@@ -36,8 +35,10 @@ class WfMcpWorkflowEventRecorder(WorkflowEventRecorder):
         capability_id: str,
         payload: dict[str, Any],
     ) -> None:
-        self.service._record_event(  # noqa: SLF001
-            make_event(event_type, capability_id=capability_id, payload=payload)
+        self.events.record_kind(
+            event_type,
+            capability_id=capability_id,
+            payload=payload,
         )
 
 
@@ -136,7 +137,7 @@ def context_from_service(service: WfMcpService) -> WorkflowOperationContext:
         draft_workspace_store=service.draft_workspace_store,
         run_store=service.run_store,
         capability_sources=specs.capability_sources,
-        events=WfMcpWorkflowEventRecorder(service),
+        events=WfMcpWorkflowEventRecorder(service.events),
         specs=specs,
         artifacts=WfMcpWorkflowArtifactCataloger(service),
         runtime=WfMcpWorkflowRuntimeRunner(service.workflow_runtime),

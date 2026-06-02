@@ -120,6 +120,10 @@ Workflow runtime ownership is now split: `WorkflowRuntimeService` owns plan
 compilation, dependency preparation, run, and resume. `WfMcpService` remains the
 broker coordinator and compatibility façade.
 
+Event recording ownership is now split: `BrokerEventRecorder` owns EventBus
+publication, simple event construction, event history reads, and catalog-change
+fanout. `WfMcpService` remains the coordinator and compatibility façade.
+
 ### WfMcpService Members NOT Used by WorkflowSurfaceHandlers
 
 These members of `WfMcpService` (`src/wf_mcp/broker/service/core.py`) are NOT accessed by `WorkflowSurfaceHandlers`:

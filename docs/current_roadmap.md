@@ -128,6 +128,10 @@ implementation state.
     `UpstreamTransportService` now owns adapter registration, auth persistence,
     catalog refresh I/O, resource/prompt reads, raw method/notification calls,
     generated-tool executor selection, and live source diagnostics.
+  - Broker event recording is being separated from broker coordination.
+    `BrokerEventRecorder` now owns EventBus publication, event history reads,
+    simple event construction, and catalog-change fanout. `WfMcpService` keeps
+    delegate methods for compatibility.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 
