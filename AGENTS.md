@@ -1,7 +1,6 @@
 # pitfalls
 
-no: assert dict == dict
-yes: assert dict['field'] == dict['field'] unless we know better
+prefer asserts dict['field'] == dict['field'] over assert dict == dict unless we know better (eg. no extra fields allowed)
 
 more later
 
