@@ -9,7 +9,6 @@ from wf_artifacts import (
     DraftWorkspaceStore,
     RunStore,
     WorkflowArtifact,
-    WorkflowArtifactCatalogEntry,
     WorkflowArtifactStore,
     WorkflowDeployment,
 )
@@ -49,16 +48,6 @@ class WorkflowSpecProvider(Protocol):
 
     def get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
         """Return the node spec for one fully qualified capability name."""
-        ...
-
-
-class WorkflowArtifactCataloger(Protocol):
-    """Formats saved workflow artifacts for list/detail surfaces."""
-
-    def workflow_artifact_catalog_entry(
-        self, artifact: WorkflowArtifact
-    ) -> WorkflowArtifactCatalogEntry:
-        """Return the catalog entry representation for one saved artifact."""
         ...
 
 
@@ -119,13 +108,11 @@ class WorkflowOperationContext:
     capability_sources: Mapping[str, CapabilitySource]
     events: WorkflowEventRecorder
     specs: WorkflowSpecProvider
-    artifacts: WorkflowArtifactCataloger
     runtime: WorkflowRuntimeRunner
     live_sources: WorkflowLiveSourceChecker | None = None
 
 
 __all__ = [
-    "WorkflowArtifactCataloger",
     "WorkflowEventRecorder",
     "WorkflowLiveSourceChecker",
     "WorkflowOperationContext",

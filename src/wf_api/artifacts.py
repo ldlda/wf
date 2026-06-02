@@ -13,6 +13,7 @@ from wf_artifacts import (
     ArtifactKind,
     RequiredCapability,
     WorkflowArtifact,
+    artifact_catalog_entry,
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
 )
 
@@ -56,9 +57,7 @@ class WorkflowArtifactApi:
         if self.context.artifact_store is None:
             return paged_list_payload("nodes", [], cursor=cursor, limit=limit)
         entries = [
-            self.context.artifacts.workflow_artifact_catalog_entry(artifact).model_dump(
-                mode="json"
-            )
+            artifact_catalog_entry(artifact).model_dump(mode="json")
             for artifact in self.context.artifact_store.list_artifacts()
             if kind is None or artifact.kind == kind
         ]

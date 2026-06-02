@@ -30,7 +30,6 @@ from .wrapper_hints import (
 )
 
 from .operation_context import (
-    WorkflowArtifactCataloger,
     WorkflowEventRecorder,
     WorkflowLiveSourceChecker,
     WorkflowOperationContext,
@@ -62,7 +61,6 @@ __all__ = [
     "WorkflowApi",
     "WorkflowArtifactApi",
     "WorkflowCapabilityApi",
-    "WorkflowArtifactCataloger",
     "WorkflowDeploymentApi",
     "WorkflowDraftApi",
     "WorkflowEventRecorder",

@@ -7,7 +7,6 @@ from typing import Any
 from wf_artifacts import DependencyDiagnostic, WorkflowArtifact, WorkflowDeployment
 from wf_authoring import NodeSpec
 from wf_api.operation_context import (
-    WorkflowArtifactCataloger,
     WorkflowEventRecorder,
     WorkflowLiveSourceChecker,
     WorkflowOperationContext,
@@ -54,16 +53,6 @@ class WfMcpWorkflowSpecProvider(WorkflowSpecProvider):
 
     def get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
         return self.service.source_catalog.get_qualified_spec(qualified_name)
-
-
-@dataclass(frozen=True, slots=True)
-class WfMcpWorkflowArtifactCataloger(WorkflowArtifactCataloger):
-    """Adapter-owned artifact catalog formatter backed by WfMcpService."""
-
-    service: WfMcpService
-
-    def workflow_artifact_catalog_entry(self, artifact):
-        return self.service.workflow_artifact_catalog_entry(artifact)
 
 
 @dataclass(frozen=True, slots=True)
@@ -139,14 +128,12 @@ def context_from_service(service: WfMcpService) -> WorkflowOperationContext:
         capability_sources=specs.capability_sources,
         events=WfMcpWorkflowEventRecorder(service.events),
         specs=specs,
-        artifacts=WfMcpWorkflowArtifactCataloger(service),
         runtime=WfMcpWorkflowRuntimeRunner(service.workflow_runtime),
         live_sources=WfMcpWorkflowLiveSourceChecker(service),
     )
 
 
 __all__ = [
-    "WfMcpWorkflowArtifactCataloger",
     "WfMcpWorkflowEventRecorder",
     "WfMcpWorkflowLiveSourceChecker",
     "WfMcpWorkflowRuntimeRunner",

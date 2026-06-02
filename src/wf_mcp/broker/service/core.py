@@ -7,10 +7,8 @@ from wf_artifacts import (
     DraftWorkspaceStore,
     RunStore,
     WorkflowArtifact,
-    WorkflowArtifactCatalogEntry,
     WorkflowArtifactStore,
     WorkflowDeployment,
-    artifact_catalog_entry,
 )
 from wf_authoring import NodeSpec
 from wf_core import (
@@ -22,7 +20,7 @@ from wf_platform import (
     CapabilitySource,
 )
 from ...connections import ConnectionRegistry
-from ...events import EventBus, McpEvent, make_event
+from ...events import EventBus, McpEvent
 from ...models import (
     AuthRecord,
     CatalogNodeEntry,
@@ -35,6 +33,7 @@ from ...models import (
 from ...sdk import BackendAdapter
 from ...runtime import ToolExecutor
 from .connection_service import ConnectionService
+from .content_access import ContentAccessService
 from ...storage import Store
 from wf_api.saved_subgraphs import SavedSubgraphTree
 from ..admin_capabilities import admin_source
@@ -48,6 +47,14 @@ from .workflow_runtime import WorkflowRuntimeService
 
 @dataclass(slots=True)
 class WfMcpService:
+    """Compatibility coordinator around focused broker services.
+
+    New broker internals should prefer the focused service fields (`source_catalog`,
+    `connection_service`, `upstream`, `workflow_runtime`, `content_access`, and
+    `events`). This facade remains for existing admin, CLI, MCP, and tests that
+    still use the historical service surface.
+    """
+
     store: Store
     default_catalog_max_age_seconds: int = 300
     event_bus: EventBus = field(default_factory=EventBus)
@@ -60,6 +67,7 @@ class WfMcpService:
     connection_service: ConnectionService = field(init=False)
     upstream: UpstreamTransportService = field(init=False)
     source_catalog: SourceCatalogService = field(init=False)
+    content_access: ContentAccessService = field(init=False)
     workflow_runtime: WorkflowRuntimeService = field(init=False)
 
     def __post_init__(self) -> None:
@@ -87,6 +95,12 @@ class WfMcpService:
             default_catalog_max_age_seconds=self.default_catalog_max_age_seconds,
         )
         self.connection_service.bind_source_catalog(self.source_catalog)
+        self.content_access = ContentAccessService(
+            source_catalog=self.source_catalog,
+            upstream=self.upstream,
+            connection_service=self.connection_service,
+            event_sink=self.events.record_event,
+        )
         if self.include_builtin_specs:
             for source in builtin_sources().values():
                 self.register_capability_source(source)
@@ -183,13 +197,6 @@ class WfMcpService:
     def list_available_specs(self) -> list[CatalogNodeEntry]:
         return self.source_catalog.list_available_specs()
 
-    def workflow_artifact_catalog_entry(
-        self,
-        artifact: WorkflowArtifact,
-    ) -> WorkflowArtifactCatalogEntry:
-        """Project a saved workflow artifact as a planner catalog entry."""
-        return artifact_catalog_entry(artifact)
-
     def get_connection_snapshot(self, connection_id: str) -> CatalogSnapshot | None:
         return self.source_catalog.get_connection_snapshot(connection_id)
 
@@ -217,34 +224,7 @@ class WfMcpService:
         return self.source_catalog.get_prompt(qualified_name)
 
     async def read_resource(self, qualified_name: str) -> dict[str, Any]:
-        local_resource = self.source_catalog.local_documentation_resource(
-            qualified_name
-        )
-        if local_resource is not None:
-            self._record_event(
-                make_event(
-                    "resource_read_completed",
-                    capability_id=qualified_name,
-                    payload={"uri": local_resource.uri, "source": "local"},
-                )
-            )
-            return {
-                "contents": [
-                    {
-                        "uri": local_resource.uri,
-                        "mimeType": local_resource.mime_type,
-                        "text": local_resource.text,
-                    }
-                ]
-            }
-
-        resource = self.get_resource(qualified_name)
-        connection = self.connections.get(resource.connection_id)
-        return await self.upstream.read_resource(
-            connection,
-            qualified_name,
-            resource.uri,
-        )
+        return await self.content_access.read_resource(qualified_name)
 
     async def invoke_method(
         self,
@@ -276,38 +256,9 @@ class WfMcpService:
         *,
         arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        local_prompt = self.source_catalog.local_documentation_prompt(qualified_name)
-        if local_prompt is not None:
-            self._record_event(
-                make_event(
-                    "prompt_get_completed",
-                    capability_id=qualified_name,
-                    payload={
-                        "argument_keys": sorted((arguments or {}).keys()),
-                        "source": "local",
-                    },
-                )
-            )
-            return {
-                "description": local_prompt.description,
-                "messages": [
-                    {
-                        "role": "user",
-                        "content": {
-                            "type": "text",
-                            "text": local_prompt.text,
-                        },
-                    }
-                ],
-            }
-
-        prompt = self.get_prompt(qualified_name)
-        connection = self.connections.get(prompt.connection_id)
-        return await self.upstream.render_prompt(
-            connection,
+        return await self.content_access.render_prompt(
             qualified_name,
-            prompt.local_name,
-            arguments,
+            arguments=arguments,
         )
 
     async def refresh_connection_catalog(
@@ -396,7 +347,7 @@ class WfMcpService:
 
     def register_capability_source(self, source: CapabilitySource) -> None:
         """Register a capability source as canonical service state."""
-        self.capability_sources[source.id] = source
+        self.source_catalog.register_capability_source(source)
 
     def _get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
         return self.source_catalog.get_qualified_spec(qualified_name)

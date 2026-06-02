@@ -34,56 +34,44 @@ The remaining class still has two kinds of code:
 | `save_auth`, `load_auth` | Delegate to `UpstreamTransportService` | Compatibility facade | Keep until admin/control surfaces use upstream service directly. |
 | `register_specs` | Delegates to `SourceCatalogService` with event fanout callback | Thin coordinator | Acceptable for now; later expose `source_catalog.register_specs(..., record_catalog_change_events=events.record_catalog_change_events)` through a smaller service bundle. |
 | Catalog/source list/inspect methods | Delegate to `SourceCatalogService` | Compatibility facade | Keep while admin/MCP surfaces use `WfMcpService`; new code should call `source_catalog`. |
-| `workflow_artifact_catalog_entry` | Calls pure `wf_artifacts.artifact_catalog_entry()` | Misplaced pure projection | Move this out of `WfMcpService`/operation context later; `wf_api` can call `wf_artifacts` directly or use a small artifact projection protocol. |
-| `read_resource` | Handles local docs special-case, records event, else forwards upstream | Mixed real responsibility | Extract next into a focused resource/prompt access service. |
+| `workflow_artifact_catalog_entry` | Removed from `WfMcpService` | Completed cleanup | `wf_api.artifacts` now calls `wf_artifacts.artifact_catalog_entry()` directly. |
+| `read_resource` | Delegates to `ContentAccessService` | Compatibility facade | Keep for admin/MCP callers; new code should call `content_access`. |
 | `invoke_method`, `send_notification` | Lookup connection, forward upstream | Compatibility facade | Could move with resource/prompt access or leave as upstream delegates. |
-| `render_prompt` | Handles local docs special-case, records event, else forwards upstream | Mixed real responsibility | Extract next with `read_resource`. |
+| `render_prompt` | Delegates to `ContentAccessService` | Compatibility facade | Keep for admin/MCP callers; new code should call `content_access`. |
 | `refresh_connection_catalog` | Lookup connection, call upstream refresh with source/event callbacks | Thin coordinator | Could move to `UpstreamTransportService` if it accepts connection id + connection lookup, or stay as facade. Not as urgent as resources/prompts. |
 | Runtime methods | Delegate to `WorkflowRuntimeService` | Compatibility facade | Keep while `wf_api` runtime adapter points through service; new internals should use `workflow_runtime`. |
 | `list_events` | Delegates to `BrokerEventRecorder` | Compatibility facade | Keep for admin/tests; new code should call `events`. |
-| `register_capability_source` | Directly mutates `source_catalog.capability_sources` | Compatibility facade | Replace implementation with `source_catalog.register_capability_source(source)` to make ownership explicit. |
+| `register_capability_source` | Delegates to `SourceCatalogService` | Compatibility facade | Keep for old service callers; source ownership is explicit. |
 | `_get_qualified_spec` | Delegates to `SourceCatalogService` | Compatibility/private shim | Keep only for tests/legacy paths; new code should call `source_catalog.get_qualified_spec`. |
 | `_record_event`, `_record_catalog_change_events` | Delegate to `BrokerEventRecorder` | Compatibility/private shim | Remove when remaining `WfMcpService` methods stop needing local event helpers. |
 
-## Best Next Slice
+## Best Next Slice (Completed)
 
 Extract a resource/prompt access service, tentatively named
 `BrokerContentAccessService` or `ResourcePromptAccessService`.
 
-Why this is next:
-
-- `read_resource` and `render_prompt` are the last methods with real branching logic in
-  `WfMcpService`.
-- They combine three dependencies: `SourceCatalogService`, `ConnectionService`, and
-  `UpstreamTransportService`.
-- They also record local documentation events directly. That makes the boundary useful
-  and testable, not just mechanical delegation.
-
-Proposed ownership:
-
-- `read_resource(qualified_name) -> dict[str, Any]`
-- `render_prompt(qualified_name, arguments=None) -> dict[str, Any]`
-- Optional: `invoke_method` and `send_notification` if the slice wants all
-  connection-id-to-upstream forwarding in one place.
+**Done:** `ContentAccessService` now owns `read_resource` and `render_prompt`.
+`WfMcpService` delegates both methods. See plan:
+`docs/superpowers/plans/2026-06-02-wfmcpservice-resource-prompt-access-extraction.md`.
 
 Keep out of scope for that slice:
 
 - Catalog refresh. It has different semantics and should stay with upstream/catalog
   coordination until there is a clearer need.
 - Workflow runtime methods. They are already clean delegates.
-- `workflow_artifact_catalog_entry`. It is not broker content access; handle it in a
-  separate small cleanup.
+- `workflow_artifact_catalog_entry`. Completed: `wf_api.artifacts` now calls the pure
+  `wf_artifacts` projection directly.
 
 ## Small Cleanup Before Or After Next Slice
 
 These are safe, low-risk cleanups:
 
-- Change `register_capability_source()` to delegate to
+- Completed: `register_capability_source()` delegates to
   `self.source_catalog.register_capability_source(source)` instead of mutating the dict.
-- Move `workflow_artifact_catalog_entry()` out of `WfMcpService` if the `wf_api`
-  operation context can call `wf_artifacts.artifact_catalog_entry()` directly.
-- Add a docstring to `WfMcpService` itself stating that it is now a compatibility
-  coordinator around focused broker services.
+- Completed: `workflow_artifact_catalog_entry()` was removed from `WfMcpService`;
+  `wf_api.artifacts` calls `wf_artifacts.artifact_catalog_entry()` directly.
+- Completed: `WfMcpService` now has a class docstring stating that it is a
+  compatibility coordinator around focused broker services.
 
 ## Durable API Implication
 
