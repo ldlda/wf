@@ -27,7 +27,7 @@ def observed_node_specs(
 ) -> dict[str, NodeSpecInventory]:
     """Project current executable specs into serializable observed contracts."""
     observed: dict[str, NodeSpecInventory] = {}
-    for source in context.capability_sources.values():
+    for source in context.specs.capability_sources.values():
         inventory = source.as_inventory()
         observed.update(
             {detail.name: detail for detail in inventory.capabilities.node_spec_details}

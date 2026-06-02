@@ -20,7 +20,7 @@ def test_context_uses_source_catalog_mapping() -> None:
     service = WfMcpService(store=FileStore(_local_temp_root() / "context_sources"))
     context = context_from_service(service)
 
-    assert context.capability_sources is service.source_catalog.capability_sources
+    assert context.specs.capability_sources is service.source_catalog.capability_sources
 
 
 def test_wf_api_operation_context_imports_no_wf_mcp() -> None:
@@ -71,7 +71,8 @@ def test_context_from_service_exposes_existing_store_objects(tmp_path: Path) -> 
     )
     assert operation_context.run_store is cli_context.service.run_store
     assert (
-        operation_context.capability_sources is cli_context.service.capability_sources
+        operation_context.specs.capability_sources
+        is cli_context.service.capability_sources
     )
 
 

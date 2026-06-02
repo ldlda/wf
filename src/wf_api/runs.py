@@ -116,7 +116,7 @@ class WorkflowRunApi:
         environment = record.environment
         diagnostics = validate_pinned_resume_environment(
             record=record,
-            sources=_available_sources(self.context.capability_sources),
+            sources=_available_sources(self.context.specs.capability_sources),
         )
         if has_blocking_diagnostics(diagnostics):
             blocked = mark_resume_blocked(

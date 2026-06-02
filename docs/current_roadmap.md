@@ -48,6 +48,42 @@ implementation state.
      subgraph preparation, and durable run lifecycle helpers. Old
      `wf_mcp.workflow_surface` helper paths remain compatibility shims.
 
+## Active Next Roadmap
+
+1. **WorkflowOperationContext simplification**
+   - Completed: the duplicated top-level
+     `WorkflowOperationContext.capability_sources` field was removed.
+   - Keep `WorkflowSpecProvider.capability_sources` as the single source inventory
+     path for `wf_api` consumers.
+   - The audit is in
+     [2026-06-03 WorkflowOperationContext shape audit](./superpowers/research/2026-06-03-workflow-operation-context-audit.md).
+
+2. **Persisted run/resume spec**
+   - Define the process-restart resume contract around run records, pinned
+     deployment/artifact/subgraph environment, source/capability validation,
+     trace paging, and interrupt-only pause semantics.
+   - Keep ordinary dead tools/sources as diagnostics or failed runs, not implicit
+     pauses.
+
+3. **Persisted run/resume implementation**
+   - Implement the load/validate/resume flow behind `WorkflowRunApi`, `RunStore`,
+     and `WorkflowRuntimeRunner`.
+   - Do not reintroduce direct `WfMcpService` coupling into the workflow API.
+
+4. **Durable API service shape**
+   - Decide the non-MCP frontend boundary for a long-lived API process.
+   - Reuse `WorkflowApi` and the focused broker services where possible.
+   - Keep config/store construction and auth explicit.
+
+5. **CLI/API alignment**
+   - Let the CLI target either local process-backed stores/runtime or the future
+     HTTP API backend.
+   - Preserve the current local CLI path until the API backend is proven.
+
+6. **Workflow primitive polish**
+   - Return to native subgraph polish, fork/gather, foreach follow-ups, and graph
+     authoring UX after the durability/platform path is stable.
+
 ## Runtime and Platform Roadmap
 
 - Scheduler foundation decision record:

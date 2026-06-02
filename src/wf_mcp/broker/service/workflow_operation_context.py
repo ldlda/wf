@@ -125,7 +125,6 @@ def context_from_service(service: WfMcpService) -> WorkflowOperationContext:
         artifact_store=service.artifact_store,
         draft_workspace_store=service.draft_workspace_store,
         run_store=service.run_store,
-        capability_sources=specs.capability_sources,
         events=WfMcpWorkflowEventRecorder(service.events),
         specs=specs,
         runtime=WfMcpWorkflowRuntimeRunner(service.workflow_runtime),

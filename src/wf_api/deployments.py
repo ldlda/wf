@@ -120,7 +120,7 @@ class WorkflowDeploymentApi:
             deployment.artifact_id,
             deployment.artifact_version,
         )
-        available_sources = _available_sources(self.context.capability_sources)
+        available_sources = _available_sources(self.context.specs.capability_sources)
         diagnostics = validate_deployment_dependencies(
             artifact=artifact,
             deployment=deployment,

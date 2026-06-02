@@ -88,7 +88,7 @@ class WorkflowCapabilityApi:
                 ),
             }
             for source in sorted(
-                self.context.capability_sources.values(),
+                self.context.specs.capability_sources.values(),
                 key=lambda source: source.id,
             )
             if source.enabled and source.visibility.planner
@@ -113,7 +113,7 @@ class WorkflowCapabilityApi:
 
     async def inspect_capability(self, *, qualified_name: str) -> dict[str, Any]:
         """Return one planner-visible workflow capability contract."""
-        for source in self.context.capability_sources.values():
+        for source in self.context.specs.capability_sources.values():
             if not source.enabled or not source.visibility.planner:
                 continue
             for detail in source.as_inventory().capabilities.node_spec_details:
@@ -150,7 +150,7 @@ class WorkflowCapabilityApi:
         spec = self.context.specs.get_qualified_spec(qualified_name)
         handler = build_async_registry(spec)[spec.name]
         source_id = _source_id_for_capability(
-            self.context.capability_sources,
+            self.context.specs.capability_sources,
             spec.name,
         )
         try:

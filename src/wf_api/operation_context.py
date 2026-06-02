@@ -105,7 +105,6 @@ class WorkflowOperationContext:
     artifact_store: WorkflowArtifactStore | None
     draft_workspace_store: DraftWorkspaceStore | None
     run_store: RunStore | None
-    capability_sources: Mapping[str, CapabilitySource]
     events: WorkflowEventRecorder
     specs: WorkflowSpecProvider
     runtime: WorkflowRuntimeRunner
