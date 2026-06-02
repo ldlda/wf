@@ -58,3 +58,120 @@ def test_rpc_unknown_method_returns_json_rpc_error(tmp_path) -> None:
         assert payload["error"]["message"] == "Method not found"
 
     asyncio.run(scenario())
+
+
+def test_rpc_draft_artifact_deployment_lifecycle(tmp_path) -> None:
+    async def scenario() -> None:
+        server = build_local_static_workflow_server(tmp_path / "store")
+        app = create_rpc_app(server)
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            draft_ws = await _rpc(
+                client,
+                "workflow.drafts.create_from_capability",
+                {
+                    "workspace_id": "constant_ws",
+                    "capability_name": "wf.std.constant",
+                    "name": "constant_workflow",
+                    "title": "Constant Workflow",
+                    "input_map": {},
+                    "output_map": {"value": "state.result"},
+                },
+            )
+
+            draft = {
+                "name": "rpc_constant",
+                "input_schema": {"type": "object", "properties": {}},
+                "state_schema": {
+                    "type": "object",
+                    "properties": {
+                        "result": {"type": "string", "reducer": "wf.std.replace"}
+                    },
+                },
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"result": {"type": "string"}},
+                    "required": ["result"],
+                },
+                "start": "constant",
+                "steps": {
+                    "constant": {
+                        "use": "wf.std.constant",
+                        "input": [
+                            {
+                                "value": "hello over rpc",
+                                "target": {"root": "local", "parts": ["value"]},
+                            }
+                        ],
+                        "output": [
+                            {
+                                "source": {"root": "local", "parts": ["value"]},
+                                "target": {"root": "state", "parts": ["result"]},
+                            }
+                        ],
+                    }
+                },
+                "routes": {"constant": {"ok": "__end__"}},
+                "output": [
+                    {
+                        "path": {"root": "state", "parts": ["result"]},
+                        "target": {"root": "local", "parts": ["result"]},
+                    }
+                ],
+            }
+
+            validate_draft = await _rpc(
+                client,
+                "workflow.drafts.validate",
+                {"draft": draft},
+            )
+            compiled_plan = validate_draft["result"]["compiled_plan"]
+            artifact = await _rpc(
+                client,
+                "workflow.artifacts.save",
+                {
+                    "artifact": {
+                        "id": "constant_rpc",
+                        "version": 1,
+                        "kind": "wrapper",
+                        "title": "Constant RPC",
+                        "input_schema": {"type": "object", "properties": {}},
+                        "output_schema": {
+                            "type": "object",
+                            "properties": {"result": {"type": "string"}},
+                            "required": ["result"],
+                        },
+                        "outcomes": ["ok"],
+                        "required_capabilities": {},
+                        "source_bindings": {"wf.std": "wf.std"},
+                        "plan": compiled_plan,
+                    },
+                },
+            )
+            deployment = await _rpc(
+                client,
+                "workflow.deployments.save",
+                {
+                    "deployment": {
+                        "id": "constant_rpc.default",
+                        "artifact_id": "constant_rpc",
+                        "artifact_version": 1,
+                        "bindings": [
+                            {"logical_source": "wf.std", "concrete_source": "wf.std"}
+                        ],
+                    },
+                },
+            )
+            validate_deployment = await _rpc(
+                client,
+                "workflow.deployments.validate",
+                {"deployment_id": "constant_rpc.default"},
+            )
+
+        assert draft_ws["result"]["workspace_id"] == "constant_ws"
+        assert validate_draft["result"]["status"] == "valid"
+        assert artifact["result"]["artifact_id"] == "constant_rpc"
+        assert deployment["result"]["deployment_id"] == "constant_rpc.default"
+        assert validate_deployment["result"]["status"] == "runnable"
+
+    asyncio.run(scenario())

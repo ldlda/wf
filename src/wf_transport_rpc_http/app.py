@@ -9,7 +9,16 @@ from fastapi_jsonrpc import Params
 from wf_server import WorkflowServer
 
 from .errors import WorkflowRpcError, raise_workflow_rpc_error
-from .models import InspectCapabilityParams, ListCapabilitiesParams
+from .models import (
+    CreateDraftFromCapabilityParams,
+    InspectCapabilityParams,
+    ListCapabilitiesParams,
+    PatchDraftParams,
+    SaveArtifactParams,
+    SaveDeploymentParams,
+    ValidateDeploymentParams,
+    ValidateDraftParams,
+)
 
 
 def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
@@ -55,6 +64,76 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
         try:
             return await server.api.inspect_capability(
                 qualified_name=params.qualified_name,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(name="workflow.drafts.create_from_capability", errors=[WorkflowRpcError])
+    async def workflow_drafts_create_from_capability(
+        params: CreateDraftFromCapabilityParams = Params(...),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.create_draft_workspace_from_capability(
+                workspace_id=params.workspace_id,
+                capability_name=params.capability_name,
+                name=params.name,
+                title=params.title,
+                input_schema=params.input_schema,
+                state_schema=params.state_schema,
+                output_schema=params.output_schema,
+                input=params.input,
+                output=params.output,
+                input_map=params.input_map,
+                output_map=params.output_map,
+                error_message_source=params.error_message_source,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(name="workflow.drafts.patch", errors=[WorkflowRpcError])
+    async def workflow_drafts_patch(
+        params: PatchDraftParams = Params(...),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.patch_draft(draft=params.draft, patch=params.patch)
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(name="workflow.drafts.validate", errors=[WorkflowRpcError])
+    async def workflow_drafts_validate(
+        params: ValidateDraftParams = Params(...),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.validate_draft(draft=params.draft)
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(name="workflow.artifacts.save", errors=[WorkflowRpcError])
+    async def workflow_artifacts_save(
+        params: SaveArtifactParams = Params(...),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.save_artifact(params.artifact)
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(name="workflow.deployments.save", errors=[WorkflowRpcError])
+    async def workflow_deployments_save(
+        params: SaveDeploymentParams = Params(...),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.save_deployment(params.deployment)
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(name="workflow.deployments.validate", errors=[WorkflowRpcError])
+    async def workflow_deployments_validate(
+        params: ValidateDeploymentParams = Params(...),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.validate_deployment(
+                deployment_id=params.deployment_id,
+                live_check=params.live_check,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
