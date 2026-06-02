@@ -21,7 +21,7 @@ from wf_api.models import RawWorkflowPlan
 from wf_platform import (
     CapabilitySource,
 )
-from ...connections import ConnectionRegistry, parse_connection_id
+from ...connections import ConnectionRegistry
 from ...events import EventBus, McpEvent, make_event
 from ...models import (
     AuthRecord,
@@ -34,7 +34,7 @@ from ...models import (
 )
 from ...sdk import BackendAdapter
 from ...runtime import ToolExecutor
-from ...shared.names import RESERVED_CONNECTION_IDS
+from .connection_service import ConnectionService
 from ...storage import Store
 from wf_api.saved_subgraphs import SavedSubgraphTree
 from ..admin_capabilities import admin_source
@@ -50,7 +50,6 @@ from .workflow_runtime import WorkflowRuntimeService
 class WfMcpService:
     store: Store
     default_catalog_max_age_seconds: int = 300
-    connections: ConnectionRegistry = field(default_factory=ConnectionRegistry)
     event_bus: EventBus = field(default_factory=EventBus)
     include_builtin_specs: bool = True
     artifact_store: WorkflowArtifactStore | None = None
@@ -58,6 +57,7 @@ class WfMcpService:
     run_store: RunStore | None = None
     tool_executor: ToolExecutor | None = None
     events: BrokerEventRecorder = field(init=False)
+    connection_service: ConnectionService = field(init=False)
     upstream: UpstreamTransportService = field(init=False)
     source_catalog: SourceCatalogService = field(init=False)
     workflow_runtime: WorkflowRuntimeService = field(init=False)
@@ -70,6 +70,7 @@ class WfMcpService:
         CLI, MCP, and future HTTP frontends may share or swap those stores.
         """
         self.events = BrokerEventRecorder(self.event_bus)
+        self.connection_service = ConnectionService(events=self.events)
         self.upstream = UpstreamTransportService(
             store=self.store,
             event_sink=self.events.record_event,
@@ -77,14 +78,15 @@ class WfMcpService:
         )
         self.source_catalog = SourceCatalogService(
             store=self.store,
-            connection_lookup=self.connections.get,
-            connection_list_enabled=self.connections.list_enabled,
-            connection_list_all=self.connections.list_all,
+            connection_lookup=self.connection_service.get,
+            connection_list_enabled=self.connection_service.list_enabled,
+            connection_list_all=self.connection_service.list_all,
             tool_executor_for=self.upstream.tool_executor_for,
             load_auth=self.upstream.load_auth,
             emit_event=self.events.record_event,
             default_catalog_max_age_seconds=self.default_catalog_max_age_seconds,
         )
+        self.connection_service.bind_source_catalog(self.source_catalog)
         if self.include_builtin_specs:
             for source in builtin_sources().values():
                 self.register_capability_source(source)
@@ -105,50 +107,25 @@ class WfMcpService:
         return self.source_catalog.capability_sources
 
     @property
+    def connections(self) -> ConnectionRegistry:
+        """Compatibility view of the broker connection registry.
+
+        Connection lifecycle ownership has moved to ConnectionService. Keep this
+        property because admin handlers, CLI helpers, and tests still inspect the
+        registry through the service facade.
+        """
+        return self.connection_service.connections
+
+    @property
     def adapters(self) -> dict[str, BackendAdapter]:
         """Compatibility view of upstream adapter registry."""
         return self.upstream.adapters
 
     def register_connection(self, connection: ConnectionConfig) -> None:
-        parse_connection_id(connection.id)
-        if connection.id in RESERVED_CONNECTION_IDS:
-            raise ValueError(f"connection id {connection.id!r} is reserved by wf-mcp")
-        self.connections.register(connection)
-        self.source_catalog.hydrate_connection_source_from_snapshot(connection)
-        self._record_event(
-            make_event(
-                "connection_registered",
-                connection_id=connection.id,
-                payload={"server": connection.server, "account": connection.account},
-            )
-        )
+        self.connection_service.register_connection(connection)
 
     def sync_connections_from_config(self, config: BrokerConfig) -> None:
-        """Reconcile connection sources after the public server reloads config.
-
-        The public server has two cooperating views: proxy mounts read the live
-        file-backed config, while workflow discovery reads this service's source
-        registry. Reload must keep those views aligned, or raw proxy tools can be
-        enabled while planner-visible workflow capabilities remain disabled.
-        """
-        next_ids = {connection.id for connection in config.connections}
-        previous_ids = set(self.connections.connections)
-        for connection_id in previous_ids - next_ids:
-            del self.connections.connections[connection_id]
-            self.capability_sources.pop(connection_id, None)
-
-        for connection in config.connections:
-            parse_connection_id(connection.id)
-            if connection.id in RESERVED_CONNECTION_IDS:
-                raise ValueError(
-                    f"connection id {connection.id!r} is reserved by wf-mcp"
-                )
-            self.connections.register(connection)
-            source = self.capability_sources.get(connection.id)
-            if source is None:
-                self.source_catalog.hydrate_connection_source_from_snapshot(connection)
-            else:
-                source.enabled = connection.enabled
+        self.connection_service.sync_connections_from_config(config)
 
     def register_adapter(self, server: str, adapter: BackendAdapter) -> None:
         self.upstream.register_adapter(server, adapter)

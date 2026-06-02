@@ -124,6 +124,11 @@ Event recording ownership is now split: `BrokerEventRecorder` owns EventBus
 publication, simple event construction, event history reads, and catalog-change
 fanout. `WfMcpService` remains the coordinator and compatibility façade.
 
+Connection registration/config reload reconciliation is now owned by
+`wf_mcp.broker.service.connection_service.ConnectionService`. The service owns
+the `ConnectionRegistry`; `WfMcpService.connections` is only a compatibility
+property.
+
 ### WfMcpService Members NOT Used by WorkflowSurfaceHandlers
 
 These members of `WfMcpService` (`src/wf_mcp/broker/service/core.py`) are NOT accessed by `WorkflowSurfaceHandlers`:

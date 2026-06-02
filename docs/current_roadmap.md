@@ -132,6 +132,11 @@ implementation state.
     `BrokerEventRecorder` now owns EventBus publication, event history reads,
     simple event construction, and catalog-change fanout. `WfMcpService` keeps
     delegate methods for compatibility.
+  - Connection ownership now lives in `ConnectionService`: it owns the broker
+    `ConnectionRegistry`, reserved connection-id rejection, `register_connection`,
+    and `sync_connections_from_config`. `WfMcpService.connections` remains a
+    compatibility property while source hydration still belongs to
+    `SourceCatalogService`.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 
