@@ -118,6 +118,9 @@ implementation state.
   - Double-delegation has been removed: CLI and MCP workflow tools construct
     `WorkflowApi(context_from_service(service))` directly. `WorkflowSurfaceHandlers`
     remains only as a temporary compatibility shim for older imports.
+  - `WfMcpService` is being reduced into injected implementation services. Source
+    registry and catalog projection now live in `SourceCatalogService`; the old
+    service methods remain as compatibility delegates for MCP broker callers.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 

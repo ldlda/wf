@@ -2,11 +2,25 @@ from __future__ import annotations
 
 import ast
 import json
+import tempfile
 from pathlib import Path
 
 from wf_api.operation_context import WorkflowOperationContext
 from wf_cli.context import load_cli_context
+from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
+from wf_mcp.storage import FileStore
+
+
+def _local_temp_root() -> Path:
+    return Path(tempfile.mkdtemp())
+
+
+def test_context_uses_source_catalog_mapping() -> None:
+    service = WfMcpService(store=FileStore(_local_temp_root() / "context_sources"))
+    context = context_from_service(service)
+
+    assert context.capability_sources is service.source_catalog.capability_sources
 
 
 def test_wf_api_operation_context_imports_no_wf_mcp() -> None:

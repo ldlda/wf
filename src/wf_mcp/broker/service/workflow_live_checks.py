@@ -70,7 +70,7 @@ async def live_source_diagnostics(
     """
     diagnostics: list[DependencyDiagnostic] = []
     for source_id, logical_ref in _required_live_sources(deployment, artifacts).items():
-        source = service.capability_sources.get(source_id)
+        source = service.source_catalog.capability_sources.get(source_id)
         if (
             source is None
             or not source.enabled

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from wf_artifacts import DependencyDiagnostic, WorkflowArtifact, WorkflowDeployment
+from wf_authoring import NodeSpec
 from wf_api.operation_context import (
     WorkflowArtifactCataloger,
     WorkflowEventRecorder,
@@ -48,10 +49,10 @@ class WfMcpWorkflowSpecProvider(WorkflowSpecProvider):
 
     @property
     def capability_sources(self):
-        return self.service.capability_sources
+        return self.service.source_catalog.capability_sources
 
-    def get_qualified_spec(self, qualified_name: str) -> object:
-        return self.service._get_qualified_spec(qualified_name)  # noqa: SLF001
+    def get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
+        return self.service.source_catalog.get_qualified_spec(qualified_name)
 
 
 @dataclass(frozen=True, slots=True)

@@ -4,8 +4,6 @@ import time
 from dataclasses import dataclass, field
 from typing import Any
 
-from pydantic import BaseModel
-
 from wf_artifacts import (
     DraftWorkspaceStore,
     RunStore,
@@ -15,7 +13,7 @@ from wf_artifacts import (
     WorkflowDeployment,
     artifact_catalog_entry,
 )
-from wf_authoring import NodeReturn, NodeSpec
+from wf_authoring import NodeSpec
 from wf_core import (
     NodeUse,
     RunState,
@@ -26,15 +24,9 @@ from wf_core import (
 from wf_api.models import RawWorkflowPlan
 from wf_api.runtime_dependencies import resolve_runtime_dependencies
 from wf_platform import (
-    CapabilityBuckets,
     CapabilitySource,
-    DocumentationPrompt,
-    DocumentationResource,
-    SourcePermissions,
-    SourceVisibility,
-    page_items,
 )
-from ...connections import ConnectionRegistry, parse_connection_id, qualify_node_name
+from ...connections import ConnectionRegistry, parse_connection_id
 from ...events import EventBus, McpEvent, make_event
 from ...models import (
     AuthRecord,
@@ -50,7 +42,6 @@ from ...runtime import ToolExecutor
 from ...shared.errors import error_payload
 from ...shared.names import RESERVED_CONNECTION_IDS
 from ...storage import Store
-from ...workflow.wrappers import _model_from_schema
 from wf_api.saved_subgraphs import (
     SavedSubgraphTree,
     prepare_saved_subgraphs,
@@ -61,7 +52,7 @@ from ..catalog import CombinedCatalog, snapshot_from_specs
 from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
 from .adapters import require_adapter
 from .builtins import builtin_sources
-from .specs import get_qualified_spec, qualify_spec
+from .source_catalog import SourceCatalogService
 
 
 @dataclass(slots=True)
@@ -70,13 +61,13 @@ class WfMcpService:
     default_catalog_max_age_seconds: int = 300
     connections: ConnectionRegistry = field(default_factory=ConnectionRegistry)
     adapters: dict[str, BackendAdapter] = field(default_factory=dict)
-    capability_sources: dict[str, CapabilitySource] = field(default_factory=dict)
     event_bus: EventBus = field(default_factory=EventBus)
     include_builtin_specs: bool = True
     artifact_store: WorkflowArtifactStore | None = None
     draft_workspace_store: DraftWorkspaceStore | None = None
     run_store: RunStore | None = None
     tool_executor: ToolExecutor | None = None
+    source_catalog: SourceCatalogService = field(init=False)
 
     def __post_init__(self) -> None:
         """Install broker-local system specs when enabled.
@@ -85,17 +76,36 @@ class WfMcpService:
         must not guess workflow persistence from the MCP catalog/auth store because
         CLI, MCP, and future HTTP frontends may share or swap those stores.
         """
+        self.source_catalog = SourceCatalogService(
+            store=self.store,
+            connection_lookup=self.connections.get,
+            connection_list_enabled=self.connections.list_enabled,
+            connection_list_all=self.connections.list_all,
+            tool_executor_for=self._tool_executor_for,
+            load_auth=self.load_auth,
+            emit_event=self._record_event,
+            default_catalog_max_age_seconds=self.default_catalog_max_age_seconds,
+        )
         if self.include_builtin_specs:
             for source in builtin_sources().values():
                 self.register_capability_source(source)
         self.register_capability_source(admin_source())
+
+    @property
+    def capability_sources(self) -> dict[str, CapabilitySource]:
+        """Compatibility view of source catalog state.
+
+        Source ownership is moving into SourceCatalogService. Keep this property
+        because workflow APIs and existing tests still consume the service facade.
+        """
+        return self.source_catalog.capability_sources
 
     def register_connection(self, connection: ConnectionConfig) -> None:
         parse_connection_id(connection.id)
         if connection.id in RESERVED_CONNECTION_IDS:
             raise ValueError(f"connection id {connection.id!r} is reserved by wf-mcp")
         self.connections.register(connection)
-        self._hydrate_connection_source_from_snapshot(connection)
+        self.source_catalog.hydrate_connection_source_from_snapshot(connection)
         self._record_event(
             make_event(
                 "connection_registered",
@@ -127,7 +137,7 @@ class WfMcpService:
             self.connections.register(connection)
             source = self.capability_sources.get(connection.id)
             if source is None:
-                self._hydrate_connection_source_from_snapshot(connection)
+                self.source_catalog.hydrate_connection_source_from_snapshot(connection)
             else:
                 source.enabled = connection.enabled
 
@@ -165,113 +175,28 @@ class WfMcpService:
         max_age_seconds: int | None = None,
         emit_change_events: bool = True,
     ) -> None:
-        self.connections.get(connection_id)
-        qualified_specs = {
-            qualify_node_name(connection_id, spec.name): qualify_spec(
-                connection_id, spec
-            )
-            for spec in specs
-        }
-        existing_source = self.capability_sources.get(connection_id)
-        if existing_source is not None:
-            # Catalog refreshes replace discovered specs, not operator policy.
-            existing_source.capabilities.node_specs = qualified_specs
-        else:
-            self.register_capability_source(
-                CapabilitySource(
-                    id=connection_id,
-                    kind="connection",
-                    capabilities=CapabilityBuckets(node_specs=qualified_specs),
-                    enabled=self.connections.get(connection_id).enabled,
-                    visibility=SourceVisibility(
-                        planner=True,
-                        mcp_client=True,
-                        admin_dashboard=True,
-                    ),
-                    permissions=SourcePermissions(calls_upstream=True),
-                    description=(
-                        f"Specs discovered or registered for {connection_id}."
-                    ),
-                )
-            )
-        snapshot = snapshot_from_specs(
+        self.source_catalog.register_specs(
             connection_id,
-            specs=qualified_specs,
-            fetched_at_epoch_ms=int(time.time() * 1000),
-            max_age_seconds=max_age_seconds or self.default_catalog_max_age_seconds,
+            *specs,
+            max_age_seconds=max_age_seconds,
+            emit_change_events=emit_change_events,
+            record_catalog_change_events=lambda source_id, snapshot, reason: (
+                self._record_catalog_change_events(
+                    source_id,
+                    snapshot,
+                    reason=reason,
+                )
+            ),
         )
-        self.store.save_catalog(snapshot)
-        self._record_event(
-            make_event(
-                "specs_registered",
-                connection_id=connection_id,
-                payload={"node_count": len(qualified_specs)},
-            )
-        )
-        if emit_change_events:
-            self._record_catalog_change_events(
-                connection_id,
-                snapshot,
-                reason="specs_registered",
-            )
 
     def get_catalog(self) -> CombinedCatalog:
-        snapshots: dict[str, CatalogSnapshot] = {}
-        for connection in self.connections.list_enabled():
-            snapshot = self.store.load_catalog(connection.id)
-            if snapshot is not None:
-                snapshots[connection.id] = snapshot
-        return CombinedCatalog(snapshots=snapshots)
+        return self.source_catalog.get_catalog()
 
     def get_planner_catalog(self) -> CombinedCatalog:
-        """Return all planner-visible specs, including broker-local sources."""
-        snapshots: dict[str, CatalogSnapshot] = {}
-        fetched_at_epoch_ms = int(time.time() * 1000)
-        for source in self.capability_sources.values():
-            if not source.enabled or not source.visibility.planner:
-                continue
-            stored_snapshot = self.store.load_catalog(source.id)
-            snapshots[source.id] = snapshot_from_specs(
-                source.id,
-                specs=source.capabilities.node_specs,
-                tool_display_names={
-                    entry.local_name: entry.title for entry in stored_snapshot.nodes
-                }
-                if stored_snapshot is not None
-                else None,
-                metadata={
-                    "kind": source.kind,
-                    "description": source.description,
-                }
-                if stored_snapshot is None
-                else stored_snapshot.metadata,
-                fetched_at_epoch_ms=(
-                    stored_snapshot.fetched_at_epoch_ms
-                    if stored_snapshot is not None
-                    else fetched_at_epoch_ms
-                ),
-                max_age_seconds=(
-                    stored_snapshot.max_age_seconds
-                    if stored_snapshot is not None
-                    else self.default_catalog_max_age_seconds
-                ),
-            )
-            if stored_snapshot is not None:
-                # Connection resources/prompts are discovered by the backend catalog,
-                # while planner node visibility is governed by capability sources.
-                snapshots[source.id].resources = list(stored_snapshot.resources)
-                snapshots[source.id].prompts = list(stored_snapshot.prompts)
-        return CombinedCatalog(snapshots=snapshots)
+        return self.source_catalog.get_planner_catalog()
 
     def list_sources(self) -> list[dict[str, Any]]:
-        """Return every capability source with the names it currently owns."""
-        return [
-            source.as_inventory().model_dump(mode="json")
-            for source in sorted(
-                self.capability_sources.values(),
-                key=lambda source: source.id,
-            )
-        ]
+        return self.source_catalog.list_sources()
 
     def list_source_summaries(
         self,
@@ -279,32 +204,13 @@ class WfMcpService:
         cursor: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        """Return compact paged source summaries for progressive discovery."""
-        summaries = [
-            source.as_status().model_dump(mode="json")
-            for source in sorted(
-                self.capability_sources.values(),
-                key=lambda source: source.id,
-            )
-        ]
-        page = page_items(summaries, cursor=cursor, limit=limit)
-        return {
-            "sources": list(page.items),
-            "next_cursor": page.next_cursor,
-            "total": page.total,
-        }
+        return self.source_catalog.list_source_summaries(cursor=cursor, limit=limit)
 
     def inspect_source(self, source_id: str) -> dict[str, Any]:
-        """Return the full source inventory for one exact source id."""
-        try:
-            source = self.capability_sources[source_id]
-        except KeyError as exc:
-            raise KeyError(f"unknown source {source_id!r}") from exc
-        return source.as_inventory().model_dump(mode="json")
+        return self.source_catalog.inspect_source(source_id)
 
     def list_available_specs(self) -> list[CatalogNodeEntry]:
-        """Return planner-visible node catalog entries from every visible source."""
-        return self.get_planner_catalog().entries()
+        return self.source_catalog.list_available_specs()
 
     def workflow_artifact_catalog_entry(
         self,
@@ -314,73 +220,35 @@ class WfMcpService:
         return artifact_catalog_entry(artifact)
 
     def get_connection_snapshot(self, connection_id: str) -> CatalogSnapshot | None:
-        self.connections.get(connection_id)
-        return self.store.load_catalog(connection_id)
+        return self.source_catalog.get_connection_snapshot(connection_id)
 
     def connection_statuses(self) -> list[dict[str, Any]]:
-        statuses: list[dict[str, Any]] = []
-        for connection in self.connections.list_all():
-            snapshot = self.store.load_catalog(connection.id)
-            statuses.append(
-                {
-                    "connection_id": connection.id,
-                    "server": connection.server,
-                    "account": connection.account,
-                    "enabled": connection.enabled,
-                    "has_snapshot": snapshot is not None,
-                    "fetched_at_epoch_ms": None
-                    if snapshot is None
-                    else snapshot.fetched_at_epoch_ms,
-                    "max_age_seconds": None
-                    if snapshot is None
-                    else snapshot.max_age_seconds,
-                    "node_count": 0 if snapshot is None else len(snapshot.nodes),
-                    "resource_count": 0
-                    if snapshot is None
-                    else len(snapshot.resources),
-                    "prompt_count": 0 if snapshot is None else len(snapshot.prompts),
-                }
-            )
-        return statuses
+        return self.source_catalog.connection_statuses()
 
     def list_resources(
         self,
         *,
         connection_id: str | None = None,
     ) -> list[CatalogResourceEntry]:
-        if connection_id is None:
-            return self.get_catalog().resource_entries()
-        snapshot = self.get_connection_snapshot(connection_id)
-        if snapshot is None:
-            return []
-        return sorted(snapshot.resources, key=lambda entry: entry.qualified_name)
+        return self.source_catalog.list_resources(connection_id=connection_id)
 
     def list_prompts(
         self,
         *,
         connection_id: str | None = None,
     ) -> list[CatalogPromptEntry]:
-        if connection_id is None:
-            return self.get_catalog().prompt_entries()
-        snapshot = self.get_connection_snapshot(connection_id)
-        if snapshot is None:
-            return []
-        return sorted(snapshot.prompts, key=lambda entry: entry.qualified_name)
+        return self.source_catalog.list_prompts(connection_id=connection_id)
 
     def get_resource(self, qualified_name: str) -> CatalogResourceEntry:
-        entry = self.get_catalog().find_resource(qualified_name)
-        if entry is None:
-            raise KeyError(f"unknown resource {qualified_name!r}")
-        return entry
+        return self.source_catalog.get_resource(qualified_name)
 
     def get_prompt(self, qualified_name: str) -> CatalogPromptEntry:
-        entry = self.get_catalog().find_prompt(qualified_name)
-        if entry is None:
-            raise KeyError(f"unknown prompt {qualified_name!r}")
-        return entry
+        return self.source_catalog.get_prompt(qualified_name)
 
     async def read_resource(self, qualified_name: str) -> dict[str, Any]:
-        local_resource = self._local_documentation_resource(qualified_name)
+        local_resource = self.source_catalog.local_documentation_resource(
+            qualified_name
+        )
         if local_resource is not None:
             self._record_event(
                 make_event(
@@ -485,7 +353,7 @@ class WfMcpService:
         *,
         arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        local_prompt = self._local_documentation_prompt(qualified_name)
+        local_prompt = self.source_catalog.local_documentation_prompt(qualified_name)
         if local_prompt is not None:
             self._record_event(
                 make_event(
@@ -537,28 +405,6 @@ class WfMcpService:
             )
         )
         return result
-
-    def _local_documentation_resource(
-        self,
-        qualified_name: str,
-    ) -> DocumentationResource | None:
-        """Return a local docs resource from capability sources by qualified name."""
-        for source in self.capability_sources.values():
-            resource = source.capabilities.resources.get(qualified_name)
-            if isinstance(resource, DocumentationResource):
-                return resource
-        return None
-
-    def _local_documentation_prompt(
-        self,
-        qualified_name: str,
-    ) -> DocumentationPrompt | None:
-        """Return a local docs prompt from capability sources by qualified name."""
-        for source in self.capability_sources.values():
-            prompt = source.capabilities.prompts.get(qualified_name)
-            if isinstance(prompt, DocumentationPrompt):
-                return prompt
-        return None
 
     async def refresh_connection_catalog(
         self,
@@ -814,85 +660,8 @@ class WfMcpService:
         """Register a capability source as canonical service state."""
         self.capability_sources[source.id] = source
 
-    def _hydrate_connection_source_from_snapshot(
-        self,
-        connection: ConnectionConfig,
-    ) -> None:
-        """Register one connection source, hydrating specs from snapshot if present."""
-        if connection.id in self.capability_sources:
-            return
-
-        snapshot = self.store.load_catalog(connection.id)
-        specs = {
-            entry.qualified_name: self._spec_from_snapshot_entry(entry)
-            for entry in (() if snapshot is None else snapshot.nodes)
-        }
-        description = (
-            f"Specs restored from catalog for {connection.id}."
-            if specs
-            else f"No catalog loaded for {connection.id}."
-        )
-        self.register_capability_source(
-            CapabilitySource(
-                id=connection.id,
-                kind="connection",
-                enabled=connection.enabled,
-                capabilities=CapabilityBuckets(node_specs=specs),
-                visibility=SourceVisibility(
-                    planner=True,
-                    mcp_client=True,
-                    admin_dashboard=True,
-                ),
-                permissions=SourcePermissions(calls_upstream=True),
-                description=description,
-            )
-        )
-
-    def _spec_from_snapshot_entry(
-        self,
-        entry: CatalogNodeEntry,
-    ) -> NodeSpec[Any, Any]:
-        """Rebuild an executable tool wrapper from a stored catalog node entry.
-
-        Snapshot entries store schema/name metadata, not Python functions. This
-        helper reconstructs the same generated NodeSpec shape and routes calls
-        through `_tool_executor_for()`, so hydrated specs use the persistent MCP
-        runtime when the service has one configured.
-        """
-        model_prefix = entry.qualified_name.replace(".", "_").replace("-", "_")
-        input_model = _model_from_schema(f"{model_prefix}_Input", entry.input_schema)
-        output_schema = entry.output_schema
-        output_model = _model_from_schema(f"{model_prefix}_Output", output_schema)
-
-        async def invoke_tool(payload: BaseModel) -> NodeReturn[BaseModel]:
-            connection = self.connections.get(entry.connection_id)
-            auth = self.load_auth(entry.connection_id)
-            result = await self._tool_executor_for(connection).call_tool(
-                connection,
-                auth,
-                entry.local_name,
-                payload.model_dump(exclude_unset=True),
-            )
-            return NodeReturn(
-                outcome=result.outcome,
-                output=output_model.model_validate(result.output),
-            )
-
-        return NodeSpec(
-            name=entry.qualified_name,
-            input_model=input_model,
-            output_model=output_model,
-            outcomes=entry.outcomes,
-            fn=invoke_tool,
-            description=entry.description,
-            is_async=True,
-            accepts_context=False,
-            input_schema_contract=entry.input_schema,
-            output_schema_contract=output_schema,
-        )
-
     def _get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
-        return get_qualified_spec(self.capability_sources, qualified_name)
+        return self.source_catalog.get_qualified_spec(qualified_name)
 
     def _record_event(self, event: McpEvent) -> None:
         self.event_bus.publish(event)

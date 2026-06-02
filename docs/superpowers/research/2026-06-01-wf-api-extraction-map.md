@@ -112,6 +112,10 @@ The extraction seam is clean: `WorkflowSurfaceHandlers` touches ~6 distinct capa
 | `adapters` | `dict[str, BackendAdapter]` | `self.service.adapters` | 1 | **MCP-specific** (live source check) |
 | `load_auth(connection_id)` | `AuthRecord \| None` | `self.service.load_auth(...)` | 1 | **MCP-specific** (live source check) |
 
+Source/catalog ownership is now split: `WfMcpService` coordinates broker runtime
+state, while `SourceCatalogService` owns capability source maps, planner catalog
+projection, snapshot hydration, and local docs lookup.
+
 ### WfMcpService Members NOT Used by WorkflowSurfaceHandlers
 
 These members of `WfMcpService` (`src/wf_mcp/broker/service/core.py`) are NOT accessed by `WorkflowSurfaceHandlers`:

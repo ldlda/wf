@@ -6,11 +6,13 @@ import shutil
 from wf_authoring import NodeSpec
 from wf_core import RunStatus
 from wf_mcp.broker import WfMcpService
+from wf_mcp.broker.service.source_catalog import SourceCatalogService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
+    DocumentationResource,
     SourceVisibility,
 )
 
@@ -296,3 +298,206 @@ def test_service_hydrates_planner_specs_from_stored_catalog() -> None:
     assert "demo.personal.echo_tool" in planner_names
     assert run.status == RunStatus.COMPLETED
     assert run.output["echoed"] == "hello"
+
+
+def test_source_catalog_service_registers_and_lists_sources_directly() -> None:
+    store = FileStore(local_temp_root() / "source_catalog_direct")
+
+    def unused_tool_executor(connection: ConnectionConfig):
+        raise AssertionError("tool executor should not be used by source listing")
+
+    catalog = SourceCatalogService(
+        store=store,
+        connection_lookup=lambda connection_id: ConnectionConfig(
+            id=connection_id,
+            server="demo",
+            account="personal",
+        ),
+        connection_list_enabled=lambda: [],
+        connection_list_all=lambda: [],
+        tool_executor_for=unused_tool_executor,
+        load_auth=lambda connection_id: None,
+        emit_event=lambda event: None,
+    )
+
+    catalog.register_capability_source(
+        CapabilitySource(
+            id="demo.personal",
+            kind="connection",
+            capabilities=CapabilityBuckets(),
+            visibility=SourceVisibility(planner=True),
+        )
+    )
+
+    payload = catalog.list_source_summaries(limit=10)
+
+    assert payload["total"] == 1
+    assert payload["sources"][0]["id"] == "demo.personal"
+
+
+def test_wfmcpservice_capability_sources_proxy_source_catalog() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "source_catalog_proxy"))
+
+    assert service.capability_sources is service.source_catalog.capability_sources
+    assert "wf.std" in service.source_catalog.capability_sources
+
+
+def test_source_catalog_service_excludes_hidden_sources_from_planner_catalog() -> None:
+    def unused_tool_executor(connection: ConnectionConfig):
+        raise AssertionError("tool executor should not be used by planner listing")
+
+    catalog = SourceCatalogService(
+        store=FileStore(local_temp_root() / "source_catalog_hidden"),
+        connection_lookup=lambda connection_id: ConnectionConfig(
+            id=connection_id,
+            server="demo",
+            account="personal",
+        ),
+        connection_list_enabled=lambda: [],
+        connection_list_all=lambda: [],
+        tool_executor_for=unused_tool_executor,
+        load_auth=lambda connection_id: None,
+        emit_event=lambda event: None,
+    )
+    visible_tool = NodeSpec(
+        name="visible.source.echo_tool",
+        input_model=echo_tool.input_model,
+        output_model=echo_tool.output_model,
+        outcomes=echo_tool.outcomes,
+        fn=echo_tool.fn,
+        description=echo_tool.description,
+        is_async=echo_tool.is_async,
+        accepts_context=echo_tool.accepts_context,
+        input_schema_contract=echo_tool.input_schema_contract,
+        output_schema_contract=echo_tool.output_schema_contract,
+    )
+    hidden_tool = NodeSpec(
+        name="hidden.source.echo_tool",
+        input_model=echo_tool.input_model,
+        output_model=echo_tool.output_model,
+        outcomes=echo_tool.outcomes,
+        fn=echo_tool.fn,
+        description=echo_tool.description,
+        is_async=echo_tool.is_async,
+        accepts_context=echo_tool.accepts_context,
+        input_schema_contract=echo_tool.input_schema_contract,
+        output_schema_contract=echo_tool.output_schema_contract,
+    )
+    catalog.register_capability_source(
+        CapabilitySource(
+            id="visible.source",
+            kind="system",
+            capabilities=CapabilityBuckets(
+                node_specs={"visible.source.echo_tool": visible_tool}
+            ),
+            visibility=SourceVisibility(planner=True),
+        )
+    )
+    catalog.register_capability_source(
+        CapabilitySource(
+            id="hidden.source",
+            kind="system",
+            capabilities=CapabilityBuckets(
+                node_specs={"hidden.source.echo_tool": hidden_tool}
+            ),
+            visibility=SourceVisibility(planner=False, admin_dashboard=False),
+        )
+    )
+
+    planner_names = {
+        entry.qualified_name for entry in catalog.get_planner_catalog().entries()
+    }
+
+    assert "visible.source.echo_tool" in planner_names
+    assert "hidden.source.echo_tool" not in planner_names
+
+
+def test_source_catalog_hydrates_connection_source_from_snapshot_directly() -> None:
+    root = local_temp_root() / "source_catalog_hydrate_direct"
+    shutil.rmtree(root, ignore_errors=True)
+    first_service = WfMcpService(store=FileStore(root))
+    first_service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    first_service.register_adapter("demo", FakeAdapter())
+    asyncio.run(first_service.refresh_connection_catalog("demo.personal"))
+
+    second_service = WfMcpService(store=FileStore(root))
+    second_service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+
+    specs = second_service.source_catalog.capability_sources[
+        "demo.personal"
+    ].capabilities.node_specs
+
+    assert "demo.personal.echo_tool" in specs
+
+
+def test_source_catalog_register_specs_replaces_discovered_specs_directly() -> None:
+    connection = ConnectionConfig(
+        id="demo.personal",
+        server="demo",
+        account="personal",
+    )
+
+    def unused_tool_executor(connection: ConnectionConfig):
+        raise AssertionError("tool executor should not be used by spec registration")
+
+    catalog = SourceCatalogService(
+        store=FileStore(local_temp_root() / "source_catalog_register_specs"),
+        connection_lookup=lambda connection_id: connection,
+        connection_list_enabled=lambda: [connection],
+        connection_list_all=lambda: [connection],
+        tool_executor_for=unused_tool_executor,
+        load_auth=lambda connection_id: None,
+        emit_event=lambda event: None,
+    )
+
+    catalog.register_capability_source(
+        CapabilitySource(
+            id="demo.personal",
+            kind="connection",
+            capabilities=CapabilityBuckets(
+                node_specs={"demo.personal.finalize_tool": finalize_tool}
+            ),
+            visibility=SourceVisibility(planner=True),
+        )
+    )
+    assert "demo.personal.finalize_tool" in (
+        catalog.capability_sources["demo.personal"].capabilities.node_specs
+    )
+
+    catalog.register_specs("demo.personal", echo_tool)
+
+    specs = catalog.capability_sources["demo.personal"].capabilities.node_specs
+
+    assert set(specs) == {"demo.personal.echo_tool"}
+    assert catalog.store.load_catalog("demo.personal") is not None
+
+
+def test_source_catalog_finds_local_documentation_resource_directly() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "source_local_docs"))
+    test_resource = DocumentationResource(
+        name="test.docs.example",
+        uri="wf://docs/example",
+        title="Example Doc",
+        description="Test documentation resource.",
+        mime_type="text/markdown",
+        text="# Example",
+    )
+    service.register_capability_source(
+        CapabilitySource(
+            id="test.docs",
+            kind="system",
+            capabilities=CapabilityBuckets(
+                resources={"test.docs.example": test_resource}
+            ),
+            visibility=SourceVisibility(planner=True),
+        )
+    )
+
+    result = service.source_catalog.local_documentation_resource("test.docs.example")
+
+    assert result is not None
+    assert result.uri == test_resource.uri
