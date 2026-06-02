@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from wf_mcp.broker.service.content_access import ContentAccessService
 from wf_mcp.broker.service.connection_service import ConnectionService
 from wf_mcp.broker.service.events import BrokerEventRecorder
@@ -152,8 +154,6 @@ def test_content_access_renders_local_documentation_prompt() -> None:
 
 
 def test_content_access_raises_on_unknown_resource() -> None:
-    import pytest
-
     content_access, _ = _make_content_access(
         store_root="content_access_missing_resource"
     )

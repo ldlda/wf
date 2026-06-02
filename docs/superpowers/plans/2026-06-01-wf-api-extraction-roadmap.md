@@ -11,12 +11,13 @@
 
 **Architecture:** `wf_api` becomes the long-lived in-process application service layer. `wf_mcp`, `wf_cli`, and future HTTP/UI adapters call `wf_api`; `wf_api` must not import `wf_mcp`.
 
-**Current State:** Slice 1 introduced `wf_api.WorkflowApi`,
-`wf_api.WorkflowApiBackend`, and `wf_mcp.broker.service.WfMcpWorkflowApiBackend`.
-Both CLI and MCP workflow tools now call `WorkflowApi`; `wf_api` imports no
-`wf_mcp` modules. `WorkflowSurfaceHandlers` still contains the existing
-operation implementation and still depends on `WfMcpService`, but it is now
-MCP-owned backend plumbing rather than the public application API.
+**Current State:** Slice 1 originally introduced `wf_api.WorkflowApi`, a
+`WorkflowApiBackend` protocol, and an MCP adapter backend. Later slices removed
+that double-delegation seam: `WorkflowApi` now composes domain services directly
+from `WorkflowOperationContext`. Both CLI and MCP workflow tools call
+`WorkflowApi`; `wf_api` imports no `wf_mcp` modules. `WorkflowSurfaceHandlers`
+is now a thin MCP compatibility subclass rather than the operation
+implementation.
 
 Slice 3 moved the protocol-neutral workflow helpers into `wf_api`: constants,
 capability refs, wrapper hints, next actions, raw workflow plan model, runtime
@@ -24,9 +25,11 @@ dependency resolution, saved subgraph preparation, and durable run lifecycle
 helpers. The old `wf_mcp.workflow_surface.*` module paths remain compatibility
 shims for those helpers.
 
-**Current Constraint:** `WorkflowSurfaceHandlers` is large and still carries
-most workflow-surface logic. Slice 1 fixed dependency direction only; later
-slices can split and rename once the boundary is correct.
+**Current Constraint:** `WfMcpService` still acts as a compatibility facade over
+focused broker services. Recent slices have extracted source/catalog, runtime,
+upstream transport, events, connection sync, and content access; the remaining
+work is to keep shrinking facade responsibilities while preserving process-local
+behavior.
 
 ---
 

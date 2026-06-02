@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import ast
 import json
-import tempfile
 from pathlib import Path
 
 from wf_api.operation_context import WorkflowOperationContext
@@ -12,12 +11,8 @@ from wf_mcp.broker.service.workflow_operation_context import context_from_servic
 from wf_mcp.storage import FileStore
 
 
-def _local_temp_root() -> Path:
-    return Path(tempfile.mkdtemp())
-
-
-def test_context_uses_source_catalog_mapping() -> None:
-    service = WfMcpService(store=FileStore(_local_temp_root() / "context_sources"))
+def test_context_uses_source_catalog_mapping(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "context_sources"))
     context = context_from_service(service)
 
     assert context.specs.capability_sources is service.source_catalog.capability_sources
@@ -113,8 +108,8 @@ def test_context_from_service_record_workflow_event(tmp_path: Path) -> None:
     assert recorded.payload["version"] == 1
 
 
-def test_context_runtime_runner_uses_workflow_runtime_service() -> None:
-    service = WfMcpService(store=FileStore(_local_temp_root() / "context_runtime"))
+def test_context_runtime_runner_uses_workflow_runtime_service(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "context_runtime"))
     context = context_from_service(service)
 
     assert getattr(context.runtime, "runtime") is service.workflow_runtime

@@ -77,6 +77,11 @@ def test_connection_service_sync_removes_retired_connections_and_sources() -> No
 
     assert service.list_all() == []
     assert "demo.personal" not in catalog.capability_sources
+    removed = service.events.list_events()[-1]
+    assert removed.kind == "connection_removed"
+    assert removed.connection_id == "demo.personal"
+    assert removed.payload["server"] == "demo"
+    assert removed.payload["account"] == "personal"
 
 
 def test_connection_service_sync_updates_existing_source_enabled_flag() -> None:
@@ -102,6 +107,34 @@ def test_connection_service_sync_updates_existing_source_enabled_flag() -> None:
 
     assert service.get("demo.personal").enabled is False
     assert catalog.capability_sources["demo.personal"].enabled is False
+    updated = service.events.list_events()[-1]
+    assert updated.kind == "connection_updated"
+    assert updated.connection_id == "demo.personal"
+    assert updated.payload["enabled"] is False
+
+
+def test_connection_service_sync_registers_new_connections_with_event() -> None:
+    service = ConnectionService(events=BrokerEventRecorder(EventBus()))
+    catalog = _source_catalog(service)
+
+    service.sync_connections_from_config(
+        BrokerConfig(
+            store_root=local_temp_root(),
+            connections=[
+                ConnectionConfig(
+                    id="demo.personal",
+                    server="demo",
+                    account="personal",
+                )
+            ],
+        )
+    )
+
+    assert service.get("demo.personal").account == "personal"
+    assert catalog.capability_sources["demo.personal"].enabled is True
+    registered = service.events.list_events()[-1]
+    assert registered.kind == "connection_registered"
+    assert registered.connection_id == "demo.personal"
 
 
 def test_wfmcpservice_exposes_connection_registry_from_connection_service() -> None:

@@ -15,6 +15,7 @@ from wf_api.operation_context import (
 )
 from .core import WfMcpService
 from .events import BrokerEventRecorder
+from .source_catalog import SourceCatalogService
 from .workflow_runtime import WorkflowRuntimeService
 
 
@@ -43,16 +44,16 @@ class WfMcpWorkflowEventRecorder(WorkflowEventRecorder):
 
 @dataclass(frozen=True, slots=True)
 class WfMcpWorkflowSpecProvider(WorkflowSpecProvider):
-    """Adapter-owned spec provider backed by WfMcpService."""
+    """Adapter-owned spec provider backed by SourceCatalogService."""
 
-    service: WfMcpService
+    source_catalog: SourceCatalogService
 
     @property
     def capability_sources(self):
-        return self.service.source_catalog.capability_sources
+        return self.source_catalog.capability_sources
 
     def get_qualified_spec(self, qualified_name: str) -> NodeSpec[Any, Any]:
-        return self.service.source_catalog.get_qualified_spec(qualified_name)
+        return self.source_catalog.get_qualified_spec(qualified_name)
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,7 +121,7 @@ class WfMcpWorkflowLiveSourceChecker(WorkflowLiveSourceChecker):
 
 def context_from_service(service: WfMcpService) -> WorkflowOperationContext:
     """Adapt the current MCP service stack into a protocol-neutral context."""
-    specs = WfMcpWorkflowSpecProvider(service)
+    specs = WfMcpWorkflowSpecProvider(service.source_catalog)
     return WorkflowOperationContext(
         artifact_store=service.artifact_store,
         draft_workspace_store=service.draft_workspace_store,

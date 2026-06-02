@@ -127,11 +127,13 @@ def test_upstream_transport_live_diagnostics_report_missing_connection() -> None
         store=FileStore(local_temp_root() / "upstream_live_missing"),
         event_sink=lambda event: None,
     )
+
+    def _raise_missing_connection(connection_id: str) -> ConnectionConfig:
+        raise KeyError(connection_id)
+
     source_catalog = SourceCatalogService(
         store=transport.store,
-        connection_lookup=lambda connection_id: (_ for _ in ()).throw(
-            KeyError(connection_id)
-        ),
+        connection_lookup=_raise_missing_connection,
         connection_list_enabled=lambda: [],
         connection_list_all=lambda: [],
         tool_executor_for=transport.tool_executor_for,

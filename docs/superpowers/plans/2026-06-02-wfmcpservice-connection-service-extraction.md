@@ -34,6 +34,7 @@
 ### Task 1: Add Direct ConnectionService Tests
 
 **Files:**
+
 - Create: `tests/wf_mcp/service/test_connection_service.py`
 
 - [ ] **Step 1: Create direct tests for the new service boundary**
@@ -161,6 +162,7 @@ Expected: import failure for `wf_mcp.broker.service.connection_service`.
 ### Task 2: Implement ConnectionService
 
 **Files:**
+
 - Create: `src/wf_mcp/broker/service/connection_service.py`
 
 - [ ] **Step 1: Add the service implementation**
@@ -270,6 +272,7 @@ Expected: all checks pass.
 ### Task 3: Wire WfMcpService Through ConnectionService
 
 **Files:**
+
 - Modify: `src/wf_mcp/broker/service/core.py`
 
 - [ ] **Step 1: Update imports and dataclass fields**
@@ -379,6 +382,7 @@ Expected: all selected tests pass.
 ### Task 4: Add Facade Compatibility Tests
 
 **Files:**
+
 - Modify: `tests/wf_mcp/service/test_connection_service.py`
 
 - [ ] **Step 1: Add WfMcpService compatibility coverage**
@@ -446,6 +450,7 @@ Expected: all tests pass.
 ### Task 5: Clean Imports and Verify Call Sites
 
 **Files:**
+
 - Modify: `src/wf_mcp/broker/service/core.py`
 - Possibly modify files only if ruff reports stale imports.
 
@@ -458,6 +463,7 @@ rg -n 'parse_connection_id|RESERVED_CONNECTION_IDS|connection_service|Connection
 ```
 
 Expected:
+
 - `parse_connection_id` and `RESERVED_CONNECTION_IDS` appear in `connection_service.py`, not `core.py`.
 - `connections: ConnectionRegistry` appears in `connection_service.py`, not `core.py`.
 - `connection_service` appears in `core.py` and direct tests.
@@ -487,6 +493,7 @@ Expected: 0 errors.
 ### Task 6: Update Roadmap and Extraction Map
 
 **Files:**
+
 - Modify: `docs/current_roadmap.md`
 - Modify if present/relevant: `docs/superpowers/research/2026-06-01-wf-api-extraction-map.md`
 
@@ -538,6 +545,7 @@ rg -n 'ConnectionService|Connection ownership|Next planned service extraction' d
 ```
 
 Expected:
+
 - `docs/current_roadmap.md` mentions completed `ConnectionService` ownership.
 - No stale "Next planned service extraction" wording for this same slice remains.
 
@@ -546,6 +554,7 @@ Expected:
 ### Task 7: Final Verification
 
 **Files:**
+
 - No new files.
 
 - [ ] **Step 1: Run focused tests**
@@ -579,6 +588,7 @@ uv run basedpyright --level error
 ```
 
 Expected:
+
 - ruff check passes.
 - ruff format check passes for Python files.
 - basedpyright reports 0 errors.

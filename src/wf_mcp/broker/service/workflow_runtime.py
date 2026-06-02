@@ -58,10 +58,10 @@ class WorkflowRuntimeService:
 
         nodes = []
         for node in plan.nodes:
-            payload = node.model_dump(by_alias=True)
+            node_payload = node.model_dump(by_alias=True)
             if isinstance(node, NodeUse):
-                payload["node"] = bindings.get(node.node, node.node)
-            nodes.append(payload)
+                node_payload["node"] = bindings.get(node.node, node.node)
+            nodes.append(node_payload)
 
         payload = {
             "name": plan.name,

@@ -51,17 +51,46 @@ class ConnectionService:
         next_ids = {connection.id for connection in config.connections}
         previous_ids = set(self.connections.connections)
         for connection_id in previous_ids - next_ids:
+            previous = self.connections.connections[connection_id]
+            # This is the low-level config reconciliation path. ConnectionRegistry
+            # and SourceCatalogService do not yet expose paired unregister methods,
+            # so this method owns direct mutation plus the observable events.
             del self.connections.connections[connection_id]
             source_catalog.capability_sources.pop(connection_id, None)
+            self.events.record_kind(
+                "connection_removed",
+                connection_id=connection_id,
+                payload={"server": previous.server, "account": previous.account},
+            )
 
         for connection in config.connections:
             self._validate_connection_id(connection.id)
+            previous = self.connections.connections.get(connection.id)
             self.connections.register(connection)
             source = source_catalog.capability_sources.get(connection.id)
             if source is None:
                 source_catalog.hydrate_connection_source_from_snapshot(connection)
             else:
                 source.enabled = connection.enabled
+            if previous is None:
+                self.events.record_kind(
+                    "connection_registered",
+                    connection_id=connection.id,
+                    payload={
+                        "server": connection.server,
+                        "account": connection.account,
+                    },
+                )
+            elif previous != connection:
+                self.events.record_kind(
+                    "connection_updated",
+                    connection_id=connection.id,
+                    payload={
+                        "server": connection.server,
+                        "account": connection.account,
+                        "enabled": connection.enabled,
+                    },
+                )
 
     def _source_catalog(self) -> SourceCatalogService:
         if self.source_catalog is None:

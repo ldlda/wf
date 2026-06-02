@@ -1,6 +1,6 @@
 # pitfalls
 
-prefer asserts dict['field'] == dict['field'] over assert dict == dict unless we know better (eg. no extra fields allowed)
+prefer asserts actual['field'] == expected['field'] over assert actual == expected unless we know better (eg. no extra fields allowed)
 
 more later
 
