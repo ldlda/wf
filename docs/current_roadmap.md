@@ -74,13 +74,20 @@ implementation state.
      and `WorkflowRuntimeRunner`.
    - Do not reintroduce direct `WfMcpService` coupling into the workflow API.
    - `wf_api.durable_context` now provides a required-store guard for future
-     durable HTTP/API frontends. It preserves the current process-local behavior
-     while failing fast if artifact, draft, or run stores are missing.
+     durable frontends. It preserves the current process-local behavior while
+     failing fast if artifact, draft, or run stores are missing.
 
 4. **Durable API service shape**
    - Decide the non-MCP frontend boundary for a long-lived API process.
    - Reuse `WorkflowApi` and the focused broker services where possible.
    - Keep config/store construction and auth explicit.
+   - Current design direction is recorded in
+     [2026-06-03 long-lived workflow API boundary](./superpowers/specs/2026-06-03-long-lived-workflow-api-boundary.md):
+     first slice should prove a lightweight local/static server that constructs
+     `WorkflowApi` without `WfMcpService`; later slices add remote CLI targeting,
+     swappable HTTP/JSON-RPC/WebSocket/MCP transport adapters, source providers,
+     auth, streaming/progress, transactional storage, and live upstream MCP
+     sources.
 
 5. **CLI/API alignment**
    - Let the CLI target either local process-backed stores/runtime or the future
