@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from .app import create_rpc_app
+from .errors import WorkflowRpcError
 from .models import (
     CreateDraftFromCapabilityParams,
     HealthParams,
@@ -32,4 +34,6 @@ __all__ = [
     "TraceRangeParams",
     "ValidateDeploymentParams",
     "ValidateDraftParams",
+    "WorkflowRpcError",
+    "create_rpc_app",
 ]
