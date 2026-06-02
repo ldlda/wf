@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from .listing import matches_query, paged_list_payload
 from .artifacts import WorkflowArtifactApi
-from .backend import TraceRange, WorkflowApiBackend
+from .models import RawWorkflowPlan, TraceRange
 from .capabilities import WorkflowCapabilityApi
 from .constants import (
     DEFAULT_CALL_STEP_ID,
@@ -56,10 +56,10 @@ __all__ = [
     "OutcomeCandidate",
     "OutcomeCandidateKind",
     "RUNTIME_ERROR_CAPABILITY",
+    "RawWorkflowPlan",
     "RuntimeDependencies",
     "TraceRange",
     "WorkflowApi",
-    "WorkflowApiBackend",
     "WorkflowArtifactApi",
     "WorkflowCapabilityApi",
     "WorkflowArtifactCataloger",

@@ -31,4 +31,4 @@ def test_load_cli_context_returns_workflow_api(tmp_path: Path) -> None:
     context = load_cli_context(config_path)
 
     assert isinstance(context.handlers, WorkflowApi)
-    assert hasattr(context.handlers, "backend")
+    assert hasattr(context.handlers, "context")

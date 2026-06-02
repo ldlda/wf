@@ -41,19 +41,24 @@ relevant concern package directly.
 Workflow lifecycle operations now have a protocol-neutral front door:
 
 ```text
-wf_cli ─┐
-        ├──> wf_api.WorkflowApi ───> WorkflowApiBackend
-wf_mcp ─┘
+wf_mcp.workflow_surface.tools
+  -> wf_api.WorkflowApi
+  -> wf_api domain services
+  -> WorkflowOperationContext
+  -> WfMcpService adapters/stores/runtime
 ```
 
-The current backend is `wf_mcp.broker.service.WfMcpWorkflowApiBackend`, which
-wraps the existing `wf_mcp.workflow_surface.WorkflowSurfaceHandlers`. That
-handler class still contains most workflow-surface logic and still depends on
-`WfMcpService`; it is kept for compatibility and incremental extraction.
+`WorkflowSurfaceHandlers` is a compatibility shim only. New entrypoints should
+construct `WorkflowApi(context_from_service(service))` directly.
+
+The old backend-adapter/protocol layer has been removed. `WorkflowApi` composes
+domain services (`WorkflowCapabilityApi`, `WorkflowDraftApi`,
+`WorkflowArtifactApi`, `WorkflowDeploymentApi`, `WorkflowRunApi`) from a
+`WorkflowOperationContext`.
 
 New code should treat `wf_api.WorkflowApi` as the application-facing API. Do not
 add new callers that import `WorkflowSurfaceHandlers` directly unless they are
-inside the MCP backend adapter or compatibility tests.
+compatibility tests.
 
 This is a dependency-direction cleanup, not a full domain split. Most API
 methods still mirror the old workflow-surface payloads and return
@@ -65,18 +70,6 @@ resolution, saved subgraph preparation, and durable run lifecycle helpers. The
 old `wf_mcp.workflow_surface.*` helper modules are compatibility shims. MCP
 tool schemas and registration still live in `wf_mcp.workflow_surface.models` and
 `wf_mcp.workflow_surface.tools`.
-
-The remaining extraction work is the large operation implementation:
-`WorkflowSurfaceHandlers` still owns most capability, draft, artifact,
-deployment, and run methods. Split that implementation by domain only after the
-current helper shims are stable.
-
-Do not move those method bodies directly into `wf_api` while they still depend
-on the whole `WfMcpService`. The next extraction step should define a
-protocol-neutral operation context/protocol seam for stores, capability sources,
-event recording, and live source calls. MCP-owned code can adapt `WfMcpService`
-into that seam; domain services can then depend on the seam rather than on MCP
-service internals.
 
 ## Broker Catalogs
 

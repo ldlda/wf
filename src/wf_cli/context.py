@@ -8,7 +8,7 @@ import typer
 from wf_api import WorkflowApi
 from wf_mcp.broker import build_service_from_config, load_broker_config
 from wf_mcp.broker.service import WfMcpService
-from wf_mcp.broker.service.workflow_api_backend import WfMcpWorkflowApiBackend
+from wf_mcp.broker.service.workflow_operation_context import context_from_service
 
 
 @dataclass(frozen=True)
@@ -41,5 +41,5 @@ def load_cli_context(config_path: str | Path) -> CliContext:
     return CliContext(
         config_path=resolved_config_path,
         service=service,
-        handlers=WorkflowApi(WfMcpWorkflowApiBackend(service)),
+        handlers=WorkflowApi(context_from_service(service)),
     )

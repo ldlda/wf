@@ -1,10 +1,19 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, Field
 from wf_core import Edge
 from wf_core.models.steps import InputBinding, Step
+
+
+@dataclass(frozen=True, slots=True)
+class TraceRange:
+    """Caller-bounded debug trace slice for durable deployment runs."""
+
+    start: int = 0
+    limit: int = 25
 
 
 class RawWorkflowPlan(BaseModel):

@@ -4,6 +4,11 @@
 
 **Goal:** Extract a protocol-neutral workflow application API from `wf_mcp` while preserving current process-local behavior and avoiding a large semantic rewrite.
 
+> Current update: the original `WorkflowApiBackend` seam was useful for proving
+> dependency direction, but has been collapsed. `WorkflowApi` now composes
+> domain services directly from `WorkflowOperationContext`; MCP owns only
+> context construction and tool schemas.
+
 **Architecture:** `wf_api` becomes the long-lived in-process application service layer. `wf_mcp`, `wf_cli`, and future HTTP/UI adapters call `wf_api`; `wf_api` must not import `wf_mcp`.
 
 **Current State:** Slice 1 introduced `wf_api.WorkflowApi`,

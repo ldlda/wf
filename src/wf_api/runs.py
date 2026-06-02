@@ -30,8 +30,10 @@ from .operation_context import WorkflowOperationContext
 class TraceRangeLike(Protocol):
     """Small structural trace range accepted from MCP, CLI, or HTTP adapters."""
 
-    start: int
-    limit: int
+    @property
+    def start(self) -> int: ...
+    @property
+    def limit(self) -> int: ...
 
 
 class WorkflowRunApi:

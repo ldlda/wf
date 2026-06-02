@@ -40,9 +40,9 @@ implementation state.
 6. **Workflow API seam**
    - `wf_api.WorkflowApi` is now the process-local application-facing workflow
      API used by both CLI commands and MCP workflow tools.
-   - `wf_api` imports no `wf_mcp` modules. The current adapter,
-     `WfMcpWorkflowApiBackend`, still wraps the existing MCP service stack while
-     later slices extract protocol-neutral logic behind that seam.
+   - `wf_api` imports no `wf_mcp` modules. `WorkflowApi` composes domain
+     services directly from `WorkflowOperationContext`; MCP owns only context
+     construction and tool schemas.
    - Protocol-neutral helpers now live in `wf_api`: refs/constants, wrapper
      hints, next actions, raw workflow plans, runtime dependencies, saved
      subgraph preparation, and durable run lifecycle helpers. Old
@@ -115,9 +115,9 @@ implementation state.
   Protocol-neutral operation context and domain services now exist behind
   `wf_api`; MCP tool schemas and tool registration stay in `wf_mcp`.
   - Workflow store ownership is explicit: entrypoints construct/inject `WorkflowStores`; `WfMcpService` no longer guesses stores from the MCP store root.
-  - The next useful slice is removing the remaining double-delegation path so
-    `WorkflowApi` composes domain services directly instead of routing through
-    `WfMcpWorkflowApiBackend` and `WorkflowSurfaceHandlers`.
+  - Double-delegation has been removed: CLI and MCP workflow tools construct
+    `WorkflowApi(context_from_service(service))` directly. `WorkflowSurfaceHandlers`
+    remains only as a temporary compatibility shim for older imports.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 

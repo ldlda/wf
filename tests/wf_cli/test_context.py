@@ -30,4 +30,9 @@ def test_load_cli_context_builds_service_and_handlers(tmp_path: Path) -> None:
 
     assert context.config_path == config_path
     assert context.service.connections.list_all()[0].id == "demo.personal"
-    assert context.handlers.backend._handlers.service is context.service  # type: ignore[attr-defined]
+    assert context.handlers.context.artifact_store is context.service.artifact_store
+    assert (
+        context.handlers.context.draft_workspace_store
+        is context.service.draft_workspace_store
+    )
+    assert context.handlers.context.run_store is context.service.run_store
