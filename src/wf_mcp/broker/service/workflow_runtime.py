@@ -9,6 +9,7 @@ from wf_authoring import NodeSpec
 from wf_core import (
     NodeUse,
     RunState,
+    RunStatus,
     Workflow,
     execute_workflow_result_async,
     resume_workflow_result_async,
@@ -168,7 +169,9 @@ class WorkflowRuntimeService:
         )
         self.emit_event(
             make_event(
-                "workflow_run_completed",
+                "workflow_run_failed"
+                if run.status == RunStatus.FAILED
+                else "workflow_run_completed",
                 workflow_name=plan.name,
                 payload={"status": run.status.value},
             )

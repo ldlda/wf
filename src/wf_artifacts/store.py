@@ -1,9 +1,22 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 from .models import WorkflowArtifact, WorkflowDeployment
+
+STORE_ID_PATTERN = r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+
+
+def ensure_store_id(value: str, *, field_name: str) -> str:
+    """Reject ids that cannot safely map to one local store path component."""
+    if not re.fullmatch(STORE_ID_PATTERN, value):
+        raise ValueError(
+            f"{field_name} must start with alphanumeric or underscore and contain "
+            "only [A-Za-z0-9_.-]"
+        )
+    return value
 
 
 class WorkflowArtifactStore:
@@ -51,16 +64,16 @@ class FileWorkflowArtifactStore(WorkflowArtifactStore):
         return self.root / "deployments"
 
     def save_artifact(self, artifact: WorkflowArtifact) -> None:
-        artifact_dir = self.artifacts_dir / artifact.id
+        artifact_dir = self._artifact_dir(artifact.id)
         artifact_dir.mkdir(parents=True, exist_ok=True)
-        path = artifact_dir / f"{artifact.version}.json"
+        path = artifact_dir / self._artifact_filename(artifact.version)
         path.write_text(
             json.dumps(artifact.model_dump(mode="json"), indent=2),
             encoding="utf-8",
         )
 
     def get_artifact(self, artifact_id: str, version: int) -> WorkflowArtifact:
-        path = self.artifacts_dir / artifact_id / f"{version}.json"
+        path = self._artifact_dir(artifact_id) / self._artifact_filename(version)
         if not path.exists():
             raise KeyError(f"unknown workflow artifact {artifact_id}@{version}")
         return WorkflowArtifact.model_validate_json(path.read_text(encoding="utf-8"))
@@ -74,9 +87,10 @@ class FileWorkflowArtifactStore(WorkflowArtifactStore):
         return artifacts
 
     def resolve_latest(self, artifact_id: str) -> WorkflowArtifact:
+        artifact_dir = self._artifact_dir(artifact_id)
         versions = [
             int(path.stem)
-            for path in (self.artifacts_dir / artifact_id).glob("*.json")
+            for path in artifact_dir.glob("*.json")
             if path.stem.isdecimal()
         ]
         if not versions:
@@ -84,14 +98,14 @@ class FileWorkflowArtifactStore(WorkflowArtifactStore):
         return self.get_artifact(artifact_id, max(versions))
 
     def save_deployment(self, deployment: WorkflowDeployment) -> None:
-        path = self.deployments_dir / f"{deployment.id}.json"
+        path = self._deployment_path(deployment.id)
         path.write_text(
             json.dumps(deployment.model_dump(mode="json"), indent=2),
             encoding="utf-8",
         )
 
     def get_deployment(self, deployment_id: str) -> WorkflowDeployment:
-        path = self.deployments_dir / f"{deployment_id}.json"
+        path = self._deployment_path(deployment_id)
         if not path.exists():
             raise KeyError(f"unknown workflow deployment {deployment_id!r}")
         return WorkflowDeployment.model_validate_json(path.read_text(encoding="utf-8"))
@@ -106,7 +120,31 @@ class FileWorkflowArtifactStore(WorkflowArtifactStore):
 
     def delete_deployment(self, deployment_id: str) -> None:
         """Remove one mutable deployment binding record from the store."""
-        path = self.deployments_dir / f"{deployment_id}.json"
+        path = self._deployment_path(deployment_id)
         if not path.exists():
             raise KeyError(f"unknown workflow deployment {deployment_id!r}")
         path.unlink()
+
+    def _artifact_dir(self, artifact_id: str) -> Path:
+        safe_id = ensure_store_id(artifact_id, field_name="artifact_id")
+        root = self.artifacts_dir.resolve()
+        path = (self.artifacts_dir / safe_id).resolve()
+        if path.parent != root:
+            raise ValueError(f"artifact_id escapes artifact store: {artifact_id!r}")
+        return path
+
+    @staticmethod
+    def _artifact_filename(version: int) -> str:
+        if version < 1:
+            raise ValueError("artifact version must be >= 1")
+        return f"{version}.json"
+
+    def _deployment_path(self, deployment_id: str) -> Path:
+        safe_id = ensure_store_id(deployment_id, field_name="deployment_id")
+        root = self.deployments_dir.resolve()
+        path = (self.deployments_dir / f"{safe_id}.json").resolve()
+        if path.parent != root:
+            raise ValueError(
+                f"deployment_id escapes deployment store: {deployment_id!r}"
+            )
+        return path

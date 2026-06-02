@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from ..connections import parse_connection_id
 from ..models import (
     AuthRecord,
     CatalogNodeEntry,
@@ -43,10 +44,22 @@ class FileStore(Store):
         return self.root / "catalog"
 
     def _auth_path(self, connection_id: str) -> Path:
-        return self.auth_dir / f"{connection_id}.json"
+        return self._connection_path(self.auth_dir, connection_id)
 
     def _catalog_path(self, connection_id: str) -> Path:
-        return self.catalog_dir / f"{connection_id}.json"
+        return self._connection_path(self.catalog_dir, connection_id)
+
+    @staticmethod
+    def _connection_path(directory: Path, connection_id: str) -> Path:
+        """Map one validated connection id to one file inside a store directory."""
+        parse_connection_id(connection_id)
+        root = directory.resolve()
+        path = (directory / f"{connection_id}.json").resolve()
+        if path.parent != root:
+            raise ValueError(
+                f"connection id escapes store directory: {connection_id!r}"
+            )
+        return path
 
     def save_auth(self, record: AuthRecord) -> None:
         self._auth_path(record.connection_id).write_text(

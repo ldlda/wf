@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from wf_core import NodeUse
+from wf_core import END, NodeUse, RunStatus
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.source_catalog import SourceCatalogService
 from wf_mcp.broker.service.specs import qualify_spec
@@ -12,7 +12,7 @@ from wf_mcp.storage import FileStore
 from wf_platform import CapabilityBuckets, CapabilitySource, SourceVisibility
 
 from ..test_support import echo_tool, local_temp_root
-from .conftest import single_echo_plan
+from .conftest import raw_plan, single_echo_plan
 
 
 def _unused_tool_executor(connection: ConnectionConfig):
@@ -133,3 +133,44 @@ def test_workflow_runtime_service_runs_plan_and_emits_events() -> None:
         "workflow_run_completed",
     ]
     assert events[1].payload["status"] == "completed"
+
+
+def test_workflow_runtime_service_emits_failed_event_for_failed_run() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "runtime_failed_event"))
+
+    run = asyncio.run(
+        service.workflow_runtime.run_workflow_from_plan(
+            raw_plan(
+                name="runtime_failed_event",
+                input_schema={"type": "object", "properties": {}},
+                state_schema={"type": "object", "properties": {}},
+                output_schema={"type": "object", "properties": {}},
+                start="fail",
+                nodes=[
+                    {
+                        "id": "fail",
+                        "type": "node",
+                        "node": "wf.std.runtime_error",
+                        "input": [
+                            {
+                                "value": "boom",
+                                "target": {
+                                    "root": "local",
+                                    "parts": ["message"],
+                                },
+                            }
+                        ],
+                    }
+                ],
+                edges=[{"from": "fail", "outcome": "ok", "to": END}],
+            ),
+            {},
+        )
+    )
+
+    assert run.status == RunStatus.FAILED
+    assert [event.kind for event in service.list_events()][-2:] == [
+        "workflow_run_started",
+        "workflow_run_failed",
+    ]
+    assert service.list_events()[-1].payload["status"] == "failed"

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 
+import pytest
+
 from wf_artifacts import (
     FileWorkflowArtifactStore,
     WorkflowArtifact,
@@ -179,3 +181,41 @@ def test_file_store_deletes_deployment(tmp_path) -> None:
     store.delete_deployment("summarize_docs.personal")
 
     assert store.list_deployments() == []
+
+
+def test_file_store_rejects_artifact_id_path_traversal(tmp_path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "store")
+    bad_artifact = artifact(1).model_copy(update={"id": "../outside"})
+
+    with pytest.raises(ValueError, match="artifact_id"):
+        store.save_artifact(bad_artifact)
+
+    assert not (tmp_path / "outside").exists()
+
+
+def test_file_store_rejects_artifact_lookup_path_traversal(tmp_path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "store")
+
+    with pytest.raises(ValueError, match="artifact_id"):
+        store.get_artifact("../outside", 1)
+
+
+def test_file_store_rejects_deployment_id_path_traversal(tmp_path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "store")
+    bad_deployment = WorkflowDeployment(
+        id="../outside",
+        artifact_id="summarize_docs",
+        artifact_version=1,
+    )
+
+    with pytest.raises(ValueError, match="deployment_id"):
+        store.save_deployment(bad_deployment)
+
+    assert not (tmp_path / "outside.json").exists()
+
+
+def test_file_store_rejects_deployment_lookup_path_traversal(tmp_path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "store")
+
+    with pytest.raises(ValueError, match="deployment_id"):
+        store.get_deployment("../outside")
