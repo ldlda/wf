@@ -409,6 +409,7 @@ src/wf_cli/
 - `WfMcpService.__post_init__` creates default `FileWorkflowArtifactStore`, `FileDraftWorkspaceStore`, `FileRunStore` if not provided. These are protocol-neutral stores.
 - The stores are created from `_store_root(self.store)` which uses the MCP `Store` root.
 - After extraction, store creation should be the caller's responsibility (config-driven), not `WfMcpService`'s.
+- Next extraction slice must define the store initialization boundary: which caller constructs `FileWorkflowArtifactStore`, `FileDraftWorkspaceStore`, and `FileRunStore`; how config/API callers inject protocol-neutral store implementations; and which tests must explicitly construct stores instead of relying on `WfMcpService.__post_init__`.
 
 ### Naming Confusion
 
@@ -446,6 +447,7 @@ src/wf_cli/
 8. **Run full test suite** — all existing tests must pass with import-only changes.
 9. **Update `CliContext`** to use `WorkflowApi` instead of `WorkflowSurfaceHandlers`.
 10. **Add integration test** for `WorkflowApi` with a mock backend (not `WfMcpService`).
+11. **Define store ownership** before extracting service construction: remove implicit workflow-store creation from `WfMcpService.__post_init__`, add config/API hooks for injected stores, and update tests to pass stores explicitly.
 
 ### Dependency Graph After Extraction
 

@@ -286,7 +286,7 @@ def test_validate_draft_workspace_refreshes_status() -> None:
     assert fetched["status"] == "invalid"
 
 
-def test_create_minimal_draft_workspace_with_error_route() -> None:
+def test_create_minimal_draft_workspace_minimal_success_path() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "drafts_minimal_workspace"
     )

@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 
+import pytest
+
 from wf_artifacts import FileWorkflowArtifactStore
 from wf_api.capabilities import WorkflowCapabilityApi
 from wf_mcp.broker import WfMcpService
@@ -91,11 +93,8 @@ def test_inspect_capability_raises_on_unknown() -> None:
     )
     api, _service = _capability_api(artifact_store, register_echo=True)
 
-    try:
+    with pytest.raises(KeyError, match="no.such.capability"):
         asyncio.run(api.inspect_capability(qualified_name="no.such.capability"))
-        assert False, "expected KeyError"
-    except KeyError as exc:
-        assert "no.such.capability" in str(exc)
 
 
 def test_call_capability_node_spec_success() -> None:

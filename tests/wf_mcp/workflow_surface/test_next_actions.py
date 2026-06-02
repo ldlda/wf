@@ -130,6 +130,18 @@ def test_next_actions_from_failed_run_recommends_bounded_trace() -> None:
     assert dumped["patch_examples"][0]["tool"] == NextActionTool.READ_RUN_TRACE.value
     assert dumped["patch_examples"][0]["request"]["run_id"] == "run_123"
     assert dumped["patch_examples"][0]["request"]["trace_range"]["start"] == 0
+    assert dumped["patch_examples"][0]["request"]["trace_range"]["limit"] == 12
+
+
+def test_next_actions_from_failed_run_caps_large_trace_example() -> None:
+    actions = NextActions.from_run_result(
+        run_id="run_123",
+        status="failed",
+        trace_count=100,
+        diagnostics=[],
+    )
+
+    dumped = actions.model_dump(mode="json")
     assert dumped["patch_examples"][0]["request"]["trace_range"]["limit"] == 25
 
 

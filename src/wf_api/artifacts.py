@@ -74,7 +74,7 @@ class WorkflowArtifactApi:
                 query=query,
             )
         ]
-        entries.sort(key=lambda entry: str(entry["name"]))
+        entries.sort(key=lambda entry: str(entry.get("name", "")))
         return paged_list_payload("nodes", entries, cursor=cursor, limit=limit)
 
     async def save_artifact(self, artifact: dict[str, Any]) -> dict[str, Any]:

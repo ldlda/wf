@@ -306,6 +306,7 @@ def _bounded_trace_example(
     trace_count: int,
 ) -> NextActionPatchExample:
     """Return a safe read_run_trace request; never suggest full trace reads."""
+    limit = max(1, min(25, trace_count))
     return NextActionPatchExample(
         description=(
             "Read a bounded debug trace slice. Increase start/limit only when needed."
@@ -315,7 +316,7 @@ def _bounded_trace_example(
             "run_id": run_id,
             "trace_range": {
                 "start": 0,
-                "limit": 25,
+                "limit": limit,
             },
         },
     )

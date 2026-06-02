@@ -30,7 +30,6 @@ from .core import WfMcpService
 
 LIVE_SOURCE_CHECK_TIMEOUT_SECONDS = 8.0
 _LIVE_SOURCE_CHECK_FAILURES = (
-    KeyError,
     TimeoutError,
     OSError,
     anyio.ClosedResourceError,
@@ -80,6 +79,16 @@ async def live_source_diagnostics(
             continue
         try:
             connection = service.connections.get(source_id)
+        except KeyError as exc:
+            diagnostics.append(
+                _source_unreachable_diagnostic(
+                    logical_ref=logical_ref,
+                    source_id=source_id,
+                    exc=exc,
+                )
+            )
+            continue
+        try:
             adapter = require_adapter(connection, service.adapters)
             auth = service.load_auth(source_id)
             await asyncio.wait_for(
@@ -88,22 +97,36 @@ async def live_source_diagnostics(
             )
         except _LIVE_SOURCE_CHECK_FAILURES as exc:
             diagnostics.append(
-                DependencyDiagnostic(
-                    severity=DiagnosticSeverity.ERROR,
-                    code="source_unreachable",
+                _source_unreachable_diagnostic(
                     logical_ref=logical_ref,
-                    bound_source=source_id,
-                    message=(
-                        f"Live check for upstream source {source_id!r} failed: "
-                        f"{type(exc).__name__}: {exc}"
-                    ),
-                    repair_hint=(
-                        "Start or reconnect the source, fix its transport/auth "
-                        "configuration, or bind this deployment to another source."
-                    ),
+                    source_id=source_id,
+                    exc=exc,
                 )
             )
     return diagnostics
+
+
+def _source_unreachable_diagnostic(
+    *,
+    logical_ref: str,
+    source_id: str,
+    exc: BaseException,
+) -> DependencyDiagnostic:
+    """Build a liveness diagnostic without catching unrelated probe bugs."""
+    return DependencyDiagnostic(
+        severity=DiagnosticSeverity.ERROR,
+        code="source_unreachable",
+        logical_ref=logical_ref,
+        bound_source=source_id,
+        message=(
+            f"Live check for upstream source {source_id!r} failed: "
+            f"{type(exc).__name__}: {exc}"
+        ),
+        repair_hint=(
+            "Start or reconnect the source, fix its transport/auth "
+            "configuration, or bind this deployment to another source."
+        ),
+    )
 
 
 __all__ = [

@@ -50,3 +50,12 @@ that decides what content types are acceptable.
 
 If a result exposes a convenience `text` field, inspect the capability schema
 and wrapper hints before using it. Do not assume every content block is text.
+
+Incorrect:
+
+```json
+{"source": {"root": "local", "parts": ["content"]}, "target": {"root": "state", "parts": ["summary"]}}
+```
+
+Correct: filter `content` to text blocks, extract each `text`, then combine or
+select the value before writing it to a string state field.

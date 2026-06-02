@@ -15,15 +15,13 @@ def test_wf_api_has_no_wf_mcp_imports() -> None:
         tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module is not None:
-                if node.module.startswith("wf_mcp") or node.module.startswith(
-                    "wf_mcp."
-                ):
+                if node.module == "wf_mcp" or node.module.startswith("wf_mcp."):
                     violations.append(
                         f"{module}:{node.lineno}: from {node.module} import ..."
                     )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
-                    if alias.name.startswith("wf_mcp"):
+                    if alias.name == "wf_mcp" or alias.name.startswith("wf_mcp."):
                         violations.append(
                             f"{module}:{node.lineno}: import {alias.name}"
                         )

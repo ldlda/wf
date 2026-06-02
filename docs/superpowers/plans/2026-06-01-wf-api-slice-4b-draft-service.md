@@ -397,7 +397,7 @@ _local_path_payload
 _state_path_payload
 ```
 
-Keep `_escape_json_pointer` if `set_draft_route` delegation still needs no local use. Remove it only if no remaining references exist.
+Remove `_escape_json_pointer` only if no remaining references exist in `handlers.py`.
 
 Do not remove from `handlers.py` yet unless `rg` proves there are no remaining
 callers:

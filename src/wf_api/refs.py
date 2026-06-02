@@ -2,10 +2,15 @@ from __future__ import annotations
 
 from typing import Any, TypeAlias
 
+from pydantic import TypeAdapter, ValidationError
+
 from wf_artifacts import WorkflowCapabilityRef
 from wf_platform import CapabilityRef
 
 WorkflowSurfaceCapabilityId: TypeAlias = CapabilityRef | WorkflowCapabilityRef
+
+_CAPABILITY_REF_ADAPTER = TypeAdapter(CapabilityRef)
+_WORKFLOW_CAPABILITY_REF_ADAPTER = TypeAdapter(WorkflowCapabilityRef)
 
 
 def parse_workflow_surface_capability_id(
@@ -19,10 +24,10 @@ def parse_workflow_surface_capability_id(
     """
     if isinstance(value, dict):
         if "artifact_id" in value and "version" in value:
-            return WorkflowCapabilityRef._validate(value)
-        return CapabilityRef._validate(value)
+            return _WORKFLOW_CAPABILITY_REF_ADAPTER.validate_python(value)
+        return _CAPABILITY_REF_ADAPTER.validate_python(value)
 
     try:
         return WorkflowCapabilityRef.parse(value)
-    except ValueError:
+    except TypeError, ValueError, ValidationError:
         return CapabilityRef.parse(value)

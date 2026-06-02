@@ -110,18 +110,16 @@ def wrapper_hints_for_capability(
         output_schema, output_properties
     )
     output_map = {name: f"state.{name}" for name in sorted(output_map_properties)}
-    state_schema = {
+    mapped_output_schema = {
         "type": "object",
         "properties": {
             name: schema for name, schema in sorted(output_map_properties.items())
         },
     }
-    wrapper_output_schema = {
-        "type": "object",
-        "properties": {
-            name: schema for name, schema in sorted(output_map_properties.items())
-        },
-    }
+    # The minimal wrapper stores mapped outputs in state and returns the same
+    # fields. Split this later only when wrappers support separate return shape.
+    state_schema = mapped_output_schema
+    wrapper_output_schema = mapped_output_schema
     missing_decisions = _missing_decisions_for_output(hint_output_schema)
     outcome_candidates = _boolean_outcome_candidates(output_properties)
     if outcome_candidates:

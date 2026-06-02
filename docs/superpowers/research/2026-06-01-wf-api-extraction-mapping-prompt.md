@@ -15,7 +15,7 @@ The current suspicion:
 Write your findings to:
 
 ```text
-random shit/wf_api_extraction_map.md
+docs/superpowers/research/2026-06-01-wf-api-extraction-map.md
 ```
 
 Keep it structured and link-heavy. Do not paste huge code blocks. Use file paths, symbol names, and short notes.

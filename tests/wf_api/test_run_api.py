@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+import pytest
+
 from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
 from wf_api.runs import WorkflowRunApi
 from wf_mcp.broker import WfMcpService
@@ -157,6 +159,29 @@ def test_run_api_inspect_and_bounded_trace() -> None:
     assert trace["trace_limit"] == 1
     assert len(trace["trace"]) <= 1
     assert trace["trace_count"] == summary["trace_count"]
+
+
+def test_run_api_rejects_invalid_trace_range_before_store_lookup() -> None:
+    root = local_temp_root() / "run_api_invalid_trace_range"
+    service, _ = _service_with_echo(root)
+    context = context_from_service(service)
+    api = WorkflowRunApi(context)
+
+    with pytest.raises(ValueError, match="trace_range.start"):
+        asyncio.run(
+            api.read_run_trace(
+                run_id="missing",
+                trace_range=SimpleTraceRange(start=-1, limit=1),
+            )
+        )
+
+    with pytest.raises(ValueError, match="trace_range.limit"):
+        asyncio.run(
+            api.read_run_trace(
+                run_id="missing",
+                trace_range=SimpleTraceRange(start=0, limit=0),
+            )
+        )
 
 
 def test_run_api_handler_delegation_matches() -> None:

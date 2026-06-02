@@ -57,6 +57,7 @@ class WorkflowRunApi:
         workflow_input: dict[str, Any],
         trace_range: TraceRangeLike | None = None,
     ) -> dict[str, Any]:
+        trace_values = _trace_range_values(trace_range)
         deployment, artifact, diagnostics, tree = (
             self.deployments.deployment_validation(deployment_id)
         )
@@ -96,22 +97,7 @@ class WorkflowRunApi:
             error=run.error,
             output=run.output,
             trace_count=len(run.trace),
-            trace=(
-                [
-                    asdict(entry)
-                    for entry in run.trace[
-                        trace_range.start : trace_range.start + trace_range.limit
-                    ]
-                ]
-                if trace_range is not None
-                else None
-            ),
-            trace_start=trace_range.start if trace_range is not None else None,
-            trace_limit=trace_range.limit if trace_range is not None else None,
-            trace_truncated=(
-                trace_range is not None
-                and len(run.trace) > trace_range.start + trace_range.limit
-            ),
+            **_trace_slice_fields(run, trace_values),
         )
 
     async def resume_run(
@@ -123,6 +109,7 @@ class WorkflowRunApi:
         trace_range: TraceRangeLike | None = None,
     ) -> dict[str, Any]:
         """Resume one durable interrupted deployment run."""
+        trace_values = _trace_range_values(trace_range)
         record, stopped_run = restore_interrupted_run(self._run_store(), run_id)
         environment = record.environment
         diagnostics = validate_pinned_resume_environment(
@@ -176,22 +163,7 @@ class WorkflowRunApi:
             error=run.error,
             output=run.output,
             trace_count=len(run.trace),
-            trace=(
-                [
-                    asdict(entry)
-                    for entry in run.trace[
-                        trace_range.start : trace_range.start + trace_range.limit
-                    ]
-                ]
-                if trace_range is not None
-                else None
-            ),
-            trace_start=trace_range.start if trace_range is not None else None,
-            trace_limit=trace_range.limit if trace_range is not None else None,
-            trace_truncated=(
-                trace_range is not None
-                and len(run.trace) > trace_range.start + trace_range.limit
-            ),
+            **_trace_slice_fields(run, trace_values),
         )
 
     async def inspect_run(self, *, run_id: str) -> dict[str, Any]:
@@ -219,9 +191,9 @@ class WorkflowRunApi:
         trace_range: TraceRangeLike,
     ) -> dict[str, Any]:
         """Return only a caller-bounded debug trace slice from a stopped run."""
+        trace_values = _trace_range_values(trace_range)
         record, run = load_stored_run(self._run_store(), run_id)
         environment = record.environment
-        end = trace_range.start + trace_range.limit
         return _run_payload(
             deployment=environment.deployment,
             artifact=environment.root_artifact,
@@ -230,11 +202,40 @@ class WorkflowRunApi:
             resume_readiness=record.resume_readiness.value,
             diagnostics=record.diagnostics,
             trace_count=len(run.trace),
-            trace=[asdict(entry) for entry in run.trace[trace_range.start : end]],
-            trace_start=trace_range.start,
-            trace_limit=trace_range.limit,
-            trace_truncated=len(run.trace) > end,
+            **_trace_slice_fields(run, trace_values),
         )
+
+
+def _trace_range_values(
+    trace_range: TraceRangeLike | None,
+) -> tuple[int, int] | None:
+    """Validate protocol-level trace ranges before they reach Python slicing."""
+    if trace_range is None:
+        return None
+    start = trace_range.start
+    limit = trace_range.limit
+    if start < 0:
+        raise ValueError("trace_range.start must be >= 0")
+    if limit <= 0:
+        raise ValueError("trace_range.limit must be > 0")
+    return start, limit
+
+
+def _trace_slice_fields(
+    run: RunState,
+    trace_range: tuple[int, int] | None,
+) -> dict[str, Any]:
+    """Return bounded trace payload fields, or no trace fields when omitted."""
+    if trace_range is None:
+        return {}
+    start, limit = trace_range
+    end = start + limit
+    return {
+        "trace": [asdict(entry) for entry in run.trace[start:end]],
+        "trace_start": start,
+        "trace_limit": limit,
+        "trace_truncated": len(run.trace) > end,
+    }
 
 
 def _run_payload(
