@@ -39,6 +39,7 @@ from .operation_context import (
 
 from .runtime_dependencies import RuntimeDependencies, resolve_runtime_dependencies
 from .stores import WorkflowStores, file_workflow_stores
+from .durable_context import durable_workflow_api, require_workflow_stores
 
 __all__ = [
     "DEFAULT_CALL_STEP_ID",
@@ -79,4 +80,6 @@ __all__ = [
     "resolve_runtime_dependencies",
     "WorkflowStores",
     "file_workflow_stores",
+    "durable_workflow_api",
+    "require_workflow_stores",
 ]

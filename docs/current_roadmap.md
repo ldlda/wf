@@ -73,6 +73,9 @@ implementation state.
    - Implement the load/validate/resume flow behind `WorkflowRunApi`, `RunStore`,
      and `WorkflowRuntimeRunner`.
    - Do not reintroduce direct `WfMcpService` coupling into the workflow API.
+   - `wf_api.durable_context` now provides a required-store guard for future
+     durable HTTP/API frontends. It preserves the current process-local behavior
+     while failing fast if artifact, draft, or run stores are missing.
 
 4. **Durable API service shape**
    - Decide the non-MCP frontend boundary for a long-lived API process.

@@ -5,7 +5,11 @@ from pathlib import Path
 
 import pytest
 
-from wf_artifacts import FileWorkflowArtifactStore, FileRunStore, WorkflowDeployment
+from wf_artifacts import (
+    FileWorkflowArtifactStore,
+    FileRunStore,
+    WorkflowDeployment,
+)
 from wf_api.runs import WorkflowRunApi
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
@@ -134,6 +138,51 @@ def test_run_api_completed_run_persists() -> None:
     assert stored.id == result["run_id"]
 
 
+def test_run_api_rejects_resume_for_completed_run() -> None:
+    root = local_temp_root() / "run_api_resume_completed_rejected"
+    service, _ = _service_with_echo(root)
+    context = context_from_service(service)
+    api = WorkflowRunApi(context)
+
+    result = asyncio.run(
+        api.run_deployment(
+            deployment_id="echo.personal",
+            workflow_input={"text": "hello"},
+        )
+    )
+
+    with pytest.raises(ValueError, match="is not interrupted"):
+        asyncio.run(
+            api.resume_run(
+                run_id=result["run_id"],
+                resume_payload={"answer": "ignored"},
+            )
+        )
+
+
+def test_run_api_inspect_uses_pinned_environment_after_deployment_deleted() -> None:
+    root = local_temp_root() / "run_api_inspect_after_deployment_deleted"
+    service, artifact_store = _service_with_echo(root)
+    context = context_from_service(service)
+    api = WorkflowRunApi(context)
+
+    result = asyncio.run(
+        api.run_deployment(
+            deployment_id="echo.personal",
+            workflow_input={"text": "hello"},
+        )
+    )
+    artifact_store.delete_deployment("echo.personal")
+
+    summary = asyncio.run(api.inspect_run(run_id=result["run_id"]))
+
+    assert summary["status"] == "completed"
+    assert summary["run_id"] == result["run_id"]
+    assert summary["deployment_id"] == "echo.personal"
+    assert summary["artifact_id"] == "echo"
+    assert summary["output"]["echoed"] == "hello"
+
+
 def test_run_api_inspect_and_bounded_trace() -> None:
     root = local_temp_root() / "run_api_inspect_trace"
     service, _ = _service_with_echo(root)
@@ -163,9 +212,15 @@ def test_run_api_inspect_and_bounded_trace() -> None:
     assert trace["trace_count"] == summary["trace_count"]
 
 
+class ExplodingRunStore(FileRunStore):
+    def get_run(self, run_id: str):
+        raise AssertionError("run store must not be read before trace_range validation")
+
+
 def test_run_api_rejects_invalid_trace_range_before_store_lookup() -> None:
     root = local_temp_root() / "run_api_invalid_trace_range"
     service, _ = _service_with_echo(root)
+    service.run_store = ExplodingRunStore(root / "exploding_runs")
     context = context_from_service(service)
     api = WorkflowRunApi(context)
 

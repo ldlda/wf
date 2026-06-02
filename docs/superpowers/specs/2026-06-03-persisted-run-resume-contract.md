@@ -271,10 +271,11 @@ The core V1 behavior exists. Remaining implementation work should focus on
 hardening and frontend durability:
 
 1. **Required stores for durable API**
-   - Current `WorkflowOperationContext` allows optional stores for MCP test and
+   - Implemented for process-local frontends through
+     `wf_api.durable_context.require_workflow_stores()` and
+     `wf_api.durable_context.durable_workflow_api()`.
+   - `WorkflowOperationContext` still allows optional stores for MCP test and
      compatibility paths.
-   - A durable HTTP/API backend should construct a stricter context where
-     artifact, draft, and run stores are required.
 
 2. **Run listing and checkpoint listing**
    - `RunStore` can list runs/checkpoints, but the public workflow API does not
@@ -303,12 +304,11 @@ hardening and frontend durability:
 
 Recommended order after this contract:
 
-1. Add tests that explicitly lock down the current contract where coverage is
-   weak:
+1. Contract regression tests now cover:
    - non-interrupted `resume_run` rejection
-   - blocked resume writes no checkpoint
    - deleted deployment does not erase existing run inspection
    - trace range validates before store lookup
+   - blocked resume writes no checkpoint (`tests/wf_mcp/test_saved_subgraphs.py`)
 2. Add a required-store context/factory for durable API surfaces.
 3. Specify and implement a transactional run store backend when a cloud/API
    deployment is real.
