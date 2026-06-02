@@ -1,0 +1,362 @@
+from __future__ import annotations
+
+import asyncio
+import time
+from collections.abc import Callable, Sequence
+from dataclasses import dataclass, field
+from typing import Any
+
+import anyio
+import httpx
+from mcp.client.streamable_http import StreamableHTTPError
+from mcp.shared.exceptions import McpError
+from wf_artifacts import (
+    DependencyDiagnostic,
+    DiagnosticSeverity,
+    WorkflowArtifact,
+    WorkflowDeployment,
+)
+from wf_mcp.broker.catalog import snapshot_from_specs
+from wf_mcp.broker.discovery import (
+    discover_connection_capabilities,
+    specs_from_discovered_tools,
+)
+from wf_mcp.events import McpEvent, make_event
+from wf_mcp.models import AuthRecord, CatalogSnapshot, ConnectionConfig
+from wf_mcp.runtime import ToolExecutor
+from wf_mcp.sdk import BackendAdapter
+from wf_mcp.shared.errors import error_payload
+from wf_mcp.storage import Store
+
+from .adapters import require_adapter
+from .source_catalog import SourceCatalogService
+
+EventSink = Callable[[McpEvent], None]
+
+
+@dataclass(slots=True)
+class UpstreamTransportService:
+    """Own upstream MCP adapter/auth operations for the broker service.
+
+    This is not protocol-neutral. It is the MCP transport implementation used by
+    admin calls, discovery, generated workflow NodeSpecs, and live source checks.
+    """
+
+    store: Store
+    event_sink: EventSink
+    adapters: dict[str, BackendAdapter] = field(default_factory=dict)
+    tool_executor: ToolExecutor | None = None
+
+    def register_adapter(self, server: str, adapter: BackendAdapter) -> None:
+        self.adapters[server] = adapter
+
+    def save_auth(self, record: AuthRecord) -> None:
+        self.store.save_auth(record)
+        self.event_sink(
+            make_event(
+                "auth_saved",
+                connection_id=record.connection_id,
+                payload={"scheme": record.scheme},
+            )
+        )
+
+    def load_auth(self, connection_id: str) -> AuthRecord | None:
+        return self.store.load_auth(connection_id)
+
+    def tool_executor_for(self, connection: ConnectionConfig) -> ToolExecutor:
+        """Return the executor used by generated workflow NodeSpecs.
+
+        Discovery uses short-lived adapters. Generated workflow nodes use this
+        hook so config-built services can swap in a persistent runtime pool for
+        stateful MCP servers.
+        """
+        if self.tool_executor is not None:
+            return self.tool_executor
+        return require_adapter(connection, self.adapters)
+
+    async def read_resource(
+        self,
+        connection: ConnectionConfig,
+        qualified_name: str,
+        uri: str,
+    ) -> dict[str, Any]:
+        adapter = require_adapter(connection, self.adapters)
+        auth = self.load_auth(connection.id)
+        self.event_sink(
+            make_event(
+                "resource_read_started",
+                connection_id=connection.id,
+                capability_id=qualified_name,
+                payload={"uri": uri},
+            )
+        )
+        result = await adapter.read_resource(connection, auth, uri)
+        self.event_sink(
+            make_event(
+                "resource_read_completed",
+                connection_id=connection.id,
+                capability_id=qualified_name,
+                payload={"uri": uri},
+            )
+        )
+        return result
+
+    async def render_prompt(
+        self,
+        connection: ConnectionConfig,
+        qualified_name: str,
+        local_name: str,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        adapter = require_adapter(connection, self.adapters)
+        auth = self.load_auth(connection.id)
+        self.event_sink(
+            make_event(
+                "prompt_get_started",
+                connection_id=connection.id,
+                capability_id=qualified_name,
+                payload={"argument_keys": sorted((arguments or {}).keys())},
+            )
+        )
+        result = await adapter.get_prompt(connection, auth, local_name, arguments)
+        self.event_sink(
+            make_event(
+                "prompt_get_completed",
+                connection_id=connection.id,
+                capability_id=qualified_name,
+                payload={"argument_keys": sorted((arguments or {}).keys())},
+            )
+        )
+        return result
+
+    async def invoke_method(
+        self,
+        connection: ConnectionConfig,
+        method: str,
+        *,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        adapter = require_adapter(connection, self.adapters)
+        auth = self.load_auth(connection.id)
+        self.event_sink(
+            make_event(
+                "raw_method_started",
+                connection_id=connection.id,
+                capability_id=method,
+                payload={"params": params or {}},
+            )
+        )
+        result = await adapter.invoke_method(connection, auth, method, params)
+        self.event_sink(
+            make_event(
+                "raw_method_completed",
+                connection_id=connection.id,
+                capability_id=method,
+                payload={"result_keys": sorted(result.keys())},
+            )
+        )
+        return result
+
+    async def send_notification(
+        self,
+        connection: ConnectionConfig,
+        method: str,
+        *,
+        params: dict[str, Any] | None = None,
+    ) -> None:
+        adapter = require_adapter(connection, self.adapters)
+        auth = self.load_auth(connection.id)
+        self.event_sink(
+            make_event(
+                "raw_notification_started",
+                connection_id=connection.id,
+                capability_id=method,
+                payload={"params": params or {}},
+            )
+        )
+        await adapter.send_notification(connection, auth, method, params)
+        self.event_sink(
+            make_event(
+                "raw_notification_completed",
+                connection_id=connection.id,
+                capability_id=method,
+                payload={},
+            )
+        )
+
+    async def refresh_connection_catalog(
+        self,
+        connection: ConnectionConfig,
+        *,
+        source_catalog: SourceCatalogService,
+        max_age_seconds: int | None = None,
+        default_catalog_max_age_seconds: int = 300,
+        record_catalog_change_events: Callable[[str, CatalogSnapshot, str], None],
+    ) -> None:
+        auth = self.load_auth(connection.id)
+        self.event_sink(
+            make_event(
+                "catalog_refresh_started",
+                connection_id=connection.id,
+                payload={"server": connection.server},
+            )
+        )
+        try:
+            adapter = require_adapter(connection, self.adapters)
+            capabilities = await discover_connection_capabilities(
+                connection=connection,
+                auth=auth,
+                adapter=adapter,
+            )
+            specs = specs_from_discovered_tools(
+                connection=connection,
+                auth=auth,
+                executor=self.tool_executor_for(connection),
+                tools=capabilities.tools,
+                emit_event=self.event_sink,
+            )
+            source_catalog.register_specs(
+                connection.id,
+                *specs,
+                max_age_seconds=max_age_seconds,
+                emit_change_events=False,
+            )
+            snapshot = snapshot_from_specs(
+                connection.id,
+                specs=source_catalog.capability_sources[
+                    connection.id
+                ].capabilities.node_specs,
+                tool_display_names={
+                    tool.name: tool.title for tool in capabilities.tools
+                },
+                resources=capabilities.resources,
+                prompts=capabilities.prompts,
+                metadata=capabilities.metadata,
+                fetched_at_epoch_ms=int(time.time() * 1000),
+                max_age_seconds=max_age_seconds or default_catalog_max_age_seconds,
+            )
+            self.store.save_catalog(snapshot)
+            record_catalog_change_events(connection.id, snapshot, "catalog_refresh")
+            self.event_sink(
+                make_event(
+                    "catalog_refresh_completed",
+                    connection_id=connection.id,
+                    payload={
+                        "node_count": len(snapshot.nodes),
+                        "resource_count": len(snapshot.resources),
+                        "prompt_count": len(snapshot.prompts),
+                    },
+                )
+            )
+        except Exception as exc:
+            self.event_sink(
+                make_event(
+                    "catalog_refresh_failed",
+                    connection_id=connection.id,
+                    payload=error_payload(exc),
+                )
+            )
+            raise
+
+    async def deployment_diagnostics(
+        self,
+        *,
+        deployment: WorkflowDeployment,
+        artifacts: Sequence[WorkflowArtifact],
+        source_catalog: SourceCatalogService,
+    ) -> list[DependencyDiagnostic]:
+        """Return opt-in diagnostics for bound upstream sources that cannot answer.
+
+        Static deployment validation only checks the last known source catalog.
+        This probe intentionally performs live upstream I/O, so MCP tools keep it
+        disabled by default and only run it when the caller asks for liveness.
+        """
+        diagnostics: list[DependencyDiagnostic] = []
+        for source_id, logical_ref in _required_live_sources(
+            deployment, artifacts
+        ).items():
+            source = source_catalog.capability_sources.get(source_id)
+            if (
+                source is None
+                or not source.enabled
+                or not source.permissions.calls_upstream
+            ):
+                continue
+            try:
+                connection = source_catalog.connection_lookup(source_id)
+            except KeyError as exc:
+                diagnostics.append(
+                    _source_unreachable_diagnostic(
+                        logical_ref=logical_ref,
+                        source_id=source_id,
+                        exc=exc,
+                    )
+                )
+                continue
+            try:
+                adapter = require_adapter(connection, self.adapters)
+                auth = self.load_auth(source_id)
+                await asyncio.wait_for(
+                    adapter.list_tools(connection, auth),
+                    timeout=LIVE_SOURCE_CHECK_TIMEOUT_SECONDS,
+                )
+            except _LIVE_SOURCE_CHECK_FAILURES as exc:
+                diagnostics.append(
+                    _source_unreachable_diagnostic(
+                        logical_ref=logical_ref,
+                        source_id=source_id,
+                        exc=exc,
+                    )
+                )
+        return diagnostics
+
+
+LIVE_SOURCE_CHECK_TIMEOUT_SECONDS = 8.0
+_LIVE_SOURCE_CHECK_FAILURES = (
+    TimeoutError,
+    OSError,
+    anyio.ClosedResourceError,
+    anyio.EndOfStream,
+    anyio.BrokenResourceError,
+    httpx.HTTPError,
+    McpError,
+    StreamableHTTPError,
+)
+
+
+def _required_live_sources(
+    deployment: WorkflowDeployment,
+    artifacts: Sequence[WorkflowArtifact],
+) -> dict[str, str]:
+    """Return concrete upstream source ids to live-check, with one logical ref."""
+    bindings = deployment.binding_map()
+    required: dict[str, str] = {}
+    for artifact in artifacts:
+        for logical_ref, capability in artifact.required_capability_map().items():
+            source_id = bindings.get(capability.logical_source)
+            if source_id is not None:
+                required.setdefault(source_id, logical_ref)
+    return required
+
+
+def _source_unreachable_diagnostic(
+    *,
+    logical_ref: str,
+    source_id: str,
+    exc: BaseException,
+) -> DependencyDiagnostic:
+    """Build a liveness diagnostic without catching unrelated probe bugs."""
+    return DependencyDiagnostic(
+        severity=DiagnosticSeverity.ERROR,
+        code="source_unreachable",
+        logical_ref=logical_ref,
+        bound_source=source_id,
+        message=(
+            f"Live check for upstream source {source_id!r} failed: "
+            f"{type(exc).__name__}: {exc}"
+        ),
+        repair_hint=(
+            "Start or reconnect the source, fix its transport/auth "
+            "configuration, or bind this deployment to another source."
+        ),
+    )

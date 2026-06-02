@@ -124,6 +124,10 @@ implementation state.
   - Workflow runtime execution is being separated from broker coordination.
     `WorkflowRuntimeService` now owns plan compilation, dependency preparation,
     run, and resume; `WfMcpService` keeps delegate methods for compatibility.
+  - Upstream MCP transport is being separated from broker coordination.
+    `UpstreamTransportService` now owns adapter registration, auth persistence,
+    catalog refresh I/O, resource/prompt reads, raw method/notification calls,
+    generated-tool executor selection, and live source diagnostics.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 

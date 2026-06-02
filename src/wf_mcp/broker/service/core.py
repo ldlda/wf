@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -35,16 +34,14 @@ from ...models import (
 )
 from ...sdk import BackendAdapter
 from ...runtime import ToolExecutor
-from ...shared.errors import error_payload
 from ...shared.names import RESERVED_CONNECTION_IDS
 from ...storage import Store
 from wf_api.saved_subgraphs import SavedSubgraphTree
 from ..admin_capabilities import admin_source
-from ..catalog import CombinedCatalog, snapshot_from_specs
-from ..discovery import discover_connection_capabilities, specs_from_discovered_tools
-from .adapters import require_adapter
+from ..catalog import CombinedCatalog
 from .builtins import builtin_sources
 from .source_catalog import SourceCatalogService
+from .upstream_transport import UpstreamTransportService
 from .workflow_runtime import WorkflowRuntimeService
 
 
@@ -53,13 +50,13 @@ class WfMcpService:
     store: Store
     default_catalog_max_age_seconds: int = 300
     connections: ConnectionRegistry = field(default_factory=ConnectionRegistry)
-    adapters: dict[str, BackendAdapter] = field(default_factory=dict)
     event_bus: EventBus = field(default_factory=EventBus)
     include_builtin_specs: bool = True
     artifact_store: WorkflowArtifactStore | None = None
     draft_workspace_store: DraftWorkspaceStore | None = None
     run_store: RunStore | None = None
     tool_executor: ToolExecutor | None = None
+    upstream: UpstreamTransportService = field(init=False)
     source_catalog: SourceCatalogService = field(init=False)
     workflow_runtime: WorkflowRuntimeService = field(init=False)
 
@@ -70,13 +67,18 @@ class WfMcpService:
         must not guess workflow persistence from the MCP catalog/auth store because
         CLI, MCP, and future HTTP frontends may share or swap those stores.
         """
+        self.upstream = UpstreamTransportService(
+            store=self.store,
+            event_sink=self._record_event,
+            tool_executor=self.tool_executor,
+        )
         self.source_catalog = SourceCatalogService(
             store=self.store,
             connection_lookup=self.connections.get,
             connection_list_enabled=self.connections.list_enabled,
             connection_list_all=self.connections.list_all,
-            tool_executor_for=self._tool_executor_for,
-            load_auth=self.load_auth,
+            tool_executor_for=self.upstream.tool_executor_for,
+            load_auth=self.upstream.load_auth,
             emit_event=self._record_event,
             default_catalog_max_age_seconds=self.default_catalog_max_age_seconds,
         )
@@ -98,6 +100,11 @@ class WfMcpService:
         because workflow APIs and existing tests still consume the service facade.
         """
         return self.source_catalog.capability_sources
+
+    @property
+    def adapters(self) -> dict[str, BackendAdapter]:
+        """Compatibility view of upstream adapter registry."""
+        return self.upstream.adapters
 
     def register_connection(self, connection: ConnectionConfig) -> None:
         parse_connection_id(connection.id)
@@ -141,31 +148,16 @@ class WfMcpService:
                 source.enabled = connection.enabled
 
     def register_adapter(self, server: str, adapter: BackendAdapter) -> None:
-        self.adapters[server] = adapter
+        self.upstream.register_adapter(server, adapter)
 
     def _tool_executor_for(self, connection: ConnectionConfig) -> ToolExecutor:
-        """Return the executor used by generated workflow NodeSpecs.
-
-        Discovery still uses the short-lived adapter path. Generated workflow
-        nodes use this executor hook so config-built services can swap in a
-        persistent runtime pool for stateful MCP servers.
-        """
-        if self.tool_executor is not None:
-            return self.tool_executor
-        return require_adapter(connection, self.adapters)
+        return self.upstream.tool_executor_for(connection)
 
     def save_auth(self, record: AuthRecord) -> None:
-        self.store.save_auth(record)
-        self._record_event(
-            make_event(
-                "auth_saved",
-                connection_id=record.connection_id,
-                payload={"scheme": record.scheme},
-            )
-        )
+        self.upstream.save_auth(record)
 
     def load_auth(self, connection_id: str) -> AuthRecord | None:
-        return self.store.load_auth(connection_id)
+        return self.upstream.load_auth(connection_id)
 
     def register_specs(
         self,
@@ -268,26 +260,11 @@ class WfMcpService:
 
         resource = self.get_resource(qualified_name)
         connection = self.connections.get(resource.connection_id)
-        adapter = require_adapter(connection, self.adapters)
-        auth = self.load_auth(resource.connection_id)
-        self._record_event(
-            make_event(
-                "resource_read_started",
-                connection_id=resource.connection_id,
-                capability_id=qualified_name,
-                payload={"uri": resource.uri},
-            )
+        return await self.upstream.read_resource(
+            connection,
+            qualified_name,
+            resource.uri,
         )
-        result = await adapter.read_resource(connection, auth, resource.uri)
-        self._record_event(
-            make_event(
-                "resource_read_completed",
-                connection_id=resource.connection_id,
-                capability_id=qualified_name,
-                payload={"uri": resource.uri},
-            )
-        )
-        return result
 
     async def invoke_method(
         self,
@@ -297,26 +274,11 @@ class WfMcpService:
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         connection = self.connections.get(connection_id)
-        adapter = require_adapter(connection, self.adapters)
-        auth = self.load_auth(connection_id)
-        self._record_event(
-            make_event(
-                "raw_method_started",
-                connection_id=connection_id,
-                capability_id=method,
-                payload={"params": params or {}},
-            )
+        return await self.upstream.invoke_method(
+            connection,
+            method,
+            params=params,
         )
-        result = await adapter.invoke_method(connection, auth, method, params)
-        self._record_event(
-            make_event(
-                "raw_method_completed",
-                connection_id=connection_id,
-                capability_id=method,
-                payload={"result_keys": sorted(result.keys())},
-            )
-        )
-        return result
 
     async def send_notification(
         self,
@@ -326,25 +288,7 @@ class WfMcpService:
         params: dict[str, Any] | None = None,
     ) -> None:
         connection = self.connections.get(connection_id)
-        adapter = require_adapter(connection, self.adapters)
-        auth = self.load_auth(connection_id)
-        self._record_event(
-            make_event(
-                "raw_notification_started",
-                connection_id=connection_id,
-                capability_id=method,
-                payload={"params": params or {}},
-            )
-        )
-        await adapter.send_notification(connection, auth, method, params)
-        self._record_event(
-            make_event(
-                "raw_notification_completed",
-                connection_id=connection_id,
-                capability_id=method,
-                payload={},
-            )
-        )
+        await self.upstream.send_notification(connection, method, params=params)
 
     async def render_prompt(
         self,
@@ -379,31 +323,12 @@ class WfMcpService:
 
         prompt = self.get_prompt(qualified_name)
         connection = self.connections.get(prompt.connection_id)
-        adapter = require_adapter(connection, self.adapters)
-        auth = self.load_auth(prompt.connection_id)
-        self._record_event(
-            make_event(
-                "prompt_get_started",
-                connection_id=prompt.connection_id,
-                capability_id=qualified_name,
-                payload={"argument_keys": sorted((arguments or {}).keys())},
-            )
-        )
-        result = await adapter.get_prompt(
+        return await self.upstream.render_prompt(
             connection,
-            auth,
+            qualified_name,
             prompt.local_name,
             arguments,
         )
-        self._record_event(
-            make_event(
-                "prompt_get_completed",
-                connection_id=prompt.connection_id,
-                capability_id=qualified_name,
-                payload={"argument_keys": sorted((arguments or {}).keys())},
-            )
-        )
-        return result
 
     async def refresh_connection_catalog(
         self,
@@ -412,73 +337,19 @@ class WfMcpService:
         max_age_seconds: int | None = None,
     ) -> None:
         connection = self.connections.get(connection_id)
-        adapter = require_adapter(connection, self.adapters)
-
-        auth = self.load_auth(connection_id)
-        self._record_event(
-            make_event(
-                "catalog_refresh_started",
-                connection_id=connection_id,
-                payload={"server": connection.server},
-            )
+        await self.upstream.refresh_connection_catalog(
+            connection,
+            source_catalog=self.source_catalog,
+            max_age_seconds=max_age_seconds,
+            default_catalog_max_age_seconds=self.default_catalog_max_age_seconds,
+            record_catalog_change_events=lambda source_id, snapshot, reason: (
+                self._record_catalog_change_events(
+                    source_id,
+                    snapshot,
+                    reason=reason,
+                )
+            ),
         )
-        try:
-            capabilities = await discover_connection_capabilities(
-                connection=connection,
-                auth=auth,
-                adapter=adapter,
-            )
-            specs = specs_from_discovered_tools(
-                connection=connection,
-                auth=auth,
-                executor=self._tool_executor_for(connection),
-                tools=capabilities.tools,
-                emit_event=self._record_event,
-            )
-            self.register_specs(
-                connection_id,
-                *specs,
-                max_age_seconds=max_age_seconds,
-                emit_change_events=False,
-            )
-            snapshot = snapshot_from_specs(
-                connection_id,
-                specs=self.capability_sources[connection_id].capabilities.node_specs,
-                tool_display_names={
-                    tool.name: tool.title for tool in capabilities.tools
-                },
-                resources=capabilities.resources,
-                prompts=capabilities.prompts,
-                metadata=capabilities.metadata,
-                fetched_at_epoch_ms=int(time.time() * 1000),
-                max_age_seconds=max_age_seconds or self.default_catalog_max_age_seconds,
-            )
-            self.store.save_catalog(snapshot)
-            self._record_catalog_change_events(
-                connection_id,
-                snapshot,
-                reason="catalog_refresh",
-            )
-            self._record_event(
-                make_event(
-                    "catalog_refresh_completed",
-                    connection_id=connection_id,
-                    payload={
-                        "node_count": len(snapshot.nodes),
-                        "resource_count": len(snapshot.resources),
-                        "prompt_count": len(snapshot.prompts),
-                    },
-                )
-            )
-        except Exception as exc:
-            self._record_event(
-                make_event(
-                    "catalog_refresh_failed",
-                    connection_id=connection_id,
-                    payload=error_payload(exc),
-                )
-            )
-            raise
 
     def compile_plan(
         self,

@@ -17,7 +17,6 @@ from wf_api.operation_context import (
 from wf_mcp.events import make_event
 
 from .core import WfMcpService
-from .workflow_live_checks import live_source_diagnostics
 from .workflow_runtime import WorkflowRuntimeService
 
 
@@ -122,10 +121,10 @@ class WfMcpWorkflowLiveSourceChecker(WorkflowLiveSourceChecker):
         deployment: WorkflowDeployment,
         artifacts: Sequence[WorkflowArtifact],
     ) -> list[DependencyDiagnostic]:
-        return await live_source_diagnostics(
-            self.service,
+        return await self.service.upstream.deployment_diagnostics(
             deployment=deployment,
             artifacts=artifacts,
+            source_catalog=self.service.source_catalog,
         )
 
 

@@ -1,0 +1,166 @@
+from __future__ import annotations
+
+import asyncio
+
+from wf_artifacts import WorkflowDeployment
+from wf_platform import CapabilityBuckets, CapabilitySource, SourcePermissions
+
+from wf_mcp.broker.service.source_catalog import SourceCatalogService
+from wf_mcp.broker.service.upstream_transport import UpstreamTransportService
+from wf_mcp.connections import ConnectionRegistry
+from wf_mcp.events import McpEvent
+from wf_mcp.models import AuthRecord, ConnectionConfig
+from wf_mcp.storage import FileStore
+
+from wf_mcp.broker import WfMcpService
+
+from ..test_support import FakeAdapter, local_temp_root
+from ..workflow_surface.conftest import echo_artifact
+
+
+def test_upstream_transport_registers_adapter() -> None:
+    events: list[McpEvent] = []
+    transport = UpstreamTransportService(
+        store=FileStore(local_temp_root() / "upstream_adapter"),
+        event_sink=events.append,
+    )
+    adapter = FakeAdapter()
+
+    transport.register_adapter("demo", adapter)
+
+    assert transport.adapters["demo"] is adapter
+
+
+def test_upstream_transport_saves_and_loads_auth_with_event() -> None:
+    events: list[McpEvent] = []
+    transport = UpstreamTransportService(
+        store=FileStore(local_temp_root() / "upstream_auth"),
+        event_sink=events.append,
+    )
+    record = AuthRecord(connection_id="demo.personal", scheme="bearer")
+
+    transport.save_auth(record)
+    loaded = transport.load_auth("demo.personal")
+
+    assert loaded is not None
+    assert loaded.connection_id == "demo.personal"
+    assert events[-1].kind == "auth_saved"
+    assert events[-1].connection_id == "demo.personal"
+
+
+def test_wfmcpservice_uses_upstream_transport_for_adapters_and_auth() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "service_upstream"))
+    adapter = FakeAdapter()
+
+    service.register_adapter("demo", adapter)
+    service.save_auth(AuthRecord(connection_id="demo.personal", scheme="bearer"))
+
+    assert service.upstream.adapters["demo"] is adapter
+    assert service.adapters is service.upstream.adapters
+    assert service.load_auth("demo.personal") is not None
+    assert service.list_events()[-1].kind == "auth_saved"
+
+
+def test_upstream_transport_invokes_raw_method_and_records_events() -> None:
+    events: list[McpEvent] = []
+    connections = ConnectionRegistry()
+    connections.register(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    transport = UpstreamTransportService(
+        store=FileStore(local_temp_root() / "upstream_raw_method"),
+        event_sink=events.append,
+    )
+    transport.register_adapter("demo", FakeAdapter())
+
+    result = asyncio.run(
+        transport.invoke_method(
+            connections.get("demo.personal"),
+            "demo.echo",
+            params={"text": "hello"},
+        )
+    )
+
+    assert result["echoed"] == "hello"
+    assert [event.kind for event in events] == [
+        "raw_method_started",
+        "raw_method_completed",
+    ]
+
+
+def test_upstream_transport_refreshes_catalog_directly() -> None:
+    events: list[McpEvent] = []
+    store = FileStore(local_temp_root() / "upstream_refresh")
+    connections = ConnectionRegistry()
+    connection = ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    connections.register(connection)
+    transport = UpstreamTransportService(store=store, event_sink=events.append)
+    transport.register_adapter("demo", FakeAdapter())
+    source_catalog = SourceCatalogService(
+        store=store,
+        connection_lookup=connections.get,
+        connection_list_enabled=connections.list_enabled,
+        connection_list_all=connections.list_all,
+        tool_executor_for=transport.tool_executor_for,
+        load_auth=transport.load_auth,
+        emit_event=events.append,
+    )
+    source_catalog.hydrate_connection_source_from_snapshot(connection)
+
+    asyncio.run(
+        transport.refresh_connection_catalog(
+            connection,
+            source_catalog=source_catalog,
+            record_catalog_change_events=lambda source_id, snapshot, reason: None,
+        )
+    )
+
+    snapshot = store.load_catalog("demo.personal")
+    assert snapshot is not None
+    assert len(snapshot.nodes) >= 1
+    assert "catalog_refresh_started" in [event.kind for event in events]
+    assert "catalog_refresh_completed" in [event.kind for event in events]
+
+
+def test_upstream_transport_live_diagnostics_report_missing_connection() -> None:
+    transport = UpstreamTransportService(
+        store=FileStore(local_temp_root() / "upstream_live_missing"),
+        event_sink=lambda event: None,
+    )
+    source_catalog = SourceCatalogService(
+        store=transport.store,
+        connection_lookup=lambda connection_id: (_ for _ in ()).throw(
+            KeyError(connection_id)
+        ),
+        connection_list_enabled=lambda: [],
+        connection_list_all=lambda: [],
+        tool_executor_for=transport.tool_executor_for,
+        load_auth=transport.load_auth,
+        emit_event=lambda event: None,
+    )
+    source_catalog.register_capability_source(
+        CapabilitySource(
+            id="demo.personal",
+            kind="connection",
+            permissions=SourcePermissions(calls_upstream=True),
+            capabilities=CapabilityBuckets(),
+        )
+    )
+    artifact = echo_artifact()
+    deployment = WorkflowDeployment(
+        id="echo.personal",
+        artifact_id="echo",
+        artifact_version=1,
+        bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+    )
+
+    diagnostics = asyncio.run(
+        transport.deployment_diagnostics(
+            deployment=deployment,
+            artifacts=[artifact],
+            source_catalog=source_catalog,
+        )
+    )
+
+    assert diagnostics[0].code == "source_unreachable"
+    assert diagnostics[0].bound_source == "demo.personal"
