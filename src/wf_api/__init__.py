@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from .listing import matches_query, paged_list_payload
 from .artifacts import WorkflowArtifactApi
+from .local_sources import builtin_sources, get_qualified_spec, qualify_spec
 from .models import RawWorkflowPlan, TraceRange
 from .capabilities import WorkflowCapabilityApi
 from .constants import (
@@ -43,8 +44,11 @@ from .durable_context import durable_workflow_api, require_workflow_stores
 
 __all__ = [
     "DEFAULT_CALL_STEP_ID",
+    "builtin_sources",
+    "get_qualified_spec",
     "matches_query",
     "paged_list_payload",
+    "qualify_spec",
     "DEFAULT_ERROR_OUTCOME",
     "DEFAULT_ERROR_STEP_ID",
     "DEFAULT_OK_OUTCOME",

@@ -1142,9 +1142,13 @@ Verification:
 These are intentionally not part of this implementation plan:
 
 1. **Transport adapter plan**
-   - Add `wf_transport_http` or equivalent.
-   - Start with health, run deployment, inspect run, read trace, resume run.
-   - Keep routes thin over `WorkflowApi`.
+   - Add JSON-RPC 2.0 over HTTP, likely `wf_transport_rpc_http`.
+   - Prefer `fastapi-jsonrpc` + `uvicorn` for server dispatch/docs.
+   - Start with health, list/inspect capabilities, run deployment, inspect run,
+     read trace, and resume run.
+   - Use stable dotted method names such as `workflow.runs.start`.
+   - Keep method handlers thin over `WorkflowApi`.
+   - Do not dynamically register saved workflows as JSON-RPC methods.
 
 2. **CLI remote target plan**
    - Let `wf_cli` choose local server composition or remote transport client.

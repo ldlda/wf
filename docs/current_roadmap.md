@@ -85,9 +85,11 @@ implementation state.
      [2026-06-03 long-lived workflow API boundary](./superpowers/specs/2026-06-03-long-lived-workflow-api-boundary.md):
      first slice should prove a lightweight local/static server that constructs
      `WorkflowApi` without `WfMcpService`; later slices add remote CLI targeting,
-     swappable HTTP/JSON-RPC/WebSocket/MCP transport adapters, source providers,
-     auth, streaming/progress, transactional storage, and live upstream MCP
-     sources.
+     JSON-RPC-over-HTTP first transport, remote CLI targeting, WebSocket/MCP
+     transport siblings, source providers, auth, streaming/progress,
+     transactional storage, and live upstream MCP sources.
+   - First slice implemented: `wf_server` can construct a local/static durable
+     `WorkflowApi` without `WfMcpService`. Transport adapters remain future work.
 
 5. **CLI/API alignment**
    - Let the CLI target either local process-backed stores/runtime or the future

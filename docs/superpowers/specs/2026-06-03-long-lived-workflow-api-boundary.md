@@ -34,14 +34,10 @@ wf_server
   source/catalog/runtime/event implementation wiring
   durable WorkflowOperationContext construction
 
-wf_transport_http
-  HTTP routes/controllers only
-  request/response framework models
+wf_transport_rpc_http
+  JSON-RPC 2.0 over HTTP endpoint/controller
+  request/response envelope translation
   auth/session/streaming transport policy
-
-wf_transport_rpc
-  optional JSON-RPC over HTTP/WebSocket adapter
-  request/response envelope translation only
 
 wf_api
   protocol-neutral workflow application operations
@@ -52,8 +48,8 @@ wf_mcp
   MCP transport and upstream MCP integration
 ```
 
-`wf_transport_http` should call `WorkflowApi` through the server composition. It
-should not call `WfMcpService`.
+`wf_transport_rpc_http` should call `WorkflowApi` through the server
+composition. It should not call `WfMcpService`.
 
 HTTP is one transport adapter, not "the API." JSON-RPC over HTTP, JSON-RPC over
 WebSocket, and possibly MCP can become sibling transports around the same
@@ -93,6 +89,15 @@ It should prove:
 - a client can connect and call workflow operations
 - deployment run/inspect/trace/resume semantics match local behavior
 - no direct dependency on `WfMcpService`
+
+Implementation status:
+
+- `wf_server.build_local_static_workflow_server()` constructs a durable
+  `WorkflowApi` with required file-backed stores, local `wf.std`/`wf.recipes`
+  sources, and a local runtime runner.
+- This first slice has no transport adapter. Clients still call the in-process
+  `WorkflowApi` in tests; HTTP/JSON-RPC/WebSocket/MCP transport adapters are
+  later slices.
 
 First slice should not include:
 
@@ -231,11 +236,35 @@ Do not move large service sets in the first slice.
 
 ## Later Slice Pointers
 
-### Slice 2: HTTP Transport Adapter
+### Slice 2: JSON-RPC HTTP Transport Adapter
 
-Add the first transport package, likely `wf_transport_http`.
+Add the first transport package as JSON-RPC 2.0 over HTTP, likely
+`wf_transport_rpc_http`.
 
-This slice should expose a small route set over the existing server composition:
+This is preferred over REST for the first remote CLI/server path because CLI and
+agent clients want stable operation names more than resource-shaped URLs. The
+method names should be dotted strings, matching the mental model already used by
+MCP/admin tool names without inheriting MCP's dynamic tool-list behavior.
+
+Proposed initial method names:
+
+```text
+workflow.capabilities.list
+workflow.capabilities.inspect
+workflow.drafts.create_from_capability
+workflow.drafts.patch
+workflow.drafts.validate
+workflow.artifacts.save
+workflow.deployments.save
+workflow.deployments.validate
+workflow.runs.start
+workflow.runs.inspect
+workflow.runs.trace
+workflow.runs.resume
+```
+
+This slice should expose a small method set over the existing server
+composition:
 
 - health/status
 - list/inspect capabilities
@@ -246,6 +275,32 @@ This slice should expose a small route set over the existing server composition:
 
 It should not implement source provider management yet.
 
+Preferred implementation dependency:
+
+```bash
+uv add fastapi-jsonrpc uvicorn
+```
+
+`fastapi-jsonrpc` is the recommended server library for this slice because it
+keeps JSON-RPC 2.0 dispatch, errors, and docs near FastAPI/Pydantic instead of
+requiring a local hand-rolled dispatcher.
+
+Client-side CLI code can use `httpx` directly for now. A typed client wrapper
+can be added when the method set stabilizes.
+
+Guardrails:
+
+- Do not dynamically register saved workflows as JSON-RPC methods.
+- Do not add a JSON-RPC equivalent of MCP `tools/list` as the primary execution
+  surface.
+- Do not require client session state to run or resume workflows.
+- Keep durable state addressed by explicit ids: `artifact_id`, `deployment_id`,
+  `run_id`.
+- Keep trace reads bounded by explicit range.
+- Define request/response models explicitly with Pydantic; do not pass raw
+  arbitrary dicts through the transport layer when a stable request shape is
+  known.
+
 ### Slice 3: CLI Remote Target
 
 Allow `wf_cli` to target either:
@@ -255,14 +310,13 @@ Allow `wf_cli` to target either:
 
 The CLI command surface should stay stable. Only context construction changes.
 
-### Slice 4: JSON-RPC / WebSocket Transport
+### Slice 4: WebSocket Transport
 
-If HTTP REST starts becoming awkward for agents or streaming, add JSON-RPC as a
-transport sibling rather than changing `WorkflowApi`.
+If JSON-RPC over HTTP starts becoming awkward for streaming/progress, add a
+WebSocket transport sibling rather than changing `WorkflowApi`.
 
 Possible shapes:
 
-- JSON-RPC over HTTP
 - JSON-RPC over WebSocket
 - future MCP transport over the same server-owned `WorkflowApi`
 
@@ -326,10 +380,9 @@ This needs explicit policies for:
 
 1. Package name: `wf_server` is the recommended process-composition package,
    but the exact name can change before implementation.
-2. HTTP framework: likely FastAPI for `wf_transport_http`, but the first server
-   slice does not require choosing until route implementation starts.
-3. RPC framework: undecided. JSON-RPC should be added only if it is clearly
-   better for agent clients or streaming/progress.
+2. HTTP framework: likely FastAPI under `fastapi-jsonrpc`.
+3. RPC framework: use `fastapi-jsonrpc` for the first JSON-RPC-over-HTTP slice
+   unless evaluation finds a blocking issue.
 4. Source-provider extraction: some reusable code currently lives in
    `wf_mcp.broker.service`; first slice should avoid moving it unless a small
    dependency-free helper is obviously needed.
