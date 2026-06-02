@@ -121,6 +121,9 @@ implementation state.
   - `WfMcpService` is being reduced into injected implementation services. Source
     registry and catalog projection now live in `SourceCatalogService`; the old
     service methods remain as compatibility delegates for MCP broker callers.
+  - Workflow runtime execution is being separated from broker coordination.
+    `WorkflowRuntimeService` now owns plan compilation, dependency preparation,
+    run, and resume; `WfMcpService` keeps delegate methods for compatibility.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 

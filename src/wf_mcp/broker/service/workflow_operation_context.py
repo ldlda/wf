@@ -18,6 +18,7 @@ from wf_mcp.events import make_event
 
 from .core import WfMcpService
 from .workflow_live_checks import live_source_diagnostics
+from .workflow_runtime import WorkflowRuntimeService
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,9 +68,9 @@ class WfMcpWorkflowArtifactCataloger(WorkflowArtifactCataloger):
 
 @dataclass(frozen=True, slots=True)
 class WfMcpWorkflowRuntimeRunner(WorkflowRuntimeRunner):
-    """Adapter-owned runtime runner backed by WfMcpService."""
+    """Adapter-owned runtime runner backed by WorkflowRuntimeService."""
 
-    service: WfMcpService
+    runtime: WorkflowRuntimeService
 
     async def run_workflow_from_plan(
         self,
@@ -79,7 +80,7 @@ class WfMcpWorkflowRuntimeRunner(WorkflowRuntimeRunner):
         artifact=None,
         saved_subgraph_tree=None,
     ):
-        return await self.service.run_workflow_from_plan(
+        return await self.runtime.run_workflow_from_plan(
             plan,
             workflow_input,
             deployment=deployment,
@@ -98,7 +99,7 @@ class WfMcpWorkflowRuntimeRunner(WorkflowRuntimeRunner):
         artifact=None,
         saved_subgraph_tree=None,
     ):
-        return await self.service.resume_workflow_from_plan(
+        return await self.runtime.resume_workflow_from_plan(
             plan,
             run,
             resume_payload=resume_payload,
@@ -139,7 +140,7 @@ def context_from_service(service: WfMcpService) -> WorkflowOperationContext:
         events=WfMcpWorkflowEventRecorder(service),
         specs=specs,
         artifacts=WfMcpWorkflowArtifactCataloger(service),
-        runtime=WfMcpWorkflowRuntimeRunner(service),
+        runtime=WfMcpWorkflowRuntimeRunner(service.workflow_runtime),
         live_sources=WfMcpWorkflowLiveSourceChecker(service),
     )
 

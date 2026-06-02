@@ -110,3 +110,10 @@ def test_context_from_service_record_workflow_event(tmp_path: Path) -> None:
     assert recorded.capability_id == "workflow.demo.v1"
     assert recorded.payload["artifact_id"] == "demo"
     assert recorded.payload["version"] == 1
+
+
+def test_context_runtime_runner_uses_workflow_runtime_service() -> None:
+    service = WfMcpService(store=FileStore(_local_temp_root() / "context_runtime"))
+    context = context_from_service(service)
+
+    assert getattr(context.runtime, "runtime") is service.workflow_runtime

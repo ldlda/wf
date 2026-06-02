@@ -116,6 +116,10 @@ Source/catalog ownership is now split: `WfMcpService` coordinates broker runtime
 state, while `SourceCatalogService` owns capability source maps, planner catalog
 projection, snapshot hydration, and local docs lookup.
 
+Workflow runtime ownership is now split: `WorkflowRuntimeService` owns plan
+compilation, dependency preparation, run, and resume. `WfMcpService` remains the
+broker coordinator and compatibility façade.
+
 ### WfMcpService Members NOT Used by WorkflowSurfaceHandlers
 
 These members of `WfMcpService` (`src/wf_mcp/broker/service/core.py`) are NOT accessed by `WorkflowSurfaceHandlers`:
