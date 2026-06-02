@@ -5,6 +5,8 @@ import json
 from typing import Any, cast
 
 from wf_artifacts import (
+    FileDraftWorkspaceStore,
+    FileRunStore,
     FileWorkflowArtifactStore,
     RequiredCapability,
     WorkflowArtifact,
@@ -352,6 +354,7 @@ def test_broker_runs_non_interrupting_workflow_deployment() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "broker_run_mcp_store"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(local_temp_root() / "broker_run_mcp_store"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -431,6 +434,7 @@ def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts() -> No
     service = WfMcpService(
         store=FileStore(local_temp_root() / "broker_run_interrupt_mcp_store"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(local_temp_root() / "broker_run_interrupt_mcp_store"),
     )
     server = create_broker_server(service)
 
@@ -467,17 +471,18 @@ def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts() -> No
     assert resumed["resume_readiness"] == "not_applicable"
 
 
-def test_build_service_from_config_uses_store_root_for_artifacts() -> None:
-    store_root = local_temp_root() / "broker_config_artifact_store"
-    service = build_service_from_config(
-        BrokerConfig(
-            store_root=store_root,
-            connections=[],
-        )
-    )
+def test_build_service_from_config_uses_store_root_for_workflow_stores() -> None:
+    store_root = local_temp_root() / "broker_config_workflow_stores"
+    config = BrokerConfig(store_root=store_root, connections=[])
+
+    service = build_service_from_config(config)
 
     assert isinstance(service.artifact_store, FileWorkflowArtifactStore)
+    assert isinstance(service.draft_workspace_store, FileDraftWorkspaceStore)
+    assert isinstance(service.run_store, FileRunStore)
     assert service.artifact_store.root == store_root
+    assert service.draft_workspace_store.root == store_root
+    assert service.run_store.root == store_root
 
 
 def _artifact() -> WorkflowArtifact:

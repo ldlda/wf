@@ -4,6 +4,7 @@ import asyncio
 from typing import Any
 
 from wf_artifacts import (
+    FileRunStore,
     FileWorkflowArtifactStore,
     RequiredCapability,
     ResumeReadiness,
@@ -381,9 +382,11 @@ def _deployment(*, bindings: dict[str, str] | None = None) -> WorkflowDeployment
 
 
 def _handlers(artifact_store: FileWorkflowArtifactStore) -> WorkflowSurfaceHandlers:
+    mcp_root = local_temp_root() / f"{artifact_store.root.name}_mcp"
     service = WfMcpService(
-        store=FileStore(local_temp_root() / f"{artifact_store.root.name}_mcp"),
+        store=FileStore(mcp_root),
         artifact_store=artifact_store,
+        run_store=FileRunStore(mcp_root),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")

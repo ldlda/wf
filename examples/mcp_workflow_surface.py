@@ -3,7 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
+from wf_artifacts import (
+    FileDraftWorkspaceStore,
+    FileRunStore,
+    FileWorkflowArtifactStore,
+    WorkflowDeployment,
+)
 from wf_mcp.capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.sdk import ToolCallResult
@@ -136,6 +141,8 @@ async def prepare_demo_service(root: Path) -> WfMcpService:
     service = WfMcpService(
         store=FileStore(root / "mcp_store"),
         artifact_store=FileWorkflowArtifactStore(root / "artifacts"),
+        draft_workspace_store=FileDraftWorkspaceStore(root / "mcp_store"),
+        run_store=FileRunStore(root / "mcp_store"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")

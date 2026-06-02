@@ -2,16 +2,12 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Any
 
 from pydantic import BaseModel
 
 from wf_artifacts import (
     DraftWorkspaceStore,
-    FileDraftWorkspaceStore,
-    FileRunStore,
-    FileWorkflowArtifactStore,
     RunStore,
     WorkflowArtifact,
     WorkflowArtifactCatalogEntry,
@@ -68,12 +64,6 @@ from .builtins import builtin_sources
 from .specs import get_qualified_spec, qualify_spec
 
 
-def _store_root(store: Store) -> Path:
-    """Return the file root for stores that expose one, else use local default."""
-    root = getattr(store, "root", None)
-    return root if isinstance(root, Path) else Path(".wf_mcp_store")
-
-
 @dataclass(slots=True)
 class WfMcpService:
     store: Store
@@ -89,15 +79,12 @@ class WfMcpService:
     tool_executor: ToolExecutor | None = None
 
     def __post_init__(self) -> None:
-        """Install broker-local system specs when enabled."""
-        if self.artifact_store is None:
-            self.artifact_store = FileWorkflowArtifactStore(_store_root(self.store))
-        if self.draft_workspace_store is None:
-            self.draft_workspace_store = FileDraftWorkspaceStore(
-                _store_root(self.store)
-            )
-        if self.run_store is None:
-            self.run_store = FileRunStore(_store_root(self.store))
+        """Install broker-local system specs when enabled.
+
+        Workflow stores are injected by entrypoint/config construction. This service
+        must not guess workflow persistence from the MCP catalog/auth store because
+        CLI, MCP, and future HTTP frontends may share or swap those stores.
+        """
         if self.include_builtin_specs:
             for source in builtin_sources().values():
                 self.register_capability_source(source)

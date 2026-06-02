@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
-from wf_artifacts import FileWorkflowArtifactStore
+from wf_artifacts import FileWorkflowArtifactStore, FileDraftWorkspaceStore
 from wf_api.drafts import WorkflowDraftApi
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
@@ -55,9 +55,11 @@ def _draft_api(
     *,
     register_echo: bool = False,
 ) -> tuple[WorkflowDraftApi, WfMcpService]:
+    mcp_root = artifact_store.root / "drafts_mcp" / str(id(artifact_store))
     service = WfMcpService(
-        store=FileStore(artifact_store.root / "drafts_mcp" / str(id(artifact_store))),
+        store=FileStore(mcp_root),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
     )
     if register_echo:
         service.register_connection(
@@ -326,9 +328,11 @@ def test_delegation_smoke_validate_draft_equivalence() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "drafts_delegation_smoke"
     )
+    mcp_root = artifact_store.root / "delegation_mcp"
     service = WfMcpService(
-        store=FileStore(artifact_store.root / "delegation_mcp"),
+        store=FileStore(mcp_root),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")

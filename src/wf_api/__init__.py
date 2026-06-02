@@ -39,6 +39,7 @@ from .operation_context import (
 )
 
 from .runtime_dependencies import RuntimeDependencies, resolve_runtime_dependencies
+from .stores import WorkflowStores, file_workflow_stores
 
 __all__ = [
     "DEFAULT_CALL_STEP_ID",
@@ -78,4 +79,6 @@ __all__ = [
     "workflow_output_schema_for_authoring",
     "wrapper_hints_for_capability",
     "resolve_runtime_dependencies",
+    "WorkflowStores",
+    "file_workflow_stores",
 ]

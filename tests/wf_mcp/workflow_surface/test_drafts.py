@@ -2,7 +2,11 @@ from __future__ import annotations
 
 import asyncio
 
-from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
+from wf_artifacts import (
+    FileWorkflowArtifactStore,
+    FileDraftWorkspaceStore,
+    WorkflowDeployment,
+)
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
@@ -122,6 +126,9 @@ def test_workflow_surface_validates_draft_workspace_with_live_outcomes() -> None
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_workspace_validate_mcp"),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_workspace_validate_mcp"
+        ),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -153,6 +160,9 @@ def test_workflow_surface_creates_minimal_draft_workspace_with_error_route() -> 
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_minimal_workspace_mcp"),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_minimal_workspace_mcp"
+        ),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -200,6 +210,9 @@ def test_workflow_surface_minimal_draft_honors_explicit_error_message_source() -
         store=FileStore(local_temp_root() / "surface_minimal_explicit_error_mcp"),
         artifact_store=FileWorkflowArtifactStore(
             local_temp_root() / "surface_minimal_explicit_error"
+        ),
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_minimal_explicit_error_mcp"
         ),
     )
     service.register_connection(
@@ -259,6 +272,9 @@ def test_workflow_surface_accepts_canonical_bindings_for_minimal_workspace() -> 
         artifact_store=FileWorkflowArtifactStore(
             local_temp_root() / "surface_minimal_canonical"
         ),
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_minimal_canonical_mcp"
+        ),
     )
     h = WorkflowSurfaceHandlers(service)
 
@@ -309,6 +325,9 @@ def test_workflow_surface_creates_draft_workspace_from_capability_hints() -> Non
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_workspace_from_capability_mcp"),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_workspace_from_capability_mcp"
+        ),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -362,6 +381,9 @@ def test_workflow_surface_creates_artifact_from_workspace() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_workspace_artifact_mcp"),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_workspace_artifact_mcp"
+        ),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -404,6 +426,9 @@ def test_workflow_surface_workspace_artifact_infers_raw_concrete_dependency() ->
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_workspace_artifact_raw_mcp"),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_workspace_artifact_raw_mcp"
+        ),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -441,6 +466,9 @@ def test_workflow_surface_creates_wrapper_from_workspace() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_workspace_wrapper_mcp"),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_workspace_wrapper_mcp"
+        ),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -478,6 +506,9 @@ def test_workflow_surface_low_confidence_draft_returns_patch_guidance() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_workspace_low_confidence_mcp"),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_workspace_low_confidence_mcp"
+        ),
     )
     service.register_connection(
         ConnectionConfig(

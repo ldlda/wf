@@ -4,7 +4,7 @@ import asyncio
 
 import pytest
 
-from wf_artifacts import FileWorkflowArtifactStore
+from wf_artifacts import FileWorkflowArtifactStore, FileDraftWorkspaceStore
 from wf_api.capabilities import WorkflowCapabilityApi
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
@@ -22,9 +22,11 @@ def _capability_api(
     register_echo: bool = False,
     register_failing: bool = False,
 ) -> tuple[WorkflowCapabilityApi, WfMcpService]:
+    mcp_root = artifact_store.root / "caps_mcp" / str(id(artifact_store))
     service = WfMcpService(
-        store=FileStore(artifact_store.root / "caps_mcp" / str(id(artifact_store))),
+        store=FileStore(mcp_root),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
     )
     if register_echo:
         service.register_connection(
@@ -241,9 +243,11 @@ def test_create_draft_workspace_from_capability() -> None:
 def test_handler_delegates_to_capability_api() -> None:
     """WorkflowSurfaceHandlers methods produce the same result as direct API."""
     artifact_store = FileWorkflowArtifactStore(local_temp_root() / "cap_api_delegation")
+    mcp_root = artifact_store.root / "delegation_mcp"
     service = WfMcpService(
-        store=FileStore(artifact_store.root / "delegation_mcp"),
+        store=FileStore(mcp_root),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")

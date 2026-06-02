@@ -6,7 +6,12 @@ import asyncio
 from dataclasses import replace
 from typing import Any
 
-from wf_artifacts import FileWorkflowArtifactStore, RequiredCapability, WorkflowArtifact
+from wf_artifacts import (
+    FileWorkflowArtifactStore,
+    FileDraftWorkspaceStore,
+    RequiredCapability,
+    WorkflowArtifact,
+)
 from wf_api.artifacts import WorkflowArtifactApi
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
@@ -111,11 +116,11 @@ def _artifact_api(
     *,
     register_echo: bool = False,
 ) -> tuple[WorkflowArtifactApi, WfMcpService]:
+    mcp_root = artifact_store.root / "artifacts_mcp" / str(id(artifact_store))
     service = WfMcpService(
-        store=FileStore(
-            artifact_store.root / "artifacts_mcp" / str(id(artifact_store))
-        ),
+        store=FileStore(mcp_root),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
     )
     if register_echo:
         service.register_connection(
@@ -255,9 +260,11 @@ def test_handler_delegation_for_inspect_artifact() -> None:
     artifact_store = FileWorkflowArtifactStore(
         local_temp_root() / "artifacts_delegation"
     )
+    mcp_root = artifact_store.root / "delegation_mcp"
     service = WfMcpService(
-        store=FileStore(artifact_store.root / "delegation_mcp"),
+        store=FileStore(mcp_root),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
     )
     artifact_store.save_artifact(_echo_artifact())
 

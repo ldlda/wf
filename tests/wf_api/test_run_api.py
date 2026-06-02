@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
+from wf_artifacts import FileWorkflowArtifactStore, FileRunStore, WorkflowDeployment
 from wf_api.runs import WorkflowRunApi
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
@@ -43,6 +43,7 @@ def _service_with_echo(
     service = WfMcpService(
         store=FileStore(root / "mcp"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(root / "mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -67,6 +68,7 @@ def _service_with_failing(
     service = WfMcpService(
         store=FileStore(root / "mcp"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(root / "mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")

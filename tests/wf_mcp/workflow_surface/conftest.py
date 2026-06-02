@@ -5,6 +5,8 @@ from typing import Any
 from pydantic import BaseModel
 
 from wf_artifacts import (
+    FileDraftWorkspaceStore,
+    FileRunStore,
     FileWorkflowArtifactStore,
     RequiredCapability,
     WorkflowArtifact,
@@ -159,9 +161,12 @@ def multiply(current: int | None, incoming: int) -> int:
 
 
 def handlers(artifact_store: FileWorkflowArtifactStore) -> WorkflowSurfaceHandlers:
+    mcp_root = artifact_store.root / "surface_mcp" / str(id(artifact_store))
     service = WfMcpService(
-        store=FileStore(artifact_store.root / "surface_mcp" / str(id(artifact_store))),
+        store=FileStore(mcp_root),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
+        run_store=FileRunStore(mcp_root),
     )
     return WorkflowSurfaceHandlers(service)
 

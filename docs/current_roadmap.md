@@ -112,11 +112,12 @@ implementation state.
   inventory and deployment metadata instead of reverse-engineering MCP tools.
 - **Workflow API extraction**: continue the staged extraction in
   [wf_api extraction roadmap](./superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md).
-  The next useful slice is scaffolding a protocol-neutral operation context for
-  stores, capability sources, event recording, and live source calls. Only after
-  that seam exists should the large `WorkflowSurfaceHandlers` implementation be
-  split by domain behind `wf_api`; MCP tool schemas and tool registration stay
-  in `wf_mcp`.
+  Protocol-neutral operation context and domain services now exist behind
+  `wf_api`; MCP tool schemas and tool registration stay in `wf_mcp`.
+  - Workflow store ownership is explicit: entrypoints construct/inject `WorkflowStores`; `WfMcpService` no longer guesses stores from the MCP store root.
+  - The next useful slice is removing the remaining double-delegation path so
+    `WorkflowApi` composes domain services directly instead of routing through
+    `WfMcpWorkflowApiBackend` and `WorkflowSurfaceHandlers`.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 

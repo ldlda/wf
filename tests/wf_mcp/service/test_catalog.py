@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import shutil
 
-from wf_artifacts import FileDraftWorkspaceStore
 from wf_authoring import NodeSpec
 from wf_core import RunStatus
 from wf_mcp.broker import WfMcpService
@@ -65,12 +64,13 @@ def test_service_installs_builtin_stdlib_specs_by_default() -> None:
     assert "wf.mcp" not in service.capability_sources
 
 
-def test_service_installs_default_draft_workspace_store() -> None:
-    root = local_temp_root() / "service_default_draft_workspace_store"
+def test_service_does_not_install_workflow_stores_implicitly() -> None:
+    root = local_temp_root() / "service_no_implicit_workflow_stores"
     service = WfMcpService(store=FileStore(root))
 
-    assert isinstance(service.draft_workspace_store, FileDraftWorkspaceStore)
-    assert service.draft_workspace_store.root == root
+    assert service.artifact_store is None
+    assert service.draft_workspace_store is None
+    assert service.run_store is None
 
 
 def test_service_registers_empty_source_for_connection_without_catalog() -> None:

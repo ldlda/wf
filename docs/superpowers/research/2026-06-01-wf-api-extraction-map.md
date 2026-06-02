@@ -404,12 +404,13 @@ src/wf_cli/
 - `self.service._get_qualified_spec(qualified_name)` — used 3 times. This is a private method on `WfMcpService`. Must become a port method.
 - `self.service._record_event(event)` — used 7 times. This is a private method. Must become a port method (or the event bus itself becomes a port).
 
-### Store Ownership Ambiguity
+### Store Ownership
 
-- `WfMcpService.__post_init__` creates default `FileWorkflowArtifactStore`, `FileDraftWorkspaceStore`, `FileRunStore` if not provided. These are protocol-neutral stores.
-- The stores are created from `_store_root(self.store)` which uses the MCP `Store` root.
-- After extraction, store creation should be the caller's responsibility (config-driven), not `WfMcpService`'s.
-- Next extraction slice must define the store initialization boundary: which caller constructs `FileWorkflowArtifactStore`, `FileDraftWorkspaceStore`, and `FileRunStore`; how config/API callers inject protocol-neutral store implementations; and which tests must explicitly construct stores instead of relying on `WfMcpService.__post_init__`.
+- `wf_artifacts` owns workflow store protocols and file-backed implementations.
+- `wf_api.stores.WorkflowStores` groups the artifact, draft workspace, and run stores as protocol-neutral API dependencies.
+- MCP config construction creates file-backed workflow stores from `BrokerConfig.store_root` and injects them into `WfMcpService`.
+- `WfMcpService.__post_init__` no longer creates workflow stores from its MCP `Store`; direct service tests must inject stores when they exercise workflow persistence.
+- Future HTTP/API entrypoints should construct or receive the same `WorkflowStores` bundle instead of importing `wf_mcp`.
 
 ### Naming Confusion
 

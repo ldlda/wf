@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
+from wf_artifacts import FileWorkflowArtifactStore, FileRunStore, WorkflowDeployment
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
@@ -51,6 +51,7 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_run_mcp"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(local_temp_root() / "surface_run_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -112,6 +113,7 @@ def test_workflow_surface_failed_deployment_exposes_error_on_run_and_inspect() -
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_failed_run_error_mcp"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(local_temp_root() / "surface_failed_run_error_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -153,6 +155,7 @@ def test_workflow_surface_run_deployment_can_include_trace_detail() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_run_trace_detail_mcp"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(local_temp_root() / "surface_run_trace_detail_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -201,6 +204,7 @@ def test_workflow_surface_run_deployment_can_read_empty_trace_range() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_run_trace_empty_range_mcp"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(local_temp_root() / "surface_run_trace_empty_range_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -237,6 +241,7 @@ def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency() -> N
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_bound_node_mcp"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(local_temp_root() / "surface_bound_node_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -263,6 +268,7 @@ def test_workflow_surface_runs_artifact_created_from_concrete_node_ref() -> None
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_created_bound_node_mcp"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(local_temp_root() / "surface_created_bound_node_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -390,6 +396,7 @@ def test_workflow_surface_runs_deployment_with_bound_reducer_dependency() -> Non
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_reducer_mcp"),
         artifact_store=artifact_store,
+        run_store=FileRunStore(local_temp_root() / "surface_reducer_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")

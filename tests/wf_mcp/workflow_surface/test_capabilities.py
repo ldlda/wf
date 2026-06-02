@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from wf_artifacts import FileWorkflowArtifactStore
+from wf_artifacts import FileWorkflowArtifactStore, FileDraftWorkspaceStore
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
@@ -102,6 +102,9 @@ def test_workflow_surface_does_not_auto_map_raw_mcp_content_blocks() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "surface_content_only_content_hint_mcp"),
         artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            local_temp_root() / "surface_content_only_content_hint_mcp"
+        ),
     )
     service.register_connection(
         ConnectionConfig(
