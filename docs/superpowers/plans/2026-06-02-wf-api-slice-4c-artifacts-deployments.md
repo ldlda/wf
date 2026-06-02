@@ -84,6 +84,7 @@ Reasons:
 ## Task 1: Extend Operation Context For Events And Live Checks
 
 **Files:**
+
 - Modify: `src/wf_api/operation_context.py`
 - Create: `src/wf_mcp/broker/service/workflow_live_checks.py`
 - Modify: `src/wf_mcp/broker/service/workflow_operation_context.py`
@@ -252,6 +253,7 @@ Expected: pass.
 ## Task 2: Create `wf_api.artifacts`
 
 **Files:**
+
 - Create: `src/wf_api/artifacts.py`
 - Modify: `src/wf_api/__init__.py`
 - Test: `tests/wf_api/test_artifact_api.py`
@@ -386,6 +388,7 @@ Expected: pass.
 ## Task 3: Create `wf_api.deployments`
 
 **Files:**
+
 - Create: `src/wf_api/deployments.py`
 - Modify: `src/wf_api/__init__.py`
 - Test: `tests/wf_api/test_deployment_api.py`
@@ -523,6 +526,7 @@ Expected: pass.
 ## Task 4: Wire `WorkflowSurfaceHandlers`
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 
 - [ ] **Step 1: Add imports**

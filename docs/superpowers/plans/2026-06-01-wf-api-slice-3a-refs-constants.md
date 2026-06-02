@@ -66,6 +66,7 @@
 ## Task 1: Add Canonical `wf_api.constants`
 
 **Files:**
+
 - Create: `src/wf_api/constants.py`
 
 - [ ] **Step 1: Create `src/wf_api/constants.py`**
@@ -109,6 +110,7 @@ call wf.std.runtime_error
 ## Task 2: Add Canonical `wf_api.refs`
 
 **Files:**
+
 - Create: `src/wf_api/refs.py`
 
 - [ ] **Step 1: Create `src/wf_api/refs.py`**
@@ -165,6 +167,7 @@ workflow.echo_wrapper.v2
 ## Task 3: Re-export Helpers From `wf_api`
 
 **Files:**
+
 - Modify: `src/wf_api/__init__.py`
 
 - [ ] **Step 1: Update imports and `__all__`**
@@ -218,6 +221,7 @@ ok demo.personal.echo_tool
 ## Task 4: Convert Old Workflow-Surface Modules To Shims
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/constants.py`
 - Modify: `src/wf_mcp/workflow_surface/refs.py`
 
@@ -290,6 +294,7 @@ call workflow.echo_wrapper.v2
 ## Task 5: Update Canonical Imports In `WorkflowSurfaceHandlers`
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 
 - [ ] **Step 1: Change constants import**
@@ -351,6 +356,7 @@ WorkflowSurfaceHandlers
 ## Task 6: Update Ref Tests For Canonical And Shim Imports
 
 **Files:**
+
 - Modify: `tests/wf_mcp/test_workflow_surface_refs.py`
 
 - [ ] **Step 1: Update imports**
@@ -404,6 +410,7 @@ Expected: all tests pass.
 ## Task 7: Search For Remaining Canonical Import Opportunities
 
 **Files:**
+
 - Inspect only unless the search finds new low-risk direct consumers.
 
 - [ ] **Step 1: Search old imports**

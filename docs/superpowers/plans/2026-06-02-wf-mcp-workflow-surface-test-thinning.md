@@ -54,6 +54,7 @@ Thin tests that only repeat:
 ## Task 1: Build A Deletion Ledger Before Editing
 
 **Files:**
+
 - Create: `docs/superpowers/plans/2026-06-02-wf-mcp-workflow-surface-test-thinning-ledger.md`
 
 - [ ] **Step 1: Create the ledger file**
@@ -125,6 +126,7 @@ integration seams.
 ## Task 2: Thin Artifact Listing Duplicates
 
 **Files:**
+
 - Modify: `tests/wf_mcp/workflow_surface/test_artifacts.py`
 - Modify: `docs/superpowers/plans/2026-06-02-wf-mcp-workflow-surface-test-thinning-ledger.md`
 - Test: `tests/wf_api/test_artifact_api.py`, `tests/wf_mcp/workflow_surface/test_artifacts.py`
@@ -192,6 +194,7 @@ Expected: pass.
 ## Task 3: Thin Capability List/Inspect Duplicates Conservatively
 
 **Files:**
+
 - Modify: `tests/wf_mcp/workflow_surface/test_capabilities.py`
 - Modify: `docs/superpowers/plans/2026-06-02-wf-mcp-workflow-surface-test-thinning-ledger.md`
 - Test: `tests/wf_api/test_capability_api.py`, `tests/wf_mcp/workflow_surface/test_capabilities.py`
@@ -290,6 +293,7 @@ Expected: pass.
 ## Task 4: Thin Deployment Tests Only Where Purely Duplicated
 
 **Files:**
+
 - Modify: `tests/wf_mcp/workflow_surface/test_deployments.py`
 - Modify: `docs/superpowers/plans/2026-06-02-wf-mcp-workflow-surface-test-thinning-ledger.md`
 - Test: `tests/wf_api/test_deployment_api.py`, `tests/wf_mcp/workflow_surface/test_deployments.py`
@@ -348,6 +352,7 @@ Expected: pass.
 ## Task 5: Thin Draft Tests With High Caution
 
 **Files:**
+
 - Modify: `tests/wf_mcp/workflow_surface/test_drafts.py`
 - Modify: `docs/superpowers/plans/2026-06-02-wf-mcp-workflow-surface-test-thinning-ledger.md`
 - Test: `tests/wf_api/test_drafts_service.py`, `tests/wf_mcp/workflow_surface/test_drafts.py`
@@ -417,6 +422,7 @@ Expected: pass.
 ## Task 6: Keep Run And Wrapper Tests Mostly Intact
 
 **Files:**
+
 - Modify: `tests/wf_mcp/workflow_surface/test_runs.py`
 - Modify: `docs/superpowers/plans/2026-06-02-wf-mcp-workflow-surface-test-thinning-ledger.md`
 - Test: `tests/wf_api/test_run_api.py`, `tests/wf_mcp/workflow_surface/test_runs.py`, `tests/wf_mcp/workflow_surface/test_wrappers.py`
@@ -468,6 +474,7 @@ Expected: pass.
 ## Task 7: Final Review And Verification
 
 **Files:**
+
 - Modify: `docs/superpowers/plans/2026-06-02-wf-mcp-workflow-surface-test-thinning-ledger.md`
 - Test: all workflow-surface and wf_api tests
 

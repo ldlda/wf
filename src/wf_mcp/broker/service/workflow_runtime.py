@@ -54,9 +54,7 @@ class WorkflowRuntimeService:
             spec: NodeSpec[Any, Any] = self.source_catalog.get_qualified_spec(
                 qualified_name
             )
-            node_defs[qualified_name] = spec.to_node_def().model_copy(
-                update={"name": qualified_name}
-            )
+            node_defs[qualified_name] = spec.to_node_def()
 
         nodes = []
         for node in plan.nodes:

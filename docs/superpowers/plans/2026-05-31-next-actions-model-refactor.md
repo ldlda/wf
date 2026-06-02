@@ -51,6 +51,7 @@
 ### Task 1: Add Generic Next-Actions Unit Tests
 
 **Files:**
+
 - Create: `tests/wf_mcp/workflow_surface/test_next_actions.py`
 
 - [ ] **Step 1: Write failing tests for high-confidence wrapper hints**
@@ -143,6 +144,7 @@ Expected: FAIL with `ModuleNotFoundError: No module named 'wf_mcp.workflow_surfa
 ### Task 2: Implement `next_actions.py`
 
 **Files:**
+
 - Create: `src/wf_mcp/workflow_surface/next_actions.py`
 
 - [ ] **Step 1: Create the generic models and wrapper-hints constructor**
@@ -332,6 +334,7 @@ Expected: PASS.
 ### Task 3: Replace Wrapper-Specific MCP Models with Generic Models
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/models.py`
 
 - [ ] **Step 1: Import generic next-action models**
@@ -396,6 +399,7 @@ NextActions
 ### Task 4: Replace Handler Dict Helpers with `NextActions`
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 
 - [ ] **Step 1: Import `NextActions`**
@@ -448,6 +452,7 @@ Expected: PASS except for assertions that still need additive `can_continue` che
 ### Task 5: Update Integration and Schema Tests
 
 **Files:**
+
 - Modify: `tests/wf_mcp/workflow_surface/test_drafts.py`
 - Modify: `tests/wf_mcp/server/test_config.py`
 
@@ -515,6 +520,7 @@ Expected: PASS.
 ### Task 6: Add a Small Documentation Note
 
 **Files:**
+
 - Modify: `docs/workflow_capabilities.md`
 
 - [ ] **Step 1: Add an advisory-guidance note**
@@ -543,6 +549,7 @@ Expected: PASS.
 ### Task 7: Full Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused tests**

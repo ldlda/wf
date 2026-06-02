@@ -124,6 +124,7 @@ Output shape:
 ## Task 1: Dependency And Plan Reset
 
 **Files:**
+
 - Modify: `pyproject.toml`
 - Modify: `uv.lock`
 - Modify: `docs/superpowers/plans/2026-05-27-openapi-capability-source.md`
@@ -174,6 +175,7 @@ Expected: prints `openapi_core httpx`.
 ## Task 2: Remove Generated-Client Runtime Coupling
 
 **Files:**
+
 - Modify: `src/wf_openapi/codegen.py`
 - Modify: `src/wf_openapi/executor.py`
 - Modify: `tests/openapi/test_codegen_executor.py`
@@ -249,6 +251,7 @@ Expected: generated-client tests that no longer match are removed/replaced; rema
 ## Task 3: Generic Request Builder
 
 **Files:**
+
 - Create: `src/wf_openapi/request.py`
 - Test: `tests/openapi/test_request_builder.py`
 
@@ -367,6 +370,7 @@ Expected: PASS.
 ## Task 4: openapi-core Validation Adapter
 
 **Files:**
+
 - Create: `src/wf_openapi/validation.py`
 - Test: `tests/openapi/test_validation.py`
 
@@ -442,6 +446,7 @@ Expected: PASS.
 ## Task 5: Generic HTTP Executor
 
 **Files:**
+
 - Modify: `src/wf_openapi/executor.py`
 - Test: `tests/openapi/test_executor.py`
 
@@ -522,6 +527,7 @@ Expected: PASS.
 ## Task 6: Source Integration
 
 **Files:**
+
 - Modify: `src/wf_openapi/source.py`
 - Test: `tests/openapi/test_source.py`
 
@@ -574,6 +580,7 @@ Expected: PASS.
 ## Task 7: Docs And Final Cleanup
 
 **Files:**
+
 - Create: `docs/openapi_capability_source.md`
 - Modify: `docs/current_roadmap.md`
 - Delete or rewrite: generated-client-only tests/files if no longer used.

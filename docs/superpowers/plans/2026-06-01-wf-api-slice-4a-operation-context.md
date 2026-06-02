@@ -83,6 +83,7 @@ This adapter may import `wf_mcp`; `wf_api` must not.
 ## Task 1: Add `wf_api.operation_context`
 
 **Files:**
+
 - Create: `src/wf_api/operation_context.py`
 
 - [ ] **Step 1: Create `src/wf_api/operation_context.py`**
@@ -224,6 +225,7 @@ WorkflowOperationContext
 ## Task 2: Re-export Operation Context Types
 
 **Files:**
+
 - Modify: `src/wf_api/__init__.py`
 
 - [ ] **Step 1: Add imports**
@@ -271,6 +273,7 @@ WorkflowOperationContext WorkflowRuntimeRunner
 ## Task 3: Add MCP Adapter For Operation Context
 
 **Files:**
+
 - Create: `src/wf_mcp/broker/service/workflow_operation_context.py`
 
 - [ ] **Step 1: Create adapter file**
@@ -397,6 +400,7 @@ context_from_service
 ## Task 4: Add Focused Tests
 
 **Files:**
+
 - Create: `tests/wf_api/test_operation_context.py`
 
 - [ ] **Step 1: Write tests**

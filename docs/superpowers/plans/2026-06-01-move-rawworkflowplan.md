@@ -13,6 +13,7 @@
 ### Task 1: Create `src/wf_api/models.py` with RawWorkflowPlan
 
 **Files:**
+
 - Create: `src/wf_api/models.py`
 
 - [ ] **Step 1: Create the file with the model**
@@ -63,6 +64,7 @@ Expected: `RawWorkflowPlan`
 ### Task 2: Replace `wf_mcp.models.RawWorkflowPlan` definition with shim
 
 **Files:**
+
 - Modify: `src/wf_mcp/models.py`
 
 - [ ] **Step 1: Replace the RawWorkflowPlan class definition with a re-export**
@@ -95,6 +97,7 @@ Expected: no errors
 ### Task 3: Update `wf_mcp/__init__.py` to import from shim
 
 **Files:**
+
 - Verify: `src/wf_mcp/__init__.py`
 
 No change needed — `wf_mcp/__init__.py` already imports `RawWorkflowPlan` from `.models`, and the shim re-exports it. Verify this still works.
@@ -109,6 +112,7 @@ Expected: `RawWorkflowPlan`
 ### Task 4: Add focused tests
 
 **Files:**
+
 - Create: `tests/wf_api/test_raw_workflow_plan_extraction.py`
 
 - [ ] **Step 1: Write the tests**
@@ -148,16 +152,20 @@ Expected: all 3 PASS
 ### Task 5: Update test imports to use canonical path
 
 **Files:**
+
 - Modify: `tests/wf_mcp/service/conftest.py`
 - Modify: `tests/wf_mcp/workflow_surface/test_runs.py`
 
 - [ ] **Step 1: Update `tests/wf_mcp/service/conftest.py`**
 
 Change line 8 from:
+
 ```python
 from wf_mcp.models import AuthRecord, ConnectionConfig, RawWorkflowPlan
 ```
+
 to:
+
 ```python
 from wf_api.models import RawWorkflowPlan
 from wf_mcp.models import AuthRecord, ConnectionConfig
@@ -166,10 +174,13 @@ from wf_mcp.models import AuthRecord, ConnectionConfig
 - [ ] **Step 2: Update `tests/wf_mcp/workflow_surface/test_runs.py`**
 
 Change line 32 from:
+
 ```python
 from wf_mcp.models import RawWorkflowPlan
 ```
+
 to:
+
 ```python
 from wf_api.models import RawWorkflowPlan
 ```

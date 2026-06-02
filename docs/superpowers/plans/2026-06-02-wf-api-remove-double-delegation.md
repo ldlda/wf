@@ -54,6 +54,7 @@ Legacy imports of `WorkflowSurfaceHandlers` may still work, but only as a thin w
 ### Task 1: Move TraceRange Out of `backend.py`
 
 **Files:**
+
 - Modify: `src/wf_api/models.py`
 - Modify: `src/wf_api/__init__.py`
 - Modify: `src/wf_cli/commands/runs.py`
@@ -159,6 +160,7 @@ Expected: tests pass, lint pass, format pass.
 ### Task 2: Make `WorkflowApi` Compose Domain Services Directly
 
 **Files:**
+
 - Modify: `src/wf_api/service.py`
 - Add: `tests/wf_api/test_direct_service.py`
 
@@ -357,6 +359,7 @@ Expected: direct service tests and domain API tests pass.
 ### Task 3: Update CLI and MCP Tool Construction
 
 **Files:**
+
 - Modify: `src/wf_cli/context.py`
 - Modify: `tests/wf_cli/test_context.py`
 - Modify: `src/wf_mcp/workflow_surface/tools.py`
@@ -490,6 +493,7 @@ Expected: CLI and MCP workflow tool tests pass.
 ### Task 4: Shrink `WorkflowSurfaceHandlers` to Compatibility Shim
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Modify: `tests/wf_api/test_direct_service.py` or add a small handler shim test
 
@@ -577,6 +581,7 @@ Expected: old handler tests pass through the shim.
 ### Task 5: Delete Backend Protocol and Adapter
 
 **Files:**
+
 - Delete: `src/wf_api/backend.py`
 - Delete: `src/wf_mcp/broker/service/workflow_api_backend.py`
 - Modify: `src/wf_api/__init__.py`
@@ -624,6 +629,7 @@ Expected: tests pass, lint pass, format pass.
 ### Task 6: Update Active Docs
 
 **Files:**
+
 - Modify: `docs/current_roadmap.md`
 - Modify: `docs/wf_mcp_architecture.md`
 - Modify: `docs/superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md`
@@ -691,6 +697,7 @@ Expected: no whitespace errors.
 ### Task 7: Final Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused workflow API/MCP/CLI tests**

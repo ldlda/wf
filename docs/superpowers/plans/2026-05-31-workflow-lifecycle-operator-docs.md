@@ -179,6 +179,7 @@ delete_deployment for temporary deployments
 ```
 
 Do not expect a newly saved workflow to appear as a new MCP tool in an existing client session. Use `run_deployment` and `call_capability` as stable front doors.
+
 ```
 
 - [ ] **Step 3: Add an explicit live validation example**
@@ -208,6 +209,7 @@ Expected successful shape:
 ```
 
 If a bound upstream source is down, expect `status="unrunnable"` and a diagnostic with `code="source_unreachable"`.
+
 ```
 
 - [ ] **Step 4: Add a cleanup example**
@@ -233,6 +235,7 @@ Expected:
   "deleted": true
 }
 ```
+
 ```
 
 - [ ] **Step 5: Run grep sanity check**
@@ -305,6 +308,7 @@ arguments:
 ```
 
 This deletes only the mutable deployment binding. Saved artifacts and durable run records remain.
+
 ```
 
 - [ ] **Step 4: Run grep sanity check**

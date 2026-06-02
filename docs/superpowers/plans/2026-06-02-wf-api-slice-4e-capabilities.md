@@ -79,6 +79,7 @@ Temporary private helper duplication is allowed. A later cleanup can promote com
 ## Task 1: Create `wf_api.capabilities`
 
 **Files:**
+
 - Create: `src/wf_api/capabilities.py`
 - Modify: `src/wf_api/__init__.py`
 - Test: `tests/wf_api/test_capability_api.py`
@@ -171,6 +172,7 @@ Add `"WorkflowCapabilityApi"` to `__all__`.
 ## Task 2: Move Discovery And Inspection
 
 **Files:**
+
 - Modify: `src/wf_api/capabilities.py`
 
 - [ ] **Step 1: Move `list_capabilities`**
@@ -240,6 +242,7 @@ Do not import private helpers from `wf_api.artifacts` or `wf_api.runs` in this s
 ## Task 3: Move Wrapper Capability Projection
 
 **Files:**
+
 - Modify: `src/wf_api/capabilities.py`
 
 - [ ] **Step 1: Add artifact store helper**
@@ -295,6 +298,7 @@ Preserve:
 ## Task 4: Move Direct Capability Calls
 
 **Files:**
+
 - Modify: `src/wf_api/capabilities.py`
 
 - [ ] **Step 1: Move `call_capability`**
@@ -374,6 +378,7 @@ first make it public. Keeping a local copy is acceptable for this slice.
 ## Task 5: Move Capability-Backed Draft Bootstrap
 
 **Files:**
+
 - Modify: `src/wf_api/capabilities.py`
 
 - [ ] **Step 1: Move `create_draft_workspace_from_capability`**
@@ -410,6 +415,7 @@ def _draft_name_from_capability(capability_name: str) -> str:
 ## Task 6: Wire `WorkflowSurfaceHandlers`
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 
 - [ ] **Step 1: Add import and instance**
@@ -498,6 +504,7 @@ Do not remove imports still needed by method signatures such as `InputBinding`,
 ## Task 7: Add Focused Capability API Tests
 
 **Files:**
+
 - Create: `tests/wf_api/test_capability_api.py`
 
 - [ ] **Step 1: Cover live source capability listing and inspection**

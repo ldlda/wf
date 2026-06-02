@@ -64,6 +64,7 @@
 ### Task 1: Add Typer Dependency And Script
 
 **Files:**
+
 - Modify: `pyproject.toml`
 
 - [ ] **Step 1: Add dependency and entrypoint**
@@ -108,6 +109,7 @@ If `uv lock` cannot access the network, stop and report the dependency-lock bloc
 ### Task 2: Add App Skeleton Tests
 
 **Files:**
+
 - Create: `tests/wf_cli/test_app.py`
 
 - [ ] **Step 1: Write failing Typer app tests**
@@ -160,6 +162,7 @@ Expected: FAIL because `wf_cli` does not exist.
 ### Task 3: Create Typer App And Command Groups
 
 **Files:**
+
 - Create: `src/wf_cli/__init__.py`
 - Create: `src/wf_cli/app.py`
 - Create: `src/wf_cli/commands/__init__.py`
@@ -381,6 +384,7 @@ Expected: PASS.
 ### Task 4: Add JSON IO Tests
 
 **Files:**
+
 - Create: `tests/wf_cli/test_io.py`
 
 - [ ] **Step 1: Write failing IO tests**
@@ -449,6 +453,7 @@ Expected: FAIL because `wf_cli.io` does not exist.
 ### Task 5: Implement JSON IO Helpers
 
 **Files:**
+
 - Create: `src/wf_cli/io.py`
 
 - [ ] **Step 1: Create IO helpers**
@@ -517,6 +522,7 @@ Expected: PASS.
 ### Task 6: Add CLI Context Tests
 
 **Files:**
+
 - Create: `tests/wf_cli/test_context.py`
 
 - [ ] **Step 1: Write failing context tests**
@@ -575,6 +581,7 @@ Expected: FAIL because `wf_cli.context` does not exist.
 ### Task 7: Implement CLI Context Loader
 
 **Files:**
+
 - Create: `src/wf_cli/context.py`
 
 - [ ] **Step 1: Create context loader**
@@ -634,6 +641,7 @@ Expected: PASS.
 ### Task 8: Run Foundation Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused CLI tests**

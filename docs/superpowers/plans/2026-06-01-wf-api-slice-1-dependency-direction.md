@@ -76,6 +76,7 @@ wf_cli  ->  wf_mcp                                              (OK — config/s
 ## Task 1: Create `wf_api` package with `WorkflowApiBackend` protocol
 
 **Files:**
+
 - Create: `src/wf_api/__init__.py`
 - Create: `src/wf_api/backend.py`
 
@@ -441,6 +442,7 @@ Expected: `OK`.
 ## Task 2: Create `WorkflowApi` facade
 
 **Files:**
+
 - Create: `src/wf_api/service.py`
 
 - [ ] **Step 1: Write `src/wf_api/service.py`**
@@ -927,6 +929,7 @@ Expected: `OK`.
 ## Task 3: Create `WfMcpWorkflowApiBackend` adapter
 
 **Files:**
+
 - Create: `src/wf_mcp/broker/service/workflow_api_backend.py`
 
 - [ ] **Step 1: Write `src/wf_mcp/broker/service/workflow_api_backend.py`**
@@ -1415,6 +1418,7 @@ Expected: `OK`.
 ## Task 4: Update `wf_cli.context` to use `WorkflowApi`
 
 **Files:**
+
 - Modify: `src/wf_cli/context.py`
 
 - [ ] **Step 1: Update `src/wf_cli/context.py`**
@@ -1486,11 +1490,13 @@ Expected: all pass. CLI commands use `context.handlers.X()` which now calls thro
 ## Task 5: Update MCP tool registration to use `WorkflowApi`
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/tools.py`
 
 - [ ] **Step 1: Update imports in `src/wf_mcp/workflow_surface/tools.py`**
 
 Change lines 10-12 from:
+
 ```python
 from wf_mcp.broker.service import WfMcpService
 
@@ -1498,6 +1504,7 @@ from .handlers import WorkflowSurfaceHandlers
 ```
 
 To:
+
 ```python
 from wf_api import WorkflowApi
 from wf_mcp.broker.service import WfMcpService
@@ -1507,11 +1514,13 @@ from wf_mcp.broker.service.workflow_api_backend import WfMcpWorkflowApiBackend
 - [ ] **Step 2: Update `register_workflow_tools` function body**
 
 Change line 39 from:
+
 ```python
     handlers = WorkflowSurfaceHandlers(service)
 ```
 
 To:
+
 ```python
     handlers = WorkflowApi(WfMcpWorkflowApiBackend(service))
 ```
@@ -1531,6 +1540,7 @@ Expected: all pass.
 ## Task 6: Add import-direction test
 
 **Files:**
+
 - Create: `tests/wf_api/test_import_direction.py`
 
 - [ ] **Step 1: Create `tests/wf_api/__init__.py`**
@@ -1592,6 +1602,7 @@ Expected: `PASSED`.
 ## Task 7: Add `CliContext.handlers` type test
 
 **Files:**
+
 - Create: `tests/wf_api/test_cli_context_uses_api.py`
 
 - [ ] **Step 1: Write `tests/wf_api/test_cli_context_uses_api.py`**

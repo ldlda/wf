@@ -68,6 +68,7 @@
 ## Task 1: Create Canonical `wf_api.wrapper_hints`
 
 **Files:**
+
 - Create: `src/wf_api/wrapper_hints.py`
 
 - [ ] **Step 1: Copy existing implementation**
@@ -117,6 +118,7 @@ WrapperAuthoringHints wrapper_hints_for_capability
 ## Task 2: Create Canonical `wf_api.next_actions`
 
 **Files:**
+
 - Create: `src/wf_api/next_actions.py`
 
 - [ ] **Step 1: Copy existing implementation**
@@ -168,6 +170,7 @@ wf.workflow.run_deployment NextActions
 ## Task 3: Re-export Guidance Helpers From `wf_api`
 
 **Files:**
+
 - Modify: `src/wf_api/__init__.py`
 
 - [ ] **Step 1: Add imports**
@@ -227,6 +230,7 @@ NextActions WrapperAuthoringHints
 ## Task 4: Convert Old Workflow-Surface Guidance Modules To Shims
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/wrapper_hints.py`
 - Modify: `src/wf_mcp/workflow_surface/next_actions.py`
 
@@ -305,6 +309,7 @@ WrapperAuthoringHints NextActions
 ## Task 5: Update Production Imports To Canonical Paths
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Modify: `src/wf_mcp/workflow_surface/models.py`
 
@@ -375,6 +380,7 @@ WorkflowSurfaceHandlers NextActions
 ## Task 6: Update Direct Tests And Add Shim Compatibility Tests
 
 **Files:**
+
 - Modify: `tests/wf_mcp/test_workflow_wrapper_hints.py`
 - Modify: `tests/wf_mcp/workflow_surface/test_next_actions.py`
 
@@ -447,6 +453,7 @@ Expected: all pass.
 ## Task 7: Search For Remaining Canonical Import Opportunities
 
 **Files:**
+
 - Inspect only unless the search finds new low-risk direct consumers.
 
 - [ ] **Step 1: Search old imports**

@@ -93,6 +93,7 @@ wf_cli  ->  wf_mcp                                              (OK — config/s
 ## Task 1: Create `wf_api` package root
 
 **Files:**
+
 - Create: `src/wf_api/__init__.py`
 
 - [ ] **Step 1: Create the package directory**
@@ -136,6 +137,7 @@ These modules have zero `wf_mcp` imports. Moving them is a prerequisite for `wf_
 ### Task 2a: Move `constants`
 
 **Files:**
+
 - Create: `src/wf_api/constants.py`
 - Modify: `src/wf_mcp/workflow_surface/constants.py` → shim
 
@@ -199,6 +201,7 @@ git commit -m "refactor: move constants to wf_api, leave shim in wf_mcp"
 ### Task 2b: Move `wrapper_hints`
 
 **Files:**
+
 - Create: `src/wf_api/wrapper_hints.py`
 - Modify: `src/wf_mcp/workflow_surface/wrapper_hints.py` → shim
 
@@ -232,6 +235,7 @@ git commit -m "refactor: move wrapper_hints to wf_api, leave shim"
 ### Task 2c: Move `refs`
 
 **Files:**
+
 - Create: `src/wf_api/refs.py`
 - Modify: `src/wf_mcp/workflow_surface/refs.py` → shim
 
@@ -265,6 +269,7 @@ git commit -m "refactor: move refs to wf_api, leave shim"
 ### Task 2d: Move `next_actions`
 
 **Files:**
+
 - Create: `src/wf_api/next_actions.py`
 - Modify: `src/wf_mcp/workflow_surface/next_actions.py` → shim
 
@@ -298,6 +303,7 @@ git commit -m "refactor: move next_actions to wf_api, leave shim"
 ### Task 2e: Move `runtime_dependencies`
 
 **Files:**
+
 - Create: `src/wf_api/runtime_dependencies.py`
 - Modify: `src/wf_mcp/workflow_surface/runtime_dependencies.py` → shim
 
@@ -323,12 +329,14 @@ git commit -m "refactor: move runtime_dependencies to wf_api, leave shim"
 ### Task 2f: Move `saved_subgraphs`
 
 **Files:**
+
 - Create: `src/wf_api/saved_subgraphs.py`
 - Modify: `src/wf_mcp/workflow_surface/saved_subgraphs.py` → shim
 
 - [ ] **Step 1: Copy `src/wf_mcp/workflow_surface/saved_subgraphs.py` to `src/wf_api/saved_subgraphs.py`**
 
 Update internal imports:
+
 - `from ..models import RawWorkflowPlan` → `from wf_api.models import RawWorkflowPlan`
 - `from .runtime_dependencies import resolve_runtime_dependencies` → `from wf_api.runtime_dependencies import resolve_runtime_dependencies`
 
@@ -358,12 +366,14 @@ git commit -m "refactor: move saved_subgraphs to wf_api, leave shim"
 ### Task 2g: Move `run_lifecycle`
 
 **Files:**
+
 - Create: `src/wf_api/run_lifecycle.py`
 - Modify: `src/wf_mcp/workflow_surface/run_lifecycle.py` → shim
 
 - [ ] **Step 1: Copy `src/wf_mcp/workflow_surface/run_lifecycle.py` to `src/wf_api/run_lifecycle.py`**
 
 Update internal import:
+
 - `from .saved_subgraphs import SavedSubgraphTree` → `from wf_api.saved_subgraphs import SavedSubgraphTree`
 
 - [ ] **Step 2: Replace old file with shim**
@@ -388,6 +398,7 @@ git commit -m "refactor: move run_lifecycle to wf_api, leave shim"
 ### Task 3a: Move `McpEvent` + `make_event` to `wf_api.events`
 
 **Files:**
+
 - Create: `src/wf_api/events.py`
 - Modify: `src/wf_mcp/events/models.py` → shim
 
@@ -462,6 +473,7 @@ git commit -m "refactor: move McpEvent/make_event to wf_api.events, leave shim"
 ### Task 3b: Move `matches_query` + `paged_list_payload` to `wf_api.listing`
 
 **Files:**
+
 - Create: `src/wf_api/listing.py`
 - Modify: `src/wf_mcp/shared/listing.py` → shim
 
@@ -569,6 +581,7 @@ git commit -m "refactor: move listing helpers to wf_api.listing, leave shim"
 ## Task 4: Move `RawWorkflowPlan` and `TraceRange` to `wf_api.models`
 
 **Files:**
+
 - Create: `src/wf_api/models.py`
 - Modify: `src/wf_mcp/models.py` → add re-export shim for `RawWorkflowPlan`
 - Modify: `src/wf_mcp/workflow_surface/models.py` → update `NextActions` import
@@ -638,10 +651,13 @@ This shadows the local `RawWorkflowPlan` class. Keep the local class definition 
 - [ ] **Step 3: Update `src/wf_mcp/workflow_surface/models.py` imports**
 
 Change line 7 from:
+
 ```python
 from .next_actions import NextActionPatchExample, NextActions
 ```
+
 to:
+
 ```python
 from wf_api.next_actions import NextActionPatchExample, NextActions
 ```
@@ -673,6 +689,7 @@ git commit -m "refactor: move RawWorkflowPlan and TraceRange to wf_api.models"
 ## Task 5: Create `WorkflowApiBackend` protocol
 
 **Files:**
+
 - Create: `src/wf_api/backend.py`
 
 - [ ] **Step 1: Write `src/wf_api/backend.py`**
@@ -792,6 +809,7 @@ git commit -m "feat(wf_api): add WorkflowApiBackend protocol"
 ## Task 6: Create `WorkflowApi` service
 
 **Files:**
+
 - Create: `src/wf_api/service.py`
 
 - [ ] **Step 1: Write `src/wf_api/service.py`**
@@ -812,6 +830,7 @@ This is the largest step. The body is `WorkflowSurfaceHandlers` from `src/wf_mcp
 12. **`_required_capabilities_for_plan(..., service=self.service)`** → `_required_capabilities_for_plan(..., backend=self.backend)`
 
 **Import changes** (top of file):
+
 - Remove: `from ..broker.service.adapters import require_adapter`
 - Remove: `from ..events import make_event`
 - Remove: `from ..models import RawWorkflowPlan`
@@ -826,6 +845,7 @@ This is the largest step. The body is `WorkflowSurfaceHandlers` from `src/wf_mcp
 - Update all `.constants`, `.models`, `.refs`, `.next_actions`, `.saved_subgraphs`, `.run_lifecycle`, `.wrapper_hints` to `wf_api.*`
 
 **Module-level helpers to update:**
+
 - `_available_sources(service: WfMcpService)` → `_available_sources(backend: WorkflowApiBackend)` — change `service.capability_sources` to `backend.capability_sources`
 - `_observed_node_specs(service: WfMcpService)` → `_observed_node_specs(backend: WorkflowApiBackend)` — change `service.capability_sources` to `backend.capability_sources`
 - `_required_capabilities_for_plan(..., service: WfMcpService)` → `_required_capabilities_for_plan(..., backend: WorkflowApiBackend)` — change `service` references to `backend`
@@ -834,6 +854,7 @@ This is the largest step. The body is `WorkflowSurfaceHandlers` from `src/wf_mcp
 - **Remove** `LIVE_SOURCE_CHECK_TIMEOUT_SECONDS` and `_LIVE_SOURCE_CHECK_FAILURES` constants
 
 **`validate_deployment` method change:**
+
 ```python
 async def validate_deployment(
     self,
@@ -874,6 +895,7 @@ git commit -m "feat(wf_api): add WorkflowApi service"
 ## Task 7: Replace `handlers.py` with shim
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 
 - [ ] **Step 1: Replace entire file with shim**
@@ -906,6 +928,7 @@ git commit -m "refactor: replace handlers.py with shim to wf_api.service"
 ## Task 8: Create `WfMcpWorkflowApiBackend` adapter
 
 **Files:**
+
 - Create: `src/wf_mcp/broker/service/workflow_api_backend.py`
 
 - [ ] **Step 1: Write `src/wf_mcp/broker/service/workflow_api_backend.py`**
@@ -1111,11 +1134,13 @@ git commit -m "feat(wf_mcp): add WfMcpWorkflowApiBackend adapter"
 ## Task 9: Update MCP tool registration to use `WorkflowApi`
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/tools.py`
 
 - [ ] **Step 1: Update imports in `src/wf_mcp/workflow_surface/tools.py`**
 
 Change:
+
 ```python
 from wf_mcp.broker.service import WfMcpService
 from .handlers import WorkflowSurfaceHandlers
@@ -1127,6 +1152,7 @@ from .models import (
 ```
 
 To:
+
 ```python
 from wf_api.service import WorkflowApi
 from wf_api.models import TraceRange
@@ -1142,6 +1168,7 @@ from .models import (
 - [ ] **Step 2: Update `register_workflow_tools` function body**
 
 Change:
+
 ```python
 def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None:
     """Register stable workflow tools on the public MCP server surface."""
@@ -1149,6 +1176,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
 ```
 
 To:
+
 ```python
 def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None:
     """Register stable workflow tools on the public MCP server surface."""
@@ -1177,16 +1205,19 @@ git commit -m "refactor: use WorkflowApi in MCP tool registration"
 ## Task 10: Update `wf_cli.context` to use `WorkflowApi`
 
 **Files:**
+
 - Modify: `src/wf_cli/context.py`
 
 - [ ] **Step 1: Update imports**
 
 Change:
+
 ```python
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 ```
 
 To:
+
 ```python
 from wf_api import WorkflowApi
 from wf_mcp.broker.service.workflow_api_backend import WfMcpWorkflowApiBackend
@@ -1195,6 +1226,7 @@ from wf_mcp.broker.service.workflow_api_backend import WfMcpWorkflowApiBackend
 - [ ] **Step 2: Update `CliContext` dataclass**
 
 Change:
+
 ```python
 @dataclass(frozen=True)
 class CliContext:
@@ -1204,6 +1236,7 @@ class CliContext:
 ```
 
 To:
+
 ```python
 @dataclass(frozen=True)
 class CliContext:
@@ -1215,6 +1248,7 @@ class CliContext:
 - [ ] **Step 3: Update `load_cli_context` function**
 
 Change:
+
 ```python
 def load_cli_context(config_path: str | Path) -> CliContext:
     resolved_config_path = Path(config_path)
@@ -1228,6 +1262,7 @@ def load_cli_context(config_path: str | Path) -> CliContext:
 ```
 
 To:
+
 ```python
 def load_cli_context(config_path: str | Path) -> CliContext:
     resolved_config_path = Path(config_path)
@@ -1243,11 +1278,13 @@ def load_cli_context(config_path: str | Path) -> CliContext:
 - [ ] **Step 4: Update `src/wf_cli/commands/runs.py`**
 
 Change:
+
 ```python
 from wf_mcp.workflow_surface import TraceRange
 ```
 
 To:
+
 ```python
 from wf_api.models import TraceRange
 ```
@@ -1272,6 +1309,7 @@ git commit -m "refactor: use WorkflowApi in CLI context"
 ## Task 11: Add `wf_api` to `pyproject.toml` packages
 
 **Files:**
+
 - Modify: `pyproject.toml`
 
 - [ ] **Step 1: Find the packages list in `pyproject.toml`**
@@ -1281,6 +1319,7 @@ Grep for `packages` or `find` in the `[tool.setuptools]` or `[tool.hatch]` secti
 - [ ] **Step 2: Add `src/wf_api` to the packages list**
 
 If using `find`:
+
 ```toml
 [tool.setuptools.packages.find]
 where = ["src"]

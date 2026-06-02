@@ -68,6 +68,7 @@ Reasons:
 ## Task 1: Align Runtime Protocol With Actual Runtime Calls
 
 **Files:**
+
 - Modify: `src/wf_api/operation_context.py`
 - Modify: `src/wf_mcp/broker/service/workflow_operation_context.py`
 - Test: `tests/wf_api/test_operation_context.py`
@@ -151,6 +152,7 @@ Expected: pass.
 ## Task 2: Create `wf_api.runs`
 
 **Files:**
+
 - Create: `src/wf_api/runs.py`
 - Modify: `src/wf_api/__init__.py`
 - Test: `tests/wf_api/test_run_api.py`
@@ -231,6 +233,7 @@ Add `"WorkflowRunApi"` to `__all__`.
 ## Task 3: Move Run Methods
 
 **Files:**
+
 - Modify: `src/wf_api/runs.py`
 
 - [ ] **Step 1: Move `run_deployment`**
@@ -311,6 +314,7 @@ Preserve current payload shape:
 ## Task 4: Move Run Helpers
 
 **Files:**
+
 - Modify: `src/wf_api/runs.py`
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 
@@ -355,6 +359,7 @@ Remove only helpers with no remaining handler callers.
 ## Task 5: Wire `WorkflowSurfaceHandlers`
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 
 - [ ] **Step 1: Add import**
@@ -429,6 +434,7 @@ methods still need them.
 ## Task 6: Add Focused Run API Tests
 
 **Files:**
+
 - Create: `tests/wf_api/test_run_api.py`
 
 - [ ] **Step 1: Cover unrunnable deployment path**

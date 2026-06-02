@@ -42,6 +42,7 @@
 ### Task 1: Make Global `--config` Available To Commands
 
 **Files:**
+
 - Modify: `src/wf_cli/app.py`
 - Modify: `src/wf_cli/context.py`
 - Modify: `tests/wf_cli/test_app.py`
@@ -115,6 +116,7 @@ Expected: PASS.
 ### Task 2: Add CLI Run/Deploy Test Fixture Helpers
 
 **Files:**
+
 - Create: `tests/wf_cli/test_run_deploy.py`
 
 - [ ] **Step 1: Create fixture helpers**
@@ -217,6 +219,7 @@ Expected: FAIL because `deploy validate` does not exist.
 ### Task 3: Implement `wf deploy validate`
 
 **Files:**
+
 - Modify: `src/wf_cli/commands/deployments.py`
 
 - [ ] **Step 1: Add imports and command**
@@ -279,6 +282,7 @@ Expected: PASS.
 ### Task 4: Add Run Command Tests
 
 **Files:**
+
 - Modify: `tests/wf_cli/test_run_deploy.py`
 
 - [ ] **Step 1: Add run start test**
@@ -414,6 +418,7 @@ Expected: deploy test passes, run tests fail because run commands do not exist.
 ### Task 5: Implement Run Commands
 
 **Files:**
+
 - Modify: `src/wf_cli/commands/runs.py`
 
 - [ ] **Step 1: Replace run command module**
@@ -534,6 +539,7 @@ Expected: PASS.
 ### Task 6: Verify Help And Input Error Behavior
 
 **Files:**
+
 - Modify: `tests/wf_cli/test_app.py`
 - Modify: `tests/wf_cli/test_run_deploy.py`
 
@@ -598,6 +604,7 @@ Expected: PASS.
 ### Task 7: Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run all CLI tests**

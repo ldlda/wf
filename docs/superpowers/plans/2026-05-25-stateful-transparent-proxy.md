@@ -13,6 +13,7 @@
 ### Task 1: Prove Stateful Proxy Behavior
 
 **Files:**
+
 - Modify: `tests/fixtures/mcp_echo_server.py`
 - Modify: `tests/wf_mcp/test_proxy.py`
 - Modify: `tests/wf_mcp/test_protocol_relay.py`
@@ -25,6 +26,7 @@
 ### Task 2: Use FastMCP Stateful Proxy Sessions
 
 **Files:**
+
 - Modify: `src/wf_mcp/proxy/mounts.py`
 
 - [ ] Replace `create_proxy(Client(...))` with `StatefulProxyClient(...)` and `FastMCPProxy(client_factory=client.new_stateful, ...)`.
@@ -34,6 +36,7 @@
 ### Task 3: Verification
 
 **Files:**
+
 - Test: `tests/wf_mcp/test_proxy.py`
 - Test: `tests/wf_mcp/test_protocol_relay.py`
 

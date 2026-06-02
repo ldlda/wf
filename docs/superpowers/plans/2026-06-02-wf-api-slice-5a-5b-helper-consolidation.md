@@ -56,6 +56,7 @@
 ## Task 1: Add `wf_api.listing`
 
 **Files:**
+
 - Create: `src/wf_api/listing.py`
 - Test: `tests/wf_api/test_listing.py`
 - Modify: `src/wf_api/__init__.py`
@@ -172,6 +173,7 @@ Expected: pass.
 ## Task 2: Route Current Workflow API Listing Calls Through `wf_api.listing`
 
 **Files:**
+
 - Modify: `src/wf_api/capabilities.py`
 - Modify: `src/wf_api/artifacts.py`
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
@@ -258,6 +260,7 @@ Expected: pass.
 ## Task 3: Add Artifact Plan And Artifact Ref Helpers
 
 **Files:**
+
 - Create: `src/wf_api/artifact_plans.py`
 - Create: `src/wf_api/artifact_refs.py`
 - Test: `tests/wf_api/test_artifact_helpers.py`
@@ -401,6 +404,7 @@ Expected: pass.
 ## Task 4: Replace Duplicate Artifact Plan/Ref Helpers In Domain APIs
 
 **Files:**
+
 - Modify: `src/wf_api/capabilities.py`
 - Modify: `src/wf_api/artifacts.py`
 - Modify: `src/wf_api/runs.py`
@@ -471,6 +475,7 @@ Expected: pass.
 ## Task 5: Add Shared Capability Requirement Helpers
 
 **Files:**
+
 - Create: `src/wf_api/capability_requirements.py`
 - Modify: `src/wf_api/drafts.py`
 - Modify: `src/wf_api/artifacts.py`
@@ -647,6 +652,7 @@ Expected: pass.
 ## Task 6: Add Source Snapshot Helper If Duplicated
 
 **Files:**
+
 - Create: `src/wf_api/source_snapshots.py`
 - Modify: `src/wf_api/deployments.py`
 - Modify: `src/wf_api/runs.py`
@@ -718,6 +724,7 @@ Expected: pass.
 ## Task 7: Remove Duplicate Private Helpers And Guard Imports
 
 **Files:**
+
 - Modify: `src/wf_api/capabilities.py`
 - Modify: `src/wf_api/artifacts.py`
 - Modify: `src/wf_api/drafts.py`
@@ -764,6 +771,7 @@ Expected: pass.
 ## Task 8: Final Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused wf_api workflow tests**

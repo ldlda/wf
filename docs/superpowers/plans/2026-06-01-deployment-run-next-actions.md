@@ -52,6 +52,7 @@
 ### Task 1: Add Constructor Unit Tests
 
 **Files:**
+
 - Modify: `tests/wf_mcp/workflow_surface/test_next_actions.py`
 
 - [ ] **Step 1: Add imports**
@@ -172,6 +173,7 @@ Expected: FAIL with `AttributeError` for missing `from_deployment_validation` an
 ### Task 2: Implement Deployment/Run Constructors
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/next_actions.py`
 
 - [ ] **Step 1: Add type-only imports**
@@ -379,6 +381,7 @@ Expected: PASS.
 ### Task 3: Thread NextActions Through Deployment Validation
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Modify: `tests/wf_mcp/workflow_surface/test_deployments.py`
 
@@ -449,6 +452,7 @@ Expected: PASS.
 ### Task 4: Thread NextActions Through Run Payloads
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Modify: `tests/wf_mcp/workflow_surface/test_runs.py`
 
@@ -548,6 +552,7 @@ Expected: PASS.
 ### Task 5: Update MCP Output Schema Tests
 
 **Files:**
+
 - Modify: `tests/wf_mcp/server/test_config.py`
 - Modify: `tests/wf_mcp/server/test_tools.py`
 
@@ -597,6 +602,7 @@ Expected: PASS.
 ### Task 6: Update Docs
 
 **Files:**
+
 - Modify: `docs/workflow_capabilities.md`
 
 - [ ] **Step 1: Add deployment/run guidance note**
@@ -626,6 +632,7 @@ Expected: PASS.
 ### Task 7: Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused test set**

@@ -84,6 +84,7 @@ draft preview and artifact creation. If a helper still has live callers in
 ## Task 1: Create `wf_api.drafts`
 
 **Files:**
+
 - Create: `src/wf_api/drafts.py`
 
 - [ ] **Step 1: Create `WorkflowDraftApi` skeleton**
@@ -179,6 +180,7 @@ Add:
 ## Task 2: Move Stateless Draft Methods
 
 **Files:**
+
 - Modify: `src/wf_api/drafts.py`
 
 - [ ] **Step 1: Add `validate_draft`**
@@ -225,6 +227,7 @@ Add:
 ## Task 3: Move Draft Workspace Methods
 
 **Files:**
+
 - Modify: `src/wf_api/drafts.py`
 
 - [ ] **Step 1: Add workspace CRUD and validation methods**
@@ -261,6 +264,7 @@ They should call `self.patch_draft_workspace(...)` inside `WorkflowDraftApi`.
 ## Task 4: Move Minimal Draft Bootstrap
 
 **Files:**
+
 - Modify: `src/wf_api/drafts.py`
 
 - [ ] **Step 1: Add `create_minimal_draft_workspace`**
@@ -294,6 +298,7 @@ Do not change their behavior.
 ## Task 5: Move Required-Capability Draft Helpers
 
 **Files:**
+
 - Modify: `src/wf_api/drafts.py`
 
 - [ ] **Step 1: Move `_required_capabilities_for_plan`**
@@ -350,6 +355,7 @@ Move it unchanged.
 ## Task 6: Wire `WorkflowSurfaceHandlers` To Delegate Draft Methods
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 
 - [ ] **Step 1: Add imports**
@@ -419,6 +425,7 @@ but not required for this slice.
 ## Task 7: Add Focused Tests
 
 **Files:**
+
 - Create: `tests/wf_api/test_drafts_service.py`
 
 - [ ] **Step 1: Write direct service tests**

@@ -51,6 +51,7 @@ That makes a protocol-specific service decide protocol-neutral workflow persiste
 ### Task 1: Add Protocol-Neutral Store Bundle
 
 **Files:**
+
 - Create: `src/wf_api/stores.py`
 - Modify: `src/wf_api/__init__.py`
 - Test: `tests/wf_api/test_stores.py`
@@ -173,6 +174,7 @@ Expected: tests pass, lint pass, format pass.
 ### Task 2: Move Config Store Construction Through the Bundle
 
 **Files:**
+
 - Modify: `src/wf_mcp/broker/config.py`
 - Test: `tests/wf_mcp/test_broker_server.py`
 
@@ -267,6 +269,7 @@ Expected: tests pass, lint pass, format pass.
 ### Task 3: Remove Implicit Workflow Store Creation from WfMcpService
 
 **Files:**
+
 - Modify: `src/wf_mcp/broker/service/core.py`
 - Modify: `tests/wf_mcp/service/test_catalog.py`
 
@@ -350,6 +353,7 @@ Expected: tests pass, lint pass, format pass.
 ### Task 4: Fix Direct Service Tests That Need Workflow Stores
 
 **Files:**
+
 - Modify only tests that fail after Task 3.
 
 - [ ] **Step 1: Run targeted workflow API/service tests**
@@ -410,6 +414,7 @@ Expected: targeted tests pass and no broad fixture churn.
 ### Task 5: Document the Store Ownership Rule
 
 **Files:**
+
 - Modify: `docs/superpowers/research/2026-06-01-wf-api-extraction-map.md`
 - Modify: `docs/current_roadmap.md` if it already has a `wf_api` section
 
@@ -452,6 +457,7 @@ Expected: no current docs/tests claim `WfMcpService` installs default workflow s
 ### Task 6: Final Verification
 
 **Files:**
+
 - All touched files.
 
 - [ ] **Step 1: Run focused suite**

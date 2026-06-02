@@ -200,6 +200,7 @@ These members of `WfMcpService` (`src/wf_mcp/broker/service/core.py`) are NOT ac
 ### Summary Classification
 
 **Protocol-neutral (should move to `wf_api`):**
+
 - All `wf_artifacts` types and functions
 - All `wf_platform` types
 - All `wf_authoring` types
@@ -210,6 +211,7 @@ These members of `WfMcpService` (`src/wf_mcp/broker/service/core.py`) are NOT ac
 - `TraceRange`, `NextActions`, `SavedSubgraphTree`, `resolve_runtime_dependencies`, `wrapper_hints`, `refs`, `run_lifecycle`, `constants`
 
 **MCP-specific (stays in `wf_mcp`):**
+
 - `ConnectionRegistry`, `ConnectionConfig`
 - `BackendAdapter`, `require_adapter`
 - `AuthRecord`
@@ -225,11 +227,13 @@ These members of `WfMcpService` (`src/wf_mcp/broker/service/core.py`) are NOT ac
 Move `WorkflowSurfaceHandlers` to `wf_api.service.WorkflowApi`, keep same constructor accepting `WfMcpService`.
 
 **Pros:**
+
 - Minimal code changes — just move the file, update imports
 - Tests keep passing with import-only changes
 - No new abstractions
 
 **Cons:**
+
 - `wf_api` would still depend on `WfMcpService` (a `wf_mcp` type)
 - Circular dependency risk: `wf_api` → `wf_mcp` → `wf_api` (if `wf_mcp` tools import from `wf_api`)
 - Doesn't actually decouple from MCP — just relocates the code
@@ -240,6 +244,7 @@ Move `WorkflowSurfaceHandlers` to `wf_api.service.WorkflowApi`, keep same constr
 Create `WorkflowApi` that depends on a smaller `WorkflowApiBackend`/ports object instead of all `WfMcpService`, then adapt `WfMcpService` into that backend.
 
 **Pros:**
+
 - Clean dependency direction: `wf_api` → ports/interfaces, `wf_mcp` → adapts `WfMcpService` into ports
 - `wf_cli` can also adapt its own backend (or reuse the `wf_mcp` adapter)
 - FastAPI later becomes just another adapter over the same ports
@@ -247,6 +252,7 @@ Create `WorkflowApi` that depends on a smaller `WorkflowApiBackend`/ports object
 - Incremental: can introduce ports one domain at a time
 
 **Cons:**
+
 - More upfront work — need to define the port interface
 - Risk of over-abstracting if ports are too fine-grained
 - Need to decide what `WorkflowApiBackend` actually exposes
@@ -256,11 +262,13 @@ Create `WorkflowApi` that depends on a smaller `WorkflowApiBackend`/ports object
 Split capabilities/drafts/artifacts/deployments/runs into separate classes before moving packages.
 
 **Pros:**
+
 - Each domain class is smaller and easier to reason about
 - Could enable partial extraction (move artifacts first, then drafts, etc.)
 - Better separation of concerns regardless of extraction
 
 **Cons:**
+
 - Large refactor with many test changes
 - Still coupled to `WfMcpService` until ports are introduced
 - May create artificial boundaries — some operations span domains (e.g., `create_artifact_from_workspace` touches both drafts and artifacts)

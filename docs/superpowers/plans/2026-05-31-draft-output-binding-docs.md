@@ -100,6 +100,7 @@ If top-level `output` is empty, the runtime keeps the legacy same-name fallback:
 for every field in `output_schema`, it copies the top-level state field with the
 same name when present. That fallback is convenient, but explicit output
 projection is clearer for new workflows.
+
 ```
 
 - [ ] **Step 2: Run grep check**
@@ -138,6 +139,7 @@ For explicit final output projection from state, use:
 ```
 
 Do not use `source` at top level. `source` belongs to step output bindings.
+
 ```
 
 - [ ] **Step 2: Run grep check**

@@ -309,6 +309,7 @@ wf explain --input-file validation-output.json
   test `NodeSpec` functions.
 - Targeted draft editing helpers such as `wf draft step add` are not in v1.
 - `wf` does not replace MCP resources/prompts or interactive MCP clients.
+
 ```
 
 - [ ] **Step 2: Add CLI doc to docs index**
@@ -393,6 +394,7 @@ wf run trace <run_id> --from 0 --limit 25
 - Do not treat wrapper hints as semantic guarantees.
 - If validation fails, run `wf explain <code>` or `wf explain --input-file <validation-output.json>`.
 - Do not use docs under `docs/superpowers/` as user-facing runtime guidance.
+
 ```
 
 - [ ] **Step 2: Do not wire skill installation**

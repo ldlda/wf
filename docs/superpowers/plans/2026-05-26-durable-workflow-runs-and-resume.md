@@ -63,6 +63,7 @@ thin MCP-facing delegation points.
 ### Task 1: Add A Versioned `RunState` Storage Codec
 
 **Files:**
+
 - Create: `src/wf_core/run_codec.py`
 - Modify: `src/wf_core/__init__.py`
 - Create: `tests/core/test_run_codec.py`
@@ -225,6 +226,7 @@ Expected: PASS and `0 errors`.
 ### Task 2: Add Typed Run Records And A File-Backed Run Store
 
 **Files:**
+
 - Create: `src/wf_artifacts/runs/__init__.py`
 - Create: `src/wf_artifacts/runs/models.py`
 - Create: `src/wf_artifacts/runs/store.py`
@@ -436,6 +438,7 @@ Expected: PASS and `0 errors`.
 ### Task 3: Pin The Resolved Saved-Child Environment Used By A Run
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/saved_subgraphs.py`
 - Modify: `src/wf_mcp/broker/service/core.py`
 - Test: `tests/wf_mcp/test_saved_subgraphs.py`
@@ -541,6 +544,7 @@ Expected: PASS and `0 errors`.
 ### Task 4: Replace Process-Local Active Runs With Durable Lifecycle Helpers
 
 **Files:**
+
 - Modify: `src/wf_core/runtime/engine.py`
 - Create: `src/wf_mcp/workflow_surface/run_lifecycle.py`
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
@@ -833,6 +837,7 @@ Expected: PASS and `0 errors`.
 ### Task 5: Block Resume When Pinned External Dependencies Are No Longer Ready
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/run_lifecycle.py`
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Test: `tests/wf_mcp/test_durable_runs.py`
@@ -941,6 +946,7 @@ Expected: PASS and `0 errors`.
 ### Task 6: Expose Inspect And Bounded Trace Tools
 
 **Files:**
+
 - Modify: `src/wf_mcp/workflow_surface/handlers.py`
 - Modify: `src/wf_mcp/workflow_surface/tools.py`
 - Modify: `src/wf_mcp/broker/artifact_tools.py`
@@ -1027,6 +1033,7 @@ Expected: PASS and `0 errors`.
 ### Task 7: Documentation, Regression Verification, And Unsupported Policy Notes
 
 **Files:**
+
 - Modify: `docs/current_roadmap.md`
 - Modify: `docs/workflow_artifacts.md`
 - Modify: `docs/wf_mcp_operator_manual.md`
