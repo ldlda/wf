@@ -47,6 +47,8 @@ implementation state.
      hints, next actions, raw workflow plans, runtime dependencies, saved
      subgraph preparation, and durable run lifecycle helpers. Old
      `wf_mcp.workflow_surface` helper paths remain compatibility shims.
+   - The boundary is documented in
+     [wf_api architecture](./wf_api_architecture.md).
 
 ## Active Next Roadmap
 
@@ -59,9 +61,11 @@ implementation state.
      [2026-06-03 WorkflowOperationContext shape audit](./superpowers/research/2026-06-03-workflow-operation-context-audit.md).
 
 2. **Persisted run/resume spec**
-   - Define the process-restart resume contract around run records, pinned
-     deployment/artifact/subgraph environment, source/capability validation,
-     trace paging, and interrupt-only pause semantics.
+   - Completed: the process-restart resume contract is defined in
+     [2026-06-03 persisted run/resume contract](./superpowers/specs/2026-06-03-persisted-run-resume-contract.md).
+   - It covers run records, pinned deployment/artifact/subgraph environment,
+     source/capability validation, trace paging, and interrupt-only pause
+     semantics.
    - Keep ordinary dead tools/sources as diagnostics or failed runs, not implicit
      pauses.
 

@@ -60,6 +60,9 @@ New code should treat `wf_api.WorkflowApi` as the application-facing API. Do not
 add new callers that import `WorkflowSurfaceHandlers` directly unless they are
 compatibility tests.
 
+The broader application-service boundary is documented in
+[`wf_api_architecture.md`](wf_api_architecture.md).
+
 This is a dependency-direction cleanup, not a full domain split. Most API
 methods still mirror the old workflow-surface payloads and return
 `dict[str, Any]`.
