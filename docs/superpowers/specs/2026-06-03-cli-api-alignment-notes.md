@@ -59,39 +59,40 @@ stateless domain mixins.
 - Transport packages adapt calls. Workflow validation, resume policy, wrapper
   hints, and next actions stay in `wf_api`.
 
-## Remaining Local-Only Areas To Audit
+## Local-Only Audit Result
 
-These command groups are not necessarily workflow-surface operations yet:
+Audit result: no workflow lifecycle command imports
+`load_local_cli_context_from_typer`. The capability, draft workspace, artifact,
+deployment, and run command groups all load `CliContext.handlers:
+WorkflowApiSurface`, so they can target either local or JSON-RPC HTTP.
+
+The remaining non-lifecycle command groups are static/local by design for now:
 
 - `wf docs`
 - `wf schema`
 - `wf explain`
 
-They may stay local because they are static/documentation helpers. If they need
-remote behavior, decide whether they belong on `WorkflowApiSurface`, a sibling
-admin/docs surface, or plain local CLI utilities.
+`wf docs` and `wf schema` are currently empty Typer groups reserved for future
+commands. `wf explain` reads the packaged explanation registry and does not need
+workflow stores or remote server state. If these need remote behavior later,
+decide whether they belong on `WorkflowApiSurface`, a sibling admin/docs
+surface, or plain local CLI utilities.
 
 ## Next Slices
 
-1. **CLI local-only audit**
-   - Search for `load_local_cli_context_from_typer`.
-   - For each command, record whether it is local-only by necessity or just
-     legacy.
-   - Convert accidental local-only commands to `WorkflowApiSurface`.
-
-2. **Server source/admin operations**
+1. **Server source/admin operations**
    - Add a protocol-neutral admin/source surface for source listing, source
      health, and dynamic source registration.
    - Do not overload `WorkflowApiSurface` if the operation is not a workflow
      lifecycle operation.
 
-3. **Store-backed source registry**
+2. **Store-backed source registry**
    - Config can bootstrap sources, but server-owned dynamic source changes
      should persist through the store.
    - Keep source identity structural: source id, provider/account/profile, and
      concrete transport details should not be inferred from dotted display names.
 
-4. **Transport sibling planning**
+3. **Transport sibling planning**
    - JSON-RPC over HTTP is the first transport.
    - If streaming/progress becomes important, add a WebSocket transport sibling
      rather than changing workflow semantics.
