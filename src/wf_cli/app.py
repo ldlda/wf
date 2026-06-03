@@ -4,7 +4,17 @@ from typing import Annotated
 
 import typer
 
-from .commands import artifacts, caps, deployments, docs, drafts, explain, runs, schema
+from .commands import (
+    artifacts,
+    caps,
+    deployments,
+    docs,
+    drafts,
+    explain,
+    runs,
+    schema,
+    sources,
+)
 from .context import CliTyperState
 
 app = typer.Typer(
@@ -51,6 +61,7 @@ app.add_typer(drafts.app, name="draft")
 app.add_typer(artifacts.app, name="artifact")
 app.add_typer(deployments.app, name="deploy")
 app.add_typer(runs.app, name="run")
+app.add_typer(sources.app, name="source")
 app.add_typer(docs.app, name="docs")
 app.add_typer(schema.app, name="schema")
 app.command("explain")(explain.explain_command)

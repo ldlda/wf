@@ -104,6 +104,8 @@ implementation state.
       `WorkflowSourceAdminApi` / `WorkflowSourceAdminSurface`; MCP admin source
       tools delegate through it while connection/raw MCP operations remain
       broker-owned.
+   - Completed: read-only source inventory is exposed through JSON-RPC HTTP and
+      `wf source list` / `wf source inspect`.
 
 5. **CLI/API alignment**
    - Completed for the basic lifecycle: selected `wf` commands can target local

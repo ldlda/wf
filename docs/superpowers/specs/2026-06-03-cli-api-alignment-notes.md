@@ -80,12 +80,13 @@ surface, or plain local CLI utilities.
 
 ## Next Slices
 
-1. **Source/admin transport and CLI commands**
-   - Build JSON-RPC methods and `wf source ...` commands over
-     `WorkflowSourceAdminSurface`.
+1. **Store-backed source registry**
+   - Read-only source/admin operations are now available through JSON-RPC HTTP
+     and `wf source list` / `wf source inspect`.
+   - Next source work is persistence for server-owned dynamic source changes.
    - Keep mutation out until the store-backed source registry is designed.
 
-2. **Store-backed source registry**
+2. **Mutable source/admin commands**
    - Config can bootstrap sources, but server-owned dynamic source changes
      should persist through the store.
    - Keep source identity structural: source id, provider/account/profile, and

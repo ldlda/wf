@@ -83,6 +83,30 @@ def test_rpc_workflow_client_lists_and_inspects_capabilities(tmp_path) -> None:
     asyncio.run(scenario())
 
 
+def test_rpc_workflow_client_lists_and_inspects_sources(tmp_path) -> None:
+    async def scenario() -> None:
+        server = build_local_static_workflow_server(tmp_path / "store")
+        app = create_rpc_app(server)
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://test",
+        ) as http_client:
+            client = RpcWorkflowApiClient(
+                url="http://test/rpc",
+                timeout_seconds=5,
+                http_client=http_client,
+            )
+            listed = await client.list_sources(limit=10)
+            inspected = await client.inspect_source(source_id="wf.std")
+
+        source_ids = {source["id"] for source in listed["sources"]}
+        assert "wf.std" in source_ids
+        assert inspected["id"] == "wf.std"
+
+    asyncio.run(scenario())
+
+
 def test_rpc_workflow_client_runs_and_reads_trace(tmp_path) -> None:
     async def scenario() -> None:
         server = build_local_static_workflow_server(tmp_path / "store")

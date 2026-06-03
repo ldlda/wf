@@ -286,6 +286,30 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     assert '"name": "wf.std.constant"' in result.output
 
 
+def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    original_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        "wf_transport_rpc_http.client.httpx.AsyncClient",
+        lambda *args, **kwargs: original_client(
+            transport=httpx.ASGITransport(app=create_rpc_app(server)),
+            base_url="http://test",
+        ),
+    )
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    listed = runner.invoke(app, [*base_args, "source", "list", "--limit", "10"])
+    inspected = runner.invoke(app, [*base_args, "source", "inspect", "wf.std"])
+
+    assert listed.exit_code == 0, listed.output
+    assert '"id": "wf.std"' in listed.output
+    assert inspected.exit_code == 0, inspected.output
+    assert '"id": "wf.std"' in inspected.output
+
+
 def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     original_client = httpx.AsyncClient

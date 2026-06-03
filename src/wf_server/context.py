@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from wf_api import WorkflowApi, durable_workflow_api
+from wf_api import WorkflowApi, WorkflowSourceAdminApi, durable_workflow_api
 from wf_api.local_sources import builtin_sources, get_qualified_spec
 from wf_api.models import RawWorkflowPlan, TraceRange
 from wf_api.operation_context import (
@@ -237,6 +237,7 @@ class WorkflowServer:
     stores: WorkflowStores
     context: WorkflowOperationContext
     api: WorkflowApi
+    source_admin: WorkflowSourceAdminApi
     events: InMemoryWorkflowEventRecorder
 
     @staticmethod
@@ -264,10 +265,12 @@ def build_local_static_workflow_server(root: str | Path) -> WorkflowServer:
         live_sources=None,
     )
     api = durable_workflow_api(context)
+    source_admin = WorkflowSourceAdminApi(context)
     return WorkflowServer(
         config=config,
         stores=stores,
         context=context,
         api=api,
+        source_admin=source_admin,
         events=events,
     )

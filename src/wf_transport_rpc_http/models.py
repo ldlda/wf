@@ -37,6 +37,15 @@ class ListCapabilitiesParams(RpcParamsModel):
     limit: int = Field(default=50, ge=1, le=200)
 
 
+class ListSourcesParams(RpcParamsModel):
+    cursor: str | None = Field(default=None)
+    limit: int = Field(default=50, ge=1, le=100)
+
+
+class InspectSourceParams(RpcParamsModel):
+    source_id: str = Field(min_length=1)
+
+
 class InspectCapabilityParams(RpcParamsModel):
     qualified_name: str = Field(min_length=1)
 

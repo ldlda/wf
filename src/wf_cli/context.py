@@ -8,7 +8,12 @@ from collections.abc import Mapping
 import typer
 from pydantic import ValidationError
 
-from wf_api import WorkflowApi, WorkflowApiSurface
+from wf_api import (
+    WorkflowApi,
+    WorkflowApiSurface,
+    WorkflowSourceAdminApi,
+    WorkflowSourceAdminSurface,
+)
 from wf_config import (
     FilesystemStoreConfig,
     LocalTargetConfig,
@@ -29,6 +34,7 @@ class CliContext:
     config_path: Path
     service: WfMcpService | None
     handlers: WorkflowApiSurface
+    source_admin: WorkflowSourceAdminSurface
 
 
 @dataclass(frozen=True)
@@ -98,16 +104,18 @@ def load_cli_context(
 
     if rpc_url is not None:
         _validate_rpc_url(rpc_url)
+        client = RpcWorkflowApiClient(
+            url=rpc_url,
+            timeout_seconds=_rpc_timeout_from_optional_config(
+                resolved_config_path,
+                override=rpc_timeout_seconds,
+            ),
+        )
         return CliContext(
             config_path=resolved_config_path,
             service=None,
-            handlers=RpcWorkflowApiClient(
-                url=rpc_url,
-                timeout_seconds=_rpc_timeout_from_optional_config(
-                    resolved_config_path,
-                    override=rpc_timeout_seconds,
-                ),
-            ),
+            handlers=client,
+            source_admin=client,
         )
 
     if _is_legacy_mcp_config(resolved_config_path):
@@ -117,6 +125,7 @@ def load_cli_context(
             config_path=resolved_config_path,
             service=service,
             handlers=WorkflowApi(context_from_service(service)),
+            source_admin=WorkflowSourceAdminApi(context_from_service(service)),
         )
 
     config = load_workflow_config(resolved_config_path)
@@ -130,19 +139,22 @@ def load_cli_context(
             config_path=resolved_config_path,
             service=None,
             handlers=server.api,
+            source_admin=server.source_admin,
         )
     if isinstance(target, RpcHttpTargetConfig):
+        client = RpcWorkflowApiClient(
+            url=str(target.url),
+            timeout_seconds=(
+                rpc_timeout_seconds
+                if rpc_timeout_seconds is not None
+                else target.timeout_seconds
+            ),
+        )
         return CliContext(
             config_path=resolved_config_path,
             service=None,
-            handlers=RpcWorkflowApiClient(
-                url=str(target.url),
-                timeout_seconds=(
-                    rpc_timeout_seconds
-                    if rpc_timeout_seconds is not None
-                    else target.timeout_seconds
-                ),
-            ),
+            handlers=client,
+            source_admin=client,
         )
     raise ValueError(f"unsupported workflow target {target!r}")
 
