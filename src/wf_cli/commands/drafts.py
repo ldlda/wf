@@ -6,7 +6,7 @@ from typing import Annotated, Literal
 
 import typer
 
-from wf_cli.context import load_local_cli_context_from_typer as load_cli_context
+from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_value
 

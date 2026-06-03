@@ -247,3 +247,97 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     )
     assert result.exit_code == 0, result.output
     assert '"name": "wf.std.constant"' in result.output
+
+
+def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    original_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        "wf_transport_rpc_http.client.httpx.AsyncClient",
+        lambda *args, **kwargs: original_client(
+            transport=httpx.ASGITransport(app=create_rpc_app(server)),
+            base_url="http://test",
+        ),
+    )
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create-from-capability",
+            "remote_ws",
+            "wf.std.constant",
+            "--name",
+            "remote_constant",
+            "--title",
+            "Remote Constant",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+    assert '"workspace_id": "remote_ws"' in created.output
+
+    validated = runner.invoke(
+        app,
+        [*base_args, "draft", "validate", "remote_ws"],
+    )
+    assert validated.exit_code == 0, validated.output
+    assert '"status": "valid"' in validated.output
+
+    saved_artifact = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "save",
+            "remote_ws",
+            "--artifact",
+            "remote_artifact",
+            "--version",
+            "1",
+            "--title",
+            "Remote Artifact",
+            "--outcome",
+            "ok",
+            "--binding",
+            "wf.std=wf.std",
+        ],
+    )
+    assert saved_artifact.exit_code == 0, saved_artifact.output
+    assert '"artifact_id": "remote_artifact"' in saved_artifact.output
+
+    inspected_artifact = runner.invoke(
+        app,
+        [*base_args, "artifact", "inspect", "remote_artifact", "1"],
+    )
+    assert inspected_artifact.exit_code == 0, inspected_artifact.output
+    assert '"id": "remote_artifact"' in inspected_artifact.output
+
+    saved_deployment = runner.invoke(
+        app,
+        [
+            *base_args,
+            "deploy",
+            "save",
+            "remote_artifact.default",
+            "--artifact",
+            "remote_artifact",
+            "--version",
+            "1",
+            "--binding",
+            "wf.std=wf.std",
+        ],
+    )
+    assert saved_deployment.exit_code == 0, saved_deployment.output
+    assert '"deployment_id": "remote_artifact.default"' in saved_deployment.output
+
+    validated_deployment = runner.invoke(
+        app,
+        [*base_args, "deploy", "validate", "remote_artifact.default"],
+    )
+    assert validated_deployment.exit_code == 0, validated_deployment.output
+    assert '"status": "runnable"' in validated_deployment.output

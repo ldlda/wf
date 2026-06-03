@@ -462,8 +462,9 @@ First slice implemented:
   wired source ids (`wf.std`, `wf.recipes`)
 - local and JSON-RPC client targets
 - `wf` root overrides for `--local`, `--url`, and `--timeout`
-- remote JSON-RPC client support for capability and run CLI commands
-- local-only CLI commands fail fast for `rpc_http` targets until they are wired
+- remote JSON-RPC client support now covers capability, draft workspace,
+  artifact, deployment, and run CLI commands
+- draft/artifact/deploy commands no longer fail fast for `rpc_http` targets
 - `wf-rpc-server --config` support for server store and RPC HTTP transport,
   including configured RPC path
 
@@ -473,7 +474,6 @@ Still future:
 - MCP/OpenAPI source config
 - arbitrary stdlib source aliases
 - `/mcp` hosting from neutral server config
-- remote draft/artifact/deployment CLI commands
 - auth and SQL stores
 
 ## Next Implementation Slice

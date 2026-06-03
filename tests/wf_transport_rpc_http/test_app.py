@@ -211,6 +211,124 @@ def test_rpc_draft_artifact_deployment_lifecycle(tmp_path) -> None:
     asyncio.run(scenario())
 
 
+def test_rpc_artifact_and_deployment_catalog_methods(tmp_path) -> None:
+    async def scenario() -> None:
+        server = build_local_static_workflow_server(tmp_path / "store")
+        await server.api.create_artifact_from_plan(
+            artifact_id="rpc_lifecycle",
+            version=1,
+            title="RPC Lifecycle",
+            plan=_constant_plan(),
+            outcomes=["ok"],
+            source_bindings={"wf.std": "wf.std"},
+        )
+        await server.api.save_deployment(
+            {
+                "id": "rpc_lifecycle.default",
+                "artifact_id": "rpc_lifecycle",
+                "artifact_version": 1,
+                "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            }
+        )
+
+        app = create_rpc_app(server)
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
+            listed_artifacts = await _rpc(client, "workflow.artifacts.list", {})
+            inspected_artifact = await _rpc(
+                client,
+                "workflow.artifacts.inspect",
+                {"artifact_id": "rpc_lifecycle", "version": 1},
+            )
+            listed_deployments = await _rpc(client, "workflow.deployments.list", {})
+            inspected_deployment = await _rpc(
+                client,
+                "workflow.deployments.inspect",
+                {"deployment_id": "rpc_lifecycle.default"},
+            )
+            deleted = await _rpc(
+                client,
+                "workflow.deployments.delete",
+                {"deployment_id": "rpc_lifecycle.default"},
+            )
+
+        assert listed_artifacts["result"]["nodes"]
+        assert inspected_artifact["result"]["id"] == "rpc_lifecycle"
+        assert listed_deployments["result"]["deployments"]
+        assert inspected_deployment["result"]["id"] == "rpc_lifecycle.default"
+        assert deleted["result"]["deployment_id"] == "rpc_lifecycle.default"
+
+    asyncio.run(scenario())
+
+
+def test_rpc_draft_workspace_methods(tmp_path) -> None:
+    async def scenario() -> None:
+        server = build_local_static_workflow_server(tmp_path / "store")
+        app = create_rpc_app(server)
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
+            created = await _rpc(
+                client,
+                "workflow.draft_workspaces.create_from_capability",
+                {
+                    "workspace_id": "remote_ws",
+                    "capability_name": "wf.std.constant",
+                    "name": "remote_constant",
+                    "title": "Remote Constant",
+                    "input_map": {},
+                    "output_map": {"value": "state.result"},
+                },
+            )
+            listed = await _rpc(client, "workflow.draft_workspaces.list", {})
+            fetched = await _rpc(
+                client,
+                "workflow.draft_workspaces.get",
+                {"workspace_id": "remote_ws"},
+            )
+            validated = await _rpc(
+                client,
+                "workflow.draft_workspaces.validate",
+                {"workspace_id": "remote_ws"},
+            )
+            patched = await _rpc(
+                client,
+                "workflow.draft_workspaces.patch",
+                {
+                    "workspace_id": "remote_ws",
+                    "revision": created["result"]["revision"],
+                    "patch": [
+                        {"op": "replace", "path": "/name", "value": "remote_renamed"}
+                    ],
+                },
+            )
+            artifact = await _rpc(
+                client,
+                "workflow.draft_workspaces.create_artifact",
+                {
+                    "workspace_id": "remote_ws",
+                    "artifact_id": "remote_artifact",
+                    "version": 1,
+                    "title": "Remote Artifact",
+                    "outcomes": ["ok"],
+                    "kind": "workflow",
+                    "source_bindings": {"wf.std": "wf.std"},
+                },
+            )
+
+        assert created["result"]["workspace_id"] == "remote_ws"
+        assert listed["result"]["workspaces"]
+        assert fetched["result"]["workspace_id"] == "remote_ws"
+        assert validated["result"]["status"] in {"valid", "invalid"}
+        assert patched["result"]["revision"] == created["result"]["revision"] + 1
+        assert artifact["result"]["artifact_id"] == "remote_artifact"
+
+    asyncio.run(scenario())
+
+
 def _constant_plan() -> RawWorkflowPlan:
     return RawWorkflowPlan.model_validate(
         {

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -71,6 +71,74 @@ class SaveArtifactParams(RpcParamsModel):
 
 class SaveDeploymentParams(RpcParamsModel):
     deployment: dict[str, Any]
+
+
+class ListDraftWorkspacesParams(RpcParamsModel):
+    pass
+
+
+class GetDraftWorkspaceParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    include_draft: bool = False
+
+
+class PatchDraftWorkspaceParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    patch: list[dict[str, Any]]
+
+
+class ValidateDraftWorkspaceParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+
+
+class CreateArtifactFromWorkspaceParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    artifact_id: str = Field(min_length=1)
+    version: int = Field(ge=1)
+    title: str = Field(min_length=1)
+    outcomes: list[str]
+    kind: Literal["workflow", "wrapper"] = "workflow"
+    description: str | None = None
+    required_capabilities: dict[str, dict[str, Any]] | None = None
+    source_bindings: dict[str, str] | None = None
+    created_from_catalog_version: str | None = None
+
+
+class CreateWrapperFromWorkspaceParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    artifact_id: str = Field(min_length=1)
+    version: int = Field(ge=1)
+    title: str = Field(min_length=1)
+    outcomes: list[str]
+    description: str | None = None
+    required_capabilities: dict[str, dict[str, Any]] | None = None
+    source_bindings: dict[str, str] | None = None
+    created_from_catalog_version: str | None = None
+
+
+class ListArtifactsParams(RpcParamsModel):
+    query: str | None = None
+    kind: Literal["workflow", "wrapper"] | None = None
+    cursor: str | None = None
+    limit: int = Field(default=50, ge=1, le=100)
+
+
+class InspectArtifactParams(RpcParamsModel):
+    artifact_id: str = Field(min_length=1)
+    version: int = Field(ge=1)
+
+
+class ListDeploymentsParams(RpcParamsModel):
+    pass
+
+
+class InspectDeploymentParams(RpcParamsModel):
+    deployment_id: str = Field(min_length=1)
+
+
+class DeleteDeploymentParams(RpcParamsModel):
+    deployment_id: str = Field(min_length=1)
 
 
 class ValidateDeploymentParams(RpcParamsModel):
