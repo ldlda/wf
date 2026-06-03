@@ -269,6 +269,9 @@ registry entries.
 
 ### Slice 4: Read Registry Through Admin
 
+Implementation plan:
+[2026-06-04 source registry admin reads](../plans/2026-06-04-source-registry-admin-reads.md).
+
 - Add admin read method for desired registry entries if needed.
 - Keep current source inventory list as runtime/observed source inventory.
 - Document difference between desired registry and observed source catalog.

@@ -59,6 +59,7 @@ The next executable slice is startup merge:
    - Emit events/diagnostics for shadowed registry entries.
 
 4. **Slice 4: Read Desired Registry Through Admin**
+   - **Status: planned.**
    - Expose desired registry entries separately from observed source inventory.
    - Make the difference visible in API/CLI docs.
 
@@ -321,6 +322,9 @@ with config-defined connections/sources.
 ### Goal
 
 Expose desired registry entries distinctly from observed source inventory.
+
+Implementation plan:
+`docs/superpowers/plans/2026-06-04-source-registry-admin-reads.md`.
 
 ### Why
 
