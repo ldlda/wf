@@ -29,11 +29,17 @@ This is useful and tested, but still MCP-shaped:
 - source entry type is `McpSourceRegistryEntry`
 - transport definitions are MCP transports
 
-That is acceptable for Slice 1, but should be resolved before startup merge and mutation commands make the shape more permanent.
+Slice 2A then moved generic registry mechanics to `wf_api.source_registry`,
+while `wf_mcp.source_registry` kept MCP-specific entries and transports. Slice
+2B added `registry_entry_to_connection_config()`.
+
+The next executable slice is startup merge:
+`docs/superpowers/plans/2026-06-03-source-registry-startup-merge.md`.
 
 ## Slice Order
 
 1. **Slice 2A: Generic Registry Mechanics**
+   - **Status: complete.**
    - Move generic validation/store/file mechanics to `wf_api`.
    - Keep MCP entry/transport validation in `wf_mcp`.
    - Prefer boring helpers over deep Pydantic generics where that keeps the
@@ -41,11 +47,13 @@ That is acceptable for Slice 1, but should be resolved before startup merge and 
    - Do not change runtime behavior.
 
 2. **Slice 2B: MCP Entry Conversion**
+   - **Status: complete.**
    - Add conversion helpers between `McpSourceRegistryEntry` and
      `ConnectionConfig`.
    - Keep config merge out of scope.
 
 3. **Slice 3: Startup Merge**
+   - **Status: planned.**
    - Load registry at broker/server startup.
    - Merge config and registry with config precedence.
    - Emit events/diagnostics for shadowed registry entries.
@@ -216,6 +224,9 @@ Keep MCP tests in `tests/wf_mcp/test_source_registry.py`:
 Add explicit conversion helpers so startup merge can convert registry entries
 into broker connection configs without duplicating field logic.
 
+Status: complete. The implemented helper preserves entry metadata, `auth_ref`,
+profile, transport details, and a `source_registry` marker.
+
 ### New Helpers
 
 In `src/wf_mcp/source_registry.py`:
@@ -230,10 +241,11 @@ def registry_entry_to_connection_config(
         account=entry.account,
         enabled=entry.enabled,
         metadata={
+            **entry.metadata,
+            "auth_ref": entry.auth_ref,
             "profile": entry.profile,
             "transport": entry.transport.model_dump(mode="json"),
             "source_registry": True,
-            **entry.metadata,
         },
     )
 ```

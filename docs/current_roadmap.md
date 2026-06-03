@@ -125,9 +125,11 @@ implementation state.
       commands are still deferred.
    - Next source registry slices are planned in
       [2026-06-03 source registry next slices](./superpowers/plans/2026-06-03-source-registry-next-slices.md):
-      first split generic registry mechanics into `wf_api`, then add MCP entry
-      conversion, startup merge, desired-registry admin reads, and finally safe
-      mutation commands.
+      generic registry mechanics now live in `wf_api`, MCP entry conversion is
+      explicit and tested, and the next executable slice is
+      [startup merge](./superpowers/plans/2026-06-03-source-registry-startup-merge.md).
+      Desired-registry admin reads and safe mutation commands remain later
+      slices.
    - Longer term: make the MCP frontend an adapter over these neutral workflow,
       source-admin, and config-admin surfaces so the old `wf_mcp` server entry
       point can shrink or retire.

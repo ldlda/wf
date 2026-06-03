@@ -235,6 +235,9 @@ source ids, and concrete MCP transports all come from the MCP broker layer.
 
 ### Slice 2A: Generic Registry Mechanics
 
+Status: complete. Generic registry mechanics live in `wf_api.source_registry`;
+MCP source entries and transports remain in `wf_mcp.source_registry`.
+
 - Move protocol-neutral registry mechanics to `wf_api.source_registry`.
 - Keep MCP source entries, MCP transports, connection-id parsing, and reserved
   id rules in `wf_mcp.source_registry`.
@@ -248,12 +251,19 @@ the generic mechanics and define their own entry models.
 
 ### Slice 2B: MCP Entry Conversion
 
+Status: complete. `registry_entry_to_connection_config()` converts MCP registry
+entries to broker `ConnectionConfig` values while preserving metadata, `auth_ref`,
+profile, transport details, enabled state, and source-registry origin.
+
 - Add explicit conversion from `McpSourceRegistryEntry` to `ConnectionConfig`.
 - Preserve structural fields such as provider, account, profile, transport,
   enabled state, auth reference, and metadata.
 - Do not merge config and registry yet.
 
 ### Slice 3: Startup Merge
+
+Implementation plan:
+[2026-06-03 source registry startup merge](../plans/2026-06-03-source-registry-startup-merge.md).
 
 - Load registry during server/broker construction.
 - Merge config + registry deterministically.
