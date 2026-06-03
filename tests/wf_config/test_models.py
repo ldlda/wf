@@ -87,3 +87,47 @@ def test_workflow_config_rejects_unknown_target_kind() -> None:
                 "client": {"target": {"kind": "mcp"}},
             }
         )
+import json
+
+from wf_config import load_workflow_config
+
+
+def test_load_workflow_config_resolves_filesystem_store_relative_to_config(
+    tmp_path,
+) -> None:
+    config_path = tmp_path / "wf.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "store": {"kind": "filesystem", "root": ".wf_store"},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_workflow_config(config_path)
+
+    assert config.server.store.root == (tmp_path / ".wf_store").resolve()
+
+
+def test_load_workflow_config_preserves_absolute_filesystem_store(tmp_path) -> None:
+    absolute_root = (tmp_path / "absolute-store").resolve()
+    config_path = tmp_path / "wf.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "store": {"kind": "filesystem", "root": str(absolute_root)},
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_workflow_config(config_path)
+
+    assert config.server.store.root == absolute_root

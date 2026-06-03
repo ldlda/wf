@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .loader import load_workflow_config
 from .models import (
     ClientConfig,
     FilesystemStoreConfig,
@@ -12,6 +13,7 @@ from .models import (
 )
 
 __all__ = [
+    "load_workflow_config",
     "ClientConfig",
     "FilesystemStoreConfig",
     "LocalTargetConfig",
