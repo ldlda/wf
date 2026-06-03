@@ -118,6 +118,8 @@ implementation state.
       source registry is designed. Config can bootstrap sources, but server-owned
       dynamic source changes need persistence, validation, and auth rules before
       they are safe.
+   - The store-backed source registry design is recorded in
+      [2026-06-03 store-backed source registry](./superpowers/specs/2026-06-03-store-backed-source-registry-design.md).
    - Longer term: make the MCP frontend an adapter over these neutral workflow,
       source-admin, and config-admin surfaces so the old `wf_mcp` server entry
       point can shrink or retire.

@@ -1,0 +1,271 @@
+# Store-Backed Source Registry Design
+
+## Purpose
+
+The workflow server now has neutral read-only workflow, source-admin, and
+admin/config surfaces. The next platform step is safe mutation: adding,
+updating, disabling, and removing server-owned sources/connections without
+editing config files by hand.
+
+This spec defines the persistence and merge rules before mutation commands are
+implemented.
+
+## Current State
+
+`wf_mcp.storage.FileStore` persists:
+
+- auth records under `auth/<connection_id>.json`
+- catalog snapshots under `catalog/<connection_id>.json`
+
+It does not persist the connection/source registry itself. Current connection
+definitions come from config and live in memory through `ConnectionService`.
+
+Neutral workflow config currently has:
+
+- `client.target`: local or JSON-RPC HTTP target
+- `server.store`: filesystem store root
+- `server.transports`: server-hosted transports
+- `server.sources`: static built-in sources such as `wf.std` / `wf.recipes`
+
+Legacy MCP config still has `connections`.
+
+## Goals
+
+- Persist server-owned dynamic source/connection changes across process restarts.
+- Keep config useful as bootstrap and deployment-time infrastructure.
+- Preserve structural source identity. Source ids are explicit ids, not parsed
+  from dotted display names.
+- Make mutation validation explicit and fail-fast.
+- Keep disabled/missing sources visible as diagnostics, not silent deletion from
+  deployments or runs.
+- Avoid turning catalog snapshots into source definitions. Catalogs are observed
+  capability state; registry entries are desired configuration state.
+
+## Non-Goals
+
+- No UI design.
+- No auth-secret format redesign beyond referencing existing auth records.
+- No SQL store in the first implementation.
+- No automatic source id inference from provider/account strings.
+- No workflow lifecycle changes.
+
+## Registry Model
+
+The persisted registry stores desired source/connection definitions:
+
+```json
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "github.work",
+      "kind": "mcp",
+      "enabled": true,
+      "provider": "github",
+      "account": "work",
+      "profile": null,
+      "transport": {
+        "kind": "stdio",
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-github"],
+        "env": {}
+      },
+      "auth_ref": "github.work",
+      "metadata": {}
+    }
+  ]
+}
+```
+
+### Source Identity
+
+`id` is the stable workflow-facing concrete source id. Examples:
+
+- `github.work`
+- `github.personal`
+- `everything.default`
+- `wf.std`
+
+The id is not decomposed for meaning. The structured fields carry meaning:
+
+- `provider`: logical provider/server family, such as `github`
+- `account`: account/workspace name, such as `work`
+- `profile`: optional variant under one provider/account
+- `transport`: concrete connectivity details
+
+Transport belongs to the concrete source entry, not only to the provider. The
+same provider/account may need different connection transports in different
+server deployments, and one source id must carry the exact runtime transport the
+server should use.
+
+### Source Kinds
+
+Initial persisted kind:
+
+- `mcp`: upstream MCP source
+
+Bootstrap-only / built-in kinds can remain config/code-owned for now:
+
+- `stdlib`
+- `docs`
+- `admin`
+
+Do not persist built-in `wf.std`, `wf.recipes`, or `wf.admin` in the dynamic
+registry unless/until there is a real need.
+
+## Store Shape
+
+Add a registry store beside existing auth/catalog files:
+
+```text
+<store_root>/
+  auth/
+  catalog/
+  source_registry.json
+```
+
+Why one file first:
+
+- The registry is small.
+- Writes can be atomic by writing a temp file then replacing it.
+- Whole-file validation is simple.
+- It matches config-like semantics.
+
+Future stores can expose the same interface over SQL or another durable backend.
+
+## Merge Rules
+
+On server startup:
+
+1. Load built-in sources from code/config.
+2. Load config-defined connections/sources.
+3. Load `source_registry.json`.
+4. Merge into one desired source map.
+5. Hydrate runtime `ConnectionService` / `SourceCatalogService` from that map.
+
+Precedence:
+
+1. Built-in reserved ids always win for reserved ids.
+2. Config-defined entries win over dynamic registry entries with the same id.
+3. Dynamic registry entries fill in ids not present in config.
+
+Rationale: config is deployment bootstrap and operator-controlled. Dynamic store
+state should not secretly override source definitions checked into deployment
+config.
+
+Duplicate behavior:
+
+- Duplicate ids inside one config or one registry file are validation errors.
+- A registry entry with the same id as config is allowed but ignored with a
+  diagnostic/event.
+- A registry entry using a reserved id is invalid.
+
+## Mutation Rules
+
+Initial mutation commands should target the registry only, not config:
+
+- add source
+- update source
+- enable/disable source
+- remove source
+
+Rules:
+
+- Mutations validate the full registry before saving.
+- Mutations write one atomic registry replacement.
+- Enabling a source requires validation of source shape and transport config.
+- Optional live validation can be requested, but ordinary connection failure
+  should not corrupt registry state.
+- Removing a source deletes desired registry state only. It does not delete old
+  catalog/auth files in the first pass.
+- Disable is preferred over remove when deployments may still reference the
+  source.
+
+## Runtime Semantics
+
+If a deployment references a missing/disabled/unreachable source:
+
+- validation reports diagnostics (`source_missing`, `source_disabled`,
+  `source_unreachable`)
+- run start fails or is blocked by validation
+- existing deployments are not rewritten
+- ordinary dead tools/sources do not become interrupts or pauses
+
+## Events
+
+Registry mutations should emit broker/server events:
+
+- `source_registered`
+- `source_updated`
+- `source_enabled`
+- `source_disabled`
+- `source_removed`
+- `source_registry_ignored_config_shadow`
+
+Events are read-only through the existing `WorkflowAdminApi`.
+
+## API Surfaces
+
+Do not add mutation to `WorkflowApiSurface`.
+
+Likely surfaces:
+
+- `WorkflowSourceAdminSurface`: read-only source list/inspect already exists
+- future `WorkflowSourceRegistrySurface`: mutating registry operations
+- `WorkflowAdminSurface`: read-only connections/status/events already exists
+
+The mutation surface may live in `wf_api` if it remains protocol-neutral. If it
+becomes transport/provider-heavy, split it into a platform admin package instead
+of bloating workflow lifecycle APIs.
+
+## First Implementation Slices
+
+### Slice 1: Registry Models and File Store
+
+- Add Pydantic registry models.
+- Add `SourceRegistryStore` protocol.
+- Add `FileSourceRegistryStore`.
+- Validate duplicate ids and reserved ids.
+- Atomic write for filesystem store.
+- No runtime wiring yet.
+
+### Slice 2: Startup Merge
+
+- Load registry during server/broker construction.
+- Merge config + registry deterministically.
+- Emit diagnostics/events for ignored shadowed entries.
+- Preserve existing config-only behavior when registry file is absent.
+
+### Slice 3: Read Registry Through Admin
+
+- Add admin read method for desired registry entries if needed.
+- Keep current source inventory list as runtime/observed source inventory.
+- Document difference between desired registry and observed source catalog.
+
+### Slice 4: Mutating RPC/CLI
+
+- Add add/update/enable/disable/remove operations.
+- Add JSON-RPC methods.
+- Add CLI commands.
+- Validate before commit.
+- Do not delete auth/catalog on remove in v1.
+
+## Open Questions
+
+- Should dynamic registry entries support non-MCP transports in v1, or only MCP
+  stdio/HTTP?
+- Should auth references be required for sources that need auth, or optional
+  until live validation?
+- Should config shadowing registry entries be a warning only, or should server
+  startup fail in strict mode?
+- Should disabled registry entries still hydrate as disabled sources so inspect
+  can explain them, or stay only in registry/admin output?
+
+## Recommendation
+
+Implement Slice 1 first. Keep it independent from runtime startup so the model
+and file persistence rules become solid before they affect source hydration.
+
+The existing `wf_mcp` store can host the first file-backed implementation, but
+the interface should be neutral enough to move later. Catalog/auth remain
+observed/secret state; the new registry is desired source configuration state.
