@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 
 import httpx
@@ -219,6 +220,42 @@ def _constant_plan() -> RawWorkflowPlan:
     )
 
 
+def _interrupt_plan() -> RawWorkflowPlan:
+    return RawWorkflowPlan.model_validate(
+        {
+            "name": "remote_approval",
+            "input_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+            },
+            "state_schema": {"fields": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "outcomes": ["submitted"],
+            "start": "approval",
+            "nodes": [
+                {
+                    "id": "approval",
+                    "type": "interrupt",
+                    "kind": "approval",
+                    "request": [
+                        {
+                            "path": {"root": "input", "parts": ["message"]},
+                            "target": {"root": "local", "parts": ["message"]},
+                        }
+                    ],
+                    "resume": [],
+                    "outcomes": ["submitted"],
+                },
+                {"id": "end_submitted", "type": "end", "outcome": "submitted"},
+            ],
+            "edges": [
+                {"from": "approval", "outcome": "submitted", "to": "end_submitted"}
+            ],
+        }
+    )
+
+
 def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     rpc_app = create_rpc_app(server)
@@ -341,3 +378,70 @@ def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> Non
     )
     assert validated_deployment.exit_code == 0, validated_deployment.output
     assert '"status": "runnable"' in validated_deployment.output
+
+
+def test_wf_remote_run_resume_interrupted_deployment(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    asyncio.run(
+        server.api.create_artifact_from_plan(
+            artifact_id="remote_approval",
+            version=1,
+            title="Remote Approval",
+            plan=_interrupt_plan(),
+            outcomes=("submitted",),
+        )
+    )
+    asyncio.run(
+        server.api.save_deployment(
+            {
+                "id": "remote_approval.default",
+                "artifact_id": "remote_approval",
+                "artifact_version": 1,
+                "bindings": [],
+            }
+        )
+    )
+    original_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        "wf_transport_rpc_http.client.httpx.AsyncClient",
+        lambda *args, **kwargs: original_client(
+            transport=httpx.ASGITransport(app=create_rpc_app(server)),
+            base_url="http://test",
+        ),
+    )
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    started = runner.invoke(
+        app,
+        [
+            *base_args,
+            "run",
+            "start",
+            "remote_approval.default",
+            "--input",
+            '{"message": "approve?"}',
+        ],
+    )
+    assert started.exit_code == 0, started.output
+    started_payload = json.loads(started.output)
+    assert started_payload["status"] == "interrupted"
+
+    resumed = runner.invoke(
+        app,
+        [
+            *base_args,
+            "run",
+            "resume",
+            started_payload["run_id"],
+            "--payload",
+            "{}",
+        ],
+    )
+    assert resumed.exit_code == 0, resumed.output
+    resumed_payload = json.loads(resumed.output)
+    assert resumed_payload["run_id"] == started_payload["run_id"]
+    assert resumed_payload["status"] == "completed"
+    assert resumed_payload["outcome"] == "submitted"

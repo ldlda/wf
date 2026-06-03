@@ -6,13 +6,13 @@ from unittest.mock import patch
 
 from typer.testing import CliRunner
 
-from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
+from wf_artifacts import FileWorkflowArtifactStore, WorkflowArtifact, WorkflowDeployment
 from wf_cli.app import app
 from typer import Context as TyperContext
 
 from wf_cli.context import CliContext, config_path_from_context, load_cli_context
 
-from tests.wf_mcp.test_support import echo_tool, local_temp_root
+from tests.wf_mcp.test_support import echo_tool, input_binding, local_temp_root
 from tests.wf_mcp.workflow_surface.conftest import echo_artifact
 
 
@@ -69,6 +69,22 @@ def _seed_echo_deployment(root: Path) -> Path:
             artifact_id="echo",
             artifact_version=1,
             bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+        )
+    )
+    return config_path
+
+
+def _seed_interrupt_deployment(root: Path) -> Path:
+    config_path = _write_config(root)
+    store_root = root / ".wf_mcp_store"
+    artifact_store = FileWorkflowArtifactStore(store_root)
+    artifact_store.save_artifact(_interrupt_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="approval.personal",
+            artifact_id="approval",
+            artifact_version=1,
+            bindings=[],
         )
     )
     return config_path
@@ -209,6 +225,49 @@ def test_wf_run_inspect_and_trace_existing_run() -> None:
     assert traced_payload["trace"][0]["node_id"] == "echo"
 
 
+def test_wf_run_resume_interrupted_run() -> None:
+    root = local_temp_root() / "wf_cli_run_resume"
+    root.mkdir(parents=True, exist_ok=True)
+    config_path = _seed_interrupt_deployment(root)
+
+    with patch(
+        "wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
+        start = runner.invoke(
+            app,
+            [
+                "--config",
+                str(config_path),
+                "run",
+                "start",
+                "approval.personal",
+                "--input",
+                '{"message": "send?"}',
+            ],
+        )
+        run_id = json.loads(start.output)["run_id"]
+
+        resumed = runner.invoke(
+            app,
+            [
+                "--config",
+                str(config_path),
+                "run",
+                "resume",
+                run_id,
+                "--payload",
+                "{}",
+            ],
+        )
+
+    assert resumed.exit_code == 0, resumed.output
+    payload = json.loads(resumed.output)
+    assert payload["run_id"] == run_id
+    assert payload["status"] == "completed"
+    assert payload["outcome"] == "submitted"
+    assert payload["resume_readiness"] == "not_applicable"
+
+
 def test_wf_run_start_reports_bad_json() -> None:
     root = local_temp_root() / "wf_cli_run_bad_json"
     root.mkdir(parents=True, exist_ok=True)
@@ -232,3 +291,44 @@ def test_wf_run_start_reports_bad_json() -> None:
 
     assert result.exit_code != 0
     assert "invalid JSON" in result.stderr
+
+
+def _interrupt_artifact() -> WorkflowArtifact:
+    return WorkflowArtifact(
+        id="approval",
+        version=1,
+        title="Approval",
+        input_schema={
+            "type": "object",
+            "properties": {"message": {"type": "string"}},
+            "required": ["message"],
+        },
+        output_schema={"type": "object", "properties": {}},
+        outcomes=("submitted",),
+        plan={
+            "name": "approval",
+            "input_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+            },
+            "state_schema": {"fields": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "outcomes": ["submitted"],
+            "start": "approval",
+            "nodes": [
+                {
+                    "id": "approval",
+                    "type": "interrupt",
+                    "kind": "approval",
+                    "request": [input_binding("input.message", "message")],
+                    "resume": [],
+                    "outcomes": ["submitted"],
+                },
+                {"id": "end_submitted", "type": "end", "outcome": "submitted"},
+            ],
+            "edges": [
+                {"from": "approval", "outcome": "submitted", "to": "end_submitted"}
+            ],
+        },
+    )

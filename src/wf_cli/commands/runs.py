@@ -67,6 +67,58 @@ def inspect_run(
     emit_json(asyncio.run(context.handlers.inspect_run(run_id=run_id)))
 
 
+@app.command("resume")
+def resume_run(
+    ctx: typer.Context,
+    run_id: Annotated[str, typer.Argument(help="Interrupted durable run id.")],
+    payload_json: Annotated[
+        str | None,
+        typer.Option("--payload", help="Resume payload JSON object."),
+    ] = None,
+    payload_file: Annotated[
+        Path | None,
+        typer.Option("--payload-file", help="Path to resume payload JSON object."),
+    ] = None,
+    outcome: Annotated[
+        str,
+        typer.Option("--outcome", help="Interrupt resume outcome."),
+    ] = "submitted",
+    trace_from: Annotated[
+        int | None,
+        typer.Option("--trace-from", min=0, help="Optional trace slice start."),
+    ] = None,
+    trace_limit: Annotated[
+        int | None,
+        typer.Option(
+            "--trace-limit", min=1, max=100, help="Optional trace slice limit."
+        ),
+    ] = None,
+) -> None:
+    """Resume an interrupted durable run.
+
+    The target store owns the paused run. With `--local`, this is the local file
+    store; with `--url`, this is the long-lived JSON-RPC server's store.
+    """
+    try:
+        resume_payload = parse_json_input(
+            input_json=payload_json,
+            input_file=payload_file,
+        )
+    except CliInputError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    context = load_cli_context_from_typer(ctx)
+    trace_range = _optional_trace_range(start=trace_from, limit=trace_limit)
+    payload = asyncio.run(
+        context.handlers.resume_run(
+            run_id=run_id,
+            resume_payload=resume_payload,
+            resume_outcome=outcome,
+            trace_range=trace_range,
+        )
+    )
+    emit_json(payload)
+
+
 @app.command("trace")
 def trace_run(
     ctx: typer.Context,

@@ -26,6 +26,24 @@ class RpcRunClientMixin:
             },
         )
 
+    async def resume_run(
+        self,
+        *,
+        run_id: str,
+        resume_payload: dict[str, Any],
+        resume_outcome: str = "submitted",
+        trace_range: TraceRangeLike | None = None,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.runs.resume",
+            {
+                "run_id": run_id,
+                "resume_payload": resume_payload,
+                "resume_outcome": resume_outcome,
+                "trace_range": _trace_range_payload(trace_range),
+            },
+        )
+
     async def inspect_run(self, *, run_id: str) -> dict[str, Any]:
         return await self._call("workflow.runs.inspect", {"run_id": run_id})
 

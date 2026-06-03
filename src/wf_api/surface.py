@@ -165,6 +165,15 @@ class WorkflowRunSurface(Protocol):
         trace_range: TraceRangeLike | None = None,
     ) -> dict[str, Any]: ...
 
+    async def resume_run(
+        self,
+        *,
+        run_id: str,
+        resume_payload: dict[str, Any],
+        resume_outcome: str = "submitted",
+        trace_range: TraceRangeLike | None = None,
+    ) -> dict[str, Any]: ...
+
     async def inspect_run(
         self,
         *,
