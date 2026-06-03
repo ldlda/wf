@@ -15,7 +15,9 @@ uv run basedpyright --level error # error to cut spam
 
 or so i think.
 
-<!-- if this file comes with every request, tell me, and you have perms to cut the files down. goo goo ga ga. use caveman skill (only) for repeated artifacts. -->
+## project is getting big
+
+scope your calls lads. else timeouts. not good for rapid testings
 
 # partial impls
 
