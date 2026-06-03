@@ -1,7 +1,9 @@
 from dataclasses import asdict
 from typing import Any
 
+from wf_api import WorkflowSourceAdminApi, WorkflowSourceAdminSurface
 from wf_mcp.broker.service import WfMcpService
+from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.shared.errors import error_payload
 
 
@@ -10,6 +12,9 @@ class BrokerAdminHandlers:
 
     def __init__(self, service: WfMcpService) -> None:
         self.service = service
+        self.sources: WorkflowSourceAdminSurface = WorkflowSourceAdminApi(
+            context_from_service(service)
+        )
 
     def list_connections(self) -> list[dict[str, Any]]:
         return [
@@ -49,16 +54,16 @@ class BrokerAdminHandlers:
     def get_planner_catalog(self) -> dict[str, Any]:
         return self.service.get_planner_catalog().as_payload()
 
-    def list_sources(
+    async def list_sources(
         self,
         *,
         cursor: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
-        return self.service.list_source_summaries(cursor=cursor, limit=limit)
+        return await self.sources.list_sources(cursor=cursor, limit=limit)
 
-    def inspect_source(self, source_id: str) -> dict[str, Any]:
-        return self.service.inspect_source(source_id)
+    async def inspect_source(self, source_id: str) -> dict[str, Any]:
+        return await self.sources.inspect_source(source_id=source_id)
 
     async def read_broker_resource(self, qualified_name: str) -> dict[str, Any]:
         return await self.service.read_resource(qualified_name)

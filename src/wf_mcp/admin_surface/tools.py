@@ -107,7 +107,7 @@ def register_service_admin_tools(
             ),
         ] = 50,
     ) -> dict[str, Any]:
-        return handlers.list_sources(cursor=cursor, limit=limit)
+        return await handlers.list_sources(cursor=cursor, limit=limit)
 
     @server.tool(
         name=name("inspect_source"),
@@ -125,7 +125,7 @@ def register_service_admin_tools(
             ),
         ],
     ) -> dict[str, Any]:
-        return handlers.inspect_source(source_id)
+        return await handlers.inspect_source(source_id)
 
     @server.tool(
         name=name("read_resource"),

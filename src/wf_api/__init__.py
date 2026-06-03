@@ -18,6 +18,7 @@ from .next_actions import NextActionPatchExample, NextActionTool, NextActions
 from .refs import WorkflowSurfaceCapabilityId, parse_workflow_surface_capability_id
 from .runs import WorkflowRunApi
 from .service import WorkflowApi
+from .source_admin import WorkflowSourceAdminApi
 from .surface import (
     WorkflowApiSurface,
     WorkflowArtifactSurface,
@@ -25,6 +26,7 @@ from .surface import (
     WorkflowDeploymentSurface,
     WorkflowDraftSurface,
     WorkflowRunSurface,
+    WorkflowSourceAdminSurface,
 )
 from .wrapper_hints import (
     MissingDecision,
@@ -87,6 +89,8 @@ __all__ = [
     "WorkflowRuntimeRunner",
     "WorkflowRunApi",
     "WorkflowRunSurface",
+    "WorkflowSourceAdminApi",
+    "WorkflowSourceAdminSurface",
     "WorkflowSpecProvider",
     "WorkflowSurfaceCapabilityId",
     "WrapperAuthoringHints",

@@ -199,6 +199,23 @@ class WorkflowApiSurface(
     """Public workflow operation surface shared by local and remote adapters."""
 
 
+class WorkflowSourceAdminSurface(Protocol):
+    """Read-only source/admin methods exposed by platform frontends."""
+
+    async def list_sources(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]: ...
+
+    async def inspect_source(
+        self,
+        *,
+        source_id: str,
+    ) -> dict[str, Any]: ...
+
+
 __all__ = [
     "WorkflowApiSurface",
     "WorkflowArtifactSurface",
@@ -206,4 +223,5 @@ __all__ = [
     "WorkflowDeploymentSurface",
     "WorkflowDraftSurface",
     "WorkflowRunSurface",
+    "WorkflowSourceAdminSurface",
 ]

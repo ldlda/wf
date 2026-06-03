@@ -80,11 +80,10 @@ surface, or plain local CLI utilities.
 
 ## Next Slices
 
-1. **Server source/admin operations**
-   - Add a protocol-neutral admin/source surface for source listing, source
-     health, and dynamic source registration.
-   - Do not overload `WorkflowApiSurface` if the operation is not a workflow
-     lifecycle operation.
+1. **Source/admin transport and CLI commands**
+   - Build JSON-RPC methods and `wf source ...` commands over
+     `WorkflowSourceAdminSurface`.
+   - Keep mutation out until the store-backed source registry is designed.
 
 2. **Store-backed source registry**
    - Config can bootstrap sources, but server-owned dynamic source changes

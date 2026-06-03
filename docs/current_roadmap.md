@@ -100,6 +100,10 @@ implementation state.
       public `RpcWorkflowApiClient` still satisfies `WorkflowApiSurface`, while
       client methods and server JSON-RPC registrations live in focused
       capability, draft, artifact, deployment, and run modules.
+   - Completed: read-only source inventory now has a protocol-neutral
+      `WorkflowSourceAdminApi` / `WorkflowSourceAdminSurface`; MCP admin source
+      tools delegate through it while connection/raw MCP operations remain
+      broker-owned.
 
 5. **CLI/API alignment**
    - Completed for the basic lifecycle: selected `wf` commands can target local

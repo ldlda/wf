@@ -26,6 +26,13 @@ def test_broker_admin_handlers_list_connections_and_events() -> None:
     assert events[0]["kind"] == "connection_registered"
     assert events[0]["connection_id"] == "demo.personal"
 
+    sources = _run(handlers.list_sources(limit=100))
+
+    source_ids = {source["id"] for source in sources["sources"]}
+    assert "wf.std" in source_ids
+    assert "wf.admin" in source_ids
+    assert sources["total"] >= 2
+
 
 def test_broker_admin_handlers_report_failed_refresh_payload() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "admin_refresh_store"))
