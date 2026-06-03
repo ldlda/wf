@@ -7,6 +7,12 @@ from wf_mcp.broker.service.source_catalog import SourceCatalogService
 from wf_mcp.events import EventBus
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.runtime import ToolExecutor
+from wf_mcp.source_registry import (
+    FileSourceRegistryStore,
+    McpSourceRegistryEntry,
+    SourceRegistryFile,
+    StdioSourceTransport,
+)
 from wf_mcp.storage import FileStore
 
 from ..test_support import local_temp_root
@@ -174,3 +180,93 @@ def test_wfmcpservice_sync_connections_delegates_to_connection_service() -> None
     ]
     assert "demo.personal" not in service.capability_sources
     assert "demo.work" in service.capability_sources
+
+
+# ---------------------------------------------------------------------------
+# Source registry merge helpers and tests
+# ---------------------------------------------------------------------------
+
+
+def _registry_entry(
+    source_id: str = "demo.registry",
+    *,
+    enabled: bool = True,
+) -> McpSourceRegistryEntry:
+    return McpSourceRegistryEntry(
+        id=source_id,
+        kind="mcp",
+        enabled=enabled,
+        provider="demo",
+        account=source_id.rsplit(".", 1)[-1],
+        transport=StdioSourceTransport(command="demo-server"),
+    )
+
+
+def test_connection_service_sync_merges_registry_entries() -> None:
+    service = ConnectionService(events=BrokerEventRecorder(EventBus()))
+    catalog = _source_catalog(service)
+    store = FileSourceRegistryStore(local_temp_root() / "registry_merge")
+    store.save_registry(SourceRegistryFile(sources=[_registry_entry()]))
+
+    service.sync_connections_from_config(
+        BrokerConfig(store_root=local_temp_root(), connections=[]),
+        source_registry_store=store,
+    )
+
+    assert [connection.id for connection in service.list_all()] == ["demo.registry"]
+    assert "demo.registry" in catalog.capability_sources
+
+
+def test_connection_service_sync_config_shadows_registry_entry() -> None:
+    service = ConnectionService(events=BrokerEventRecorder(EventBus()))
+    _source_catalog(service)
+    store = FileSourceRegistryStore(local_temp_root() / "registry_shadow")
+    store.save_registry(SourceRegistryFile(sources=[_registry_entry("demo.same")]))
+
+    service.sync_connections_from_config(
+        BrokerConfig(
+            store_root=local_temp_root(),
+            connections=[
+                ConnectionConfig(id="demo.same", server="demo", account="config"),
+            ],
+        ),
+        source_registry_store=store,
+    )
+
+    assert service.get("demo.same").account == "config"
+    assert any(
+        event.kind == "source_registry_ignored_config_shadow"
+        and event.connection_id == "demo.same"
+        for event in service.events.list_events()
+    )
+
+
+def test_connection_service_sync_registry_disabled_entry_hydrates_disabled_source() -> None:
+    service = ConnectionService(events=BrokerEventRecorder(EventBus()))
+    catalog = _source_catalog(service)
+    store = FileSourceRegistryStore(local_temp_root() / "registry_disabled")
+    store.save_registry(SourceRegistryFile(sources=[_registry_entry(enabled=False)]))
+
+    service.sync_connections_from_config(
+        BrokerConfig(store_root=local_temp_root(), connections=[]),
+        source_registry_store=store,
+    )
+
+    assert service.get("demo.registry").enabled is False
+    assert catalog.capability_sources["demo.registry"].enabled is False
+
+
+def test_wfmcpservice_sync_connections_delegates_registry_store() -> None:
+    service = WfMcpService(store=FileStore(local_temp_root() / "facade_registry"))
+    store = FileSourceRegistryStore(local_temp_root() / "facade_registry_store")
+    store.save_registry(SourceRegistryFile(sources=[_registry_entry()]))
+
+    service.sync_connections_from_config(
+        BrokerConfig(store_root=local_temp_root(), connections=[]),
+        source_registry_store=store,
+    )
+
+    assert [connection.id for connection in service.connections.list_all()] == [
+        "demo.registry"
+    ]
+    assert "demo.registry" in service.capability_sources

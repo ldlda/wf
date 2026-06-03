@@ -53,7 +53,7 @@ The next executable slice is startup merge:
    - Keep config merge out of scope.
 
 3. **Slice 3: Startup Merge**
-   - **Status: planned.**
+   - **Status: complete.**
    - Load registry at broker/server startup.
    - Merge config and registry with config precedence.
    - Emit events/diagnostics for shadowed registry entries.

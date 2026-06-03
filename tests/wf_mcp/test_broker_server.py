@@ -19,6 +19,12 @@ from wf_mcp.broker import (
     load_broker_config,
 )
 from wf_mcp.models import BrokerConfig, ConnectionConfig
+from wf_mcp.source_registry import (
+    FileSourceRegistryStore,
+    McpSourceRegistryEntry,
+    SourceRegistryFile,
+    StdioSourceTransport,
+)
 from wf_mcp.storage import FileStore
 
 from .test_support import (
@@ -483,6 +489,64 @@ def test_build_service_from_config_uses_store_root_for_workflow_stores() -> None
     assert service.artifact_store.root == store_root
     assert service.draft_workspace_store.root == store_root
     assert service.run_store.root == store_root
+
+
+# ---------------------------------------------------------------------------
+# Source registry integration tests
+# ---------------------------------------------------------------------------
+
+
+def _registry_entry(
+    source_id: str = "demo.registry",
+    *,
+    enabled: bool = True,
+) -> McpSourceRegistryEntry:
+    return McpSourceRegistryEntry(
+        id=source_id,
+        kind="mcp",
+        enabled=enabled,
+        provider="demo",
+        account=source_id.rsplit(".", 1)[-1],
+        transport=StdioSourceTransport(command="demo-server"),
+    )
+
+
+def test_build_service_from_config_loads_source_registry_entries() -> None:
+    tmp_path = local_temp_root() / "broker_config_registry_load"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config = BrokerConfig(store_root=tmp_path, connections=[])
+    FileSourceRegistryStore(tmp_path).save_registry(
+        SourceRegistryFile(sources=[_registry_entry("fixture.registry")])
+    )
+
+    service = build_service_from_config(config)
+
+    assert service.connections.get("fixture.registry").server == "demo"
+    assert "demo" in service.adapters
+    assert "fixture.registry" in service.capability_sources
+
+
+def test_build_service_from_config_config_shadows_registry() -> None:
+    tmp_path = local_temp_root() / "broker_config_registry_shadow"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config = BrokerConfig(
+        store_root=tmp_path,
+        connections=[
+            ConnectionConfig(id="fixture.same", server="fixture", account="config"),
+        ],
+    )
+    FileSourceRegistryStore(tmp_path).save_registry(
+        SourceRegistryFile(sources=[_registry_entry("fixture.same")])
+    )
+
+    service = build_service_from_config(config)
+
+    assert service.connections.get("fixture.same").account == "config"
+    assert any(
+        event.kind == "source_registry_ignored_config_shadow"
+        and event.connection_id == "fixture.same"
+        for event in service.list_events()
+    )
 
 
 def _artifact() -> WorkflowArtifact:

@@ -32,6 +32,7 @@ from ...models import (
 )
 from ...sdk import BackendAdapter
 from ...runtime import ToolExecutor
+from ...source_registry import SourceRegistryStore
 from .connection_service import ConnectionService
 from .content_access import ContentAccessService
 from ...storage import Store
@@ -138,8 +139,16 @@ class WfMcpService:
     def register_connection(self, connection: ConnectionConfig) -> None:
         self.connection_service.register_connection(connection)
 
-    def sync_connections_from_config(self, config: BrokerConfig) -> None:
-        self.connection_service.sync_connections_from_config(config)
+    def sync_connections_from_config(
+        self,
+        config: BrokerConfig,
+        *,
+        source_registry_store: SourceRegistryStore | None = None,
+    ) -> None:
+        self.connection_service.sync_connections_from_config(
+            config,
+            source_registry_store=source_registry_store,
+        )
 
     def register_adapter(self, server: str, adapter: BackendAdapter) -> None:
         self.upstream.register_adapter(server, adapter)

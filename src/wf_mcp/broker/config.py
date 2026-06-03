@@ -9,6 +9,7 @@ from ..control import BrokerConfigFile
 from ..models import BrokerConfig
 from ..runtime import McpRuntimePool, PersistentSessionFactory
 from ..sdk import McpSdkAdapter
+from ..source_registry import FileSourceRegistryStore
 from ..storage import FileStore
 from .service import WfMcpService
 
@@ -34,8 +35,12 @@ def build_service_from_config(config: BrokerConfig) -> WfMcpService:
         # across sequential workflow nodes.
         tool_executor=McpRuntimePool(runtime_factory.create),
     )
-    for connection in config.connections:
-        service.register_connection(connection)
+    source_registry_store = FileSourceRegistryStore(config.store_root)
+    service.sync_connections_from_config(
+        config,
+        source_registry_store=source_registry_store,
+    )
+    for connection in service.connections.list_all():
         if connection.server not in service.adapters:
             service.register_adapter(connection.server, McpSdkAdapter())
     return service

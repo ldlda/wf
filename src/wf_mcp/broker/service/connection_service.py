@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from ...connections import ConnectionRegistry, parse_connection_id
 from ...models import BrokerConfig, ConnectionConfig
 from ...shared.names import RESERVED_CONNECTION_IDS
+from ...source_registry import SourceRegistryStore, registry_entry_to_connection_config
 from .events import BrokerEventRecorder
 from .source_catalog import SourceCatalogService
 
@@ -53,10 +54,35 @@ class ConnectionService:
             payload={"server": connection.server, "account": connection.account},
         )
 
-    def sync_connections_from_config(self, config: BrokerConfig) -> None:
+    def sync_connections_from_config(
+        self,
+        config: BrokerConfig,
+        *,
+        source_registry_store: SourceRegistryStore | None = None,
+    ) -> None:
         """Reconcile registry/source state after the public server reloads config."""
+        # Config-defined connections win over registry entries with the same id;
+        # registry entries fill ids not present in config.
+        connections = list(config.connections)
+        config_ids = {connection.id for connection in connections}
+        if source_registry_store is not None:
+            registry = source_registry_store.load_registry()
+            for entry in registry.sources:
+                if entry.id in config_ids:
+                    self.events.record_kind(
+                        "source_registry_ignored_config_shadow",
+                        connection_id=entry.id,
+                        payload={
+                            "server": entry.provider,
+                            "account": entry.account,
+                            "reason": "config_connection_takes_precedence",
+                        },
+                    )
+                    continue
+                connections.append(registry_entry_to_connection_config(entry))
+
         source_catalog = self._source_catalog()
-        next_ids = {connection.id for connection in config.connections}
+        next_ids = {connection.id for connection in connections}
         previous_ids = set(self.connections.connections)
         for connection_id in previous_ids - next_ids:
             previous = self.connections.connections[connection_id]
@@ -71,7 +97,7 @@ class ConnectionService:
                 payload={"server": previous.server, "account": previous.account},
             )
 
-        for connection in config.connections:
+        for connection in connections:
             self._validate_connection_id(connection.id)
             previous = self.connections.connections.get(connection.id)
             self.connections.register(connection)

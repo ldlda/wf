@@ -13,6 +13,7 @@ from ..broker.transport import normalize_transport
 from ..documentation import build_local_documentation_source
 from ..models import BrokerConfig
 from ..sdk import McpSdkAdapter
+from ..source_registry import FileSourceRegistryStore
 from ..proxy.runtime import ProxyRuntime
 from ..workflow_surface import register_workflow_tools
 from .prompts import register_documentation_prompts
@@ -33,8 +34,11 @@ def create_server(
     service = build_service_from_config(config)
 
     def sync_service(config: BrokerConfig) -> None:
-        service.sync_connections_from_config(config)
-        for connection in config.connections:
+        service.sync_connections_from_config(
+            config,
+            source_registry_store=FileSourceRegistryStore(config.store_root),
+        )
+        for connection in service.connections.list_all():
             if connection.server not in service.adapters:
                 service.register_adapter(connection.server, McpSdkAdapter())
 

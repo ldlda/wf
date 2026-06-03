@@ -120,15 +120,15 @@ implementation state.
       they are safe.
    - The store-backed source registry design is recorded in
       [2026-06-03 store-backed source registry](./superpowers/specs/2026-06-03-store-backed-source-registry-design.md).
-   - First source registry implementation slice complete: validated registry
-      models plus `FileSourceRegistryStore` exist, but startup merge and mutation
-      commands are still deferred.
+   - First source registry implementation slices complete: validated registry
+      models, `FileSourceRegistryStore`, generic `wf_api` registry mechanics,
+      MCP entry conversion, and startup merge are implemented.
+   - Source registry startup merge is implemented: absent registry preserves
+      config-only behavior, registry-only entries hydrate as dynamic connections,
+      and config entries shadow same-id registry entries with an event.
    - Next source registry slices are planned in
       [2026-06-03 source registry next slices](./superpowers/plans/2026-06-03-source-registry-next-slices.md):
-      generic registry mechanics now live in `wf_api`, MCP entry conversion is
-      explicit and tested, and the next executable slice is
-      [startup merge](./superpowers/plans/2026-06-03-source-registry-startup-merge.md).
-      Desired-registry admin reads and safe mutation commands remain later
+      desired-registry admin reads and safe mutation commands remain later
       slices.
    - Longer term: make the MCP frontend an adapter over these neutral workflow,
       source-admin, and config-admin surfaces so the old `wf_mcp` server entry

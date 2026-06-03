@@ -262,13 +262,10 @@ profile, transport details, enabled state, and source-registry origin.
 
 ### Slice 3: Startup Merge
 
-Implementation plan:
-[2026-06-03 source registry startup merge](../plans/2026-06-03-source-registry-startup-merge.md).
-
-- Load registry during server/broker construction.
-- Merge config + registry deterministically.
-- Emit diagnostics/events for ignored shadowed entries.
-- Preserve existing config-only behavior when registry file is absent.
+Status: complete. Broker/service construction now loads `source_registry.json`,
+merges config-defined connections with dynamic registry entries, preserves config
+precedence, and emits `source_registry_ignored_config_shadow` for shadowed
+registry entries.
 
 ### Slice 4: Read Registry Through Admin
 

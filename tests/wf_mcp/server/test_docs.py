@@ -9,6 +9,12 @@ from mcp import types as mcp_types
 from wf_mcp.broker.config import load_broker_config
 from wf_mcp.models import BrokerConfig
 from wf_mcp.server import create_server_client
+from wf_mcp.source_registry import (
+    FileSourceRegistryStore,
+    McpSourceRegistryEntry,
+    SourceRegistryFile,
+    StdioSourceTransport,
+)
 
 from ..test_support import fixture_server_path, local_temp_root
 from .conftest import structured
@@ -176,5 +182,47 @@ def test_server_reload_syncs_service_connection_source_enabled_state() -> None:
                 capability["name"] for capability in structured(after)["capabilities"]
             ]
             assert "fixture.personal.echo_tool" in names
+
+    asyncio.run(run_proxy())
+
+
+def test_server_reload_preserves_source_registry_connections() -> None:
+    tmp_path = local_temp_root() / "unified_reload_registry_source_store"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps({"store_root": ".wf_mcp_store", "connections": []}),
+        encoding="utf-8",
+    )
+    config = load_broker_config(config_path)
+    FileSourceRegistryStore(config.store_root).save_registry(
+        SourceRegistryFile(
+            sources=[
+                McpSourceRegistryEntry(
+                    id="fixture.registry",
+                    kind="mcp",
+                    enabled=True,
+                    provider="fixture",
+                    account="registry",
+                    transport=StdioSourceTransport(command=sys.executable),
+                )
+            ]
+        )
+    )
+
+    async def run_proxy() -> None:
+        client = create_server_client(config, config_path=config_path)
+        async with client:
+            before = await client.call_tool("wf.admin.list_sources", {"limit": 100})
+            before_ids = {
+                source["id"] for source in structured(before)["sources"]
+            }
+            assert "fixture.registry" in before_ids
+
+            await client.call_tool("wf.admin.reload_config")
+
+            after = await client.call_tool("wf.admin.list_sources", {"limit": 100})
+            after_ids = {source["id"] for source in structured(after)["sources"]}
+            assert "fixture.registry" in after_ids
 
     asyncio.run(run_proxy())
