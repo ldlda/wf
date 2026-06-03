@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from .app import create_rpc_app
+from .client import RpcWorkflowApiClient
 from .errors import WorkflowRpcError
 from .models import (
     CreateDraftFromCapabilityParams,
@@ -36,4 +37,5 @@ __all__ = [
     "ValidateDraftParams",
     "WorkflowRpcError",
     "create_rpc_app",
+    "RpcWorkflowApiClient",
 ]
