@@ -275,6 +275,15 @@ composition:
 
 It should not implement source provider management yet.
 
+Implementation status:
+
+- `wf_transport_rpc_http.create_rpc_app(server)` exposes a fixed JSON-RPC
+  method set over an existing `wf_server.WorkflowServer`.
+- `wf-rpc-server --store-root <path>` starts the local/static server over
+  `/rpc`.
+- This slice still does not include remote `wf` CLI targeting, auth,
+  streaming/progress, or live upstream MCP source management.
+
 Preferred implementation dependency:
 
 ```bash

@@ -88,8 +88,11 @@ implementation state.
      JSON-RPC-over-HTTP first transport, remote CLI targeting, WebSocket/MCP
      transport siblings, source providers, auth, streaming/progress,
      transactional storage, and live upstream MCP sources.
-   - First slice implemented: `wf_server` can construct a local/static durable
-     `WorkflowApi` without `WfMcpService`. Transport adapters remain future work.
+    - First slice implemented: `wf_server` can construct a local/static durable
+      `WorkflowApi` without `WfMcpService`. Transport adapters remain future work.
+    - Completed: the first JSON-RPC-over-HTTP transport can expose the local/static
+      `WorkflowServer` through fixed dotted methods. Remote CLI targeting remains
+      the next transport-facing slice.
 
 5. **CLI/API alignment**
    - Let the CLI target either local process-backed stores/runtime or the future

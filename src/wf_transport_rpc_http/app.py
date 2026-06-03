@@ -72,7 +72,9 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
 
-    @entrypoint.method(name="workflow.drafts.create_from_capability", errors=[WorkflowRpcError])
+    @entrypoint.method(
+        name="workflow.drafts.create_from_capability", errors=[WorkflowRpcError]
+    )
     async def workflow_drafts_create_from_capability(
         params: CreateDraftFromCapabilityParams = Params(...),
     ) -> dict[str, Any]:
