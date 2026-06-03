@@ -93,6 +93,9 @@ implementation state.
     - Completed: the first JSON-RPC-over-HTTP transport can expose the local/static
       `WorkflowServer` through fixed dotted methods. Remote CLI targeting remains
       the next transport-facing slice.
+    - Completed: workflow config now distinguishes client targets from server
+      hosting config, and selected `wf` commands can target JSON-RPC HTTP with
+      explicit CLI overrides.
 
 5. **CLI/API alignment**
    - Let the CLI target either local process-backed stores/runtime or the future

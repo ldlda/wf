@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 import pytest
 from pydantic import ValidationError
 
@@ -10,6 +12,7 @@ from wf_config import (
     RpcHttpTransportConfig,
     StdlibSourceConfig,
     WorkflowConfigFile,
+    load_workflow_config,
 )
 
 
@@ -87,9 +90,6 @@ def test_workflow_config_rejects_unknown_target_kind() -> None:
                 "client": {"target": {"kind": "mcp"}},
             }
         )
-import json
-
-from wf_config import load_workflow_config
 
 
 def test_load_workflow_config_resolves_filesystem_store_relative_to_config(

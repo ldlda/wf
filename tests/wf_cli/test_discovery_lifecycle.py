@@ -9,12 +9,26 @@ from typer.testing import CliRunner
 
 from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
 from wf_cli.app import app
-from wf_cli.context import CliContext, load_cli_context
+from typer import Context as TyperContext
+
+from wf_cli.context import CliContext, config_path_from_context, load_cli_context
 from wf_cli.formats import ListOutputFormat, render_list_payload
 from wf_cli.io import CliInputError, parse_bindings, parse_json_value
 
 from tests.wf_mcp.test_support import echo_tool, local_temp_root
 from tests.wf_mcp.workflow_surface.conftest import echo_artifact
+
+
+def _load_cli_context_with_specs(ctx: TyperContext | str | Path) -> CliContext:
+    if isinstance(ctx, (str, Path)):
+        config_path = ctx
+    else:
+        config_path = config_path_from_context(ctx)
+    context = load_cli_context(config_path)
+    service = context.service
+    assert service is not None
+    service.register_specs("demo.personal", echo_tool)
+    return context
 
 
 def test_render_list_payload_ids_uses_requested_id_field() -> None:
@@ -132,30 +146,14 @@ def _write_cli_config(root: Path) -> Path:
     return config_path
 
 
-from wf_cli.context import load_cli_context_from_typer, config_path_from_context, load_cli_context
-
-def _load_cli_context_with_specs(ctx: typer.Context | str | Path) -> CliContext:
-    if isinstance(ctx, (str, Path)):
-        config_path = ctx
-    else:
-        config_path = config_path_from_context(ctx)
-    """Seed executable demo specs for CLI tests only.
-
-    Config loading registers connections and stores; it does not register
-    in-memory test NodeSpecs. Production source registration remains outside
-    this CLI slice.
-    """
-    context = load_cli_context(config_path)
-    context.service.register_specs("demo.personal", echo_tool)
-    return context
-
-
 def test_wf_cap_list_outputs_json() -> None:
     root = local_temp_root() / "wf_cli_cap_list"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 
-    with patch("wf_cli.commands.caps.load_cli_context_from_typer", _load_cli_context_with_specs):
+    with patch(
+        "wf_cli.commands.caps.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
         result = runner.invoke(
             app,
             ["--config", str(config_path), "cap", "list", "--source", "demo.personal"],
@@ -172,7 +170,9 @@ def test_wf_cap_list_ids_format() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 
-    with patch("wf_cli.commands.caps.load_cli_context_from_typer", _load_cli_context_with_specs):
+    with patch(
+        "wf_cli.commands.caps.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
         result = runner.invoke(
             app,
             [
@@ -196,7 +196,9 @@ def test_wf_cap_inspect_outputs_detail() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 
-    with patch("wf_cli.commands.caps.load_cli_context_from_typer", _load_cli_context_with_specs):
+    with patch(
+        "wf_cli.commands.caps.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
         result = runner.invoke(
             app,
             ["--config", str(config_path), "cap", "inspect", "demo.personal.echo_tool"],

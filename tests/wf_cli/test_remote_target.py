@@ -2,8 +2,15 @@ from __future__ import annotations
 
 import json
 
+import httpx
+from typer.testing import CliRunner
+
+from wf_api.models import RawWorkflowPlan
+from wf_cli.app import app
 from wf_cli.context import load_cli_context
-from wf_transport_rpc_http import RpcWorkflowApiClient
+from wf_core import END
+from wf_server import build_local_static_workflow_server
+from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
 
 
 def test_load_cli_context_uses_rpc_client_for_rpc_http_target(tmp_path) -> None:
@@ -57,16 +64,6 @@ def test_load_cli_context_local_override_beats_rpc_config(tmp_path) -> None:
     assert not isinstance(context.handlers, RpcWorkflowApiClient)
     assert context.service is None
     assert context.config_path == config_path
-import asyncio
-
-import httpx
-from typer.testing import CliRunner
-
-from wf_api.models import RawWorkflowPlan
-from wf_cli.app import app
-from wf_core import END
-from wf_server import build_local_static_workflow_server
-from wf_transport_rpc_http import create_rpc_app
 
 
 def _constant_plan() -> RawWorkflowPlan:
@@ -124,7 +121,9 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     original_client = httpx.AsyncClient
     monkeypatch.setattr(
         "wf_transport_rpc_http.client.httpx.AsyncClient",
-        lambda *args, **kwargs: original_client(transport=transport, base_url="http://test"),
+        lambda *args, **kwargs: original_client(
+            transport=transport, base_url="http://test"
+        ),
     )
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")

@@ -2,10 +2,14 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pathlib import Path
 import typer
 import uvicorn
-from wf_config import FilesystemStoreConfig, RpcHttpTransportConfig, load_workflow_config
+
+from wf_config import (
+    FilesystemStoreConfig,
+    RpcHttpTransportConfig,
+    load_workflow_config,
+)
 
 from wf_server import build_local_static_workflow_server
 
@@ -37,7 +41,9 @@ def serve(
         workflow_config = load_workflow_config(config)
         store = workflow_config.server.store
         if not isinstance(store, FilesystemStoreConfig):
-            raise typer.BadParameter("wf-rpc-server currently requires filesystem store")
+            raise typer.BadParameter(
+                "wf-rpc-server currently requires filesystem store"
+            )
         resolved_store_root = resolved_store_root or store.root
         rpc_transport = next(
             (
@@ -51,7 +57,9 @@ def serve(
             resolved_host = host or rpc_transport.host
             resolved_port = port or rpc_transport.port
     if resolved_store_root is None:
-        raise typer.BadParameter("--store-root is required when --config is not supplied")
+        raise typer.BadParameter(
+            "--store-root is required when --config is not supplied"
+        )
 
     server = build_local_static_workflow_server(resolved_store_root)
     rpc_app = create_rpc_app(server)

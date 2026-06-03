@@ -8,13 +8,34 @@ from typer.testing import CliRunner
 
 from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
 from wf_cli.app import app
-from wf_cli.context import CliContext, load_cli_context
+from typer import Context as TyperContext
+
+from wf_cli.context import CliContext, config_path_from_context, load_cli_context
 
 from tests.wf_mcp.test_support import echo_tool, local_temp_root
 from tests.wf_mcp.workflow_surface.conftest import echo_artifact
 
 
 runner = CliRunner()
+
+
+def _load_cli_context_with_specs(ctx: TyperContext | str | Path) -> CliContext:
+    """Test-only hook: seed executable demo specs for CLI integration tests.
+
+    ``build_service_from_config`` registers connections, adapters, and
+    file-backed stores, but not in-memory node specs.  Production code does
+    not auto-register specs; this helper exists solely so CLI tests can
+    exercise the full command path with a runnable deployment.
+    """
+    if isinstance(ctx, (str, Path)):
+        config_path = ctx
+    else:
+        config_path = config_path_from_context(ctx)
+    context = load_cli_context(config_path)
+    service = context.service
+    assert service is not None
+    service.register_specs("demo.personal", echo_tool)
+    return context
 
 
 def _write_config(root: Path) -> Path:
@@ -53,25 +74,6 @@ def _seed_echo_deployment(root: Path) -> Path:
     return config_path
 
 
-from wf_cli.context import load_cli_context_from_typer, config_path_from_context, load_cli_context
-
-def _load_cli_context_with_specs(ctx: typer.Context | str | Path) -> CliContext:
-    if isinstance(ctx, (str, Path)):
-        config_path = ctx
-    else:
-        config_path = config_path_from_context(ctx)
-    """Test-only hook: seed executable demo specs for CLI integration tests.
-
-    ``build_service_from_config`` registers connections, adapters, and
-    file-backed stores, but not in-memory node specs.  Production code does
-    not auto-register specs; this helper exists solely so CLI tests can
-    exercise the full command path with a runnable deployment.
-    """
-    context = load_cli_context(config_path)
-    context.service.register_specs("demo.personal", echo_tool)
-    return context
-
-
 def test_wf_deploy_validate_outputs_json() -> None:
     root = local_temp_root() / "wf_cli_deploy_validate"
     root.mkdir(parents=True, exist_ok=True)
@@ -99,7 +101,9 @@ def test_wf_run_start_accepts_inline_json_input() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
-    with patch("wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs):
+    with patch(
+        "wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
         result = runner.invoke(
             app,
             [
@@ -128,7 +132,9 @@ def test_wf_run_start_accepts_input_file() -> None:
     input_path = root / "input.json"
     input_path.write_text('{"text": "from file"}', encoding="utf-8")
 
-    with patch("wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs):
+    with patch(
+        "wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
         result = runner.invoke(
             app,
             [
@@ -153,7 +159,9 @@ def test_wf_run_inspect_and_trace_existing_run() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
-    with patch("wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs):
+    with patch(
+        "wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
         start = runner.invoke(
             app,
             [
@@ -206,7 +214,9 @@ def test_wf_run_start_reports_bad_json() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
-    with patch("wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs):
+    with patch(
+        "wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
         result = runner.invoke(
             app,
             [

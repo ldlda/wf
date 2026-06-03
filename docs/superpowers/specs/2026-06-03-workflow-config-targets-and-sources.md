@@ -452,6 +452,26 @@ Relative paths should resolve relative to the config file directory.
 - Do not derive identity by splitting dotted source ids.
 - Do not use MCP as the first-class `wf` CLI target.
 
+## Implementation Status
+
+First slice implemented:
+
+- neutral `wf_config` models and loader
+- filesystem server store config
+- stdlib source bootstrap config
+- local and JSON-RPC client targets
+- `wf` root overrides for `--local`, `--url`, and `--timeout`
+- remote JSON-RPC client support for capability and run CLI commands
+- `wf-rpc-server --config` support for server store and RPC HTTP transport
+
+Still future:
+
+- store-backed mutable source registry
+- MCP/OpenAPI source config
+- `/mcp` hosting from neutral server config
+- remote draft/artifact/deployment CLI commands
+- auth and SQL stores
+
 ## Next Implementation Slice
 
 First config implementation should be small:

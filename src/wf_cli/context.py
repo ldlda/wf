@@ -9,7 +9,12 @@ from wf_api import WorkflowApi
 from wf_mcp.broker import build_service_from_config, load_broker_config
 from wf_mcp.broker.service import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
-from wf_config import FilesystemStoreConfig, LocalTargetConfig, RpcHttpTargetConfig, load_workflow_config
+from wf_config import (
+    FilesystemStoreConfig,
+    LocalTargetConfig,
+    RpcHttpTargetConfig,
+    load_workflow_config,
+)
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient
 
@@ -20,7 +25,7 @@ class CliContext:
 
     config_path: Path
     service: WfMcpService | None
-    handlers: WorkflowApi | RpcWorkflowApiClient
+    handlers: "WorkflowApi | RpcWorkflowApiClient"
 
 
 def config_path_from_context(ctx: typer.Context) -> str:

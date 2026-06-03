@@ -55,20 +55,16 @@ def test_context_from_service_exposes_existing_store_objects(tmp_path: Path) -> 
         encoding="utf-8",
     )
     cli_context = load_cli_context(config_path)
+    service = cli_context.service
+    assert service is not None
 
-    operation_context = context_from_service(cli_context.service)
+    operation_context = context_from_service(service)
 
     assert isinstance(operation_context, WorkflowOperationContext)
-    assert operation_context.artifact_store is cli_context.service.artifact_store
-    assert (
-        operation_context.draft_workspace_store
-        is cli_context.service.draft_workspace_store
-    )
-    assert operation_context.run_store is cli_context.service.run_store
-    assert (
-        operation_context.specs.capability_sources
-        is cli_context.service.capability_sources
-    )
+    assert operation_context.artifact_store is service.artifact_store
+    assert operation_context.draft_workspace_store is service.draft_workspace_store
+    assert operation_context.run_store is service.run_store
+    assert operation_context.specs.capability_sources is service.capability_sources
 
 
 def test_context_from_service_delegates_specs_and_events(tmp_path: Path) -> None:
@@ -78,12 +74,14 @@ def test_context_from_service_delegates_specs_and_events(tmp_path: Path) -> None
         encoding="utf-8",
     )
     cli_context = load_cli_context(config_path)
-    operation_context = context_from_service(cli_context.service)
+    service = cli_context.service
+    assert service is not None
+    operation_context = context_from_service(service)
 
     event = object()
     operation_context.events.record_event(event)
 
-    assert cli_context.service.list_events()[-1] is event
+    assert service.list_events()[-1] is event
 
 
 def test_context_from_service_record_workflow_event(tmp_path: Path) -> None:
@@ -93,7 +91,9 @@ def test_context_from_service_record_workflow_event(tmp_path: Path) -> None:
         encoding="utf-8",
     )
     cli_context = load_cli_context(config_path)
-    operation_context = context_from_service(cli_context.service)
+    service = cli_context.service
+    assert service is not None
+    operation_context = context_from_service(service)
 
     operation_context.events.record_workflow_event(
         "workflow_artifact_saved",
@@ -101,7 +101,7 @@ def test_context_from_service_record_workflow_event(tmp_path: Path) -> None:
         payload={"artifact_id": "demo", "version": 1},
     )
 
-    recorded = cli_context.service.events.list_events()[-1]
+    recorded = service.events.list_events()[-1]
     assert recorded.kind == "workflow_artifact_saved"
     assert recorded.capability_id == "workflow.demo.v1"
     assert recorded.payload["artifact_id"] == "demo"
