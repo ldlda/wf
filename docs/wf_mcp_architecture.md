@@ -26,8 +26,9 @@ relevant concern package directly.
 
 ## Dependency Rules
 
-- `wf_api` is the process-local workflow application API. `wf_mcp` may import
-  and adapt it; `wf_api` must not import `wf_mcp`.
+- `wf_api` defines the workflow application surface and process-local
+  implementation. `wf_mcp` may import and adapt it; `wf_api` must not import
+  `wf_mcp`.
 - `wf_mcp.sdk` should not import `wf_core` or `wf_authoring`.
 - `wf_mcp.proxy` should not import `wf_mcp.workflow`.
 - `wf_mcp.workflow` is the only layer that converts MCP capabilities into node specs.
@@ -42,6 +43,7 @@ Workflow lifecycle operations now have a protocol-neutral front door:
 
 ```text
 wf_mcp.workflow_surface.tools
+  -> wf_api.WorkflowApiSurface implementation
   -> wf_api.WorkflowApi
   -> wf_api domain services
   -> WorkflowOperationContext
@@ -51,14 +53,16 @@ wf_mcp.workflow_surface.tools
 `WorkflowSurfaceHandlers` is a compatibility shim only. New entrypoints should
 construct `WorkflowApi(context_from_service(service))` directly.
 
-The old backend-adapter/protocol layer has been removed. `WorkflowApi` composes
-domain services (`WorkflowCapabilityApi`, `WorkflowDraftApi`,
-`WorkflowArtifactApi`, `WorkflowDeploymentApi`, `WorkflowRunApi`) from a
-`WorkflowOperationContext`.
+The old backend-adapter/protocol layer has been removed. `WorkflowApiSurface`
+is now the structural workflow operation contract. The local `WorkflowApi`
+implementation composes domain services (`WorkflowCapabilityApi`,
+`WorkflowDraftApi`, `WorkflowArtifactApi`, `WorkflowDeploymentApi`,
+`WorkflowRunApi`) from a `WorkflowOperationContext`.
 
-New code should treat `wf_api.WorkflowApi` as the application-facing API. Do not
-add new callers that import `WorkflowSurfaceHandlers` directly unless they are
-compatibility tests.
+New code should type consumers against `wf_api.WorkflowApiSurface` when they can
+work with either local or remote implementations. Use concrete `WorkflowApi`
+only when same-process stores/runtime are required. Do not add new callers that
+import `WorkflowSurfaceHandlers` directly unless they are compatibility tests.
 
 The broader application-service boundary is documented in
 [`wf_api_architecture.md`](wf_api_architecture.md).

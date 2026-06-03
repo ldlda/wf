@@ -15,10 +15,11 @@ frontends can share.
 | `wf_core` | Workflow execution semantics: graph models, runtime state, scheduler, path/state mapping, interrupts, subgraphs, foreach, and run-state codec. |
 | `wf_artifacts` | Saved definitions and persistence contracts: workflow artifacts, deployments, draft workspaces, run records, checkpoints, artifact/deployment validation models. |
 | `wf_platform` | Shared capability/source concepts and platform-facing contracts such as capability refs, source inventory models, documentation source models, and JSON schema helpers. |
-| `wf_api` | Application workflows over core/artifacts/platform: capability discovery, wrapper hints, draft editing, artifact/deployment operations, run/resume operations, next actions, and progressive response shaping. |
+| `wf_api` | Application workflow contract and process-local implementation over core/artifacts/platform: capability discovery, wrapper hints, draft editing, artifact/deployment operations, run/resume operations, next actions, and progressive response shaping. |
 | `wf_mcp` | MCP-specific transport, tool schemas, upstream MCP adapters, broker services, proxy/admin tools, config reload, and `WorkflowApi` context construction for MCP. |
-| future `wf_http` | HTTP transport over `wf_api`, not a reimplementation of workflow business logic. |
-| `wf_cli` | CLI frontend over `wf_api`; it may run locally against process-local stores or later target an HTTP backend. |
+| `wf_transport_rpc_http` | JSON-RPC-over-HTTP transport adapter and remote client over `WorkflowApiSurface`, not a reimplementation of workflow business logic. |
+| future `wf_http` / WebSocket / MCP server transports | Additional transports over `WorkflowApiSurface`, not new workflow application APIs. |
+| `wf_cli` | CLI frontend over `WorkflowApiSurface`; it may run locally against process-local stores or target a remote JSON-RPC backend. |
 
 ## What Belongs In wf_api
 
@@ -35,6 +36,9 @@ frontends can share.
 Examples that belong in `wf_api`:
 
 - `WorkflowApi`
+- `WorkflowApiSurface`
+- domain surface protocols such as `WorkflowDraftSurface` and
+  `WorkflowRunSurface`
 - `WorkflowCapabilityApi`
 - `WorkflowDraftApi`
 - `WorkflowArtifactApi`
@@ -100,7 +104,32 @@ Important rules:
 Do not add a catch-all `service` field to the context. If a domain API needs a
 new dependency, add a narrow protocol or explicit field.
 
-## Domain Services
+## WorkflowApiSurface And Domain Services
+
+`WorkflowApiSurface` is the public application contract shared by local and
+remote frontends. It is a structural protocol, not a base class. Implementations
+can satisfy it by method shape:
+
+- `WorkflowApi` implements the surface in-process by composing domain services
+  over `WorkflowOperationContext`.
+- `RpcWorkflowApiClient` implements the same flat surface by serializing calls
+  to fixed JSON-RPC method names.
+- Future auth, cache, recording, WebSocket, or MCP-server adapters should also
+  target the same surface instead of importing concrete implementation classes.
+
+The surface is split into domain protocols:
+
+```text
+WorkflowApiSurface
+  WorkflowCapabilitySurface
+  WorkflowDraftSurface
+  WorkflowArtifactSurface
+  WorkflowDeploymentSurface
+  WorkflowRunSurface
+```
+
+The domain services below are the process-local implementation pieces, not the
+contract itself.
 
 `WorkflowApi` composes focused domain APIs:
 
@@ -179,13 +208,16 @@ MCP-specific concerns stay outside `wf_api`:
 
 ## Future HTTP/API Boundary
 
-A future HTTP API should reuse `WorkflowApi`, not copy MCP handlers.
+Future HTTP/WebSocket/MCP server transports should consume
+`WorkflowApiSurface`, usually backed by a process-local `WorkflowApi` instance.
+They must not copy MCP handlers or workflow business logic.
 
 Expected shape:
 
 ```text
-wf_http route/controller
-  -> WorkflowApi(required_store_context)
+transport route/controller
+  -> WorkflowApiSurface implementation
+  -> WorkflowApi(required_store_context) when running process-locally
   -> wf_api domain services
 ```
 
@@ -208,10 +240,12 @@ The HTTP layer should not own:
 
 The next implementation work should follow this order:
 
-1. Harden persisted run/resume contract tests in `wf_api`.
-2. Introduce a stricter required-store context/factory for durable API surfaces.
-3. Design the durable HTTP/API frontend around `WorkflowApi`.
-4. Align CLI so it can target either local process stores or the future HTTP API.
+1. Continue hardening persisted run/resume behavior behind `WorkflowRunApi`.
+2. Keep CLI and transport entrypoints typed against `WorkflowApiSurface`.
+3. Add missing server/source/auth operations behind the same surface or explicit
+   sibling admin surfaces.
+4. Add future WebSocket/MCP-server transports as adapters, not as new workflow
+   application layers.
 
 Workflow primitives such as fork/gather and additional authoring sugar should
 resume after the durability/platform boundary is stable.

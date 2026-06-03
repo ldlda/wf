@@ -38,8 +38,10 @@ implementation state.
      sources, docs/resources, and admin-only control surfaces.
 
 6. **Workflow API seam**
-   - `wf_api.WorkflowApi` is now the process-local application-facing workflow
-     API used by both CLI commands and MCP workflow tools.
+   - `wf_api.WorkflowApiSurface` is now the protocol-neutral workflow operation
+     contract consumed by CLI and transport adapters.
+   - `wf_api.WorkflowApi` is the process-local implementation used by MCP
+     workflow tools and local CLI/server composition.
    - `wf_api` imports no `wf_mcp` modules. `WorkflowApi` composes domain
      services directly from `WorkflowOperationContext`; MCP owns only context
      construction and tool schemas.
@@ -83,25 +85,30 @@ implementation state.
    - Keep config/store construction and auth explicit.
    - Current design direction is recorded in
      [2026-06-03 long-lived workflow API boundary](./superpowers/specs/2026-06-03-long-lived-workflow-api-boundary.md):
-     first slice should prove a lightweight local/static server that constructs
-     `WorkflowApi` without `WfMcpService`; later slices add remote CLI targeting,
-     JSON-RPC-over-HTTP first transport, remote CLI targeting, WebSocket/MCP
-     transport siblings, source providers, auth, streaming/progress,
-     transactional storage, and live upstream MCP sources.
-    - First slice implemented: `wf_server` can construct a local/static durable
-      `WorkflowApi` without `WfMcpService`. Transport adapters remain future work.
-    - Completed: the first JSON-RPC-over-HTTP transport can expose the local/static
-      `WorkflowServer` through fixed dotted methods. Remote CLI targeting remains
-      the next transport-facing slice.
+     initial slices proved a lightweight local/static server and JSON-RPC
+     transport; later slices add transport siblings, source providers, auth,
+     streaming/progress, transactional storage, and live upstream MCP sources.
+   - First slice implemented: `wf_server` can construct a local/static durable
+     `WorkflowApi` without `WfMcpService`.
+   - Completed: the first JSON-RPC-over-HTTP transport can expose the
+     local/static `WorkflowServer` through fixed dotted methods.
    - Completed: workflow config now distinguishes client targets from server
       hosting config, the basic `wf` lifecycle can target JSON-RPC HTTP:
       capability discovery, draft workspace authoring, artifact/deployment
       operations, run, inspect, and bounded trace.
+   - Completed: `wf_transport_rpc_http` is split by workflow domain. The
+      public `RpcWorkflowApiClient` still satisfies `WorkflowApiSurface`, while
+      client methods and server JSON-RPC registrations live in focused
+      capability, draft, artifact, deployment, and run modules.
 
 5. **CLI/API alignment**
-   - Let the CLI target either local process-backed stores/runtime or the future
-     HTTP API backend.
-   - Preserve the current local CLI path until the API backend is proven.
+   - Completed for the basic lifecycle: selected `wf` commands can target local
+     process-backed stores/runtime or JSON-RPC HTTP through the same
+     `WorkflowApiSurface`.
+   - Audit remaining local-only commands and keep `load_local_cli_context`
+     limited to commands that genuinely require same-process access.
+   - Preserve the current local CLI path until server source registry/auth/admin
+     operations are proven remotely.
 
 6. **Workflow primitive polish**
    - Return to native subgraph polish, fork/gather, foreach follow-ups, and graph
