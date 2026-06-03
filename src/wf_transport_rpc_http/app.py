@@ -7,6 +7,7 @@ import fastapi_jsonrpc as jsonrpc
 from wf_server import WorkflowServer
 
 from .errors import WorkflowRpcError
+from .methods_admin import register_methods as register_admin_methods
 from .methods_artifacts import register_methods as register_artifact_methods
 from .methods_capabilities import register_methods as register_capability_methods
 from .methods_deployments import register_methods as register_deployment_methods
@@ -45,6 +46,7 @@ def create_rpc_app(server: WorkflowServer, *, rpc_path: str = "/rpc") -> jsonrpc
     register_deployment_methods(entrypoint, server)
     register_run_methods(entrypoint, server)
     register_source_methods(entrypoint, server)
+    register_admin_methods(entrypoint, server)
 
     app.bind_entrypoint(entrypoint)
     return app

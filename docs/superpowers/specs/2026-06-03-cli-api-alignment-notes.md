@@ -83,6 +83,8 @@ surface, or plain local CLI utilities.
 1. **Store-backed source registry**
    - Read-only source/admin operations are now available through JSON-RPC HTTP
      and `wf source list` / `wf source inspect`.
+   - Read-only admin/config operations are now available through JSON-RPC HTTP
+     and `wf admin connections`, `wf admin statuses`, and `wf admin events`.
    - Next source work is persistence for server-owned dynamic source changes.
    - Keep mutation out until the store-backed source registry is designed.
 
@@ -101,8 +103,9 @@ surface, or plain local CLI utilities.
 
 ## Open Questions
 
-- Should source/admin operations live in `wf_api` as a sibling surface, or in a
-  new package that composes `wf_api` plus server management services?
+- Source/admin and admin/config read-only operations currently live in `wf_api`
+  as sibling surfaces. If mutation grows into a larger management domain, split
+  that later instead of overloading `WorkflowApiSurface`.
 - Should `wf schema` describe local CLI command payloads only, or query a remote
   server for supported method schemas?
 - Should `wf docs` read packaged local docs, remote server docs, or both?

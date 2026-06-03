@@ -310,6 +310,38 @@ def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     assert '"id": "wf.std"' in inspected.output
 
 
+def test_wf_admin_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    server.events.record_workflow_event(
+        "workflow_test_event",
+        capability_id="workflow.demo.v1",
+        payload={"ok": True},
+    )
+    original_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        "wf_transport_rpc_http.client.httpx.AsyncClient",
+        lambda *args, **kwargs: original_client(
+            transport=httpx.ASGITransport(app=create_rpc_app(server)),
+            base_url="http://test",
+        ),
+    )
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    connections = runner.invoke(app, [*base_args, "admin", "connections"])
+    statuses = runner.invoke(app, [*base_args, "admin", "statuses"])
+    events = runner.invoke(app, [*base_args, "admin", "events"])
+
+    assert connections.exit_code == 0, connections.output
+    assert '"connections": []' in connections.output
+    assert statuses.exit_code == 0, statuses.output
+    assert '"statuses": []' in statuses.output
+    assert events.exit_code == 0, events.output
+    assert '"kind": "workflow_test_event"' in events.output
+
+
 def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     original_client = httpx.AsyncClient

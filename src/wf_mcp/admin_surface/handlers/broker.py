@@ -1,7 +1,11 @@
-from dataclasses import asdict
 from typing import Any
 
-from wf_api import WorkflowSourceAdminApi, WorkflowSourceAdminSurface
+from wf_api import (
+    WorkflowAdminApi,
+    WorkflowAdminSurface,
+    WorkflowSourceAdminApi,
+    WorkflowSourceAdminSurface,
+)
 from wf_mcp.broker.service import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.shared.errors import error_payload
@@ -15,18 +19,18 @@ class BrokerAdminHandlers:
         self.sources: WorkflowSourceAdminSurface = WorkflowSourceAdminApi(
             context_from_service(service)
         )
+        self.admin: WorkflowAdminSurface = WorkflowAdminApi(
+            connections=service.connection_service,
+            events=service.events,
+        )
 
-    def list_connections(self) -> list[dict[str, Any]]:
-        return [
-            asdict(connection)
-            for connection in sorted(
-                self.service.connections.list_all(),
-                key=lambda connection: connection.id,
-            )
-        ]
+    async def list_connections(self) -> list[dict[str, Any]]:
+        payload = await self.admin.list_connections()
+        return payload["connections"]
 
-    def get_connection_statuses(self) -> list[dict[str, Any]]:
-        return self.service.connection_statuses()
+    async def get_connection_statuses(self) -> list[dict[str, Any]]:
+        payload = await self.admin.get_connection_statuses()
+        return payload["statuses"]
 
     async def refresh_connection_catalog(self, connection_id: str) -> dict[str, Any]:
         try:
@@ -93,5 +97,6 @@ class BrokerAdminHandlers:
                 **error_payload(exc),
             }
 
-    def get_broker_events(self) -> list[dict[str, Any]]:
-        return [asdict(event) for event in self.service.list_events()]
+    async def get_broker_events(self) -> list[dict[str, Any]]:
+        payload = await self.admin.list_events()
+        return payload["events"]

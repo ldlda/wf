@@ -216,7 +216,18 @@ class WorkflowSourceAdminSurface(Protocol):
     ) -> dict[str, Any]: ...
 
 
+class WorkflowAdminSurface(Protocol):
+    """Read-only connection/config admin methods exposed by platform frontends."""
+
+    async def list_connections(self) -> dict[str, Any]: ...
+
+    async def get_connection_statuses(self) -> dict[str, Any]: ...
+
+    async def list_events(self) -> dict[str, Any]: ...
+
+
 __all__ = [
+    "WorkflowAdminSurface",
     "WorkflowApiSurface",
     "WorkflowArtifactSurface",
     "WorkflowCapabilitySurface",

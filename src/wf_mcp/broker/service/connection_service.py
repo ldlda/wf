@@ -32,8 +32,16 @@ class ConnectionService:
     def list_all(self) -> list[ConnectionConfig]:
         return self.connections.list_all()
 
+    def list_connections(self) -> list[ConnectionConfig]:
+        """Return connection inventory for protocol-neutral admin surfaces."""
+        return self.list_all()
+
     def list_enabled(self) -> list[ConnectionConfig]:
         return self.connections.list_enabled()
+
+    def get_connection_statuses(self) -> list[dict[str, object]]:
+        """Return catalog-backed connection statuses for admin surfaces."""
+        return self._source_catalog().connection_statuses()
 
     def register_connection(self, connection: ConnectionConfig) -> None:
         self._validate_connection_id(connection.id)

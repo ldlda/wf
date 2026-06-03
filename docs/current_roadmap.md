@@ -106,6 +106,21 @@ implementation state.
       broker-owned.
    - Completed: read-only source inventory is exposed through JSON-RPC HTTP and
       `wf source list` / `wf source inspect`.
+   - Completed: read-only admin/config sibling surface covers connection
+      inventory, connection status, and broker/server events. Keep it separate
+      from `WorkflowApiSurface`; this is platform management, not workflow
+      lifecycle.
+   - Completed: read-only admin/config now has a neutral `WorkflowAdminApi` /
+      `WorkflowAdminSurface`, is exposed through JSON-RPC HTTP, and is available
+      through `wf admin connections`, `wf admin statuses`, and
+      `wf admin events`.
+   - Defer mutating source/connection config commands until the store-backed
+      source registry is designed. Config can bootstrap sources, but server-owned
+      dynamic source changes need persistence, validation, and auth rules before
+      they are safe.
+   - Longer term: make the MCP frontend an adapter over these neutral workflow,
+      source-admin, and config-admin surfaces so the old `wf_mcp` server entry
+      point can shrink or retire.
 
 5. **CLI/API alignment**
    - Completed for the basic lifecycle: selected `wf` commands can target local

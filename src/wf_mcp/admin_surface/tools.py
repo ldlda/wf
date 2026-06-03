@@ -46,7 +46,7 @@ def register_service_admin_tools(
             description="List configured MCP connections known to this server.",
         )
         async def list_connections() -> list[dict[str, Any]]:
-            return handlers.list_connections()
+            return await handlers.list_connections()
 
         @server.tool(
             name=name("get_connection_statuses"),
@@ -54,7 +54,7 @@ def register_service_admin_tools(
             description="Show configured MCP connection status and catalog counts.",
         )
         async def get_connection_statuses() -> list[dict[str, Any]]:
-            return handlers.get_connection_statuses()
+            return await handlers.get_connection_statuses()
 
     @server.tool(
         name=name("refresh_connection_catalog"),
@@ -177,4 +177,4 @@ def register_service_admin_tools(
         description="Return locally recorded broker/platform events.",
     )
     async def get_events() -> list[dict[str, Any]]:
-        return handlers.get_broker_events()
+        return await handlers.get_broker_events()

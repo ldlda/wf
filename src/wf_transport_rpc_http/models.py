@@ -30,6 +30,10 @@ class HealthParams(RpcParamsModel):
     pass
 
 
+class AdminEmptyParams(RpcParamsModel):
+    pass
+
+
 class ListCapabilitiesParams(RpcParamsModel):
     query: str | None = Field(default=None)
     source_id: str | None = Field(default=None)

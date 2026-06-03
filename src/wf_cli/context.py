@@ -10,6 +10,8 @@ from pydantic import ValidationError
 
 from wf_api import (
     WorkflowApi,
+    WorkflowAdminApi,
+    WorkflowAdminSurface,
     WorkflowApiSurface,
     WorkflowSourceAdminApi,
     WorkflowSourceAdminSurface,
@@ -35,6 +37,7 @@ class CliContext:
     service: WfMcpService | None
     handlers: WorkflowApiSurface
     source_admin: WorkflowSourceAdminSurface
+    admin: WorkflowAdminSurface
 
 
 @dataclass(frozen=True)
@@ -116,6 +119,7 @@ def load_cli_context(
             service=None,
             handlers=client,
             source_admin=client,
+            admin=client,
         )
 
     if _is_legacy_mcp_config(resolved_config_path):
@@ -126,6 +130,10 @@ def load_cli_context(
             service=service,
             handlers=WorkflowApi(context_from_service(service)),
             source_admin=WorkflowSourceAdminApi(context_from_service(service)),
+            admin=WorkflowAdminApi(
+                connections=service.connection_service,
+                events=service.events,
+            ),
         )
 
     config = load_workflow_config(resolved_config_path)
@@ -140,6 +148,7 @@ def load_cli_context(
             service=None,
             handlers=server.api,
             source_admin=server.source_admin,
+            admin=server.admin,
         )
     if isinstance(target, RpcHttpTargetConfig):
         client = RpcWorkflowApiClient(
@@ -155,6 +164,7 @@ def load_cli_context(
             service=None,
             handlers=client,
             source_admin=client,
+            admin=client,
         )
     raise ValueError(f"unsupported workflow target {target!r}")
 

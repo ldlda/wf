@@ -18,8 +18,8 @@ def test_broker_admin_handlers_list_connections_and_events() -> None:
     )
     handlers = BrokerAdminHandlers(service)
 
-    connections = handlers.list_connections()
-    events = handlers.get_broker_events()
+    connections = _run(handlers.list_connections())
+    events = _run(handlers.get_broker_events())
 
     assert connections[0]["id"] == "demo.personal"
     assert connections[0]["server"] == "demo"

@@ -18,6 +18,7 @@ def test_wf_help_lists_lifecycle_groups() -> None:
     assert "deploy" in result.output
     assert "run" in result.output
     assert "source" in result.output
+    assert "admin" in result.output
     assert "docs" in result.output
     assert "schema" in result.output
     assert "explain" in result.output
@@ -74,6 +75,13 @@ def test_wf_source_list_help_exists() -> None:
     assert result.exit_code == 0
     assert "--format" in result.output
     assert "--limit" in result.output
+
+
+def test_wf_admin_connections_help_exists() -> None:
+    result = runner.invoke(app, ["admin", "connections", "--help"])
+
+    assert result.exit_code == 0
+    assert "--format" in result.output
 
 
 def test_wf_artifact_list_help_exists() -> None:

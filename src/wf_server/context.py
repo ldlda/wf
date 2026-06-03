@@ -5,7 +5,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from wf_api import WorkflowApi, WorkflowSourceAdminApi, durable_workflow_api
+from wf_api import (
+    WorkflowAdminApi,
+    WorkflowApi,
+    WorkflowSourceAdminApi,
+    durable_workflow_api,
+)
 from wf_api.local_sources import builtin_sources, get_qualified_spec
 from wf_api.models import RawWorkflowPlan, TraceRange
 from wf_api.operation_context import (
@@ -63,6 +68,21 @@ class InMemoryWorkflowEventRecorder(WorkflowEventRecorder):
                 "payload": payload,
             }
         )
+
+    def list_events(self) -> list[dict[str, Any]]:
+        """Expose local server events for the read-only admin surface."""
+        return list(self.events)
+
+
+@dataclass(frozen=True, slots=True)
+class EmptyWorkflowConnectionProvider:
+    """Read-only admin provider for local/static servers without upstream sources."""
+
+    def list_connections(self) -> list[dict[str, Any]]:
+        return []
+
+    def get_connection_statuses(self) -> list[dict[str, Any]]:
+        return []
 
 
 @dataclass(frozen=True, slots=True)
@@ -238,6 +258,7 @@ class WorkflowServer:
     context: WorkflowOperationContext
     api: WorkflowApi
     source_admin: WorkflowSourceAdminApi
+    admin: WorkflowAdminApi
     events: InMemoryWorkflowEventRecorder
 
     @staticmethod
@@ -266,11 +287,16 @@ def build_local_static_workflow_server(root: str | Path) -> WorkflowServer:
     )
     api = durable_workflow_api(context)
     source_admin = WorkflowSourceAdminApi(context)
+    admin = WorkflowAdminApi(
+        connections=EmptyWorkflowConnectionProvider(),
+        events=events,
+    )
     return WorkflowServer(
         config=config,
         stores=stores,
         context=context,
         api=api,
         source_admin=source_admin,
+        admin=admin,
         events=events,
     )

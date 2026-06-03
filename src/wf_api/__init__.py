@@ -1,6 +1,11 @@
 from __future__ import annotations
 
 from .listing import matches_query, paged_list_payload
+from .admin import (
+    WorkflowAdminApi,
+    WorkflowAdminConnectionProvider,
+    WorkflowAdminEventProvider,
+)
 from .artifacts import WorkflowArtifactApi
 from .local_sources import builtin_sources, get_qualified_spec, qualify_spec
 from .models import RawWorkflowPlan, TraceRange
@@ -20,6 +25,7 @@ from .runs import WorkflowRunApi
 from .service import WorkflowApi
 from .source_admin import WorkflowSourceAdminApi
 from .surface import (
+    WorkflowAdminSurface,
     WorkflowApiSurface,
     WorkflowArtifactSurface,
     WorkflowCapabilitySurface,
@@ -73,6 +79,10 @@ __all__ = [
     "RawWorkflowPlan",
     "RuntimeDependencies",
     "TraceRange",
+    "WorkflowAdminApi",
+    "WorkflowAdminConnectionProvider",
+    "WorkflowAdminEventProvider",
+    "WorkflowAdminSurface",
     "WorkflowApi",
     "WorkflowApiSurface",
     "WorkflowArtifactApi",

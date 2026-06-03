@@ -107,6 +107,37 @@ def test_rpc_workflow_client_lists_and_inspects_sources(tmp_path) -> None:
     asyncio.run(scenario())
 
 
+def test_rpc_workflow_client_reads_admin_state(tmp_path) -> None:
+    async def scenario() -> None:
+        server = build_local_static_workflow_server(tmp_path / "store")
+        server.events.record_workflow_event(
+            "workflow_test_event",
+            capability_id="workflow.demo.v1",
+            payload={"ok": True},
+        )
+        app = create_rpc_app(server)
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport,
+            base_url="http://test",
+        ) as http_client:
+            client = RpcWorkflowApiClient(
+                url="http://test/rpc",
+                timeout_seconds=5,
+                http_client=http_client,
+            )
+            connections = await client.list_connections()
+            statuses = await client.get_connection_statuses()
+            events = await client.list_events()
+
+        assert connections == {"connections": [], "total": 0}
+        assert statuses == {"statuses": [], "total": 0}
+        assert events["total"] == 1
+        assert events["events"][0]["kind"] == "workflow_test_event"
+
+    asyncio.run(scenario())
+
+
 def test_rpc_workflow_client_runs_and_reads_trace(tmp_path) -> None:
     async def scenario() -> None:
         server = build_local_static_workflow_server(tmp_path / "store")
