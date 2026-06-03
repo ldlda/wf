@@ -132,7 +132,13 @@ def _write_cli_config(root: Path) -> Path:
     return config_path
 
 
-def _load_cli_context_with_specs(config_path: str | Path) -> CliContext:
+from wf_cli.context import load_cli_context_from_typer, config_path_from_context, load_cli_context
+
+def _load_cli_context_with_specs(ctx: typer.Context | str | Path) -> CliContext:
+    if isinstance(ctx, (str, Path)):
+        config_path = ctx
+    else:
+        config_path = config_path_from_context(ctx)
     """Seed executable demo specs for CLI tests only.
 
     Config loading registers connections and stores; it does not register
@@ -149,7 +155,7 @@ def test_wf_cap_list_outputs_json() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 
-    with patch("wf_cli.commands.caps.load_cli_context", _load_cli_context_with_specs):
+    with patch("wf_cli.commands.caps.load_cli_context_from_typer", _load_cli_context_with_specs):
         result = runner.invoke(
             app,
             ["--config", str(config_path), "cap", "list", "--source", "demo.personal"],
@@ -166,7 +172,7 @@ def test_wf_cap_list_ids_format() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 
-    with patch("wf_cli.commands.caps.load_cli_context", _load_cli_context_with_specs):
+    with patch("wf_cli.commands.caps.load_cli_context_from_typer", _load_cli_context_with_specs):
         result = runner.invoke(
             app,
             [
@@ -190,7 +196,7 @@ def test_wf_cap_inspect_outputs_detail() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 
-    with patch("wf_cli.commands.caps.load_cli_context", _load_cli_context_with_specs):
+    with patch("wf_cli.commands.caps.load_cli_context_from_typer", _load_cli_context_with_specs):
         result = runner.invoke(
             app,
             ["--config", str(config_path), "cap", "inspect", "demo.personal.echo_tool"],

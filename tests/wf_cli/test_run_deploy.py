@@ -53,7 +53,13 @@ def _seed_echo_deployment(root: Path) -> Path:
     return config_path
 
 
-def _load_cli_context_with_specs(config_path: str | Path) -> CliContext:
+from wf_cli.context import load_cli_context_from_typer, config_path_from_context, load_cli_context
+
+def _load_cli_context_with_specs(ctx: typer.Context | str | Path) -> CliContext:
+    if isinstance(ctx, (str, Path)):
+        config_path = ctx
+    else:
+        config_path = config_path_from_context(ctx)
     """Test-only hook: seed executable demo specs for CLI integration tests.
 
     ``build_service_from_config`` registers connections, adapters, and
@@ -93,7 +99,7 @@ def test_wf_run_start_accepts_inline_json_input() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
-    with patch("wf_cli.commands.runs.load_cli_context", _load_cli_context_with_specs):
+    with patch("wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs):
         result = runner.invoke(
             app,
             [
@@ -122,7 +128,7 @@ def test_wf_run_start_accepts_input_file() -> None:
     input_path = root / "input.json"
     input_path.write_text('{"text": "from file"}', encoding="utf-8")
 
-    with patch("wf_cli.commands.runs.load_cli_context", _load_cli_context_with_specs):
+    with patch("wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs):
         result = runner.invoke(
             app,
             [
@@ -147,7 +153,7 @@ def test_wf_run_inspect_and_trace_existing_run() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
-    with patch("wf_cli.commands.runs.load_cli_context", _load_cli_context_with_specs):
+    with patch("wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs):
         start = runner.invoke(
             app,
             [
@@ -200,7 +206,7 @@ def test_wf_run_start_reports_bad_json() -> None:
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
-    with patch("wf_cli.commands.runs.load_cli_context", _load_cli_context_with_specs):
+    with patch("wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs):
         result = runner.invoke(
             app,
             [

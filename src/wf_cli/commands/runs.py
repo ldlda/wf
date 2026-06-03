@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 
-from wf_cli.context import config_path_from_context, load_cli_context
+from wf_cli.context import load_cli_context_from_typer
 from wf_cli.io import CliInputError, emit_json, parse_json_input
 from wf_api import TraceRange
 
@@ -45,7 +45,7 @@ def start_run(
         workflow_input = parse_json_input(input_json=input_json, input_file=input_file)
     except CliInputError as exc:
         raise typer.BadParameter(str(exc)) from exc
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context_from_typer(ctx)
     trace_range = _optional_trace_range(start=trace_from, limit=trace_limit)
     payload = asyncio.run(
         context.handlers.run_deployment(
@@ -63,7 +63,7 @@ def inspect_run(
     run_id: Annotated[str, typer.Argument(help="Durable run id to inspect.")],
 ) -> None:
     """Inspect a durable run without trace entries."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context_from_typer(ctx)
     emit_json(asyncio.run(context.handlers.inspect_run(run_id=run_id)))
 
 
@@ -81,7 +81,7 @@ def trace_run(
     ] = 25,
 ) -> None:
     """Read a bounded debug trace slice."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context_from_typer(ctx)
     payload = asyncio.run(
         context.handlers.read_run_trace(
             run_id=run_id,

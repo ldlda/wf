@@ -5,7 +5,7 @@ from typing import Annotated
 
 import typer
 
-from wf_cli.context import config_path_from_context, load_cli_context
+from wf_cli.context import load_cli_context_from_typer
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import emit_json
 
@@ -37,7 +37,7 @@ def list_capabilities(
     ] = ListOutputFormat.JSON,
 ) -> None:
     """List compact planner-visible workflow capabilities."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context_from_typer(ctx)
     payload = asyncio.run(
         context.handlers.list_capabilities(
             query=query,
@@ -61,7 +61,7 @@ def inspect_capability(
     qualified_name: Annotated[str, typer.Argument(help="Workflow capability name.")],
 ) -> None:
     """Inspect one workflow capability contract."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context_from_typer(ctx)
     payload = asyncio.run(
         context.handlers.inspect_capability(qualified_name=qualified_name)
     )
