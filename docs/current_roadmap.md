@@ -114,10 +114,9 @@ implementation state.
       `WorkflowAdminSurface`, is exposed through JSON-RPC HTTP, and is available
       through `wf admin connections`, `wf admin statuses`, and
       `wf admin events`.
-   - Defer mutating source/connection config commands until the store-backed
-      source registry is designed. Config can bootstrap sources, but server-owned
-      dynamic source changes need persistence, validation, and auth rules before
-      they are safe.
+   - Mutating source/connection config commands now target the store-backed
+      source registry plan instead of config files. Config can bootstrap sources,
+      while server-owned dynamic source changes need validated registry writes.
    - The store-backed source registry design is recorded in
       [2026-06-03 store-backed source registry](./superpowers/specs/2026-06-03-store-backed-source-registry-design.md).
    - First source registry implementation slices complete: validated registry
@@ -136,6 +135,11 @@ implementation state.
       (`wf admin registry list` / `wf admin registry inspect`). Local/static
       servers report unavailable instead of empty; a concrete MCP-backed
       `WorkflowServer` construction path remains future work. No mutations added.
+   - Next executable source registry slice:
+      [2026-06-04 source registry mutations](./superpowers/plans/2026-06-04-source-registry-mutations.md).
+      It adds add/update/enable/disable/remove operations against desired
+      registry state only; config, auth records, and catalog snapshots are not
+      mutated in v1.
    - Longer term: make the MCP frontend an adapter over these neutral workflow,
       source-admin, and config-admin surfaces so the old `wf_mcp` server entry
       point can shrink or retire.

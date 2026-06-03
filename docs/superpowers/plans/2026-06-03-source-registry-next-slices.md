@@ -68,6 +68,7 @@ The next executable slice is startup merge:
    - Concrete MCP-backed `WorkflowServer` construction remains future work.
 
 5. **Slice 5: Mutation Commands**
+   - **Status: planned.**
    - Add add/update/enable/disable/remove operations.
    - Use registry store, validation, and atomic writes.
    - Keep auth/catalog cleanup deferred.
@@ -366,6 +367,9 @@ Pick one naming shape in the implementation plan.
 ### Goal
 
 Add safe registry mutation.
+
+Implementation plan:
+`docs/superpowers/plans/2026-06-04-source-registry-mutations.md`.
 
 ### Operations
 

@@ -280,6 +280,9 @@ MCP-backed `WorkflowServer` construction remains future work.
 
 ### Slice 5: Mutating RPC/CLI
 
+Implementation plan:
+[2026-06-04 source registry mutations](../plans/2026-06-04-source-registry-mutations.md).
+
 - Add add/update/enable/disable/remove operations.
 - Add JSON-RPC methods.
 - Add CLI commands.
