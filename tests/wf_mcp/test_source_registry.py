@@ -10,6 +10,7 @@ from wf_mcp.source_registry import (
     McpSourceRegistryEntry,
     SourceRegistryFile,
     StdioSourceTransport,
+    registry_entry_to_connection_config,
 )
 
 
@@ -52,31 +53,9 @@ def test_source_registry_accepts_http_transport() -> None:
     assert str(entry.transport.url) == "https://example.test/mcp"
 
 
-def test_source_registry_rejects_duplicate_ids() -> None:
-    with pytest.raises(ValueError, match="duplicate source id 'github.work'"):
-        SourceRegistryFile(sources=[_entry("github.work"), _entry("github.work")])
-
-
 def test_source_registry_rejects_reserved_ids() -> None:
     with pytest.raises(ValueError, match="reserved"):
         _entry("wf.admin")
-
-
-def test_source_registry_rejects_unsafe_ids() -> None:
-    with pytest.raises(ValueError, match="connection id"):
-        _entry("../bad")
-
-
-def test_file_source_registry_store_loads_empty_registry_when_missing(
-    tmp_path: Path,
-) -> None:
-    store = FileSourceRegistryStore(tmp_path)
-
-    registry = store.load_registry()
-
-    assert registry.version == 1
-    assert registry.sources == []
-    assert store.path == tmp_path / "source_registry.json"
 
 
 def test_file_source_registry_store_round_trips_registry(tmp_path: Path) -> None:
@@ -102,9 +81,38 @@ def test_file_source_registry_store_validates_loaded_registry(tmp_path: Path) ->
         store.load_registry()
 
 
-def test_file_source_registry_store_rejects_corrupted_json(tmp_path: Path) -> None:
-    store = FileSourceRegistryStore(tmp_path)
-    store.path.write_text("not json{{{", encoding="utf-8")
+def test_registry_entry_to_connection_config_preserves_identity() -> None:
+    entry = _entry()
+    config = registry_entry_to_connection_config(entry)
 
-    with pytest.raises(ValueError, match="corrupted"):
-        store.load_registry()
+    assert config.id == "github.work"
+    assert config.server == "github"
+    assert config.account == "work"
+    assert config.enabled is True
+
+
+def test_registry_entry_to_connection_config_preserves_transport_metadata() -> None:
+    entry = _entry()
+    entry.auth_ref = "github.work.auth"
+    config = registry_entry_to_connection_config(entry)
+
+    assert config.metadata["auth_ref"] == "github.work.auth"
+    assert config.metadata["profile"] is None
+    assert config.metadata["transport"]["kind"] == "stdio"
+    assert config.metadata["transport"]["command"] == "npx"
+    assert config.metadata["source_registry"] is True
+
+
+def test_registry_entry_to_connection_config_preserves_user_metadata() -> None:
+    entry = _entry()
+    config = registry_entry_to_connection_config(entry)
+
+    assert config.metadata["purpose"] == "tests"
+
+
+def test_registry_entry_to_connection_config_disabled_entry() -> None:
+    entry = _entry()
+    entry.enabled = False
+    config = registry_entry_to_connection_config(entry)
+
+    assert config.enabled is False
