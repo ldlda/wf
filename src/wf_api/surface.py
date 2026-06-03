@@ -226,6 +226,23 @@ class WorkflowAdminSurface(Protocol):
     async def list_events(self) -> dict[str, Any]: ...
 
 
+class WorkflowSourceRegistrySurface(Protocol):
+    """Read-only desired source registry methods exposed by platform frontends."""
+
+    async def list_registry_entries(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]: ...
+
+    async def inspect_registry_entry(
+        self,
+        *,
+        source_id: str,
+    ) -> dict[str, Any]: ...
+
+
 __all__ = [
     "WorkflowAdminSurface",
     "WorkflowApiSurface",
@@ -235,4 +252,5 @@ __all__ = [
     "WorkflowDraftSurface",
     "WorkflowRunSurface",
     "WorkflowSourceAdminSurface",
+    "WorkflowSourceRegistrySurface",
 ]

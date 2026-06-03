@@ -9,6 +9,7 @@ from wf_api import (
     WorkflowAdminApi,
     WorkflowApi,
     WorkflowSourceAdminApi,
+    WorkflowSourceRegistryApi,
     durable_workflow_api,
 )
 from wf_api.local_sources import builtin_sources, get_qualified_spec
@@ -260,6 +261,7 @@ class WorkflowServer:
     source_admin: WorkflowSourceAdminApi
     admin: WorkflowAdminApi
     events: InMemoryWorkflowEventRecorder
+    source_registry_admin: WorkflowSourceRegistryApi | None = None
 
     @staticmethod
     def trace_range(*, start: int, limit: int) -> TraceRange:

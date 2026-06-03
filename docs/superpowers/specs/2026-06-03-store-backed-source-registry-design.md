@@ -269,12 +269,14 @@ registry entries.
 
 ### Slice 4: Read Registry Through Admin
 
-Implementation plan:
-[2026-06-04 source registry admin reads](../plans/2026-06-04-source-registry-admin-reads.md).
-
-- Add admin read method for desired registry entries if needed.
-- Keep current source inventory list as runtime/observed source inventory.
-- Document difference between desired registry and observed source catalog.
+Status: complete for API/transport/CLI plumbing. `WorkflowSourceRegistryApi`
+provides neutral read-only access to desired registry entries. JSON-RPC methods
+`workflow.admin.source_registry.list` and `.inspect` are registered. CLI commands
+`wf admin registry list` and `wf admin registry inspect` are available for
+targets that expose the surface. Local/static servers report
+`source_registry_unavailable` instead of pretending to have an empty registry.
+No mutations added. `wf source list` behavior remains unchanged. Concrete
+MCP-backed `WorkflowServer` construction remains future work.
 
 ### Slice 5: Mutating RPC/CLI
 

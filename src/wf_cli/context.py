@@ -15,6 +15,7 @@ from wf_api import (
     WorkflowApiSurface,
     WorkflowSourceAdminApi,
     WorkflowSourceAdminSurface,
+    WorkflowSourceRegistrySurface,
 )
 from wf_config import (
     FilesystemStoreConfig,
@@ -38,6 +39,7 @@ class CliContext:
     handlers: WorkflowApiSurface
     source_admin: WorkflowSourceAdminSurface
     admin: WorkflowAdminSurface
+    source_registry_admin: WorkflowSourceRegistrySurface | None = None
 
 
 @dataclass(frozen=True)
@@ -120,6 +122,7 @@ def load_cli_context(
             handlers=client,
             source_admin=client,
             admin=client,
+            source_registry_admin=client,
         )
 
     if _is_legacy_mcp_config(resolved_config_path):
@@ -165,6 +168,7 @@ def load_cli_context(
             handlers=client,
             source_admin=client,
             admin=client,
+            source_registry_admin=client,
         )
     raise ValueError(f"unsupported workflow target {target!r}")
 

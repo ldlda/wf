@@ -11,6 +11,7 @@ from .client_capabilities import RpcCapabilityClientMixin
 from .client_deployments import RpcDeploymentClientMixin
 from .client_drafts import RpcDraftClientMixin
 from .client_runs import RpcRunClientMixin
+from .client_source_registry import RpcSourceRegistryClientMixin
 from .client_sources import RpcSourceAdminClientMixin
 
 
@@ -23,6 +24,7 @@ class RpcWorkflowApiClient(
     RpcDeploymentClientMixin,
     RpcRunClientMixin,
     RpcSourceAdminClientMixin,
+    RpcSourceRegistryClientMixin,
     RpcAdminClientMixin,
 ):
     """WorkflowApiSurface implementation backed by JSON-RPC HTTP calls.

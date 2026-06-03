@@ -157,3 +157,9 @@ def test_local_static_server_inspects_and_reads_bounded_trace(tmp_path) -> None:
     assert trace["trace_start"] == 0
     assert trace["trace_limit"] == 1
     assert len(trace["trace"]) == 1
+
+
+def test_local_static_server_has_no_source_registry_admin(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+
+    assert server.source_registry_admin is None

@@ -59,9 +59,13 @@ The next executable slice is startup merge:
    - Emit events/diagnostics for shadowed registry entries.
 
 4. **Slice 4: Read Desired Registry Through Admin**
-   - **Status: planned.**
+   - **Status: complete.**
    - Expose desired registry entries separately from observed source inventory.
-   - Make the difference visible in API/CLI docs.
+   - `WorkflowSourceRegistryApi` provides neutral read-only access.
+   - JSON-RPC methods `workflow.admin.source_registry.list` / `.inspect`.
+   - CLI commands `wf admin registry list` / `wf admin registry inspect`.
+   - Local/static servers report unavailable instead of empty.
+   - Concrete MCP-backed `WorkflowServer` construction remains future work.
 
 5. **Slice 5: Mutation Commands**
    - Add add/update/enable/disable/remove operations.
@@ -323,8 +327,13 @@ with config-defined connections/sources.
 
 Expose desired registry entries distinctly from observed source inventory.
 
-Implementation plan:
-`docs/superpowers/plans/2026-06-04-source-registry-admin-reads.md`.
+Status: complete for API/transport/CLI plumbing. `WorkflowSourceRegistryApi`
+provides neutral read-only access. JSON-RPC methods
+`workflow.admin.source_registry.list` / `.inspect` are registered. CLI commands
+`wf admin registry list` / `wf admin registry inspect` are available for targets
+that expose the surface. Local/static servers report
+`source_registry_unavailable`. Concrete MCP-backed `WorkflowServer` construction
+remains future work.
 
 ### Why
 

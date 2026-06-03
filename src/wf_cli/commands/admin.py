@@ -8,11 +8,15 @@ import typer
 from wf_cli.context import load_cli_context_from_typer
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 
+from . import source_registry
+
 app = typer.Typer(
     name="admin",
     help="Read workflow server admin and config state.",
     no_args_is_help=True,
 )
+
+app.add_typer(source_registry.app, name="registry")
 
 
 @app.command("connections")

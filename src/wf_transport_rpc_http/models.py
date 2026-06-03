@@ -179,3 +179,12 @@ class ResumeRunParams(RpcParamsModel):
     resume_payload: dict[str, Any] = Field(default_factory=dict)
     resume_outcome: str = Field(default="submitted", min_length=1)
     trace_range: TraceRangeParams | None = None
+
+
+class ListRegistryEntriesParams(RpcParamsModel):
+    cursor: str | None = Field(default=None)
+    limit: int = Field(default=50, ge=1, le=100)
+
+
+class InspectRegistryEntryParams(RpcParamsModel):
+    source_id: str = Field(min_length=1)

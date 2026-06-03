@@ -130,10 +130,12 @@ implementation state.
       [2026-06-03 source registry next slices](./superpowers/plans/2026-06-03-source-registry-next-slices.md):
       desired-registry admin reads and safe mutation commands remain later
       slices.
-   - Next executable source registry slice:
-      [2026-06-04 source registry admin reads](./superpowers/plans/2026-06-04-source-registry-admin-reads.md).
-      It keeps desired registry state separate from observed source inventory
-      and adds read-only admin/RPC/CLI access before any mutation commands.
+   - Completed: desired-registry admin read plumbing is available through
+      `WorkflowSourceRegistryApi`, JSON-RPC methods
+      (`workflow.admin.source_registry.list` / `.inspect`), and CLI commands
+      (`wf admin registry list` / `wf admin registry inspect`). Local/static
+      servers report unavailable instead of empty; a concrete MCP-backed
+      `WorkflowServer` construction path remains future work. No mutations added.
    - Longer term: make the MCP frontend an adapter over these neutral workflow,
       source-admin, and config-admin surfaces so the old `wf_mcp` server entry
       point can shrink or retire.

@@ -13,6 +13,7 @@ from .methods_capabilities import register_methods as register_capability_method
 from .methods_deployments import register_methods as register_deployment_methods
 from .methods_drafts import register_methods as register_draft_methods
 from .methods_runs import register_methods as register_run_methods
+from .methods_source_registry import register_methods as register_source_registry_methods
 from .methods_sources import register_methods as register_source_methods
 
 
@@ -46,6 +47,7 @@ def create_rpc_app(server: WorkflowServer, *, rpc_path: str = "/rpc") -> jsonrpc
     register_deployment_methods(entrypoint, server)
     register_run_methods(entrypoint, server)
     register_source_methods(entrypoint, server)
+    register_source_registry_methods(entrypoint, server)
     register_admin_methods(entrypoint, server)
 
     app.bind_entrypoint(entrypoint)

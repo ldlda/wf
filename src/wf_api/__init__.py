@@ -24,6 +24,10 @@ from .refs import WorkflowSurfaceCapabilityId, parse_workflow_surface_capability
 from .runs import WorkflowRunApi
 from .service import WorkflowApi
 from .source_admin import WorkflowSourceAdminApi
+from .source_registry_admin import (
+    WorkflowSourceRegistryApi,
+    WorkflowSourceRegistryProvider,
+)
 from .surface import (
     WorkflowAdminSurface,
     WorkflowApiSurface,
@@ -33,6 +37,7 @@ from .surface import (
     WorkflowDraftSurface,
     WorkflowRunSurface,
     WorkflowSourceAdminSurface,
+    WorkflowSourceRegistrySurface,
 )
 from .wrapper_hints import (
     MissingDecision,
@@ -101,6 +106,9 @@ __all__ = [
     "WorkflowRunSurface",
     "WorkflowSourceAdminApi",
     "WorkflowSourceAdminSurface",
+    "WorkflowSourceRegistryApi",
+    "WorkflowSourceRegistryProvider",
+    "WorkflowSourceRegistrySurface",
     "WorkflowSpecProvider",
     "WorkflowSurfaceCapabilityId",
     "WrapperAuthoringHints",
