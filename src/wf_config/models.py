@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class WorkflowConfigModel(BaseModel):
@@ -18,15 +18,8 @@ class LocalTargetConfig(WorkflowConfigModel):
 
 class RpcHttpTargetConfig(WorkflowConfigModel):
     kind: Literal["rpc_http"]
-    url: str = Field(min_length=1)
+    url: AnyHttpUrl
     timeout_seconds: float = Field(default=30.0, gt=0)
-
-    @field_validator("url")
-    @classmethod
-    def validate_url(cls, value: str) -> str:
-        if not value.startswith(("http://", "https://")):
-            raise ValueError("rpc_http target url must start with http:// or https://")
-        return value
 
 
 TargetConfig = Annotated[

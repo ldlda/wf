@@ -60,7 +60,7 @@ def test_workflow_config_parses_rpc_http_target_and_transport() -> None:
     )
 
     assert isinstance(config.client.target, RpcHttpTargetConfig)
-    assert config.client.target.url == "http://127.0.0.1:8765/rpc"
+    assert str(config.client.target.url) == "http://127.0.0.1:8765/rpc"
     assert config.client.target.timeout_seconds == 12
     assert isinstance(config.server.transports[0], RpcHttpTransportConfig)
     assert config.server.transports[0].host == "0.0.0.0"
@@ -93,7 +93,7 @@ def test_workflow_config_rejects_unknown_target_kind() -> None:
 
 
 def test_workflow_config_rejects_invalid_rpc_http_url() -> None:
-    with pytest.raises(ValidationError, match="http:// or https://"):
+    with pytest.raises(ValidationError):
         WorkflowConfigFile.model_validate(
             {
                 "version": 1,

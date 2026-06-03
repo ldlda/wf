@@ -98,7 +98,7 @@ def load_cli_context(
             config_path=resolved_config_path,
             service=None,
             handlers=RpcWorkflowApiClient(
-                url=target.url,
+                url=str(target.url),
                 timeout_seconds=(
                     rpc_timeout_seconds
                     if rpc_timeout_seconds is not None
