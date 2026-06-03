@@ -63,7 +63,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.capabilities.inspect", errors=[WorkflowRpcError])
     async def workflow_capabilities_inspect(
-        params: InspectCapabilityParams = Params(...),
+        params: InspectCapabilityParams = Params(...),  # type: ignore[reportArgumentType],  # type: ignore[reportArgumentType]
     ) -> dict[str, Any]:
         try:
             return await server.api.inspect_capability(
@@ -76,7 +76,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
         name="workflow.drafts.create_from_capability", errors=[WorkflowRpcError]
     )
     async def workflow_drafts_create_from_capability(
-        params: CreateDraftFromCapabilityParams = Params(...),
+        params: CreateDraftFromCapabilityParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.create_draft_workspace_from_capability(
@@ -98,7 +98,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.drafts.patch", errors=[WorkflowRpcError])
     async def workflow_drafts_patch(
-        params: PatchDraftParams = Params(...),
+        params: PatchDraftParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.patch_draft(draft=params.draft, patch=params.patch)
@@ -107,7 +107,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.drafts.validate", errors=[WorkflowRpcError])
     async def workflow_drafts_validate(
-        params: ValidateDraftParams = Params(...),
+        params: ValidateDraftParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.validate_draft(draft=params.draft)
@@ -116,7 +116,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.artifacts.save", errors=[WorkflowRpcError])
     async def workflow_artifacts_save(
-        params: SaveArtifactParams = Params(...),
+        params: SaveArtifactParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.save_artifact(params.artifact)
@@ -125,7 +125,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.deployments.save", errors=[WorkflowRpcError])
     async def workflow_deployments_save(
-        params: SaveDeploymentParams = Params(...),
+        params: SaveDeploymentParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.save_deployment(params.deployment)
@@ -134,7 +134,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.deployments.validate", errors=[WorkflowRpcError])
     async def workflow_deployments_validate(
-        params: ValidateDeploymentParams = Params(...),
+        params: ValidateDeploymentParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.validate_deployment(
@@ -146,7 +146,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.runs.start", errors=[WorkflowRpcError])
     async def workflow_runs_start(
-        params: StartRunParams = Params(...),
+        params: StartRunParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.run_deployment(
@@ -163,7 +163,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.runs.inspect", errors=[WorkflowRpcError])
     async def workflow_runs_inspect(
-        params: InspectRunParams = Params(...),
+        params: InspectRunParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.inspect_run(run_id=params.run_id)
@@ -172,7 +172,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.runs.trace", errors=[WorkflowRpcError])
     async def workflow_runs_trace(
-        params: ReadRunTraceParams = Params(...),
+        params: ReadRunTraceParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.read_run_trace(
@@ -184,7 +184,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.runs.resume", errors=[WorkflowRpcError])
     async def workflow_runs_resume(
-        params: ResumeRunParams = Params(...),
+        params: ResumeRunParams = Params(...),  # type: ignore[reportArgumentType],
     ) -> dict[str, Any]:
         try:
             return await server.api.resume_run(
