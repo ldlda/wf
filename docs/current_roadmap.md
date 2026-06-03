@@ -120,6 +120,9 @@ implementation state.
       they are safe.
    - The store-backed source registry design is recorded in
       [2026-06-03 store-backed source registry](./superpowers/specs/2026-06-03-store-backed-source-registry-design.md).
+   - First source registry implementation slice complete: validated registry
+      models plus `FileSourceRegistryStore` exist, but startup merge and mutation
+      commands are still deferred.
    - Longer term: make the MCP frontend an adapter over these neutral workflow,
       source-admin, and config-admin surfaces so the old `wf_mcp` server entry
       point can shrink or retire.
