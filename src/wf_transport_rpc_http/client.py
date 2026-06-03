@@ -7,7 +7,7 @@ from uuid import uuid4
 
 import httpx
 
-from wf_api.models import TraceRange
+from wf_api.runs import TraceRangeLike
 
 
 @dataclass(slots=True)
@@ -270,7 +270,7 @@ class RpcWorkflowApiClient:
         *,
         deployment_id: str,
         workflow_input: dict[str, Any],
-        trace_range: TraceRange | None = None,
+        trace_range: TraceRangeLike | None = None,
     ) -> dict[str, Any]:
         return await self._call(
             "workflow.runs.start",
@@ -288,7 +288,7 @@ class RpcWorkflowApiClient:
         self,
         *,
         run_id: str,
-        trace_range: TraceRange,
+        trace_range: TraceRangeLike,
     ) -> dict[str, Any]:
         return await self._call(
             "workflow.runs.trace",
@@ -299,7 +299,9 @@ class RpcWorkflowApiClient:
         )
 
 
-def _trace_range_payload(trace_range: TraceRange | None) -> dict[str, int] | None:
+def _trace_range_payload(
+    trace_range: TraceRangeLike | None,
+) -> dict[str, int] | None:
     if trace_range is None:
         return None
     return {"start": trace_range.start, "limit": trace_range.limit}

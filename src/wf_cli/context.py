@@ -7,7 +7,7 @@ import json
 import typer
 from pydantic import ValidationError
 
-from wf_api import WorkflowApi
+from wf_api import WorkflowApi, WorkflowApiSurface
 from wf_config import (
     FilesystemStoreConfig,
     LocalTargetConfig,
@@ -27,7 +27,7 @@ class CliContext:
 
     config_path: Path
     service: WfMcpService | None
-    handlers: "WorkflowApi | RpcWorkflowApiClient"
+    handlers: WorkflowApiSurface
 
 
 @dataclass(frozen=True)

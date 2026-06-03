@@ -18,6 +18,14 @@ from .next_actions import NextActionPatchExample, NextActionTool, NextActions
 from .refs import WorkflowSurfaceCapabilityId, parse_workflow_surface_capability_id
 from .runs import WorkflowRunApi
 from .service import WorkflowApi
+from .surface import (
+    WorkflowApiSurface,
+    WorkflowArtifactSurface,
+    WorkflowCapabilitySurface,
+    WorkflowDeploymentSurface,
+    WorkflowDraftSurface,
+    WorkflowRunSurface,
+)
 from .wrapper_hints import (
     MissingDecision,
     MissingDecisionKind,
@@ -64,15 +72,21 @@ __all__ = [
     "RuntimeDependencies",
     "TraceRange",
     "WorkflowApi",
+    "WorkflowApiSurface",
     "WorkflowArtifactApi",
+    "WorkflowArtifactSurface",
     "WorkflowCapabilityApi",
+    "WorkflowCapabilitySurface",
     "WorkflowDeploymentApi",
+    "WorkflowDeploymentSurface",
     "WorkflowDraftApi",
+    "WorkflowDraftSurface",
     "WorkflowEventRecorder",
     "WorkflowLiveSourceChecker",
     "WorkflowOperationContext",
     "WorkflowRuntimeRunner",
     "WorkflowRunApi",
+    "WorkflowRunSurface",
     "WorkflowSpecProvider",
     "WorkflowSurfaceCapabilityId",
     "WrapperAuthoringHints",
