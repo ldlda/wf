@@ -68,6 +68,30 @@ def test_rpc_unknown_method_returns_json_rpc_error(tmp_path) -> None:
     asyncio.run(scenario())
 
 
+def test_rpc_app_mounts_configured_rpc_path(tmp_path) -> None:
+    async def scenario() -> None:
+        server = build_local_static_workflow_server(tmp_path / "store")
+        app = create_rpc_app(server, rpc_path="/workflow-rpc")
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(
+            transport=transport, base_url="http://test"
+        ) as client:
+            response = await client.post(
+                "/workflow-rpc",
+                json={
+                    "jsonrpc": "2.0",
+                    "id": "test",
+                    "method": "workflow.health",
+                    "params": {},
+                },
+            )
+
+        assert response.status_code == 200
+        assert response.json()["result"]["status"] == "ok"
+
+    asyncio.run(scenario())
+
+
 def test_rpc_draft_artifact_deployment_lifecycle(tmp_path) -> None:
     async def scenario() -> None:
         server = build_local_static_workflow_server(tmp_path / "store")

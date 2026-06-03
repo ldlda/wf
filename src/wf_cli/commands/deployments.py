@@ -6,7 +6,7 @@ from typing import Annotated
 
 import typer
 
-from wf_cli.context import config_path_from_context, load_cli_context
+from wf_cli.context import load_local_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_input
 
@@ -30,7 +30,7 @@ def validate_deployment(
     ] = False,
 ) -> None:
     """Validate one saved workflow deployment."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context(ctx)
     payload = asyncio.run(
         context.handlers.validate_deployment(
             deployment_id=deployment_id,
@@ -48,7 +48,7 @@ def list_deployments(
     ] = ListOutputFormat.JSON,
 ) -> None:
     """List saved workflow deployments."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context(ctx)
     payload = asyncio.run(context.handlers.list_deployments())
     emit_list_payload(
         payload,
@@ -65,7 +65,7 @@ def inspect_deployment(
     deployment_id: Annotated[str, typer.Argument(help="Deployment id.")],
 ) -> None:
     """Inspect one saved deployment."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context(ctx)
     emit_json(
         asyncio.run(context.handlers.inspect_deployment(deployment_id=deployment_id))
     )
@@ -106,7 +106,7 @@ def save_deployment(
             )
     except CliInputError as exc:
         raise typer.BadParameter(str(exc)) from exc
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context(ctx)
     emit_json(asyncio.run(context.handlers.save_deployment(payload)))
 
 
@@ -116,7 +116,7 @@ def delete_deployment(
     deployment_id: Annotated[str, typer.Argument(help="Deployment id.")],
 ) -> None:
     """Delete one saved deployment."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context(ctx)
     emit_json(
         asyncio.run(context.handlers.delete_deployment(deployment_id=deployment_id))
     )

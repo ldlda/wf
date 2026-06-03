@@ -25,16 +25,18 @@ from .models import (
 )
 
 
-def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
+def create_rpc_app(server: WorkflowServer, *, rpc_path: str = "/rpc") -> jsonrpc.API:
     """Build a JSON-RPC HTTP app over an existing WorkflowServer.
 
     Transport code owns only JSON-RPC envelope handling. Workflow semantics stay
     behind server.api, so this package remains swappable with WebSocket/MCP
     transports later.
     """
+    if not rpc_path.startswith("/"):
+        raise ValueError("rpc_path must start with '/'")
 
     app = jsonrpc.API()
-    entrypoint = jsonrpc.Entrypoint("/rpc")
+    entrypoint = jsonrpc.Entrypoint(rpc_path)
 
     @app.get("/healthz")
     async def healthz() -> dict[str, str]:

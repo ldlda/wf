@@ -92,6 +92,26 @@ def test_workflow_config_rejects_unknown_target_kind() -> None:
         )
 
 
+def test_workflow_config_rejects_invalid_rpc_http_url() -> None:
+    with pytest.raises(ValidationError, match="http:// or https://"):
+        WorkflowConfigFile.model_validate(
+            {
+                "version": 1,
+                "client": {"target": {"kind": "rpc_http", "url": "not-a-url"}},
+            }
+        )
+
+
+def test_workflow_config_rejects_unwired_stdlib_source_id() -> None:
+    with pytest.raises(ValidationError):
+        WorkflowConfigFile.model_validate(
+            {
+                "version": 1,
+                "server": {"sources": [{"kind": "stdlib", "id": "custom.id"}]},
+            }
+        )
+
+
 def test_load_workflow_config_resolves_filesystem_store_relative_to_config(
     tmp_path,
 ) -> None:

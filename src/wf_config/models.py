@@ -18,8 +18,15 @@ class LocalTargetConfig(WorkflowConfigModel):
 
 class RpcHttpTargetConfig(WorkflowConfigModel):
     kind: Literal["rpc_http"]
-    url: str
+    url: str = Field(min_length=1)
     timeout_seconds: float = Field(default=30.0, gt=0)
+
+    @field_validator("url")
+    @classmethod
+    def validate_url(cls, value: str) -> str:
+        if not value.startswith(("http://", "https://")):
+            raise ValueError("rpc_http target url must start with http:// or https://")
+        return value
 
 
 TargetConfig = Annotated[
@@ -65,7 +72,7 @@ ServerTransportConfig = Annotated[
 
 class StdlibSourceConfig(WorkflowConfigModel):
     kind: Literal["stdlib"]
-    id: str = Field(min_length=1)
+    id: Literal["wf.std", "wf.recipes"]
 
 
 SourceConfig = Annotated[

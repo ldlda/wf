@@ -5,7 +5,7 @@ from typing import Annotated, Literal
 
 import typer
 
-from wf_cli.context import config_path_from_context, load_cli_context
+from wf_cli.context import load_local_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import emit_json
 
@@ -37,7 +37,7 @@ def list_artifacts(
     ] = ListOutputFormat.JSON,
 ) -> None:
     """List compact saved artifact summaries."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context(ctx)
     payload = asyncio.run(
         context.handlers.list_artifacts(
             query=query,
@@ -62,7 +62,7 @@ def inspect_artifact(
     version: Annotated[int, typer.Argument(min=1, help="Artifact version.")],
 ) -> None:
     """Inspect one saved artifact version."""
-    context = load_cli_context(config_path_from_context(ctx))
+    context = load_cli_context(ctx)
     emit_json(
         asyncio.run(
             context.handlers.inspect_artifact(artifact_id=artifact_id, version=version)

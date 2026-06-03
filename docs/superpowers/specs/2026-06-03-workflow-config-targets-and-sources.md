@@ -305,7 +305,7 @@ Recommended Pydantic shape:
 ```python
 class StdlibSourceConfig(BaseModel):
     kind: Literal["stdlib"]
-    id: str
+    id: Literal["wf.std", "wf.recipes"]
 
 
 class McpStdioTransportConfig(BaseModel):
@@ -458,16 +458,20 @@ First slice implemented:
 
 - neutral `wf_config` models and loader
 - filesystem server store config
-- stdlib source bootstrap config
+- stdlib source bootstrap config is parsed and fail-fast limited to currently
+  wired source ids (`wf.std`, `wf.recipes`)
 - local and JSON-RPC client targets
 - `wf` root overrides for `--local`, `--url`, and `--timeout`
 - remote JSON-RPC client support for capability and run CLI commands
-- `wf-rpc-server --config` support for server store and RPC HTTP transport
+- local-only CLI commands fail fast for `rpc_http` targets until they are wired
+- `wf-rpc-server --config` support for server store and RPC HTTP transport,
+  including configured RPC path
 
 Still future:
 
 - store-backed mutable source registry
 - MCP/OpenAPI source config
+- arbitrary stdlib source aliases
 - `/mcp` hosting from neutral server config
 - remote draft/artifact/deployment CLI commands
 - auth and SQL stores

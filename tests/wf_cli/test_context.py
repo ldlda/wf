@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from wf_api import WorkflowApi
 from wf_cli.context import load_cli_context
 
 
@@ -29,6 +30,7 @@ def test_load_cli_context_builds_service_and_handlers(tmp_path: Path) -> None:
     context = load_cli_context(config_path)
     service = context.service
     assert service is not None
+    assert isinstance(context.handlers, WorkflowApi)
 
     assert context.config_path == config_path
     assert service.connections.list_all()[0].id == "demo.personal"
