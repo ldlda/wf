@@ -15,6 +15,15 @@ wheels = [
 ]
 
 [[package]]
+name = "aiojobs"
+version = "1.4.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/03/54/751969398e2039b4dc458fa153dc066a0f7337a5b480d58944f59b7b38ae/aiojobs-1.4.0.tar.gz", hash = "sha256:463665c75d1fcc46c78d44375c1034abf5e3f087894b0fc5ec4dd16ef90fdc98", size = 139598, upload-time = "2025-04-05T00:39:07.771Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ce/89/5a30b3c041712a8b2dadb5ccef2bae12a874469650c61c018705039699cd/aiojobs-1.4.0-py3-none-any.whl", hash = "sha256:e95eb0d10d1f6095aefb04d228d2b4b3747514503f26540de722c2228a8500ca", size = 9455, upload-time = "2025-04-05T00:39:06.279Z" },
+]
+
+[[package]]
 name = "annotated-doc"
 version = "0.0.4"
 source = { registry = "https://pypi.org/simple" }
@@ -275,6 +284,37 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/50/79/66800aadf48771f6b62f7eb014e352e5d06856655206165d775e675a02c9/exceptiongroup-1.3.1.tar.gz", hash = "sha256:8b412432c6055b0b7d14c310000ae93352ed6754f70fa8f7c34141f91c4e3219", size = 30371, upload-time = "2025-11-21T23:01:54.787Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8a/0e/97c33bf5009bdbac74fd2beace167cab3f978feb69cc36f1ef79360d6c4e/exceptiongroup-1.3.1-py3-none-any.whl", hash = "sha256:a7a39a3bd276781e98394987d3a5701d0c4edffb633bb7a5144577f82c773598", size = 16740, upload-time = "2025-11-21T23:01:53.443Z" },
+]
+
+[[package]]
+name = "fastapi"
+version = "0.136.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "annotated-doc" },
+    { name = "pydantic" },
+    { name = "starlette" },
+    { name = "typing-extensions" },
+    { name = "typing-inspection" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/81/2d/ff8d91d7b564d464629a0fd50a4489c97fcb836ac230bf3a7269232a9b1f/fastapi-0.136.3.tar.gz", hash = "sha256:e487fae93ad408e6f47641ee4dfe389864fd7bec92e547ea8498fc13f43e83ab", size = 396410, upload-time = "2026-05-23T18:53:15.192Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e0/82/45359b62a067409bd929ae8a56b8ed13e5a8c8a61194b3c236920999ab83/fastapi-0.136.3-py3-none-any.whl", hash = "sha256:3d2a69bdf04b7e9f3afa292c3bc7a98816bbfafa10bc9b45f3f3700d2f761620", size = 117481, upload-time = "2026-05-23T18:53:16.924Z" },
+]
+
+[[package]]
+name = "fastapi-jsonrpc"
+version = "3.5.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "aiojobs" },
+    { name = "fastapi" },
+    { name = "pydantic" },
+    { name = "starlette" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/3e/c9/4e5a5eb24f7d99aa1cf1f37a2c64e9c6d79c40c19a96541345157da362c7/fastapi_jsonrpc-3.5.0.tar.gz", hash = "sha256:e4fb3a1d8e4a32aed980dad819992b34299e247a35a8d28d930f6e972f9eb1dd", size = 446763, upload-time = "2026-04-17T15:49:50.781Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/13/90/39821f8171569469852502c868a47e91c091852230db4250e89c7e8c6f46/fastapi_jsonrpc-3.5.0-py3-none-any.whl", hash = "sha256:f13b7aa6c1f020222a9e997686bd92c43e123b3cf690f743357950d4aa4201b8", size = 23802, upload-time = "2026-04-17T15:49:33.348Z" },
 ]
 
 [[package]]
@@ -592,6 +632,7 @@ name = "lda-wf"
 version = "0.0.1"
 source = { editable = "." }
 dependencies = [
+    { name = "fastapi-jsonrpc" },
     { name = "fastmcp" },
     { name = "httpx" },
     { name = "jsonpatch" },
@@ -600,6 +641,7 @@ dependencies = [
     { name = "openapi-core" },
     { name = "pydantic" },
     { name = "typer" },
+    { name = "uvicorn" },
 ]
 
 [package.dev-dependencies]
@@ -609,6 +651,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "fastapi-jsonrpc", specifier = ">=3.5.0" },
     { name = "fastmcp", specifier = ">=3.2.4" },
     { name = "httpx", specifier = ">=0.28" },
     { name = "jsonpatch", specifier = ">=1.33" },
@@ -617,6 +660,7 @@ requires-dist = [
     { name = "openapi-core", specifier = ">=0.19" },
     { name = "pydantic", specifier = ">=2" },
     { name = "typer", specifier = ">=0.24.2" },
+    { name = "uvicorn", specifier = ">=0.46.0" },
 ]
 
 [package.metadata.requires-dev]
