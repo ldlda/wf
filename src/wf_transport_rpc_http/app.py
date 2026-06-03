@@ -63,7 +63,7 @@ def create_rpc_app(server: WorkflowServer) -> jsonrpc.API:
 
     @entrypoint.method(name="workflow.capabilities.inspect", errors=[WorkflowRpcError])
     async def workflow_capabilities_inspect(
-        params: InspectCapabilityParams = Params(...),  # type: ignore[reportArgumentType],  # type: ignore[reportArgumentType]
+        params: InspectCapabilityParams = Params(...),  # type: ignore[reportArgumentType]
     ) -> dict[str, Any]:
         try:
             return await server.api.inspect_capability(
