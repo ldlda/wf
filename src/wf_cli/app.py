@@ -5,6 +5,7 @@ from typing import Annotated
 import typer
 
 from .commands import artifacts, caps, deployments, docs, drafts, explain, runs, schema
+from .context import CliTyperState
 
 app = typer.Typer(
     name="wf",
@@ -37,12 +38,12 @@ def root(
     ] = None,
 ) -> None:
     """Run workflow platform commands."""
-    ctx.obj = {
-        "config_path": config,
-        "force_local": local,
-        "rpc_url": url,
-        "rpc_timeout_seconds": timeout,
-    }
+    ctx.obj = CliTyperState(
+        config_path=config,
+        force_local=local,
+        rpc_url=url,
+        rpc_timeout_seconds=timeout,
+    )
 
 
 app.add_typer(caps.app, name="cap")

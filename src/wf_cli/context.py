@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 import json
+from collections.abc import Mapping
 
 import typer
 from pydantic import ValidationError
@@ -39,11 +40,48 @@ class LocalCliContext:
     handlers: WorkflowApi
 
 
+@dataclass(frozen=True, slots=True)
+class CliTyperState:
+    """Typed boundary for Typer's untyped `Context.obj` payload.
+
+    Typer/Click do not make `Context.obj` generic, so every command should read
+    root CLI options through this adapter instead of spelling dict keys locally.
+    """
+
+    config_path: str = "wf_mcp.config.json"
+    force_local: bool = False
+    rpc_url: str | None = None
+    rpc_timeout_seconds: float | None = None
+
+    @classmethod
+    def from_context(cls, ctx: typer.Context) -> CliTyperState:
+        obj = ctx.obj
+        if isinstance(obj, cls):
+            return obj
+        if isinstance(obj, Mapping):
+            return cls.from_mapping(obj)
+        return cls()
+
+    @classmethod
+    def from_mapping(cls, obj: Mapping[object, object]) -> CliTyperState:
+        config_path = obj.get("config_path", cls.config_path)
+        rpc_url = obj.get("rpc_url")
+        timeout = obj.get("rpc_timeout_seconds")
+        return cls(
+            config_path=(
+                config_path if isinstance(config_path, str) else cls.config_path
+            ),
+            force_local=bool(obj.get("force_local", cls.force_local)),
+            rpc_url=rpc_url if isinstance(rpc_url, str) else None,
+            rpc_timeout_seconds=(
+                float(timeout) if isinstance(timeout, float | int) else None
+            ),
+        )
+
+
 def config_path_from_context(ctx: typer.Context) -> str:
     """Return the root --config path captured by the Typer callback."""
-    obj = ctx.obj if isinstance(ctx.obj, dict) else {}
-    value = obj.get("config_path", "wf_mcp.config.json")
-    return value if isinstance(value, str) else "wf_mcp.config.json"
+    return CliTyperState.from_context(ctx).config_path
 
 
 def load_cli_context(
@@ -136,20 +174,15 @@ def load_local_cli_context(
 
 
 def force_local_from_context(ctx: typer.Context) -> bool:
-    obj = ctx.obj if isinstance(ctx.obj, dict) else {}
-    return bool(obj.get("force_local", False))
+    return CliTyperState.from_context(ctx).force_local
 
 
 def rpc_url_from_context(ctx: typer.Context) -> str | None:
-    obj = ctx.obj if isinstance(ctx.obj, dict) else {}
-    value = obj.get("rpc_url")
-    return value if isinstance(value, str) else None
+    return CliTyperState.from_context(ctx).rpc_url
 
 
 def rpc_timeout_from_context(ctx: typer.Context) -> float | None:
-    obj = ctx.obj if isinstance(ctx.obj, dict) else {}
-    value = obj.get("rpc_timeout_seconds")
-    return value if isinstance(value, float | int) else None
+    return CliTyperState.from_context(ctx).rpc_timeout_seconds
 
 
 def load_cli_context_from_typer(ctx: typer.Context) -> CliContext:

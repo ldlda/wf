@@ -1,10 +1,66 @@
 from __future__ import annotations
 
+import click
 import json
 from pathlib import Path
 
+import typer
 from wf_api import WorkflowApi
-from wf_cli.context import load_cli_context
+from wf_cli.context import (
+    CliTyperState,
+    config_path_from_context,
+    force_local_from_context,
+    load_cli_context,
+    rpc_timeout_from_context,
+    rpc_url_from_context,
+)
+
+
+def _typer_context(obj: object | None) -> typer.Context:
+    ctx = typer.Context(click.Command("wf"))
+    ctx.obj = obj
+    return ctx
+
+
+def test_cli_typer_state_reads_typed_context_object() -> None:
+    ctx = _typer_context(
+        CliTyperState(
+            config_path="remote.json",
+            force_local=True,
+            rpc_url="http://127.0.0.1:8000/rpc",
+            rpc_timeout_seconds=2.5,
+        )
+    )
+
+    assert config_path_from_context(ctx) == "remote.json"
+    assert force_local_from_context(ctx) is True
+    assert rpc_url_from_context(ctx) == "http://127.0.0.1:8000/rpc"
+    assert rpc_timeout_from_context(ctx) == 2.5
+
+
+def test_cli_typer_state_accepts_legacy_dict_context_object() -> None:
+    ctx = _typer_context(
+        {
+            "config_path": "legacy.json",
+            "force_local": True,
+            "rpc_url": "http://localhost:9000/rpc",
+            "rpc_timeout_seconds": 3,
+        }
+    )
+
+    assert config_path_from_context(ctx) == "legacy.json"
+    assert force_local_from_context(ctx) is True
+    assert rpc_url_from_context(ctx) == "http://localhost:9000/rpc"
+    assert rpc_timeout_from_context(ctx) == 3.0
+
+
+def test_cli_typer_state_defaults_for_missing_context_object() -> None:
+    ctx = _typer_context(None)
+
+    assert config_path_from_context(ctx) == "wf_mcp.config.json"
+    assert force_local_from_context(ctx) is False
+    assert rpc_url_from_context(ctx) is None
+    assert rpc_timeout_from_context(ctx) is None
 
 
 def test_load_cli_context_builds_service_and_handlers(tmp_path: Path) -> None:
