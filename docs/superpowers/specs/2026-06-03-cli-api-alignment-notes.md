@@ -1,0 +1,107 @@
+# CLI / API Alignment Notes
+
+## Context
+
+`wf_api.WorkflowApiSurface` is now the shared workflow operation contract.
+`WorkflowApi` implements it in-process, and `RpcWorkflowApiClient` implements it
+by calling fixed JSON-RPC methods. The CLI now uses target-aware context for the
+basic workflow lifecycle:
+
+- capability list/inspect
+- draft workspace list/inspect/create/patch/validate/save
+- artifact list/inspect
+- deployment list/inspect/save/validate/delete
+- run start/inspect/trace/resume
+
+This means `wf` can target either:
+
+- `local`: same-process stores/runtime built from config
+- `rpc_http`: a long-lived workflow server that owns its own stores/runtime
+
+The target store is the authority. For example, `wf run resume` does not resume
+"client-local" state when pointed at `--url`; it resumes the run persisted in the
+server's run store.
+
+## Current Boundary
+
+```text
+CLI command
+  -> CliContext.handlers: WorkflowApiSurface
+  -> WorkflowApi                  # local target
+  -> RpcWorkflowApiClient         # rpc_http target
+```
+
+Server side:
+
+```text
+JSON-RPC request
+  -> wf_transport_rpc_http methods_* module
+  -> WorkflowServer.api: WorkflowApi
+  -> wf_api domain service
+  -> WorkflowOperationContext
+```
+
+The JSON-RPC transport is split by workflow domain. `RpcWorkflowApiClient`
+remains one flat surface implementation, backed by a base transport plus
+stateless domain mixins.
+
+## Design Rules
+
+- CLI commands should type against `WorkflowApiSurface` whenever they can work
+  with local or remote targets.
+- Use `load_local_cli_context_from_typer` only for commands that truly need
+  same-process access to stores, config files, or non-surface internals.
+- Remote clients should not infer workflow state from client-local config. The
+  selected target owns persisted runs, deployments, artifacts, and draft
+  workspaces.
+- JSON-RPC methods remain fixed and dotted, such as `workflow.runs.resume`.
+  Do not dynamically register saved workflows as JSON-RPC methods.
+- Transport packages adapt calls. Workflow validation, resume policy, wrapper
+  hints, and next actions stay in `wf_api`.
+
+## Remaining Local-Only Areas To Audit
+
+These command groups are not necessarily workflow-surface operations yet:
+
+- `wf docs`
+- `wf schema`
+- `wf explain`
+
+They may stay local because they are static/documentation helpers. If they need
+remote behavior, decide whether they belong on `WorkflowApiSurface`, a sibling
+admin/docs surface, or plain local CLI utilities.
+
+## Next Slices
+
+1. **CLI local-only audit**
+   - Search for `load_local_cli_context_from_typer`.
+   - For each command, record whether it is local-only by necessity or just
+     legacy.
+   - Convert accidental local-only commands to `WorkflowApiSurface`.
+
+2. **Server source/admin operations**
+   - Add a protocol-neutral admin/source surface for source listing, source
+     health, and dynamic source registration.
+   - Do not overload `WorkflowApiSurface` if the operation is not a workflow
+     lifecycle operation.
+
+3. **Store-backed source registry**
+   - Config can bootstrap sources, but server-owned dynamic source changes
+     should persist through the store.
+   - Keep source identity structural: source id, provider/account/profile, and
+     concrete transport details should not be inferred from dotted display names.
+
+4. **Transport sibling planning**
+   - JSON-RPC over HTTP is the first transport.
+   - If streaming/progress becomes important, add a WebSocket transport sibling
+     rather than changing workflow semantics.
+   - A future MCP server transport can expose the same server-owned
+     `WorkflowApiSurface` plus any sibling admin/docs surfaces.
+
+## Open Questions
+
+- Should source/admin operations live in `wf_api` as a sibling surface, or in a
+  new package that composes `wf_api` plus server management services?
+- Should `wf schema` describe local CLI command payloads only, or query a remote
+  server for supported method schemas?
+- Should `wf docs` read packaged local docs, remote server docs, or both?

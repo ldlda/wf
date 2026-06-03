@@ -105,6 +105,8 @@ implementation state.
    - Completed for the basic lifecycle: selected `wf` commands can target local
      process-backed stores/runtime or JSON-RPC HTTP through the same
      `WorkflowApiSurface`.
+   - Current alignment notes are recorded in
+     [2026-06-03 CLI/API alignment notes](./superpowers/specs/2026-06-03-cli-api-alignment-notes.md).
    - Audit remaining local-only commands and keep `load_local_cli_context`
      limited to commands that genuinely require same-process access.
    - Preserve the current local CLI path until server source registry/auth/admin
