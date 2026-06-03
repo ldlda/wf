@@ -229,20 +229,44 @@ of bloating workflow lifecycle APIs.
 - Atomic write for filesystem store.
 - No runtime wiring yet.
 
-### Slice 2: Startup Merge
+Status: complete. The first implementation lives in `wf_mcp.source_registry`
+because the entry shape is MCP-specific: connection-id validation, reserved
+source ids, and concrete MCP transports all come from the MCP broker layer.
+
+### Slice 2A: Generic Registry Mechanics
+
+- Move protocol-neutral registry mechanics to `wf_api.source_registry`.
+- Keep MCP source entries, MCP transports, connection-id parsing, and reserved
+  id rules in `wf_mcp.source_registry`.
+- Generic mechanics include safe registry-id validation, duplicate-id checking,
+  a registry-store protocol, and a small atomic JSON model store.
+- Do not wire registry state into startup yet.
+
+This resolves the current location tension without pretending an MCP source
+entry is a generic workflow source. Future non-MCP source families should reuse
+the generic mechanics and define their own entry models.
+
+### Slice 2B: MCP Entry Conversion
+
+- Add explicit conversion from `McpSourceRegistryEntry` to `ConnectionConfig`.
+- Preserve structural fields such as provider, account, profile, transport,
+  enabled state, auth reference, and metadata.
+- Do not merge config and registry yet.
+
+### Slice 3: Startup Merge
 
 - Load registry during server/broker construction.
 - Merge config + registry deterministically.
 - Emit diagnostics/events for ignored shadowed entries.
 - Preserve existing config-only behavior when registry file is absent.
 
-### Slice 3: Read Registry Through Admin
+### Slice 4: Read Registry Through Admin
 
 - Add admin read method for desired registry entries if needed.
 - Keep current source inventory list as runtime/observed source inventory.
 - Document difference between desired registry and observed source catalog.
 
-### Slice 4: Mutating RPC/CLI
+### Slice 5: Mutating RPC/CLI
 
 - Add add/update/enable/disable/remove operations.
 - Add JSON-RPC methods.
@@ -263,9 +287,10 @@ of bloating workflow lifecycle APIs.
 
 ## Recommendation
 
-Implement Slice 1 first. Keep it independent from runtime startup so the model
-and file persistence rules become solid before they affect source hydration.
+Implement Slice 2A next. Keep it independent from runtime startup so the
+generic/MCP split becomes solid before it affects source hydration.
 
-The existing `wf_mcp` store can host the first file-backed implementation, but
-the interface should be neutral enough to move later. Catalog/auth remain
-observed/secret state; the new registry is desired source configuration state.
+Catalog/auth remain observed/secret state; the new registry is desired source
+configuration state. Generic registry mechanics can live in `wf_api`, but
+provider-specific entries and conversion into broker runtime connections stay
+with the package that owns that provider.
