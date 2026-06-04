@@ -59,7 +59,9 @@ composition. It should not call `WfMcpService`.
 
 HTTP is one transport adapter, not "the API." JSON-RPC over HTTP, JSON-RPC over
 WebSocket, and possibly MCP can become sibling transports around the same
-server/application boundary.
+server/application boundary. Server composition should be driven by the wider
+neutral `wf_config` model, including source definitions; MCP broker config is a
+legacy/source-specific input to normalize, not a permanent peer config family.
 
 `wf_server` may initially be small. Its role is to prove that a non-MCP process
 can construct the same application boundary with required stores and an explicit
@@ -364,16 +366,37 @@ Current MCP-backed server status:
 - `wf-rpc-server --mcp-config <path>` can serve JSON-RPC over that server.
 - Source registry read/mutation APIs are reachable remotely when the target
   exposes `source_registry_admin`.
+- Boundary caveat: the first `--mcp-config` hook intentionally proved the
+  product path quickly, but it currently makes the transport CLI import
+  `wf_mcp.broker`. That violates the original transport-package boundary and
+  the existing import-direction guard. Treat this as a cleanup slice, not the
+  desired final shape. The intended cleanup is to widen `wf_config` so MCP
+  sources are configured through `server.sources[]`, with `wf_mcp.config.json`
+  handled as compatibility input.
 
 Next implementation slices should be:
 
-1. Manual product smoke with the real CLI/server commands. Record UX/runtime
+1. Wider `wf_config` source model. Add an MCP source config variant under
+   `server.sources[]` that can express the current broker connection shape:
+   source id, provider/account/profile, `locked` / `seed` ownership, stdio/http
+   transport, auth reference, enabled flag, and metadata. Keep legacy
+   `wf_mcp.config.json` parsing as a compatibility adapter into the wider
+   config, not as the future primary shape.
+   `McpSourceRegistryEntry` already expresses most of this shape. The
+   `locked` / `seed` policy currently lives on legacy
+   `ConnectionConfig.source_config_ownership`; migrate that as a neutral source
+   ownership/config policy field, not as a connection-specific name.
+2. Transport package boundary cleanup. Keep JSON-RPC method/app/client modules
+   transport-only. After `wf_config` can describe MCP sources, `wf-rpc-server
+   --config ...` should compose MCP-backed sources from neutral config and the
+   `--mcp-config` path can become deprecated/legacy.
+3. Manual product smoke with the real CLI/server commands. Record UX/runtime
    gaps before broadening architecture.
-2. Source registry apply/reload semantics. Registry mutation currently updates
+4. Source registry apply/reload semantics. Registry mutation currently updates
    desired persisted state; the next explicit decision is whether changes apply
    only after restart, through an explicit reload/apply operation, or through
    automatic live reconciliation. Prefer explicit reload/apply for v1.
-3. Persisted resume across server restart. Rebuild the MCP-backed RPC server
+5. Persisted resume across server restart. Rebuild the MCP-backed RPC server
    from the same stores and prove interrupted runs resume from the stored
    checkpoint and pinned dependency environment.
 

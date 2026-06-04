@@ -162,6 +162,27 @@ implementation state.
       JSON-RPC transport over an MCP-backed `WorkflowServer`, making the remote
       CLI path usable with MCP sources and desired source registry operations.
 - Next concrete platform slices:
+  - Wider `wf_config` source model: migrate MCP broker config concepts into the
+    neutral server config instead of preserving `wf_mcp.config.json` as a
+    peer forever. `wf_config.server.sources[]` already exists as a
+    discriminated union, but only `stdlib` is implemented today. Add MCP source
+    variants that carry source id, provider/account/profile, ownership policy,
+    transport shape, auth reference, and metadata. The old MCP broker config
+    becomes a compatibility input that normalizes into the wider config model.
+    After that, `wf-rpc-server --config ...` can build MCP-backed sources from
+    neutral config and `--mcp-config` can be deprecated or treated as a legacy
+    alias.
+    `McpSourceRegistryEntry` already has most of the target shape; the one
+    ownership field comes from legacy `ConnectionConfig.source_config_ownership`.
+    When migrating, carry that policy into the neutral MCP source variant with a
+    clearer name such as `config_ownership` or `ownership`, rather than leaking
+    the old connection-centric field name.
+  - Transport package boundary cleanup follows the config migration. The current
+    `wf-rpc-server --mcp-config` hookup proves the product path but makes
+    `wf_transport_rpc_http.cli` import `wf_mcp.broker`, tripping the existing
+    import-direction guard. The durable fix is not a permanent split launcher;
+    it is making `wf_config` wide enough that the RPC server can compose from
+    neutral config while MCP-specific adapters stay selected by source kind.
   - Manual product smoke: run `wf-rpc-server --mcp-config ...`, point
     `wf --url ...` at it, and capture real CLI/server UX gaps before adding
     more architecture.
@@ -287,6 +308,12 @@ implementation state.
     and `sync_connections_from_config`. `WfMcpService.connections` remains a
     compatibility property while source hydration still belongs to
     `SourceCatalogService`.
+  - Several reusable implementation pieces still live in `wf_mcp` because they
+    are MCP-shaped today (`source_registry.py`, `broker/server.py`, and focused
+    `broker/service/*` services). The next config migration should make the
+    split explicit: neutral config/registry mechanics belong in `wf_config`,
+    `wf_api`, `wf_server`, or another platform package; MCP-specific transport,
+    adapter, and upstream session behavior stays in `wf_mcp`.
 
 Frame stress points remaining for native subgraphs and future fork/gather:
 
