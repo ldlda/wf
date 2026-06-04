@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import Body
 import fastapi_jsonrpc as jsonrpc
-from fastapi_jsonrpc import Params
 
 from wf_api import WorkflowSourceRegistrySurface
 from wf_server import WorkflowServer
@@ -17,6 +15,7 @@ from .models import (
     RegistryEntryIdParams,
     UpdateRegistryEntryParams,
 )
+from .params import RpcParams
 
 
 def _require_source_registry_admin(
@@ -49,9 +48,7 @@ def register_methods(
         errors=[WorkflowRpcError],
     )
     async def workflow_admin_source_registry_list(
-        params: ListRegistryEntriesParams = Body(
-            default_factory=ListRegistryEntriesParams,
-        ),
+        params: ListRegistryEntriesParams = RpcParams(),
     ) -> dict[str, Any]:
         admin = _require_source_registry_admin(server, operation="reads")
         try:
@@ -67,7 +64,7 @@ def register_methods(
         errors=[WorkflowRpcError],
     )
     async def workflow_admin_source_registry_inspect(
-        params: InspectRegistryEntryParams = Params(...),  # type: ignore[reportArgumentType]
+        params: InspectRegistryEntryParams = RpcParams(),
     ) -> dict[str, Any]:
         admin = _require_source_registry_admin(server, operation="reads")
         try:
@@ -82,7 +79,7 @@ def register_methods(
         errors=[WorkflowRpcError],
     )
     async def workflow_admin_source_registry_add(
-        params: AddRegistryEntryParams = Params(...),  # type: ignore[reportArgumentType]
+        params: AddRegistryEntryParams = RpcParams(),
     ) -> dict[str, Any]:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:
@@ -97,7 +94,7 @@ def register_methods(
         errors=[WorkflowRpcError],
     )
     async def workflow_admin_source_registry_update(
-        params: UpdateRegistryEntryParams = Params(...),  # type: ignore[reportArgumentType]
+        params: UpdateRegistryEntryParams = RpcParams(),
     ) -> dict[str, Any]:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:
@@ -113,7 +110,7 @@ def register_methods(
         errors=[WorkflowRpcError],
     )
     async def workflow_admin_source_registry_enable(
-        params: RegistryEntryIdParams = Params(...),  # type: ignore[reportArgumentType]
+        params: RegistryEntryIdParams = RpcParams(),
     ) -> dict[str, Any]:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:
@@ -128,7 +125,7 @@ def register_methods(
         errors=[WorkflowRpcError],
     )
     async def workflow_admin_source_registry_disable(
-        params: RegistryEntryIdParams = Params(...),  # type: ignore[reportArgumentType]
+        params: RegistryEntryIdParams = RpcParams(),
     ) -> dict[str, Any]:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:
@@ -143,7 +140,7 @@ def register_methods(
         errors=[WorkflowRpcError],
     )
     async def workflow_admin_source_registry_remove(
-        params: RegistryEntryIdParams = Params(...),  # type: ignore[reportArgumentType]
+        params: RegistryEntryIdParams = RpcParams(),
     ) -> dict[str, Any]:
         admin = _require_source_registry_admin(server, operation="mutations")
         try:

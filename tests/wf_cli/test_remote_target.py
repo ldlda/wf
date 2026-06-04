@@ -258,19 +258,19 @@ def _interrupt_plan() -> RawWorkflowPlan:
 
 def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
-    rpc_app = create_rpc_app(server)
-    transport = httpx.ASGITransport(app=rpc_app)
     original_client = httpx.AsyncClient
     monkeypatch.setattr(
         "wf_transport_rpc_http.client.httpx.AsyncClient",
         lambda *args, **kwargs: original_client(
-            transport=transport, base_url="http://test"
+            transport=httpx.ASGITransport(app=create_rpc_app(server)),
+            base_url="http://test",
         ),
     )
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
 
-    result = CliRunner().invoke(
+    runner = CliRunner()
+    inspected = runner.invoke(
         app,
         [
             "--config",
@@ -282,8 +282,30 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
             "wf.std.constant",
         ],
     )
-    assert result.exit_code == 0, result.output
-    assert '"name": "wf.std.constant"' in result.output
+    listed = runner.invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "--url",
+            "http://test/rpc",
+            "cap",
+            "list",
+            "--source",
+            "wf.std",
+            "--limit",
+            "100",
+        ],
+    )
+
+    assert inspected.exit_code == 0, inspected.output
+    assert '"name": "wf.std.constant"' in inspected.output
+    assert listed.exit_code == 0, listed.output
+    listed_payload = json.loads(listed.output)
+    assert listed_payload["capabilities"]
+    assert {
+        capability["source_id"] for capability in listed_payload["capabilities"]
+    } == {"wf.std"}
 
 
 def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:

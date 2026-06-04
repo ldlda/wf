@@ -60,6 +60,27 @@ async def test_mcp_backed_rpc_lists_and_mutates_source_registry(tmp_path) -> Non
     assert inspected["entry"]["enabled"] is False
 
 
+async def test_mcp_backed_rpc_capability_list_filters_by_source(tmp_path) -> None:
+    config = BrokerConfig(store_root=tmp_path / "store", connections=[])
+    server = build_workflow_server_from_config(config)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            http_client=http_client,
+        )
+        listed = await client.list_capabilities(source_id="wf.std", limit=100)
+
+    assert listed["capabilities"]
+    assert {capability["source_id"] for capability in listed["capabilities"]} == {
+        "wf.std"
+    }
+
+
 async def test_mcp_backed_rpc_reports_connections_and_events(tmp_path) -> None:
     config = BrokerConfig(
         store_root=tmp_path / "store",

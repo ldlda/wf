@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import Body
 import fastapi_jsonrpc as jsonrpc
-from fastapi_jsonrpc import Params
 
 from wf_server import WorkflowServer
 
 from .errors import WorkflowRpcError, raise_workflow_rpc_error
 from .models import InspectCapabilityParams, ListCapabilitiesParams
+from .params import RpcParams
 
 
 def register_methods(
@@ -20,7 +19,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.capabilities.list", errors=[WorkflowRpcError])
     async def workflow_capabilities_list(
-        params: ListCapabilitiesParams = Body(default_factory=ListCapabilitiesParams),
+        params: ListCapabilitiesParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.list_capabilities(
@@ -34,7 +33,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.capabilities.inspect", errors=[WorkflowRpcError])
     async def workflow_capabilities_inspect(
-        params: InspectCapabilityParams = Params(...),  # type: ignore[reportArgumentType]
+        params: InspectCapabilityParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.inspect_capability(

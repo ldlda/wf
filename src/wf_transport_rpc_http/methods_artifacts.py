@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import Body
 import fastapi_jsonrpc as jsonrpc
-from fastapi_jsonrpc import Params
 
 from wf_server import WorkflowServer
 
 from .errors import WorkflowRpcError, raise_workflow_rpc_error
 from .models import InspectArtifactParams, ListArtifactsParams, SaveArtifactParams
+from .params import RpcParams
 
 
 def register_methods(
@@ -20,7 +19,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.artifacts.save", errors=[WorkflowRpcError])
     async def workflow_artifacts_save(
-        params: SaveArtifactParams = Params(...),  # type: ignore[reportArgumentType]
+        params: SaveArtifactParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.save_artifact(params.artifact)
@@ -29,7 +28,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.artifacts.list", errors=[WorkflowRpcError])
     async def workflow_artifacts_list(
-        params: ListArtifactsParams = Body(default_factory=ListArtifactsParams),
+        params: ListArtifactsParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.list_artifacts(
@@ -43,7 +42,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.artifacts.inspect", errors=[WorkflowRpcError])
     async def workflow_artifacts_inspect(
-        params: InspectArtifactParams = Params(...),  # type: ignore[reportArgumentType]
+        params: InspectArtifactParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.inspect_artifact(

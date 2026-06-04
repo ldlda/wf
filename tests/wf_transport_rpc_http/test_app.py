@@ -45,6 +45,9 @@ async def test_rpc_health_and_capability_methods(tmp_path) -> None:
     assert health_response.json()["status"] == "ok"
     assert health["result"]["status"] == "ok"
     assert listed["result"]["capabilities"]
+    assert {
+        capability["source_id"] for capability in listed["result"]["capabilities"]
+    } == {"wf.std"}
     assert inspected["result"]["name"] == "wf.std.constant"
 
 

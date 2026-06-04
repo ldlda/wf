@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from fastapi import Body
 import fastapi_jsonrpc as jsonrpc
-from fastapi_jsonrpc import Params
 
 from wf_server import WorkflowServer
 
@@ -20,6 +18,7 @@ from .models import (
     ValidateDraftParams,
     ValidateDraftWorkspaceParams,
 )
+from .params import RpcParams
 
 
 def register_methods(
@@ -32,7 +31,7 @@ def register_methods(
         name="workflow.drafts.create_from_capability", errors=[WorkflowRpcError]
     )
     async def workflow_drafts_create_from_capability(
-        params: CreateDraftFromCapabilityParams = Params(...),  # type: ignore[reportArgumentType]
+        params: CreateDraftFromCapabilityParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await _create_from_capability(server, params)
@@ -41,7 +40,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.drafts.patch", errors=[WorkflowRpcError])
     async def workflow_drafts_patch(
-        params: PatchDraftParams = Params(...),  # type: ignore[reportArgumentType]
+        params: PatchDraftParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.patch_draft(draft=params.draft, patch=params.patch)
@@ -50,7 +49,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.drafts.validate", errors=[WorkflowRpcError])
     async def workflow_drafts_validate(
-        params: ValidateDraftParams = Params(...),  # type: ignore[reportArgumentType]
+        params: ValidateDraftParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.validate_draft(draft=params.draft)
@@ -59,9 +58,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.draft_workspaces.list", errors=[WorkflowRpcError])
     async def workflow_draft_workspaces_list(
-        params: ListDraftWorkspacesParams = Body(
-            default_factory=ListDraftWorkspacesParams
-        ),
+        params: ListDraftWorkspacesParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.list_draft_workspaces()
@@ -70,7 +67,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.draft_workspaces.get", errors=[WorkflowRpcError])
     async def workflow_draft_workspaces_get(
-        params: GetDraftWorkspaceParams = Params(...),  # type: ignore[reportArgumentType]
+        params: GetDraftWorkspaceParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.get_draft_workspace(
@@ -85,7 +82,7 @@ def register_methods(
         errors=[WorkflowRpcError],
     )
     async def workflow_draft_workspaces_create_from_capability(
-        params: CreateDraftFromCapabilityParams = Params(...),  # type: ignore[reportArgumentType]
+        params: CreateDraftFromCapabilityParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await _create_from_capability(server, params)
@@ -96,7 +93,7 @@ def register_methods(
         name="workflow.draft_workspaces.patch", errors=[WorkflowRpcError]
     )
     async def workflow_draft_workspaces_patch(
-        params: PatchDraftWorkspaceParams = Params(...),  # type: ignore[reportArgumentType]
+        params: PatchDraftWorkspaceParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.patch_draft_workspace(
@@ -111,7 +108,7 @@ def register_methods(
         name="workflow.draft_workspaces.validate", errors=[WorkflowRpcError]
     )
     async def workflow_draft_workspaces_validate(
-        params: ValidateDraftWorkspaceParams = Params(...),  # type: ignore[reportArgumentType]
+        params: ValidateDraftWorkspaceParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.validate_draft_workspace(
@@ -124,7 +121,7 @@ def register_methods(
         name="workflow.draft_workspaces.create_artifact", errors=[WorkflowRpcError]
     )
     async def workflow_draft_workspaces_create_artifact(
-        params: CreateArtifactFromWorkspaceParams = Params(...),  # type: ignore[reportArgumentType]
+        params: CreateArtifactFromWorkspaceParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.create_artifact_from_workspace(
@@ -146,7 +143,7 @@ def register_methods(
         name="workflow.draft_workspaces.create_wrapper", errors=[WorkflowRpcError]
     )
     async def workflow_draft_workspaces_create_wrapper(
-        params: CreateWrapperFromWorkspaceParams = Params(...),  # type: ignore[reportArgumentType]
+        params: CreateWrapperFromWorkspaceParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.create_wrapper_from_workspace(

@@ -38,6 +38,10 @@ wf --url http://127.0.0.1:8765/rpc admin registry list
 registry. `--store-root` is for the local/static server path and cannot be
 combined with `--mcp-config`.
 
+`admin registry` shows desired persisted source entries. It is separate from
+workflow artifacts and deployments, so it can be empty even when the server has
+runtime sources and saved workflows.
+
 ## Output Policy
 
 JSON is the default output format for every command.
@@ -77,6 +81,10 @@ wf cap list
 wf cap list --source wf.std --format ids
 wf cap list --query echo --format compact
 ```
+
+`--source` filters by the exact source id shown by `wf source list`. For
+example, `echo` is usually an MCP tool such as `everything.default.echo`, not a
+`wf.std` builtin.
 
 Inspect one capability:
 

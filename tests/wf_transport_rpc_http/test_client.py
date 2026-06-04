@@ -75,6 +75,9 @@ async def test_rpc_workflow_client_lists_and_inspects_capabilities(tmp_path) -> 
         )
 
     assert listed["capabilities"]
+    assert {capability["source_id"] for capability in listed["capabilities"]} == {
+        "wf.std"
+    }
     assert inspected["name"] == "wf.std.constant"
 
 

@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 import fastapi_jsonrpc as jsonrpc
-from fastapi_jsonrpc import Params
 
 from wf_server import WorkflowServer
 
@@ -14,6 +13,7 @@ from .models import (
     ResumeRunParams,
     StartRunParams,
 )
+from .params import RpcParams
 
 
 def register_methods(
@@ -24,7 +24,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.runs.start", errors=[WorkflowRpcError])
     async def workflow_runs_start(
-        params: StartRunParams = Params(...),  # type: ignore[reportArgumentType]
+        params: StartRunParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.run_deployment(
@@ -41,7 +41,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.runs.inspect", errors=[WorkflowRpcError])
     async def workflow_runs_inspect(
-        params: InspectRunParams = Params(...),  # type: ignore[reportArgumentType]
+        params: InspectRunParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.inspect_run(run_id=params.run_id)
@@ -50,7 +50,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.runs.trace", errors=[WorkflowRpcError])
     async def workflow_runs_trace(
-        params: ReadRunTraceParams = Params(...),  # type: ignore[reportArgumentType]
+        params: ReadRunTraceParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.read_run_trace(
@@ -62,7 +62,7 @@ def register_methods(
 
     @entrypoint.method(name="workflow.runs.resume", errors=[WorkflowRpcError])
     async def workflow_runs_resume(
-        params: ResumeRunParams = Params(...),  # type: ignore[reportArgumentType]
+        params: ResumeRunParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
             return await server.api.resume_run(
