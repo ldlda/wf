@@ -11,6 +11,8 @@ from wf_config import (
     load_workflow_config,
 )
 
+from wf_mcp.broker import build_workflow_server_from_config, load_broker_config
+
 from wf_server import build_local_static_workflow_server
 
 from .app import create_rpc_app
@@ -30,6 +32,11 @@ def serve(
         "--store-root",
         help="Override filesystem workflow store root.",
     ),
+    mcp_config: Path | None = typer.Option(
+        None,
+        "--mcp-config",
+        help="Path to MCP broker config JSON for MCP-backed workflow server.",
+    ),
     host: str | None = typer.Option(
         None,
         "--host",
@@ -43,11 +50,20 @@ def serve(
         help="Override RPC bind port; defaults to config or 8765.",
     ),
 ) -> None:
-    """Serve the local/static WorkflowApi over JSON-RPC HTTP."""
+    """Serve WorkflowApi over JSON-RPC HTTP."""
+    if mcp_config is not None and store_root is not None:
+        raise typer.BadParameter("--mcp-config cannot be combined with --store-root")
+
     resolved_store_root = store_root
     resolved_host = host
     resolved_port = port
     resolved_rpc_path = "/rpc"
+
+    server = None
+    if mcp_config is not None:
+        broker_config = load_broker_config(mcp_config)
+        server = build_workflow_server_from_config(broker_config)
+
     if config is not None:
         workflow_config = load_workflow_config(config)
         store = workflow_config.server.store
@@ -68,12 +84,14 @@ def serve(
             resolved_host = host or rpc_transport.host
             resolved_port = port or rpc_transport.port
             resolved_rpc_path = rpc_transport.path
-    if resolved_store_root is None:
-        raise typer.BadParameter(
-            "--store-root is required when --config is not supplied"
-        )
 
-    server = build_local_static_workflow_server(resolved_store_root)
+    if server is None:
+        if resolved_store_root is None:
+            raise typer.BadParameter(
+                "--store-root is required when --config is not supplied"
+            )
+        server = build_local_static_workflow_server(resolved_store_root)
+
     rpc_app = create_rpc_app(server, rpc_path=resolved_rpc_path)
     uvicorn.run(
         rpc_app,

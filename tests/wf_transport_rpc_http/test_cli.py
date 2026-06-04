@@ -12,6 +12,7 @@ def test_rpc_server_cli_help_mentions_store_root() -> None:
 
     assert result.exit_code == 0
     assert "--store-root" in result.output
+    assert "--mcp-config" in result.output
     assert "--host" in result.output
     assert "--port" in result.output
 
@@ -99,3 +100,86 @@ def test_rpc_server_cli_uses_configured_store_and_transport(
     assert captured["host"] == "127.0.0.2"
     assert captured["port"] == 9999
     assert captured["access_log"] is False
+
+
+def test_rpc_server_cli_uses_mcp_config_server(monkeypatch, tmp_path) -> None:
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "store_root": str(tmp_path / "store"),
+                "connections": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    captured: dict[str, object] = {}
+
+    def fake_load_broker_config(path):
+        captured["mcp_config_path"] = path
+        return "broker-config"
+
+    def fake_build_mcp_server(config):
+        captured["mcp_config"] = config
+        return object()
+
+    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+        captured["server"] = server
+        captured["rpc_path"] = rpc_path
+        return object()
+
+    def fake_uvicorn_run(app_obj, *, host, port, access_log):
+        captured["app"] = app_obj
+        captured["host"] = host
+        captured["port"] = port
+        captured["access_log"] = access_log
+
+    monkeypatch.setattr("wf_transport_rpc_http.cli.load_broker_config", fake_load_broker_config)
+    monkeypatch.setattr(
+        "wf_transport_rpc_http.cli.build_workflow_server_from_config",
+        fake_build_mcp_server,
+    )
+    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_uvicorn_run)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "--mcp-config",
+            str(config_path),
+            "--host",
+            "127.0.0.9",
+            "--port",
+            "9988",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["mcp_config_path"] == config_path
+    assert captured["mcp_config"] == "broker-config"
+    assert captured["server"] is not None
+    assert captured["rpc_path"] == "/rpc"
+    assert captured["host"] == "127.0.0.9"
+    assert captured["port"] == 9988
+    assert captured["access_log"] is False
+
+
+def test_rpc_server_cli_rejects_mcp_config_with_store_root(tmp_path) -> None:
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps({"store_root": str(tmp_path / "store"), "connections": []}),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "--mcp-config",
+            str(config_path),
+            "--store-root",
+            str(tmp_path / "other"),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "--mcp-config cannot be combined with --store-root" in result.output
