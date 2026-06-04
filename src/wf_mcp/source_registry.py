@@ -24,6 +24,20 @@ from .shared.names import RESERVED_CONNECTION_IDS
 if TYPE_CHECKING:
     from .models import ConnectionConfig
 
+_FLAT_HTTP_TRANSPORTS = {"http", "streamable-http", "streamable_http", "sse"}
+_TRANSPORT_METADATA_KEYS = {
+    "transport",
+    "command",
+    "args",
+    "env",
+    "cwd",
+    "url",
+    "headers",
+    "profile",
+    "auth_ref",
+    "source_registry",
+}
+
 
 class StdioSourceTransport(SourceRegistryBaseModel):
     kind: Literal["stdio"] = "stdio"
@@ -146,7 +160,8 @@ def connection_config_to_registry_entry(
                 "args": list(connection.metadata.get("args", [])),
                 "env": dict(connection.metadata.get("env", {})),
             }
-        elif transport == "streamable_http":
+        elif transport in _FLAT_HTTP_TRANSPORTS:
+            legacy_transport = transport
             transport = {
                 "kind": "http",
                 "url": connection.metadata.get("url", ""),
@@ -162,7 +177,14 @@ def connection_config_to_registry_entry(
         )
     profile = connection.metadata.get("profile")
     auth_ref = connection.metadata.get("auth_ref")
-    return McpSourceRegistryEntry.model_validate(
+    source_metadata = {
+        key: value
+        for key, value in connection.metadata.items()
+        if key not in _TRANSPORT_METADATA_KEYS
+    }
+    if "legacy_transport" in locals():
+        source_metadata["legacy_transport"] = legacy_transport
+    entry = McpSourceRegistryEntry.model_validate(
         {
             "id": connection.id,
             "enabled": connection.enabled,
@@ -171,13 +193,10 @@ def connection_config_to_registry_entry(
             "profile": profile if isinstance(profile, str) else None,
             "transport": transport,
             "auth_ref": auth_ref if isinstance(auth_ref, str) else None,
-            "metadata": {
-                key: value
-                for key, value in connection.metadata.items()
-                if key not in {"transport", "profile", "auth_ref", "source_registry"}
-            },
+            "metadata": source_metadata,
         }
     )
+    return entry
 
 
 def workflow_mcp_source_to_connection_config(source: object) -> ConnectionConfig:

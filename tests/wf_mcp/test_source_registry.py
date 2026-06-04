@@ -146,6 +146,52 @@ def test_connection_config_to_registry_entry_preserves_transport_metadata() -> N
     assert entry.metadata["region"] == "us"
 
 
+def test_connection_config_to_registry_entry_accepts_flat_stdio_metadata() -> None:
+    connection = ConnectionConfig(
+        id="github.work",
+        server="github",
+        account="work",
+        metadata={
+            "transport": "stdio",
+            "command": "npx",
+            "args": ["server"],
+            "env": {"DEBUG": "1"},
+            "region": "us",
+        },
+    )
+
+    entry = connection_config_to_registry_entry(connection)
+
+    assert entry.transport.kind == "stdio"
+    assert isinstance(entry.transport, StdioSourceTransport)
+    assert entry.transport.command == "npx"
+    assert entry.transport.args == ("server",)
+    assert entry.transport.env == {"DEBUG": "1"}
+    assert entry.metadata == {"region": "us"}
+
+
+def test_connection_config_to_registry_entry_accepts_flat_http_metadata() -> None:
+    connection = ConnectionConfig(
+        id="context7.default",
+        server="context7",
+        account="default",
+        metadata={
+            "transport": "sse",
+            "url": "http://127.0.0.1:3000/sse",
+            "headers": {"X-Test": "yes"},
+            "purpose": "legacy",
+        },
+    )
+
+    entry = connection_config_to_registry_entry(connection)
+
+    assert entry.transport.kind == "http"
+    assert isinstance(entry.transport, HttpSourceTransport)
+    assert str(entry.transport.url) == "http://127.0.0.1:3000/sse"
+    assert entry.transport.headers == {"X-Test": "yes"}
+    assert entry.metadata == {"purpose": "legacy", "legacy_transport": "sse"}
+
+
 def test_connection_config_to_registry_entry_requires_transport_metadata() -> None:
     connection = ConnectionConfig(id="github.work", server="github", account="work")
 
