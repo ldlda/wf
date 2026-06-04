@@ -2,12 +2,13 @@
 
 Date: 2026-06-03
 
-Status: Slices 1-3 implemented. `wf_server` provides
-`build_local_static_workflow_server`, `wf_transport_rpc_http` provides JSON-RPC
-methods and client support, `wf_cli` has target-aware context, and `wf_config`
-owns neutral config models. WebSocket transport, source providers, auth,
-streaming/progress, database backend, and live MCP source management remain
-future work.
+Status: Slices 1-4 implemented. `wf_server` provides
+`build_local_static_workflow_server`; `wf_mcp.broker.server` can adapt MCP
+broker config/services into the neutral `WorkflowServer`; `wf_transport_rpc_http`
+provides JSON-RPC methods and client support; `wf_cli` has target-aware context;
+and `wf_config` owns neutral config models. WebSocket transport, auth,
+streaming/progress, database backend, and live source hot reload remain future
+work.
 
 Related:
 
@@ -105,6 +106,9 @@ Implementation status:
 - Slice 3 complete: `wf_cli` supports target-aware context with `--local`,
   `--url`, and `--timeout` overrides, and works with remote RPC targets for
   capability and run commands.
+- Slice 4 complete: `wf_mcp.broker.server.build_workflow_server_from_config()`
+  returns a neutral `WorkflowServer` backed by MCP broker runtime services,
+  including source registry admin and platform admin surfaces.
 
 First slice should not include:
 

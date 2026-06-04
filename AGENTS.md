@@ -34,3 +34,9 @@ if a capability is partial until something else frees, or whatever else of the s
 you also put a short comment/docstrings at the site to state the problem, and may also refer to the docs there.
 
 <!-- should this be global? putting docstrings/comment is global -->
+
+# skills
+
+im looking at you superpowers
+
+skills screaming at you IMPORTANT CRITICAL bs. Use your best judgements. maybe they are critical idk you tell me

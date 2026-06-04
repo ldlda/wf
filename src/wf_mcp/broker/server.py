@@ -2,11 +2,26 @@ from __future__ import annotations
 
 from mcp.server.fastmcp import FastMCP
 
+from wf_api import (
+    WorkflowAdminApi,
+    WorkflowApi,
+    WorkflowSourceAdminApi,
+    WorkflowSourceRegistryApi,
+    durable_workflow_api,
+)
+from wf_api.stores import WorkflowStores
+from wf_server import WorkflowServer, WorkflowServerConfig
+
 from .artifact_tools import register_artifact_tools
+from .config import build_service_from_config
 from .prompts import register_broker_prompts
 from .resources import register_broker_resources
 from .service import WfMcpService
+from .service.source_registry_admin import SourceRegistryAdminProvider
+from .service.workflow_operation_context import context_from_service
 from .tools import register_broker_tools
+from ..models import BrokerConfig
+from ..source_registry import FileSourceRegistryStore, SourceRegistryStore
 
 
 def create_broker_server(service: WfMcpService) -> FastMCP:
@@ -24,3 +39,70 @@ def create_broker_server(service: WfMcpService) -> FastMCP:
     register_broker_resources(server, service)
     register_broker_prompts(server, service)
     return server
+
+
+def workflow_server_from_service(
+    service: WfMcpService,
+    *,
+    config: BrokerConfig,
+    source_registry_store: SourceRegistryStore,
+) -> WorkflowServer:
+    """Adapt an MCP broker service into the neutral WorkflowServer shape.
+
+    This is intentionally in wf_mcp, not wf_server: MCP owns upstream source
+    management, while wf_server stays transport-neutral and MCP-free.
+    """
+    if (
+        service.artifact_store is None
+        or service.draft_workspace_store is None
+        or service.run_store is None
+    ):
+        raise ValueError("MCP-backed WorkflowServer requires workflow stores")
+
+    context = context_from_service(service)
+    api: WorkflowApi = durable_workflow_api(context)
+    source_admin = WorkflowSourceAdminApi(context)
+    admin = WorkflowAdminApi(
+        connections=service.connection_service,
+        events=service.events,
+    )
+    registry_provider = SourceRegistryAdminProvider(
+        source_registry_store=source_registry_store,
+        config_connections=config.connections,
+    )
+    source_registry_admin = WorkflowSourceRegistryApi(
+        provider=registry_provider,
+        mutation_provider=registry_provider,
+    )
+    stores = WorkflowStores(
+        artifact_store=service.artifact_store,
+        draft_workspace_store=service.draft_workspace_store,
+        run_store=service.run_store,
+    )
+    return WorkflowServer(
+        config=WorkflowServerConfig(store_root=config.store_root),
+        stores=stores,
+        context=context,
+        api=api,
+        source_admin=source_admin,
+        admin=admin,
+        events=service.events,
+        source_registry_admin=source_registry_admin,
+    )
+
+
+def build_workflow_server_from_config(config: BrokerConfig) -> WorkflowServer:
+    """Build a neutral WorkflowServer backed by MCP broker runtime services."""
+    service = build_service_from_config(config)
+    return workflow_server_from_service(
+        service,
+        config=config,
+        source_registry_store=FileSourceRegistryStore(config.store_root),
+    )
+
+
+__all__ = [
+    "build_workflow_server_from_config",
+    "create_broker_server",
+    "workflow_server_from_service",
+]

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 from wf_mcp.events import EventBus, McpEvent, make_event
 from wf_mcp.models import CatalogSnapshot
@@ -18,8 +18,20 @@ class BrokerEventRecorder:
 
     event_bus: EventBus
 
-    def record_event(self, event: McpEvent) -> None:
-        self.event_bus.publish(event)
+    def record_event(self, event: object) -> None:
+        # WorkflowEventRecorder is protocol-neutral and may pass test/local
+        # sentinel objects. EventBus is typed for McpEvent, but the in-memory
+        # history sink preserves whatever object is published.
+        self.event_bus.publish(cast(McpEvent, event))
+
+    def record_workflow_event(
+        self,
+        event_type: str,
+        *,
+        capability_id: str,
+        payload: dict[str, Any],
+    ) -> None:
+        self.record_kind(event_type, capability_id=capability_id, payload=payload)
 
     def record_kind(
         self,

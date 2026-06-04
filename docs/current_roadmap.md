@@ -136,14 +136,18 @@ implementation state.
       changes.
    - Historical source registry slice planning is archived in
       [2026-06-03 source registry next slices](./historical/superpowers/plans/2026-06-03-source-registry-next-slices.md):
-      desired-registry admin reads and safe mutation commands are complete;
-      concrete MCP-backed `WorkflowServer` construction remains future work.
+      desired-registry admin reads and safe mutation commands are complete.
+   - Completed: MCP-backed `WorkflowServer` construction is available through
+      `wf_mcp.broker.server.build_workflow_server_from_config`. JSON-RPC can now
+      expose real MCP-backed workflow, source-admin, admin, and desired source
+      registry surfaces without making `wf_server` import `wf_mcp`.
    - Completed: desired-registry admin read plumbing is available through
       `WorkflowSourceRegistryApi`, JSON-RPC methods
       (`workflow.admin.source_registry.list` / `.inspect`), and CLI commands
       (`wf admin registry list` / `wf admin registry inspect`). Local/static
-      servers report unavailable instead of empty; a concrete MCP-backed
-      `WorkflowServer` construction path remains future work.
+      servers report unavailable instead of empty; concrete MCP-backed
+      `WorkflowServer` construction is now available through
+      `wf_mcp.broker.server`.
    - Completed: desired-registry mutation operations are available through
       `WorkflowSourceRegistryApi` (add/update/enable/disable/remove),
       JSON-RPC methods (`workflow.admin.source_registry.add` / `.update` /

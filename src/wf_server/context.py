@@ -260,7 +260,7 @@ class WorkflowServer:
     api: WorkflowApi
     source_admin: WorkflowSourceAdminApi
     admin: WorkflowAdminApi
-    events: InMemoryWorkflowEventRecorder
+    events: WorkflowEventRecorder
     source_registry_admin: WorkflowSourceRegistryApi | None = None
 
     @staticmethod
