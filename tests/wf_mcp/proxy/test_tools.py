@@ -33,20 +33,18 @@ def test_proxy_lists_and_calls_upstream_tools() -> None:
             assert "fixture.personal.echo_tool" in names
 
             connections_result = await client.call_tool("wf.admin.list_connections")
-            assert structured(connections_result) == {
-                "result": [
-                    {
-                        "id": "fixture.personal",
-                        "server": "fixture",
-                        "account": "personal",
-                        "enabled": True,
-                        "metadata": {
-                            "transport": "stdio",
-                            "command": sys.executable,
-                            "args": [fixture_server_path()],
-                        },
-                    }
-                ]
+            connections = structured(connections_result)["result"]
+            assert len(connections) == 1
+            connection = connections[0]
+            assert connection["id"] == "fixture.personal"
+            assert connection["server"] == "fixture"
+            assert connection["account"] == "personal"
+            assert connection["enabled"] is True
+            assert connection["source_config_ownership"] == "locked"
+            assert connection["metadata"] == {
+                "transport": "stdio",
+                "command": sys.executable,
+                "args": [fixture_server_path()],
             }
 
             result = await client.call_tool(

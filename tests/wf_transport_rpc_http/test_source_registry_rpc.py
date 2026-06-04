@@ -37,6 +37,9 @@ class FakeRegistryProvider:
     def config_source_ids(self) -> set[str]:
         return {"github.work"}
 
+    def config_source_ownership(self) -> dict[str, str]:
+        return {"github.work": "locked"}
+
 
 class FakeMutationProvider:
     def __init__(self) -> None:
