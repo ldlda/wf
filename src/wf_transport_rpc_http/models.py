@@ -188,3 +188,16 @@ class ListRegistryEntriesParams(RpcParamsModel):
 
 class InspectRegistryEntryParams(RpcParamsModel):
     source_id: str = Field(min_length=1)
+
+
+class AddRegistryEntryParams(RpcParamsModel):
+    entry: dict[str, Any]
+
+
+class UpdateRegistryEntryParams(RpcParamsModel):
+    source_id: str = Field(min_length=1)
+    patch: dict[str, Any]
+
+
+class RegistryEntryIdParams(RpcParamsModel):
+    source_id: str = Field(min_length=1)

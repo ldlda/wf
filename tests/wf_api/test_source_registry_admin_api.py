@@ -1,7 +1,8 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass, field
+from collections.abc import Mapping
+from dataclasses import asdict, dataclass, field
 from typing import Any
 
 import pytest
@@ -145,3 +146,173 @@ def test_api_satisfies_surface_protocol() -> None:
     api: WorkflowSourceRegistrySurface = _api(FakeRegistryEntry(id="x"))
 
     assert api is not None
+
+
+class FakeMutationProvider:
+    """Mutable fake that tracks mutation calls for assertion."""
+
+    def __init__(
+        self,
+        entries: list[FakeRegistryEntry] | None = None,
+    ) -> None:
+        self._entries = list(entries) if entries else []
+
+    def add_registry_entry(self, entry: Mapping[str, Any]) -> dict[str, Any]:
+        fe = FakeRegistryEntry(**entry)
+        self._entries.append(fe)
+        return asdict(fe)
+
+    def update_registry_entry(self, source_id: str, patch: Mapping[str, Any]) -> dict[str, Any]:
+        for i, e in enumerate(self._entries):
+            if e.id == source_id:
+                merged = asdict(e)
+                merged.update(patch)
+                self._entries[i] = FakeRegistryEntry(**merged)
+                return merged
+        raise KeyError(source_id)
+
+    def set_registry_entry_enabled(self, source_id: str, enabled: bool) -> dict[str, Any]:
+        for i, e in enumerate(self._entries):
+            if e.id == source_id:
+                merged = asdict(e)
+                merged["enabled"] = enabled
+                self._entries[i] = FakeRegistryEntry(**merged)
+                return merged
+        raise KeyError(source_id)
+
+    def remove_registry_entry(self, source_id: str) -> dict[str, Any]:
+        if not any(e.id == source_id for e in self._entries):
+            raise KeyError(source_id)
+        self._entries = [e for e in self._entries if e.id != source_id]
+        return {"removed": True, "source_id": source_id}
+
+
+def _mutation_api(
+    entries: list[FakeRegistryEntry] | None = None,
+    config_ids: set[str] | None = None,
+) -> tuple[WorkflowSourceRegistryApi, FakeMutationProvider]:
+    provider = FakeRegistryProvider(list(entries) if entries else [], config_ids)
+    mutation = FakeMutationProvider(list(entries) if entries else [])
+    return WorkflowSourceRegistryApi(provider=provider, mutation_provider=mutation), mutation
+
+
+def test_add_registry_entry() -> None:
+    api, _ = _mutation_api()
+    new_entry = {"id": "new.source", "kind": "mcp", "enabled": True, "provider": "new", "account": "default", "profile": None, "transport": {"kind": "stdio"}, "auth_ref": None}
+    payload = asyncio.run(api.add_registry_entry(entry=new_entry))
+
+    assert payload["entry"]["id"] == "new.source"
+    assert payload["entry"]["provider"] == "new"
+    assert payload["shadowed_by_config"] is False
+
+
+def test_add_registry_entry_shadowed() -> None:
+    api, _ = _mutation_api(config_ids={"new.source"})
+    new_entry = {"id": "new.source", "kind": "mcp", "enabled": True, "provider": "new", "account": "default", "profile": None, "transport": {"kind": "stdio"}, "auth_ref": None}
+    payload = asyncio.run(api.add_registry_entry(entry=new_entry))
+
+    assert payload["entry"]["id"] == "new.source"
+    assert payload["shadowed_by_config"] is True
+
+
+def test_update_registry_entry() -> None:
+    api, _ = _mutation_api(
+        entries=[FakeRegistryEntry(id="upd.source", provider="old")],
+    )
+    payload = asyncio.run(api.update_registry_entry(source_id="upd.source", patch={"provider": "new"}))
+
+    assert payload["entry"]["id"] == "upd.source"
+    assert payload["entry"]["provider"] == "new"
+    assert payload["shadowed_by_config"] is False
+
+
+def test_enable_registry_entry() -> None:
+    api, _ = _mutation_api(
+        entries=[FakeRegistryEntry(id="toggle.source", enabled=False)],
+    )
+    payload = asyncio.run(api.enable_registry_entry(source_id="toggle.source"))
+
+    assert payload["entry"]["id"] == "toggle.source"
+    assert payload["entry"]["enabled"] is True
+    assert payload["shadowed_by_config"] is False
+
+
+def test_disable_registry_entry() -> None:
+    api, _ = _mutation_api(
+        entries=[FakeRegistryEntry(id="toggle.source", enabled=True)],
+    )
+    payload = asyncio.run(api.disable_registry_entry(source_id="toggle.source"))
+
+    assert payload["entry"]["id"] == "toggle.source"
+    assert payload["entry"]["enabled"] is False
+    assert payload["shadowed_by_config"] is False
+
+
+def test_remove_registry_entry() -> None:
+    api, _ = _mutation_api(
+        entries=[FakeRegistryEntry(id="rem.source")],
+    )
+    payload = asyncio.run(api.remove_registry_entry(source_id="rem.source"))
+
+    assert payload == {"removed": True, "source_id": "rem.source"}
+
+
+def test_update_nonexistent_raises_key_error() -> None:
+    api, _ = _mutation_api()
+    with pytest.raises(KeyError):
+        asyncio.run(api.update_registry_entry(source_id="missing", patch={}))
+
+
+def test_enable_nonexistent_raises_key_error() -> None:
+    api, _ = _mutation_api()
+    with pytest.raises(KeyError):
+        asyncio.run(api.enable_registry_entry(source_id="missing"))
+
+
+def test_disable_nonexistent_raises_key_error() -> None:
+    api, _ = _mutation_api()
+    with pytest.raises(KeyError):
+        asyncio.run(api.disable_registry_entry(source_id="missing"))
+
+
+def test_remove_nonexistent_raises_key_error() -> None:
+    api, _ = _mutation_api()
+    with pytest.raises(KeyError):
+        asyncio.run(api.remove_registry_entry(source_id="missing"))
+
+
+def test_add_raises_without_mutation_provider() -> None:
+    api = _api()
+    new_entry = {"id": "x", "kind": "mcp", "enabled": True}
+    with pytest.raises(TypeError, match="requires a mutation provider"):
+        asyncio.run(api.add_registry_entry(entry=new_entry))
+
+
+def test_update_raises_without_mutation_provider() -> None:
+    api = _api()
+    with pytest.raises(TypeError, match="requires a mutation provider"):
+        asyncio.run(api.update_registry_entry(source_id="x", patch={}))
+
+
+def test_enable_raises_without_mutation_provider() -> None:
+    api = _api()
+    with pytest.raises(TypeError, match="requires a mutation provider"):
+        asyncio.run(api.enable_registry_entry(source_id="x"))
+
+
+def test_disable_raises_without_mutation_provider() -> None:
+    api = _api()
+    with pytest.raises(TypeError, match="requires a mutation provider"):
+        asyncio.run(api.disable_registry_entry(source_id="x"))
+
+
+def test_remove_raises_without_mutation_provider() -> None:
+    api = _api()
+    with pytest.raises(TypeError, match="requires a mutation provider"):
+        asyncio.run(api.remove_registry_entry(source_id="x"))
+
+
+def test_api_with_mutation_satisfies_surface_protocol() -> None:
+    api, _ = _mutation_api(entries=[FakeRegistryEntry(id="x")])
+    surface: WorkflowSourceRegistrySurface = api
+    assert surface is not None

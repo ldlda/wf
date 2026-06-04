@@ -280,14 +280,13 @@ MCP-backed `WorkflowServer` construction remains future work.
 
 ### Slice 5: Mutating RPC/CLI
 
-Implementation plan:
-[2026-06-04 source registry mutations](../plans/2026-06-04-source-registry-mutations.md).
-
-- Add add/update/enable/disable/remove operations.
-- Add JSON-RPC methods.
-- Add CLI commands.
-- Validate before commit.
-- Do not delete auth/catalog on remove in v1.
+Status: complete. Add/update/enable/disable/remove operations are available
+through `WorkflowSourceRegistryApi`, JSON-RPC methods, and CLI commands.
+Mutations target persisted desired registry state only; config files, auth
+records, and catalog snapshots are not mutated. Config-shadowed add is rejected
+in v1. Remove requires `--confirm` in CLI. Local/static servers report
+unavailable for mutation commands. Concrete MCP-backed `WorkflowServer`
+construction remains future work.
 
 ## Open Questions
 

@@ -4,7 +4,7 @@ from typing import Any
 
 
 class RpcSourceRegistryClientMixin:
-    """JSON-RPC implementation of read-only desired source registry surface methods."""
+    """JSON-RPC implementation of source registry surface methods."""
 
     async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]: ...
 
@@ -26,5 +26,56 @@ class RpcSourceRegistryClientMixin:
     ) -> dict[str, Any]:
         return await self._call(
             "workflow.admin.source_registry.inspect",
+            {"source_id": source_id},
+        )
+
+    async def add_registry_entry(
+        self,
+        *,
+        entry: dict[str, Any],
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.admin.source_registry.add",
+            {"entry": entry},
+        )
+
+    async def update_registry_entry(
+        self,
+        *,
+        source_id: str,
+        patch: dict[str, Any],
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.admin.source_registry.update",
+            {"source_id": source_id, "patch": patch},
+        )
+
+    async def enable_registry_entry(
+        self,
+        *,
+        source_id: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.admin.source_registry.enable",
+            {"source_id": source_id},
+        )
+
+    async def disable_registry_entry(
+        self,
+        *,
+        source_id: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.admin.source_registry.disable",
+            {"source_id": source_id},
+        )
+
+    async def remove_registry_entry(
+        self,
+        *,
+        source_id: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.admin.source_registry.remove",
             {"source_id": source_id},
         )

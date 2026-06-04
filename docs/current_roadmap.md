@@ -127,19 +127,24 @@ implementation state.
       and config entries shadow same-id registry entries with an event.
    - Next source registry slices are planned in
       [2026-06-03 source registry next slices](./superpowers/plans/2026-06-03-source-registry-next-slices.md):
-      desired-registry admin reads and safe mutation commands remain later
-      slices.
+      desired-registry admin reads and safe mutation commands are complete;
+      concrete MCP-backed `WorkflowServer` construction remains future work.
    - Completed: desired-registry admin read plumbing is available through
       `WorkflowSourceRegistryApi`, JSON-RPC methods
       (`workflow.admin.source_registry.list` / `.inspect`), and CLI commands
       (`wf admin registry list` / `wf admin registry inspect`). Local/static
       servers report unavailable instead of empty; a concrete MCP-backed
-      `WorkflowServer` construction path remains future work. No mutations added.
-   - Next executable source registry slice:
-      [2026-06-04 source registry mutations](./superpowers/plans/2026-06-04-source-registry-mutations.md).
-      It adds add/update/enable/disable/remove operations against desired
-      registry state only; config, auth records, and catalog snapshots are not
-      mutated in v1.
+      `WorkflowServer` construction path remains future work.
+   - Completed: desired-registry mutation operations are available through
+      `WorkflowSourceRegistryApi` (add/update/enable/disable/remove),
+      JSON-RPC methods (`workflow.admin.source_registry.add` / `.update` /
+      `.enable` / `.disable` / `.remove`), and CLI commands
+      (`wf admin registry add` / `update` / `enable` / `disable` / `remove`)
+      for targets that expose the registry-admin surface. Mutations target
+      persisted desired registry state only; config files, auth records, and
+      catalog snapshots are not mutated. Config-shadowed add is rejected in v1.
+      Remove requires `--confirm` in CLI; local/static servers report
+      unavailable.
    - Longer term: make the MCP frontend an adapter over these neutral workflow,
       source-admin, and config-admin surfaces so the old `wf_mcp` server entry
       point can shrink or retire.

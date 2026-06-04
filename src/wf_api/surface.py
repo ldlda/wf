@@ -227,7 +227,7 @@ class WorkflowAdminSurface(Protocol):
 
 
 class WorkflowSourceRegistrySurface(Protocol):
-    """Read-only desired source registry methods exposed by platform frontends."""
+    """Desired source registry methods exposed by platform frontends."""
 
     async def list_registry_entries(
         self,
@@ -237,6 +237,37 @@ class WorkflowSourceRegistrySurface(Protocol):
     ) -> dict[str, Any]: ...
 
     async def inspect_registry_entry(
+        self,
+        *,
+        source_id: str,
+    ) -> dict[str, Any]: ...
+
+    async def add_registry_entry(
+        self,
+        *,
+        entry: dict[str, Any],
+    ) -> dict[str, Any]: ...
+
+    async def update_registry_entry(
+        self,
+        *,
+        source_id: str,
+        patch: dict[str, Any],
+    ) -> dict[str, Any]: ...
+
+    async def enable_registry_entry(
+        self,
+        *,
+        source_id: str,
+    ) -> dict[str, Any]: ...
+
+    async def disable_registry_entry(
+        self,
+        *,
+        source_id: str,
+    ) -> dict[str, Any]: ...
+
+    async def remove_registry_entry(
         self,
         *,
         source_id: str,
