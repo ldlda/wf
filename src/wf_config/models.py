@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -69,14 +70,71 @@ ServerTransportConfig = Annotated[
     Field(discriminator="kind"),
 ]
 
+SourceConfigOwnership = Literal["locked", "seed"]
+SOURCE_ID_PATTERN = r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
+
+
+class StdioSourceTransportConfig(WorkflowConfigModel):
+    kind: Literal["stdio"] = "stdio"
+    command: str = Field(min_length=1)
+    args: tuple[str, ...] = ()
+    env: dict[str, str] = Field(default_factory=dict)
+
+
+class HttpSourceTransportConfig(WorkflowConfigModel):
+    kind: Literal["http"] = "http"
+    url: AnyHttpUrl
+    headers: dict[str, str] = Field(default_factory=dict)
+
+
+SourceTransportConfig = Annotated[
+    StdioSourceTransportConfig | HttpSourceTransportConfig,
+    Field(discriminator="kind"),
+]
+
 
 class StdlibSourceConfig(WorkflowConfigModel):
     kind: Literal["stdlib"]
     id: Literal["wf.std", "wf.recipes"]
 
 
+class McpSourceConfig(WorkflowConfigModel):
+    """Neutral config shape for MCP-backed workflow capability sources.
+
+    This intentionally mirrors `wf_mcp.source_registry.McpSourceRegistryEntry`
+    without importing MCP modules. `ownership` carries the old
+    `ConnectionConfig.source_config_ownership` policy with neutral terminology.
+    """
+
+    kind: Literal["mcp"] = "mcp"
+    id: str
+    enabled: bool = True
+    provider: str = Field(min_length=1)
+    account: str = Field(min_length=1)
+    profile: str | None = None
+    ownership: SourceConfigOwnership = "locked"
+    transport: SourceTransportConfig
+    auth_ref: str | None = None
+    metadata: dict[str, object] = Field(default_factory=dict)
+
+    @field_validator("id")
+    @classmethod
+    def validate_source_id(cls, value: str) -> str:
+        if not re.fullmatch(SOURCE_ID_PATTERN, value):
+            raise ValueError(
+                "source id must start with alphanumeric or underscore and contain "
+                "only [A-Za-z0-9_.-]"
+            )
+        if "." not in value:
+            raise ValueError("source id must look like '<provider>.<account>'")
+        provider, account = value.split(".", 1)
+        if not provider or not account:
+            raise ValueError("source id must look like '<provider>.<account>'")
+        return value
+
+
 SourceConfig = Annotated[
-    StdlibSourceConfig,
+    StdlibSourceConfig | McpSourceConfig,
     Field(discriminator="kind"),
 ]
 

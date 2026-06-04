@@ -174,9 +174,13 @@ implementation state.
     alias.
     `McpSourceRegistryEntry` already has most of the target shape; the one
     ownership field comes from legacy `ConnectionConfig.source_config_ownership`.
-    When migrating, carry that policy into the neutral MCP source variant with a
-    clearer name such as `config_ownership` or `ownership`, rather than leaking
-    the old connection-centric field name.
+     When migrating, carry that policy into the neutral MCP source variant with a
+     clearer name such as `config_ownership` or `ownership`, rather than leaking
+     the old connection-centric field name.
+    First slice complete: `wf_config.server.sources[]` now accepts
+    `kind: "mcp"` entries with stdio/http transport, auth reference, metadata,
+    enabled flag, and `locked` / `seed` ownership policy. Runtime composition
+    from these entries is the next slice.
   - Transport package boundary cleanup follows the config migration. The current
     `wf-rpc-server --mcp-config` hookup proves the product path but makes
     `wf_transport_rpc_http.cli` import `wf_mcp.broker`, tripping the existing

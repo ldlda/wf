@@ -114,6 +114,10 @@ Implementation status:
 - Slice 5 complete: `wf-rpc-server --mcp-config <path>` starts JSON-RPC over an
   MCP-backed `WorkflowServer`; `--store-root` remains local/static-only.
 
+Model slice complete when `wf_config.server.sources[]` accepts `kind: "mcp"`
+entries. The next slice converts those neutral source entries into MCP
+broker runtime connections and server composition.
+
 First slice should not include:
 
 - live upstream MCP source management

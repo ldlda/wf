@@ -8,9 +8,12 @@ from pydantic import ValidationError
 
 from wf_config import (
     FilesystemStoreConfig,
+    HttpSourceTransportConfig,
     LocalTargetConfig,
+    McpSourceConfig,
     RpcHttpTargetConfig,
     RpcHttpTransportConfig,
+    StdioSourceTransportConfig,
     StdlibSourceConfig,
     WorkflowConfigFile,
     load_workflow_config,
@@ -154,3 +157,139 @@ def test_load_workflow_config_preserves_absolute_filesystem_store(
     config = load_workflow_config(config_path)
 
     assert config.server.store.root == absolute_root
+
+
+def test_workflow_config_parses_mcp_stdio_source() -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "sources": [
+                    {
+                        "kind": "mcp",
+                        "id": "everything.default",
+                        "enabled": True,
+                        "provider": "everything",
+                        "account": "default",
+                        "profile": "dev",
+                        "ownership": "seed",
+                        "transport": {
+                            "kind": "stdio",
+                            "command": "uvx",
+                            "args": ["mcp-server-everything"],
+                            "env": {"DEBUG": "1"},
+                        },
+                        "auth_ref": "auth.everything.default",
+                        "metadata": {"description": "Everything test server"},
+                    }
+                ]
+            },
+        }
+    )
+
+    source = config.server.sources[0]
+    assert isinstance(source, McpSourceConfig)
+    assert source.id == "everything.default"
+    assert source.enabled is True
+    assert source.provider == "everything"
+    assert source.account == "default"
+    assert source.profile == "dev"
+    assert source.ownership == "seed"
+    assert isinstance(source.transport, StdioSourceTransportConfig)
+    assert source.transport.command == "uvx"
+    assert source.transport.args == ("mcp-server-everything",)
+    assert source.transport.env == {"DEBUG": "1"}
+    assert source.auth_ref == "auth.everything.default"
+    assert source.metadata["description"] == "Everything test server"
+
+
+def test_workflow_config_parses_mcp_http_source() -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "sources": [
+                    {
+                        "kind": "mcp",
+                        "id": "context7.default",
+                        "provider": "context7",
+                        "account": "default",
+                        "transport": {
+                            "kind": "http",
+                            "url": "http://127.0.0.1:3000/mcp",
+                            "headers": {"X-Test": "yes"},
+                        },
+                    }
+                ]
+            },
+        }
+    )
+
+    source = config.server.sources[0]
+    assert isinstance(source, McpSourceConfig)
+    assert source.enabled is True
+    assert source.ownership == "locked"
+    assert isinstance(source.transport, HttpSourceTransportConfig)
+    assert str(source.transport.url) == "http://127.0.0.1:3000/mcp"
+    assert source.transport.headers == {"X-Test": "yes"}
+
+
+def test_workflow_config_rejects_mcp_source_without_provider_account_shape() -> None:
+    with pytest.raises(ValidationError, match="source id must look like"):
+        WorkflowConfigFile.model_validate(
+            {
+                "version": 1,
+                "server": {
+                    "sources": [
+                        {
+                            "kind": "mcp",
+                            "id": "everything",
+                            "provider": "everything",
+                            "account": "default",
+                            "transport": {"kind": "stdio", "command": "uvx"},
+                        }
+                    ]
+                },
+            }
+        )
+
+
+def test_workflow_config_rejects_unsafe_mcp_source_id() -> None:
+    with pytest.raises(ValidationError, match="source id must start"):
+        WorkflowConfigFile.model_validate(
+            {
+                "version": 1,
+                "server": {
+                    "sources": [
+                        {
+                            "kind": "mcp",
+                            "id": ".hidden.default",
+                            "provider": "hidden",
+                            "account": "default",
+                            "transport": {"kind": "stdio", "command": "uvx"},
+                        }
+                    ]
+                },
+            }
+        )
+
+
+def test_workflow_config_rejects_duplicate_source_ids_across_kinds() -> None:
+    with pytest.raises(ValidationError, match="duplicate source id"):
+        WorkflowConfigFile.model_validate(
+            {
+                "version": 1,
+                "server": {
+                    "sources": [
+                        {"kind": "stdlib", "id": "wf.std"},
+                        {
+                            "kind": "mcp",
+                            "id": "wf.std",
+                            "provider": "wf",
+                            "account": "std",
+                            "transport": {"kind": "stdio", "command": "uvx"},
+                        },
+                    ]
+                },
+            }
+        )
