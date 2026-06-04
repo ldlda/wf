@@ -79,9 +79,9 @@ async def test_mcp_backed_rpc_reports_connections_and_events(tmp_path) -> None:
         transport=transport, base_url="http://test"
     ) as http_client:
         connections = await _rpc(
-            http_client, "workflow.admin.connections.list", {"limit": 20}
+            http_client, "workflow.admin.connections.list", {}
         )
-        events = await _rpc(http_client, "workflow.admin.events.list", {"limit": 20})
+        events = await _rpc(http_client, "workflow.admin.events.list", {})
 
     assert connections["result"]["connections"][0]["id"] == "demo.default"
     assert any(

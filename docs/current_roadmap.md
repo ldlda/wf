@@ -161,6 +161,20 @@ implementation state.
    - Completed: `wf-rpc-server --mcp-config wf_mcp.config.json` starts the
       JSON-RPC transport over an MCP-backed `WorkflowServer`, making the remote
       CLI path usable with MCP sources and desired source registry operations.
+- Next concrete platform slices:
+  - Manual product smoke: run `wf-rpc-server --mcp-config ...`, point
+    `wf --url ...` at it, and capture real CLI/server UX gaps before adding
+    more architecture.
+  - Source registry apply/reload: decide and implement how persisted registry
+    mutations affect the running source catalog. Prefer an explicit
+    apply/reload operation before automatic live remount.
+  - Persisted resume across server restart: prove an interrupted run can be
+    resumed after rebuilding the MCP-backed RPC server from the same stores and
+    pinned source environment.
+  - Auth/source secrets boundary: keep registry desired state separate from
+    upstream credentials, and surface missing auth as validation diagnostics.
+  - Run watch/progress: start with polling over existing inspect/trace APIs;
+    defer SSE/WebSocket/MCP progress until the polling UX is proven insufficient.
 - Cleanup candidate: consolidate store/source registry id validation patterns
       (`SOURCE_REGISTRY_ID_PATTERN`, `STORE_ID_PATTERN`) only after another package
       needs the same rule. Today they intentionally stay close to their stores.

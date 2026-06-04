@@ -67,11 +67,12 @@ def serve(
     if config is not None:
         workflow_config = load_workflow_config(config)
         store = workflow_config.server.store
-        if not isinstance(store, FilesystemStoreConfig):
+        if server is None and not isinstance(store, FilesystemStoreConfig):
             raise typer.BadParameter(
                 "wf-rpc-server currently requires filesystem store"
             )
-        resolved_store_root = resolved_store_root or store.root
+        if server is None:
+            resolved_store_root = resolved_store_root or store.root
         rpc_transport = next(
             (
                 transport

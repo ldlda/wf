@@ -358,6 +358,25 @@ Possible providers:
 This slice should avoid making "source" mean "MCP connection." MCP is one
 source provider, not the source model.
 
+Current MCP-backed server status:
+
+- MCP-backed `WorkflowServer` construction is implemented.
+- `wf-rpc-server --mcp-config <path>` can serve JSON-RPC over that server.
+- Source registry read/mutation APIs are reachable remotely when the target
+  exposes `source_registry_admin`.
+
+Next implementation slices should be:
+
+1. Manual product smoke with the real CLI/server commands. Record UX/runtime
+   gaps before broadening architecture.
+2. Source registry apply/reload semantics. Registry mutation currently updates
+   desired persisted state; the next explicit decision is whether changes apply
+   only after restart, through an explicit reload/apply operation, or through
+   automatic live reconciliation. Prefer explicit reload/apply for v1.
+3. Persisted resume across server restart. Rebuild the MCP-backed RPC server
+   from the same stores and prove interrupted runs resume from the stored
+   checkpoint and pinned dependency environment.
+
 ### Slice 6: Auth and Tenancy
 
 Define who can read/write artifacts, deployments, runs, and auth records.
