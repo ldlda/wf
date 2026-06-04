@@ -143,21 +143,38 @@ On server startup:
 4. Merge into one desired source map.
 5. Hydrate runtime `ConnectionService` / `SourceCatalogService` from that map.
 
-Precedence:
+Current v1 precedence:
 
 1. Built-in reserved ids always win for reserved ids.
 2. Config-defined entries win over dynamic registry entries with the same id.
 3. Dynamic registry entries fill in ids not present in config.
 
-Rationale: config is deployment bootstrap and operator-controlled. Dynamic store
-state should not secretly override source definitions checked into deployment
-config.
+Rationale: this first pass is conservative. Config is deployment bootstrap and
+operator-controlled, so dynamic store state should not secretly override source
+definitions checked into deployment config before source ownership policy exists.
+
+Long-term ownership policy:
+
+- Config remains valid for bootstrap, dev/test portability, disaster recovery,
+  and operator-managed static sources.
+- Store-backed registry is the normal mutable desired-state authority for
+  server-owned dynamic sources.
+- Config should not win forever by default. Future source definitions should
+  distinguish at least two config ownership modes:
+  - `locked`: config owns the id. Registry add/update for that id is rejected
+    or remains explicitly shadowed.
+  - `seed`: config creates or hydrates the initial store entry when missing,
+    then the store owns later admin changes.
+
+Until that policy exists in models and startup merge, same-id config entries
+continue to shadow store entries for safety.
 
 Duplicate behavior:
 
 - Duplicate ids inside one config or one registry file are validation errors.
 - A registry entry with the same id as config is allowed but ignored with a
-  diagnostic/event.
+  diagnostic/event in v1. Future `seed` config entries should instead allow the
+  store entry to become authoritative after seeding.
 - A registry entry using a reserved id is invalid.
 
 ## Mutation Rules
@@ -288,14 +305,23 @@ in v1. Remove requires `--confirm` in CLI. Local/static servers report
 unavailable for mutation commands. Concrete MCP-backed `WorkflowServer`
 construction remains future work.
 
+### Slice 6: Config Ownership Policy
+
+Status: planned. Replace implicit "config always shadows store" with explicit
+source ownership policy. The intended shape is `locked` for operator-owned
+config entries and `seed` for bootstrap entries that should hand ownership to
+the store after initial materialization. This should update config models,
+startup merge diagnostics, registry mutation validation, and admin read payloads
+so users can tell why a source id is mutable or shadowed.
+
 ## Open Questions
 
 - Should dynamic registry entries support non-MCP transports in v1, or only MCP
   stdio/HTTP?
 - Should auth references be required for sources that need auth, or optional
   until live validation?
-- Should config shadowing registry entries be a warning only, or should server
-  startup fail in strict mode?
+- Should strict mode fail on `locked` config/store conflicts, or keep them as
+  explicit shadow diagnostics?
 - Should disabled registry entries still hydrate as disabled sources so inspect
   can explain them, or stay only in registry/admin output?
 

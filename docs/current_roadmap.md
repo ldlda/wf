@@ -125,6 +125,11 @@ implementation state.
    - Source registry startup merge is implemented: absent registry preserves
       config-only behavior, registry-only entries hydrate as dynamic connections,
       and config entries shadow same-id registry entries with an event.
+   - Config shadowing is the v1 conservative behavior, not the final ownership
+      model. The planned follow-up is explicit config ownership policy:
+      `locked` config entries stay operator-owned, while `seed` entries
+      bootstrap missing store entries and then let the store own later admin
+      changes.
    - Next source registry slices are planned in
       [2026-06-03 source registry next slices](./superpowers/plans/2026-06-03-source-registry-next-slices.md):
       desired-registry admin reads and safe mutation commands are complete;

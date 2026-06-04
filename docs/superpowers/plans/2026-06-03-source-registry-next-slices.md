@@ -76,6 +76,17 @@ The next executable slice is startup merge:
      local/static servers report unavailable and concrete MCP-backed
      `WorkflowServer` construction remains future work.
 
+6. **Slice 6: Config Ownership Policy**
+   - **Status: planned.**
+   - Replace implicit config-shadowing with explicit `locked` / `seed`
+     ownership policy.
+   - `locked` config entries remain operator-owned and shadow/reject registry
+     mutation for the same id.
+   - `seed` config entries bootstrap missing store entries, then the store owns
+     later admin changes.
+   - Update startup merge diagnostics and registry admin payloads so users can
+     see why a source is mutable or shadowed.
+
 ---
 
 ## Slice 2A: Generic Registry Mechanics
@@ -406,4 +417,5 @@ Status: complete. Implementation:
 - This is a multi-slice roadmap, not a single execution plan for all mutation work.
 - Slice 2A is the immediate next implementation target and resolves the location problem.
 - Startup merge is intentionally after generic/MCP split and conversion helpers.
-- No mutation commands are planned before persistence and merge rules are implemented.
+- Config ownership policy is intentionally after mutation commands, because it
+  changes precedence semantics rather than introducing persistence.
