@@ -398,13 +398,23 @@ Next implementation slices should be:
    transport-only. After `wf_config` can describe MCP sources, `wf-rpc-server
    --config ...` should compose MCP-backed sources from neutral config and the
    `--mcp-config` path can become deprecated/legacy.
-3. Manual product smoke with the real CLI/server commands. Record UX/runtime
+3. Legacy MCP config migration. Provide an explicit converter from old
+   `wf_mcp.config.json` into `WorkflowConfigFile`: `store_root` maps to
+   `server.store` (`StoreConfig` is already a discriminated union; currently
+   only `kind: "filesystem"` exists), and each legacy connection maps to a
+   `kind: "mcp"` source. Preserve `source_config_ownership` as the neutral
+   `ownership` field. Normalize old HTTP-like transport metadata
+   (`http`, `streamable-http`, `streamable_http`, `sse`) into the neutral HTTP
+   MCP source transport while preserving compatibility metadata where needed.
+   `sse` remains legacy/deprecated, but conversion support is intentional
+   because FastMCP can still expose it.
+4. Manual product smoke with the real CLI/server commands. Record UX/runtime
    gaps before broadening architecture.
-4. Source registry apply/reload semantics. Registry mutation currently updates
+5. Source registry apply/reload semantics. Registry mutation currently updates
    desired persisted state; the next explicit decision is whether changes apply
    only after restart, through an explicit reload/apply operation, or through
    automatic live reconciliation. Prefer explicit reload/apply for v1.
-5. Persisted resume across server restart. Rebuild the MCP-backed RPC server
+6. Persisted resume across server restart. Rebuild the MCP-backed RPC server
    from the same stores and prove interrupted runs resume from the stored
    checkpoint and pinned dependency environment.
 

@@ -43,6 +43,10 @@ Prefer neutral workflow config for new MCP-backed servers:
 ```
 
 `--mcp-config` is still accepted for legacy broker config files.
+Future migration support should let users convert that legacy shape into the
+neutral config above. The old `store_root` field maps to
+`server.store: {"kind": "filesystem", "root": ...}`; old `connections[]` map to
+`server.sources[]` entries with `kind: "mcp"`.
 
 Start a JSON-RPC server backed by MCP broker config and MCP-capable sources:
 

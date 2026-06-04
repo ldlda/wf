@@ -191,6 +191,17 @@ implementation state.
     import-direction guard. The durable fix is not a permanent split launcher;
     it is making `wf_config` wide enough that the RPC server can compose from
     neutral config while MCP-specific adapters stay selected by source kind.
+  - Legacy config migration: add a converter from old `wf_mcp.config.json`
+    (`store_root`, `connections[]`) into the wider `wf_config` shape
+    (`server.store`, `server.sources[]`). `server.store` is already a
+    discriminated union (`kind: "filesystem"` today, future SQL/store backends
+    later), so the conversion should map old `store_root` to
+    `server.store.root` without inventing a parallel store field. Old MCP HTTP
+    metadata values such as `http`, `streamable-http`, `streamable_http`, and
+    `sse` should normalize into the neutral HTTP source transport while
+    preserving enough metadata for MCP/FastMCP compatibility. `sse` is legacy
+    protocol shape, but keep conversion support because FastMCP deployments may
+    still use it.
   - Manual product smoke: run `wf-rpc-server --mcp-config ...`, point
     `wf --url ...` at it, and capture real CLI/server UX gaps before adding
     more architecture.
