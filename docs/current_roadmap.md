@@ -181,6 +181,10 @@ implementation state.
     `kind: "mcp"` entries with stdio/http transport, auth reference, metadata,
     enabled flag, and `locked` / `seed` ownership policy. Runtime composition
     from these entries is the next slice.
+    Runtime bridge complete: neutral `kind: "mcp"` source entries can now build
+    the MCP-backed `WorkflowServer`. `--mcp-config` remains supported as a
+    legacy compatibility path while new configs should prefer
+    `server.sources[]`.
   - Transport package boundary cleanup follows the config migration. The current
     `wf-rpc-server --mcp-config` hookup proves the product path but makes
     `wf_transport_rpc_http.cli` import `wf_mcp.broker`, tripping the existing

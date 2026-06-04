@@ -118,6 +118,10 @@ Model slice complete when `wf_config.server.sources[]` accepts `kind: "mcp"`
 entries. The next slice converts those neutral source entries into MCP
 broker runtime connections and server composition.
 
+Runtime bridge complete when `wf-rpc-server --config <path>` can compose an
+MCP-backed server from neutral `server.sources[]` entries. `--mcp-config`
+remains a compatibility alias until existing users migrate.
+
 First slice should not include:
 
 - live upstream MCP source management

@@ -12,8 +12,9 @@ from wf_api import (
 from wf_api.stores import WorkflowStores
 from wf_server import WorkflowServer, WorkflowServerConfig
 
+from wf_config import WorkflowConfigFile
 from .artifact_tools import register_artifact_tools
-from .config import build_service_from_config
+from .config import broker_config_from_workflow_config, build_service_from_config
 from .prompts import register_broker_prompts
 from .resources import register_broker_resources
 from .service import WfMcpService
@@ -101,8 +102,18 @@ def build_workflow_server_from_config(config: BrokerConfig) -> WorkflowServer:
     )
 
 
+def build_workflow_server_from_workflow_config(
+    config: WorkflowConfigFile,
+) -> WorkflowServer:
+    """Build an MCP-backed WorkflowServer from neutral workflow config sources."""
+    return build_workflow_server_from_config(
+        broker_config_from_workflow_config(config)
+    )
+
+
 __all__ = [
     "build_workflow_server_from_config",
+    "build_workflow_server_from_workflow_config",
     "create_broker_server",
     "workflow_server_from_service",
 ]

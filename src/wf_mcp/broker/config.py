@@ -4,12 +4,13 @@ import json
 from pathlib import Path
 
 from wf_api import file_workflow_stores
+from wf_config import WorkflowConfigFile
 
 from ..control import BrokerConfigFile
 from ..models import BrokerConfig
 from ..runtime import McpRuntimePool, PersistentSessionFactory
 from ..sdk import McpSdkAdapter
-from ..source_registry import FileSourceRegistryStore
+from ..source_registry import FileSourceRegistryStore, workflow_mcp_source_to_connection_config
 from ..storage import FileStore
 from .service import WfMcpService
 
@@ -19,6 +20,18 @@ def load_broker_config(path: str | Path) -> BrokerConfig:
     config_path = Path(path)
     data = json.loads(config_path.read_text(encoding="utf-8"))
     return BrokerConfigFile.model_validate(data).to_runtime(config_path=config_path)
+
+
+def broker_config_from_workflow_config(config: WorkflowConfigFile) -> BrokerConfig:
+    """Create MCP broker runtime config from neutral workflow server config."""
+    return BrokerConfig(
+        store_root=config.server.store.root,
+        connections=[
+            workflow_mcp_source_to_connection_config(source)
+            for source in config.server.sources
+            if getattr(source, "kind", None) == "mcp"
+        ],
+    )
 
 
 def build_service_from_config(config: BrokerConfig) -> WfMcpService:
@@ -44,3 +57,10 @@ def build_service_from_config(config: BrokerConfig) -> WfMcpService:
         if connection.server not in service.adapters:
             service.register_adapter(connection.server, McpSdkAdapter())
     return service
+
+
+__all__ = [
+    "broker_config_from_workflow_config",
+    "build_service_from_config",
+    "load_broker_config",
+]

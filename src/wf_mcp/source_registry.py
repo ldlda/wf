@@ -160,6 +160,44 @@ def connection_config_to_registry_entry(
     )
 
 
+def workflow_mcp_source_to_connection_config(source: object) -> ConnectionConfig:
+    """Convert neutral wf_config MCP source config into a broker connection.
+
+    Keep this adapter in wf_mcp because the output is MCP broker runtime state.
+    The input is intentionally typed as object to avoid making wf_mcp's public
+    registry module part of wf_config's import graph.
+    """
+    from .models import ConnectionConfig
+
+    if getattr(source, "kind", None) != "mcp":
+        raise ValueError("expected wf_config MCP source")
+    for field in ("id", "provider", "account", "enabled", "ownership"):
+        if getattr(source, field, None) is None:
+            raise ValueError(f"wf_config MCP source missing required field: {field}")
+    transport = getattr(source, "transport")
+    metadata = dict(getattr(source, "metadata", {}))
+    metadata.update(
+        {
+            "transport": transport.model_dump(mode="json"),
+            "source_registry": False,
+        }
+    )
+    profile = getattr(source, "profile", None)
+    if profile is not None:
+        metadata["profile"] = profile
+    auth_ref = getattr(source, "auth_ref", None)
+    if auth_ref is not None:
+        metadata["auth_ref"] = auth_ref
+    return ConnectionConfig(
+        id=getattr(source, "id"),
+        server=getattr(source, "provider"),
+        account=getattr(source, "account"),
+        enabled=getattr(source, "enabled"),
+        metadata=metadata,
+        source_config_ownership=getattr(source, "ownership"),
+    )
+
+
 __all__ = [
     "FileSourceRegistryStore",
     "HttpSourceTransport",
@@ -170,4 +208,5 @@ __all__ = [
     "StdioSourceTransport",
     "connection_config_to_registry_entry",
     "registry_entry_to_connection_config",
+    "workflow_mcp_source_to_connection_config",
 ]

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import httpx
 
-from wf_mcp.broker.server import build_workflow_server_from_config
+from wf_config import WorkflowConfigFile
+from wf_mcp.broker.server import build_workflow_server_from_config, build_workflow_server_from_workflow_config
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.source_registry import (
     FileSourceRegistryStore,
@@ -109,3 +110,37 @@ async def test_mcp_backed_rpc_reports_connections_and_events(tmp_path) -> None:
         event["kind"] == "connection_registered"
         for event in events["result"]["events"]
     )
+
+
+async def test_mcp_backed_rpc_can_be_built_from_neutral_workflow_config(
+    tmp_path,
+) -> None:
+    workflow_config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "store": {"kind": "filesystem", "root": str(tmp_path / "store")},
+                "sources": [
+                    {
+                        "kind": "mcp",
+                        "id": "demo.default",
+                        "provider": "demo",
+                        "account": "default",
+                        "transport": {"kind": "stdio", "command": "demo-server"},
+                    }
+                ],
+            },
+        }
+    )
+    server = build_workflow_server_from_workflow_config(workflow_config)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as http_client:
+        connections = await _rpc(
+            http_client, "workflow.admin.connections.list", {}
+        )
+
+    assert connections["result"]["connections"][0]["id"] == "demo.default"

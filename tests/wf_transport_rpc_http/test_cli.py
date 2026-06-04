@@ -281,3 +281,65 @@ def test_rpc_server_cli_mcp_config_with_config_uses_transport_settings(monkeypat
     assert captured["host"] == "127.0.0.3"
     assert captured["port"] == 7777
     assert captured["access_log"] is False
+
+
+def test_rpc_server_cli_config_with_mcp_source_uses_mcp_builder(
+    monkeypatch, tmp_path
+) -> None:
+    captured = {}
+
+    def fake_build_from_workflow_config(config):
+        captured["source_kinds"] = [source.kind for source in config.server.sources]
+        return object()
+
+    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+        captured["server"] = server
+        captured["rpc_path"] = rpc_path
+        return "app"
+
+    def fake_run(app, *, host, port, access_log):
+        captured["run"] = {
+            "app": app,
+            "host": host,
+            "port": port,
+            "access_log": access_log,
+        }
+
+    monkeypatch.setattr(
+        "wf_transport_rpc_http.cli.build_workflow_server_from_workflow_config",
+        fake_build_from_workflow_config,
+    )
+    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_run)
+
+    config_path = tmp_path / "wf.json"
+    config_path.write_text(
+        """
+{
+  "version": 1,
+  "server": {
+    "store": {"kind": "filesystem", "root": ".wf_store"},
+    "transports": [{"kind": "rpc_http", "host": "127.0.0.1", "port": 8765}],
+    "sources": [
+      {
+        "kind": "mcp",
+        "id": "everything.default",
+        "provider": "everything",
+        "account": "default",
+        "transport": {"kind": "stdio", "command": "uvx"}
+      }
+    ]
+  }
+}
+""",
+        encoding="utf-8",
+    )
+
+    from wf_transport_rpc_http.cli import app
+    from typer.testing import CliRunner
+
+    result = CliRunner().invoke(app, ["--config", str(config_path)])
+
+    assert result.exit_code == 0, result.output
+    assert captured["source_kinds"] == ["mcp"]
+    assert captured["run"]["app"] == "app"

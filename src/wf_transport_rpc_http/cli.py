@@ -11,7 +11,11 @@ from wf_config import (
     load_workflow_config,
 )
 
-from wf_mcp.broker import build_workflow_server_from_config, load_broker_config
+from wf_mcp.broker import (
+    build_workflow_server_from_config,
+    build_workflow_server_from_workflow_config,
+    load_broker_config,
+)
 
 from wf_server import build_local_static_workflow_server
 
@@ -66,6 +70,12 @@ def serve(
 
     if config is not None:
         workflow_config = load_workflow_config(config)
+        has_mcp_sources = any(
+            getattr(source, "kind", None) == "mcp"
+            for source in workflow_config.server.sources
+        )
+        if server is None and has_mcp_sources:
+            server = build_workflow_server_from_workflow_config(workflow_config)
         store = workflow_config.server.store
         if server is None and not isinstance(store, FilesystemStoreConfig):
             raise typer.BadParameter(

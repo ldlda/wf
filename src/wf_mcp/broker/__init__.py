@@ -7,6 +7,7 @@ from .discovery import (
 from .events import McpEvent, make_event
 from .server import (
     build_workflow_server_from_config,
+    build_workflow_server_from_workflow_config,
     create_broker_server,
     workflow_server_from_service,
 )
@@ -21,6 +22,7 @@ __all__ = [
     "WfMcpService",
     "build_service_from_config",
     "build_workflow_server_from_config",
+    "build_workflow_server_from_workflow_config",
     "create_broker_server",
     "discover_connection_capabilities",
     "load_broker_config",

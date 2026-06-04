@@ -21,6 +21,29 @@ Start a local/static JSON-RPC workflow server:
 wf-rpc-server --store-root .wf_store --host 127.0.0.1 --port 8765
 ```
 
+Prefer neutral workflow config for new MCP-backed servers:
+
+```json
+{
+  "version": 1,
+  "server": {
+    "store": {"kind": "filesystem", "root": ".wf_store"},
+    "transports": [{"kind": "rpc_http", "host": "127.0.0.1", "port": 8765}],
+    "sources": [
+      {
+        "kind": "mcp",
+        "id": "everything.default",
+        "provider": "everything",
+        "account": "default",
+        "transport": {"kind": "stdio", "command": "uvx", "args": ["mcp-server-everything"]}
+      }
+    ]
+  }
+}
+```
+
+`--mcp-config` is still accepted for legacy broker config files.
+
 Start a JSON-RPC server backed by MCP broker config and MCP-capable sources:
 
 ```bash
