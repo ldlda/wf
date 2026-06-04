@@ -43,8 +43,13 @@ Prefer neutral workflow config for new MCP-backed servers:
 ```
 
 `--mcp-config` is still accepted for legacy broker config files.
-Future migration support should let users convert that legacy shape into the
-neutral config above. The old `store_root` field maps to
+Convert a legacy broker config into the neutral config shape:
+
+```bash
+wf config migrate-mcp wf_mcp.config.json --output wf.json
+```
+
+The old `store_root` field maps to
 `server.store: {"kind": "filesystem", "root": ...}`; old `connections[]` map to
 `server.sources[]` entries with `kind: "mcp"`.
 

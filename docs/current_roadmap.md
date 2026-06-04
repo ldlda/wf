@@ -202,6 +202,8 @@ implementation state.
     preserving enough metadata for MCP/FastMCP compatibility. `sse` is legacy
     protocol shape, but keep conversion support because FastMCP deployments may
     still use it.
+    Completed: `wf config migrate-mcp` converts legacy broker config files into
+    neutral workflow config files without mutating the original.
   - Manual product smoke: run `wf-rpc-server --mcp-config ...`, point
     `wf --url ...` at it, and capture real CLI/server UX gaps before adding
     more architecture.

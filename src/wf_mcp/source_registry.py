@@ -136,7 +136,27 @@ def connection_config_to_registry_entry(
     identity to become the future desired-state owner after first startup.
     """
     transport = connection.metadata.get("transport")
-    if not isinstance(transport, dict):
+    if isinstance(transport, dict):
+        pass
+    elif isinstance(transport, str):
+        if transport == "stdio":
+            transport = {
+                "kind": "stdio",
+                "command": connection.metadata.get("command", ""),
+                "args": list(connection.metadata.get("args", [])),
+                "env": dict(connection.metadata.get("env", {})),
+            }
+        elif transport == "streamable_http":
+            transport = {
+                "kind": "http",
+                "url": connection.metadata.get("url", ""),
+                "headers": dict(connection.metadata.get("headers", {})),
+            }
+        else:
+            raise ValueError(
+                f"seed connection {connection.id!r} has unrecognized transport {transport!r}"
+            )
+    else:
         raise ValueError(
             f"seed connection {connection.id!r} requires metadata.transport"
         )
@@ -176,12 +196,27 @@ def workflow_mcp_source_to_connection_config(source: object) -> ConnectionConfig
             raise ValueError(f"wf_config MCP source missing required field: {field}")
     transport = getattr(source, "transport")
     metadata = dict(getattr(source, "metadata", {}))
-    metadata.update(
-        {
-            "transport": transport.model_dump(mode="json"),
-            "source_registry": False,
-        }
-    )
+    if transport.kind == "stdio":
+        metadata.update(
+            {
+                "transport": "stdio",
+                "command": transport.command,
+                "args": list(transport.args),
+                "env": dict(transport.env),
+                "source_registry": False,
+            }
+        )
+    elif transport.kind == "http":
+        metadata.update(
+            {
+                "transport": "streamable_http",
+                "url": str(transport.url),
+                "headers": dict(transport.headers),
+                "source_registry": False,
+            }
+        )
+    else:
+        raise ValueError(f"unsupported wf_config MCP transport {transport.kind!r}")
     profile = getattr(source, "profile", None)
     if profile is not None:
         metadata["profile"] = profile

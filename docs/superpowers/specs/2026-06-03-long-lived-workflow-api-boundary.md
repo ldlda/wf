@@ -408,6 +408,8 @@ Next implementation slices should be:
    MCP source transport while preserving compatibility metadata where needed.
    `sse` remains legacy/deprecated, but conversion support is intentional
    because FastMCP can still expose it.
+   Completed when `wf config migrate-mcp <legacy> --output <workflow-config>`
+   writes a neutral config that can be used by `wf-rpc-server --config`.
 4. Manual product smoke with the real CLI/server commands. Record UX/runtime
    gaps before broadening architecture.
 5. Source registry apply/reload semantics. Registry mutation currently updates
