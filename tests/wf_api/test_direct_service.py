@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 from wf_artifacts import FileWorkflowArtifactStore
 from wf_api import WorkflowApi
@@ -14,11 +15,10 @@ from wf_mcp.broker.service.workflow_operation_context import context_from_servic
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 
-from tests.wf_mcp.test_support import echo_tool, local_temp_root
+from tests.wf_mcp.test_support import echo_tool
 
 
-def _api() -> WorkflowApi:
-    root = local_temp_root() / "wf_api_direct_composition"
+def _api(root: Path) -> WorkflowApi:
     service = WfMcpService(
         store=FileStore(root / "mcp"),
         artifact_store=FileWorkflowArtifactStore(root),
@@ -30,8 +30,8 @@ def _api() -> WorkflowApi:
     return WorkflowApi(context_from_service(service))
 
 
-def test_workflow_api_composes_domain_services() -> None:
-    api = _api()
+def test_workflow_api_composes_domain_services(tmp_path: Path) -> None:
+    api = _api(tmp_path / "wf_api_direct_composition")
 
     assert isinstance(api.capabilities, WorkflowCapabilityApi)
     assert isinstance(api.drafts, WorkflowDraftApi)
@@ -41,8 +41,8 @@ def test_workflow_api_composes_domain_services() -> None:
     assert not hasattr(api, "backend")
 
 
-def test_workflow_api_direct_capability_call() -> None:
-    api = _api()
+def test_workflow_api_direct_capability_call(tmp_path: Path) -> None:
+    api = _api(tmp_path / "wf_api_direct_composition")
 
     result = asyncio.run(
         api.call_capability(
@@ -56,11 +56,11 @@ def test_workflow_api_direct_capability_call() -> None:
     assert result["output"] == {"echoed": "hello"}
 
 
-def test_workflow_surface_handlers_is_compatibility_shim() -> None:
+def test_workflow_surface_handlers_is_compatibility_shim(tmp_path: Path) -> None:
     from wf_api import WorkflowApi
     from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 
-    root = local_temp_root() / "workflow_surface_handler_shim"
+    root = tmp_path / "workflow_surface_handler_shim"
     service = WfMcpService(
         store=FileStore(root / "mcp"),
         artifact_store=FileWorkflowArtifactStore(root),

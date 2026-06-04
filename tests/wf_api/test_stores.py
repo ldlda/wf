@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from wf_api.stores import WorkflowStores, file_workflow_stores
 from wf_artifacts import (
     FileDraftWorkspaceStore,
@@ -7,11 +9,9 @@ from wf_artifacts import (
     FileWorkflowArtifactStore,
 )
 
-from tests.wf_mcp.test_support import local_temp_root
 
-
-def test_file_workflow_stores_constructs_all_three_file_stores() -> None:
-    root = local_temp_root() / "wf_api_file_workflow_stores"
+def test_file_workflow_stores_constructs_all_three_file_stores(tmp_path: Path) -> None:
+    root = tmp_path / "wf_api_file_workflow_stores"
 
     stores = file_workflow_stores(root)
 

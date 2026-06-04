@@ -17,7 +17,7 @@ from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 
-from tests.wf_mcp.test_support import echo_tool, local_temp_root
+from tests.wf_mcp.test_support import echo_tool
 from tests.wf_mcp.workflow_surface.conftest import (
     echo_artifact,
     failing_artifact,
@@ -81,8 +81,8 @@ def _service_with_failing(
     return service, artifact_store
 
 
-def test_run_api_unrunnable_deployment() -> None:
-    root = local_temp_root() / "run_api_unrunnable"
+def test_run_api_unrunnable_deployment(tmp_path: Path) -> None:
+    root = tmp_path / "run_api_unrunnable"
     artifact_store = FileWorkflowArtifactStore(root)
     from tests.wf_mcp.workflow_surface.conftest import artifact
 
@@ -115,8 +115,8 @@ def test_run_api_unrunnable_deployment() -> None:
     assert result["diagnostics"][0]["code"]
 
 
-def test_run_api_completed_run_persists() -> None:
-    root = local_temp_root() / "run_api_completed"
+def test_run_api_completed_run_persists(tmp_path: Path) -> None:
+    root = tmp_path / "run_api_completed"
     service, artifact_store = _service_with_echo(root)
     context = context_from_service(service)
     api = WorkflowRunApi(context)
@@ -138,8 +138,8 @@ def test_run_api_completed_run_persists() -> None:
     assert stored.id == result["run_id"]
 
 
-def test_run_api_rejects_resume_for_completed_run() -> None:
-    root = local_temp_root() / "run_api_resume_completed_rejected"
+def test_run_api_rejects_resume_for_completed_run(tmp_path: Path) -> None:
+    root = tmp_path / "run_api_resume_completed_rejected"
     service, _ = _service_with_echo(root)
     context = context_from_service(service)
     api = WorkflowRunApi(context)
@@ -160,8 +160,8 @@ def test_run_api_rejects_resume_for_completed_run() -> None:
         )
 
 
-def test_run_api_inspect_uses_pinned_environment_after_deployment_deleted() -> None:
-    root = local_temp_root() / "run_api_inspect_after_deployment_deleted"
+def test_run_api_inspect_uses_pinned_environment_after_deployment_deleted(tmp_path: Path) -> None:
+    root = tmp_path / "run_api_inspect_after_deployment_deleted"
     service, artifact_store = _service_with_echo(root)
     context = context_from_service(service)
     api = WorkflowRunApi(context)
@@ -183,8 +183,8 @@ def test_run_api_inspect_uses_pinned_environment_after_deployment_deleted() -> N
     assert summary["output"]["echoed"] == "hello"
 
 
-def test_run_api_inspect_and_bounded_trace() -> None:
-    root = local_temp_root() / "run_api_inspect_trace"
+def test_run_api_inspect_and_bounded_trace(tmp_path: Path) -> None:
+    root = tmp_path / "run_api_inspect_trace"
     service, _ = _service_with_echo(root)
     context = context_from_service(service)
     api = WorkflowRunApi(context)
@@ -217,8 +217,8 @@ class ExplodingRunStore(FileRunStore):
         raise AssertionError("run store must not be read before trace_range validation")
 
 
-def test_run_api_rejects_invalid_trace_range_before_store_lookup() -> None:
-    root = local_temp_root() / "run_api_invalid_trace_range"
+def test_run_api_rejects_invalid_trace_range_before_store_lookup(tmp_path: Path) -> None:
+    root = tmp_path / "run_api_invalid_trace_range"
     service, _ = _service_with_echo(root)
     service.run_store = ExplodingRunStore(root / "exploding_runs")
     context = context_from_service(service)
@@ -241,8 +241,8 @@ def test_run_api_rejects_invalid_trace_range_before_store_lookup() -> None:
         )
 
 
-def test_run_api_handler_delegation_matches() -> None:
-    root = local_temp_root() / "run_api_delegation"
+def test_run_api_handler_delegation_matches(tmp_path: Path) -> None:
+    root = tmp_path / "run_api_delegation"
     service, _ = _service_with_echo(root)
     context = context_from_service(service)
     api = WorkflowRunApi(context)

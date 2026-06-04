@@ -17,11 +17,9 @@ from wf_mcp.source_registry import (
 )
 from wf_mcp.storage import FileStore
 
-from ..test_support import local_temp_root
 
-
-def _source_catalog(service: ConnectionService) -> SourceCatalogService:
-    store = FileStore(local_temp_root() / "connection_service_catalog")
+def _source_catalog(service: ConnectionService, root: Path) -> SourceCatalogService:
+    store = FileStore(root / "connection_service_catalog")
 
     def _tool_executor_for(_connection: ConnectionConfig) -> ToolExecutor:
         raise AssertionError("tool executor should not be needed in these tests")
@@ -39,9 +37,9 @@ def _source_catalog(service: ConnectionService) -> SourceCatalogService:
     return catalog
 
 
-def test_connection_service_rejects_reserved_connection_ids() -> None:
+def test_connection_service_rejects_reserved_connection_ids(tmp_path: Path) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    _source_catalog(service)
+    _source_catalog(service, tmp_path)
 
     for connection_id in ("wf.admin", "wf.mcp"):
         try:
@@ -55,9 +53,9 @@ def test_connection_service_rejects_reserved_connection_ids() -> None:
             raise AssertionError(f"expected {connection_id!r} to be rejected")
 
 
-def test_connection_service_registers_connection_and_empty_source() -> None:
+def test_connection_service_registers_connection_and_empty_source(tmp_path: Path) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    catalog = _source_catalog(service)
+    catalog = _source_catalog(service, tmp_path)
 
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -72,15 +70,15 @@ def test_connection_service_registers_connection_and_empty_source() -> None:
     assert service.events.list_events()[0].connection_id == "demo.personal"
 
 
-def test_connection_service_sync_removes_retired_connections_and_sources() -> None:
+def test_connection_service_sync_removes_retired_connections_and_sources(tmp_path: Path) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    catalog = _source_catalog(service)
+    catalog = _source_catalog(service, tmp_path)
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
 
     service.sync_connections_from_config(
-        BrokerConfig(store_root=local_temp_root(), connections=[])
+        BrokerConfig(store_root=tmp_path, connections=[])
     )
 
     assert service.list_all() == []
@@ -92,16 +90,16 @@ def test_connection_service_sync_removes_retired_connections_and_sources() -> No
     assert removed.payload["account"] == "personal"
 
 
-def test_connection_service_sync_updates_existing_source_enabled_flag() -> None:
+def test_connection_service_sync_updates_existing_source_enabled_flag(tmp_path: Path) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    catalog = _source_catalog(service)
+    catalog = _source_catalog(service, tmp_path)
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
 
     service.sync_connections_from_config(
         BrokerConfig(
-            store_root=local_temp_root(),
+            store_root=tmp_path,
             connections=[
                 ConnectionConfig(
                     id="demo.personal",
@@ -121,13 +119,13 @@ def test_connection_service_sync_updates_existing_source_enabled_flag() -> None:
     assert updated.payload["enabled"] is False
 
 
-def test_connection_service_sync_registers_new_connections_with_event() -> None:
+def test_connection_service_sync_registers_new_connections_with_event(tmp_path: Path) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    catalog = _source_catalog(service)
+    catalog = _source_catalog(service, tmp_path)
 
     service.sync_connections_from_config(
         BrokerConfig(
-            store_root=local_temp_root(),
+            store_root=tmp_path,
             connections=[
                 ConnectionConfig(
                     id="demo.personal",
@@ -145,8 +143,8 @@ def test_connection_service_sync_registers_new_connections_with_event() -> None:
     assert registered.connection_id == "demo.personal"
 
 
-def test_wfmcpservice_exposes_connection_registry_from_connection_service() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "connection_facade"))
+def test_wfmcpservice_exposes_connection_registry_from_connection_service(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "connection_facade"))
 
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -157,15 +155,15 @@ def test_wfmcpservice_exposes_connection_registry_from_connection_service() -> N
     assert "demo.personal" in service.capability_sources
 
 
-def test_wfmcpservice_sync_connections_delegates_to_connection_service() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "connection_sync"))
+def test_wfmcpservice_sync_connections_delegates_to_connection_service(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "connection_sync"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
 
     service.sync_connections_from_config(
         BrokerConfig(
-            store_root=local_temp_root(),
+            store_root=tmp_path,
             connections=[
                 ConnectionConfig(
                     id="demo.work",
@@ -204,14 +202,14 @@ def _registry_entry(
     )
 
 
-def test_connection_service_sync_merges_registry_entries() -> None:
+def test_connection_service_sync_merges_registry_entries(tmp_path: Path) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    catalog = _source_catalog(service)
-    store = FileSourceRegistryStore(local_temp_root() / "registry_merge")
+    catalog = _source_catalog(service, tmp_path)
+    store = FileSourceRegistryStore(tmp_path / "registry_merge")
     store.save_registry(SourceRegistryFile(sources=[_registry_entry()]))
 
     service.sync_connections_from_config(
-        BrokerConfig(store_root=local_temp_root(), connections=[]),
+        BrokerConfig(store_root=tmp_path, connections=[]),
         source_registry_store=store,
     )
 
@@ -219,15 +217,15 @@ def test_connection_service_sync_merges_registry_entries() -> None:
     assert "demo.registry" in catalog.capability_sources
 
 
-def test_connection_service_sync_config_shadows_registry_entry() -> None:
+def test_connection_service_sync_config_shadows_registry_entry(tmp_path: Path) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    _source_catalog(service)
-    store = FileSourceRegistryStore(local_temp_root() / "registry_shadow")
+    _source_catalog(service, tmp_path)
+    store = FileSourceRegistryStore(tmp_path / "registry_shadow")
     store.save_registry(SourceRegistryFile(sources=[_registry_entry("demo.same")]))
 
     service.sync_connections_from_config(
         BrokerConfig(
-            store_root=local_temp_root(),
+            store_root=tmp_path,
             connections=[
                 ConnectionConfig(id="demo.same", server="demo", account="config"),
             ],
@@ -243,16 +241,16 @@ def test_connection_service_sync_config_shadows_registry_entry() -> None:
     )
 
 
-def test_connection_service_sync_registry_disabled_entry_hydrates_disabled_source() -> (
-    None
-):
+def test_connection_service_sync_registry_disabled_entry_hydrates_disabled_source(
+    tmp_path: Path,
+) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    catalog = _source_catalog(service)
-    store = FileSourceRegistryStore(local_temp_root() / "registry_disabled")
+    catalog = _source_catalog(service, tmp_path)
+    store = FileSourceRegistryStore(tmp_path / "registry_disabled")
     store.save_registry(SourceRegistryFile(sources=[_registry_entry(enabled=False)]))
 
     service.sync_connections_from_config(
-        BrokerConfig(store_root=local_temp_root(), connections=[]),
+        BrokerConfig(store_root=tmp_path, connections=[]),
         source_registry_store=store,
     )
 
@@ -264,7 +262,7 @@ def test_connection_service_sync_locked_config_shadows_registry_entry(
     tmp_path: Path,
 ) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    _source_catalog(service)
+    _source_catalog(service, tmp_path)
     store = FileSourceRegistryStore(tmp_path / "locked_shadow")
     store.save_registry(
         SourceRegistryFile(
@@ -279,7 +277,7 @@ def test_connection_service_sync_locked_config_shadows_registry_entry(
         )
     )
     config = BrokerConfig(
-        store_root=local_temp_root(),
+        store_root=tmp_path,
         connections=[
             ConnectionConfig(
                 id="demo.default",
@@ -305,11 +303,11 @@ def test_connection_service_sync_seed_config_materializes_registry_entry(
     tmp_path: Path,
 ) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    _source_catalog(service)
+    _source_catalog(service, tmp_path)
     store_root = tmp_path / "seed_materialized"
     store = FileSourceRegistryStore(store_root)
     config = BrokerConfig(
-        store_root=local_temp_root(),
+        store_root=tmp_path,
         connections=[
             ConnectionConfig(
                 id="demo.default",
@@ -339,7 +337,7 @@ def test_connection_service_sync_seed_existing_registry_entry_wins(
     tmp_path: Path,
 ) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
-    _source_catalog(service)
+    _source_catalog(service, tmp_path)
     store = FileSourceRegistryStore(tmp_path / "seed_existing")
     store.save_registry(
         SourceRegistryFile(
@@ -354,7 +352,7 @@ def test_connection_service_sync_seed_existing_registry_entry_wins(
         )
     )
     config = BrokerConfig(
-        store_root=local_temp_root(),
+        store_root=tmp_path,
         connections=[
             ConnectionConfig(
                 id="demo.default",
@@ -377,13 +375,13 @@ def test_connection_service_sync_seed_existing_registry_entry_wins(
     )
 
 
-def test_wfmcpservice_sync_connections_delegates_registry_store() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "facade_registry"))
-    store = FileSourceRegistryStore(local_temp_root() / "facade_registry_store")
+def test_wfmcpservice_sync_connections_delegates_registry_store(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "facade_registry"))
+    store = FileSourceRegistryStore(tmp_path / "facade_registry_store")
     store.save_registry(SourceRegistryFile(sources=[_registry_entry()]))
 
     service.sync_connections_from_config(
-        BrokerConfig(store_root=local_temp_root(), connections=[]),
+        BrokerConfig(store_root=tmp_path, connections=[]),
         source_registry_store=store,
     )
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 import pytest
 
@@ -12,7 +13,7 @@ from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
 
-from tests.wf_mcp.test_support import echo_tool, local_temp_root
+from tests.wf_mcp.test_support import echo_tool
 from tests.wf_mcp.workflow_surface.conftest import echo_artifact, failing_tool
 
 
@@ -42,8 +43,8 @@ def _capability_api(
     return WorkflowCapabilityApi(context), service
 
 
-def test_list_capabilities_returns_planner_visible_sources() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "cap_api_list")
+def test_list_capabilities_returns_planner_visible_sources(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_list")
     api, _service = _capability_api(artifact_store, register_echo=True)
 
     result = asyncio.run(api.list_capabilities())
@@ -62,9 +63,9 @@ def test_list_capabilities_returns_planner_visible_sources() -> None:
     assert "output_fields" in first
 
 
-def test_list_capabilities_filters_by_source() -> None:
+def test_list_capabilities_filters_by_source(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "cap_api_list_filter"
+        tmp_path / "cap_api_list_filter"
     )
     api, _service = _capability_api(artifact_store, register_echo=True)
 
@@ -73,8 +74,8 @@ def test_list_capabilities_filters_by_source() -> None:
     assert [item["name"] for item in result["capabilities"]] == ["wf.std.truthy"]
 
 
-def test_inspect_capability_returns_detail_with_wrapper_hints() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "cap_api_inspect")
+def test_inspect_capability_returns_detail_with_wrapper_hints(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_inspect")
     api, _service = _capability_api(artifact_store, register_echo=True)
 
     detail = asyncio.run(
@@ -89,9 +90,9 @@ def test_inspect_capability_returns_detail_with_wrapper_hints() -> None:
     assert hints["output_map"] == {"echoed": "state.echoed"}
 
 
-def test_inspect_capability_raises_on_unknown() -> None:
+def test_inspect_capability_raises_on_unknown(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "cap_api_inspect_unknown"
+        tmp_path / "cap_api_inspect_unknown"
     )
     api, _service = _capability_api(artifact_store, register_echo=True)
 
@@ -99,8 +100,8 @@ def test_inspect_capability_raises_on_unknown() -> None:
         asyncio.run(api.inspect_capability(qualified_name="no.such.capability"))
 
 
-def test_call_capability_node_spec_success() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "cap_api_call")
+def test_call_capability_node_spec_success(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_call")
     api, _service = _capability_api(artifact_store, register_echo=True)
 
     result = asyncio.run(
@@ -117,8 +118,8 @@ def test_call_capability_node_spec_success() -> None:
     assert result["deployment_id"] is None
 
 
-def test_call_capability_node_spec_failure() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "cap_api_call_fail")
+def test_call_capability_node_spec_failure(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_call_fail")
     api, _service = _capability_api(artifact_store, register_failing=True)
 
     result = asyncio.run(
@@ -134,9 +135,9 @@ def test_call_capability_node_spec_failure() -> None:
     assert result["diagnostics"][0]["code"] == "capability_call_failed"
 
 
-def test_list_capabilities_includes_saved_wrapper() -> None:
+def test_list_capabilities_includes_saved_wrapper(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "cap_api_wrapper_list"
+        tmp_path / "cap_api_wrapper_list"
     )
     artifact_store.save_artifact(
         echo_artifact().model_copy(
@@ -165,9 +166,9 @@ def test_list_capabilities_includes_saved_wrapper() -> None:
     assert row["output_fields"] == ["echoed"]
 
 
-def test_inspect_capability_saved_wrapper() -> None:
+def test_inspect_capability_saved_wrapper(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "cap_api_wrapper_inspect"
+        tmp_path / "cap_api_wrapper_inspect"
     )
     artifact_store.save_artifact(
         echo_artifact().model_copy(update={"id": "echo_wrapper", "kind": "wrapper"})
@@ -194,9 +195,9 @@ def test_inspect_capability_saved_wrapper() -> None:
     assert hints["output_map"] == {"echoed": "state.echoed"}
 
 
-def test_call_capability_saved_wrapper() -> None:
+def test_call_capability_saved_wrapper(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "cap_api_wrapper_call"
+        tmp_path / "cap_api_wrapper_call"
     )
     artifact_store.save_artifact(
         echo_artifact().model_copy(update={"id": "echo_wrapper", "kind": "wrapper"})
@@ -215,9 +216,9 @@ def test_call_capability_saved_wrapper() -> None:
     assert result["diagnostics"] == []
 
 
-def test_create_draft_workspace_from_capability() -> None:
+def test_create_draft_workspace_from_capability(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "cap_api_draft_bootstrap"
+        tmp_path / "cap_api_draft_bootstrap"
     )
     api, _service = _capability_api(artifact_store, register_echo=True)
 
@@ -240,9 +241,9 @@ def test_create_draft_workspace_from_capability() -> None:
     assert fetched["draft"]["steps"]["call"]["use"] == "demo.personal.echo_tool"
 
 
-def test_handler_delegates_to_capability_api() -> None:
+def test_handler_delegates_to_capability_api(tmp_path: Path) -> None:
     """WorkflowSurfaceHandlers methods produce the same result as direct API."""
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "cap_api_delegation")
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_delegation")
     mcp_root = artifact_store.root / "delegation_mcp"
     service = WfMcpService(
         store=FileStore(mcp_root),

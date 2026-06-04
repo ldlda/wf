@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import replace
+from pathlib import Path
 from typing import Any, cast
 
 from wf_artifacts import (
@@ -21,7 +22,7 @@ from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
 
-from tests.wf_mcp.test_support import echo_tool, local_temp_root
+from tests.wf_mcp.test_support import echo_tool
 
 
 def _echo_artifact() -> WorkflowArtifact:
@@ -97,8 +98,8 @@ def _deployment_api(
     return WorkflowDeploymentApi(context), service
 
 
-def test_save_deployment_stores_and_returns_stable_fields() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "deploy_save")
+def test_save_deployment_stores_and_returns_stable_fields(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_save")
     api, _service = _deployment_api(artifact_store)
 
     result = asyncio.run(
@@ -120,8 +121,8 @@ def test_save_deployment_stores_and_returns_stable_fields() -> None:
     assert result["artifact_version"] == 1
 
 
-def test_list_deployments_returns_compact_summaries() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "deploy_list")
+def test_list_deployments_returns_compact_summaries(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_list")
     api, _service = _deployment_api(artifact_store)
     artifact_store.save_deployment(
         WorkflowDeployment(
@@ -140,8 +141,8 @@ def test_list_deployments_returns_compact_summaries() -> None:
     assert "bindings" not in result["deployments"][0]
 
 
-def test_list_deployments_returns_empty_without_artifact_store() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "deploy_no_store")
+def test_list_deployments_returns_empty_without_artifact_store(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_no_store")
     _api, service = _deployment_api(artifact_store)
     context = replace(context_from_service(service), artifact_store=None)
     api = WorkflowDeploymentApi(context)
@@ -151,8 +152,8 @@ def test_list_deployments_returns_empty_without_artifact_store() -> None:
     assert result["deployments"] == []
 
 
-def test_delete_deployment_removes_one() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "deploy_delete")
+def test_delete_deployment_removes_one(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_delete")
     api, _service = _deployment_api(artifact_store)
     artifact_store.save_deployment(
         WorkflowDeployment(
@@ -170,9 +171,9 @@ def test_delete_deployment_removes_one() -> None:
     assert artifact_store.list_deployments() == []
 
 
-def test_validate_deployment_returns_runnable_for_valid_binding() -> None:
+def test_validate_deployment_returns_runnable_for_valid_binding(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "deploy_validate_runnable"
+        tmp_path / "deploy_validate_runnable"
     )
     api, service = _deployment_api(artifact_store, register_echo=True)
     artifact_store.save_artifact(_echo_artifact())
@@ -202,9 +203,9 @@ class FailingLivenessAdapter:
         raise OSError("stdio process exited")
 
 
-def test_validate_deployment_live_check_calls_live_checker() -> None:
+def test_validate_deployment_live_check_calls_live_checker(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "deploy_validate_live"
+        tmp_path / "deploy_validate_live"
     )
     api, service = _deployment_api(artifact_store, register_echo=True)
     artifact_store.save_artifact(_echo_artifact())
@@ -229,9 +230,9 @@ def test_validate_deployment_live_check_calls_live_checker() -> None:
     assert result["diagnostics"][0]["code"] == "source_unreachable"
 
 
-def test_handler_delegation_for_validate_deployment() -> None:
+def test_handler_delegation_for_validate_deployment(tmp_path: Path) -> None:
     """WorkflowSurfaceHandlers.validate_deployment delegates to WorkflowDeploymentApi."""
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "deploy_delegation")
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_delegation")
     service = WfMcpService(
         store=FileStore(artifact_store.root / "delegation_mcp"),
         artifact_store=artifact_store,

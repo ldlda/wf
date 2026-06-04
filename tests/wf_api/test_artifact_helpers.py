@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from wf_api.artifact_plans import plan_field, plan_nodes, raw_plan_from_artifact
@@ -63,15 +65,15 @@ def test_required_capability_payloads_sorts_by_name() -> None:
     assert "kind" in first
 
 
-def test_observed_node_specs_projects_enabled_context_specs() -> None:
+def test_observed_node_specs_projects_enabled_context_specs(tmp_path: Path) -> None:
     from wf_artifacts import FileWorkflowArtifactStore
     from wf_mcp.broker import WfMcpService
     from wf_mcp.models import ConnectionConfig
     from wf_mcp.storage import FileStore
     from wf_mcp.broker.service.workflow_operation_context import context_from_service
-    from tests.wf_mcp.test_support import echo_tool, local_temp_root
+    from tests.wf_mcp.test_support import echo_tool
 
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "cap_req_helpers")
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_req_helpers")
     service = WfMcpService(
         store=FileStore(artifact_store.root / "mcp"),
         artifact_store=artifact_store,
