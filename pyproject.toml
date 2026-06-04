@@ -28,12 +28,14 @@ dev = [
     "basedpyright>=1.39.6",
     "pytest>=8",
     # "pytest-sugar>=1",
+    "pytest-asyncio>=1.4.0",
     "ruff>=0.15.15",
 ]
 
 [tool.pytest.ini_options]
 addopts = "-p no:cacheprovider"
 pythonpath = ["."]
+asyncio_mode = "auto"
 
 [tool.uv]
 package = true

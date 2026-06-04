@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, replace
 from typing import Any
 
@@ -100,390 +99,339 @@ def _server_with_mutation_provider(tmp_path: Any) -> Any:
 # --- read-only tests (unchanged) ---
 
 
-def test_rpc_source_registry_list_unavailable_on_local_static(tmp_path) -> None:
-    async def scenario() -> None:
-        server = build_local_static_workflow_server(tmp_path / "store")
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client, "workflow.admin.source_registry.list", {"limit": 10}
-            )
-
-        assert "error" in payload
-        assert payload["error"]["data"]["code"] == "source_registry_unavailable"
-
-    asyncio.run(scenario())
-
-
-def test_rpc_source_registry_inspect_unavailable_on_local_static(tmp_path) -> None:
-    async def scenario() -> None:
-        server = build_local_static_workflow_server(tmp_path / "store")
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.inspect",
-                {"source_id": "github.work"},
-            )
-
-        assert "error" in payload
-        assert payload["error"]["data"]["code"] == "source_registry_unavailable"
-
-    asyncio.run(scenario())
-
-
-def test_rpc_source_registry_methods_return_registry_payloads(tmp_path) -> None:
-    async def scenario() -> None:
-        server = replace(
-            build_local_static_workflow_server(tmp_path / "store"),
-            source_registry_admin=WorkflowSourceRegistryApi(
-                provider=FakeRegistryProvider()
-            ),
+async def test_rpc_source_registry_list_unavailable_on_local_static(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client, "workflow.admin.source_registry.list", {"limit": 10}
         )
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            listed = await _rpc(
-                client, "workflow.admin.source_registry.list", {"limit": 10}
-            )
-            inspected = await _rpc(
-                client,
-                "workflow.admin.source_registry.inspect",
-                {"source_id": "github.work"},
-            )
 
-        assert listed["result"]["entries"][0]["id"] == "github.work"
-        assert listed["result"]["entries"][0]["shadowed_by_config"] is True
-        assert inspected["result"]["entry"]["transport"]["kind"] == "stdio"
-        assert inspected["result"]["shadowed_by_config"] is True
+    assert "error" in payload
+    assert payload["error"]["data"]["code"] == "source_registry_unavailable"
 
-    asyncio.run(scenario())
+
+async def test_rpc_source_registry_inspect_unavailable_on_local_static(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.inspect",
+            {"source_id": "github.work"},
+        )
+
+    assert "error" in payload
+    assert payload["error"]["data"]["code"] == "source_registry_unavailable"
+
+
+async def test_rpc_source_registry_methods_return_registry_payloads(tmp_path) -> None:
+    server = replace(
+        build_local_static_workflow_server(tmp_path / "store"),
+        source_registry_admin=WorkflowSourceRegistryApi(
+            provider=FakeRegistryProvider()
+        ),
+    )
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        listed = await _rpc(
+            client, "workflow.admin.source_registry.list", {"limit": 10}
+        )
+        inspected = await _rpc(
+            client,
+            "workflow.admin.source_registry.inspect",
+            {"source_id": "github.work"},
+        )
+
+    assert listed["result"]["entries"][0]["id"] == "github.work"
+    assert listed["result"]["entries"][0]["shadowed_by_config"] is True
+    assert inspected["result"]["entry"]["transport"]["kind"] == "stdio"
+    assert inspected["result"]["shadowed_by_config"] is True
 
 
 # --- mutation unavailable tests ---
 
 
-def test_rpc_source_registry_add_unavailable_on_local_static(tmp_path) -> None:
-    async def scenario() -> None:
-        server = build_local_static_workflow_server(tmp_path / "store")
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.add",
-                {"entry": {"id": "new.source", "kind": "mcp"}},
-            )
+async def test_rpc_source_registry_add_unavailable_on_local_static(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.add",
+            {"entry": {"id": "new.source", "kind": "mcp"}},
+        )
 
-        assert "error" in payload
-        assert payload["error"]["data"]["code"] == "source_registry_unavailable"
-
-    asyncio.run(scenario())
+    assert "error" in payload
+    assert payload["error"]["data"]["code"] == "source_registry_unavailable"
 
 
-def test_rpc_source_registry_update_unavailable_on_local_static(tmp_path) -> None:
-    async def scenario() -> None:
-        server = build_local_static_workflow_server(tmp_path / "store")
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.update",
-                {"source_id": "github.work", "patch": {"enabled": False}},
-            )
+async def test_rpc_source_registry_update_unavailable_on_local_static(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.update",
+            {"source_id": "github.work", "patch": {"enabled": False}},
+        )
 
-        assert "error" in payload
-        assert payload["error"]["data"]["code"] == "source_registry_unavailable"
-
-    asyncio.run(scenario())
+    assert "error" in payload
+    assert payload["error"]["data"]["code"] == "source_registry_unavailable"
 
 
-def test_rpc_source_registry_enable_unavailable_on_local_static(tmp_path) -> None:
-    async def scenario() -> None:
-        server = build_local_static_workflow_server(tmp_path / "store")
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.enable",
-                {"source_id": "github.work"},
-            )
+async def test_rpc_source_registry_enable_unavailable_on_local_static(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.enable",
+            {"source_id": "github.work"},
+        )
 
-        assert "error" in payload
-        assert payload["error"]["data"]["code"] == "source_registry_unavailable"
-
-    asyncio.run(scenario())
+    assert "error" in payload
+    assert payload["error"]["data"]["code"] == "source_registry_unavailable"
 
 
-def test_rpc_source_registry_disable_unavailable_on_local_static(tmp_path) -> None:
-    async def scenario() -> None:
-        server = build_local_static_workflow_server(tmp_path / "store")
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.disable",
-                {"source_id": "github.work"},
-            )
+async def test_rpc_source_registry_disable_unavailable_on_local_static(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.disable",
+            {"source_id": "github.work"},
+        )
 
-        assert "error" in payload
-        assert payload["error"]["data"]["code"] == "source_registry_unavailable"
-
-    asyncio.run(scenario())
+    assert "error" in payload
+    assert payload["error"]["data"]["code"] == "source_registry_unavailable"
 
 
-def test_rpc_source_registry_remove_unavailable_on_local_static(tmp_path) -> None:
-    async def scenario() -> None:
-        server = build_local_static_workflow_server(tmp_path / "store")
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.remove",
-                {"source_id": "github.work"},
-            )
+async def test_rpc_source_registry_remove_unavailable_on_local_static(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.remove",
+            {"source_id": "github.work"},
+        )
 
-        assert "error" in payload
-        assert payload["error"]["data"]["code"] == "source_registry_unavailable"
-
-    asyncio.run(scenario())
+    assert "error" in payload
+    assert payload["error"]["data"]["code"] == "source_registry_unavailable"
 
 
 # --- mutation success tests ---
 
 
-def test_rpc_source_registry_add_returns_entry(tmp_path) -> None:
-    async def scenario() -> None:
-        server = _server_with_mutation_provider(tmp_path)
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.add",
-                {"entry": {"id": "new.mcp", "kind": "mcp", "enabled": True}},
-            )
-
-        assert "result" in payload
-        assert payload["result"]["entry"]["id"] == "new.mcp"
-        assert payload["result"]["entry"]["kind"] == "mcp"
-
-    asyncio.run(scenario())
-
-
-def test_rpc_source_registry_update_returns_entry(tmp_path) -> None:
-    async def scenario() -> None:
-        server = _server_with_mutation_provider(tmp_path)
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.update",
-                {"source_id": "github.work", "patch": {"enabled": False}},
-            )
-
-        assert "result" in payload
-        assert payload["result"]["entry"]["id"] == "github.work"
-        assert payload["result"]["entry"]["enabled"] is False
-
-    asyncio.run(scenario())
-
-
-def test_rpc_source_registry_enable_returns_entry(tmp_path) -> None:
-    async def scenario() -> None:
-        mutation = FakeMutationProvider()
-        mutation.entries["github.work"]["enabled"] = False
-        server = replace(
-            build_local_static_workflow_server(tmp_path / "store"),
-            source_registry_admin=WorkflowSourceRegistryApi(
-                provider=FakeRegistryProvider(),
-                mutation_provider=mutation,
-            ),
+async def test_rpc_source_registry_add_returns_entry(tmp_path) -> None:
+    server = _server_with_mutation_provider(tmp_path)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.add",
+            {"entry": {"id": "new.mcp", "kind": "mcp", "enabled": True}},
         )
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.enable",
-                {"source_id": "github.work"},
-            )
 
-        assert "result" in payload
-        assert payload["result"]["entry"]["enabled"] is True
-
-    asyncio.run(scenario())
+    assert "result" in payload
+    assert payload["result"]["entry"]["id"] == "new.mcp"
+    assert payload["result"]["entry"]["kind"] == "mcp"
 
 
-def test_rpc_source_registry_disable_returns_entry(tmp_path) -> None:
-    async def scenario() -> None:
-        server = _server_with_mutation_provider(tmp_path)
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.disable",
-                {"source_id": "github.work"},
-            )
+async def test_rpc_source_registry_update_returns_entry(tmp_path) -> None:
+    server = _server_with_mutation_provider(tmp_path)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.update",
+            {"source_id": "github.work", "patch": {"enabled": False}},
+        )
 
-        assert "result" in payload
-        assert payload["result"]["entry"]["enabled"] is False
-
-    asyncio.run(scenario())
+    assert "result" in payload
+    assert payload["result"]["entry"]["id"] == "github.work"
+    assert payload["result"]["entry"]["enabled"] is False
 
 
-def test_rpc_source_registry_remove_returns_removed(tmp_path) -> None:
-    async def scenario() -> None:
-        server = _server_with_mutation_provider(tmp_path)
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.remove",
-                {"source_id": "github.work"},
-            )
+async def test_rpc_source_registry_enable_returns_entry(tmp_path) -> None:
+    mutation = FakeMutationProvider()
+    mutation.entries["github.work"]["enabled"] = False
+    server = replace(
+        build_local_static_workflow_server(tmp_path / "store"),
+        source_registry_admin=WorkflowSourceRegistryApi(
+            provider=FakeRegistryProvider(),
+            mutation_provider=mutation,
+        ),
+    )
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.enable",
+            {"source_id": "github.work"},
+        )
 
-        assert "result" in payload
-        assert payload["result"]["removed"] is True
-        assert payload["result"]["source_id"] == "github.work"
+    assert "result" in payload
+    assert payload["result"]["entry"]["enabled"] is True
 
-    asyncio.run(scenario())
+
+async def test_rpc_source_registry_disable_returns_entry(tmp_path) -> None:
+    server = _server_with_mutation_provider(tmp_path)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.disable",
+            {"source_id": "github.work"},
+        )
+
+    assert "result" in payload
+    assert payload["result"]["entry"]["enabled"] is False
+
+
+async def test_rpc_source_registry_remove_returns_removed(tmp_path) -> None:
+    server = _server_with_mutation_provider(tmp_path)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.remove",
+            {"source_id": "github.work"},
+        )
+
+    assert "result" in payload
+    assert payload["result"]["removed"] is True
+    assert payload["result"]["source_id"] == "github.work"
 
 
 # --- mutation error tests ---
 
 
-def test_rpc_source_registry_add_missing_entry_raises_error(tmp_path) -> None:
-    async def scenario() -> None:
-        server = _server_with_mutation_provider(tmp_path)
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.add",
-                {"entry": {}},
-            )
+async def test_rpc_source_registry_add_missing_entry_raises_error(tmp_path) -> None:
+    server = _server_with_mutation_provider(tmp_path)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.add",
+            {"entry": {}},
+        )
 
-        assert "error" in payload
-
-    asyncio.run(scenario())
+    assert "error" in payload
 
 
-def test_rpc_source_registry_update_missing_source_raises_error(tmp_path) -> None:
-    async def scenario() -> None:
-        server = _server_with_mutation_provider(tmp_path)
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.update",
-                {"source_id": "nonexistent", "patch": {"enabled": False}},
-            )
+async def test_rpc_source_registry_update_missing_source_raises_error(tmp_path) -> None:
+    server = _server_with_mutation_provider(tmp_path)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.update",
+            {"source_id": "nonexistent", "patch": {"enabled": False}},
+        )
 
-        assert "error" in payload
-
-    asyncio.run(scenario())
+    assert "error" in payload
 
 
-def test_rpc_source_registry_remove_missing_source_raises_error(tmp_path) -> None:
-    async def scenario() -> None:
-        server = _server_with_mutation_provider(tmp_path)
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as client:
-            payload = await _rpc(
-                client,
-                "workflow.admin.source_registry.remove",
-                {"source_id": "nonexistent"},
-            )
+async def test_rpc_source_registry_remove_missing_source_raises_error(tmp_path) -> None:
+    server = _server_with_mutation_provider(tmp_path)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.remove",
+            {"source_id": "nonexistent"},
+        )
 
-        assert "error" in payload
-
-    asyncio.run(scenario())
+    assert "error" in payload
 
 
 # --- client method tests ---
 
 
-def test_rpc_client_source_registry_calls_correct_methods(tmp_path) -> None:
-    async def scenario() -> None:
-        server = build_local_static_workflow_server(tmp_path / "store")
-        app = create_rpc_app(server)
-        transport = httpx.ASGITransport(app=app)
-        async with httpx.AsyncClient(
-            transport=transport, base_url="http://test"
-        ) as http_client:
-            client = RpcWorkflowApiClient(
-                url="http://test/rpc",
-                timeout_seconds=5,
-                http_client=http_client,
-            )
-            try:
-                await client.list_registry_entries(limit=5)
-            except RuntimeError as exc:
-                list_error = str(exc)
-            else:
-                list_error = None
+async def test_rpc_client_source_registry_calls_correct_methods(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            timeout_seconds=5,
+            http_client=http_client,
+        )
+        try:
+            await client.list_registry_entries(limit=5)
+        except RuntimeError as exc:
+            list_error = str(exc)
+        else:
+            list_error = None
 
-            try:
-                await client.inspect_registry_entry(source_id="x")
-            except RuntimeError as exc:
-                inspect_error = str(exc)
-            else:
-                inspect_error = None
+        try:
+            await client.inspect_registry_entry(source_id="x")
+        except RuntimeError as exc:
+            inspect_error = str(exc)
+        else:
+            inspect_error = None
 
-        assert list_error is not None
-        assert "source registry admin reads are not available" in list_error
-        assert inspect_error is not None
-        assert "source registry admin reads are not available" in inspect_error
-
-    asyncio.run(scenario())
+    assert list_error is not None
+    assert "source registry admin reads are not available" in list_error
+    assert inspect_error is not None
+    assert "source registry admin reads are not available" in inspect_error
 
 
-def test_rpc_client_source_registry_mutation_methods_exist() -> None:
+async def test_rpc_client_source_registry_mutation_methods_exist() -> None:
     from wf_transport_rpc_http.client import RpcWorkflowApiClient
 
     client = RpcWorkflowApiClient.__new__(RpcWorkflowApiClient)
@@ -495,31 +443,31 @@ def test_rpc_client_source_registry_mutation_methods_exist() -> None:
 
     client._call = fake_call  # type: ignore[assignment]
 
-    asyncio.run(client.add_registry_entry(entry={"id": "x", "kind": "mcp"}))
+    await client.add_registry_entry(entry={"id": "x", "kind": "mcp"})
     assert calls[-1] == (
         "workflow.admin.source_registry.add",
         {"entry": {"id": "x", "kind": "mcp"}},
     )
 
-    asyncio.run(client.update_registry_entry(source_id="s", patch={"enabled": False}))
+    await client.update_registry_entry(source_id="s", patch={"enabled": False})
     assert calls[-1] == (
         "workflow.admin.source_registry.update",
         {"source_id": "s", "patch": {"enabled": False}},
     )
 
-    asyncio.run(client.enable_registry_entry(source_id="s"))
+    await client.enable_registry_entry(source_id="s")
     assert calls[-1] == (
         "workflow.admin.source_registry.enable",
         {"source_id": "s"},
     )
 
-    asyncio.run(client.disable_registry_entry(source_id="s"))
+    await client.disable_registry_entry(source_id="s")
     assert calls[-1] == (
         "workflow.admin.source_registry.disable",
         {"source_id": "s"},
     )
 
-    asyncio.run(client.remove_registry_entry(source_id="s"))
+    await client.remove_registry_entry(source_id="s")
     assert calls[-1] == (
         "workflow.admin.source_registry.remove",
         {"source_id": "s"},
