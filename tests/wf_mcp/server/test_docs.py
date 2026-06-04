@@ -214,9 +214,7 @@ def test_server_reload_preserves_source_registry_connections() -> None:
         client = create_server_client(config, config_path=config_path)
         async with client:
             before = await client.call_tool("wf.admin.list_sources", {"limit": 100})
-            before_ids = {
-                source["id"] for source in structured(before)["sources"]
-            }
+            before_ids = {source["id"] for source in structured(before)["sources"]}
             assert "fixture.registry" in before_ids
 
             await client.call_tool("wf.admin.reload_config")

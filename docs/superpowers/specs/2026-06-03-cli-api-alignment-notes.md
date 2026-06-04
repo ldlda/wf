@@ -85,8 +85,11 @@ surface, or plain local CLI utilities.
      and `wf source list` / `wf source inspect`.
    - Read-only admin/config operations are now available through JSON-RPC HTTP
      and `wf admin connections`, `wf admin statuses`, and `wf admin events`.
-   - Next source work is persistence for server-owned dynamic source changes.
-   - Keep mutation out until the store-backed source registry is designed.
+   - Source registry mutations (`add` / `update` / `enable` / `disable` /
+     `remove`) are now implemented for server-owned dynamic source changes.
+   - Remaining source-registry work is migration policy: config can bootstrap
+     or lock sources, while the store-backed registry owns mutable desired
+     state for dynamic sources.
 
 2. **Mutable source/admin commands**
    - Config can bootstrap sources, but server-owned dynamic source changes

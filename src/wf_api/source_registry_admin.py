@@ -19,7 +19,9 @@ class WorkflowSourceRegistryProvider(Protocol):
 class WorkflowSourceRegistryMutationProvider(Protocol):
     """Write capabilities for source registry mutation operations."""
 
-    def add_registry_entry(self, entry: Mapping[str, Any]) -> Mapping[str, Any] | object: ...
+    def add_registry_entry(
+        self, entry: Mapping[str, Any]
+    ) -> Mapping[str, Any] | object: ...
     def update_registry_entry(
         self, source_id: str, patch: Mapping[str, Any]
     ) -> Mapping[str, Any] | object: ...

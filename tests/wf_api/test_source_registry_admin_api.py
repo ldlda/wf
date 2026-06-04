@@ -93,7 +93,9 @@ def test_list_pagination() -> None:
     )
 
     first = asyncio.run(api.list_registry_entries(limit=2))
-    second = asyncio.run(api.list_registry_entries(cursor=first["next_cursor"], limit=2))
+    second = asyncio.run(
+        api.list_registry_entries(cursor=first["next_cursor"], limit=2)
+    )
 
     assert [e["id"] for e in first["entries"]] == ["a", "b"]
     assert first["next_cursor"] == "2"
@@ -162,7 +164,9 @@ class FakeMutationProvider:
         self._entries.append(fe)
         return asdict(fe)
 
-    def update_registry_entry(self, source_id: str, patch: Mapping[str, Any]) -> dict[str, Any]:
+    def update_registry_entry(
+        self, source_id: str, patch: Mapping[str, Any]
+    ) -> dict[str, Any]:
         for i, e in enumerate(self._entries):
             if e.id == source_id:
                 merged = asdict(e)
@@ -171,7 +175,9 @@ class FakeMutationProvider:
                 return merged
         raise KeyError(source_id)
 
-    def set_registry_entry_enabled(self, source_id: str, enabled: bool) -> dict[str, Any]:
+    def set_registry_entry_enabled(
+        self, source_id: str, enabled: bool
+    ) -> dict[str, Any]:
         for i, e in enumerate(self._entries):
             if e.id == source_id:
                 merged = asdict(e)
@@ -193,12 +199,23 @@ def _mutation_api(
 ) -> tuple[WorkflowSourceRegistryApi, FakeMutationProvider]:
     provider = FakeRegistryProvider(list(entries) if entries else [], config_ids)
     mutation = FakeMutationProvider(list(entries) if entries else [])
-    return WorkflowSourceRegistryApi(provider=provider, mutation_provider=mutation), mutation
+    return WorkflowSourceRegistryApi(
+        provider=provider, mutation_provider=mutation
+    ), mutation
 
 
 def test_add_registry_entry() -> None:
     api, _ = _mutation_api()
-    new_entry = {"id": "new.source", "kind": "mcp", "enabled": True, "provider": "new", "account": "default", "profile": None, "transport": {"kind": "stdio"}, "auth_ref": None}
+    new_entry = {
+        "id": "new.source",
+        "kind": "mcp",
+        "enabled": True,
+        "provider": "new",
+        "account": "default",
+        "profile": None,
+        "transport": {"kind": "stdio"},
+        "auth_ref": None,
+    }
     payload = asyncio.run(api.add_registry_entry(entry=new_entry))
 
     assert payload["entry"]["id"] == "new.source"
@@ -208,7 +225,16 @@ def test_add_registry_entry() -> None:
 
 def test_add_registry_entry_shadowed() -> None:
     api, _ = _mutation_api(config_ids={"new.source"})
-    new_entry = {"id": "new.source", "kind": "mcp", "enabled": True, "provider": "new", "account": "default", "profile": None, "transport": {"kind": "stdio"}, "auth_ref": None}
+    new_entry = {
+        "id": "new.source",
+        "kind": "mcp",
+        "enabled": True,
+        "provider": "new",
+        "account": "default",
+        "profile": None,
+        "transport": {"kind": "stdio"},
+        "auth_ref": None,
+    }
     payload = asyncio.run(api.add_registry_entry(entry=new_entry))
 
     assert payload["entry"]["id"] == "new.source"
@@ -219,7 +245,9 @@ def test_update_registry_entry() -> None:
     api, _ = _mutation_api(
         entries=[FakeRegistryEntry(id="upd.source", provider="old")],
     )
-    payload = asyncio.run(api.update_registry_entry(source_id="upd.source", patch={"provider": "new"}))
+    payload = asyncio.run(
+        api.update_registry_entry(source_id="upd.source", patch={"provider": "new"})
+    )
 
     assert payload["entry"]["id"] == "upd.source"
     assert payload["entry"]["provider"] == "new"

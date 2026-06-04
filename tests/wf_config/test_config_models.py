@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from pydantic import ValidationError
@@ -113,7 +114,7 @@ def test_workflow_config_rejects_unwired_stdlib_source_id() -> None:
 
 
 def test_load_workflow_config_resolves_filesystem_store_relative_to_config(
-    tmp_path,
+    tmp_path: Path,
 ) -> None:
     config_path = tmp_path / "wf.json"
     config_path.write_text(
@@ -133,7 +134,9 @@ def test_load_workflow_config_resolves_filesystem_store_relative_to_config(
     assert config.server.store.root == (tmp_path / ".wf_store").resolve()
 
 
-def test_load_workflow_config_preserves_absolute_filesystem_store(tmp_path) -> None:
+def test_load_workflow_config_preserves_absolute_filesystem_store(
+    tmp_path: Path,
+) -> None:
     absolute_root = (tmp_path / "absolute-store").resolve()
     config_path = tmp_path / "wf.json"
     config_path.write_text(

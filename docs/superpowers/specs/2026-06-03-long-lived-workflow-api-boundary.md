@@ -2,7 +2,12 @@
 
 Date: 2026-06-03
 
-Status: design spec; implementation not started
+Status: Slices 1-3 implemented. `wf_server` provides
+`build_local_static_workflow_server`, `wf_transport_rpc_http` provides JSON-RPC
+methods and client support, `wf_cli` has target-aware context, and `wf_config`
+owns neutral config models. WebSocket transport, source providers, auth,
+streaming/progress, database backend, and live MCP source management remain
+future work.
 
 Related:
 
@@ -92,12 +97,14 @@ It should prove:
 
 Implementation status:
 
-- `wf_server.build_local_static_workflow_server()` constructs a durable
+- Slice 1 complete: `wf_server.build_local_static_workflow_server()` constructs a durable
   `WorkflowApi` with required file-backed stores, local `wf.std`/`wf.recipes`
   sources, and a local runtime runner.
-- This first slice has no transport adapter. Clients still call the in-process
-  `WorkflowApi` in tests; HTTP/JSON-RPC/WebSocket/MCP transport adapters are
-  later slices.
+- Slice 2 complete: `wf_transport_rpc_http` provides JSON-RPC 2.0 over HTTP via
+  `create_rpc_app(server)` and the `wf-rpc-server` CLI.
+- Slice 3 complete: `wf_cli` supports target-aware context with `--local`,
+  `--url`, and `--timeout` overrides, and works with remote RPC targets for
+  capability and run commands.
 
 First slice should not include:
 
@@ -279,10 +286,12 @@ Implementation status:
 
 - `wf_transport_rpc_http.create_rpc_app(server)` exposes a fixed JSON-RPC
   method set over an existing `wf_server.WorkflowServer`.
-- `wf-rpc-server --store-root <path>` starts the local/static server over
-  `/rpc`.
-- This slice still does not include remote `wf` CLI targeting, auth,
-  streaming/progress, or live upstream MCP source management.
+- `wf-rpc-server --store-root <path>` and `wf-rpc-server --config <path>` start
+  the local/static server over `/rpc`.
+- Remote `wf` CLI targeting is implemented through `wf_config` and target-aware
+  context in `wf_cli`.
+- Auth, streaming/progress, and live upstream MCP source management remain
+  future work.
 
 Preferred implementation dependency:
 

@@ -13,7 +13,9 @@ from .methods_capabilities import register_methods as register_capability_method
 from .methods_deployments import register_methods as register_deployment_methods
 from .methods_drafts import register_methods as register_draft_methods
 from .methods_runs import register_methods as register_run_methods
-from .methods_source_registry import register_methods as register_source_registry_methods
+from .methods_source_registry import (
+    register_methods as register_source_registry_methods,
+)
 from .methods_sources import register_methods as register_source_methods
 
 

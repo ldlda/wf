@@ -150,6 +150,9 @@ implementation state.
       catalog snapshots are not mutated. Config-shadowed add is rejected in v1.
       Remove requires `--confirm` in CLI; local/static servers report
       unavailable.
+- Cleanup candidate: consolidate store/source registry id validation patterns
+      (`SOURCE_REGISTRY_ID_PATTERN`, `STORE_ID_PATTERN`) only after another package
+      needs the same rule. Today they intentionally stay close to their stores.
    - Longer term: make the MCP frontend an adapter over these neutral workflow,
       source-admin, and config-admin surfaces so the old `wf_mcp` server entry
       point can shrink or retire.

@@ -9,7 +9,11 @@ import httpx
 
 @dataclass(slots=True)
 class RpcClientTransport:
-    """Shared JSON-RPC request plumbing for workflow RPC client mixins."""
+    """Shared JSON-RPC request plumbing for workflow RPC client mixins.
+
+    If `http_client` is provided, that client's own timeout configuration wins;
+    `timeout_seconds` is only used when this transport creates an `AsyncClient`.
+    """
 
     url: str
     timeout_seconds: float = 30.0

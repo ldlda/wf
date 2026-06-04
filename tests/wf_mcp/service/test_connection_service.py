@@ -241,7 +241,9 @@ def test_connection_service_sync_config_shadows_registry_entry() -> None:
     )
 
 
-def test_connection_service_sync_registry_disabled_entry_hydrates_disabled_source() -> None:
+def test_connection_service_sync_registry_disabled_entry_hydrates_disabled_source() -> (
+    None
+):
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
     catalog = _source_catalog(service)
     store = FileSourceRegistryStore(local_temp_root() / "registry_disabled")

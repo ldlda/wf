@@ -161,8 +161,8 @@ def _read_json_arg(
     if file_path:
         try:
             value = json.loads(Path(file_path).read_text(encoding="utf-8"))
-        except FileNotFoundError:
-            raise typer.BadParameter(f"file not found: {file_path}")
+        except FileNotFoundError as exc:
+            raise typer.BadParameter(f"file not found: {file_path}") from exc
         except json.JSONDecodeError as exc:
             raise typer.BadParameter(f"invalid JSON in file: {exc}") from exc
         return _require_json_object(value, flag_names)

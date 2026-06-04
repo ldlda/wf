@@ -6,6 +6,7 @@ from fastapi import Body
 import fastapi_jsonrpc as jsonrpc
 from fastapi_jsonrpc import Params
 
+from wf_api import WorkflowSourceRegistrySurface
 from wf_server import WorkflowServer
 
 from .errors import WorkflowRpcError, raise_workflow_rpc_error
@@ -16,6 +17,25 @@ from .models import (
     RegistryEntryIdParams,
     UpdateRegistryEntryParams,
 )
+
+
+def _require_source_registry_admin(
+    server: WorkflowServer,
+    *,
+    operation: str,
+) -> WorkflowSourceRegistrySurface:
+    admin = server.source_registry_admin
+    if admin is None:
+        raise WorkflowRpcError(
+            data={
+                "code": "source_registry_unavailable",
+                "message": (
+                    f"source registry admin {operation} are not available "
+                    "for this server"
+                ),
+            }
+        )
+    return admin
 
 
 def register_methods(
@@ -33,15 +53,9 @@ def register_methods(
             default_factory=ListRegistryEntriesParams,
         ),
     ) -> dict[str, Any]:
-        if server.source_registry_admin is None:
-            raise WorkflowRpcError(
-                data={
-                    "code": "source_registry_unavailable",
-                    "message": "source registry admin reads are not available for this server",
-                }
-            )
+        admin = _require_source_registry_admin(server, operation="reads")
         try:
-            return await server.source_registry_admin.list_registry_entries(
+            return await admin.list_registry_entries(
                 cursor=params.cursor,
                 limit=params.limit,
             )
@@ -55,15 +69,9 @@ def register_methods(
     async def workflow_admin_source_registry_inspect(
         params: InspectRegistryEntryParams = Params(...),  # type: ignore[reportArgumentType]
     ) -> dict[str, Any]:
-        if server.source_registry_admin is None:
-            raise WorkflowRpcError(
-                data={
-                    "code": "source_registry_unavailable",
-                    "message": "source registry admin reads are not available for this server",
-                }
-            )
+        admin = _require_source_registry_admin(server, operation="reads")
         try:
-            return await server.source_registry_admin.inspect_registry_entry(
+            return await admin.inspect_registry_entry(
                 source_id=params.source_id,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -76,15 +84,9 @@ def register_methods(
     async def workflow_admin_source_registry_add(
         params: AddRegistryEntryParams = Params(...),  # type: ignore[reportArgumentType]
     ) -> dict[str, Any]:
-        if server.source_registry_admin is None:
-            raise WorkflowRpcError(
-                data={
-                    "code": "source_registry_unavailable",
-                    "message": "source registry admin mutations are not available for this server",
-                }
-            )
+        admin = _require_source_registry_admin(server, operation="mutations")
         try:
-            return await server.source_registry_admin.add_registry_entry(
+            return await admin.add_registry_entry(
                 entry=params.entry,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -97,15 +99,9 @@ def register_methods(
     async def workflow_admin_source_registry_update(
         params: UpdateRegistryEntryParams = Params(...),  # type: ignore[reportArgumentType]
     ) -> dict[str, Any]:
-        if server.source_registry_admin is None:
-            raise WorkflowRpcError(
-                data={
-                    "code": "source_registry_unavailable",
-                    "message": "source registry admin mutations are not available for this server",
-                }
-            )
+        admin = _require_source_registry_admin(server, operation="mutations")
         try:
-            return await server.source_registry_admin.update_registry_entry(
+            return await admin.update_registry_entry(
                 source_id=params.source_id,
                 patch=params.patch,
             )
@@ -119,15 +115,9 @@ def register_methods(
     async def workflow_admin_source_registry_enable(
         params: RegistryEntryIdParams = Params(...),  # type: ignore[reportArgumentType]
     ) -> dict[str, Any]:
-        if server.source_registry_admin is None:
-            raise WorkflowRpcError(
-                data={
-                    "code": "source_registry_unavailable",
-                    "message": "source registry admin mutations are not available for this server",
-                }
-            )
+        admin = _require_source_registry_admin(server, operation="mutations")
         try:
-            return await server.source_registry_admin.enable_registry_entry(
+            return await admin.enable_registry_entry(
                 source_id=params.source_id,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -140,15 +130,9 @@ def register_methods(
     async def workflow_admin_source_registry_disable(
         params: RegistryEntryIdParams = Params(...),  # type: ignore[reportArgumentType]
     ) -> dict[str, Any]:
-        if server.source_registry_admin is None:
-            raise WorkflowRpcError(
-                data={
-                    "code": "source_registry_unavailable",
-                    "message": "source registry admin mutations are not available for this server",
-                }
-            )
+        admin = _require_source_registry_admin(server, operation="mutations")
         try:
-            return await server.source_registry_admin.disable_registry_entry(
+            return await admin.disable_registry_entry(
                 source_id=params.source_id,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
@@ -161,15 +145,9 @@ def register_methods(
     async def workflow_admin_source_registry_remove(
         params: RegistryEntryIdParams = Params(...),  # type: ignore[reportArgumentType]
     ) -> dict[str, Any]:
-        if server.source_registry_admin is None:
-            raise WorkflowRpcError(
-                data={
-                    "code": "source_registry_unavailable",
-                    "message": "source registry admin mutations are not available for this server",
-                }
-            )
+        admin = _require_source_registry_admin(server, operation="mutations")
         try:
-            return await server.source_registry_admin.remove_registry_entry(
+            return await admin.remove_registry_entry(
                 source_id=params.source_id,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:

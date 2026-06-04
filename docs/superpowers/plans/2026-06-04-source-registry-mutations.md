@@ -42,6 +42,12 @@ For mutation v1:
 - `update`, `enable`, `disable`, and `remove` may operate on existing registry entries even if they are currently shadowed by config.
 - A future `allow_shadow` flag can relax `add`; do not add it in this slice.
 
+Rationale: `add` rejects config-shadowed ids to prevent silent no-ops: adding a
+registry entry that cannot activate while config owns the same id. Existing
+shadowed registry entries can still be updated, enabled, disabled, or removed so
+operators can prepare store state for config removal or future `seed` ownership
+policy.
+
 ### Full-Registry Validation
 
 Every mutation must:

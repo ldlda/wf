@@ -6,11 +6,14 @@ from pathlib import Path
 
 def test_rpc_transport_has_domain_method_modules() -> None:
     for module_name in (
+        "wf_transport_rpc_http.methods_admin",
         "wf_transport_rpc_http.methods_capabilities",
         "wf_transport_rpc_http.methods_drafts",
         "wf_transport_rpc_http.methods_artifacts",
         "wf_transport_rpc_http.methods_deployments",
         "wf_transport_rpc_http.methods_runs",
+        "wf_transport_rpc_http.methods_sources",
+        "wf_transport_rpc_http.methods_source_registry",
     ):
         module = importlib.import_module(module_name)
 

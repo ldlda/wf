@@ -49,6 +49,8 @@ class WorkflowAdminApi:
         )
         return {"statuses": statuses, "total": len(statuses)}
 
+    # Preserve provider order for events; event providers are expected to return
+    # chronological order and callers may rely on that ordering for diagnostics.
     async def list_events(self) -> dict[str, Any]:
         events = [_payload(event) for event in self.events.list_events()]
         return {"events": events, "total": len(events)}

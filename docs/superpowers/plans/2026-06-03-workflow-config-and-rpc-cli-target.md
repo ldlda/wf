@@ -2,6 +2,16 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+### Target Selection Precedence
+
+1. `--url` CLI override selects an RPC HTTP target.
+2. `--local` CLI override selects the in-process local target.
+3. Config file `client.target` selects the configured target.
+4. Missing target config defaults to local.
+
+CLI overrides intentionally win over config so one-off diagnostics can point at
+a different server without editing the config file.
+
 **Goal:** Add neutral workflow config models and let selected `wf` CLI commands target either local execution or the JSON-RPC HTTP server.
 
 **Architecture:** Introduce `wf_config` as the protocol-neutral config package. Keep existing `wf_mcp.config.json` loading for compatibility, but add a new `wf.json`-style shape with `client.target`, `server.store`, `server.transports`, and bootstrap `server.sources`. Put the JSON-RPC client adapter in `wf_transport_rpc_http.client`; CLI context chooses local `WorkflowApi` or remote RPC adapter based on config plus CLI overrides.

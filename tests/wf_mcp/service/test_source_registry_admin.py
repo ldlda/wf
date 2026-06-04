@@ -14,13 +14,17 @@ from wf_mcp.source_registry import (
 )
 
 
-def _store_with_entries(root: Path, *entries: McpSourceRegistryEntry) -> FileSourceRegistryStore:
+def _store_with_entries(
+    root: Path, *entries: McpSourceRegistryEntry
+) -> FileSourceRegistryStore:
     store = FileSourceRegistryStore(root)
     store.save_registry(SourceRegistryFile(sources=list(entries)))
     return store
 
 
-def _entry(source_id: str, *, provider: str = "github", account: str = "work") -> McpSourceRegistryEntry:
+def _entry(
+    source_id: str, *, provider: str = "github", account: str = "work"
+) -> McpSourceRegistryEntry:
     return McpSourceRegistryEntry(
         id=source_id,
         provider=provider,
@@ -29,7 +33,9 @@ def _entry(source_id: str, *, provider: str = "github", account: str = "work") -
     )
 
 
-def _entry_dict(source_id: str, *, provider: str = "github", account: str = "work") -> dict:
+def _entry_dict(
+    source_id: str, *, provider: str = "github", account: str = "work"
+) -> dict:
     return {
         "id": source_id,
         "provider": provider,
@@ -44,8 +50,13 @@ def _provider(
     config_ids: frozenset[str] | None = None,
 ) -> SourceRegistryAdminProvider:
     store = _store_with_entries(tmp_path / "reg", *(entries or []))
-    connections = [ConnectionConfig(id=cid, server="s", account="a") for cid in (config_ids or frozenset())]
-    return SourceRegistryAdminProvider(source_registry_store=store, config_connections=connections)
+    connections = [
+        ConnectionConfig(id=cid, server="s", account="a")
+        for cid in (config_ids or frozenset())
+    ]
+    return SourceRegistryAdminProvider(
+        source_registry_store=store, config_connections=connections
+    )
 
 
 # -- read tests ------------------------------------------------------------
@@ -197,7 +208,9 @@ def test_enable_disable_missing_source_raises_key_error(tmp_path: Path) -> None:
 
 
 def test_remove_persists_absence_and_does_not_touch_unrelated(tmp_path: Path) -> None:
-    provider = _provider(tmp_path, entries=[_entry("keep.server"), _entry("drop.server")])
+    provider = _provider(
+        tmp_path, entries=[_entry("keep.server"), _entry("drop.server")]
+    )
 
     result = provider.remove_registry_entry("drop.server")
 

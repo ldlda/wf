@@ -7,7 +7,11 @@ from typing import Any
 from wf_api.source_registry_admin import WorkflowSourceRegistryMutationProvider
 
 from ...models import ConnectionConfig
-from ...source_registry import McpSourceRegistryEntry, SourceRegistryFile, SourceRegistryStore
+from ...source_registry import (
+    McpSourceRegistryEntry,
+    SourceRegistryFile,
+    SourceRegistryStore,
+)
 
 
 @dataclass(slots=True)
@@ -38,7 +42,9 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
         registry = SourceRegistryFile(sources=sources)
         self.source_registry_store.save_registry(registry)
 
-    def _entry_map(self, registry: SourceRegistryFile) -> dict[str, McpSourceRegistryEntry]:
+    def _entry_map(
+        self, registry: SourceRegistryFile
+    ) -> dict[str, McpSourceRegistryEntry]:
         return registry.source_map()
 
     def _require_entry(self, source_id: str) -> McpSourceRegistryEntry:
@@ -80,7 +86,9 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
         self._save(sources)
         return updated
 
-    def set_registry_entry_enabled(self, source_id: str, enabled: bool) -> McpSourceRegistryEntry:
+    def set_registry_entry_enabled(
+        self, source_id: str, enabled: bool
+    ) -> McpSourceRegistryEntry:
         existing = self._require_entry(source_id)
         updated = existing.model_copy(update={"enabled": enabled})
         registry = self._load()
