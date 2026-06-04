@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from wf_mcp.broker.service.content_access import ContentAccessService
@@ -87,17 +85,17 @@ def _register_local_docs(source_catalog: SourceCatalogService) -> None:
     )
 
 
-def test_content_access_reads_local_documentation_resource() -> None:
+async def test_content_access_reads_local_documentation_resource() -> None:
     content_access, events = _make_content_access()
 
-    result = asyncio.run(content_access.read_resource("test.docs.example"))
+    result = await content_access.read_resource("test.docs.example")
 
     assert result["contents"][0]["uri"] == "wf://docs/example"
     assert result["contents"][0]["text"] == "# Example"
     assert "resource_read_completed" in [e.kind for e in events.list_events()]
 
 
-def test_content_access_reads_upstream_resource_with_events() -> None:
+async def test_content_access_reads_upstream_resource_with_events() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "content_upstream_resource")
     )
@@ -105,11 +103,9 @@ def test_content_access_reads_upstream_resource_with_events() -> None:
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
     service.register_adapter("demo", FakeAdapter())
-    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+    await service.refresh_connection_catalog("demo.personal")
 
-    result = asyncio.run(
-        service.content_access.read_resource("demo.personal.resource.welcome")
-    )
+    result = await service.content_access.read_resource("demo.personal.resource.welcome")
 
     assert result["contents"][0]["text"] == "Welcome from the fake adapter resource."
     event_kinds = [e.kind for e in service.list_events()]
@@ -117,7 +113,7 @@ def test_content_access_reads_upstream_resource_with_events() -> None:
     assert "resource_read_completed" in event_kinds
 
 
-def test_content_access_renders_upstream_prompt_with_events() -> None:
+async def test_content_access_renders_upstream_prompt_with_events() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "content_upstream_prompt")
     )
@@ -125,13 +121,11 @@ def test_content_access_renders_upstream_prompt_with_events() -> None:
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
     service.register_adapter("demo", FakeAdapter())
-    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+    await service.refresh_connection_catalog("demo.personal")
 
-    result = asyncio.run(
-        service.content_access.render_prompt(
-            "demo.personal.prompt.summarize",
-            arguments={"text": "hello world"},
-        )
+    result = await service.content_access.render_prompt(
+        "demo.personal.prompt.summarize",
+        arguments={"text": "hello world"},
     )
 
     assert "hello world" in result["messages"][0]["content"]["text"]
@@ -140,12 +134,12 @@ def test_content_access_renders_upstream_prompt_with_events() -> None:
     assert "prompt_get_completed" in event_kinds
 
 
-def test_content_access_renders_local_documentation_prompt() -> None:
+async def test_content_access_renders_local_documentation_prompt() -> None:
     content_access, events = _make_content_access(
         store_root="content_access_local_prompt"
     )
 
-    result = asyncio.run(content_access.render_prompt("test.docs.guide"))
+    result = await content_access.render_prompt("test.docs.guide")
 
     assert result["description"] == "Test documentation prompt."
     assert result["messages"][0]["role"] == "user"
@@ -153,10 +147,10 @@ def test_content_access_renders_local_documentation_prompt() -> None:
     assert "prompt_get_completed" in [e.kind for e in events.list_events()]
 
 
-def test_content_access_raises_on_unknown_resource() -> None:
+async def test_content_access_raises_on_unknown_resource() -> None:
     content_access, _ = _make_content_access(
         store_root="content_access_missing_resource"
     )
 
     with pytest.raises(KeyError):
-        asyncio.run(content_access.read_resource("nonexistent.resource"))
+        await content_access.read_resource("nonexistent.resource")

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from wf_authoring import NodeSpec
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
@@ -21,7 +19,7 @@ from ..test_support import (
 from .conftest import raw_plan, single_echo_plan
 
 
-def test_service_compiles_and_runs_raw_plan() -> None:
+async def test_service_compiles_and_runs_raw_plan() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "run_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -64,13 +62,13 @@ def test_service_compiles_and_runs_raw_plan() -> None:
         edges=[{"from": "echo", "outcome": "ok", "to": "__end__"}],
     )
 
-    run = asyncio.run(service.run_workflow_from_plan(plan, {"text": "hello"}))
+    run = await service.run_workflow_from_plan(plan, {"text": "hello"})
 
     assert run.status == "completed"
     assert run.output["echoed"] == "hello"
 
 
-def test_service_preserves_raw_plan_root_output_bindings() -> None:
+async def test_service_preserves_raw_plan_root_output_bindings() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "root_output_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -113,12 +111,12 @@ def test_service_preserves_raw_plan_root_output_bindings() -> None:
         edges=[{"from": "echo", "outcome": "ok", "to": "__end__"}],
     )
 
-    run = asyncio.run(service.run_workflow_from_plan(plan, {"text": "hello"}))
+    run = await service.run_workflow_from_plan(plan, {"text": "hello"})
 
     assert run.output["echoed"] == "hello"
 
 
-def test_service_resolves_registered_spec_with_dotted_local_name() -> None:
+async def test_service_resolves_registered_spec_with_dotted_local_name() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "dotted_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -127,13 +125,13 @@ def test_service_resolves_registered_spec_with_dotted_local_name() -> None:
 
     plan = single_echo_plan("dotted_plan", "demo.personal.echo_tool")
 
-    run = asyncio.run(service.run_workflow_from_plan(plan, {"text": "hello"}))
+    run = await service.run_workflow_from_plan(plan, {"text": "hello"})
 
     assert run.status == "completed"
     assert run.output["echoed"] == "hello"
 
 
-def test_service_runs_logical_source_plan_with_dotted_local_name() -> None:
+async def test_service_runs_logical_source_plan_with_dotted_local_name() -> None:
     import shutil
 
     from wf_artifacts import WorkflowDeployment
@@ -163,26 +161,24 @@ def test_service_runs_logical_source_plan_with_dotted_local_name() -> None:
 
     plan = single_echo_plan("logical_plan", "demo.foo.bar")
 
-    run = asyncio.run(
-        service.run_workflow_from_plan(
-            plan,
-            {"text": "hello"},
-            deployment=WorkflowDeployment(
-                id="logical_dotted.personal",
-                artifact_id="logical_dotted",
-                artifact_version=1,
-                bindings=[
-                    {"logical_source": "demo", "concrete_source": "demo.personal"}
-                ],
-            ),
-        )
+    run = await service.run_workflow_from_plan(
+        plan,
+        {"text": "hello"},
+        deployment=WorkflowDeployment(
+            id="logical_dotted.personal",
+            artifact_id="logical_dotted",
+            artifact_version=1,
+            bindings=[
+                {"logical_source": "demo", "concrete_source": "demo.personal"}
+            ],
+        ),
     )
 
     assert run.status == "completed"
     assert run.output["echoed"] == "hello"
 
 
-def test_service_binds_longest_logical_source_prefix_first() -> None:
+async def test_service_binds_longest_logical_source_prefix_first() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "prefix_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -194,7 +190,7 @@ def test_service_binds_longest_logical_source_prefix_first() -> None:
 
     plan = single_echo_plan("prefix_plan", "demo.personal.echo_tool")
 
-    run = asyncio.run(service.run_workflow_from_plan(plan, {"text": "hello"}))
+    run = await service.run_workflow_from_plan(plan, {"text": "hello"})
 
     assert run.status == "completed"
 
@@ -302,14 +298,14 @@ def test_service_preserves_planner_hidden_connection_source_on_reregistration() 
     assert "demo.personal.echo_tool" not in source.capabilities.node_specs
 
 
-def test_service_refreshes_catalog_from_adapter() -> None:
+async def test_service_refreshes_catalog_from_adapter() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "refresh_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
     service.register_adapter("demo", FakeAdapter())
 
-    asyncio.run(service.refresh_connection_catalog("demo.personal"))
+    await service.refresh_connection_catalog("demo.personal")
 
     source = service.capability_sources["demo.personal"]
     assert "demo.personal.echo_tool" in source.capabilities.node_specs

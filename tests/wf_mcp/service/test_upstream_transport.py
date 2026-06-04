@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from wf_artifacts import WorkflowDeployment
 from wf_platform import CapabilityBuckets, CapabilitySource, SourcePermissions
 
@@ -61,7 +59,7 @@ def test_wfmcpservice_uses_upstream_transport_for_adapters_and_auth() -> None:
     assert service.list_events()[-1].kind == "auth_saved"
 
 
-def test_upstream_transport_invokes_raw_method_and_records_events() -> None:
+async def test_upstream_transport_invokes_raw_method_and_records_events() -> None:
     events: list[McpEvent] = []
     connections = ConnectionRegistry()
     connections.register(
@@ -73,12 +71,10 @@ def test_upstream_transport_invokes_raw_method_and_records_events() -> None:
     )
     transport.register_adapter("demo", FakeAdapter())
 
-    result = asyncio.run(
-        transport.invoke_method(
-            connections.get("demo.personal"),
-            "demo.echo",
-            params={"text": "hello"},
-        )
+    result = await transport.invoke_method(
+        connections.get("demo.personal"),
+        "demo.echo",
+        params={"text": "hello"},
     )
 
     assert result["echoed"] == "hello"
@@ -88,7 +84,7 @@ def test_upstream_transport_invokes_raw_method_and_records_events() -> None:
     ]
 
 
-def test_upstream_transport_refreshes_catalog_directly() -> None:
+async def test_upstream_transport_refreshes_catalog_directly() -> None:
     events: list[McpEvent] = []
     store = FileStore(local_temp_root() / "upstream_refresh")
     connections = ConnectionRegistry()
@@ -107,12 +103,10 @@ def test_upstream_transport_refreshes_catalog_directly() -> None:
     )
     source_catalog.hydrate_connection_source_from_snapshot(connection)
 
-    asyncio.run(
-        transport.refresh_connection_catalog(
-            connection,
-            source_catalog=source_catalog,
-            record_catalog_change_events=lambda source_id, snapshot, reason: None,
-        )
+    await transport.refresh_connection_catalog(
+        connection,
+        source_catalog=source_catalog,
+        record_catalog_change_events=lambda source_id, snapshot, reason: None,
     )
 
     snapshot = store.load_catalog("demo.personal")
@@ -122,7 +116,7 @@ def test_upstream_transport_refreshes_catalog_directly() -> None:
     assert "catalog_refresh_completed" in [event.kind for event in events]
 
 
-def test_upstream_transport_live_diagnostics_report_missing_connection() -> None:
+async def test_upstream_transport_live_diagnostics_report_missing_connection() -> None:
     transport = UpstreamTransportService(
         store=FileStore(local_temp_root() / "upstream_live_missing"),
         event_sink=lambda event: None,
@@ -156,12 +150,10 @@ def test_upstream_transport_live_diagnostics_report_missing_connection() -> None
         bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
     )
 
-    diagnostics = asyncio.run(
-        transport.deployment_diagnostics(
-            deployment=deployment,
-            artifacts=[artifact],
-            source_catalog=source_catalog,
-        )
+    diagnostics = await transport.deployment_diagnostics(
+        deployment=deployment,
+        artifacts=[artifact],
+        source_catalog=source_catalog,
     )
 
     assert diagnostics[0].code == "source_unreachable"

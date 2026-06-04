@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import shutil
 
 from wf_authoring import NodeSpec
@@ -268,7 +267,7 @@ def test_service_catalog_split_keeps_system_specs_out_of_backend_catalog() -> No
     assert "wf.std.runtime_error" in available_names
 
 
-def test_service_hydrates_planner_specs_from_stored_catalog() -> None:
+async def test_service_hydrates_planner_specs_from_stored_catalog() -> None:
     store = local_temp_root() / "restart_planner_store"
     shutil.rmtree(store, ignore_errors=True)
     first_service = WfMcpService(store=FileStore(store))
@@ -276,7 +275,7 @@ def test_service_hydrates_planner_specs_from_stored_catalog() -> None:
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
     first_service.register_adapter("demo", FakeAdapter())
-    asyncio.run(first_service.refresh_connection_catalog("demo.personal"))
+    await first_service.refresh_connection_catalog("demo.personal")
 
     second_service = WfMcpService(store=FileStore(store))
     second_service.register_connection(
@@ -288,11 +287,9 @@ def test_service_hydrates_planner_specs_from_stored_catalog() -> None:
         node["qualified_name"]
         for node in second_service.get_planner_catalog().as_payload()["nodes"]
     }
-    run = asyncio.run(
-        second_service.run_workflow_from_plan(
-            single_echo_plan("hydrated_plan", "demo.personal.echo_tool"),
-            {"text": "hello"},
-        )
+    run = await second_service.run_workflow_from_plan(
+        single_echo_plan("hydrated_plan", "demo.personal.echo_tool"),
+        {"text": "hello"},
     )
 
     assert "demo.personal.echo_tool" in planner_names
@@ -412,7 +409,7 @@ def test_source_catalog_service_excludes_hidden_sources_from_planner_catalog() -
     assert "hidden.source.echo_tool" not in planner_names
 
 
-def test_source_catalog_hydrates_connection_source_from_snapshot_directly() -> None:
+async def test_source_catalog_hydrates_connection_source_from_snapshot_directly() -> None:
     root = local_temp_root() / "source_catalog_hydrate_direct"
     shutil.rmtree(root, ignore_errors=True)
     first_service = WfMcpService(store=FileStore(root))
@@ -420,7 +417,7 @@ def test_source_catalog_hydrates_connection_source_from_snapshot_directly() -> N
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
     first_service.register_adapter("demo", FakeAdapter())
-    asyncio.run(first_service.refresh_connection_catalog("demo.personal"))
+    await first_service.refresh_connection_catalog("demo.personal")
 
     second_service = WfMcpService(store=FileStore(root))
     second_service.register_connection(

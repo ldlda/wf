@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import ast
-import asyncio
 from pathlib import Path
 
 from wf_api.models import RawWorkflowPlan
@@ -74,36 +73,30 @@ def test_wf_server_context_imports_no_wfmcp_service() -> None:
     assert violations == []
 
 
-def test_local_static_server_runs_deployment_and_persists_run(tmp_path) -> None:
+async def test_local_static_server_runs_deployment_and_persists_run(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     api = server.api
     plan = _constant_plan()
 
-    artifact_result = asyncio.run(
-        api.create_artifact_from_plan(
-            artifact_id="server_constant",
-            version=1,
-            title="Server Constant",
-            plan=plan,
-            outcomes=["ok"],
-            source_bindings={"wf.std": "wf.std"},
-        )
+    artifact_result = await api.create_artifact_from_plan(
+        artifact_id="server_constant",
+        version=1,
+        title="Server Constant",
+        plan=plan,
+        outcomes=["ok"],
+        source_bindings={"wf.std": "wf.std"},
     )
-    deployment_result = asyncio.run(
-        api.save_deployment(
-            {
-                "id": "server_constant.default",
-                "artifact_id": "server_constant",
-                "artifact_version": 1,
-                "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
-            }
-        )
+    deployment_result = await api.save_deployment(
+        {
+            "id": "server_constant.default",
+            "artifact_id": "server_constant",
+            "artifact_version": 1,
+            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+        }
     )
-    run_result = asyncio.run(
-        api.run_deployment(
-            deployment_id="server_constant.default",
-            workflow_input={},
-        )
+    run_result = await api.run_deployment(
+        deployment_id="server_constant.default",
+        workflow_input={},
     )
 
     assert artifact_result["artifact_id"] == "server_constant"
@@ -116,40 +109,34 @@ def test_local_static_server_runs_deployment_and_persists_run(tmp_path) -> None:
     )
 
 
-def test_local_static_server_inspects_and_reads_bounded_trace(tmp_path) -> None:
+async def test_local_static_server_inspects_and_reads_bounded_trace(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     api = server.api
     plan = _constant_plan()
-    asyncio.run(
-        api.create_artifact_from_plan(
-            artifact_id="server_trace",
-            version=1,
-            title="Server Trace",
-            plan=plan.model_copy(update={"name": "server_trace"}),
-            outcomes=["ok"],
-            source_bindings={"wf.std": "wf.std"},
-        )
+    await api.create_artifact_from_plan(
+        artifact_id="server_trace",
+        version=1,
+        title="Server Trace",
+        plan=plan.model_copy(update={"name": "server_trace"}),
+        outcomes=["ok"],
+        source_bindings={"wf.std": "wf.std"},
     )
-    asyncio.run(
-        api.save_deployment(
-            {
-                "id": "server_trace.default",
-                "artifact_id": "server_trace",
-                "artifact_version": 1,
-                "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
-            }
-        )
+    await api.save_deployment(
+        {
+            "id": "server_trace.default",
+            "artifact_id": "server_trace",
+            "artifact_version": 1,
+            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+        }
     )
-    run_result = asyncio.run(
-        api.run_deployment(deployment_id="server_trace.default", workflow_input={})
+    run_result = await api.run_deployment(
+        deployment_id="server_trace.default", workflow_input={}
     )
 
-    summary = asyncio.run(api.inspect_run(run_id=run_result["run_id"]))
-    trace = asyncio.run(
-        api.read_run_trace(
-            run_id=run_result["run_id"],
-            trace_range=server.trace_range(start=0, limit=1),
-        )
+    summary = await api.inspect_run(run_id=run_result["run_id"])
+    trace = await api.read_run_trace(
+        run_id=run_result["run_id"],
+        trace_range=server.trace_range(start=0, limit=1),
     )
 
     assert "trace" not in summary

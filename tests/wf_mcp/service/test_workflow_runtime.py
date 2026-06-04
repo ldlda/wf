@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from wf_core import END, NodeUse, RunStatus
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.source_catalog import SourceCatalogService
@@ -112,7 +110,7 @@ def test_workflow_runtime_service_prepares_node_registry_and_reducers() -> None:
     assert prepared_subgraphs == {}
 
 
-def test_workflow_runtime_service_runs_plan_and_emits_events() -> None:
+async def test_workflow_runtime_service_runs_plan_and_emits_events() -> None:
     events = []
     runtime = WorkflowRuntimeService(
         source_catalog=_source_catalog(),
@@ -120,11 +118,9 @@ def test_workflow_runtime_service_runs_plan_and_emits_events() -> None:
         emit_event=events.append,
     )
 
-    run = asyncio.run(
-        runtime.run_workflow_from_plan(
-            single_echo_plan("runtime_run", "demo.personal.echo_tool"),
-            {"text": "hello"},
-        )
+    run = await runtime.run_workflow_from_plan(
+        single_echo_plan("runtime_run", "demo.personal.echo_tool"),
+        {"text": "hello"},
     )
 
     assert run.output["echoed"] == "hello"
@@ -135,37 +131,35 @@ def test_workflow_runtime_service_runs_plan_and_emits_events() -> None:
     assert events[1].payload["status"] == "completed"
 
 
-def test_workflow_runtime_service_emits_failed_event_for_failed_run() -> None:
+async def test_workflow_runtime_service_emits_failed_event_for_failed_run() -> None:
     service = WfMcpService(store=FileStore(local_temp_root() / "runtime_failed_event"))
 
-    run = asyncio.run(
-        service.workflow_runtime.run_workflow_from_plan(
-            raw_plan(
-                name="runtime_failed_event",
-                input_schema={"type": "object", "properties": {}},
-                state_schema={"type": "object", "properties": {}},
-                output_schema={"type": "object", "properties": {}},
-                start="fail",
-                nodes=[
-                    {
-                        "id": "fail",
-                        "type": "node",
-                        "node": "wf.std.runtime_error",
-                        "input": [
-                            {
-                                "value": "boom",
-                                "target": {
-                                    "root": "local",
-                                    "parts": ["message"],
-                                },
-                            }
-                        ],
-                    }
-                ],
-                edges=[{"from": "fail", "outcome": "ok", "to": END}],
-            ),
-            {},
-        )
+    run = await service.workflow_runtime.run_workflow_from_plan(
+        raw_plan(
+            name="runtime_failed_event",
+            input_schema={"type": "object", "properties": {}},
+            state_schema={"type": "object", "properties": {}},
+            output_schema={"type": "object", "properties": {}},
+            start="fail",
+            nodes=[
+                {
+                    "id": "fail",
+                    "type": "node",
+                    "node": "wf.std.runtime_error",
+                    "input": [
+                        {
+                            "value": "boom",
+                            "target": {
+                                "root": "local",
+                                "parts": ["message"],
+                            },
+                        }
+                    ],
+                }
+            ],
+            edges=[{"from": "fail", "outcome": "ok", "to": END}],
+        ),
+        {},
     )
 
     assert run.status == RunStatus.FAILED
