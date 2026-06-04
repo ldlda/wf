@@ -38,6 +38,9 @@ class FakeRegistryProvider:
     def config_source_ids(self) -> set[str]:
         return self._config_ids
 
+    def config_source_ownership(self) -> dict[str, str]:
+        return {source_id: "locked" for source_id in self._config_ids}
+
 
 def _api(
     *entries: FakeRegistryEntry,
@@ -116,6 +119,20 @@ def test_list_shadowed_by_config() -> None:
     sl = next(e for e in payload["entries"] if e["id"] == "slack.personal")
     assert gh["shadowed_by_config"] is True
     assert sl["shadowed_by_config"] is False
+
+
+def test_list_registry_entries_reports_config_ownership_and_mutability() -> None:
+    api = _api(
+        FakeRegistryEntry(id="github.work"),
+        config_ids={"github.work"},
+    )
+
+    payload = asyncio.run(api.list_registry_entries())
+
+    entry = payload["entries"][0]
+    assert entry["shadowed_by_config"] is True
+    assert entry["config_ownership"] == "locked"
+    assert entry["mutable"] is False
 
 
 def test_inspect_returns_full_entry_and_shadow_flag() -> None:

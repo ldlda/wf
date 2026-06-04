@@ -549,6 +549,53 @@ def test_build_service_from_config_config_shadows_registry() -> None:
     )
 
 
+def test_broker_config_connection_defaults_to_locked() -> None:
+    tmp_path = local_temp_root() / "broker_config_locked_default"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "store_root": str(tmp_path / "store"),
+                "connections": [
+                    {"id": "demo.default", "server": "demo", "account": "default"}
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_broker_config(config_path)
+
+    assert config.connections[0].source_config_ownership == "locked"
+
+
+def test_broker_config_connection_accepts_seed_policy() -> None:
+    tmp_path = local_temp_root() / "broker_config_seed_policy"
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    config_path = tmp_path / "wf_mcp.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "store_root": str(tmp_path / "store"),
+                "connections": [
+                    {
+                        "id": "demo.default",
+                        "server": "demo",
+                        "account": "default",
+                        "source_config_ownership": "seed",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_broker_config(config_path)
+
+    assert config.connections[0].source_config_ownership == "seed"
+
+
 def _artifact() -> WorkflowArtifact:
     return WorkflowArtifact(
         id="summarize_docs",

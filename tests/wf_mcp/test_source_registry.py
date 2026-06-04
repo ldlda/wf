@@ -10,8 +10,10 @@ from wf_mcp.source_registry import (
     McpSourceRegistryEntry,
     SourceRegistryFile,
     StdioSourceTransport,
+    connection_config_to_registry_entry,
     registry_entry_to_connection_config,
 )
+from wf_mcp.models import ConnectionConfig
 
 
 def _entry(source_id: str = "github.work") -> McpSourceRegistryEntry:
@@ -116,3 +118,36 @@ def test_registry_entry_to_connection_config_disabled_entry() -> None:
     config = registry_entry_to_connection_config(entry)
 
     assert config.enabled is False
+
+
+def test_connection_config_to_registry_entry_preserves_transport_metadata() -> None:
+    connection = ConnectionConfig(
+        id="github.work",
+        server="github",
+        account="work",
+        enabled=False,
+        metadata={
+            "transport": {"kind": "stdio", "command": "npx", "args": ["server"]},
+            "profile": "corp",
+            "auth_ref": "secret://github/work",
+            "region": "us",
+        },
+    )
+
+    entry = connection_config_to_registry_entry(connection)
+
+    assert entry.id == "github.work"
+    assert entry.provider == "github"
+    assert entry.account == "work"
+    assert entry.enabled is False
+    assert entry.profile == "corp"
+    assert entry.auth_ref == "secret://github/work"
+    assert entry.transport.kind == "stdio"
+    assert entry.metadata["region"] == "us"
+
+
+def test_connection_config_to_registry_entry_requires_transport_metadata() -> None:
+    connection = ConnectionConfig(id="github.work", server="github", account="work")
+
+    with pytest.raises(ValueError, match="requires metadata.transport"):
+        connection_config_to_registry_entry(connection)

@@ -5,7 +5,7 @@ from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator
 
-from ..models import BrokerConfig, ConnectionConfig
+from ..models import BrokerConfig, ConnectionConfig, SourceConfigOwnership
 
 
 class StdioConnectionMetadata(BaseModel):
@@ -43,6 +43,7 @@ class ConnectionConfigFile(BaseModel):
     account: str
     enabled: bool = True
     metadata: dict[str, Any] = Field(default_factory=dict)
+    source_config_ownership: SourceConfigOwnership = "locked"
 
     @field_validator("metadata", mode="before")
     @classmethod
@@ -65,6 +66,7 @@ class ConnectionConfigFile(BaseModel):
             account=self.account,
             enabled=self.enabled,
             metadata=self.metadata,
+            source_config_ownership=self.source_config_ownership,
         )
 
 

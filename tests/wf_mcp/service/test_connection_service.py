@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.connection_service import ConnectionService
 from wf_mcp.broker.service.events import BrokerEventRecorder
@@ -256,6 +258,118 @@ def test_connection_service_sync_registry_disabled_entry_hydrates_disabled_sourc
 
     assert service.get("demo.registry").enabled is False
     assert catalog.capability_sources["demo.registry"].enabled is False
+
+
+def test_connection_service_sync_locked_config_shadows_registry_entry(
+    tmp_path: Path,
+) -> None:
+    service = ConnectionService(events=BrokerEventRecorder(EventBus()))
+    _source_catalog(service)
+    store = FileSourceRegistryStore(tmp_path / "locked_shadow")
+    store.save_registry(
+        SourceRegistryFile(
+            sources=[
+                McpSourceRegistryEntry(
+                    id="demo.default",
+                    provider="registry",
+                    account="stored",
+                    transport=StdioSourceTransport(command="demo-server"),
+                )
+            ]
+        )
+    )
+    config = BrokerConfig(
+        store_root=local_temp_root(),
+        connections=[
+            ConnectionConfig(
+                id="demo.default",
+                server="config",
+                account="locked",
+                source_config_ownership="locked",
+            )
+        ],
+    )
+
+    service.sync_connections_from_config(config, source_registry_store=store)
+
+    connection = service.get("demo.default")
+    assert connection.server == "config"
+    assert connection.account == "locked"
+    assert any(
+        event.kind == "source_registry_ignored_config_shadow"
+        for event in service.events.list_events()
+    )
+
+
+def test_connection_service_sync_seed_config_materializes_registry_entry(
+    tmp_path: Path,
+) -> None:
+    service = ConnectionService(events=BrokerEventRecorder(EventBus()))
+    _source_catalog(service)
+    store_root = tmp_path / "seed_materialized"
+    store = FileSourceRegistryStore(store_root)
+    config = BrokerConfig(
+        store_root=local_temp_root(),
+        connections=[
+            ConnectionConfig(
+                id="demo.default",
+                server="demo",
+                account="default",
+                metadata={"transport": {"kind": "stdio", "command": "demo-server"}},
+                source_config_ownership="seed",
+            )
+        ],
+    )
+
+    service.sync_connections_from_config(config, source_registry_store=store)
+
+    registry = store.load_registry()
+    assert registry.sources[0].id == "demo.default"
+    assert registry.sources[0].provider == "demo"
+    assert service.get("demo.default").metadata["source_registry"] is True
+    all_events = service.events.list_events()
+    assert any(
+        event.kind == "source_registry_seeded_from_config"
+        for event in all_events
+    )
+
+
+def test_connection_service_sync_seed_existing_registry_entry_wins(
+    tmp_path: Path,
+) -> None:
+    service = ConnectionService(events=BrokerEventRecorder(EventBus()))
+    _source_catalog(service)
+    store = FileSourceRegistryStore(tmp_path / "seed_existing")
+    store.save_registry(
+        SourceRegistryFile(
+            sources=[
+                McpSourceRegistryEntry(
+                    id="demo.default",
+                    provider="registry",
+                    account="stored",
+                    transport=StdioSourceTransport(command="demo-server"),
+                )
+            ]
+        )
+    )
+    config = BrokerConfig(
+        store_root=local_temp_root(),
+        connections=[
+            ConnectionConfig(
+                id="demo.default",
+                server="config",
+                account="seed",
+                metadata={"transport": {"kind": "stdio", "command": "config-server"}},
+                source_config_ownership="seed",
+            )
+        ],
+    )
+
+    service.sync_connections_from_config(config, source_registry_store=store)
+
+    connection = service.get("demo.default")
+    assert connection.server == "registry"
+    assert connection.account == "stored"
 
 
 def test_wfmcpservice_sync_connections_delegates_registry_store() -> None:

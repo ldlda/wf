@@ -14,6 +14,8 @@ class WorkflowSourceRegistryProvider(Protocol):
 
     def config_source_ids(self) -> Set[str]: ...
 
+    def config_source_ownership(self) -> Mapping[str, str]: ...
+
 
 @runtime_checkable
 class WorkflowSourceRegistryMutationProvider(Protocol):
@@ -58,9 +60,12 @@ class WorkflowSourceRegistryApi:
         cursor: str | None = None,
         limit: int = 50,
     ) -> dict[str, Any]:
+        ownership = self._provider.config_source_ownership()
         entries = sorted(
             (
-                _entry_summary(_payload(item), self._provider.config_source_ids())
+                _entry_summary(
+                    _payload(item), self._provider.config_source_ids(), ownership
+                )
                 for item in self._provider.list_registry_entries()
             ),
             key=lambda item: str(item.get("id", "")),
@@ -77,12 +82,15 @@ class WorkflowSourceRegistryApi:
         *,
         source_id: str,
     ) -> dict[str, Any]:
+        ownership = self._provider.config_source_ownership()
         for item in self._provider.list_registry_entries():
             entry = _payload(item)
             if entry.get("id") == source_id:
                 return {
                     "entry": entry,
                     "shadowed_by_config": self._is_shadowed(source_id),
+                    "config_ownership": ownership.get(source_id),
+                    "mutable": ownership.get(source_id) != "locked",
                 }
         raise KeyError(f"unknown registry source {source_id!r}")
 
@@ -174,11 +182,14 @@ def _payload(value: Mapping[str, Any] | object) -> dict[str, Any]:
     )
 
 
-def _entry_summary(entry: dict[str, Any], shadowed_ids: Set[str]) -> dict[str, Any]:
+def _entry_summary(
+    entry: dict[str, Any], shadowed_ids: Set[str], ownership: Mapping[str, str]
+) -> dict[str, Any]:
     transport = entry.get("transport")
     transport_kind = transport.get("kind") if isinstance(transport, Mapping) else None
+    entry_id = entry["id"]
     return {
-        "id": entry["id"],
+        "id": entry_id,
         "kind": entry["kind"],
         "enabled": entry["enabled"],
         "provider": entry.get("provider"),
@@ -186,5 +197,7 @@ def _entry_summary(entry: dict[str, Any], shadowed_ids: Set[str]) -> dict[str, A
         "profile": entry.get("profile"),
         "transport_kind": transport_kind,
         "auth_ref": entry.get("auth_ref"),
-        "shadowed_by_config": entry["id"] in shadowed_ids,
+        "shadowed_by_config": entry_id in shadowed_ids,
+        "config_ownership": ownership.get(entry_id),
+        "mutable": ownership.get(entry_id) != "locked",
     }

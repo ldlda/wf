@@ -77,7 +77,7 @@ The next executable slice is startup merge:
      `WorkflowServer` construction remains future work.
 
 6. **Slice 6: Config Ownership Policy**
-   - **Status: planned.**
+   - **Status: complete.**
    - Replace implicit config-shadowing with explicit `locked` / `seed`
      ownership policy.
    - `locked` config entries remain operator-owned and shadow/reject registry

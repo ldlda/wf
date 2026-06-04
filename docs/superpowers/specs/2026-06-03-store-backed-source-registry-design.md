@@ -307,12 +307,10 @@ construction remains future work.
 
 ### Slice 6: Config Ownership Policy
 
-Status: planned. Replace implicit "config always shadows store" with explicit
-source ownership policy. The intended shape is `locked` for operator-owned
-config entries and `seed` for bootstrap entries that should hand ownership to
-the store after initial materialization. This should update config models,
-startup merge diagnostics, registry mutation validation, and admin read payloads
-so users can tell why a source id is mutable or shadowed.
+Status: complete. MCP broker config connections now support
+`source_config_ownership="locked" | "seed"`. `locked` preserves v1 shadowing.
+`seed` materializes missing store entries and lets existing registry entries
+own future runtime state.
 
 ## Open Questions
 

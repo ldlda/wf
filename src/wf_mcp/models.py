@@ -2,12 +2,15 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from .capabilities import CatalogNodeEntry, CatalogPromptEntry, CatalogResourceEntry
 
 # RawWorkflowPlan moved to wf_api.models; re-exported here for backward compat.
 from wf_api.models import RawWorkflowPlan  # noqa: F401
+
+
+SourceConfigOwnership = Literal["locked", "seed"]
 
 
 @dataclass(slots=True)
@@ -17,6 +20,7 @@ class ConnectionConfig:
     account: str
     enabled: bool = True
     metadata: dict[str, Any] = field(default_factory=dict)
+    source_config_ownership: SourceConfigOwnership = "locked"
 
 
 @dataclass(slots=True)

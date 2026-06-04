@@ -5,7 +5,12 @@ from dataclasses import dataclass, field
 from ...connections import ConnectionRegistry, parse_connection_id
 from ...models import BrokerConfig, ConnectionConfig
 from ...shared.names import RESERVED_CONNECTION_IDS
-from ...source_registry import SourceRegistryStore, registry_entry_to_connection_config
+from ...source_registry import (
+    SourceRegistryFile,
+    SourceRegistryStore,
+    connection_config_to_registry_entry,
+    registry_entry_to_connection_config,
+)
 from .events import BrokerEventRecorder
 from .source_catalog import SourceCatalogService
 
@@ -61,25 +66,68 @@ class ConnectionService:
         source_registry_store: SourceRegistryStore | None = None,
     ) -> None:
         """Reconcile registry/source state after the public server reloads config."""
-        # Config-defined connections win over registry entries with the same id;
-        # registry entries fill ids not present in config.
         connections = list(config.connections)
-        config_ids = {connection.id for connection in connections}
+        config_by_id = {connection.id: connection for connection in connections}
+        registry_entries = {}
+        registry_changed = False
+
         if source_registry_store is not None:
             registry = source_registry_store.load_registry()
-            for entry in registry.sources:
-                if entry.id in config_ids:
-                    self.events.record_kind(
-                        "source_registry_ignored_config_shadow",
-                        connection_id=entry.id,
-                        payload={
-                            "server": entry.provider,
-                            "account": entry.account,
-                            "reason": "config_connection_takes_precedence",
-                        },
+            registry_entries = registry.source_map()
+
+            for connection in connections:
+                if connection.source_config_ownership != "seed":
+                    continue
+                if connection.id in registry_entries:
+                    continue
+                seeded = connection_config_to_registry_entry(connection)
+                registry_entries[seeded.id] = seeded
+                registry_changed = True
+                self.events.record_kind(
+                    "source_registry_seeded_from_config",
+                    connection_id=seeded.id,
+                    payload={"server": seeded.provider, "account": seeded.account},
+                )
+
+            if registry_changed:
+                source_registry_store.save_registry(
+                    SourceRegistryFile(sources=list(registry_entries.values()))
+                )
+
+            merged_connections: list[ConnectionConfig] = []
+            for connection in connections:
+                registry_entry = registry_entries.get(connection.id)
+                if (
+                    connection.source_config_ownership == "seed"
+                    and registry_entry is not None
+                ):
+                    merged_connections.append(
+                        registry_entry_to_connection_config(registry_entry)
                     )
                     continue
-                connections.append(registry_entry_to_connection_config(entry))
+                merged_connections.append(connection)
+
+            merged_ids = {connection.id for connection in merged_connections}
+            for entry in registry_entries.values():
+                config_connection = config_by_id.get(entry.id)
+                if config_connection is not None:
+                    if config_connection.source_config_ownership == "locked":
+                        self.events.record_kind(
+                            "source_registry_ignored_config_shadow",
+                            connection_id=entry.id,
+                            payload={
+                                "server": entry.provider,
+                                "account": entry.account,
+                                "reason": "locked_config_connection_takes_precedence",
+                            },
+                        )
+                    continue
+                if entry.id not in merged_ids:
+                    merged_connections.append(
+                        registry_entry_to_connection_config(entry)
+                    )
+
+            connections = merged_connections
 
         source_catalog = self._source_catalog()
         next_ids = {connection.id for connection in connections}

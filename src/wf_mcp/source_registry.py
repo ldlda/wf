@@ -127,6 +127,39 @@ def registry_entry_to_connection_config(
     )
 
 
+def connection_config_to_registry_entry(
+    connection: ConnectionConfig,
+) -> McpSourceRegistryEntry:
+    """Materialize a seed config connection into persisted registry state.
+
+    Seed config is bootstrap-only. The registry entry must carry enough source
+    identity to become the future desired-state owner after first startup.
+    """
+    transport = connection.metadata.get("transport")
+    if not isinstance(transport, dict):
+        raise ValueError(
+            f"seed connection {connection.id!r} requires metadata.transport"
+        )
+    profile = connection.metadata.get("profile")
+    auth_ref = connection.metadata.get("auth_ref")
+    return McpSourceRegistryEntry.model_validate(
+        {
+            "id": connection.id,
+            "enabled": connection.enabled,
+            "provider": connection.server,
+            "account": connection.account,
+            "profile": profile if isinstance(profile, str) else None,
+            "transport": transport,
+            "auth_ref": auth_ref if isinstance(auth_ref, str) else None,
+            "metadata": {
+                key: value
+                for key, value in connection.metadata.items()
+                if key not in {"transport", "profile", "auth_ref", "source_registry"}
+            },
+        }
+    )
+
+
 __all__ = [
     "FileSourceRegistryStore",
     "HttpSourceTransport",
@@ -135,5 +168,6 @@ __all__ = [
     "SourceRegistryStore",
     "SourceTransport",
     "StdioSourceTransport",
+    "connection_config_to_registry_entry",
     "registry_entry_to_connection_config",
 ]

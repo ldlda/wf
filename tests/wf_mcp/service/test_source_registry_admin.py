@@ -48,12 +48,16 @@ def _provider(
     tmp_path: Path,
     entries: list[McpSourceRegistryEntry] | None = None,
     config_ids: frozenset[str] | None = None,
+    config_connections: list[ConnectionConfig] | None = None,
 ) -> SourceRegistryAdminProvider:
     store = _store_with_entries(tmp_path / "reg", *(entries or []))
-    connections = [
-        ConnectionConfig(id=cid, server="s", account="a")
-        for cid in (config_ids or frozenset())
-    ]
+    if config_connections is not None:
+        connections = config_connections
+    else:
+        connections = [
+            ConnectionConfig(id=cid, server="s", account="a")
+            for cid in (config_ids or frozenset())
+        ]
     return SourceRegistryAdminProvider(
         source_registry_store=store, config_connections=connections
     )
@@ -120,10 +124,28 @@ def test_add_persists_and_round_trips(tmp_path: Path) -> None:
 def test_add_rejects_config_shadowed_id(tmp_path: Path) -> None:
     provider = _provider(tmp_path, config_ids=frozenset({"config.server"}))
 
-    with pytest.raises(ValueError, match="shadowed by a config connection"):
+    with pytest.raises(ValueError, match="locked by a config connection"):
         provider.add_registry_entry(_entry_dict("config.server"))
 
     assert provider.list_registry_entries() == []
+
+
+def test_add_allows_seed_config_shadow_when_registry_missing(tmp_path: Path) -> None:
+    provider = _provider(
+        tmp_path,
+        config_connections=[
+            ConnectionConfig(
+                id="github.work",
+                server="github",
+                account="work",
+                source_config_ownership="seed",
+            )
+        ],
+    )
+
+    result = provider.add_registry_entry(_entry_dict("github.work"))
+
+    assert result.id == "github.work"
 
 
 def test_add_rejects_duplicate_registry_id(tmp_path: Path) -> None:

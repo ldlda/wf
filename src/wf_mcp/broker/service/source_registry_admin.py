@@ -33,7 +33,19 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
     def config_source_ids(self) -> set[str]:
         return {connection.id for connection in self.config_connections}
 
+    def config_source_ownership(self) -> dict[str, str]:
+        return {
+            connection.id: connection.source_config_ownership
+            for connection in self.config_connections
+        }
+
     # -- private helpers ----------------------------------------------------
+
+    def _config_connection(self, source_id: str) -> ConnectionConfig | None:
+        for connection in self.config_connections:
+            if connection.id == source_id:
+                return connection
+        return None
 
     def _load(self) -> SourceRegistryFile:
         return self.source_registry_store.load_registry()
@@ -58,9 +70,13 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
 
     def add_registry_entry(self, entry: Mapping[str, Any]) -> McpSourceRegistryEntry:
         source_id = str(entry["id"])
-        if source_id in self.config_source_ids():
+        config_connection = self._config_connection(source_id)
+        if (
+            config_connection is not None
+            and config_connection.source_config_ownership == "locked"
+        ):
             raise ValueError(
-                f"cannot add {source_id!r}: id is shadowed by a config connection"
+                f"cannot add {source_id!r}: id is locked by a config connection"
             )
         validated = McpSourceRegistryEntry.model_validate(dict(entry))
         registry = self._load()
