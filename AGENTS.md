@@ -1,10 +1,17 @@
-# pitfalls
+# pitfalls / guide
 
 prefer asserts actual['field'] == expected['field'] over assert actual == expected unless we know better (eg. no extra fields allowed)
 
 Prefer pytest `tmp_path` for test-local filesystem state. Avoid fixed paths under `local_temp_root()` for tests that create durable files unless the test explicitly cleans or needs cross-process persistence; stale files there can change later test runs.
 
+Now that pytest-asyncio is installed, prefer `async def test_x()`
+instead of `def test_x(): async def scenario(): ...; asyncio.run(scenario())`
+
 more later
+
+## Docs mgmt
+
+read docs/AGENTS.md
 
 # Test suite
 

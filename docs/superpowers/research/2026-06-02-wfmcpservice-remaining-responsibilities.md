@@ -52,7 +52,7 @@ Extract a resource/prompt access service, tentatively named
 
 **Done:** `ContentAccessService` now owns `read_resource` and `render_prompt`.
 `WfMcpService` delegates both methods. See plan:
-`docs/superpowers/plans/2026-06-02-wfmcpservice-resource-prompt-access-extraction.md`.
+`docs/historical/superpowers/plans/2026-06-02-wfmcpservice-resource-prompt-access-extraction.md`.
 
 Keep out of scope for that slice:
 

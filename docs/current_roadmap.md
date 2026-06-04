@@ -134,8 +134,8 @@ implementation state.
       connections: `locked` entries stay operator-owned, while `seed` entries
       bootstrap missing store entries and then let the store own later admin
       changes.
-   - Next source registry slices are planned in
-      [2026-06-03 source registry next slices](./superpowers/plans/2026-06-03-source-registry-next-slices.md):
+   - Historical source registry slice planning is archived in
+      [2026-06-03 source registry next slices](./historical/superpowers/plans/2026-06-03-source-registry-next-slices.md):
       desired-registry admin reads and safe mutation commands are complete;
       concrete MCP-backed `WorkflowServer` construction remains future work.
    - Completed: desired-registry admin read plumbing is available through
@@ -239,8 +239,8 @@ implementation state.
   `wf.workflow.run_deployment` remains the dependable front door.
 - **Dashboard/source controls**: future UI should consume the same source
   inventory and deployment metadata instead of reverse-engineering MCP tools.
-- **Workflow API extraction**: continue the staged extraction in
-  [wf_api extraction roadmap](./superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md).
+- **Workflow API extraction**: completed staged extraction context is archived in
+  [wf_api extraction roadmap](./historical/superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md).
   Protocol-neutral operation context and domain services now exist behind
   `wf_api`; MCP tool schemas and tool registration stay in `wf_mcp`.
   - Workflow store ownership is explicit: entrypoints construct/inject `WorkflowStores`; `WfMcpService` no longer guesses stores from the MCP store root.

@@ -78,9 +78,9 @@ implementation plans are kept for context, not as active instructions.
   design notes.
 - [`historical/path_mapping_scratch.md`](historical/path_mapping_scratch.md):
   older path and mapping design thread.
-- [`superpowers/plans/`](superpowers/plans/): mostly completed implementation
-  plans and execution records. Use them for context, not as the primary source
-  of truth.
+- [`superpowers/plans/`](superpowers/plans/): active executable handoff plans
+  only. Completed or stale plans are archived under
+  [`historical/superpowers/plans/`](historical/superpowers/plans/).
 - [`superpowers/specs/`](superpowers/specs/): design specs produced during
   planning sessions.
 

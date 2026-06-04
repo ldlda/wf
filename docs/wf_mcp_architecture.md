@@ -148,7 +148,7 @@ working around locally and which should stay upstream-dependent for now, lives
 in [`wf_mcp_proxy_reality_and_roadmap.md`](wf_mcp_proxy_reality_and_roadmap.md).
 
 The public MCP mode split has been retired. The execution plan is
-[`superpowers/plans/2026-05-16-retire-legacy-mcp-modes.md`](superpowers/plans/2026-05-16-retire-legacy-mcp-modes.md):
+[`historical/superpowers/plans/2026-05-16-retire-legacy-mcp-modes.md`](historical/superpowers/plans/2026-05-16-retire-legacy-mcp-modes.md):
 `broker` and `proxy` were legacy public launch surfaces, while the ordinary
 server now exposes both local capabilities and proxied upstream capabilities.
 Internal concern packages remain useful even though the public mode choices are
