@@ -217,3 +217,67 @@ def test_rpc_server_cli_mcp_config_builds_registry_capable_server(monkeypatch, t
     assert captured["rpc_path"] == "/rpc"
     assert captured["host"] == "127.0.0.1"
     assert captured["port"] == 8765
+
+
+def test_rpc_server_cli_mcp_config_with_config_uses_transport_settings(monkeypatch, tmp_path) -> None:
+    mcp_config_path = tmp_path / "wf_mcp.config.json"
+    mcp_config_path.write_text(
+        json.dumps(
+            {
+                "store_root": str(tmp_path / "store"),
+                "connections": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    neutral_config_path = tmp_path / "wf.json"
+    neutral_config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "store": {"kind": "filesystem", "root": ".wf_store"},
+                    "transports": [
+                        {
+                            "kind": "rpc_http",
+                            "host": "127.0.0.3",
+                            "port": 7777,
+                            "path": "/custom-rpc",
+                        }
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    captured: dict[str, object] = {}
+
+    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+        captured["server"] = server
+        captured["rpc_path"] = rpc_path
+        return object()
+
+    def fake_uvicorn_run(app_obj, *, host, port, access_log):
+        captured["host"] = host
+        captured["port"] = port
+        captured["access_log"] = access_log
+
+    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_uvicorn_run)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "--mcp-config",
+            str(mcp_config_path),
+            "--config",
+            str(neutral_config_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert captured["server"] is not None
+    assert captured["rpc_path"] == "/custom-rpc"
+    assert captured["host"] == "127.0.0.3"
+    assert captured["port"] == 7777
+    assert captured["access_log"] is False
