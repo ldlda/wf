@@ -324,6 +324,7 @@ def test_connection_service_sync_seed_config_materializes_registry_entry(
     service.sync_connections_from_config(config, source_registry_store=store)
 
     registry = store.load_registry()
+    assert len(registry.sources) == 1
     assert registry.sources[0].id == "demo.default"
     assert registry.sources[0].provider == "demo"
     assert service.get("demo.default").metadata["source_registry"] is True
@@ -370,6 +371,10 @@ def test_connection_service_sync_seed_existing_registry_entry_wins(
     connection = service.get("demo.default")
     assert connection.server == "registry"
     assert connection.account == "stored"
+    assert any(
+        event.kind == "source_registry_seed_existing_entry_wins"
+        for event in service.events.list_events()
+    )
 
 
 def test_wfmcpservice_sync_connections_delegates_registry_store() -> None:

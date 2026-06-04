@@ -101,6 +101,15 @@ class ConnectionService:
                     connection.source_config_ownership == "seed"
                     and registry_entry is not None
                 ):
+                    self.events.record_kind(
+                        "source_registry_seed_existing_entry_wins",
+                        connection_id=registry_entry.id,
+                        payload={
+                            "server": registry_entry.provider,
+                            "account": registry_entry.account,
+                            "reason": "seed_config_yields_to_registry_entry",
+                        },
+                    )
                     merged_connections.append(
                         registry_entry_to_connection_config(registry_entry)
                     )
