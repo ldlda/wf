@@ -158,6 +158,9 @@ implementation state.
       catalog snapshots are not mutated. Config-shadowed add is rejected in v1.
       Remove requires `--confirm` in CLI; local/static servers report
       unavailable.
+   - Completed: `wf-rpc-server --mcp-config wf_mcp.config.json` starts the
+      JSON-RPC transport over an MCP-backed `WorkflowServer`, making the remote
+      CLI path usable with MCP sources and desired source registry operations.
 - Cleanup candidate: consolidate store/source registry id validation patterns
       (`SOURCE_REGISTRY_ID_PATTERN`, `STORE_ID_PATTERN`) only after another package
       needs the same rule. Today they intentionally stay close to their stores.

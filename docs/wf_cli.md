@@ -13,6 +13,31 @@ wf --config wf_mcp.config.json <command>
 
 If `--config` is omitted, `wf_mcp.config.json` is used.
 
+## Remote Server
+
+Start a local/static JSON-RPC workflow server:
+
+```bash
+wf-rpc-server --store-root .wf_store --host 127.0.0.1 --port 8765
+```
+
+Start a JSON-RPC server backed by MCP broker config and MCP-capable sources:
+
+```bash
+wf-rpc-server --mcp-config wf_mcp.config.json --host 127.0.0.1 --port 8765
+```
+
+Then point `wf` at it:
+
+```bash
+wf --url http://127.0.0.1:8765/rpc cap list
+wf --url http://127.0.0.1:8765/rpc admin registry list
+```
+
+`--mcp-config` owns the server's workflow stores, MCP connections, and source
+registry. `--store-root` is for the local/static server path and cannot be
+combined with `--mcp-config`.
+
 ## Output Policy
 
 JSON is the default output format for every command.

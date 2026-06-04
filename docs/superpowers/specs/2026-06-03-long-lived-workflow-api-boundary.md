@@ -2,7 +2,7 @@
 
 Date: 2026-06-03
 
-Status: Slices 1-4 implemented. `wf_server` provides
+Status: Slices 1-5 implemented. `wf_server` provides
 `build_local_static_workflow_server`; `wf_mcp.broker.server` can adapt MCP
 broker config/services into the neutral `WorkflowServer`; `wf_transport_rpc_http`
 provides JSON-RPC methods and client support; `wf_cli` has target-aware context;
@@ -109,6 +109,8 @@ Implementation status:
 - Slice 4 complete: `wf_mcp.broker.server.build_workflow_server_from_config()`
   returns a neutral `WorkflowServer` backed by MCP broker runtime services,
   including source registry admin and platform admin surfaces.
+- Slice 5 complete: `wf-rpc-server --mcp-config <path>` starts JSON-RPC over an
+  MCP-backed `WorkflowServer`; `--store-root` remains local/static-only.
 
 First slice should not include:
 
