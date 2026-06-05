@@ -1,5 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
+import time
 from typing import Annotated
 
 import typer
@@ -14,6 +15,8 @@ app = typer.Typer(
     help="Run workflow deployments and inspect durable runs.",
     no_args_is_help=True,
 )
+
+_STOPPED_RUN_STATUSES = frozenset({"completed", "failed", "interrupted", "blocked"})
 
 
 @app.command("start")
@@ -65,6 +68,52 @@ def inspect_run(
     """Inspect a durable run without trace entries."""
     context = load_cli_context_from_typer(ctx)
     emit_json(run_cli_operation(context, context.handlers.inspect_run(run_id=run_id)))
+
+
+@app.command("watch")
+def watch_run(
+    ctx: typer.Context,
+    run_id: Annotated[str, typer.Argument(help="Durable run id to watch.")],
+    interval: Annotated[
+        float,
+        typer.Option("--interval", min=0.0, help="Polling interval in seconds."),
+    ] = 1.0,
+    timeout: Annotated[
+        float | None,
+        typer.Option("--timeout", min=0.1, help="Maximum seconds to watch."),
+    ] = None,
+    include_trace: Annotated[
+        bool,
+        typer.Option("--trace", help="Include a bounded trace slice when stopped."),
+    ] = False,
+    trace_from: Annotated[
+        int,
+        typer.Option("--trace-from", min=0, help="Trace slice start offset."),
+    ] = 0,
+    trace_limit: Annotated[
+        int,
+        typer.Option("--trace-limit", min=1, max=100, help="Trace slice limit."),
+    ] = 25,
+) -> None:
+    """Poll a durable run until it reaches a stopped status."""
+    context = load_cli_context_from_typer(ctx)
+    started_at = time.monotonic()
+    while True:
+        payload = run_cli_operation(context, context.handlers.inspect_run(run_id=run_id))
+        if payload.get("status") in _STOPPED_RUN_STATUSES:
+            if include_trace:
+                payload = run_cli_operation(
+                    context,
+                    context.handlers.read_run_trace(
+                        run_id=run_id,
+                        trace_range=TraceRange(start=trace_from, limit=trace_limit),
+                    ),
+                )
+            emit_json(payload)
+            return
+        if timeout is not None and time.monotonic() - started_at >= timeout:
+            raise typer.BadParameter(f"run {run_id!r} did not stop before timeout")
+        time.sleep(interval)
 
 
 @app.command("resume")

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any, cast
 from unittest.mock import patch
 
 from typer.testing import CliRunner
@@ -17,6 +18,11 @@ from tests.wf_mcp.workflow_surface.conftest import echo_artifact
 
 
 runner = CliRunner()
+
+
+class PendingRunHandlers:
+    async def inspect_run(self, *, run_id: str) -> dict[str, Any]:
+        return {"run_id": run_id, "status": "running"}
 
 
 def _load_cli_context_with_specs(ctx: TyperContext | str | Path) -> CliContext:
@@ -223,6 +229,166 @@ def test_wf_run_inspect_and_trace_existing_run() -> None:
     assert traced_payload["trace_start"] == 0
     assert traced_payload["trace_limit"] == 1
     assert traced_payload["trace"][0]["node_id"] == "echo"
+
+
+def test_wf_run_watch_outputs_terminal_run_summary() -> None:
+    root = local_temp_root() / "wf_cli_run_watch_completed"
+    root.mkdir(parents=True, exist_ok=True)
+    config_path = _seed_echo_deployment(root)
+
+    with patch(
+        "wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
+        start = runner.invoke(
+            app,
+            [
+                "--config",
+                str(config_path),
+                "run",
+                "start",
+                "echo.personal",
+                "--input",
+                '{"text": "hello"}',
+            ],
+        )
+        run_id = json.loads(start.output)["run_id"]
+
+        watched = runner.invoke(
+            app,
+            [
+                "--config",
+                str(config_path),
+                "run",
+                "watch",
+                run_id,
+                "--interval",
+                "0",
+            ],
+        )
+
+    assert watched.exit_code == 0, watched.output
+    payload = json.loads(watched.output)
+    assert payload["run_id"] == run_id
+    assert payload["status"] == "completed"
+    assert payload["outcome"] == "ok"
+
+
+def test_wf_run_watch_stops_on_interrupted_run() -> None:
+    root = local_temp_root() / "wf_cli_run_watch_interrupted"
+    root.mkdir(parents=True, exist_ok=True)
+    config_path = _seed_interrupt_deployment(root)
+
+    with patch(
+        "wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
+        start = runner.invoke(
+            app,
+            [
+                "--config",
+                str(config_path),
+                "run",
+                "start",
+                "approval.personal",
+                "--input",
+                '{"message": "send?"}',
+            ],
+        )
+        run_id = json.loads(start.output)["run_id"]
+
+        watched = runner.invoke(
+            app,
+            [
+                "--config",
+                str(config_path),
+                "run",
+                "watch",
+                run_id,
+                "--interval",
+                "0",
+            ],
+        )
+
+    assert watched.exit_code == 0, watched.output
+    payload = json.loads(watched.output)
+    assert payload["run_id"] == run_id
+    assert payload["status"] == "interrupted"
+    assert payload["resume_readiness"] == "ready"
+
+
+def test_wf_run_watch_can_include_trace_slice() -> None:
+    root = local_temp_root() / "wf_cli_run_watch_trace"
+    root.mkdir(parents=True, exist_ok=True)
+    config_path = _seed_echo_deployment(root)
+
+    with patch(
+        "wf_cli.commands.runs.load_cli_context_from_typer", _load_cli_context_with_specs
+    ):
+        start = runner.invoke(
+            app,
+            [
+                "--config",
+                str(config_path),
+                "run",
+                "start",
+                "echo.personal",
+                "--input",
+                '{"text": "hello"}',
+            ],
+        )
+        run_id = json.loads(start.output)["run_id"]
+
+        watched = runner.invoke(
+            app,
+            [
+                "--config",
+                str(config_path),
+                "run",
+                "watch",
+                run_id,
+                "--interval",
+                "0",
+                "--trace",
+                "--trace-limit",
+                "1",
+            ],
+        )
+
+    assert watched.exit_code == 0, watched.output
+    payload = json.loads(watched.output)
+    assert payload["run_id"] == run_id
+    assert payload["status"] == "completed"
+    assert payload["trace_limit"] == 1
+    assert payload["trace"][0]["node_id"] == "echo"
+
+
+def test_wf_run_watch_times_out_for_unstopped_run() -> None:
+    fake_context = CliContext(
+        config_path=Path("dummy"),
+        service=None,
+        handlers=cast(Any, PendingRunHandlers()),
+        source_admin=cast(Any, None),
+        admin=cast(Any, None),
+    )
+
+    with patch(
+        "wf_cli.commands.runs.load_cli_context_from_typer",
+        lambda _ctx: fake_context,
+    ):
+        result = runner.invoke(
+            app,
+            [
+                "run",
+                "watch",
+                "run_pending",
+                "--interval",
+                "0",
+                "--timeout",
+                "0.1",
+            ],
+        )
+
+    assert result.exit_code != 0
+    assert "did not stop before timeout" in result.output
 
 
 def test_wf_run_resume_interrupted_run() -> None:

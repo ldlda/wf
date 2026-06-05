@@ -223,13 +223,12 @@ implementation state.
     interrupted run, and resume it to completion through `RpcWorkflowApiClient`.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
-  - Run watch/progress: start with polling over existing inspect/trace APIs;
-    defer SSE/WebSocket/MCP progress until the polling UX is proven insufficient.
-  - CLI remote error formatting: remote JSON-RPC workflow/admin errors currently
-    can surface as full Python tracebacks in CLI commands, for example
-    `wf source inspect missing.source`. Add a compact, user-facing error path for
-    expected remote `RuntimeError`/workflow errors while preserving tracebacks for
-    developer/debug mode.
+  - Completed: `wf run watch` starts run progress UX with polling over existing
+    `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP
+    progress remains deferred until polling UX proves insufficient.
+  - Completed: CLI remote error formatting now routes expected operation and
+    HTTP transport failures through compact Typer/Click errors by default.
+    `wf --verbose ...` preserves raw exception behavior for debugging.
   - MCP package split direction: keep separating "MCP as a client transport"
     from "MCP as an upstream workflow source provider." The future shape is
     likely `wf_transport_mcp` for exposing workflow/admin surfaces to MCP

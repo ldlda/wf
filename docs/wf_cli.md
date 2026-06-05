@@ -255,6 +255,13 @@ Inspect a run without trace detail:
 wf run inspect run_123
 ```
 
+Poll a run until it stops:
+
+```bash
+wf run watch run_123 --interval 1
+wf run watch run_123 --trace --trace-limit 25
+```
+
 Read a bounded trace slice:
 
 ```bash
