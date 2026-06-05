@@ -44,6 +44,8 @@ def build_workflow_server_from_workflow_config(
         return _build_mcp_workflow_server_from_workflow_config(config)
     store = config.server.store
     if not isinstance(store, FilesystemStoreConfig):
+        # Roadmap: SQL/transactional stores are deferred until the remote server
+        # storage boundary is proven with file-backed stores.
         raise ValueError("wf-rpc-server currently requires filesystem store")
     return build_local_static_workflow_server(store.root)
 

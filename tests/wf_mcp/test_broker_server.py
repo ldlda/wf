@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
 from typing import Any, cast
 
 from wf_artifacts import (
@@ -549,9 +550,7 @@ def test_build_service_from_config_config_shadows_registry() -> None:
     )
 
 
-def test_broker_config_connection_defaults_to_locked() -> None:
-    tmp_path = local_temp_root() / "broker_config_locked_default"
-    tmp_path.mkdir(parents=True, exist_ok=True)
+def test_broker_config_connection_defaults_to_locked(tmp_path: Path) -> None:
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
         json.dumps(
@@ -570,9 +569,7 @@ def test_broker_config_connection_defaults_to_locked() -> None:
     assert config.connections[0].source_config_ownership == "locked"
 
 
-def test_broker_config_connection_accepts_seed_policy() -> None:
-    tmp_path = local_temp_root() / "broker_config_seed_policy"
-    tmp_path.mkdir(parents=True, exist_ok=True)
+def test_broker_config_connection_accepts_seed_policy(tmp_path: Path) -> None:
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
         json.dumps(

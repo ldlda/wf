@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
+
 from wf_config import WorkflowConfigFile
 from wf_server.config import (
     build_workflow_server_from_legacy_mcp_config,
@@ -9,7 +13,7 @@ from wf_server.context import WorkflowServer
 
 
 def test_build_workflow_server_from_workflow_config_uses_local_static_for_no_mcp_sources(
-    tmp_path,
+    tmp_path: Path,
 ) -> None:
     config = WorkflowConfigFile.model_validate(
         {
@@ -29,7 +33,7 @@ def test_build_workflow_server_from_workflow_config_uses_local_static_for_no_mcp
 
 
 def test_build_workflow_server_from_workflow_config_uses_mcp_builder_for_mcp_sources(
-    monkeypatch, tmp_path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     captured = {}
 
@@ -66,7 +70,7 @@ def test_build_workflow_server_from_workflow_config_uses_mcp_builder_for_mcp_sou
 
 
 def test_build_workflow_server_from_legacy_mcp_config_delegates_to_mcp_builder(
-    monkeypatch, tmp_path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     captured = {}
 

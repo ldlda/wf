@@ -150,6 +150,7 @@ def connection_config_to_registry_entry(
     identity to become the future desired-state owner after first startup.
     """
     transport = connection.metadata.get("transport")
+    legacy_transport_value: str | None = None
     if isinstance(transport, dict):
         pass
     elif isinstance(transport, str):
@@ -161,7 +162,7 @@ def connection_config_to_registry_entry(
                 "env": dict(connection.metadata.get("env", {})),
             }
         elif transport in _FLAT_HTTP_TRANSPORTS:
-            legacy_transport = transport
+            legacy_transport_value = transport
             transport = {
                 "kind": "http",
                 "url": connection.metadata.get("url", ""),
@@ -182,8 +183,8 @@ def connection_config_to_registry_entry(
         for key, value in connection.metadata.items()
         if key not in _TRANSPORT_METADATA_KEYS
     }
-    if "legacy_transport" in locals():
-        source_metadata["legacy_transport"] = legacy_transport
+    if legacy_transport_value is not None:
+        source_metadata["legacy_transport"] = legacy_transport_value
     entry = McpSourceRegistryEntry.model_validate(
         {
             "id": connection.id,

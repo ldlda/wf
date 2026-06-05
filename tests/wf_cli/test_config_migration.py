@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from typer.testing import CliRunner
 
 from wf_cli.app import app
 
 
-def test_wf_config_migrate_mcp_prints_neutral_config(tmp_path) -> None:
+def test_wf_config_migrate_mcp_prints_neutral_config(tmp_path: Path) -> None:
     legacy_path = tmp_path / "wf_mcp.config.json"
     legacy_path.write_text(
         """
@@ -45,7 +46,7 @@ def test_wf_config_migrate_mcp_prints_neutral_config(tmp_path) -> None:
     assert source["transport"]["command"] == "uvx"
 
 
-def test_wf_config_migrate_mcp_writes_output_file(tmp_path) -> None:
+def test_wf_config_migrate_mcp_writes_output_file(tmp_path: Path) -> None:
     legacy_path = tmp_path / "wf_mcp.config.json"
     output_path = tmp_path / "wf.json"
     legacy_path.write_text(

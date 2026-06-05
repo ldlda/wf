@@ -102,13 +102,19 @@ def watch_run(
         payload = run_cli_operation(context, context.handlers.inspect_run(run_id=run_id))
         if payload.get("status") in _STOPPED_RUN_STATUSES:
             if include_trace:
-                payload = run_cli_operation(
+                trace_payload = run_cli_operation(
                     context,
                     context.handlers.read_run_trace(
                         run_id=run_id,
                         trace_range=TraceRange(start=trace_from, limit=trace_limit),
                     ),
                 )
+                payload = {
+                    **payload,
+                    "trace_start": trace_payload.get("trace_start"),
+                    "trace_limit": trace_payload.get("trace_limit"),
+                    "trace": trace_payload.get("trace", []),
+                }
             emit_json(payload)
             return
         if timeout is not None and time.monotonic() - started_at >= timeout:

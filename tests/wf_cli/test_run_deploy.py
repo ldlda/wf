@@ -231,9 +231,9 @@ def test_wf_run_inspect_and_trace_existing_run() -> None:
     assert traced_payload["trace"][0]["node_id"] == "echo"
 
 
-def test_wf_run_watch_outputs_terminal_run_summary() -> None:
-    root = local_temp_root() / "wf_cli_run_watch_completed"
-    root.mkdir(parents=True, exist_ok=True)
+def test_wf_run_watch_outputs_terminal_run_summary(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_run_watch_completed"
+    root.mkdir()
     config_path = _seed_echo_deployment(root)
 
     with patch(
@@ -273,9 +273,9 @@ def test_wf_run_watch_outputs_terminal_run_summary() -> None:
     assert payload["outcome"] == "ok"
 
 
-def test_wf_run_watch_stops_on_interrupted_run() -> None:
-    root = local_temp_root() / "wf_cli_run_watch_interrupted"
-    root.mkdir(parents=True, exist_ok=True)
+def test_wf_run_watch_stops_on_interrupted_run(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_run_watch_interrupted"
+    root.mkdir()
     config_path = _seed_interrupt_deployment(root)
 
     with patch(
@@ -315,9 +315,9 @@ def test_wf_run_watch_stops_on_interrupted_run() -> None:
     assert payload["resume_readiness"] == "ready"
 
 
-def test_wf_run_watch_can_include_trace_slice() -> None:
-    root = local_temp_root() / "wf_cli_run_watch_trace"
-    root.mkdir(parents=True, exist_ok=True)
+def test_wf_run_watch_can_include_trace_slice(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_run_watch_trace"
+    root.mkdir()
     config_path = _seed_echo_deployment(root)
 
     with patch(
@@ -357,6 +357,7 @@ def test_wf_run_watch_can_include_trace_slice() -> None:
     payload = json.loads(watched.output)
     assert payload["run_id"] == run_id
     assert payload["status"] == "completed"
+    assert payload["outcome"] == "ok"
     assert payload["trace_limit"] == 1
     assert payload["trace"][0]["node_id"] == "echo"
 
