@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import asyncio
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -9,6 +7,7 @@ import typer
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_value
+from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
     name="draft",
@@ -26,7 +25,7 @@ def list_drafts(
 ) -> None:
     """List stored draft workspaces."""
     context = load_cli_context(ctx)
-    payload = asyncio.run(context.handlers.list_draft_workspaces())
+    payload = run_cli_operation(context, context.handlers.list_draft_workspaces())
     emit_list_payload(
         payload,
         collection_key="workspaces",
@@ -47,11 +46,12 @@ def inspect_draft(
     """Inspect one draft workspace."""
     context = load_cli_context(ctx)
     emit_json(
-        asyncio.run(
+        run_cli_operation(
+            context,
             context.handlers.get_draft_workspace(
                 workspace_id=workspace_id,
                 include_draft=include_draft,
-            )
+            ),
         )
     )
 
@@ -71,13 +71,14 @@ def create_from_capability(
     """Bootstrap a draft workspace from inspect_capability wrapper hints."""
     context = load_cli_context(ctx)
     emit_json(
-        asyncio.run(
+        run_cli_operation(
+            context,
             context.handlers.create_draft_workspace_from_capability(
                 workspace_id=workspace_id,
                 capability_name=capability_name,
                 name=name,
                 title=title,
-            )
+            ),
         )
     )
 
@@ -105,12 +106,13 @@ def patch_draft(
         raise typer.BadParameter("draft patch input must be a JSON array")
     context = load_cli_context(ctx)
     emit_json(
-        asyncio.run(
+        run_cli_operation(
+            context,
             context.handlers.patch_draft_workspace(
                 workspace_id=workspace_id,
                 revision=revision,
                 patch=patch,
-            )
+            ),
         )
     )
 
@@ -123,8 +125,9 @@ def validate_draft(
     """Validate one stored draft workspace."""
     context = load_cli_context(ctx)
     emit_json(
-        asyncio.run(
-            context.handlers.validate_draft_workspace(workspace_id=workspace_id)
+        run_cli_operation(
+            context,
+            context.handlers.validate_draft_workspace(workspace_id=workspace_id),
         )
     )
 
@@ -158,7 +161,8 @@ def save_draft(
         raise typer.BadParameter(str(exc)) from exc
     context = load_cli_context(ctx)
     if kind == "wrapper":
-        payload = asyncio.run(
+        payload = run_cli_operation(
+            context,
             context.handlers.create_wrapper_from_workspace(
                 workspace_id=workspace_id,
                 artifact_id=artifact_id,
@@ -167,10 +171,11 @@ def save_draft(
                 outcomes=tuple(outcome or ["ok"]),
                 description=description,
                 source_bindings=source_bindings or None,
-            )
+            ),
         )
     else:
-        payload = asyncio.run(
+        payload = run_cli_operation(
+            context,
             context.handlers.create_artifact_from_workspace(
                 workspace_id=workspace_id,
                 artifact_id=artifact_id,
@@ -180,6 +185,6 @@ def save_draft(
                 kind=kind,
                 description=description,
                 source_bindings=source_bindings or None,
-            )
+            ),
         )
     emit_json(payload)

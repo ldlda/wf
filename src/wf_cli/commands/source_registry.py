@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import asyncio
 import json
 from pathlib import Path
 from typing import Annotated, Any
@@ -10,6 +8,7 @@ import typer
 from wf_cli.context import CliContext, load_cli_context_from_typer
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import emit_json
+from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
     name="registry",
@@ -43,7 +42,10 @@ def list_registry_entries(
     """List desired persisted source registry entries."""
     context = load_cli_context_from_typer(ctx)
     admin = _require_registry_admin(context)
-    payload = asyncio.run(admin.list_registry_entries(cursor=cursor, limit=limit))
+    payload = run_cli_operation(
+        context,
+        admin.list_registry_entries(cursor=cursor, limit=limit),
+    )
     emit_list_payload(
         payload,
         collection_key="entries",
@@ -61,7 +63,10 @@ def inspect_registry_entry(
     """Inspect one desired persisted source registry entry."""
     context = load_cli_context_from_typer(ctx)
     admin = _require_registry_admin(context)
-    payload = asyncio.run(admin.inspect_registry_entry(source_id=source_id))
+    payload = run_cli_operation(
+        context,
+        admin.inspect_registry_entry(source_id=source_id),
+    )
     emit_json(payload)
 
 
@@ -80,7 +85,7 @@ def add_registry_entry(
     context = load_cli_context_from_typer(ctx)
     admin = _require_registry_admin(context)
     entry = _read_json_arg(input_json, input_file, "--input/--input-file")
-    payload = asyncio.run(admin.add_registry_entry(entry=entry))
+    payload = run_cli_operation(context, admin.add_registry_entry(entry=entry))
     emit_json(payload)
 
 
@@ -99,7 +104,10 @@ def update_registry_entry(
     context = load_cli_context_from_typer(ctx)
     admin = _require_registry_admin(context)
     patch = _read_json_arg(patch_json, patch_file, "--patch/--patch-file")
-    payload = asyncio.run(admin.update_registry_entry(source_id=source_id, patch=patch))
+    payload = run_cli_operation(
+        context,
+        admin.update_registry_entry(source_id=source_id, patch=patch),
+    )
     emit_json(payload)
 
 
@@ -111,7 +119,10 @@ def enable_registry_entry(
     """Enable a desired source registry entry."""
     context = load_cli_context_from_typer(ctx)
     admin = _require_registry_admin(context)
-    payload = asyncio.run(admin.enable_registry_entry(source_id=source_id))
+    payload = run_cli_operation(
+        context,
+        admin.enable_registry_entry(source_id=source_id),
+    )
     emit_json(payload)
 
 
@@ -123,7 +134,10 @@ def disable_registry_entry(
     """Disable a desired source registry entry."""
     context = load_cli_context_from_typer(ctx)
     admin = _require_registry_admin(context)
-    payload = asyncio.run(admin.disable_registry_entry(source_id=source_id))
+    payload = run_cli_operation(
+        context,
+        admin.disable_registry_entry(source_id=source_id),
+    )
     emit_json(payload)
 
 
@@ -140,7 +154,10 @@ def remove_registry_entry(
     admin = _require_registry_admin(context)
     if not confirm:
         raise typer.BadParameter("removal requires --confirm flag")
-    payload = asyncio.run(admin.remove_registry_entry(source_id=source_id))
+    payload = run_cli_operation(
+        context,
+        admin.remove_registry_entry(source_id=source_id),
+    )
     emit_json(payload)
 
 
@@ -149,7 +166,7 @@ def apply_registry_changes(ctx: typer.Context) -> None:
     """Apply desired registry state to the running server."""
     context = load_cli_context_from_typer(ctx)
     admin = _require_registry_admin(context)
-    payload = asyncio.run(admin.apply_registry_changes())
+    payload = run_cli_operation(context, admin.apply_registry_changes())
     emit_json(payload)
 
 

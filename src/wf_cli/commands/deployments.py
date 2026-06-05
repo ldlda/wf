@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import asyncio
 from pathlib import Path
 from typing import Annotated
 
@@ -9,6 +7,7 @@ import typer
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_input
+from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
     name="deploy",
@@ -31,11 +30,12 @@ def validate_deployment(
 ) -> None:
     """Validate one saved workflow deployment."""
     context = load_cli_context(ctx)
-    payload = asyncio.run(
+    payload = run_cli_operation(
+        context,
         context.handlers.validate_deployment(
             deployment_id=deployment_id,
             live_check=live,
-        )
+        ),
     )
     emit_json(payload)
 
@@ -49,7 +49,7 @@ def list_deployments(
 ) -> None:
     """List saved workflow deployments."""
     context = load_cli_context(ctx)
-    payload = asyncio.run(context.handlers.list_deployments())
+    payload = run_cli_operation(context, context.handlers.list_deployments())
     emit_list_payload(
         payload,
         collection_key="deployments",
@@ -67,7 +67,10 @@ def inspect_deployment(
     """Inspect one saved deployment."""
     context = load_cli_context(ctx)
     emit_json(
-        asyncio.run(context.handlers.inspect_deployment(deployment_id=deployment_id))
+        run_cli_operation(
+            context,
+            context.handlers.inspect_deployment(deployment_id=deployment_id),
+        )
     )
 
 
@@ -107,7 +110,7 @@ def save_deployment(
     except CliInputError as exc:
         raise typer.BadParameter(str(exc)) from exc
     context = load_cli_context(ctx)
-    emit_json(asyncio.run(context.handlers.save_deployment(payload)))
+    emit_json(run_cli_operation(context, context.handlers.save_deployment(payload)))
 
 
 @app.command("delete")
@@ -118,7 +121,10 @@ def delete_deployment(
     """Delete one saved deployment."""
     context = load_cli_context(ctx)
     emit_json(
-        asyncio.run(context.handlers.delete_deployment(deployment_id=deployment_id))
+        run_cli_operation(
+            context,
+            context.handlers.delete_deployment(deployment_id=deployment_id),
+        )
     )
 
 

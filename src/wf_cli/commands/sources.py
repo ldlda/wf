@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import asyncio
 from typing import Annotated
 
 import typer
@@ -8,6 +6,7 @@ import typer
 from wf_cli.context import load_cli_context_from_typer
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import emit_json
+from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
     name="source",
@@ -31,7 +30,10 @@ def list_sources(
 ) -> None:
     """List compact workflow source summaries."""
     context = load_cli_context_from_typer(ctx)
-    payload = asyncio.run(context.source_admin.list_sources(cursor=cursor, limit=limit))
+    payload = run_cli_operation(
+        context,
+        context.source_admin.list_sources(cursor=cursor, limit=limit),
+    )
     emit_list_payload(
         payload,
         collection_key="sources",
@@ -48,5 +50,8 @@ def inspect_source(
 ) -> None:
     """Inspect one workflow source inventory."""
     context = load_cli_context_from_typer(ctx)
-    payload = asyncio.run(context.source_admin.inspect_source(source_id=source_id))
+    payload = run_cli_operation(
+        context,
+        context.source_admin.inspect_source(source_id=source_id),
+    )
     emit_json(payload)

@@ -99,6 +99,14 @@ Detail and mutation commands are JSON-only unless documented otherwise.
 
 There is no `table` format in v1.
 
+By default, expected operation failures are shown as compact CLI errors without
+Python tracebacks. Use the root `--verbose` flag when debugging internal
+failures:
+
+```bash
+wf --verbose --url http://127.0.0.1:8765/rpc source inspect missing.source
+```
+
 ## Lifecycle
 
 The normal CLI workflow is:

@@ -47,8 +47,8 @@ def _patch_load_cli_context(
 
 def _patch_asyncio_run(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
-        "wf_cli.commands.source_registry.asyncio.run",
-        lambda coro: coro,
+        "wf_cli.commands.source_registry.run_cli_operation",
+        lambda _context, operation: operation,
     )
 
 

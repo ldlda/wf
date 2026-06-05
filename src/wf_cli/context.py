@@ -40,6 +40,7 @@ class CliContext:
     source_admin: WorkflowSourceAdminSurface
     admin: WorkflowAdminSurface
     source_registry_admin: WorkflowSourceRegistrySurface | None = None
+    verbose: bool = False
 
 
 @dataclass(frozen=True)
@@ -63,6 +64,7 @@ class CliTyperState:
     force_local: bool = False
     rpc_url: str | None = None
     rpc_timeout_seconds: float | None = None
+    verbose: bool = False
 
     @classmethod
     def from_context(cls, ctx: typer.Context) -> CliTyperState:
@@ -87,6 +89,7 @@ class CliTyperState:
             rpc_timeout_seconds=(
                 float(timeout) if isinstance(timeout, float | int) else None
             ),
+            verbose=bool(obj.get("verbose", cls.verbose)),
         )
 
 
@@ -101,6 +104,7 @@ def load_cli_context(
     force_local: bool = False,
     rpc_url: str | None = None,
     rpc_timeout_seconds: float | None = None,
+    verbose: bool = False,
 ) -> CliContext:
     """Load config and build workflow-surface handlers for CLI commands."""
     resolved_config_path = Path(config_path)
@@ -123,6 +127,7 @@ def load_cli_context(
             source_admin=client,
             admin=client,
             source_registry_admin=client,
+            verbose=verbose,
         )
 
     if _is_legacy_mcp_config(resolved_config_path):
@@ -137,6 +142,7 @@ def load_cli_context(
                 connections=service.connection_service,
                 events=service.events,
             ),
+            verbose=verbose,
         )
 
     config = load_workflow_config(resolved_config_path)
@@ -152,6 +158,7 @@ def load_cli_context(
             handlers=server.api,
             source_admin=server.source_admin,
             admin=server.admin,
+            verbose=verbose,
         )
     if isinstance(target, RpcHttpTargetConfig):
         client = RpcWorkflowApiClient(
@@ -169,6 +176,7 @@ def load_cli_context(
             source_admin=client,
             admin=client,
             source_registry_admin=client,
+            verbose=verbose,
         )
     raise ValueError(f"unsupported workflow target {target!r}")
 
@@ -218,6 +226,7 @@ def load_cli_context_from_typer(ctx: typer.Context) -> CliContext:
             force_local=force_local_from_context(ctx),
             rpc_url=rpc_url_from_context(ctx),
             rpc_timeout_seconds=rpc_timeout_from_context(ctx),
+            verbose=CliTyperState.from_context(ctx).verbose,
         )
     except ValueError as exc:
         raise typer.BadParameter(str(exc)) from exc

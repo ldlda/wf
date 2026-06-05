@@ -1,12 +1,11 @@
 from __future__ import annotations
-
-import asyncio
 from typing import Annotated
 
 import typer
 
 from wf_cli.context import load_cli_context_from_typer
 from wf_cli.formats import ListOutputFormat, emit_list_payload
+from wf_cli.remote_errors import run_cli_operation
 
 from . import source_registry
 
@@ -28,7 +27,7 @@ def list_connections(
 ) -> None:
     """List configured upstream connections known to the target."""
     context = load_cli_context_from_typer(ctx)
-    payload = asyncio.run(context.admin.list_connections())
+    payload = run_cli_operation(context, context.admin.list_connections())
     emit_list_payload(
         payload,
         collection_key="connections",
@@ -47,7 +46,7 @@ def get_connection_statuses(
 ) -> None:
     """List connection catalog/status summaries."""
     context = load_cli_context_from_typer(ctx)
-    payload = asyncio.run(context.admin.get_connection_statuses())
+    payload = run_cli_operation(context, context.admin.get_connection_statuses())
     emit_list_payload(
         payload,
         collection_key="statuses",
@@ -66,7 +65,7 @@ def list_events(
 ) -> None:
     """List recorded workflow platform events."""
     context = load_cli_context_from_typer(ctx)
-    payload = asyncio.run(context.admin.list_events())
+    payload = run_cli_operation(context, context.admin.list_events())
     emit_list_payload(
         payload,
         collection_key="events",

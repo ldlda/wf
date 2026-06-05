@@ -48,13 +48,22 @@ def root(
         float | None,
         typer.Option("--timeout", min=0.1, help="Override RPC timeout seconds."),
     ] = None,
+    verbose: Annotated[
+        bool,
+        typer.Option(
+            "--verbose",
+            help="Show full tracebacks for unexpected internal errors.",
+        ),
+    ] = False,
 ) -> None:
     """Run workflow platform commands."""
+    app.pretty_exceptions_short = not verbose
     ctx.obj = CliTyperState(
         config_path=config,
         force_local=local,
         rpc_url=url,
         rpc_timeout_seconds=timeout,
+        verbose=verbose,
     )
 
 

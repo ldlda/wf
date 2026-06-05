@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import asyncio
 from pathlib import Path
 from typing import Annotated
 
@@ -8,6 +6,7 @@ import typer
 
 from wf_cli.context import load_cli_context_from_typer
 from wf_cli.io import CliInputError, emit_json, parse_json_input
+from wf_cli.remote_errors import run_cli_operation
 from wf_api import TraceRange
 
 app = typer.Typer(
@@ -47,12 +46,13 @@ def start_run(
         raise typer.BadParameter(str(exc)) from exc
     context = load_cli_context_from_typer(ctx)
     trace_range = _optional_trace_range(start=trace_from, limit=trace_limit)
-    payload = asyncio.run(
+    payload = run_cli_operation(
+        context,
         context.handlers.run_deployment(
             deployment_id=deployment_id,
             workflow_input=workflow_input,
             trace_range=trace_range,
-        )
+        ),
     )
     emit_json(payload)
 
@@ -64,7 +64,7 @@ def inspect_run(
 ) -> None:
     """Inspect a durable run without trace entries."""
     context = load_cli_context_from_typer(ctx)
-    emit_json(asyncio.run(context.handlers.inspect_run(run_id=run_id)))
+    emit_json(run_cli_operation(context, context.handlers.inspect_run(run_id=run_id)))
 
 
 @app.command("resume")
@@ -108,13 +108,14 @@ def resume_run(
         raise typer.BadParameter(str(exc)) from exc
     context = load_cli_context_from_typer(ctx)
     trace_range = _optional_trace_range(start=trace_from, limit=trace_limit)
-    payload = asyncio.run(
+    payload = run_cli_operation(
+        context,
         context.handlers.resume_run(
             run_id=run_id,
             resume_payload=resume_payload,
             resume_outcome=outcome,
             trace_range=trace_range,
-        )
+        ),
     )
     emit_json(payload)
 
@@ -134,11 +135,12 @@ def trace_run(
 ) -> None:
     """Read a bounded debug trace slice."""
     context = load_cli_context_from_typer(ctx)
-    payload = asyncio.run(
+    payload = run_cli_operation(
+        context,
         context.handlers.read_run_trace(
             run_id=run_id,
             trace_range=TraceRange(start=trace_from, limit=limit),
-        )
+        ),
     )
     emit_json(payload)
 

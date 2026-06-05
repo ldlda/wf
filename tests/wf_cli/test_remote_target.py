@@ -2,16 +2,31 @@ from __future__ import annotations
 
 import asyncio
 import json
+from pathlib import Path
+from typing import Any, cast
 
 import httpx
 from typer.testing import CliRunner
 
 from wf_api.models import RawWorkflowPlan
 from wf_cli.app import app
-from wf_cli.context import load_cli_context, load_local_cli_context
+from wf_cli.context import CliContext, load_cli_context, load_local_cli_context
 from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
+
+
+class BrokenSourceAdmin:
+    async def list_sources(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return {"sources": [], "next_cursor": None, "total": 0}
+
+    async def inspect_source(self, *, source_id: str) -> dict[str, Any]:
+        raise RuntimeError(f"broken source admin for {source_id}")
 
 
 def test_load_cli_context_uses_rpc_client_for_rpc_http_target(tmp_path) -> None:
@@ -330,6 +345,115 @@ def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     assert '"id": "wf.std"' in listed.output
     assert inspected.exit_code == 0, inspected.output
     assert '"id": "wf.std"' in inspected.output
+
+
+def test_wf_remote_source_inspect_formats_expected_rpc_error(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    original_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        "wf_transport_rpc_http.client.httpx.AsyncClient",
+        lambda *args, **kwargs: original_client(
+            transport=httpx.ASGITransport(app=create_rpc_app(server)),
+            base_url="http://test",
+        ),
+    )
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    result = runner.invoke(app, [*base_args, "source", "inspect", "missing.source"])
+
+    assert result.exit_code != 0
+    assert "Error" in result.output
+    assert "Workflow operation failed" in result.output
+    assert "missing.source" in result.output
+    assert "Traceback" not in result.output
+    assert "RuntimeError" not in result.output
+
+
+def test_wf_remote_source_list_formats_transport_error(monkeypatch, tmp_path) -> None:
+    async def connection_failed(*args: Any, **kwargs: Any) -> dict[str, Any]:
+        raise httpx.ConnectError(
+            "connection refused",
+            request=httpx.Request("POST", "http://test/rpc"),
+        )
+
+    monkeypatch.setattr(
+        "wf_transport_rpc_http.client_sources.RpcSourceAdminClientMixin.list_sources",
+        connection_failed,
+    )
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+
+    result = runner.invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "--url",
+            "http://test/rpc",
+            "source",
+            "list",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Error" in result.output
+    assert "connection refused" in result.output
+    assert "Traceback" not in result.output
+    assert "ConnectError" not in result.output
+
+
+def test_wf_unexpected_error_uses_short_traceback_by_default(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    fake_context = CliContext(
+        config_path=Path("dummy"),
+        service=cast(Any, object()),
+        handlers=build_local_static_workflow_server(tmp_path / "store").api,
+        source_admin=BrokenSourceAdmin(),
+        admin=cast(Any, object()),
+    )
+    monkeypatch.setattr(
+        "wf_cli.commands.sources.load_cli_context_from_typer",
+        lambda _ctx: fake_context,
+    )
+
+    result = CliRunner().invoke(app, ["source", "inspect", "wf.std"])
+
+    assert result.exit_code != 0
+    assert "broken source admin for wf.std" in result.output
+    assert "tests/wf_cli/test_remote_target.py" not in result.output
+
+
+def test_wf_verbose_shows_full_traceback_for_unexpected_error(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    fake_context = CliContext(
+        config_path=Path("dummy"),
+        service=cast(Any, object()),
+        handlers=build_local_static_workflow_server(tmp_path / "store").api,
+        source_admin=BrokenSourceAdmin(),
+        admin=cast(Any, object()),
+        verbose=True,
+    )
+    monkeypatch.setattr(
+        "wf_cli.commands.sources.load_cli_context_from_typer",
+        lambda _ctx: fake_context,
+    )
+
+    result = CliRunner().invoke(app, ["--verbose", "source", "inspect", "wf.std"])
+
+    assert result.exit_code != 0
+    assert isinstance(result.exception, RuntimeError)
+    assert str(result.exception) == "broken source admin for wf.std"
 
 
 def test_wf_admin_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:

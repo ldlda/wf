@@ -1,6 +1,4 @@
 from __future__ import annotations
-
-import asyncio
 from typing import Annotated, Literal
 
 import typer
@@ -8,6 +6,7 @@ import typer
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import emit_json
+from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
     name="artifact",
@@ -38,13 +37,14 @@ def list_artifacts(
 ) -> None:
     """List compact saved artifact summaries."""
     context = load_cli_context(ctx)
-    payload = asyncio.run(
+    payload = run_cli_operation(
+        context,
         context.handlers.list_artifacts(
             query=query,
             kind=kind,
             cursor=cursor,
             limit=limit,
-        )
+        ),
     )
     emit_list_payload(
         payload,
@@ -64,7 +64,8 @@ def inspect_artifact(
     """Inspect one saved artifact version."""
     context = load_cli_context(ctx)
     emit_json(
-        asyncio.run(
-            context.handlers.inspect_artifact(artifact_id=artifact_id, version=version)
+        run_cli_operation(
+            context,
+            context.handlers.inspect_artifact(artifact_id=artifact_id, version=version),
         )
     )
