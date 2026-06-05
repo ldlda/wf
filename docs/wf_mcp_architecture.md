@@ -158,9 +158,20 @@ gone.
 
 If this becomes multiple distributions, likely split points are:
 
-- `wf-mcp-proxy`: `proxy`, `control`, `shared`
-- `wf-mcp-broker`: `broker`, `storage`, `workflow`, `shared`
-- `wf-mcp-sdk`: `sdk`, `capabilities`, `models`, `shared`
+- `wf-transport-mcp`: MCP-facing transport that exposes neutral
+  `WorkflowServer` / `wf_api` workflow, source-admin, and platform-admin
+  surfaces to MCP clients.
+- `wf-sources-mcp`: upstream MCP source provider that owns external MCP server
+  discovery, sessions, tool invocation, resources/prompts, FastMCP integration,
+  and conversion of discovered MCP tools into workflow node specs.
+- `wf-mcp-proxy`: compatibility/proxy runtime for mounting upstream MCP servers
+  through FastMCP, if that remains useful after `wf-sources-mcp` exists.
 
-For now, keep one distribution and use import discipline to preserve those
-boundaries.
+The key boundary is direction, not naming: "MCP as a client transport" and
+"MCP as an upstream workflow source" are separate roles. The current `wf_mcp`
+package still contains both roles plus compatibility entrypoints. New
+server/transport code should depend on `wf_server` / `wf_api` surfaces and keep
+MCP-specific upstream behavior behind a source-provider adapter.
+
+For now, keep one distribution and use import discipline to preserve these
+future split points.

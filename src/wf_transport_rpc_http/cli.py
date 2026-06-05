@@ -11,13 +11,11 @@ from wf_config import (
     load_workflow_config,
 )
 
-from wf_mcp.broker import (
-    build_workflow_server_from_config,
+from wf_server.config import (
+    build_workflow_server_from_legacy_mcp_config,
     build_workflow_server_from_workflow_config,
-    load_broker_config,
 )
-
-from wf_server import build_local_static_workflow_server
+from wf_server.context import build_local_static_workflow_server
 
 from .app import create_rpc_app
 
@@ -65,23 +63,26 @@ def serve(
 
     server = None
     if mcp_config is not None:
-        broker_config = load_broker_config(mcp_config)
-        server = build_workflow_server_from_config(broker_config)
+        server = build_workflow_server_from_legacy_mcp_config(mcp_config)
 
     if config is not None:
         workflow_config = load_workflow_config(config)
-        has_mcp_sources = any(
-            getattr(source, "kind", None) == "mcp"
-            for source in workflow_config.server.sources
-        )
-        if server is None and has_mcp_sources:
-            server = build_workflow_server_from_workflow_config(workflow_config)
         store = workflow_config.server.store
-        if server is None and not isinstance(store, FilesystemStoreConfig):
-            raise typer.BadParameter(
-                "wf-rpc-server currently requires filesystem store"
+        if server is None and store_root is None:
+            server = build_workflow_server_from_workflow_config(workflow_config)
+        elif server is None:
+            has_mcp_sources = any(
+                getattr(source, "kind", None) == "mcp"
+                for source in workflow_config.server.sources
             )
-        if server is None:
+            if has_mcp_sources:
+                raise typer.BadParameter(
+                    "--store-root cannot override MCP-source config"
+                )
+            if not isinstance(store, FilesystemStoreConfig):
+                raise typer.BadParameter(
+                    "wf-rpc-server currently requires filesystem store"
+                )
             resolved_store_root = resolved_store_root or store.root
         rpc_transport = next(
             (

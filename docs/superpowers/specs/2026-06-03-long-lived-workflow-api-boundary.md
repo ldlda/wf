@@ -54,6 +54,19 @@ wf_mcp
   MCP transport and upstream MCP integration
 ```
 
+`wf_mcp` is intentionally treated as a combined compatibility package in this
+diagram, not as the desired final boundary. It currently contains two different
+roles:
+
+- MCP as a client transport: an MCP client connects to workflow/admin surfaces.
+- MCP as an upstream source provider: workflows discover and invoke external MCP
+  servers as capability sources.
+
+Those roles should separate over time. A future `wf_transport_mcp` can expose
+the same `WorkflowServer` / `wf_api` surfaces to MCP clients, while a future
+`wf_sources_mcp` can own upstream MCP discovery, sessions, tool invocation,
+resource/prompt access, and FastMCP-specific provider behavior.
+
 `wf_transport_rpc_http` should call `WorkflowApi` through the server
 composition. It should not call `WfMcpService`.
 
@@ -252,6 +265,10 @@ Hard rules:
   MCP-specific context adapter.
 - A future MCP transport mounted through `wf_server` must still keep upstream
   MCP source execution separate from transport request handling.
+- Do not add new generic server or transport code that depends on the combined
+  `wf_mcp` facade. If it needs MCP-specific upstream behavior, isolate that as a
+  source-provider adapter; if it needs to expose workflow operations to MCP
+  clients, isolate that as a transport adapter.
 
 If a reusable service currently lives under `wf_mcp.broker.service` but has no
 MCP dependency, later slices may move or duplicate a protocol-neutral version.
@@ -368,6 +385,19 @@ Possible providers:
 This slice should avoid making "source" mean "MCP connection." MCP is one
 source provider, not the source model.
 
+Future package direction:
+
+```text
+wf_transport_mcp
+  exposes WorkflowServer / wf_api operations to MCP clients
+
+wf_sources_mcp
+  consumes upstream MCP servers as workflow capability sources
+
+wf_mcp
+  compatibility package until old MCP entrypoints can shrink or retire
+```
+
 Current MCP-backed server status:
 
 - MCP-backed `WorkflowServer` construction is implemented.
@@ -398,6 +428,9 @@ Next implementation slices should be:
    transport-only. After `wf_config` can describe MCP sources, `wf-rpc-server
    --config ...` should compose MCP-backed sources from neutral config and the
    `--mcp-config` path can become deprecated/legacy.
+   Completed when `tests/wf_transport_rpc_http/test_import_direction.py` passes
+   and the RPC transport CLI imports only `wf_config`, `wf_server`, and transport
+   modules for server construction.
 3. Legacy MCP config migration. Provide an explicit converter from old
    `wf_mcp.config.json` into `WorkflowConfigFile`: `store_root` maps to
    `server.store` (`StoreConfig` is already a discriminated union; currently

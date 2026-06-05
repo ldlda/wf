@@ -191,6 +191,8 @@ implementation state.
     import-direction guard. The durable fix is not a permanent split launcher;
     it is making `wf_config` wide enough that the RPC server can compose from
     neutral config while MCP-specific adapters stay selected by source kind.
+    Completed: `wf_transport_rpc_http` no longer imports `wf_mcp`; server
+    composition from neutral or legacy MCP config lives behind `wf_server.config`.
   - Legacy config migration: add a converter from old `wf_mcp.config.json`
     (`store_root`, `connections[]`) into the wider `wf_config` shape
     (`server.store`, `server.sources[]`). `server.store` is already a
@@ -217,6 +219,13 @@ implementation state.
     upstream credentials, and surface missing auth as validation diagnostics.
   - Run watch/progress: start with polling over existing inspect/trace APIs;
     defer SSE/WebSocket/MCP progress until the polling UX is proven insufficient.
+  - MCP package split direction: keep separating "MCP as a client transport"
+    from "MCP as an upstream workflow source provider." The future shape is
+    likely `wf_transport_mcp` for exposing workflow/admin surfaces to MCP
+    clients, and `wf_sources_mcp` for discovering/invoking upstream MCP servers
+    as workflow capabilities. The current `wf_mcp` package still contains both
+    roles plus compatibility entrypoints; new server/transport work should avoid
+    depending on that combined facade.
 - Cleanup candidate: consolidate store/source registry id validation patterns
       (`SOURCE_REGISTRY_ID_PATTERN`, `STORE_ID_PATTERN`) only after another package
       needs the same rule. Today they intentionally stay close to their stores.

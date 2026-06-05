@@ -70,8 +70,8 @@ def test_rpc_server_cli_uses_configured_store_and_transport(
     )
     captured: dict[str, object] = {}
 
-    def fake_build_server(root):
-        captured["store_root"] = root
+    def fake_build_server(config):
+        captured["store_root"] = config.server.store.root
         return object()
 
     def fake_create_rpc_app(server, *, rpc_path="/rpc"):
@@ -86,7 +86,7 @@ def test_rpc_server_cli_uses_configured_store_and_transport(
         captured["access_log"] = access_log
 
     monkeypatch.setattr(
-        "wf_transport_rpc_http.cli.build_local_static_workflow_server",
+        "wf_transport_rpc_http.cli.build_workflow_server_from_workflow_config",
         fake_build_server,
     )
     monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
@@ -115,12 +115,8 @@ def test_rpc_server_cli_uses_mcp_config_server(monkeypatch, tmp_path) -> None:
     )
     captured: dict[str, object] = {}
 
-    def fake_load_broker_config(path):
+    def fake_build_mcp_server(path):
         captured["mcp_config_path"] = path
-        return "broker-config"
-
-    def fake_build_mcp_server(config):
-        captured["mcp_config"] = config
         return object()
 
     def fake_create_rpc_app(server, *, rpc_path="/rpc"):
@@ -134,9 +130,8 @@ def test_rpc_server_cli_uses_mcp_config_server(monkeypatch, tmp_path) -> None:
         captured["port"] = port
         captured["access_log"] = access_log
 
-    monkeypatch.setattr("wf_transport_rpc_http.cli.load_broker_config", fake_load_broker_config)
     monkeypatch.setattr(
-        "wf_transport_rpc_http.cli.build_workflow_server_from_config",
+        "wf_transport_rpc_http.cli.build_workflow_server_from_legacy_mcp_config",
         fake_build_mcp_server,
     )
     monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
@@ -156,7 +151,6 @@ def test_rpc_server_cli_uses_mcp_config_server(monkeypatch, tmp_path) -> None:
 
     assert result.exit_code == 0, result.output
     assert captured["mcp_config_path"] == config_path
-    assert captured["mcp_config"] == "broker-config"
     assert captured["server"] is not None
     assert captured["rpc_path"] == "/rpc"
     assert captured["host"] == "127.0.0.9"
@@ -343,3 +337,35 @@ def test_rpc_server_cli_config_with_mcp_source_uses_mcp_builder(
     assert result.exit_code == 0, result.output
     assert captured["source_kinds"] == ["mcp"]
     assert captured["run"]["app"] == "app"
+
+
+def test_rpc_server_cli_rejects_store_root_with_mcp_source_config(tmp_path) -> None:
+    config_path = tmp_path / "wf.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "store": {"kind": "filesystem", "root": ".wf_store"},
+                    "sources": [
+                        {
+                            "kind": "mcp",
+                            "id": "everything.default",
+                            "provider": "everything",
+                            "account": "default",
+                            "transport": {"kind": "stdio", "command": "uvx"},
+                        }
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app,
+        ["--config", str(config_path), "--store-root", str(tmp_path / "override")],
+    )
+
+    assert result.exit_code != 0
+    assert "--store-root cannot override MCP-source config" in result.output
