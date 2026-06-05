@@ -144,6 +144,15 @@ def remove_registry_entry(
     emit_json(payload)
 
 
+@app.command("apply")
+def apply_registry_changes(ctx: typer.Context) -> None:
+    """Apply desired registry state to the running server."""
+    context = load_cli_context_from_typer(ctx)
+    admin = _require_registry_admin(context)
+    payload = asyncio.run(admin.apply_registry_changes())
+    emit_json(payload)
+
+
 def _read_json_arg(
     inline: str | None,
     file_path: str | None,

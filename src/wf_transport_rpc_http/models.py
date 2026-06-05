@@ -201,3 +201,7 @@ class UpdateRegistryEntryParams(RpcParamsModel):
 
 class RegistryEntryIdParams(RpcParamsModel):
     source_id: str = Field(min_length=1)
+
+
+class ApplyRegistryChangesParams(RpcParamsModel):
+    pass

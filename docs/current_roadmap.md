@@ -209,9 +209,14 @@ implementation state.
   - Manual product smoke: run `wf-rpc-server --mcp-config ...`, point
     `wf --url ...` at it, and capture real CLI/server UX gaps before adding
     more architecture.
-  - Source registry apply/reload: decide and implement how persisted registry
-    mutations affect the running source catalog. Prefer an explicit
-    apply/reload operation before automatic live remount.
+   - Source registry apply/reload: decide and implement how persisted registry
+     mutations affect the running source catalog. Prefer an explicit
+     apply/reload operation before automatic live remount.
+   - Completed: desired source registry mutations can now be applied explicitly
+     through `wf admin registry apply` / `workflow.admin.source_registry.apply`.
+     V1 apply reconciles registry state into the current server connection/source
+     graph; it does not auto-apply mutations, mutate config files, or remount
+     MCP proxy providers.
   - Persisted resume across server restart: prove an interrupted run can be
     resumed after rebuilding the MCP-backed RPC server from the same stores and
     pinned source environment.

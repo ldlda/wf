@@ -66,6 +66,7 @@ def test_wf_admin_registry_help_exists() -> None:
     assert "enable" in result.output
     assert "disable" in result.output
     assert "remove" in result.output
+    assert "apply" in result.output
 
 
 def test_wf_admin_registry_list_help_exists() -> None:
@@ -504,3 +505,34 @@ def test_read_json_arg_invalid_file(tmp_path: Path) -> None:
 def test_read_json_arg_missing_file() -> None:
     with pytest.raises(Exception, match="file not found"):
         _read_json_arg(None, "/nonexistent/file.json", "--input/--input-file")
+
+
+# --- apply command tests ---
+
+
+def test_wf_admin_registry_apply_help_exists() -> None:
+    result = runner.invoke(app, ["admin", "registry", "apply", "--help"])
+
+    assert result.exit_code == 0
+
+
+def test_registry_apply_calls_surface(monkeypatch: pytest.MonkeyPatch) -> None:
+    surface = MagicMock()
+    surface.apply_registry_changes.return_value = {
+        "applied": True,
+        "registered": ["demo.new"],
+        "updated": [],
+        "removed": [],
+        "connection_count": 1,
+        "registry_entry_count": 1,
+    }
+    fake_ctx = _fake_context_with_admin(surface)
+    _patch_load_cli_context(monkeypatch, fake_ctx)
+    _patch_asyncio_run(monkeypatch)
+
+    result = runner.invoke(app, ["admin", "registry", "apply"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["applied"] is True
+    assert payload["registered"] == ["demo.new"]

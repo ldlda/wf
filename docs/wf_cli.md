@@ -74,6 +74,15 @@ combined with `--mcp-config`.
 workflow artifacts and deployments, so it can be empty even when the server has
 runtime sources and saved workflows.
 
+After `wf admin registry add/update/enable/disable/remove`, call:
+
+```bash
+wf --url http://127.0.0.1:8765/rpc admin registry apply
+```
+
+Apply updates the running server's source graph from desired registry state.
+It is explicit in v1; registry mutations are not auto-applied.
+
 ## Output Policy
 
 JSON is the default output format for every command.

@@ -8,6 +8,7 @@ import httpx
 from wf_api import WorkflowSourceRegistryApi
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
+from wf_transport_rpc_http.client_source_registry import RpcSourceRegistryClientMixin
 
 
 @dataclass(frozen=True, slots=True)
@@ -472,3 +473,67 @@ async def test_rpc_client_source_registry_mutation_methods_exist() -> None:
         "workflow.admin.source_registry.remove",
         {"source_id": "s"},
     )
+
+
+# --- apply tests ---
+
+
+async def test_rpc_source_registry_apply_unavailable_on_local_static(tmp_path) -> None:
+    app = create_rpc_app(build_local_static_workflow_server(tmp_path / "store"))
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.apply",
+            {},
+        )
+
+    assert payload["error"]["data"]["code"] == "source_registry_unavailable"
+
+
+async def test_rpc_source_registry_apply_returns_summary(tmp_path) -> None:
+    from unittest.mock import AsyncMock
+
+    admin = AsyncMock()
+    admin.apply_registry_changes.return_value = {
+        "applied": True,
+        "registered": ["demo.new"],
+        "updated": [],
+        "removed": [],
+        "connection_count": 1,
+        "registry_entry_count": 1,
+    }
+    server = replace(
+        build_local_static_workflow_server(tmp_path / "store"),
+        source_registry_admin=admin,
+    )
+    app = create_rpc_app(server)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        payload = await _rpc(
+            client,
+            "workflow.admin.source_registry.apply",
+            {},
+        )
+
+    assert payload["result"]["applied"] is True
+    assert payload["result"]["registered"] == ["demo.new"]
+    admin.apply_registry_changes.assert_awaited_once()
+
+
+async def test_rpc_client_source_registry_apply_method_exists() -> None:
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    class Client(RpcSourceRegistryClientMixin):
+        async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
+            calls.append((method, params))
+            return {"applied": True}
+
+    payload = await Client().apply_registry_changes()
+
+    assert payload["applied"] is True
+    assert calls == [("workflow.admin.source_registry.apply", {})]

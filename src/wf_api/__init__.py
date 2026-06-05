@@ -26,6 +26,7 @@ from .service import WorkflowApi
 from .source_admin import WorkflowSourceAdminApi
 from .source_registry_admin import (
     WorkflowSourceRegistryApi,
+    WorkflowSourceRegistryApplyProvider,
     WorkflowSourceRegistryMutationProvider,
     WorkflowSourceRegistryProvider,
 )
@@ -108,6 +109,7 @@ __all__ = [
     "WorkflowSourceAdminApi",
     "WorkflowSourceAdminSurface",
     "WorkflowSourceRegistryApi",
+    "WorkflowSourceRegistryApplyProvider",
     "WorkflowSourceRegistryMutationProvider",
     "WorkflowSourceRegistryProvider",
     "WorkflowSourceRegistrySurface",

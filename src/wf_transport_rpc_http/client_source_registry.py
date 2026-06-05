@@ -79,3 +79,9 @@ class RpcSourceRegistryClientMixin:
             "workflow.admin.source_registry.remove",
             {"source_id": source_id},
         )
+
+    async def apply_registry_changes(self) -> dict[str, Any]:
+        return await self._call(
+            "workflow.admin.source_registry.apply",
+            {},
+        )

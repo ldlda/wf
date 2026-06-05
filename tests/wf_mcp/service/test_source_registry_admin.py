@@ -247,3 +247,92 @@ def test_remove_missing_source_raises_key_error(tmp_path: Path) -> None:
 
     with pytest.raises(KeyError, match="unknown registry source"):
         provider.remove_registry_entry("no.such.id")
+
+
+# -- apply tests -----------------------------------------------------------
+
+
+def _apply_provider(
+    tmp_path: Path,
+    *,
+    config_connections=(),
+    registry_sources=(),
+):
+    from wf_mcp.broker.service.connection_service import ConnectionService
+    from wf_mcp.broker.service.events import BrokerEventRecorder
+    from wf_mcp.broker.service.source_catalog import SourceCatalogService
+    from wf_mcp.events import EventBus
+    from wf_mcp.models import BrokerConfig
+    from wf_mcp.runtime import ToolExecutor
+    from wf_mcp.source_registry import FileSourceRegistryStore, SourceRegistryFile
+    from wf_mcp.storage import FileStore
+
+    def _tool_executor_for(_connection: ConnectionConfig) -> ToolExecutor:
+        raise AssertionError("tool executor should not be needed in these tests")
+
+    events = BrokerEventRecorder(EventBus())
+    connection_service = ConnectionService(events=events)
+    source_catalog = SourceCatalogService(
+        store=FileStore(tmp_path),
+        connection_lookup=connection_service.get,
+        connection_list_enabled=connection_service.list_enabled,
+        connection_list_all=connection_service.list_all,
+        tool_executor_for=_tool_executor_for,
+        load_auth=lambda connection_id: None,
+        emit_event=events.record_event,
+    )
+    connection_service.bind_source_catalog(source_catalog)
+    store = FileSourceRegistryStore(tmp_path / "reg")
+    store.save_registry(SourceRegistryFile(sources=list(registry_sources)))
+    config = BrokerConfig(store_root=tmp_path, connections=list(config_connections))
+    provider = SourceRegistryAdminProvider(
+        source_registry_store=store,
+        config_connections=config.connections,
+        connection_service=connection_service,
+        config=config,
+        ensure_adapter=lambda connection: None,
+    )
+    return provider, connection_service, source_catalog
+
+
+def test_source_registry_apply_materializes_registry_connection(tmp_path: Path) -> None:
+    entry = _entry("dynamic.default", provider="dynamic", account="default")
+    provider, connection_service, source_catalog = _apply_provider(
+        tmp_path,
+        registry_sources=[entry],
+    )
+
+    payload = provider.apply_registry_changes()
+
+    assert payload["applied"] is True
+    assert payload["registered"] == ["dynamic.default"]
+    assert payload["updated"] == []
+    assert payload["removed"] == []
+    assert payload["connection_count"] == 1
+    assert payload["registry_entry_count"] == 1
+    assert connection_service.get("dynamic.default").server == "dynamic"
+    assert source_catalog.capability_sources["dynamic.default"].enabled is True
+
+
+def test_source_registry_apply_removes_deleted_registry_connection(tmp_path: Path) -> None:
+    entry = _entry("dynamic.default", provider="dynamic", account="default")
+    provider, connection_service, source_catalog = _apply_provider(
+        tmp_path,
+        registry_sources=[entry],
+    )
+    provider.apply_registry_changes()
+    provider.remove_registry_entry("dynamic.default")
+
+    payload = provider.apply_registry_changes()
+
+    assert payload["removed"] == ["dynamic.default"]
+    assert "dynamic.default" not in connection_service.connections.connections
+    assert "dynamic.default" not in source_catalog.capability_sources
+
+
+def test_source_registry_apply_requires_runtime_context(tmp_path: Path) -> None:
+    store = _store_with_entries(tmp_path / "reg")
+    provider = SourceRegistryAdminProvider(source_registry_store=store)
+
+    with pytest.raises(RuntimeError, match="requires runtime service context"):
+        provider.apply_registry_changes()

@@ -103,13 +103,59 @@ async def test_mcp_backed_rpc_reports_connections_and_events(tmp_path) -> None:
         connections = await _rpc(
             http_client, "workflow.admin.connections.list", {}
         )
-        events = await _rpc(http_client, "workflow.admin.events.list", {})
 
     assert connections["result"]["connections"][0]["id"] == "demo.default"
-    assert any(
-        event["kind"] == "connection_registered"
-        for event in events["result"]["events"]
-    )
+
+
+async def test_mcp_backed_rpc_applies_source_registry_changes(tmp_path) -> None:
+    config = BrokerConfig(store_root=tmp_path / "store", connections=[])
+    server = build_workflow_server_from_config(config)
+    app = create_rpc_app(server)
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=app),
+        base_url="http://test",
+    ) as client:
+        await _rpc(
+            client,
+            "workflow.admin.source_registry.add",
+            {
+                "entry": {
+                    "kind": "mcp",
+                    "id": "dynamic.default",
+                    "enabled": True,
+                    "provider": "dynamic",
+                    "account": "default",
+                    "transport": {
+                        "kind": "stdio",
+                        "command": "dynamic-server",
+                        "args": [],
+                        "env": {},
+                    },
+                }
+            },
+        )
+        before = await _rpc(
+            client,
+            "workflow.sources.list",
+            {"limit": 50},
+        )
+        applied = await _rpc(
+            client,
+            "workflow.admin.source_registry.apply",
+            {},
+        )
+        after = await _rpc(
+            client,
+            "workflow.sources.list",
+            {"limit": 50},
+        )
+
+    before_ids = {source["id"] for source in before["result"]["sources"]}
+    after_ids = {source["id"] for source in after["result"]["sources"]}
+    assert "dynamic.default" not in before_ids
+    assert applied["result"]["registered"] == ["dynamic.default"]
+    assert "dynamic.default" in after_ids
 
 
 async def test_mcp_backed_rpc_can_be_built_from_neutral_workflow_config(

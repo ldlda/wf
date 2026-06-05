@@ -361,3 +361,42 @@ def test_api_with_mutation_satisfies_surface_protocol() -> None:
     api, _ = _mutation_api(entries=[FakeRegistryEntry(id="x")])
     surface: WorkflowSourceRegistrySurface = api
     assert surface is not None
+
+
+class RecordingApplyProvider:
+    def __init__(self) -> None:
+        self.called = False
+
+    def apply_registry_changes(self) -> dict[str, object]:
+        self.called = True
+        return {
+            "applied": True,
+            "registered": ["demo.new"],
+            "updated": [],
+            "removed": [],
+            "connection_count": 1,
+            "registry_entry_count": 1,
+        }
+
+
+async def test_apply_registry_changes_delegates_to_apply_provider() -> None:
+    read_provider = FakeRegistryProvider([])
+    apply_provider = RecordingApplyProvider()
+    api = WorkflowSourceRegistryApi(
+        provider=read_provider,
+        apply_provider=apply_provider,
+    )
+
+    payload = await api.apply_registry_changes()
+
+    assert apply_provider.called is True
+    assert payload["applied"] is True
+    assert payload["registered"] == ["demo.new"]
+    assert payload["connection_count"] == 1
+
+
+async def test_apply_registry_changes_requires_apply_provider() -> None:
+    api = WorkflowSourceRegistryApi(provider=FakeRegistryProvider([]))
+
+    with pytest.raises(TypeError, match="apply_registry_changes requires"):
+        await api.apply_registry_changes()

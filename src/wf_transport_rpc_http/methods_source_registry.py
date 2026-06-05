@@ -10,6 +10,7 @@ from wf_server import WorkflowServer
 from .errors import WorkflowRpcError, raise_workflow_rpc_error
 from .models import (
     AddRegistryEntryParams,
+    ApplyRegistryChangesParams,
     InspectRegistryEntryParams,
     ListRegistryEntriesParams,
     RegistryEntryIdParams,
@@ -148,4 +149,17 @@ def register_methods(
                 source_id=params.source_id,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.admin.source_registry.apply",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_admin_source_registry_apply(
+        params: ApplyRegistryChangesParams = RpcParams(),
+    ) -> dict[str, Any]:
+        admin = _require_source_registry_admin(server, operation="apply")
+        try:
+            return await admin.apply_registry_changes()
+        except (ValueError, KeyError, LookupError, FileNotFoundError, RuntimeError) as exc:
             raise_workflow_rpc_error(exc)

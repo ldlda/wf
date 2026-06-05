@@ -273,6 +273,8 @@ class WorkflowSourceRegistrySurface(Protocol):
         source_id: str,
     ) -> dict[str, Any]: ...
 
+    async def apply_registry_changes(self) -> dict[str, Any]: ...
+
 
 __all__ = [
     "WorkflowAdminSurface",

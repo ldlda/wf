@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any
 
 from wf_api.source_registry_admin import WorkflowSourceRegistryMutationProvider
 
-from ...models import ConnectionConfig
+from ...models import BrokerConfig, ConnectionConfig
 from ...source_registry import (
     McpSourceRegistryEntry,
     SourceRegistryFile,
     SourceRegistryStore,
 )
+from .connection_service import ConnectionService
 
 
 @dataclass(slots=True)
@@ -24,6 +25,9 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
 
     source_registry_store: SourceRegistryStore
     config_connections: Sequence[ConnectionConfig] = field(default_factory=tuple)
+    connection_service: ConnectionService | None = None
+    config: BrokerConfig | None = None
+    ensure_adapter: Callable[[ConnectionConfig], None] | None = None
 
     # -- read helpers -------------------------------------------------------
 
@@ -118,3 +122,41 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
         sources = [s for s in registry.sources if s.id != source_id]
         self._save(sources)
         return {"removed": True, "source_id": source_id}
+
+    def apply_registry_changes(self) -> dict[str, Any]:
+        """Reconcile desired registry state into the live service connection graph.
+
+        This mirrors config reload reconciliation, but it only applies persisted
+        registry state. It does not mutate config files or remount FastMCP proxy
+        providers.
+        """
+        if self.connection_service is None or self.config is None:
+            raise RuntimeError("source registry apply requires runtime service context")
+
+        before = {connection.id: connection for connection in self.connection_service.list_all()}
+        self.connection_service.sync_connections_from_config(
+            self.config,
+            source_registry_store=self.source_registry_store,
+        )
+        after = {connection.id: connection for connection in self.connection_service.list_all()}
+
+        if self.ensure_adapter is not None:
+            for connection in after.values():
+                self.ensure_adapter(connection)
+
+        before_ids = set(before)
+        after_ids = set(after)
+        updated = sorted(
+            source_id
+            for source_id in before_ids & after_ids
+            if before[source_id] != after[source_id]
+        )
+        registry = self._load()
+        return {
+            "applied": True,
+            "registered": sorted(after_ids - before_ids),
+            "updated": updated,
+            "removed": sorted(before_ids - after_ids),
+            "connection_count": len(after),
+            "registry_entry_count": len(registry.sources),
+        }

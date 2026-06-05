@@ -312,6 +312,17 @@ Status: complete. MCP broker config connections now support
 `seed` materializes missing store entries and lets existing registry entries
 own future runtime state.
 
+### Apply Semantics
+
+Registry mutation commands write desired persisted state. They do not implicitly
+change the running server. `apply_registry_changes` is the explicit boundary
+that reconciles desired registry state with the current runtime source graph.
+
+The apply operation mirrors config reload reconciliation by calling the same
+connection/source merge logic. It preserves `locked` config shadowing and `seed`
+config handoff rules. It does not mutate config files, remount public MCP proxy
+providers, or handle upstream credential prompts.
+
 ## Open Questions
 
 - Should dynamic registry entries support non-MCP transports in v1, or only MCP

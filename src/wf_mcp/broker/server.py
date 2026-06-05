@@ -22,6 +22,7 @@ from .service.source_registry_admin import SourceRegistryAdminProvider
 from .service.workflow_operation_context import context_from_service
 from .tools import register_broker_tools
 from ..models import BrokerConfig
+from ..sdk.adapter import McpSdkAdapter
 from ..source_registry import FileSourceRegistryStore, SourceRegistryStore
 
 
@@ -70,10 +71,18 @@ def workflow_server_from_service(
     registry_provider = SourceRegistryAdminProvider(
         source_registry_store=source_registry_store,
         config_connections=config.connections,
+        connection_service=service.connection_service,
+        config=config,
+        ensure_adapter=lambda connection: service.register_adapter(
+            connection.server, McpSdkAdapter()
+        )
+        if connection.server not in service.adapters
+        else None,
     )
     source_registry_admin = WorkflowSourceRegistryApi(
         provider=registry_provider,
         mutation_provider=registry_provider,
+        apply_provider=registry_provider,
     )
     stores = WorkflowStores(
         artifact_store=service.artifact_store,

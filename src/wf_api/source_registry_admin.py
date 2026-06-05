@@ -33,6 +33,13 @@ class WorkflowSourceRegistryMutationProvider(Protocol):
     def remove_registry_entry(self, source_id: str) -> Mapping[str, Any] | object: ...
 
 
+@runtime_checkable
+class WorkflowSourceRegistryApplyProvider(Protocol):
+    """Applies desired registry state to the currently running server."""
+
+    def apply_registry_changes(self) -> Mapping[str, Any] | object: ...
+
+
 class WorkflowSourceRegistryApi:
     """Protocol-neutral desired source registry operations.
 
@@ -47,9 +54,11 @@ class WorkflowSourceRegistryApi:
         *,
         provider: WorkflowSourceRegistryProvider,
         mutation_provider: WorkflowSourceRegistryMutationProvider | None = None,
+        apply_provider: WorkflowSourceRegistryApplyProvider | None = None,
     ) -> None:
         self._provider = provider
         self._mutation_provider = mutation_provider
+        self._apply_provider = apply_provider
 
     def _is_shadowed(self, source_id: str) -> bool:
         return source_id in self._provider.config_source_ids()
@@ -164,6 +173,11 @@ class WorkflowSourceRegistryApi:
             "removed": bool(result.get("removed")),
             "source_id": str(result.get("source_id", source_id)),
         }
+
+    async def apply_registry_changes(self) -> dict[str, Any]:
+        if self._apply_provider is None:
+            raise TypeError("apply_registry_changes requires an apply provider")
+        return _payload(self._apply_provider.apply_registry_changes())
 
 
 def _payload(value: Mapping[str, Any] | object) -> dict[str, Any]:
