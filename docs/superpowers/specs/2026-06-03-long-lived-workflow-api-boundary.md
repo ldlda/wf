@@ -445,13 +445,13 @@ Next implementation slices should be:
    writes a neutral config that can be used by `wf-rpc-server --config`.
 4. Manual product smoke with the real CLI/server commands. Record UX/runtime
    gaps before broadening architecture.
-5. Source registry apply/reload semantics. Registry mutation currently updates
-   desired persisted state; the next explicit decision is whether changes apply
-   only after restart, through an explicit reload/apply operation, or through
-   automatic live reconciliation. Prefer explicit reload/apply for v1.
-6. Persisted resume across server restart. Rebuild the MCP-backed RPC server
-   from the same stores and prove interrupted runs resume from the stored
-   checkpoint and pinned dependency environment.
+5. Completed: source registry apply/reload semantics. Registry mutation updates
+   desired persisted state, and explicit apply reconciles that state into the
+   current server connection/source graph without mutating config files.
+6. Completed: persisted resume across server restart. The MCP-backed JSON-RPC
+   regression rebuilds a neutral-config server from the same stores, inspects an
+   interrupted run, and resumes it from the stored checkpoint and pinned
+   dependency environment.
 
 ### Slice 6: Auth and Tenancy
 

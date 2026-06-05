@@ -217,13 +217,19 @@ implementation state.
      V1 apply reconciles registry state into the current server connection/source
      graph; it does not auto-apply mutations, mutate config files, or remount
      MCP proxy providers.
-  - Persisted resume across server restart: prove an interrupted run can be
-    resumed after rebuilding the MCP-backed RPC server from the same stores and
-    pinned source environment.
+  - Completed: persisted resume across server rebuild is covered through the
+    MCP-backed JSON-RPC path. A neutral-config `WorkflowServer` can start an
+    interrupting run, be rebuilt from the same filesystem stores, inspect the
+    interrupted run, and resume it to completion through `RpcWorkflowApiClient`.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
   - Run watch/progress: start with polling over existing inspect/trace APIs;
     defer SSE/WebSocket/MCP progress until the polling UX is proven insufficient.
+  - CLI remote error formatting: remote JSON-RPC workflow/admin errors currently
+    can surface as full Python tracebacks in CLI commands, for example
+    `wf source inspect missing.source`. Add a compact, user-facing error path for
+    expected remote `RuntimeError`/workflow errors while preserving tracebacks for
+    developer/debug mode.
   - MCP package split direction: keep separating "MCP as a client transport"
     from "MCP as an upstream workflow source provider." The future shape is
     likely `wf_transport_mcp` for exposing workflow/admin surfaces to MCP

@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import httpx
 
+from wf_api.models import RawWorkflowPlan
 from wf_config import WorkflowConfigFile
-from wf_mcp.broker.server import build_workflow_server_from_config, build_workflow_server_from_workflow_config
+from wf_mcp.broker.server import (
+    build_workflow_server_from_config,
+    build_workflow_server_from_workflow_config,
+)
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.source_registry import (
     FileSourceRegistryStore,
@@ -22,6 +26,42 @@ def _registry_entry(source_id: str, *, enabled: bool = True) -> McpSourceRegistr
             "provider": "demo",
             "account": "registry",
             "transport": {"kind": "stdio", "command": "demo-server"},
+        }
+    )
+
+
+def _interrupt_plan() -> RawWorkflowPlan:
+    return RawWorkflowPlan.model_validate(
+        {
+            "name": "rpc_restart_approval",
+            "input_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+            },
+            "state_schema": {"fields": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "outcomes": ["submitted"],
+            "start": "approval",
+            "nodes": [
+                {
+                    "id": "approval",
+                    "type": "interrupt",
+                    "kind": "approval",
+                    "request": [
+                        {
+                            "path": {"root": "input", "parts": ["message"]},
+                            "target": {"root": "local", "parts": ["message"]},
+                        }
+                    ],
+                    "resume": [],
+                    "outcomes": ["submitted"],
+                },
+                {"id": "end_submitted", "type": "end", "outcome": "submitted"},
+            ],
+            "edges": [
+                {"from": "approval", "outcome": "submitted", "to": "end_submitted"}
+            ],
         }
     )
 
@@ -190,3 +230,69 @@ async def test_mcp_backed_rpc_can_be_built_from_neutral_workflow_config(
         )
 
     assert connections["result"]["connections"][0]["id"] == "demo.default"
+
+
+async def test_mcp_backed_rpc_resumes_interrupted_run_after_server_rebuild(
+    tmp_path,
+) -> None:
+    workflow_config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "store": {"kind": "filesystem", "root": str(tmp_path / "store")},
+                "sources": [],
+            },
+        }
+    )
+    first_server = build_workflow_server_from_workflow_config(workflow_config)
+    await first_server.api.create_artifact_from_plan(
+        artifact_id="rpc_restart_approval",
+        version=1,
+        title="RPC Restart Approval",
+        plan=_interrupt_plan(),
+        outcomes=["submitted"],
+    )
+    await first_server.api.save_deployment(
+        {
+            "id": "rpc_restart_approval.default",
+            "artifact_id": "rpc_restart_approval",
+            "artifact_version": 1,
+            "bindings": [],
+        }
+    )
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_rpc_app(first_server)),
+        base_url="http://test",
+    ) as http_client:
+        first_client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            http_client=http_client,
+        )
+        started = await first_client.run_deployment(
+            deployment_id="rpc_restart_approval.default",
+            workflow_input={"message": "approve after restart?"},
+        )
+
+    assert started["status"] == "interrupted"
+    assert started["interrupt"]["payload"]["message"] == "approve after restart?"
+
+    rebuilt_server = build_workflow_server_from_workflow_config(workflow_config)
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_rpc_app(rebuilt_server)),
+        base_url="http://test",
+    ) as http_client:
+        rebuilt_client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            http_client=http_client,
+        )
+        inspected = await rebuilt_client.inspect_run(run_id=started["run_id"])
+        resumed = await rebuilt_client.resume_run(
+            run_id=started["run_id"],
+            resume_payload={},
+        )
+
+    assert inspected["status"] == "interrupted"
+    assert inspected["run_id"] == started["run_id"]
+    assert resumed["run_id"] == started["run_id"]
+    assert resumed["status"] == "completed"
+    assert resumed["outcome"] == "submitted"
