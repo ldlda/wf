@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "client": {
+    "target": {
+      "kind": "local"
+    }
+  },
+  "server": {
+    "store": {
+      "kind": "filesystem",
+      "root": ".wf_mcp_store"
+    },
+    "transports": [],
+    "sources": [
+      {
+        "kind": "mcp",
+        "id": "everything.default",
+        "enabled": true,
+        "provider": "everything",
+        "account": "default",
+        "profile": null,
+        "ownership": "locked",
+        "transport": {
+          "kind": "stdio",
+          "command": "pnpx",
+          "args": [
+            "@modelcontextprotocol/server-everything"
+          ],
+          "env": {}
+        },
+        "auth_ref": null,
+        "metadata": {}
+      }
+    ]
+  }
+}

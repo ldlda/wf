@@ -209,7 +209,7 @@ pyrightconfig.json
 
 
 # local config file
-wf_mcp.config.json
+wf*.config.json
 
 # Generated MCPB packages
 *.mcpb
