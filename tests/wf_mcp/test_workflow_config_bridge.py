@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from wf_config import WorkflowConfigFile
 from wf_mcp.broker.config import broker_config_from_workflow_config
 
 
-def test_broker_config_from_workflow_config_converts_mcp_sources(tmp_path) -> None:
+def test_broker_config_from_workflow_config_converts_mcp_sources(
+    tmp_path: Path,
+) -> None:
     workflow_config = WorkflowConfigFile.model_validate(
         {
             "version": 1,
@@ -52,7 +56,9 @@ def test_broker_config_from_workflow_config_converts_mcp_sources(tmp_path) -> No
     assert connection.metadata["description"] == "Everything test server"
 
 
-def test_broker_config_from_workflow_config_converts_mcp_http_source(tmp_path) -> None:
+def test_broker_config_from_workflow_config_converts_mcp_http_source(
+    tmp_path: Path,
+) -> None:
     workflow_config = WorkflowConfigFile.model_validate(
         {
             "version": 1,
@@ -83,7 +89,9 @@ def test_broker_config_from_workflow_config_converts_mcp_http_source(tmp_path) -
     assert connection.metadata["headers"] == {"X-Test": "yes"}
 
 
-def test_broker_config_from_workflow_config_ignores_non_mcp_sources(tmp_path) -> None:
+def test_broker_config_from_workflow_config_ignores_non_mcp_sources(
+    tmp_path: Path,
+) -> None:
     workflow_config = WorkflowConfigFile.model_validate(
         {
             "version": 1,

@@ -210,7 +210,7 @@ def workflow_mcp_source_to_connection_config(source: object) -> ConnectionConfig
 
     if getattr(source, "kind", None) != "mcp":
         raise ValueError("expected wf_config MCP source")
-    for field in ("id", "provider", "account", "enabled", "ownership"):
+    for field in ("id", "provider", "account", "enabled", "ownership", "transport"):
         if getattr(source, field, None) is None:
             raise ValueError(f"wf_config MCP source missing required field: {field}")
     transport = getattr(source, "transport")

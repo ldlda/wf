@@ -17,7 +17,7 @@ tasks from this file's old history.
 Use the replacement plan instead:
 
 ```text
-docs/superpowers/plans/2026-05-27-openapi-core-capability-source.md
+docs/historical/superpowers/plans/2026-05-27-openapi-core-capability-source.md
 ```
 
 The replacement plan uses the OpenAPI document as source of truth,

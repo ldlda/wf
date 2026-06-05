@@ -127,7 +127,7 @@ Output shape:
 
 - Modify: `pyproject.toml`
 - Modify: `uv.lock`
-- Modify: `docs/superpowers/plans/2026-05-27-openapi-capability-source.md`
+- Modify: `docs/historical/superpowers/plans/2026-05-27-openapi-capability-source.md`
 - Test: `tests/openapi/test_codegen_executor.py` may be removed or replaced later.
 
 - [ ] **Step 1: Replace runtime dependency**
@@ -155,7 +155,7 @@ Expected: lockfile updates successfully.
 Keep the superseded note at the top of:
 
 ```text
-docs/superpowers/plans/2026-05-27-openapi-capability-source.md
+docs/historical/superpowers/plans/2026-05-27-openapi-capability-source.md
 ```
 
 Expected: future agents do not continue Task 5/6 AST parsing work.

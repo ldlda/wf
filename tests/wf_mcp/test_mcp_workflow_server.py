@@ -35,7 +35,8 @@ def _registry_entry(source_id: str) -> McpSourceRegistryEntry:
 
 def test_wf_server_package_stays_mcp_free() -> None:
     path = "src/wf_server/context.py"
-    tree = ast.parse(open(path, encoding="utf-8").read(), filename=path)
+    with open(path, encoding="utf-8") as file:
+        tree = ast.parse(file.read(), filename=path)
 
     violations: list[str] = []
     for node in ast.walk(tree):
