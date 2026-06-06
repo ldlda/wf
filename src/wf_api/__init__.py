@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .auth import AUTH_ID_PATTERN, AuthRecord, AuthStore, validate_auth_id
 from .listing import matches_query, paged_list_payload
 from .admin import (
     WorkflowAdminApi,
@@ -66,7 +67,10 @@ from .stores import WorkflowStores, file_workflow_stores
 from .durable_context import durable_workflow_api, require_workflow_stores
 
 __all__ = [
+    "AUTH_ID_PATTERN",
     "DEFAULT_CALL_STEP_ID",
+    "AuthRecord",
+    "AuthStore",
     "builtin_sources",
     "get_qualified_spec",
     "matches_query",
@@ -119,6 +123,7 @@ __all__ = [
     "WrapperHintConfidence",
     "WrapperOutcomePolicy",
     "parse_workflow_surface_capability_id",
+    "validate_auth_id",
     "workflow_output_schema_for_authoring",
     "wrapper_hints_for_capability",
     "resolve_runtime_dependencies",

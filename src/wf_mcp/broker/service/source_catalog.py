@@ -36,7 +36,7 @@ from .specs import get_qualified_spec, qualify_spec
 ConnectionLookup = Callable[[str], ConnectionConfig]
 ConnectionList = Callable[[], list[ConnectionConfig]]
 ToolExecutorLookup = Callable[[ConnectionConfig], ToolExecutor]
-AuthLoader = Callable[[str], AuthRecord | None]
+AuthLoader = Callable[[ConnectionConfig], AuthRecord | None]
 EventEmitter = Callable[[McpEvent], None]
 
 
@@ -270,7 +270,7 @@ class SourceCatalogService:
 
         async def invoke_tool(payload: BaseModel) -> NodeReturn[BaseModel]:
             connection = self.connection_lookup(entry.connection_id)
-            auth = self.load_auth(entry.connection_id)
+            auth = self.load_auth(connection)
             result = await self.tool_executor_for(connection).call_tool(
                 connection,
                 auth,

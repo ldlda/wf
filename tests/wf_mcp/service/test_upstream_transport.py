@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from wf_artifacts import WorkflowDeployment
 from wf_platform import CapabilityBuckets, CapabilitySource, SourcePermissions
 
@@ -14,6 +16,14 @@ from wf_mcp.broker import WfMcpService
 
 from ..test_support import FakeAdapter, local_temp_root
 from ..workflow_surface.conftest import echo_artifact
+
+
+def _transport(root: Path) -> UpstreamTransportService:
+    events: list[McpEvent] = []
+    return UpstreamTransportService(
+        store=FileStore(root),
+        event_sink=events.append,
+    )
 
 
 def test_upstream_transport_registers_adapter() -> None:
@@ -98,7 +108,7 @@ async def test_upstream_transport_refreshes_catalog_directly() -> None:
         connection_list_enabled=connections.list_enabled,
         connection_list_all=connections.list_all,
         tool_executor_for=transport.tool_executor_for,
-        load_auth=transport.load_auth,
+        load_auth=transport.load_connection_auth,
         emit_event=events.append,
     )
     source_catalog.hydrate_connection_source_from_snapshot(connection)
@@ -131,7 +141,7 @@ async def test_upstream_transport_live_diagnostics_report_missing_connection() -
         connection_list_enabled=lambda: [],
         connection_list_all=lambda: [],
         tool_executor_for=transport.tool_executor_for,
-        load_auth=transport.load_auth,
+        load_auth=transport.load_connection_auth,
         emit_event=lambda event: None,
     )
     source_catalog.register_capability_source(
@@ -158,3 +168,82 @@ async def test_upstream_transport_live_diagnostics_report_missing_connection() -
 
     assert diagnostics[0].code == "source_unreachable"
     assert diagnostics[0].bound_source == "demo.personal"
+
+
+def test_upstream_load_connection_auth_prefers_auth_ref(tmp_path: Path) -> None:
+    service = _transport(tmp_path)
+    service.save_auth(
+        AuthRecord(
+            connection_id="github.creds",
+            scheme="bearer",
+            payload={"token": "secret"},
+        )
+    )
+    service.save_auth(
+        AuthRecord(
+            connection_id="github.work",
+            scheme="bearer",
+            payload={"token": "wrong"},
+        )
+    )
+    connection = ConnectionConfig(
+        id="github.work",
+        server="github",
+        account="work",
+        metadata={"auth_ref": "github.creds"},
+    )
+
+    assert service.load_connection_auth(connection) == AuthRecord(
+        connection_id="github.creds",
+        scheme="bearer",
+        payload={"token": "secret"},
+    )
+
+
+def test_upstream_load_connection_auth_falls_back_to_connection_id(
+    tmp_path: Path,
+) -> None:
+    service = _transport(tmp_path)
+    service.save_auth(
+        AuthRecord(
+            connection_id="github.work",
+            scheme="bearer",
+            payload={"token": "legacy"},
+        )
+    )
+    connection = ConnectionConfig(
+        id="github.work",
+        server="github",
+        account="work",
+    )
+
+    assert service.load_connection_auth(connection) == AuthRecord(
+        connection_id="github.work",
+        scheme="bearer",
+        payload={"token": "legacy"},
+    )
+
+
+def test_upstream_load_connection_auth_ignores_non_string_auth_ref(
+    tmp_path: Path,
+) -> None:
+    service = _transport(tmp_path)
+    service.save_auth(
+        AuthRecord(
+            connection_id="github.work",
+            scheme="bearer",
+            payload={"token": "legacy"},
+        )
+    )
+    connection = ConnectionConfig(
+        id="github.work",
+        server="github",
+        account="work",
+        metadata={"auth_ref": 123},
+    )
+
+    assert service.load_connection_auth(connection) == AuthRecord(
+        connection_id="github.work",
+        scheme="bearer",
+        payload={"token": "legacy"},
+    )

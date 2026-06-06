@@ -227,6 +227,10 @@ implementation state.
     [2026-06-06 auth/source secrets boundary](./superpowers/specs/2026-06-06-auth-source-secrets-boundary.md):
     sources carry `auth_ref`, runtime resolves through an auth store interface,
     and the current filesystem auth files are only one adapter.
+    First implementation slice complete: neutral auth records/store protocol
+    exist in `wf_api`, MCP runtime auth resolution prefers explicit `auth_ref`
+    with legacy connection-id fallback, and MCP payload interpretation is
+    isolated in provider-specific adapter helpers.
   - Completed: `wf run watch` starts run progress UX with polling over existing
     `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP
     progress remains deferred until polling UX proves insufficient.

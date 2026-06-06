@@ -63,6 +63,19 @@ class UpstreamTransportService:
     def load_auth(self, connection_id: str) -> AuthRecord | None:
         return self.store.load_auth(connection_id)
 
+    def load_connection_auth(self, connection: ConnectionConfig) -> AuthRecord | None:
+        """Resolve auth for a connection, preferring explicit source auth_ref.
+
+        Legacy MCP auth records are keyed by connection id. New source registry
+        and neutral config entries carry `auth_ref`; keep both paths until the
+        old compatibility surface has no callers.
+        """
+
+        auth_ref = connection.metadata.get("auth_ref")
+        if isinstance(auth_ref, str):
+            return self.load_auth(auth_ref)
+        return self.load_auth(connection.id)
+
     def tool_executor_for(self, connection: ConnectionConfig) -> ToolExecutor:
         """Return the executor used by generated workflow NodeSpecs.
 
@@ -81,7 +94,7 @@ class UpstreamTransportService:
         uri: str,
     ) -> dict[str, Any]:
         adapter = require_adapter(connection, self.adapters)
-        auth = self.load_auth(connection.id)
+        auth = self.load_connection_auth(connection)
         self.event_sink(
             make_event(
                 "resource_read_started",
@@ -109,7 +122,7 @@ class UpstreamTransportService:
         arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         adapter = require_adapter(connection, self.adapters)
-        auth = self.load_auth(connection.id)
+        auth = self.load_connection_auth(connection)
         self.event_sink(
             make_event(
                 "prompt_get_started",
@@ -137,7 +150,7 @@ class UpstreamTransportService:
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         adapter = require_adapter(connection, self.adapters)
-        auth = self.load_auth(connection.id)
+        auth = self.load_connection_auth(connection)
         self.event_sink(
             make_event(
                 "raw_method_started",
@@ -165,7 +178,7 @@ class UpstreamTransportService:
         params: dict[str, Any] | None = None,
     ) -> None:
         adapter = require_adapter(connection, self.adapters)
-        auth = self.load_auth(connection.id)
+        auth = self.load_connection_auth(connection)
         self.event_sink(
             make_event(
                 "raw_notification_started",
@@ -193,7 +206,7 @@ class UpstreamTransportService:
         default_catalog_max_age_seconds: int = 300,
         record_catalog_change_events: Callable[[str, CatalogSnapshot, str], None],
     ) -> None:
-        auth = self.load_auth(connection.id)
+        auth = self.load_connection_auth(connection)
         self.event_sink(
             make_event(
                 "catalog_refresh_started",
@@ -295,7 +308,7 @@ class UpstreamTransportService:
                 continue
             try:
                 adapter = require_adapter(connection, self.adapters)
-                auth = self.load_auth(source_id)
+                auth = self.load_connection_auth(connection)
                 await asyncio.wait_for(
                     adapter.list_tools(connection, auth),
                     timeout=LIVE_SOURCE_CHECK_TIMEOUT_SECONDS,

@@ -17,6 +17,7 @@ from mcp.types import (
 )
 from pydantic import AnyUrl
 
+from ..auth import mcp_auth_env, mcp_auth_headers
 from ..capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from ..models import AuthRecord, ConnectionConfig
 from .base import BackendAdapter, ToolCallResult
@@ -26,16 +27,6 @@ from .converters import (
     tool_result_to_call_result,
     tool_to_discovered,
 )
-
-
-def _auth_headers(auth: AuthRecord | None) -> dict[str, str]:
-    if auth is None:
-        return {}
-    headers = dict(auth.payload.get("headers", {}))
-    token = auth.payload.get("token")
-    if isinstance(token, str) and "Authorization" not in headers:
-        headers["Authorization"] = f"Bearer {token}"
-    return headers
 
 
 class McpSdkAdapter(BackendAdapter):
@@ -51,10 +42,9 @@ class McpSdkAdapter(BackendAdapter):
             args = list(connection.metadata.get("args", []))
             env = connection.metadata.get("env")
             cwd = connection.metadata.get("cwd")
-            if auth is not None:
-                auth_env = auth.payload.get("env")
-                if isinstance(auth_env, dict):
-                    env = {**(env or {}), **auth_env}
+            auth_env = mcp_auth_env(auth)
+            if auth_env:
+                env = {**(env or {}), **auth_env}
             params = StdioServerParameters(
                 command=command,
                 args=args,
@@ -69,7 +59,7 @@ class McpSdkAdapter(BackendAdapter):
 
         if transport == "streamable_http":
             url = connection.metadata["url"]
-            headers = _auth_headers(auth)
+            headers = mcp_auth_headers(auth)
             http_client = httpx.AsyncClient(headers=headers or None)
             async with http_client:
                 async with streamable_http_client(

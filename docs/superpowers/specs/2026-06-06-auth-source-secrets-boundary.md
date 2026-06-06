@@ -11,6 +11,12 @@ This spec defines the next boundary before expanding auth behavior. The
 important choice is interface first: file-backed auth is one implementation, not
 the architecture.
 
+## Status
+
+Slice 1 implements the neutral auth record/store protocol and MCP compatibility
+bridge. Diagnostics, auth admin surfaces, and provider-specific auth unions are
+future slices.
+
 ## Current State
 
 Existing MCP runtime auth is connection-id keyed:

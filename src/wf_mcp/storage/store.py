@@ -3,6 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from wf_api.auth import AuthRecord as NeutralAuthRecord
+
+from ..auth import mcp_auth_from_neutral, neutral_auth_from_mcp
 from ..connections import parse_connection_id
 from ..models import (
     AuthRecord,
@@ -19,6 +22,12 @@ class Store:
         raise NotImplementedError
 
     def load_auth(self, connection_id: str) -> AuthRecord | None:
+        raise NotImplementedError
+
+    def save_auth_record(self, record: NeutralAuthRecord) -> None:
+        raise NotImplementedError
+
+    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | None:
         raise NotImplementedError
 
     def save_catalog(self, snapshot: CatalogSnapshot) -> None:
@@ -80,6 +89,19 @@ class FileStore(Store):
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
         return AuthRecord(**data)
+
+    def save_auth_record(self, record: NeutralAuthRecord) -> None:
+        """Save neutral auth through the legacy MCP file shape."""
+
+        self.save_auth(mcp_auth_from_neutral(record))
+
+    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | None:
+        """Load neutral auth from the legacy MCP file shape."""
+
+        record = self.load_auth(auth_ref)
+        if record is None:
+            return None
+        return neutral_auth_from_mcp(record)
 
     def save_catalog(self, snapshot: CatalogSnapshot) -> None:
         self._catalog_path(snapshot.connection_id).write_text(

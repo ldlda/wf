@@ -91,7 +91,7 @@ class WfMcpService:
             connection_list_enabled=self.connection_service.list_enabled,
             connection_list_all=self.connection_service.list_all,
             tool_executor_for=self.upstream.tool_executor_for,
-            load_auth=self.upstream.load_auth,
+            load_auth=self.upstream.load_connection_auth,
             emit_event=self.events.record_event,
             default_catalog_max_age_seconds=self.default_catalog_max_age_seconds,
         )

@@ -10,18 +10,9 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 from mcp.types import CallToolResult
 
+from ..auth import mcp_auth_env, mcp_auth_headers
 from ..models import AuthRecord, ConnectionConfig
 from .session import PersistentMcpSession
-
-
-def _auth_headers(auth: AuthRecord | None) -> dict[str, str]:
-    if auth is None:
-        return {}
-    headers = dict(auth.payload.get("headers", {}))
-    token = auth.payload.get("token")
-    if isinstance(token, str) and "Authorization" not in headers:
-        headers["Authorization"] = f"Bearer {token}"
-    return headers
 
 
 @dataclass(slots=True)
@@ -57,10 +48,9 @@ class PersistentSessionFactory:
         transport = connection.metadata.get("transport", "stdio")
         if transport == "stdio":
             env = connection.metadata.get("env")
-            if auth is not None:
-                auth_env = auth.payload.get("env")
-                if isinstance(auth_env, dict):
-                    env = {**(env or {}), **auth_env}
+            auth_env = mcp_auth_env(auth)
+            if auth_env:
+                env = {**(env or {}), **auth_env}
             params = StdioServerParameters(
                 command=connection.metadata["command"],
                 args=list(connection.metadata.get("args", [])),
@@ -78,7 +68,7 @@ class PersistentSessionFactory:
 
         if transport == "streamable_http":
             http_client = await stack.enter_async_context(
-                httpx.AsyncClient(headers=_auth_headers(auth) or None)
+                httpx.AsyncClient(headers=mcp_auth_headers(auth) or None)
             )
             (
                 read_stream,
