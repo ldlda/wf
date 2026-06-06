@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 
@@ -23,5 +24,29 @@ class RpcAdminClientMixin:
     async def inspect_auth_record(self, auth_ref: str) -> dict[str, Any]:
         return await self._call(
             "workflow.admin.auth.inspect",
+            {"auth_ref": auth_ref},
+        )
+
+    async def save_auth_record(
+        self,
+        *,
+        auth_ref: str,
+        scheme: str,
+        payload: Mapping[str, object],
+        metadata: Mapping[str, object] | None = None,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.admin.auth.save",
+            {
+                "auth_ref": auth_ref,
+                "scheme": scheme,
+                "payload": dict(payload),
+                "metadata": dict(metadata or {}),
+            },
+        )
+
+    async def delete_auth_record(self, auth_ref: str) -> dict[str, Any]:
+        return await self._call(
+            "workflow.admin.auth.delete",
             {"auth_ref": auth_ref},
         )

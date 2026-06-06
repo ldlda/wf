@@ -238,8 +238,12 @@ implementation state.
     available through MCP-backed server admin, JSON-RPC, and CLI. Summaries show
     ids, schemes, metadata, and payload keys only; secret payload values remain
     hidden.
-    Not done: auth is still compatibility-grade. There is no auth mutation UI/CLI,
-    OAuth flow, production secret manager, provider-specific display model, or
+    Fourth implementation slice complete: local/dev auth records can be saved and
+    deleted through neutral admin, JSON-RPC, and `wf admin auth`. This is still not
+    a production secret manager or OAuth flow; payload values are accepted only as
+    write inputs and never returned.
+    Not done: auth is still compatibility-grade. There is no OAuth flow,
+    production secret manager, provider-specific display model, or
     full removal of the legacy MCP auth record shape yet.
   - Completed: `wf run watch` starts run progress UX with polling over existing
     `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP

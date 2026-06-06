@@ -4,6 +4,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import asdict, is_dataclass
 from typing import Any, Protocol
 
+from wf_api.auth import AuthRecord
+
 
 class WorkflowAdminConnectionProvider(Protocol):
     """Provides read-only connection inventory for admin frontends."""
@@ -20,11 +22,15 @@ class WorkflowAdminEventProvider(Protocol):
 
 
 class WorkflowAdminAuthProvider(Protocol):
-    """Provides read-only auth inventory without secret payload values."""
+    """Provides auth inventory and local/dev auth mutation."""
 
     def list_auth_records(self) -> Sequence[Mapping[str, Any] | object]: ...
 
     def inspect_auth_record(self, auth_ref: str) -> Mapping[str, Any] | object: ...
+
+    def save_auth_record(self, record: AuthRecord) -> Mapping[str, Any] | object: ...
+
+    def delete_auth_record(self, auth_ref: str) -> Mapping[str, Any] | object: ...
 
 
 class WorkflowAdminApi:
@@ -78,6 +84,29 @@ class WorkflowAdminApi:
         if self.auth is None:
             raise RuntimeError("auth admin is not available for this target")
         return _payload(self.auth.inspect_auth_record(auth_ref))
+
+    async def save_auth_record(
+        self,
+        *,
+        auth_ref: str,
+        scheme: str,
+        payload: Mapping[str, object],
+        metadata: Mapping[str, object] | None = None,
+    ) -> dict[str, Any]:
+        if self.auth is None:
+            raise RuntimeError("auth admin is not available for this target")
+        record = AuthRecord(
+            id=auth_ref,
+            scheme=scheme,
+            payload=dict(payload),
+            metadata=dict(metadata or {}),
+        )
+        return _payload(self.auth.save_auth_record(record))
+
+    async def delete_auth_record(self, auth_ref: str) -> dict[str, Any]:
+        if self.auth is None:
+            raise RuntimeError("auth admin is not available for this target")
+        return _payload(self.auth.delete_auth_record(auth_ref))
 
 
 def _payload(value: Mapping[str, Any] | object) -> dict[str, Any]:

@@ -7,7 +7,7 @@ import fastapi_jsonrpc as jsonrpc
 from wf_server import WorkflowServer
 
 from .errors import WorkflowRpcError, raise_workflow_rpc_error
-from .models import AdminEmptyParams, InspectAuthParams
+from .models import AdminEmptyParams, DeleteAuthParams, InspectAuthParams, SaveAuthParams
 from .params import RpcParams
 
 
@@ -80,6 +80,47 @@ def register_methods(
     ) -> dict[str, Any]:
         try:
             return await server.admin.inspect_auth_record(params.auth_ref)
+        except (
+            ValueError,
+            KeyError,
+            LookupError,
+            FileNotFoundError,
+            RuntimeError,
+        ) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.admin.auth.save",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_admin_auth_save(
+        params: SaveAuthParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.admin.save_auth_record(
+                auth_ref=params.auth_ref,
+                scheme=params.scheme,
+                payload=params.payload,
+                metadata=params.metadata,
+            )
+        except (
+            ValueError,
+            KeyError,
+            LookupError,
+            FileNotFoundError,
+            RuntimeError,
+        ) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.admin.auth.delete",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_admin_auth_delete(
+        params: DeleteAuthParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.admin.delete_auth_record(params.auth_ref)
         except (
             ValueError,
             KeyError,

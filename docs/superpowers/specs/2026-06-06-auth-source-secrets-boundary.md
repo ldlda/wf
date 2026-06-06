@@ -16,8 +16,11 @@ the architecture.
 Slice 1 implements the neutral auth record/store protocol and MCP compatibility
 bridge. Slice 2 surfaces missing explicit auth refs through live source
 diagnostics and source registry apply summaries. Slice 3 exposes read-only auth
-admin summaries without secret payload values. Auth mutation surfaces and
-provider-specific auth unions are future slices.
+admin summaries without secret payload values. Slice 4 adds local/dev file-backed
+auth save/delete through neutral admin, JSON-RPC, and CLI. Responses still
+expose only ids, schemes, metadata, and payload keys; secret payload values
+remain write-only. OAuth, production secret managers, and provider-specific auth
+variants remain future work.
 
 This is not a complete auth product yet. The implemented runtime path only wires
 existing MCP-compatible auth records into source calls, diagnostics, and

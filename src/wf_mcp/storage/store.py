@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from wf_api.auth import AuthRecord as NeutralAuthRecord
+from wf_api.auth import AuthRecord as NeutralAuthRecord, validate_auth_id
 from wf_mcp.capabilities import (
     CatalogNodeEntry,
     CatalogPromptEntry,
@@ -34,6 +34,12 @@ class Store:
     def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | None:
         raise NotImplementedError
 
+    def delete_auth(self, connection_id: str) -> bool:
+        raise NotImplementedError
+
+    def delete_auth_record(self, auth_ref: str) -> bool:
+        raise NotImplementedError
+
     def save_catalog(self, snapshot: CatalogSnapshot) -> None:
         raise NotImplementedError
 
@@ -56,8 +62,20 @@ class FileStore(Store):
     def catalog_dir(self) -> Path:
         return self.root / "catalog"
 
-    def _auth_path(self, connection_id: str) -> Path:
-        return self._connection_path(self.auth_dir, connection_id)
+    def _auth_path(self, auth_ref: str) -> Path:
+        """Map one auth ref to one file.
+
+        Auth refs used to be connection ids, but neutral auth refs now carry no
+        provider/account semantics. Keep catalog paths on connection-id
+        validation while auth storage accepts the wider auth-id contract.
+        """
+
+        validate_auth_id(auth_ref)
+        root = self.auth_dir.resolve()
+        path = (self.auth_dir / f"{auth_ref}.json").resolve()
+        if path.parent != root:
+            raise ValueError(f"auth ref escapes store directory: {auth_ref!r}")
+        return path
 
     def _catalog_path(self, connection_id: str) -> Path:
         return self._connection_path(self.catalog_dir, connection_id)
@@ -111,6 +129,17 @@ class FileStore(Store):
         if record is None:
             return None
         return neutral_auth_from_mcp(record)
+
+    def delete_auth(self, connection_id: str) -> bool:
+        path = self._auth_path(connection_id)
+        if not path.exists():
+            return False
+        path.unlink()
+        return True
+
+    def delete_auth_record(self, auth_ref: str) -> bool:
+        """Delete neutral auth through the legacy MCP file shape."""
+        return self.delete_auth(auth_ref)
 
     def save_catalog(self, snapshot: CatalogSnapshot) -> None:
         self._catalog_path(snapshot.connection_id).write_text(

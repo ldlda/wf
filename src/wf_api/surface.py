@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
 from wf_artifacts import ArtifactKind
@@ -228,6 +228,17 @@ class WorkflowAdminSurface(Protocol):
     async def list_auth_records(self) -> dict[str, Any]: ...
 
     async def inspect_auth_record(self, auth_ref: str) -> dict[str, Any]: ...
+
+    async def save_auth_record(
+        self,
+        *,
+        auth_ref: str,
+        scheme: str,
+        payload: Mapping[str, object],
+        metadata: Mapping[str, object] | None = None,
+    ) -> dict[str, Any]: ...
+
+    async def delete_auth_record(self, auth_ref: str) -> dict[str, Any]: ...
 
 
 class WorkflowSourceRegistrySurface(Protocol):

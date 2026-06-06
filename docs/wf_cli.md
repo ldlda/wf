@@ -286,6 +286,21 @@ generate prose.
 
 ## Common Diagnostics
 
+### Local/dev auth records
+
+Auth payload values are write-only. `list`, `inspect`, `save`, and `delete`
+responses show ids, schemes, metadata, and payload keys only.
+
+```powershell
+wf admin auth save drive.work --scheme bearer --payload-file drive-auth.json
+wf admin auth list
+wf admin auth inspect drive.work
+wf admin auth delete drive.work --confirm
+```
+
+Use source `auth_ref` values to point sources at these records. Do not commit
+payload files containing real secrets.
+
 ### `source_missing`
 
 A required logical source is not available or not bound.

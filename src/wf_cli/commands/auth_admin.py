@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Annotated
 
 import typer
@@ -11,9 +13,37 @@ from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
     name="auth",
-    help="Read auth record status without exposing secret payload values.",
+    help="Manage local/dev auth records without exposing secret payload values.",
     no_args_is_help=True,
 )
+
+
+def _read_json_object(
+    inline: str | None,
+    file_path: str | None,
+    flag_names: str,
+) -> dict[str, object]:
+    if inline and file_path:
+        raise typer.BadParameter(f"provide exactly one of {flag_names}")
+    if inline:
+        try:
+            value = json.loads(inline)
+        except json.JSONDecodeError as exc:
+            raise typer.BadParameter(f"invalid JSON: {exc}") from exc
+        if not isinstance(value, dict):
+            raise typer.BadParameter(f"{flag_names} must be a JSON object")
+        return dict(value)
+    if file_path:
+        try:
+            value = json.loads(Path(file_path).read_text(encoding="utf-8"))
+        except FileNotFoundError as exc:
+            raise typer.BadParameter(f"file not found: {file_path}") from exc
+        except json.JSONDecodeError as exc:
+            raise typer.BadParameter(f"invalid JSON in file: {exc}") from exc
+        if not isinstance(value, dict):
+            raise typer.BadParameter(f"{flag_names} must be a JSON object")
+        return dict(value)
+    raise typer.BadParameter(f"{flag_names} is required")
 
 
 @app.command("list")
@@ -47,3 +77,62 @@ def inspect_auth_record(
         context.admin.inspect_auth_record(auth_ref),
     )
     emit_json(payload)
+
+
+@app.command("save")
+def save_auth_record(
+    ctx: typer.Context,
+    auth_ref: Annotated[str, typer.Argument(help="Auth record id/ref.")],
+    scheme: Annotated[str, typer.Option("--scheme", help="Auth scheme/kind.")],
+    payload_json: Annotated[
+        str | None,
+        typer.Option("--payload", help="Secret payload JSON object."),
+    ] = None,
+    payload_file: Annotated[
+        str | None,
+        typer.Option("--payload-file", help="File containing secret payload JSON object."),
+    ] = None,
+    metadata_json: Annotated[
+        str | None,
+        typer.Option("--metadata", help="Non-secret metadata JSON object."),
+    ] = None,
+    metadata_file: Annotated[
+        str | None,
+        typer.Option("--metadata-file", help="File containing non-secret metadata JSON object."),
+    ] = None,
+) -> None:
+    """Save or replace a local/dev auth record; response never includes payload values."""
+    payload = _read_json_object(payload_json, payload_file, "--payload/--payload-file")
+    metadata = (
+        _read_json_object(metadata_json, metadata_file, "--metadata/--metadata-file")
+        if metadata_json or metadata_file
+        else None
+    )
+    context = load_cli_context_from_typer(ctx)
+    result = run_cli_operation(
+        context,
+        context.admin.save_auth_record(
+            auth_ref=auth_ref,
+            scheme=scheme,
+            payload=payload,
+            metadata=metadata,
+        ),
+    )
+    emit_json(result)
+
+
+@app.command("delete")
+def delete_auth_record(
+    ctx: typer.Context,
+    auth_ref: Annotated[str, typer.Argument(help="Auth record id/ref.")],
+    confirm: Annotated[
+        bool,
+        typer.Option("--confirm", help="Required to delete an auth record."),
+    ] = False,
+) -> None:
+    """Delete a local/dev auth record."""
+    if not confirm:
+        raise typer.BadParameter("--confirm is required to delete an auth record")
+    context = load_cli_context_from_typer(ctx)
+    result = run_cli_operation(context, context.admin.delete_auth_record(auth_ref))
+    emit_json(result)

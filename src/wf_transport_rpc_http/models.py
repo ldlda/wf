@@ -209,3 +209,14 @@ class ApplyRegistryChangesParams(RpcParamsModel):
 
 class InspectAuthParams(RpcParamsModel):
     auth_ref: str = Field(min_length=1)
+
+
+class SaveAuthParams(RpcParamsModel):
+    auth_ref: str = Field(min_length=1)
+    scheme: str = Field(min_length=1)
+    payload: dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class DeleteAuthParams(RpcParamsModel):
+    auth_ref: str = Field(min_length=1)
