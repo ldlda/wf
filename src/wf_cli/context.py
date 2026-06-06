@@ -267,7 +267,7 @@ def _rpc_timeout_from_optional_config(
         return override
     try:
         config = load_workflow_config(path)
-    except (FileNotFoundError, json.JSONDecodeError, ValidationError):
+    except FileNotFoundError, json.JSONDecodeError, ValidationError:
         return 30.0
     target = config.client.target
     if isinstance(target, RpcHttpTargetConfig):

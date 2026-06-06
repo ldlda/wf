@@ -1,5 +1,9 @@
 # pitfalls / guide
 
+## tech stack
+
+Python baseline is 3.14 (`requires-python = ">=3.14"`). Python 3.14 syntax is allowed; do not "fix" valid new syntax just because it looks unusual.
+
 ## extra fields
 
 prefer asserts actual['field'] == expected['field'] over assert actual == expected unless we know better (eg. no extra fields allowed)
