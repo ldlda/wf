@@ -1,3 +1,17 @@
-from .store import FileStore, Store
+from .store import (
+    AuthStore,
+    CatalogStore,
+    FileAuthStore,
+    FileCatalogStore,
+    FileStore,
+    Store,
+)
 
-__all__ = ["FileStore", "Store"]
+__all__ = [
+    "AuthStore",
+    "CatalogStore",
+    "FileAuthStore",
+    "FileCatalogStore",
+    "FileStore",
+    "Store",
+]

@@ -4,6 +4,7 @@ from pathlib import Path
 
 from wf_config import WorkflowConfigFile
 from wf_mcp.broker.config import broker_config_from_workflow_config
+from wf_mcp.models import CatalogSnapshot
 
 
 def test_broker_config_from_workflow_config_converts_mcp_sources(
@@ -187,7 +188,25 @@ def test_build_service_from_neutral_config_uses_role_store_roots(
     service = build_service_from_config(broker)
 
     assert service.store.root == tmp_path / "auth"
+    assert service.auth_store is not None
+    assert service.catalog_store is not None
+    assert service.auth_store.root == tmp_path / "auth"
+    assert service.catalog_store.root == tmp_path / "catalog"
     assert service.artifact_store.root == tmp_path / "workflow"
     assert service.draft_workspace_store.root == tmp_path / "workflow"
     assert service.run_store.root == tmp_path / "workflow"
     assert (tmp_path / "sources").exists()
+
+    service.source_catalog.store.save_catalog(
+        CatalogSnapshot(
+            connection_id="everything.default",
+            fetched_at_epoch_ms=1,
+            max_age_seconds=300,
+            nodes=[],
+            resources=[],
+            prompts=[],
+            metadata={},
+        )
+    )
+    assert (tmp_path / "catalog" / "catalog" / "everything.default.json").exists()
+    assert not (tmp_path / "auth" / "catalog" / "everything.default.json").exists()

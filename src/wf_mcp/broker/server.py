@@ -68,7 +68,7 @@ def workflow_server_from_service(
     admin = WorkflowAdminApi(
         connections=service.connection_service,
         events=service.events,
-        auth=McpAuthAdminProvider(store=service.store),
+        auth=McpAuthAdminProvider(store=service.auth_store or service.store),
     )
     registry_provider = SourceRegistryAdminProvider(
         source_registry_store=source_registry_store,

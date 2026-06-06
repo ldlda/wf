@@ -15,7 +15,7 @@ from ..source_registry import (
     FileSourceRegistryStore,
     workflow_mcp_source_to_connection_config,
 )
-from ..storage import FileStore
+from ..storage import FileAuthStore, FileCatalogStore, FileStore
 from .models import BrokerStoreRoots
 from .service import WfMcpService
 
@@ -164,11 +164,14 @@ def build_service_from_config(config: BrokerConfig) -> WfMcpService:
     runtime_factory = PersistentSessionFactory()
     store_roots = config.store_roots or BrokerStoreRoots.from_default(config.store_root)
     workflow_stores = file_workflow_stores(store_roots.workflow_root)
-    # FileStore still owns both auth files and catalog snapshots. Role roots are
-    # carried separately so a later FileStore split can move catalog_cache without a
-    # config migration.
+    # Keep FileStore as the compatibility facade on WfMcpService.store while
+    # focused services receive role-specific stores.
+    auth_store = FileAuthStore(store_roots.auth_root)
+    catalog_store = FileCatalogStore(store_roots.catalog_cache_root)
     service = WfMcpService(
         store=FileStore(store_roots.auth_root),
+        auth_store=auth_store,
+        catalog_store=catalog_store,
         artifact_store=workflow_stores.artifact_store,
         draft_workspace_store=workflow_stores.draft_workspace_store,
         run_store=workflow_stores.run_store,

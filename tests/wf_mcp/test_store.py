@@ -5,7 +5,7 @@ import pytest
 from wf_api.auth import AuthRecord as NeutralAuthRecord
 from wf_mcp.connections import parse_connection_id
 from wf_mcp.models import AuthRecord, CatalogSnapshot
-from wf_mcp.storage import FileStore
+from wf_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
 
 from .test_support import local_temp_root
 
@@ -108,3 +108,37 @@ def test_file_store_accepts_neutral_auth_ref_without_connection_shape(
     assert loaded.scheme == "bearer"
     assert loaded.payload == {"token": "secret"}
     assert store.delete_auth_record("api_ci-1") is True
+
+
+def test_file_auth_store_uses_own_root(tmp_path) -> None:
+    store = FileAuthStore(tmp_path / "auth_root")
+    record = AuthRecord(
+        connection_id="drive.work",
+        scheme="bearer",
+        payload={"token": "secret"},
+    )
+
+    store.save_auth(record)
+
+    assert store.load_auth("drive.work") == record
+    assert (tmp_path / "auth_root" / "auth" / "drive.work.json").exists()
+    assert not (tmp_path / "auth_root" / "catalog").exists()
+
+
+def test_file_catalog_store_uses_own_root(tmp_path) -> None:
+    store = FileCatalogStore(tmp_path / "catalog_root")
+    snapshot = CatalogSnapshot(
+        connection_id="drive.work",
+        fetched_at_epoch_ms=1,
+        max_age_seconds=300,
+        nodes=[],
+        resources=[],
+        prompts=[],
+        metadata={},
+    )
+
+    store.save_catalog(snapshot)
+
+    assert store.load_catalog("drive.work") == snapshot
+    assert (tmp_path / "catalog_root" / "catalog" / "drive.work.json").exists()
+    assert not (tmp_path / "catalog_root" / "auth").exists()

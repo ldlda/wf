@@ -8,8 +8,8 @@ from wf_mcp.broker.service.source_catalog import SourceCatalogService
 from wf_mcp.broker.service.upstream_transport import UpstreamTransportService
 from wf_mcp.connections import ConnectionRegistry
 from wf_mcp.events import McpEvent
-from wf_mcp.models import AuthRecord, ConnectionConfig
-from wf_mcp.storage import FileStore
+from wf_mcp.models import AuthRecord, CatalogSnapshot, ConnectionConfig
+from wf_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
 from wf_platform import CapabilityBuckets, CapabilitySource, SourcePermissions
 
 from ..test_support import FakeAdapter, local_temp_root
@@ -19,7 +19,8 @@ from ..workflow_surface.conftest import echo_artifact
 def _transport(root: Path) -> UpstreamTransportService:
     events: list[McpEvent] = []
     return UpstreamTransportService(
-        store=FileStore(root),
+        auth_store=FileStore(root),
+        catalog_store=FileStore(root),
         event_sink=events.append,
     )
 
@@ -27,7 +28,8 @@ def _transport(root: Path) -> UpstreamTransportService:
 def test_upstream_transport_registers_adapter() -> None:
     events: list[McpEvent] = []
     transport = UpstreamTransportService(
-        store=FileStore(local_temp_root() / "upstream_adapter"),
+        auth_store=FileStore(local_temp_root() / "upstream_adapter"),
+        catalog_store=FileStore(local_temp_root() / "upstream_adapter"),
         event_sink=events.append,
     )
     adapter = FakeAdapter()
@@ -40,7 +42,8 @@ def test_upstream_transport_registers_adapter() -> None:
 def test_upstream_transport_saves_and_loads_auth_with_event() -> None:
     events: list[McpEvent] = []
     transport = UpstreamTransportService(
-        store=FileStore(local_temp_root() / "upstream_auth"),
+        auth_store=FileStore(local_temp_root() / "upstream_auth"),
+        catalog_store=FileStore(local_temp_root() / "upstream_auth"),
         event_sink=events.append,
     )
     record = AuthRecord(connection_id="demo.personal", scheme="bearer")
@@ -74,7 +77,8 @@ async def test_upstream_transport_invokes_raw_method_and_records_events() -> Non
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
     transport = UpstreamTransportService(
-        store=FileStore(local_temp_root() / "upstream_raw_method"),
+        auth_store=FileStore(local_temp_root() / "upstream_raw_method"),
+        catalog_store=FileStore(local_temp_root() / "upstream_raw_method"),
         event_sink=events.append,
     )
     transport.register_adapter("demo", FakeAdapter())
@@ -98,7 +102,11 @@ async def test_upstream_transport_refreshes_catalog_directly() -> None:
     connections = ConnectionRegistry()
     connection = ConnectionConfig(id="demo.personal", server="demo", account="personal")
     connections.register(connection)
-    transport = UpstreamTransportService(store=store, event_sink=events.append)
+    transport = UpstreamTransportService(
+        auth_store=store,
+        catalog_store=store,
+        event_sink=events.append,
+    )
     transport.register_adapter("demo", FakeAdapter())
     source_catalog = SourceCatalogService(
         store=store,
@@ -126,7 +134,8 @@ async def test_upstream_transport_refreshes_catalog_directly() -> None:
 
 async def test_upstream_transport_live_diagnostics_report_missing_connection() -> None:
     transport = UpstreamTransportService(
-        store=FileStore(local_temp_root() / "upstream_live_missing"),
+        auth_store=FileStore(local_temp_root() / "upstream_live_missing"),
+        catalog_store=FileStore(local_temp_root() / "upstream_live_missing"),
         event_sink=lambda event: None,
     )
 
@@ -134,7 +143,7 @@ async def test_upstream_transport_live_diagnostics_report_missing_connection() -
         raise KeyError(connection_id)
 
     source_catalog = SourceCatalogService(
-        store=transport.store,
+        store=transport.catalog_store,
         connection_lookup=_raise_missing_connection,
         connection_list_enabled=lambda: [],
         connection_list_all=lambda: [],
@@ -260,7 +269,11 @@ async def test_upstream_transport_live_diagnostics_report_missing_auth_ref(
         metadata={"auth_ref": "github.creds"},
     )
     connections.register(connection)
-    transport = UpstreamTransportService(store=store, event_sink=events.append)
+    transport = UpstreamTransportService(
+        auth_store=store,
+        catalog_store=store,
+        event_sink=events.append,
+    )
     transport.register_adapter("demo", FakeAdapter())
     source_catalog = SourceCatalogService(
         store=store,
@@ -296,3 +309,29 @@ async def test_upstream_transport_live_diagnostics_report_missing_auth_ref(
     assert diagnostics[0].code == "auth_not_found"
     assert diagnostics[0].bound_source == "github.work"
     assert "github.creds" in diagnostics[0].message
+
+
+def test_upstream_transport_uses_separate_auth_and_catalog_stores(tmp_path) -> None:
+    auth_store = FileAuthStore(tmp_path / "auth")
+    catalog_store = FileCatalogStore(tmp_path / "catalog")
+    events = []
+    transport = UpstreamTransportService(
+        auth_store=auth_store,
+        catalog_store=catalog_store,
+        event_sink=events.append,
+    )
+    record = AuthRecord(connection_id="demo.personal", scheme="bearer")
+    transport.save_auth(record)
+    snapshot = CatalogSnapshot(
+        connection_id="demo.personal",
+        fetched_at_epoch_ms=1,
+        max_age_seconds=300,
+        nodes=[],
+        resources=[],
+        prompts=[],
+        metadata={},
+    )
+    transport.catalog_store.save_catalog(snapshot)
+
+    assert (tmp_path / "auth" / "auth" / "demo.personal.json").exists()
+    assert (tmp_path / "catalog" / "catalog" / "demo.personal.json").exists()

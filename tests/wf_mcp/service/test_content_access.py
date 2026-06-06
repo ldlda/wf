@@ -30,7 +30,8 @@ def _make_content_access(
     events = BrokerEventRecorder(EventBus())
     connection_service = ConnectionService(events=events)
     upstream = UpstreamTransportService(
-        store=store,
+        auth_store=store,
+        catalog_store=store,
         event_sink=events.record_event,
     )
     source_catalog = SourceCatalogService(

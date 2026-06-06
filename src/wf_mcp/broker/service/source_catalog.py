@@ -30,7 +30,7 @@ from ...models import (
     CatalogSnapshot,
 )
 from ...runtime import ToolExecutor
-from ...storage import Store
+from ...storage import CatalogStore
 from ...workflow.wrappers import _model_from_schema
 from ..catalog import CombinedCatalog, snapshot_from_specs
 from .specs import get_qualified_spec, qualify_spec
@@ -51,7 +51,7 @@ class SourceCatalogService:
     the broker's configured tool executor.
     """
 
-    store: Store
+    store: CatalogStore
     connection_lookup: ConnectionLookup
     connection_list_enabled: ConnectionList
     connection_list_all: ConnectionList

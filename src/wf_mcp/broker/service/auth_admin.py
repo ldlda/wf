@@ -6,7 +6,7 @@ from typing import Any
 from wf_api import WorkflowAdminAuthProvider
 from wf_api.auth import AuthRecord as NeutralAuthRecord
 
-from ...storage import Store
+from ...storage import AuthStore
 
 
 @dataclass(frozen=True, slots=True)
@@ -17,7 +17,7 @@ class McpAuthAdminProvider(WorkflowAdminAuthProvider):
     auth variants can provide richer safe display later.
     """
 
-    store: Store
+    store: AuthStore
 
     def list_auth_records(self) -> list[dict[str, Any]]:
         return [

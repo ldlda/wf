@@ -16,7 +16,7 @@ from wf_mcp.source_registry import (
     McpSourceRegistryEntry,
     SourceRegistryFile,
 )
-from wf_mcp.storage import FileStore
+from wf_mcp.storage import FileAuthStore, FileStore
 from wf_server import WorkflowServer
 
 
@@ -131,3 +131,35 @@ async def test_workflow_server_from_service_exposes_auth_admin(tmp_path) -> None
             "payload_keys": ["token"],
         }
     ]
+
+
+async def test_workflow_server_from_service_uses_focused_auth_store(tmp_path) -> None:
+    from wf_artifacts import (
+        FileDraftWorkspaceStore,
+        FileRunStore,
+        FileWorkflowArtifactStore,
+    )
+    from wf_mcp.models import AuthRecord
+
+    auth_store = FileAuthStore(tmp_path / "auth")
+    service = WfMcpService(
+        store=FileStore(tmp_path / "compat"),
+        auth_store=auth_store,
+        artifact_store=FileWorkflowArtifactStore(tmp_path / "workflow"),
+        draft_workspace_store=FileDraftWorkspaceStore(tmp_path / "workflow"),
+        run_store=FileRunStore(tmp_path / "workflow"),
+    )
+    auth_store.save_auth(AuthRecord(connection_id="drive.work", scheme="bearer"))
+
+    config = BrokerConfig(
+        store_root=tmp_path / "store",
+        connections=[],
+    )
+    server = workflow_server_from_service(
+        service,
+        config=config,
+        source_registry_store=FileSourceRegistryStore(tmp_path / "store"),
+    )
+    result = await server.admin.inspect_auth_record("drive.work")
+
+    assert result["id"] == "drive.work"

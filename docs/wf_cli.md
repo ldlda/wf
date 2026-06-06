@@ -58,7 +58,9 @@ workflow artifacts/deployments/runs, source registry entries, catalog cache, and
 local/dev auth records. Role-specific store overrides are now supported via
 `server.stores.*` (e.g. `server.stores.workflow`, `server.stores.auth`,
 `server.stores.source_registry`, `server.stores.catalog_cache`); missing roles
-continue to fall back to `server.store`.
+continue to fall back to `server.store`. For filesystem configs, role-specific
+store overrides can split local/dev auth records and catalog cache from workflow
+records.
 
 Start a JSON-RPC server backed by MCP broker config and MCP-capable sources:
 

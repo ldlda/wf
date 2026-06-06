@@ -6,8 +6,8 @@ from wf_authoring import NodeSpec
 from wf_core import RunStatus
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.source_catalog import SourceCatalogService
-from wf_mcp.models import ConnectionConfig
-from wf_mcp.storage import FileStore
+from wf_mcp.models import CatalogSnapshot, ConnectionConfig
+from wf_mcp.storage import FileCatalogStore, FileStore
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -500,3 +500,35 @@ def test_source_catalog_finds_local_documentation_resource_directly() -> None:
 
     assert result is not None
     assert result.uri == test_resource.uri
+
+
+def test_source_catalog_uses_catalog_store_only(tmp_path) -> None:
+    catalog_store = FileCatalogStore(tmp_path / "catalog")
+    service = SourceCatalogService(
+        store=catalog_store,
+        connection_lookup=lambda connection_id: ConnectionConfig(
+            id=connection_id,
+            server="demo",
+            account="personal",
+        ),
+        connection_list_enabled=lambda: [],
+        connection_list_all=lambda: [],
+        tool_executor_for=lambda connection: (_ for _ in ()).throw(
+            AssertionError("unexpected executor")
+        ),
+        load_auth=lambda connection: None,
+        emit_event=lambda event: None,
+    )
+    snapshot = CatalogSnapshot(
+        connection_id="demo.personal",
+        fetched_at_epoch_ms=1,
+        max_age_seconds=300,
+        nodes=[],
+        resources=[],
+        prompts=[],
+        metadata={},
+    )
+    service.store.save_catalog(snapshot)
+
+    assert service.store.load_catalog("demo.personal") == snapshot
+    assert (tmp_path / "catalog" / "catalog" / "demo.personal.json").exists()

@@ -37,7 +37,7 @@ from ...models import (
 from ...runtime import ToolExecutor
 from ...sdk import BackendAdapter
 from ...source_registry import SourceRegistryStore
-from ...storage import Store
+from ...storage import AuthStore, CatalogStore, Store
 from ..admin_capabilities import admin_source
 from ..catalog import CombinedCatalog
 from .builtins import builtin_sources
@@ -60,6 +60,8 @@ class WfMcpService:
     """
 
     store: Store
+    auth_store: AuthStore | None = None
+    catalog_store: CatalogStore | None = None
     default_catalog_max_age_seconds: int = 300
     event_bus: EventBus = field(default_factory=EventBus)
     include_builtin_specs: bool = True
@@ -83,13 +85,16 @@ class WfMcpService:
         """
         self.events = BrokerEventRecorder(self.event_bus)
         self.connection_service = ConnectionService(events=self.events)
+        auth_store = self.auth_store or self.store
+        catalog_store = self.catalog_store or self.store
         self.upstream = UpstreamTransportService(
-            store=self.store,
+            auth_store=auth_store,
+            catalog_store=catalog_store,
             event_sink=self.events.record_event,
             tool_executor=self.tool_executor,
         )
         self.source_catalog = SourceCatalogService(
-            store=self.store,
+            store=catalog_store,
             connection_lookup=self.connection_service.get,
             connection_list_enabled=self.connection_service.list_enabled,
             connection_list_all=self.connection_service.list_all,

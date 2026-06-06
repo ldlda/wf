@@ -253,7 +253,9 @@ optional role-specific overrides without breaking existing files:
 ```
 
 Implementation status: first filesystem-only slice implemented. Role overrides
-are optional and fall back to `server.store`.
+are optional and fall back to `server.store`. MCP auth and catalog/cache
+storage now have separate file-store adapters; `server.store` still remains
+the fallback for missing roles.
 
 Resolution rule:
 

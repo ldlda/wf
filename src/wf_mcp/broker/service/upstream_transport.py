@@ -28,7 +28,7 @@ from wf_mcp.models import CatalogSnapshot, ConnectionConfig
 from wf_mcp.runtime import ToolExecutor
 from wf_mcp.sdk import BackendAdapter
 from wf_mcp.shared.errors import error_payload
-from wf_mcp.storage import Store
+from wf_mcp.storage import AuthStore, CatalogStore
 
 from ...auth import connection_auth_diagnostic
 from .adapters import require_adapter
@@ -45,7 +45,8 @@ class UpstreamTransportService:
     admin calls, discovery, generated workflow NodeSpecs, and live source checks.
     """
 
-    store: Store
+    auth_store: AuthStore
+    catalog_store: CatalogStore
     event_sink: EventSink
     adapters: dict[str, BackendAdapter] = field(default_factory=dict)
     tool_executor: ToolExecutor | None = None
@@ -54,7 +55,7 @@ class UpstreamTransportService:
         self.adapters[server] = adapter
 
     def save_auth(self, record: AuthRecord) -> None:
-        self.store.save_auth(record)
+        self.auth_store.save_auth(record)
         self.event_sink(
             make_event(
                 "auth_saved",
@@ -64,7 +65,7 @@ class UpstreamTransportService:
         )
 
     def load_auth(self, connection_id: str) -> AuthRecord | None:
-        return self.store.load_auth(connection_id)
+        return self.auth_store.load_auth(connection_id)
 
     def load_connection_auth(self, connection: ConnectionConfig) -> AuthRecord | None:
         """Resolve auth for a connection, preferring explicit source auth_ref.
@@ -251,7 +252,7 @@ class UpstreamTransportService:
                 fetched_at_epoch_ms=int(time.time() * 1000),
                 max_age_seconds=max_age_seconds or default_catalog_max_age_seconds,
             )
-            self.store.save_catalog(snapshot)
+            self.catalog_store.save_catalog(snapshot)
             record_catalog_change_events(connection.id, snapshot, "catalog_refresh")
             self.event_sink(
                 make_event(

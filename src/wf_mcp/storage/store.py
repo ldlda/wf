@@ -19,7 +19,7 @@ from ..models import (
 )
 
 
-class Store:
+class AuthStore:
     def save_auth(self, record: AuthRecord) -> None:
         raise NotImplementedError
 
@@ -41,6 +41,8 @@ class Store:
     def delete_auth_record(self, auth_ref: str) -> bool:
         raise NotImplementedError
 
+
+class CatalogStore:
     def save_catalog(self, snapshot: CatalogSnapshot) -> None:
         raise NotImplementedError
 
@@ -48,20 +50,19 @@ class Store:
         raise NotImplementedError
 
 
-class FileStore(Store):
+class Store(AuthStore, CatalogStore):
+    """Compatibility store combining MCP auth and catalog/cache storage."""
+
+
+class FileAuthStore(AuthStore):
     def __init__(self, root: Path) -> None:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.auth_dir.mkdir(parents=True, exist_ok=True)
-        self.catalog_dir.mkdir(parents=True, exist_ok=True)
 
     @property
     def auth_dir(self) -> Path:
         return self.root / "auth"
-
-    @property
-    def catalog_dir(self) -> Path:
-        return self.root / "catalog"
 
     def _auth_path(self, auth_ref: str) -> Path:
         """Map one auth ref to one file.
@@ -76,21 +77,6 @@ class FileStore(Store):
         path = (self.auth_dir / f"{auth_ref}.json").resolve()
         if path.parent != root:
             raise ValueError(f"auth ref escapes store directory: {auth_ref!r}")
-        return path
-
-    def _catalog_path(self, connection_id: str) -> Path:
-        return self._connection_path(self.catalog_dir, connection_id)
-
-    @staticmethod
-    def _connection_path(directory: Path, connection_id: str) -> Path:
-        """Map one validated connection id to one file inside a store directory."""
-        parse_connection_id(connection_id)
-        root = directory.resolve()
-        path = (directory / f"{connection_id}.json").resolve()
-        if path.parent != root:
-            raise ValueError(
-                f"connection id escapes store directory: {connection_id!r}"
-            )
         return path
 
     def save_auth(self, record: AuthRecord) -> None:
@@ -142,6 +128,32 @@ class FileStore(Store):
         """Delete neutral auth through the legacy MCP file shape."""
         return self.delete_auth(auth_ref)
 
+
+class FileCatalogStore(CatalogStore):
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.root.mkdir(parents=True, exist_ok=True)
+        self.catalog_dir.mkdir(parents=True, exist_ok=True)
+
+    @property
+    def catalog_dir(self) -> Path:
+        return self.root / "catalog"
+
+    def _catalog_path(self, connection_id: str) -> Path:
+        return self._connection_path(self.catalog_dir, connection_id)
+
+    @staticmethod
+    def _connection_path(directory: Path, connection_id: str) -> Path:
+        """Map one validated connection id to one file inside a store directory."""
+        parse_connection_id(connection_id)
+        root = directory.resolve()
+        path = (directory / f"{connection_id}.json").resolve()
+        if path.parent != root:
+            raise ValueError(
+                f"connection id escapes store directory: {connection_id!r}"
+            )
+        return path
+
     def save_catalog(self, snapshot: CatalogSnapshot) -> None:
         self._catalog_path(snapshot.connection_id).write_text(
             json.dumps(dump_catalog_snapshot(snapshot), indent=2),
@@ -167,3 +179,48 @@ class FileStore(Store):
             ],
             metadata=data.get("metadata", {}),
         )
+
+
+class FileStore(Store):
+    """Compatibility file store that combines auth and catalog stores."""
+
+    def __init__(self, root: Path) -> None:
+        self.root = root
+        self.root.mkdir(parents=True, exist_ok=True)
+        self._auth = FileAuthStore(root)
+        self._catalog = FileCatalogStore(root)
+
+    @property
+    def auth_dir(self) -> Path:
+        return self._auth.auth_dir
+
+    @property
+    def catalog_dir(self) -> Path:
+        return self._catalog.catalog_dir
+
+    def save_auth(self, record: AuthRecord) -> None:
+        self._auth.save_auth(record)
+
+    def load_auth(self, connection_id: str) -> AuthRecord | None:
+        return self._auth.load_auth(connection_id)
+
+    def list_auth_refs(self) -> list[str]:
+        return self._auth.list_auth_refs()
+
+    def save_auth_record(self, record: NeutralAuthRecord) -> None:
+        self._auth.save_auth_record(record)
+
+    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | None:
+        return self._auth.load_auth_record(auth_ref)
+
+    def delete_auth(self, connection_id: str) -> bool:
+        return self._auth.delete_auth(connection_id)
+
+    def delete_auth_record(self, auth_ref: str) -> bool:
+        return self._auth.delete_auth_record(auth_ref)
+
+    def save_catalog(self, snapshot: CatalogSnapshot) -> None:
+        self._catalog.save_catalog(snapshot)
+
+    def load_catalog(self, connection_id: str) -> CatalogSnapshot | None:
+        return self._catalog.load_catalog(connection_id)

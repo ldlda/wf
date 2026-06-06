@@ -256,9 +256,10 @@ implementation state.
     `server.stores.workflow`, `server.stores.auth`,
     `server.stores.source_registry`, and `server.stores.catalog_cache`
     filesystem overrides. Missing roles still fall back to `server.store`.
-    MCP compatibility still uses one `FileStore` class for auth and catalog
-    snapshots internally; the separate catalog root is carried for the future
-    store split.
+    Follow-up complete: MCP compatibility auth and catalog/cache stores are now
+    split at the service boundary. `FileStore` remains as a compatibility
+    wrapper, while neutral config role roots can drive `FileAuthStore` and
+    `FileCatalogStore` separately.
   - Completed: `wf run watch` starts run progress UX with polling over existing
     `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP
     progress remains deferred until polling UX proves insufficient.
