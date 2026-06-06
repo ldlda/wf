@@ -273,6 +273,11 @@ implementation state.
     as workflow capabilities. The current `wf_mcp` package still contains both
     roles plus compatibility entrypoints; new server/transport work should avoid
     depending on that combined facade.
+    Next concrete slice: create `wf_sources_mcp` and move leaf upstream-source
+    pieces first, starting with MCP auth helpers and focused auth/catalog stores.
+    Keep `wf_mcp` re-export shims for compatibility and add import-direction
+    tests so `wf_sources_mcp` does not depend on workflow/admin surface,
+    frontend server, or proxy modules.
     The `wf-mcp` script is now a legacy/special-purpose MCP entrypoint, not the
     preferred durable workflow server. New product paths should target
     `wf-rpc-server` plus neutral `wf_config`/`wf_server` composition, then keep

@@ -67,6 +67,36 @@ the same `WorkflowServer` / `wf_api` surfaces to MCP clients, while a future
 `wf_sources_mcp` can own upstream MCP discovery, sessions, tool invocation,
 resource/prompt access, and FastMCP-specific provider behavior.
 
+### MCP Source Provider Package Direction
+
+`wf_sources_mcp` is the target package for MCP-as-upstream-source code. It should
+own behavior required to turn external MCP servers into workflow capability
+sources:
+
+- MCP auth interpretation for stdio/http transports
+- desired MCP source registry models and conversion into runtime connection
+  records
+- source catalog snapshot cache stores
+- upstream discovery and tool/resource/prompt invocation adapters
+- stateful MCP runtime/session management
+- FastMCP-specific compatibility behavior
+
+`wf_sources_mcp` must not own workflow lifecycle APIs, MCP frontend tool schemas,
+or old `wf-mcp` entrypoint behavior. Those belong to `wf_api`, transport
+packages, or compatibility shims.
+
+First slices should move leaf modules only and leave `wf_mcp` re-export shims:
+
+1. MCP auth helpers and focused auth/catalog stores.
+2. MCP source registry models/conversion.
+3. Upstream transport/discovery/session services.
+
+Each slice should add import-direction tests so the new source-provider package
+does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,
+`wf_mcp.server`, or `wf_mcp.proxy`. Temporary imports from broker model shims are
+acceptable only when documented in the slice plan; the direction is to replace
+them with protocol/DTO seams before moving runtime services.
+
 `wf_transport_rpc_http` should call `WorkflowApi` through the server
 composition. It should not call `WfMcpService`.
 
