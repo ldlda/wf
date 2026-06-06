@@ -28,6 +28,7 @@ from wf_mcp.sdk import BackendAdapter
 from wf_mcp.shared.errors import error_payload
 from wf_mcp.storage import Store
 
+from ...auth import connection_auth_diagnostic
 from .adapters import require_adapter
 from .source_catalog import SourceCatalogService
 
@@ -305,6 +306,14 @@ class UpstreamTransportService:
                         exc=exc,
                     )
                 )
+                continue
+            auth_diagnostic = connection_auth_diagnostic(
+                connection,
+                load_auth=self.load_auth,
+                logical_ref=logical_ref,
+            )
+            if auth_diagnostic is not None:
+                diagnostics.append(auth_diagnostic)
                 continue
             try:
                 adapter = require_adapter(connection, self.adapters)

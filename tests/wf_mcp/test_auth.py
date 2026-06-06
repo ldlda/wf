@@ -3,13 +3,16 @@ from __future__ import annotations
 from pathlib import Path
 
 from wf_api.auth import AuthRecord as NeutralAuthRecord
+from wf_artifacts import DiagnosticSeverity
 from wf_mcp.auth import (
+    auth_ref_for_connection,
+    connection_auth_diagnostic,
     mcp_auth_env,
     mcp_auth_headers,
     mcp_auth_from_neutral,
     neutral_auth_from_mcp,
 )
-from wf_mcp.models import AuthRecord as McpAuthRecord
+from wf_mcp.models import AuthRecord as McpAuthRecord, ConnectionConfig
 from wf_mcp.storage import FileStore
 
 
@@ -115,4 +118,85 @@ def test_file_store_legacy_auth_methods_still_work(tmp_path: Path) -> None:
         id="github.work",
         scheme="bearer",
         payload={"token": "secret"},
+    )
+
+
+def test_auth_ref_for_connection_returns_string_only() -> None:
+    assert (
+        auth_ref_for_connection(
+            ConnectionConfig(
+                id="github.work",
+                server="github",
+                account="work",
+                metadata={"auth_ref": "github.creds"},
+            )
+        )
+        == "github.creds"
+    )
+    assert (
+        auth_ref_for_connection(
+            ConnectionConfig(
+                id="github.work",
+                server="github",
+                account="work",
+                metadata={"auth_ref": 123},
+            )
+        )
+        is None
+    )
+
+
+def test_connection_auth_diagnostic_reports_missing_auth_ref() -> None:
+    connection = ConnectionConfig(
+        id="github.work",
+        server="github",
+        account="work",
+        metadata={"auth_ref": "github.creds"},
+    )
+
+    diagnostic = connection_auth_diagnostic(
+        connection,
+        load_auth=lambda auth_ref: None,
+        logical_ref="github",
+    )
+
+    assert diagnostic is not None
+    assert diagnostic.severity == DiagnosticSeverity.ERROR
+    assert diagnostic.code == "auth_not_found"
+    assert diagnostic.logical_ref == "github"
+    assert diagnostic.bound_source == "github.work"
+    assert "github.creds" in diagnostic.message
+    assert diagnostic.repair_hint is not None
+    assert "Add an auth record" in diagnostic.repair_hint
+
+
+def test_connection_auth_diagnostic_ignores_absent_or_present_auth_ref() -> None:
+    no_ref = ConnectionConfig(id="github.work", server="github", account="work")
+    with_ref = ConnectionConfig(
+        id="github.work",
+        server="github",
+        account="work",
+        metadata={"auth_ref": "github.creds"},
+    )
+    auth = McpAuthRecord(
+        connection_id="github.creds",
+        scheme="bearer",
+        payload={"token": "secret"},
+    )
+
+    assert (
+        connection_auth_diagnostic(
+            no_ref,
+            load_auth=lambda auth_ref: None,
+            logical_ref="github",
+        )
+        is None
+    )
+    assert (
+        connection_auth_diagnostic(
+            with_ref,
+            load_auth=lambda auth_ref: auth,
+            logical_ref="github",
+        )
+        is None
     )

@@ -14,8 +14,9 @@ the architecture.
 ## Status
 
 Slice 1 implements the neutral auth record/store protocol and MCP compatibility
-bridge. Diagnostics, auth admin surfaces, and provider-specific auth unions are
-future slices.
+bridge. Slice 2 surfaces missing explicit auth refs through live source
+diagnostics and source registry apply summaries. Auth admin surfaces and
+provider-specific auth unions are future slices.
 
 ## Current State
 

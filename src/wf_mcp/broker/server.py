@@ -78,6 +78,7 @@ def workflow_server_from_service(
         )
         if connection.server not in service.adapters
         else None,
+        load_auth=service.upstream.load_auth,
     )
     source_registry_admin = WorkflowSourceRegistryApi(
         provider=registry_provider,

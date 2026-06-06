@@ -6,7 +6,8 @@ from typing import Any
 
 from wf_api.source_registry_admin import WorkflowSourceRegistryMutationProvider
 
-from ...models import BrokerConfig, ConnectionConfig
+from ...auth import connection_auth_diagnostic
+from ...models import AuthRecord, BrokerConfig, ConnectionConfig
 from ...source_registry import (
     McpSourceRegistryEntry,
     SourceRegistryFile,
@@ -28,6 +29,7 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
     connection_service: ConnectionService | None = None
     config: BrokerConfig | None = None
     ensure_adapter: Callable[[ConnectionConfig], None] | None = None
+    load_auth: Callable[[str], AuthRecord | None] | None = None
 
     # -- read helpers -------------------------------------------------------
 
@@ -151,6 +153,15 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
             for source_id in before_ids & after_ids
             if before[source_id] != after[source_id]
         )
+        auth_diagnostics = []
+        if self.load_auth is not None:
+            for source_id in sorted(after):
+                diagnostic = connection_auth_diagnostic(
+                    after[source_id],
+                    load_auth=self.load_auth,
+                )
+                if diagnostic is not None:
+                    auth_diagnostics.append(diagnostic.model_dump(mode="json"))
         registry = self._load()
         return {
             "applied": True,
@@ -159,4 +170,5 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
             "removed": sorted(before_ids - after_ids),
             "connection_count": len(after),
             "registry_entry_count": len(registry.sources),
+            "auth_diagnostics": auth_diagnostics,
         }

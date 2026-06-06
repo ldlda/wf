@@ -247,3 +247,54 @@ def test_upstream_load_connection_auth_ignores_non_string_auth_ref(
         scheme="bearer",
         payload={"token": "legacy"},
     )
+
+
+async def test_upstream_transport_live_diagnostics_report_missing_auth_ref(
+    tmp_path: Path,
+) -> None:
+    events: list[McpEvent] = []
+    store = FileStore(tmp_path)
+    connections = ConnectionRegistry()
+    connection = ConnectionConfig(
+        id="github.work",
+        server="demo",
+        account="work",
+        metadata={"auth_ref": "github.creds"},
+    )
+    connections.register(connection)
+    transport = UpstreamTransportService(store=store, event_sink=events.append)
+    transport.register_adapter("demo", FakeAdapter())
+    source_catalog = SourceCatalogService(
+        store=store,
+        connection_lookup=connections.get,
+        connection_list_enabled=connections.list_enabled,
+        connection_list_all=connections.list_all,
+        tool_executor_for=transport.tool_executor_for,
+        load_auth=transport.load_connection_auth,
+        emit_event=events.append,
+    )
+    source_catalog.register_capability_source(
+        CapabilitySource(
+            id="github.work",
+            kind="connection",
+            permissions=SourcePermissions(calls_upstream=True),
+            capabilities=CapabilityBuckets(),
+        )
+    )
+    artifact = echo_artifact()
+    deployment = WorkflowDeployment(
+        id="echo.personal",
+        artifact_id="echo",
+        artifact_version=1,
+        bindings=[{"logical_source": "demo", "concrete_source": "github.work"}],
+    )
+
+    diagnostics = await transport.deployment_diagnostics(
+        deployment=deployment,
+        artifacts=[artifact],
+        source_catalog=source_catalog,
+    )
+
+    assert diagnostics[0].code == "auth_not_found"
+    assert diagnostics[0].bound_source == "github.work"
+    assert "github.creds" in diagnostics[0].message

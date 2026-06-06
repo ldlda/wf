@@ -336,3 +336,54 @@ def test_source_registry_apply_requires_runtime_context(tmp_path: Path) -> None:
 
     with pytest.raises(RuntimeError, match="requires runtime service context"):
         provider.apply_registry_changes()
+
+
+def test_source_registry_apply_reports_missing_auth_ref(tmp_path: Path) -> None:
+    entry = McpSourceRegistryEntry(
+        id="github.work",
+        provider="github",
+        account="work",
+        auth_ref="github.creds",
+        transport=StdioSourceTransport(command="npx"),
+    )
+    provider, connection_service, _source_catalog = _apply_provider(
+        tmp_path,
+        registry_sources=[entry],
+    )
+    provider.load_auth = lambda auth_ref: None
+
+    payload = provider.apply_registry_changes()
+
+    assert payload["applied"] is True
+    assert payload["registered"] == ["github.work"]
+    assert connection_service.get("github.work").metadata["auth_ref"] == "github.creds"
+    diagnostic = payload["auth_diagnostics"][0]
+    assert diagnostic["code"] == "auth_not_found"
+    assert diagnostic["bound_source"] == "github.work"
+    assert "github.creds" in diagnostic["message"]
+
+
+def test_source_registry_apply_empty_auth_diagnostics_when_auth_present(
+    tmp_path: Path,
+) -> None:
+    from wf_mcp.models import AuthRecord as McpAuthRecord
+
+    entry = McpSourceRegistryEntry(
+        id="github.work",
+        provider="github",
+        account="work",
+        auth_ref="github.creds",
+        transport=StdioSourceTransport(command="npx"),
+    )
+    provider, _connection_service, _source_catalog = _apply_provider(
+        tmp_path,
+        registry_sources=[entry],
+    )
+    provider.load_auth = lambda auth_ref: McpAuthRecord(
+        connection_id=auth_ref, scheme="bearer", payload={"token": "secret"}
+    )
+
+    payload = provider.apply_registry_changes()
+
+    assert payload["applied"] is True
+    assert payload["auth_diagnostics"] == []

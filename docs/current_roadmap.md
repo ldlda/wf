@@ -231,6 +231,9 @@ implementation state.
     exist in `wf_api`, MCP runtime auth resolution prefers explicit `auth_ref`
     with legacy connection-id fallback, and MCP payload interpretation is
     isolated in provider-specific adapter helpers.
+    Second implementation slice complete: missing explicit auth refs now surface
+    as `auth_not_found` diagnostics in live source checks and source registry
+    apply summaries.
   - Completed: `wf run watch` starts run progress UX with polling over existing
     `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP
     progress remains deferred until polling UX proves insufficient.
