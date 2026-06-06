@@ -223,6 +223,10 @@ implementation state.
     interrupted run, and resume it to completion through `RpcWorkflowApiClient`.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
+    The contract is now specified in
+    [2026-06-06 auth/source secrets boundary](./superpowers/specs/2026-06-06-auth-source-secrets-boundary.md):
+    sources carry `auth_ref`, runtime resolves through an auth store interface,
+    and the current filesystem auth files are only one adapter.
   - Completed: `wf run watch` starts run progress UX with polling over existing
     `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP
     progress remains deferred until polling UX proves insufficient.
