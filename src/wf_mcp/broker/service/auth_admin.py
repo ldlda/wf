@@ -5,8 +5,7 @@ from typing import Any
 
 from wf_api import WorkflowAdminAuthProvider
 from wf_api.auth import AuthRecord as NeutralAuthRecord
-
-from ...storage import AuthStore
+from wf_sources_mcp.storage import AuthStore
 
 
 @dataclass(frozen=True, slots=True)

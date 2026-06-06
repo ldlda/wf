@@ -51,3 +51,21 @@ def test_models_module_reexports_canonical_model_owners() -> None:
     assert CompatBrokerConfig is BrokerConfig
     assert CompatCatalogSnapshot is CatalogSnapshot
     assert CompatConnectionConfig is ConnectionConfig
+
+
+def test_wf_mcp_auth_shim_reexports_wf_sources_mcp_auth() -> None:
+    from wf_mcp.auth import AuthRecord as CompatAuthRecord
+    from wf_sources_mcp.auth import AuthRecord
+
+    assert CompatAuthRecord is AuthRecord
+
+
+def test_wf_mcp_storage_shim_reexports_wf_sources_mcp_storage() -> None:
+    from wf_mcp.storage import FileAuthStore as CompatFileAuthStore
+    from wf_mcp.storage import FileCatalogStore as CompatFileCatalogStore
+    from wf_mcp.storage import FileStore as CompatFileStore
+    from wf_sources_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
+
+    assert CompatFileAuthStore is FileAuthStore
+    assert CompatFileCatalogStore is FileCatalogStore
+    assert CompatFileStore is FileStore

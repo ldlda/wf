@@ -1,4 +1,6 @@
-from .store import (
+from __future__ import annotations
+
+from wf_sources_mcp.storage import (
     AuthStore,
     CatalogStore,
     FileAuthStore,

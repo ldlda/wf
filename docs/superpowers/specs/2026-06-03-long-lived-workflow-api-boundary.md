@@ -87,7 +87,8 @@ packages, or compatibility shims.
 
 First slices should move leaf modules only and leave `wf_mcp` re-export shims:
 
-1. MCP auth helpers and focused auth/catalog stores.
+1. Complete: MCP auth helpers and focused auth/catalog stores moved to
+   `wf_sources_mcp`, with `wf_mcp` shims preserved.
 2. MCP source registry models/conversion.
 3. Upstream transport/discovery/session services.
 

@@ -1,11 +1,6 @@
-"""Compatibility shim for MCP source auth helpers.
-
-Canonical implementation lives in `wf_sources_mcp.auth`.
-"""
-
 from __future__ import annotations
 
-from wf_sources_mcp.auth import (
+from .auth import (
     AuthRecord,
     auth_missing_diagnostic,
     auth_ref_for_connection,

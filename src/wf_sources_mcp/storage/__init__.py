@@ -1,11 +1,6 @@
-"""Compatibility shim for MCP source auth/catalog stores.
-
-Canonical implementation lives in `wf_sources_mcp.storage.store`.
-"""
-
 from __future__ import annotations
 
-from wf_sources_mcp.storage.store import (
+from .store import (
     AuthStore,
     CatalogStore,
     FileAuthStore,

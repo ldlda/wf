@@ -25,8 +25,9 @@ from wf_mcp.capabilities import (
 from wf_platform import (
     CapabilitySource,
 )
+from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.storage import AuthStore, CatalogStore, Store
 
-from ...auth import AuthRecord
 from ...connections import ConnectionRegistry
 from ...events import EventBus, McpEvent
 from ...models import (
@@ -37,7 +38,6 @@ from ...models import (
 from ...runtime import ToolExecutor
 from ...sdk import BackendAdapter
 from ...source_registry import SourceRegistryStore
-from ...storage import AuthStore, CatalogStore, Store
 from ..admin_capabilities import admin_source
 from ..catalog import CombinedCatalog
 from .builtins import builtin_sources

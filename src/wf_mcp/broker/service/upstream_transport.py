@@ -17,7 +17,6 @@ from wf_artifacts import (
     WorkflowArtifact,
     WorkflowDeployment,
 )
-from wf_mcp.auth import AuthRecord
 from wf_mcp.broker.catalog import snapshot_from_specs
 from wf_mcp.broker.discovery import (
     discover_connection_capabilities,
@@ -28,9 +27,9 @@ from wf_mcp.models import CatalogSnapshot, ConnectionConfig
 from wf_mcp.runtime import ToolExecutor
 from wf_mcp.sdk import BackendAdapter
 from wf_mcp.shared.errors import error_payload
-from wf_mcp.storage import AuthStore, CatalogStore
+from wf_sources_mcp.auth import AuthRecord, connection_auth_diagnostic
+from wf_sources_mcp.storage import AuthStore, CatalogStore
 
-from ...auth import connection_auth_diagnostic
 from .adapters import require_adapter
 from .source_catalog import SourceCatalogService
 

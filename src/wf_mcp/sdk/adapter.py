@@ -17,7 +17,8 @@ from mcp.types import (
 )
 from pydantic import AnyUrl
 
-from ..auth import AuthRecord, mcp_auth_env, mcp_auth_headers
+from wf_sources_mcp.auth import AuthRecord, mcp_auth_env, mcp_auth_headers
+
 from ..capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from ..models import ConnectionConfig
 from .base import BackendAdapter, ToolCallResult
