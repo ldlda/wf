@@ -41,8 +41,9 @@ scope your calls lads. else timeouts. not good for rapid testings
 
 # partial impls
 
-if a capability is partial until something else frees, or whatever else of the same kind, and you note it in docs,
-you also put a short comment/docstrings at the site to state the problem, and may also refer to the docs there.
+If code has a partial implementation and docs mention the limitation, add a
+short comment or docstring at the code seam too. Future agents see code before
+they see old plans.
 
 <!-- should this be global? putting docstrings/comment is global -->
 
