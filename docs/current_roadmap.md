@@ -245,6 +245,13 @@ implementation state.
     Not done: auth is still compatibility-grade. There is no OAuth flow,
     production secret manager, provider-specific display model, or
     full removal of the legacy MCP auth record shape yet.
+  - Role-specific server stores: the current neutral config has one
+    `server.store` root that backs workflow records, desired source registry,
+    catalog/cache snapshots, and local/dev auth records. The next config slice
+    should add optional `server.stores.*` overrides while preserving
+    `server.store` as the fallback for every missing role. First implementation
+    should stay filesystem-only; secret managers, SQL, and object stores are
+    later backend implementations.
   - Completed: `wf run watch` starts run progress UX with polling over existing
     `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP
     progress remains deferred until polling UX proves insufficient.

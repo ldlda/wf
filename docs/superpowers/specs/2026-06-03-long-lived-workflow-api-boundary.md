@@ -202,6 +202,25 @@ WorkflowApi
 The context must pass `require_workflow_stores()` before being exposed through
 the long-lived API.
 
+Current config exposes one default `server.store` root. The server then fans it
+out into workflow stores, auth records, source registry state, and catalog/cache
+state. That is acceptable for the first durable server path, but the boundary
+should not assume every persistence role always shares one backend.
+
+Future config should support optional role-specific store overrides:
+
+```text
+server.store              default for every missing role
+server.stores.workflow    artifacts, deployments, drafts, runs, traces
+server.stores.auth        auth records or secret-manager references
+server.stores.sources     desired source registry entries
+server.stores.catalog     source catalog/cache snapshots
+```
+
+The compatibility rule is: if a role store is absent, use `server.store`. First
+implementation should keep overrides filesystem-only; SQL, object storage, and
+secret-manager adapters are later backend implementations.
+
 The first server runtime may reuse existing implementation classes when they do
 not require MCP-specific behavior. If reuse would require constructing
 `WfMcpService`, that is the wrong dependency direction.

@@ -173,7 +173,7 @@ sources.
 
 `server.store` answers: where does the server persist workflow platform state?
 
-The current implementation can start with a filesystem store:
+The current implementation uses one default filesystem store root:
 
 ```json
 {
@@ -185,6 +185,13 @@ The current implementation can start with a filesystem store:
   }
 }
 ```
+
+That single root fans out internally into role-specific files/directories:
+
+- workflow records: artifacts, deployments, draft workspaces, runs, and traces
+- source registry desired state
+- source catalog/cache snapshots
+- auth records for local/dev MCP-compatible credentials
 
 Recommended Pydantic shape for the first slice:
 
@@ -211,7 +218,52 @@ the config does not bake the store concept into a single `store_root` field.
 Relative filesystem paths should resolve relative to the config file directory.
 SQL-backed stores are future work.
 
-The store should eventually own mutable workflow platform registries:
+### Store Roles
+
+`server.store` is the default store for every role. Future configs should allow
+optional role-specific overrides without breaking existing files:
+
+```json
+{
+  "server": {
+    "store": {
+      "kind": "filesystem",
+      "root": ".wf_store"
+    },
+    "stores": {
+      "workflow": {
+        "kind": "filesystem",
+        "root": ".wf_store"
+      },
+      "auth": {
+        "kind": "filesystem",
+        "root": ".wf_auth"
+      },
+      "source_registry": {
+        "kind": "filesystem",
+        "root": ".wf_sources"
+      },
+      "catalog_cache": {
+        "kind": "filesystem",
+        "root": ".wf_catalog"
+      }
+    }
+  }
+}
+```
+
+Resolution rule:
+
+```text
+effective_store(role) = server.stores[role] if present else server.store
+```
+
+The first implementation should keep all role overrides optional and filesystem
+only. This preserves the current single-root config while making the boundary
+ready for secret-manager auth stores, database-backed workflow records, and
+separate catalog/cache storage.
+
+The store layer should own mutable workflow platform registries:
 
 - artifact records
 - deployment records
