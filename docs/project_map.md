@@ -8,7 +8,7 @@ This repository has three main packages plus examples and tests.
 | --- | --- | --- |
 | `wf_core` | Deterministic workflow kernel: models, validation, runtime, run state, traces, interrupts, foreach, and path/state operations. | Runtime users, `wf_authoring`, workflow adapters. |
 | `wf_authoring` | Ergonomic workflow construction: `@node`, `NodeSpec`, builder DSL, conditions, path helpers, reusable ops, subgraph nodes. | Humans, tests, future LLM workflow builders. |
-| `wf_mcp` | MCP integration: SDK adapters, broker/proxy runtime, storage, config control, and workflow wrappers for discovered tools. | MCP-facing CLI/server code and future UI/control surfaces. |
+| `wf_mcp` | MCP-specific integration: SDK adapters, upstream MCP runtime, proxy/debug compatibility, legacy broker entrypoints, and wrappers for discovered MCP tools. | MCP source/provider code, MCP transport work, and compatibility callers. Durable workflow server paths should prefer `wf_server` plus transport packages. |
 
 ## Important Entry Points
 
@@ -22,8 +22,9 @@ This repository has three main packages plus examples and tests.
 - `wf_authoring.node`: typed Python function to `NodeSpec`.
 - [`docs/wf_authoring_control_flow.md`](wf_authoring_control_flow.md): when to
   use `branch`, `handle`, `match`, `when`, and `choose`.
-- `wf_mcp`: public MCP facade.
-- `wf-mcp`: CLI script from `pyproject.toml`.
+- `wf_mcp`: MCP-specific facade and compatibility package.
+- `wf-mcp`: legacy/special-purpose MCP script from `pyproject.toml`.
+- `wf-rpc-server`: preferred durable workflow server script for CLI/API clients.
 - `wf_mcp.broker.WfMcpService.get_catalog()`: backend MCP catalog snapshots.
 - `wf_mcp.broker.WfMcpService.get_planner_catalog()`: backend snapshots plus
   broker-local workflow sources such as `wf.std` and `wf.mcp`.
@@ -69,7 +70,10 @@ need local environment configuration.
 - Add new graph/model syntax in `wf_core.models`, then validate it in
   `wf_core.validation`.
 - Add author convenience helpers in `wf_authoring`, not `wf_core`.
-- Add MCP transport/proxy/config behavior in `wf_mcp` concern packages.
+- Add upstream MCP source/provider behavior in `wf_mcp` concern packages until a
+  dedicated `wf_sources_mcp` split exists.
+- Add durable workflow server behavior in `wf_server` or transport packages, not
+  the legacy `wf-mcp` entrypoint.
 - Add broker-local workflow utilities as `WfMcpService` spec sources, not as
   fake MCP connections.
 - Add runnable examples in `examples`.

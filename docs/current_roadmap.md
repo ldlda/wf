@@ -254,6 +254,11 @@ implementation state.
     as workflow capabilities. The current `wf_mcp` package still contains both
     roles plus compatibility entrypoints; new server/transport work should avoid
     depending on that combined facade.
+    The `wf-mcp` script is now a legacy/special-purpose MCP entrypoint, not the
+    preferred durable workflow server. New product paths should target
+    `wf-rpc-server` plus neutral `wf_config`/`wf_server` composition, then keep
+    shrinking `wf_mcp` toward upstream MCP source utilities, MCP transport
+    adapters, proxy/debug compatibility, and old entrypoint shims.
     MCP UI/App metadata is source metadata only for now. Do not advertise widget
     or MCP Apps support through workflow transports until a dedicated MCP
     frontend transport owns iframe hosting, `ui://` resources, app-only tool
