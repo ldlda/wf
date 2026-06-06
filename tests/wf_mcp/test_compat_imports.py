@@ -36,3 +36,18 @@ def test_concern_package_imports_resolve() -> None:
     assert WfMcpService.__name__ == "WfMcpService"
     assert ProxyRuntime.__name__ == "ProxyRuntime"
     assert callable(load_broker_config)
+
+
+def test_models_module_reexports_canonical_model_owners() -> None:
+    from wf_mcp.auth import AuthRecord
+    from wf_mcp.broker.models import BrokerConfig, ConnectionConfig
+    from wf_mcp.catalog.models import CatalogSnapshot
+    from wf_mcp.models import AuthRecord as CompatAuthRecord
+    from wf_mcp.models import BrokerConfig as CompatBrokerConfig
+    from wf_mcp.models import CatalogSnapshot as CompatCatalogSnapshot
+    from wf_mcp.models import ConnectionConfig as CompatConnectionConfig
+
+    assert CompatAuthRecord is AuthRecord
+    assert CompatBrokerConfig is BrokerConfig
+    assert CompatCatalogSnapshot is CatalogSnapshot
+    assert CompatConnectionConfig is ConnectionConfig

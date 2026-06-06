@@ -371,6 +371,10 @@ implementation state.
     and `sync_connections_from_config`. `WfMcpService.connections` remains a
     compatibility property while source hydration still belongs to
     `SourceCatalogService`.
+  - MCP model ownership is being compartmentalized. `wf_mcp.broker.models` owns
+    broker/connection config dataclasses, `wf_mcp.catalog.models` owns catalog
+    snapshots, and `wf_mcp.auth` owns the legacy MCP auth record plus adapter
+    helpers. `wf_mcp.models` remains a compatibility facade for older imports.
   - Several reusable implementation pieces still live in `wf_mcp` because they
     are MCP-shaped today (`source_registry.py`, `broker/server.py`, and focused
     `broker/service/*` services). The next config migration should make the
