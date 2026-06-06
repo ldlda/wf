@@ -23,6 +23,7 @@ from wf_sources_mcp.catalog import (
     CatalogPromptEntry,
     CatalogResourceEntry,
 )
+from wf_sources_mcp.sdk import ToolExecutor
 from wf_sources_mcp.storage import CatalogStore
 
 from ...connections import ConnectionConfig, qualify_node_name
@@ -30,7 +31,6 @@ from ...events import McpEvent, make_event
 from ...models import (
     CatalogSnapshot,
 )
-from ...runtime import ToolExecutor
 from ...workflow.wrappers import _model_from_schema
 from ..catalog import CombinedCatalog, snapshot_from_specs
 from .specs import get_qualified_spec, qualify_spec

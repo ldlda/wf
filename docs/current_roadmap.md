@@ -283,9 +283,13 @@ implementation state.
      models, file store, and conversion helpers now live in
      `wf_sources_mcp.source_registry`, with `wf_mcp.source_registry` retained
      as a compatibility shim.
-     Third `wf_sources_mcp` slice complete: upstream MCP catalog/discovery DTOs
+      Third `wf_sources_mcp` slice complete: upstream MCP catalog/discovery DTOs
      and catalog snapshot dumping now live in `wf_sources_mcp.catalog`, with
      `wf_mcp.capabilities` and `wf_mcp.catalog.models` retained as shims.
+     Fourth `wf_sources_mcp` slice complete: upstream SDK protocol/result
+     types (`BackendAdapter`, `ToolExecutor`, `ToolCallResult`) now live in
+     `wf_sources_mcp.sdk`, with `wf_mcp.sdk` and `wf_mcp.runtime.protocols`
+     retained as compatibility shims.
     The `wf-mcp` script is now a legacy/special-purpose MCP entrypoint, not the
     preferred durable workflow server. New product paths should target
     `wf-rpc-server` plus neutral `wf_config`/`wf_server` composition, then keep

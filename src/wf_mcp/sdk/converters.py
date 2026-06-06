@@ -8,8 +8,7 @@ from mcp.types import Resource as McpResource
 from mcp.types import Tool as McpTool
 
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
-
-from .base import ToolCallResult
+from wf_sources_mcp.sdk import ToolCallResult
 
 
 def tool_to_discovered(tool: McpTool) -> DiscoveredTool:

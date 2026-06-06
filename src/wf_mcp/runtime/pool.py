@@ -6,9 +6,10 @@ from dataclasses import asdict, dataclass, field
 from inspect import isawaitable
 from typing import Any, cast
 
+from wf_sources_mcp.sdk import ToolCallResult
+
 from ..auth import AuthRecord
 from ..models import ConnectionConfig
-from ..sdk import ToolCallResult
 from .session import PersistentMcpSession
 
 SessionFactory = Callable[

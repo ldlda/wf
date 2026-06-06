@@ -102,3 +102,25 @@ def test_wf_mcp_catalog_models_shim_reexports_wf_sources_mcp_catalog_models() ->
 
     assert CompatCatalogSnapshot is CatalogSnapshot
     assert compat_dump is dump_catalog_snapshot
+
+
+def test_wf_mcp_sdk_protocol_shims_reexport_wf_sources_mcp_sdk() -> None:
+    from wf_mcp.sdk import BackendAdapter as CompatBackendAdapter
+    from wf_mcp.sdk import ToolCallResult as CompatToolCallResult
+    from wf_mcp.sdk.base import BackendAdapter as CompatBaseBackendAdapter
+    from wf_mcp.sdk.base import ToolCallResult as CompatBaseToolCallResult
+    from wf_sources_mcp.sdk import BackendAdapter, ToolCallResult
+
+    assert CompatBackendAdapter is BackendAdapter
+    assert CompatToolCallResult is ToolCallResult
+    assert CompatBaseBackendAdapter is BackendAdapter
+    assert CompatBaseToolCallResult is ToolCallResult
+
+
+def test_wf_mcp_runtime_protocol_shim_reexports_wf_sources_mcp_tool_executor() -> None:
+    from wf_mcp.runtime import ToolExecutor as CompatRuntimeToolExecutor
+    from wf_mcp.runtime.protocols import ToolExecutor as CompatProtocolToolExecutor
+    from wf_sources_mcp.sdk import ToolExecutor
+
+    assert CompatRuntimeToolExecutor is ToolExecutor
+    assert CompatProtocolToolExecutor is ToolExecutor

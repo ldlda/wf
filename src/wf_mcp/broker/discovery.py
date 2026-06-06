@@ -9,11 +9,10 @@ from mcp.types import METHOD_NOT_FOUND
 
 from wf_authoring import NodeSpec
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+from wf_sources_mcp.sdk import BackendAdapter, ToolExecutor
 
 from ..auth import AuthRecord
 from ..models import ConnectionConfig
-from ..runtime import ToolExecutor
-from ..sdk import BackendAdapter
 from ..shared import root_exception
 from ..workflow import wrap_discovered_tool
 from .events import McpEvent

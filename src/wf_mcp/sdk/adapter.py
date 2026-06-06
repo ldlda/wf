@@ -19,9 +19,9 @@ from pydantic import AnyUrl
 
 from wf_sources_mcp.auth import AuthRecord, mcp_auth_env, mcp_auth_headers
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+from wf_sources_mcp.sdk import BackendAdapter, ToolCallResult
 
 from ..models import ConnectionConfig
-from .base import BackendAdapter, ToolCallResult
 from .converters import (
     prompt_to_discovered,
     resource_to_discovered,

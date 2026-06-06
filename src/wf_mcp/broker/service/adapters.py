@@ -2,8 +2,9 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from wf_sources_mcp.sdk import BackendAdapter
+
 from ...models import ConnectionConfig
-from ...sdk import BackendAdapter
 
 
 def require_adapter(

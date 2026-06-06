@@ -7,9 +7,10 @@ from typing import Any
 from mcp.client.session import ClientSession
 from mcp.types import CallToolResult
 
+from wf_sources_mcp.sdk import ToolCallResult
+
 from ..auth import AuthRecord
 from ..models import ConnectionConfig
-from ..sdk import ToolCallResult
 from ..sdk.converters import tool_result_to_call_result
 
 RawToolCaller = Callable[[str, dict[str, Any]], Awaitable[CallToolResult]]

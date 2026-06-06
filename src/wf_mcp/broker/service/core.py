@@ -26,6 +26,7 @@ from wf_sources_mcp.catalog import (
     CatalogPromptEntry,
     CatalogResourceEntry,
 )
+from wf_sources_mcp.sdk import BackendAdapter, ToolExecutor
 from wf_sources_mcp.source_registry import SourceRegistryStore
 from wf_sources_mcp.storage import AuthStore, CatalogStore, Store
 
@@ -36,8 +37,6 @@ from ...models import (
     CatalogSnapshot,
     ConnectionConfig,
 )
-from ...runtime import ToolExecutor
-from ...sdk import BackendAdapter
 from ..admin_capabilities import admin_source
 from ..catalog import CombinedCatalog
 from .builtins import builtin_sources

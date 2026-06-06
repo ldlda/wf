@@ -1,24 +1,12 @@
+"""Compatibility shim for MCP runtime execution protocol.
+
+Canonical implementation lives in `wf_sources_mcp.sdk`.
+"""
+
 from __future__ import annotations
 
-from typing import Any, Protocol
+from wf_sources_mcp.sdk import ToolExecutor
 
-from ..auth import AuthRecord
-from ..models import ConnectionConfig
-from ..sdk import ToolCallResult
-
-
-class ToolExecutor(Protocol):
-    """Runtime boundary for executing MCP tools from workflow nodes.
-
-    Discovery can stay one-shot, but workflow execution needs this smaller
-    protocol so a future persistent runtime pool can replace the current
-    adapter without changing generated NodeSpecs.
-    """
-
-    async def call_tool(
-        self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
-        tool_name: str,
-        payload: dict[str, Any],
-    ) -> ToolCallResult: ...
+__all__ = [
+    "ToolExecutor",
+]
