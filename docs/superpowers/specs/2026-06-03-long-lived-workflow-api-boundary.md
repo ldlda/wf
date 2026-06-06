@@ -80,6 +80,29 @@ legacy/source-specific input to normalize, not a permanent peer config family.
 can construct the same application boundary with required stores and an explicit
 runtime/source implementation.
 
+## MCP UI/App Support Policy
+
+MCP UI metadata is not workflow-server capability by itself. Upstream MCP tools
+may expose `_meta.ui` / `ui://...` resources, but rendering those resources is a
+host/frontend responsibility, not a workflow runtime responsibility.
+
+Until a dedicated MCP frontend transport owns the full host behavior, do not
+advertise MCP Apps/UI support to clients. Supporting it requires more than
+passing metadata through:
+
+- serving `ui://` resources and any dependent assets from a stable origin
+- sandboxed iframe hosting
+- a JSON-RPC `postMessage` / app bridge
+- app-only tool visibility and calls
+- CSP/domain policy
+- widget state and teardown semantics
+
+`wf_sources_mcp` / current upstream MCP source code may preserve UI metadata as
+observed source metadata, but it must not imply that `wf_server` can render or
+host widgets. `wf_transport_mcp` may later implement a real host bridge. Raw
+MCP proxy/debug modes can expose upstream behavior explicitly, but that path is
+not the durable workflow surface.
+
 ## Why Not Wrap WfMcpService
 
 `WfMcpService` is still a compatibility facade for MCP broker concerns:

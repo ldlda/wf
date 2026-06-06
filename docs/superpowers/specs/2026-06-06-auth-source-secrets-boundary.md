@@ -19,6 +19,12 @@ diagnostics and source registry apply summaries. Slice 3 exposes read-only auth
 admin summaries without secret payload values. Auth mutation surfaces and
 provider-specific auth unions are future slices.
 
+This is not a complete auth product yet. The implemented runtime path only wires
+existing MCP-compatible auth records into source calls, diagnostics, and
+read-only admin summaries. There is still no user-facing auth creation/mutation
+surface, OAuth flow, production secret manager, provider-specific display model,
+or full retirement of the legacy `wf_mcp.models.AuthRecord` compatibility type.
+
 ## Current State
 
 Existing MCP runtime auth is connection-id keyed:

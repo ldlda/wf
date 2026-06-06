@@ -238,6 +238,9 @@ implementation state.
     available through MCP-backed server admin, JSON-RPC, and CLI. Summaries show
     ids, schemes, metadata, and payload keys only; secret payload values remain
     hidden.
+    Not done: auth is still compatibility-grade. There is no auth mutation UI/CLI,
+    OAuth flow, production secret manager, provider-specific display model, or
+    full removal of the legacy MCP auth record shape yet.
   - Completed: `wf run watch` starts run progress UX with polling over existing
     `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP
     progress remains deferred until polling UX proves insufficient.
@@ -251,6 +254,11 @@ implementation state.
     as workflow capabilities. The current `wf_mcp` package still contains both
     roles plus compatibility entrypoints; new server/transport work should avoid
     depending on that combined facade.
+    MCP UI/App metadata is source metadata only for now. Do not advertise widget
+    or MCP Apps support through workflow transports until a dedicated MCP
+    frontend transport owns iframe hosting, `ui://` resources, app-only tool
+    calls, and bridge semantics. Raw proxy/debug paths may expose upstream MCP
+    behavior explicitly, but that is not the durable workflow surface.
 - Cleanup candidate: consolidate store/source registry id validation patterns
       (`SOURCE_REGISTRY_ID_PATTERN`, `STORE_ID_PATTERN`) only after another package
       needs the same rule. Today they intentionally stay close to their stores.
