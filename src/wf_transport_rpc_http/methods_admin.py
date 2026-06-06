@@ -7,7 +7,12 @@ import fastapi_jsonrpc as jsonrpc
 from wf_server import WorkflowServer
 
 from .errors import WorkflowRpcError, raise_workflow_rpc_error
-from .models import AdminEmptyParams, DeleteAuthParams, InspectAuthParams, SaveAuthParams
+from .models import (
+    AdminEmptyParams,
+    DeleteAuthParams,
+    InspectAuthParams,
+    SaveAuthParams,
+)
 from .params import RpcParams
 
 

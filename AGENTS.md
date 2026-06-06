@@ -28,7 +28,7 @@ more later
 
 ```bash
 uv run /* --env-file .env */ pytest -q
-(uvx / uv run) ruff check / format
+uv run ruff check; uv run ruff format
 uv run basedpyright --level error # error to cut spam
 # maybe uvx ty
 ```

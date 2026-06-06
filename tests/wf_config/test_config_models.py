@@ -364,25 +364,26 @@ def test_load_workflow_config_resolves_role_store_paths_relative_to_config(
 
     config = load_workflow_config(config_path)
 
-    assert config.server.store.root == (
-        config_path.parent / ".default_store"
-    ).resolve()
+    assert config.server.store.root == (config_path.parent / ".default_store").resolve()
     assert config.server.stores.workflow is not None
-    assert config.server.stores.workflow.root == (
-        config_path.parent / ".workflow_store"
-    ).resolve()
+    assert (
+        config.server.stores.workflow.root
+        == (config_path.parent / ".workflow_store").resolve()
+    )
     assert config.server.stores.auth is not None
-    assert config.server.stores.auth.root == (
-        config_path.parent / ".auth_store"
-    ).resolve()
+    assert (
+        config.server.stores.auth.root == (config_path.parent / ".auth_store").resolve()
+    )
     assert config.server.stores.source_registry is not None
-    assert config.server.stores.source_registry.root == (
-        config_path.parent / ".source_store"
-    ).resolve()
+    assert (
+        config.server.stores.source_registry.root
+        == (config_path.parent / ".source_store").resolve()
+    )
     assert config.server.stores.catalog_cache is not None
-    assert config.server.stores.catalog_cache.root == (
-        config_path.parent / ".catalog_store"
-    ).resolve()
+    assert (
+        config.server.stores.catalog_cache.root
+        == (config_path.parent / ".catalog_store").resolve()
+    )
 
 
 def test_server_config_resolves_missing_role_stores_to_default_store() -> None:

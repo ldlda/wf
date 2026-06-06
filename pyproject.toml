@@ -45,3 +45,6 @@ typeCheckingMode = "basic"
 
 [tool.ruff.format]
 preview = false
+
+[tool.ruff.lint]
+extend-select = ["I"]

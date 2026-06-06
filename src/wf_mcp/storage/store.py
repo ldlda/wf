@@ -3,7 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from wf_api.auth import AuthRecord as NeutralAuthRecord, validate_auth_id
+from wf_api.auth import AuthRecord as NeutralAuthRecord
+from wf_api.auth import validate_auth_id
 from wf_mcp.capabilities import (
     CatalogNodeEntry,
     CatalogPromptEntry,

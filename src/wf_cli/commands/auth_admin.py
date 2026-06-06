@@ -90,7 +90,9 @@ def save_auth_record(
     ] = None,
     payload_file: Annotated[
         str | None,
-        typer.Option("--payload-file", help="File containing secret payload JSON object."),
+        typer.Option(
+            "--payload-file", help="File containing secret payload JSON object."
+        ),
     ] = None,
     metadata_json: Annotated[
         str | None,
@@ -98,7 +100,9 @@ def save_auth_record(
     ] = None,
     metadata_file: Annotated[
         str | None,
-        typer.Option("--metadata-file", help="File containing non-secret metadata JSON object."),
+        typer.Option(
+            "--metadata-file", help="File containing non-secret metadata JSON object."
+        ),
     ] = None,
 ) -> None:
     """Save or replace a local/dev auth record; response never includes payload values."""
