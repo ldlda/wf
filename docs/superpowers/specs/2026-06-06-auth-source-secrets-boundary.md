@@ -164,6 +164,30 @@ Live source checks and source registry apply should prefer diagnostics over late
 adapter failures. Runtime invocation can still fail if the upstream server
 requires auth but does not declare that requirement.
 
+## Read-Only Display
+
+Read-only admin surfaces may show that an auth record exists, but they must not
+promise provider-specific display until auth records are concrete variants.
+
+For the current `scheme + payload` bridge, safe display should stay intentionally
+minimal:
+
+- `id`
+- `scheme`
+- `metadata`
+- `payload_keys`
+
+Do not expose payload values. Do not promise token hints, OAuth subjects,
+expiry, scopes, header names, or environment-variable names as the stable
+neutral contract yet. Once auth records become a discriminated union, each
+variant can own a richer safe display method:
+
+- bearer auth can show token presence or a redacted hint
+- headers auth can show safe header names
+- env auth can show safe environment variable names
+- OAuth auth can show subject, expiry, scopes, and refreshability
+- opaque auth can stay limited to scheme and payload keys
+
 ## Store Shape
 
 The current filesystem store can remain:
