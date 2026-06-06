@@ -55,9 +55,10 @@ The old `store_root` field maps to
 
 `server.store` is currently the default root for all file-backed server state:
 workflow artifacts/deployments/runs, source registry entries, catalog cache, and
-local/dev auth records. Future configs may add role-specific store overrides
-such as `server.stores.auth` or `server.stores.source_registry`; missing roles
-should continue to fall back to `server.store`.
+local/dev auth records. Role-specific store overrides are now supported via
+`server.stores.*` (e.g. `server.stores.workflow`, `server.stores.auth`,
+`server.stores.source_registry`, `server.stores.catalog_cache`); missing roles
+continue to fall back to `server.store`.
 
 Start a JSON-RPC server backed by MCP broker config and MCP-capable sources:
 

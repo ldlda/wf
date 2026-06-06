@@ -15,6 +15,7 @@ from wf_cli.context import (
     rpc_timeout_from_context,
     rpc_url_from_context,
 )
+from wf_server import build_local_static_workflow_server
 
 
 def _typer_context(obj: object | None) -> typer.Context:
@@ -96,3 +97,43 @@ def test_load_cli_context_builds_service_and_handlers(tmp_path: Path) -> None:
         context.handlers.context.draft_workspace_store is service.draft_workspace_store
     )
     assert context.handlers.context.run_store is service.run_store
+
+
+def test_load_cli_context_local_uses_workflow_store_override(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    config_path = tmp_path / "wf.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "client": {"target": {"kind": "local"}},
+                "server": {
+                    "store": {"kind": "filesystem", "root": ".default"},
+                    "stores": {
+                        "workflow": {
+                            "kind": "filesystem",
+                            "root": ".workflow",
+                        }
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    captured: dict[str, object] = {}
+
+    def fake_build_local_static_workflow_server(root):
+        captured["store_root"] = root
+        return build_local_static_workflow_server(tmp_path / "actual")
+
+    monkeypatch.setattr(
+        "wf_cli.context.build_local_static_workflow_server",
+        fake_build_local_static_workflow_server,
+    )
+
+    context = load_cli_context(config_path)
+
+    assert context.service is None
+    assert captured["store_root"] == (tmp_path / ".workflow").resolve()

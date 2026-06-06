@@ -252,6 +252,13 @@ implementation state.
     `server.store` as the fallback for every missing role. First implementation
     should stay filesystem-only; secret managers, SQL, and object stores are
     later backend implementations.
+    First role-specific store slice complete: neutral config now accepts optional
+    `server.stores.workflow`, `server.stores.auth`,
+    `server.stores.source_registry`, and `server.stores.catalog_cache`
+    filesystem overrides. Missing roles still fall back to `server.store`.
+    MCP compatibility still uses one `FileStore` class for auth and catalog
+    snapshots internally; the separate catalog root is carried for the future
+    store split.
   - Completed: `wf run watch` starts run progress UX with polling over existing
     `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP
     progress remains deferred until polling UX proves insufficient.

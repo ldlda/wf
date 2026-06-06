@@ -274,6 +274,38 @@ def test_workflow_config_rejects_unsafe_mcp_source_id() -> None:
         )
 
 
+def test_workflow_config_parses_role_specific_store_overrides() -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "store": {"kind": "filesystem", "root": ".wf_store"},
+                "stores": {
+                    "workflow": {"kind": "filesystem", "root": ".wf_workflow"},
+                    "auth": {"kind": "filesystem", "root": ".wf_auth"},
+                    "source_registry": {
+                        "kind": "filesystem",
+                        "root": ".wf_sources",
+                    },
+                    "catalog_cache": {
+                        "kind": "filesystem",
+                        "root": ".wf_catalog",
+                    },
+                },
+            },
+        }
+    )
+
+    assert isinstance(config.server.stores.workflow, FilesystemStoreConfig)
+    assert config.server.stores.workflow.root.as_posix() == ".wf_workflow"
+    assert isinstance(config.server.stores.auth, FilesystemStoreConfig)
+    assert config.server.stores.auth.root.as_posix() == ".wf_auth"
+    assert isinstance(config.server.stores.source_registry, FilesystemStoreConfig)
+    assert config.server.stores.source_registry.root.as_posix() == ".wf_sources"
+    assert isinstance(config.server.stores.catalog_cache, FilesystemStoreConfig)
+    assert config.server.stores.catalog_cache.root.as_posix() == ".wf_catalog"
+
+
 def test_workflow_config_rejects_duplicate_source_ids_across_kinds() -> None:
     with pytest.raises(ValidationError, match="duplicate source id"):
         WorkflowConfigFile.model_validate(
@@ -293,3 +325,80 @@ def test_workflow_config_rejects_duplicate_source_ids_across_kinds() -> None:
                 },
             }
         )
+
+
+def test_load_workflow_config_resolves_role_store_paths_relative_to_config(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "nested" / "wf.json"
+    config_path.parent.mkdir()
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "store": {"kind": "filesystem", "root": ".default_store"},
+                    "stores": {
+                        "workflow": {
+                            "kind": "filesystem",
+                            "root": ".workflow_store",
+                        },
+                        "auth": {
+                            "kind": "filesystem",
+                            "root": ".auth_store",
+                        },
+                        "source_registry": {
+                            "kind": "filesystem",
+                            "root": ".source_store",
+                        },
+                        "catalog_cache": {
+                            "kind": "filesystem",
+                            "root": ".catalog_store",
+                        },
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_workflow_config(config_path)
+
+    assert config.server.store.root == (
+        config_path.parent / ".default_store"
+    ).resolve()
+    assert config.server.stores.workflow is not None
+    assert config.server.stores.workflow.root == (
+        config_path.parent / ".workflow_store"
+    ).resolve()
+    assert config.server.stores.auth is not None
+    assert config.server.stores.auth.root == (
+        config_path.parent / ".auth_store"
+    ).resolve()
+    assert config.server.stores.source_registry is not None
+    assert config.server.stores.source_registry.root == (
+        config_path.parent / ".source_store"
+    ).resolve()
+    assert config.server.stores.catalog_cache is not None
+    assert config.server.stores.catalog_cache.root == (
+        config_path.parent / ".catalog_store"
+    ).resolve()
+
+
+def test_server_config_resolves_missing_role_stores_to_default_store() -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "store": {"kind": "filesystem", "root": ".default"},
+                "stores": {
+                    "auth": {"kind": "filesystem", "root": ".auth"},
+                },
+            },
+        }
+    )
+
+    assert config.server.workflow_store.root.as_posix() == ".default"
+    assert config.server.auth_store.root.as_posix() == ".auth"
+    assert config.server.source_registry_store.root.as_posix() == ".default"
+    assert config.server.catalog_cache_store.root.as_posix() == ".default"

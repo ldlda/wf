@@ -106,3 +106,88 @@ def test_broker_config_from_workflow_config_ignores_non_mcp_sources(
 
     assert broker_config.store_root == tmp_path / "store"
     assert broker_config.connections == []
+
+
+def test_broker_config_from_workflow_config_carries_role_store_roots() -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "store": {"kind": "filesystem", "root": ".default"},
+                "stores": {
+                    "workflow": {"kind": "filesystem", "root": ".workflow"},
+                    "auth": {"kind": "filesystem", "root": ".auth"},
+                    "source_registry": {
+                        "kind": "filesystem",
+                        "root": ".sources",
+                    },
+                    "catalog_cache": {
+                        "kind": "filesystem",
+                        "root": ".catalog",
+                    },
+                },
+            },
+        }
+    )
+
+    broker = broker_config_from_workflow_config(config)
+
+    assert broker.store_roots.workflow_root == Path(".workflow")
+    assert broker.store_roots.auth_root == Path(".auth")
+    assert broker.store_roots.source_registry_root == Path(".sources")
+    assert broker.store_roots.catalog_cache_root == Path(".catalog")
+
+
+def test_build_service_from_neutral_config_uses_role_store_roots(
+    tmp_path: Path,
+) -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "store": {"kind": "filesystem", "root": str(tmp_path / "default")},
+                "stores": {
+                    "workflow": {
+                        "kind": "filesystem",
+                        "root": str(tmp_path / "workflow"),
+                    },
+                    "auth": {
+                        "kind": "filesystem",
+                        "root": str(tmp_path / "auth"),
+                    },
+                    "source_registry": {
+                        "kind": "filesystem",
+                        "root": str(tmp_path / "sources"),
+                    },
+                    "catalog_cache": {
+                        "kind": "filesystem",
+                        "root": str(tmp_path / "catalog"),
+                    },
+                },
+                "sources": [
+                    {
+                        "kind": "mcp",
+                        "id": "everything.default",
+                        "provider": "everything",
+                        "account": "default",
+                        "transport": {
+                            "kind": "stdio",
+                            "command": "uvx",
+                            "args": ["mcp-server-everything"],
+                        },
+                    }
+                ],
+            },
+        }
+    )
+
+    from wf_mcp.broker.config import build_service_from_config
+
+    broker = broker_config_from_workflow_config(config)
+    service = build_service_from_config(broker)
+
+    assert service.store.root == tmp_path / "auth"
+    assert service.artifact_store.root == tmp_path / "workflow"
+    assert service.draft_workspace_store.root == tmp_path / "workflow"
+    assert service.run_store.root == tmp_path / "workflow"
+    assert (tmp_path / "sources").exists()

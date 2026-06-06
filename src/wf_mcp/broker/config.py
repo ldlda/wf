@@ -9,6 +9,7 @@ from wf_config.models import FilesystemStoreConfig, McpSourceConfig, ServerConfi
 
 from ..control import BrokerConfigFile, ConnectionConfigFile
 from ..models import BrokerConfig
+from .models import BrokerStoreRoots
 from ..runtime import McpRuntimePool, PersistentSessionFactory
 from ..sdk import McpSdkAdapter
 from ..source_registry import (
@@ -104,10 +105,32 @@ def load_broker_config(path: str | Path) -> BrokerConfig:
     return BrokerConfigFile.model_validate(data).to_runtime(config_path=config_path)
 
 
+def _filesystem_store_root(store: object, *, role: str) -> Path:
+    if not isinstance(store, FilesystemStoreConfig):
+        raise ValueError(f"MCP-backed workflow server requires filesystem {role} store")
+    return store.root
+
+
 def broker_config_from_workflow_config(config: WorkflowConfigFile) -> BrokerConfig:
     """Create MCP broker runtime config from neutral workflow server config."""
     return BrokerConfig(
         store_root=config.server.store.root,
+        store_roots=BrokerStoreRoots(
+            default_root=config.server.store.root,
+            workflow_root=_filesystem_store_root(
+                config.server.workflow_store,
+                role="workflow",
+            ),
+            auth_root=_filesystem_store_root(config.server.auth_store, role="auth"),
+            source_registry_root=_filesystem_store_root(
+                config.server.source_registry_store,
+                role="source_registry",
+            ),
+            catalog_cache_root=_filesystem_store_root(
+                config.server.catalog_cache_store,
+                role="catalog_cache",
+            ),
+        ),
         connections=[
             workflow_mcp_source_to_connection_config(source)
             for source in config.server.sources
@@ -139,9 +162,13 @@ def migrate_broker_config_file(path: str | Path) -> WorkflowConfigFile:
 def build_service_from_config(config: BrokerConfig) -> WfMcpService:
     """Create a broker service with SDK adapters for configured connections."""
     runtime_factory = PersistentSessionFactory()
-    workflow_stores = file_workflow_stores(config.store_root)
+    store_roots = config.store_roots or BrokerStoreRoots.from_default(config.store_root)
+    workflow_stores = file_workflow_stores(store_roots.workflow_root)
+    # FileStore still owns both auth files and catalog snapshots. Role roots are
+    # carried separately so a later FileStore split can move catalog_cache without a
+    # config migration.
     service = WfMcpService(
-        store=FileStore(config.store_root),
+        store=FileStore(store_roots.auth_root),
         artifact_store=workflow_stores.artifact_store,
         draft_workspace_store=workflow_stores.draft_workspace_store,
         run_store=workflow_stores.run_store,
@@ -150,7 +177,7 @@ def build_service_from_config(config: BrokerConfig) -> WfMcpService:
         # across sequential workflow nodes.
         tool_executor=McpRuntimePool(runtime_factory.create),
     )
-    source_registry_store = FileSourceRegistryStore(config.store_root)
+    source_registry_store = FileSourceRegistryStore(store_roots.source_registry_root)
     service.sync_connections_from_config(
         config,
         source_registry_store=source_registry_store,

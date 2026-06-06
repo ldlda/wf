@@ -44,7 +44,7 @@ def build_workflow_server_from_workflow_config(
     """
     if _has_mcp_sources(config):
         return _build_mcp_workflow_server_from_workflow_config(config)
-    store = config.server.store
+    store = config.server.workflow_store
     if not isinstance(store, FilesystemStoreConfig):
         # Roadmap: SQL/transactional stores are deferred until the remote server
         # storage boundary is proven with file-backed stores.

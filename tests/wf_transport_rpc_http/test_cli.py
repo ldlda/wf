@@ -374,3 +374,52 @@ def test_rpc_server_cli_rejects_store_root_with_mcp_source_config(tmp_path) -> N
 
     assert result.exit_code != 0
     assert "--store-root cannot override MCP-source config" in result.output
+
+
+def test_rpc_server_cli_config_uses_workflow_store_override(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    config_path = tmp_path / "wf.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "store": {"kind": "filesystem", "root": ".default"},
+                    "stores": {
+                        "workflow": {
+                            "kind": "filesystem",
+                            "root": ".workflow",
+                        }
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    captured: dict[str, object] = {}
+
+    def fake_build_server(config):
+        captured["workflow_store_root"] = config.server.workflow_store.root
+        return object()
+
+    def fake_create_rpc_app(server, *, rpc_path="/rpc"):
+        captured["server"] = server
+        captured["rpc_path"] = rpc_path
+        return object()
+
+    def fake_uvicorn_run(app_obj, *, host, port, access_log):
+        captured["app"] = app_obj
+
+    monkeypatch.setattr(
+        "wf_transport_rpc_http.cli.build_workflow_server_from_workflow_config",
+        fake_build_server,
+    )
+    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_uvicorn_run)
+
+    result = CliRunner().invoke(app, ["--config", str(config_path)])
+
+    assert result.exit_code == 0, result.output
+    assert captured["workflow_store_root"] == (tmp_path / ".workflow").resolve()

@@ -139,8 +139,23 @@ SourceConfig = Annotated[
 ]
 
 
+class ServerStoresConfig(WorkflowConfigModel):
+    """Optional role-specific store overrides.
+
+    Missing roles fall back to `ServerConfig.store`. Keep this config role-based
+    so future backends can split workflow records, auth, desired sources, and
+    cache storage independently.
+    """
+
+    workflow: StoreConfig | None = None
+    auth: StoreConfig | None = None
+    source_registry: StoreConfig | None = None
+    catalog_cache: StoreConfig | None = None
+
+
 class ServerConfig(WorkflowConfigModel):
     store: StoreConfig = Field(default_factory=FilesystemStoreConfig)
+    stores: ServerStoresConfig = Field(default_factory=ServerStoresConfig)
     transports: list[ServerTransportConfig] = Field(default_factory=list)
     sources: list[SourceConfig] = Field(default_factory=list)
 
@@ -152,6 +167,22 @@ class ServerConfig(WorkflowConfigModel):
                 raise ValueError(f"duplicate source id {source.id!r}")
             seen.add(source.id)
         return self
+
+    @property
+    def workflow_store(self) -> StoreConfig:
+        return self.stores.workflow or self.store
+
+    @property
+    def auth_store(self) -> StoreConfig:
+        return self.stores.auth or self.store
+
+    @property
+    def source_registry_store(self) -> StoreConfig:
+        return self.stores.source_registry or self.store
+
+    @property
+    def catalog_cache_store(self) -> StoreConfig:
+        return self.stores.catalog_cache or self.store
 
 
 class WorkflowConfigFile(WorkflowConfigModel):

@@ -148,7 +148,7 @@ def load_cli_context(
     config = load_workflow_config(resolved_config_path)
     target = config.client.target
     if force_local or isinstance(target, LocalTargetConfig):
-        store = config.server.store
+        store = config.server.workflow_store
         if not isinstance(store, FilesystemStoreConfig):
             raise ValueError("local CLI target currently requires filesystem store")
         server = build_local_static_workflow_server(store.root)

@@ -252,6 +252,9 @@ optional role-specific overrides without breaking existing files:
 }
 ```
 
+Implementation status: first filesystem-only slice implemented. Role overrides
+are optional and fall back to `server.store`.
+
 Resolution rule:
 
 ```text

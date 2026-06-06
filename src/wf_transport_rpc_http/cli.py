@@ -66,7 +66,7 @@ def serve(
 
     if config is not None:
         workflow_config = load_workflow_config(config)
-        store = workflow_config.server.store
+        store = workflow_config.server.workflow_store
         if server is None and store_root is None:
             server = build_workflow_server_from_workflow_config(workflow_config)
         elif server is None:
