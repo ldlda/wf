@@ -8,11 +8,6 @@ from typing import Any
 from pydantic import BaseModel
 
 from wf_authoring import NodeReturn, NodeSpec
-from wf_mcp.capabilities import (
-    CatalogNodeEntry,
-    CatalogPromptEntry,
-    CatalogResourceEntry,
-)
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -23,6 +18,11 @@ from wf_platform import (
     page_items,
 )
 from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.catalog import (
+    CatalogNodeEntry,
+    CatalogPromptEntry,
+    CatalogResourceEntry,
+)
 from wf_sources_mcp.storage import CatalogStore
 
 from ...connections import ConnectionConfig, qualify_node_name

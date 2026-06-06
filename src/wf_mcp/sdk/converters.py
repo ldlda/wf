@@ -7,7 +7,8 @@ from mcp.types import Prompt as McpPrompt
 from mcp.types import Resource as McpResource
 from mcp.types import Tool as McpTool
 
-from ..capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+
 from .base import ToolCallResult
 
 

@@ -8,7 +8,7 @@ from wf_mcp.broker.models import (
     ConnectionConfig,
     SourceConfigOwnership,
 )
-from wf_mcp.catalog.models import CatalogSnapshot, dump_catalog_snapshot
+from wf_sources_mcp.catalog.models import CatalogSnapshot, dump_catalog_snapshot
 
 __all__ = [
     "AuthRecord",

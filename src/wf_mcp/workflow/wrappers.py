@@ -9,9 +9,9 @@ from pydantic import BaseModel, ConfigDict, Field, create_model
 from wf_authoring import NodeReturn, NodeSpec
 from wf_core import RuntimeContext
 from wf_mcp.broker.events import McpEvent, make_event
+from wf_sources_mcp.catalog import DiscoveredTool
 
 from ..auth import AuthRecord
-from ..capabilities import DiscoveredTool
 from ..models import ConnectionConfig
 from ..runtime import ToolExecutor
 

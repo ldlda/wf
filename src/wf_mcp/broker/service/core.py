@@ -17,15 +17,15 @@ from wf_core import (
     RunState,
     Workflow,
 )
-from wf_mcp.capabilities import (
-    CatalogNodeEntry,
-    CatalogPromptEntry,
-    CatalogResourceEntry,
-)
 from wf_platform import (
     CapabilitySource,
 )
 from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.catalog import (
+    CatalogNodeEntry,
+    CatalogPromptEntry,
+    CatalogResourceEntry,
+)
 from wf_sources_mcp.source_registry import SourceRegistryStore
 from wf_sources_mcp.storage import AuthStore, CatalogStore, Store
 

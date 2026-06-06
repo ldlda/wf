@@ -84,3 +84,21 @@ def test_wf_mcp_source_registry_shim_reexports_wf_sources_mcp_registry() -> None
     assert CompatFileStore is FileSourceRegistryStore
     assert CompatEntry is McpSourceRegistryEntry
     assert CompatFile is SourceRegistryFile
+
+
+def test_wf_mcp_capabilities_shim_reexports_wf_sources_mcp_catalog_entries() -> None:
+    from wf_mcp.capabilities import CatalogNodeEntry as CompatCatalogNodeEntry
+    from wf_mcp.capabilities import DiscoveredTool as CompatDiscoveredTool
+    from wf_sources_mcp.catalog import CatalogNodeEntry, DiscoveredTool
+
+    assert CompatCatalogNodeEntry is CatalogNodeEntry
+    assert CompatDiscoveredTool is DiscoveredTool
+
+
+def test_wf_mcp_catalog_models_shim_reexports_wf_sources_mcp_catalog_models() -> None:
+    from wf_mcp.catalog.models import CatalogSnapshot as CompatCatalogSnapshot
+    from wf_mcp.catalog.models import dump_catalog_snapshot as compat_dump
+    from wf_sources_mcp.catalog import CatalogSnapshot, dump_catalog_snapshot
+
+    assert CompatCatalogSnapshot is CatalogSnapshot
+    assert compat_dump is dump_catalog_snapshot

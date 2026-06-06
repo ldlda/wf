@@ -90,7 +90,8 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
 1. Complete: MCP auth helpers and focused auth/catalog stores moved to
    `wf_sources_mcp`, with `wf_mcp` shims preserved.
 2. Complete: MCP source registry models/conversion moved to `wf_sources_mcp.source_registry`, with `wf_mcp.source_registry` retained as a shim.
-3. Upstream transport/discovery/session services.
+3. Complete: upstream MCP catalog/discovery DTOs moved to `wf_sources_mcp.catalog`, with `wf_mcp.capabilities` and `wf_mcp.catalog.models` retained as shims.
+4. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

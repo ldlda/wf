@@ -4,16 +4,16 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from wf_authoring import NodeCatalog, NodeSpec
-
-from ..capabilities import (
+from wf_sources_mcp.catalog import (
     CatalogNodeEntry,
     CatalogPromptEntry,
     CatalogResourceEntry,
     DiscoveredPrompt,
     DiscoveredResource,
 )
+from wf_sources_mcp.catalog.models import CatalogSnapshot
+
 from ..connections import qualify_node_name
-from ..models import CatalogSnapshot
 from ..sdk.converters import workflow_output_schema_from_mcp_tool_schema
 
 

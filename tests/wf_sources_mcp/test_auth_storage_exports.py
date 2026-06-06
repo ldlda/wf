@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from wf_api.auth import AuthRecord as NeutralAuthRecord
-from wf_mcp.catalog.models import CatalogSnapshot
 from wf_sources_mcp.auth import (
     AuthRecord,
     mcp_auth_env,
@@ -9,6 +8,7 @@ from wf_sources_mcp.auth import (
     mcp_auth_headers,
     neutral_auth_from_mcp,
 )
+from wf_sources_mcp.catalog import CatalogSnapshot
 from wf_sources_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
 
 

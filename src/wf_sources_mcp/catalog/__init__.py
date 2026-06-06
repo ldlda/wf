@@ -1,11 +1,6 @@
-"""Compatibility shim for MCP upstream catalog entry DTOs.
-
-Canonical implementation lives in `wf_sources_mcp.catalog.entries`.
-"""
-
 from __future__ import annotations
 
-from wf_sources_mcp.catalog.entries import (
+from .entries import (
     CatalogNodeEntry,
     CatalogPromptEntry,
     CatalogResourceEntry,
@@ -13,12 +8,15 @@ from wf_sources_mcp.catalog.entries import (
     DiscoveredResource,
     DiscoveredTool,
 )
+from .models import CatalogSnapshot, dump_catalog_snapshot
 
 __all__ = [
     "CatalogNodeEntry",
     "CatalogPromptEntry",
     "CatalogResourceEntry",
+    "CatalogSnapshot",
     "DiscoveredPrompt",
     "DiscoveredResource",
     "DiscoveredTool",
+    "dump_catalog_snapshot",
 ]

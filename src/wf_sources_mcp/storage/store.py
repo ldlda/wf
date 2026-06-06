@@ -1,8 +1,7 @@
 """MCP upstream-source auth and catalog file stores.
 
 These stores preserve the current MCP compatibility JSON shapes. Catalog entry
-types still come from `wf_mcp` until catalog DTOs finish moving to a neutral or
-source-provider package.
+types come from `wf_sources_mcp.catalog`.
 """
 
 from __future__ import annotations
@@ -16,7 +15,7 @@ from wf_api.auth import validate_auth_id
 from wf_sources_mcp.auth import AuthRecord, mcp_auth_from_neutral, neutral_auth_from_mcp
 
 if TYPE_CHECKING:
-    from wf_mcp.catalog.models import CatalogSnapshot
+    from wf_sources_mcp.catalog.models import CatalogSnapshot
 
 
 class AuthStore:
@@ -142,7 +141,7 @@ class FileCatalogStore(CatalogStore):
         return path
 
     def save_catalog(self, snapshot: CatalogSnapshot) -> None:
-        from wf_mcp.catalog.models import dump_catalog_snapshot
+        from wf_sources_mcp.catalog.models import dump_catalog_snapshot
 
         self._catalog_path(snapshot.connection_id).write_text(
             json.dumps(dump_catalog_snapshot(snapshot), indent=2),
@@ -150,12 +149,14 @@ class FileCatalogStore(CatalogStore):
         )
 
     def load_catalog(self, connection_id: str) -> CatalogSnapshot | None:
-        from wf_mcp.capabilities import (
+        from wf_sources_mcp.catalog import (
             CatalogNodeEntry,
             CatalogPromptEntry,
             CatalogResourceEntry,
         )
-        from wf_mcp.catalog.models import CatalogSnapshot as CatalogSnapshotType
+        from wf_sources_mcp.catalog import (
+            CatalogSnapshot as CatalogSnapshotType,
+        )
 
         path = self._catalog_path(connection_id)
         if not path.exists():

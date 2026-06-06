@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+
 from ..auth import AuthRecord
-from ..capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from ..models import ConnectionConfig
 
 

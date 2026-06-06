@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any, cast
 
 from wf_mcp.events import EventBus, McpEvent, make_event
-from wf_mcp.models import CatalogSnapshot
+from wf_sources_mcp.catalog.models import CatalogSnapshot
 
 
 @dataclass(slots=True)
