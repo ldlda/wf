@@ -24,6 +24,9 @@ class Store:
     def load_auth(self, connection_id: str) -> AuthRecord | None:
         raise NotImplementedError
 
+    def list_auth_refs(self) -> list[str]:
+        raise NotImplementedError
+
     def save_auth_record(self, record: NeutralAuthRecord) -> None:
         raise NotImplementedError
 
@@ -89,6 +92,11 @@ class FileStore(Store):
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
         return AuthRecord(**data)
+
+    def list_auth_refs(self) -> list[str]:
+        """Return auth refs present in the local file auth store."""
+
+        return sorted(path.stem for path in self.auth_dir.glob("*.json"))
 
     def save_auth_record(self, record: NeutralAuthRecord) -> None:
         """Save neutral auth through the legacy MCP file shape."""

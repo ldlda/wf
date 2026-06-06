@@ -18,6 +18,7 @@ from .config import broker_config_from_workflow_config, build_service_from_confi
 from .prompts import register_broker_prompts
 from .resources import register_broker_resources
 from .service import WfMcpService
+from .service.auth_admin import McpAuthAdminProvider
 from .service.source_registry_admin import SourceRegistryAdminProvider
 from .service.workflow_operation_context import context_from_service
 from .tools import register_broker_tools
@@ -67,6 +68,7 @@ def workflow_server_from_service(
     admin = WorkflowAdminApi(
         connections=service.connection_service,
         events=service.events,
+        auth=McpAuthAdminProvider(store=service.store),
     )
     registry_provider = SourceRegistryAdminProvider(
         source_registry_store=source_registry_store,

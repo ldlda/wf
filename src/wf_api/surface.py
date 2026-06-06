@@ -225,6 +225,10 @@ class WorkflowAdminSurface(Protocol):
 
     async def list_events(self) -> dict[str, Any]: ...
 
+    async def list_auth_records(self) -> dict[str, Any]: ...
+
+    async def inspect_auth_record(self, auth_ref: str) -> dict[str, Any]: ...
+
 
 class WorkflowSourceRegistrySurface(Protocol):
     """Desired source registry methods exposed by platform frontends."""

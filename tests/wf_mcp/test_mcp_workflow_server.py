@@ -96,3 +96,38 @@ def test_workflow_server_from_service_rejects_missing_stores(tmp_path) -> None:
             config=config,
             source_registry_store=FileSourceRegistryStore(config.store_root),
         )
+
+
+async def test_workflow_server_from_service_exposes_auth_admin(tmp_path) -> None:
+    from wf_mcp.models import AuthRecord
+
+    config = BrokerConfig(
+        store_root=tmp_path / "store",
+        connections=[
+            ConnectionConfig(id="demo.default", server="demo", account="default")
+        ],
+    )
+    service = build_service_from_config(config)
+    service.save_auth(
+        AuthRecord(
+            connection_id="github.work",
+            scheme="bearer",
+            payload={"token": "secret"},
+        )
+    )
+    server = workflow_server_from_service(
+        service,
+        config=config,
+        source_registry_store=FileSourceRegistryStore(config.store_root),
+    )
+
+    payload = await server.admin.list_auth_records()
+
+    assert payload["auth_records"] == [
+        {
+            "id": "github.work",
+            "scheme": "bearer",
+            "metadata": {},
+            "payload_keys": ["token"],
+        }
+    ]

@@ -7,7 +7,7 @@ from wf_cli.context import load_cli_context_from_typer
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.remote_errors import run_cli_operation
 
-from . import source_registry
+from . import auth_admin, source_registry
 
 app = typer.Typer(
     name="admin",
@@ -16,6 +16,7 @@ app = typer.Typer(
 )
 
 app.add_typer(source_registry.app, name="registry")
+app.add_typer(auth_admin.app, name="auth")
 
 
 @app.command("connections")

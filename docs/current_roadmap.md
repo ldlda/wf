@@ -234,6 +234,10 @@ implementation state.
     Second implementation slice complete: missing explicit auth refs now surface
     as `auth_not_found` diagnostics in live source checks and source registry
     apply summaries.
+    Third implementation slice complete: read-only auth admin summaries are
+    available through MCP-backed server admin, JSON-RPC, and CLI. Summaries show
+    ids, schemes, metadata, and payload keys only; secret payload values remain
+    hidden.
   - Completed: `wf run watch` starts run progress UX with polling over existing
     `inspect_run` and optional bounded `read_run_trace`. SSE/WebSocket/MCP
     progress remains deferred until polling UX proves insufficient.

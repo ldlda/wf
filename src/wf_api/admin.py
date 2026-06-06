@@ -19,6 +19,14 @@ class WorkflowAdminEventProvider(Protocol):
     def list_events(self) -> Sequence[Mapping[str, Any] | object]: ...
 
 
+class WorkflowAdminAuthProvider(Protocol):
+    """Provides read-only auth inventory without secret payload values."""
+
+    def list_auth_records(self) -> Sequence[Mapping[str, Any] | object]: ...
+
+    def inspect_auth_record(self, auth_ref: str) -> Mapping[str, Any] | object: ...
+
+
 class WorkflowAdminApi:
     """Protocol-neutral read-only broker/server admin operations.
 
@@ -31,9 +39,11 @@ class WorkflowAdminApi:
         *,
         connections: WorkflowAdminConnectionProvider,
         events: WorkflowAdminEventProvider,
+        auth: WorkflowAdminAuthProvider | None = None,
     ) -> None:
         self.connections = connections
         self.events = events
+        self.auth = auth
 
     async def list_connections(self) -> dict[str, Any]:
         connections = sorted(
@@ -54,6 +64,20 @@ class WorkflowAdminApi:
     async def list_events(self) -> dict[str, Any]:
         events = [_payload(event) for event in self.events.list_events()]
         return {"events": events, "total": len(events)}
+
+    async def list_auth_records(self) -> dict[str, Any]:
+        if self.auth is None:
+            raise RuntimeError("auth admin is not available for this target")
+        records = sorted(
+            (_payload(item) for item in self.auth.list_auth_records()),
+            key=lambda item: str(item.get("id", "")),
+        )
+        return {"auth_records": records, "total": len(records)}
+
+    async def inspect_auth_record(self, auth_ref: str) -> dict[str, Any]:
+        if self.auth is None:
+            raise RuntimeError("auth admin is not available for this target")
+        return _payload(self.auth.inspect_auth_record(auth_ref))
 
 
 def _payload(value: Mapping[str, Any] | object) -> dict[str, Any]:

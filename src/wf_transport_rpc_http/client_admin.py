@@ -16,3 +16,12 @@ class RpcAdminClientMixin:
 
     async def list_events(self) -> dict[str, Any]:
         return await self._call("workflow.admin.events.list", {})
+
+    async def list_auth_records(self) -> dict[str, Any]:
+        return await self._call("workflow.admin.auth.list", {})
+
+    async def inspect_auth_record(self, auth_ref: str) -> dict[str, Any]:
+        return await self._call(
+            "workflow.admin.auth.inspect",
+            {"auth_ref": auth_ref},
+        )

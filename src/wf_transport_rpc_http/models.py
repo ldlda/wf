@@ -205,3 +205,7 @@ class RegistryEntryIdParams(RpcParamsModel):
 
 class ApplyRegistryChangesParams(RpcParamsModel):
     pass
+
+
+class InspectAuthParams(RpcParamsModel):
+    auth_ref: str = Field(min_length=1)

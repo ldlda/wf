@@ -4,6 +4,7 @@ from .auth import AUTH_ID_PATTERN, AuthRecord, AuthStore, validate_auth_id
 from .listing import matches_query, paged_list_payload
 from .admin import (
     WorkflowAdminApi,
+    WorkflowAdminAuthProvider,
     WorkflowAdminConnectionProvider,
     WorkflowAdminEventProvider,
 )
@@ -91,6 +92,7 @@ __all__ = [
     "RuntimeDependencies",
     "TraceRange",
     "WorkflowAdminApi",
+    "WorkflowAdminAuthProvider",
     "WorkflowAdminConnectionProvider",
     "WorkflowAdminEventProvider",
     "WorkflowAdminSurface",

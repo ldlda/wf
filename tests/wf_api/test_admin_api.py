@@ -4,6 +4,8 @@ import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
+import pytest
+
 from wf_api import WorkflowAdminApi, WorkflowAdminSurface
 
 
@@ -94,3 +96,66 @@ def test_admin_api_satisfies_surface_protocol() -> None:
     api: WorkflowAdminSurface = WorkflowAdminApi(connections=provider, events=provider)
 
     assert api is not None
+
+
+class AuthProvider:
+    def list_auth_records(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": "github.work",
+                "scheme": "bearer",
+                "metadata": {"owner": "platform"},
+                "payload_keys": ["token"],
+            },
+            {
+                "id": "api.work",
+                "scheme": "headers",
+                "metadata": {},
+                "payload_keys": ["headers"],
+            },
+        ]
+
+    def inspect_auth_record(self, auth_ref: str) -> dict[str, Any]:
+        for record in self.list_auth_records():
+            if record["id"] == auth_ref:
+                return record
+        raise KeyError(auth_ref)
+
+
+def _api(auth=None) -> WorkflowAdminApi:
+    return WorkflowAdminApi(
+        connections=FakeAdminProvider(),
+        events=FakeAdminProvider(),
+        auth=auth,
+    )
+
+
+def test_admin_lists_auth_records_sorted_without_payload_values() -> None:
+    payload = asyncio.run(_api(AuthProvider()).list_auth_records())
+
+    assert payload["total"] == 2
+    assert [record["id"] for record in payload["auth_records"]] == [
+        "api.work",
+        "github.work",
+    ]
+    assert payload["auth_records"][0]["payload_keys"] == ["headers"]
+    assert "payload" not in payload["auth_records"][0]
+
+
+def test_admin_inspects_auth_record_without_payload_values() -> None:
+    payload = asyncio.run(_api(AuthProvider()).inspect_auth_record("github.work"))
+
+    assert payload == {
+        "id": "github.work",
+        "scheme": "bearer",
+        "metadata": {"owner": "platform"},
+        "payload_keys": ["token"],
+    }
+
+
+def test_admin_auth_methods_report_unavailable_without_provider() -> None:
+    with pytest.raises(RuntimeError, match="auth admin is not available"):
+        asyncio.run(_api().list_auth_records())
+
+    with pytest.raises(RuntimeError, match="auth admin is not available"):
+        asyncio.run(_api().inspect_auth_record("github.work"))
