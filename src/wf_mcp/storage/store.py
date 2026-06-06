@@ -4,14 +4,16 @@ import json
 from pathlib import Path
 
 from wf_api.auth import AuthRecord as NeutralAuthRecord
+from wf_mcp.capabilities import (
+    CatalogNodeEntry,
+    CatalogPromptEntry,
+    CatalogResourceEntry,
+)
 
 from ..auth import mcp_auth_from_neutral, neutral_auth_from_mcp
 from ..connections import parse_connection_id
 from ..models import (
     AuthRecord,
-    CatalogNodeEntry,
-    CatalogPromptEntry,
-    CatalogResourceEntry,
     CatalogSnapshot,
     dump_catalog_snapshot,
 )

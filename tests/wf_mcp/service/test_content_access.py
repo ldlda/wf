@@ -40,7 +40,7 @@ def _make_content_access(
         connection_list_enabled=connection_service.list_enabled,
         connection_list_all=connection_service.list_all,
         tool_executor_for=upstream.tool_executor_for,
-        load_auth=upstream.load_auth,
+        load_auth=upstream.load_connection_auth,
         emit_event=events.record_event,
     )
     connection_service.bind_source_catalog(source_catalog)

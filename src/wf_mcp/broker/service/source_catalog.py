@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel
 from wf_authoring import NodeReturn, NodeSpec
+from wf_mcp.capabilities import CatalogNodeEntry, CatalogPromptEntry, CatalogResourceEntry
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -21,9 +22,6 @@ from ...connections import ConnectionConfig, qualify_node_name
 from ...events import McpEvent, make_event
 from ...models import (
     AuthRecord,
-    CatalogNodeEntry,
-    CatalogPromptEntry,
-    CatalogResourceEntry,
     CatalogSnapshot,
 )
 from ...runtime import ToolExecutor

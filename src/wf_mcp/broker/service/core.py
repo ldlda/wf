@@ -16,6 +16,7 @@ from wf_core import (
     Workflow,
 )
 from wf_api.models import RawWorkflowPlan
+from wf_mcp.capabilities import CatalogNodeEntry, CatalogPromptEntry, CatalogResourceEntry
 from wf_platform import (
     CapabilitySource,
 )
@@ -23,9 +24,6 @@ from ...connections import ConnectionRegistry
 from ...events import EventBus, McpEvent
 from ...models import (
     AuthRecord,
-    CatalogNodeEntry,
-    CatalogPromptEntry,
-    CatalogResourceEntry,
     CatalogSnapshot,
     BrokerConfig,
     ConnectionConfig,
