@@ -131,8 +131,8 @@ def _api(auth=None) -> WorkflowAdminApi:
     )
 
 
-def test_admin_lists_auth_records_sorted_without_payload_values() -> None:
-    payload = asyncio.run(_api(AuthProvider()).list_auth_records())
+async def test_admin_lists_auth_records_sorted_without_payload_values() -> None:
+    payload = await _api(AuthProvider()).list_auth_records()
 
     assert payload["total"] == 2
     assert [record["id"] for record in payload["auth_records"]] == [
@@ -143,8 +143,8 @@ def test_admin_lists_auth_records_sorted_without_payload_values() -> None:
     assert "payload" not in payload["auth_records"][0]
 
 
-def test_admin_inspects_auth_record_without_payload_values() -> None:
-    payload = asyncio.run(_api(AuthProvider()).inspect_auth_record("github.work"))
+async def test_admin_inspects_auth_record_without_payload_values() -> None:
+    payload = await _api(AuthProvider()).inspect_auth_record("github.work")
 
     assert payload == {
         "id": "github.work",
@@ -154,12 +154,12 @@ def test_admin_inspects_auth_record_without_payload_values() -> None:
     }
 
 
-def test_admin_auth_methods_report_unavailable_without_provider() -> None:
+async def test_admin_auth_methods_report_unavailable_without_provider() -> None:
     with pytest.raises(RuntimeError, match="auth admin is not available"):
-        asyncio.run(_api().list_auth_records())
+        await _api().list_auth_records()
 
     with pytest.raises(RuntimeError, match="auth admin is not available"):
-        asyncio.run(_api().inspect_auth_record("github.work"))
+        await _api().inspect_auth_record("github.work")
 
 
 class MutableAuthProvider(AuthProvider):
@@ -191,17 +191,15 @@ class MutableAuthProvider(AuthProvider):
         return {"deleted": True, "id": auth_ref}
 
 
-def test_admin_saves_auth_record_without_payload_values() -> None:
+async def test_admin_saves_auth_record_without_payload_values() -> None:
     provider = MutableAuthProvider()
     api = _api(provider)
 
-    payload = asyncio.run(
-        api.save_auth_record(
-            auth_ref="drive.work",
-            scheme="bearer",
-            payload={"token": "secret"},
-            metadata={"owner": "test"},
-        )
+    payload = await api.save_auth_record(
+        auth_ref="drive.work",
+        scheme="bearer",
+        payload={"token": "secret"},
+        metadata={"owner": "test"},
     )
 
     assert payload == {
@@ -213,33 +211,29 @@ def test_admin_saves_auth_record_without_payload_values() -> None:
     assert "secret" not in str(payload)
 
 
-def test_admin_deletes_auth_record() -> None:
+async def test_admin_deletes_auth_record() -> None:
     provider = MutableAuthProvider()
     api = _api(provider)
-    asyncio.run(
-        api.save_auth_record(
-            auth_ref="drive.work",
-            scheme="bearer",
-            payload={"token": "secret"},
-        )
+    await api.save_auth_record(
+        auth_ref="drive.work",
+        scheme="bearer",
+        payload={"token": "secret"},
     )
 
-    payload = asyncio.run(api.delete_auth_record("drive.work"))
+    payload = await api.delete_auth_record("drive.work")
 
     assert payload == {"deleted": True, "id": "drive.work"}
     with pytest.raises(KeyError):
         provider.inspect_auth_record("drive.work")
 
 
-def test_admin_auth_mutations_report_unavailable_without_provider() -> None:
+async def test_admin_auth_mutations_report_unavailable_without_provider() -> None:
     with pytest.raises(RuntimeError, match="auth admin is not available"):
-        asyncio.run(
-            _api().save_auth_record(
-                auth_ref="drive.work",
-                scheme="bearer",
-                payload={"token": "secret"},
-            )
+        await _api().save_auth_record(
+            auth_ref="drive.work",
+            scheme="bearer",
+            payload={"token": "secret"},
         )
 
     with pytest.raises(RuntimeError, match="auth admin is not available"):
-        asyncio.run(_api().delete_auth_record("drive.work"))
+        await _api().delete_auth_record("drive.work")

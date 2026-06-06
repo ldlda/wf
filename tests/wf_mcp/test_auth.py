@@ -157,7 +157,7 @@ def test_connection_auth_diagnostic_reports_missing_auth_ref() -> None:
 
     diagnostic = connection_auth_diagnostic(
         connection,
-        load_auth=lambda auth_ref: None,
+        load_auth_ref=lambda auth_ref: None,
         logical_ref="github",
     )
 
@@ -188,7 +188,7 @@ def test_connection_auth_diagnostic_ignores_absent_or_present_auth_ref() -> None
     assert (
         connection_auth_diagnostic(
             no_ref,
-            load_auth=lambda auth_ref: None,
+            load_auth_ref=lambda auth_ref: None,
             logical_ref="github",
         )
         is None
@@ -196,7 +196,7 @@ def test_connection_auth_diagnostic_ignores_absent_or_present_auth_ref() -> None
     assert (
         connection_auth_diagnostic(
             with_ref,
-            load_auth=lambda auth_ref: auth,
+            load_auth_ref=lambda auth_ref: auth,
             logical_ref="github",
         )
         is None

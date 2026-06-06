@@ -164,7 +164,7 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
             for source_id in sorted(after):
                 diagnostic = connection_auth_diagnostic(
                     after[source_id],
-                    load_auth=self.load_auth,
+                    load_auth_ref=self.load_auth,
                 )
                 if diagnostic is not None:
                     auth_diagnostics.append(diagnostic.model_dump(mode="json"))

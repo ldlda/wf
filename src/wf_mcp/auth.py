@@ -112,7 +112,7 @@ def auth_missing_diagnostic(
 def connection_auth_diagnostic(
     connection: ConnectionConfig,
     *,
-    load_auth: Callable[[str], AuthRecord | None],
+    load_auth_ref: Callable[[str], AuthRecord | None],
     logical_ref: str | None = None,
 ) -> DependencyDiagnostic | None:
     """Return an auth diagnostic for explicit auth_ref misses.
@@ -125,7 +125,7 @@ def connection_auth_diagnostic(
     auth_ref = auth_ref_for_connection(connection)
     if auth_ref is None:
         return None
-    if load_auth(auth_ref) is not None:
+    if load_auth_ref(auth_ref) is not None:
         return None
     return auth_missing_diagnostic(
         auth_ref=auth_ref,

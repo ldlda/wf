@@ -311,7 +311,9 @@ async def test_upstream_transport_live_diagnostics_report_missing_auth_ref(
     assert "github.creds" in diagnostics[0].message
 
 
-def test_upstream_transport_uses_separate_auth_and_catalog_stores(tmp_path) -> None:
+def test_upstream_transport_uses_separate_auth_and_catalog_stores(
+    tmp_path: Path,
+) -> None:
     auth_store = FileAuthStore(tmp_path / "auth")
     catalog_store = FileCatalogStore(tmp_path / "catalog")
     events = []

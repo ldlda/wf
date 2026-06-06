@@ -312,7 +312,9 @@ class UpstreamTransportService:
                 continue
             auth_diagnostic = connection_auth_diagnostic(
                 connection,
-                load_auth=self.load_auth,
+                # The diagnostic helper passes the explicit auth_ref to this
+                # loader, matching load_connection_auth's auth_ref-first path.
+                load_auth_ref=self.load_auth,
                 logical_ref=logical_ref,
             )
             if auth_diagnostic is not None:

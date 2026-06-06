@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+from pathlib import Path
 
 from wf_authoring import NodeSpec
 from wf_core import RunStatus
@@ -502,7 +503,7 @@ def test_source_catalog_finds_local_documentation_resource_directly() -> None:
     assert result.uri == test_resource.uri
 
 
-def test_source_catalog_uses_catalog_store_only(tmp_path) -> None:
+def test_source_catalog_uses_catalog_store_only(tmp_path: Path) -> None:
     catalog_store = FileCatalogStore(tmp_path / "catalog")
     service = SourceCatalogService(
         store=catalog_store,
