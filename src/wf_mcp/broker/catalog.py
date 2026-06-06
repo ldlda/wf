@@ -12,9 +12,11 @@ from wf_sources_mcp.catalog import (
     DiscoveredResource,
 )
 from wf_sources_mcp.catalog.models import CatalogSnapshot
+from wf_sources_mcp.sdk.converters import (
+    workflow_output_schema_from_mcp_tool_schema,
+)
 
 from ..connections import qualify_node_name
-from ..sdk.converters import workflow_output_schema_from_mcp_tool_schema
 
 
 def snapshot_from_specs(

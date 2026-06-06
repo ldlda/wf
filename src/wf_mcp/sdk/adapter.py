@@ -20,14 +20,14 @@ from pydantic import AnyUrl
 from wf_sources_mcp.auth import AuthRecord, mcp_auth_env, mcp_auth_headers
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from wf_sources_mcp.sdk import BackendAdapter, ToolCallResult
-
-from ..models import ConnectionConfig
-from .converters import (
+from wf_sources_mcp.sdk.converters import (
     prompt_to_discovered,
     resource_to_discovered,
     tool_result_to_call_result,
     tool_to_discovered,
 )
+
+from ..models import ConnectionConfig
 
 
 class McpSdkAdapter(BackendAdapter):

@@ -124,3 +124,26 @@ def test_wf_mcp_runtime_protocol_shim_reexports_wf_sources_mcp_tool_executor() -
 
     assert CompatRuntimeToolExecutor is ToolExecutor
     assert CompatProtocolToolExecutor is ToolExecutor
+
+
+def test_wf_mcp_sdk_converter_shim_reexports_wf_sources_mcp_converters() -> None:
+    from wf_mcp.sdk.converters import prompt_to_discovered as compat_prompt
+    from wf_mcp.sdk.converters import resource_to_discovered as compat_resource
+    from wf_mcp.sdk.converters import tool_result_to_call_result as compat_tool_result
+    from wf_mcp.sdk.converters import tool_to_discovered as compat_tool_to_discovered
+    from wf_mcp.sdk.converters import (
+        workflow_output_schema_from_mcp_tool_schema as compat_output_schema,
+    )
+    from wf_sources_mcp.sdk.converters import (
+        prompt_to_discovered,
+        resource_to_discovered,
+        tool_result_to_call_result,
+        tool_to_discovered,
+        workflow_output_schema_from_mcp_tool_schema,
+    )
+
+    assert compat_prompt is prompt_to_discovered
+    assert compat_resource is resource_to_discovered
+    assert compat_tool_result is tool_result_to_call_result
+    assert compat_tool_to_discovered is tool_to_discovered
+    assert compat_output_schema is workflow_output_schema_from_mcp_tool_schema
