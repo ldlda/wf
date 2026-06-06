@@ -6,8 +6,11 @@ from pathlib import Path
 import httpx
 
 from wf_authoring import NodeReturn
-from wf_openapi.executor import OpenApiExecutionConfig, call_openapi_operation
-from wf_openapi.executor import OpenApiOperationOutput
+from wf_openapi.executor import (
+    OpenApiExecutionConfig,
+    OpenApiOperationOutput,
+    call_openapi_operation,
+)
 from wf_openapi.spec import load_openapi_operations
 from wf_openapi.validation import load_openapi_app
 

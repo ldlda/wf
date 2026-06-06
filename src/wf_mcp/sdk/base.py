@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
+from ..auth import AuthRecord
 from ..capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
-from ..models import AuthRecord, ConnectionConfig
+from ..models import ConnectionConfig
 
 
 @dataclass(slots=True)

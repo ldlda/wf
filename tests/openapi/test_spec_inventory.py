@@ -5,9 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from wf_openapi.spec import load_openapi_operations
 from wf_openapi.schemas import input_schema_for_operation, output_schema_for_operation
-
+from wf_openapi.spec import load_openapi_operations
 
 FIXTURE = Path(__file__).parent / "fixtures" / "petstore_minimal.openapi.json"
 

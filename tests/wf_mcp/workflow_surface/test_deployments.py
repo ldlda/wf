@@ -6,8 +6,8 @@ from typing import cast
 import pytest
 
 from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
-from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.capabilities import DiscoveredTool
+from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.sdk import BackendAdapter
 
 from ..test_support import echo_tool, local_temp_root

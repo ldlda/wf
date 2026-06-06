@@ -5,11 +5,12 @@ from typing import Annotated, Any, Mapping
 from fastmcp import FastMCP
 from pydantic import Field
 
+from wf_api import WorkflowApi
 from wf_artifacts import ArtifactKind
 from wf_artifacts.models import RequiredCapability
-from wf_api import WorkflowApi
 from wf_mcp.broker.service import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
+
 from .models import (
     CallCapabilityResult,
     CreateArtifactFromWorkspaceRequest,

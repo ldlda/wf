@@ -6,8 +6,8 @@ from typing import Any
 
 from wf_api.source_registry_admin import WorkflowSourceRegistryMutationProvider
 
-from ...auth import connection_auth_diagnostic
-from ...models import AuthRecord, BrokerConfig, ConnectionConfig
+from ...auth import AuthRecord, connection_auth_diagnostic
+from ...models import BrokerConfig, ConnectionConfig
 from ...source_registry import (
     McpSourceRegistryEntry,
     SourceRegistryFile,
@@ -135,12 +135,18 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
         if self.connection_service is None or self.config is None:
             raise RuntimeError("source registry apply requires runtime service context")
 
-        before = {connection.id: connection for connection in self.connection_service.list_all()}
+        before = {
+            connection.id: connection
+            for connection in self.connection_service.list_all()
+        }
         self.connection_service.sync_connections_from_config(
             self.config,
             source_registry_store=self.source_registry_store,
         )
-        after = {connection.id: connection for connection in self.connection_service.list_all()}
+        after = {
+            connection.id: connection
+            for connection in self.connection_service.list_all()
+        }
 
         if self.ensure_adapter is not None:
             for connection in after.values():

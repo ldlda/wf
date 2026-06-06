@@ -3,6 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from wf_api.models import RawWorkflowPlan
+from wf_api.saved_subgraphs import SavedSubgraphTree
 from wf_artifacts import (
     DraftWorkspaceStore,
     RunStore,
@@ -15,29 +17,32 @@ from wf_core import (
     RunState,
     Workflow,
 )
-from wf_api.models import RawWorkflowPlan
-from wf_mcp.capabilities import CatalogNodeEntry, CatalogPromptEntry, CatalogResourceEntry
+from wf_mcp.capabilities import (
+    CatalogNodeEntry,
+    CatalogPromptEntry,
+    CatalogResourceEntry,
+)
 from wf_platform import (
     CapabilitySource,
 )
+
+from ...auth import AuthRecord
 from ...connections import ConnectionRegistry
 from ...events import EventBus, McpEvent
 from ...models import (
-    AuthRecord,
-    CatalogSnapshot,
     BrokerConfig,
+    CatalogSnapshot,
     ConnectionConfig,
 )
-from ...sdk import BackendAdapter
 from ...runtime import ToolExecutor
+from ...sdk import BackendAdapter
 from ...source_registry import SourceRegistryStore
-from .connection_service import ConnectionService
-from .content_access import ContentAccessService
 from ...storage import Store
-from wf_api.saved_subgraphs import SavedSubgraphTree
 from ..admin_capabilities import admin_source
 from ..catalog import CombinedCatalog
 from .builtins import builtin_sources
+from .connection_service import ConnectionService
+from .content_access import ContentAccessService
 from .events import BrokerEventRecorder
 from .source_catalog import SourceCatalogService
 from .upstream_transport import UpstreamTransportService

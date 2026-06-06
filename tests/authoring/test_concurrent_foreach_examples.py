@@ -16,8 +16,7 @@ from examples.authoring_concurrent_foreach import (
     run_replace_conflict_example,
 )
 from wf_authoring import WorkflowBuilder, state_path
-from wf_core import ForeachConcurrentPolicy
-from wf_core import RunStatus
+from wf_core import ForeachConcurrentPolicy, RunStatus
 
 
 def test_authoring_concurrent_foreach_collects_item_errors() -> None:

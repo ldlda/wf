@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from pydantic import BaseModel, Field
+
 from wf_core import Edge
 from wf_core.models.steps import InputBinding, Step
 

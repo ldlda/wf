@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from wf_mcp.models import ConnectionConfig
 from wf_mcp.source_registry import (
     FileSourceRegistryStore,
     HttpSourceTransport,
@@ -13,7 +14,6 @@ from wf_mcp.source_registry import (
     connection_config_to_registry_entry,
     registry_entry_to_connection_config,
 )
-from wf_mcp.models import ConnectionConfig
 
 
 def _entry(source_id: str = "github.work") -> McpSourceRegistryEntry:

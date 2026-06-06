@@ -3,16 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 
 from wf_artifacts import WorkflowDeployment
-from wf_platform import CapabilityBuckets, CapabilitySource, SourcePermissions
-
+from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.source_catalog import SourceCatalogService
 from wf_mcp.broker.service.upstream_transport import UpstreamTransportService
 from wf_mcp.connections import ConnectionRegistry
 from wf_mcp.events import McpEvent
 from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.storage import FileStore
-
-from wf_mcp.broker import WfMcpService
+from wf_platform import CapabilityBuckets, CapabilitySource, SourcePermissions
 
 from ..test_support import FakeAdapter, local_temp_root
 from ..workflow_surface.conftest import echo_artifact

@@ -7,7 +7,8 @@ from typing import Any
 from mcp.client.session import ClientSession
 from mcp.types import CallToolResult
 
-from ..models import AuthRecord, ConnectionConfig
+from ..auth import AuthRecord
+from ..models import ConnectionConfig
 from ..sdk import ToolCallResult
 from ..sdk.converters import tool_result_to_call_result
 

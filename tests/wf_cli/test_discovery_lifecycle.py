@@ -5,18 +5,16 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from typer.testing import CliRunner
-
-from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
-from wf_cli.app import app
 from typer import Context as TyperContext
-
-from wf_cli.context import CliContext, config_path_from_context, load_cli_context
-from wf_cli.formats import ListOutputFormat, render_list_payload
-from wf_cli.io import CliInputError, parse_bindings, parse_json_value
+from typer.testing import CliRunner
 
 from tests.wf_mcp.test_support import echo_tool, local_temp_root
 from tests.wf_mcp.workflow_surface.conftest import echo_artifact
+from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
+from wf_cli.app import app
+from wf_cli.context import CliContext, config_path_from_context, load_cli_context
+from wf_cli.formats import ListOutputFormat, render_list_payload
+from wf_cli.io import CliInputError, parse_bindings, parse_json_value
 
 
 def _load_cli_context_with_specs(ctx: TyperContext | str | Path) -> CliContext:

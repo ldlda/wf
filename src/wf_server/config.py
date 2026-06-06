@@ -8,7 +8,9 @@ from .context import WorkflowServer, build_local_static_workflow_server
 
 
 def _has_mcp_sources(config: WorkflowConfigFile) -> bool:
-    return any(getattr(source, "kind", None) == "mcp" for source in config.server.sources)
+    return any(
+        getattr(source, "kind", None) == "mcp" for source in config.server.sources
+    )
 
 
 def _build_mcp_workflow_server_from_workflow_config(

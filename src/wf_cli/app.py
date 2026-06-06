@@ -8,7 +8,6 @@ from .commands import (
     admin,
     artifacts,
     caps,
-    config as config_commands,
     deployments,
     docs,
     drafts,
@@ -16,6 +15,9 @@ from .commands import (
     runs,
     schema,
     sources,
+)
+from .commands import (
+    config as config_commands,
 )
 from .context import CliTyperState
 

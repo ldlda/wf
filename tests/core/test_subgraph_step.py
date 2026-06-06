@@ -19,10 +19,10 @@ from wf_core import (
     SubgraphNode,
     Workflow,
     WorkflowExecutionError,
-    execute_workflow_async,
     execute_workflow,
-    resume_workflow_async,
+    execute_workflow_async,
     resume_workflow,
+    resume_workflow_async,
 )
 from wf_core.models.steps import InputPathBinding, Step
 from wf_core.paths import GraphSourcePath, LocalPath

@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
-from .refs import CapabilityRef, SourceRef
 from .paging import Page, page_items
+from .refs import CapabilityRef, SourceRef
 from .schema_hashes import hash_json_schema
 
 if TYPE_CHECKING:

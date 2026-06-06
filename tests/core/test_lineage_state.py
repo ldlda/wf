@@ -15,8 +15,7 @@ from wf_core import (
 )
 from wf_core.models.reducers import ReducerRef
 from wf_core.paths import StatePath
-from wf_core.run_state import StateWrite
-from wf_core.run_state import ExecutionFrame, LineageState, RuntimeScope
+from wf_core.run_state import ExecutionFrame, LineageState, RuntimeScope, StateWrite
 from wf_core.runtime.lineage import (
     add_lineage,
     append_lineage_writes,

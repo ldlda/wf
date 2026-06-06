@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from wf_core import END, NodeUse, RunStatus
-
 from examples.authoring_control_flow import (
     build_branch_workflow,
     build_choose_workflow,
@@ -10,6 +8,7 @@ from examples.authoring_control_flow import (
     build_use_ref_workflow,
     build_when_workflow,
 )
+from wf_core import END, NodeUse, RunStatus
 
 
 def test_branch_example_routes_node_outcomes() -> None:

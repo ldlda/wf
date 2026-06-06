@@ -4,7 +4,6 @@ from typer.testing import CliRunner
 
 from wf_cli.app import app
 
-
 runner = CliRunner()
 
 

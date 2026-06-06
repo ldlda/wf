@@ -1,17 +1,17 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from pathlib import Path
 import json
 from collections.abc import Mapping
+from dataclasses import dataclass
+from pathlib import Path
 
 import typer
 from pydantic import ValidationError
 
 from wf_api import (
-    WorkflowApi,
     WorkflowAdminApi,
     WorkflowAdminSurface,
+    WorkflowApi,
     WorkflowApiSurface,
     WorkflowSourceAdminApi,
     WorkflowSourceAdminSurface,
@@ -267,7 +267,7 @@ def _rpc_timeout_from_optional_config(
         return override
     try:
         config = load_workflow_config(path)
-    except (FileNotFoundError, json.JSONDecodeError, ValidationError):
+    except FileNotFoundError, json.JSONDecodeError, ValidationError:
         return 30.0
     target = config.client.target
     if isinstance(target, RpcHttpTargetConfig):

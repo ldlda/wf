@@ -8,8 +8,11 @@ from typing import Any
 from wf_core.errors import WorkflowExecutionError
 from wf_core.run_state import ExecutionFrame, LineageState, RunState, StateWrite
 from wf_core.runtime.foreach_state import ForeachBarrierState, item_frame_owner
-from wf_core.runtime.ops.state import StatePatch
-from wf_core.runtime.ops.state import commit_state_patch, safe_set_nested_value
+from wf_core.runtime.ops.state import (
+    StatePatch,
+    commit_state_patch,
+    safe_set_nested_value,
+)
 
 
 @dataclass(slots=True)

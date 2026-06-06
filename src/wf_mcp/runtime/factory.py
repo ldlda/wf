@@ -10,8 +10,8 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 from mcp.types import CallToolResult
 
-from ..auth import mcp_auth_env, mcp_auth_headers
-from ..models import AuthRecord, ConnectionConfig
+from ..auth import AuthRecord, mcp_auth_env, mcp_auth_headers
+from ..models import ConnectionConfig
 from .session import PersistentMcpSession
 
 

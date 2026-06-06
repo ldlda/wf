@@ -53,7 +53,9 @@ def test_connection_service_rejects_reserved_connection_ids(tmp_path: Path) -> N
             raise AssertionError(f"expected {connection_id!r} to be rejected")
 
 
-def test_connection_service_registers_connection_and_empty_source(tmp_path: Path) -> None:
+def test_connection_service_registers_connection_and_empty_source(
+    tmp_path: Path,
+) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
     catalog = _source_catalog(service, tmp_path)
 
@@ -70,7 +72,9 @@ def test_connection_service_registers_connection_and_empty_source(tmp_path: Path
     assert service.events.list_events()[0].connection_id == "demo.personal"
 
 
-def test_connection_service_sync_removes_retired_connections_and_sources(tmp_path: Path) -> None:
+def test_connection_service_sync_removes_retired_connections_and_sources(
+    tmp_path: Path,
+) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
     catalog = _source_catalog(service, tmp_path)
     service.register_connection(
@@ -90,7 +94,9 @@ def test_connection_service_sync_removes_retired_connections_and_sources(tmp_pat
     assert removed.payload["account"] == "personal"
 
 
-def test_connection_service_sync_updates_existing_source_enabled_flag(tmp_path: Path) -> None:
+def test_connection_service_sync_updates_existing_source_enabled_flag(
+    tmp_path: Path,
+) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
     catalog = _source_catalog(service, tmp_path)
     service.register_connection(
@@ -119,7 +125,9 @@ def test_connection_service_sync_updates_existing_source_enabled_flag(tmp_path: 
     assert updated.payload["enabled"] is False
 
 
-def test_connection_service_sync_registers_new_connections_with_event(tmp_path: Path) -> None:
+def test_connection_service_sync_registers_new_connections_with_event(
+    tmp_path: Path,
+) -> None:
     service = ConnectionService(events=BrokerEventRecorder(EventBus()))
     catalog = _source_catalog(service, tmp_path)
 
@@ -143,7 +151,9 @@ def test_connection_service_sync_registers_new_connections_with_event(tmp_path: 
     assert registered.connection_id == "demo.personal"
 
 
-def test_wfmcpservice_exposes_connection_registry_from_connection_service(tmp_path: Path) -> None:
+def test_wfmcpservice_exposes_connection_registry_from_connection_service(
+    tmp_path: Path,
+) -> None:
     service = WfMcpService(store=FileStore(tmp_path / "connection_facade"))
 
     service.register_connection(
@@ -155,7 +165,9 @@ def test_wfmcpservice_exposes_connection_registry_from_connection_service(tmp_pa
     assert "demo.personal" in service.capability_sources
 
 
-def test_wfmcpservice_sync_connections_delegates_to_connection_service(tmp_path: Path) -> None:
+def test_wfmcpservice_sync_connections_delegates_to_connection_service(
+    tmp_path: Path,
+) -> None:
     service = WfMcpService(store=FileStore(tmp_path / "connection_sync"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -328,8 +340,7 @@ def test_connection_service_sync_seed_config_materializes_registry_entry(
     assert service.get("demo.default").metadata["source_registry"] is True
     all_events = service.events.list_events()
     assert any(
-        event.kind == "source_registry_seeded_from_config"
-        for event in all_events
+        event.kind == "source_registry_seeded_from_config" for event in all_events
     )
 
 

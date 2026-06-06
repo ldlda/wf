@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from wf_api.saved_subgraphs import SavedSubgraphTree
 from wf_artifacts import (
     AvailableSource,
     CheckpointReason,
@@ -25,8 +26,6 @@ from wf_core import (
     dump_run_state,
     load_run_state,
 )
-
-from wf_api.saved_subgraphs import SavedSubgraphTree
 
 
 def create_pinned_environment(

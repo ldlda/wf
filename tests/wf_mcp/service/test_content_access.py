@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from wf_mcp.broker.service.content_access import ContentAccessService
+from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.connection_service import ConnectionService
+from wf_mcp.broker.service.content_access import ContentAccessService
 from wf_mcp.broker.service.events import BrokerEventRecorder
 from wf_mcp.broker.service.source_catalog import SourceCatalogService
 from wf_mcp.broker.service.upstream_transport import UpstreamTransportService
 from wf_mcp.events import EventBus
+from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_platform import (
     CapabilityBuckets,
@@ -16,9 +18,6 @@ from wf_platform import (
     DocumentationResource,
     SourceVisibility,
 )
-
-from wf_mcp.broker import WfMcpService
-from wf_mcp.models import ConnectionConfig
 
 from ..test_support import FakeAdapter, local_temp_root
 
@@ -105,7 +104,9 @@ async def test_content_access_reads_upstream_resource_with_events() -> None:
     service.register_adapter("demo", FakeAdapter())
     await service.refresh_connection_catalog("demo.personal")
 
-    result = await service.content_access.read_resource("demo.personal.resource.welcome")
+    result = await service.content_access.read_resource(
+        "demo.personal.resource.welcome"
+    )
 
     assert result["contents"][0]["text"] == "Welcome from the fake adapter resource."
     event_kinds = [e.kind for e in service.list_events()]

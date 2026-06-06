@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
+from wf_authoring import state, state_path
 from wf_authoring.dsl.path_inputs import (
     coerce_graph_path,
     coerce_local_path,
     coerce_state_path,
 )
-from wf_authoring import state, state_path
 from wf_core.models.conditions import BinaryCondition, PathOperand
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 

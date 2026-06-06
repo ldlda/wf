@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Annotated, Literal, Protocol
-
 from pathlib import Path
+from typing import TYPE_CHECKING, Annotated, Literal, Protocol
 
 from pydantic import (
     AnyHttpUrl,
@@ -14,8 +13,10 @@ from pydantic import (
 from wf_api.source_registry import (
     AtomicJsonRegistryStore,
     SourceRegistryBaseModel,
-    SourceRegistryStore as GenericSourceRegistryStore,
     validate_unique_source_ids,
+)
+from wf_api.source_registry import (
+    SourceRegistryStore as GenericSourceRegistryStore,
 )
 
 from .connections import parse_connection_id

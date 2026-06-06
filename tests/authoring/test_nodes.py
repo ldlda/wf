@@ -3,9 +3,9 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 from wf_authoring import (
-    NoOutput,
     NodeCatalog,
     NodeReturn,
+    NoOutput,
     Nothing,
     build_registry,
     node,

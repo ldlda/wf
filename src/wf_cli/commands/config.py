@@ -5,9 +5,8 @@ from typing import Annotated
 
 import typer
 
-from wf_mcp.broker.config import migrate_broker_config_file
-
 from wf_cli.io import emit_json
+from wf_mcp.broker.config import migrate_broker_config_file
 
 app = typer.Typer(
     name="config",

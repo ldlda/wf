@@ -6,8 +6,13 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from pydantic import BaseModel
+
 from wf_authoring import NodeReturn, NodeSpec
-from wf_mcp.capabilities import CatalogNodeEntry, CatalogPromptEntry, CatalogResourceEntry
+from wf_mcp.capabilities import (
+    CatalogNodeEntry,
+    CatalogPromptEntry,
+    CatalogResourceEntry,
+)
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -18,10 +23,10 @@ from wf_platform import (
     page_items,
 )
 
+from ...auth import AuthRecord
 from ...connections import ConnectionConfig, qualify_node_name
 from ...events import McpEvent, make_event
 from ...models import (
-    AuthRecord,
     CatalogSnapshot,
 )
 from ...runtime import ToolExecutor
@@ -29,7 +34,6 @@ from ...storage import Store
 from ...workflow.wrappers import _model_from_schema
 from ..catalog import CombinedCatalog, snapshot_from_specs
 from .specs import get_qualified_spec, qualify_spec
-
 
 ConnectionLookup = Callable[[str], ConnectionConfig]
 ConnectionList = Callable[[], list[ConnectionConfig]]

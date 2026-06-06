@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import json
-from inspect import isawaitable
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
+from inspect import isawaitable
 from typing import Any, cast
 
-from ..models import AuthRecord, ConnectionConfig
+from ..auth import AuthRecord
+from ..models import ConnectionConfig
 from ..sdk import ToolCallResult
 from .session import PersistentMcpSession
 

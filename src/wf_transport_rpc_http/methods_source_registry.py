@@ -161,5 +161,11 @@ def register_methods(
         admin = _require_source_registry_admin(server, operation="apply")
         try:
             return await admin.apply_registry_changes()
-        except (ValueError, KeyError, LookupError, FileNotFoundError, RuntimeError) as exc:
+        except (
+            ValueError,
+            KeyError,
+            LookupError,
+            FileNotFoundError,
+            RuntimeError,
+        ) as exc:
             raise_workflow_rpc_error(exc)

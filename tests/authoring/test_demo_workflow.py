@@ -3,30 +3,30 @@ from __future__ import annotations
 import pytest
 from pydantic import BaseModel
 
+from examples.demo_workflow import build_demo_registry, build_demo_workflow
+from wf_authoring import (
+    NodeReturn,
+    WorkflowBuilder,
+    build_registry,
+    context_path,
+    input_from,
+    input_path,
+    node,
+    output_to,
+    state,
+    state_path,
+)
 from wf_core import (
     END,
     FrameStatus,
-    RuntimeContext,
     RunStatus,
+    RuntimeContext,
     WorkflowExecutionError,
     execute_workflow,
     resume_workflow,
     step_workflow,
 )
 from wf_core.runtime.ops.runs import create_run_state
-from examples.demo_workflow import build_demo_registry, build_demo_workflow
-from wf_authoring import (
-    NodeReturn,
-    WorkflowBuilder,
-    build_registry,
-    input_from,
-    state,
-    output_to,
-    state_path,
-    context_path,
-    input_path,
-    node,
-)
 
 
 class DriveListFilesInput(BaseModel):

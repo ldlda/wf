@@ -26,10 +26,14 @@ def test_compat_shim_import_from_wf_mcp() -> None:
 def test_shim_symbols_are_identical_to_canonical() -> None:
     from wf_api.runtime_dependencies import (
         RuntimeDependencies as CanonicalRuntimeDependencies,
+    )
+    from wf_api.runtime_dependencies import (
         resolve_runtime_dependencies as canonical_resolve,
     )
     from wf_mcp.workflow_surface.runtime_dependencies import (
         RuntimeDependencies as ShimRuntimeDependencies,
+    )
+    from wf_mcp.workflow_surface.runtime_dependencies import (
         resolve_runtime_dependencies as shim_resolve,
     )
 

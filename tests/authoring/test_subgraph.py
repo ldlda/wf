@@ -4,6 +4,12 @@ import asyncio
 
 from pydantic import BaseModel
 
+from examples.authoring_workflow_as_node import (
+    build_parent_workflow,
+    run_parent_workflow,
+    wrapped_demo_workflow,
+)
+from examples.demo_workflow import build_demo_registry, build_demo_workflow
 from wf_authoring import (
     WorkflowBuilder,
     async_subgraph_node,
@@ -14,8 +20,8 @@ from wf_authoring import (
     node,
     output_to,
     state_path,
-    subgraph_ref,
     subgraph_node,
+    subgraph_ref,
 )
 from wf_core import (
     END,
@@ -24,12 +30,6 @@ from wf_core import (
     RuntimeContext,
     Workflow,
     execute_workflow_async,
-)
-from examples.demo_workflow import build_demo_registry, build_demo_workflow
-from examples.authoring_workflow_as_node import (
-    build_parent_workflow,
-    run_parent_workflow,
-    wrapped_demo_workflow,
 )
 
 

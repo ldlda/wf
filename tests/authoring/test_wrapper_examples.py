@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import warnings
 
-from wf_core import RunStatus
-
-from examples.wrapper_status_route import build_wrapper
 from examples.wrapper_normalization import build_normalized_wrapper
+from examples.wrapper_status_route import build_wrapper
+from wf_core import RunStatus
 
 
 def test_status_wrapper_uses_match_without_deprecation_warning() -> None:

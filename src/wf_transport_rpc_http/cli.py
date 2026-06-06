@@ -10,7 +10,6 @@ from wf_config import (
     RpcHttpTransportConfig,
     load_workflow_config,
 )
-
 from wf_server.config import (
     build_workflow_server_from_legacy_mcp_config,
     build_workflow_server_from_workflow_config,

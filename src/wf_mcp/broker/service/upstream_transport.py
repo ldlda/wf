@@ -10,19 +10,21 @@ import anyio
 import httpx
 from mcp.client.streamable_http import StreamableHTTPError
 from mcp.shared.exceptions import McpError
+
 from wf_artifacts import (
     DependencyDiagnostic,
     DiagnosticSeverity,
     WorkflowArtifact,
     WorkflowDeployment,
 )
+from wf_mcp.auth import AuthRecord
 from wf_mcp.broker.catalog import snapshot_from_specs
 from wf_mcp.broker.discovery import (
     discover_connection_capabilities,
     specs_from_discovered_tools,
 )
 from wf_mcp.events import McpEvent, make_event
-from wf_mcp.models import AuthRecord, CatalogSnapshot, ConnectionConfig
+from wf_mcp.models import CatalogSnapshot, ConnectionConfig
 from wf_mcp.runtime import ToolExecutor
 from wf_mcp.sdk import BackendAdapter
 from wf_mcp.shared.errors import error_payload

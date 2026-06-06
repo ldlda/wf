@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from wf_core.local_paths import LocalPathError, has_overlapping_paths, split_local_path
 from wf_core.models.conditions import (
     BinaryCondition,
     Condition,
@@ -9,7 +10,6 @@ from wf_core.models.conditions import (
     PathOperand,
     VariadicCondition,
 )
-from wf_core.local_paths import LocalPathError, has_overlapping_paths, split_local_path
 from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import (
     ConditionNode,

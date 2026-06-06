@@ -4,14 +4,13 @@ from pathlib import Path
 
 import pytest
 
+from tests.wf_mcp.workflow_surface.conftest import echo_artifact
 from wf_api.artifact_plans import plan_field, plan_nodes, raw_plan_from_artifact
 from wf_api.artifact_refs import artifact_capability_id
 from wf_api.capability_requirements import (
     observed_node_specs,
     required_capability_payloads,
 )
-
-from tests.wf_mcp.workflow_surface.conftest import echo_artifact
 
 
 def test_artifact_capability_id_uses_workflow_ref_shape() -> None:
@@ -66,12 +65,12 @@ def test_required_capability_payloads_sorts_by_name() -> None:
 
 
 def test_observed_node_specs_projects_enabled_context_specs(tmp_path: Path) -> None:
+    from tests.wf_mcp.test_support import echo_tool
     from wf_artifacts import FileWorkflowArtifactStore
     from wf_mcp.broker import WfMcpService
+    from wf_mcp.broker.service.workflow_operation_context import context_from_service
     from wf_mcp.models import ConnectionConfig
     from wf_mcp.storage import FileStore
-    from wf_mcp.broker.service.workflow_operation_context import context_from_service
-    from tests.wf_mcp.test_support import echo_tool
 
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_req_helpers")
     service = WfMcpService(

@@ -1,14 +1,15 @@
 from __future__ import annotations
-from pathlib import Path
+
 import time
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
+from wf_api import TraceRange
 from wf_cli.context import load_cli_context_from_typer
 from wf_cli.io import CliInputError, emit_json, parse_json_input
 from wf_cli.remote_errors import run_cli_operation
-from wf_api import TraceRange
 
 app = typer.Typer(
     name="run",
@@ -99,7 +100,9 @@ def watch_run(
     context = load_cli_context_from_typer(ctx)
     started_at = time.monotonic()
     while True:
-        payload = run_cli_operation(context, context.handlers.inspect_run(run_id=run_id))
+        payload = run_cli_operation(
+            context, context.handlers.inspect_run(run_id=run_id)
+        )
         if payload.get("status") in _STOPPED_RUN_STATUSES:
             if include_trace:
                 trace_payload = run_cli_operation(

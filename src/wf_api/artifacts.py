@@ -14,6 +14,8 @@ from wf_artifacts import (
     RequiredCapability,
     WorkflowArtifact,
     artifact_catalog_entry,
+)
+from wf_artifacts import (
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
 )
 

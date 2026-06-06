@@ -3,19 +3,18 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from wf_artifacts import FileWorkflowArtifactStore
+from tests.wf_mcp.test_support import echo_tool
 from wf_api import WorkflowApi
 from wf_api.artifacts import WorkflowArtifactApi
 from wf_api.capabilities import WorkflowCapabilityApi
 from wf_api.deployments import WorkflowDeploymentApi
 from wf_api.drafts import WorkflowDraftApi
 from wf_api.runs import WorkflowRunApi
+from wf_artifacts import FileWorkflowArtifactStore
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
-
-from tests.wf_mcp.test_support import echo_tool
 
 
 def _api(root: Path) -> WorkflowApi:

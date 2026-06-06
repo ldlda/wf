@@ -4,9 +4,8 @@ from collections.abc import Mapping
 from typing import Any
 
 from wf_authoring import NodeSpec
-
-from wf_platform import CapabilitySource
 from wf_mcp.connections import qualify_node_name
+from wf_platform import CapabilitySource
 
 
 def qualify_spec(connection_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, Any]:

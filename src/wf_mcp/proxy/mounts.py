@@ -17,8 +17,8 @@ from mcp.client.streamable_http import StreamableHTTPError
 from mcp.shared.exceptions import McpError
 
 from ..models import BrokerConfig, ConnectionConfig
-from ..proxy_results import ResourceLinkNamespace
 from ..proxy_config import broker_config_to_fastmcp_config
+from ..proxy_results import ResourceLinkNamespace
 from ..shared.names import ProxyNamespace
 
 ProxyT = TypeVar("ProxyT")

@@ -9,6 +9,7 @@ from pydantic import BaseModel
 if __package__ in {None, ""}:
     sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from examples.demo_workflow import build_demo_registry, build_demo_workflow
 from wf_authoring import (
     WorkflowBuilder,
     input_from,
@@ -18,8 +19,6 @@ from wf_authoring import (
 )
 from wf_core import END
 from wf_core.run_state import RunState
-
-from examples.demo_workflow import build_demo_registry, build_demo_workflow
 
 
 class ChildInput(BaseModel):

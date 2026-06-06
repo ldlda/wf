@@ -5,7 +5,7 @@ import asyncio
 from pydantic import BaseModel
 
 from wf_authoring import build_async_registry, node
-from wf_core import RuntimeContext, RunStatus, execute_workflow_async
+from wf_core import RunStatus, RuntimeContext, execute_workflow_async
 
 from .test_demo_workflow import (
     build_authoring_demo_workflow,

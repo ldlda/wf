@@ -5,12 +5,12 @@ from copy import deepcopy
 from wf_core.models.workflow import Workflow
 from wf_core.paths import set_nested_value
 from wf_core.run_state import (
-    ExecutionFrame,
-    FrameStatus,
-    LineageState,
     ROOT_FRAME_ID,
     ROOT_LINEAGE_ID,
     ROOT_SCOPE_ID,
+    ExecutionFrame,
+    FrameStatus,
+    LineageState,
     RunState,
     RunStatus,
     RuntimeScope,

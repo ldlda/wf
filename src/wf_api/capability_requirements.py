@@ -4,6 +4,8 @@ from typing import Any
 
 from wf_artifacts import (
     RequiredCapability,
+)
+from wf_artifacts import (
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
 )
 from wf_platform import CapabilityRef, NodeSpecInventory

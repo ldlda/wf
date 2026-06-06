@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from inspect import iscoroutinefunction
 from collections.abc import Callable
+from inspect import iscoroutinefunction
 from typing import Any, cast, overload
 
 from pydantic import BaseModel

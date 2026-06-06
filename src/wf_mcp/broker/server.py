@@ -10,9 +10,12 @@ from wf_api import (
     durable_workflow_api,
 )
 from wf_api.stores import WorkflowStores
+from wf_config import WorkflowConfigFile
 from wf_server import WorkflowServer, WorkflowServerConfig
 
-from wf_config import WorkflowConfigFile
+from ..models import BrokerConfig
+from ..sdk.adapter import McpSdkAdapter
+from ..source_registry import FileSourceRegistryStore, SourceRegistryStore
 from .artifact_tools import register_artifact_tools
 from .config import broker_config_from_workflow_config, build_service_from_config
 from .prompts import register_broker_prompts
@@ -22,9 +25,6 @@ from .service.auth_admin import McpAuthAdminProvider
 from .service.source_registry_admin import SourceRegistryAdminProvider
 from .service.workflow_operation_context import context_from_service
 from .tools import register_broker_tools
-from ..models import BrokerConfig
-from ..sdk.adapter import McpSdkAdapter
-from ..source_registry import FileSourceRegistryStore, SourceRegistryStore
 
 
 def create_broker_server(service: WfMcpService) -> FastMCP:
@@ -75,11 +75,11 @@ def workflow_server_from_service(
         config_connections=config.connections,
         connection_service=service.connection_service,
         config=config,
-        ensure_adapter=lambda connection: service.register_adapter(
-            connection.server, McpSdkAdapter()
-        )
-        if connection.server not in service.adapters
-        else None,
+        ensure_adapter=lambda connection: (
+            service.register_adapter(connection.server, McpSdkAdapter())
+            if connection.server not in service.adapters
+            else None
+        ),
         load_auth=service.upstream.load_auth,
     )
     source_registry_admin = WorkflowSourceRegistryApi(
@@ -118,9 +118,7 @@ def build_workflow_server_from_workflow_config(
     config: WorkflowConfigFile,
 ) -> WorkflowServer:
     """Build an MCP-backed WorkflowServer from neutral workflow config sources."""
-    return build_workflow_server_from_config(
-        broker_config_from_workflow_config(config)
-    )
+    return build_workflow_server_from_config(broker_config_from_workflow_config(config))
 
 
 __all__ = [

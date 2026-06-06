@@ -10,10 +10,10 @@ from .callables import (
     PlainNodeCallable,
     SyncRegistryHandler,
 )
-from .inference import accepts_context, infer_models, is_basemodel_subclass
 from .decorator import node
+from .inference import accepts_context, infer_models, is_basemodel_subclass
 from .registry import build_async_registry, build_registry
-from .result import NoOutput, NodeReturn, Nothing, outcome
+from .result import NodeReturn, NoOutput, Nothing, outcome
 from .schema import schema_ref_for
 from .spec import NodeSpec
 

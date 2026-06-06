@@ -7,22 +7,21 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
+from tests.wf_mcp.test_support import echo_tool
+from wf_api.deployments import WorkflowDeploymentApi
 from wf_artifacts import (
     FileWorkflowArtifactStore,
     RequiredCapability,
     WorkflowArtifact,
     WorkflowDeployment,
 )
-from wf_api.deployments import WorkflowDeploymentApi
 from wf_mcp.broker import WfMcpService
-from wf_mcp.models import AuthRecord, ConnectionConfig
+from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.capabilities import DiscoveredTool
+from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.sdk import BackendAdapter
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
-from wf_mcp.broker.service.workflow_operation_context import context_from_service
-
-from tests.wf_mcp.test_support import echo_tool
 
 
 def _echo_artifact() -> WorkflowArtifact:
@@ -172,9 +171,7 @@ def test_delete_deployment_removes_one(tmp_path: Path) -> None:
 
 
 def test_validate_deployment_returns_runnable_for_valid_binding(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "deploy_validate_runnable"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_validate_runnable")
     api, service = _deployment_api(artifact_store, register_echo=True)
     artifact_store.save_artifact(_echo_artifact())
     artifact_store.save_deployment(
@@ -204,9 +201,7 @@ class FailingLivenessAdapter:
 
 
 def test_validate_deployment_live_check_calls_live_checker(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "deploy_validate_live"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_validate_live")
     api, service = _deployment_api(artifact_store, register_echo=True)
     artifact_store.save_artifact(_echo_artifact())
     artifact_store.save_deployment(

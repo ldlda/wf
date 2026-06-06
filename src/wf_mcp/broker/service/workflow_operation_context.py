@@ -4,8 +4,6 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
-from wf_artifacts import DependencyDiagnostic, WorkflowArtifact, WorkflowDeployment
-from wf_authoring import NodeSpec
 from wf_api.operation_context import (
     WorkflowEventRecorder,
     WorkflowLiveSourceChecker,
@@ -13,6 +11,9 @@ from wf_api.operation_context import (
     WorkflowRuntimeRunner,
     WorkflowSpecProvider,
 )
+from wf_artifacts import DependencyDiagnostic, WorkflowArtifact, WorkflowDeployment
+from wf_authoring import NodeSpec
+
 from .core import WfMcpService
 from .events import BrokerEventRecorder
 from .source_catalog import SourceCatalogService

@@ -11,15 +11,19 @@ from ..control import BrokerConfigFile, ConnectionConfigFile
 from ..models import BrokerConfig
 from ..runtime import McpRuntimePool, PersistentSessionFactory
 from ..sdk import McpSdkAdapter
-from ..source_registry import FileSourceRegistryStore, workflow_mcp_source_to_connection_config
+from ..source_registry import (
+    FileSourceRegistryStore,
+    workflow_mcp_source_to_connection_config,
+)
 from ..storage import FileStore
 from .service import WfMcpService
-
 
 _HTTP_TRANSPORTS = {"http", "streamable-http", "streamable_http", "sse"}
 
 
-def _source_metadata_without_transport(metadata: dict[str, object]) -> dict[str, object]:
+def _source_metadata_without_transport(
+    metadata: dict[str, object],
+) -> dict[str, object]:
     return {
         key: value
         for key, value in metadata.items()

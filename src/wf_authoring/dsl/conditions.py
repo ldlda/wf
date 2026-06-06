@@ -14,8 +14,8 @@ from wf_core.models.conditions import (
 )
 from wf_core.paths import GraphSourcePath
 
-from .paths import GraphPath, context_path, input_path, state_path
 from .path_inputs import PathInput
+from .paths import GraphPath, context_path, input_path, state_path
 
 
 def _operand(value: object) -> PathOperand | LiteralOperand:

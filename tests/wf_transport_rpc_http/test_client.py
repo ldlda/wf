@@ -70,9 +70,7 @@ async def test_rpc_workflow_client_lists_and_inspects_capabilities(tmp_path) -> 
             http_client=http_client,
         )
         listed = await client.list_capabilities(source_id="wf.std", limit=5)
-        inspected = await client.inspect_capability(
-            qualified_name="wf.std.constant"
-        )
+        inspected = await client.inspect_capability(qualified_name="wf.std.constant")
 
     assert listed["capabilities"]
     assert {capability["source_id"] for capability in listed["capabilities"]} == {
@@ -219,9 +217,7 @@ async def test_rpc_workflow_client_lists_and_inspects_artifacts(tmp_path) -> Non
             url="http://test/rpc", timeout_seconds=5, http_client=http_client
         )
         listed = await client.list_artifacts()
-        inspected = await client.inspect_artifact(
-            artifact_id="client_art", version=1
-        )
+        inspected = await client.inspect_artifact(artifact_id="client_art", version=1)
 
     assert listed["nodes"]
     assert inspected["id"] == "client_art"

@@ -3,17 +3,17 @@ from __future__ import annotations
 import asyncio
 
 from wf_artifacts import (
-    FileWorkflowArtifactStore,
     FileDraftWorkspaceStore,
+    FileWorkflowArtifactStore,
     WorkflowDeployment,
 )
+from wf_core.models.steps import InputPathBinding, OutputBinding
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 from wf_mcp.workflow_surface.models import CreateMinimalDraftWorkspaceRequest
-from wf_core.models.steps import InputPathBinding, OutputBinding
-from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 from ..test_support import echo_tool, local_temp_root
 from .conftest import (

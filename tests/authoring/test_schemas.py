@@ -4,9 +4,6 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field
 
-from wf_authoring import WorkflowBuilder, state_field
-from wf_core.paths import StatePath
-
 from tests.authoring.helpers import (
     AppendState,
     DefaultedState,
@@ -16,6 +13,8 @@ from tests.authoring.helpers import (
     WorkflowOutput,
     WorkflowState,
 )
+from wf_authoring import WorkflowBuilder, state_field
+from wf_core.paths import StatePath
 
 
 class DotAliasState(BaseModel):

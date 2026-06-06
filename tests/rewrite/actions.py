@@ -1,7 +1,6 @@
 import random
 from typing import Final
 
-
 from tests.rewrite.models import (
     ContextInput,
     Countdown,

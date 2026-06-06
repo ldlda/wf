@@ -8,11 +8,12 @@ from wf_mcp.auth import (
     auth_ref_for_connection,
     connection_auth_diagnostic,
     mcp_auth_env,
-    mcp_auth_headers,
     mcp_auth_from_neutral,
+    mcp_auth_headers,
     neutral_auth_from_mcp,
 )
-from wf_mcp.models import AuthRecord as McpAuthRecord, ConnectionConfig
+from wf_mcp.models import AuthRecord as McpAuthRecord
+from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 
 

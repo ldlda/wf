@@ -6,8 +6,8 @@ import pytest
 from mcp import McpError
 from mcp.types import ErrorData
 
-from wf_mcp.capabilities import DiscoveredTool
 from wf_mcp.broker import WfMcpService
+from wf_mcp.capabilities import DiscoveredTool
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.sdk import McpSdkAdapter
 from wf_mcp.storage import FileStore

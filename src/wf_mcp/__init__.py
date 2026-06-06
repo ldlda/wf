@@ -1,3 +1,4 @@
+from .auth import AuthRecord
 from .broker import (
     WfMcpService,
     load_broker_config,
@@ -8,7 +9,6 @@ from .capabilities import (
     DiscoveredTool,
 )
 from .models import (
-    AuthRecord,
     BrokerConfig,
     ConnectionConfig,
     RawWorkflowPlan,

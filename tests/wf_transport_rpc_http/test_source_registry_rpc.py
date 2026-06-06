@@ -104,9 +104,7 @@ async def test_rpc_source_registry_list_unavailable_on_local_static(tmp_path) ->
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client, "workflow.admin.source_registry.list", {"limit": 10}
         )
@@ -115,13 +113,13 @@ async def test_rpc_source_registry_list_unavailable_on_local_static(tmp_path) ->
     assert payload["error"]["data"]["code"] == "source_registry_unavailable"
 
 
-async def test_rpc_source_registry_inspect_unavailable_on_local_static(tmp_path) -> None:
+async def test_rpc_source_registry_inspect_unavailable_on_local_static(
+    tmp_path,
+) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.inspect",
@@ -141,9 +139,7 @@ async def test_rpc_source_registry_methods_return_registry_payloads(tmp_path) ->
     )
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         listed = await _rpc(
             client, "workflow.admin.source_registry.list", {"limit": 10}
         )
@@ -166,9 +162,7 @@ async def test_rpc_source_registry_add_unavailable_on_local_static(tmp_path) -> 
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.add",
@@ -183,9 +177,7 @@ async def test_rpc_source_registry_update_unavailable_on_local_static(tmp_path) 
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.update",
@@ -200,9 +192,7 @@ async def test_rpc_source_registry_enable_unavailable_on_local_static(tmp_path) 
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.enable",
@@ -213,13 +203,13 @@ async def test_rpc_source_registry_enable_unavailable_on_local_static(tmp_path) 
     assert payload["error"]["data"]["code"] == "source_registry_unavailable"
 
 
-async def test_rpc_source_registry_disable_unavailable_on_local_static(tmp_path) -> None:
+async def test_rpc_source_registry_disable_unavailable_on_local_static(
+    tmp_path,
+) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.disable",
@@ -234,9 +224,7 @@ async def test_rpc_source_registry_remove_unavailable_on_local_static(tmp_path) 
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.remove",
@@ -254,9 +242,7 @@ async def test_rpc_source_registry_add_returns_entry(tmp_path) -> None:
     server = _server_with_mutation_provider(tmp_path)
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.add",
@@ -272,9 +258,7 @@ async def test_rpc_source_registry_update_returns_entry(tmp_path) -> None:
     server = _server_with_mutation_provider(tmp_path)
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.update",
@@ -298,9 +282,7 @@ async def test_rpc_source_registry_enable_returns_entry(tmp_path) -> None:
     )
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.enable",
@@ -315,9 +297,7 @@ async def test_rpc_source_registry_disable_returns_entry(tmp_path) -> None:
     server = _server_with_mutation_provider(tmp_path)
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.disable",
@@ -332,9 +312,7 @@ async def test_rpc_source_registry_remove_returns_removed(tmp_path) -> None:
     server = _server_with_mutation_provider(tmp_path)
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.remove",
@@ -353,9 +331,7 @@ async def test_rpc_source_registry_add_missing_entry_raises_error(tmp_path) -> N
     server = _server_with_mutation_provider(tmp_path)
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.add",
@@ -369,9 +345,7 @@ async def test_rpc_source_registry_update_missing_source_raises_error(tmp_path) 
     server = _server_with_mutation_provider(tmp_path)
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.update",
@@ -385,9 +359,7 @@ async def test_rpc_source_registry_remove_missing_source_raises_error(tmp_path) 
     server = _server_with_mutation_provider(tmp_path)
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(
             client,
             "workflow.admin.source_registry.remove",

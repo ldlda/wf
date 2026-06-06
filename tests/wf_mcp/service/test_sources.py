@@ -168,9 +168,7 @@ async def test_service_runs_logical_source_plan_with_dotted_local_name() -> None
             id="logical_dotted.personal",
             artifact_id="logical_dotted",
             artifact_version=1,
-            bindings=[
-                {"logical_source": "demo", "concrete_source": "demo.personal"}
-            ],
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
         ),
     )
 

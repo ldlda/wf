@@ -6,6 +6,12 @@ from typing import Any, cast
 
 import pytest
 
+from tests.authoring.helpers import (
+    AutoBindInput,
+    AutoBindOutput,
+    AutoBindState,
+    auto_bind_node,
+)
 from wf_authoring import (
     WorkflowBuilder,
     input_from,
@@ -14,18 +20,11 @@ from wf_authoring import (
     state,
     state_path,
 )
+from wf_authoring.builder.mapping import normalize_input_mapping
 from wf_core import END, EndNode, RunStatus, WorkflowExecutionError
 from wf_core.models.steps import InputPathBinding, InputValueBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_platform import CapabilityRef
-
-from tests.authoring.helpers import (
-    AutoBindInput,
-    AutoBindOutput,
-    AutoBindState,
-    auto_bind_node,
-)
-from wf_authoring.builder.mapping import normalize_input_mapping
 
 
 def test_builder_auto_binds_matching_node_inputs_and_outputs_to_state() -> None:

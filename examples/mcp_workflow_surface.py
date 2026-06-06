@@ -9,10 +9,10 @@ from wf_artifacts import (
     FileWorkflowArtifactStore,
     WorkflowDeployment,
 )
+from wf_mcp.broker import WfMcpService
 from wf_mcp.capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.sdk import ToolCallResult
-from wf_mcp.broker import WfMcpService
 from wf_mcp.sdk.base import BackendAdapter
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers

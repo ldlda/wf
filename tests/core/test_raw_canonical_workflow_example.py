@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from wf_core import RunStatus
-
 from examples.raw_canonical_workflow import (
     build_raw_canonical_workflow,
     run_raw_canonical_example,
@@ -10,6 +8,7 @@ from examples.raw_concurrent_foreach import (
     build_raw_concurrent_foreach_workflow,
     run_raw_concurrent_foreach_example,
 )
+from wf_core import RunStatus
 
 
 def test_raw_canonical_workflow_runs() -> None:

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Iterable, Mapping
 import tomllib
+from collections.abc import Iterable, Mapping
 from typing import TypeAlias, cast
 
 from wf_core.paths import GraphRoot, GraphSourcePath, LocalPath, StatePath

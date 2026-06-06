@@ -5,24 +5,23 @@ from pathlib import Path
 
 import pytest
 
-from wf_artifacts import (
-    FileWorkflowArtifactStore,
-    FileRunStore,
-    WorkflowDeployment,
-)
-from wf_api.runs import WorkflowRunApi
-from wf_mcp.broker import WfMcpService
-from wf_mcp.broker.service.workflow_operation_context import context_from_service
-from wf_mcp.models import ConnectionConfig
-from wf_mcp.storage import FileStore
-from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
-
 from tests.wf_mcp.test_support import echo_tool
 from tests.wf_mcp.workflow_surface.conftest import (
     echo_artifact,
     failing_artifact,
     failing_tool,
 )
+from wf_api.runs import WorkflowRunApi
+from wf_artifacts import (
+    FileRunStore,
+    FileWorkflowArtifactStore,
+    WorkflowDeployment,
+)
+from wf_mcp.broker import WfMcpService
+from wf_mcp.broker.service.workflow_operation_context import context_from_service
+from wf_mcp.models import ConnectionConfig
+from wf_mcp.storage import FileStore
+from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 
 
 class SimpleTraceRange:
@@ -160,7 +159,9 @@ def test_run_api_rejects_resume_for_completed_run(tmp_path: Path) -> None:
         )
 
 
-def test_run_api_inspect_uses_pinned_environment_after_deployment_deleted(tmp_path: Path) -> None:
+def test_run_api_inspect_uses_pinned_environment_after_deployment_deleted(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "run_api_inspect_after_deployment_deleted"
     service, artifact_store = _service_with_echo(root)
     context = context_from_service(service)
@@ -217,7 +218,9 @@ class ExplodingRunStore(FileRunStore):
         raise AssertionError("run store must not be read before trace_range validation")
 
 
-def test_run_api_rejects_invalid_trace_range_before_store_lookup(tmp_path: Path) -> None:
+def test_run_api_rejects_invalid_trace_range_before_store_lookup(
+    tmp_path: Path,
+) -> None:
     root = tmp_path / "run_api_invalid_trace_range"
     service, _ = _service_with_echo(root)
     service.run_store = ExplodingRunStore(root / "exploding_runs")

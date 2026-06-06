@@ -14,6 +14,7 @@ from wf_core import RunState
 from .artifact_plans import raw_plan_from_artifact
 from .deployments import WorkflowDeploymentApi, _available_sources
 from .next_actions import NextActions
+from .operation_context import WorkflowOperationContext
 from .run_lifecycle import (
     create_pinned_environment,
     has_blocking_diagnostics,
@@ -24,7 +25,6 @@ from .run_lifecycle import (
     validate_pinned_resume_environment,
 )
 from .saved_subgraphs import saved_subgraph_tree_from_snapshots
-from .operation_context import WorkflowOperationContext
 
 
 class TraceRangeLike(Protocol):

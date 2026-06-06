@@ -2,9 +2,9 @@ import pytest
 from pydantic import ValidationError
 
 from wf_core.models.steps import (
+    ForeachNode,
     InputPathBinding,
     InputValueBinding,
-    ForeachNode,
     InterruptNode,
     NodeUse,
 )

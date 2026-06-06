@@ -275,9 +275,7 @@ async def test_generated_specs_use_injected_tool_executor() -> None:
     spec = service._get_qualified_spec("demo.personal.echo_tool")
     handler = build_async_registry(spec)[spec.name]
 
-    result = await handler(
-        {"text": "hello"}, RuntimeContext(current_node_id="echo")
-    )
+    result = await handler({"text": "hello"}, RuntimeContext(current_node_id="echo"))
 
     assert result["outcome"] == "ok"
     assert result["output"]["echoed"] == "hello"

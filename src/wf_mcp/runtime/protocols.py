@@ -2,7 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Protocol
 
-from ..models import AuthRecord, ConnectionConfig
+from ..auth import AuthRecord
+from ..models import ConnectionConfig
 from ..sdk import ToolCallResult
 
 

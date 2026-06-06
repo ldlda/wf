@@ -9,8 +9,8 @@ from fastmcp.utilities.versions import VersionSpec
 from pydantic import ConfigDict
 from pydantic.json_schema import SkipJsonSchema
 
-from .resource_links import rewrite_resource_link_content
 from ..shared.names import connection_id_to_resource_path
+from .resource_links import rewrite_resource_link_content
 
 
 class ResourceLinkRewritingTool(Tool):

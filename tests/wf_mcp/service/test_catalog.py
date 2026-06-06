@@ -409,7 +409,9 @@ def test_source_catalog_service_excludes_hidden_sources_from_planner_catalog() -
     assert "hidden.source.echo_tool" not in planner_names
 
 
-async def test_source_catalog_hydrates_connection_source_from_snapshot_directly() -> None:
+async def test_source_catalog_hydrates_connection_source_from_snapshot_directly() -> (
+    None
+):
     root = local_temp_root() / "source_catalog_hydrate_direct"
     shutil.rmtree(root, ignore_errors=True)
     first_service = WfMcpService(store=FileStore(root))

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
+from wf_api.next_actions import NextActions, NextActionTool
 from wf_artifacts import DependencyDiagnostic, DiagnosticSeverity
-
-from wf_api.next_actions import NextActionTool, NextActions
 
 
 def test_next_actions_from_high_confidence_wrapper_hints_can_validate() -> None:

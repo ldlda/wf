@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 
+from wf_api.saved_subgraphs import resolve_saved_subgraph_tree
 from wf_artifacts import (
     FileRunStore,
     FileWorkflowArtifactStore,
@@ -15,7 +16,6 @@ from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
-from wf_api.saved_subgraphs import resolve_saved_subgraph_tree
 
 from .test_support import echo_tool, input_binding, local_temp_root, output_binding
 

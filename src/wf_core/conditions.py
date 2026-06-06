@@ -11,8 +11,8 @@ from .models.conditions import (
     LiteralOperand,
     NotCondition,
     PathOperand,
+    VariadicCondition,
 )
-from .models.conditions import VariadicCondition
 from .paths import PathResolutionError, path_exists, resolve_graph_path
 
 

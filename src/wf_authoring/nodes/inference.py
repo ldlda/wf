@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from inspect import Parameter, signature
 from collections.abc import Callable
+from inspect import Parameter, signature
 from typing import cast, get_args, get_origin, get_type_hints
 
 from pydantic import BaseModel

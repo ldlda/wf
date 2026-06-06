@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import pytest
 
-from wf_authoring import WorkflowBuilder, state
-
 from tests.authoring.helpers import (
     AutoBindInput,
     AutoBindOutput,
@@ -11,6 +9,7 @@ from tests.authoring.helpers import (
     auto_bind_node,
     branch_router,
 )
+from wf_authoring import WorkflowBuilder, state
 
 
 def test_builder_branch_connects_existing_steps() -> None:

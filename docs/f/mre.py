@@ -1,11 +1,10 @@
 import asyncio
 
 import mcp.types as mcp_types
-from fastmcp import Client
+from fastmcp import Client, Context, FastMCP
 from fastmcp.client.transports import FastMCPTransport
-from fastmcp.server import create_proxy
-from fastmcp import Context, FastMCP
 from fastmcp.dependencies import CurrentContext
+from fastmcp.server import create_proxy
 from pydantic import AnyUrl
 
 server = FastMCP("notification-fixture")

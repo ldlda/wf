@@ -4,15 +4,14 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
-from wf_artifacts import FileWorkflowArtifactStore, FileDraftWorkspaceStore
+from tests.wf_mcp.test_support import echo_tool
 from wf_api.drafts import WorkflowDraftApi
+from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
 from wf_mcp.broker import WfMcpService
+from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
-from wf_mcp.broker.service.workflow_operation_context import context_from_service
-
-from tests.wf_mcp.test_support import echo_tool
 
 
 def _echo_draft() -> dict[str, Any]:
@@ -96,9 +95,7 @@ def test_patch_draft_applies_json_patch(tmp_path: Path) -> None:
 
 
 def test_create_draft_workspace_creates_workspace(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "drafts_create_workspace"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_workspace")
     api, _service = _draft_api(artifact_store)
 
     result = asyncio.run(
@@ -119,10 +116,10 @@ def test_create_draft_workspace_creates_workspace(tmp_path: Path) -> None:
     assert fetched["draft"]["steps"]["echo"]["use"] == "demo.personal.echo_tool"
 
 
-def test_list_draft_workspaces_returns_sorted_summaries_without_drafts(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "drafts_list_workspaces"
-    )
+def test_list_draft_workspaces_returns_sorted_summaries_without_drafts(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_list_workspaces")
     api, _service = _draft_api(artifact_store)
     asyncio.run(
         api.create_draft_workspace(
@@ -150,9 +147,7 @@ def test_list_draft_workspaces_returns_sorted_summaries_without_drafts(tmp_path:
 
 
 def test_delete_draft_workspace_is_idempotent(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "drafts_delete_workspace"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_delete_workspace")
     api, _service = _draft_api(artifact_store)
     asyncio.run(
         api.create_draft_workspace(
@@ -175,9 +170,7 @@ def test_delete_draft_workspace_is_idempotent(tmp_path: Path) -> None:
 
 
 def test_patch_draft_workspace_updates_revision(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "drafts_patch_workspace"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch_workspace")
     api, _service = _draft_api(artifact_store)
     asyncio.run(
         api.create_draft_workspace(
@@ -198,10 +191,10 @@ def test_patch_draft_workspace_updates_revision(tmp_path: Path) -> None:
     assert patched["status"] == "valid"
 
 
-def test_draft_workspace_patch_helpers_update_revision_and_bindings(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "drafts_patch_helpers"
-    )
+def test_draft_workspace_patch_helpers_update_revision_and_bindings(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch_helpers")
     api, _service = _draft_api(artifact_store)
     asyncio.run(
         api.create_draft_workspace(
@@ -267,9 +260,7 @@ def test_draft_workspace_patch_helpers_update_revision_and_bindings(tmp_path: Pa
 
 
 def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "drafts_validate_workspace"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_validate_workspace")
     api, service = _draft_api(artifact_store, register_echo=True)
     draft = _echo_draft()
     draft["routes"]["echo"] = {"typo": "__end__"}
@@ -290,9 +281,7 @@ def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None:
 
 
 def test_create_minimal_draft_workspace_minimal_success_path(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "drafts_minimal_workspace"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_minimal_workspace")
     api, _service = _draft_api(artifact_store, register_echo=True)
 
     result = asyncio.run(
@@ -326,9 +315,7 @@ def test_create_minimal_draft_workspace_minimal_success_path(tmp_path: Path) -> 
 
 def test_delegation_smoke_validate_draft_equivalence(tmp_path: Path) -> None:
     """WorkflowSurfaceHandlers.validate_draft delegates to WorkflowDraftApi."""
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "drafts_delegation_smoke"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_delegation_smoke")
     mcp_root = artifact_store.root / "delegation_mcp"
     service = WfMcpService(
         store=FileStore(mcp_root),

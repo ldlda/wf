@@ -10,10 +10,9 @@ from wf_mcp.capabilities import (
     CatalogResourceEntry,
 )
 
-from ..auth import mcp_auth_from_neutral, neutral_auth_from_mcp
+from ..auth import AuthRecord, mcp_auth_from_neutral, neutral_auth_from_mcp
 from ..connections import parse_connection_id
 from ..models import (
-    AuthRecord,
     CatalogSnapshot,
     dump_catalog_snapshot,
 )

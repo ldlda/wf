@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from jsonschema import ValidationError, SchemaError, validators
+from jsonschema import SchemaError, ValidationError, validators
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.schemas import SchemaRef

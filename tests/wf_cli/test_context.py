@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-import click
 import json
 from pathlib import Path
 
+import click
 import typer
+
 from wf_api import WorkflowApi
 from wf_cli.context import (
     CliTyperState,

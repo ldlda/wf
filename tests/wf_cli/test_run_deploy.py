@@ -5,17 +5,14 @@ from pathlib import Path
 from typing import Any, cast
 from unittest.mock import patch
 
-from typer.testing import CliRunner
-
-from wf_artifacts import FileWorkflowArtifactStore, WorkflowArtifact, WorkflowDeployment
-from wf_cli.app import app
 from typer import Context as TyperContext
-
-from wf_cli.context import CliContext, config_path_from_context, load_cli_context
+from typer.testing import CliRunner
 
 from tests.wf_mcp.test_support import echo_tool, input_binding, local_temp_root
 from tests.wf_mcp.workflow_surface.conftest import echo_artifact
-
+from wf_artifacts import FileWorkflowArtifactStore, WorkflowArtifact, WorkflowDeployment
+from wf_cli.app import app
+from wf_cli.context import CliContext, config_path_from_context, load_cli_context
 
 runner = CliRunner()
 

@@ -3,12 +3,31 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from wf_authoring import NodeSpec, coalesce, concat, constant, default_if_none
-from wf_authoring import extract_field, filter_items, filter_items_present, first_item
-from wf_authoring import first_item_maybe, first_item_or_none, is_empty, last_item
-from wf_authoring import last_item_or_none, length, node, pick_key, pick_path
-from wf_authoring import project_fields, rename_fields, runtime_error, truthy
-from wf_authoring import extract_text_content
+from wf_authoring import (
+    NodeSpec,
+    coalesce,
+    concat,
+    constant,
+    default_if_none,
+    extract_field,
+    extract_text_content,
+    filter_items,
+    filter_items_present,
+    first_item,
+    first_item_maybe,
+    first_item_or_none,
+    is_empty,
+    last_item,
+    last_item_or_none,
+    length,
+    node,
+    pick_key,
+    pick_path,
+    project_fields,
+    rename_fields,
+    runtime_error,
+    truthy,
+)
 from wf_core.runtime.ops.merges import DEFAULT_REDUCER_DEFINITIONS
 from wf_platform import (
     CapabilityBuckets,

@@ -140,9 +140,7 @@ async def test_mcp_backed_rpc_reports_connections_and_events(tmp_path) -> None:
     async with httpx.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
-        connections = await _rpc(
-            http_client, "workflow.admin.connections.list", {}
-        )
+        connections = await _rpc(http_client, "workflow.admin.connections.list", {})
 
     assert connections["result"]["connections"][0]["id"] == "demo.default"
 
@@ -225,9 +223,7 @@ async def test_mcp_backed_rpc_can_be_built_from_neutral_workflow_config(
     async with httpx.AsyncClient(
         transport=transport, base_url="http://test"
     ) as http_client:
-        connections = await _rpc(
-            http_client, "workflow.admin.connections.list", {}
-        )
+        connections = await _rpc(http_client, "workflow.admin.connections.list", {})
 
     assert connections["result"]["connections"][0]["id"] == "demo.default"
 

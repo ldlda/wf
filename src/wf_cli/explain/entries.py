@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from .models import ExplainCard
 
-
 EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
     ExplainCard(
         code="source_missing",

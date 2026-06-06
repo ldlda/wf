@@ -314,7 +314,9 @@ def test_source_registry_apply_materializes_registry_connection(tmp_path: Path) 
     assert source_catalog.capability_sources["dynamic.default"].enabled is True
 
 
-def test_source_registry_apply_removes_deleted_registry_connection(tmp_path: Path) -> None:
+def test_source_registry_apply_removes_deleted_registry_connection(
+    tmp_path: Path,
+) -> None:
     entry = _entry("dynamic.default", provider="dynamic", account="default")
     provider, connection_service, source_catalog = _apply_provider(
         tmp_path,

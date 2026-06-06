@@ -25,9 +25,7 @@ async def test_rpc_health_and_capability_methods(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         health_response = await client.get("/healthz")
         health = await _rpc(client, "workflow.health", {})
         listed = await _rpc(
@@ -55,9 +53,7 @@ async def test_rpc_unknown_method_returns_json_rpc_error(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         payload = await _rpc(client, "workflow.nope", {})
 
     assert payload["error"]["code"] == -32601
@@ -68,9 +64,7 @@ async def test_rpc_app_mounts_configured_rpc_path(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server, rpc_path="/workflow-rpc")
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/workflow-rpc",
             json={
@@ -89,9 +83,7 @@ async def test_rpc_draft_artifact_deployment_lifecycle(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         draft_ws = await _rpc(
             client,
             "workflow.drafts.create_from_capability",
@@ -222,9 +214,7 @@ async def test_rpc_artifact_and_deployment_catalog_methods(tmp_path) -> None:
 
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         listed_artifacts = await _rpc(client, "workflow.artifacts.list", {})
         inspected_artifact = await _rpc(
             client,
@@ -254,9 +244,7 @@ async def test_rpc_draft_workspace_methods(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         created = await _rpc(
             client,
             "workflow.draft_workspaces.create_from_capability",
@@ -382,9 +370,7 @@ async def test_rpc_runs_deployment_and_reads_bounded_trace(tmp_path) -> None:
 
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(
-        transport=transport, base_url="http://test"
-    ) as client:
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
         run = await _rpc(
             client,
             "workflow.runs.start",

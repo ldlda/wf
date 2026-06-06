@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import (
     ConditionNode,
     EndNode,
@@ -9,7 +10,6 @@ from wf_core.models.steps import (
     Step,
     SubgraphNode,
 )
-from wf_core.models.schemas import NodeDef
 from wf_core.models.workflow import Workflow
 from wf_core.tokens import END
 from wf_core.validation.issues import ValidationIssueCode, ValidationReport

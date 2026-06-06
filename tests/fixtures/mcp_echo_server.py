@@ -4,9 +4,7 @@ from typing import Annotated, Any, TypedDict
 
 import mcp.types as mcp_types
 from mcp.server.fastmcp import Context, FastMCP
-from pydantic import AnyUrl
-from pydantic import Field
-
+from pydantic import AnyUrl, Field
 
 server = FastMCP("echo-fixture")
 _remembered_value: str | None = None

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import asyncio
 
-from wf_artifacts import FileWorkflowArtifactStore, FileRunStore, WorkflowDeployment
+from wf_artifacts import FileRunStore, FileWorkflowArtifactStore, WorkflowDeployment
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore

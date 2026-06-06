@@ -1,8 +1,8 @@
 import json
 import sys
 
-from wf_core import RunState, execute_workflow, resume_workflow
 from examples.demo_workflow import build_demo_registry, build_demo_workflow
+from wf_core import RunState, execute_workflow, resume_workflow
 
 
 def print_run(label: str, run: RunState) -> None:

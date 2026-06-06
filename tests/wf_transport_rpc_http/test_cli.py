@@ -179,7 +179,9 @@ def test_rpc_server_cli_rejects_mcp_config_with_store_root(tmp_path) -> None:
     assert "--mcp-config cannot be combined with --store-root" in result.output
 
 
-def test_rpc_server_cli_mcp_config_builds_registry_capable_server(monkeypatch, tmp_path) -> None:
+def test_rpc_server_cli_mcp_config_builds_registry_capable_server(
+    monkeypatch, tmp_path
+) -> None:
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
         json.dumps(
@@ -213,7 +215,9 @@ def test_rpc_server_cli_mcp_config_builds_registry_capable_server(monkeypatch, t
     assert captured["port"] == 8765
 
 
-def test_rpc_server_cli_mcp_config_with_config_uses_transport_settings(monkeypatch, tmp_path) -> None:
+def test_rpc_server_cli_mcp_config_with_config_uses_transport_settings(
+    monkeypatch, tmp_path
+) -> None:
     mcp_config_path = tmp_path / "wf_mcp.config.json"
     mcp_config_path.write_text(
         json.dumps(
@@ -329,8 +333,9 @@ def test_rpc_server_cli_config_with_mcp_source_uses_mcp_builder(
         encoding="utf-8",
     )
 
-    from wf_transport_rpc_http.cli import app
     from typer.testing import CliRunner
+
+    from wf_transport_rpc_http.cli import app
 
     result = CliRunner().invoke(app, ["--config", str(config_path)])
 

@@ -83,7 +83,9 @@ def test_build_workflow_server_from_legacy_mcp_config_delegates_to_mcp_builder(
         fake_builder,
     )
     legacy_path = tmp_path / "wf_mcp.config.json"
-    legacy_path.write_text('{"store_root": "store", "connections": []}', encoding="utf-8")
+    legacy_path.write_text(
+        '{"store_root": "store", "connections": []}', encoding="utf-8"
+    )
 
     server = build_workflow_server_from_legacy_mcp_config(legacy_path)
 

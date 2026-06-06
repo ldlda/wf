@@ -16,9 +16,9 @@ from wf_core import (
     Workflow,
     WorkflowExecutionError,
 )
+from wf_core.models.steps import OutputBinding
 from wf_core.paths import StatePath
 from wf_core.run_state import StateWrite
-from wf_core.models.steps import OutputBinding
 from wf_core.runtime.engine import resume_workflow
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.runs import create_run_state

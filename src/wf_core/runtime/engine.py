@@ -5,12 +5,12 @@ from typing import Any
 
 from wf_core.errors import WorkflowExecutionError
 from wf_core.models.workflow import Workflow
+from wf_core.run_state import ROOT_SCOPE_ID, RunState, RunStatus
 from wf_core.runtime.ops.flow import finalize_run
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.nodes import AsyncNodeHandler, NodeHandler
 from wf_core.runtime.ops.runs import create_run_state
 from wf_core.runtime.scheduler import resolve_no_ready_frames, select_next_frame
-from wf_core.run_state import ROOT_SCOPE_ID, RunState, RunStatus
 from wf_core.tokens import END
 
 from .preparation import prepare_new_run, prepare_resume

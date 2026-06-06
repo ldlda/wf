@@ -12,9 +12,9 @@ from ..broker.config import build_service_from_config
 from ..broker.transport import normalize_transport
 from ..documentation import build_local_documentation_source
 from ..models import BrokerConfig
+from ..proxy.runtime import ProxyRuntime
 from ..sdk import McpSdkAdapter
 from ..source_registry import FileSourceRegistryStore
-from ..proxy.runtime import ProxyRuntime
 from ..workflow_surface import register_workflow_tools
 from .prompts import register_documentation_prompts
 from .resources import register_documentation_resources

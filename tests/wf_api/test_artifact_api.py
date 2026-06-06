@@ -7,20 +7,19 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+from tests.wf_mcp.test_support import echo_tool
+from wf_api.artifacts import WorkflowArtifactApi
 from wf_artifacts import (
-    FileWorkflowArtifactStore,
     FileDraftWorkspaceStore,
+    FileWorkflowArtifactStore,
     RequiredCapability,
     WorkflowArtifact,
 )
-from wf_api.artifacts import WorkflowArtifactApi
 from wf_mcp.broker import WfMcpService
+from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
-from wf_mcp.broker.service.workflow_operation_context import context_from_service
-
-from tests.wf_mcp.test_support import echo_tool
 
 
 def _echo_draft() -> dict[str, Any]:
@@ -145,7 +144,9 @@ def test_save_artifact_stores_and_returns_saved(tmp_path: Path) -> None:
     assert saved.id == "echo"
 
 
-def test_list_artifacts_returns_empty_page_without_artifact_store(tmp_path: Path) -> None:
+def test_list_artifacts_returns_empty_page_without_artifact_store(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_no_store")
     _api, service = _artifact_api(artifact_store)
     context = replace(context_from_service(service), artifact_store=None)
@@ -158,10 +159,10 @@ def test_list_artifacts_returns_empty_page_without_artifact_store(tmp_path: Path
     assert result["total"] == 0
 
 
-def test_create_artifact_from_plan_saves_with_observed_node_specs(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "artifacts_from_plan"
-    )
+def test_create_artifact_from_plan_saves_with_observed_node_specs(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_from_plan")
     api, _service = _artifact_api(artifact_store, register_echo=True)
 
     result = asyncio.run(
@@ -180,10 +181,10 @@ def test_create_artifact_from_plan_saves_with_observed_node_specs(tmp_path: Path
     assert saved.id == "echo"
 
 
-def test_create_artifact_from_workspace_returns_saved_false_when_invalid(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "artifacts_workspace_invalid"
-    )
+def test_create_artifact_from_workspace_returns_saved_false_when_invalid(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_workspace_invalid")
     api, service = _artifact_api(artifact_store, register_echo=True)
     draft = _echo_draft()
     draft["routes"]["echo"] = {"typo": "__end__"}
@@ -213,9 +214,7 @@ def test_create_artifact_from_workspace_returns_saved_false_when_invalid(tmp_pat
 
 
 def test_create_wrapper_from_workspace_saves_kind_wrapper(tmp_path: Path) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "artifacts_wrapper_workspace"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_wrapper_workspace")
     api, service = _artifact_api(artifact_store, register_echo=True)
     from wf_api.drafts import WorkflowDraftApi
 
@@ -258,9 +257,7 @@ def test_inspect_artifact_returns_stable_fields(tmp_path: Path) -> None:
 
 def test_handler_delegation_for_inspect_artifact(tmp_path: Path) -> None:
     """WorkflowSurfaceHandlers.inspect_artifact delegates to WorkflowArtifactApi."""
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "artifacts_delegation"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_delegation")
     mcp_root = artifact_store.root / "delegation_mcp"
     service = WfMcpService(
         store=FileStore(mcp_root),

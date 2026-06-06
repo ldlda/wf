@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import warnings
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal, overload, cast
-import warnings
+from typing import Any, Literal, cast, overload
 from warnings import deprecated
 
 from wf_authoring.ops.values import runtime_error
@@ -18,18 +18,18 @@ from wf_core import (
     NodeHandler,
     NodeUse,
     PreparedSubgraph,
+    RunState,
     SchemaRef,
     StateSchema,
     SubgraphNode,
     Workflow,
     WorkflowRef,
-    RunState,
     execute_workflow,
     resume_workflow,
 )
 from wf_core.errors import WorkflowExecutionError
-from wf_core.models.conditions import Condition as CoreCondition
 from wf_core.models.conditions import BinaryCondition, ExistsCondition, PathOperand
+from wf_core.models.conditions import Condition as CoreCondition
 from wf_core.models.steps import (
     InputBinding,
     InputPathBinding,
@@ -42,12 +42,12 @@ from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_platform import CapabilityRef
 
 from ..dsl import Expr, GraphPath, PathArg, PathExpr, compile_condition
+from ..nodes import NodeSpec
 from ..nodes.callables import SyncRegistryHandler
 from ..nodes.registry import build_registry
 from ..reducers import ReducerCatalog
 from ..schemas import SchemaLike, StateSchemaLike, schema_ref_from, state_schema_from
 from ..subgraph import subgraph_ref
-from ..nodes import NodeSpec
 from .ids import next_step_id, slug_id
 from .mapping import (
     InputBindingArg,

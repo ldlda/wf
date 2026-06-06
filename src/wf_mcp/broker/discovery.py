@@ -9,8 +9,9 @@ from mcp.types import METHOD_NOT_FOUND
 
 from wf_authoring import NodeSpec
 
+from ..auth import AuthRecord
 from ..capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
-from ..models import AuthRecord, ConnectionConfig
+from ..models import ConnectionConfig
 from ..runtime import ToolExecutor
 from ..sdk import BackendAdapter
 from ..shared import root_exception
