@@ -6,16 +6,16 @@ from pathlib import Path
 from wf_api import file_workflow_stores
 from wf_config import WorkflowConfigFile
 from wf_config.models import FilesystemStoreConfig, McpSourceConfig, ServerConfig
+from wf_sources_mcp.source_registry import (
+    FileSourceRegistryStore,
+    workflow_mcp_source_to_connection_config,
+)
 from wf_sources_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
 
 from ..control import BrokerConfigFile, ConnectionConfigFile
 from ..models import BrokerConfig
 from ..runtime import McpRuntimePool, PersistentSessionFactory
 from ..sdk import McpSdkAdapter
-from ..source_registry import (
-    FileSourceRegistryStore,
-    workflow_mcp_source_to_connection_config,
-)
 from .models import BrokerStoreRoots
 from .service import WfMcpService
 

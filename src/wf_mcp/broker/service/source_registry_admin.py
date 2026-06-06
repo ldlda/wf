@@ -5,14 +5,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from wf_api.source_registry_admin import WorkflowSourceRegistryMutationProvider
-
-from ...auth import AuthRecord, connection_auth_diagnostic
-from ...models import BrokerConfig, ConnectionConfig
-from ...source_registry import (
+from wf_sources_mcp.source_registry import (
     McpSourceRegistryEntry,
     SourceRegistryFile,
     SourceRegistryStore,
 )
+
+from ...auth import AuthRecord, connection_auth_diagnostic
+from ...models import BrokerConfig, ConnectionConfig
 from .connection_service import ConnectionService
 
 

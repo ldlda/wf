@@ -69,3 +69,18 @@ def test_wf_mcp_storage_shim_reexports_wf_sources_mcp_storage() -> None:
     assert CompatFileAuthStore is FileAuthStore
     assert CompatFileCatalogStore is FileCatalogStore
     assert CompatFileStore is FileStore
+
+
+def test_wf_mcp_source_registry_shim_reexports_wf_sources_mcp_registry() -> None:
+    from wf_mcp.source_registry import FileSourceRegistryStore as CompatFileStore
+    from wf_mcp.source_registry import McpSourceRegistryEntry as CompatEntry
+    from wf_mcp.source_registry import SourceRegistryFile as CompatFile
+    from wf_sources_mcp.source_registry import (
+        FileSourceRegistryStore,
+        McpSourceRegistryEntry,
+        SourceRegistryFile,
+    )
+
+    assert CompatFileStore is FileSourceRegistryStore
+    assert CompatEntry is McpSourceRegistryEntry
+    assert CompatFile is SourceRegistryFile

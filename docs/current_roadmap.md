@@ -273,12 +273,16 @@ implementation state.
     as workflow capabilities. The current `wf_mcp` package still contains both
     roles plus compatibility entrypoints; new server/transport work should avoid
     depending on that combined facade.
-     First `wf_sources_mcp` slice complete: MCP auth helpers and focused
-     auth/catalog stores now live in `wf_sources_mcp`, with `wf_mcp` compatibility
-     shims preserved. Runtime/session/source-registry moves remain future slices.
-     Keep `wf_mcp` re-export shims for compatibility and add import-direction
-     tests so `wf_sources_mcp` does not depend on workflow/admin surface,
-     frontend server, or proxy modules.
+      First `wf_sources_mcp` slice complete: MCP auth helpers and focused
+      auth/catalog stores now live in `wf_sources_mcp`, with `wf_mcp` compatibility
+      shims preserved. Runtime/session/source-registry moves remain future slices.
+      Keep `wf_mcp` re-export shims for compatibility and add import-direction
+      tests so `wf_sources_mcp` does not depend on workflow/admin surface,
+      frontend server, or proxy modules.
+     Second `wf_sources_mcp` slice complete: MCP desired source registry
+     models, file store, and conversion helpers now live in
+     `wf_sources_mcp.source_registry`, with `wf_mcp.source_registry` retained
+     as a compatibility shim.
     The `wf-mcp` script is now a legacy/special-purpose MCP entrypoint, not the
     preferred durable workflow server. New product paths should target
     `wf-rpc-server` plus neutral `wf_config`/`wf_server` composition, then keep

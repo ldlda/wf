@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from ...connections import ConnectionRegistry, parse_connection_id
-from ...models import BrokerConfig, ConnectionConfig
-from ...shared.names import RESERVED_CONNECTION_IDS
-from ...source_registry import (
+from wf_sources_mcp.source_registry import (
     SourceRegistryFile,
     SourceRegistryStore,
     connection_config_to_registry_entry,
     registry_entry_to_connection_config,
 )
+
+from ...connections import ConnectionRegistry, parse_connection_id
+from ...models import BrokerConfig, ConnectionConfig
+from ...shared.names import RESERVED_CONNECTION_IDS
 from .events import BrokerEventRecorder
 from .source_catalog import SourceCatalogService
 

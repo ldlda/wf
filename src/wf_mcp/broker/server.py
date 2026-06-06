@@ -12,10 +12,10 @@ from wf_api import (
 from wf_api.stores import WorkflowStores
 from wf_config import WorkflowConfigFile
 from wf_server import WorkflowServer, WorkflowServerConfig
+from wf_sources_mcp.source_registry import FileSourceRegistryStore, SourceRegistryStore
 
 from ..models import BrokerConfig
 from ..sdk.adapter import McpSdkAdapter
-from ..source_registry import FileSourceRegistryStore, SourceRegistryStore
 from .artifact_tools import register_artifact_tools
 from .config import broker_config_from_workflow_config, build_service_from_config
 from .prompts import register_broker_prompts

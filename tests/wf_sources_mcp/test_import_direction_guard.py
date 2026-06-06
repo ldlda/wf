@@ -3,6 +3,9 @@ from __future__ import annotations
 import ast
 from pathlib import Path
 
+# Temporary low-level wf_mcp imports are allowed for connection id parsing,
+# reserved names, and broker DTO conversion. Frontend/proxy/workflow-surface
+# imports are forbidden because wf_sources_mcp is upstream-source code.
 FORBIDDEN_WF_MCP_PREFIXES = (
     "wf_mcp.admin_surface",
     "wf_mcp.workflow_surface",

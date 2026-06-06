@@ -26,6 +26,7 @@ from wf_platform import (
     CapabilitySource,
 )
 from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.source_registry import SourceRegistryStore
 from wf_sources_mcp.storage import AuthStore, CatalogStore, Store
 
 from ...connections import ConnectionRegistry
@@ -37,7 +38,6 @@ from ...models import (
 )
 from ...runtime import ToolExecutor
 from ...sdk import BackendAdapter
-from ...source_registry import SourceRegistryStore
 from ..admin_capabilities import admin_source
 from ..catalog import CombinedCatalog
 from .builtins import builtin_sources
