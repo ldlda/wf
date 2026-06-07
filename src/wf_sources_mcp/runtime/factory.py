@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 import asyncio
+import time
+from collections.abc import Awaitable, Callable
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
+from itertools import count
+from typing import Any, Generic, TypeVar
 
 from mcp.client.session import ClientSession
-from mcp.types import CallToolResult
 
 from wf_sources_mcp.auth import AuthRecord
-from wf_sources_mcp.client import open_mcp_session
+from wf_sources_mcp.client import McpSourceClient, open_mcp_session
 from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.sdk import ToolCallResult
 
 from .session import PersistentMcpSession
+
+T = TypeVar("T")
+ClientOperation = Callable[[McpSourceClient], Awaitable[T]]
 
 
 @dataclass(slots=True)
@@ -49,12 +56,19 @@ class PersistentSessionFactory:
 
 
 @dataclass(slots=True)
-class _ToolCallRequest:
-    """One request submitted to the task that owns the MCP transport."""
+class _ClientOperationRequest(Generic[T]):
+    """One explicit operation submitted to the MCP transport owner task.
 
-    tool_name: str
-    payload: dict[str, object]
-    result: asyncio.Future[CallToolResult]
+    `operation` is metadata for diagnostics/tracing only. Execution uses `run`;
+    do not dispatch with `getattr(client, operation)`.
+    """
+
+    operation: str
+    connection_id: str
+    sequence: int
+    submitted_at: float
+    run: ClientOperation[T]
+    result: asyncio.Future[T]
 
 
 @dataclass(slots=True)
@@ -71,9 +85,10 @@ class _SessionOwner:
     factory: PersistentSessionFactory
     connection: McpSourceConnection
     auth: AuthRecord | None
-    _requests: asyncio.Queue[_ToolCallRequest | None] = field(
+    _requests: asyncio.Queue[_ClientOperationRequest[Any] | None] = field(
         default_factory=asyncio.Queue
     )
+    _sequence: count = field(default_factory=lambda: count(1))
     _task: asyncio.Task[None] | None = None
 
     async def start(self) -> None:
@@ -85,21 +100,29 @@ class _SessionOwner:
         )
         await ready
 
-    async def call_tool(
+    async def submit(
         self,
-        tool_name: str,
-        payload: dict[str, object],
-    ) -> CallToolResult:
-        """Submit a call and fail promptly if its transport owner exits."""
+        operation: str,
+        run: ClientOperation[T],
+    ) -> T:
+        """Submit an explicit client operation to the MCP owner task."""
         task = self._task
         if task is None:
             raise RuntimeError("persistent MCP session is not started")
         if task.done():
             await task
             raise RuntimeError("persistent MCP session stopped unexpectedly")
-        result = asyncio.get_running_loop().create_future()
+
+        result: asyncio.Future[T] = asyncio.get_running_loop().create_future()
         await self._requests.put(
-            _ToolCallRequest(tool_name=tool_name, payload=payload, result=result)
+            _ClientOperationRequest(
+                operation=operation,
+                connection_id=self.connection.id,
+                sequence=next(self._sequence),
+                submitted_at=time.monotonic(),
+                run=run,
+                result=result,
+            )
         )
         done, _pending = await asyncio.wait(
             {result, task}, return_when=asyncio.FIRST_COMPLETED
@@ -108,6 +131,17 @@ class _SessionOwner:
             return result.result()
         await task
         raise RuntimeError("persistent MCP session stopped unexpectedly")
+
+    async def call_tool(
+        self,
+        tool_name: str,
+        payload: dict[str, object],
+    ) -> ToolCallResult:
+        """Submit a tool call through the generic owner-task operation queue."""
+        return await self.submit(
+            operation="call_tool",
+            run=lambda client: client.call_tool(tool_name, payload),
+        )
 
     async def close(self) -> None:
         """Ask the owner task to close the MCP transport in its own scope."""
@@ -126,15 +160,14 @@ class _SessionOwner:
                 session = await self.factory._create_with_stack(
                     stack, self.connection, self.auth
                 )
+                client = McpSourceClient(session=session, connection=self.connection)
                 ready.set_result(None)
                 while True:
                     request = await self._requests.get()
                     if request is None:
                         return
                     try:
-                        response = await session.call_tool(
-                            request.tool_name, request.payload
-                        )
+                        response = await request.run(client)
                     except Exception as exc:
                         request.result.set_exception(exc)
                     else:
@@ -143,8 +176,6 @@ class _SessionOwner:
             if not ready.done():
                 ready.set_exception(exc)
                 return
-            # Calls already queued behind the failing request cannot otherwise
-            # observe that their sole transport owner has exited.
             while not self._requests.empty():
                 pending = self._requests.get_nowait()
                 if pending is not None and not pending.result.done():

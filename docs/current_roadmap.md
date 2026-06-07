@@ -242,6 +242,10 @@ implementation state.
       `wf_sources_mcp.client`. The one-shot SDK adapter delegates MCP operation
       calls and conversion through the facade; persistent runtime remains
       tool-call-only until a separate owner-task routing slice.
+    - Completed: persistent MCP runtime owner now uses a generic explicit
+      operation queue with request metadata and `McpSourceClient` execution.
+      Public runtime remains tool-call-only; `operation` strings are diagnostics
+      labels, not dispatch.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in

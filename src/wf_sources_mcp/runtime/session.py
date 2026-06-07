@@ -5,14 +5,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from mcp.client.session import ClientSession
-from mcp.types import CallToolResult
 
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.sdk import ToolCallResult
 from wf_sources_mcp.sdk.converters import tool_result_to_call_result
 
-RawToolCaller = Callable[[str, dict[str, Any]], Awaitable[CallToolResult]]
+RawToolCaller = Callable[[str, dict[str, Any]], Awaitable[ToolCallResult]]
 
 
 @dataclass(slots=True)
@@ -39,12 +38,11 @@ class PersistentMcpSession:
         self, tool_name: str, payload: dict[str, Any]
     ) -> ToolCallResult:
         if self.call_callback is not None:
-            result = await self.call_callback(tool_name, payload)
-        elif self.client is not None:
+            return await self.call_callback(tool_name, payload)
+        if self.client is not None:
             result = await self.client.call_tool(tool_name, payload)
-        else:
-            raise RuntimeError("persistent MCP session has no tool call transport")
-        return tool_result_to_call_result(result)
+            return tool_result_to_call_result(result)
+        raise RuntimeError("persistent MCP session has no tool call transport")
 
     async def close(self) -> None:
         """Close the transport/session stack owned by the runtime factory."""
