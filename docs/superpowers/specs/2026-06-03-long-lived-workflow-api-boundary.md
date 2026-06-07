@@ -95,11 +95,14 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
 5. Complete: MCP SDK conversion helpers moved to `wf_sources_mcp.sdk.converters`, with `wf_mcp.sdk.converters` retained as a shim.
 6. Complete: shared MCP session opener in `wf_sources_mcp.client`. One-shot
    adapter (`McpSdkAdapter`) and persistent runtime
-   (`PersistentSessionFactory`) both use `open_mcp_session`. Runtime files
-   remain in `wf_mcp` for compatibility; next slice moves
-   `PersistentSessionFactory`, `PersistentMcpSession`, and `McpRuntimePool`
-   to `wf_sources_mcp.runtime`.
-7. Upstream transport/discovery/session services.
+   (`PersistentSessionFactory`) both use `open_mcp_session`.
+7. Complete: persistent MCP runtime (`PersistentMcpSession`,
+   `PersistentSessionFactory`, `McpRuntimePool`,
+   `connection_runtime_fingerprint`) moved to `wf_sources_mcp.runtime`, with
+   `wf_mcp.runtime.*` retained as compatibility shims. Runtime remains
+   tool-call-only. Next slice is moving `McpSdkAdapter` to
+   `wf_sources_mcp.sdk.adapter`.
+8. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

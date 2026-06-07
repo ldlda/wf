@@ -147,3 +147,29 @@ def test_wf_mcp_sdk_converter_shim_reexports_wf_sources_mcp_converters() -> None
     assert compat_tool_result is tool_result_to_call_result
     assert compat_tool_to_discovered is tool_to_discovered
     assert compat_output_schema is workflow_output_schema_from_mcp_tool_schema
+
+
+def test_runtime_shims_reexport_wf_sources_mcp_runtime() -> None:
+    from wf_mcp.runtime import (
+        McpRuntimePool as OldMcpRuntimePool,
+    )
+    from wf_mcp.runtime import (
+        PersistentMcpSession as OldPersistentMcpSession,
+    )
+    from wf_mcp.runtime import (
+        PersistentSessionFactory as OldPersistentSessionFactory,
+    )
+    from wf_mcp.runtime import (
+        connection_runtime_fingerprint as old_connection_runtime_fingerprint,
+    )
+    from wf_sources_mcp.runtime import (
+        McpRuntimePool,
+        PersistentMcpSession,
+        PersistentSessionFactory,
+        connection_runtime_fingerprint,
+    )
+
+    assert OldMcpRuntimePool is McpRuntimePool
+    assert OldPersistentMcpSession is PersistentMcpSession
+    assert OldPersistentSessionFactory is PersistentSessionFactory
+    assert old_connection_runtime_fingerprint is connection_runtime_fingerprint

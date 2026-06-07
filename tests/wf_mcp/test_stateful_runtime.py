@@ -11,7 +11,7 @@ from mcp.types import CallToolResult
 from wf_authoring import build_async_registry
 from wf_core import RuntimeContext
 from wf_mcp.capabilities import DiscoveredTool
-from wf_mcp.models import AuthRecord, ConnectionConfig
+from wf_mcp.models import AuthRecord
 from wf_mcp.runtime import McpRuntimePool, PersistentMcpSession
 from wf_mcp.runtime.factory import PersistentSessionFactory
 from wf_mcp.sdk import ToolCallResult
@@ -102,7 +102,7 @@ class CrashingSessionFactory(PersistentSessionFactory):
     async def _create_with_stack(
         self,
         stack: AsyncExitStack,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> ClientSession:
         return cast(ClientSession, self.client)
@@ -161,20 +161,16 @@ def test_generated_workflow_specs_share_injected_tool_executor() -> None:
 
 
 def test_runtime_pool_reuses_stateful_session_for_same_connection() -> None:
-    connection = ConnectionConfig(
+    connection = McpSourceConnection(
         id="playwright.default",
-        server="playwright",
+        provider="playwright",
         account="default",
-        metadata={
-            "transport": "stdio",
-            "command": "pnpx",
-            "args": ["@playwright/mcp"],
-        },
+        transport=StdioSourceTransport(command="pnpx"),
     )
     created_clients: list[FakeStatefulClient] = []
 
     async def factory(
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> PersistentMcpSession:
         client = FakeStatefulClient()
@@ -199,22 +195,22 @@ def test_runtime_pool_reuses_stateful_session_for_same_connection() -> None:
 
 
 def test_runtime_pool_replaces_session_when_fingerprint_changes() -> None:
-    original = ConnectionConfig(
+    original = McpSourceConnection(
         id="playwright.default",
-        server="playwright",
+        provider="playwright",
         account="default",
-        metadata={"transport": "stdio", "command": "pnpx", "args": ["old"]},
+        transport=StdioSourceTransport(command="pnpx"),
     )
-    changed = ConnectionConfig(
+    changed = McpSourceConnection(
         id="playwright.default",
-        server="playwright",
+        provider="playwright",
         account="default",
-        metadata={"transport": "stdio", "command": "pnpx", "args": ["new"]},
+        transport=StdioSourceTransport(command="pnpx-new"),
     )
     created_clients: list[FakeStatefulClient] = []
 
     def factory(
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> PersistentMcpSession:
         client = FakeStatefulClient()
@@ -238,11 +234,10 @@ def test_runtime_pool_replaces_session_when_fingerprint_changes() -> None:
 
 
 def test_persistent_session_fails_inflight_and_queued_calls_if_owner_dies() -> None:
-    connection = ConnectionConfig(
+    connection = McpSourceConnection(
         id="failing.default",
-        server="failing",
+        provider="failing",
         account="default",
-        metadata={},
     )
 
     async def exercise() -> tuple[

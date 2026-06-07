@@ -227,11 +227,13 @@ implementation state.
      [2026-06-07 MCP source connection seam](./historical/superpowers/plans/2026-06-07-mcp-source-connection-seam.md).
    - Completed: shared MCP session opener exists in `wf_sources_mcp.client`.
      One-shot adapter (`McpSdkAdapter`) and persistent runtime
-     (`PersistentSessionFactory`) both use it. Runtime files remain in
-     `wf_mcp` for compatibility. Next slice can move `PersistentSessionFactory`,
-     `PersistentMcpSession`, and `McpRuntimePool` to
-     `wf_sources_mcp.runtime`. The completed plan was
-     [2026-06-07 MCP client session opener](./historical/superpowers/plans/2026-06-07-mcp-client-session-opener.md).
+     (`PersistentSessionFactory`) both use it.
+   - Completed: persistent MCP runtime moved to `wf_sources_mcp.runtime`.
+     `PersistentMcpSession`, `PersistentSessionFactory`, `McpRuntimePool`,
+     and `connection_runtime_fingerprint` are now canonical in
+     `wf_sources_mcp.runtime`; `wf_mcp.runtime.*` are compatibility shims.
+     Runtime remains tool-call-only. The completed plan was
+     [2026-06-07 MCP runtime package move](./historical/superpowers/plans/2026-06-07-mcp-runtime-package-move.md).
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in
