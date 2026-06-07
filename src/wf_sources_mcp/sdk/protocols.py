@@ -82,13 +82,8 @@ class BackendAdapter(Protocol):
     ) -> ToolCallResult: ...
 
 
-class ToolExecutor(Protocol):
-    """Runtime boundary for executing MCP tools from workflow nodes.
-
-    Discovery can stay one-shot, but workflow execution needs this smaller
-    protocol so persistent runtime pools can replace one-shot adapters without
-    changing generated NodeSpecs.
-    """
+class ToolRuntime(Protocol):
+    """Runtime boundary for executing MCP tools from workflow nodes."""
 
     async def call_tool(
         self,
@@ -99,12 +94,18 @@ class ToolExecutor(Protocol):
     ) -> ToolCallResult: ...
 
 
-class StatefulMcpRuntime(ToolExecutor, Protocol):
-    """Stateful execution/read boundary for configured MCP sources.
+class ToolExecutor(ToolRuntime, Protocol):
+    """Compatibility name for workflow-node tool execution."""
 
-    Implementations keep source session state across calls. Discovery/catalog
-    refresh may still use one-shot adapters by policy.
-    """
+
+class ResourceRuntime(Protocol):
+    """Stateful resource operations for configured MCP sources."""
+
+    async def list_resources(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredResource]: ...
 
     async def read_resource(
         self,
@@ -112,6 +113,16 @@ class StatefulMcpRuntime(ToolExecutor, Protocol):
         auth: AuthRecord | None,
         uri: str,
     ) -> dict[str, Any]: ...
+
+
+class PromptRuntime(Protocol):
+    """Stateful prompt operations for configured MCP sources."""
+
+    async def list_prompts(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredPrompt]: ...
 
     async def get_prompt(
         self,
@@ -122,9 +133,20 @@ class StatefulMcpRuntime(ToolExecutor, Protocol):
     ) -> dict[str, Any]: ...
 
 
+class StatefulMcpRuntime(ToolRuntime, ResourceRuntime, PromptRuntime, Protocol):
+    """Stateful execution/read/list boundary for configured MCP sources.
+
+    Implementations keep source session state across calls. Catalog refresh may
+    still use one-shot adapters by policy.
+    """
+
+
 __all__ = [
     "BackendAdapter",
+    "PromptRuntime",
+    "ResourceRuntime",
     "StatefulMcpRuntime",
     "ToolCallResult",
     "ToolExecutor",
+    "ToolRuntime",
 ]

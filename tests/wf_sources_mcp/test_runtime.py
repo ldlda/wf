@@ -6,7 +6,13 @@ from typing import Any
 import pytest
 from mcp.client.session import ClientSession
 from mcp.types import CallToolResult as RawCallToolResult
-from mcp.types import TextContent
+from mcp.types import (
+    ListPromptsResult,
+    ListResourcesResult,
+    Prompt,
+    Resource,
+    TextContent,
+)
 from pydantic import AnyUrl
 
 from wf_sources_mcp.auth import AuthRecord
@@ -136,6 +142,31 @@ class _FakeFactory(PersistentSessionFactory):
                     },
                 )()
 
+            async def list_resources(self) -> ListResourcesResult:
+                return ListResourcesResult(
+                    resources=[
+                        Resource(
+                            uri=AnyUrl("fixture://docs/runtime"),
+                            name="resource.runtime",
+                            title="Runtime Resource",
+                            description="Runtime-scoped resource.",
+                            mimeType="text/plain",
+                        )
+                    ]
+                )
+
+            async def list_prompts(self) -> ListPromptsResult:
+                return ListPromptsResult(
+                    prompts=[
+                        Prompt(
+                            name="prompt.runtime",
+                            title="Runtime Prompt",
+                            description="Runtime-scoped prompt.",
+                            arguments=[],
+                        )
+                    ]
+                )
+
         return _FakeClient()  # type: ignore[return-value]
 
 
@@ -209,6 +240,8 @@ def test_persistent_session_public_runtime_exposes_safe_read_operations() -> Non
     assert "call_tool" in public_operations
     assert "read_resource" in public_operations
     assert "get_prompt" in public_operations
+    assert "list_resources" in public_operations
+    assert "list_prompts" in public_operations
     assert "invoke_method" not in public_operations
     assert "send_notification" not in public_operations
 
@@ -298,3 +331,54 @@ async def test_runtime_pool_reuses_session_for_tool_resource_and_prompt() -> Non
         "prompt.summarize:{'text': 'hello'}"
     )
     assert factory.created_connections == [connection]
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_factory_routes_resource_and_prompt_lists() -> None:
+    factory = _FakeFactory()
+    session = await factory.create(_connection(), None)
+
+    resources = await session.list_resources()
+    prompts = await session.list_prompts()
+    await session.close()
+
+    assert resources[0].name == "resource.runtime"
+    assert resources[0].uri == "fixture://docs/runtime"
+    assert prompts[0].name == "prompt.runtime"
+
+
+@pytest.mark.asyncio
+async def test_runtime_pool_reuses_session_for_resource_and_prompt_lists() -> None:
+    factory = _FakeFactory()
+    pool = McpRuntimePool(factory.create)
+    connection = _connection()
+
+    resources = await pool.list_resources(connection, None)
+    prompts = await pool.list_prompts(connection, None)
+    await pool.close_all()
+
+    assert resources[0].name == "resource.runtime"
+    assert prompts[0].name == "prompt.runtime"
+    assert factory.created_connections == [connection]
+
+
+def test_runtime_pool_satisfies_stateful_protocol_static_shape() -> None:
+    from wf_sources_mcp.sdk import (
+        PromptRuntime,
+        ResourceRuntime,
+        StatefulMcpRuntime,
+        ToolRuntime,
+    )
+
+    factory = _FakeFactory()
+    pool = McpRuntimePool(factory.create)
+
+    tool_runtime: ToolRuntime = pool
+    resource_runtime: ResourceRuntime = pool
+    prompt_runtime: PromptRuntime = pool
+    stateful_runtime: StatefulMcpRuntime = pool
+
+    assert tool_runtime is pool
+    assert resource_runtime is pool
+    assert prompt_runtime is pool
+    assert stateful_runtime is pool

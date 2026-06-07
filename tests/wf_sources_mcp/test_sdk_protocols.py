@@ -82,3 +82,19 @@ def test_stateful_mcp_runtime_protocol_shape() -> None:
 
     assert StatefulMcpRuntime.__name__ == "StatefulMcpRuntime"
     assert ToolExecutor.__name__ == "ToolExecutor"
+
+
+def test_stateful_runtime_protocol_slices_export() -> None:
+    from wf_sources_mcp.sdk import (
+        PromptRuntime,
+        ResourceRuntime,
+        StatefulMcpRuntime,
+        ToolExecutor,
+        ToolRuntime,
+    )
+
+    assert ToolRuntime.__name__ == "ToolRuntime"
+    assert ResourceRuntime.__name__ == "ResourceRuntime"
+    assert PromptRuntime.__name__ == "PromptRuntime"
+    assert ToolExecutor.__name__ == "ToolExecutor"
+    assert StatefulMcpRuntime.__name__ == "StatefulMcpRuntime"

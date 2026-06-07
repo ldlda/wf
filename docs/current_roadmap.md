@@ -256,6 +256,10 @@ implementation state.
     - Completed: broker content access now prefers a configured stateful MCP
       runtime for `read_resource` and `get_prompt`, with one-shot adapter fallback.
       Catalog refresh/discovery remains one-shot by policy.
+    - Completed: stateful MCP runtime now has protocol slices for tools,
+      resources, and prompts, and can route session-scoped `list_resources` and
+      `list_prompts` through the owner task. Catalog refresh still uses one-shot
+      adapter policy.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in

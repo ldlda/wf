@@ -120,6 +120,21 @@ def test_wf_mcp_sdk_protocol_shims_reexport_wf_sources_mcp_sdk() -> None:
     assert CompatBaseToolCallResult is ToolCallResult
     assert CompatBaseStatefulMcpRuntime is StatefulMcpRuntime
 
+    from wf_mcp.sdk import PromptRuntime as CompatPromptRuntime
+    from wf_mcp.sdk import ResourceRuntime as CompatResourceRuntime
+    from wf_mcp.sdk import ToolRuntime as CompatToolRuntime
+    from wf_mcp.sdk.base import PromptRuntime as CompatBasePromptRuntime
+    from wf_mcp.sdk.base import ResourceRuntime as CompatBaseResourceRuntime
+    from wf_mcp.sdk.base import ToolRuntime as CompatBaseToolRuntime
+    from wf_sources_mcp.sdk import PromptRuntime, ResourceRuntime, ToolRuntime
+
+    assert CompatPromptRuntime is PromptRuntime
+    assert CompatResourceRuntime is ResourceRuntime
+    assert CompatToolRuntime is ToolRuntime
+    assert CompatBasePromptRuntime is PromptRuntime
+    assert CompatBaseResourceRuntime is ResourceRuntime
+    assert CompatBaseToolRuntime is ToolRuntime
+
 
 def test_wf_mcp_runtime_protocol_shim_reexports_wf_sources_mcp_tool_executor() -> None:
     from wf_mcp.runtime import ToolExecutor as CompatRuntimeToolExecutor

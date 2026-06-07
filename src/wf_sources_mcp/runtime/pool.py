@@ -7,6 +7,7 @@ from inspect import isawaitable
 from typing import Any, cast
 
 from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.sdk import ToolCallResult
 
@@ -101,6 +102,22 @@ class McpRuntimePool:
     ) -> dict[str, Any]:
         session = await self.get_session(connection, auth)
         return await session.get_prompt(prompt_name, arguments)
+
+    async def list_resources(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredResource]:
+        session = await self.get_session(connection, auth)
+        return await session.list_resources()
+
+    async def list_prompts(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredPrompt]:
+        session = await self.get_session(connection, auth)
+        return await session.list_prompts()
 
     async def close_connection(self, connection_id: str) -> None:
         current = self._sessions.pop(connection_id, None)

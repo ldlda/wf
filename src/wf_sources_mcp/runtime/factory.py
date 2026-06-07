@@ -11,6 +11,7 @@ from typing import Any, Generic, TypeVar
 from mcp.client.session import ClientSession
 
 from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource
 from wf_sources_mcp.client import McpSourceClient, open_mcp_session
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.sdk import ToolCallResult
@@ -44,6 +45,8 @@ class PersistentSessionFactory:
             call_callback=owner.call_tool,
             read_resource_callback=owner.read_resource,
             get_prompt_callback=owner.get_prompt,
+            list_resources_callback=owner.list_resources,
+            list_prompts_callback=owner.list_prompts,
             close_callback=owner.close,
         )
 
@@ -161,6 +164,20 @@ class _SessionOwner:
         return await self.submit(
             operation="get_prompt",
             run=lambda client: client.get_prompt(prompt_name, arguments),
+        )
+
+    async def list_resources(self) -> list[DiscoveredResource]:
+        """Submit resource listing through the generic owner-task operation queue."""
+        return await self.submit(
+            operation="list_resources",
+            run=lambda client: client.list_resources(),
+        )
+
+    async def list_prompts(self) -> list[DiscoveredPrompt]:
+        """Submit prompt listing through the generic owner-task operation queue."""
+        return await self.submit(
+            operation="list_prompts",
+            run=lambda client: client.list_prompts(),
         )
 
     async def close(self) -> None:
