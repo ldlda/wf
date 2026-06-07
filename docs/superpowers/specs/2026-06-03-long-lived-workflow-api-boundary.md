@@ -120,7 +120,10 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
 12. Complete: persistent MCP runtime can route `get_prompt` through the
     owner-task queue and `McpSourceClient`. Runtime still does not expose raw
     method invocation, notifications, or discovery list operations.
-13. Upstream transport/discovery/session services.
+13. Complete: broker content access now prefers configured `StatefulMcpRuntime`
+    for resource and prompt reads, falling back to the one-shot adapter when no
+    stateful runtime is configured. Catalog refresh/discovery remains one-shot.
+14. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

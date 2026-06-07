@@ -168,6 +168,10 @@ def build_service_from_config(config: BrokerConfig) -> WfMcpService:
     # focused services receive role-specific stores.
     auth_store = FileAuthStore(store_roots.auth_root)
     catalog_store = FileCatalogStore(store_roots.catalog_cache_root)
+    # Discovery can use short-lived SDK sessions. Workflow execution needs
+    # a persistent runtime so stateful MCP servers keep session/page state
+    # across sequential workflow nodes.
+    runtime_pool = McpRuntimePool(runtime_factory.create)
     service = WfMcpService(
         store=FileStore(store_roots.auth_root),
         auth_store=auth_store,
@@ -178,7 +182,8 @@ def build_service_from_config(config: BrokerConfig) -> WfMcpService:
         # Discovery can use short-lived SDK sessions. Workflow execution needs
         # a persistent runtime so stateful MCP servers keep session/page state
         # across sequential workflow nodes.
-        tool_executor=McpRuntimePool(runtime_factory.create),
+        tool_executor=runtime_pool,
+        stateful_runtime=runtime_pool,
     )
     source_registry_store = FileSourceRegistryStore(store_roots.source_registry_root)
     service.sync_connections_from_config(

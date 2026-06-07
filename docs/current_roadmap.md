@@ -253,6 +253,9 @@ implementation state.
     - Completed: persistent MCP runtime can now route `get_prompt` through
       the owner-task queue and `McpSourceClient`. This keeps prompt reads
       stateful without adding raw method invocation or notification support.
+    - Completed: broker content access now prefers a configured stateful MCP
+      runtime for `read_resource` and `get_prompt`, with one-shot adapter fallback.
+      Catalog refresh/discovery remains one-shot by policy.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in

@@ -28,10 +28,9 @@ from wf_mcp.shared.errors import error_payload
 from wf_sources_mcp.auth import AuthRecord, connection_auth_diagnostic
 from wf_sources_mcp.catalog.models import CatalogSnapshot
 from wf_sources_mcp.connections import (
-    McpSourceConnection,
     mcp_source_connection_from_connection_config,
 )
-from wf_sources_mcp.sdk import BackendAdapter, ToolExecutor
+from wf_sources_mcp.sdk import BackendAdapter, StatefulMcpRuntime, ToolExecutor
 from wf_sources_mcp.storage import AuthStore, CatalogStore
 
 from .adapters import require_adapter
@@ -53,6 +52,7 @@ class UpstreamTransportService:
     event_sink: EventSink
     adapters: dict[str, BackendAdapter] = field(default_factory=dict)
     tool_executor: ToolExecutor | None = None
+    stateful_runtime: StatefulMcpRuntime | None = None
 
     def register_adapter(self, server: str, adapter: BackendAdapter) -> None:
         self.adapters[server] = adapter
@@ -103,7 +103,6 @@ class UpstreamTransportService:
         qualified_name: str,
         uri: str,
     ) -> dict[str, Any]:
-        adapter = require_adapter(connection, self.adapters)
         auth = self.load_connection_auth(connection)
         # Compatibility boundary: broker callers still pass ConnectionConfig.
         source_connection = mcp_source_connection_from_connection_config(connection)
@@ -115,7 +114,15 @@ class UpstreamTransportService:
                 payload={"uri": uri},
             )
         )
-        result = await adapter.read_resource(source_connection, auth, uri)
+        if self.stateful_runtime is not None:
+            result = await self.stateful_runtime.read_resource(
+                source_connection,
+                auth,
+                uri,
+            )
+        else:
+            adapter = require_adapter(connection, self.adapters)
+            result = await adapter.read_resource(source_connection, auth, uri)
         self.event_sink(
             make_event(
                 "resource_read_completed",
@@ -133,7 +140,6 @@ class UpstreamTransportService:
         local_name: str,
         arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        adapter = require_adapter(connection, self.adapters)
         auth = self.load_connection_auth(connection)
         # Compatibility boundary: broker callers still pass ConnectionConfig.
         source_connection = mcp_source_connection_from_connection_config(connection)
@@ -145,7 +151,16 @@ class UpstreamTransportService:
                 payload={"argument_keys": sorted((arguments or {}).keys())},
             )
         )
-        result = await adapter.get_prompt(source_connection, auth, local_name, arguments)
+        if self.stateful_runtime is not None:
+            result = await self.stateful_runtime.get_prompt(
+                source_connection,
+                auth,
+                local_name,
+                arguments,
+            )
+        else:
+            adapter = require_adapter(connection, self.adapters)
+            result = await adapter.get_prompt(source_connection, auth, local_name, arguments)
         self.event_sink(
             make_event(
                 "prompt_get_completed",

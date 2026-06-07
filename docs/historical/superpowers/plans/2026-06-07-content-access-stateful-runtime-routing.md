@@ -1,5 +1,10 @@
 # Content Access Stateful Runtime Routing Implementation Plan
 
+> **Historical:** This plan has been implemented. The `StatefulMcpRuntime` protocol
+> is in `wf_sources_mcp.sdk`, upstream transport prefers it for content reads,
+> and `WfMcpService` wires the configured runtime pool as both `tool_executor`
+> and `stateful_runtime`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Route broker content reads (`read_resource`, `render_prompt`) through a stateful MCP runtime when one is configured, while preserving one-shot adapter fallback.

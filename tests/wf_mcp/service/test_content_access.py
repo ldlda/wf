@@ -156,3 +156,59 @@ async def test_content_access_raises_on_unknown_resource() -> None:
 
     with pytest.raises(KeyError):
         await content_access.read_resource("nonexistent.resource")
+
+
+class _StatefulRuntime:
+    def __init__(self) -> None:
+        self.resources: list[str] = []
+        self.prompts: list[str] = []
+
+    async def call_tool(self, connection, auth, tool_name, payload):
+        raise AssertionError("not used")
+
+    async def read_resource(self, connection, auth, uri: str):
+        self.resources.append(uri)
+        return {"contents": [{"uri": uri, "text": "stateful resource"}]}
+
+    async def get_prompt(self, connection, auth, prompt_name, arguments=None):
+        self.prompts.append(prompt_name)
+        return {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": {"type": "text", "text": "stateful prompt"},
+                }
+            ]
+        }
+
+
+async def test_content_access_uses_stateful_runtime_for_upstream_content() -> None:
+    runtime = _StatefulRuntime()
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "content_stateful_runtime"),
+        tool_executor=runtime,
+        stateful_runtime=runtime,
+    )
+    service.register_connection(
+        ConnectionConfig(
+            id="demo.personal",
+            server="demo",
+            account="personal",
+            metadata={"transport": "stdio", "command": "fake-mcp-server"},
+        )
+    )
+    service.register_adapter("demo", FakeAdapter())
+    await service.refresh_connection_catalog("demo.personal")
+
+    resource = await service.content_access.read_resource(
+        "demo.personal.resource.welcome"
+    )
+    prompt = await service.content_access.render_prompt(
+        "demo.personal.prompt.summarize",
+        arguments={"text": "hello"},
+    )
+
+    assert resource["contents"][0]["text"] == "stateful resource"
+    assert prompt["messages"][0]["content"]["text"] == "stateful prompt"
+    assert runtime.resources == ["demo://docs/welcome"]
+    assert runtime.prompts == ["prompt.summarize"]

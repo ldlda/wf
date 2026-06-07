@@ -8,11 +8,12 @@ from .converters import (
     tool_to_discovered,
     workflow_output_schema_from_mcp_tool_schema,
 )
-from .protocols import BackendAdapter, ToolCallResult, ToolExecutor
+from .protocols import BackendAdapter, StatefulMcpRuntime, ToolCallResult, ToolExecutor
 
 __all__ = [
     "BackendAdapter",
     "McpSdkAdapter",
+    "StatefulMcpRuntime",
     "ToolCallResult",
     "ToolExecutor",
     "prompt_to_discovered",

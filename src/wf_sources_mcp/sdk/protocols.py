@@ -99,8 +99,32 @@ class ToolExecutor(Protocol):
     ) -> ToolCallResult: ...
 
 
+class StatefulMcpRuntime(ToolExecutor, Protocol):
+    """Stateful execution/read boundary for configured MCP sources.
+
+    Implementations keep source session state across calls. Discovery/catalog
+    refresh may still use one-shot adapters by policy.
+    """
+
+    async def read_resource(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+        uri: str,
+    ) -> dict[str, Any]: ...
+
+    async def get_prompt(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+        prompt_name: str,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]: ...
+
+
 __all__ = [
     "BackendAdapter",
+    "StatefulMcpRuntime",
     "ToolCallResult",
     "ToolExecutor",
 ]

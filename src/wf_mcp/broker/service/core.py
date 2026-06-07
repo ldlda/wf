@@ -26,7 +26,7 @@ from wf_sources_mcp.catalog import (
     CatalogPromptEntry,
     CatalogResourceEntry,
 )
-from wf_sources_mcp.sdk import BackendAdapter, ToolExecutor
+from wf_sources_mcp.sdk import BackendAdapter, StatefulMcpRuntime, ToolExecutor
 from wf_sources_mcp.source_registry import SourceRegistryStore
 from wf_sources_mcp.storage import AuthStore, CatalogStore, Store
 
@@ -68,6 +68,7 @@ class WfMcpService:
     draft_workspace_store: DraftWorkspaceStore | None = None
     run_store: RunStore | None = None
     tool_executor: ToolExecutor | None = None
+    stateful_runtime: StatefulMcpRuntime | None = None
     events: BrokerEventRecorder = field(init=False)
     connection_service: ConnectionService = field(init=False)
     upstream: UpstreamTransportService = field(init=False)
@@ -91,6 +92,7 @@ class WfMcpService:
             catalog_store=catalog_store,
             event_sink=self.events.record_event,
             tool_executor=self.tool_executor,
+            stateful_runtime=self.stateful_runtime,
         )
         self.source_catalog = SourceCatalogService(
             store=catalog_store,

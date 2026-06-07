@@ -351,3 +351,110 @@ def test_upstream_transport_uses_separate_auth_and_catalog_stores(
 
     assert (tmp_path / "auth" / "auth" / "demo.personal.json").exists()
     assert (tmp_path / "catalog" / "catalog" / "demo.personal.json").exists()
+
+
+class _StatefulRuntime:
+    def __init__(self) -> None:
+        self.resources: list[tuple[str, str]] = []
+        self.prompts: list[tuple[str, str, dict[str, str] | None]] = []
+
+    async def call_tool(self, connection, auth, tool_name, payload):
+        raise AssertionError("not used by these tests")
+
+    async def read_resource(self, connection, auth, uri: str):
+        self.resources.append((connection.id, uri))
+        return {"contents": [{"uri": uri, "text": "stateful resource"}]}
+
+    async def get_prompt(
+        self,
+        connection,
+        auth,
+        prompt_name: str,
+        arguments: dict[str, str] | None = None,
+    ):
+        self.prompts.append((connection.id, prompt_name, arguments))
+        return {
+            "messages": [
+                {
+                    "role": "user",
+                    "content": {"type": "text", "text": "stateful prompt"},
+                }
+            ]
+        }
+
+
+class _ExplodingContentAdapter(FakeAdapter):
+    async def read_resource(self, connection, auth, uri):
+        raise AssertionError("adapter read_resource should not be used")
+
+    async def get_prompt(self, connection, auth, prompt_name, arguments=None):
+        raise AssertionError("adapter get_prompt should not be used")
+
+
+async def test_upstream_transport_prefers_stateful_runtime_for_resource_reads(
+    tmp_path: Path,
+) -> None:
+    events: list[McpEvent] = []
+    runtime = _StatefulRuntime()
+    transport = UpstreamTransportService(
+        auth_store=FileStore(tmp_path),
+        catalog_store=FileStore(tmp_path),
+        event_sink=events.append,
+        stateful_runtime=runtime,
+    )
+    transport.register_adapter("demo", _ExplodingContentAdapter())
+    connection = ConnectionConfig(
+        id="demo.personal",
+        server="demo",
+        account="personal",
+        metadata=_fake_transport_metadata(),
+    )
+
+    result = await transport.read_resource(
+        connection,
+        "demo.personal.resource.welcome",
+        "fixture://docs/welcome",
+    )
+
+    assert result["contents"][0]["text"] == "stateful resource"
+    assert runtime.resources == [("demo.personal", "fixture://docs/welcome")]
+    assert [event.kind for event in events] == [
+        "resource_read_started",
+        "resource_read_completed",
+    ]
+
+
+async def test_upstream_transport_prefers_stateful_runtime_for_prompts(
+    tmp_path: Path,
+) -> None:
+    events: list[McpEvent] = []
+    runtime = _StatefulRuntime()
+    transport = UpstreamTransportService(
+        auth_store=FileStore(tmp_path),
+        catalog_store=FileStore(tmp_path),
+        event_sink=events.append,
+        stateful_runtime=runtime,
+    )
+    transport.register_adapter("demo", _ExplodingContentAdapter())
+    connection = ConnectionConfig(
+        id="demo.personal",
+        server="demo",
+        account="personal",
+        metadata=_fake_transport_metadata(),
+    )
+
+    result = await transport.render_prompt(
+        connection,
+        "demo.personal.prompt.summarize",
+        "prompt.summarize",
+        {"text": "hello"},
+    )
+
+    assert result["messages"][0]["content"]["text"] == "stateful prompt"
+    assert runtime.prompts == [
+        ("demo.personal", "prompt.summarize", {"text": "hello"})
+    ]
+    assert [event.kind for event in events] == [
+        "prompt_get_started",
+        "prompt_get_completed",
+    ]

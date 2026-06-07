@@ -106,15 +106,19 @@ def test_wf_mcp_catalog_models_shim_reexports_wf_sources_mcp_catalog_models() ->
 
 def test_wf_mcp_sdk_protocol_shims_reexport_wf_sources_mcp_sdk() -> None:
     from wf_mcp.sdk import BackendAdapter as CompatBackendAdapter
+    from wf_mcp.sdk import StatefulMcpRuntime as CompatStatefulMcpRuntime
     from wf_mcp.sdk import ToolCallResult as CompatToolCallResult
     from wf_mcp.sdk.base import BackendAdapter as CompatBaseBackendAdapter
+    from wf_mcp.sdk.base import StatefulMcpRuntime as CompatBaseStatefulMcpRuntime
     from wf_mcp.sdk.base import ToolCallResult as CompatBaseToolCallResult
-    from wf_sources_mcp.sdk import BackendAdapter, ToolCallResult
+    from wf_sources_mcp.sdk import BackendAdapter, StatefulMcpRuntime, ToolCallResult
 
     assert CompatBackendAdapter is BackendAdapter
     assert CompatToolCallResult is ToolCallResult
+    assert CompatStatefulMcpRuntime is StatefulMcpRuntime
     assert CompatBaseBackendAdapter is BackendAdapter
     assert CompatBaseToolCallResult is ToolCallResult
+    assert CompatBaseStatefulMcpRuntime is StatefulMcpRuntime
 
 
 def test_wf_mcp_runtime_protocol_shim_reexports_wf_sources_mcp_tool_executor() -> None:

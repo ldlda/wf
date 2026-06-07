@@ -75,3 +75,10 @@ async def test_tool_executor_protocol_can_describe_tool_calls() -> None:
 
     assert result.outcome == "ok"
     assert result.output == {"echoed": {"message": "hello"}}
+
+
+def test_stateful_mcp_runtime_protocol_shape() -> None:
+    from wf_sources_mcp.sdk import StatefulMcpRuntime, ToolExecutor
+
+    assert StatefulMcpRuntime.__name__ == "StatefulMcpRuntime"
+    assert ToolExecutor.__name__ == "ToolExecutor"
