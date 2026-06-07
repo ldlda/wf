@@ -92,6 +92,16 @@ class McpRuntimePool:
         session = await self.get_session(connection, auth)
         return await session.read_resource(uri)
 
+    async def get_prompt(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+        prompt_name: str,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        session = await self.get_session(connection, auth)
+        return await session.get_prompt(prompt_name, arguments)
+
     async def close_connection(self, connection_id: str) -> None:
         current = self._sessions.pop(connection_id, None)
         if current is not None:

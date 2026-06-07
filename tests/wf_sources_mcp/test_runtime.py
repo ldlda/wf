@@ -65,6 +65,14 @@ async def test_persistent_session_raises_without_resource_transport() -> None:
         await session.read_resource("test://x")
 
 
+@pytest.mark.asyncio
+async def test_persistent_session_raises_without_prompt_transport() -> None:
+    session = PersistentMcpSession(connection=_connection(), auth=None)
+
+    with pytest.raises(RuntimeError, match="no prompt transport"):
+        await session.get_prompt("prompt.summarize")
+
+
 class _FakeFactory(PersistentSessionFactory):
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, object]]] = []
@@ -101,6 +109,29 @@ class _FakeFactory(PersistentSessionFactory):
                     {
                         "model_dump": lambda _self, **_kwargs: {
                             "contents": [{"uri": str(uri), "text": "resource text"}]
+                        }
+                    },
+                )()
+
+            async def get_prompt(
+                self,
+                prompt_name: str,
+                arguments: dict[str, str] | None = None,
+            ):
+                return type(
+                    "GetPromptResult",
+                    (),
+                    {
+                        "model_dump": lambda _self, **_kwargs: {
+                            "messages": [
+                                {
+                                    "role": "user",
+                                    "content": {
+                                        "type": "text",
+                                        "text": f"{prompt_name}:{arguments or {}}",
+                                    },
+                                }
+                            ]
                         }
                     },
                 )()
@@ -168,7 +199,7 @@ def test_runtime_fingerprint_changes_when_transport_changes() -> None:
     )
 
 
-def test_persistent_session_public_runtime_exposes_only_tool_and_resource_read() -> None:
+def test_persistent_session_public_runtime_exposes_safe_read_operations() -> None:
     public_operations = {
         name
         for name in dir(PersistentMcpSession)
@@ -177,9 +208,30 @@ def test_persistent_session_public_runtime_exposes_only_tool_and_resource_read()
 
     assert "call_tool" in public_operations
     assert "read_resource" in public_operations
-    assert "get_prompt" not in public_operations
+    assert "get_prompt" in public_operations
     assert "invoke_method" not in public_operations
     assert "send_notification" not in public_operations
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_factory_routes_prompts_through_owner() -> None:
+    factory = _FakeFactory()
+    connection = _connection()
+    session = await factory.create(connection, None)
+
+    await session.call_tool("echo", {"text": "one"})
+    await session.read_resource("fixture://docs/welcome")
+    prompt_payload = await session.get_prompt(
+        "prompt.summarize",
+        {"text": "hello"},
+    )
+    await session.close()
+
+    assert factory.created_connections == [connection]
+    assert factory.calls == [("echo", {"text": "one"})]
+    assert prompt_payload["messages"][0]["content"]["text"] == (
+        "prompt.summarize:{'text': 'hello'}"
+    )
 
 
 @pytest.mark.asyncio
@@ -217,4 +269,32 @@ async def test_runtime_pool_reuses_session_for_tool_and_resource_read() -> None:
 
     assert tool_result.output == {"echoed": "one"}
     assert resource_payload["contents"][0]["text"] == "resource text"
+    assert factory.created_connections == [connection]
+
+
+@pytest.mark.asyncio
+async def test_runtime_pool_reuses_session_for_tool_resource_and_prompt() -> None:
+    factory = _FakeFactory()
+    pool = McpRuntimePool(factory.create)
+    connection = _connection()
+
+    tool_result = await pool.call_tool(connection, None, "echo", {"text": "one"})
+    resource_payload = await pool.read_resource(
+        connection,
+        None,
+        "fixture://docs/welcome",
+    )
+    prompt_payload = await pool.get_prompt(
+        connection,
+        None,
+        "prompt.summarize",
+        {"text": "hello"},
+    )
+    await pool.close_all()
+
+    assert tool_result.output == {"echoed": "one"}
+    assert resource_payload["contents"][0]["text"] == "resource text"
+    assert prompt_payload["messages"][0]["content"]["text"] == (
+        "prompt.summarize:{'text': 'hello'}"
+    )
     assert factory.created_connections == [connection]

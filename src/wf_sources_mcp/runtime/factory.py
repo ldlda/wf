@@ -43,6 +43,7 @@ class PersistentSessionFactory:
             auth=auth,
             call_callback=owner.call_tool,
             read_resource_callback=owner.read_resource,
+            get_prompt_callback=owner.get_prompt,
             close_callback=owner.close,
         )
 
@@ -149,6 +150,17 @@ class _SessionOwner:
         return await self.submit(
             operation="read_resource",
             run=lambda client: client.read_resource(uri),
+        )
+
+    async def get_prompt(
+        self,
+        prompt_name: str,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Submit a prompt get through the generic owner-task operation queue."""
+        return await self.submit(
+            operation="get_prompt",
+            run=lambda client: client.get_prompt(prompt_name, arguments),
         )
 
     async def close(self) -> None:

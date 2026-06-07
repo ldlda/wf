@@ -14,6 +14,10 @@ from wf_sources_mcp.sdk.converters import tool_result_to_call_result
 
 RawToolCaller = Callable[[str, dict[str, Any]], Awaitable[ToolCallResult]]
 RawResourceReader = Callable[[str], Awaitable[dict[str, Any]]]
+RawPromptGetter = Callable[
+    [str, dict[str, str] | None],
+    Awaitable[dict[str, Any]],
+]
 
 
 @dataclass(slots=True)
@@ -35,6 +39,7 @@ class PersistentMcpSession:
     client: ClientSession | None = None
     call_callback: RawToolCaller | None = None
     read_resource_callback: RawResourceReader | None = None
+    get_prompt_callback: RawPromptGetter | None = None
     close_callback: Callable[[], Awaitable[None]] | None = None
 
     async def call_tool(
@@ -55,6 +60,19 @@ class PersistentMcpSession:
             result = await self.client.read_resource(AnyUrl(uri))
             return result.model_dump(by_alias=True, mode="json", exclude_none=True)
         raise RuntimeError("persistent MCP session has no resource read transport")
+
+    async def get_prompt(
+        self,
+        prompt_name: str,
+        arguments: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Get an MCP prompt through the owner task or injected session."""
+        if self.get_prompt_callback is not None:
+            return await self.get_prompt_callback(prompt_name, arguments)
+        if self.client is not None:
+            result = await self.client.get_prompt(prompt_name, arguments)
+            return result.model_dump(by_alias=True, mode="json", exclude_none=True)
+        raise RuntimeError("persistent MCP session has no prompt transport")
 
     async def close(self) -> None:
         """Close the transport/session stack owned by the runtime factory."""

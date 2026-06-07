@@ -250,6 +250,9 @@ implementation state.
       the owner-task queue and `McpSourceClient`. This is intentionally a thin
       wrapper over the existing source-client facade; prompt/raw method runtime
       operations remain separate future slices.
+    - Completed: persistent MCP runtime can now route `get_prompt` through
+      the owner-task queue and `McpSourceClient`. This keeps prompt reads
+      stateful without adding raw method invocation or notification support.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in
