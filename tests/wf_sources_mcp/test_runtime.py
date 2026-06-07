@@ -7,6 +7,7 @@ import pytest
 from mcp.client.session import ClientSession
 from mcp.types import CallToolResult as RawCallToolResult
 from mcp.types import TextContent
+from pydantic import AnyUrl
 
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.connections import McpSourceConnection
@@ -56,6 +57,14 @@ async def test_persistent_session_raises_without_transport() -> None:
         await session.call_tool("echo", {})
 
 
+@pytest.mark.asyncio
+async def test_persistent_session_raises_without_resource_transport() -> None:
+    session = PersistentMcpSession(connection=_connection(), auth=None)
+
+    with pytest.raises(RuntimeError, match="no resource read transport"):
+        await session.read_resource("test://x")
+
+
 class _FakeFactory(PersistentSessionFactory):
     def __init__(self) -> None:
         self.calls: list[tuple[str, dict[str, object]]] = []
@@ -84,6 +93,17 @@ class _FakeFactory(PersistentSessionFactory):
                 self, tool_name: str, payload: dict[str, object]
             ) -> RawCallToolResult:
                 return await factory._call_tool(tool_name, payload)
+
+            async def read_resource(self, uri: AnyUrl):
+                return type(
+                    "ReadResourceResult",
+                    (),
+                    {
+                        "model_dump": lambda _self, **_kwargs: {
+                            "contents": [{"uri": str(uri), "text": "resource text"}]
+                        }
+                    },
+                )()
 
         return _FakeClient()  # type: ignore[return-value]
 
@@ -148,7 +168,7 @@ def test_runtime_fingerprint_changes_when_transport_changes() -> None:
     )
 
 
-def test_persistent_session_public_runtime_is_tool_call_only() -> None:
+def test_persistent_session_public_runtime_exposes_only_tool_and_resource_read() -> None:
     public_operations = {
         name
         for name in dir(PersistentMcpSession)
@@ -156,7 +176,45 @@ def test_persistent_session_public_runtime_is_tool_call_only() -> None:
     }
 
     assert "call_tool" in public_operations
-    assert "read_resource" not in public_operations
+    assert "read_resource" in public_operations
     assert "get_prompt" not in public_operations
     assert "invoke_method" not in public_operations
     assert "send_notification" not in public_operations
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_factory_routes_resource_reads_through_owner() -> None:
+    factory = _FakeFactory()
+    connection = _connection()
+    session = await factory.create(connection, None)
+
+    await session.call_tool("echo", {"text": "one"})
+    resource_payload = await session.read_resource("fixture://docs/welcome")
+    await session.close()
+
+    assert factory.created_connections == [connection]
+    assert factory.calls == [("echo", {"text": "one"})]
+    assert resource_payload == {
+        "contents": [
+            {"uri": "fixture://docs/welcome", "text": "resource text"},
+        ]
+    }
+
+
+@pytest.mark.asyncio
+async def test_runtime_pool_reuses_session_for_tool_and_resource_read() -> None:
+    factory = _FakeFactory()
+    pool = McpRuntimePool(factory.create)
+    connection = _connection()
+
+    tool_result = await pool.call_tool(connection, None, "echo", {"text": "one"})
+    resource_payload = await pool.read_resource(
+        connection,
+        None,
+        "fixture://docs/welcome",
+    )
+    await pool.close_all()
+
+    assert tool_result.output == {"echoed": "one"}
+    assert resource_payload["contents"][0]["text"] == "resource text"
+    assert factory.created_connections == [connection]

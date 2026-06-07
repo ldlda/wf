@@ -246,6 +246,10 @@ implementation state.
       operation queue with request metadata and `McpSourceClient` execution.
       Public runtime remains tool-call-only; `operation` strings are diagnostics
       labels, not dispatch.
+    - Completed: persistent MCP runtime can now route `read_resource` through
+      the owner-task queue and `McpSourceClient`. This is intentionally a thin
+      wrapper over the existing source-client facade; prompt/raw method runtime
+      operations remain separate future slices.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in

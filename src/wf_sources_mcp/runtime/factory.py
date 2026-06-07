@@ -42,6 +42,7 @@ class PersistentSessionFactory:
             connection=connection,
             auth=auth,
             call_callback=owner.call_tool,
+            read_resource_callback=owner.read_resource,
             close_callback=owner.close,
         )
 
@@ -141,6 +142,13 @@ class _SessionOwner:
         return await self.submit(
             operation="call_tool",
             run=lambda client: client.call_tool(tool_name, payload),
+        )
+
+    async def read_resource(self, uri: str) -> dict[str, Any]:
+        """Submit a resource read through the generic owner-task operation queue."""
+        return await self.submit(
+            operation="read_resource",
+            run=lambda client: client.read_resource(uri),
         )
 
     async def close(self) -> None:

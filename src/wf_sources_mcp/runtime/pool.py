@@ -83,6 +83,15 @@ class McpRuntimePool:
         session = await self.get_session(connection, auth)
         return await session.call_tool(tool_name, payload)
 
+    async def read_resource(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+        uri: str,
+    ) -> dict[str, Any]:
+        session = await self.get_session(connection, auth)
+        return await session.read_resource(uri)
+
     async def close_connection(self, connection_id: str) -> None:
         current = self._sessions.pop(connection_id, None)
         if current is not None:

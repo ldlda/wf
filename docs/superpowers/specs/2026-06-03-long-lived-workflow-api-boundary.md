@@ -114,7 +114,10 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
 10. Complete: persistent MCP runtime owner now routes explicit callables through
     a generic operation queue with request metadata. The runtime still exposes
     only `call_tool`; non-tool methods require a separate public-surface slice.
-11. Upstream transport/discovery/session services.
+11. Complete: persistent MCP runtime can route `read_resource` through the
+    owner-task queue and `McpSourceClient`. Runtime still does not expose
+    `get_prompt`, raw method invocation, or notifications.
+12. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,
