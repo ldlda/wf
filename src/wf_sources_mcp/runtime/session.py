@@ -23,6 +23,10 @@ class PersistentMcpSession:
     inside an AnyIO cancel scope and must be called and closed by that same
     owner task. `client` remains available for simple injected/fake sessions in
     tests. `call_tool()` always normalizes SDK results for workflow nodes.
+
+    This runtime intentionally exposes only tool calls for now. Shared
+    non-tool operations live on `McpSourceClient`; routing them through the
+    owner task is a separate runtime-expansion slice.
     """
 
     connection: McpSourceConnection

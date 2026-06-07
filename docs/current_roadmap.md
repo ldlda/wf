@@ -238,6 +238,10 @@ implementation state.
       `McpSdkAdapter` is now canonical in `wf_sources_mcp`; `wf_mcp.sdk.*`
       remains a compatibility shim for old imports. Persistent runtime is still
       tool-call-only.
+    - Completed: shared `McpSourceClient` facade introduced in
+      `wf_sources_mcp.client`. The one-shot SDK adapter delegates MCP operation
+      calls and conversion through the facade; persistent runtime remains
+      tool-call-only until a separate owner-task routing slice.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in

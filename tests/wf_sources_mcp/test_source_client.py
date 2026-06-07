@@ -20,7 +20,6 @@ from pydantic import AnyUrl
 
 from wf_sources_mcp.client import McpSourceClient
 from wf_sources_mcp.connections import McpSourceConnection
-from wf_sources_mcp.sdk import BackendAdapter, McpSdkAdapter
 from wf_sources_mcp.transports import StdioSourceTransport
 
 
@@ -35,8 +34,8 @@ def _connection() -> McpSourceConnection:
 
 class _FakeSession:
     def __init__(self) -> None:
-        self.notifications: list[ClientNotification] = []
         self.requests: list[ClientRequest] = []
+        self.notifications: list[ClientNotification] = []
 
     async def list_tools(self) -> ListToolsResult:
         return ListToolsResult(
@@ -136,86 +135,58 @@ class _FakeSession:
         )
 
 
-class _ClientContext:
-    def __init__(self, client: McpSourceClient) -> None:
-        self.client = client
-
-    async def __aenter__(self) -> McpSourceClient:
-        return self.client
-
-    async def __aexit__(
-        self,
-        exc_type: type[BaseException] | None,
-        exc: BaseException | None,
-        tb: object | None,
-    ) -> None:
-        return None
-
-
-class _FakeAdapter(McpSdkAdapter):
-    def __init__(self, session: _FakeSession) -> None:
-        self.fake_session = session
-
-    def _client(self, connection: McpSourceConnection, auth: object | None):
-        assert connection.id == "demo.personal"
-        assert auth is None
-        return _ClientContext(
-            McpSourceClient(session=self.fake_session, connection=connection)
-        )
-
-
-def test_mcp_sdk_adapter_implements_backend_protocol() -> None:
-    adapter: BackendAdapter = McpSdkAdapter()
-
-    assert adapter.__class__.__name__ == "McpSdkAdapter"
-
-
 @pytest.mark.asyncio
-async def test_mcp_sdk_adapter_uses_session_for_all_backend_methods() -> None:
-    session = _FakeSession()
-    adapter = _FakeAdapter(session)
-    connection = _connection()
+async def test_source_client_lists_catalog_items_and_metadata() -> None:
+    source_client = McpSourceClient(session=_FakeSession(), connection=_connection())
 
-    tools = await adapter.list_tools(connection, None)
-    resources = await adapter.list_resources(connection, None)
-    prompts = await adapter.list_prompts(connection, None)
-    metadata = await adapter.get_connection_metadata(connection, None)
-    resource_payload = await adapter.read_resource(
-        connection,
-        None,
-        "fixture://docs/welcome",
-    )
-    prompt_payload = await adapter.get_prompt(
-        connection,
-        None,
-        "prompt.summarize",
-        {"text": "hello"},
-    )
-    tool_result = await adapter.call_tool(connection, None, "echo", {"text": "hello"})
-    method_payload = await adapter.invoke_method(
-        connection,
-        None,
-        "ping",
-    )
-    await adapter.send_notification(
-        connection,
-        None,
-        "notifications/initialized",
-    )
+    tools = await source_client.list_tools()
+    resources = await source_client.list_resources()
+    prompts = await source_client.list_prompts()
+    metadata = await source_client.get_connection_metadata()
 
     assert tools[0].name == "echo"
     assert resources[0].uri == "fixture://docs/welcome"
     assert prompts[0].name == "prompt.summarize"
     assert metadata == {"server": "demo", "transport": "stdio"}
+
+
+@pytest.mark.asyncio
+async def test_source_client_reads_resources_and_prompts_as_payloads() -> None:
+    source_client = McpSourceClient(session=_FakeSession(), connection=_connection())
+
+    resource_payload = await source_client.read_resource("fixture://docs/welcome")
+    prompt_payload = await source_client.get_prompt(
+        "prompt.summarize",
+        {"text": "hello"},
+    )
+
     assert resource_payload["contents"][0]["text"] == "hello"
     assert prompt_payload["messages"][0]["content"]["text"] == (
         "prompt.summarize:{'text': 'hello'}"
     )
-    assert method_payload == {"ok": True}
-    assert session.requests, "invoke_method should have sent a request"
-    assert session.notifications, "send_notification should have sent a notification"
-    assert tool_result.outcome == "ok"
-    assert tool_result.output == {
+
+
+@pytest.mark.asyncio
+async def test_source_client_invokes_methods_and_notifications() -> None:
+    session = _FakeSession()
+    source_client = McpSourceClient(session=session, connection=_connection())
+
+    result = await source_client.invoke_method("ping")
+    await source_client.send_notification("notifications/initialized")
+
+    assert result == {"ok": True}
+    assert session.requests, "invoke_method should send a request"
+    assert session.notifications, "send_notification should send a notification"
+
+
+@pytest.mark.asyncio
+async def test_source_client_call_tool_normalizes_result() -> None:
+    source_client = McpSourceClient(session=_FakeSession(), connection=_connection())
+
+    result = await source_client.call_tool("echo", {"text": "hello"})
+
+    assert result.outcome == "ok"
+    assert result.output == {
         "tool": "echo",
         "payload": {"text": "hello"},
     }
