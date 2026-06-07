@@ -1,21 +1,17 @@
 """MCP upstream-source auth helpers.
 
-This module is canonical for MCP-as-source auth interpretation. The temporary
-TYPE_CHECKING dependency on `wf_mcp.broker.models.ConnectionConfig` exists until
-connection runtime DTOs move out of the compatibility MCP facade.
+This module is canonical for MCP-as-source auth interpretation. Runtime-facing
+helpers consume source-connection-like objects instead of broker config DTOs.
 """
 
 from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any
+from typing import Any, Protocol
 
 from wf_api.auth import AuthRecord as NeutralAuthRecord
 from wf_artifacts import DependencyDiagnostic, DiagnosticSeverity
-
-if TYPE_CHECKING:
-    from wf_mcp.broker.models import ConnectionConfig
 
 
 @dataclass(slots=True)
@@ -85,11 +81,18 @@ def mcp_auth_env(auth: AuthRecord | None) -> dict[str, str]:
     }
 
 
-def auth_ref_for_connection(connection: ConnectionConfig) -> str | None:
+class SourceConnectionLike(Protocol):
+    @property
+    def id(self) -> str: ...
+
+    @property
+    def auth_ref(self) -> str | None: ...
+
+
+def auth_ref_for_connection(connection: SourceConnectionLike) -> str | None:
     """Return the explicit auth ref for one source connection, if present."""
 
-    auth_ref = connection.metadata.get("auth_ref")
-    return auth_ref if isinstance(auth_ref, str) else None
+    return connection.auth_ref
 
 
 def auth_missing_diagnostic(
@@ -117,7 +120,7 @@ def auth_missing_diagnostic(
 
 
 def connection_auth_diagnostic(
-    connection: ConnectionConfig,
+    connection: SourceConnectionLike,
     *,
     load_auth_ref: Callable[[str], AuthRecord | None],
     logical_ref: str | None = None,

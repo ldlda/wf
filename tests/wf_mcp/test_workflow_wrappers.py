@@ -10,6 +10,8 @@ from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.runtime import ToolExecutor
 from wf_mcp.sdk import ToolCallResult
 from wf_mcp.workflow import wrap_discovered_tool
+from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.transports import StdioSourceTransport
 
 
 class RecordingAdapter:
@@ -54,10 +56,11 @@ class TextContentAdapter:
 def test_discovered_tool_wrapper_omits_unset_optional_arguments() -> None:
     adapter = RecordingAdapter()
     spec = wrap_discovered_tool(
-        connection=ConnectionConfig(
+        connection=McpSourceConnection(
             id="playwright.default",
-            server="playwright",
+            provider="playwright",
             account="default",
+            transport=StdioSourceTransport(command="placeholder"),
         ),
         auth=None,
         executor=cast(ToolExecutor, adapter),
@@ -92,10 +95,11 @@ def test_discovered_tool_wrapper_omits_unset_optional_arguments() -> None:
 
 def test_discovered_tool_wrapper_preserves_raw_mcp_content_output() -> None:
     spec = wrap_discovered_tool(
-        connection=ConnectionConfig(
+        connection=McpSourceConnection(
             id="everything.default",
-            server="everything",
+            provider="everything",
             account="default",
+            transport=StdioSourceTransport(command="placeholder"),
         ),
         auth=None,
         executor=cast(ToolExecutor, TextContentAdapter()),

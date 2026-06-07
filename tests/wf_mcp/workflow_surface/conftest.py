@@ -64,8 +64,8 @@ class ContentOnlyOutputAdapter:
 
     async def list_tools(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
     ) -> list[DiscoveredTool]:
         return [
             DiscoveredTool(
@@ -87,29 +87,29 @@ class ContentOnlyOutputAdapter:
 
     async def list_resources(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
     ) -> list[Any]:
         return []
 
     async def list_prompts(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
     ) -> list[Any]:
         return []
 
     async def get_connection_metadata(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
     ) -> dict[str, Any]:
-        return {"server": connection.server}
+        return {"server": getattr(connection, "provider", getattr(connection, "server", None))}
 
     async def call_tool(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
         tool_name: str,
         payload: dict[str, Any],
     ) -> ToolCallResult:
@@ -121,16 +121,16 @@ class ContentOnlyOutputAdapter:
 
     async def read_resource(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
         uri: str,
     ) -> dict[str, Any]:
         raise KeyError(uri)
 
     async def get_prompt(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
         prompt_name: str,
         arguments: dict[str, str] | None = None,
     ) -> dict[str, Any]:
@@ -138,8 +138,8 @@ class ContentOnlyOutputAdapter:
 
     async def invoke_method(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
         method: str,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
@@ -147,8 +147,8 @@ class ContentOnlyOutputAdapter:
 
     async def send_notification(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
         method: str,
         params: dict[str, Any] | None = None,
     ) -> None:

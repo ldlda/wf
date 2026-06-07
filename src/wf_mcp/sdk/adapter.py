@@ -19,6 +19,7 @@ from pydantic import AnyUrl
 
 from wf_sources_mcp.auth import AuthRecord, mcp_auth_env, mcp_auth_headers
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.sdk import BackendAdapter, ToolCallResult
 from wf_sources_mcp.sdk.converters import (
     prompt_to_discovered,
@@ -26,31 +27,26 @@ from wf_sources_mcp.sdk.converters import (
     tool_result_to_call_result,
     tool_to_discovered,
 )
-
-from ..models import ConnectionConfig
+from wf_sources_mcp.transports import HttpSourceTransport, StdioSourceTransport
 
 
 class McpSdkAdapter(BackendAdapter):
     @asynccontextmanager
     async def _session(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ):
-        transport = connection.metadata.get("transport", "stdio")
-        if transport == "stdio":
-            command = connection.metadata["command"]
-            args = list(connection.metadata.get("args", []))
-            env = connection.metadata.get("env")
-            cwd = connection.metadata.get("cwd")
+        transport = connection.transport
+        if isinstance(transport, StdioSourceTransport):
             auth_env = mcp_auth_env(auth)
+            env = dict(transport.env)
             if auth_env:
-                env = {**(env or {}), **auth_env}
+                env = {**env, **auth_env}
             params = StdioServerParameters(
-                command=command,
-                args=args,
+                command=transport.command,
+                args=list(transport.args),
                 env=env,
-                cwd=cwd,
             )
             async with stdio_client(params) as (read_stream, write_stream):
                 async with ClientSession(read_stream, write_stream) as session:
@@ -58,13 +54,12 @@ class McpSdkAdapter(BackendAdapter):
                     yield session
             return
 
-        if transport == "streamable_http":
-            url = connection.metadata["url"]
+        if isinstance(transport, HttpSourceTransport):
             headers = mcp_auth_headers(auth)
             http_client = httpx.AsyncClient(headers=headers or None)
             async with http_client:
                 async with streamable_http_client(
-                    url,
+                    str(transport.url),
                     http_client=http_client,
                 ) as (read_stream, write_stream, _get_session_id):
                     async with ClientSession(read_stream, write_stream) as session:
@@ -72,11 +67,11 @@ class McpSdkAdapter(BackendAdapter):
                         yield session
             return
 
-        raise ValueError(f"unsupported MCP transport {transport!r}")
+        raise ValueError(f"unsupported MCP transport {transport.kind!r}")
 
     async def list_tools(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredTool]:
         async with self._session(connection, auth) as session:
@@ -85,7 +80,7 @@ class McpSdkAdapter(BackendAdapter):
 
     async def list_resources(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredResource]:
         async with self._session(connection, auth) as session:
@@ -94,7 +89,7 @@ class McpSdkAdapter(BackendAdapter):
 
     async def list_prompts(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredPrompt]:
         async with self._session(connection, auth) as session:
@@ -103,17 +98,17 @@ class McpSdkAdapter(BackendAdapter):
 
     async def get_connection_metadata(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> dict[str, Any]:
         return {
-            "server": connection.server,
-            "transport": connection.metadata.get("transport", "stdio"),
+            "server": connection.provider,
+            "transport": connection.transport.kind,
         }
 
     async def read_resource(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         uri: str,
     ) -> dict[str, Any]:
@@ -123,7 +118,7 @@ class McpSdkAdapter(BackendAdapter):
 
     async def get_prompt(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         prompt_name: str,
         arguments: dict[str, str] | None = None,
@@ -134,7 +129,7 @@ class McpSdkAdapter(BackendAdapter):
 
     async def invoke_method(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         method: str,
         params: dict[str, Any] | None = None,
@@ -148,7 +143,7 @@ class McpSdkAdapter(BackendAdapter):
 
     async def send_notification(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         method: str,
         params: dict[str, Any] | None = None,
@@ -160,7 +155,7 @@ class McpSdkAdapter(BackendAdapter):
 
     async def call_tool(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         tool_name: str,
         payload: dict[str, Any],

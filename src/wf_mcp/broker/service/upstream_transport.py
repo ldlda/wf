@@ -27,6 +27,10 @@ from wf_mcp.models import ConnectionConfig
 from wf_mcp.shared.errors import error_payload
 from wf_sources_mcp.auth import AuthRecord, connection_auth_diagnostic
 from wf_sources_mcp.catalog.models import CatalogSnapshot
+from wf_sources_mcp.connections import (
+    McpSourceConnection,
+    mcp_source_connection_from_connection_config,
+)
 from wf_sources_mcp.sdk import BackendAdapter, ToolExecutor
 from wf_sources_mcp.storage import AuthStore, CatalogStore
 
@@ -74,6 +78,9 @@ class UpstreamTransportService:
         old compatibility surface has no callers.
         """
 
+        # Compatibility boundary: broker callers still pass ConnectionConfig.
+        # Check legacy metadata for auth_ref first to avoid requiring transport
+        # metadata just for auth resolution.
         auth_ref = connection.metadata.get("auth_ref")
         if isinstance(auth_ref, str):
             return self.load_auth(auth_ref)
@@ -98,6 +105,8 @@ class UpstreamTransportService:
     ) -> dict[str, Any]:
         adapter = require_adapter(connection, self.adapters)
         auth = self.load_connection_auth(connection)
+        # Compatibility boundary: broker callers still pass ConnectionConfig.
+        source_connection = mcp_source_connection_from_connection_config(connection)
         self.event_sink(
             make_event(
                 "resource_read_started",
@@ -106,7 +115,7 @@ class UpstreamTransportService:
                 payload={"uri": uri},
             )
         )
-        result = await adapter.read_resource(connection, auth, uri)
+        result = await adapter.read_resource(source_connection, auth, uri)
         self.event_sink(
             make_event(
                 "resource_read_completed",
@@ -126,6 +135,8 @@ class UpstreamTransportService:
     ) -> dict[str, Any]:
         adapter = require_adapter(connection, self.adapters)
         auth = self.load_connection_auth(connection)
+        # Compatibility boundary: broker callers still pass ConnectionConfig.
+        source_connection = mcp_source_connection_from_connection_config(connection)
         self.event_sink(
             make_event(
                 "prompt_get_started",
@@ -134,7 +145,7 @@ class UpstreamTransportService:
                 payload={"argument_keys": sorted((arguments or {}).keys())},
             )
         )
-        result = await adapter.get_prompt(connection, auth, local_name, arguments)
+        result = await adapter.get_prompt(source_connection, auth, local_name, arguments)
         self.event_sink(
             make_event(
                 "prompt_get_completed",
@@ -154,6 +165,8 @@ class UpstreamTransportService:
     ) -> dict[str, Any]:
         adapter = require_adapter(connection, self.adapters)
         auth = self.load_connection_auth(connection)
+        # Compatibility boundary: broker callers still pass ConnectionConfig.
+        source_connection = mcp_source_connection_from_connection_config(connection)
         self.event_sink(
             make_event(
                 "raw_method_started",
@@ -162,7 +175,7 @@ class UpstreamTransportService:
                 payload={"params": params or {}},
             )
         )
-        result = await adapter.invoke_method(connection, auth, method, params)
+        result = await adapter.invoke_method(source_connection, auth, method, params)
         self.event_sink(
             make_event(
                 "raw_method_completed",
@@ -182,6 +195,8 @@ class UpstreamTransportService:
     ) -> None:
         adapter = require_adapter(connection, self.adapters)
         auth = self.load_connection_auth(connection)
+        # Compatibility boundary: broker callers still pass ConnectionConfig.
+        source_connection = mcp_source_connection_from_connection_config(connection)
         self.event_sink(
             make_event(
                 "raw_notification_started",
@@ -190,7 +205,7 @@ class UpstreamTransportService:
                 payload={"params": params or {}},
             )
         )
-        await adapter.send_notification(connection, auth, method, params)
+        await adapter.send_notification(source_connection, auth, method, params)
         self.event_sink(
             make_event(
                 "raw_notification_completed",
@@ -309,8 +324,10 @@ class UpstreamTransportService:
                     )
                 )
                 continue
+            # Compatibility boundary: broker callers still pass ConnectionConfig.
+            source_connection = mcp_source_connection_from_connection_config(connection)
             auth_diagnostic = connection_auth_diagnostic(
-                connection,
+                source_connection,
                 # The diagnostic helper passes the explicit auth_ref to this
                 # loader, matching load_connection_auth's auth_ref-first path.
                 load_auth_ref=self.load_auth,
@@ -323,7 +340,7 @@ class UpstreamTransportService:
                 adapter = require_adapter(connection, self.adapters)
                 auth = self.load_connection_auth(connection)
                 await asyncio.wait_for(
-                    adapter.list_tools(connection, auth),
+                    adapter.list_tools(source_connection, auth),
                     timeout=LIVE_SOURCE_CHECK_TIMEOUT_SECONDS,
                 )
             except _LIVE_SOURCE_CHECK_FAILURES as exc:

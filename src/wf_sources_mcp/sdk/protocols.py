@@ -1,19 +1,13 @@
-"""Protocol/result contracts for MCP upstream source providers.
-
-The temporary `wf_mcp.broker.models.ConnectionConfig` dependency remains until
-broker runtime connection DTOs move to a neutral/source-provider package.
-"""
+"""Protocol/result contracts for MCP upstream source providers."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Protocol
+from typing import Any, Protocol
 
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
-
-if TYPE_CHECKING:
-    from wf_mcp.broker.models import ConnectionConfig
+from wf_sources_mcp.connections import McpSourceConnection
 
 
 @dataclass(slots=True)
@@ -26,38 +20,38 @@ class ToolCallResult:
 class BackendAdapter(Protocol):
     async def list_tools(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredTool]: ...
 
     async def list_resources(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredResource]: ...
 
     async def list_prompts(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredPrompt]: ...
 
     async def get_connection_metadata(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> dict[str, Any]: ...
 
     async def read_resource(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         uri: str,
     ) -> dict[str, Any]: ...
 
     async def get_prompt(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         prompt_name: str,
         arguments: dict[str, str] | None = None,
@@ -65,7 +59,7 @@ class BackendAdapter(Protocol):
 
     async def invoke_method(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         method: str,
         params: dict[str, Any] | None = None,
@@ -73,7 +67,7 @@ class BackendAdapter(Protocol):
 
     async def send_notification(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         method: str,
         params: dict[str, Any] | None = None,
@@ -81,7 +75,7 @@ class BackendAdapter(Protocol):
 
     async def call_tool(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         tool_name: str,
         payload: dict[str, Any],
@@ -98,7 +92,7 @@ class ToolExecutor(Protocol):
 
     async def call_tool(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         tool_name: str,
         payload: dict[str, Any],

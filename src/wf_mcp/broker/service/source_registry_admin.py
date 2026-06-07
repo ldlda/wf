@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from wf_api.source_registry_admin import WorkflowSourceRegistryMutationProvider
+from wf_sources_mcp.connections import mcp_source_connection_from_connection_config
 from wf_sources_mcp.source_registry import (
     McpSourceRegistryEntry,
     SourceRegistryFile,
@@ -162,8 +163,12 @@ class SourceRegistryAdminProvider(WorkflowSourceRegistryMutationProvider):
         auth_diagnostics = []
         if self.load_auth is not None:
             for source_id in sorted(after):
+                # Compatibility boundary: broker callers still pass ConnectionConfig.
+                source_connection = mcp_source_connection_from_connection_config(
+                    after[source_id]
+                )
                 diagnostic = connection_auth_diagnostic(
-                    after[source_id],
+                    source_connection,
                     load_auth_ref=self.load_auth,
                 )
                 if diagnostic is not None:

@@ -11,6 +11,7 @@ from wf_mcp.capabilities import DiscoveredTool
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.sdk import McpSdkAdapter
 from wf_mcp.storage import FileStore
+from wf_sources_mcp.connections import mcp_source_connection_from_connection_config
 
 from .test_support import (
     everything_server_connection,
@@ -39,7 +40,7 @@ class _ToolsOnlyAdapter:
         raise McpError(ErrorData(code=-32601, message="Method not found"))
 
     async def get_connection_metadata(self, connection, auth):
-        return {"server": connection.server}
+        return {"server": getattr(connection, "provider", getattr(connection, "server", None))}
 
     async def read_resource(self, connection, auth, uri):
         raise NotImplementedError
@@ -133,9 +134,12 @@ def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
 
     adapter = McpSdkAdapter()
     try:
+        source_connection = mcp_source_connection_from_connection_config(
+            service.connections.get("fixture.personal")
+        )
         result = asyncio.run(
             adapter.call_tool(
-                connection=service.connections.get("fixture.personal"),
+                connection=source_connection,
                 auth=None,
                 tool_name="echo_tool",
                 payload={"text": "hello"},
@@ -184,6 +188,7 @@ def test_refresh_catalog_keeps_tools_when_optional_lists_are_unsupported() -> No
             id="tools_only.personal",
             server="tools_only",
             account="personal",
+            metadata={"transport": "stdio", "command": "fake-tools-only"},
         )
     )
     service.register_adapter("tools_only", _ToolsOnlyAdapter())
@@ -205,6 +210,7 @@ def test_refresh_catalog_unwraps_taskgroup_method_not_found() -> None:
             id="wrapped_tools_only.personal",
             server="wrapped_tools_only",
             account="personal",
+            metadata={"transport": "stdio", "command": "fake-tools-only"},
         )
     )
     service.register_adapter("wrapped_tools_only", _WrappedToolsOnlyAdapter())

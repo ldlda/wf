@@ -16,6 +16,10 @@ from ..test_support import FakeAdapter, local_temp_root
 from ..workflow_surface.conftest import echo_artifact
 
 
+def _fake_transport_metadata() -> dict[str, object]:
+    return {"transport": "stdio", "command": "fake-mcp-server"}
+
+
 def _transport(root: Path) -> UpstreamTransportService:
     events: list[McpEvent] = []
     return UpstreamTransportService(
@@ -74,7 +78,12 @@ async def test_upstream_transport_invokes_raw_method_and_records_events() -> Non
     events: list[McpEvent] = []
     connections = ConnectionRegistry()
     connections.register(
-        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+        ConnectionConfig(
+            id="demo.personal",
+            server="demo",
+            account="personal",
+            metadata=_fake_transport_metadata(),
+        )
     )
     transport = UpstreamTransportService(
         auth_store=FileStore(local_temp_root() / "upstream_raw_method"),
@@ -100,7 +109,12 @@ async def test_upstream_transport_refreshes_catalog_directly() -> None:
     events: list[McpEvent] = []
     store = FileStore(local_temp_root() / "upstream_refresh")
     connections = ConnectionRegistry()
-    connection = ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    connection = ConnectionConfig(
+        id="demo.personal",
+        server="demo",
+        account="personal",
+        metadata=_fake_transport_metadata(),
+    )
     connections.register(connection)
     transport = UpstreamTransportService(
         auth_store=store,
@@ -197,7 +211,7 @@ def test_upstream_load_connection_auth_prefers_auth_ref(tmp_path: Path) -> None:
         id="github.work",
         server="github",
         account="work",
-        metadata={"auth_ref": "github.creds"},
+        metadata={**_fake_transport_metadata(), "auth_ref": "github.creds"},
     )
 
     assert service.load_connection_auth(connection) == AuthRecord(
@@ -264,9 +278,9 @@ async def test_upstream_transport_live_diagnostics_report_missing_auth_ref(
     connections = ConnectionRegistry()
     connection = ConnectionConfig(
         id="github.work",
-        server="demo",
+        server="github",
         account="work",
-        metadata={"auth_ref": "github.creds"},
+        metadata={**_fake_transport_metadata(), "auth_ref": "github.creds"},
     )
     connections.register(connection)
     transport = UpstreamTransportService(

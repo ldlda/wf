@@ -21,9 +21,9 @@ if TYPE_CHECKING:
     from fastmcp.resources.template import ResourceTemplate
     from fastmcp.tools.base import Tool
 
+from wf_sources_mcp.ids import RESERVED_CONNECTION_IDS
+
 ADMIN_NAMESPACE = "wf.admin"
-RESERVED_CONNECTION_IDS = frozenset({ADMIN_NAMESPACE, "wf.mcp"})
-"""Source ids reserved by wf-mcp system capabilities."""
 
 
 @dataclass(frozen=True, slots=True)

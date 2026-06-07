@@ -16,6 +16,8 @@ from wf_mcp.runtime import McpRuntimePool, PersistentMcpSession
 from wf_mcp.runtime.factory import PersistentSessionFactory
 from wf_mcp.sdk import ToolCallResult
 from wf_mcp.workflow import wrap_discovered_tool
+from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.transports import StdioSourceTransport
 
 
 @dataclass(slots=True)
@@ -27,7 +29,7 @@ class FakeStatefulExecutor:
 
     async def call_tool(
         self,
-        connection: ConnectionConfig,
+        connection,
         auth: AuthRecord | None,
         tool_name: str,
         payload: dict[str, Any],
@@ -120,10 +122,11 @@ def _tool(name: str) -> DiscoveredTool:
 def test_generated_workflow_specs_share_injected_tool_executor() -> None:
     """Generated NodeSpecs use the injected executor, not a baked-in adapter."""
 
-    connection = ConnectionConfig(
+    connection = McpSourceConnection(
         id="playwright.default",
-        server="playwright",
+        provider="playwright",
         account="default",
+        transport=StdioSourceTransport(command="placeholder"),
     )
     executor = FakeStatefulExecutor()
     navigate = wrap_discovered_tool(

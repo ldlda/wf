@@ -9,6 +9,10 @@ from mcp.types import METHOD_NOT_FOUND
 
 from wf_authoring import NodeSpec
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+from wf_sources_mcp.connections import (
+    McpSourceConnection,
+    mcp_source_connection_from_connection_config,
+)
 from wf_sources_mcp.sdk import BackendAdapter, ToolExecutor
 
 from ..auth import AuthRecord
@@ -34,14 +38,18 @@ async def discover_connection_capabilities(
     auth: AuthRecord | None,
     adapter: BackendAdapter,
 ) -> DiscoveredConnectionCapabilities:
-    tools = await adapter.list_tools(connection, auth)
+    # Compatibility boundary: broker callers still pass ConnectionConfig. Runtime
+    # internals use McpSourceConnection so the session code can move to
+    # wf_sources_mcp in a later slice.
+    source_connection = mcp_source_connection_from_connection_config(connection)
+    tools = await adapter.list_tools(source_connection, auth)
     resources = await _list_optional_capabilities(
-        lambda: adapter.list_resources(connection, auth)
+        lambda: adapter.list_resources(source_connection, auth)
     )
     prompts = await _list_optional_capabilities(
-        lambda: adapter.list_prompts(connection, auth)
+        lambda: adapter.list_prompts(source_connection, auth)
     )
-    metadata = await adapter.get_connection_metadata(connection, auth)
+    metadata = await adapter.get_connection_metadata(source_connection, auth)
     return DiscoveredConnectionCapabilities(
         tools=tools,
         resources=resources,
@@ -77,9 +85,13 @@ def specs_from_discovered_tools(
     tools: list[DiscoveredTool],
     emit_event: Callable[[McpEvent], None] | None = None,
 ) -> list[NodeSpec[Any, Any]]:
+    # Compatibility boundary: broker callers still pass ConnectionConfig. Runtime
+    # internals use McpSourceConnection so the session code can move to
+    # wf_sources_mcp in a later slice.
+    source_connection = mcp_source_connection_from_connection_config(connection)
     return [
         wrap_discovered_tool(
-            connection=connection,
+            connection=source_connection,
             auth=auth,
             executor=executor,
             tool=tool,

@@ -28,8 +28,8 @@ class ContentOnlyOutputAdapter(FakeAdapter):
 
     async def list_tools(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
     ) -> list[DiscoveredTool]:
         return [
             DiscoveredTool(
@@ -51,8 +51,8 @@ class ContentOnlyOutputAdapter(FakeAdapter):
 
     async def call_tool(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
         tool_name: str,
         payload: dict[str, Any],
     ) -> ToolCallResult:

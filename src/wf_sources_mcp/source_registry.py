@@ -8,14 +8,9 @@ runtime DTOs move out of the compatibility MCP facade.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Literal, Protocol
+from typing import TYPE_CHECKING, Literal, Protocol
 
-from pydantic import (
-    AnyHttpUrl,
-    Field,
-    field_validator,
-    model_validator,
-)
+from pydantic import Field, field_validator, model_validator
 
 from wf_api.source_registry import (
     AtomicJsonRegistryStore,
@@ -25,12 +20,12 @@ from wf_api.source_registry import (
 from wf_api.source_registry import (
     SourceRegistryStore as GenericSourceRegistryStore,
 )
-
-# Temporary low-level compatibility imports. `wf_mcp.shared.names` currently
-# pulls in FastMCP transitively; keep this visible until reserved-name parsing
-# moves to a neutral/source package.
-from wf_mcp.connections import parse_connection_id
-from wf_mcp.shared.names import RESERVED_CONNECTION_IDS
+from wf_sources_mcp.ids import RESERVED_CONNECTION_IDS, parse_connection_id
+from wf_sources_mcp.transports import (
+    HttpSourceTransport,
+    SourceTransport,
+    StdioSourceTransport,
+)
 
 if TYPE_CHECKING:
     from wf_mcp.models import ConnectionConfig
@@ -48,25 +43,6 @@ _TRANSPORT_METADATA_KEYS = {
     "auth_ref",
     "source_registry",
 }
-
-
-class StdioSourceTransport(SourceRegistryBaseModel):
-    kind: Literal["stdio"] = "stdio"
-    command: str = Field(min_length=1)
-    args: tuple[str, ...] = ()
-    env: dict[str, str] = Field(default_factory=dict)
-
-
-class HttpSourceTransport(SourceRegistryBaseModel):
-    kind: Literal["http"] = "http"
-    url: AnyHttpUrl
-    headers: dict[str, str] = Field(default_factory=dict)
-
-
-SourceTransport = Annotated[
-    StdioSourceTransport | HttpSourceTransport,
-    Field(discriminator="kind"),
-]
 
 
 class McpSourceRegistryEntry(SourceRegistryBaseModel):

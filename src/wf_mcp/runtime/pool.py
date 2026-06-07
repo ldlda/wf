@@ -75,8 +75,8 @@ class McpRuntimePool:
 
     async def call_tool(
         self,
-        connection: ConnectionConfig,
-        auth: AuthRecord | None,
+        connection,
+        auth,
         tool_name: str,
         payload: dict[str, Any],
     ) -> ToolCallResult:

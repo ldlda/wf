@@ -15,6 +15,8 @@ from wf_mcp.auth import (
 from wf_mcp.models import AuthRecord as McpAuthRecord
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
+from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.transports import StdioSourceTransport
 
 
 def test_mcp_auth_from_neutral_preserves_scheme_and_payload() -> None:
@@ -125,22 +127,23 @@ def test_file_store_legacy_auth_methods_still_work(tmp_path: Path) -> None:
 def test_auth_ref_for_connection_returns_string_only() -> None:
     assert (
         auth_ref_for_connection(
-            ConnectionConfig(
+            McpSourceConnection(
                 id="github.work",
-                server="github",
+                provider="github",
                 account="work",
-                metadata={"auth_ref": "github.creds"},
+                transport=StdioSourceTransport(command="placeholder"),
+                auth_ref="github.creds",
             )
         )
         == "github.creds"
     )
     assert (
         auth_ref_for_connection(
-            ConnectionConfig(
+            McpSourceConnection(
                 id="github.work",
-                server="github",
+                provider="github",
                 account="work",
-                metadata={"auth_ref": 123},
+                transport=StdioSourceTransport(command="placeholder"),
             )
         )
         is None
@@ -148,11 +151,12 @@ def test_auth_ref_for_connection_returns_string_only() -> None:
 
 
 def test_connection_auth_diagnostic_reports_missing_auth_ref() -> None:
-    connection = ConnectionConfig(
+    connection = McpSourceConnection(
         id="github.work",
-        server="github",
+        provider="github",
         account="work",
-        metadata={"auth_ref": "github.creds"},
+        transport=StdioSourceTransport(command="placeholder"),
+        auth_ref="github.creds",
     )
 
     diagnostic = connection_auth_diagnostic(
@@ -172,12 +176,18 @@ def test_connection_auth_diagnostic_reports_missing_auth_ref() -> None:
 
 
 def test_connection_auth_diagnostic_ignores_absent_or_present_auth_ref() -> None:
-    no_ref = ConnectionConfig(id="github.work", server="github", account="work")
-    with_ref = ConnectionConfig(
+    no_ref = McpSourceConnection(
         id="github.work",
-        server="github",
+        provider="github",
         account="work",
-        metadata={"auth_ref": "github.creds"},
+        transport=StdioSourceTransport(command="placeholder"),
+    )
+    with_ref = McpSourceConnection(
+        id="github.work",
+        provider="github",
+        account="work",
+        transport=StdioSourceTransport(command="placeholder"),
+        auth_ref="github.creds",
     )
     auth = McpAuthRecord(
         connection_id="github.creds",

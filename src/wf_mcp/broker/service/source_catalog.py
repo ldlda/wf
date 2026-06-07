@@ -23,6 +23,7 @@ from wf_sources_mcp.catalog import (
     CatalogPromptEntry,
     CatalogResourceEntry,
 )
+from wf_sources_mcp.connections import mcp_source_connection_from_connection_config
 from wf_sources_mcp.sdk import ToolExecutor
 from wf_sources_mcp.storage import CatalogStore
 
@@ -273,8 +274,10 @@ class SourceCatalogService:
         async def invoke_tool(payload: BaseModel) -> NodeReturn[BaseModel]:
             connection = self.connection_lookup(entry.connection_id)
             auth = self.load_auth(connection)
+            # Compatibility boundary: broker callers still pass ConnectionConfig.
+            source_connection = mcp_source_connection_from_connection_config(connection)
             result = await self.tool_executor_for(connection).call_tool(
-                connection,
+                source_connection,
                 auth,
                 entry.local_name,
                 payload.model_dump(exclude_unset=True),

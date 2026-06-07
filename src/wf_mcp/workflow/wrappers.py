@@ -9,11 +9,10 @@ from pydantic import BaseModel, ConfigDict, Field, create_model
 from wf_authoring import NodeReturn, NodeSpec
 from wf_core import RuntimeContext
 from wf_mcp.broker.events import McpEvent, make_event
+from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredTool
+from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.sdk import ToolExecutor
-
-from ..auth import AuthRecord
-from ..models import ConnectionConfig
 
 _JSON_TYPE_MAP: dict[str, object] = {
     "string": str,
@@ -118,7 +117,7 @@ def _model_from_schema(name: str, schema: dict[str, Any]) -> type[BaseModel]:
 
 def wrap_discovered_tool(
     *,
-    connection: ConnectionConfig,
+    connection: McpSourceConnection,
     auth: AuthRecord | None,
     executor: ToolExecutor,
     tool: DiscoveredTool,
