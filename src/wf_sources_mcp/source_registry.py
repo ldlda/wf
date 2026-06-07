@@ -147,6 +147,7 @@ def connection_config_to_registry_entry(
                 "command": connection.metadata.get("command", ""),
                 "args": list(connection.metadata.get("args", [])),
                 "env": dict(connection.metadata.get("env", {})),
+                "cwd": connection.metadata.get("cwd"),
             }
         elif transport in _FLAT_HTTP_TRANSPORTS:
             legacy_transport_value = transport

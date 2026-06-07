@@ -38,6 +38,8 @@ class McpSdkAdapter(BackendAdapter):
         auth: AuthRecord | None,
     ):
         transport = connection.transport
+        if transport is None:
+            raise ValueError(f"connection {connection.id!r} requires metadata.transport")
         if isinstance(transport, StdioSourceTransport):
             auth_env = mcp_auth_env(auth)
             env = dict(transport.env)
@@ -67,7 +69,7 @@ class McpSdkAdapter(BackendAdapter):
                         yield session
             return
 
-        raise ValueError(f"unsupported MCP transport {transport.kind!r}")
+        raise ValueError(f"unsupported MCP transport {type(transport).__name__}")
 
     async def list_tools(
         self,
@@ -101,9 +103,10 @@ class McpSdkAdapter(BackendAdapter):
         connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> dict[str, Any]:
+        transport = connection.transport
         return {
             "server": connection.provider,
-            "transport": connection.transport.kind,
+            "transport": transport.kind if transport is not None else None,
         }
 
     async def read_resource(

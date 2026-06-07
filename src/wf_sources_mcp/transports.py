@@ -12,6 +12,7 @@ class StdioSourceTransport(SourceRegistryBaseModel):
     command: str = Field(min_length=1)
     args: tuple[str, ...] = ()
     env: dict[str, str] = Field(default_factory=dict)
+    cwd: str | None = None
 
 
 class HttpSourceTransport(SourceRegistryBaseModel):

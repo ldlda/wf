@@ -122,6 +122,7 @@ def test_mcp_source_connection_from_legacy_connection_config_stdio() -> None:
             "command": "uvx",
             "args": ["github-mcp"],
             "env": {"A": "B"},
+            "cwd": "C:/repo",
             "auth_ref": "github.token",
             "profile": "engineering",
             "source_registry": True,
@@ -141,6 +142,7 @@ def test_mcp_source_connection_from_legacy_connection_config_stdio() -> None:
     assert isinstance(connection.transport, StdioSourceTransport)
     assert connection.transport.command == "uvx"
     assert connection.transport.args == ("github-mcp",)
+    assert connection.transport.cwd == "C:/repo"
 
 
 def test_mcp_source_connection_from_legacy_connection_config_http() -> None:
@@ -164,7 +166,7 @@ def test_mcp_source_connection_from_legacy_connection_config_http() -> None:
     assert connection.transport.headers == {"X-Test": "yes"}
 
 
-def test_mcp_source_connection_rejects_missing_legacy_transport() -> None:
+def test_mcp_source_connection_accepts_missing_legacy_transport_until_open() -> None:
     from wf_mcp.broker.models import ConnectionConfig
 
     legacy = ConnectionConfig(
@@ -174,8 +176,9 @@ def test_mcp_source_connection_rejects_missing_legacy_transport() -> None:
         metadata={},
     )
 
-    with pytest.raises(ValueError, match="requires metadata.transport"):
-        mcp_source_connection_from_connection_config(legacy)
+    connection = mcp_source_connection_from_connection_config(legacy)
+
+    assert connection.transport is None
 
 
 class _ConnectionLike(Protocol):

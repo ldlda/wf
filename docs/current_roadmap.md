@@ -221,10 +221,14 @@ implementation state.
      MCP-backed JSON-RPC path. A neutral-config `WorkflowServer` can start an
      interrupting run, be rebuilt from the same filesystem stores, inspect the
      interrupted run, and resume it to completion through `RpcWorkflowApiClient`.
-    - Completed: MCP upstream source runtime cleanup now starts with a typed
-      `McpSourceConnection` seam in `wf_sources_mcp`, not by moving
-      `runtime/factory.py` as-is. The active plan was
-      [2026-06-07 MCP source connection seam](./historical/superpowers/plans/2026-06-07-mcp-source-connection-seam.md).
+   - Completed: MCP upstream source runtime cleanup now starts with a typed
+     `McpSourceConnection` seam in `wf_sources_mcp`, not by moving
+     `runtime/factory.py` as-is. The active plan was
+     [2026-06-07 MCP source connection seam](./historical/superpowers/plans/2026-06-07-mcp-source-connection-seam.md).
+   - Planned next: share one MCP session opener between the one-shot SDK
+     adapter and persistent runtime before moving runtime files. The active
+     plan is
+     [2026-06-07 MCP client session opener](./superpowers/plans/2026-06-07-mcp-client-session-opener.md).
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in

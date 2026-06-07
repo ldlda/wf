@@ -6,12 +6,15 @@ from dataclasses import asdict, dataclass, field
 from inspect import isawaitable
 from typing import Any, cast
 
+from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.sdk import ToolCallResult
+from wf_sources_mcp.transports import HttpSourceTransport, StdioSourceTransport
 
 from ..auth import AuthRecord
 from ..models import ConnectionConfig
 from .session import PersistentMcpSession
 
+RuntimeConnection = ConnectionConfig | McpSourceConnection
 SessionFactory = Callable[
     [ConnectionConfig, AuthRecord | None],
     PersistentMcpSession | Awaitable[PersistentMcpSession],
@@ -19,7 +22,7 @@ SessionFactory = Callable[
 
 
 def connection_runtime_fingerprint(
-    connection: ConnectionConfig,
+    connection: RuntimeConnection,
     auth: AuthRecord | None = None,
 ) -> str:
     """Return the connection identity that decides MCP runtime reuse.
@@ -55,7 +58,7 @@ class McpRuntimePool:
 
     async def get_session(
         self,
-        connection: ConnectionConfig,
+        connection: RuntimeConnection,
         auth: AuthRecord | None,
     ) -> PersistentMcpSession:
         fingerprint = connection_runtime_fingerprint(connection, auth)
@@ -65,7 +68,10 @@ class McpRuntimePool:
         if current is not None:
             await current[1].close()
 
-        created = self.session_factory(connection, auth)
+        # Compatibility boundary: wrappers now pass McpSourceConnection, while
+        # PersistentSessionFactory still consumes the legacy broker DTO until
+        # the shared opener/runtime move lands.
+        created = self.session_factory(_legacy_connection_config(connection), auth)
         if isawaitable(created):
             session = await created
         else:
@@ -75,8 +81,8 @@ class McpRuntimePool:
 
     async def call_tool(
         self,
-        connection,
-        auth,
+        connection: RuntimeConnection,
+        auth: AuthRecord | None,
         tool_name: str,
         payload: dict[str, Any],
     ) -> ToolCallResult:
@@ -94,3 +100,45 @@ class McpRuntimePool:
         self._sessions.clear()
         for _fingerprint, session in sessions:
             await session.close()
+
+
+def _legacy_connection_config(connection: RuntimeConnection) -> ConnectionConfig:
+    if isinstance(connection, ConnectionConfig):
+        return connection
+
+    metadata = dict(connection.metadata)
+    transport = connection.transport
+    if isinstance(transport, StdioSourceTransport):
+        metadata.update(
+            {
+                "transport": "stdio",
+                "command": transport.command,
+                "args": list(transport.args),
+                "env": dict(transport.env),
+            }
+        )
+        if transport.cwd is not None:
+            metadata["cwd"] = transport.cwd
+    elif isinstance(transport, HttpSourceTransport):
+        metadata.update(
+            {
+                "transport": "streamable_http",
+                "url": str(transport.url),
+                "headers": dict(transport.headers),
+            }
+        )
+    else:
+        raise ValueError(f"connection {connection.id!r} requires metadata.transport")
+
+    if connection.profile is not None:
+        metadata["profile"] = connection.profile
+    if connection.auth_ref is not None:
+        metadata["auth_ref"] = connection.auth_ref
+
+    return ConnectionConfig(
+        id=connection.id,
+        server=connection.provider,
+        account=connection.account,
+        enabled=connection.enabled,
+        metadata=metadata,
+    )

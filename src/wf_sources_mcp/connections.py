@@ -39,7 +39,7 @@ class McpSourceConnection:
     id: str
     provider: str
     account: str
-    transport: SourceTransport
+    transport: SourceTransport | None = None
     enabled: bool = True
     profile: str | None = None
     auth_ref: str | None = None
@@ -55,6 +55,16 @@ class McpSourceConnection:
             raise ValueError(
                 "MCP source connection id must match provider/account fields"
             )
+
+    @property
+    def server(self) -> str:
+        """Compatibility alias for older adapter code.
+
+        `provider` is the source-provider term. The old broker DTO called the
+        same field `server`, and several fake/custom adapters still read it.
+        """
+
+        return self.provider
 
 
 def mcp_source_connection_from_registry_entry(
@@ -103,7 +113,9 @@ def mcp_source_connection_from_connection_config(
     )
 
 
-def _transport_from_connection_metadata(connection: ConnectionConfig) -> SourceTransport:
+def _transport_from_connection_metadata(
+    connection: ConnectionConfig,
+) -> SourceTransport | None:
     transport = connection.metadata.get("transport")
     if isinstance(transport, dict):
         kind = transport.get("kind")
@@ -123,6 +135,11 @@ def _transport_from_connection_metadata(connection: ConnectionConfig) -> SourceT
                     str(key): str(value)
                     for key, value in dict(connection.metadata.get("env", {})).items()
                 },
+                cwd=(
+                    str(connection.metadata["cwd"])
+                    if connection.metadata.get("cwd") is not None
+                    else None
+                ),
             )
         if transport in _FLAT_HTTP_TRANSPORTS:
             url = connection.metadata.get("url", "")
@@ -138,7 +155,7 @@ def _transport_from_connection_metadata(connection: ConnectionConfig) -> SourceT
         raise ValueError(
             f"connection {connection.id!r} has unrecognized metadata.transport {transport!r}"
         )
-    raise ValueError(f"connection {connection.id!r} requires metadata.transport")
+    return None
 
 
 __all__ = [
