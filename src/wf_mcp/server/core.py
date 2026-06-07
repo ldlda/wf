@@ -7,6 +7,7 @@ from fastmcp import FastMCP
 from fastmcp.client import Client
 from fastmcp.client.transports.memory import FastMCPTransport
 
+from wf_sources_mcp.sdk import McpSdkAdapter
 from wf_sources_mcp.source_registry import FileSourceRegistryStore
 
 from ..admin_surface import register_service_admin_tools
@@ -15,7 +16,6 @@ from ..broker.transport import normalize_transport
 from ..documentation import build_local_documentation_source
 from ..models import BrokerConfig
 from ..proxy.runtime import ProxyRuntime
-from ..sdk import McpSdkAdapter
 from ..workflow_surface import register_workflow_tools
 from .prompts import register_documentation_prompts
 from .resources import register_documentation_resources

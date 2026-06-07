@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .adapter import McpSdkAdapter
 from .converters import (
     prompt_to_discovered,
     resource_to_discovered,
@@ -11,6 +12,7 @@ from .protocols import BackendAdapter, ToolCallResult, ToolExecutor
 
 __all__ = [
     "BackendAdapter",
+    "McpSdkAdapter",
     "ToolCallResult",
     "ToolExecutor",
     "prompt_to_discovered",

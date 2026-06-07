@@ -228,12 +228,16 @@ implementation state.
    - Completed: shared MCP session opener exists in `wf_sources_mcp.client`.
      One-shot adapter (`McpSdkAdapter`) and persistent runtime
      (`PersistentSessionFactory`) both use it.
-   - Completed: persistent MCP runtime moved to `wf_sources_mcp.runtime`.
-     `PersistentMcpSession`, `PersistentSessionFactory`, `McpRuntimePool`,
-     and `connection_runtime_fingerprint` are now canonical in
-     `wf_sources_mcp.runtime`; `wf_mcp.runtime.*` are compatibility shims.
-     Runtime remains tool-call-only. The completed plan was
-     [2026-06-07 MCP runtime package move](./historical/superpowers/plans/2026-06-07-mcp-runtime-package-move.md).
+    - Completed: persistent MCP runtime moved to `wf_sources_mcp.runtime`.
+      `PersistentMcpSession`, `PersistentSessionFactory`, `McpRuntimePool`,
+      and `connection_runtime_fingerprint` are now canonical in
+      `wf_sources_mcp.runtime`; `wf_mcp.runtime.*` are compatibility shims.
+      Runtime remains tool-call-only. The completed plan was
+      [2026-06-07 MCP runtime package move](./historical/superpowers/plans/2026-06-07-mcp-runtime-package-move.md).
+    - Completed: one-shot MCP SDK adapter moved to `wf_sources_mcp.sdk.adapter`.
+      `McpSdkAdapter` is now canonical in `wf_sources_mcp`; `wf_mcp.sdk.*`
+      remains a compatibility shim for old imports. Persistent runtime is still
+      tool-call-only.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in

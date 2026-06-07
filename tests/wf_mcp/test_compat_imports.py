@@ -149,6 +149,17 @@ def test_wf_mcp_sdk_converter_shim_reexports_wf_sources_mcp_converters() -> None
     assert compat_output_schema is workflow_output_schema_from_mcp_tool_schema
 
 
+def test_wf_mcp_sdk_adapter_shim_reexports_wf_sources_mcp_adapter() -> None:
+    from wf_mcp.sdk import McpSdkAdapter as CompatPackageAdapter
+    from wf_mcp.sdk.adapter import McpSdkAdapter as CompatModuleAdapter
+    from wf_sources_mcp.sdk import McpSdkAdapter
+    from wf_sources_mcp.sdk.adapter import McpSdkAdapter as CanonicalModuleAdapter
+
+    assert CompatPackageAdapter is McpSdkAdapter
+    assert CompatModuleAdapter is McpSdkAdapter
+    assert CanonicalModuleAdapter is McpSdkAdapter
+
+
 def test_runtime_shims_reexport_wf_sources_mcp_runtime() -> None:
     from wf_mcp.runtime import (
         McpRuntimePool as OldMcpRuntimePool,

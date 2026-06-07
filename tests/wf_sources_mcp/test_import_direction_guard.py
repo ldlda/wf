@@ -78,6 +78,7 @@ def test_wf_sources_mcp_does_not_import_old_sdk_protocol_modules() -> None:
     root = Path(__file__).resolve().parents[2] / "src" / "wf_sources_mcp"
     forbidden = {
         "wf_mcp.sdk",
+        "wf_mcp.sdk.adapter",
         "wf_mcp.sdk.base",
         "wf_mcp.runtime",
         "wf_mcp.runtime.protocols",
