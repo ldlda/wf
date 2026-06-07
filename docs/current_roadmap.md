@@ -225,10 +225,13 @@ implementation state.
      `McpSourceConnection` seam in `wf_sources_mcp`, not by moving
      `runtime/factory.py` as-is. The active plan was
      [2026-06-07 MCP source connection seam](./historical/superpowers/plans/2026-06-07-mcp-source-connection-seam.md).
-   - Planned next: share one MCP session opener between the one-shot SDK
-     adapter and persistent runtime before moving runtime files. The active
-     plan is
-     [2026-06-07 MCP client session opener](./superpowers/plans/2026-06-07-mcp-client-session-opener.md).
+   - Completed: shared MCP session opener exists in `wf_sources_mcp.client`.
+     One-shot adapter (`McpSdkAdapter`) and persistent runtime
+     (`PersistentSessionFactory`) both use it. Runtime files remain in
+     `wf_mcp` for compatibility. Next slice can move `PersistentSessionFactory`,
+     `PersistentMcpSession`, and `McpRuntimePool` to
+     `wf_sources_mcp.runtime`. The completed plan was
+     [2026-06-07 MCP client session opener](./historical/superpowers/plans/2026-06-07-mcp-client-session-opener.md).
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in

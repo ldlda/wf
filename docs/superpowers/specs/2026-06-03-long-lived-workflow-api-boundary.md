@@ -93,7 +93,13 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
 3. Complete: upstream MCP catalog/discovery DTOs moved to `wf_sources_mcp.catalog`, with `wf_mcp.capabilities` and `wf_mcp.catalog.models` retained as shims.
 4. Complete: upstream SDK protocol/result types moved to `wf_sources_mcp.sdk`, with `wf_mcp.sdk` and `wf_mcp.runtime.protocols` retained as shims.
 5. Complete: MCP SDK conversion helpers moved to `wf_sources_mcp.sdk.converters`, with `wf_mcp.sdk.converters` retained as a shim.
-6. Upstream transport/discovery/session services.
+6. Complete: shared MCP session opener in `wf_sources_mcp.client`. One-shot
+   adapter (`McpSdkAdapter`) and persistent runtime
+   (`PersistentSessionFactory`) both use `open_mcp_session`. Runtime files
+   remain in `wf_mcp` for compatibility; next slice moves
+   `PersistentSessionFactory`, `PersistentMcpSession`, and `McpRuntimePool`
+   to `wf_sources_mcp.runtime`.
+7. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

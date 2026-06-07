@@ -4,13 +4,12 @@ import asyncio
 from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 
-import httpx
 from mcp.client.session import ClientSession
-from mcp.client.stdio import StdioServerParameters, stdio_client
-from mcp.client.streamable_http import streamable_http_client
 from mcp.types import CallToolResult
 
-from wf_sources_mcp.auth import AuthRecord, mcp_auth_env, mcp_auth_headers
+from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.client import open_mcp_session
+from wf_sources_mcp.connections import mcp_source_connection_from_connection_config
 
 from ..models import ConnectionConfig
 from .session import PersistentMcpSession
@@ -46,48 +45,11 @@ class PersistentSessionFactory:
         connection: ConnectionConfig,
         auth: AuthRecord | None,
     ) -> ClientSession:
-        transport = connection.metadata.get("transport", "stdio")
-        if transport == "stdio":
-            env = connection.metadata.get("env")
-            auth_env = mcp_auth_env(auth)
-            if auth_env:
-                env = {**(env or {}), **auth_env}
-            params = StdioServerParameters(
-                command=connection.metadata["command"],
-                args=list(connection.metadata.get("args", [])),
-                env=env,
-                cwd=connection.metadata.get("cwd"),
-            )
-            read_stream, write_stream = await stack.enter_async_context(
-                stdio_client(params)
-            )
-            session = await stack.enter_async_context(
-                ClientSession(read_stream, write_stream)
-            )
-            await session.initialize()
-            return session
-
-        if transport == "streamable_http":
-            http_client = await stack.enter_async_context(
-                httpx.AsyncClient(headers=mcp_auth_headers(auth) or None)
-            )
-            (
-                read_stream,
-                write_stream,
-                _get_session_id,
-            ) = await stack.enter_async_context(
-                streamable_http_client(
-                    connection.metadata["url"],
-                    http_client=http_client,
-                )
-            )
-            session = await stack.enter_async_context(
-                ClientSession(read_stream, write_stream)
-            )
-            await session.initialize()
-            return session
-
-        raise ValueError(f"unsupported MCP transport {transport!r}")
+        source_connection = mcp_source_connection_from_connection_config(connection)
+        session = await stack.enter_async_context(
+            open_mcp_session(source_connection, auth)
+        )
+        return session
 
 
 @dataclass(slots=True)

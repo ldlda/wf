@@ -3,11 +3,7 @@ from __future__ import annotations
 from contextlib import asynccontextmanager
 from typing import Any
 
-import httpx
 from mcp import ClientResult
-from mcp.client.session import ClientSession
-from mcp.client.stdio import StdioServerParameters, stdio_client
-from mcp.client.streamable_http import streamable_http_client
 from mcp.types import (
     ClientNotification,
     ClientRequest,
@@ -17,8 +13,9 @@ from mcp.types import (
 )
 from pydantic import AnyUrl
 
-from wf_sources_mcp.auth import AuthRecord, mcp_auth_env, mcp_auth_headers
+from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
+from wf_sources_mcp.client import open_mcp_session
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.sdk import BackendAdapter, ToolCallResult
 from wf_sources_mcp.sdk.converters import (
@@ -27,7 +24,6 @@ from wf_sources_mcp.sdk.converters import (
     tool_result_to_call_result,
     tool_to_discovered,
 )
-from wf_sources_mcp.transports import HttpSourceTransport, StdioSourceTransport
 
 
 class McpSdkAdapter(BackendAdapter):
@@ -37,39 +33,8 @@ class McpSdkAdapter(BackendAdapter):
         connection: McpSourceConnection,
         auth: AuthRecord | None,
     ):
-        transport = connection.transport
-        if transport is None:
-            raise ValueError(f"connection {connection.id!r} requires metadata.transport")
-        if isinstance(transport, StdioSourceTransport):
-            auth_env = mcp_auth_env(auth)
-            env = dict(transport.env)
-            if auth_env:
-                env = {**env, **auth_env}
-            params = StdioServerParameters(
-                command=transport.command,
-                args=list(transport.args),
-                env=env,
-            )
-            async with stdio_client(params) as (read_stream, write_stream):
-                async with ClientSession(read_stream, write_stream) as session:
-                    await session.initialize()
-                    yield session
-            return
-
-        if isinstance(transport, HttpSourceTransport):
-            headers = mcp_auth_headers(auth)
-            http_client = httpx.AsyncClient(headers=headers or None)
-            async with http_client:
-                async with streamable_http_client(
-                    str(transport.url),
-                    http_client=http_client,
-                ) as (read_stream, write_stream, _get_session_id):
-                    async with ClientSession(read_stream, write_stream) as session:
-                        await session.initialize()
-                        yield session
-            return
-
-        raise ValueError(f"unsupported MCP transport {type(transport).__name__}")
+        async with open_mcp_session(connection, auth) as session:
+            yield session
 
     async def list_tools(
         self,

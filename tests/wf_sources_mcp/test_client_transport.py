@@ -1,0 +1,257 @@
+from __future__ import annotations
+
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from typing import Any
+
+import pytest
+
+from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.client.transport import open_mcp_session
+from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.transports import HttpSourceTransport, StdioSourceTransport
+
+
+@dataclass
+class _FakeSession:
+    initialized: bool = False
+    calls: list[str] | None = None
+
+    async def initialize(self) -> None:
+        self.initialized = True
+
+
+@asynccontextmanager
+async def _fake_stdio_client(params: Any) -> AsyncIterator[tuple[Any, Any]]:
+    yield "read", "write"
+
+
+@asynccontextmanager
+async def _fake_streamable_http_client(
+    url: str, *, http_client: Any = None
+) -> AsyncIterator[tuple[Any, Any, Any]]:
+    yield "read", "write", lambda: None
+
+
+@asynccontextmanager
+async def _fake_client_session(
+    read: Any, write: Any
+) -> AsyncIterator[_FakeSession]:
+    yield _FakeSession()
+
+
+def _stdio_connection(
+    *,
+    command: str = "uvx",
+    args: tuple[str, ...] = ("server",),
+    env: dict[str, str] | None = None,
+    cwd: str | None = None,
+) -> McpSourceConnection:
+    return McpSourceConnection(
+        id="test.server",
+        provider="test",
+        account="server",
+        transport=StdioSourceTransport(
+            command=command,
+            args=args,
+            env=env or {},
+            cwd=cwd,
+        ),
+    )
+
+
+def _http_connection(
+    url: str = "http://127.0.0.1:8000/mcp",
+    headers: dict[str, str] | None = None,
+) -> McpSourceConnection:
+    return McpSourceConnection(
+        id="test.server",
+        provider="test",
+        account="server",
+        transport=HttpSourceTransport(
+            url=url,
+            headers=headers or {},
+        ),
+    )
+
+
+@pytest.fixture(autouse=True)
+def _patch_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
+    import wf_sources_mcp.client.transport as mod
+
+    monkeypatch.setattr(mod, "stdio_client", _fake_stdio_client)
+    monkeypatch.setattr(mod, "streamable_http_client", _fake_streamable_http_client)
+    monkeypatch.setattr(mod, "ClientSession", _fake_client_session)
+
+
+@pytest.mark.asyncio
+async def test_stdio_session_initializes_before_yielding() -> None:
+    connection = _stdio_connection()
+
+    async with open_mcp_session(connection, None) as session:
+        assert session.initialized is True
+
+
+@pytest.mark.asyncio
+async def test_stdio_env_merges_transport_and_auth_wins_on_duplicate() -> None:
+    connection = _stdio_connection(env={"A": "transport", "B": "transport_only"})
+    auth = AuthRecord(
+        connection_id="test.server",
+        scheme="env",
+        payload={"env": {"A": "auth_wins", "C": "auth_only"}},
+    )
+
+    import wf_sources_mcp.client.transport as mod
+
+    captured_params: list[Any] = []
+
+    @asynccontextmanager
+    async def _capturing_stdio_client(
+        params: Any,
+    ) -> AsyncIterator[tuple[Any, Any]]:
+        captured_params.append(params)
+        yield "read", "write"
+
+    mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment]
+
+    async with open_mcp_session(connection, auth) as session:
+        assert session.initialized is True
+
+    params = captured_params[0]
+    assert params.env["A"] == "auth_wins"
+    assert params.env["B"] == "transport_only"
+    assert params.env["C"] == "auth_only"
+
+
+@pytest.mark.asyncio
+async def test_stdio_cwd_propagated_to_server_parameters() -> None:
+    connection = _stdio_connection(cwd="/workspace")
+
+    import wf_sources_mcp.client.transport as mod
+
+    captured_params: list[Any] = []
+
+    @asynccontextmanager
+    async def _capturing_stdio_client(
+        params: Any,
+    ) -> AsyncIterator[tuple[Any, Any]]:
+        captured_params.append(params)
+        yield "read", "write"
+
+    mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment]
+
+    async with open_mcp_session(connection, None) as session:
+        assert session.initialized is True
+
+    assert captured_params[0].cwd == "/workspace"
+
+
+@pytest.mark.asyncio
+async def test_http_session_initializes_before_yielding() -> None:
+    connection = _http_connection()
+
+    async with open_mcp_session(connection, None) as session:
+        assert session.initialized is True
+
+
+@pytest.mark.asyncio
+async def test_http_auth_headers_passed_to_client(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = _http_connection()
+    auth = AuthRecord(
+        connection_id="test.server",
+        scheme="bearer",
+        payload={"token": "secret123"},
+    )
+
+    import httpx as _httpx
+
+    captured_clients: list[_httpx.AsyncClient] = []
+    _original_client = _httpx.AsyncClient
+
+    class _CapturingClient(_original_client):  # type: ignore[type-arg]
+        def __init__(self, **kwargs: Any) -> None:
+            super().__init__(**kwargs)
+            captured_clients.append(self)
+
+    import wf_sources_mcp.client.transport as mod
+
+    class _PatchedHttpx:
+        AsyncClient = _CapturingClient
+
+    monkeypatch.setattr(mod, "httpx", _PatchedHttpx())
+
+    async with open_mcp_session(connection, auth) as session:
+        assert session.initialized is True
+
+    assert len(captured_clients) == 1
+    assert captured_clients[0].headers["Authorization"] == "Bearer secret123"
+
+
+@pytest.mark.asyncio
+async def test_unsupported_transport_raises_value_error() -> None:
+    connection = McpSourceConnection(
+        id="test.server",
+        provider="test",
+        account="server",
+    )
+
+    with pytest.raises(ValueError, match="requires metadata.transport"):
+        async with open_mcp_session(connection, None):
+            pass
+
+
+@pytest.mark.asyncio
+async def test_stdio_no_auth_uses_transport_env_only() -> None:
+    connection = _stdio_connection(env={"TOKEN": "abc"})
+
+    import wf_sources_mcp.client.transport as mod
+
+    captured_params: list[Any] = []
+
+    @asynccontextmanager
+    async def _capturing_stdio_client(
+        params: Any,
+    ) -> AsyncIterator[tuple[Any, Any]]:
+        captured_params.append(params)
+        yield "read", "write"
+
+    mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment]
+
+    async with open_mcp_session(connection, None):
+        pass
+
+    assert captured_params[0].env == {"TOKEN": "abc"}
+
+
+@pytest.mark.asyncio
+async def test_http_no_auth_creates_client_with_no_auth_headers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    connection = _http_connection()
+
+    import httpx as _httpx
+
+    captured_clients: list[_httpx.AsyncClient] = []
+    _original_client = _httpx.AsyncClient
+
+    class _CapturingClient(_original_client):  # type: ignore[type-arg]
+        def __init__(self, **kwargs: Any) -> None:
+            super().__init__(**kwargs)
+            captured_clients.append(self)
+
+    import wf_sources_mcp.client.transport as mod
+
+    monkeypatch.setattr(
+        mod,
+        "httpx",
+        type("_PatchedHttpx", (), {"AsyncClient": _CapturingClient})(),
+    )
+
+    async with open_mcp_session(connection, None):
+        pass
+
+    assert len(captured_clients) == 1
+    assert "Authorization" not in captured_clients[0].headers
