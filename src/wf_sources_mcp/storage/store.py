@@ -129,9 +129,9 @@ class FileCatalogStore(CatalogStore):
 
     @staticmethod
     def _connection_path(directory: Path, connection_id: str) -> Path:
-        from wf_mcp.connections import parse_connection_id
+        from wf_sources_mcp.ids import validate_connection_id
 
-        parse_connection_id(connection_id)
+        validate_connection_id(connection_id)
         root = directory.resolve()
         path = (directory / f"{connection_id}.json").resolve()
         if path.parent != root:

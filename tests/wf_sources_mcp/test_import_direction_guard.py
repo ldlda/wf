@@ -92,11 +92,15 @@ def test_wf_sources_mcp_does_not_import_old_sdk_protocol_modules() -> None:
         tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module in forbidden:
-                violations.append(f"{module}:{node.lineno}: from {node.module} import ...")
+                violations.append(
+                    f"{module}:{node.lineno}: from {node.module} import ..."
+                )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name in forbidden:
-                        violations.append(f"{module}:{node.lineno}: import {alias.name}")
+                        violations.append(
+                            f"{module}:{node.lineno}: import {alias.name}"
+                        )
 
     assert violations == [], (
         "wf_sources_mcp still imports old wf_mcp SDK/runtime protocol modules:\n"
@@ -117,11 +121,15 @@ def test_wf_sources_mcp_does_not_import_old_sdk_converter_module() -> None:
         tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module in forbidden:
-                violations.append(f"{module}:{node.lineno}: from {node.module} import ...")
+                violations.append(
+                    f"{module}:{node.lineno}: from {node.module} import ..."
+                )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name in forbidden:
-                        violations.append(f"{module}:{node.lineno}: import {alias.name}")
+                        violations.append(
+                            f"{module}:{node.lineno}: import {alias.name}"
+                        )
 
     assert violations == [], (
         "wf_sources_mcp still imports old wf_mcp SDK converter module:\n"
@@ -140,11 +148,15 @@ def test_wf_sources_mcp_does_not_import_old_broker_discovery_module() -> None:
         tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module in forbidden:
-                violations.append(f"{module}:{node.lineno}: from {node.module} import ...")
+                violations.append(
+                    f"{module}:{node.lineno}: from {node.module} import ..."
+                )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name in forbidden:
-                        violations.append(f"{module}:{node.lineno}: import {alias.name}")
+                        violations.append(
+                            f"{module}:{node.lineno}: import {alias.name}"
+                        )
 
     assert violations == [], (
         "wf_sources_mcp still imports old wf_mcp broker discovery module:\n"
@@ -163,11 +175,15 @@ def test_wf_sources_mcp_does_not_import_old_workflow_wrapper_module() -> None:
         tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module in forbidden:
-                violations.append(f"{module}:{node.lineno}: from {node.module} import ...")
+                violations.append(
+                    f"{module}:{node.lineno}: from {node.module} import ..."
+                )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name in forbidden:
-                        violations.append(f"{module}:{node.lineno}: import {alias.name}")
+                        violations.append(
+                            f"{module}:{node.lineno}: import {alias.name}"
+                        )
 
     assert violations == [], (
         "wf_sources_mcp still imports old wf_mcp workflow wrapper module:\n"
@@ -186,11 +202,15 @@ def test_wf_sources_mcp_does_not_import_old_broker_event_modules() -> None:
         tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module in forbidden:
-                violations.append(f"{module}:{node.lineno}: from {node.module} import ...")
+                violations.append(
+                    f"{module}:{node.lineno}: from {node.module} import ..."
+                )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name in forbidden:
-                        violations.append(f"{module}:{node.lineno}: import {alias.name}")
+                        violations.append(
+                            f"{module}:{node.lineno}: import {alias.name}"
+                        )
 
     assert violations == [], (
         "wf_sources_mcp still imports old wf_mcp broker event modules:\n"
@@ -209,13 +229,44 @@ def test_wf_sources_mcp_does_not_import_old_broker_service_adapter_module() -> N
         tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module in forbidden:
-                violations.append(f"{module}:{node.lineno}: from {node.module} import ...")
+                violations.append(
+                    f"{module}:{node.lineno}: from {node.module} import ..."
+                )
             elif isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name in forbidden:
-                        violations.append(f"{module}:{node.lineno}: import {alias.name}")
+                        violations.append(
+                            f"{module}:{node.lineno}: import {alias.name}"
+                        )
 
     assert violations == [], (
         "wf_sources_mcp still imports old wf_mcp broker service adapter module:\n"
+        + "\n".join(f"  {violation}" for violation in violations)
+    )
+
+
+def test_wf_sources_mcp_does_not_import_old_wf_mcp_id_modules() -> None:
+    root = Path(__file__).resolve().parents[2] / "src" / "wf_sources_mcp"
+    forbidden = {"wf_mcp.connections", "wf_mcp.shared.names"}
+    violations: list[str] = []
+
+    for py_file in sorted(root.rglob("*.py")):
+        rel = py_file.relative_to(root.parent)
+        module = str(rel.with_suffix("")).replace("/", ".").replace("\\", ".")
+        tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module in forbidden:
+                violations.append(
+                    f"{module}:{node.lineno}: from {node.module} import ..."
+                )
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name in forbidden:
+                        violations.append(
+                            f"{module}:{node.lineno}: import {alias.name}"
+                        )
+
+    assert violations == [], (
+        "wf_sources_mcp still imports old wf_mcp source ID modules:\n"
         + "\n".join(f"  {violation}" for violation in violations)
     )

@@ -25,6 +25,8 @@ from wf_sources_mcp.ids import RESERVED_CONNECTION_IDS
 
 ADMIN_NAMESPACE = "wf.admin"
 
+__all__ = ["RESERVED_CONNECTION_IDS"]
+
 
 @dataclass(frozen=True, slots=True)
 class ProxyToolName:

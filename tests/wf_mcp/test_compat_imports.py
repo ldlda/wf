@@ -247,8 +247,19 @@ def test_wf_mcp_broker_discovery_keeps_specs_adapter() -> None:
     assert broker_specs.__name__ == "specs_from_discovered_tools"
 
 
-def test_wf_mcp_broker_service_adapter_shim_reexports_wf_sources_mcp_adapter_helper() -> None:
+def test_wf_mcp_broker_service_adapter_shim_reexports_wf_sources_mcp_adapter_helper() -> (
+    None
+):
     from wf_mcp.broker.service.adapters import require_adapter as compat_require_adapter
     from wf_sources_mcp.adapters import require_adapter
 
     assert compat_require_adapter is require_adapter
+
+
+def test_wf_mcp_connection_id_helpers_reexport_wf_sources_mcp_ids() -> None:
+    from wf_mcp.connections import parse_connection_id as compat_parse_connection_id
+    from wf_mcp.shared.names import RESERVED_CONNECTION_IDS as compat_reserved_ids
+    from wf_sources_mcp.ids import RESERVED_CONNECTION_IDS, parse_connection_id
+
+    assert compat_parse_connection_id is parse_connection_id
+    assert compat_reserved_ids is RESERVED_CONNECTION_IDS

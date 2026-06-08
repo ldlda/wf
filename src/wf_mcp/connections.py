@@ -6,6 +6,8 @@ from wf_sources_mcp.ids import CONNECTION_ID_PATTERN, parse_connection_id
 
 from .models import ConnectionConfig
 
+__all__ = ["CONNECTION_ID_PATTERN", "parse_connection_id"]
+
 
 def qualify_node_name(connection_id: str, local_name: str) -> str:
     parse_connection_id(connection_id)

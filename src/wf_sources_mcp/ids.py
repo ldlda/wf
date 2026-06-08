@@ -28,8 +28,20 @@ def parse_connection_id(connection_id: str) -> tuple[str, str]:
     return server, account
 
 
+def validate_connection_id(connection_id: str) -> str:
+    """Validate one MCP source id and return it unchanged.
+
+    Use this when callers need path-safety and shape validation but do not need
+    provider/account pieces. `parse_connection_id()` remains the splitter.
+    """
+
+    parse_connection_id(connection_id)
+    return connection_id
+
+
 __all__ = [
     "CONNECTION_ID_PATTERN",
     "RESERVED_CONNECTION_IDS",
     "parse_connection_id",
+    "validate_connection_id",
 ]
