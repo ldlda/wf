@@ -43,7 +43,7 @@ Implement the policy in [`artifact delete policy`](../specs/2026-06-09-artifact-
 - Modify: `src/wf_artifacts/store.py`
 - Test: `tests/artifacts/test_store.py`
 
-- [ ] **Step 1: Add failing tests for artifact delete**
+- [x] **Step 1: Add failing tests for artifact delete**
 
 In `tests/artifacts/test_store.py`, add:
 
@@ -99,7 +99,7 @@ def test_file_store_finds_deployments_for_artifact_version(tmp_path) -> None:
     ]
 ```
 
-- [ ] **Step 2: Run store tests and verify failure**
+- [x] **Step 2: Run store tests and verify failure**
 
 Run:
 
@@ -109,7 +109,7 @@ uv run pytest tests/artifacts/test_store.py -q
 
 Expected: FAIL because `delete_artifact` and `deployments_for_artifact` do not exist.
 
-- [ ] **Step 3: Add abstract store methods**
+- [x] **Step 3: Add abstract store methods**
 
 In `WorkflowArtifactStore`, add:
 
@@ -123,7 +123,7 @@ In `WorkflowArtifactStore`, add:
         raise NotImplementedError
 ```
 
-- [ ] **Step 4: Implement file store methods**
+- [x] **Step 4: Implement file store methods**
 
 In `FileWorkflowArtifactStore`, add:
 
@@ -149,7 +149,7 @@ In `FileWorkflowArtifactStore`, add:
 
 Keep sorting behavior from `list_deployments()`; do not add separate sort logic.
 
-- [ ] **Step 5: Run store tests**
+- [x] **Step 5: Run store tests**
 
 Run:
 
@@ -166,7 +166,7 @@ Expected: PASS.
 - Modify: `src/wf_api/surface.py`
 - Test: `tests/wf_api/test_artifact_api.py`
 
-- [ ] **Step 1: Add failing API tests**
+- [x] **Step 1: Add failing API tests**
 
 In `tests/wf_api/test_artifact_api.py`, add tests near `test_inspect_artifact_returns_stable_fields`:
 
@@ -216,7 +216,7 @@ from wf_artifacts import WorkflowDeployment
 
 If `pytest` is already imported in the file after prior edits, do not duplicate it.
 
-- [ ] **Step 2: Run API tests and verify failure**
+- [x] **Step 2: Run API tests and verify failure**
 
 Run:
 
@@ -226,7 +226,7 @@ uv run pytest tests/wf_api/test_artifact_api.py -q
 
 Expected: FAIL because `WorkflowArtifactApi.delete_artifact` does not exist.
 
-- [ ] **Step 3: Add surface method**
+- [x] **Step 3: Add surface method**
 
 In `src/wf_api/surface.py`, add to `WorkflowArtifactSurface`:
 
@@ -239,7 +239,7 @@ In `src/wf_api/surface.py`, add to `WorkflowArtifactSurface`:
     ) -> dict[str, Any]: ...
 ```
 
-- [ ] **Step 4: Implement API method**
+- [x] **Step 4: Implement API method**
 
 In `src/wf_api/artifacts.py`, add after `inspect_artifact`:
 
@@ -273,7 +273,7 @@ In `src/wf_api/artifacts.py`, add after `inspect_artifact`:
 
 If review objects to the `capability_id` string, use `artifact_capability_id` only if constructing a fake artifact is not required. Do not load the artifact after deletion just to build an event id.
 
-- [ ] **Step 5: Run API tests**
+- [x] **Step 5: Run API tests**
 
 Run:
 
@@ -292,7 +292,7 @@ Expected: PASS.
 - Test: `tests/wf_transport_rpc_http/test_app.py`
 - Test: `tests/wf_transport_rpc_http/test_client.py`
 
-- [ ] **Step 1: Add failing RPC/client tests**
+- [x] **Step 1: Add failing RPC/client tests**
 
 In `tests/wf_transport_rpc_http/test_app.py`, add an app-level method test that saves an artifact then calls:
 
@@ -317,7 +317,7 @@ assert deleted["deleted"] is True
 
 Use existing helpers in those files for building/saving artifacts. If no helper exists, create the artifact through `client.save_artifact(...)` using the existing artifact test payload pattern.
 
-- [ ] **Step 2: Run RPC tests and verify failure**
+- [x] **Step 2: Run RPC tests and verify failure**
 
 Run:
 
@@ -327,7 +327,7 @@ uv run pytest tests/wf_transport_rpc_http/test_app.py tests/wf_transport_rpc_htt
 
 Expected: FAIL because params/method/client method do not exist.
 
-- [ ] **Step 3: Add params model**
+- [x] **Step 3: Add params model**
 
 In `src/wf_transport_rpc_http/models.py`, add:
 
@@ -337,7 +337,7 @@ class DeleteArtifactParams(RpcParamsModel):
     version: int = Field(ge=1)
 ```
 
-- [ ] **Step 4: Register RPC method**
+- [x] **Step 4: Register RPC method**
 
 In `src/wf_transport_rpc_http/methods/artifacts.py`, import `DeleteArtifactParams` and add:
 
@@ -355,7 +355,7 @@ In `src/wf_transport_rpc_http/methods/artifacts.py`, import `DeleteArtifactParam
             raise_workflow_rpc_error(exc)
 ```
 
-- [ ] **Step 5: Add client method**
+- [x] **Step 5: Add client method**
 
 In `src/wf_transport_rpc_http/client/artifacts.py`, add:
 
@@ -369,7 +369,7 @@ In `src/wf_transport_rpc_http/client/artifacts.py`, add:
         )
 ```
 
-- [ ] **Step 6: Run RPC/client tests**
+- [x] **Step 6: Run RPC/client tests**
 
 Run:
 
@@ -385,7 +385,7 @@ Expected: PASS.
 - Modify: `src/wf_cli/commands/artifacts.py`
 - Test: `tests/wf_cli/test_remote_target.py` or `tests/wf_cli/test_artifacts.py`
 
-- [ ] **Step 1: Add CLI tests**
+- [x] **Step 1: Add CLI tests**
 
 Add tests for:
 
@@ -422,7 +422,7 @@ assert payload["deleted"] is False
 assert payload["blocked_by_deployments"] == ["echo.default"]
 ```
 
-- [ ] **Step 2: Run CLI tests and verify failure**
+- [x] **Step 2: Run CLI tests and verify failure**
 
 Run:
 
@@ -432,7 +432,7 @@ uv run pytest tests/wf_cli/test_remote_target.py -q
 
 Expected: FAIL because `wf artifact delete` does not exist.
 
-- [ ] **Step 3: Implement command**
+- [x] **Step 3: Implement command**
 
 In `src/wf_cli/commands/artifacts.py`, add:
 
@@ -465,7 +465,7 @@ def delete_artifact(
     )
 ```
 
-- [ ] **Step 4: Run CLI tests**
+- [x] **Step 4: Run CLI tests**
 
 Run:
 
@@ -482,7 +482,7 @@ Expected: PASS.
 - Modify: `docs/current_roadmap.md`
 - Modify: `docs/superpowers/specs/2026-06-09-artifact-delete-policy.md`
 
-- [ ] **Step 1: Document command**
+- [x] **Step 1: Document command**
 
 In `docs/wf_cli.md`, add:
 
@@ -492,11 +492,11 @@ wf artifact delete smoke_artifact_20260609 1 --confirm
 
 State that the command refuses to delete artifact versions referenced by deployments, and users should delete deployments first with `wf deploy delete <deployment_id>`.
 
-- [ ] **Step 2: Update roadmap**
+- [x] **Step 2: Update roadmap**
 
 In `docs/current_roadmap.md`, mark artifact delete complete under Priority 1 after implementation. Keep the artifact-delete policy spec linked as current behavior if it remains accurate.
 
-- [ ] **Step 3: Update policy spec status**
+- [x] **Step 3: Update policy spec status**
 
 At the top of `docs/superpowers/specs/2026-06-09-artifact-delete-policy.md`, add:
 
@@ -509,7 +509,7 @@ unreferenced artifact versions and rejects versions referenced by deployments.
 
 ## Task 6: Final Verification
 
-- [ ] **Step 1: Run focused tests**
+- [x] **Step 1: Run focused tests**
 
 Run:
 
@@ -519,7 +519,7 @@ uv run pytest tests/artifacts/test_store.py tests/wf_api/test_artifact_api.py te
 
 Expected: PASS.
 
-- [ ] **Step 2: Run changed-file lint/type checks**
+- [x] **Step 2: Run changed-file lint/type checks**
 
 Run:
 
@@ -530,7 +530,7 @@ uv run basedpyright --level error src/wf_artifacts/store.py src/wf_api/artifacts
 
 Expected: PASS. If global ruff reports unrelated pre-existing errors, scope the final report to changed-file lint and list the unrelated files separately.
 
-- [ ] **Step 3: Optional manual smoke**
+- [x] **Step 3: Optional manual smoke**
 
 Against a running server:
 

@@ -251,6 +251,15 @@ wf artifact inspect concat_ws 1
 Artifacts are immutable saved workflow definitions. List output is compact by
 design; use `inspect` for full details.
 
+Delete an unreferenced artifact version:
+
+```bash
+wf artifact delete smoke_artifact_20260609 1 --confirm
+```
+
+The command refuses to delete artifact versions still referenced by deployments.
+Delete referencing deployments first with `wf deploy delete <deployment_id>`.
+
 ## Deployments
 
 Save a deployment from flags:

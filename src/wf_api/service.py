@@ -95,6 +95,17 @@ class WorkflowApi:
             version=version,
         )
 
+    async def delete_artifact(
+        self,
+        *,
+        artifact_id: str,
+        version: int,
+    ) -> dict[str, Any]:
+        return await self.artifacts.delete_artifact(
+            artifact_id=artifact_id,
+            version=version,
+        )
+
     async def save_artifact(
         self,
         artifact: dict[str, Any],

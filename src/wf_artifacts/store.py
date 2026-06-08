@@ -43,6 +43,14 @@ class WorkflowArtifactStore:
     def list_deployments(self) -> list[WorkflowDeployment]:
         raise NotImplementedError
 
+    def delete_artifact(self, artifact_id: str, version: int) -> None:
+        raise NotImplementedError
+
+    def deployments_for_artifact(
+        self, artifact_id: str, version: int
+    ) -> list[WorkflowDeployment]:
+        raise NotImplementedError
+
     def delete_deployment(self, deployment_id: str) -> None:
         raise NotImplementedError
 
@@ -117,6 +125,24 @@ class FileWorkflowArtifactStore(WorkflowArtifactStore):
                 WorkflowDeployment.model_validate_json(path.read_text(encoding="utf-8"))
             )
         return deployments
+
+    def delete_artifact(self, artifact_id: str, version: int) -> None:
+        """Remove one immutable artifact version from the store."""
+        path = self._artifact_dir(artifact_id) / self._artifact_filename(version)
+        if not path.exists():
+            raise KeyError(f"unknown workflow artifact {artifact_id}@{version}")
+        path.unlink()
+
+    def deployments_for_artifact(
+        self, artifact_id: str, version: int
+    ) -> list[WorkflowDeployment]:
+        """Return deployments that currently reference one artifact version."""
+        return [
+            deployment
+            for deployment in self.list_deployments()
+            if deployment.artifact_id == artifact_id
+            and deployment.artifact_version == version
+        ]
 
     def delete_deployment(self, deployment_id: str) -> None:
         """Remove one mutable deployment binding record from the store."""

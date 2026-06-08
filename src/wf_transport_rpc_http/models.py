@@ -152,6 +152,11 @@ class InspectArtifactParams(RpcParamsModel):
     version: int = Field(ge=1)
 
 
+class DeleteArtifactParams(RpcParamsModel):
+    artifact_id: str = Field(min_length=1)
+    version: int = Field(ge=1)
+
+
 class ListDeploymentsParams(RpcParamsModel):
     pass
 

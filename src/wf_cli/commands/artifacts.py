@@ -96,3 +96,31 @@ def _resolve_artifact_version(
         return version_option
     assert version_arg is not None
     return version_arg
+
+
+@app.command("delete")
+def delete_artifact(
+    ctx: typer.Context,
+    artifact_id: Annotated[str, typer.Argument(help="Artifact id.")],
+    version: Annotated[int, typer.Argument(min=1, help="Artifact version.")],
+    confirm: Annotated[
+        bool,
+        typer.Option(
+            "--confirm",
+            help="Required confirmation for deleting an artifact version.",
+        ),
+    ] = False,
+) -> None:
+    """Delete one unreferenced artifact version."""
+    if not confirm:
+        raise typer.BadParameter("pass --confirm to delete an artifact version")
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.delete_artifact(
+                artifact_id=artifact_id,
+                version=version,
+            ),
+        )
+    )

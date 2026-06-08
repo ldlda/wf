@@ -346,3 +346,29 @@ async def test_rpc_workflow_client_deletes_draft_workspace(tmp_path) -> None:
         deleted_again = await client.delete_draft_workspace(workspace_id="delete-me")
         assert deleted_again["workspace_id"] == "delete-me"
         assert deleted_again["deleted"] is False
+
+
+async def test_rpc_workflow_client_deletes_artifact(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    await server.api.create_artifact_from_plan(
+        artifact_id="delete_artifact",
+        version=1,
+        title="Delete Me",
+        plan=_constant_plan(),
+        outcomes=["ok"],
+        source_bindings={"wf.std": "wf.std"},
+    )
+
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc", timeout_seconds=5, http_client=http_client
+        )
+        deleted = await client.delete_artifact(artifact_id="delete_artifact", version=1)
+
+    assert deleted["deleted"] is True
+    assert deleted["artifact_id"] == "delete_artifact"
+    assert deleted["version"] == 1

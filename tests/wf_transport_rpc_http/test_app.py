@@ -336,6 +336,31 @@ async def test_rpc_draft_workspace_delete(tmp_path) -> None:
         assert payload["result"]["deleted"] is True
 
 
+async def test_rpc_artifact_delete(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    await server.api.create_artifact_from_plan(
+        artifact_id="delete_artifact",
+        version=1,
+        title="Delete Me",
+        plan=_constant_plan(),
+        outcomes=["ok"],
+        source_bindings={"wf.std": "wf.std"},
+    )
+
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        payload = await _rpc(
+            client,
+            "workflow.artifacts.delete",
+            {"artifact_id": "delete_artifact", "version": 1},
+        )
+        assert payload["result"]["artifact_id"] == "delete_artifact"
+        assert payload["result"]["version"] == 1
+        assert payload["result"]["deleted"] is True
+        assert payload["result"]["blocked_by_deployments"] == []
+
+
 def _constant_plan() -> RawWorkflowPlan:
     return RawWorkflowPlan.model_validate(
         {

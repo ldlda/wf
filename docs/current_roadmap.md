@@ -33,16 +33,13 @@ clear operator feedback before adding more architecture.
   [`2026-06-09 product smoke RPC CLI`](superpowers/research/2026-06-09-product-smoke-rpc-cli.md).
 - Completed: `wf artifact inspect` now accepts `--version` as an alias for the
   positional version argument.
+- Completed: `wf artifact delete <artifact_id> <version> --confirm` deletes
+  unreferenced artifact versions and rejects versions still referenced by
+  deployments. Implementation:
+  [`wf artifact delete`](historical/superpowers/plans/2026-06-09-wf-artifact-delete.md).
 - Completed: `wf draft delete <workspace_id> --confirm` exposes existing draft
   workspace deletion as a safe CLI command. Implementation:
   [`wf draft delete CLI/RPC`](historical/superpowers/plans/2026-06-09-wf-draft-delete-cli-rpc.md).
-- Separate cleanup: design artifact deletion before exposing a command.
-  Deployments live in the artifact store and can reference artifact versions, so
-  `wf artifact delete <artifact_id> <version> --confirm` must reject referenced
-  artifacts by default. Active spec:
-  [`artifact delete policy`](superpowers/specs/2026-06-09-artifact-delete-policy.md).
-  Active plan:
-  [`wf artifact delete`](superpowers/plans/2026-06-09-wf-artifact-delete.md).
 - Next docs/ergonomics cleanup: explain raw MCP content-block envelopes returned
   by `cap call`, and only add a text-unwrapping CLI option if the safe behavior
   is explicitly defined.

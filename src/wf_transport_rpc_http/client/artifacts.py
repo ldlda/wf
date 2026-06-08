@@ -38,3 +38,11 @@ class RpcArtifactClientMixin:
         self: RpcCaller, artifact: dict[str, Any]
     ) -> dict[str, Any]:
         return await self._call("workflow.artifacts.save", {"artifact": artifact})
+
+    async def delete_artifact(
+        self: RpcCaller, *, artifact_id: str, version: int
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.artifacts.delete",
+            {"artifact_id": artifact_id, "version": version},
+        )

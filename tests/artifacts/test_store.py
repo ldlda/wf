@@ -219,3 +219,54 @@ def test_file_store_rejects_deployment_lookup_path_traversal(tmp_path) -> None:
 
     with pytest.raises(ValueError, match="deployment_id"):
         store.get_deployment("../outside")
+
+
+def test_file_store_deletes_one_artifact_version(tmp_path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path)
+    store.save_artifact(artifact(1))
+    store.save_artifact(artifact(2))
+
+    store.delete_artifact("summarize_docs", 1)
+
+    with pytest.raises(KeyError, match="unknown workflow artifact"):
+        store.get_artifact("summarize_docs", 1)
+    assert store.get_artifact("summarize_docs", 2).version == 2
+
+
+def test_file_store_delete_artifact_missing_version_raises_key_error(tmp_path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path)
+
+    with pytest.raises(KeyError, match="unknown workflow artifact"):
+        store.delete_artifact("summarize_docs", 1)
+
+
+def test_file_store_finds_deployments_for_artifact_version(tmp_path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path)
+    store.save_deployment(
+        WorkflowDeployment(
+            id="summarize_docs.work",
+            artifact_id="summarize_docs",
+            artifact_version=1,
+        )
+    )
+    store.save_deployment(
+        WorkflowDeployment(
+            id="summarize_docs.personal",
+            artifact_id="summarize_docs",
+            artifact_version=1,
+        )
+    )
+    store.save_deployment(
+        WorkflowDeployment(
+            id="summarize_docs.v2",
+            artifact_id="summarize_docs",
+            artifact_version=2,
+        )
+    )
+
+    blockers = store.deployments_for_artifact("summarize_docs", 1)
+
+    assert [deployment.id for deployment in blockers] == [
+        "summarize_docs.personal",
+        "summarize_docs.work",
+    ]

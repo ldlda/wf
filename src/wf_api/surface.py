@@ -137,6 +137,13 @@ class WorkflowArtifactSurface(Protocol):
         version: int,
     ) -> dict[str, Any]: ...
 
+    async def delete_artifact(
+        self,
+        *,
+        artifact_id: str,
+        version: int,
+    ) -> dict[str, Any]: ...
+
 
 class WorkflowDeploymentSurface(Protocol):
     """Deployment methods exposed by workflow frontends."""

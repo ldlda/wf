@@ -1,7 +1,12 @@
 # Artifact Delete Policy
 
-This is the current design contract for adding artifact deletion. It is separate
-from `wf draft delete` because artifact deletion is not only CLI plumbing.
+## Status
+
+Implemented: `wf artifact delete <artifact_id> <version> --confirm` deletes
+unreferenced artifact versions and rejects versions referenced by deployments.
+
+This is the current design contract for artifact deletion. It is separate from
+`wf draft delete` because artifact deletion is not only CLI plumbing.
 
 ## Current State
 
@@ -9,19 +14,20 @@ from `wf draft delete` because artifact deletion is not only CLI plumbing.
   through CLI/RPC.
 - Deployment deletion already exists and is stored through
   `WorkflowArtifactStore.delete_deployment`.
-- Artifact deletion does **not** exist yet as a store/API operation.
+- Artifact deletion exists as a store/API/RPC/CLI operation for one artifact
+  version at a time.
 - Deployments live in the artifact store area and can reference a specific
   `(artifact_id, version)`.
 
-This means `wf artifact delete <artifact_id> <version>` needs store-level policy,
-not just a CLI command.
+This means `wf artifact delete <artifact_id> <version>` enforces store-level
+policy, not just CLI confirmation.
 
 ## Required Safety Rule
 
 Artifact deletion must not remove an artifact version while any deployment
 references that artifact version.
 
-The first implementation should reject with structured output like:
+Deletion rejects referenced artifacts with structured output like:
 
 ```json
 {
@@ -35,7 +41,7 @@ The first implementation should reject with structured output like:
 The exact response can be adjusted to match existing API payload style, but it
 must include the blocking deployment ids.
 
-## Non-Goals For First Slice
+## Non-Goals
 
 - Do not cascade-delete deployments.
 - Do not delete runs.
@@ -55,7 +61,8 @@ The non-cascade path must remain the default.
 
 ## Implementation Shape
 
-Add store primitives first, then API, then transport, then CLI:
+The implemented shape is store primitives first, then API, then transport, then
+CLI:
 
 1. `WorkflowArtifactStore` gains an artifact-version delete method.
 2. `WorkflowArtifactStore` gains a helper to find deployments referencing
@@ -67,7 +74,7 @@ Add store primitives first, then API, then transport, then CLI:
 
 ## Test Requirements
 
-The first artifact-delete slice should include tests for:
+Artifact deletion should keep tests for:
 
 - Deleting an unreferenced artifact version succeeds.
 - Deleting a missing artifact version is idempotent only if the existing artifact
@@ -88,4 +95,3 @@ the artifact that deployment referenced.
 
 `wf artifact delete <artifact_id> <version>` removes an artifact version only
 after proving no deployment references it.
-

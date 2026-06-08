@@ -276,6 +276,32 @@ class WorkflowArtifactApi:
         artifact = self._artifact_store().get_artifact(artifact_id, version)
         return artifact.model_dump(mode="json")
 
+    async def delete_artifact(
+        self, *, artifact_id: str, version: int
+    ) -> dict[str, Any]:
+        store = self._artifact_store()
+        blockers = store.deployments_for_artifact(artifact_id, version)
+        blocker_ids = [deployment.id for deployment in blockers]
+        if blocker_ids:
+            return {
+                "artifact_id": artifact_id,
+                "version": version,
+                "deleted": False,
+                "blocked_by_deployments": blocker_ids,
+            }
+        store.delete_artifact(artifact_id, version)
+        self.context.events.record_workflow_event(
+            "workflow_artifact_deleted",
+            capability_id=f"{artifact_id}@{version}",
+            payload={"artifact_id": artifact_id, "version": version},
+        )
+        return {
+            "artifact_id": artifact_id,
+            "version": version,
+            "deleted": True,
+            "blocked_by_deployments": [],
+        }
+
 
 def _suggested_self_bindings(required_sources: Sequence[str]) -> dict[str, str]:
     """Suggest local bindings for built-in sources that deploy to themselves."""

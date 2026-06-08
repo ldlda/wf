@@ -7,7 +7,12 @@ import fastapi_jsonrpc as jsonrpc
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
-from ..models import InspectArtifactParams, ListArtifactsParams, SaveArtifactParams
+from ..models import (
+    DeleteArtifactParams,
+    InspectArtifactParams,
+    ListArtifactsParams,
+    SaveArtifactParams,
+)
 from ..params import RpcParams
 
 
@@ -46,6 +51,18 @@ def register_methods(
     ) -> dict[str, Any]:
         try:
             return await server.api.inspect_artifact(
+                artifact_id=params.artifact_id,
+                version=params.version,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(name="workflow.artifacts.delete", errors=[WorkflowRpcError])
+    async def workflow_artifacts_delete(
+        params: DeleteArtifactParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.delete_artifact(
                 artifact_id=params.artifact_id,
                 version=params.version,
             )

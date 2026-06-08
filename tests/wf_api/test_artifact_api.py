@@ -7,6 +7,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from tests.wf_mcp.test_support import echo_tool
 from wf_api.artifacts import WorkflowArtifactApi
 from wf_artifacts import (
@@ -14,6 +16,7 @@ from wf_artifacts import (
     FileWorkflowArtifactStore,
     RequiredCapability,
     WorkflowArtifact,
+    WorkflowDeployment,
 )
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
@@ -276,3 +279,39 @@ def test_handler_delegation_for_inspect_artifact(tmp_path: Path) -> None:
     assert handler_result["id"] == api_result["id"]
     assert handler_result["version"] == api_result["version"]
     assert handler_result["title"] == api_result["title"]
+
+
+def test_delete_artifact_deletes_unreferenced_version(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_delete")
+    api, _service = _artifact_api(artifact_store)
+    artifact_store.save_artifact(_echo_artifact())
+
+    result = asyncio.run(api.delete_artifact(artifact_id="echo", version=1))
+
+    assert result["artifact_id"] == "echo"
+    assert result["version"] == 1
+    assert result["deleted"] is True
+    assert result["blocked_by_deployments"] == []
+    with pytest.raises(KeyError, match="unknown workflow artifact"):
+        artifact_store.get_artifact("echo", 1)
+
+
+def test_delete_artifact_rejects_referenced_version(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_delete_blocked")
+    api, _service = _artifact_api(artifact_store)
+    artifact_store.save_artifact(_echo_artifact())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="echo.default",
+            artifact_id="echo",
+            artifact_version=1,
+        )
+    )
+
+    result = asyncio.run(api.delete_artifact(artifact_id="echo", version=1))
+
+    assert result["artifact_id"] == "echo"
+    assert result["version"] == 1
+    assert result["deleted"] is False
+    assert result["blocked_by_deployments"] == ["echo.default"]
+    assert artifact_store.get_artifact("echo", 1).id == "echo"
