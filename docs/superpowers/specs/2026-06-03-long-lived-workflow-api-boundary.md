@@ -145,7 +145,10 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
     moved to `wf_sources_mcp.tool_wrappers`, with `wf_mcp.workflow` retained as
     a compatibility shim. `specs_from_discovered_tools` remains in `wf_mcp`
     as the broker event projection adapter.
-20. Upstream transport/discovery/session services.
+20. Complete: neutral `specs_from_discovered_tools` moved to
+    `wf_sources_mcp.discovery`. `wf_mcp.broker.discovery` remains as the broker
+    adapter for legacy `ConnectionConfig` input and `McpEvent` projection.
+21. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

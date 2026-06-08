@@ -237,3 +237,11 @@ def test_wf_mcp_workflow_wrapper_shim_reexports_wf_sources_mcp_tool_wrapper() ->
 
     assert compat_package_wrap is wrap_discovered_tool
     assert compat_module_wrap is wrap_discovered_tool
+
+
+def test_wf_mcp_broker_discovery_keeps_specs_adapter() -> None:
+    from wf_mcp.broker.discovery import specs_from_discovered_tools as broker_specs
+    from wf_sources_mcp.discovery import specs_from_discovered_tools as source_specs
+
+    assert broker_specs is not source_specs
+    assert broker_specs.__name__ == "specs_from_discovered_tools"

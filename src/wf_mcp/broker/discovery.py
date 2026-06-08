@@ -10,9 +10,11 @@ from wf_sources_mcp.discovery import (
     DiscoveredConnectionCapabilities,
     discover_connection_capabilities,
 )
+from wf_sources_mcp.discovery import (
+    specs_from_discovered_tools as source_specs_from_discovered_tools,
+)
 from wf_sources_mcp.sdk import ToolExecutor
 from wf_sources_mcp.tool_events import ToolWrapperEvent
-from wf_sources_mcp.tool_wrappers import wrap_discovered_tool
 
 from ..auth import AuthRecord
 from ..models import ConnectionConfig
@@ -45,16 +47,13 @@ def specs_from_discovered_tools(
         if emit_event is not None:
             emit_event(_project_tool_wrapper_event(event))
 
-    return [
-        wrap_discovered_tool(
-            connection=source_connection,
-            auth=auth,
-            executor=executor,
-            tool=tool,
-            emit_event=emit_tool_event if emit_event is not None else None,
-        )
-        for tool in tools
-    ]
+    return source_specs_from_discovered_tools(
+        connection=source_connection,
+        auth=auth,
+        executor=executor,
+        tools=tools,
+        emit_event=emit_tool_event if emit_event is not None else None,
+    )
 
 
 __all__ = [

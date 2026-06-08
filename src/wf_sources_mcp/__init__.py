@@ -65,6 +65,7 @@ __all__ = [
     "model_from_schema",
     "neutral_auth_from_mcp",
     "registry_entry_to_connection_config",
+    "specs_from_discovered_tools",
     "tool_call_completed_event",
     "tool_call_started_event",
     "ToolWrapperEvent",
@@ -106,6 +107,7 @@ def __getattr__(name: str) -> object:
     if name in {
         "DiscoveredConnectionCapabilities",
         "discover_connection_capabilities",
+        "specs_from_discovered_tools",
     }:
         from . import discovery
 

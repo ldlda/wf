@@ -7,10 +7,13 @@ from typing import Any, TypeVar
 from mcp import McpError
 from mcp.types import METHOD_NOT_FOUND
 
+from wf_authoring import NodeSpec
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from wf_sources_mcp.connections import McpSourceConnection
-from wf_sources_mcp.sdk import BackendAdapter
+from wf_sources_mcp.sdk import BackendAdapter, ToolExecutor
+from wf_sources_mcp.tool_events import ToolWrapperEventSink
+from wf_sources_mcp.tool_wrappers import wrap_discovered_tool
 
 _CapabilityT = TypeVar("_CapabilityT")
 
@@ -74,4 +77,28 @@ def _root_exception(exc: BaseException) -> BaseException:
     return current
 
 
-__all__ = ["DiscoveredConnectionCapabilities", "discover_connection_capabilities"]
+def specs_from_discovered_tools(
+    *,
+    connection: McpSourceConnection,
+    auth: AuthRecord | None,
+    executor: ToolExecutor,
+    tools: list[DiscoveredTool],
+    emit_event: ToolWrapperEventSink | None = None,
+) -> list[NodeSpec[Any, Any]]:
+    return [
+        wrap_discovered_tool(
+            connection=connection,
+            auth=auth,
+            executor=executor,
+            tool=tool,
+            emit_event=emit_event,
+        )
+        for tool in tools
+    ]
+
+
+__all__ = [
+    "DiscoveredConnectionCapabilities",
+    "discover_connection_capabilities",
+    "specs_from_discovered_tools",
+]

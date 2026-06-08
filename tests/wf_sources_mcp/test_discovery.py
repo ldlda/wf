@@ -6,10 +6,15 @@ import pytest
 from mcp import McpError
 from mcp.types import ErrorData
 
+from wf_authoring import build_async_registry
+from wf_core import RuntimeContext
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from wf_sources_mcp.connections import McpSourceConnection
-from wf_sources_mcp.discovery import discover_connection_capabilities
+from wf_sources_mcp.discovery import (
+    discover_connection_capabilities,
+    specs_from_discovered_tools,
+)
 from wf_sources_mcp.sdk import BackendAdapter, ToolCallResult
 from wf_sources_mcp.transports import StdioSourceTransport
 
@@ -192,6 +197,85 @@ def test_backend_adapter_static_shape() -> None:
     adapter: BackendAdapter = _Adapter()
 
     assert adapter is not None
+
+
+class _RecordingExecutor:
+    def __init__(self) -> None:
+        self.calls: list[dict[str, Any]] = []
+
+    async def call_tool(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+        tool_name: str,
+        payload: dict[str, Any],
+    ) -> ToolCallResult:
+        self.calls.append(
+            {
+                "connection": connection,
+                "auth": auth,
+                "tool_name": tool_name,
+                "payload": payload,
+            }
+        )
+        return ToolCallResult(
+            outcome="ok",
+            output={"content": [{"type": "text", "text": "Echo: hello"}]},
+            meta={"duration_ms": 3},
+        )
+
+
+async def test_specs_from_discovered_tools_wraps_tools_with_neutral_events() -> None:
+    executor = _RecordingExecutor()
+    events: list[Any] = []
+    connection = _connection()
+    specs = specs_from_discovered_tools(
+        connection=connection,
+        auth=None,
+        executor=executor,
+        tools=[
+            DiscoveredTool(
+                name="echo",
+                title="Echo",
+                description="Echo input",
+                input_schema={
+                    "type": "object",
+                    "properties": {"message": {"type": "string"}},
+                    "required": ["message"],
+                },
+                output_schema={
+                    "type": "object",
+                    "properties": {"content": {"type": "array"}},
+                },
+            )
+        ],
+        emit_event=events.append,
+    )
+    handler = build_async_registry(*specs)["echo"]
+
+    result = await handler(
+        {"message": "hello"},
+        RuntimeContext(current_node_id="echo"),
+    )
+
+    assert result["outcome"] == "ok"
+    assert result["output"]["content"][0]["text"] == "Echo: hello"
+    assert executor.calls[0]["connection"] is connection
+    assert executor.calls[0]["tool_name"] == "echo"
+    assert executor.calls[0]["payload"] == {"message": "hello"}
+    assert [event.kind for event in events] == [
+        "tool_call_started",
+        "tool_call_completed",
+    ]
+    assert events[0].capability_id == "demo.default.echo"
+    assert events[1].payload == {"outcome": "ok", "meta": {"duration_ms": 3}}
+
+
+def test_specs_from_discovered_tools_exports_from_package_root() -> None:
+    from wf_sources_mcp import specs_from_discovered_tools as root_specs_from_tools
+    from wf_sources_mcp.discovery import specs_from_discovered_tools
+
+    assert root_specs_from_tools is specs_from_discovered_tools
 
 
 def test_discovery_symbols_export_from_package_root() -> None:

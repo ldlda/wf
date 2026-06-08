@@ -348,6 +348,9 @@ implementation state.
     - Completed: MCP discovered-tool wrapper generation (`wrap_discovered_tool`)
       now lives in `wf_sources_mcp.tool_wrappers`. `wf_mcp.workflow` remains a
       compatibility shim; broker discovery imports the canonical wrapper.
+    - Completed: neutral `specs_from_discovered_tools` now lives in
+      `wf_sources_mcp.discovery`. `wf_mcp.broker.discovery` remains as the
+      broker adapter for `ConnectionConfig` and `McpEvent` projection.
     The `wf-mcp` script is now a legacy/special-purpose MCP entrypoint, not the
     preferred durable workflow server. New product paths should target
     `wf-rpc-server` plus neutral `wf_config`/`wf_server` composition, then keep
