@@ -17,10 +17,7 @@ from wf_artifacts import (
     WorkflowArtifact,
     WorkflowDeployment,
 )
-from wf_mcp.broker.discovery import (
-    discover_connection_capabilities,
-    specs_from_discovered_tools,
-)
+from wf_mcp.broker.discovery import specs_from_discovered_tools
 from wf_mcp.events import McpEvent, make_event
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.shared.errors import error_payload
@@ -30,6 +27,7 @@ from wf_sources_mcp.catalog.models import CatalogSnapshot
 from wf_sources_mcp.connections import (
     mcp_source_connection_from_connection_config,
 )
+from wf_sources_mcp.discovery import discover_connection_capabilities
 from wf_sources_mcp.sdk import BackendAdapter, StatefulMcpRuntime, ToolExecutor
 from wf_sources_mcp.storage import AuthStore, CatalogStore
 
@@ -249,8 +247,9 @@ class UpstreamTransportService:
         )
         try:
             adapter = require_adapter(connection, self.adapters)
+            source_connection = mcp_source_connection_from_connection_config(connection)
             capabilities = await discover_connection_capabilities(
-                connection=connection,
+                connection=source_connection,
                 auth=auth,
                 adapter=adapter,
             )

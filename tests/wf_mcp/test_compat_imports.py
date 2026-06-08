@@ -212,3 +212,19 @@ def test_wf_mcp_broker_catalog_shim_reexports_wf_sources_mcp_catalog() -> None:
 
     assert CompatCombinedCatalog is CombinedCatalog
     assert compat_snapshot_from_specs is snapshot_from_specs
+
+
+def test_wf_mcp_broker_discovery_shim_reexports_wf_sources_mcp_discovery() -> None:
+    from wf_mcp.broker.discovery import (
+        DiscoveredConnectionCapabilities as CompatDiscoveredConnectionCapabilities,
+    )
+    from wf_mcp.broker.discovery import (
+        discover_connection_capabilities as compat_discover_connection_capabilities,
+    )
+    from wf_sources_mcp.discovery import (
+        DiscoveredConnectionCapabilities,
+        discover_connection_capabilities,
+    )
+
+    assert CompatDiscoveredConnectionCapabilities is DiscoveredConnectionCapabilities
+    assert compat_discover_connection_capabilities is discover_connection_capabilities

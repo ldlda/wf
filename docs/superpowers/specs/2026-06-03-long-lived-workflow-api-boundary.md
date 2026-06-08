@@ -129,7 +129,11 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
 15. Complete: MCP source catalog aggregation helpers (`CombinedCatalog` and
     `snapshot_from_specs`) moved to `wf_sources_mcp.catalog`, with
     `wf_mcp.broker.catalog` retained as a compatibility shim.
-16. Upstream transport/discovery/session services.
+16. Complete: MCP upstream capability discovery moved to
+    `wf_sources_mcp.discovery`, with `wf_mcp.broker.discovery` retaining
+    compatibility re-exports. `specs_from_discovered_tools` remains in `wf_mcp`
+    until the wrapper/event seam is neutralized.
+17. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

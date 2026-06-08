@@ -43,6 +43,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "AuthRecord",
+    "DiscoveredConnectionCapabilities",
     "FileSourceRegistryStore",
     "HttpSourceTransport",
     "McpSourceConnection",
@@ -55,6 +56,7 @@ __all__ = [
     "auth_ref_for_connection",
     "connection_auth_diagnostic",
     "connection_config_to_registry_entry",
+    "discover_connection_capabilities",
     "mcp_auth_env",
     "mcp_auth_from_neutral",
     "mcp_auth_headers",
@@ -95,4 +97,11 @@ def __getattr__(name: str) -> object:
         from . import transports
 
         return getattr(transports, name)
+    if name in {
+        "DiscoveredConnectionCapabilities",
+        "discover_connection_capabilities",
+    }:
+        from . import discovery
+
+        return getattr(discovery, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
