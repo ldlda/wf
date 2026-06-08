@@ -643,3 +643,65 @@ def test_wf_remote_run_resume_interrupted_deployment(monkeypatch, tmp_path) -> N
     assert resumed_payload["run_id"] == started_payload["run_id"]
     assert resumed_payload["status"] == "completed"
     assert resumed_payload["outcome"] == "submitted"
+
+
+def test_wf_status_uses_rpc_url_override(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "--url",
+            "http://test/rpc",
+            "status",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["target"]["mode"] == "remote"
+    assert payload["target"]["url"] == "http://test/rpc"
+    assert payload["workflow"]["capability_count"] >= 1
+    assert payload["sources"]["available"] is True
+    assert payload["admin"]["available"] is True
+    assert payload["registry"]["available"] is False
+
+
+def test_wf_status_reports_rpc_config_target(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "client": {
+                    "target": {
+                        "kind": "rpc_http",
+                        "url": "http://test/rpc",
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "status",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["target"]["mode"] == "remote"
+    assert payload["target"]["url"] == "http://test/rpc"
+    assert payload["workflow"]["capability_count"] >= 1

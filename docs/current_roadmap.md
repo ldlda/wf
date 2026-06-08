@@ -27,7 +27,7 @@ MCP entrypoint and compatibility surface.
 The platform is usable enough to test as a product. Next work should focus on
 clear operator feedback before adding more architecture.
 
-- Add `wf status` as a compact target/server status command.
+- Completed: `wf status` is a compact read-only target/server status command.
 - Run a real CLI smoke script against `wf-rpc-server --config wf.config.json`.
 - Capture UX gaps as small follow-up items: confusing errors, missing examples,
   poor command help, and target/config ambiguity.

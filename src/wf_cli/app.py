@@ -15,6 +15,7 @@ from .commands import (
     runs,
     schema,
     sources,
+    status,
 )
 from .commands import (
     config as config_commands,
@@ -80,6 +81,7 @@ app.add_typer(docs.app, name="docs")
 app.add_typer(schema.app, name="schema")
 app.add_typer(config_commands.app, name="config")
 app.command("explain")(explain.explain_command)
+app.command("status")(status.status_command)
 
 
 def main() -> None:

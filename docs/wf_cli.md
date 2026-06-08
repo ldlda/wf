@@ -92,6 +92,17 @@ wf --url http://127.0.0.1:8765/rpc admin registry apply
 Apply updates the running server's source graph from desired registry state.
 It is explicit in v1; registry mutations are not auto-applied.
 
+Check the selected target:
+
+```bash
+wf status
+wf --url http://127.0.0.1:8765/rpc status
+```
+
+`status` is read-only. It reports the selected target, capability/source
+availability, admin counts, auth record count, and desired registry count when
+the target exposes those admin surfaces. It does not return auth payload values.
+
 ## Output Policy
 
 JSON is the default output format for every command.
