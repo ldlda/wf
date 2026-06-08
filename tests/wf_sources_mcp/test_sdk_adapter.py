@@ -164,6 +164,11 @@ class _FakeAdapter(McpSdkAdapter):
         )
 
 
+class _ExplodingClientAdapter(McpSdkAdapter):
+    def _client(self, connection: McpSourceConnection, auth: object | None):
+        raise AssertionError("metadata lookup must not open an MCP session")
+
+
 def test_mcp_sdk_adapter_implements_backend_protocol() -> None:
     adapter: BackendAdapter = McpSdkAdapter()
 
@@ -219,3 +224,13 @@ async def test_mcp_sdk_adapter_uses_session_for_all_backend_methods() -> None:
         "tool": "echo",
         "payload": {"text": "hello"},
     }
+
+
+@pytest.mark.asyncio
+async def test_mcp_sdk_adapter_metadata_does_not_open_session() -> None:
+    metadata = await _ExplodingClientAdapter().get_connection_metadata(
+        _connection(),
+        None,
+    )
+
+    assert metadata == {"server": "demo", "transport": "stdio"}

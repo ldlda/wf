@@ -58,8 +58,13 @@ class McpSdkAdapter(BackendAdapter):
         connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> dict[str, Any]:
-        async with self._client(connection, auth) as client:
-            return await client.get_connection_metadata()
+        # Metadata is derived from local connection config. Opening an MCP
+        # transport here would create an unnecessary session during discovery.
+        transport = connection.transport
+        return {
+            "server": connection.provider,
+            "transport": transport.kind if transport is not None else None,
+        }
 
     async def read_resource(
         self,
