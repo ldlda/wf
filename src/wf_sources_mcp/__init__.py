@@ -22,6 +22,7 @@ from .auth import (
 
 if TYPE_CHECKING:
     from .connections import (
+        LegacyConnectionConfigLike,
         McpSourceConnection,
         mcp_source_connection_from_connection_config,
         mcp_source_connection_from_registry_entry,
@@ -32,8 +33,6 @@ if TYPE_CHECKING:
         SourceRegistryFile,
         SourceRegistryStore,
         connection_config_to_registry_entry,
-        registry_entry_to_connection_config,
-        workflow_mcp_source_to_connection_config,
     )
     from .transports import (
         HttpSourceTransport,
@@ -46,6 +45,7 @@ __all__ = [
     "AuthRecord",
     "DiscoveredConnectionCapabilities",
     "LegacyAdapterRef",
+    "LegacyConnectionConfigLike",
     "SourceAdapterRef",
     "FileSourceRegistryStore",
     "HttpSourceTransport",
@@ -67,7 +67,6 @@ __all__ = [
     "mcp_source_connection_from_registry_entry",
     "model_from_schema",
     "neutral_auth_from_mcp",
-    "registry_entry_to_connection_config",
     "require_adapter",
     "specs_from_discovered_tools",
     "tool_call_completed_event",
@@ -75,7 +74,6 @@ __all__ = [
     "ToolWrapperEvent",
     "ToolWrapperEventSink",
     "wrap_discovered_tool",
-    "workflow_mcp_source_to_connection_config",
 ]
 
 
@@ -90,6 +88,7 @@ def __getattr__(name: str) -> object:
 
         return getattr(adapters, name)
     if name in {
+        "LegacyConnectionConfigLike",
         "McpSourceConnection",
         "mcp_source_connection_from_connection_config",
         "mcp_source_connection_from_registry_entry",
@@ -103,8 +102,6 @@ def __getattr__(name: str) -> object:
         "SourceRegistryFile",
         "SourceRegistryStore",
         "connection_config_to_registry_entry",
-        "registry_entry_to_connection_config",
-        "workflow_mcp_source_to_connection_config",
     }:
         from . import source_registry
 

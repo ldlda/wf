@@ -270,3 +270,26 @@ def test_wf_sources_mcp_does_not_import_old_wf_mcp_id_modules() -> None:
         "wf_sources_mcp still imports old wf_mcp source ID modules:\n"
         + "\n".join(f"  {violation}" for violation in violations)
     )
+
+
+def test_wf_sources_mcp_does_not_import_wf_mcp_broker_dtos() -> None:
+    root = Path(__file__).resolve().parents[2] / "src" / "wf_sources_mcp"
+    forbidden = {"wf_mcp.models", "wf_mcp.broker.models"}
+    violations: list[str] = []
+
+    for py_file in sorted(root.rglob("*.py")):
+        rel = py_file.relative_to(root.parent)
+        module = str(rel.with_suffix("")).replace("/", ".").replace("\\", ".")
+        tree = ast.parse(py_file.read_text(encoding="utf-8"), filename=str(py_file))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module in forbidden:
+                violations.append(f"{module}:{node.lineno}: from {node.module} import ...")
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name in forbidden:
+                        violations.append(f"{module}:{node.lineno}: import {alias.name}")
+
+    assert violations == [], (
+        "wf_sources_mcp still imports wf_mcp broker DTO modules:\n"
+        + "\n".join(f"  {violation}" for violation in violations)
+    )

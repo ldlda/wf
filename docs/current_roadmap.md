@@ -321,10 +321,13 @@ implementation state.
       Keep `wf_mcp` re-export shims for compatibility and add import-direction
       tests so `wf_sources_mcp` does not depend on workflow/admin surface,
       frontend server, or proxy modules.
-      Second `wf_sources_mcp` slice complete: MCP desired source registry
-     models, file store, and conversion helpers now live in
-     `wf_sources_mcp.source_registry`, with `wf_mcp.source_registry` retained
-     as a compatibility shim.
+       Second `wf_sources_mcp` slice complete: MCP desired source registry
+      models, file store, and conversion helpers now live in
+      `wf_sources_mcp.source_registry`, with `wf_mcp.source_registry` retained
+      as a compatibility shim.
+      Broker DTO construction moved out of `wf_sources_mcp`: source-provider
+      modules use structural legacy inputs only, while `wf_mcp.source_registry`
+      owns helpers that construct `ConnectionConfig`.
       Third `wf_sources_mcp` slice complete: upstream MCP catalog/discovery DTOs
      and catalog snapshot dumping now live in `wf_sources_mcp.catalog`, with
      `wf_mcp.capabilities` and `wf_mcp.catalog.models` retained as shims.

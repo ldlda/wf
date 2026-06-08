@@ -1,3 +1,5 @@
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from typing import Protocol
 
 import pytest
@@ -21,6 +23,15 @@ from wf_sources_mcp.transports import (
     SourceTransport,
     StdioSourceTransport,
 )
+
+
+@dataclass(slots=True)
+class _LegacyConnectionLike:
+    id: str
+    server: str
+    account: str
+    enabled: bool = True
+    metadata: Mapping[str, object] = field(default_factory=dict)
 
 
 def test_stdio_source_transport_is_typed() -> None:
@@ -130,7 +141,7 @@ def test_mcp_source_connection_from_legacy_connection_config_stdio() -> None:
         },
     )
 
-    connection = mcp_source_connection_from_connection_config(legacy)
+    connection = mcp_source_connection_from_connection_config(legacy)  # type: ignore[arg-type]
 
     assert connection.id == "github.work"
     assert connection.provider == "github"
@@ -159,7 +170,7 @@ def test_mcp_source_connection_from_legacy_connection_config_http() -> None:
         },
     )
 
-    connection = mcp_source_connection_from_connection_config(legacy)
+    connection = mcp_source_connection_from_connection_config(legacy)  # type: ignore[arg-type]
 
     assert isinstance(connection.transport, HttpSourceTransport)
     assert str(connection.transport.url) == "http://127.0.0.1:8000/mcp"
@@ -176,9 +187,43 @@ def test_mcp_source_connection_accepts_missing_legacy_transport_until_open() -> 
         metadata={},
     )
 
-    connection = mcp_source_connection_from_connection_config(legacy)
+    connection = mcp_source_connection_from_connection_config(legacy)  # type: ignore[arg-type]
 
     assert connection.transport is None
+
+
+def test_structural_legacy_connection_stdio_without_wf_mcp() -> None:
+    legacy = _LegacyConnectionLike(
+        id="github.work",
+        server="github",
+        account="work",
+        enabled=False,
+        metadata={
+            "transport": "stdio",
+            "command": "uvx",
+            "args": ["github-mcp"],
+            "env": {"A": "B"},
+            "cwd": "C:/repo",
+            "auth_ref": "github.token",
+            "profile": "engineering",
+            "source_registry": True,
+            "team": "platform",
+        },
+    )
+
+    connection = mcp_source_connection_from_connection_config(legacy)
+
+    assert connection.id == "github.work"
+    assert connection.provider == "github"
+    assert connection.account == "work"
+    assert connection.enabled is False
+    assert connection.profile == "engineering"
+    assert connection.auth_ref == "github.token"
+    assert connection.metadata == {"source_registry": True, "team": "platform"}
+    assert isinstance(connection.transport, StdioSourceTransport)
+    assert connection.transport.command == "uvx"
+    assert connection.transport.args == ("github-mcp",)
+    assert connection.transport.cwd == "C:/repo"
 
 
 class _ConnectionLike(Protocol):

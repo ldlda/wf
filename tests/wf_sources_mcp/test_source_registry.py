@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pytest
 
-from wf_mcp.models import ConnectionConfig
 from wf_sources_mcp.source_registry import (
     FileSourceRegistryStore,
     HttpSourceTransport,
@@ -12,8 +13,16 @@ from wf_sources_mcp.source_registry import (
     SourceRegistryFile,
     StdioSourceTransport,
     connection_config_to_registry_entry,
-    registry_entry_to_connection_config,
 )
+
+
+@dataclass(slots=True)
+class _LegacyConnectionLike:
+    id: str
+    server: str
+    account: str
+    enabled: bool = True
+    metadata: Mapping[str, object] = field(default_factory=dict)
 
 
 def _entry(source_id: str = "github.work") -> McpSourceRegistryEntry:
@@ -83,45 +92,8 @@ def test_file_source_registry_store_validates_loaded_registry(tmp_path: Path) ->
         store.load_registry()
 
 
-def test_registry_entry_to_connection_config_preserves_identity() -> None:
-    entry = _entry()
-    config = registry_entry_to_connection_config(entry)
-
-    assert config.id == "github.work"
-    assert config.server == "github"
-    assert config.account == "work"
-    assert config.enabled is True
-
-
-def test_registry_entry_to_connection_config_preserves_transport_metadata() -> None:
-    entry = _entry()
-    entry.auth_ref = "github.work.auth"
-    config = registry_entry_to_connection_config(entry)
-
-    assert config.metadata["auth_ref"] == "github.work.auth"
-    assert config.metadata["profile"] is None
-    assert config.metadata["transport"]["kind"] == "stdio"
-    assert config.metadata["transport"]["command"] == "npx"
-    assert config.metadata["source_registry"] is True
-
-
-def test_registry_entry_to_connection_config_preserves_user_metadata() -> None:
-    entry = _entry()
-    config = registry_entry_to_connection_config(entry)
-
-    assert config.metadata["purpose"] == "tests"
-
-
-def test_registry_entry_to_connection_config_disabled_entry() -> None:
-    entry = _entry()
-    entry.enabled = False
-    config = registry_entry_to_connection_config(entry)
-
-    assert config.enabled is False
-
-
 def test_connection_config_to_registry_entry_preserves_transport_metadata() -> None:
-    connection = ConnectionConfig(
+    connection = _LegacyConnectionLike(
         id="github.work",
         server="github",
         account="work",
@@ -147,7 +119,7 @@ def test_connection_config_to_registry_entry_preserves_transport_metadata() -> N
 
 
 def test_connection_config_to_registry_entry_accepts_flat_stdio_metadata() -> None:
-    connection = ConnectionConfig(
+    connection = _LegacyConnectionLike(
         id="github.work",
         server="github",
         account="work",
@@ -171,7 +143,7 @@ def test_connection_config_to_registry_entry_accepts_flat_stdio_metadata() -> No
 
 
 def test_connection_config_to_registry_entry_accepts_flat_http_metadata() -> None:
-    connection = ConnectionConfig(
+    connection = _LegacyConnectionLike(
         id="context7.default",
         server="context7",
         account="default",
@@ -193,7 +165,7 @@ def test_connection_config_to_registry_entry_accepts_flat_http_metadata() -> Non
 
 
 def test_connection_config_to_registry_entry_requires_transport_metadata() -> None:
-    connection = ConnectionConfig(id="github.work", server="github", account="work")
+    connection = _LegacyConnectionLike(id="github.work", server="github", account="work")
 
     with pytest.raises(ValueError, match="requires metadata.transport"):
         connection_config_to_registry_entry(connection)

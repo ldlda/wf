@@ -13,6 +13,7 @@ from wf_mcp.source_registry import (
     StdioSourceTransport,
     connection_config_to_registry_entry,
     registry_entry_to_connection_config,
+    workflow_mcp_source_to_connection_config,
 )
 
 
@@ -120,6 +121,13 @@ def test_registry_entry_to_connection_config_disabled_entry() -> None:
     assert config.enabled is False
 
 
+def test_registry_entry_to_connection_config_returns_broker_dto() -> None:
+    entry = _entry()
+    config = registry_entry_to_connection_config(entry)
+
+    assert isinstance(config, ConnectionConfig)
+
+
 def test_connection_config_to_registry_entry_preserves_transport_metadata() -> None:
     connection = ConnectionConfig(
         id="github.work",
@@ -134,7 +142,7 @@ def test_connection_config_to_registry_entry_preserves_transport_metadata() -> N
         },
     )
 
-    entry = connection_config_to_registry_entry(connection)
+    entry = connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
 
     assert entry.id == "github.work"
     assert entry.provider == "github"
@@ -160,7 +168,7 @@ def test_connection_config_to_registry_entry_accepts_flat_stdio_metadata() -> No
         },
     )
 
-    entry = connection_config_to_registry_entry(connection)
+    entry = connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
 
     assert entry.transport.kind == "stdio"
     assert isinstance(entry.transport, StdioSourceTransport)
@@ -183,7 +191,7 @@ def test_connection_config_to_registry_entry_accepts_flat_http_metadata() -> Non
         },
     )
 
-    entry = connection_config_to_registry_entry(connection)
+    entry = connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
 
     assert entry.transport.kind == "http"
     assert isinstance(entry.transport, HttpSourceTransport)
@@ -196,4 +204,82 @@ def test_connection_config_to_registry_entry_requires_transport_metadata() -> No
     connection = ConnectionConfig(id="github.work", server="github", account="work")
 
     with pytest.raises(ValueError, match="requires metadata.transport"):
-        connection_config_to_registry_entry(connection)
+        connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
+
+
+class _McpSource:
+    """Minimal mock for wf_config MCP source objects."""
+
+    def __init__(self) -> None:
+        self.kind = "mcp"
+        self.id = "github.work"
+        self.provider = "github"
+        self.account = "work"
+        self.enabled = True
+        self.ownership = "seed"
+        self.transport = StdioSourceTransport(command="npx", args=("-y", "server"))
+        self.metadata: dict[str, object] = {"region": "us"}
+        self.profile: str | None = "engineering"
+        self.auth_ref: str | None = "github.token"
+
+
+class _McpSourceHttp:
+    """Minimal mock for wf_config MCP source with HTTP transport."""
+
+    def __init__(self) -> None:
+        self.kind = "mcp"
+        self.id = "ctx.default"
+        self.provider = "ctx"
+        self.account = "default"
+        self.enabled = True
+        self.ownership = "locked"
+        self.transport = HttpSourceTransport(url="http://127.0.0.1:3000/sse")  # type: ignore[arg-type]
+        self.metadata: dict[str, object] = {}
+        self.profile: str | None = None
+        self.auth_ref: str | None = None
+
+
+def test_workflow_mcp_source_to_connection_config_stdio() -> None:
+    source = _McpSource()
+    config = workflow_mcp_source_to_connection_config(source)
+
+    assert isinstance(config, ConnectionConfig)
+    assert config.id == "github.work"
+    assert config.server == "github"
+    assert config.account == "work"
+    assert config.enabled is True
+    assert config.source_config_ownership == "seed"
+    assert config.metadata["transport"] == "stdio"
+    assert config.metadata["command"] == "npx"
+    assert config.metadata["args"] == ["-y", "server"]
+    assert config.metadata["profile"] == "engineering"
+    assert config.metadata["auth_ref"] == "github.token"
+    assert config.metadata["region"] == "us"
+    assert config.metadata["source_registry"] is False
+
+
+def test_workflow_mcp_source_to_connection_config_http() -> None:
+    source = _McpSourceHttp()
+    config = workflow_mcp_source_to_connection_config(source)
+
+    assert isinstance(config, ConnectionConfig)
+    assert config.id == "ctx.default"
+    assert config.metadata["transport"] == "streamable_http"
+    assert config.metadata["url"] == "http://127.0.0.1:3000/sse"
+    assert config.metadata["source_registry"] is False
+
+
+def test_workflow_mcp_source_to_connection_config_rejects_non_mcp() -> None:
+    source = _McpSource()
+    source.kind = "stdlib"
+
+    with pytest.raises(ValueError, match="expected wf_config MCP source"):
+        workflow_mcp_source_to_connection_config(source)
+
+
+def test_workflow_mcp_source_to_connection_config_rejects_missing_fields() -> None:
+    source = _McpSource()
+    source.id = None  # type: ignore[assignment]
+
+    with pytest.raises(ValueError, match="missing required field"):
+        workflow_mcp_source_to_connection_config(source)

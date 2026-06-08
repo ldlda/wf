@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from wf_mcp.source_registry import (
+    connection_config_to_registry_entry,
+    registry_entry_to_connection_config,
+)
 from wf_sources_mcp.source_registry import (
     SourceRegistryFile,
     SourceRegistryStore,
-    connection_config_to_registry_entry,
-    registry_entry_to_connection_config,
 )
 
 from ...connections import ConnectionRegistry, parse_connection_id
@@ -81,7 +83,7 @@ class ConnectionService:
                     continue
                 if connection.id in registry_entries:
                     continue
-                seeded = connection_config_to_registry_entry(connection)
+                seeded = connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
                 registry_entries[seeded.id] = seeded
                 registry_changed = True
                 self.events.record_kind(

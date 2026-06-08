@@ -1,18 +1,18 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import cast
 
 from wf_sources_mcp.ids import parse_connection_id
-from wf_sources_mcp.source_registry import McpSourceRegistryEntry
+from wf_sources_mcp.source_registry import (
+    LegacyConnectionConfigLike,
+    McpSourceRegistryEntry,
+)
 from wf_sources_mcp.transports import (
     HttpSourceTransport,
     SourceTransport,
     StdioSourceTransport,
 )
-
-if TYPE_CHECKING:
-    from wf_mcp.broker.models import ConnectionConfig
 
 _FLAT_HTTP_TRANSPORTS = {"http", "streamable-http", "streamable_http", "sse"}
 _CONNECTION_METADATA_KEYS = {
@@ -85,7 +85,7 @@ def mcp_source_connection_from_registry_entry(
 
 
 def mcp_source_connection_from_connection_config(
-    connection: ConnectionConfig,
+    connection: LegacyConnectionConfigLike,
 ) -> McpSourceConnection:
     """Adapt legacy broker connection config into typed source shape.
 
@@ -114,7 +114,7 @@ def mcp_source_connection_from_connection_config(
 
 
 def _transport_from_connection_metadata(
-    connection: ConnectionConfig,
+    connection: LegacyConnectionConfigLike,
 ) -> SourceTransport | None:
     transport = connection.metadata.get("transport")
     if isinstance(transport, dict):
@@ -128,12 +128,16 @@ def _transport_from_connection_metadata(
         )
     if isinstance(transport, str):
         if transport == "stdio":
+            args_raw = connection.metadata.get("args", ())
+            env_raw = connection.metadata.get("env", {})
             return StdioSourceTransport(
                 command=str(connection.metadata.get("command", "")),
-                args=tuple(str(arg) for arg in connection.metadata.get("args", ())),
+                args=tuple(str(arg) for arg in cast("tuple[object, ...]", args_raw)),
                 env={
                     str(key): str(value)
-                    for key, value in dict(connection.metadata.get("env", {})).items()
+                    for key, value in cast(
+                        "dict[str, object]", env_raw
+                    ).items()
                 },
                 cwd=(
                     str(connection.metadata["cwd"])
@@ -143,12 +147,13 @@ def _transport_from_connection_metadata(
             )
         if transport in _FLAT_HTTP_TRANSPORTS:
             url = connection.metadata.get("url", "")
+            headers_raw = connection.metadata.get("headers", {})
             return HttpSourceTransport(
                 url=url if isinstance(url, str) else str(url),  # type: ignore[arg-type]
                 headers={
                     str(key): str(value)
-                    for key, value in dict(
-                        connection.metadata.get("headers", {})
+                    for key, value in cast(
+                        "dict[str, object]", headers_raw
                     ).items()
                 },
             )
@@ -159,6 +164,7 @@ def _transport_from_connection_metadata(
 
 
 __all__ = [
+    "LegacyConnectionConfigLike",
     "McpSourceConnection",
     "mcp_source_connection_from_connection_config",
     "mcp_source_connection_from_registry_entry",

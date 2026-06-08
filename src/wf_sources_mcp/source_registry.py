@@ -1,14 +1,16 @@
 """MCP upstream-source registry models and conversion helpers.
 
-This module is canonical for MCP-as-source desired registry state. The temporary
-runtime dependency on `wf_mcp.models.ConnectionConfig` remains until broker
-runtime DTOs move out of the compatibility MCP facade.
+This module is canonical for MCP-as-source desired registry state. Legacy
+broker DTO conversions have moved to `wf_mcp.source_registry`. This module
+accepts legacy-shaped inputs structurally and must not construct broker
+runtime DTOs.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from pathlib import Path
-from typing import TYPE_CHECKING, Literal, Protocol
+from typing import Literal, Protocol, cast
 
 from pydantic import Field, field_validator, model_validator
 
@@ -27,9 +29,6 @@ from wf_sources_mcp.transports import (
     StdioSourceTransport,
 )
 
-if TYPE_CHECKING:
-    from wf_mcp.models import ConnectionConfig
-
 _FLAT_HTTP_TRANSPORTS = {"http", "streamable-http", "streamable_http", "sse"}
 _TRANSPORT_METADATA_KEYS = {
     "transport",
@@ -43,6 +42,16 @@ _TRANSPORT_METADATA_KEYS = {
     "auth_ref",
     "source_registry",
 }
+
+
+class LegacyConnectionConfigLike(Protocol):
+    """Structural shape needed from legacy broker connection configs."""
+
+    id: str
+    server: str
+    account: str
+    enabled: bool
+    metadata: Mapping[str, object]
 
 
 class McpSourceRegistryEntry(SourceRegistryBaseModel):
@@ -107,29 +116,8 @@ class FileSourceRegistryStore:
         self._delegate.save_registry(registry)
 
 
-def registry_entry_to_connection_config(
-    entry: McpSourceRegistryEntry,
-) -> ConnectionConfig:
-    """Convert a registry entry to a broker connection config."""
-    from wf_mcp.models import ConnectionConfig
-
-    return ConnectionConfig(
-        id=entry.id,
-        server=entry.provider,
-        account=entry.account,
-        enabled=entry.enabled,
-        metadata={
-            **entry.metadata,
-            "auth_ref": entry.auth_ref,
-            "profile": entry.profile,
-            "transport": entry.transport.model_dump(mode="json"),
-            "source_registry": True,
-        },
-    )
-
-
 def connection_config_to_registry_entry(
-    connection: ConnectionConfig,
+    connection: LegacyConnectionConfigLike,
 ) -> McpSourceRegistryEntry:
     """Materialize a seed config connection into persisted registry state.
 
@@ -142,19 +130,22 @@ def connection_config_to_registry_entry(
         pass
     elif isinstance(transport, str):
         if transport == "stdio":
+            args_raw = connection.metadata.get("args", ())
+            env_raw = connection.metadata.get("env", {})
             transport = {
                 "kind": "stdio",
                 "command": connection.metadata.get("command", ""),
-                "args": list(connection.metadata.get("args", [])),
-                "env": dict(connection.metadata.get("env", {})),
+                "args": list(cast("tuple[object, ...]", args_raw)),
+                "env": dict(cast("dict[str, object]", env_raw)),
                 "cwd": connection.metadata.get("cwd"),
             }
         elif transport in _FLAT_HTTP_TRANSPORTS:
             legacy_transport_value = transport
+            headers_raw = connection.metadata.get("headers", {})
             transport = {
                 "kind": "http",
                 "url": connection.metadata.get("url", ""),
-                "headers": dict(connection.metadata.get("headers", {})),
+                "headers": dict(cast("dict[str, object]", headers_raw)),
             }
         else:
             raise ValueError(
@@ -188,68 +179,14 @@ def connection_config_to_registry_entry(
     return entry
 
 
-def workflow_mcp_source_to_connection_config(source: object) -> ConnectionConfig:
-    """Convert neutral wf_config MCP source config into a broker connection.
-
-    This adapter remains source-provider code even though the output is the
-    temporary broker runtime DTO. The input is intentionally typed as object to
-    avoid making `wf_config` part of this package's import graph.
-    """
-    from wf_mcp.models import ConnectionConfig
-
-    if getattr(source, "kind", None) != "mcp":
-        raise ValueError("expected wf_config MCP source")
-    for field in ("id", "provider", "account", "enabled", "ownership", "transport"):
-        if getattr(source, field, None) is None:
-            raise ValueError(f"wf_config MCP source missing required field: {field}")
-    transport = getattr(source, "transport")
-    metadata = dict(getattr(source, "metadata", {}))
-    if transport.kind == "stdio":
-        metadata.update(
-            {
-                "transport": "stdio",
-                "command": transport.command,
-                "args": list(transport.args),
-                "env": dict(transport.env),
-                "source_registry": False,
-            }
-        )
-    elif transport.kind == "http":
-        metadata.update(
-            {
-                "transport": "streamable_http",
-                "url": str(transport.url),
-                "headers": dict(transport.headers),
-                "source_registry": False,
-            }
-        )
-    else:
-        raise ValueError(f"unsupported wf_config MCP transport {transport.kind!r}")
-    profile = getattr(source, "profile", None)
-    if profile is not None:
-        metadata["profile"] = profile
-    auth_ref = getattr(source, "auth_ref", None)
-    if auth_ref is not None:
-        metadata["auth_ref"] = auth_ref
-    return ConnectionConfig(
-        id=getattr(source, "id"),
-        server=getattr(source, "provider"),
-        account=getattr(source, "account"),
-        enabled=getattr(source, "enabled"),
-        metadata=metadata,
-        source_config_ownership=getattr(source, "ownership"),
-    )
-
-
 __all__ = [
     "FileSourceRegistryStore",
     "HttpSourceTransport",
+    "LegacyConnectionConfigLike",
     "McpSourceRegistryEntry",
     "SourceRegistryFile",
     "SourceRegistryStore",
     "SourceTransport",
     "StdioSourceTransport",
     "connection_config_to_registry_entry",
-    "registry_entry_to_connection_config",
-    "workflow_mcp_source_to_connection_config",
 ]
