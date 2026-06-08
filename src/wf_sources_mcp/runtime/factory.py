@@ -11,7 +11,7 @@ from typing import Any, Generic, TypeVar
 from mcp.client.session import ClientSession
 
 from wf_sources_mcp.auth import AuthRecord
-from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource
+from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from wf_sources_mcp.client import McpSourceClient, open_mcp_session
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.sdk import ToolCallResult
@@ -47,6 +47,10 @@ class PersistentSessionFactory:
             get_prompt_callback=owner.get_prompt,
             list_resources_callback=owner.list_resources,
             list_prompts_callback=owner.list_prompts,
+            list_tools_callback=owner.list_tools,
+            get_connection_metadata_callback=owner.get_connection_metadata,
+            invoke_method_callback=owner.invoke_method,
+            send_notification_callback=owner.send_notification,
             close_callback=owner.close,
         )
 
@@ -178,6 +182,43 @@ class _SessionOwner:
         return await self.submit(
             operation="list_prompts",
             run=lambda client: client.list_prompts(),
+        )
+
+    async def list_tools(self) -> list[DiscoveredTool]:
+        """Submit tool listing through the generic owner-task operation queue."""
+        return await self.submit(
+            operation="list_tools",
+            run=lambda client: client.list_tools(),
+        )
+
+    async def get_connection_metadata(self) -> dict[str, Any]:
+        """Return connection metadata computed locally without an upstream call."""
+        transport = self.connection.transport
+        return {
+            "server": self.connection.provider,
+            "transport": transport.kind if transport is not None else None,
+        }
+
+    async def invoke_method(
+        self,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        """Submit a raw method invocation through the generic owner-task operation queue."""
+        return await self.submit(
+            operation="invoke_method",
+            run=lambda client: client.invoke_method(method, params),
+        )
+
+    async def send_notification(
+        self,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> None:
+        """Submit a notification send through the generic owner-task operation queue."""
+        await self.submit(
+            operation="send_notification",
+            run=lambda client: client.send_notification(method, params),
         )
 
     async def close(self) -> None:

@@ -17,7 +17,9 @@ class ToolCallResult:
     meta: dict[str, Any] = field(default_factory=dict)
 
 
-class BackendAdapter(Protocol):
+class McpSourceOperations(Protocol):
+    """Full MCP operation surface shared by one-shot adapters and persistent runtimes."""
+
     async def list_tools(
         self,
         connection: McpSourceConnection,
@@ -82,6 +84,10 @@ class BackendAdapter(Protocol):
     ) -> ToolCallResult: ...
 
 
+class BackendAdapter(McpSourceOperations, Protocol):
+    """One-shot or adapter-style MCP operation executor."""
+
+
 class ToolRuntime(Protocol):
     """Runtime boundary for executing MCP tools from workflow nodes."""
 
@@ -133,8 +139,8 @@ class PromptRuntime(Protocol):
     ) -> dict[str, Any]: ...
 
 
-class StatefulMcpRuntime(ToolRuntime, ResourceRuntime, PromptRuntime, Protocol):
-    """Stateful execution/read/list boundary for configured MCP sources.
+class StatefulMcpRuntime(McpSourceOperations, Protocol):
+    """Persistent MCP operation executor for configured sources.
 
     Implementations keep source session state across calls. Catalog refresh may
     still use one-shot adapters by policy.
@@ -143,6 +149,7 @@ class StatefulMcpRuntime(ToolRuntime, ResourceRuntime, PromptRuntime, Protocol):
 
 __all__ = [
     "BackendAdapter",
+    "McpSourceOperations",
     "PromptRuntime",
     "ResourceRuntime",
     "StatefulMcpRuntime",

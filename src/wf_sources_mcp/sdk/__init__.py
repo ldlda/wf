@@ -10,6 +10,7 @@ from .converters import (
 )
 from .protocols import (
     BackendAdapter,
+    McpSourceOperations,
     PromptRuntime,
     ResourceRuntime,
     StatefulMcpRuntime,
@@ -21,6 +22,7 @@ from .protocols import (
 __all__ = [
     "BackendAdapter",
     "McpSdkAdapter",
+    "McpSourceOperations",
     "PromptRuntime",
     "ResourceRuntime",
     "StatefulMcpRuntime",

@@ -260,6 +260,10 @@ implementation state.
       resources, and prompts, and can route session-scoped `list_resources` and
       `list_prompts` through the owner task. Catalog refresh still uses one-shot
       adapter policy.
+    - Completed: persistent MCP runtime now implements the full upstream MCP
+      operation surface used by the one-shot adapter. Broker upstream operations
+      prefer the shared runtime pool when configured, with one-shot adapters
+      retained as fallback.
     - Completed: MCP source catalog aggregation helpers (`CombinedCatalog` and
       `snapshot_from_specs`) now live in `wf_sources_mcp.catalog`; the old
       `wf_mcp.broker.catalog` path is a compatibility shim.

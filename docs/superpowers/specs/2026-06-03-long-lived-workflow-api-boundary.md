@@ -157,7 +157,11 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
 23. Complete: broker DTO construction removed from `wf_sources_mcp`.
     `wf_sources_mcp` accepts legacy-shaped inputs structurally, while
     `wf_mcp.source_registry` owns helpers that construct `ConnectionConfig`.
-24. Upstream transport/discovery/session services.
+24. Complete: `McpRuntimePool` implements the full MCP operation surface
+    (`list_tools`, resources, prompts, tools, raw methods, notifications, and
+    local metadata). Broker upstream operations prefer the persistent runtime
+    when configured and fall back to one-shot adapters.
+25. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

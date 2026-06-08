@@ -158,7 +158,9 @@ class UpstreamTransportService:
             )
         else:
             adapter = require_adapter(connection, self.adapters)
-            result = await adapter.get_prompt(source_connection, auth, local_name, arguments)
+            result = await adapter.get_prompt(
+                source_connection, auth, local_name, arguments
+            )
         self.event_sink(
             make_event(
                 "prompt_get_completed",
@@ -176,7 +178,6 @@ class UpstreamTransportService:
         *,
         params: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        adapter = require_adapter(connection, self.adapters)
         auth = self.load_connection_auth(connection)
         # Compatibility boundary: broker callers still pass ConnectionConfig.
         source_connection = mcp_source_connection_from_connection_config(connection)
@@ -188,7 +189,15 @@ class UpstreamTransportService:
                 payload={"params": params or {}},
             )
         )
-        result = await adapter.invoke_method(source_connection, auth, method, params)
+        if self.stateful_runtime is not None:
+            result = await self.stateful_runtime.invoke_method(
+                source_connection, auth, method, params
+            )
+        else:
+            adapter = require_adapter(connection, self.adapters)
+            result = await adapter.invoke_method(
+                source_connection, auth, method, params
+            )
         self.event_sink(
             make_event(
                 "raw_method_completed",
@@ -206,7 +215,6 @@ class UpstreamTransportService:
         *,
         params: dict[str, Any] | None = None,
     ) -> None:
-        adapter = require_adapter(connection, self.adapters)
         auth = self.load_connection_auth(connection)
         # Compatibility boundary: broker callers still pass ConnectionConfig.
         source_connection = mcp_source_connection_from_connection_config(connection)
@@ -218,7 +226,13 @@ class UpstreamTransportService:
                 payload={"params": params or {}},
             )
         )
-        await adapter.send_notification(source_connection, auth, method, params)
+        if self.stateful_runtime is not None:
+            await self.stateful_runtime.send_notification(
+                source_connection, auth, method, params
+            )
+        else:
+            adapter = require_adapter(connection, self.adapters)
+            await adapter.send_notification(source_connection, auth, method, params)
         self.event_sink(
             make_event(
                 "raw_notification_completed",
@@ -246,12 +260,15 @@ class UpstreamTransportService:
             )
         )
         try:
-            adapter = require_adapter(connection, self.adapters)
             source_connection = mcp_source_connection_from_connection_config(connection)
+            if self.stateful_runtime is not None:
+                operations: BackendAdapter = self.stateful_runtime
+            else:
+                operations = require_adapter(connection, self.adapters)
             capabilities = await discover_connection_capabilities(
                 connection=source_connection,
                 auth=auth,
-                adapter=adapter,
+                adapter=operations,
             )
             specs = specs_from_discovered_tools(
                 connection=connection,
@@ -351,12 +368,18 @@ class UpstreamTransportService:
                 diagnostics.append(auth_diagnostic)
                 continue
             try:
-                adapter = require_adapter(connection, self.adapters)
                 auth = self.load_connection_auth(connection)
-                await asyncio.wait_for(
-                    adapter.list_tools(source_connection, auth),
-                    timeout=LIVE_SOURCE_CHECK_TIMEOUT_SECONDS,
-                )
+                if self.stateful_runtime is not None:
+                    await asyncio.wait_for(
+                        self.stateful_runtime.list_tools(source_connection, auth),
+                        timeout=LIVE_SOURCE_CHECK_TIMEOUT_SECONDS,
+                    )
+                else:
+                    adapter = require_adapter(connection, self.adapters)
+                    await asyncio.wait_for(
+                        adapter.list_tools(source_connection, auth),
+                        timeout=LIVE_SOURCE_CHECK_TIMEOUT_SECONDS,
+                    )
             except _LIVE_SOURCE_CHECK_FAILURES as exc:
                 diagnostics.append(
                     _source_unreachable_diagnostic(

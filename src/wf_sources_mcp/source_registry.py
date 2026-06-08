@@ -47,11 +47,20 @@ _TRANSPORT_METADATA_KEYS = {
 class LegacyConnectionConfigLike(Protocol):
     """Structural shape needed from legacy broker connection configs."""
 
-    id: str
-    server: str
-    account: str
-    enabled: bool
-    metadata: Mapping[str, object]
+    @property
+    def id(self) -> str: ...
+
+    @property
+    def server(self) -> str: ...
+
+    @property
+    def account(self) -> str: ...
+
+    @property
+    def enabled(self) -> bool: ...
+
+    @property
+    def metadata(self) -> Mapping[str, object]: ...
 
 
 class McpSourceRegistryEntry(SourceRegistryBaseModel):

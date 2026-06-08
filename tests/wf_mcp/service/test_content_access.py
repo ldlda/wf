@@ -181,6 +181,59 @@ class _StatefulRuntime:
             ]
         }
 
+    async def list_tools(self, connection, auth):
+        from wf_sources_mcp.catalog import DiscoveredTool
+
+        return [
+            DiscoveredTool(
+                name="echo_tool",
+                title="Echo Tool",
+                description="Echo text back",
+                input_schema={"type": "object"},
+                output_schema={"type": "object"},
+            )
+        ]
+
+    async def list_resources(self, connection, auth):
+        from wf_sources_mcp.catalog import DiscoveredResource
+
+        return [
+            DiscoveredResource(
+                uri="demo://docs/welcome",
+                name="resource.welcome",
+                title="Welcome Resource",
+                description="Welcome resource",
+                mime_type="text/plain",
+            )
+        ]
+
+    async def list_prompts(self, connection, auth):
+        from wf_sources_mcp.catalog import DiscoveredPrompt
+
+        return [
+            DiscoveredPrompt(
+                name="prompt.summarize",
+                title="Summarize Prompt",
+                description="Summarize text",
+                arguments=[
+                    {
+                        "name": "text",
+                        "required": True,
+                        "description": "Text to summarize",
+                    }
+                ],
+            )
+        ]
+
+    async def get_connection_metadata(self, connection, auth):
+        return {"server": connection.server, "transport": "stdio"}
+
+    async def invoke_method(self, connection, auth, method, params=None):
+        raise AssertionError("not used by content access tests")
+
+    async def send_notification(self, connection, auth, method, params=None):
+        raise AssertionError("not used by content access tests")
+
 
 async def test_content_access_uses_stateful_runtime_for_upstream_content() -> None:
     runtime = _StatefulRuntime()

@@ -4,14 +4,19 @@ from contextlib import AsyncExitStack
 from typing import Any
 
 import pytest
+from mcp import ClientResult
 from mcp.client.session import ClientSession
 from mcp.types import CallToolResult as RawCallToolResult
 from mcp.types import (
+    ClientNotification,
+    ClientRequest,
     ListPromptsResult,
     ListResourcesResult,
+    ListToolsResult,
     Prompt,
     Resource,
     TextContent,
+    Tool,
 )
 from pydantic import AnyUrl
 
@@ -167,6 +172,44 @@ class _FakeFactory(PersistentSessionFactory):
                     ]
                 )
 
+            async def list_tools(self) -> ListToolsResult:
+                return ListToolsResult(
+                    tools=[
+                        Tool(
+                            name="tool.runtime",
+                            title="Runtime Tool",
+                            description="Runtime-scoped tool.",
+                            inputSchema={"type": "object"},
+                        )
+                    ]
+                )
+
+            async def get_connection_metadata(self) -> dict[str, object]:
+                return {"server": "demo", "transport": "stdio"}
+
+            async def invoke_method(
+                self,
+                method: str,
+                params: dict[str, object] | None = None,
+            ) -> dict[str, object]:
+                return {"echoed": (params or {}).get("text", "")}
+
+            async def send_notification(
+                self,
+                method: str,
+                params: dict[str, object] | None = None,
+            ) -> None:
+                return None
+
+            async def send_request(
+                self,
+                request: ClientRequest,
+                result_type: type[ClientResult],
+            ) -> ClientResult:
+                return ClientResult.model_validate(
+                    {"jsonrpc": "2.0", "id": 1, "result": {}}
+                )
+
         return _FakeClient()  # type: ignore[return-value]
 
 
@@ -242,8 +285,10 @@ def test_persistent_session_public_runtime_exposes_safe_read_operations() -> Non
     assert "get_prompt" in public_operations
     assert "list_resources" in public_operations
     assert "list_prompts" in public_operations
-    assert "invoke_method" not in public_operations
-    assert "send_notification" not in public_operations
+    assert "list_tools" in public_operations
+    assert "get_connection_metadata" in public_operations
+    assert "invoke_method" in public_operations
+    assert "send_notification" in public_operations
 
 
 @pytest.mark.asyncio
@@ -348,6 +393,237 @@ async def test_persistent_session_factory_routes_resource_and_prompt_lists() -> 
 
 
 @pytest.mark.asyncio
+async def test_persistent_session_factory_routes_list_tools_through_owner() -> None:
+    factory = _FakeFactory()
+    session = await factory.create(_connection(), None)
+
+    tools = await session.list_tools()
+    await session.close()
+
+    assert tools[0].name == "tool.runtime"
+    assert tools[0].description == "Runtime-scoped tool."
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_factory_routes_metadata_through_owner() -> None:
+    factory = _FakeFactory()
+    session = await factory.create(_connection(), None)
+
+    metadata = await session.get_connection_metadata()
+    await session.close()
+
+    assert metadata["server"] == "demo"
+    assert metadata["transport"] == "stdio"
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_factory_routes_invoke_method_through_owner() -> None:
+    factory = _FakeFactory()
+    session = await factory.create(_connection(), None)
+
+    result = await session.invoke_method("ping")
+    await session.close()
+
+    assert isinstance(result, dict)
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_factory_routes_send_notification_through_owner() -> (
+    None
+):
+    factory = _FakeFactory()
+    session = await factory.create(_connection(), None)
+
+    await session.send_notification("notifications/initialized")
+    await session.close()
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_list_tools_callback() -> None:
+    async def list_tools_cb() -> list:
+        from wf_sources_mcp.catalog import DiscoveredTool
+
+        return [
+            DiscoveredTool(
+                name="cb_tool",
+                title=None,
+                description="Callback tool",
+                input_schema={"type": "object"},
+                output_schema={"type": "object"},
+            )
+        ]
+
+    session = PersistentMcpSession(
+        connection=_connection(),
+        auth=None,
+        list_tools_callback=list_tools_cb,
+    )
+
+    tools = await session.list_tools()
+
+    assert tools[0].name == "cb_tool"
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_get_connection_metadata_callback() -> None:
+    async def metadata_cb() -> dict[str, object]:
+        return {"server": "cb_server", "transport": "http"}
+
+    session = PersistentMcpSession(
+        connection=_connection(),
+        auth=None,
+        get_connection_metadata_callback=metadata_cb,
+    )
+
+    metadata = await session.get_connection_metadata()
+
+    assert metadata["server"] == "cb_server"
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_invoke_method_callback() -> None:
+    async def invoke_cb(
+        method: str, params: dict[str, object] | None
+    ) -> dict[str, object]:
+        return {"method": method, "params": params}
+
+    session = PersistentMcpSession(
+        connection=_connection(),
+        auth=None,
+        invoke_method_callback=invoke_cb,
+    )
+
+    result = await session.invoke_method("test.method", {"key": "val"})
+
+    assert result["method"] == "test.method"
+    assert result["params"] == {"key": "val"}
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_send_notification_callback() -> None:
+    sent: list[tuple[str, dict[str, object] | None]] = []
+
+    async def notify_cb(method: str, params: dict[str, object] | None) -> None:
+        sent.append((method, params))
+
+    session = PersistentMcpSession(
+        connection=_connection(),
+        auth=None,
+        send_notification_callback=notify_cb,
+    )
+
+    await session.send_notification("test.event", {"data": 1})
+
+    assert sent == [("test.event", {"data": 1})]
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_list_tools_client_fallback() -> None:
+    from mcp.types import ListToolsResult, Tool
+
+    class _MinimalClient:
+        async def list_tools(self) -> ListToolsResult:
+            return ListToolsResult(
+                tools=[
+                    Tool(
+                        name="client_tool",
+                        description="Client tool",
+                        inputSchema={"type": "object"},
+                    )
+                ]
+            )
+
+    session = PersistentMcpSession(
+        connection=_connection(),
+        auth=None,
+        client=_MinimalClient(),  # type: ignore[arg-type]
+    )
+
+    tools = await session.list_tools()
+
+    assert tools[0].name == "client_tool"
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_invoke_method_client_fallback() -> None:
+    from mcp import ClientResult
+
+    class _MinimalClient:
+        async def send_request(
+            self,
+            request: ClientRequest,
+            result_type: type[ClientResult],
+        ) -> ClientResult:
+            return ClientResult.model_validate(
+                {"jsonrpc": "2.0", "id": 1, "result": {"tools": []}}
+            )
+
+    session = PersistentMcpSession(
+        connection=_connection(),
+        auth=None,
+        client=_MinimalClient(),  # type: ignore[arg-type]
+    )
+
+    result = await session.invoke_method("tools/list")
+
+    assert result["result"]["tools"] == []
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_send_notification_client_fallback() -> None:
+
+    sent: list[ClientNotification] = []
+
+    class _MinimalClient:
+        async def send_notification(self, notification: ClientNotification) -> None:
+            sent.append(notification)
+
+    session = PersistentMcpSession(
+        connection=_connection(),
+        auth=None,
+        client=_MinimalClient(),  # type: ignore[arg-type]
+    )
+
+    await session.send_notification("notifications/initialized")
+
+    assert len(sent) == 1
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_raises_without_tools_transport() -> None:
+    session = PersistentMcpSession(connection=_connection(), auth=None)
+
+    with pytest.raises(RuntimeError, match="no tools list transport"):
+        await session.list_tools()
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_raises_without_invoke_transport() -> None:
+    session = PersistentMcpSession(connection=_connection(), auth=None)
+
+    with pytest.raises(RuntimeError, match="no method invoke transport"):
+        await session.invoke_method("test.ping")
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_raises_without_notification_transport() -> None:
+    session = PersistentMcpSession(connection=_connection(), auth=None)
+
+    with pytest.raises(RuntimeError, match="no notification send transport"):
+        await session.send_notification("test.event")
+
+
+@pytest.mark.asyncio
+async def test_persistent_session_get_connection_metadata_local_fallback() -> None:
+    session = PersistentMcpSession(connection=_connection(), auth=None)
+
+    metadata = await session.get_connection_metadata()
+
+    assert metadata["server"] == "demo"
+    assert metadata["transport"] == "stdio"
+
+
+@pytest.mark.asyncio
 async def test_runtime_pool_reuses_session_for_resource_and_prompt_lists() -> None:
     factory = _FakeFactory()
     pool = McpRuntimePool(factory.create)
@@ -359,6 +635,57 @@ async def test_runtime_pool_reuses_session_for_resource_and_prompt_lists() -> No
 
     assert resources[0].name == "resource.runtime"
     assert prompts[0].name == "prompt.runtime"
+    assert factory.created_connections == [connection]
+
+
+@pytest.mark.asyncio
+async def test_runtime_pool_reuses_session_for_list_tools() -> None:
+    factory = _FakeFactory()
+    pool = McpRuntimePool(factory.create)
+    connection = _connection()
+
+    tools = await pool.list_tools(connection, None)
+    await pool.close_all()
+
+    assert tools[0].name == "tool.runtime"
+    assert factory.created_connections == [connection]
+
+
+@pytest.mark.asyncio
+async def test_runtime_pool_reuses_session_for_invoke_method() -> None:
+    factory = _FakeFactory()
+    pool = McpRuntimePool(factory.create)
+    connection = _connection()
+
+    result = await pool.invoke_method(connection, None, "ping")
+    await pool.close_all()
+
+    assert isinstance(result, dict)
+    assert factory.created_connections == [connection]
+
+
+@pytest.mark.asyncio
+async def test_runtime_pool_reuses_session_for_send_notification() -> None:
+    factory = _FakeFactory()
+    pool = McpRuntimePool(factory.create)
+    connection = _connection()
+
+    await pool.send_notification(connection, None, "notifications/initialized")
+    await pool.close_all()
+
+    assert factory.created_connections == [connection]
+
+
+@pytest.mark.asyncio
+async def test_runtime_pool_reuses_session_for_metadata() -> None:
+    factory = _FakeFactory()
+    pool = McpRuntimePool(factory.create)
+    connection = _connection()
+
+    metadata = await pool.get_connection_metadata(connection, None)
+    await pool.close_all()
+
+    assert metadata["server"] == "demo"
     assert factory.created_connections == [connection]
 
 

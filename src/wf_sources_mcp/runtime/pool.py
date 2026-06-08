@@ -7,7 +7,7 @@ from inspect import isawaitable
 from typing import Any, cast
 
 from wf_sources_mcp.auth import AuthRecord
-from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource
+from wf_sources_mcp.catalog import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.sdk import ToolCallResult
 
@@ -118,6 +118,42 @@ class McpRuntimePool:
     ) -> list[DiscoveredPrompt]:
         session = await self.get_session(connection, auth)
         return await session.list_prompts()
+
+    async def list_tools(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredTool]:
+        session = await self.get_session(connection, auth)
+        return await session.list_tools()
+
+    async def get_connection_metadata(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+    ) -> dict[str, Any]:
+        session = await self.get_session(connection, auth)
+        return await session.get_connection_metadata()
+
+    async def invoke_method(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        session = await self.get_session(connection, auth)
+        return await session.invoke_method(method, params)
+
+    async def send_notification(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+        method: str,
+        params: dict[str, Any] | None = None,
+    ) -> None:
+        session = await self.get_session(connection, auth)
+        await session.send_notification(method, params)
 
     async def close_connection(self, connection_id: str) -> None:
         current = self._sessions.pop(connection_id, None)

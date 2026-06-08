@@ -11,6 +11,7 @@ from wf_mcp.events import McpEvent
 from wf_mcp.models import AuthRecord, CatalogSnapshot, ConnectionConfig
 from wf_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
 from wf_platform import CapabilityBuckets, CapabilitySource, SourcePermissions
+from wf_sources_mcp.catalog import DiscoveredTool
 
 from ..test_support import FakeAdapter, local_temp_root
 from ..workflow_surface.conftest import echo_artifact
@@ -357,6 +358,11 @@ class _StatefulRuntime:
     def __init__(self) -> None:
         self.resources: list[tuple[str, str]] = []
         self.prompts: list[tuple[str, str, dict[str, str] | None]] = []
+        self.tools_called: list[tuple[str, str]] = []
+        self.methods_invoked: list[tuple[str, str, str, dict[str, object] | None]] = []
+        self.notifications_sent: list[
+            tuple[str, str, str, dict[str, object] | None]
+        ] = []
 
     async def call_tool(self, connection, auth, tool_name, payload):
         raise AssertionError("not used by these tests")
@@ -381,6 +387,38 @@ class _StatefulRuntime:
                 }
             ]
         }
+
+    async def list_tools(self, connection, auth):
+        self.tools_called.append((connection.id, connection.provider))
+        return [
+            DiscoveredTool(
+                name="stateful_tool",
+                title="Stateful Tool",
+                description="A stateful tool",
+                input_schema={"type": "object"},
+                output_schema={"type": "object"},
+            )
+        ]
+
+    async def list_resources(self, connection, auth):
+        return []
+
+    async def list_prompts(self, connection, auth):
+        return []
+
+    async def get_connection_metadata(self, connection, auth):
+        return {"server": connection.provider, "transport": "stdio"}
+
+    async def invoke_method(self, connection, auth, method, params=None):
+        self.methods_invoked.append(
+            (connection.id, connection.provider, method, params)
+        )
+        return {"echoed": (params or {}).get("text", "")}
+
+    async def send_notification(self, connection, auth, method, params=None):
+        self.notifications_sent.append(
+            (connection.id, connection.provider, method, params)
+        )
 
 
 class _ExplodingContentAdapter(FakeAdapter):
@@ -451,10 +489,179 @@ async def test_upstream_transport_prefers_stateful_runtime_for_prompts(
     )
 
     assert result["messages"][0]["content"]["text"] == "stateful prompt"
-    assert runtime.prompts == [
-        ("demo.personal", "prompt.summarize", {"text": "hello"})
-    ]
+    assert runtime.prompts == [("demo.personal", "prompt.summarize", {"text": "hello"})]
     assert [event.kind for event in events] == [
         "prompt_get_started",
         "prompt_get_completed",
     ]
+
+
+async def test_upstream_transport_prefers_stateful_runtime_for_invoke_method(
+    tmp_path: Path,
+) -> None:
+    events: list[McpEvent] = []
+    runtime = _StatefulRuntime()
+    transport = UpstreamTransportService(
+        auth_store=FileStore(tmp_path),
+        catalog_store=FileStore(tmp_path),
+        event_sink=events.append,
+        stateful_runtime=runtime,
+    )
+    transport.register_adapter("demo", _ExplodingContentAdapter())
+    connection = ConnectionConfig(
+        id="demo.personal",
+        server="demo",
+        account="personal",
+        metadata=_fake_transport_metadata(),
+    )
+
+    result = await transport.invoke_method(
+        connection,
+        "demo.echo",
+        params={"text": "hello"},
+    )
+
+    assert result["echoed"] == "hello"
+    assert runtime.methods_invoked == [
+        ("demo.personal", "demo", "demo.echo", {"text": "hello"})
+    ]
+    assert [event.kind for event in events] == [
+        "raw_method_started",
+        "raw_method_completed",
+    ]
+
+
+async def test_upstream_transport_prefers_stateful_runtime_for_send_notification(
+    tmp_path: Path,
+) -> None:
+    events: list[McpEvent] = []
+    runtime = _StatefulRuntime()
+    transport = UpstreamTransportService(
+        auth_store=FileStore(tmp_path),
+        catalog_store=FileStore(tmp_path),
+        event_sink=events.append,
+        stateful_runtime=runtime,
+    )
+    transport.register_adapter("demo", _ExplodingContentAdapter())
+    connection = ConnectionConfig(
+        id="demo.personal",
+        server="demo",
+        account="personal",
+        metadata=_fake_transport_metadata(),
+    )
+
+    await transport.send_notification(
+        connection,
+        "notifications/test",
+        params={"data": "value"},
+    )
+
+    assert runtime.notifications_sent == [
+        ("demo.personal", "demo", "notifications/test", {"data": "value"})
+    ]
+    assert [event.kind for event in events] == [
+        "raw_notification_started",
+        "raw_notification_completed",
+    ]
+
+
+async def test_upstream_transport_prefers_stateful_runtime_for_catalog_refresh(
+    tmp_path: Path,
+) -> None:
+    events: list[McpEvent] = []
+    store = FileStore(tmp_path)
+    connections = ConnectionRegistry()
+    connection = ConnectionConfig(
+        id="demo.personal",
+        server="demo",
+        account="personal",
+        metadata=_fake_transport_metadata(),
+    )
+    connections.register(connection)
+    runtime = _StatefulRuntime()
+    transport = UpstreamTransportService(
+        auth_store=store,
+        catalog_store=store,
+        event_sink=events.append,
+        stateful_runtime=runtime,
+    )
+    transport.register_adapter("demo", _ExplodingContentAdapter())
+    source_catalog = SourceCatalogService(
+        store=store,
+        connection_lookup=connections.get,
+        connection_list_enabled=connections.list_enabled,
+        connection_list_all=connections.list_all,
+        tool_executor_for=transport.tool_executor_for,
+        load_auth=transport.load_connection_auth,
+        emit_event=events.append,
+    )
+    source_catalog.hydrate_connection_source_from_snapshot(connection)
+
+    await transport.refresh_connection_catalog(
+        connection,
+        source_catalog=source_catalog,
+        record_catalog_change_events=lambda source_id, snapshot, reason: None,
+    )
+
+    assert runtime.tools_called == [("demo.personal", "demo")]
+    assert "catalog_refresh_started" in [event.kind for event in events]
+    assert "catalog_refresh_completed" in [event.kind for event in events]
+
+
+class _ExplodingAdapterForDiagnostics(FakeAdapter):
+    async def list_tools(self, connection, auth):
+        raise AssertionError("adapter list_tools should not be used in diagnostics")
+
+
+async def test_upstream_transport_prefers_stateful_runtime_for_deployment_diagnostics(
+    tmp_path: Path,
+) -> None:
+    runtime = _StatefulRuntime()
+    connections = ConnectionRegistry()
+    connection = ConnectionConfig(
+        id="demo.personal",
+        server="demo",
+        account="personal",
+        metadata=_fake_transport_metadata(),
+    )
+    connections.register(connection)
+    transport = UpstreamTransportService(
+        auth_store=FileStore(tmp_path),
+        catalog_store=FileStore(tmp_path),
+        event_sink=lambda event: None,
+        stateful_runtime=runtime,
+    )
+    transport.register_adapter("demo", _ExplodingAdapterForDiagnostics())
+    source_catalog = SourceCatalogService(
+        store=transport.catalog_store,
+        connection_lookup=connections.get,
+        connection_list_enabled=connections.list_enabled,
+        connection_list_all=connections.list_all,
+        tool_executor_for=transport.tool_executor_for,
+        load_auth=transport.load_connection_auth,
+        emit_event=lambda event: None,
+    )
+    source_catalog.register_capability_source(
+        CapabilitySource(
+            id="demo.personal",
+            kind="connection",
+            permissions=SourcePermissions(calls_upstream=True),
+            capabilities=CapabilityBuckets(),
+        )
+    )
+    artifact = echo_artifact()
+    deployment = WorkflowDeployment(
+        id="echo.personal",
+        artifact_id="echo",
+        artifact_version=1,
+        bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+    )
+
+    diagnostics = await transport.deployment_diagnostics(
+        deployment=deployment,
+        artifacts=[artifact],
+        source_catalog=source_catalog,
+    )
+
+    assert diagnostics == []
+    assert runtime.tools_called == [("demo.personal", "demo")]
