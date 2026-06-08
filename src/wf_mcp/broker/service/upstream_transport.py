@@ -21,6 +21,7 @@ from wf_mcp.broker.discovery import specs_from_discovered_tools
 from wf_mcp.events import McpEvent, make_event
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.shared.errors import error_payload
+from wf_sources_mcp.adapters import require_adapter
 from wf_sources_mcp.auth import AuthRecord, connection_auth_diagnostic
 from wf_sources_mcp.catalog import snapshot_from_specs
 from wf_sources_mcp.catalog.models import CatalogSnapshot
@@ -31,7 +32,6 @@ from wf_sources_mcp.discovery import discover_connection_capabilities
 from wf_sources_mcp.sdk import BackendAdapter, StatefulMcpRuntime, ToolExecutor
 from wf_sources_mcp.storage import AuthStore, CatalogStore
 
-from .adapters import require_adapter
 from .source_catalog import SourceCatalogService
 
 EventSink = Callable[[McpEvent], None]

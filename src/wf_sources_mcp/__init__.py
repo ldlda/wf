@@ -42,8 +42,11 @@ if TYPE_CHECKING:
     )
 
 __all__ = [
+    "AdapterLookupRef",
     "AuthRecord",
     "DiscoveredConnectionCapabilities",
+    "LegacyAdapterRef",
+    "SourceAdapterRef",
     "FileSourceRegistryStore",
     "HttpSourceTransport",
     "McpSourceConnection",
@@ -65,6 +68,7 @@ __all__ = [
     "model_from_schema",
     "neutral_auth_from_mcp",
     "registry_entry_to_connection_config",
+    "require_adapter",
     "specs_from_discovered_tools",
     "tool_call_completed_event",
     "tool_call_started_event",
@@ -76,6 +80,15 @@ __all__ = [
 
 
 def __getattr__(name: str) -> object:
+    if name in {
+        "AdapterLookupRef",
+        "LegacyAdapterRef",
+        "SourceAdapterRef",
+        "require_adapter",
+    }:
+        from . import adapters
+
+        return getattr(adapters, name)
     if name in {
         "McpSourceConnection",
         "mcp_source_connection_from_connection_config",

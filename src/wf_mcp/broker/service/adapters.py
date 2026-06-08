@@ -1,18 +1,15 @@
+"""Compatibility shim for upstream MCP adapter lookup.
+
+Canonical implementation lives in `wf_sources_mcp.adapters`.
+"""
+
 from __future__ import annotations
 
-from collections.abc import Mapping
+from wf_sources_mcp.adapters import (
+    AdapterLookupRef,
+    LegacyAdapterRef,
+    SourceAdapterRef,
+    require_adapter,
+)
 
-from wf_sources_mcp.sdk import BackendAdapter
-
-from ...models import ConnectionConfig
-
-
-def require_adapter(
-    connection: ConnectionConfig,
-    adapters: Mapping[str, BackendAdapter],
-) -> BackendAdapter:
-    """Return the adapter for a connection or raise a useful lookup error."""
-    adapter = adapters.get(connection.server)
-    if adapter is None:
-        raise KeyError(f"no adapter registered for server {connection.server!r}")
-    return adapter
+__all__ = ["AdapterLookupRef", "LegacyAdapterRef", "SourceAdapterRef", "require_adapter"]

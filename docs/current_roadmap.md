@@ -351,6 +351,9 @@ implementation state.
     - Completed: neutral `specs_from_discovered_tools` now lives in
       `wf_sources_mcp.discovery`. `wf_mcp.broker.discovery` remains as the
       broker adapter for `ConnectionConfig` and `McpEvent` projection.
+    - Completed: upstream MCP adapter lookup (`require_adapter`) now lives in
+      `wf_sources_mcp.adapters`, with `wf_mcp.broker.service.adapters` retained
+      as a compatibility shim.
     The `wf-mcp` script is now a legacy/special-purpose MCP entrypoint, not the
     preferred durable workflow server. New product paths should target
     `wf-rpc-server` plus neutral `wf_config`/`wf_server` composition, then keep
