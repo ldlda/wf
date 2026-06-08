@@ -126,7 +126,10 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
 14. Complete: stateful MCP runtime protocols split into tool/resource/prompt
     slices. Runtime can route `list_resources` and `list_prompts` through the
     owner task for session-scoped listings; catalog refresh remains one-shot.
-15. Upstream transport/discovery/session services.
+15. Complete: MCP source catalog aggregation helpers (`CombinedCatalog` and
+    `snapshot_from_specs`) moved to `wf_sources_mcp.catalog`, with
+    `wf_mcp.broker.catalog` retained as a compatibility shim.
+16. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from .aggregate import CombinedCatalog, snapshot_from_specs
 from .entries import (
     CatalogNodeEntry,
     CatalogPromptEntry,
@@ -15,8 +16,10 @@ __all__ = [
     "CatalogPromptEntry",
     "CatalogResourceEntry",
     "CatalogSnapshot",
+    "CombinedCatalog",
     "DiscoveredPrompt",
     "DiscoveredResource",
     "DiscoveredTool",
     "dump_catalog_snapshot",
+    "snapshot_from_specs",
 ]

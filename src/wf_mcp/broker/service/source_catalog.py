@@ -22,6 +22,8 @@ from wf_sources_mcp.catalog import (
     CatalogNodeEntry,
     CatalogPromptEntry,
     CatalogResourceEntry,
+    CombinedCatalog,
+    snapshot_from_specs,
 )
 from wf_sources_mcp.connections import mcp_source_connection_from_connection_config
 from wf_sources_mcp.sdk import ToolExecutor
@@ -33,7 +35,6 @@ from ...models import (
     CatalogSnapshot,
 )
 from ...workflow.wrappers import _model_from_schema
-from ..catalog import CombinedCatalog, snapshot_from_specs
 from .specs import get_qualified_spec, qualify_spec
 
 ConnectionLookup = Callable[[str], ConnectionConfig]

@@ -46,6 +46,7 @@ def test_wf_sources_mcp_does_not_import_frontend_mcp_modules() -> None:
 def test_wf_sources_mcp_does_not_import_wf_mcp_catalog_dtos() -> None:
     root = Path(__file__).resolve().parents[2] / "src" / "wf_sources_mcp"
     forbidden = {
+        "wf_mcp.broker.catalog",
         "wf_mcp.capabilities",
         "wf_mcp.catalog",
         "wf_mcp.catalog.models",

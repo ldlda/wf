@@ -203,3 +203,12 @@ def test_runtime_shims_reexport_wf_sources_mcp_runtime() -> None:
     assert OldPersistentMcpSession is PersistentMcpSession
     assert OldPersistentSessionFactory is PersistentSessionFactory
     assert old_connection_runtime_fingerprint is connection_runtime_fingerprint
+
+
+def test_wf_mcp_broker_catalog_shim_reexports_wf_sources_mcp_catalog() -> None:
+    from wf_mcp.broker.catalog import CombinedCatalog as CompatCombinedCatalog
+    from wf_mcp.broker.catalog import snapshot_from_specs as compat_snapshot_from_specs
+    from wf_sources_mcp.catalog import CombinedCatalog, snapshot_from_specs
+
+    assert CompatCombinedCatalog is CombinedCatalog
+    assert compat_snapshot_from_specs is snapshot_from_specs

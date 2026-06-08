@@ -260,6 +260,9 @@ implementation state.
       resources, and prompts, and can route session-scoped `list_resources` and
       `list_prompts` through the owner task. Catalog refresh still uses one-shot
       adapter policy.
+    - Completed: MCP source catalog aggregation helpers (`CombinedCatalog` and
+      `snapshot_from_specs`) now live in `wf_sources_mcp.catalog`; the old
+      `wf_mcp.broker.catalog` path is a compatibility shim.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in
