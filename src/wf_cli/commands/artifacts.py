@@ -60,9 +60,17 @@ def list_artifacts(
 def inspect_artifact(
     ctx: typer.Context,
     artifact_id: Annotated[str, typer.Argument(help="Artifact id.")],
-    version: Annotated[int, typer.Argument(min=1, help="Artifact version.")],
+    version_arg: Annotated[
+        int | None,
+        typer.Argument(min=1, help="Artifact version."),
+    ] = None,
+    version_option: Annotated[
+        int | None,
+        typer.Option("--version", min=1, help="Artifact version."),
+    ] = None,
 ) -> None:
     """Inspect one saved artifact version."""
+    version = _resolve_artifact_version(version_arg, version_option)
     context = load_cli_context(ctx)
     emit_json(
         run_cli_operation(
@@ -70,3 +78,21 @@ def inspect_artifact(
             context.handlers.inspect_artifact(artifact_id=artifact_id, version=version),
         )
     )
+
+
+def _resolve_artifact_version(
+    version_arg: int | None,
+    version_option: int | None,
+) -> int:
+    if version_arg is None and version_option is None:
+        raise typer.BadParameter("artifact version is required")
+    if (
+        version_arg is not None
+        and version_option is not None
+        and version_arg != version_option
+    ):
+        raise typer.BadParameter("positional VERSION and --version must match")
+    if version_option is not None:
+        return version_option
+    assert version_arg is not None
+    return version_arg
