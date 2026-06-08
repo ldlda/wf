@@ -141,7 +141,11 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
     `wf_sources_mcp.tool_events` DTOs; `wf_mcp.broker.discovery` adapts them to
     broker-local `McpEvent`. `wrap_discovered_tool` remains in `wf_mcp` until
     the next move slice.
-19. Upstream transport/discovery/session services.
+19. Complete: MCP discovered-tool wrapper generation (`wrap_discovered_tool`)
+    moved to `wf_sources_mcp.tool_wrappers`, with `wf_mcp.workflow` retained as
+    a compatibility shim. `specs_from_discovered_tools` remains in `wf_mcp`
+    as the broker event projection adapter.
+20. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

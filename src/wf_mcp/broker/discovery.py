@@ -12,10 +12,10 @@ from wf_sources_mcp.discovery import (
 )
 from wf_sources_mcp.sdk import ToolExecutor
 from wf_sources_mcp.tool_events import ToolWrapperEvent
+from wf_sources_mcp.tool_wrappers import wrap_discovered_tool
 
 from ..auth import AuthRecord
 from ..models import ConnectionConfig
-from ..workflow import wrap_discovered_tool
 from .events import McpEvent, make_event
 
 

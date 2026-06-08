@@ -69,6 +69,7 @@ __all__ = [
     "tool_call_started_event",
     "ToolWrapperEvent",
     "ToolWrapperEventSink",
+    "wrap_discovered_tool",
     "workflow_mcp_source_to_connection_config",
 ]
 
@@ -113,6 +114,10 @@ def __getattr__(name: str) -> object:
         from . import schema_models
 
         return schema_models.model_from_schema
+    if name == "wrap_discovered_tool":
+        from . import tool_wrappers
+
+        return tool_wrappers.wrap_discovered_tool
     if name in {
         "ToolWrapperEvent",
         "ToolWrapperEventSink",

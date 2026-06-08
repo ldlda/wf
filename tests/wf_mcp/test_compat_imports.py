@@ -228,3 +228,12 @@ def test_wf_mcp_broker_discovery_shim_reexports_wf_sources_mcp_discovery() -> No
 
     assert CompatDiscoveredConnectionCapabilities is DiscoveredConnectionCapabilities
     assert compat_discover_connection_capabilities is discover_connection_capabilities
+
+
+def test_wf_mcp_workflow_wrapper_shim_reexports_wf_sources_mcp_tool_wrapper() -> None:
+    from wf_mcp.workflow import wrap_discovered_tool as compat_package_wrap
+    from wf_mcp.workflow.wrappers import wrap_discovered_tool as compat_module_wrap
+    from wf_sources_mcp.tool_wrappers import wrap_discovered_tool
+
+    assert compat_package_wrap is wrap_discovered_tool
+    assert compat_module_wrap is wrap_discovered_tool
