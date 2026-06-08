@@ -47,6 +47,19 @@ def test_wf_sources_mcp_auth_adapters_interpret_mcp_payload() -> None:
     assert mcp_auth_env(auth) == {"GITHUB_TOKEN": "secret"}
 
 
+def test_wf_sources_mcp_auth_headers_preserve_existing_authorization_case() -> None:
+    auth = AuthRecord(
+        connection_id="github.work",
+        scheme="bearer",
+        payload={
+            "token": "secret",
+            "headers": {"authorization": "Bearer custom"},
+        },
+    )
+
+    assert mcp_auth_headers(auth) == {"authorization": "Bearer custom"}
+
+
 def test_wf_sources_mcp_file_stores_keep_existing_disk_shape(tmp_path) -> None:
     auth_store = FileAuthStore(tmp_path / "auth-root")
     catalog_store = FileCatalogStore(tmp_path / "catalog-root")

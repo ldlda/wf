@@ -38,7 +38,7 @@ def _python_type_from_schema(schema: object) -> object:
 
     if schema_type == "array":
         item_type = _python_type_from_schema(schema.get("items", {}))
-        return list[item_type] if isinstance(item_type, type) else list[Any]
+        return list[item_type]
 
     if not isinstance(schema_type, str):
         return Any
@@ -52,7 +52,7 @@ def _optional_type(annotation: object) -> object:
     origin = get_origin(annotation)
     if origin in {Union, UnionType} and NoneType in get_args(annotation):
         return annotation
-    return annotation | None if isinstance(annotation, type) else Any
+    return cast(Any, annotation) | None
 
 
 def _field_default(

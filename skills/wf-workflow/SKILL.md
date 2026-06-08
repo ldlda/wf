@@ -20,21 +20,25 @@ low-level escape hatch.
 1. Discover sources with `wf.admin.list_sources` or `wf cap list`.
 2. Discover workflow-ready capabilities with `wf.workflow.list_capabilities`.
 3. Inspect one candidate with `wf.workflow.inspect_capability`.
-4. Create a patchable draft workspace with
+4. Call one candidate with `wf.workflow.call_capability` or `wf cap call` when
+   payload shape or upstream source reachability is uncertain.
+5. Create a patchable draft workspace with
    `wf.workflow.create_draft_workspace_from_capability`.
-5. Patch targeted fields with focused helpers or JSON Patch.
-6. Validate with `wf.workflow.validate_draft_workspace`.
-7. Save with `wf.workflow.create_artifact_from_workspace` or
+6. Patch targeted fields with focused helpers or JSON Patch.
+7. Validate with `wf.workflow.validate_draft_workspace`.
+8. Save with `wf.workflow.create_artifact_from_workspace` or
    `wf.workflow.create_wrapper_from_workspace`.
-8. Save a deployment with `wf.workflow.save_deployment`.
-9. Validate with `wf.workflow.validate_deployment`.
-10. Run with `wf.workflow.run_deployment`.
-11. Inspect stopped runs with `wf.workflow.inspect_run`; read bounded trace
+9. Save a deployment with `wf.workflow.save_deployment`.
+10. Validate with `wf.workflow.validate_deployment`.
+11. Run with `wf.workflow.run_deployment`.
+12. Inspect stopped runs with `wf.workflow.inspect_run`; read bounded trace
     slices only when debugging.
 
 ## Rules
 
 - Use workflow capabilities, not raw MCP tools, when building graphs.
+- Use `call_capability` for single-call probes; use deployments/runs for durable
+  lifecycle behavior.
 - Treat wrapper hints as scaffolding, not semantic truth.
 - Use draft workspaces for iterative authoring; avoid rewriting full drafts.
 - Use explicit source bindings at deployment time.

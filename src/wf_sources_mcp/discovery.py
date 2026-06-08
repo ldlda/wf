@@ -69,11 +69,7 @@ def _root_exception(exc: BaseException) -> BaseException:
     """Unwrap the first nested exception from MCP task-group ExceptionGroups."""
     current: BaseException = exc
     while isinstance(current, ExceptionGroup) and current.exceptions:
-        nested = current.exceptions[0]
-        if isinstance(nested, BaseException):
-            current = nested
-            continue
-        break
+        current = current.exceptions[0]
     return current
 
 

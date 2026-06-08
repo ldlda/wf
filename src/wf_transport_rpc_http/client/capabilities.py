@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from .base import RpcCaller
+
 
 class RpcCapabilityClientMixin:
     """JSON-RPC implementation of workflow capability surface methods."""
 
-    async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]: ...
-
     async def list_capabilities(
-        self,
+        self: RpcCaller,
         *,
         query: str | None = None,
         source_id: str | None = None,
@@ -26,14 +26,16 @@ class RpcCapabilityClientMixin:
             },
         )
 
-    async def inspect_capability(self, *, qualified_name: str) -> dict[str, Any]:
+    async def inspect_capability(
+        self: RpcCaller, *, qualified_name: str
+    ) -> dict[str, Any]:
         return await self._call(
             "workflow.capabilities.inspect",
             {"qualified_name": qualified_name},
         )
 
     async def call_capability(
-        self,
+        self: RpcCaller,
         *,
         qualified_name: str,
         payload: dict[str, Any],

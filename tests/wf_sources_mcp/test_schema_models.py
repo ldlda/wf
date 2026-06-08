@@ -111,6 +111,45 @@ def test_model_from_schema_allows_extra_fields_and_tolerates_unknown_shapes() ->
     assert dumped["extra"] == "kept"
 
 
+def test_model_from_schema_preserves_complex_array_item_annotations() -> None:
+    model = model_from_schema(
+        "NestedArrayInput",
+        {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "type": ["object", "null"],
+                    },
+                },
+            },
+        },
+    )
+
+    annotation = model.model_fields["items"].annotation
+
+    assert str(annotation) == "list[dict[str, typing.Any] | None]"
+
+
+def test_model_from_schema_preserves_optional_complex_annotations() -> None:
+    model = model_from_schema(
+        "OptionalObjectInput",
+        {
+            "type": "object",
+            "properties": {
+                "metadata": {
+                    "type": ["object", "null"],
+                },
+            },
+        },
+    )
+
+    annotation = model.model_fields["metadata"].annotation
+
+    assert str(annotation) == "dict[str, typing.Any] | None"
+
+
 def test_model_from_schema_exports_from_package_root() -> None:
     from wf_sources_mcp import model_from_schema as root_model_from_schema
     from wf_sources_mcp.schema_models import model_from_schema

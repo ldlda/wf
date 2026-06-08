@@ -4,14 +4,14 @@ from typing import Any
 
 from wf_api.runs import TraceRangeLike
 
+from .base import RpcCaller
+
 
 class RpcRunClientMixin:
     """JSON-RPC implementation of workflow run lifecycle surface methods."""
 
-    async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]: ...
-
     async def run_deployment(
-        self,
+        self: RpcCaller,
         *,
         deployment_id: str,
         workflow_input: dict[str, Any],
@@ -27,7 +27,7 @@ class RpcRunClientMixin:
         )
 
     async def resume_run(
-        self,
+        self: RpcCaller,
         *,
         run_id: str,
         resume_payload: dict[str, Any],
@@ -44,11 +44,11 @@ class RpcRunClientMixin:
             },
         )
 
-    async def inspect_run(self, *, run_id: str) -> dict[str, Any]:
+    async def inspect_run(self: RpcCaller, *, run_id: str) -> dict[str, Any]:
         return await self._call("workflow.runs.inspect", {"run_id": run_id})
 
     async def read_run_trace(
-        self,
+        self: RpcCaller,
         *,
         run_id: str,
         trace_range: TraceRangeLike,

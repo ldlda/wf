@@ -100,6 +100,12 @@ implementation state.
       public `RpcWorkflowApiClient` still satisfies `WorkflowApiSurface`, while
       client methods and server JSON-RPC registrations live in focused
       capability, draft, artifact, deployment, and run modules.
+   - Completed: JSON-RPC and CLI now expose `call_capability` through
+      `workflow.capabilities.call` and `wf cap call`, so local and remote users
+      can smoke-test a capability before creating draft workspaces.
+   - Completed: RPC client domain mixins now share a single typed
+      `RpcCaller._call(method, params)` transport primitive instead of
+      repeating `_call` stubs in every mixin.
    - Completed: read-only source inventory now has a protocol-neutral
       `WorkflowSourceAdminApi` / `WorkflowSourceAdminSurface`; MCP admin source
       tools delegate through it while connection/raw MCP operations remain

@@ -61,7 +61,8 @@ def mcp_auth_headers(auth: AuthRecord | None) -> dict[str, str]:
         else {}
     )
     token = auth.payload.get("token")
-    if isinstance(token, str) and "Authorization" not in headers:
+    has_authorization = any(key.lower() == "authorization" for key in headers)
+    if isinstance(token, str) and not has_authorization:
         headers["Authorization"] = f"Bearer {token}"
     return headers
 

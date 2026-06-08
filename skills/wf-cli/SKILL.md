@@ -28,6 +28,7 @@ Canonical docs:
 ```bash
 wf cap list --format ids
 wf cap inspect <capability>
+wf cap call <capability> --input '{"field":"value"}'
 
 wf draft create-from-capability <workspace_id> <capability>
 wf draft inspect <workspace_id> --include-draft
@@ -45,6 +46,7 @@ wf run trace <run_id> --from 0 --limit 25
 
 - Prefer `--input-file` for large JSON.
 - Prefer `--format ids` or `--format compact` for discovery.
+- Use `wf cap call` as a cheap smoke test before creating a draft.
 - Do not request unbounded traces.
 - Do not treat wrapper hints as semantic guarantees.
 - If validation fails, run `wf explain <code>` or `wf explain --input-file <validation-output.json>`.

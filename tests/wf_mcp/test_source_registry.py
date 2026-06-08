@@ -142,7 +142,7 @@ def test_connection_config_to_registry_entry_preserves_transport_metadata() -> N
         },
     )
 
-    entry = connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
+    entry = connection_config_to_registry_entry(connection)
 
     assert entry.id == "github.work"
     assert entry.provider == "github"
@@ -168,7 +168,7 @@ def test_connection_config_to_registry_entry_accepts_flat_stdio_metadata() -> No
         },
     )
 
-    entry = connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
+    entry = connection_config_to_registry_entry(connection)
 
     assert entry.transport.kind == "stdio"
     assert isinstance(entry.transport, StdioSourceTransport)
@@ -191,7 +191,7 @@ def test_connection_config_to_registry_entry_accepts_flat_http_metadata() -> Non
         },
     )
 
-    entry = connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
+    entry = connection_config_to_registry_entry(connection)
 
     assert entry.transport.kind == "http"
     assert isinstance(entry.transport, HttpSourceTransport)
@@ -204,7 +204,7 @@ def test_connection_config_to_registry_entry_requires_transport_metadata() -> No
     connection = ConnectionConfig(id="github.work", server="github", account="work")
 
     with pytest.raises(ValueError, match="requires metadata.transport"):
-        connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
+        connection_config_to_registry_entry(connection)
 
 
 class _McpSource:

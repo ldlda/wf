@@ -153,6 +153,18 @@ wf cap inspect wf.std.concat
 `inspect` returns the full contract, including `wrapper_hints` when available.
 Hints are scaffolding, not semantic guarantees.
 
+Call one capability once before creating a draft:
+
+```bash
+wf cap call wf.std.constant --input '{"value": "hello"}'
+wf --url http://127.0.0.1:8765/rpc cap call everything.default.echo --input '{"message": "hello"}'
+```
+
+`cap call` is an authoring/runtime smoke test. It uses the same local or remote
+target selection as the rest of the CLI and returns a normalized outcome,
+output, source id, and diagnostics. Use it to confirm payload shape and upstream
+source reachability before spending time on a draft workspace.
+
 ## Draft Workspaces
 
 Create a draft from a capability:

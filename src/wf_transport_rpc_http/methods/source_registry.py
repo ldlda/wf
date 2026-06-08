@@ -26,11 +26,12 @@ def _require_source_registry_admin(
 ) -> WorkflowSourceRegistrySurface:
     admin = server.source_registry_admin
     if admin is None:
+        verb = "are" if operation in {"reads", "mutations"} else "is"
         raise WorkflowRpcError(
             data={
                 "code": "source_registry_unavailable",
                 "message": (
-                    f"source registry admin {operation} are not available "
+                    f"source registry admin {operation} {verb} not available "
                     "for this server"
                 ),
             }

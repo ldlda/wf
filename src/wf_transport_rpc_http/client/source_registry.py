@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from .base import RpcCaller
+
 
 class RpcSourceRegistryClientMixin:
     """JSON-RPC implementation of source registry surface methods."""
 
-    async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]: ...
-
     async def list_registry_entries(
-        self,
+        self: RpcCaller,
         *,
         cursor: str | None = None,
         limit: int = 50,
@@ -20,7 +20,7 @@ class RpcSourceRegistryClientMixin:
         )
 
     async def inspect_registry_entry(
-        self,
+        self: RpcCaller,
         *,
         source_id: str,
     ) -> dict[str, Any]:
@@ -30,7 +30,7 @@ class RpcSourceRegistryClientMixin:
         )
 
     async def add_registry_entry(
-        self,
+        self: RpcCaller,
         *,
         entry: dict[str, Any],
     ) -> dict[str, Any]:
@@ -40,7 +40,7 @@ class RpcSourceRegistryClientMixin:
         )
 
     async def update_registry_entry(
-        self,
+        self: RpcCaller,
         *,
         source_id: str,
         patch: dict[str, Any],
@@ -51,7 +51,7 @@ class RpcSourceRegistryClientMixin:
         )
 
     async def enable_registry_entry(
-        self,
+        self: RpcCaller,
         *,
         source_id: str,
     ) -> dict[str, Any]:
@@ -61,7 +61,7 @@ class RpcSourceRegistryClientMixin:
         )
 
     async def disable_registry_entry(
-        self,
+        self: RpcCaller,
         *,
         source_id: str,
     ) -> dict[str, Any]:
@@ -71,7 +71,7 @@ class RpcSourceRegistryClientMixin:
         )
 
     async def remove_registry_entry(
-        self,
+        self: RpcCaller,
         *,
         source_id: str,
     ) -> dict[str, Any]:
@@ -80,7 +80,7 @@ class RpcSourceRegistryClientMixin:
             {"source_id": source_id},
         )
 
-    async def apply_registry_changes(self) -> dict[str, Any]:
+    async def apply_registry_changes(self: RpcCaller) -> dict[str, Any]:
         return await self._call(
             "workflow.admin.source_registry.apply",
             {},

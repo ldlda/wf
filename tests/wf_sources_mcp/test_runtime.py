@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 from contextlib import AsyncExitStack
 from typing import Any
 
@@ -256,6 +257,41 @@ async def test_runtime_pool_reuses_unchanged_connection() -> None:
     await pool.call_tool(connection, None, "echo", {"text": "one"})
     await pool.call_tool(connection, None, "echo", {"text": "two"})
 
+    assert created == [connection]
+
+
+@pytest.mark.asyncio
+async def test_runtime_pool_serializes_concurrent_session_creation() -> None:
+    created: list[McpSourceConnection] = []
+    release = asyncio.Event()
+
+    async def create_session(
+        connection: McpSourceConnection, auth: AuthRecord | None
+    ) -> PersistentMcpSession:
+        created.append(connection)
+        await release.wait()
+
+        async def _call(tool_name: str, payload: dict[str, Any]) -> ToolCallResult:
+            return ToolCallResult(outcome="ok", output={"echoed": payload["text"]})
+
+        return PersistentMcpSession(
+            connection=connection,
+            auth=auth,
+            call_callback=_call,
+        )
+
+    pool = McpRuntimePool(session_factory=create_session)
+    connection = _connection()
+
+    first = asyncio.create_task(pool.get_session(connection, None))
+    second = asyncio.create_task(pool.get_session(connection, None))
+    await asyncio.sleep(0)
+    release.set()
+
+    first_session, second_session = await asyncio.gather(first, second)
+    await pool.close_all()
+
+    assert first_session is second_session
     assert created == [connection]
 
 

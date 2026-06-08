@@ -1,10 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 from uuid import uuid4
 
 import httpx
+
+
+class RpcCaller(Protocol):
+    """Transport primitive required by domain RPC client mixins."""
+
+    async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]: ...
 
 
 @dataclass(slots=True)

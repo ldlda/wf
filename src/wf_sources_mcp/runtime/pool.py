@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import json
 from collections.abc import Awaitable, Callable
 from dataclasses import asdict, dataclass, field
@@ -30,6 +31,8 @@ def connection_runtime_fingerprint(
     command, URL, account, or auth payload must create a fresh session.
     """
 
+    # Expected payloads are dataclasses/primitive mappings today. `default=str`
+    # is only a fallback for SDK URL/path-like leaf values in auth/transport data.
     return json.dumps(
         {
             "connection": asdict(connection),
@@ -53,6 +56,7 @@ class McpRuntimePool:
 
     session_factory: SessionFactory
     _sessions: dict[str, tuple[str, PersistentMcpSession]] = field(default_factory=dict)
+    _session_locks: dict[str, asyncio.Lock] = field(default_factory=dict)
 
     async def get_session(
         self,
@@ -63,16 +67,22 @@ class McpRuntimePool:
         current = self._sessions.get(connection.id)
         if current is not None and current[0] == fingerprint:
             return current[1]
-        if current is not None:
-            await current[1].close()
 
-        created = self.session_factory(connection, auth)
-        if isawaitable(created):
-            session = await created
-        else:
-            session = cast(PersistentMcpSession, created)
-        self._sessions[connection.id] = (fingerprint, session)
-        return session
+        lock = self._session_locks.setdefault(connection.id, asyncio.Lock())
+        async with lock:
+            current = self._sessions.get(connection.id)
+            if current is not None and current[0] == fingerprint:
+                return current[1]
+            if current is not None:
+                await current[1].close()
+
+            created = self.session_factory(connection, auth)
+            if isawaitable(created):
+                session = await created
+            else:
+                session = cast(PersistentMcpSession, created)
+            self._sessions[connection.id] = (fingerprint, session)
+            return session
 
     async def call_tool(
         self,
@@ -157,6 +167,7 @@ class McpRuntimePool:
 
     async def close_connection(self, connection_id: str) -> None:
         current = self._sessions.pop(connection_id, None)
+        self._session_locks.pop(connection_id, None)
         if current is not None:
             await current[1].close()
 
@@ -164,5 +175,6 @@ class McpRuntimePool:
         """Close all live runtimes; useful for server shutdown and tests."""
         sessions = list(self._sessions.values())
         self._sessions.clear()
+        self._session_locks.clear()
         for _fingerprint, session in sessions:
             await session.close()

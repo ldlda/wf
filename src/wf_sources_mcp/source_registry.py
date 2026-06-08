@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Literal, Protocol, cast
+from typing import Any, Literal, Protocol, cast
 
 from pydantic import Field, field_validator, model_validator
 
@@ -60,7 +60,7 @@ class LegacyConnectionConfigLike(Protocol):
     def enabled(self) -> bool: ...
 
     @property
-    def metadata(self) -> Mapping[str, object]: ...
+    def metadata(self) -> Mapping[str, Any]: ...
 
 
 class McpSourceRegistryEntry(SourceRegistryBaseModel):

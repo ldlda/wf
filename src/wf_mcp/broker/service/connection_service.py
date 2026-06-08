@@ -83,7 +83,7 @@ class ConnectionService:
                     continue
                 if connection.id in registry_entries:
                     continue
-                seeded = connection_config_to_registry_entry(connection)  # type: ignore[arg-type]
+                seeded = connection_config_to_registry_entry(connection)
                 registry_entries[seeded.id] = seeded
                 registry_changed = True
                 self.events.record_kind(

@@ -16,7 +16,9 @@ frontends can share.
 | `wf_artifacts` | Saved definitions and persistence contracts: workflow artifacts, deployments, draft workspaces, run records, checkpoints, artifact/deployment validation models. |
 | `wf_platform` | Shared capability/source concepts and platform-facing contracts such as capability refs, source inventory models, documentation source models, and JSON schema helpers. |
 | `wf_api` | Application workflow contract and process-local implementation over core/artifacts/platform: capability discovery, wrapper hints, draft editing, artifact/deployment operations, run/resume operations, next actions, and progressive response shaping. |
-| `wf_mcp` | MCP-specific transport, tool schemas, upstream MCP adapters, broker services, proxy/admin tools, config reload, and `WorkflowApi` context construction for MCP. |
+| `wf_server` | Durable server composition boundary that hosts a `WorkflowApi` plus optional admin/source-registry surfaces. |
+| `wf_sources_mcp` | MCP-as-upstream-source implementation: source ids, source registry DTOs, auth/catalog stores, discovery, SDK client/facade, persistent runtime pool, and tool-wrapper helpers. |
+| `wf_mcp` | MCP frontend/compatibility package: old `wf-mcp` server entry points, broker glue around MCP-hosted services, proxy/admin tools, and compatibility shims while callers migrate. |
 | `wf_transport_rpc_http` | JSON-RPC-over-HTTP transport adapter and remote client over `WorkflowApiSurface`, not a reimplementation of workflow business logic. |
 | future `wf_http` / WebSocket / MCP server transports | Additional transports over `WorkflowApiSurface`, not new workflow application APIs. |
 | `wf_cli` | CLI frontend over `WorkflowApiSurface`; it may run locally against process-local stores or target a remote JSON-RPC backend. |
@@ -116,6 +118,21 @@ can satisfy it by method shape:
   to fixed JSON-RPC method names.
 - Future auth, cache, recording, WebSocket, or MCP-server adapters should also
   target the same surface instead of importing concrete implementation classes.
+
+Current remote CLI flow:
+
+```text
+wf_cli
+  -> wf_transport_rpc_http.RpcWorkflowApiClient
+  -> wf_server.WorkflowServer
+  -> wf_api.WorkflowApi / admin surfaces
+  -> wf_sources_mcp or other source implementations
+```
+
+`RpcWorkflowApiClient` is intentionally composed from domain mixins over one
+transport primitive, `RpcCaller._call(method, params)`. Domain mixins must not
+own HTTP state or duplicate `_call` stubs; they are method bundles over the
+shared JSON-RPC request primitive.
 
 The surface is split into domain protocols:
 

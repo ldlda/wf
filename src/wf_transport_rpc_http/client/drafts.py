@@ -3,17 +3,17 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Literal
 
+from .base import RpcCaller
+
 
 class RpcDraftClientMixin:
     """JSON-RPC implementation of workflow draft workspace surface methods."""
 
-    async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]: ...
-
-    async def list_draft_workspaces(self) -> dict[str, Any]:
+    async def list_draft_workspaces(self: RpcCaller) -> dict[str, Any]:
         return await self._call("workflow.draft_workspaces.list", {})
 
     async def get_draft_workspace(
-        self,
+        self: RpcCaller,
         *,
         workspace_id: str,
         include_draft: bool = False,
@@ -24,7 +24,7 @@ class RpcDraftClientMixin:
         )
 
     async def create_draft_workspace_from_capability(
-        self,
+        self: RpcCaller,
         *,
         workspace_id: str,
         capability_name: str,
@@ -58,7 +58,7 @@ class RpcDraftClientMixin:
         )
 
     async def patch_draft_workspace(
-        self,
+        self: RpcCaller,
         *,
         workspace_id: str,
         revision: int,
@@ -70,7 +70,7 @@ class RpcDraftClientMixin:
         )
 
     async def validate_draft_workspace(
-        self,
+        self: RpcCaller,
         *,
         workspace_id: str,
     ) -> dict[str, Any]:
@@ -80,7 +80,7 @@ class RpcDraftClientMixin:
         )
 
     async def create_artifact_from_workspace(
-        self,
+        self: RpcCaller,
         *,
         workspace_id: str,
         artifact_id: str,
@@ -110,7 +110,7 @@ class RpcDraftClientMixin:
         )
 
     async def create_wrapper_from_workspace(
-        self,
+        self: RpcCaller,
         *,
         workspace_id: str,
         artifact_id: str,

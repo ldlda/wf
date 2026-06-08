@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Any
 
+from .base import RpcCaller
+
 
 class RpcSourceAdminClientMixin:
     """JSON-RPC implementation of read-only source admin surface methods."""
 
-    async def _call(self, method: str, params: dict[str, Any]) -> dict[str, Any]: ...
-
     async def list_sources(
-        self,
+        self: RpcCaller,
         *,
         cursor: str | None = None,
         limit: int = 50,
@@ -22,7 +22,7 @@ class RpcSourceAdminClientMixin:
             },
         )
 
-    async def inspect_source(self, *, source_id: str) -> dict[str, Any]:
+    async def inspect_source(self: RpcCaller, *, source_id: str) -> dict[str, Any]:
         return await self._call(
             "workflow.sources.inspect",
             {"source_id": source_id},
