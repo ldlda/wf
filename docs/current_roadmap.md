@@ -41,6 +41,8 @@ clear operator feedback before adding more architecture.
   `wf artifact delete <artifact_id> <version> --confirm` must reject referenced
   artifacts by default. Active spec:
   [`artifact delete policy`](superpowers/specs/2026-06-09-artifact-delete-policy.md).
+  Active plan:
+  [`wf artifact delete`](superpowers/plans/2026-06-09-wf-artifact-delete.md).
 - Next docs/ergonomics cleanup: explain raw MCP content-block envelopes returned
   by `cap call`, and only add a text-unwrapping CLI option if the safe behavior
   is explicitly defined.
