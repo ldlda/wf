@@ -40,11 +40,13 @@ clear operator feedback before adding more architecture.
 - Completed: `wf draft delete <workspace_id> --confirm` exposes existing draft
   workspace deletion as a safe CLI command. Implementation:
   [`wf draft delete CLI/RPC`](historical/superpowers/plans/2026-06-09-wf-draft-delete-cli-rpc.md).
+- Completed: bounded RPC CLI smoke runbook with cleanup commands:
+  [`RPC CLI smoke runbook`](runbooks/rpc-cli-smoke.md).
 - Next docs/ergonomics cleanup: explain raw MCP content-block envelopes returned
   by `cap call`, and only add a text-unwrapping CLI option if the safe behavior
   is explicitly defined.
-- Future smoke automation: turn the manual RPC CLI smoke sequence into a small
-  runbook or script once the cleanup commands exist.
+- Future smoke automation: turn the manual RPC CLI smoke runbook into a small
+  script once the command sequence stabilizes.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

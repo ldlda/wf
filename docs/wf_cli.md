@@ -75,6 +75,10 @@ wf --url http://127.0.0.1:8765/rpc cap list
 wf --url http://127.0.0.1:8765/rpc admin registry list
 ```
 
+For a bounded end-to-end product check, use the
+[`RPC CLI smoke runbook`](runbooks/rpc-cli-smoke.md). It keeps list/trace output
+small and avoids dumping arbitrary MCP resource payloads.
+
 `--mcp-config` owns the server's workflow stores, MCP connections, and source
 registry. `--store-root` is for the local/static server path and cannot be
 combined with `--mcp-config`.
@@ -175,6 +179,11 @@ wf --url http://127.0.0.1:8765/rpc cap call everything.default.echo --input '{"m
 target selection as the rest of the CLI and returns a normalized outcome,
 output, source id, and diagnostics. Use it to confirm payload shape and upstream
 source reachability before spending time on a draft workspace.
+
+Be careful with raw MCP capabilities: some tools/resources can return large
+content-block envelopes, including base64 payloads. Prefer known-small smoke
+capabilities such as `wf.std.constant` unless you explicitly need to test a
+specific upstream source.
 
 ## Draft Workspaces
 

@@ -44,6 +44,8 @@ implementation plans are kept for context, not as active instructions.
 
 - [`wf_cli.md`](wf_cli.md): workflow platform CLI commands, output formats,
   lifecycle flow, and common diagnostics.
+- [`runbooks/rpc-cli-smoke.md`](runbooks/rpc-cli-smoke.md): bounded
+  end-to-end smoke test for `wf-rpc-server` plus remote `wf` CLI.
 
 ## MCP Platform
 
