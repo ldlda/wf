@@ -327,6 +327,20 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
             "100",
         ],
     )
+    called = runner.invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "--url",
+            "http://test/rpc",
+            "cap",
+            "call",
+            "wf.std.constant",
+            "--input",
+            '{"value": "hello cap call"}',
+        ],
+    )
 
     assert inspected.exit_code == 0, inspected.output
     assert '"name": "wf.std.constant"' in inspected.output
@@ -336,6 +350,11 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     assert {
         capability["source_id"] for capability in listed_payload["capabilities"]
     } == {"wf.std"}
+    assert called.exit_code == 0, called.output
+    called_payload = json.loads(called.output)
+    assert called_payload["qualified_name"] == "wf.std.constant"
+    assert called_payload["outcome"] == "ok"
+    assert called_payload["output"] == {"value": "hello cap call"}
 
 
 def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:

@@ -54,6 +54,12 @@ class InspectCapabilityParams(RpcParamsModel):
     qualified_name: str = Field(min_length=1)
 
 
+class CallCapabilityParams(RpcParamsModel):
+    qualified_name: str = Field(min_length=1)
+    payload: dict[str, Any] = Field(default_factory=dict)
+    deployment_id: str | None = None
+
+
 class CreateDraftFromCapabilityParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     capability_name: str = Field(min_length=1)

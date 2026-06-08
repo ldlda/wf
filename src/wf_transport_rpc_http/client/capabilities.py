@@ -31,3 +31,19 @@ class RpcCapabilityClientMixin:
             "workflow.capabilities.inspect",
             {"qualified_name": qualified_name},
         )
+
+    async def call_capability(
+        self,
+        *,
+        qualified_name: str,
+        payload: dict[str, Any],
+        deployment_id: str | None = None,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.capabilities.call",
+            {
+                "qualified_name": qualified_name,
+                "payload": payload,
+                "deployment_id": deployment_id,
+            },
+        )

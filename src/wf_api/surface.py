@@ -26,6 +26,14 @@ class WorkflowCapabilitySurface(Protocol):
         qualified_name: str,
     ) -> dict[str, Any]: ...
 
+    async def call_capability(
+        self,
+        *,
+        qualified_name: str,
+        payload: dict[str, Any],
+        deployment_id: str | None = None,
+    ) -> dict[str, Any]: ...
+
 
 class WorkflowDraftSurface(Protocol):
     """Draft workspace methods exposed by workflow frontends.

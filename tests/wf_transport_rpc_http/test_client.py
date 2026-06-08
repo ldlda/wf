@@ -71,12 +71,19 @@ async def test_rpc_workflow_client_lists_and_inspects_capabilities(tmp_path) -> 
         )
         listed = await client.list_capabilities(source_id="wf.std", limit=5)
         inspected = await client.inspect_capability(qualified_name="wf.std.constant")
+        called = await client.call_capability(
+            qualified_name="wf.std.constant",
+            payload={"value": "hello rpc client"},
+        )
 
     assert listed["capabilities"]
     assert {capability["source_id"] for capability in listed["capabilities"]} == {
         "wf.std"
     }
     assert inspected["name"] == "wf.std.constant"
+    assert called["qualified_name"] == "wf.std.constant"
+    assert called["outcome"] == "ok"
+    assert called["output"] == {"value": "hello rpc client"}
 
 
 async def test_rpc_workflow_client_lists_and_inspects_sources(tmp_path) -> None:

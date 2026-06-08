@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from wf_cli.context import load_cli_context_from_typer
 from wf_cli.formats import ListOutputFormat, emit_list_payload
-from wf_cli.io import emit_json
+from wf_cli.io import CliInputError, emit_json, parse_json_input
 from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
@@ -68,3 +69,47 @@ def inspect_capability(
         context.handlers.inspect_capability(qualified_name=qualified_name),
     )
     emit_json(payload)
+
+
+@app.command("call")
+def call_capability(
+    ctx: typer.Context,
+    qualified_name: Annotated[str, typer.Argument(help="Workflow capability name.")],
+    input_json: Annotated[
+        str | None,
+        typer.Option("--input", help="JSON object payload for the capability."),
+    ] = None,
+    input_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--input-file",
+            exists=True,
+            dir_okay=False,
+            readable=True,
+            help="Read capability JSON object payload from a file.",
+        ),
+    ] = None,
+    deployment_id: Annotated[
+        str | None,
+        typer.Option(
+            "--deployment",
+            help="Deployment id for saved wrappers with deployment-bound sources.",
+        ),
+    ] = None,
+) -> None:
+    """Call one workflow capability once for authoring/runtime smoke tests."""
+    try:
+        payload = parse_json_input(input_json=input_json, input_file=input_file)
+    except CliInputError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+
+    context = load_cli_context_from_typer(ctx)
+    result = run_cli_operation(
+        context,
+        context.handlers.call_capability(
+            qualified_name=qualified_name,
+            payload=payload,
+            deployment_id=deployment_id,
+        ),
+    )
+    emit_json(result)

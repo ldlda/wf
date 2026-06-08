@@ -38,6 +38,14 @@ async def test_rpc_health_and_capability_methods(tmp_path) -> None:
             "workflow.capabilities.inspect",
             {"qualified_name": "wf.std.constant"},
         )
+        called = await _rpc(
+            client,
+            "workflow.capabilities.call",
+            {
+                "qualified_name": "wf.std.constant",
+                "payload": {"value": "hello direct rpc"},
+            },
+        )
 
     assert health_response.status_code == 200
     assert health_response.json()["status"] == "ok"
@@ -47,6 +55,10 @@ async def test_rpc_health_and_capability_methods(tmp_path) -> None:
         capability["source_id"] for capability in listed["result"]["capabilities"]
     } == {"wf.std"}
     assert inspected["result"]["name"] == "wf.std.constant"
+    assert called["result"]["qualified_name"] == "wf.std.constant"
+    assert called["result"]["kind"] == "node_spec"
+    assert called["result"]["outcome"] == "ok"
+    assert called["result"]["output"] == {"value": "hello direct rpc"}
 
 
 async def test_rpc_unknown_method_returns_json_rpc_error(tmp_path) -> None:
