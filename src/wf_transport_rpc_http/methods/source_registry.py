@@ -7,8 +7,8 @@ import fastapi_jsonrpc as jsonrpc
 from wf_api import WorkflowSourceRegistrySurface
 from wf_server import WorkflowServer
 
-from .errors import WorkflowRpcError, raise_workflow_rpc_error
-from .models import (
+from ..errors import WorkflowRpcError, raise_workflow_rpc_error
+from ..models import (
     AddRegistryEntryParams,
     ApplyRegistryChangesParams,
     InspectRegistryEntryParams,
@@ -16,7 +16,7 @@ from .models import (
     RegistryEntryIdParams,
     UpdateRegistryEntryParams,
 )
-from .params import RpcParams
+from ..params import RpcParams
 
 
 def _require_source_registry_admin(

@@ -8,12 +8,14 @@ from typing import Any, cast
 import httpx
 from typer.testing import CliRunner
 
+import wf_cli.context as cli_context
 from wf_api.models import RawWorkflowPlan
 from wf_cli.app import app
 from wf_cli.context import CliContext, load_cli_context, load_local_cli_context
 from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
+from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
 
 
 class BrokenSourceAdmin:
@@ -271,16 +273,29 @@ def _interrupt_plan() -> RawWorkflowPlan:
     )
 
 
+def _patch_rpc_client_to_server(monkeypatch, server) -> None:
+    """Route CLI-created RPC clients to an in-process ASGI test server."""
+
+    def fake_rpc_client_from_target(
+        *,
+        url: str,
+        timeout_seconds: float,
+    ) -> RpcWorkflowApiClient:
+        return RpcWorkflowApiClient(
+            url=url,
+            timeout_seconds=timeout_seconds,
+            http_client=httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=create_rpc_app(server)),
+                base_url="http://test",
+            ),
+        )
+
+    monkeypatch.setattr(cli_context, "rpc_client_from_target", fake_rpc_client_from_target)
+
+
 def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
-    original_client = httpx.AsyncClient
-    monkeypatch.setattr(
-        "wf_transport_rpc_http.client.httpx.AsyncClient",
-        lambda *args, **kwargs: original_client(
-            transport=httpx.ASGITransport(app=create_rpc_app(server)),
-            base_url="http://test",
-        ),
-    )
+    _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
 
@@ -325,14 +340,7 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
 
 def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
-    original_client = httpx.AsyncClient
-    monkeypatch.setattr(
-        "wf_transport_rpc_http.client.httpx.AsyncClient",
-        lambda *args, **kwargs: original_client(
-            transport=httpx.ASGITransport(app=create_rpc_app(server)),
-            base_url="http://test",
-        ),
-    )
+    _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
     runner = CliRunner()
@@ -352,14 +360,7 @@ def test_wf_remote_source_inspect_formats_expected_rpc_error(
     tmp_path,
 ) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
-    original_client = httpx.AsyncClient
-    monkeypatch.setattr(
-        "wf_transport_rpc_http.client.httpx.AsyncClient",
-        lambda *args, **kwargs: original_client(
-            transport=httpx.ASGITransport(app=create_rpc_app(server)),
-            base_url="http://test",
-        ),
-    )
+    _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
     runner = CliRunner()
@@ -382,10 +383,7 @@ def test_wf_remote_source_list_formats_transport_error(monkeypatch, tmp_path) ->
             request=httpx.Request("POST", "http://test/rpc"),
         )
 
-    monkeypatch.setattr(
-        "wf_transport_rpc_http.client_sources.RpcSourceAdminClientMixin.list_sources",
-        connection_failed,
-    )
+    monkeypatch.setattr(RpcSourceAdminClientMixin, "list_sources", connection_failed)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
     runner = CliRunner()
@@ -463,14 +461,7 @@ def test_wf_admin_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
         capability_id="workflow.demo.v1",
         payload={"ok": True},
     )
-    original_client = httpx.AsyncClient
-    monkeypatch.setattr(
-        "wf_transport_rpc_http.client.httpx.AsyncClient",
-        lambda *args, **kwargs: original_client(
-            transport=httpx.ASGITransport(app=create_rpc_app(server)),
-            base_url="http://test",
-        ),
-    )
+    _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
     runner = CliRunner()
@@ -490,14 +481,7 @@ def test_wf_admin_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
 
 def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
-    original_client = httpx.AsyncClient
-    monkeypatch.setattr(
-        "wf_transport_rpc_http.client.httpx.AsyncClient",
-        lambda *args, **kwargs: original_client(
-            transport=httpx.ASGITransport(app=create_rpc_app(server)),
-            base_url="http://test",
-        ),
-    )
+    _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
     runner = CliRunner()
@@ -603,14 +587,7 @@ def test_wf_remote_run_resume_interrupted_deployment(monkeypatch, tmp_path) -> N
             }
         )
     )
-    original_client = httpx.AsyncClient
-    monkeypatch.setattr(
-        "wf_transport_rpc_http.client.httpx.AsyncClient",
-        lambda *args, **kwargs: original_client(
-            transport=httpx.ASGITransport(app=create_rpc_app(server)),
-            base_url="http://test",
-        ),
-    )
+    _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
     runner = CliRunner()

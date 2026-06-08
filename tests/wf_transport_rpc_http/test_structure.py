@@ -1,19 +1,21 @@
 from __future__ import annotations
 
 import importlib
-from pathlib import Path
+import inspect
+
+from wf_transport_rpc_http.client import RpcWorkflowApiClient
 
 
 def test_rpc_transport_has_domain_method_modules() -> None:
     for module_name in (
-        "wf_transport_rpc_http.methods_admin",
-        "wf_transport_rpc_http.methods_capabilities",
-        "wf_transport_rpc_http.methods_drafts",
-        "wf_transport_rpc_http.methods_artifacts",
-        "wf_transport_rpc_http.methods_deployments",
-        "wf_transport_rpc_http.methods_runs",
-        "wf_transport_rpc_http.methods_sources",
-        "wf_transport_rpc_http.methods_source_registry",
+        "wf_transport_rpc_http.methods.admin",
+        "wf_transport_rpc_http.methods.capabilities",
+        "wf_transport_rpc_http.methods.drafts",
+        "wf_transport_rpc_http.methods.artifacts",
+        "wf_transport_rpc_http.methods.deployments",
+        "wf_transport_rpc_http.methods.runs",
+        "wf_transport_rpc_http.methods.sources",
+        "wf_transport_rpc_http.methods.source_registry",
     ):
         module = importlib.import_module(module_name)
 
@@ -21,7 +23,6 @@ def test_rpc_transport_has_domain_method_modules() -> None:
 
 
 def test_rpc_transport_client_stays_thin() -> None:
-    client_path = Path("src/wf_transport_rpc_http/client.py")
-    line_count = len(client_path.read_text(encoding="utf-8").splitlines())
+    line_count = len(inspect.getsource(RpcWorkflowApiClient).splitlines())
 
-    assert line_count < 140
+    assert line_count < 40

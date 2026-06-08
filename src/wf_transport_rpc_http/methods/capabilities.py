@@ -6,9 +6,9 @@ import fastapi_jsonrpc as jsonrpc
 
 from wf_server import WorkflowServer
 
-from .errors import WorkflowRpcError, raise_workflow_rpc_error
-from .models import InspectCapabilityParams, ListCapabilitiesParams
-from .params import RpcParams
+from ..errors import WorkflowRpcError, raise_workflow_rpc_error
+from ..models import InspectCapabilityParams, ListCapabilitiesParams
+from ..params import RpcParams
 
 
 def register_methods(

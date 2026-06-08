@@ -8,7 +8,7 @@ import httpx
 from wf_api import WorkflowSourceRegistryApi
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
-from wf_transport_rpc_http.client_source_registry import RpcSourceRegistryClientMixin
+from wf_transport_rpc_http.client.source_registry import RpcSourceRegistryClientMixin
 
 
 @dataclass(frozen=True, slots=True)

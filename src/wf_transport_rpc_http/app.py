@@ -7,16 +7,18 @@ import fastapi_jsonrpc as jsonrpc
 from wf_server import WorkflowServer
 
 from .errors import WorkflowRpcError
-from .methods_admin import register_methods as register_admin_methods
-from .methods_artifacts import register_methods as register_artifact_methods
-from .methods_capabilities import register_methods as register_capability_methods
-from .methods_deployments import register_methods as register_deployment_methods
-from .methods_drafts import register_methods as register_draft_methods
-from .methods_runs import register_methods as register_run_methods
-from .methods_source_registry import (
+from .methods.admin import register_methods as register_admin_methods
+from .methods.artifacts import register_methods as register_artifact_methods
+from .methods.capabilities import (
+    register_methods as register_capability_methods,
+)
+from .methods.deployments import register_methods as register_deployment_methods
+from .methods.drafts import register_methods as register_draft_methods
+from .methods.runs import register_methods as register_run_methods
+from .methods.source_registry import (
     register_methods as register_source_registry_methods,
 )
-from .methods_sources import register_methods as register_source_methods
+from .methods.sources import register_methods as register_source_methods
 
 
 def create_rpc_app(server: WorkflowServer, *, rpc_path: str = "/rpc") -> jsonrpc.API:

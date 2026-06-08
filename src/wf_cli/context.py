@@ -113,7 +113,7 @@ def load_cli_context(
 
     if rpc_url is not None:
         _validate_rpc_url(rpc_url)
-        client = RpcWorkflowApiClient(
+        client = rpc_client_from_target(
             url=rpc_url,
             timeout_seconds=_rpc_timeout_from_optional_config(
                 resolved_config_path,
@@ -161,7 +161,7 @@ def load_cli_context(
             verbose=verbose,
         )
     if isinstance(target, RpcHttpTargetConfig):
-        client = RpcWorkflowApiClient(
+        client = rpc_client_from_target(
             url=str(target.url),
             timeout_seconds=(
                 rpc_timeout_seconds
@@ -179,6 +179,21 @@ def load_cli_context(
             verbose=verbose,
         )
     raise ValueError(f"unsupported workflow target {target!r}")
+
+
+def rpc_client_from_target(
+    *,
+    url: str,
+    timeout_seconds: float,
+) -> RpcWorkflowApiClient:
+    """Build the remote workflow surface for a resolved RPC target.
+
+    CLI tests patch this project-owned seam instead of monkeypatching `httpx`
+    internals. The production path still keeps HTTP construction inside the
+    transport package.
+    """
+
+    return RpcWorkflowApiClient(url=url, timeout_seconds=timeout_seconds)
 
 
 def load_local_cli_context(

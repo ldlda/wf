@@ -2,17 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import httpx  # noqa: F401  # Backcompat for tests patching client.httpx.AsyncClient.
-
-from .client_admin import RpcAdminClientMixin
-from .client_artifacts import RpcArtifactClientMixin
-from .client_base import RpcClientTransport
-from .client_capabilities import RpcCapabilityClientMixin
-from .client_deployments import RpcDeploymentClientMixin
-from .client_drafts import RpcDraftClientMixin
-from .client_runs import RpcRunClientMixin
-from .client_source_registry import RpcSourceRegistryClientMixin
-from .client_sources import RpcSourceAdminClientMixin
+from .admin import RpcAdminClientMixin
+from .artifacts import RpcArtifactClientMixin
+from .base import RpcClientTransport
+from .capabilities import RpcCapabilityClientMixin
+from .deployments import RpcDeploymentClientMixin
+from .drafts import RpcDraftClientMixin
+from .runs import RpcRunClientMixin
+from .source_registry import RpcSourceRegistryClientMixin
+from .sources import RpcSourceAdminClientMixin
 
 
 @dataclass(slots=True)
