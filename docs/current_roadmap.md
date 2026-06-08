@@ -28,9 +28,19 @@ The platform is usable enough to test as a product. Next work should focus on
 clear operator feedback before adding more architecture.
 
 - Completed: `wf status` is a compact read-only target/server status command.
-- Run a real CLI smoke script against `wf-rpc-server --config wf.config.json`.
-- Capture UX gaps as small follow-up items: confusing errors, missing examples,
-  poor command help, and target/config ambiguity.
+- Completed: a real CLI smoke pass against `wf-rpc-server --config wf.config.json`
+  is captured in
+  [`2026-06-09 product smoke RPC CLI`](superpowers/research/2026-06-09-product-smoke-rpc-cli.md).
+- Completed: `wf artifact inspect` now accepts `--version` as an alias for the
+  positional version argument.
+- Next product cleanup: add safe `wf draft delete <workspace_id> --confirm` and
+  `wf artifact delete <artifact_id> <version> --confirm` commands so smoke runs
+  and exploratory authoring do not leave durable junk.
+- Next docs/ergonomics cleanup: explain raw MCP content-block envelopes returned
+  by `cap call`, and only add a text-unwrapping CLI option if the safe behavior
+  is explicitly defined.
+- Future smoke automation: turn the manual RPC CLI smoke sequence into a small
+  runbook or script once the cleanup commands exist.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening
