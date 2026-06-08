@@ -1,6 +1,8 @@
 # Project Map
 
-This repository has three main packages plus examples and tests.
+This repository has workflow kernel, API/server, transport, source, CLI, examples,
+and tests packages. The older MCP package still exists, but new durable client
+paths should go through `wf_server` plus transport/source packages.
 
 ## Packages
 
@@ -8,7 +10,12 @@ This repository has three main packages plus examples and tests.
 | --- | --- | --- |
 | `wf_core` | Deterministic workflow kernel: models, validation, runtime, run state, traces, interrupts, foreach, and path/state operations. | Runtime users, `wf_authoring`, workflow adapters. |
 | `wf_authoring` | Ergonomic workflow construction: `@node`, `NodeSpec`, builder DSL, conditions, path helpers, reusable ops, subgraph nodes. | Humans, tests, future LLM workflow builders. |
-| `wf_mcp` | MCP-specific integration: SDK adapters, upstream MCP runtime, proxy/debug compatibility, legacy broker entrypoints, and wrappers for discovered MCP tools. | MCP source/provider code, MCP transport work, and compatibility callers. Durable workflow server paths should prefer `wf_server` plus transport packages. |
+| `wf_api` | Workflow application surface over core/artifacts/platform: capabilities, drafts, artifacts, deployments, runs, and source/admin surfaces. | `wf_cli`, `wf_server`, JSON-RPC clients, future transports. |
+| `wf_server` | Durable server composition boundary around `WorkflowApi` plus optional admin/source-registry surfaces. | Transport packages and server startup code. |
+| `wf_transport_rpc_http` | JSON-RPC-over-HTTP app/client and `wf-rpc-server` CLI. | Remote `wf` clients and local server smoke tests. |
+| `wf_sources_mcp` | MCP-as-upstream-source implementation: ids, registry DTOs, auth/catalog stores, discovery, SDK client/facade, runtime pool, wrappers. | `wf_server`, broker glue, MCP source tests. |
+| `wf_mcp` | MCP frontend/compatibility package: legacy `wf-mcp` entrypoints, broker glue, proxy/admin tools, and shims while extraction continues. | Compatibility callers and MCP transport work. |
+| `wf_cli` | Command-line frontend over local or remote workflow APIs. | Humans, scripts, agent skills. |
 
 ## Important Entry Points
 
@@ -22,7 +29,13 @@ This repository has three main packages plus examples and tests.
 - `wf_authoring.node`: typed Python function to `NodeSpec`.
 - [`docs/wf_authoring_control_flow.md`](wf_authoring_control_flow.md): when to
   use `branch`, `handle`, `match`, `when`, and `choose`.
-- `wf_mcp`: MCP-specific facade and compatibility package.
+- `wf_api.WorkflowApi`: process-local workflow application facade.
+- `wf_server.WorkflowServer`: durable workflow server composition object.
+- `wf_transport_rpc_http.RpcWorkflowApiClient`: JSON-RPC client implementing
+  the workflow/admin surfaces over HTTP.
+- `wf_sources_mcp.McpRuntimePool`: persistent MCP source runtime for stateful
+  upstream tools/resources/prompts.
+- `wf_mcp`: MCP-specific frontend and compatibility package.
 - `wf-mcp`: legacy/special-purpose MCP script from `pyproject.toml`.
 - `wf-rpc-server`: preferred durable workflow server script for CLI/API clients.
 - `wf_mcp.broker.WfMcpService.get_catalog()`: backend MCP catalog snapshots.
@@ -70,8 +83,9 @@ need local environment configuration.
 - Add new graph/model syntax in `wf_core.models`, then validate it in
   `wf_core.validation`.
 - Add author convenience helpers in `wf_authoring`, not `wf_core`.
-- Add upstream MCP source/provider behavior in `wf_mcp` concern packages until a
-  dedicated `wf_sources_mcp` split exists.
+- Add upstream MCP source/provider behavior in `wf_sources_mcp`.
+- Keep `wf_mcp` changes limited to MCP frontend/broker/proxy compatibility
+  unless the work is explicitly retiring old callers.
 - Add durable workflow server behavior in `wf_server` or transport packages, not
   the legacy `wf-mcp` entrypoint.
 - Add broker-local workflow utilities as `WfMcpService` spec sources, not as

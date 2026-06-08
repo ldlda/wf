@@ -12,6 +12,8 @@ implementation plans are kept for context, not as active instructions.
   core type-shape cleanup.
 - [`wf_core_architecture.md`](wf_core_architecture.md): kernel package
   boundaries, runtime flow, validation flow, and known runtime gaps.
+- [`wf_api_architecture.md`](wf_api_architecture.md): workflow application API,
+  server/transport boundaries, and source package split.
 - [`wf_mcp_architecture.md`](wf_mcp_architecture.md): MCP package boundaries,
   dependency rules, reload/proxy behavior, and extraction seams.
 
