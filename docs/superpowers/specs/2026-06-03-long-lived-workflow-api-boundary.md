@@ -161,7 +161,10 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
     (`list_tools`, resources, prompts, tools, raw methods, notifications, and
     local metadata). Broker upstream operations prefer the persistent runtime
     when configured and fall back to one-shot adapters.
-25. Upstream transport/discovery/session services.
+25. Complete: deterministic JSON-RPC integration coverage proves MCP-backed
+    workflow runs reuse one persistent runtime session for repeated operations
+    against the same source.
+26. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

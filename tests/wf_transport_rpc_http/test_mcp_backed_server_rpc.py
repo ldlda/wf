@@ -1,19 +1,42 @@
 from __future__ import annotations
 
-import httpx
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, cast
 
+import httpx
+from mcp.client.session import ClientSession
+from mcp.types import (
+    CallToolResult,
+    ListPromptsResult,
+    ListResourcesResult,
+    ListToolsResult,
+    TextContent,
+    Tool,
+)
+
+from wf_api import file_workflow_stores
 from wf_api.models import RawWorkflowPlan
 from wf_config import WorkflowConfigFile
 from wf_mcp.broker.server import (
     build_workflow_server_from_config,
     build_workflow_server_from_workflow_config,
+    workflow_server_from_service,
 )
+from wf_mcp.broker.service import WfMcpService
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.source_registry import (
     FileSourceRegistryStore,
     McpSourceRegistryEntry,
     SourceRegistryFile,
 )
+from wf_server.context import WorkflowServer
+from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.runtime import McpRuntimePool
+from wf_sources_mcp.runtime.factory import PersistentSessionFactory
+from wf_sources_mcp.runtime.session import PersistentMcpSession
+from wf_sources_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
 
 
@@ -73,6 +96,119 @@ async def _rpc(client: httpx.AsyncClient, method: str, params: dict) -> dict:
     )
     assert response.status_code == 200
     return response.json()
+
+
+# ---------------------------------------------------------------------------
+# Recording runtime fakes for session-reuse proof
+# ---------------------------------------------------------------------------
+
+
+@dataclass(slots=True)
+class _CountingMcpClient:
+    count: int = 0
+    tool_calls: list[tuple[str, dict[str, Any]]] = field(default_factory=list)
+
+    async def list_tools(self) -> ListToolsResult:
+        return ListToolsResult(
+            tools=[
+                Tool(
+                    name="counter",
+                    title="Counter",
+                    description="Increment a session-local counter.",
+                    inputSchema={"type": "object", "properties": {}},
+                    outputSchema={
+                        "type": "object",
+                        "properties": {"count": {"type": "integer"}},
+                    },
+                )
+            ]
+        )
+
+    async def call_tool(
+        self,
+        tool_name: str,
+        payload: dict[str, Any],
+    ) -> CallToolResult:
+        self.tool_calls.append((tool_name, payload))
+        if tool_name != "counter":
+            raise KeyError(tool_name)
+        self.count += 1
+        return CallToolResult(
+            content=[TextContent(type="text", text=str(self.count))],
+            structuredContent={"count": self.count},
+        )
+
+    async def list_resources(self) -> ListResourcesResult:
+        return ListResourcesResult(resources=[])
+
+    async def list_prompts(self) -> ListPromptsResult:
+        return ListPromptsResult(prompts=[])
+
+
+class _RecordingSessionFactory(PersistentSessionFactory):
+    def __init__(self) -> None:
+        self.clients: list[_CountingMcpClient] = []
+        self.created_connections: list[McpSourceConnection] = []
+
+    async def create(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+    ) -> PersistentMcpSession:
+        self.created_connections.append(connection)
+        client = _CountingMcpClient()
+        self.clients.append(client)
+
+        return PersistentMcpSession(
+            connection=connection,
+            auth=auth,
+            client=cast(ClientSession, client),
+        )
+
+
+def _runtime_reuse_server(
+    tmp_path: Path,
+) -> tuple[WorkflowServer, WfMcpService, _RecordingSessionFactory]:
+    config = BrokerConfig(
+        store_root=tmp_path / "store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.default",
+                server="fixture",
+                account="default",
+                metadata={
+                    "transport": "stdio",
+                    "command": "fake-mcp-server",
+                },
+            )
+        ],
+    )
+    assert config.store_roots is not None
+    store_roots = config.store_roots
+    workflow_stores = file_workflow_stores(store_roots.workflow_root)
+    auth_store = FileAuthStore(store_roots.auth_root)
+    catalog_store = FileCatalogStore(store_roots.catalog_cache_root)
+    factory = _RecordingSessionFactory()
+    runtime_pool = McpRuntimePool(factory.create)
+
+    service = WfMcpService(
+        store=FileStore(store_roots.auth_root),
+        auth_store=auth_store,
+        catalog_store=catalog_store,
+        artifact_store=workflow_stores.artifact_store,
+        draft_workspace_store=workflow_stores.draft_workspace_store,
+        run_store=workflow_stores.run_store,
+        tool_executor=runtime_pool,
+        stateful_runtime=runtime_pool,
+    )
+    service.register_connection(config.connections[0])
+    source_registry_store = FileSourceRegistryStore(store_roots.source_registry_root)
+    server = workflow_server_from_service(
+        service,
+        config=config,
+        source_registry_store=source_registry_store,
+    )
+    return server, service, factory
 
 
 async def test_mcp_backed_rpc_lists_and_mutates_source_registry(tmp_path) -> None:
@@ -292,3 +428,171 @@ async def test_mcp_backed_rpc_resumes_interrupted_run_after_server_rebuild(
     assert resumed["run_id"] == started["run_id"]
     assert resumed["status"] == "completed"
     assert resumed["outcome"] == "submitted"
+
+
+async def test_mcp_backed_rpc_workflow_reuses_runtime_session_across_runs(
+    tmp_path,
+) -> None:
+    server, service, factory = _runtime_reuse_server(tmp_path)
+    await service.refresh_connection_catalog("fixture.default")
+
+    assert len(factory.clients) == 1
+    assert factory.created_connections[0].id == "fixture.default"
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_rpc_app(server)),
+        base_url="http://test",
+    ) as http_client:
+        client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
+
+        created = await client.create_draft_workspace_from_capability(
+            workspace_id="counter_ws",
+            capability_name="fixture.default.counter",
+            name="counter_workflow",
+            title="Counter Workflow",
+        )
+        assert created["workspace_id"] == "counter_ws"
+
+        artifact = await client.create_artifact_from_workspace(
+            workspace_id="counter_ws",
+            artifact_id="counter_workflow",
+            version=1,
+            title="Counter Workflow",
+            outcomes=["ok", "error"],
+            kind="workflow",
+        )
+        assert artifact.get("saved", True) is not False
+
+        await client.save_deployment(
+            {
+                "id": "counter_workflow.default",
+                "artifact_id": "counter_workflow",
+                "artifact_version": 1,
+                "bindings": [
+                    {
+                        "logical_source": "fixture.default",
+                        "concrete_source": "fixture.default",
+                    },
+                    {"logical_source": "wf.std", "concrete_source": "wf.std"},
+                ],
+            }
+        )
+
+        first = await client.run_deployment(
+            deployment_id="counter_workflow.default",
+            workflow_input={},
+        )
+        second = await client.run_deployment(
+            deployment_id="counter_workflow.default",
+            workflow_input={},
+        )
+
+    assert first["status"] == "completed"
+    assert second["status"] == "completed"
+    assert first["output"]["count"] == 1
+    assert second["output"]["count"] == 2
+    assert len(factory.clients) == 1
+    assert len(factory.created_connections) == 1
+    assert factory.clients[0].tool_calls == [
+        ("counter", {}),
+        ("counter", {}),
+    ]
+
+
+async def test_mcp_backed_rpc_workflow_reuses_runtime_session_direct_setup(
+    tmp_path,
+) -> None:
+    server, service, factory = _runtime_reuse_server(tmp_path)
+    await service.refresh_connection_catalog("fixture.default")
+
+    assert len(factory.clients) == 1
+
+    await server.api.create_artifact_from_plan(
+        artifact_id="counter_workflow",
+        version=1,
+        title="Counter Workflow",
+        plan=RawWorkflowPlan.model_validate(
+            {
+                "name": "counter_workflow",
+                "input_schema": {"type": "object", "properties": {}},
+                "state_schema": {
+                    "fields": {
+                        "count": {"type": "integer", "reducer": "wf.std.replace"}
+                    }
+                },
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"count": {"type": "integer"}},
+                },
+                "outcomes": ["ok", "error"],
+                "output": [
+                    {
+                        "path": {"root": "state", "parts": ["count"]},
+                        "target": {"root": "local", "parts": ["count"]},
+                    }
+                ],
+                "start": "run_counter",
+                "nodes": [
+                    {
+                        "id": "run_counter",
+                        "type": "node",
+                        "node": "fixture.default.counter",
+                        "input": [],
+                        "output": [
+                            {
+                                "source": {"root": "local", "parts": ["count"]},
+                                "target": {"root": "state", "parts": ["count"]},
+                            }
+                        ],
+                    },
+                    {"id": "end_ok", "type": "end", "outcome": "ok"},
+                    {"id": "end_error", "type": "end", "outcome": "error"},
+                ],
+                "edges": [
+                    {"from": "run_counter", "outcome": "ok", "to": "end_ok"},
+                    {"from": "run_counter", "outcome": "error", "to": "end_error"},
+                ],
+            }
+        ),
+        outcomes=["ok", "error"],
+    )
+    await server.api.save_deployment(
+        {
+            "id": "counter_workflow.default",
+            "artifact_id": "counter_workflow",
+            "artifact_version": 1,
+            "bindings": [
+                {
+                    "logical_source": "fixture.default",
+                    "concrete_source": "fixture.default",
+                },
+                {"logical_source": "wf.std", "concrete_source": "wf.std"},
+            ],
+        }
+    )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_rpc_app(server)),
+        base_url="http://test",
+    ) as http_client:
+        client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
+
+        first = await client.run_deployment(
+            deployment_id="counter_workflow.default",
+            workflow_input={},
+        )
+        second = await client.run_deployment(
+            deployment_id="counter_workflow.default",
+            workflow_input={},
+        )
+
+    assert first["status"] == "completed"
+    assert second["status"] == "completed"
+    assert first["output"]["count"] == 1
+    assert second["output"]["count"] == 2
+    assert len(factory.clients) == 1
+    assert len(factory.created_connections) == 1
+    assert factory.clients[0].tool_calls == [
+        ("counter", {}),
+        ("counter", {}),
+    ]

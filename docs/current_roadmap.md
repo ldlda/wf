@@ -267,6 +267,9 @@ implementation state.
     - Completed: MCP source catalog aggregation helpers (`CombinedCatalog` and
       `snapshot_from_specs`) now live in `wf_sources_mcp.catalog`; the old
       `wf_mcp.broker.catalog` path is a compatibility shim.
+    - Completed: JSON-RPC MCP-backed workflow runs now have deterministic
+      session-reuse coverage: repeated runs against one source use one
+      `McpRuntimePool` session and preserve session-local state.
   - Auth/source secrets boundary: keep registry desired state separate from
     upstream credentials, and surface missing auth as validation diagnostics.
     The contract is now specified in
