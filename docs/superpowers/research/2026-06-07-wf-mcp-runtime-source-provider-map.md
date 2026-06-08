@@ -2,6 +2,12 @@
 
 Date: 2026-06-07
 
+> **Historical note (2026-06-08):** This research snapshot predates the
+> `wf_sources_mcp` extraction slices completed on 2026-06-08. Several blockers
+> called out below have since moved: source ID helpers live in
+> `wf_sources_mcp.ids`, MCP runtime/SDK/client code lives in `wf_sources_mcp`,
+> and broker DTO construction helpers live in `wf_mcp.source_registry`.
+
 ## Executive Summary
 
 `wf_mcp` is a monolith containing four distinct responsibilities that should become separate packages:

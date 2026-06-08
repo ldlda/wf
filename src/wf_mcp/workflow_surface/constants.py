@@ -1,7 +1,7 @@
 """Compatibility shim for workflow API constants.
 
 New code should import these literals from `wf_api.constants`. This module stays
-so older MCP workflow-surface imports keep working during extraction.
+so older MCP workflow-surface imports keep working until callers migrate.
 """
 
 from wf_api.constants import (

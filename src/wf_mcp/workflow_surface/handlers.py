@@ -15,7 +15,7 @@ class WorkflowSurfaceHandlers(WorkflowApi):
 
     New code should construct `WorkflowApi(context_from_service(service))`
     directly. This shim keeps tests and legacy broker artifact tools working
-    while the MCP surface is migrated.
+    for legacy callers.
     """
 
     def __init__(self, service: WfMcpService) -> None:

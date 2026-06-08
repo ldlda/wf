@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from wf_authoring import NodeSpec
+from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredTool
 from wf_sources_mcp.connections import mcp_source_connection_from_connection_config
 from wf_sources_mcp.discovery import (
@@ -16,7 +17,6 @@ from wf_sources_mcp.discovery import (
 from wf_sources_mcp.sdk import ToolExecutor
 from wf_sources_mcp.tool_events import ToolWrapperEvent
 
-from ..auth import AuthRecord
 from ..models import ConnectionConfig
 from .events import McpEvent, make_event
 
