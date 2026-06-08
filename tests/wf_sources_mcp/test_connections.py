@@ -48,7 +48,9 @@ def test_stdio_source_transport_is_typed() -> None:
 
 
 def test_http_source_transport_is_typed() -> None:
-    transport = HttpSourceTransport(url="http://127.0.0.1:8000/mcp")
+    transport = HttpSourceTransport.model_validate(
+        {"url": "http://127.0.0.1:8000/mcp"}
+    )
 
     assert transport.kind == "http"
     assert str(transport.url) == "http://127.0.0.1:8000/mcp"
@@ -154,6 +156,23 @@ def test_mcp_source_connection_from_legacy_connection_config_stdio() -> None:
     assert connection.transport.command == "uvx"
     assert connection.transport.args == ("github-mcp",)
     assert connection.transport.cwd == "C:/repo"
+
+
+def test_mcp_source_connection_allows_stable_id_distinct_from_account() -> None:
+    """Config source ids are stable keys; provider/account describe upstream identity."""
+
+    legacy = _LegacyConnectionLike(
+        id="everything.default",
+        server="everything",
+        account="demo",
+        metadata={"transport": "stdio", "command": "npx"},
+    )
+
+    connection = mcp_source_connection_from_connection_config(legacy)
+
+    assert connection.id == "everything.default"
+    assert connection.provider == "everything"
+    assert connection.account == "demo"
 
 
 def test_mcp_source_connection_from_legacy_connection_config_http() -> None:

@@ -46,15 +46,11 @@ class McpSourceConnection:
     metadata: dict[str, object] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        provider, account = parse_connection_id(self.id)
+        parse_connection_id(self.id)
         if not self.provider:
             raise ValueError("provider must not be empty")
         if not self.account:
             raise ValueError("account must not be empty")
-        if provider != self.provider or account != self.account:
-            raise ValueError(
-                "MCP source connection id must match provider/account fields"
-            )
 
     @property
     def server(self) -> str:
