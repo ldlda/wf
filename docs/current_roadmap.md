@@ -342,6 +342,9 @@ implementation state.
     - Completed: MCP JSON-schema-to-Pydantic model helper now lives in
       `wf_sources_mcp.schema_models`. `wf_mcp.workflow.wrappers` still owns
       tool wrapper event emission, but no longer owns the shared schema compiler.
+    - Completed: MCP tool wrapper event emission now uses neutral
+      `wf_sources_mcp.tool_events` DTOs. Broker discovery projects those events
+      into `McpEvent`, preparing `wrap_discovered_tool` for a package move.
     The `wf-mcp` script is now a legacy/special-purpose MCP entrypoint, not the
     preferred durable workflow server. New product paths should target
     `wf-rpc-server` plus neutral `wf_config`/`wf_server` composition, then keep

@@ -1,17 +1,19 @@
 from __future__ import annotations
 
-from collections.abc import Callable
-
 from pydantic import BaseModel
 
 from wf_authoring import NodeReturn, NodeSpec
 from wf_core import RuntimeContext
-from wf_mcp.broker.events import McpEvent, make_event
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredTool
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.schema_models import model_from_schema
 from wf_sources_mcp.sdk import ToolExecutor
+from wf_sources_mcp.tool_events import (
+    ToolWrapperEventSink,
+    tool_call_completed_event,
+    tool_call_started_event,
+)
 
 _model_from_schema = model_from_schema
 
@@ -22,7 +24,7 @@ def wrap_discovered_tool(
     auth: AuthRecord | None,
     executor: ToolExecutor,
     tool: DiscoveredTool,
-    emit_event: Callable[[McpEvent], None] | None = None,
+    emit_event: ToolWrapperEventSink | None = None,
 ) -> NodeSpec[BaseModel, BaseModel]:
     input_model = model_from_schema(
         f"{connection.id}_{tool.name}_Input",
@@ -39,11 +41,10 @@ def wrap_discovered_tool(
     ) -> NodeReturn[BaseModel]:
         if emit_event is not None:
             emit_event(
-                make_event(
-                    "tool_call_started",
+                tool_call_started_event(
                     connection_id=connection.id,
                     capability_id=f"{connection.id}.{tool.name}",
-                    payload={"input": payload.model_dump(exclude_unset=True)},
+                    input_payload=payload.model_dump(exclude_unset=True),
                 )
             )
         result = await executor.call_tool(
@@ -56,14 +57,11 @@ def wrap_discovered_tool(
         )
         if emit_event is not None:
             emit_event(
-                make_event(
-                    "tool_call_completed",
+                tool_call_completed_event(
                     connection_id=connection.id,
                     capability_id=f"{connection.id}.{tool.name}",
-                    payload={
-                        "outcome": result.outcome,
-                        "meta": result.meta,
-                    },
+                    outcome=result.outcome,
+                    meta=result.meta,
                 )
             )
         return NodeReturn(

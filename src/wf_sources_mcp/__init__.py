@@ -65,6 +65,10 @@ __all__ = [
     "model_from_schema",
     "neutral_auth_from_mcp",
     "registry_entry_to_connection_config",
+    "tool_call_completed_event",
+    "tool_call_started_event",
+    "ToolWrapperEvent",
+    "ToolWrapperEventSink",
     "workflow_mcp_source_to_connection_config",
 ]
 
@@ -109,4 +113,13 @@ def __getattr__(name: str) -> object:
         from . import schema_models
 
         return schema_models.model_from_schema
+    if name in {
+        "ToolWrapperEvent",
+        "ToolWrapperEventSink",
+        "tool_call_completed_event",
+        "tool_call_started_event",
+    }:
+        from . import tool_events
+
+        return getattr(tool_events, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

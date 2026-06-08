@@ -137,7 +137,11 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
     `wf_sources_mcp.schema_models`. This removes the broker catalog hydration
     dependency on private `wf_mcp.workflow.wrappers` helpers; eventful tool
     wrapping remains in `wf_mcp` for the next seam.
-18. Upstream transport/discovery/session services.
+18. Complete: MCP tool wrapper event emission now uses neutral
+    `wf_sources_mcp.tool_events` DTOs; `wf_mcp.broker.discovery` adapts them to
+    broker-local `McpEvent`. `wrap_discovered_tool` remains in `wf_mcp` until
+    the next move slice.
+19. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

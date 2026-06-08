@@ -132,3 +132,50 @@ def test_discovered_tool_wrapper_preserves_raw_mcp_content_output() -> None:
     assert "text" not in result["output"]
     assert result["output"]["content"][0]["type"] == "text"
     assert result["output"]["content"][0]["text"] == "Echo: hello"
+
+
+def test_discovered_tool_wrapper_emits_neutral_tool_events() -> None:
+    events = []
+    spec = wrap_discovered_tool(
+        connection=McpSourceConnection(
+            id="everything.default",
+            provider="everything",
+            account="default",
+            transport=StdioSourceTransport(command="placeholder"),
+        ),
+        auth=None,
+        executor=cast(ToolExecutor, TextContentAdapter()),
+        tool=DiscoveredTool(
+            name="echo",
+            title="Echo",
+            description=None,
+            input_schema={
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+            },
+            output_schema={
+                "type": "object",
+                "properties": {"content": {"type": "array"}},
+            },
+        ),
+        emit_event=events.append,
+    )
+    handler = build_async_registry(spec)[spec.name]
+
+    async def run_call() -> None:
+        await handler(
+            {"message": "hello"},
+            RuntimeContext(current_node_id="echo"),
+        )
+
+    asyncio.run(run_call())
+
+    assert [event.kind for event in events] == [
+        "tool_call_started",
+        "tool_call_completed",
+    ]
+    assert events[0].connection_id == "everything.default"
+    assert events[0].capability_id == "everything.default.echo"
+    assert events[0].payload == {"input": {"message": "hello"}}
+    assert events[1].payload["outcome"] == "ok"

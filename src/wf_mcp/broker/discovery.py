@@ -11,11 +11,21 @@ from wf_sources_mcp.discovery import (
     discover_connection_capabilities,
 )
 from wf_sources_mcp.sdk import ToolExecutor
+from wf_sources_mcp.tool_events import ToolWrapperEvent
 
 from ..auth import AuthRecord
 from ..models import ConnectionConfig
 from ..workflow import wrap_discovered_tool
-from .events import McpEvent
+from .events import McpEvent, make_event
+
+
+def _project_tool_wrapper_event(event: ToolWrapperEvent) -> McpEvent:
+    return make_event(
+        event.kind,
+        connection_id=event.connection_id,
+        capability_id=event.capability_id,
+        payload=event.payload,
+    )
 
 
 def specs_from_discovered_tools(
@@ -30,13 +40,18 @@ def specs_from_discovered_tools(
     # internals use McpSourceConnection so the session code can move to
     # wf_sources_mcp in a later slice.
     source_connection = mcp_source_connection_from_connection_config(connection)
+
+    def emit_tool_event(event: ToolWrapperEvent) -> None:
+        if emit_event is not None:
+            emit_event(_project_tool_wrapper_event(event))
+
     return [
         wrap_discovered_tool(
             connection=source_connection,
             auth=auth,
             executor=executor,
             tool=tool,
-            emit_event=emit_event,
+            emit_event=emit_tool_event if emit_event is not None else None,
         )
         for tool in tools
     ]
