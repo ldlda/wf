@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from types import NoneType, UnionType
-from typing import Any, Union, cast, get_args, get_origin
 
-from pydantic import BaseModel, ConfigDict, Field, create_model
+from pydantic import BaseModel
 
 from wf_authoring import NodeReturn, NodeSpec
 from wf_core import RuntimeContext
@@ -12,107 +10,10 @@ from wf_mcp.broker.events import McpEvent, make_event
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.catalog import DiscoveredTool
 from wf_sources_mcp.connections import McpSourceConnection
+from wf_sources_mcp.schema_models import model_from_schema
 from wf_sources_mcp.sdk import ToolExecutor
 
-_JSON_TYPE_MAP: dict[str, object] = {
-    "string": str,
-    "integer": int,
-    "number": float,
-    "boolean": bool,
-    "object": dict[str, Any],
-}
-
-
-def _python_type_from_schema(schema: object) -> object:
-    """Map the supported JSON Schema subset into a Pydantic annotation.
-
-    Input is expected to be an MCP tool property schema. This helper is not a
-    full JSON Schema compiler; unsupported shapes intentionally become `Any`
-    so discovery remains tolerant while the original schema contract is still
-    preserved on the generated NodeSpec.
-    """
-    if not isinstance(schema, dict):
-        return Any
-
-    if "enum" in schema:
-        return Any
-
-    schema_type = schema.get("type")
-    if isinstance(schema_type, list):
-        non_null_types = [item for item in schema_type if item != "null"]
-        if len(non_null_types) == 1:
-            return _optional_type(
-                _python_type_from_schema({**schema, "type": non_null_types[0]})
-            )
-        return Any
-
-    if schema_type == "array":
-        item_type = _python_type_from_schema(schema.get("items", {}))
-        return list[item_type] if isinstance(item_type, type) else list[Any]
-
-    if not isinstance(schema_type, str):
-        return Any
-    return _JSON_TYPE_MAP.get(schema_type, Any)
-
-
-def _optional_type(annotation: object) -> object:
-    """Return an optional version of a supported runtime annotation."""
-    if annotation is Any:
-        return Any
-    origin = get_origin(annotation)
-    if origin in {Union, UnionType} and NoneType in get_args(annotation):
-        return annotation
-    return annotation | None if isinstance(annotation, type) else Any
-
-
-def _field_default(
-    field_name: str,
-    property_schema: object,
-    required: set[str],
-) -> object:
-    """Return the Pydantic default for one MCP tool input property.
-
-    Required fields use `...`; optional fields default to `None`; explicit JSON
-    Schema defaults win. Runtime calls later use `exclude_unset=True`, so absent
-    optional fields are omitted instead of being sent upstream as explicit null.
-    """
-    if isinstance(property_schema, dict) and "default" in property_schema:
-        return property_schema["default"]
-    return ... if field_name in required else None
-
-
-def _model_from_schema(name: str, schema: dict[str, Any]) -> type[BaseModel]:
-    """Create a loose Pydantic adapter model for an MCP JSON Schema object.
-
-    Input should be an object-like JSON Schema with `properties` and optional
-    `required`. The returned model is only the Python-call boundary for a
-    generated NodeSpec; the original JSON Schema remains the public contract via
-    `input_schema_contract` / `output_schema_contract`.
-    """
-    properties = cast(dict[str, Any], schema.get("properties", {}))
-    required = set(cast(list[str], schema.get("required", [])))
-    field_defs: dict[str, tuple[object, object]] = {}
-
-    for field_name, property_schema in properties.items():
-        annotation = _python_type_from_schema(property_schema)
-        default = _field_default(field_name, property_schema, required)
-        description = (
-            property_schema.get("description")
-            if isinstance(property_schema, dict)
-            else None
-        )
-        field_defs[field_name] = (
-            annotation,
-            Field(default=default, description=description),
-        )
-
-    raw_field_defs = cast(dict[str, Any], field_defs)
-    model = create_model(
-        name,
-        __config__=ConfigDict(extra="allow"),
-        **raw_field_defs,
-    )
-    return cast(type[BaseModel], model)
+_model_from_schema = model_from_schema
 
 
 def wrap_discovered_tool(
@@ -123,11 +24,11 @@ def wrap_discovered_tool(
     tool: DiscoveredTool,
     emit_event: Callable[[McpEvent], None] | None = None,
 ) -> NodeSpec[BaseModel, BaseModel]:
-    input_model = _model_from_schema(
+    input_model = model_from_schema(
         f"{connection.id}_{tool.name}_Input",
         tool.input_schema,
     )
-    output_model = _model_from_schema(
+    output_model = model_from_schema(
         f"{connection.id}_{tool.name}_Output",
         tool.output_schema,
     )

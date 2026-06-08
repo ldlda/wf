@@ -339,6 +339,9 @@ implementation state.
       and `DiscoveredConnectionCapabilities`) now lives in `wf_sources_mcp.discovery`.
       Tool-to-NodeSpec wrapping remains in `wf_mcp` until the event/wrapper seam
       is neutralized.
+    - Completed: MCP JSON-schema-to-Pydantic model helper now lives in
+      `wf_sources_mcp.schema_models`. `wf_mcp.workflow.wrappers` still owns
+      tool wrapper event emission, but no longer owns the shared schema compiler.
     The `wf-mcp` script is now a legacy/special-purpose MCP entrypoint, not the
     preferred durable workflow server. New product paths should target
     `wf-rpc-server` plus neutral `wf_config`/`wf_server` composition, then keep

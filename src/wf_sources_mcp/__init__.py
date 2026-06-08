@@ -62,6 +62,7 @@ __all__ = [
     "mcp_auth_headers",
     "mcp_source_connection_from_connection_config",
     "mcp_source_connection_from_registry_entry",
+    "model_from_schema",
     "neutral_auth_from_mcp",
     "registry_entry_to_connection_config",
     "workflow_mcp_source_to_connection_config",
@@ -104,4 +105,8 @@ def __getattr__(name: str) -> object:
         from . import discovery
 
         return getattr(discovery, name)
+    if name == "model_from_schema":
+        from . import schema_models
+
+        return schema_models.model_from_schema
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

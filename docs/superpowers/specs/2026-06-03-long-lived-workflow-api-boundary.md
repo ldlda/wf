@@ -133,7 +133,11 @@ First slices should move leaf modules only and leave `wf_mcp` re-export shims:
     `wf_sources_mcp.discovery`, with `wf_mcp.broker.discovery` retaining
     compatibility re-exports. `specs_from_discovered_tools` remains in `wf_mcp`
     until the wrapper/event seam is neutralized.
-17. Upstream transport/discovery/session services.
+17. Complete: MCP JSON-schema-to-Pydantic model helper moved to
+    `wf_sources_mcp.schema_models`. This removes the broker catalog hydration
+    dependency on private `wf_mcp.workflow.wrappers` helpers; eventful tool
+    wrapping remains in `wf_mcp` for the next seam.
+18. Upstream transport/discovery/session services.
 
 Each slice should add import-direction tests so the new source-provider package
 does not depend on `wf_mcp.workflow_surface`, `wf_mcp.admin_surface`,

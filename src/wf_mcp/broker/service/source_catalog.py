@@ -26,6 +26,7 @@ from wf_sources_mcp.catalog import (
     snapshot_from_specs,
 )
 from wf_sources_mcp.connections import mcp_source_connection_from_connection_config
+from wf_sources_mcp.schema_models import model_from_schema
 from wf_sources_mcp.sdk import ToolExecutor
 from wf_sources_mcp.storage import CatalogStore
 
@@ -34,7 +35,6 @@ from ...events import McpEvent, make_event
 from ...models import (
     CatalogSnapshot,
 )
-from ...workflow.wrappers import _model_from_schema
 from .specs import get_qualified_spec, qualify_spec
 
 ConnectionLookup = Callable[[str], ConnectionConfig]
@@ -268,9 +268,9 @@ class SourceCatalogService:
         runtime when the service has one configured.
         """
         model_prefix = entry.qualified_name.replace(".", "_").replace("-", "_")
-        input_model = _model_from_schema(f"{model_prefix}_Input", entry.input_schema)
+        input_model = model_from_schema(f"{model_prefix}_Input", entry.input_schema)
         output_schema = entry.output_schema
-        output_model = _model_from_schema(f"{model_prefix}_Output", output_schema)
+        output_model = model_from_schema(f"{model_prefix}_Output", output_schema)
 
         async def invoke_tool(payload: BaseModel) -> NodeReturn[BaseModel]:
             connection = self.connection_lookup(entry.connection_id)
