@@ -79,6 +79,16 @@ class RpcDraftClientMixin:
             {"workspace_id": workspace_id},
         )
 
+    async def delete_draft_workspace(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.delete",
+            {"workspace_id": workspace_id},
+        )
+
     async def create_artifact_from_workspace(
         self: RpcCaller,
         *,

@@ -206,6 +206,15 @@ Validate:
 wf draft validate concat_ws
 ```
 
+Delete a draft workspace:
+
+```bash
+wf draft delete concat_ws --confirm
+```
+
+Draft deletion removes only the draft workspace. It does not delete artifacts,
+deployments, or runs.
+
 Save as an artifact:
 
 ```bash

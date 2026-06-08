@@ -111,6 +111,10 @@ class ValidateDraftWorkspaceParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
 
 
+class DeleteDraftWorkspaceParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+
+
 class CreateArtifactFromWorkspaceParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     artifact_id: str = Field(min_length=1)

@@ -313,6 +313,29 @@ async def test_rpc_draft_workspace_methods(tmp_path) -> None:
     assert artifact["result"]["artifact_id"] == "remote_artifact"
 
 
+async def test_rpc_draft_workspace_delete(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "delete-me",
+                "capability_name": "wf.std.constant",
+                "name": "delete_me_ws",
+            },
+        )
+        payload = await _rpc(
+            client,
+            "workflow.draft_workspaces.delete",
+            {"workspace_id": "delete-me"},
+        )
+        assert payload["result"]["workspace_id"] == "delete-me"
+        assert payload["result"]["deleted"] is True
+
+
 def _constant_plan() -> RawWorkflowPlan:
     return RawWorkflowPlan.model_validate(
         {

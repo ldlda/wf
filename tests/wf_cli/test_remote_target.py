@@ -705,3 +705,46 @@ def test_wf_status_reports_rpc_config_target(monkeypatch, tmp_path) -> None:
     assert payload["target"]["mode"] == "remote"
     assert payload["target"]["url"] == "http://test/rpc"
     assert payload["workflow"]["capability_count"] >= 1
+
+
+def test_wf_draft_delete_requires_confirm(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    result = runner.invoke(app, [*base_args, "draft", "delete", "delete-me"])
+
+    assert result.exit_code != 0
+    assert "confirm" in (result.output).lower()
+
+
+def test_wf_draft_delete_succeeds_with_confirm(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create-from-capability",
+            "delete-me",
+            "wf.std.constant",
+            "--name",
+            "delete_me_ws",
+        ],
+    )
+
+    result = runner.invoke(app, [*base_args, "draft", "delete", "delete-me", "--confirm"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["workspace_id"] == "delete-me"
+    assert payload["deleted"] is True

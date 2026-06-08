@@ -3,6 +3,7 @@ from __future__ import annotations
 import httpx
 
 from wf_api.models import RawWorkflowPlan, TraceRange
+from wf_api.surface import WorkflowDraftSurface
 from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
@@ -317,3 +318,31 @@ async def test_rpc_workflow_client_draft_workspace_lifecycle(tmp_path) -> None:
     assert validated["status"] in {"valid", "invalid"}
     assert patched["revision"] == created["revision"] + 1
     assert artifact["artifact_id"] == "client_ws_art"
+
+
+def test_rpc_client_satisfies_draft_surface_static_shape() -> None:
+    _: type[WorkflowDraftSurface] = RpcWorkflowApiClient
+
+
+async def test_rpc_workflow_client_deletes_draft_workspace(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc", timeout_seconds=5, http_client=http_client
+        )
+        await client.create_draft_workspace_from_capability(
+            workspace_id="delete-me",
+            capability_name="wf.std.constant",
+            name="delete_me_ws",
+        )
+        deleted = await client.delete_draft_workspace(workspace_id="delete-me")
+        assert deleted["workspace_id"] == "delete-me"
+        assert deleted["deleted"] is True
+
+        deleted_again = await client.delete_draft_workspace(workspace_id="delete-me")
+        assert deleted_again["workspace_id"] == "delete-me"
+        assert deleted_again["deleted"] is False

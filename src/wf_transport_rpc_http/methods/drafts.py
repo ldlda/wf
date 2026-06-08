@@ -11,6 +11,7 @@ from ..models import (
     CreateArtifactFromWorkspaceParams,
     CreateDraftFromCapabilityParams,
     CreateWrapperFromWorkspaceParams,
+    DeleteDraftWorkspaceParams,
     GetDraftWorkspaceParams,
     ListDraftWorkspacesParams,
     PatchDraftParams,
@@ -112,6 +113,19 @@ def register_methods(
     ) -> dict[str, Any]:
         try:
             return await server.api.validate_draft_workspace(
+                workspace_id=params.workspace_id,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.delete", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_delete(
+        params: DeleteDraftWorkspaceParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.delete_draft_workspace(
                 workspace_id=params.workspace_id,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:

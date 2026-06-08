@@ -82,6 +82,12 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
     ) -> dict[str, Any]: ...
 
+    async def delete_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+    ) -> dict[str, Any]: ...
+
     async def create_artifact_from_workspace(
         self,
         *,

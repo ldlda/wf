@@ -133,6 +133,30 @@ def validate_draft(
     )
 
 
+@app.command("delete")
+def delete_draft(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    confirm: Annotated[
+        bool,
+        typer.Option(
+            "--confirm",
+            help="Required confirmation for deleting a draft workspace.",
+        ),
+    ] = False,
+) -> None:
+    """Delete a stored draft workspace."""
+    if not confirm:
+        raise typer.BadParameter("pass --confirm to delete a draft workspace")
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.delete_draft_workspace(workspace_id=workspace_id),
+        )
+    )
+
+
 @app.command("save")
 def save_draft(
     ctx: typer.Context,
