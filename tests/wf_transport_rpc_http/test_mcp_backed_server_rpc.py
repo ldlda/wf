@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, cast
 
 import httpx
+import pytest
 from mcp.client.session import ClientSession
 from mcp.types import (
     CallToolResult,
@@ -15,9 +17,11 @@ from mcp.types import (
     Tool,
 )
 
-from wf_api import file_workflow_stores
+from tests.wf_mcp.test_support import fixture_server_path
+from wf_api import TraceRange, file_workflow_stores
 from wf_api.models import RawWorkflowPlan
 from wf_config import WorkflowConfigFile
+from wf_mcp.broker.config import build_service_from_config
 from wf_mcp.broker.server import (
     build_workflow_server_from_config,
     build_workflow_server_from_workflow_config,
@@ -596,3 +600,206 @@ async def test_mcp_backed_rpc_workflow_reuses_runtime_session_direct_setup(
         ("counter", {}),
         ("counter", {}),
     ]
+
+
+async def test_mcp_backed_rpc_deployment_becomes_unrunnable_after_source_removed(
+    tmp_path,
+) -> None:
+    server, service, _factory = _runtime_reuse_server(tmp_path)
+    await service.refresh_connection_catalog("fixture.default")
+    await server.api.create_artifact_from_plan(
+        artifact_id="counter_removed_source",
+        version=1,
+        title="Counter Removed Source",
+        plan=RawWorkflowPlan.model_validate(
+            {
+                "name": "counter_removed_source",
+                "input_schema": {"type": "object", "properties": {}},
+                "state_schema": {
+                    "fields": {
+                        "count": {"type": "integer", "reducer": "wf.std.replace"}
+                    }
+                },
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"count": {"type": "integer"}},
+                },
+                "outcomes": ["ok", "error"],
+                "output": [
+                    {
+                        "path": {"root": "state", "parts": ["count"]},
+                        "target": {"root": "local", "parts": ["count"]},
+                    }
+                ],
+                "start": "run_counter",
+                "nodes": [
+                    {
+                        "id": "run_counter",
+                        "type": "node",
+                        "node": "fixture.default.counter",
+                        "input": [],
+                        "output": [
+                            {
+                                "source": {"root": "local", "parts": ["count"]},
+                                "target": {"root": "state", "parts": ["count"]},
+                            }
+                        ],
+                    },
+                    {"id": "end_ok", "type": "end", "outcome": "ok"},
+                    {"id": "end_error", "type": "end", "outcome": "error"},
+                ],
+                "edges": [
+                    {"from": "run_counter", "outcome": "ok", "to": "end_ok"},
+                    {"from": "run_counter", "outcome": "error", "to": "end_error"},
+                ],
+            }
+        ),
+        outcomes=["ok", "error"],
+    )
+    await server.api.save_deployment(
+        {
+            "id": "counter_removed_source.default",
+            "artifact_id": "counter_removed_source",
+            "artifact_version": 1,
+            "bindings": [
+                {
+                    "logical_source": "fixture.default",
+                    "concrete_source": "fixture.default",
+                },
+                {"logical_source": "wf.std", "concrete_source": "wf.std"},
+            ],
+        }
+    )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_rpc_app(server)),
+        base_url="http://test",
+    ) as http_client:
+        client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
+
+        before = await client.validate_deployment(
+            deployment_id="counter_removed_source.default"
+        )
+        service.connection_service.sync_connections_from_config(
+            BrokerConfig(store_root=tmp_path / "store", connections=[])
+        )
+        after = await client.validate_deployment(
+            deployment_id="counter_removed_source.default"
+        )
+
+    assert before["status"] == "runnable"
+    assert after["status"] == "unrunnable"
+    assert after["diagnostics"]
+
+
+async def test_mcp_backed_rpc_workflow_reuses_real_stdio_fixture_session(
+    tmp_path,
+) -> None:
+    """The real stdio MCP fixture must keep server-local state across RPC runs."""
+
+    config = BrokerConfig(
+        store_root=tmp_path / "store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+    service = build_service_from_config(config)
+    try:
+        await service.refresh_connection_catalog("fixture.personal")
+    except PermissionError as exc:
+        pytest.skip(f"stdio MCP transport is not permitted in this environment: {exc}")
+    server = workflow_server_from_service(
+        service,
+        config=config,
+        source_registry_store=FileSourceRegistryStore(config.store_root),
+    )
+
+    async with httpx.AsyncClient(
+        transport=httpx.ASGITransport(app=create_rpc_app(server)),
+        base_url="http://test",
+    ) as http_client:
+        client = RpcWorkflowApiClient(url="http://test/rpc", http_client=http_client)
+
+        await client.create_draft_workspace_from_capability(
+            workspace_id="remember_ws",
+            capability_name="fixture.personal.remember_value_tool",
+            name="remember_workflow",
+            title="Remember Workflow",
+        )
+        await client.create_artifact_from_workspace(
+            workspace_id="remember_ws",
+            artifact_id="remember_workflow",
+            version=1,
+            title="Remember Workflow",
+            outcomes=["ok", "error"],
+            kind="workflow",
+        )
+        await client.save_deployment(
+            {
+                "id": "remember_workflow.default",
+                "artifact_id": "remember_workflow",
+                "artifact_version": 1,
+                "bindings": [
+                    {
+                        "logical_source": "fixture.personal",
+                        "concrete_source": "fixture.personal",
+                    },
+                    {"logical_source": "wf.std", "concrete_source": "wf.std"},
+                ],
+            }
+        )
+
+        await client.create_draft_workspace_from_capability(
+            workspace_id="recall_ws",
+            capability_name="fixture.personal.recall_value_tool",
+            name="recall_workflow",
+            title="Recall Workflow",
+        )
+        await client.create_artifact_from_workspace(
+            workspace_id="recall_ws",
+            artifact_id="recall_workflow",
+            version=1,
+            title="Recall Workflow",
+            outcomes=["ok", "error"],
+            kind="workflow",
+        )
+        await client.save_deployment(
+            {
+                "id": "recall_workflow.default",
+                "artifact_id": "recall_workflow",
+                "artifact_version": 1,
+                "bindings": [
+                    {
+                        "logical_source": "fixture.personal",
+                        "concrete_source": "fixture.personal",
+                    },
+                    {"logical_source": "wf.std", "concrete_source": "wf.std"},
+                ],
+            }
+        )
+
+        remembered = await client.run_deployment(
+            deployment_id="remember_workflow.default",
+            workflow_input={"value": "held-through-rpc"},
+        )
+        recalled = await client.run_deployment(
+            deployment_id="recall_workflow.default",
+            workflow_input={},
+        )
+        recall_trace = await client.read_run_trace(
+            run_id=recalled["run_id"],
+            trace_range=TraceRange(start=0, limit=5),
+        )
+
+    assert remembered["status"] == "completed"
+    assert recalled["status"] == "completed"
+    assert recall_trace["trace"][0]["output"]["remembered"] == "held-through-rpc"
