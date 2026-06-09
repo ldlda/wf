@@ -358,6 +358,32 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     assert called_payload["outcome"] == "ok"
     assert called_payload["output"] == {"value": "hello cap call"}
 
+    compact = runner.invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "--url",
+            "http://test/rpc",
+            "cap",
+            "call",
+            "wf.std.constant",
+            "--input",
+            '{"value": "hello cap call"}',
+            "--format",
+            "compact",
+        ],
+    )
+    assert compact.exit_code == 0, compact.output
+    assert "wf.std.constant" in compact.output
+    assert "outcome=ok" in compact.output
+    assert "hello cap call" not in compact.output
+
+    help_result = runner.invoke(app, ["cap", "call", "--help"])
+    assert help_result.exit_code == 0
+    assert "--unwrap-text" in help_result.output
+    assert "MCP text block" in help_result.output
+
 
 def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")

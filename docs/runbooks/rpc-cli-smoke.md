@@ -80,6 +80,14 @@ Expected:
 - `outcome` is `ok`.
 - Output is small and machine-readable.
 
+Optionally, test compact output:
+
+```bash
+uv run wf --config wf.config.json cap call wf.std.constant --input '{"value":"smoke"}' --format compact
+```
+
+Expected: one bounded line with `outcome=ok`.
+
 Avoid using arbitrary MCP tools here unless their output shape is known. MCP
 content-block envelopes can be large and should not be treated like compact
 workflow output.

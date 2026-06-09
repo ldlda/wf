@@ -175,6 +175,24 @@ wf cap call wf.std.constant --input '{"value": "hello"}'
 wf --url http://127.0.0.1:8765/rpc cap call everything.default.echo --input '{"message": "hello"}'
 ```
 
+Use `--format compact` for a bounded one-line summary that avoids dumping large
+MCP content-block envelopes:
+
+```bash
+wf cap call wf.std.constant --input '{"value": "hello"}' --format compact
+```
+
+Use `--format text --unwrap-text` to extract exactly one MCP text content block.
+This mode refuses images, resources, blobs, multiple content blocks, and
+non-MCP output:
+
+```bash
+wf cap call everything.default.echo --input '{"message": "hello"}' --format text --unwrap-text
+```
+
+Use `--max-output-chars N` to bound compact/text terminal output. JSON output
+is never truncated.
+
 `cap call` is an authoring/runtime smoke test. It uses the same local or remote
 target selection as the rest of the CLI and returns a normalized outcome,
 output, source id, and diagnostics. Use it to confirm payload shape and upstream
