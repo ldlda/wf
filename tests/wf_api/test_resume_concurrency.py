@@ -4,6 +4,8 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from wf_api.models import RawWorkflowPlan
 from wf_api.operation_context import WorkflowOperationContext
 from wf_api.run_lifecycle import create_pinned_environment, persist_stopped_run
@@ -115,8 +117,6 @@ async def test_resume_run_serializes_same_run_attempts(tmp_path: Path) -> None:
 
     assert first_payload["status"] == "completed"
     assert first_payload["output"] == {"answer": "first"}
-
-    import pytest
 
     with pytest.raises(ValueError, match="is not interrupted"):
         await second
