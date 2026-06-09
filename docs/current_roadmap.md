@@ -42,9 +42,9 @@ clear operator feedback before adding more architecture.
   [`wf draft delete CLI/RPC`](historical/superpowers/plans/2026-06-09-wf-draft-delete-cli-rpc.md).
 - Completed: bounded RPC CLI smoke runbook with cleanup commands:
   [`RPC CLI smoke runbook`](runbooks/rpc-cli-smoke.md).
-- Next docs/ergonomics cleanup: explain raw MCP content-block envelopes returned
-  by `cap call`, and only add a text-unwrapping CLI option if the safe behavior
-  is explicitly defined.
+- Next docs/ergonomics cleanup: make `cap call` output safer for humans without
+  changing default JSON semantics. Active plan:
+  [`cap call output safety`](superpowers/plans/2026-06-09-cap-call-output-safety.md).
 - Future smoke automation: turn the manual RPC CLI smoke runbook into a small
   script once the command sequence stabilizes.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
