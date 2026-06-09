@@ -381,8 +381,11 @@ def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
 
     help_result = runner.invoke(app, ["cap", "call", "--help"])
     assert help_result.exit_code == 0
+    help_text = " ".join(help_result.output.split())
     assert "--unwrap-text" in help_result.output
-    assert "MCP text block" in help_result.output
+    assert "MCP text content block" in help_text
+    assert "multiple blocks" in help_text
+    assert "non-MCP" in help_text
 
 
 def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:

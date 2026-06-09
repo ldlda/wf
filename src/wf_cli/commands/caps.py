@@ -12,6 +12,18 @@ from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import CliInputError, emit_json, parse_json_input
 from wf_cli.remote_errors import run_cli_operation
 
+CAP_CALL_HELP = """Call one workflow capability once for authoring/runtime smoke tests.
+
+Output modes:
+
+- json: Full lossless payload. Default. Never truncated.
+- compact: One bounded summary line.
+- text: Requires --unwrap-text and prints exactly one MCP text content block.
+
+Text unwrap refuses images, resources, blobs, multiple blocks, and non-MCP
+output. Use --max-output-chars to bound compact/text terminal output.
+"""
+
 
 class CapCallOutputFormat(StrEnum):
     JSON = "json"
@@ -80,7 +92,7 @@ def inspect_capability(
     emit_json(payload)
 
 
-@app.command("call")
+@app.command("call", help=CAP_CALL_HELP)
 def call_capability(
     ctx: typer.Context,
     qualified_name: Annotated[str, typer.Argument(help="Workflow capability name.")],
@@ -121,11 +133,10 @@ def call_capability(
         bool,
         typer.Option(
             "--unwrap-text",
-            help="Only with --format text: unwrap one MCP text block.",
+            help="Unwrap one safe MCP text block; implies --format text.",
         ),
     ] = False,
 ) -> None:
-    """Call one workflow capability once for authoring/runtime smoke tests."""
     try:
         payload = parse_json_input(input_json=input_json, input_file=input_file)
     except CliInputError as exc:
@@ -143,7 +154,10 @@ def call_capability(
     try:
         rendered = render_cap_call_output(
             result,
-            output_format=output_format,
+            output_format=_resolve_cap_call_output_format(
+                output_format=output_format,
+                unwrap_text=unwrap_text,
+            ),
             unwrap_text=unwrap_text,
             max_output_chars=max_output_chars,
         )
@@ -171,6 +185,17 @@ def render_cap_call_output(
         )
     summary = _compact_cap_call_summary(result)
     return _truncate_text(summary, max_output_chars=max_output_chars)
+
+
+def _resolve_cap_call_output_format(
+    *,
+    output_format: CapCallOutputFormat,
+    unwrap_text: bool,
+) -> CapCallOutputFormat:
+    """Treat --unwrap-text as the explicit request for safe text extraction."""
+    if unwrap_text and output_format is CapCallOutputFormat.JSON:
+        return CapCallOutputFormat.TEXT
+    return output_format
 
 
 def _compact_cap_call_summary(result: dict[str, Any]) -> str:

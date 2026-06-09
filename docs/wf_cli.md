@@ -182,12 +182,12 @@ MCP content-block envelopes:
 wf cap call wf.std.constant --input '{"value": "hello"}' --format compact
 ```
 
-Use `--format text --unwrap-text` to extract exactly one MCP text content block.
-This mode refuses images, resources, blobs, multiple content blocks, and
+Use `--unwrap-text` to extract exactly one MCP text content block. This implies
+text output and refuses images, resources, blobs, multiple content blocks, and
 non-MCP output:
 
 ```bash
-wf cap call everything.default.echo --input '{"message": "hello"}' --format text --unwrap-text
+wf cap call everything.default.echo --input '{"message": "hello"}' --unwrap-text
 ```
 
 Use `--max-output-chars N` to bound compact/text terminal output. JSON output

@@ -157,8 +157,6 @@ def test_cap_call_cli_unwraps_single_mcp_text_block(monkeypatch) -> None:
             "everything.default.echo",
             "--input",
             '{"message": "hello"}',
-            "--format",
-            "text",
             "--unwrap-text",
         ],
     )
@@ -189,6 +187,29 @@ def test_cap_call_cli_refuses_to_unwrap_blob_content(monkeypatch) -> None:
 
     assert result.exit_code != 0
     assert "exactly one MCP text content block" in result.output
+
+
+def test_cap_call_cli_format_text_requires_unwrap_text(monkeypatch) -> None:
+    _patch_context(
+        monkeypatch,
+        _base_result({"content": [{"type": "text", "text": "hello text"}]}),
+    )
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "cap",
+            "call",
+            "everything.default.echo",
+            "--input",
+            "{}",
+            "--format",
+            "text",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "--format text requires --unwrap-text" in result.output
 
 
 def test_cap_call_cli_refuses_to_unwrap_multiple_text_blocks(monkeypatch) -> None:
