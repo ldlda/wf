@@ -46,7 +46,8 @@ clear operator feedback before adding more architecture.
   changing default JSON semantics. Implementation:
   [`cap call output safety`](historical/superpowers/plans/2026-06-09-cap-call-output-safety.md).
 - Future smoke automation: turn the manual RPC CLI smoke runbook into a small
-  script once the command sequence stabilizes.
+  script. Active plan:
+  [`RPC CLI smoke example`](superpowers/plans/2026-06-09-rpc-cli-smoke-example.md).
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening
