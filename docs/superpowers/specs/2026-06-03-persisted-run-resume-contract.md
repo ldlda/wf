@@ -291,6 +291,8 @@ hardening and frontend durability:
    - Concurrent `resume_run` calls for the same interrupted run should not both
      advance from the same checkpoint.
    - V1 file store does not provide compare-and-swap semantics.
+   - Active implementation plan:
+     [`resume run concurrency guard`](../plans/2026-06-09-resume-run-concurrency-guard.md).
 
 5. **Protocol-native long-running progress**
    - MCP tasks/progress or an HTTP streaming/event surface should report active
