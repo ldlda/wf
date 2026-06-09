@@ -1,5 +1,9 @@
 # Store-Backed Source Registry Design
 
+Related:
+
+- [Runtime source lifecycle](./2026-06-09-runtime-source-lifecycle.md)
+
 ## Purpose
 
 The workflow server now has neutral read-only workflow, source-admin, and

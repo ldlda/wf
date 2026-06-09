@@ -8,6 +8,7 @@ Related:
 
 - [Long-lived workflow API boundary](./2026-06-03-long-lived-workflow-api-boundary.md)
 - [Persisted run/resume contract](./2026-06-03-persisted-run-resume-contract.md)
+- [Runtime source lifecycle](./2026-06-09-runtime-source-lifecycle.md)
 - [Current roadmap](../../current_roadmap.md)
 
 ## Purpose
