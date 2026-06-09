@@ -4,6 +4,10 @@
 
 Python baseline is 3.14 (`requires-python = ">=3.14"`). Python 3.14 syntax is allowed; do not "fix" valid new syntax just because it looks unusual.
 
+Example new syntax:
+
+- Parentheses-Free Exceptions (PEP 758) <!-- coderabbit -->
+
 ## extra fields
 
 prefer asserts actual['field'] == expected['field'] over assert actual == expected unless we know better (eg. no extra fields allowed)

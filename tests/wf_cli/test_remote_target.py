@@ -290,7 +290,9 @@ def _patch_rpc_client_to_server(monkeypatch, server) -> None:
             ),
         )
 
-    monkeypatch.setattr(cli_context, "rpc_client_from_target", fake_rpc_client_from_target)
+    monkeypatch.setattr(
+        cli_context, "rpc_client_from_target", fake_rpc_client_from_target
+    )
 
 
 def test_wf_cap_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
@@ -742,7 +744,9 @@ def test_wf_draft_delete_succeeds_with_confirm(monkeypatch, tmp_path) -> None:
         ],
     )
 
-    result = runner.invoke(app, [*base_args, "draft", "delete", "delete-me", "--confirm"])
+    result = runner.invoke(
+        app, [*base_args, "draft", "delete", "delete-me", "--confirm"]
+    )
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)

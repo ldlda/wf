@@ -48,9 +48,7 @@ def test_stdio_source_transport_is_typed() -> None:
 
 
 def test_http_source_transport_is_typed() -> None:
-    transport = HttpSourceTransport.model_validate(
-        {"url": "http://127.0.0.1:8000/mcp"}
-    )
+    transport = HttpSourceTransport.model_validate({"url": "http://127.0.0.1:8000/mcp"})
 
     assert transport.kind == "http"
     assert str(transport.url) == "http://127.0.0.1:8000/mcp"

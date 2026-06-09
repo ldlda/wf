@@ -165,7 +165,9 @@ def test_connection_config_to_registry_entry_accepts_flat_http_metadata() -> Non
 
 
 def test_connection_config_to_registry_entry_requires_transport_metadata() -> None:
-    connection = _LegacyConnectionLike(id="github.work", server="github", account="work")
+    connection = _LegacyConnectionLike(
+        id="github.work", server="github", account="work"
+    )
 
     with pytest.raises(ValueError, match="requires metadata.transport"):
         connection_config_to_registry_entry(connection)

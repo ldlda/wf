@@ -117,9 +117,7 @@ def test_artifact_delete_confirmed_succeeds(monkeypatch) -> None:
         lambda _ctx: _Context(handlers=handlers),
     )
 
-    result = CliRunner().invoke(
-        app, ["artifact", "delete", "echo", "1", "--confirm"]
-    )
+    result = CliRunner().invoke(app, ["artifact", "delete", "echo", "1", "--confirm"])
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -136,9 +134,7 @@ def test_artifact_delete_blocked_returns_blocker_ids(monkeypatch) -> None:
         lambda _ctx: _BlockedContext(handlers=handlers),
     )
 
-    result = CliRunner().invoke(
-        app, ["artifact", "delete", "echo", "1", "--confirm"]
-    )
+    result = CliRunner().invoke(app, ["artifact", "delete", "echo", "1", "--confirm"])
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)

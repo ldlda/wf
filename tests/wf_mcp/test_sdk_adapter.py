@@ -40,7 +40,11 @@ class _ToolsOnlyAdapter:
         raise McpError(ErrorData(code=-32601, message="Method not found"))
 
     async def get_connection_metadata(self, connection, auth):
-        return {"server": getattr(connection, "provider", getattr(connection, "server", None))}
+        return {
+            "server": getattr(
+                connection, "provider", getattr(connection, "server", None)
+            )
+        }
 
     async def read_resource(self, connection, auth, uri):
         raise NotImplementedError

@@ -14,7 +14,6 @@ from wf_artifacts import (
 from wf_authoring import node, reducer
 from wf_mcp.broker import WfMcpService
 from wf_mcp.capabilities import DiscoveredTool
-from wf_mcp.models import AuthRecord, ConnectionConfig
 from wf_mcp.sdk import ToolCallResult
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
@@ -104,7 +103,11 @@ class ContentOnlyOutputAdapter:
         connection,
         auth,
     ) -> dict[str, Any]:
-        return {"server": getattr(connection, "provider", getattr(connection, "server", None))}
+        return {
+            "server": getattr(
+                connection, "provider", getattr(connection, "server", None)
+            )
+        }
 
     async def call_tool(
         self,

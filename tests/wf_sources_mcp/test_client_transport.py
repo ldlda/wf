@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any
 
 import pytest
+from pydantic import AnyHttpUrl
 
 from wf_sources_mcp.auth import AuthRecord
 from wf_sources_mcp.client.transport import open_mcp_session
@@ -35,9 +36,7 @@ async def _fake_streamable_http_client(
 
 
 @asynccontextmanager
-async def _fake_client_session(
-    read: Any, write: Any
-) -> AsyncIterator[_FakeSession]:
+async def _fake_client_session(read: Any, write: Any) -> AsyncIterator[_FakeSession]:
     yield _FakeSession()
 
 
@@ -70,7 +69,7 @@ def _http_connection(
         provider="test",
         account="server",
         transport=HttpSourceTransport(
-            url=url,
+            url=AnyHttpUrl(url),
             headers=headers or {},
         ),
     )
@@ -90,6 +89,7 @@ async def test_stdio_session_initializes_before_yielding() -> None:
     connection = _stdio_connection()
 
     async with open_mcp_session(connection, None) as session:
+        assert isinstance(session, _FakeSession)
         assert session.initialized is True
 
 
@@ -116,6 +116,7 @@ async def test_stdio_env_merges_transport_and_auth_wins_on_duplicate() -> None:
     mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment]
 
     async with open_mcp_session(connection, auth) as session:
+        assert isinstance(session, _FakeSession)
         assert session.initialized is True
 
     params = captured_params[0]
@@ -142,6 +143,7 @@ async def test_stdio_cwd_propagated_to_server_parameters() -> None:
     mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment]
 
     async with open_mcp_session(connection, None) as session:
+        assert isinstance(session, _FakeSession)
         assert session.initialized is True
 
     assert captured_params[0].cwd == "/workspace"
@@ -152,6 +154,7 @@ async def test_http_session_initializes_before_yielding() -> None:
     connection = _http_connection()
 
     async with open_mcp_session(connection, None) as session:
+        assert isinstance(session, _FakeSession)
         assert session.initialized is True
 
 
@@ -184,6 +187,7 @@ async def test_http_auth_headers_passed_to_client(
     monkeypatch.setattr(mod, "httpx", _PatchedHttpx())
 
     async with open_mcp_session(connection, auth) as session:
+        assert isinstance(session, _FakeSession)
         assert session.initialized is True
 
     assert len(captured_clients) == 1

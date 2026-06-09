@@ -59,4 +59,9 @@ def require_adapter(
     return adapter
 
 
-__all__ = ["AdapterLookupRef", "LegacyAdapterRef", "SourceAdapterRef", "require_adapter"]
+__all__ = [
+    "AdapterLookupRef",
+    "LegacyAdapterRef",
+    "SourceAdapterRef",
+    "require_adapter",
+]

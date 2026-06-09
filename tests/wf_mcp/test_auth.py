@@ -13,7 +13,6 @@ from wf_mcp.auth import (
     neutral_auth_from_mcp,
 )
 from wf_mcp.models import AuthRecord as McpAuthRecord
-from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.transports import StdioSourceTransport

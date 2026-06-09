@@ -12,7 +12,7 @@ from wf_core import RuntimeContext
 from wf_core.models.steps import InputPathBinding, OutputBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_mcp.capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
-from wf_mcp.models import AuthRecord, ConnectionConfig
+from wf_mcp.models import ConnectionConfig
 from wf_mcp.sdk import ToolCallResult
 
 
@@ -186,7 +186,9 @@ class FakeAdapter:
         auth,
     ) -> dict[str, Any]:
         return {
-            "server": getattr(connection, "provider", getattr(connection, "server", None)),
+            "server": getattr(
+                connection, "provider", getattr(connection, "server", None)
+            ),
             "account": connection.account,
             "auth_scheme": auth.scheme if auth is not None else None,
         }

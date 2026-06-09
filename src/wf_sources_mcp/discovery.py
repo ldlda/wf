@@ -36,7 +36,9 @@ async def discover_connection_capabilities(
     resources = await _list_optional_capabilities(
         lambda: adapter.list_resources(connection, auth)
     )
-    prompts = await _list_optional_capabilities(lambda: adapter.list_prompts(connection, auth))
+    prompts = await _list_optional_capabilities(
+        lambda: adapter.list_prompts(connection, auth)
+    )
     metadata = await adapter.get_connection_metadata(connection, auth)
     return DiscoveredConnectionCapabilities(
         tools=tools,

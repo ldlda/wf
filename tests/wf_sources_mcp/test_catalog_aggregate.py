@@ -104,7 +104,11 @@ def test_combined_catalog_sorts_entries_and_serializes_payload() -> None:
     first = snapshot_from_specs(
         "zeta.default",
         specs={"echo": _echo_spec()},
-        resources=[DiscoveredResource(uri="zeta://guide", name="guide", title=None, description=None)],
+        resources=[
+            DiscoveredResource(
+                uri="zeta://guide", name="guide", title=None, description=None
+            )
+        ],
         prompts=[DiscoveredPrompt(name="prompt", title=None, description=None)],
         metadata={"order": "second"},
         fetched_at_epoch_ms=2,
@@ -113,7 +117,11 @@ def test_combined_catalog_sorts_entries_and_serializes_payload() -> None:
     second = snapshot_from_specs(
         "alpha.default",
         specs={"echo": _echo_spec()},
-        resources=[DiscoveredResource(uri="alpha://guide", name="guide", title=None, description=None)],
+        resources=[
+            DiscoveredResource(
+                uri="alpha://guide", name="guide", title=None, description=None
+            )
+        ],
         prompts=[DiscoveredPrompt(name="prompt", title=None, description=None)],
         metadata={"order": "first"},
         fetched_at_epoch_ms=1,

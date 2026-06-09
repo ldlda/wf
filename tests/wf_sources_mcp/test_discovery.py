@@ -155,7 +155,9 @@ class _BrokenResourceAdapter(_Adapter):
         raise RuntimeError("resource listing broke")
 
 
-async def test_discover_connection_capabilities_collects_all_capability_families() -> None:
+async def test_discover_connection_capabilities_collects_all_capability_families() -> (
+    None
+):
     adapter = _Adapter()
     connection = _connection()
 
@@ -172,7 +174,9 @@ async def test_discover_connection_capabilities_collects_all_capability_families
     assert adapter.seen_connections == [connection]
 
 
-async def test_discover_connection_capabilities_treats_missing_optional_families_as_empty() -> None:
+async def test_discover_connection_capabilities_treats_missing_optional_families_as_empty() -> (
+    None
+):
     capabilities = await discover_connection_capabilities(
         connection=_connection(),
         auth=None,
@@ -184,7 +188,9 @@ async def test_discover_connection_capabilities_treats_missing_optional_families
     assert capabilities.prompts == []
 
 
-async def test_discover_connection_capabilities_reraises_non_method_not_found_errors() -> None:
+async def test_discover_connection_capabilities_reraises_non_method_not_found_errors() -> (
+    None
+):
     with pytest.raises(RuntimeError, match="resource listing broke"):
         await discover_connection_capabilities(
             connection=_connection(),

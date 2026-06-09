@@ -8,9 +8,11 @@ from mcp.types import (
     CallToolResult,
     ClientNotification,
     ClientRequest,
+    GetPromptResult,
     ListPromptsResult,
     ListResourcesResult,
     ListToolsResult,
+    ReadResourceResult,
 )
 from pydantic import AnyUrl
 
@@ -21,33 +23,41 @@ if TYPE_CHECKING:
         DiscoveredPrompt,
         DiscoveredResource,
         DiscoveredTool,
-        )
+    )
     from wf_sources_mcp.sdk.protocols import ToolCallResult
 
 
 class McpClientSession(Protocol):
-    """Subset of MCP SDK ClientSession operations used by source clients."""
+    """Subset of MCP SDK ClientSession operations used by source clients.
 
+    This protocol targets the low-level MCP SDK ``ClientSession`` shape, not
+    ``fastmcp.client.Client``. FastMCP exposes higher-level convenience methods
+    with different return types; if we use it here later, wrap it in an adapter
+    instead of pretending it satisfies this session protocol.
+    """
+
+    # ClientSession stuff. we dont even use their Pagination system...
     async def list_tools(self) -> ListToolsResult: ...
 
     async def list_resources(self) -> ListResourcesResult: ...
 
     async def list_prompts(self) -> ListPromptsResult: ...
 
-    async def read_resource(self, uri: AnyUrl) -> Any: ...
+    async def read_resource(self, uri: AnyUrl) -> ReadResourceResult: ...
 
     async def get_prompt(
         self,
         name: str,
         arguments: dict[str, str] | None = None,
         /,
-    ) -> Any: ...
+    ) -> GetPromptResult: ...
 
+    # BaseSession stuff. not even complete signature, thats crazy
     async def send_request(
         self,
         request: ClientRequest,
         result_type: type[ClientResult],
-    ) -> Any: ...
+    ) -> ClientResult: ...
 
     async def send_notification(self, notification: ClientNotification) -> None: ...
 
@@ -57,6 +67,16 @@ class McpClientSession(Protocol):
         arguments: dict[str, Any],
         /,
     ) -> CallToolResult: ...
+
+
+if TYPE_CHECKING:
+    from mcp.client.session import ClientSession as SdkClientSession
+
+    def _typecheck_sdk_client_session(
+        session: SdkClientSession,
+    ) -> McpClientSession:
+        """Static-only guard: MCP SDK ClientSession must satisfy our subset."""
+        return session
 
 
 @dataclass(slots=True)

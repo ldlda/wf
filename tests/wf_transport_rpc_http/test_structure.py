@@ -40,7 +40,9 @@ def test_rpc_client_mixins_share_one_call_contract() -> None:
     for module_info in pkgutil.iter_modules(rpc_client_package.__path__):
         if module_info.name in {"__init__", "base"}:
             continue
-        module = importlib.import_module(f"wf_transport_rpc_http.client.{module_info.name}")
+        module = importlib.import_module(
+            f"wf_transport_rpc_http.client.{module_info.name}"
+        )
         for _name, value in inspect.getmembers(module, inspect.isclass):
             if value.__module__ == module.__name__:
                 assert "_call" not in value.__dict__

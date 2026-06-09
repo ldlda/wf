@@ -12,4 +12,9 @@ from wf_sources_mcp.adapters import (
     require_adapter,
 )
 
-__all__ = ["AdapterLookupRef", "LegacyAdapterRef", "SourceAdapterRef", "require_adapter"]
+__all__ = [
+    "AdapterLookupRef",
+    "LegacyAdapterRef",
+    "SourceAdapterRef",
+    "require_adapter",
+]

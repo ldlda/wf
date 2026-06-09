@@ -131,9 +131,7 @@ def _transport_from_connection_metadata(
                 args=tuple(str(arg) for arg in cast("tuple[object, ...]", args_raw)),
                 env={
                     str(key): str(value)
-                    for key, value in cast(
-                        "dict[str, object]", env_raw
-                    ).items()
+                    for key, value in cast("dict[str, object]", env_raw).items()
                 },
                 cwd=(
                     str(connection.metadata["cwd"])
@@ -148,9 +146,7 @@ def _transport_from_connection_metadata(
                 url=url if isinstance(url, str) else str(url),  # type: ignore[arg-type]
                 headers={
                     str(key): str(value)
-                    for key, value in cast(
-                        "dict[str, object]", headers_raw
-                    ).items()
+                    for key, value in cast("dict[str, object]", headers_raw).items()
                 },
             )
         raise ValueError(
