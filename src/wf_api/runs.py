@@ -12,6 +12,7 @@ from wf_artifacts import (
 from wf_core import RunState
 
 from .artifact_plans import raw_plan_from_artifact
+from .run_locks import AsyncKeyedLock
 from .deployments import WorkflowDeploymentApi, _available_sources
 from .next_actions import NextActions
 from .operation_context import WorkflowOperationContext
@@ -43,9 +44,15 @@ class WorkflowRunApi:
     does not depend on MCP service internals.
     """
 
-    def __init__(self, context: WorkflowOperationContext) -> None:
+    def __init__(
+        self,
+        context: WorkflowOperationContext,
+        *,
+        resume_locks: AsyncKeyedLock | None = None,
+    ) -> None:
         self.context = context
         self.deployments = WorkflowDeploymentApi(context)
+        self._resume_locks = resume_locks or AsyncKeyedLock()
 
     def _run_store(self) -> RunStore:
         if self.context.run_store is None:
@@ -111,6 +118,24 @@ class WorkflowRunApi:
         trace_range: TraceRangeLike | None = None,
     ) -> dict[str, Any]:
         """Resume one durable interrupted deployment run."""
+        # FileRunStore locks individual file writes only. The API layer owns the
+        # process-local read/execute/write critical section for one run id.
+        async with self._resume_locks.lock(run_id):
+            return await self._resume_run_unlocked(
+                run_id=run_id,
+                resume_payload=resume_payload,
+                resume_outcome=resume_outcome,
+                trace_range=trace_range,
+            )
+
+    async def _resume_run_unlocked(
+        self,
+        *,
+        run_id: str,
+        resume_payload: dict[str, Any],
+        resume_outcome: str,
+        trace_range: TraceRangeLike | None,
+    ) -> dict[str, Any]:
         trace_values = _trace_range_values(trace_range)
         record, stopped_run = restore_interrupted_run(self._run_store(), run_id)
         environment = record.environment
