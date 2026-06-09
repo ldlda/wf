@@ -162,7 +162,7 @@ def migrate_broker_config_file(path: str | Path) -> WorkflowConfigFile:
 def build_service_from_config(config: BrokerConfig) -> WfMcpService:
     """Create a broker service with SDK adapters for configured connections."""
     runtime_factory = PersistentSessionFactory()
-    store_roots = config.store_roots or BrokerStoreRoots.from_default(config.store_root)
+    store_roots = config.store_roots
     workflow_stores = file_workflow_stores(store_roots.workflow_root)
     # Keep FileStore as the compatibility facade on WfMcpService.store while
     # focused services receive role-specific stores.

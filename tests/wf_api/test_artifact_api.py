@@ -280,13 +280,13 @@ def test_handler_delegation_for_inspect_artifact(tmp_path: Path) -> None:
     assert handler_result["version"] == api_result["version"]
     assert handler_result["title"] == api_result["title"]
 
-
-def test_delete_artifact_deletes_unreferenced_version(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_delete_artifact_deletes_unreferenced_version(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_delete")
     api, _service = _artifact_api(artifact_store)
     artifact_store.save_artifact(_echo_artifact())
 
-    result = asyncio.run(api.delete_artifact(artifact_id="echo", version=1))
+    result = await api.delete_artifact(artifact_id="echo", version=1)
 
     assert result["artifact_id"] == "echo"
     assert result["version"] == 1
@@ -295,8 +295,8 @@ def test_delete_artifact_deletes_unreferenced_version(tmp_path: Path) -> None:
     with pytest.raises(KeyError, match="unknown workflow artifact"):
         artifact_store.get_artifact("echo", 1)
 
-
-def test_delete_artifact_rejects_referenced_version(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_delete_artifact_rejects_referenced_version(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_delete_blocked")
     api, _service = _artifact_api(artifact_store)
     artifact_store.save_artifact(_echo_artifact())
@@ -308,7 +308,7 @@ def test_delete_artifact_rejects_referenced_version(tmp_path: Path) -> None:
         )
     )
 
-    result = asyncio.run(api.delete_artifact(artifact_id="echo", version=1))
+    result = await api.delete_artifact(artifact_id="echo", version=1)
 
     assert result["artifact_id"] == "echo"
     assert result["version"] == 1

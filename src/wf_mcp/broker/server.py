@@ -107,7 +107,6 @@ def workflow_server_from_service(
 def build_workflow_server_from_config(config: BrokerConfig) -> WorkflowServer:
     """Build a neutral WorkflowServer backed by MCP broker runtime services."""
     service = build_service_from_config(config)
-    assert config.store_roots is not None
     return workflow_server_from_service(
         service,
         config=config,

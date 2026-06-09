@@ -760,7 +760,7 @@ def test_wf_draft_delete_succeeds_with_confirm(monkeypatch, tmp_path) -> None:
     runner = CliRunner()
     base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
 
-    runner.invoke(
+    created = runner.invoke(
         app,
         [
             *base_args,
@@ -772,6 +772,7 @@ def test_wf_draft_delete_succeeds_with_confirm(monkeypatch, tmp_path) -> None:
             "delete_me_ws",
         ],
     )
+    assert created.exit_code == 0, created.output
 
     result = runner.invoke(
         app, [*base_args, "draft", "delete", "delete-me", "--confirm"]

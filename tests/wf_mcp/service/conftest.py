@@ -6,8 +6,9 @@ from wf_api.models import RawWorkflowPlan
 from wf_authoring import node
 from wf_core import END
 from wf_mcp.capabilities import DiscoveredTool
-from wf_mcp.models import AuthRecord, ConnectionConfig
+from wf_mcp.models import AuthRecord
 from wf_mcp.sdk import ToolCallResult
+from wf_sources_mcp import McpSourceConnection
 
 from ..test_support import (
     EchoInput,
@@ -28,7 +29,7 @@ class ContentOnlyOutputAdapter(FakeAdapter):
 
     async def list_tools(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredTool]:
         return [
@@ -51,7 +52,7 @@ class ContentOnlyOutputAdapter(FakeAdapter):
 
     async def call_tool(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         tool_name: str,
         payload: dict[str, Any],

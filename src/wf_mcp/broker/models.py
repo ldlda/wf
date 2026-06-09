@@ -43,15 +43,21 @@ class ConnectionConfig:
     source_config_ownership: SourceConfigOwnership = "locked"
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, init=False)
 class BrokerConfig:
     store_root: Path
-    connections: list[ConnectionConfig] = field(default_factory=list)
-    store_roots: BrokerStoreRoots | None = None
+    connections: list[ConnectionConfig]
+    store_roots: BrokerStoreRoots
 
-    def __post_init__(self) -> None:
-        if self.store_roots is None:
-            self.store_roots = BrokerStoreRoots.from_default(self.store_root)
+    def __init__(
+        self,
+        store_root: Path,
+        connections: list[ConnectionConfig] | None = None,
+        store_roots: BrokerStoreRoots | None = None,
+    ) -> None:
+        self.store_root = store_root
+        self.connections = [] if connections is None else connections
+        self.store_roots = store_roots or BrokerStoreRoots.from_default(store_root)
 
 
 __all__ = [

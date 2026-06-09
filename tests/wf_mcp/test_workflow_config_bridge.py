@@ -2,9 +2,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from wf_artifacts import (
+    FileDraftWorkspaceStore,
+    FileRunStore,
+    FileWorkflowArtifactStore,
+)
 from wf_config import WorkflowConfigFile
 from wf_mcp.broker.config import broker_config_from_workflow_config
 from wf_mcp.models import CatalogSnapshot
+from wf_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
 
 
 def test_broker_config_from_workflow_config_converts_mcp_sources(
@@ -187,9 +193,13 @@ def test_build_service_from_neutral_config_uses_role_store_roots(
     broker = broker_config_from_workflow_config(config)
     service = build_service_from_config(broker)
 
+    assert isinstance(service.store, FileStore)
+    assert isinstance(service.auth_store, FileAuthStore)
+    assert isinstance(service.catalog_store, FileCatalogStore)
+    assert isinstance(service.artifact_store, FileWorkflowArtifactStore)
+    assert isinstance(service.draft_workspace_store, FileDraftWorkspaceStore)
+    assert isinstance(service.run_store, FileRunStore)
     assert service.store.root == tmp_path / "auth"
-    assert service.auth_store is not None
-    assert service.catalog_store is not None
     assert service.auth_store.root == tmp_path / "auth"
     assert service.catalog_store.root == tmp_path / "catalog"
     assert service.artifact_store.root == tmp_path / "workflow"

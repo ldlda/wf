@@ -187,7 +187,6 @@ def _runtime_reuse_server(
             )
         ],
     )
-    assert config.store_roots is not None
     store_roots = config.store_roots
     workflow_stores = file_workflow_stores(store_roots.workflow_root)
     auth_store = FileAuthStore(store_roots.auth_root)
