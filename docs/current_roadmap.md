@@ -55,10 +55,11 @@ The v1 durable run and resume path exists, including persisted interrupted runs,
 bounded trace reads, dependency revalidation, and process-rebuild resume tests.
 Remaining hardening should focus on correctness under real server use.
 
-- Add same-run concurrency protection around `resume_run`.
-  Active implementation plan:
-  [`resume run concurrency guard`](superpowers/plans/2026-06-09-resume-run-concurrency-guard.md).
-- Clarify store-level locking/transaction expectations for filesystem stores.
+- Completed: same-process `resume_run` calls are serialized per run id.
+  Implementation:
+  [`resume run concurrency guard`](historical/superpowers/plans/2026-06-09-resume-run-concurrency-guard.md).
+- Clarify store-level locking/transaction expectations for future filesystem
+  and transactional stores.
 - Preserve existing semantics: broken pinned dependencies return blocked
   readiness and diagnostics; ordinary live tool/source failures are failed runs,
   not implicit pauses.

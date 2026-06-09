@@ -192,6 +192,8 @@ Current implementation:
 
 - `WorkflowRunApi.resume_run()` follows this contract for stored interrupted
   runs and blocked dependency validation.
+- Same-process callers are serialized per `run_id` around the restore,
+  dependency validation, runtime resume, and checkpoint write sequence.
 - `restore_interrupted_run()` rejects non-interrupted statuses.
 - `mark_resume_blocked()` updates run summary without writing a checkpoint.
 
@@ -242,10 +244,13 @@ behavior, and checkpoint boundaries.
 
 Current limits:
 
-- The file store uses per-process locking only.
-- It is appropriate for local/dev/single-process use.
-- A long-lived API or multi-worker deployment should use a transactional store
-  later.
+- `WorkflowRunApi.resume_run()` provides a process-local per-run critical
+  section for one API/server process.
+- `FileRunStore` locks individual file writes only; it does not provide
+  compare-and-swap or cross-process transactions.
+- The file store is appropriate for local/dev/single-process use.
+- A multi-worker or cloud deployment still needs SQLite/Postgres or another
+  transactional store before claiming strong concurrent resume safety.
 
 ## Frontend Contract
 
@@ -288,11 +293,9 @@ hardening and frontend durability:
      store to avoid lost writes and weak concurrent resume behavior.
 
 4. **Resume concurrency guard**
-   - Concurrent `resume_run` calls for the same interrupted run should not both
-     advance from the same checkpoint.
-   - V1 file store does not provide compare-and-swap semantics.
-   - Active implementation plan:
-     [`resume run concurrency guard`](../plans/2026-06-09-resume-run-concurrency-guard.md).
+   - Implemented for same-process API callers through a per-`run_id` async
+     critical section in `WorkflowRunApi.resume_run()`.
+   - Cross-process protection remains part of the transactional backend gap.
 
 5. **Protocol-native long-running progress**
    - MCP tasks/progress or an HTTP streaming/event surface should report active
