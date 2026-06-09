@@ -42,7 +42,7 @@ async def _fetch_status_data(context: CliContext) -> dict[str, Any]:
         if isinstance(item, dict) and isinstance(item.get("name"), str)
     ]
     workflow = {
-        "capability_count": len(items),
+        "capability_count": _payload_count(capabilities, "capabilities"),
         "sample_capabilities": names[:5],
     }
 
@@ -72,7 +72,7 @@ async def _fetch_sources(context: CliContext) -> dict[str, Any]:
     ]
     return {
         "available": True,
-        "source_count": len(sources),
+        "source_count": _payload_count(payload, "sources"),
         "sample_sources": source_ids[:5],
     }
 
@@ -112,8 +112,17 @@ async def _fetch_registry(context: CliContext) -> dict[str, Any]:
         return _unavailable(exc)
     return {
         "available": True,
-        "entry_count": len(payload.get("entries", [])),
+        "entry_count": _payload_count(payload, "entries"),
     }
+
+
+def _payload_count(payload: dict[str, Any], items_key: str) -> int:
+    """Prefer a paged API's total count, falling back to the current page size."""
+    total = payload.get("total")
+    if isinstance(total, int):
+        return total
+    items = payload.get(items_key, [])
+    return len(items) if isinstance(items, list) else 0
 
 
 def _unavailable(exc: Exception) -> dict[str, Any]:

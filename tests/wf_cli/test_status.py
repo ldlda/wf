@@ -5,6 +5,7 @@ import json
 from typer.testing import CliRunner
 
 from wf_cli.app import app
+from wf_cli.commands.status import _payload_count
 
 
 def test_wf_status_local_static_target(tmp_path) -> None:
@@ -46,3 +47,15 @@ def test_wf_status_local_static_target(tmp_path) -> None:
     assert payload["sources"]["source_count"] >= 1
     assert payload["admin"]["available"] is True
     assert payload["registry"]["available"] is False
+
+
+def test_status_count_prefers_paged_total() -> None:
+    payload = {"total": 91, "capabilities": [{"name": "first"}]}
+
+    assert _payload_count(payload, "capabilities") == 91
+
+
+def test_status_count_falls_back_to_page_length_without_total() -> None:
+    payload = {"capabilities": [{"name": "first"}, {"name": "second"}]}
+
+    assert _payload_count(payload, "capabilities") == 2
