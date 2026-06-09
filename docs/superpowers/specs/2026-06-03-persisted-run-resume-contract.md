@@ -7,6 +7,7 @@ Status: contract clarification; current V1 mostly implemented
 Related:
 
 - [Durable workflow runs and resume design](./2026-05-26-durable-workflow-runs-and-resume-design.md)
+- [Store transaction and locking boundary](./2026-06-09-store-transaction-boundary.md)
 - [Durable run operations](../../durable_run_operations.md)
 - [WorkflowOperationContext audit](../research/2026-06-03-workflow-operation-context-audit.md)
 

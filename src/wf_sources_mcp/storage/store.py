@@ -54,6 +54,12 @@ class Store(AuthStore, CatalogStore):
 
 
 class FileAuthStore(AuthStore):
+    """Local plaintext JSON auth store for development and test deployments.
+
+    Admin surfaces keep payload values write-only, but this filesystem backend
+    does not encrypt secrets or coordinate cross-process writes.
+    """
+
     def __init__(self, root: Path) -> None:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
@@ -115,6 +121,12 @@ class FileAuthStore(AuthStore):
 
 
 class FileCatalogStore(CatalogStore):
+    """Local JSON cache for MCP catalog snapshots.
+
+    Catalog snapshots are a convenience cache, not authoritative desired state,
+    and writes are not cross-process transactional.
+    """
+
     def __init__(self, root: Path) -> None:
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)

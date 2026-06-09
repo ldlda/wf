@@ -58,8 +58,9 @@ Remaining hardening should focus on correctness under real server use.
 - Completed: same-process `resume_run` calls are serialized per run id.
   Implementation:
   [`resume run concurrency guard`](historical/superpowers/plans/2026-06-09-resume-run-concurrency-guard.md).
-- Clarify store-level locking/transaction expectations for future filesystem
-  and transactional stores.
+- Completed: store-level locking/transaction expectations are documented for
+  current file stores and future transactional stores:
+  [`store transaction boundary`](superpowers/specs/2026-06-09-store-transaction-boundary.md).
 - Preserve existing semantics: broken pinned dependencies return blocked
   readiness and diagnostics; ordinary live tool/source failures are failed runs,
   not implicit pauses.

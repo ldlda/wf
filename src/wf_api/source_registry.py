@@ -58,7 +58,11 @@ class SourceRegistryStore(Protocol[RegistryT]):
 
 
 class AtomicJsonRegistryStore(Generic[RegistryT]):
-    """Filesystem implementation for small desired-registry documents."""
+    """Filesystem implementation for small desired-registry documents.
+
+    Saves replace one whole JSON file atomically, but there is no revision check
+    or cross-process compare-and-swap. Concurrent writers are last-writer-wins.
+    """
 
     def __init__(
         self,

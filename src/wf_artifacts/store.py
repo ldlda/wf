@@ -56,7 +56,12 @@ class WorkflowArtifactStore:
 
 
 class FileWorkflowArtifactStore(WorkflowArtifactStore):
-    """JSON file-backed artifact store for local development and tests."""
+    """JSON file-backed artifact store for local development and tests.
+
+    This store validates paths and performs simple file writes/deletes. API
+    services own multi-step policies such as "do not delete referenced
+    artifacts"; use a transactional store for multi-process safety.
+    """
 
     def __init__(self, root: Path) -> None:
         self.root = root

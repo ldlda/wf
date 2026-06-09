@@ -30,7 +30,12 @@ class RunStore:
 
 
 class FileRunStore(RunStore):
-    """JSON file-backed stopped-run store for local development and tests."""
+    """JSON file-backed stopped-run store for local development and tests.
+
+    The internal lock protects individual writes inside one process only.
+    `WorkflowRunApi.resume_run()` owns the same-process read/execute/write
+    critical section; multi-worker deployments need a transactional store.
+    """
 
     def __init__(self, root: Path) -> None:
         self.root = root
