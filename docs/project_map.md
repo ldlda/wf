@@ -55,6 +55,9 @@ paths should go through `wf_server` plus transport/source packages.
 - `examples/mcp_workflow_surface.py` shows the fixture-style MCP workflow path:
   discover a backend tool, create a draft artifact, save a deployment, and run
   it while wiring the generated `ok` and `error` outcomes.
+- `examples/rpc_cli_smoke.py` spawns `wf-rpc-server`, runs the bounded CLI
+  lifecycle from the RPC CLI smoke runbook, and cleans up. Use
+  `--keep-temp` to preserve the generated config/store on failure.
 
 ## Tests
 

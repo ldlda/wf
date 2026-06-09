@@ -6,6 +6,14 @@ Use this runbook to verify the product path:
 wf CLI -> wf_transport_rpc_http -> wf_server -> wf_api -> wf_core / stores / sources
 ```
 
+For an automated version of this runbook:
+
+```bash
+uv run python examples/rpc_cli_smoke.py
+```
+
+Use `--keep-temp` to preserve the generated config/store after failure.
+
 This is a bounded smoke test, not a load test. Keep outputs compact and avoid
 dumping raw upstream MCP resource payloads into terminal logs or agent context.
 Some MCP servers can return huge base64 image/resource blocks.

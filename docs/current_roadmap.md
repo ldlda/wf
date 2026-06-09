@@ -42,12 +42,11 @@ clear operator feedback before adding more architecture.
   [`wf draft delete CLI/RPC`](historical/superpowers/plans/2026-06-09-wf-draft-delete-cli-rpc.md).
 - Completed: bounded RPC CLI smoke runbook with cleanup commands:
   [`RPC CLI smoke runbook`](runbooks/rpc-cli-smoke.md).
+- Completed: automated RPC CLI smoke example:
+  [`RPC CLI smoke example`](historical/superpowers/plans/2026-06-09-rpc-cli-smoke-example.md).
 - Next docs/ergonomics cleanup: make `cap call` output safer for humans without
   changing default JSON semantics. Implementation:
   [`cap call output safety`](historical/superpowers/plans/2026-06-09-cap-call-output-safety.md).
-- Future smoke automation: turn the manual RPC CLI smoke runbook into a small
-  script. Active plan:
-  [`RPC CLI smoke example`](superpowers/plans/2026-06-09-rpc-cli-smoke-example.md).
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening
