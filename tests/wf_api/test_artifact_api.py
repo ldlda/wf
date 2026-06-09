@@ -280,6 +280,7 @@ def test_handler_delegation_for_inspect_artifact(tmp_path: Path) -> None:
     assert handler_result["version"] == api_result["version"]
     assert handler_result["title"] == api_result["title"]
 
+
 @pytest.mark.asyncio
 async def test_delete_artifact_deletes_unreferenced_version(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_delete")
@@ -294,6 +295,7 @@ async def test_delete_artifact_deletes_unreferenced_version(tmp_path: Path) -> N
     assert result["blocked_by_deployments"] == []
     with pytest.raises(KeyError, match="unknown workflow artifact"):
         artifact_store.get_artifact("echo", 1)
+
 
 @pytest.mark.asyncio
 async def test_delete_artifact_rejects_referenced_version(tmp_path: Path) -> None:

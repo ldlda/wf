@@ -16,7 +16,7 @@ from wf_artifacts import (
 )
 from wf_authoring import NodeSpec
 from wf_core import InterruptRequest, RunState, RunStatus
-from wf_platform import CapabilityBuckets, CapabilitySource, SourceKind
+from wf_platform import CapabilitySource
 
 
 class DummyEvents:
@@ -174,9 +174,7 @@ def _artifact() -> WorkflowArtifact:
             "output_schema": {"type": "object", "properties": {}},
             "outcomes": ["ok", "submitted"],
             "start": "end_submitted",
-            "nodes": [
-                {"id": "end_submitted", "type": "end", "outcome": "submitted"}
-            ],
+            "nodes": [{"id": "end_submitted", "type": "end", "outcome": "submitted"}],
             "edges": [],
         },
     )
