@@ -15,6 +15,7 @@ Related:
 - [wf_api architecture](../../wf_api_architecture.md)
 - [wf_mcp architecture](../../wf_mcp_architecture.md)
 - [Persisted run/resume contract](./2026-06-03-persisted-run-resume-contract.md)
+- [Server CLI and transport boundary](./2026-06-10-server-cli-transport-boundary.md)
 - [Current roadmap](../../current_roadmap.md)
 
 ## Purpose

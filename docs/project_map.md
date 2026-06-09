@@ -11,8 +11,8 @@ paths should go through `wf_server` plus transport/source packages.
 | `wf_core` | Deterministic workflow kernel: models, validation, runtime, run state, traces, interrupts, foreach, and path/state operations. | Runtime users, `wf_authoring`, workflow adapters. |
 | `wf_authoring` | Ergonomic workflow construction: `@node`, `NodeSpec`, builder DSL, conditions, path helpers, reusable ops, subgraph nodes. | Humans, tests, future LLM workflow builders. |
 | `wf_api` | Workflow application surface over core/artifacts/platform: capabilities, drafts, artifacts, deployments, runs, and source/admin surfaces. | `wf_cli`, `wf_server`, JSON-RPC clients, future transports. |
-| `wf_server` | Durable server composition boundary around `WorkflowApi` plus optional admin/source-registry surfaces. | Transport packages and server startup code. |
-| `wf_transport_rpc_http` | JSON-RPC-over-HTTP app/client and `wf-rpc-server` CLI. | Remote `wf` clients and local server smoke tests. |
+| `wf_server` | Durable server composition boundary around `WorkflowApi` plus optional admin/source-registry surfaces. Target home for server startup CLI/policy. | Transport packages and server startup code. |
+| `wf_transport_rpc_http` | JSON-RPC-over-HTTP app/client. The current `wf-rpc-server` CLI is slated to move to `wf_server` with a compatibility shim. | Remote `wf` clients and local server smoke tests. |
 | `wf_sources_mcp` | MCP-as-upstream-source implementation: ids, registry DTOs, auth/catalog stores, discovery, SDK client/facade, runtime pool, wrappers. | `wf_server`, broker glue, MCP source tests. |
 | `wf_mcp` | MCP frontend/compatibility package: legacy `wf-mcp` entrypoints, broker glue, proxy/admin tools, and shims while extraction continues. | Compatibility callers and MCP transport work. |
 | `wf_cli` | Command-line frontend over local or remote workflow APIs. | Humans, scripts, agent skills. |
@@ -33,11 +33,15 @@ paths should go through `wf_server` plus transport/source packages.
 - `wf_server.WorkflowServer`: durable workflow server composition object.
 - `wf_transport_rpc_http.RpcWorkflowApiClient`: JSON-RPC client implementing
   the workflow/admin surfaces over HTTP.
+- `wf_transport_rpc_http.create_rpc_app`: JSON-RPC HTTP adapter over an existing
+  `WorkflowServer`.
 - `wf_sources_mcp.McpRuntimePool`: persistent MCP source runtime for stateful
   upstream tools/resources/prompts.
 - `wf_mcp`: MCP-specific frontend and compatibility package.
 - `wf-mcp`: legacy/special-purpose MCP script from `pyproject.toml`.
-- `wf-rpc-server`: preferred durable workflow server script for CLI/API clients.
+- `wf-rpc-server`: preferred durable workflow server script for CLI/API clients;
+  currently implemented in `wf_transport_rpc_http.cli`, but the target owner is
+  `wf_server.cli`.
 - `wf_mcp.broker.WfMcpService.get_catalog()`: backend MCP catalog snapshots.
 - `wf_mcp.broker.WfMcpService.get_planner_catalog()`: backend snapshots plus
   broker-local workflow sources such as `wf.std` and `wf.mcp`.

@@ -81,12 +81,16 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
 - New source families should follow the generic runtime source lifecycle rather
   than being forced through MCP `ConnectionConfig`:
   [`runtime source lifecycle`](superpowers/specs/2026-06-09-runtime-source-lifecycle.md).
+- Server startup policy should move out of the JSON-RPC transport package and
+  into `wf_server` before adding more hosted transports:
+  [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).
 - Deferred auth work: OAuth/OIDC, production secret manager integration,
   encrypted-at-rest file format, and provider-specific display models.
 - Active specs:
   - [`workflow config targets and sources`](superpowers/specs/2026-06-03-workflow-config-targets-and-sources.md)
   - [`store-backed source registry`](superpowers/specs/2026-06-03-store-backed-source-registry-design.md)
   - [`runtime source lifecycle`](superpowers/specs/2026-06-09-runtime-source-lifecycle.md)
+  - [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md)
   - [`auth/source secrets boundary`](superpowers/specs/2026-06-06-auth-source-secrets-boundary.md)
 
 ## Priority 4: MCP Package Split Finish Line
