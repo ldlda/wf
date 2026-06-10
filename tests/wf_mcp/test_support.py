@@ -3,7 +3,8 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, overload
+from warnings import deprecated
 
 from pydantic import BaseModel, Field
 
@@ -47,8 +48,17 @@ def finalize_tool(
     )
 
 
-def local_temp_root() -> Path:
-    root = Path("test-artifacts") / "wf_mcp_store"
+@deprecated("Use pytests tmp_path fixture instead")
+@overload
+def local_temp_root() -> Path: ...
+
+
+@overload
+def local_temp_root(root_path: Path) -> Path: ...
+
+
+def local_temp_root(root_path: Path | None = None) -> Path:
+    root = root_path or (Path("test-artifacts") / "wf_mcp_store")
     root.mkdir(parents=True, exist_ok=True)
     return root
 

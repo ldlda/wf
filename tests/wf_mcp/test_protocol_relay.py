@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import sys
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 
 import mcp.types as mcp_types
 import pytest
@@ -12,7 +13,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy import create_proxy_client
 
-from .test_support import fixture_server_path, local_temp_root
+from .test_support import fixture_server_path
 
 NotificationProbe = Callable[
     [Callable[[mcp_types.ServerNotification], None]],
@@ -70,9 +71,9 @@ def test_fixture_server_emits_observable_protocol_notifications_directly() -> No
     assert "notifications/message" in methods
 
 
-def _fixture_proxy_notification_methods() -> list[str]:
+def _fixture_proxy_notification_methods(tmp_path: Path) -> list[str]:
     config = BrokerConfig(
-        store_root=local_temp_root() / "protocol_relay_store",
+        store_root=tmp_path / "protocol_relay_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",
@@ -105,8 +106,10 @@ def _fixture_proxy_notification_methods() -> list[str]:
     return _notification_methods(notifications)
 
 
-def test_proxy_does_not_relay_generic_upstream_notifications_yet() -> None:
-    methods = _fixture_proxy_notification_methods()
+def test_proxy_does_not_relay_generic_upstream_notifications_yet(
+    tmp_path: Path,
+) -> None:
+    methods = _fixture_proxy_notification_methods(tmp_path)
 
     # Stateful proxy sessions preserve FastMCP's supported request callbacks,
     # but generic upstream change/update notification rebroadcast is separate
@@ -124,7 +127,9 @@ def test_proxy_does_not_relay_generic_upstream_notifications_yet() -> None:
         "data; valid string-valued MCP logging data is rejected upstream."
     ),
 )
-def test_proxy_relays_string_valued_upstream_log_when_fastmcp_supports_it() -> None:
-    methods = _fixture_proxy_notification_methods()
+def test_proxy_relays_string_valued_upstream_log_when_fastmcp_supports_it(
+    tmp_path: Path,
+) -> None:
+    methods = _fixture_proxy_notification_methods(tmp_path)
 
     assert "notifications/message" in methods

@@ -21,11 +21,7 @@ from wf_core import (
 )
 
 
-def test_concurrent_foreach_interrupt_returns_before_refill() -> None:
-    asyncio.run(_assert_concurrent_foreach_interrupt_returns_before_refill())
-
-
-async def _assert_concurrent_foreach_interrupt_returns_before_refill() -> None:
+async def test_concurrent_foreach_interrupt_returns_before_refill() -> None:
     run = await execute_workflow_async(
         _workflow(),
         {"items": ["a", "b", "c"]},
@@ -40,11 +36,7 @@ async def _assert_concurrent_foreach_interrupt_returns_before_refill() -> None:
     assert "seen" not in run.state
 
 
-def test_resume_prioritizes_interrupted_item_before_siblings() -> None:
-    asyncio.run(_assert_resume_prioritizes_interrupted_item_before_siblings())
-
-
-async def _assert_resume_prioritizes_interrupted_item_before_siblings() -> None:
+async def test_resume_prioritizes_interrupted_item_before_siblings() -> None:
     workflow = _workflow()
     run = await execute_workflow_async(
         workflow,

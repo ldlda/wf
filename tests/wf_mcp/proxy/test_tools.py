@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from pathlib import Path
 from typing import Any
 
 import anyio
@@ -14,72 +15,69 @@ from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy import create_proxy_client
 from wf_mcp.proxy.mounts import _bounded_proxy_list
 
-from ..test_support import fixture_server_path, local_temp_root
+from ..test_support import fixture_server_path
 from .conftest import proxy_config, structured
 
 
-def test_proxy_lists_and_calls_upstream_tools() -> None:
-    config = proxy_config()
+async def test_proxy_lists_and_calls_upstream_tools(tmp_path: Path) -> None:
+    config = proxy_config(tmp_path)
 
-    async def run_proxy() -> None:
-        client = create_proxy_client(config)
-        async with client:
-            tools = await client.list_tools()
-            names = [tool.name for tool in tools]
-            assert "wf.admin.list_connections" in names
-            assert "wf.admin.get_connection_statuses" in names
-            assert "wf.admin.list_proxy_tools" in names
-            assert "wf.admin.get_proxy_tool" in names
-            assert "fixture.personal.echo_tool" in names
+    client = create_proxy_client(config)
+    async with client:
+        tools = await client.list_tools()
+        names = [tool.name for tool in tools]
+        assert "wf.admin.list_connections" in names
+        assert "wf.admin.get_connection_statuses" in names
+        assert "wf.admin.list_proxy_tools" in names
+        assert "wf.admin.get_proxy_tool" in names
+        assert "fixture.personal.echo_tool" in names
 
-            connections_result = await client.call_tool("wf.admin.list_connections")
-            connections = structured(connections_result)["result"]
-            assert len(connections) == 1
-            connection = connections[0]
-            assert connection["id"] == "fixture.personal"
-            assert connection["server"] == "fixture"
-            assert connection["account"] == "personal"
-            assert connection["enabled"] is True
-            assert connection["source_config_ownership"] == "locked"
-            assert connection["metadata"] == {
-                "transport": "stdio",
-                "command": sys.executable,
-                "args": [fixture_server_path()],
-            }
+        connections_result = await client.call_tool("wf.admin.list_connections")
+        connections = structured(connections_result)["result"]
+        assert len(connections) == 1
+        connection = connections[0]
+        assert connection["id"] == "fixture.personal"
+        assert connection["server"] == "fixture"
+        assert connection["account"] == "personal"
+        assert connection["enabled"] is True
+        assert connection["source_config_ownership"] == "locked"
+        assert connection["metadata"] == {
+            "transport": "stdio",
+            "command": sys.executable,
+            "args": [fixture_server_path()],
+        }
 
-            result = await client.call_tool(
-                "fixture.personal.echo_tool",
-                {"text": "hello"},
-            )
-            assert structured(result) == {"echoed": "hello"}
+        result = await client.call_tool(
+            "fixture.personal.echo_tool",
+            {"text": "hello"},
+        )
+        assert structured(result) == {"echoed": "hello"}
 
-            proxy_tools_result = await client.call_tool("wf.admin.list_proxy_tools")
-            proxy_tools_payload = structured(proxy_tools_result)
-            proxy_tools = proxy_tools_payload["tools"]
-            assert proxy_tools_payload["nextCursor"] is None
-            assert proxy_tools_payload["total"] == 5
-            assert len(proxy_tools) == 5
-            assert proxy_tools[0]["proxy_name"] == "fixture.personal.echo_tool"
-            assert proxy_tools[0]["connection_id"] == "fixture.personal"
-            assert proxy_tools[0]["local_name"] == "echo_tool"
-            assert proxy_tools[0]["enabled"] is True
-            proxy_names = [tool["proxy_name"] for tool in proxy_tools]
-            assert "fixture.personal.emit_notifications_tool" in proxy_names
-            assert "fixture.personal.remember_value_tool" in proxy_names
-            assert "fixture.personal.recall_value_tool" in proxy_names
-            assert "fixture.personal.resource_link_tool" in proxy_names
+        proxy_tools_result = await client.call_tool("wf.admin.list_proxy_tools")
+        proxy_tools_payload = structured(proxy_tools_result)
+        proxy_tools = proxy_tools_payload["tools"]
+        assert proxy_tools_payload["nextCursor"] is None
+        assert proxy_tools_payload["total"] == 5
+        assert len(proxy_tools) == 5
+        assert proxy_tools[0]["proxy_name"] == "fixture.personal.echo_tool"
+        assert proxy_tools[0]["connection_id"] == "fixture.personal"
+        assert proxy_tools[0]["local_name"] == "echo_tool"
+        assert proxy_tools[0]["enabled"] is True
+        proxy_names = [tool["proxy_name"] for tool in proxy_tools]
+        assert "fixture.personal.emit_notifications_tool" in proxy_names
+        assert "fixture.personal.remember_value_tool" in proxy_names
+        assert "fixture.personal.recall_value_tool" in proxy_names
+        assert "fixture.personal.resource_link_tool" in proxy_names
 
-            proxy_tool_result = await client.call_tool(
-                "wf.admin.get_proxy_tool",
-                {"proxy_name": "fixture.personal.echo_tool"},
-            )
-            proxy_tool = structured(proxy_tool_result)
-            assert proxy_tool["proxy_name"] == "fixture.personal.echo_tool"
-            assert proxy_tool["connection_id"] == "fixture.personal"
-            assert proxy_tool["local_name"] == "echo_tool"
-            assert proxy_tool["input_schema"]["properties"]["text"]["type"] == "string"
-
-    asyncio.run(run_proxy())
+        proxy_tool_result = await client.call_tool(
+            "wf.admin.get_proxy_tool",
+            {"proxy_name": "fixture.personal.echo_tool"},
+        )
+        proxy_tool = structured(proxy_tool_result)
+        assert proxy_tool["proxy_name"] == "fixture.personal.echo_tool"
+        assert proxy_tool["connection_id"] == "fixture.personal"
+        assert proxy_tool["local_name"] == "echo_tool"
+        assert proxy_tool["input_schema"]["properties"]["text"]["type"] == "string"
 
 
 def test_proxy_listing_degrades_when_one_source_hangs() -> None:
@@ -183,60 +181,49 @@ def test_proxy_listing_degrades_when_session_transport_closes(
     assert "remote.default" in caplog.text
 
 
-def test_proxy_registers_admin_tools_on_local_provider() -> None:
-    config = proxy_config()
+async def test_proxy_registers_admin_tools_on_local_provider(tmp_path) -> None:
+    config = proxy_config(tmp_path)
 
-    async def run_proxy() -> None:
-        client = create_proxy_client(config)
-        async with client:
-            tools = await client.list_tools()
-            admin_names = [
-                tool.name for tool in tools if tool.name.startswith("wf.admin.")
-            ]
-            assert "wf.admin.list_connections" in admin_names
-            assert "wf.admin.get_connection_statuses" in admin_names
-            assert "wf.admin.list_proxy_tools" in admin_names
-            assert "wf.admin.get_proxy_tool" in admin_names
-
-    asyncio.run(run_proxy())
+    client = create_proxy_client(config)
+    async with client:
+        tools = await client.list_tools()
+        admin_names = [tool.name for tool in tools if tool.name.startswith("wf.admin.")]
+        assert "wf.admin.list_connections" in admin_names
+        assert "wf.admin.get_connection_statuses" in admin_names
+        assert "wf.admin.list_proxy_tools" in admin_names
+        assert "wf.admin.get_proxy_tool" in admin_names
 
 
-def test_proxy_rewrites_resource_links_returned_by_tools() -> None:
-    config = proxy_config()
+async def test_proxy_rewrites_resource_links_returned_by_tools(tmp_path) -> None:
+    config = proxy_config(tmp_path)
 
-    async def run_proxy() -> None:
-        client = create_proxy_client(config)
-        async with client:
-            result = await client.call_tool("fixture.personal.resource_link_tool")
-            link = result.content[0]
-            assert link.type == "resource_link"
-            assert str(link.uri) == "fixture://fixture/personal/docs/welcome"
-
-    asyncio.run(run_proxy())
+    client = create_proxy_client(config)
+    async with client:
+        result = await client.call_tool("fixture.personal.resource_link_tool")
+        link = result.content[0]
+        assert link.type == "resource_link"
+        assert str(link.uri) == "fixture://fixture/personal/docs/welcome"
 
 
-def test_proxy_reuses_one_upstream_session_for_stateful_tools() -> None:
+async def test_proxy_reuses_one_upstream_session_for_stateful_tools(tmp_path) -> None:
     """Visible proxy tools must share server-local state for one MCP client."""
-    config = proxy_config()
+    config = proxy_config(tmp_path)
 
-    async def run_proxy() -> None:
-        client = create_proxy_client(config)
-        async with client:
-            written = await client.call_tool(
-                "fixture.personal.remember_value_tool",
-                {"value": "held"},
-            )
-            recalled = await client.call_tool("fixture.personal.recall_value_tool")
+    client = create_proxy_client(config)
+    async with client:
+        written = await client.call_tool(
+            "fixture.personal.remember_value_tool",
+            {"value": "held"},
+        )
+        recalled = await client.call_tool("fixture.personal.recall_value_tool")
 
-            assert structured(written)["remembered"] == "held"
-            assert structured(recalled)["remembered"] == "held"
-
-    asyncio.run(run_proxy())
+        assert structured(written)["remembered"] == "held"
+        assert structured(recalled)["remembered"] == "held"
 
 
-def test_proxy_rejects_invalid_connection_config() -> None:
+def test_proxy_rejects_invalid_connection_config(tmp_path) -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "proxy_invalid_store",
+        store_root=tmp_path / "proxy_invalid_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",
@@ -291,103 +278,91 @@ def test_proxy_rejects_invalid_connection_config() -> None:
     assert "connection id 'wf.admin' is reserved by wf-mcp" in message
 
 
-def test_proxy_can_expose_resources_and_prompts_as_tools() -> None:
-    config = proxy_config()
+async def test_proxy_can_expose_resources_and_prompts_as_tools(tmp_path) -> None:
+    config = proxy_config(tmp_path)
 
-    async def run_proxy() -> None:
-        client = create_proxy_client(
-            config,
-            resources_as_tools=True,
-            prompts_as_tools=True,
+    client = create_proxy_client(
+        config,
+        resources_as_tools=True,
+        prompts_as_tools=True,
+    )
+    async with client:
+        tools = await client.list_tools()
+        names = [tool.name for tool in tools]
+        assert "list_resources" in names
+        assert "read_resource" in names
+        assert "list_prompts" in names
+        assert "get_prompt" in names
+
+
+async def test_proxy_can_collapse_upstream_tools_behind_search(tmp_path) -> None:
+    config = BrokerConfig(
+        store_root=tmp_path / "search_proxy_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    client = create_proxy_client(config, search_tools=True)
+    async with client:
+        tools = await client.list_tools()
+        names = [tool.name for tool in tools]
+        assert "search_tools" in names
+        assert "wf.admin.list_connections" in names
+        assert "wf.admin.get_connection_statuses" in names
+        assert "wf.admin.list_proxy_tools" in names
+        assert "fixture.personal.echo_tool" not in names
+
+
+async def test_proxy_admin_inventory_ignores_search_visibility(tmp_path) -> None:
+    config = BrokerConfig(
+        store_root=tmp_path / "search_admin_store",
+        connections=[
+            ConnectionConfig(
+                id="fixture.personal",
+                server="fixture",
+                account="personal",
+                metadata={
+                    "transport": "stdio",
+                    "command": sys.executable,
+                    "args": [fixture_server_path()],
+                },
+            )
+        ],
+    )
+
+    client = create_proxy_client(config, search_tools=True)
+    async with client:
+        result = await client.call_tool("wf.admin.list_proxy_tools")
+        payload = structured(result)
+        assert payload["total"] > 0
+
+
+async def test_proxy_proxy_tool_listing_supports_filters_and_cursor(tmp_path) -> None:
+    config = proxy_config(tmp_path)
+
+    client = create_proxy_client(config)
+    async with client:
+        result = await client.call_tool(
+            "wf.admin.list_proxy_tools",
+            {"limit": 2},
         )
-        async with client:
-            tools = await client.list_tools()
-            names = [tool.name for tool in tools]
-            assert "list_resources" in names
-            assert "read_resource" in names
-            assert "list_prompts" in names
-            assert "get_prompt" in names
+        payload = structured(result)
+        assert len(payload["tools"]) == 2
+        assert payload["nextCursor"] is not None
 
-    asyncio.run(run_proxy())
-
-
-def test_proxy_can_collapse_upstream_tools_behind_search() -> None:
-    config = BrokerConfig(
-        store_root=local_temp_root() / "search_proxy_store",
-        connections=[
-            ConnectionConfig(
-                id="fixture.personal",
-                server="fixture",
-                account="personal",
-                metadata={
-                    "transport": "stdio",
-                    "command": sys.executable,
-                    "args": [fixture_server_path()],
-                },
-            )
-        ],
-    )
-
-    async def run_proxy() -> None:
-        client = create_proxy_client(config, search_tools=True)
-        async with client:
-            tools = await client.list_tools()
-            names = [tool.name for tool in tools]
-            assert "search_tools" in names
-            assert "wf.admin.list_connections" in names
-            assert "wf.admin.get_connection_statuses" in names
-            assert "wf.admin.list_proxy_tools" in names
-            assert "fixture.personal.echo_tool" not in names
-
-    asyncio.run(run_proxy())
-
-
-def test_proxy_admin_inventory_ignores_search_visibility() -> None:
-    config = BrokerConfig(
-        store_root=local_temp_root() / "search_admin_store",
-        connections=[
-            ConnectionConfig(
-                id="fixture.personal",
-                server="fixture",
-                account="personal",
-                metadata={
-                    "transport": "stdio",
-                    "command": sys.executable,
-                    "args": [fixture_server_path()],
-                },
-            )
-        ],
-    )
-
-    async def run_proxy() -> None:
-        client = create_proxy_client(config, search_tools=True)
-        async with client:
-            result = await client.call_tool("wf.admin.list_proxy_tools")
-            payload = structured(result)
-            assert payload["total"] > 0
-
-    asyncio.run(run_proxy())
-
-
-def test_proxy_proxy_tool_listing_supports_filters_and_cursor() -> None:
-    config = proxy_config()
-
-    async def run_proxy() -> None:
-        client = create_proxy_client(config)
-        async with client:
-            result = await client.call_tool(
-                "wf.admin.list_proxy_tools",
-                {"limit": 2},
-            )
-            payload = structured(result)
-            assert len(payload["tools"]) == 2
-            assert payload["nextCursor"] is not None
-
-            result2 = await client.call_tool(
-                "wf.admin.list_proxy_tools",
-                {"limit": 2, "cursor": payload["nextCursor"]},
-            )
-            payload2 = structured(result2)
-            assert len(payload2["tools"]) > 0
-
-    asyncio.run(run_proxy())
+        result2 = await client.call_tool(
+            "wf.admin.list_proxy_tools",
+            {"limit": 2, "cursor": payload["nextCursor"]},
+        )
+        payload2 = structured(result2)
+        assert len(payload2["tools"]) > 0

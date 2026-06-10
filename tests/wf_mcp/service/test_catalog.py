@@ -20,13 +20,12 @@ from ..test_support import (
     FakeAdapter,
     echo_tool,
     finalize_tool,
-    local_temp_root,
 )
 from .conftest import single_echo_plan
 
 
-def test_service_builds_namespaced_catalog() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "catalog_store"))
+def test_service_builds_namespaced_catalog(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "catalog_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
@@ -41,8 +40,8 @@ def test_service_builds_namespaced_catalog() -> None:
     ]
 
 
-def test_service_rejects_reserved_connection_ids() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "reserved_ids_store"))
+def test_service_rejects_reserved_connection_ids(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "reserved_ids_store"))
 
     for connection_id in ("wf.admin", "wf.mcp"):
         try:
@@ -56,8 +55,8 @@ def test_service_rejects_reserved_connection_ids() -> None:
             raise AssertionError(f"expected {connection_id!r} to be rejected")
 
 
-def test_service_installs_builtin_stdlib_specs_by_default() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "builtin_store"))
+def test_service_installs_builtin_stdlib_specs_by_default(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "builtin_store"))
 
     assert (
         "wf.std.runtime_error"
@@ -66,8 +65,8 @@ def test_service_installs_builtin_stdlib_specs_by_default() -> None:
     assert "wf.mcp" not in service.capability_sources
 
 
-def test_service_does_not_install_workflow_stores_implicitly() -> None:
-    root = local_temp_root() / "service_no_implicit_workflow_stores"
+def test_service_does_not_install_workflow_stores_implicitly(tmp_path: Path) -> None:
+    root = tmp_path / "service_no_implicit_workflow_stores"
     service = WfMcpService(store=FileStore(root))
 
     assert service.artifact_store is None
@@ -75,8 +74,10 @@ def test_service_does_not_install_workflow_stores_implicitly() -> None:
     assert service.run_store is None
 
 
-def test_service_registers_empty_source_for_connection_without_catalog() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "empty_source"))
+def test_service_registers_empty_source_for_connection_without_catalog(
+    tmp_path: Path,
+) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "empty_source"))
 
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -88,8 +89,10 @@ def test_service_registers_empty_source_for_connection_without_catalog() -> None
     assert source.description == "No catalog loaded for demo.personal."
 
 
-def test_service_lists_all_capability_sources_with_owned_capability_names() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "source_inventory"))
+def test_service_lists_all_capability_sources_with_owned_capability_names(
+    tmp_path: Path,
+) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "source_inventory"))
 
     sources = service.list_sources()
     sources_by_id = {source["id"]: source for source in sources}
@@ -112,8 +115,8 @@ def test_service_lists_all_capability_sources_with_owned_capability_names() -> N
     assert "wf.admin.list_sources" in admin_source["capabilities"]["tools"]
 
 
-def test_service_lists_compact_source_summaries() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "source_summaries"))
+def test_service_lists_compact_source_summaries(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "source_summaries"))
 
     payload = service.list_source_summaries(limit=1)
 
@@ -129,8 +132,8 @@ def test_service_lists_compact_source_summaries() -> None:
     assert std_source["has_more"]["node_specs"] is True
 
 
-def test_wf_std_source_contains_authoring_ops() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "stdlib_source_store"))
+def test_wf_std_source_contains_authoring_ops(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "stdlib_source_store"))
     specs = service.capability_sources["wf.std"].capabilities.node_specs
 
     expected = {
@@ -158,8 +161,8 @@ def test_wf_std_source_contains_authoring_ops() -> None:
     assert set(specs) == expected
 
 
-def test_wf_std_source_contains_builtin_reducers() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "stdlib_reducer_store"))
+def test_wf_std_source_contains_builtin_reducers(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "stdlib_reducer_store"))
     reducers = service.capability_sources["wf.std"].capabilities.reducers
 
     assert set(reducers) == {
@@ -172,8 +175,8 @@ def test_wf_std_source_contains_builtin_reducers() -> None:
     }
 
 
-def test_service_sources_have_visibility_and_capability_buckets() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "source_shape_store"))
+def test_service_sources_have_visibility_and_capability_buckets(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "source_shape_store"))
 
     std_source = service.capability_sources["wf.std"]
 
@@ -186,8 +189,8 @@ def test_service_sources_have_visibility_and_capability_buckets() -> None:
     assert not std_source.capabilities.tools
 
 
-def test_wf_recipes_source_contains_composed_capabilities() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "recipes_source_store"))
+def test_wf_recipes_source_contains_composed_capabilities(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "recipes_source_store"))
     specs = service.capability_sources["wf.recipes"].capabilities.node_specs
 
     assert set(specs) == {"wf.recipes.extract_text_content"}
@@ -196,8 +199,8 @@ def test_wf_recipes_source_contains_composed_capabilities() -> None:
     )
 
 
-def test_wf_admin_source_exists_but_is_not_planner_visible() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "admin_source_store"))
+def test_wf_admin_source_exists_but_is_not_planner_visible(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "admin_source_store"))
     source = service.capability_sources["wf.admin"]
 
     assert source.kind == "system"
@@ -214,9 +217,9 @@ def test_wf_admin_source_exists_but_is_not_planner_visible() -> None:
     assert "wf.admin" not in service.get_planner_catalog().snapshots
 
 
-def test_service_can_disable_builtin_stdlib_specs() -> None:
+def test_service_can_disable_builtin_stdlib_specs(tmp_path: Path) -> None:
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "no_builtin_store"),
+        store=FileStore(tmp_path / "no_builtin_store"),
         include_builtin_specs=False,
     )
 
@@ -224,8 +227,8 @@ def test_service_can_disable_builtin_stdlib_specs() -> None:
     assert "wf.recipes" not in service.capability_sources
 
 
-def test_service_planner_catalog_excludes_hidden_sources() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "hidden_list_store"))
+def test_service_planner_catalog_excludes_hidden_sources(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "hidden_list_store"))
     hidden_echo_tool = NodeSpec(
         name="hidden.source.echo_tool",
         input_model=echo_tool.input_model,
@@ -255,8 +258,10 @@ def test_service_planner_catalog_excludes_hidden_sources() -> None:
     assert "hidden.source.echo_tool" not in planner_names
 
 
-def test_service_catalog_split_keeps_system_specs_out_of_backend_catalog() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "planner_store"))
+def test_service_catalog_split_keeps_system_specs_out_of_backend_catalog(
+    tmp_path: Path,
+) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "planner_store"))
 
     backend_payload = service.get_catalog().as_payload()
     planner_payload = service.get_planner_catalog().as_payload()
@@ -268,8 +273,10 @@ def test_service_catalog_split_keeps_system_specs_out_of_backend_catalog() -> No
     assert "wf.std.runtime_error" in available_names
 
 
-async def test_service_hydrates_planner_specs_from_stored_catalog() -> None:
-    store = local_temp_root() / "restart_planner_store"
+async def test_service_hydrates_planner_specs_from_stored_catalog(
+    tmp_path: Path,
+) -> None:
+    store = tmp_path / "restart_planner_store"
     shutil.rmtree(store, ignore_errors=True)
     first_service = WfMcpService(store=FileStore(store))
     first_service.register_connection(
@@ -298,8 +305,10 @@ async def test_service_hydrates_planner_specs_from_stored_catalog() -> None:
     assert run.output["echoed"] == "hello"
 
 
-def test_source_catalog_service_registers_and_lists_sources_directly() -> None:
-    store = FileStore(local_temp_root() / "source_catalog_direct")
+def test_source_catalog_service_registers_and_lists_sources_directly(
+    tmp_path: Path,
+) -> None:
+    store = FileStore(tmp_path / "source_catalog_direct")
 
     def unused_tool_executor(connection: ConnectionConfig):
         raise AssertionError("tool executor should not be used by source listing")
@@ -333,19 +342,21 @@ def test_source_catalog_service_registers_and_lists_sources_directly() -> None:
     assert payload["sources"][0]["id"] == "demo.personal"
 
 
-def test_wfmcpservice_capability_sources_proxy_source_catalog() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "source_catalog_proxy"))
+def test_wfmcpservice_capability_sources_proxy_source_catalog(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "source_catalog_proxy"))
 
     assert service.capability_sources is service.source_catalog.capability_sources
     assert "wf.std" in service.source_catalog.capability_sources
 
 
-def test_source_catalog_service_excludes_hidden_sources_from_planner_catalog() -> None:
+def test_source_catalog_service_excludes_hidden_sources_from_planner_catalog(
+    tmp_path: Path,
+) -> None:
     def unused_tool_executor(connection: ConnectionConfig):
         raise AssertionError("tool executor should not be used by planner listing")
 
     catalog = SourceCatalogService(
-        store=FileStore(local_temp_root() / "source_catalog_hidden"),
+        store=FileStore(tmp_path / "source_catalog_hidden"),
         connection_lookup=lambda connection_id: ConnectionConfig(
             id=connection_id,
             server="demo",
@@ -410,10 +421,10 @@ def test_source_catalog_service_excludes_hidden_sources_from_planner_catalog() -
     assert "hidden.source.echo_tool" not in planner_names
 
 
-async def test_source_catalog_hydrates_connection_source_from_snapshot_directly() -> (
-    None
-):
-    root = local_temp_root() / "source_catalog_hydrate_direct"
+async def test_source_catalog_hydrates_connection_source_from_snapshot_directly(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "source_catalog_hydrate_direct"
     shutil.rmtree(root, ignore_errors=True)
     first_service = WfMcpService(store=FileStore(root))
     first_service.register_connection(
@@ -434,7 +445,9 @@ async def test_source_catalog_hydrates_connection_source_from_snapshot_directly(
     assert "demo.personal.echo_tool" in specs
 
 
-def test_source_catalog_register_specs_replaces_discovered_specs_directly() -> None:
+def test_source_catalog_register_specs_replaces_discovered_specs_directly(
+    tmp_path: Path,
+) -> None:
     connection = ConnectionConfig(
         id="demo.personal",
         server="demo",
@@ -445,7 +458,7 @@ def test_source_catalog_register_specs_replaces_discovered_specs_directly() -> N
         raise AssertionError("tool executor should not be used by spec registration")
 
     catalog = SourceCatalogService(
-        store=FileStore(local_temp_root() / "source_catalog_register_specs"),
+        store=FileStore(tmp_path / "source_catalog_register_specs"),
         connection_lookup=lambda connection_id: connection,
         connection_list_enabled=lambda: [connection],
         connection_list_all=lambda: [connection],
@@ -476,8 +489,10 @@ def test_source_catalog_register_specs_replaces_discovered_specs_directly() -> N
     assert catalog.store.load_catalog("demo.personal") is not None
 
 
-def test_source_catalog_finds_local_documentation_resource_directly() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "source_local_docs"))
+def test_source_catalog_finds_local_documentation_resource_directly(
+    tmp_path: Path,
+) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "source_local_docs"))
     test_resource = DocumentationResource(
         name="test.docs.example",
         uri="wf://docs/example",

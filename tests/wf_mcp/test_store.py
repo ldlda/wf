@@ -7,11 +7,9 @@ from wf_mcp.connections import parse_connection_id
 from wf_mcp.models import AuthRecord, CatalogSnapshot
 from wf_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
 
-from .test_support import local_temp_root
 
-
-def test_file_store_round_trips_auth() -> None:
-    store = FileStore(local_temp_root() / "auth_store")
+def test_file_store_round_trips_auth(tmp_path) -> None:
+    store = FileStore(tmp_path / "auth_store")
     record = AuthRecord(
         connection_id="demo.personal",
         scheme="oauth",

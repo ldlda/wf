@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from wf_core import (
@@ -187,7 +185,8 @@ def test_subgraph_step_projects_child_context_output() -> None:
     assert run.output["answer"] == "root:subgraph:child"
 
 
-def test_subgraph_step_executes_prepared_async_child() -> None:
+@pytest.mark.asyncio
+async def test_subgraph_step_executes_prepared_async_child() -> None:
     async def answer(payload: dict[str, object], _ctx: object) -> dict[str, object]:
         return {"answer": f"async:{payload['text']}"}
 
@@ -204,7 +203,7 @@ def test_subgraph_step_executes_prepared_async_child() -> None:
             },
         )
 
-    run = asyncio.run(execute())
+    run = await execute()
 
     assert run.output["answer"] == "async:hello"
     assert run.trace[-1].step_type == "subgraph"
@@ -295,7 +294,8 @@ def test_subgraph_step_interrupts_and_resumes_inside_prepared_child() -> None:
     assert resumed.state["answer"] == "yes"
 
 
-def test_subgraph_step_resumes_interrupted_async_prepared_child() -> None:
+@pytest.mark.asyncio
+async def test_subgraph_step_resumes_interrupted_async_prepared_child() -> None:
     async def run_child() -> RunState:
         child = _interrupting_child_workflow()
         parent = _workflow(output_schema=_schema({"answer": {"type": "string"}}))
@@ -314,7 +314,7 @@ def test_subgraph_step_resumes_interrupted_async_prepared_child() -> None:
             subgraphs={"child.workflow": prepared},
         )
 
-    resumed = asyncio.run(run_child())
+    resumed = await run_child()
 
     assert resumed.status == "completed"
     assert resumed.output["answer"] == "async yes"

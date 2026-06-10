@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 
 from wf_artifacts import FileRunStore, FileWorkflowArtifactStore, WorkflowDeployment
 from wf_mcp.broker import WfMcpService
@@ -15,7 +16,7 @@ from wf_platform import (
     SourceVisibility,
 )
 
-from ..test_support import echo_tool, local_temp_root
+from ..test_support import echo_tool
 from .conftest import (
     amount_tool,
     changed_echo_tool,
@@ -37,8 +38,8 @@ def test_raw_workflow_plan_uses_core_step_and_edge_models() -> None:
     assert plan.edges[0].outcome == "ok"
 
 
-def test_workflow_surface_runs_non_interrupting_deployment() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_run")
+def test_workflow_surface_runs_non_interrupting_deployment(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_run")
     artifact_store.save_artifact(echo_artifact())
     artifact_store.save_deployment(
         WorkflowDeployment(
@@ -49,9 +50,9 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "surface_run_mcp"),
+        store=FileStore(tmp_path / "surface_run_mcp"),
         artifact_store=artifact_store,
-        run_store=FileRunStore(local_temp_root() / "surface_run_mcp"),
+        run_store=FileRunStore(tmp_path / "surface_run_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -97,10 +98,10 @@ def test_workflow_surface_runs_non_interrupting_deployment() -> None:
     assert traced["trace_truncated"] is False
 
 
-def test_workflow_surface_failed_deployment_exposes_error_on_run_and_inspect() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "surface_failed_run_error"
-    )
+def test_workflow_surface_failed_deployment_exposes_error_on_run_and_inspect(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_failed_run_error")
     artifact_store.save_artifact(failing_artifact())
     artifact_store.save_deployment(
         WorkflowDeployment(
@@ -111,9 +112,9 @@ def test_workflow_surface_failed_deployment_exposes_error_on_run_and_inspect() -
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "surface_failed_run_error_mcp"),
+        store=FileStore(tmp_path / "surface_failed_run_error_mcp"),
         artifact_store=artifact_store,
-        run_store=FileRunStore(local_temp_root() / "surface_failed_run_error_mcp"),
+        run_store=FileRunStore(tmp_path / "surface_failed_run_error_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -139,10 +140,10 @@ def test_workflow_surface_failed_deployment_exposes_error_on_run_and_inspect() -
     assert inspected["next_actions"]["recommended_next_tool"] is None
 
 
-def test_workflow_surface_run_deployment_can_include_trace_detail() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "surface_run_trace_detail"
-    )
+def test_workflow_surface_run_deployment_can_include_trace_detail(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_run_trace_detail")
     artifact_store.save_artifact(echo_artifact())
     artifact_store.save_deployment(
         WorkflowDeployment(
@@ -153,9 +154,9 @@ def test_workflow_surface_run_deployment_can_include_trace_detail() -> None:
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "surface_run_trace_detail_mcp"),
+        store=FileStore(tmp_path / "surface_run_trace_detail_mcp"),
         artifact_store=artifact_store,
-        run_store=FileRunStore(local_temp_root() / "surface_run_trace_detail_mcp"),
+        run_store=FileRunStore(tmp_path / "surface_run_trace_detail_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -188,9 +189,11 @@ def test_workflow_surface_run_deployment_can_include_trace_detail() -> None:
     assert validated["trace_truncated"] is False
 
 
-def test_workflow_surface_run_deployment_can_read_empty_trace_range() -> None:
+def test_workflow_surface_run_deployment_can_read_empty_trace_range(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "surface_run_trace_empty_range"
+        tmp_path / "surface_run_trace_empty_range"
     )
     artifact_store.save_artifact(echo_artifact())
     artifact_store.save_deployment(
@@ -202,9 +205,9 @@ def test_workflow_surface_run_deployment_can_read_empty_trace_range() -> None:
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "surface_run_trace_empty_range_mcp"),
+        store=FileStore(tmp_path / "surface_run_trace_empty_range_mcp"),
         artifact_store=artifact_store,
-        run_store=FileRunStore(local_temp_root() / "surface_run_trace_empty_range_mcp"),
+        run_store=FileRunStore(tmp_path / "surface_run_trace_empty_range_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -227,8 +230,10 @@ def test_workflow_surface_run_deployment_can_read_empty_trace_range() -> None:
     assert payload["trace_truncated"] is False
 
 
-def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_bound_node")
+def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_bound_node")
     artifact_store.save_artifact(logical_echo_artifact())
     artifact_store.save_deployment(
         WorkflowDeployment(
@@ -239,9 +244,9 @@ def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency() -> N
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "surface_bound_node_mcp"),
+        store=FileStore(tmp_path / "surface_bound_node_mcp"),
         artifact_store=artifact_store,
-        run_store=FileRunStore(local_temp_root() / "surface_bound_node_mcp"),
+        run_store=FileRunStore(tmp_path / "surface_bound_node_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -261,14 +266,14 @@ def test_workflow_surface_runs_deployment_with_bound_node_spec_dependency() -> N
     assert payload["diagnostics"] == []
 
 
-def test_workflow_surface_runs_artifact_created_from_concrete_node_ref() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "surface_created_bound_node"
-    )
+def test_workflow_surface_runs_artifact_created_from_concrete_node_ref(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_created_bound_node")
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "surface_created_bound_node_mcp"),
+        store=FileStore(tmp_path / "surface_created_bound_node_mcp"),
         artifact_store=artifact_store,
-        run_store=FileRunStore(local_temp_root() / "surface_created_bound_node_mcp"),
+        run_store=FileRunStore(tmp_path / "surface_created_bound_node_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -313,12 +318,12 @@ def test_workflow_surface_runs_artifact_created_from_concrete_node_ref() -> None
     assert payload["diagnostics"] == []
 
 
-def test_workflow_surface_detects_drift_from_saved_node_spec_snapshot() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "surface_created_drift"
-    )
+def test_workflow_surface_detects_drift_from_saved_node_spec_snapshot(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_created_drift")
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "surface_created_drift_mcp"),
+        store=FileStore(tmp_path / "surface_created_drift_mcp"),
         artifact_store=artifact_store,
     )
     service.register_connection(
@@ -379,8 +384,10 @@ def test_workflow_surface_detects_drift_from_saved_node_spec_snapshot() -> None:
     assert payload["diagnostics"][0]["code"] == "schema_changed"
 
 
-def test_workflow_surface_runs_deployment_with_bound_reducer_dependency() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "surface_reducer")
+def test_workflow_surface_runs_deployment_with_bound_reducer_dependency(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_reducer")
     artifact_store.save_artifact(custom_reducer_artifact())
     artifact_store.save_deployment(
         WorkflowDeployment(
@@ -394,9 +401,9 @@ def test_workflow_surface_runs_deployment_with_bound_reducer_dependency() -> Non
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "surface_reducer_mcp"),
+        store=FileStore(tmp_path / "surface_reducer_mcp"),
         artifact_store=artifact_store,
-        run_store=FileRunStore(local_temp_root() / "surface_reducer_mcp"),
+        run_store=FileRunStore(tmp_path / "surface_reducer_mcp"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")

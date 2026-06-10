@@ -33,13 +33,12 @@ from .test_support import (
     FakeAdapter,
     echo_tool,
     input_binding,
-    local_temp_root,
     output_binding,
 )
 
 
-def test_load_broker_config_resolves_relative_store_root() -> None:
-    tmp_path = local_temp_root() / "broker_config_test"
+def test_load_broker_config_resolves_relative_store_root(tmp_path: Path) -> None:
+    tmp_path = tmp_path / "broker_config_test"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
@@ -64,8 +63,10 @@ def test_load_broker_config_resolves_relative_store_root() -> None:
     assert [connection.id for connection in config.connections] == ["demo.personal"]
 
 
-def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "broker_server_store"))
+def test_create_broker_server_exposes_tools_resources_and_prompts(
+    tmp_path: Path,
+) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "broker_server_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
@@ -111,8 +112,8 @@ def test_create_broker_server_exposes_tools_resources_and_prompts() -> None:
     assert "demo.personal" in all_source_ids
 
 
-def test_broker_admin_tools_are_backed_by_wf_admin_source() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "broker_admin_source"))
+def test_broker_admin_tools_are_backed_by_wf_admin_source(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "broker_admin_source"))
     server = create_broker_server(service)
 
     tools = asyncio.run(server.list_tools())
@@ -125,9 +126,9 @@ def test_broker_admin_tools_are_backed_by_wf_admin_source() -> None:
     )
 
 
-def test_build_service_from_config_registers_connections() -> None:
+def test_build_service_from_config_registers_connections(tmp_path: Path) -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "broker_config_store",
+        store_root=tmp_path / "broker_config_store",
         connections=[
             ConnectionConfig(id="demo.personal", server="demo", account="personal"),
             ConnectionConfig(id="demo.work", server="demo", account="work"),
@@ -140,8 +141,8 @@ def test_build_service_from_config_registers_connections() -> None:
     assert ids == ["demo.personal", "demo.work"]
 
 
-def test_broker_refresh_tool_returns_structured_error() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "broker_fail_store"))
+def test_broker_refresh_tool_returns_structured_error(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "broker_fail_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
@@ -162,11 +163,11 @@ def test_broker_refresh_tool_returns_structured_error() -> None:
     }
 
 
-def test_broker_lists_workflow_artifacts_from_artifact_store() -> None:
-    artifact_store = FileWorkflowArtifactStore(local_temp_root() / "broker_artifacts")
+def test_broker_lists_workflow_artifacts_from_artifact_store(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "broker_artifacts")
     artifact_store.save_artifact(_artifact())
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "broker_artifacts_mcp_store"),
+        store=FileStore(tmp_path / "broker_artifacts_mcp_store"),
         artifact_store=artifact_store,
     )
     server = create_broker_server(service)
@@ -181,13 +182,11 @@ def test_broker_lists_workflow_artifacts_from_artifact_store() -> None:
     assert "plan" not in nodes[0]
 
 
-def test_broker_inspects_workflow_artifact_from_artifact_store() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "broker_inspect_artifacts"
-    )
+def test_broker_inspects_workflow_artifact_from_artifact_store(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "broker_inspect_artifacts")
     artifact_store.save_artifact(_artifact())
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "broker_inspect_mcp_store"),
+        store=FileStore(tmp_path / "broker_inspect_mcp_store"),
         artifact_store=artifact_store,
     )
     server = create_broker_server(service)
@@ -205,10 +204,10 @@ def test_broker_inspects_workflow_artifact_from_artifact_store() -> None:
     assert artifact["plan"]["name"] == "summarize_docs"
 
 
-def test_broker_validates_workflow_deployment_from_artifact_store() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "broker_validate_artifacts"
-    )
+def test_broker_validates_workflow_deployment_from_artifact_store(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "broker_validate_artifacts")
     artifact_store.save_artifact(_artifact())
     artifact_store.save_deployment(
         WorkflowDeployment(
@@ -221,7 +220,7 @@ def test_broker_validates_workflow_deployment_from_artifact_store() -> None:
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "broker_validate_mcp_store"),
+        store=FileStore(tmp_path / "broker_validate_mcp_store"),
         artifact_store=artifact_store,
     )
     server = create_broker_server(service)
@@ -240,12 +239,10 @@ def test_broker_validates_workflow_deployment_from_artifact_store() -> None:
     assert payload["diagnostics"][0]["code"] == "source_missing"
 
 
-def test_broker_saves_workflow_artifact() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "broker_save_artifacts"
-    )
+def test_broker_saves_workflow_artifact(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "broker_save_artifacts")
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "broker_save_mcp_store"),
+        store=FileStore(tmp_path / "broker_save_mcp_store"),
         artifact_store=artifact_store,
     )
     server = create_broker_server(service)
@@ -264,12 +261,12 @@ def test_broker_saves_workflow_artifact() -> None:
     assert loaded.title == "Summarize Docs"
 
 
-def test_broker_creates_workflow_artifact_from_plan() -> None:
+def test_broker_creates_workflow_artifact_from_plan(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "broker_create_artifact_from_plan"
+        tmp_path / "broker_create_artifact_from_plan"
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "broker_create_artifact_mcp_store"),
+        store=FileStore(tmp_path / "broker_create_artifact_mcp_store"),
         artifact_store=artifact_store,
     )
     server = create_broker_server(service)
@@ -306,12 +303,10 @@ def test_broker_creates_workflow_artifact_from_plan() -> None:
     assert loaded.required_capability_map()["demo.echo_tool"].logical_source == "demo"
 
 
-def test_broker_saves_and_lists_workflow_deployments() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "broker_save_deployments"
-    )
+def test_broker_saves_and_lists_workflow_deployments(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "broker_save_deployments")
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "broker_save_deployments_mcp_store"),
+        store=FileStore(tmp_path / "broker_save_deployments_mcp_store"),
         artifact_store=artifact_store,
     )
     server = create_broker_server(service)
@@ -345,10 +340,8 @@ def test_broker_saves_and_lists_workflow_deployments() -> None:
     assert "bindings" not in list_payload["deployments"][0]
 
 
-def test_broker_runs_non_interrupting_workflow_deployment() -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "broker_run_artifacts"
-    )
+def test_broker_runs_non_interrupting_workflow_deployment(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "broker_run_artifacts")
     artifact_store.save_artifact(_echo_artifact())
     artifact_store.save_deployment(
         WorkflowDeployment(
@@ -359,9 +352,9 @@ def test_broker_runs_non_interrupting_workflow_deployment() -> None:
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "broker_run_mcp_store"),
+        store=FileStore(tmp_path / "broker_run_mcp_store"),
         artifact_store=artifact_store,
-        run_store=FileRunStore(local_temp_root() / "broker_run_mcp_store"),
+        run_store=FileRunStore(tmp_path / "broker_run_mcp_store"),
     )
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
@@ -388,9 +381,11 @@ def test_broker_runs_non_interrupting_workflow_deployment() -> None:
     assert payload["trace_count"] > 0
 
 
-def test_broker_run_deployment_returns_unrunnable_for_dependency_errors() -> None:
+def test_broker_run_deployment_returns_unrunnable_for_dependency_errors(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "broker_run_unrunnable_artifacts"
+        tmp_path / "broker_run_unrunnable_artifacts"
     )
     artifact_store.save_artifact(_artifact())
     artifact_store.save_deployment(
@@ -404,7 +399,7 @@ def test_broker_run_deployment_returns_unrunnable_for_dependency_errors() -> Non
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "broker_run_unrunnable_mcp_store"),
+        store=FileStore(tmp_path / "broker_run_unrunnable_mcp_store"),
         artifact_store=artifact_store,
     )
     server = create_broker_server(service)
@@ -425,9 +420,11 @@ def test_broker_run_deployment_returns_unrunnable_for_dependency_errors() -> Non
     assert payload["diagnostics"][0]["code"] == "source_missing"
 
 
-def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts() -> None:
+def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(
-        local_temp_root() / "broker_run_interrupt_artifacts"
+        tmp_path / "broker_run_interrupt_artifacts"
     )
     artifact_store.save_artifact(_interrupt_artifact())
     artifact_store.save_deployment(
@@ -439,9 +436,9 @@ def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts() -> No
         )
     )
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "broker_run_interrupt_mcp_store"),
+        store=FileStore(tmp_path / "broker_run_interrupt_mcp_store"),
         artifact_store=artifact_store,
-        run_store=FileRunStore(local_temp_root() / "broker_run_interrupt_mcp_store"),
+        run_store=FileRunStore(tmp_path / "broker_run_interrupt_mcp_store"),
     )
     server = create_broker_server(service)
 
@@ -478,8 +475,10 @@ def test_broker_run_deployment_pauses_and_resumes_interrupting_artifacts() -> No
     assert resumed["resume_readiness"] == "not_applicable"
 
 
-def test_build_service_from_config_uses_store_root_for_workflow_stores() -> None:
-    store_root = local_temp_root() / "broker_config_workflow_stores"
+def test_build_service_from_config_uses_store_root_for_workflow_stores(
+    tmp_path: Path,
+) -> None:
+    store_root = tmp_path / "broker_config_workflow_stores"
     config = BrokerConfig(store_root=store_root, connections=[])
 
     service = build_service_from_config(config)
@@ -512,8 +511,10 @@ def _registry_entry(
     )
 
 
-def test_build_service_from_config_loads_source_registry_entries() -> None:
-    tmp_path = local_temp_root() / "broker_config_registry_load"
+def test_build_service_from_config_loads_source_registry_entries(
+    tmp_path: Path,
+) -> None:
+    tmp_path = tmp_path / "broker_config_registry_load"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config = BrokerConfig(store_root=tmp_path, connections=[])
     FileSourceRegistryStore(tmp_path).save_registry(
@@ -527,8 +528,8 @@ def test_build_service_from_config_loads_source_registry_entries() -> None:
     assert "fixture.registry" in service.capability_sources
 
 
-def test_build_service_from_config_config_shadows_registry() -> None:
-    tmp_path = local_temp_root() / "broker_config_registry_shadow"
+def test_build_service_from_config_config_shadows_registry(tmp_path: Path) -> None:
+    tmp_path = tmp_path / "broker_config_registry_shadow"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config = BrokerConfig(
         store_root=tmp_path,

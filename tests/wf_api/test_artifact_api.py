@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import replace
 from pathlib import Path
 from typing import Any
@@ -134,11 +133,12 @@ def _artifact_api(
     return WorkflowArtifactApi(context), service
 
 
-def test_save_artifact_stores_and_returns_saved(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_save_artifact_stores_and_returns_saved(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_save")
     api, _service = _artifact_api(artifact_store)
 
-    result = asyncio.run(api.save_artifact(_echo_artifact().model_dump(mode="json")))
+    result = await api.save_artifact(_echo_artifact().model_dump(mode="json"))
 
     assert result["saved"] is True
     assert result["artifact_id"] == "echo"
@@ -147,7 +147,8 @@ def test_save_artifact_stores_and_returns_saved(tmp_path: Path) -> None:
     assert saved.id == "echo"
 
 
-def test_list_artifacts_returns_empty_page_without_artifact_store(
+@pytest.mark.asyncio
+async def test_list_artifacts_returns_empty_page_without_artifact_store(
     tmp_path: Path,
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_no_store")
@@ -155,27 +156,26 @@ def test_list_artifacts_returns_empty_page_without_artifact_store(
     context = replace(context_from_service(service), artifact_store=None)
     api = WorkflowArtifactApi(context)
 
-    result = asyncio.run(api.list_artifacts())
+    result = await api.list_artifacts()
 
     assert result["nodes"] == []
     assert result["next_cursor"] is None
     assert result["total"] == 0
 
 
-def test_create_artifact_from_plan_saves_with_observed_node_specs(
+@pytest.mark.asyncio
+async def test_create_artifact_from_plan_saves_with_observed_node_specs(
     tmp_path: Path,
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_from_plan")
     api, _service = _artifact_api(artifact_store, register_echo=True)
 
-    result = asyncio.run(
-        api.create_artifact_from_plan(
-            artifact_id="echo",
-            version=1,
-            title="Echo",
-            plan=_echo_artifact().plan,
-            outcomes=("completed",),
-        )
+    result = await api.create_artifact_from_plan(
+        artifact_id="echo",
+        version=1,
+        title="Echo",
+        plan=_echo_artifact().plan,
+        outcomes=("completed",),
     )
 
     assert result["saved"] is True
@@ -184,7 +184,7 @@ def test_create_artifact_from_plan_saves_with_observed_node_specs(
     assert saved.id == "echo"
 
 
-def test_create_artifact_from_workspace_returns_saved_false_when_invalid(
+async def test_create_artifact_from_workspace_returns_saved_false_when_invalid(
     tmp_path: Path,
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_workspace_invalid")
@@ -195,49 +195,42 @@ def test_create_artifact_from_workspace_returns_saved_false_when_invalid(
 
     context = context_from_service(service)
     drafts_api = WorkflowDraftApi(context)
-    asyncio.run(
-        drafts_api.create_draft_workspace(
-            workspace_id="echo_ws",
-            draft=draft,
-        )
+    await drafts_api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=draft,
     )
 
-    result = asyncio.run(
-        api.create_artifact_from_workspace(
-            workspace_id="echo_ws",
-            artifact_id="echo",
-            version=1,
-            title="Echo",
-            outcomes=("completed",),
-        )
+    result = await api.create_artifact_from_workspace(
+        workspace_id="echo_ws",
+        artifact_id="echo",
+        version=1,
+        title="Echo",
+        outcomes=("completed",),
     )
 
     assert result["saved"] is False
     assert result["status"] == "invalid"
 
 
-def test_create_wrapper_from_workspace_saves_kind_wrapper(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_create_wrapper_from_workspace_saves_kind_wrapper(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_wrapper_workspace")
     api, service = _artifact_api(artifact_store, register_echo=True)
     from wf_api.drafts import WorkflowDraftApi
 
     context = context_from_service(service)
     drafts_api = WorkflowDraftApi(context)
-    asyncio.run(
-        drafts_api.create_draft_workspace(
-            workspace_id="echo_ws",
-            draft=_echo_draft(),
-        )
+    await drafts_api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
     )
 
-    result = asyncio.run(
-        api.create_wrapper_from_workspace(
-            workspace_id="echo_ws",
-            artifact_id="echo_wrapper",
-            version=1,
-            title="Echo Wrapper",
-            outcomes=("completed",),
-        )
+    result = await api.create_wrapper_from_workspace(
+        workspace_id="echo_ws",
+        artifact_id="echo_wrapper",
+        version=1,
+        title="Echo Wrapper",
+        outcomes=("completed",),
     )
 
     assert result["saved"] is True
@@ -245,12 +238,13 @@ def test_create_wrapper_from_workspace_saves_kind_wrapper(tmp_path: Path) -> Non
     assert saved.kind == "wrapper"
 
 
-def test_inspect_artifact_returns_stable_fields(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_inspect_artifact_returns_stable_fields(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_inspect")
     api, _service = _artifact_api(artifact_store)
     artifact_store.save_artifact(_echo_artifact())
 
-    result = asyncio.run(api.inspect_artifact(artifact_id="echo", version=1))
+    result = await api.inspect_artifact(artifact_id="echo", version=1)
 
     assert result["id"] == "echo"
     assert result["version"] == 1
@@ -258,7 +252,8 @@ def test_inspect_artifact_returns_stable_fields(tmp_path: Path) -> None:
     assert "plan" in result
 
 
-def test_handler_delegation_for_inspect_artifact(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_handler_delegation_for_inspect_artifact(tmp_path: Path) -> None:
     """WorkflowSurfaceHandlers.inspect_artifact delegates to WorkflowArtifactApi."""
     artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_delegation")
     mcp_root = artifact_store.root / "delegation_mcp"
@@ -273,8 +268,8 @@ def test_handler_delegation_for_inspect_artifact(tmp_path: Path) -> None:
     context = context_from_service(service)
     api = WorkflowArtifactApi(context)
 
-    handler_result = asyncio.run(h.inspect_artifact(artifact_id="echo", version=1))
-    api_result = asyncio.run(api.inspect_artifact(artifact_id="echo", version=1))
+    handler_result = await h.inspect_artifact(artifact_id="echo", version=1)
+    api_result = await api.inspect_artifact(artifact_id="echo", version=1)
 
     assert handler_result["id"] == api_result["id"]
     assert handler_result["version"] == api_result["version"]

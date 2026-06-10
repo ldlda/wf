@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import sys
+from pathlib import Path
 
 import mcp.types as mcp_types
 import pytest
@@ -11,7 +12,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.proxy import create_proxy_client
 
-from .test_support import fixture_server_path, local_temp_root
+from .test_support import fixture_server_path
 
 
 def test_fixture_server_initialize_capabilities_are_observable_directly() -> None:
@@ -40,9 +41,11 @@ def test_fixture_server_initialize_capabilities_are_observable_directly() -> Non
     assert capabilities.logging is None
 
 
-def test_unified_proxy_initialize_capabilities_reflect_local_surface() -> None:
+def test_unified_proxy_initialize_capabilities_reflect_local_surface(
+    tmp_path: Path,
+) -> None:
     config = BrokerConfig(
-        store_root=local_temp_root() / "protocol_capabilities_store",
+        store_root=tmp_path / "protocol_capabilities_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",

@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -55,11 +54,12 @@ class FakeAdminProvider:
         return self.events
 
 
-def test_admin_api_lists_connections_in_id_order() -> None:
+@pytest.mark.asyncio
+async def test_admin_api_lists_connections_in_id_order() -> None:
     provider = FakeAdminProvider()
     api = WorkflowAdminApi(connections=provider, events=provider)
 
-    payload = asyncio.run(api.list_connections())
+    payload = await api.list_connections()
 
     assert payload["total"] == 2
     assert [connection["id"] for connection in payload["connections"]] == [
@@ -68,11 +68,12 @@ def test_admin_api_lists_connections_in_id_order() -> None:
     ]
 
 
-def test_admin_api_lists_connection_statuses_in_id_order() -> None:
+@pytest.mark.asyncio
+async def test_admin_api_lists_connection_statuses_in_id_order() -> None:
     provider = FakeAdminProvider()
     api = WorkflowAdminApi(connections=provider, events=provider)
 
-    payload = asyncio.run(api.get_connection_statuses())
+    payload = await api.get_connection_statuses()
 
     assert payload["total"] == 2
     assert [status["connection_id"] for status in payload["statuses"]] == [
@@ -81,11 +82,12 @@ def test_admin_api_lists_connection_statuses_in_id_order() -> None:
     ]
 
 
-def test_admin_api_lists_events() -> None:
+@pytest.mark.asyncio
+async def test_admin_api_lists_events() -> None:
     provider = FakeAdminProvider()
     api = WorkflowAdminApi(connections=provider, events=provider)
 
-    payload = asyncio.run(api.list_events())
+    payload = await api.list_events()
 
     assert payload["total"] == 1
     assert payload["events"][0]["kind"] == "connection_registered"

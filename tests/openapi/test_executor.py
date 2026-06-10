@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 
 import httpx
+import pytest
 
 from wf_authoring import NodeReturn
 from wf_openapi.executor import (
@@ -17,7 +17,8 @@ from wf_openapi.validation import load_openapi_app
 FIXTURE = Path(__file__).parent / "fixtures" / "petstore_minimal.openapi.json"
 
 
-def test_call_openapi_operation_maps_success() -> None:
+@pytest.mark.asyncio
+async def test_call_openapi_operation_maps_success() -> None:
     app = load_openapi_app(FIXTURE)
     operation = next(
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
@@ -38,14 +39,15 @@ def test_call_openapi_operation_maps_success() -> None:
                 client=client,
             )
 
-    result = asyncio.run(run())
+    result = await run()
 
     assert result.outcome == "ok"
     assert result.output.status_code == 200
     assert result.output.body["id"] == "pet-1"
 
 
-def test_call_openapi_operation_maps_declared_http_error() -> None:
+@pytest.mark.asyncio
+async def test_call_openapi_operation_maps_declared_http_error() -> None:
     app = load_openapi_app(FIXTURE)
     operation = next(
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
@@ -65,14 +67,15 @@ def test_call_openapi_operation_maps_declared_http_error() -> None:
                 client=client,
             )
 
-    result = asyncio.run(run())
+    result = await run()
 
     assert result.outcome == "http_error"
     assert result.output.status_code == 404
     assert result.output.body["message"] == "missing"
 
 
-def test_call_openapi_operation_maps_unexpected_status() -> None:
+@pytest.mark.asyncio
+async def test_call_openapi_operation_maps_unexpected_status() -> None:
     app = load_openapi_app(FIXTURE)
     operation = next(
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
@@ -92,14 +95,17 @@ def test_call_openapi_operation_maps_unexpected_status() -> None:
                 client=client,
             )
 
-    result = asyncio.run(run())
+    result = await run()
 
     assert result.outcome == "unexpected_status"
     assert result.output.status_code == 418
     assert result.output.validation_errors
 
 
-def test_call_openapi_operation_maps_invalid_request_to_validation_error() -> None:
+@pytest.mark.asyncio
+async def test_call_openapi_operation_maps_invalid_request_to_validation_error() -> (
+    None
+):
     app = load_openapi_app(FIXTURE)
     operation = next(
         op for op in load_openapi_operations(FIXTURE) if op.name == "create_pet"
@@ -118,14 +124,17 @@ def test_call_openapi_operation_maps_invalid_request_to_validation_error() -> No
                 client=client,
             )
 
-    result = asyncio.run(run())
+    result = await run()
 
     assert result.outcome == "validation_error"
     assert result.output.status_code == 0
     assert result.output.validation_errors
 
 
-def test_call_openapi_operation_maps_invalid_response_to_validation_error() -> None:
+@pytest.mark.asyncio
+async def test_call_openapi_operation_maps_invalid_response_to_validation_error() -> (
+    None
+):
     app = load_openapi_app(FIXTURE)
     operation = next(
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
@@ -145,14 +154,15 @@ def test_call_openapi_operation_maps_invalid_response_to_validation_error() -> N
                 client=client,
             )
 
-    result = asyncio.run(run())
+    result = await run()
 
     assert result.outcome == "validation_error"
     assert result.output.status_code == 200
     assert result.output.validation_errors
 
 
-def test_call_openapi_operation_maps_malformed_json_response_to_validation_error() -> (
+@pytest.mark.asyncio
+async def test_call_openapi_operation_maps_malformed_json_response_to_validation_error() -> (
     None
 ):
     app = load_openapi_app(FIXTURE)
@@ -178,14 +188,15 @@ def test_call_openapi_operation_maps_malformed_json_response_to_validation_error
                 client=client,
             )
 
-    result = asyncio.run(run())
+    result = await run()
 
     assert result.outcome == "validation_error"
     assert result.output.status_code == 200
     assert result.output.validation_errors
 
 
-def test_call_openapi_operation_maps_transport_error() -> None:
+@pytest.mark.asyncio
+async def test_call_openapi_operation_maps_transport_error() -> None:
     app = load_openapi_app(FIXTURE)
     operation = next(
         op for op in load_openapi_operations(FIXTURE) if op.name == "get_pet"
@@ -205,7 +216,7 @@ def test_call_openapi_operation_maps_transport_error() -> None:
                 client=client,
             )
 
-    result = asyncio.run(run())
+    result = await run()
 
     assert result.outcome == "transport_error"
     assert result.output.status_code == 0

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from pydantic import BaseModel
 
 from wf_authoring import build_async_registry, node
@@ -33,7 +31,7 @@ class InferredAsyncOutput(BaseModel):
     echoed: str
 
 
-def test_async_registry_accepts_sync_and_async_specs() -> None:
+async def test_async_registry_accepts_sync_and_async_specs() -> None:
     @node()
     def sync_echo(
         payload: InferredEchoInput,
@@ -54,14 +52,14 @@ def test_async_registry_accepts_sync_and_async_specs() -> None:
     async def run_handler(name: str, value: str) -> dict[str, object]:
         return await registry[name]({"value": value}, ctx)
 
-    sync_result = asyncio.run(run_handler("sync_echo", "hello"))
-    async_result = asyncio.run(run_handler("async_echo", "world"))
+    sync_result = await run_handler("sync_echo", "hello")
+    async_result = await run_handler("async_echo", "world")
 
     assert sync_result == {"outcome": "ok", "output": {"echoed": "hello"}}
     assert async_result == {"outcome": "ok", "output": {"echoed": "async:world"}}
 
 
-def test_execute_workflow_async_runs_with_async_registry() -> None:
+async def test_execute_workflow_async_runs_with_async_registry() -> None:
     workflow, _ = build_authoring_demo_workflow()
     registry = build_async_registry(
         drive_list_files_spec,
@@ -71,12 +69,10 @@ def test_execute_workflow_async_runs_with_async_registry() -> None:
         mark_email_skipped_spec,
     )
 
-    run = asyncio.run(
-        execute_workflow_async(
-            workflow,
-            {"folder_id": "demo-folder", "should_email": False},
-            registry,
-        )
+    run = await execute_workflow_async(
+        workflow,
+        {"folder_id": "demo-folder", "should_email": False},
+        registry,
     )
 
     assert run.status == RunStatus.COMPLETED

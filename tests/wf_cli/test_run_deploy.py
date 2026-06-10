@@ -8,7 +8,7 @@ from unittest.mock import patch
 from typer import Context as TyperContext
 from typer.testing import CliRunner
 
-from tests.wf_mcp.test_support import echo_tool, input_binding, local_temp_root
+from tests.wf_mcp.test_support import echo_tool, input_binding
 from tests.wf_mcp.workflow_surface.conftest import echo_artifact
 from wf_artifacts import FileWorkflowArtifactStore, WorkflowArtifact, WorkflowDeployment
 from wf_cli.app import app
@@ -93,8 +93,8 @@ def _seed_interrupt_deployment(root: Path) -> Path:
     return config_path
 
 
-def test_wf_deploy_validate_outputs_json() -> None:
-    root = local_temp_root() / "wf_cli_deploy_validate"
+def test_wf_deploy_validate_outputs_json(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_deploy_validate"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
@@ -115,8 +115,8 @@ def test_wf_deploy_validate_outputs_json() -> None:
     )
 
 
-def test_wf_run_start_accepts_inline_json_input() -> None:
-    root = local_temp_root() / "wf_cli_run_start"
+def test_wf_run_start_accepts_inline_json_input(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_run_start"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
@@ -144,8 +144,8 @@ def test_wf_run_start_accepts_inline_json_input() -> None:
     assert payload["next_actions"]["can_continue"] is False
 
 
-def test_wf_run_start_accepts_input_file() -> None:
-    root = local_temp_root() / "wf_cli_run_start_file"
+def test_wf_run_start_accepts_input_file(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_run_start_file"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
     input_path = root / "input.json"
@@ -173,8 +173,8 @@ def test_wf_run_start_accepts_input_file() -> None:
     assert payload["output"]["echoed"] == "from file"
 
 
-def test_wf_run_inspect_and_trace_existing_run() -> None:
-    root = local_temp_root() / "wf_cli_run_inspect_trace"
+def test_wf_run_inspect_and_trace_existing_run(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_run_inspect_trace"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
@@ -389,8 +389,8 @@ def test_wf_run_watch_times_out_for_unstopped_run() -> None:
     assert "did not stop before timeout" in result.output
 
 
-def test_wf_run_resume_interrupted_run() -> None:
-    root = local_temp_root() / "wf_cli_run_resume"
+def test_wf_run_resume_interrupted_run(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_run_resume"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_interrupt_deployment(root)
 
@@ -432,8 +432,8 @@ def test_wf_run_resume_interrupted_run() -> None:
     assert payload["resume_readiness"] == "not_applicable"
 
 
-def test_wf_run_start_reports_bad_json() -> None:
-    root = local_temp_root() / "wf_cli_run_bad_json"
+def test_wf_run_start_reports_bad_json(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_run_bad_json"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 

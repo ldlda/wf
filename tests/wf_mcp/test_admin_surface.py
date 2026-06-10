@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from wf_mcp.admin_surface import BrokerAdminHandlers, TransparentAdminHandlers
@@ -8,11 +9,9 @@ from wf_mcp.broker import WfMcpService
 from wf_mcp.models import BrokerConfig, ConnectionConfig
 from wf_mcp.storage import FileStore
 
-from .test_support import local_temp_root
 
-
-def test_broker_admin_handlers_list_connections_and_events() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "admin_broker_store"))
+def test_broker_admin_handlers_list_connections_and_events(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "admin_broker_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
@@ -34,8 +33,8 @@ def test_broker_admin_handlers_list_connections_and_events() -> None:
     assert sources["total"] >= 2
 
 
-def test_broker_admin_handlers_report_failed_refresh_payload() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "admin_refresh_store"))
+def test_broker_admin_handlers_report_failed_refresh_payload(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "admin_refresh_store"))
     handlers = BrokerAdminHandlers(service)
 
     payload = _run(handlers.refresh_connection_catalog("missing.personal"))
@@ -45,8 +44,8 @@ def test_broker_admin_handlers_report_failed_refresh_payload() -> None:
     assert payload["error_type"] == "KeyError"
 
 
-def test_transparent_admin_handlers_delegate_config_operations() -> None:
-    runtime = FakeProxyAdminRuntime()
+def test_transparent_admin_handlers_delegate_config_operations(tmp_path: Path) -> None:
+    runtime = FakeProxyAdminRuntime(tmp_path)
     handlers = TransparentAdminHandlers(runtime)
 
     connections = handlers.list_connections()
@@ -130,10 +129,10 @@ class FakeManager:
 
 
 class FakeProxyAdminRuntime:
-    def __init__(self) -> None:
+    def __init__(self, tmp_path: Path) -> None:
         self.manager = FakeManager(added=[])
         self._config = BrokerConfig(
-            store_root=local_temp_root() / "transparent_admin_handlers_store",
+            store_root=tmp_path / "transparent_admin_handlers_store",
             connections=[
                 ConnectionConfig(
                     id="demo.personal",

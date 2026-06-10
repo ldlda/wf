@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import asyncio
+from pathlib import Path
 
 import pytest
 from mcp import McpError
@@ -16,7 +16,6 @@ from wf_sources_mcp.connections import mcp_source_connection_from_connection_con
 from .test_support import (
     everything_server_connection,
     fixture_server_path,
-    local_temp_root,
     sys,
 )
 
@@ -70,8 +69,9 @@ class _WrappedToolsOnlyAdapter(_ToolsOnlyAdapter):
         )
 
 
-def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "sdk_adapter_store"))
+@pytest.mark.asyncio
+async def test_mcp_sdk_adapter_lists_and_calls_stdio_tool(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "sdk_adapter_store"))
     service.register_connection(
         ConnectionConfig(
             id="fixture.personal",
@@ -87,7 +87,7 @@ def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
     service.register_adapter("fixture", McpSdkAdapter())
 
     try:
-        asyncio.run(service.refresh_connection_catalog("fixture.personal"))
+        await service.refresh_connection_catalog("fixture.personal")
     except PermissionError as exc:
         pytest.skip(f"stdio MCP transport is not permitted in this environment: {exc}")
 
@@ -117,14 +117,10 @@ def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
         }
     ]
 
-    resource_result = asyncio.run(
-        service.read_resource("fixture.personal.resource.welcome")
-    )
-    prompt_result = asyncio.run(
-        service.render_prompt(
-            "fixture.personal.prompt.summarize",
-            arguments={"text": "hello"},
-        )
+    resource_result = await service.read_resource("fixture.personal.resource.welcome")
+    prompt_result = await service.render_prompt(
+        "fixture.personal.prompt.summarize",
+        arguments={"text": "hello"},
     )
     assert (
         resource_result["contents"][0]["text"] == "Welcome from the fixture MCP server."
@@ -133,7 +129,7 @@ def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
         prompt_result["messages"][0]["content"]["text"]
         == "Summarize this text:\n\nhello"
     )
-    ping_result = asyncio.run(service.invoke_method("fixture.personal", "ping"))
+    ping_result = await service.invoke_method("fixture.personal", "ping")
     assert ping_result == {}
 
     adapter = McpSdkAdapter()
@@ -141,13 +137,11 @@ def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
         source_connection = mcp_source_connection_from_connection_config(
             service.connections.get("fixture.personal")
         )
-        result = asyncio.run(
-            adapter.call_tool(
-                connection=source_connection,
-                auth=None,
-                tool_name="echo_tool",
-                payload={"text": "hello"},
-            )
+        result = await adapter.call_tool(
+            connection=source_connection,
+            auth=None,
+            tool_name="echo_tool",
+            payload={"text": "hello"},
         )
     except PermissionError as exc:
         pytest.skip(f"stdio MCP transport is not permitted in this environment: {exc}")
@@ -155,21 +149,19 @@ def test_mcp_sdk_adapter_lists_and_calls_stdio_tool() -> None:
     assert result.output == {"echoed": "hello"}
 
 
-def test_mcp_sdk_adapter_can_probe_everything_server() -> None:
+async def test_mcp_sdk_adapter_can_probe_everything_server(tmp_path: Path) -> None:
     connection = everything_server_connection()
     if connection is None:
         pytest.skip(
             "set MCP_EVERYTHING_COMMAND to enable the live everything-server integration test"
         )
 
-    service = WfMcpService(
-        store=FileStore(local_temp_root() / "everything_server_store")
-    )
+    service = WfMcpService(store=FileStore(tmp_path / "everything_server_store"))
     service.register_connection(connection)
     service.register_adapter("everything", McpSdkAdapter())
 
     try:
-        asyncio.run(service.refresh_connection_catalog("everything.default"))
+        await service.refresh_connection_catalog("everything.default")
     except PermissionError as exc:
         pytest.skip(f"live MCP transport is not permitted in this environment: {exc}")
 
@@ -183,10 +175,10 @@ def test_mcp_sdk_adapter_can_probe_everything_server() -> None:
     assert "prompts" in payload
 
 
-def test_refresh_catalog_keeps_tools_when_optional_lists_are_unsupported() -> None:
-    service = WfMcpService(
-        store=FileStore(local_temp_root() / "tools_only_server_store")
-    )
+async def test_refresh_catalog_keeps_tools_when_optional_lists_are_unsupported(
+    tmp_path: Path,
+) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "tools_only_server_store"))
     service.register_connection(
         ConnectionConfig(
             id="tools_only.personal",
@@ -197,7 +189,7 @@ def test_refresh_catalog_keeps_tools_when_optional_lists_are_unsupported() -> No
     )
     service.register_adapter("tools_only", _ToolsOnlyAdapter())
 
-    asyncio.run(service.refresh_connection_catalog("tools_only.personal"))
+    await service.refresh_connection_catalog("tools_only.personal")
 
     payload = service.get_catalog().as_payload()
     assert payload["nodes"][0]["qualified_name"] == "tools_only.personal.echo_tool"
@@ -205,9 +197,11 @@ def test_refresh_catalog_keeps_tools_when_optional_lists_are_unsupported() -> No
     assert payload["prompts"] == []
 
 
-def test_refresh_catalog_unwraps_taskgroup_method_not_found() -> None:
+async def test_refresh_catalog_unwraps_taskgroup_method_not_found(
+    tmp_path: Path,
+) -> None:
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "wrapped_tools_only_server_store")
+        store=FileStore(tmp_path / "wrapped_tools_only_server_store")
     )
     service.register_connection(
         ConnectionConfig(
@@ -219,7 +213,7 @@ def test_refresh_catalog_unwraps_taskgroup_method_not_found() -> None:
     )
     service.register_adapter("wrapped_tools_only", _WrappedToolsOnlyAdapter())
 
-    asyncio.run(service.refresh_connection_catalog("wrapped_tools_only.personal"))
+    await service.refresh_connection_catalog("wrapped_tools_only.personal")
 
     payload = service.get_catalog().as_payload()
     assert payload["nodes"][0]["qualified_name"] == (

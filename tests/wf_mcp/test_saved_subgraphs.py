@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from pathlib import Path
 from typing import Any
 
 from wf_api.saved_subgraphs import resolve_saved_subgraph_tree
@@ -17,11 +18,11 @@ from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 
-from .test_support import echo_tool, input_binding, local_temp_root, output_binding
+from .test_support import echo_tool, input_binding, output_binding
 
 
-def test_saved_subgraph_tree_loads_exact_child_artifact_version() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_tree")
+def test_saved_subgraph_tree_loads_exact_child_artifact_version(tmp_path: Path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_tree")
     parent = _parent_artifact()
     store.save_artifact(_leaf_artifact())
 
@@ -35,8 +36,8 @@ def test_saved_subgraph_tree_loads_exact_child_artifact_version() -> None:
     assert resolution.artifacts_by_ref["workflow.child.v1"].version == 1
 
 
-def test_saved_subgraph_tree_reports_missing_child_artifact() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_missing")
+def test_saved_subgraph_tree_reports_missing_child_artifact(tmp_path: Path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_missing")
 
     resolution = resolve_saved_subgraph_tree(
         root_artifact=_parent_artifact(),
@@ -48,8 +49,8 @@ def test_saved_subgraph_tree_reports_missing_child_artifact() -> None:
     assert resolution.diagnostics[0].logical_ref == "workflow.child.v1"
 
 
-def test_saved_subgraph_tree_reports_recursive_child_cycle() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_cycle")
+def test_saved_subgraph_tree_reports_recursive_child_cycle(tmp_path: Path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_cycle")
     parent = _parent_artifact()
     child = _parent_artifact(
         artifact_id="child",
@@ -69,12 +70,14 @@ def test_saved_subgraph_tree_reports_recursive_child_cycle() -> None:
     assert resolution.diagnostics[0].logical_ref == "workflow.parent.v1"
 
 
-def test_saved_child_uses_parent_deployment_binding_for_validation() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_validate")
+def test_saved_child_uses_parent_deployment_binding_for_validation(
+    tmp_path: Path,
+) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_validate")
     store.save_artifact(_parent_artifact())
     store.save_artifact(_leaf_artifact())
     store.save_deployment(_deployment())
-    handlers = _handlers(store)
+    handlers = _handlers(store, tmp_path)
 
     result = asyncio.run(handlers.validate_deployment(deployment_id="parent.personal"))
 
@@ -82,12 +85,12 @@ def test_saved_child_uses_parent_deployment_binding_for_validation() -> None:
     assert result["diagnostics"] == []
 
 
-def test_saved_child_missing_parent_binding_is_unrunnable() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_unbound")
+def test_saved_child_missing_parent_binding_is_unrunnable(tmp_path: Path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_unbound")
     store.save_artifact(_parent_artifact())
     store.save_artifact(_leaf_artifact())
     store.save_deployment(_deployment(bindings={}))
-    handlers = _handlers(store)
+    handlers = _handlers(store, tmp_path)
 
     result = asyncio.run(handlers.validate_deployment(deployment_id="parent.personal"))
 
@@ -96,14 +99,14 @@ def test_saved_child_missing_parent_binding_is_unrunnable() -> None:
     assert result["diagnostics"][0]["logical_ref"] == "demo.echo_tool"
 
 
-def test_interrupting_saved_child_pauses_and_resumes_through_deployment_surface() -> (
-    None
-):
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_interrupt")
+def test_interrupting_saved_child_pauses_and_resumes_through_deployment_surface(
+    tmp_path: Path,
+) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_interrupt")
     store.save_artifact(_parent_artifact())
     store.save_artifact(_interrupting_child_artifact())
     store.save_deployment(_deployment())
-    handlers = _handlers(store)
+    handlers = _handlers(store, tmp_path)
 
     validation = asyncio.run(
         handlers.validate_deployment(deployment_id="parent.personal")
@@ -125,7 +128,7 @@ def test_interrupting_saved_child_pauses_and_resumes_through_deployment_surface(
     assert paused["interrupt"]["payload"]["question"] == "hello"
 
     # Durable resume must not rely on the process-local handler instance.
-    handlers = _handlers(store)
+    handlers = _handlers(store, tmp_path)
     resumed = asyncio.run(
         handlers.resume_run(
             run_id=paused["run_id"],
@@ -138,12 +141,14 @@ def test_interrupting_saved_child_pauses_and_resumes_through_deployment_surface(
     assert resumed["output"]["echoed"] == "world"
 
 
-def test_interrupted_saved_child_blocks_resume_until_pinned_source_returns() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_blocked")
+def test_interrupted_saved_child_blocks_resume_until_pinned_source_returns(
+    tmp_path: Path,
+) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_blocked")
     store.save_artifact(_parent_artifact())
     store.save_artifact(_interrupting_child_artifact(requires_demo=True))
     store.save_deployment(_deployment())
-    handlers = _handlers(store)
+    handlers = _handlers(store, tmp_path)
 
     paused = asyncio.run(
         handlers.run_deployment(
@@ -184,11 +189,13 @@ def test_interrupted_saved_child_blocks_resume_until_pinned_source_returns() -> 
     assert run_store.get_latest_checkpoint(paused["run_id"]).sequence == 2
 
 
-def test_missing_saved_child_is_unrunnable_on_deployment_surface() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_missing_run")
+def test_missing_saved_child_is_unrunnable_on_deployment_surface(
+    tmp_path: Path,
+) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_missing_run")
     store.save_artifact(_parent_artifact())
     store.save_deployment(_deployment())
-    handlers = _handlers(store)
+    handlers = _handlers(store, tmp_path)
 
     result = asyncio.run(handlers.validate_deployment(deployment_id="parent.personal"))
 
@@ -197,8 +204,8 @@ def test_missing_saved_child_is_unrunnable_on_deployment_surface() -> None:
     assert result["diagnostics"][0]["logical_ref"] == "workflow.child.v1"
 
 
-def test_cyclic_saved_child_is_unrunnable_on_deployment_surface() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_cycle_run")
+def test_cyclic_saved_child_is_unrunnable_on_deployment_surface(tmp_path: Path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_cycle_run")
     store.save_artifact(_parent_artifact())
     store.save_artifact(
         _parent_artifact(
@@ -208,7 +215,7 @@ def test_cyclic_saved_child_is_unrunnable_on_deployment_surface() -> None:
         )
     )
     store.save_deployment(_deployment())
-    handlers = _handlers(store)
+    handlers = _handlers(store, tmp_path)
 
     result = asyncio.run(handlers.validate_deployment(deployment_id="parent.personal"))
 
@@ -217,12 +224,14 @@ def test_cyclic_saved_child_is_unrunnable_on_deployment_surface() -> None:
     assert result["diagnostics"][0]["logical_ref"] == "workflow.parent.v1"
 
 
-def test_saved_child_runs_natively_with_parent_deployment_binding() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_run")
+def test_saved_child_runs_natively_with_parent_deployment_binding(
+    tmp_path: Path,
+) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_run")
     store.save_artifact(_parent_artifact())
     store.save_artifact(_leaf_artifact())
     store.save_deployment(_deployment())
-    handlers = _handlers(store)
+    handlers = _handlers(store, tmp_path)
 
     result = asyncio.run(
         handlers.run_deployment(
@@ -236,8 +245,8 @@ def test_saved_child_runs_natively_with_parent_deployment_binding() -> None:
     assert result["diagnostics"] == []
 
 
-def test_nested_saved_child_inherits_root_deployment_binding() -> None:
-    store = FileWorkflowArtifactStore(local_temp_root() / "saved_subgraph_nested_run")
+def test_nested_saved_child_inherits_root_deployment_binding(tmp_path: Path) -> None:
+    store = FileWorkflowArtifactStore(tmp_path / "saved_subgraph_nested_run")
     store.save_artifact(_parent_artifact(child_artifact_id="middle"))
     store.save_artifact(
         _parent_artifact(
@@ -248,7 +257,7 @@ def test_nested_saved_child_inherits_root_deployment_binding() -> None:
     )
     store.save_artifact(_leaf_artifact())
     store.save_deployment(_deployment())
-    handlers = _handlers(store)
+    handlers = _handlers(store, tmp_path)
 
     result = asyncio.run(
         handlers.run_deployment(
@@ -381,8 +390,10 @@ def _deployment(*, bindings: dict[str, str] | None = None) -> WorkflowDeployment
     )
 
 
-def _handlers(artifact_store: FileWorkflowArtifactStore) -> WorkflowSurfaceHandlers:
-    mcp_root = local_temp_root() / f"{artifact_store.root.name}_mcp"
+def _handlers(
+    artifact_store: FileWorkflowArtifactStore, tmp_path: Path
+) -> WorkflowSurfaceHandlers:
+    mcp_root = tmp_path / f"{artifact_store.root.name}_mcp"
     service = WfMcpService(
         store=FileStore(mcp_root),
         artifact_store=artifact_store,

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import asyncio
-
 from pydantic import BaseModel
 
 from examples.authoring_workflow_as_node import (
@@ -63,7 +61,7 @@ def test_subgraph_node_wraps_compiled_workflow() -> None:
     assert "summary" in result["output"]
 
 
-def test_async_subgraph_node_wraps_async_compiled_workflow() -> None:
+async def test_async_subgraph_node_wraps_async_compiled_workflow() -> None:
     class ChildInput(BaseModel):
         text: str
 
@@ -114,12 +112,10 @@ def test_async_subgraph_node_wraps_async_compiled_workflow() -> None:
     parent.set_entry_point(step)
     parent.connect(step, "ok", END)
 
-    run = asyncio.run(
-        execute_workflow_async(
-            parent.compile(),
-            {"text": "hello"},
-            build_async_registry(wrapped),
-        )
+    run = await execute_workflow_async(
+        parent.compile(),
+        {"text": "hello"},
+        build_async_registry(wrapped),
     )
 
     assert run.status == RunStatus.COMPLETED

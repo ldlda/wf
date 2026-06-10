@@ -213,3 +213,6 @@ wf*.config.json
 
 # Generated MCPB packages
 *.mcpb
+
+# pytest files
+.pytest-tmp/

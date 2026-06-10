@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sys
+from pathlib import Path
 from typing import Any
 
 from wf_mcp.models import BrokerConfig, ConnectionConfig
@@ -14,9 +15,9 @@ def structured(result: Any) -> dict[str, Any]:
     return content
 
 
-def proxy_config() -> BrokerConfig:
+def proxy_config(tmp_path: Path = local_temp_root()) -> BrokerConfig:
     return BrokerConfig(
-        store_root=local_temp_root() / "proxy_store",
+        store_root=tmp_path / "proxy_store",
         connections=[
             ConnectionConfig(
                 id="fixture.personal",

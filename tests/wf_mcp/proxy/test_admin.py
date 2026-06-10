@@ -3,18 +3,19 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from pathlib import Path
 
 import mcp.types as mcp_types
 
 from wf_mcp.broker import load_broker_config
 from wf_mcp.proxy import create_proxy_client
 
-from ..test_support import fixture_server_path, local_temp_root
+from ..test_support import fixture_server_path
 from .conftest import structured
 
 
-def test_proxy_admin_tools_mutate_config_file() -> None:
-    tmp_path = local_temp_root() / "proxy_admin_store"
+def test_proxy_admin_tools_mutate_config_file(tmp_path: Path) -> None:
+    tmp_path = tmp_path / "proxy_admin_store"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
@@ -89,8 +90,8 @@ def test_proxy_admin_tools_mutate_config_file() -> None:
     ]
 
 
-def test_proxy_admin_reload_remounts_connections() -> None:
-    tmp_path = local_temp_root() / "proxy_reload_store"
+def test_proxy_admin_reload_remounts_connections(tmp_path: Path) -> None:
+    tmp_path = tmp_path / "proxy_reload_store"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
@@ -130,8 +131,8 @@ def test_proxy_admin_reload_remounts_connections() -> None:
     asyncio.run(run_proxy())
 
 
-def test_proxy_admin_reload_sends_list_changed_notifications() -> None:
-    tmp_path = local_temp_root() / "proxy_reload_notification_store"
+def test_proxy_admin_reload_sends_list_changed_notifications(tmp_path: Path) -> None:
+    tmp_path = tmp_path / "proxy_reload_notification_store"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
@@ -164,8 +165,8 @@ def test_proxy_admin_reload_sends_list_changed_notifications() -> None:
     assert "notifications/prompts/list_changed" in methods
 
 
-def test_proxy_config_mutation_does_not_notify_before_reload() -> None:
-    tmp_path = local_temp_root() / "proxy_staged_notification_store"
+def test_proxy_config_mutation_does_not_notify_before_reload(tmp_path: Path) -> None:
+    tmp_path = tmp_path / "proxy_staged_notification_store"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(

@@ -8,7 +8,7 @@ import pytest
 from typer import Context as TyperContext
 from typer.testing import CliRunner
 
-from tests.wf_mcp.test_support import echo_tool, local_temp_root
+from tests.wf_mcp.test_support import echo_tool
 from tests.wf_mcp.workflow_surface.conftest import echo_artifact
 from wf_artifacts import FileWorkflowArtifactStore, WorkflowDeployment
 from wf_cli.app import app
@@ -144,8 +144,8 @@ def _write_cli_config(root: Path) -> Path:
     return config_path
 
 
-def test_wf_cap_list_outputs_json() -> None:
-    root = local_temp_root() / "wf_cli_cap_list"
+def test_wf_cap_list_outputs_json(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_cap_list"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 
@@ -163,8 +163,8 @@ def test_wf_cap_list_outputs_json() -> None:
     assert payload["capabilities"][0]["source_id"] == "demo.personal"
 
 
-def test_wf_cap_list_ids_format() -> None:
-    root = local_temp_root() / "wf_cli_cap_list_ids"
+def test_wf_cap_list_ids_format(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_cap_list_ids"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 
@@ -189,8 +189,8 @@ def test_wf_cap_list_ids_format() -> None:
     assert result.output.strip() == "demo.personal.echo_tool"
 
 
-def test_wf_cap_inspect_outputs_detail() -> None:
-    root = local_temp_root() / "wf_cli_cap_inspect"
+def test_wf_cap_inspect_outputs_detail(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_cap_inspect"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 
@@ -229,8 +229,8 @@ def _seed_echo_deployment(root: Path) -> Path:
     return config_path
 
 
-def test_wf_artifact_list_and_inspect() -> None:
-    root = local_temp_root() / "wf_cli_artifacts"
+def test_wf_artifact_list_and_inspect(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_artifacts"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_artifact(root)
 
@@ -249,8 +249,8 @@ def test_wf_artifact_list_and_inspect() -> None:
     assert payload["version"] == 1
 
 
-def test_wf_deploy_list_inspect_save_delete() -> None:
-    root = local_temp_root() / "wf_cli_deploy_lifecycle"
+def test_wf_deploy_list_inspect_save_delete(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_deploy_lifecycle"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _seed_echo_deployment(root)
 
@@ -290,8 +290,8 @@ def test_wf_deploy_list_inspect_save_delete() -> None:
     assert json.loads(deleted.output)["deleted"] is True
 
 
-def test_wf_draft_create_patch_validate_save() -> None:
-    root = local_temp_root() / "wf_cli_draft_lifecycle"
+def test_wf_draft_create_patch_validate_save(tmp_path: Path) -> None:
+    root = tmp_path / "wf_cli_draft_lifecycle"
     root.mkdir(parents=True, exist_ok=True)
     config_path = _write_cli_config(root)
 

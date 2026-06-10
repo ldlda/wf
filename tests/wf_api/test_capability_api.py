@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from pathlib import Path
 
 import pytest
@@ -42,11 +41,14 @@ def _capability_api(
     return WorkflowCapabilityApi(context), service
 
 
-def test_list_capabilities_returns_planner_visible_sources(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_list_capabilities_returns_planner_visible_sources(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_list")
     api, _service = _capability_api(artifact_store, register_echo=True)
 
-    result = asyncio.run(api.list_capabilities())
+    result = await api.list_capabilities()
 
     assert result["total"] >= 1
     assert any(
@@ -62,22 +64,24 @@ def test_list_capabilities_returns_planner_visible_sources(tmp_path: Path) -> No
     assert "output_fields" in first
 
 
-def test_list_capabilities_filters_by_source(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_list_capabilities_filters_by_source(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_list_filter")
     api, _service = _capability_api(artifact_store, register_echo=True)
 
-    result = asyncio.run(api.list_capabilities(source_id="wf.std", query="truthy"))
+    result = await api.list_capabilities(source_id="wf.std", query="truthy")
 
     assert [item["name"] for item in result["capabilities"]] == ["wf.std.truthy"]
 
 
-def test_inspect_capability_returns_detail_with_wrapper_hints(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_inspect_capability_returns_detail_with_wrapper_hints(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_inspect")
     api, _service = _capability_api(artifact_store, register_echo=True)
 
-    detail = asyncio.run(
-        api.inspect_capability(qualified_name="demo.personal.echo_tool")
-    )
+    detail = await api.inspect_capability(qualified_name="demo.personal.echo_tool")
 
     assert detail["name"] == "demo.personal.echo_tool"
     assert "wrapper_hints" in detail
@@ -87,23 +91,23 @@ def test_inspect_capability_returns_detail_with_wrapper_hints(tmp_path: Path) ->
     assert hints["output_map"] == {"echoed": "state.echoed"}
 
 
-def test_inspect_capability_raises_on_unknown(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_inspect_capability_raises_on_unknown(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_inspect_unknown")
     api, _service = _capability_api(artifact_store, register_echo=True)
 
     with pytest.raises(KeyError, match="no.such.capability"):
-        asyncio.run(api.inspect_capability(qualified_name="no.such.capability"))
+        await api.inspect_capability(qualified_name="no.such.capability")
 
 
-def test_call_capability_node_spec_success(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_call_capability_node_spec_success(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_call")
     api, _service = _capability_api(artifact_store, register_echo=True)
 
-    result = asyncio.run(
-        api.call_capability(
-            qualified_name="demo.personal.echo_tool",
-            payload={"text": "hello"},
-        )
+    result = await api.call_capability(
+        qualified_name="demo.personal.echo_tool",
+        payload={"text": "hello"},
     )
 
     assert result["kind"] == "node_spec"
@@ -113,15 +117,14 @@ def test_call_capability_node_spec_success(tmp_path: Path) -> None:
     assert result["deployment_id"] is None
 
 
-def test_call_capability_node_spec_failure(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_call_capability_node_spec_failure(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_call_fail")
     api, _service = _capability_api(artifact_store, register_failing=True)
 
-    result = asyncio.run(
-        api.call_capability(
-            qualified_name="demo.personal.failing_tool",
-            payload={"message": "boom"},
-        )
+    result = await api.call_capability(
+        qualified_name="demo.personal.failing_tool",
+        payload={"message": "boom"},
     )
 
     assert result["kind"] == "node_spec"
@@ -130,7 +133,8 @@ def test_call_capability_node_spec_failure(tmp_path: Path) -> None:
     assert result["diagnostics"][0]["code"] == "capability_call_failed"
 
 
-def test_list_capabilities_includes_saved_wrapper(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_list_capabilities_includes_saved_wrapper(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_wrapper_list")
     artifact_store.save_artifact(
         echo_artifact().model_copy(
@@ -143,7 +147,7 @@ def test_list_capabilities_includes_saved_wrapper(tmp_path: Path) -> None:
     )
     api, _service = _capability_api(artifact_store)
 
-    result = asyncio.run(api.list_capabilities(source_id="workflow", query="echo"))
+    result = await api.list_capabilities(source_id="workflow", query="echo")
 
     names = [item["name"] for item in result["capabilities"]]
     assert names == ["workflow.echo_wrapper.v1"]
@@ -159,16 +163,15 @@ def test_list_capabilities_includes_saved_wrapper(tmp_path: Path) -> None:
     assert row["output_fields"] == ["echoed"]
 
 
-def test_inspect_capability_saved_wrapper(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_inspect_capability_saved_wrapper(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_wrapper_inspect")
     artifact_store.save_artifact(
         echo_artifact().model_copy(update={"id": "echo_wrapper", "kind": "wrapper"})
     )
     api, _service = _capability_api(artifact_store)
 
-    detail = asyncio.run(
-        api.inspect_capability(qualified_name="workflow.echo_wrapper.v1")
-    )
+    detail = await api.inspect_capability(qualified_name="workflow.echo_wrapper.v1")
 
     assert detail["name"] == "workflow.echo_wrapper.v1"
     assert detail["source_id"] == "workflow"
@@ -186,18 +189,17 @@ def test_inspect_capability_saved_wrapper(tmp_path: Path) -> None:
     assert hints["output_map"] == {"echoed": "state.echoed"}
 
 
-def test_call_capability_saved_wrapper(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_call_capability_saved_wrapper(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_wrapper_call")
     artifact_store.save_artifact(
         echo_artifact().model_copy(update={"id": "echo_wrapper", "kind": "wrapper"})
     )
     api, service = _capability_api(artifact_store, register_echo=True)
 
-    result = asyncio.run(
-        api.call_capability(
-            qualified_name="workflow.echo_wrapper.v1",
-            payload={"text": "hi"},
-        )
+    result = await api.call_capability(
+        qualified_name="workflow.echo_wrapper.v1",
+        payload={"text": "hi"},
     )
 
     assert result["kind"] == "wrapper_artifact"
@@ -205,15 +207,14 @@ def test_call_capability_saved_wrapper(tmp_path: Path) -> None:
     assert result["diagnostics"] == []
 
 
-def test_create_draft_workspace_from_capability(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_create_draft_workspace_from_capability(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_draft_bootstrap")
     api, _service = _capability_api(artifact_store, register_echo=True)
 
-    result = asyncio.run(
-        api.create_draft_workspace_from_capability(
-            workspace_id="echo_ws",
-            capability_name="demo.personal.echo_tool",
-        )
+    result = await api.create_draft_workspace_from_capability(
+        workspace_id="echo_ws",
+        capability_name="demo.personal.echo_tool",
     )
 
     assert result["workspace_id"] == "echo_ws"
@@ -222,13 +223,15 @@ def test_create_draft_workspace_from_capability(tmp_path: Path) -> None:
     assert "next_actions" in result
     assert result["wrapper_hints"]["capability_name"] == "demo.personal.echo_tool"
 
-    fetched = asyncio.run(
-        api.drafts.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
+    fetched = await api.drafts.get_draft_workspace(
+        workspace_id="echo_ws", include_draft=True
     )
+
     assert fetched["draft"]["steps"]["call"]["use"] == "demo.personal.echo_tool"
 
 
-def test_handler_delegates_to_capability_api(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_handler_delegates_to_capability_api(tmp_path: Path) -> None:
     """WorkflowSurfaceHandlers methods produce the same result as direct API."""
     artifact_store = FileWorkflowArtifactStore(tmp_path / "cap_api_delegation")
     mcp_root = artifact_store.root / "delegation_mcp"
@@ -246,12 +249,10 @@ def test_handler_delegates_to_capability_api(tmp_path: Path) -> None:
     context = context_from_service(service)
     api = WorkflowCapabilityApi(context)
 
-    handler_result = asyncio.run(
-        h.inspect_capability(qualified_name="demo.personal.echo_tool")
+    handler_result = await h.inspect_capability(
+        qualified_name="demo.personal.echo_tool"
     )
-    api_result = asyncio.run(
-        api.inspect_capability(qualified_name="demo.personal.echo_tool")
-    )
+    api_result = await api.inspect_capability(qualified_name="demo.personal.echo_tool")
 
     assert handler_result["name"] == api_result["name"]
     assert handler_result["wrapper_hints"] == api_result["wrapper_hints"]

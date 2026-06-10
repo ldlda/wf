@@ -18,11 +18,7 @@ from wf_core import (
 )
 
 
-def test_async_concurrent_foreach_respects_max_active() -> None:
-    asyncio.run(_assert_async_concurrent_foreach_respects_max_active())
-
-
-async def _assert_async_concurrent_foreach_respects_max_active() -> None:
+async def test_async_concurrent_foreach_respects_max_active() -> None:
     workflow = _workflow(max_active=2)
     active = 0
     max_seen = 0
@@ -45,11 +41,7 @@ async def _assert_async_concurrent_foreach_respects_max_active() -> None:
     assert run.state["seen"] == ["a", "b", "c", "d"]
 
 
-def test_async_concurrent_foreach_commits_in_item_index_order() -> None:
-    asyncio.run(_assert_async_concurrent_foreach_commits_in_item_index_order())
-
-
-async def _assert_async_concurrent_foreach_commits_in_item_index_order() -> None:
+async def test_async_concurrent_foreach_commits_in_item_index_order() -> None:
     workflow = _workflow(max_active=3)
 
     async def record(payload: dict[str, Any], _ctx: object) -> dict[str, Any]:

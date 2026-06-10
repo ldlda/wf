@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any, cast
 
 import pytest
@@ -33,8 +32,8 @@ def test_authoring_concurrent_foreach_collects_item_errors() -> None:
     assert error["item"] == "bad"
 
 
-def test_authoring_async_concurrent_foreach_commits_in_item_order() -> None:
-    run = asyncio.run(run_async_ordered_example())
+async def test_authoring_async_concurrent_foreach_commits_in_item_order() -> None:
+    run = await run_async_ordered_example()
 
     assert run.status == RunStatus.COMPLETED
     assert run.output["seen"] == ["a", "b", "c"]

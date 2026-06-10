@@ -9,8 +9,6 @@ from pydantic import ValidationError
 from wf_mcp.broker import load_broker_config
 from wf_mcp.cli import build_parser, main
 
-from .test_support import local_temp_root
-
 
 def _write_config(path: Path) -> None:
     path.write_text(
@@ -100,8 +98,10 @@ def test_build_parser_accepts_no_admin_tools_flag() -> None:
     assert args.admin_tools is False
 
 
-def test_cli_connections_prints_configured_connections(capsys) -> None:
-    tmp_path = local_temp_root() / "cli_connections_test"
+def test_cli_connections_prints_configured_connections(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    tmp_path = tmp_path / "cli_connections_test"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     _write_config(config_path)
@@ -115,9 +115,9 @@ def test_cli_connections_prints_configured_connections(capsys) -> None:
 
 
 def test_cli_catalog_prints_empty_catalog_when_not_refreshed(
-    capsys,
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
 ) -> None:
-    tmp_path = local_temp_root() / "cli_catalog_test"
+    tmp_path = tmp_path / "cli_catalog_test"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     _write_config(config_path)
@@ -132,8 +132,10 @@ def test_cli_catalog_prints_empty_catalog_when_not_refreshed(
     assert payload["prompts"] == []
 
 
-def test_cli_status_prints_connection_statuses(capsys) -> None:
-    tmp_path = local_temp_root() / "cli_status_test"
+def test_cli_status_prints_connection_statuses(
+    capsys: pytest.CaptureFixture[str], tmp_path: Path
+) -> None:
+    tmp_path = tmp_path / "cli_status_test"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     _write_config(config_path)
@@ -159,8 +161,8 @@ def test_cli_status_prints_connection_statuses(capsys) -> None:
     ]
 
 
-def test_load_broker_config_normalizes_typed_stdio_metadata() -> None:
-    tmp_path = local_temp_root() / "cli_typed_stdio_config_test"
+def test_load_broker_config_normalizes_typed_stdio_metadata(tmp_path: Path) -> None:
+    tmp_path = tmp_path / "cli_typed_stdio_config_test"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(
@@ -195,8 +197,8 @@ def test_load_broker_config_normalizes_typed_stdio_metadata() -> None:
     }
 
 
-def test_load_broker_config_rejects_bad_metadata_shape() -> None:
-    tmp_path = local_temp_root() / "cli_bad_config_test"
+def test_load_broker_config_rejects_bad_metadata_shape(tmp_path: Path) -> None:
+    tmp_path = tmp_path / "cli_bad_config_test"
     tmp_path.mkdir(parents=True, exist_ok=True)
     config_path = tmp_path / "wf_mcp.config.json"
     config_path.write_text(

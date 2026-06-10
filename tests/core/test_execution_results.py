@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 import pytest
@@ -27,53 +26,45 @@ async def explode(_payload: dict[str, Any], _context: RuntimeContext) -> dict[st
     raise ValueError("boom")
 
 
-def test_execute_result_api_returns_failed_state_without_changing_strict_execute() -> (
+@pytest.mark.asyncio
+async def test_execute_result_api_returns_failed_state_without_changing_strict_execute() -> (
     None
 ):
     workflow = _failing_workflow()
 
-    failed = asyncio.run(
-        execute_workflow_result_async(workflow, {}, {"explode": explode})
-    )
+    failed = await execute_workflow_result_async(workflow, {}, {"explode": explode})
 
     assert failed.status is RunStatus.FAILED
     assert failed.error == "boom"
 
     with pytest.raises(ValueError, match="boom"):
-        asyncio.run(execute_workflow_async(workflow, {}, {"explode": explode}))
+        await execute_workflow_async(workflow, {}, {"explode": explode})
 
 
-def test_resume_result_api_returns_failed_state_without_changing_strict_resume() -> (
+@pytest.mark.asyncio
+async def test_resume_result_api_returns_failed_state_without_changing_strict_resume() -> (
     None
 ):
     workflow = _interrupt_then_fail_workflow()
-    interrupted = asyncio.run(
-        execute_workflow_async(workflow, {}, {"explode": explode})
+    interrupted = await execute_workflow_async(workflow, {}, {"explode": explode})
+
+    failed = await resume_workflow_result_async(
+        workflow,
+        interrupted,
+        {"explode": explode},
+        resume_payload={},
     )
 
-    failed = asyncio.run(
-        resume_workflow_result_async(
+    assert failed.status is RunStatus.FAILED
+    assert failed.error == "boom"
+
+    interrupted = await execute_workflow_async(workflow, {}, {"explode": explode})
+    with pytest.raises(ValueError, match="boom"):
+        await resume_workflow_async(
             workflow,
             interrupted,
             {"explode": explode},
             resume_payload={},
-        )
-    )
-
-    assert failed.status is RunStatus.FAILED
-    assert failed.error == "boom"
-
-    interrupted = asyncio.run(
-        execute_workflow_async(workflow, {}, {"explode": explode})
-    )
-    with pytest.raises(ValueError, match="boom"):
-        asyncio.run(
-            resume_workflow_async(
-                workflow,
-                interrupted,
-                {"explode": explode},
-                resume_payload={},
-            )
         )
 
 

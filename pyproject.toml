@@ -29,11 +29,12 @@ dev = [
     "pytest>=8",
     # "pytest-sugar>=1",
     "pytest-asyncio>=1.4.0",
+    "pytest-xdist>=3.8.0",
     "ruff>=0.15.15",
 ]
 
 [tool.pytest.ini_options]
-addopts = "-p no:cacheprovider"
+addopts = "-p no:cacheprovider -n auto --basetemp .pytest-tmp"
 pythonpath = ["."]
 asyncio_mode = "auto"
 

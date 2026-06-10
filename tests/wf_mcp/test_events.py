@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Sequence
+from pathlib import Path
 
 from wf_mcp.broker import WfMcpService
 from wf_mcp.events import EventBus, InMemoryEventSink, McpEvent, make_event
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 
-from .test_support import FakeAdapter, echo_tool, local_temp_root
+from .test_support import FakeAdapter, echo_tool
 
 
 def test_event_bus_fans_out_to_subscribers() -> None:
@@ -24,11 +25,11 @@ def test_event_bus_fans_out_to_subscribers() -> None:
     assert seen_kinds == ["catalog_changed"]
 
 
-def test_service_records_events_through_event_bus() -> None:
+def test_service_records_events_through_event_bus(tmp_path: Path) -> None:
     sink = InMemoryEventSink()
     bus = EventBus(sink)
     service = WfMcpService(
-        store=FileStore(local_temp_root() / "event_bus_service_store"),
+        store=FileStore(tmp_path / "event_bus_service_store"),
         event_bus=bus,
     )
 
@@ -40,8 +41,8 @@ def test_service_records_events_through_event_bus() -> None:
     assert sink.list_events()[0] is service.list_events()[0]
 
 
-def test_register_specs_emits_tool_and_catalog_change_events() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "spec_change_store"))
+def test_register_specs_emits_tool_and_catalog_change_events(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "spec_change_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
@@ -66,8 +67,8 @@ def test_register_specs_emits_tool_and_catalog_change_events() -> None:
     assert catalog_changed[0].payload["reason"] == "specs_registered"
 
 
-def test_refresh_catalog_emits_capability_change_events() -> None:
-    service = WfMcpService(store=FileStore(local_temp_root() / "refresh_change_store"))
+def test_refresh_catalog_emits_capability_change_events(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "refresh_change_store"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
