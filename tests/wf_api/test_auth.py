@@ -33,7 +33,7 @@ def test_auth_record_is_immutable_and_mapping_typed() -> None:
     assert_type(record.payload, Mapping[str, object])
 
     with pytest.raises(AttributeError):
-        record.scheme = "headers"  # type: ignore[misc]
+        record.scheme = "headers"  # type: ignore[misc, ty:invalid-assignment]
 
 
 class MemoryAuthStore:

@@ -101,7 +101,7 @@ def test_path_objects_are_immutable_and_hashable() -> None:
     assert len(paths) == 1
 
     with pytest.raises(Exception):
-        StatePath.of("person.name").parts = ("other",)  # type: ignore[misc]
+        StatePath.of("person.name").parts = ("other",)  # type: ignore[misc, ty:invalid-assignment]
 
 
 @pytest.mark.parametrize(

@@ -47,13 +47,19 @@ or so i think.
 
 scope your calls lads. else timeouts. not good for rapid testings
 
-# partial impls
+# code
+
+## docstrings/comment
+
+- add docstrings or comments around weird or non-obvious logic.
+  - Add docstrings explaining compound return types that otherwise say nothing (e.g. `tuple[list[str], Any]`)
+- Polish the thing (at least its docs) if you keep using it (helper fn, common class)
+
+## partial impls
 
 If code has a partial implementation and docs mention the limitation, add a
 short comment or docstring at the code seam too. Future agents see code before
 they see old plans.
-
-<!-- should this be global? putting docstrings/comment is global -->
 
 # skills
 

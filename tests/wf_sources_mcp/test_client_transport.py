@@ -140,7 +140,7 @@ async def test_stdio_cwd_propagated_to_server_parameters() -> None:
         captured_params.append(params)
         yield "read", "write"
 
-    mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment]
+    mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment, ty:invalid-assignment]
 
     async with open_mcp_session(connection, None) as session:
         assert isinstance(session, _FakeSession)
@@ -222,7 +222,7 @@ async def test_stdio_no_auth_uses_transport_env_only() -> None:
         captured_params.append(params)
         yield "read", "write"
 
-    mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment]
+    mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment, ty:invalid-assignment]
 
     async with open_mcp_session(connection, None):
         pass

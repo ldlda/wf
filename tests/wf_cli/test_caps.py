@@ -37,7 +37,7 @@ def _patch_context(monkeypatch, result: dict[str, Any]) -> None:
         return CliContext(
             config_path=Path("dummy"),
             service=None,
-            handlers=_FakeHandlers(result),  # type: ignore[arg-type]
+            handlers=_FakeHandlers(result),  # type: ignore[arg-type, ty:invalid-argument-type]
             source_admin=cast(Any, object()),
             admin=cast(Any, object()),
         )

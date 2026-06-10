@@ -9,48 +9,45 @@ from wf_core import RuntimeContext
 
 from .result import NodeReturn
 
-InputT = TypeVar("InputT", bound=BaseModel)
-OutputT = TypeVar("OutputT", bound=BaseModel)
-
-InputT_contra = TypeVar("InputT_contra", bound=BaseModel, contravariant=True)
-OutputT_co = TypeVar("OutputT_co", bound=BaseModel, covariant=True)
+InputT = TypeVar("InputT", bound=BaseModel, infer_variance=True)
+OutputT = TypeVar("OutputT", bound=BaseModel, infer_variance=True)
 
 
-class ContextNodeCallable(Protocol[InputT_contra, OutputT_co]):
+class ContextNodeCallable(Protocol[InputT, OutputT]):
     def __call__(
         self,
-        payload: InputT_contra,
+        payload: InputT,
         /,
         ctx: RuntimeContext,
-    ) -> NodeReturn[OutputT_co] | OutputT_co | None: ...
+    ) -> NodeReturn[OutputT] | OutputT | None: ...
 
 
-class PlainNodeCallable(Protocol[InputT_contra, OutputT_co]):
+class PlainNodeCallable(Protocol[InputT, OutputT]):
     def __call__(
         self,
-        payload: InputT_contra,
+        payload: InputT,
         /,
-    ) -> NodeReturn[OutputT_co] | OutputT_co | None: ...
+    ) -> NodeReturn[OutputT] | OutputT | None: ...
 
 
 NodeCallable = ContextNodeCallable[InputT, OutputT] | PlainNodeCallable[InputT, OutputT]
 
 
-class AsyncContextNodeCallable(Protocol[InputT_contra, OutputT_co]):
+class AsyncContextNodeCallable(Protocol[InputT, OutputT]):
     def __call__(
         self,
-        payload: InputT_contra,
+        payload: InputT,
         /,
         ctx: RuntimeContext,
-    ) -> Awaitable[NodeReturn[OutputT_co] | OutputT_co | None]: ...
+    ) -> Awaitable[NodeReturn[OutputT] | OutputT | None]: ...
 
 
-class AsyncPlainNodeCallable(Protocol[InputT_contra, OutputT_co]):
+class AsyncPlainNodeCallable(Protocol[InputT, OutputT]):
     def __call__(
         self,
-        payload: InputT_contra,
+        payload: InputT,
         /,
-    ) -> Awaitable[NodeReturn[OutputT_co] | OutputT_co | None]: ...
+    ) -> Awaitable[NodeReturn[OutputT] | OutputT | None]: ...
 
 
 AsyncNodeCallable = (

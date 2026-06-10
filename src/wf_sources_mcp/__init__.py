@@ -21,12 +21,25 @@ from .auth import (
 )
 
 if TYPE_CHECKING:
+    # type checked version of __getattr__
+    from .adapters import (
+        AdapterLookupRef,
+        LegacyAdapterRef,
+        SourceAdapterRef,
+        require_adapter,
+    )
     from .connections import (
         LegacyConnectionConfigLike,
         McpSourceConnection,
         mcp_source_connection_from_connection_config,
         mcp_source_connection_from_registry_entry,
     )
+    from .discovery import (
+        DiscoveredConnectionCapabilities,
+        discover_connection_capabilities,
+        specs_from_discovered_tools,
+    )
+    from .schema_models import model_from_schema
     from .source_registry import (
         FileSourceRegistryStore,
         McpSourceRegistryEntry,
@@ -34,11 +47,19 @@ if TYPE_CHECKING:
         SourceRegistryStore,
         connection_config_to_registry_entry,
     )
+    from .tool_events import (
+        ToolWrapperEvent,
+        ToolWrapperEventSink,
+        tool_call_completed_event,
+        tool_call_started_event,
+    )
+    from .tool_wrappers import wrap_discovered_tool
     from .transports import (
         HttpSourceTransport,
         SourceTransport,
         StdioSourceTransport,
     )
+
 
 __all__ = [
     "AdapterLookupRef",
@@ -77,6 +98,7 @@ __all__ = [
 ]
 
 
+# these are heavy, so we import lazily
 def __getattr__(name: str) -> object:
     if name in {
         "AdapterLookupRef",

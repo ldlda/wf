@@ -49,7 +49,7 @@ def test_source_registry_accepts_http_transport() -> None:
         id="github.http",
         provider="github",
         account="work",
-        transport=HttpSourceTransport(url="https://example.test/mcp"),  # type: ignore[arg-type]
+        transport=HttpSourceTransport(url="https://example.test/mcp"),  # type: ignore[arg-type, ty:invalid-argument-type]
     )
 
     assert entry.transport.kind == "http"
@@ -233,7 +233,7 @@ class _McpSourceHttp:
         self.account = "default"
         self.enabled = True
         self.ownership = "locked"
-        self.transport = HttpSourceTransport(url="http://127.0.0.1:3000/sse")  # type: ignore[arg-type]
+        self.transport = HttpSourceTransport(url="http://127.0.0.1:3000/sse")  # type: ignore[arg-type, ty:invalid-argument-type]
         self.metadata: dict[str, object] = {}
         self.profile: str | None = None
         self.auth_ref: str | None = None

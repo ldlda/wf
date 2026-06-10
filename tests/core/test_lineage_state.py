@@ -215,7 +215,7 @@ def test_non_root_frame_node_writes_are_buffered_in_lineage() -> None:
     result = execute_node_use(
         workflow,
         run,
-        workflow.nodes[0],  # type: ignore[arg-type]
+        workflow.nodes[0],  # type: ignore[arg-type, ty:invalid-argument-type]
         workflow.node_defs[0],
         {"write_value": lambda payload, _ctx: {"value": f"{payload['value']}-next"}},
     )

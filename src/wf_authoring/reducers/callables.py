@@ -4,7 +4,7 @@ from typing import Any, Protocol, TypeVar
 
 from pydantic import BaseModel
 
-ConfigT = TypeVar("ConfigT", bound=BaseModel)
+ConfigT = TypeVar("ConfigT", bound=BaseModel, infer_variance=True)
 
 
 class PlainReducerCallable(Protocol):

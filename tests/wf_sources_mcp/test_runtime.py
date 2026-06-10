@@ -211,7 +211,7 @@ class _FakeFactory(PersistentSessionFactory):
                     {"jsonrpc": "2.0", "id": 1, "result": {}}
                 )
 
-        return _FakeClient()  # type: ignore[return-value]
+        return _FakeClient()  # type: ignore[return-value, ty:invalid-return-type]
 
 
 @pytest.mark.asyncio
@@ -572,7 +572,7 @@ async def test_persistent_session_list_tools_client_fallback() -> None:
     session = PersistentMcpSession(
         connection=_connection(),
         auth=None,
-        client=_MinimalClient(),  # type: ignore[arg-type]
+        client=_MinimalClient(),  # type: ignore[arg-type, ty:invalid-argument-type]
     )
 
     tools = await session.list_tools()
@@ -597,7 +597,7 @@ async def test_persistent_session_invoke_method_client_fallback() -> None:
     session = PersistentMcpSession(
         connection=_connection(),
         auth=None,
-        client=_MinimalClient(),  # type: ignore[arg-type]
+        client=_MinimalClient(),  # type: ignore[arg-type, ty:invalid-argument-type]
     )
 
     result = await session.invoke_method("tools/list")
@@ -617,7 +617,7 @@ async def test_persistent_session_send_notification_client_fallback() -> None:
     session = PersistentMcpSession(
         connection=_connection(),
         auth=None,
-        client=_MinimalClient(),  # type: ignore[arg-type]
+        client=_MinimalClient(),  # type: ignore[arg-type, ty:invalid-argument-type]
     )
 
     await session.send_notification("notifications/initialized")
