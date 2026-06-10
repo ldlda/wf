@@ -4,7 +4,7 @@ import json
 
 from typer.testing import CliRunner
 
-from wf_transport_rpc_http.cli import app
+from wf_server.cli import app
 
 
 def test_rpc_server_cli_help_mentions_store_root() -> None:
@@ -86,11 +86,11 @@ def test_rpc_server_cli_uses_configured_store_and_transport(
         captured["access_log"] = access_log
 
     monkeypatch.setattr(
-        "wf_transport_rpc_http.cli.build_workflow_server_from_workflow_config",
+        "wf_server.cli.build_workflow_server_from_workflow_config",
         fake_build_server,
     )
-    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
-    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_uvicorn_run)
+    monkeypatch.setattr("wf_server.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_server.cli.uvicorn.run", fake_uvicorn_run)
 
     result = CliRunner().invoke(app, ["--config", str(config_path)])
 
@@ -131,11 +131,11 @@ def test_rpc_server_cli_uses_mcp_config_server(monkeypatch, tmp_path) -> None:
         captured["access_log"] = access_log
 
     monkeypatch.setattr(
-        "wf_transport_rpc_http.cli.build_workflow_server_from_legacy_mcp_config",
+        "wf_server.cli.build_workflow_server_from_legacy_mcp_config",
         fake_build_mcp_server,
     )
-    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
-    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_uvicorn_run)
+    monkeypatch.setattr("wf_server.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_server.cli.uvicorn.run", fake_uvicorn_run)
 
     result = CliRunner().invoke(
         app,
@@ -203,8 +203,8 @@ def test_rpc_server_cli_mcp_config_builds_registry_capable_server(
         captured["host"] = host
         captured["port"] = port
 
-    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
-    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_uvicorn_run)
+    monkeypatch.setattr("wf_server.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_server.cli.uvicorn.run", fake_uvicorn_run)
 
     result = CliRunner().invoke(app, ["--mcp-config", str(config_path)])
 
@@ -260,8 +260,8 @@ def test_rpc_server_cli_mcp_config_with_config_uses_transport_settings(
         captured["port"] = port
         captured["access_log"] = access_log
 
-    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
-    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_uvicorn_run)
+    monkeypatch.setattr("wf_server.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_server.cli.uvicorn.run", fake_uvicorn_run)
 
     result = CliRunner().invoke(
         app,
@@ -304,11 +304,11 @@ def test_rpc_server_cli_config_with_mcp_source_uses_mcp_builder(
         }
 
     monkeypatch.setattr(
-        "wf_transport_rpc_http.cli.build_workflow_server_from_workflow_config",
+        "wf_server.cli.build_workflow_server_from_workflow_config",
         fake_build_from_workflow_config,
     )
-    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
-    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_run)
+    monkeypatch.setattr("wf_server.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_server.cli.uvicorn.run", fake_run)
 
     config_path = tmp_path / "wf.json"
     config_path.write_text(
@@ -332,10 +332,6 @@ def test_rpc_server_cli_config_with_mcp_source_uses_mcp_builder(
 """,
         encoding="utf-8",
     )
-
-    from typer.testing import CliRunner
-
-    from wf_transport_rpc_http.cli import app
 
     result = CliRunner().invoke(app, ["--config", str(config_path)])
 
@@ -413,11 +409,11 @@ def test_rpc_server_cli_config_uses_workflow_store_override(
         captured["app"] = app_obj
 
     monkeypatch.setattr(
-        "wf_transport_rpc_http.cli.build_workflow_server_from_workflow_config",
+        "wf_server.cli.build_workflow_server_from_workflow_config",
         fake_build_server,
     )
-    monkeypatch.setattr("wf_transport_rpc_http.cli.create_rpc_app", fake_create_rpc_app)
-    monkeypatch.setattr("wf_transport_rpc_http.cli.uvicorn.run", fake_uvicorn_run)
+    monkeypatch.setattr("wf_server.cli.create_rpc_app", fake_create_rpc_app)
+    monkeypatch.setattr("wf_server.cli.uvicorn.run", fake_uvicorn_run)
 
     result = CliRunner().invoke(app, ["--config", str(config_path)])
 

@@ -81,11 +81,9 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
 - New source families should follow the generic runtime source lifecycle rather
   than being forced through MCP `ConnectionConfig`:
   [`runtime source lifecycle`](superpowers/specs/2026-06-09-runtime-source-lifecycle.md).
-- Server startup policy should move out of the JSON-RPC transport package and
-  into `wf_server` before adding more hosted transports:
+- Completed: server startup policy moved to `wf_server.cli`; JSON-RPC HTTP
+  remains in `wf_transport_rpc_http`:
   [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).
-  Active implementation plan:
-  [`server CLI ownership move`](superpowers/plans/2026-06-10-server-cli-ownership-move.md).
 - Deferred auth work: OAuth/OIDC, production secret manager integration,
   encrypted-at-rest file format, and provider-specific display models.
 - Active specs:

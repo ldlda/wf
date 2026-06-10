@@ -21,7 +21,7 @@ dependencies = [
 [project.scripts]
 wf = "wf_cli.app:main"
 wf-mcp = "wf_mcp.cli:main"
-wf-rpc-server = "wf_transport_rpc_http.cli:main"
+wf-rpc-server = "wf_server.cli:main"
 
 [dependency-groups]
 dev = [

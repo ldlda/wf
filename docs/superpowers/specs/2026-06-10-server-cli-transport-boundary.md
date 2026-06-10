@@ -2,7 +2,7 @@
 
 Date: 2026-06-10
 
-Status: design direction; implementation not started
+Status: first move slice implemented
 
 Related:
 
@@ -89,6 +89,16 @@ wf-rpc-server = "wf_server.cli:main"
 
 Keep `wf_transport_rpc_http.cli` temporarily so tests and imports do not break
 immediately.
+
+## Implementation Status
+
+First move slice complete:
+
+- `wf-rpc-server` script entrypoint points at `wf_server.cli:main`.
+- `wf_server.cli` owns startup config parsing and server composition.
+- `wf_transport_rpc_http.cli` remains as a compatibility shim.
+- `wf_transport_rpc_http.create_rpc_app(server)` remains the JSON-RPC HTTP
+  transport adapter.
 
 ## Why Not Move `create_rpc_app`
 
