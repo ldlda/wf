@@ -13,9 +13,9 @@ Related:
 
 ## Purpose
 
-`wf-rpc-server` currently lives in `wf_transport_rpc_http.cli`, but the module
-does more than transport work. It parses server startup config, selects local
-static vs MCP-backed composition, handles legacy `--mcp-config`, and starts the
+`wf-rpc-server` used to live in `wf_transport_rpc_http.cli`, but that module did
+more than transport work. It parsed server startup config, selected local static
+vs MCP-backed composition, handled legacy `--mcp-config`, and started the
 JSON-RPC HTTP transport.
 
 That made sense while JSON-RPC was the only long-lived server path. It is now
@@ -40,15 +40,15 @@ wf_transport_rpc_http
 The script name can remain `wf-rpc-server` for compatibility, but its entrypoint
 should eventually point at `wf_server.cli:main`.
 
-## Current Shape
+## Previous Shape
 
-Current script registration:
+Previous script registration:
 
 ```toml
 wf-rpc-server = "wf_transport_rpc_http.cli:main"
 ```
 
-Current responsibilities inside `wf_transport_rpc_http.cli`:
+Previous responsibilities inside `wf_transport_rpc_http.cli`:
 
 - parse `--config`
 - parse `--store-root`
