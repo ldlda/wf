@@ -372,3 +372,43 @@ async def test_rpc_workflow_client_deletes_artifact(tmp_path) -> None:
     assert deleted["deleted"] is True
     assert deleted["artifact_id"] == "delete_artifact"
     assert deleted["version"] == 1
+
+
+async def test_rpc_client_lists_runs(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    await server.api.create_artifact_from_plan(
+        artifact_id="client_list_runs",
+        version=1,
+        title="Client List Runs",
+        plan=_constant_plan(),
+        outcomes=["ok"],
+        source_bindings={"wf.std": "wf.std"},
+    )
+    await server.api.save_deployment(
+        {
+            "id": "client_list_runs.default",
+            "artifact_id": "client_list_runs",
+            "artifact_version": 1,
+            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+        }
+    )
+    started = await server.api.run_deployment(
+        deployment_id="client_list_runs.default",
+        workflow_input={},
+    )
+
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://test",
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            timeout_seconds=5,
+            http_client=http_client,
+        )
+        listed = await client.list_runs(status="completed", limit=5)
+
+    assert listed["total"] == 1
+    assert listed["runs"][0]["run_id"] == started["run_id"]

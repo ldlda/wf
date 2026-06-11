@@ -178,6 +178,14 @@ class WorkflowDeploymentSurface(Protocol):
 class WorkflowRunSurface(Protocol):
     """Run lifecycle methods exposed by workflow frontends."""
 
+    async def list_runs(
+        self,
+        *,
+        status: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]: ...
+
     async def run_deployment(
         self,
         *,

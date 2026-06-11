@@ -9,6 +9,7 @@ from wf_server import WorkflowServer
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
 from ..models import (
     InspectRunParams,
+    ListRunsParams,
     ReadRunTraceParams,
     ResumeRunParams,
     StartRunParams,
@@ -21,6 +22,19 @@ def register_methods(
     server: WorkflowServer,
 ) -> None:
     """Register run lifecycle JSON-RPC methods."""
+
+    @entrypoint.method(name="workflow.runs.list", errors=[WorkflowRpcError])
+    async def workflow_runs_list(
+        params: ListRunsParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.list_runs(
+                status=params.status,
+                cursor=params.cursor,
+                limit=params.limit,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
 
     @entrypoint.method(name="workflow.runs.start", errors=[WorkflowRpcError])
     async def workflow_runs_start(

@@ -174,6 +174,12 @@ class ValidateDeploymentParams(RpcParamsModel):
     live_check: bool = False
 
 
+class ListRunsParams(RpcParamsModel):
+    status: Literal["completed", "failed", "interrupted"] | None = None
+    cursor: str | None = None
+    limit: int = Field(default=50, ge=1, le=100)
+
+
 class StartRunParams(RpcParamsModel):
     deployment_id: str = Field(min_length=1)
     workflow_input: dict[str, Any] = Field(default_factory=dict)

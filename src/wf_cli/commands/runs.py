@@ -20,6 +20,34 @@ app = typer.Typer(
 _STOPPED_RUN_STATUSES = frozenset({"completed", "failed", "interrupted", "blocked"})
 
 
+@app.command("list")
+def list_runs(
+    ctx: typer.Context,
+    status: Annotated[
+        str | None,
+        typer.Option(
+            "--status",
+            help="Filter by stopped status: completed, failed, or interrupted.",
+        ),
+    ] = None,
+    cursor: Annotated[
+        str | None,
+        typer.Option("--cursor", help="Offset cursor returned by a previous page."),
+    ] = None,
+    limit: Annotated[
+        int,
+        typer.Option("--limit", min=1, max=100, help="Maximum run summaries."),
+    ] = 50,
+) -> None:
+    """List durable stopped workflow runs without trace entries."""
+    context = load_cli_context_from_typer(ctx)
+    payload = run_cli_operation(
+        context,
+        context.handlers.list_runs(status=status, cursor=cursor, limit=limit),
+    )
+    emit_json(payload)
+
+
 @app.command("start")
 def start_run(
     ctx: typer.Context,

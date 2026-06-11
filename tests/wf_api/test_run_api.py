@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -11,6 +12,7 @@ from tests.wf_mcp.workflow_surface.conftest import (
     failing_artifact,
     failing_tool,
 )
+from wf_api import WorkflowApi
 from wf_api.runs import WorkflowRunApi
 from wf_artifacts import (
     FileRunStore,
@@ -266,3 +268,114 @@ def test_run_api_handler_delegation_matches(tmp_path: Path) -> None:
     assert handler_summary["run_id"] == api_summary["run_id"]
     assert handler_summary["trace_count"] == api_summary["trace_count"]
     assert handler_summary["resume_readiness"] == api_summary["resume_readiness"]
+
+
+async def test_run_api_lists_runs_newest_first_with_summary(tmp_path: Path) -> None:
+    root = tmp_path / "run_api_list"
+    service, _ = _service_with_echo(root)
+    context = context_from_service(service)
+    api = WorkflowRunApi(context)
+
+    first = await api.run_deployment(
+        deployment_id="echo.personal",
+        workflow_input={"text": "first"},
+    )
+    second = await api.run_deployment(
+        deployment_id="echo.personal",
+        workflow_input={"text": "second"},
+    )
+
+    payload = await api.list_runs()
+
+    assert payload["total"] == 2
+    assert payload["cursor"] is None
+    assert payload["next_cursor"] is None
+    assert payload["limit"] == 50
+    assert [row["run_id"] for row in payload["runs"]] == [
+        second["run_id"],
+        first["run_id"],
+    ]
+    first_row = payload["runs"][0]
+    assert first_row["deployment_id"] == "echo.personal"
+    assert first_row["artifact_id"] == "echo"
+    assert first_row["artifact_version"] == 1
+    assert first_row["status"] == "completed"
+    assert first_row["resume_readiness"] == "not_applicable"
+    assert first_row["diagnostic_count"] == 0
+    assert "trace" not in first_row
+    assert "output" not in first_row
+    assert "environment" not in first_row
+
+
+async def test_run_api_lists_runs_with_status_filter_and_offset_cursor(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run_api_list_filter"
+    service, _ = _service_with_echo(root)
+    context = context_from_service(service)
+    api = WorkflowRunApi(context)
+
+    await api.run_deployment(
+        deployment_id="echo.personal",
+        workflow_input={"text": "first"},
+    )
+    await api.run_deployment(
+        deployment_id="echo.personal",
+        workflow_input={"text": "second"},
+    )
+
+    first_page = await api.list_runs(status="completed", limit=1)
+    second_page = await api.list_runs(
+        status="completed",
+        cursor=first_page["next_cursor"],
+        limit=1,
+    )
+
+    assert first_page["total"] == 2
+    assert first_page["next_cursor"] == "1"
+    assert len(first_page["runs"]) == 1
+    assert second_page["total"] == 2
+    assert second_page["cursor"] == "1"
+    assert second_page["next_cursor"] is None
+    assert len(second_page["runs"]) == 1
+    assert first_page["runs"][0]["run_id"] != second_page["runs"][0]["run_id"]
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "message"),
+    [
+        ({"status": "running"}, "status must be one of"),
+        ({"cursor": "not-int"}, "cursor must be a non-negative integer offset"),
+        ({"cursor": "-1"}, "cursor must be a non-negative integer offset"),
+        ({"limit": 0}, "limit must be between 1 and 100"),
+        ({"limit": 101}, "limit must be between 1 and 100"),
+    ],
+)
+async def test_run_api_list_runs_rejects_invalid_query(
+    tmp_path: Path,
+    kwargs: dict[str, Any],
+    message: str,
+) -> None:
+    root = tmp_path / "run_api_list_invalid"
+    service, _ = _service_with_echo(root)
+    context = context_from_service(service)
+    api = WorkflowRunApi(context)
+
+    with pytest.raises(ValueError, match=message):
+        await api.list_runs(**kwargs)
+
+
+async def test_workflow_api_facade_lists_runs(tmp_path: Path) -> None:
+    root = tmp_path / "workflow_api_list_runs"
+    service, _ = _service_with_echo(root)
+    context = context_from_service(service)
+    api = WorkflowApi(context)
+    await api.run_deployment(
+        deployment_id="echo.personal",
+        workflow_input={"text": "hello"},
+    )
+
+    payload = await api.list_runs()
+
+    assert payload["total"] == 1
+    assert payload["runs"][0]["deployment_id"] == "echo.personal"

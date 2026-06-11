@@ -461,3 +461,41 @@ async def test_rpc_runs_deployment_and_reads_bounded_trace(tmp_path) -> None:
     assert trace["result"]["trace_start"] == 0
     assert trace["result"]["trace_limit"] == 1
     assert len(trace["result"]["trace"]) == 1
+
+
+async def test_rpc_run_list_method(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    await server.api.create_artifact_from_plan(
+        artifact_id="list_runs_rpc",
+        version=1,
+        title="List Runs RPC",
+        plan=_constant_plan(),
+        outcomes=["ok"],
+        source_bindings={"wf.std": "wf.std"},
+    )
+    await server.api.save_deployment(
+        {
+            "id": "list_runs_rpc.default",
+            "artifact_id": "list_runs_rpc",
+            "artifact_version": 1,
+            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+        }
+    )
+    started = await server.api.run_deployment(
+        deployment_id="list_runs_rpc.default",
+        workflow_input={},
+    )
+
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        payload = await _rpc(
+            client,
+            "workflow.runs.list",
+            {"status": "completed", "limit": 10},
+        )
+
+    assert payload["result"]["total"] == 1
+    assert payload["result"]["runs"][0]["run_id"] == started["run_id"]
+    assert payload["result"]["runs"][0]["deployment_id"] == "list_runs_rpc.default"
+    assert "trace" not in payload["result"]["runs"][0]

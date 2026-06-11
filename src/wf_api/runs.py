@@ -6,8 +6,10 @@ from typing import Any, Protocol
 from wf_artifacts import (
     DependencyDiagnostic,
     RunStore,
+    StoredRunStatus,
     WorkflowArtifact,
     WorkflowDeployment,
+    WorkflowRunRecord,
 )
 from wf_core import RunState
 
@@ -193,6 +195,41 @@ class WorkflowRunApi:
             **_trace_slice_fields(run, trace_values),
         )
 
+    async def list_runs(
+        self,
+        *,
+        status: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        """Return compact persisted run summaries without trace or checkpoint state."""
+        if limit < 1 or limit > 100:
+            raise ValueError("limit must be between 1 and 100")
+        start = _cursor_offset(cursor)
+        status_filter: StoredRunStatus | None = None
+        if status is not None:
+            try:
+                status_filter = StoredRunStatus(status)
+            except ValueError as exc:
+                allowed = ", ".join(item.value for item in StoredRunStatus)
+                raise ValueError(f"status must be one of: {allowed}") from exc
+
+        records = self._run_store().list_runs()
+        if status_filter is not None:
+            records = [record for record in records if record.status == status_filter]
+        records.sort(key=lambda record: (record.updated_at, record.id), reverse=True)
+
+        total = len(records)
+        end = start + limit
+        page = records[start:end]
+        return {
+            "runs": [_run_summary(record) for record in page],
+            "total": total,
+            "cursor": cursor,
+            "next_cursor": str(end) if end < total else None,
+            "limit": limit,
+        }
+
     async def inspect_run(self, *, run_id: str) -> dict[str, Any]:
         """Return one durable stopped-run summary without debug trace entries."""
         record, run = load_stored_run(self._run_store(), run_id)
@@ -246,6 +283,35 @@ def _trace_range_values(
     if limit <= 0:
         raise ValueError("trace_range.limit must be > 0")
     return start, limit
+
+
+def _cursor_offset(cursor: str | None) -> int:
+    """Parse the simple offset cursor used by run listing."""
+    if cursor is None:
+        return 0
+    try:
+        offset = int(cursor)
+    except ValueError as exc:
+        raise ValueError("cursor must be a non-negative integer offset") from exc
+    if offset < 0:
+        raise ValueError("cursor must be a non-negative integer offset")
+    return offset
+
+
+def _run_summary(record: WorkflowRunRecord) -> dict[str, Any]:
+    """Return an operator-facing run row without heavy runtime state."""
+    environment = record.environment
+    return {
+        "run_id": record.id,
+        "deployment_id": environment.deployment.id,
+        "artifact_id": environment.root_artifact.id,
+        "artifact_version": environment.root_artifact.version,
+        "status": record.status.value,
+        "resume_readiness": record.resume_readiness.value,
+        "diagnostic_count": len(record.diagnostics),
+        "created_at": record.created_at.isoformat(),
+        "updated_at": record.updated_at.isoformat(),
+    }
 
 
 def _trace_slice_fields(

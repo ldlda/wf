@@ -61,8 +61,9 @@ Remaining hardening should focus on correctness under real server use.
 - Completed: store-level locking/transaction expectations are documented for
   current file stores and future transactional stores:
   [`store transaction boundary`](superpowers/specs/2026-06-09-store-transaction-boundary.md).
-- Active implementation plan: compact paged run listing for API/RPC/CLI:
-  [`run list API/RPC/CLI`](superpowers/plans/2026-06-11-run-list-api-rpc-cli.md).
+- Completed: paged `wf run list` exposes compact persisted stopped-run
+  summaries without trace or checkpoint state. Implementation:
+  [`run list API/RPC/CLI`](historical/superpowers/plans/2026-06-11-run-list-api-rpc-cli.md).
 - Preserve existing semantics: broken pinned dependencies return blocked
   readiness and diagnostics; ordinary live tool/source failures are failed runs,
   not implicit pauses.

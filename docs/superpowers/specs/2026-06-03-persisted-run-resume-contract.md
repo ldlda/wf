@@ -162,6 +162,13 @@ Current implementation:
 
 - `WorkflowRunApi.read_run_trace()` follows this contract.
 
+### `list_runs`
+
+Returns paged compact summaries for stopped durable runs. The list payload
+contains run id, deployment id, artifact id/version, status, resume readiness,
+diagnostic count, and timestamps. It never returns trace entries, checkpoint
+state, runtime output, or pinned environment bodies.
+
 ### `resume_run`
 
 Input:
@@ -258,6 +265,7 @@ Current limits:
 MCP, CLI, and future HTTP surfaces should preserve the same operation semantics:
 
 - Start: `run_deployment`
+- List compact summaries: `list_runs`
 - Inspect: `inspect_run`
 - Debug trace: `read_run_trace`
 - Continue explicit interrupt: `resume_run`
@@ -284,9 +292,8 @@ hardening and frontend durability:
      compatibility paths.
 
 2. **Run listing and checkpoint listing**
-   - `RunStore` can list runs/checkpoints, but the public workflow API does not
-     yet expose a mature paged run catalog.
-   - Add only after inspect/trace semantics remain compact and stable.
+   - `RunStore` can list runs, and the public workflow API exposes compact paged
+     run listing. Checkpoint listing remains intentionally private for now.
 
 3. **Transactional backend**
    - `FileRunStore` is fine for local process use.

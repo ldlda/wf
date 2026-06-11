@@ -457,6 +457,51 @@ def test_wf_run_start_reports_bad_json(tmp_path: Path) -> None:
     assert "invalid JSON" in result.stderr
 
 
+def test_wf_run_list_emits_json(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeHandlers:
+        async def list_runs(self, *, status=None, cursor=None, limit=50):
+            captured["status"] = status
+            captured["cursor"] = cursor
+            captured["limit"] = limit
+            return {
+                "runs": [
+                    {
+                        "run_id": "run_1",
+                        "deployment_id": "demo.default",
+                        "artifact_id": "demo",
+                        "artifact_version": 1,
+                        "status": "completed",
+                        "resume_readiness": "not_applicable",
+                        "diagnostic_count": 0,
+                        "created_at": "2026-06-11T00:00:00",
+                        "updated_at": "2026-06-11T00:00:01",
+                    }
+                ],
+                "total": 1,
+                "cursor": None,
+                "next_cursor": None,
+                "limit": 25,
+            }
+
+    monkeypatch.setattr(
+        "wf_cli.commands.runs.load_cli_context_from_typer",
+        lambda ctx: type("Ctx", (), {"handlers": FakeHandlers(), "verbose": False})(),
+    )
+
+    result = CliRunner().invoke(
+        app,
+        ["run", "list", "--status", "completed", "--limit", "25"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["total"] == 1
+    assert payload["runs"][0]["run_id"] == "run_1"
+    assert captured == {"status": "completed", "cursor": None, "limit": 25}
+
+
 def _interrupt_artifact() -> WorkflowArtifact:
     return WorkflowArtifact(
         id="approval",

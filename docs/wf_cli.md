@@ -326,6 +326,19 @@ wf run start concat_ws.default \
   --input '{"items":["red","blue"],"separator":" + "}'
 ```
 
+List durable stopped runs:
+
+```bash
+wf run list --limit 20
+wf run list --status interrupted
+wf --url http://127.0.0.1:8765/rpc run list --status failed
+```
+
+`wf run list` returns compact stopped-run summaries from the target store. It
+does not include trace entries or checkpoint state. Use `wf run inspect <run_id>`
+for one run summary and `wf run trace <run_id> --from 0 --limit 25` for bounded
+debug detail.
+
 Inspect a run without trace detail:
 
 ```bash

@@ -458,6 +458,19 @@ class WorkflowApi:
 
     # -- runs --
 
+    async def list_runs(
+        self,
+        *,
+        status: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return await self.runs.list_runs(
+            status=status,
+            cursor=cursor,
+            limit=limit,
+        )
+
     async def run_deployment(
         self,
         *,

@@ -10,6 +10,22 @@ from .base import RpcCaller
 class RpcRunClientMixin:
     """JSON-RPC implementation of workflow run lifecycle surface methods."""
 
+    async def list_runs(
+        self: RpcCaller,
+        *,
+        status: str | None = None,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.runs.list",
+            {
+                "status": status,
+                "cursor": cursor,
+                "limit": limit,
+            },
+        )
+
     async def run_deployment(
         self: RpcCaller,
         *,
