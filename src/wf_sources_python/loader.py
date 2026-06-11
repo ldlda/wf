@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Mapping, Sequence
 from importlib import import_module
 from typing import Any, Protocol
 
@@ -76,7 +76,9 @@ def _coerce_specs(raw_registry: object) -> list[NodeSpec[Any, Any]]:
     specs: list[NodeSpec[Any, Any]] = []
     for value in values:
         if not isinstance(value, NodeSpec):
-            raise TypeError(f"expected NodeSpec in Python source registry, got {type(value).__name__}")
+            raise TypeError(
+                f"expected NodeSpec in Python source registry, got {type(value).__name__}"
+            )
         specs.append(value)
     return specs
 

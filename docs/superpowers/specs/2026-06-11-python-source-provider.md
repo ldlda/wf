@@ -2,7 +2,7 @@
 
 Date: 2026-06-11
 
-Status: planned first non-MCP source family
+Status: first static config slice implemented
 
 Related:
 
@@ -112,4 +112,21 @@ After static config works:
 3. Consider reducer exports if a real project source needs custom reducers.
 4. Consider isolation policy for untrusted Python. The first version is trusted
    in-process code only.
+
+## Implementation Status
+
+Implemented:
+
+- `wf_config` accepts `server.sources[]` entries with `kind: "python"`.
+- `wf_sources_python` loads trusted in-process `NodeSpec` registries from
+  `module:registry`.
+- `wf_server.config` composes Python sources into local/static servers.
+- Capability listing/calling works over JSON-RPC.
+
+Still deferred:
+
+- mutable source registry/apply support
+- hot reload
+- reducer exports
+- sandboxing/untrusted code
 

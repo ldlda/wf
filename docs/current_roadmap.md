@@ -88,6 +88,9 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
 - Active implementation plan: static config Python sources for trusted
   project-local `NodeSpec` registries:
   [`static Python sources`](superpowers/plans/2026-06-11-static-python-sources.md).
+- Completed: static config `kind: "python"` sources can load trusted local
+  `NodeSpec` registries and expose them through WorkflowServer. Implementation:
+  [`static Python sources`](historical/superpowers/plans/2026-06-11-static-python-sources.md).
 - Completed: server startup policy moved to `wf_server.cli`; JSON-RPC HTTP
   remains in `wf_transport_rpc_http`:
   [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).
