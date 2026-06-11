@@ -8,7 +8,7 @@ from wf_core import ReducerSpec
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_platform.refs import CapabilityRef
 
-SourceKind = Literal["system", "connection"]
+SourceKind = Literal["system", "connection", "python"]
 JsonObject = dict[str, Any]
 SOURCE_PREVIEW_LIMIT = 3
 
