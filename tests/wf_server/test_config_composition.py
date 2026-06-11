@@ -12,6 +12,33 @@ from wf_server.config import (
 from wf_server.context import WorkflowServer
 
 
+def test_workflow_config_with_python_source_exposes_capability(tmp_path: Path) -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "store": {"kind": "filesystem", "root": str(tmp_path / "store")},
+                "sources": [
+                    {
+                        "kind": "python",
+                        "id": "local.ops",
+                        "module": "tests.fixtures.python_source_ops",
+                        "registry": "registry",
+                    }
+                ],
+            },
+        }
+    )
+
+    server = build_workflow_server_from_workflow_config(config)
+
+    assert "local.ops" in server.context.specs.capability_sources
+    assert (
+        "local.ops.echo"
+        in server.context.specs.capability_sources["local.ops"].capabilities.node_specs
+    )
+
+
 def test_build_workflow_server_from_workflow_config_uses_local_static_for_no_mcp_sources(
     tmp_path: Path,
 ) -> None:

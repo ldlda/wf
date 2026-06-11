@@ -268,12 +268,22 @@ class WorkflowServer:
         return TraceRange(start=start, limit=limit)
 
 
-def build_local_static_workflow_server(root: str | Path) -> WorkflowServer:
+def build_local_static_workflow_server(
+    root: str | Path,
+    *,
+    extra_sources: Mapping[str, CapabilitySource] | None = None,
+) -> WorkflowServer:
     """Build a durable local/static workflow server composition."""
     config = WorkflowServerConfig(store_root=Path(root))
     stores = file_workflow_stores(config.store_root)
     events = InMemoryWorkflowEventRecorder()
-    specs = StaticWorkflowSpecProvider(builtin_sources())
+    sources = builtin_sources()
+    if extra_sources:
+        overlap = set(sources) & set(extra_sources)
+        if overlap:
+            raise ValueError(f"duplicate workflow source ids: {sorted(overlap)}")
+        sources.update(extra_sources)
+    specs = StaticWorkflowSpecProvider(sources)
     runtime = LocalWorkflowRuntimeRunner(
         specs=specs,
         artifact_store=stores.artifact_store,
