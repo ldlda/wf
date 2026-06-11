@@ -5,8 +5,10 @@ from typing import Any
 import httpx
 
 from wf_api.models import RawWorkflowPlan
+from wf_config import WorkflowConfigFile
 from wf_core import END
 from wf_server import build_local_static_workflow_server
+from wf_server.config import build_workflow_server_from_workflow_config
 from wf_transport_rpc_http.app import create_rpc_app
 
 
@@ -499,3 +501,43 @@ async def test_rpc_run_list_method(tmp_path) -> None:
     assert payload["result"]["runs"][0]["run_id"] == started["run_id"]
     assert payload["result"]["runs"][0]["deployment_id"] == "list_runs_rpc.default"
     assert "trace" not in payload["result"]["runs"][0]
+
+
+async def test_rpc_calls_python_source_capability(tmp_path) -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "store": {"kind": "filesystem", "root": str(tmp_path / "store")},
+                "sources": [
+                    {
+                        "kind": "python",
+                        "id": "local.ops",
+                        "module": "tests.fixtures.python_source_ops",
+                        "registry": "registry",
+                    }
+                ],
+            },
+        }
+    )
+    server = build_workflow_server_from_workflow_config(config)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        listed = await _rpc(
+            client,
+            "workflow.capabilities.list",
+            {"source_id": "local.ops", "limit": 10},
+        )
+        called = await _rpc(
+            client,
+            "workflow.capabilities.call",
+            {
+                "qualified_name": "local.ops.echo",
+                "payload": {"text": "hello python"},
+            },
+        )
+
+    assert listed["result"]["total"] == 2
+    assert called["result"]["outcome"] == "ok"
+    assert called["result"]["output"] == {"echoed": "hello python"}
