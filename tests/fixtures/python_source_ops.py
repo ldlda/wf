@@ -24,3 +24,10 @@ def upper(payload: EchoInput) -> EchoOutput:
 
 
 registry = [echo, upper]
+
+
+def callable_registry():
+    return {"echo": echo, "upper": upper}
+
+
+duplicate_registry = [echo, echo]
