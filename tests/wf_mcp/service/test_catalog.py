@@ -183,7 +183,7 @@ def test_service_sources_have_visibility_and_capability_buckets(tmp_path: Path) 
     assert std_source.id == "wf.std"
     assert std_source.kind == "system"
     assert std_source.visibility.planner is True
-    assert std_source.visibility.mcp_client is True
+    assert std_source.visibility.client is True
     assert std_source.visibility.admin_dashboard is True
     assert "wf.std.runtime_error" in std_source.capabilities.node_specs
     assert not std_source.capabilities.tools
@@ -205,7 +205,7 @@ def test_wf_admin_source_exists_but_is_not_planner_visible(tmp_path: Path) -> No
 
     assert source.kind == "system"
     assert source.visibility.planner is False
-    assert source.visibility.mcp_client is False
+    assert source.visibility.client is False
     assert source.visibility.admin_dashboard is True
     assert source.permissions.safe_for_workflow is False
     assert source.permissions.calls_upstream is False

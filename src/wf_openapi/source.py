@@ -88,7 +88,7 @@ def build_openapi_capability_source(
         enabled=True,
         visibility=SourceVisibility(
             planner=True,
-            mcp_client=False,
+            client=False,
             admin_dashboard=True,
         ),
         permissions=SourcePermissions(

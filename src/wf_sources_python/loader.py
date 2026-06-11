@@ -48,7 +48,7 @@ def load_python_source(
         ),
         visibility=SourceVisibility(
             planner=True,
-            mcp_client=True,
+            client=True,
             admin_dashboard=True,
         ),
         permissions=SourcePermissions(safe_for_workflow=True),

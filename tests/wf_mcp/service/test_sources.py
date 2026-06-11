@@ -265,7 +265,7 @@ def test_service_excludes_planner_hidden_connection_specs_from_planner_catalog()
     service.register_specs("demo.personal", echo_tool)
     service.capability_sources["demo.personal"].visibility = SourceVisibility(
         planner=False,
-        mcp_client=True,
+        client=True,
         admin_dashboard=True,
     )
 
@@ -283,14 +283,14 @@ def test_service_preserves_planner_hidden_connection_source_on_reregistration() 
     service.register_specs("demo.personal", echo_tool)
     service.capability_sources["demo.personal"].visibility = SourceVisibility(
         planner=False,
-        mcp_client=True,
+        client=True,
         admin_dashboard=True,
     )
     service.register_specs("demo.personal", finalize_tool)
 
     source = service.capability_sources["demo.personal"]
     assert source.visibility.planner is False
-    assert source.visibility.mcp_client is True
+    assert source.visibility.client is True
     assert source.visibility.admin_dashboard is True
     assert "demo.personal.finalize_tool" in source.capabilities.node_specs
     assert "demo.personal.echo_tool" not in source.capabilities.node_specs

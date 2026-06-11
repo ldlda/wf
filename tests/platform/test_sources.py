@@ -26,7 +26,7 @@ def test_capability_source_projects_typed_status() -> None:
             },
             resources={"wf.std.manual": object()},
         ),
-        visibility=SourceVisibility(planner=True, mcp_client=True),
+        visibility=SourceVisibility(planner=True, client=True),
         permissions=SourcePermissions(safe_for_workflow=True),
         description="Workflow standard library.",
     )
@@ -94,7 +94,7 @@ def test_documentation_source_owns_provider_neutral_resources() -> None:
     resource = source.capabilities.resources["wf.docs.operator_manual"]
 
     assert source.id == "wf.docs"
-    assert source.visibility.mcp_client is True
+    assert source.visibility.client is True
     assert resource.uri == "wf://docs/operator-manual"
     assert resource.text == "# Operator Manual"
     assert source.capabilities.prompts["wf.docs.operator_guide"].text == (

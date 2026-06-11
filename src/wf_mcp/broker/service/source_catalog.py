@@ -248,7 +248,7 @@ class SourceCatalogService:
                 capabilities=CapabilityBuckets(node_specs=specs),
                 visibility=SourceVisibility(
                     planner=True,
-                    mcp_client=True,
+                    client=True,
                     admin_dashboard=True,
                 ),
                 permissions=SourcePermissions(calls_upstream=True),
@@ -335,7 +335,7 @@ class SourceCatalogService:
                     enabled=self.connection_lookup(connection_id).enabled,
                     visibility=SourceVisibility(
                         planner=True,
-                        mcp_client=True,
+                        client=True,
                         admin_dashboard=True,
                     ),
                     permissions=SourcePermissions(calls_upstream=True),

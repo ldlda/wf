@@ -51,7 +51,7 @@ def admin_source() -> CapabilitySource:
         capabilities=CapabilityBuckets(tools=tools),
         visibility=SourceVisibility(
             planner=False,
-            mcp_client=False,
+            client=False,
             admin_dashboard=True,
         ),
         permissions=SourcePermissions(

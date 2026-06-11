@@ -16,7 +16,7 @@ SOURCE_PREVIEW_LIMIT = 3
 @dataclass(frozen=True, slots=True)
 class SourceVisibility:
     planner: bool = False
-    mcp_client: bool = False
+    client: bool = False
     admin_dashboard: bool = True
 
 
@@ -32,7 +32,7 @@ class SourceVisibilitySnapshot(BaseModel):
     """Serializable visibility flags for one source inventory snapshot."""
 
     planner: bool = False
-    mcp_client: bool = False
+    client: bool = False
     admin_dashboard: bool = True
 
 
@@ -150,7 +150,7 @@ class CapabilitySource:
             enabled=self.enabled,
             visibility=SourceVisibilitySnapshot(
                 planner=self.visibility.planner,
-                mcp_client=self.visibility.mcp_client,
+                client=self.visibility.client,
                 admin_dashboard=self.visibility.admin_dashboard,
             ),
             permissions=SourcePermissionsSnapshot(

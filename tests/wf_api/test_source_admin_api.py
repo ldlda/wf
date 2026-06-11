@@ -94,7 +94,7 @@ def _source(source_id: str, *, enabled: bool = True) -> CapabilitySource:
         capabilities=CapabilityBuckets(),
         visibility=SourceVisibility(
             planner=True,
-            mcp_client=True,
+            client=True,
             admin_dashboard=True,
         ),
         permissions=SourcePermissions(calls_upstream=True),

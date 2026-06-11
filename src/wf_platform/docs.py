@@ -40,6 +40,6 @@ def build_documentation_source(
             resources={resource.name: resource for resource in resources},
             prompts={prompt.name: prompt for prompt in prompts or []},
         ),
-        visibility=SourceVisibility(mcp_client=True),
+        visibility=SourceVisibility(client=True),
         description="Local operator and workflow documentation.",
     )

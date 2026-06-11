@@ -166,7 +166,7 @@ def builtin_sources() -> dict[str, CapabilitySource]:
             ),
             visibility=SourceVisibility(
                 planner=True,
-                mcp_client=True,
+                client=True,
                 admin_dashboard=True,
             ),
             permissions=SourcePermissions(safe_for_workflow=True),
@@ -178,7 +178,7 @@ def builtin_sources() -> dict[str, CapabilitySource]:
             capabilities=CapabilityBuckets(node_specs=recipe_specs()),
             visibility=SourceVisibility(
                 planner=True,
-                mcp_client=True,
+                client=True,
                 admin_dashboard=True,
             ),
             permissions=SourcePermissions(safe_for_workflow=True),
