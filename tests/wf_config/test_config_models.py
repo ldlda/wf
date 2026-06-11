@@ -386,6 +386,30 @@ def test_load_workflow_config_resolves_role_store_paths_relative_to_config(
     )
 
 
+def test_workflow_config_parses_python_source() -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "sources": [
+                    {
+                        "kind": "python",
+                        "id": "local.ops",
+                        "module": "tests.fixtures.python_source_ops",
+                        "registry": "registry",
+                    }
+                ]
+            },
+        }
+    )
+
+    source = config.server.sources[0]
+    assert source.kind == "python"
+    assert source.id == "local.ops"
+    assert source.module == "tests.fixtures.python_source_ops"
+    assert source.registry == "registry"
+
+
 def test_server_config_resolves_missing_role_stores_to_default_store() -> None:
     config = WorkflowConfigFile.model_validate(
         {

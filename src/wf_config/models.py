@@ -98,6 +98,28 @@ class StdlibSourceConfig(WorkflowConfigModel):
     id: Literal["wf.std", "wf.recipes"]
 
 
+class PythonSourceConfig(WorkflowConfigModel):
+    """Static config for trusted in-process Python workflow sources."""
+
+    kind: Literal["python"] = "python"
+    id: str
+    enabled: bool = True
+    module: str = Field(min_length=1)
+    registry: str = Field(default="registry", min_length=1)
+
+    @field_validator("id")
+    @classmethod
+    def validate_source_id(cls, value: str) -> str:
+        if not re.fullmatch(SOURCE_ID_PATTERN, value):
+            raise ValueError(
+                "source id must start with alphanumeric or underscore and contain "
+                "only [A-Za-z0-9_.-]"
+            )
+        if "." not in value:
+            raise ValueError("source id must look like '<namespace>.<name>'")
+        return value
+
+
 class McpSourceConfig(WorkflowConfigModel):
     """Neutral config shape for MCP-backed workflow capability sources.
 
@@ -134,7 +156,7 @@ class McpSourceConfig(WorkflowConfigModel):
 
 
 SourceConfig = Annotated[
-    StdlibSourceConfig | McpSourceConfig,
+    StdlibSourceConfig | PythonSourceConfig | McpSourceConfig,
     Field(discriminator="kind"),
 ]
 
