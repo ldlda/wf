@@ -43,6 +43,9 @@ def test_wf_status_local_static_target(tmp_path) -> None:
     assert payload["target"]["url"] is None
     assert payload["workflow"]["capability_count"] >= 1
     assert "wf.std.constant" in payload["workflow"]["sample_capabilities"]
+    assert payload["runs"]["available"] is True
+    assert payload["runs"]["total"] == 0
+    assert payload["runs"]["latest"] is None
     assert payload["sources"]["available"] is True
     assert payload["sources"]["source_count"] >= 1
     assert payload["admin"]["available"] is True

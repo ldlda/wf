@@ -47,11 +47,13 @@ async def _fetch_status_data(context: CliContext) -> dict[str, Any]:
     }
 
     sources = await _fetch_sources(context)
+    runs = await _fetch_runs(context)
     admin = await _fetch_admin(context)
     registry = await _fetch_registry(context)
 
     return {
         "workflow": workflow,
+        "runs": runs,
         "sources": sources,
         "admin": admin,
         "registry": registry,
@@ -74,6 +76,41 @@ async def _fetch_sources(context: CliContext) -> dict[str, Any]:
         "available": True,
         "source_count": _payload_count(payload, "sources"),
         "sample_sources": source_ids[:5],
+    }
+
+
+async def _fetch_runs(context: CliContext) -> dict[str, Any]:
+    # Intentionally broad: older/partial targets may not expose run listing yet.
+    try:
+        all_runs = await context.handlers.list_runs(limit=1)
+    except Exception as exc:
+        return _unavailable(exc)
+
+    latest = None
+    runs = all_runs.get("runs", [])
+    if runs and isinstance(runs[0], dict):
+        latest = {
+            "run_id": runs[0].get("run_id"),
+            "status": runs[0].get("status"),
+            "updated_at": runs[0].get("updated_at"),
+        }
+
+    counts: dict[str, int] = {}
+    for status in ("completed", "failed", "interrupted"):
+        try:
+            payload = await context.handlers.list_runs(status=status, limit=1)
+        except Exception:
+            counts[status] = 0
+            continue
+        counts[status] = _payload_count(payload, "runs")
+
+    return {
+        "available": True,
+        "total": _payload_count(all_runs, "runs"),
+        "completed": counts["completed"],
+        "failed": counts["failed"],
+        "interrupted": counts["interrupted"],
+        "latest": latest,
     }
 
 

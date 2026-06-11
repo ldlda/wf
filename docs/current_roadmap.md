@@ -27,7 +27,8 @@ MCP entrypoint and compatibility surface.
 The platform is usable enough to test as a product. Next work should focus on
 clear operator feedback before adding more architecture.
 
-- Completed: `wf status` is a compact read-only target/server status command.
+- Completed: `wf status` is a compact read-only target/server status command,
+  including durable run counts and the latest run summary when available.
 - Completed: a real CLI smoke pass against `wf-rpc-server --config wf.config.json`
   is captured in
   [`2026-06-09 product smoke RPC CLI`](superpowers/research/2026-06-09-product-smoke-rpc-cli.md).

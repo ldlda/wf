@@ -678,6 +678,32 @@ def test_wf_remote_run_resume_interrupted_deployment(monkeypatch, tmp_path) -> N
 
 def test_wf_status_uses_rpc_url_override(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
+    asyncio.run(
+        server.api.create_artifact_from_plan(
+            artifact_id="status_constant",
+            version=1,
+            title="Status Constant",
+            plan=_constant_plan(),
+            outcomes=("ok",),
+            source_bindings={"wf.std": "wf.std"},
+        )
+    )
+    asyncio.run(
+        server.api.save_deployment(
+            {
+                "id": "status_constant.default",
+                "artifact_id": "status_constant",
+                "artifact_version": 1,
+                "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            }
+        )
+    )
+    started = asyncio.run(
+        server.api.run_deployment(
+            deployment_id="status_constant.default",
+            workflow_input={},
+        )
+    )
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
@@ -698,6 +724,13 @@ def test_wf_status_uses_rpc_url_override(monkeypatch, tmp_path) -> None:
     assert payload["target"]["mode"] == "remote"
     assert payload["target"]["url"] == "http://test/rpc"
     assert payload["workflow"]["capability_count"] >= 1
+    assert payload["runs"]["available"] is True
+    assert payload["runs"]["total"] == 1
+    assert payload["runs"]["completed"] == 1
+    assert payload["runs"]["failed"] == 0
+    assert payload["runs"]["interrupted"] == 0
+    assert payload["runs"]["latest"]["run_id"] == started["run_id"]
+    assert payload["runs"]["latest"]["status"] == "completed"
     assert payload["sources"]["available"] is True
     assert payload["admin"]["available"] is True
     assert payload["registry"]["available"] is False

@@ -104,8 +104,9 @@ wf --url http://127.0.0.1:8765/rpc status
 ```
 
 `status` is read-only. It reports the selected target, capability/source
-availability, admin counts, auth record count, and desired registry count when
-the target exposes those admin surfaces. It does not return auth payload values.
+availability, durable run counts/latest run, admin counts, auth record count,
+and desired registry count when the target exposes those surfaces. It does not
+return auth payload values, trace entries, or checkpoint state.
 
 ## Output Policy
 
