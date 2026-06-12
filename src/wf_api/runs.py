@@ -214,6 +214,8 @@ class WorkflowRunApi:
                 allowed = ", ".join(item.value for item in StoredRunStatus)
                 raise ValueError(f"status must be one of: {allowed}") from exc
 
+        # File-backed v1 stores keep run listing simple by filtering/sorting in
+        # memory. Move this into store-level pagination if run counts grow large.
         records = self._run_store().list_runs()
         if status_filter is not None:
             records = [record for record in records if record.status == status_filter]

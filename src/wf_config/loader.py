@@ -14,11 +14,12 @@ from .models import (
 
 
 def load_workflow_config(path: str | Path) -> WorkflowConfigFile:
-    """Load neutral workflow config and resolve local filesystem paths.
+    """Load neutral workflow config and resolve local filesystem/source paths.
 
     Relative filesystem store roots are config-file relative so `wf --config`
     behaves the same regardless of the caller's current working directory.
-    Role-specific store overrides follow the same rule.
+    Role-specific store overrides and Python source import paths follow the
+    same rule.
     """
 
     config_path = Path(path)

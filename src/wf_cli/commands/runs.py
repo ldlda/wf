@@ -27,7 +27,7 @@ def list_runs(
         str | None,
         typer.Option(
             "--status",
-            help="Filter by stopped status: completed, failed, or interrupted.",
+            help="Filter by stopped status: completed, failed, interrupted, or blocked.",
         ),
     ] = None,
     cursor: Annotated[

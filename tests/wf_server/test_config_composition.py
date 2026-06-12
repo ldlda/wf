@@ -73,6 +73,21 @@ def test_static_source_provider_rejects_duplicate_source_ids() -> None:
         collect_static_sources([provider, FakeSourceProvider()])
 
 
+def test_static_source_provider_rejects_source_key_mismatch() -> None:
+    provider = StaticSourceProvider(
+        {
+            "fake.alias": CapabilitySource(
+                id="fake.ops",
+                kind="python",
+                capabilities=CapabilityBuckets(),
+            )
+        }
+    )
+
+    with pytest.raises(ValueError, match="does not match source id"):
+        collect_static_sources([provider])
+
+
 def test_build_workflow_server_from_workflow_config_uses_local_static_for_no_mcp_sources(
     tmp_path: Path,
 ) -> None:

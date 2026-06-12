@@ -73,12 +73,13 @@ Add a `kind: "python"` entry under `server.sources[]`:
 }
 ```
 
-`path` is resolved relative to the config file. It is important for console
-scripts: `uv run python` and installed entrypoints do not always have the same
-import path.
+`path` is resolved relative to the config file and added to `sys.path` before
+import. This makes the module discoverable whether you run through
+`uv run python` or an installed entrypoint.
 
 The source id prefixes local names. A node named `echo` becomes
-`local.ops.echo`. A node named `authoring.echo` is also exposed as
+`local.ops.echo`. If a node uses the authoring namespace, such as
+`authoring.echo`, that authoring prefix is replaced by the source id, producing
 `local.ops.echo`.
 
 ## 3. Validate And Start

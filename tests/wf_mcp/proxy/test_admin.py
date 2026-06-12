@@ -15,9 +15,9 @@ from .conftest import structured
 
 
 def test_proxy_admin_tools_mutate_config_file(tmp_path: Path) -> None:
-    tmp_path = tmp_path / "proxy_admin_store"
-    tmp_path.mkdir(parents=True, exist_ok=True)
-    config_path = tmp_path / "wf_mcp.config.json"
+    test_root = tmp_path / "proxy_admin_store"
+    test_root.mkdir(parents=True, exist_ok=True)
+    config_path = test_root / "wf_mcp.config.json"
     config_path.write_text(
         json.dumps(
             {
@@ -91,9 +91,9 @@ def test_proxy_admin_tools_mutate_config_file(tmp_path: Path) -> None:
 
 
 def test_proxy_admin_reload_remounts_connections(tmp_path: Path) -> None:
-    tmp_path = tmp_path / "proxy_reload_store"
-    tmp_path.mkdir(parents=True, exist_ok=True)
-    config_path = tmp_path / "wf_mcp.config.json"
+    test_root = tmp_path / "proxy_reload_store"
+    test_root.mkdir(parents=True, exist_ok=True)
+    config_path = test_root / "wf_mcp.config.json"
     config_path.write_text(
         json.dumps(
             {
@@ -132,9 +132,9 @@ def test_proxy_admin_reload_remounts_connections(tmp_path: Path) -> None:
 
 
 def test_proxy_admin_reload_sends_list_changed_notifications(tmp_path: Path) -> None:
-    tmp_path = tmp_path / "proxy_reload_notification_store"
-    tmp_path.mkdir(parents=True, exist_ok=True)
-    config_path = tmp_path / "wf_mcp.config.json"
+    test_root = tmp_path / "proxy_reload_notification_store"
+    test_root.mkdir(parents=True, exist_ok=True)
+    config_path = test_root / "wf_mcp.config.json"
     config_path.write_text(
         json.dumps(
             {
@@ -166,9 +166,9 @@ def test_proxy_admin_reload_sends_list_changed_notifications(tmp_path: Path) -> 
 
 
 def test_proxy_config_mutation_does_not_notify_before_reload(tmp_path: Path) -> None:
-    tmp_path = tmp_path / "proxy_staged_notification_store"
-    tmp_path.mkdir(parents=True, exist_ok=True)
-    config_path = tmp_path / "wf_mcp.config.json"
+    test_root = tmp_path / "proxy_staged_notification_store"
+    test_root.mkdir(parents=True, exist_ok=True)
+    config_path = test_root / "wf_mcp.config.json"
     config_path.write_text(
         json.dumps(
             {

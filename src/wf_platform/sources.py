@@ -8,6 +8,8 @@ from wf_core import ReducerSpec
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_platform.refs import CapabilityRef
 
+# Source kind is source-origin metadata, not a provider interface:
+# system=built-ins, connection=upstream/stateful providers, python=trusted local code.
 SourceKind = Literal["system", "connection", "python"]
 JsonObject = dict[str, Any]
 SOURCE_PREVIEW_LIMIT = 3

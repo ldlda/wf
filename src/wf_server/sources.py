@@ -35,8 +35,12 @@ def collect_static_sources(
     collected: dict[str, CapabilitySource] = {}
     for provider in providers:
         for source_id, source in provider.load_sources().items():
+            if source.id != source_id:
+                raise ValueError(
+                    f"provider source key {source_id!r} does not match source id {source.id!r}"
+                )
             if source_id in collected:
-                raise ValueError(f"duplicate workflow source ids: {[source_id]}")
+                raise ValueError(f"duplicate workflow source ids: {source_id}")
             collected[source_id] = source
     return collected
 
