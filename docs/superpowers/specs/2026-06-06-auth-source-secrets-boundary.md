@@ -363,17 +363,21 @@ Do not inline secret payloads into:
    - Move MCP header/env interpretation behind `McpAuthBinder`.
    - Keep source providers responsible for declaring supported auth variants.
 
-7. **OAuth refresh-token support**
+7. **OAuth refresh-token support** (implemented)
    - Add `oauth_refresh_token` variant and injected token refresher protocol.
    - Apply OAuth records as bearer headers for HTTP-capable MCP sources.
    - Unit-test with a fake refresher; do not require Google or browser login.
+   - Provider profiles in workflow config describe OAuth login parameters.
+   - CLI command `wf admin auth oauth-login` exchanges authorization codes
+     and saves refresh tokens as typed auth records.
 
-8. **Google Drive MCP smoke**
+8. **Google Drive MCP smoke** (manual/local-only)
    - Configure a normal HTTP MCP source:
      `https://drivemcp.googleapis.com/mcp/v1`.
    - Bind it to an OAuth refresh-token auth record.
    - Verify `list_tools` or a harmless read-only tool through the durable server
      path when local credentials are available.
+   - Requires local Google OAuth client credentials; not automated in CI.
 
 ## Open Decisions
 
