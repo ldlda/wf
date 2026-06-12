@@ -61,6 +61,9 @@ server startup. MCP sources are shape-validated only; use `wf status`,
 `wf source list`, or `wf deploy validate --live` against a running server for
 live upstream checks.
 
+For a complete Python-source flow from `ops.py` through deployment/run, see the
+[`Python source runbook`](runbooks/python-source.md).
+
 The old `store_root` field maps to
 `server.store: {"kind": "filesystem", "root": ...}`; old `connections[]` map to
 `server.sources[]` entries with `kind: "mcp"`.

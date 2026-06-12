@@ -541,3 +541,78 @@ async def test_rpc_calls_python_source_capability(tmp_path) -> None:
     assert listed["result"]["total"] == 2
     assert called["result"]["outcome"] == "ok"
     assert called["result"]["output"] == {"echoed": "hello python"}
+
+
+async def test_rpc_runs_workflow_from_python_source_capability(tmp_path) -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "version": 1,
+            "server": {
+                "store": {"kind": "filesystem", "root": str(tmp_path / "store")},
+                "sources": [
+                    {
+                        "kind": "python",
+                        "id": "local.ops",
+                        "module": "tests.fixtures.python_source_ops",
+                        "registry": "registry",
+                    }
+                ],
+            },
+        }
+    )
+    server = build_workflow_server_from_workflow_config(config)
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "python_echo_ws",
+                "capability_name": "local.ops.echo",
+                "name": "python_echo",
+                "title": "Python Echo",
+            },
+        )
+        artifact = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_artifact",
+            {
+                "workspace_id": "python_echo_ws",
+                "artifact_id": "python_echo",
+                "version": 1,
+                "title": "Python Echo",
+                "outcomes": ["ok"],
+                "kind": "workflow",
+                "source_bindings": {"local.ops": "local.ops", "wf.std": "wf.std"},
+            },
+        )
+        deployment = await _rpc(
+            client,
+            "workflow.deployments.save",
+            {
+                "deployment": {
+                    "id": "python_echo.default",
+                    "artifact_id": "python_echo",
+                    "artifact_version": 1,
+                    "bindings": [
+                        {"logical_source": "local.ops", "concrete_source": "local.ops"},
+                        {"logical_source": "wf.std", "concrete_source": "wf.std"},
+                    ],
+                }
+            },
+        )
+        run = await _rpc(
+            client,
+            "workflow.runs.start",
+            {
+                "deployment_id": "python_echo.default",
+                "workflow_input": {"text": "hello workflow"},
+                "trace_range": {"start": 0, "limit": 5},
+            },
+        )
+
+    assert artifact["result"]["artifact_id"] == "python_echo"
+    assert deployment["result"]["deployment_id"] == "python_echo.default"
+    assert run["result"]["outcome"] == "ok"
+    assert run["result"]["output"] == {"echoed": "hello workflow"}

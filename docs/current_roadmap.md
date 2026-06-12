@@ -92,6 +92,10 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
   including config-relative path resolution and trusted static Python source
   imports. MCP sources are shape-validated only; live upstream checks remain a
   server/status concern.
+- Completed: Python source operator docs and RPC integration coverage now prove
+  `ops.py` source config, capability call, draft artifact creation, deployment,
+  and workflow run. Runbook:
+  [`Python source`](runbooks/python-source.md).
 - Completed: server startup policy moved to `wf_server.cli`; JSON-RPC HTTP
   remains in `wf_transport_rpc_http`:
   [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).

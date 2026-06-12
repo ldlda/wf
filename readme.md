@@ -47,6 +47,8 @@ wf_cli
 - [docs/README.md](docs/README.md): documentation index.
 - [docs/wf_cli.md](docs/wf_cli.md): CLI lifecycle, remote targets, and common
   diagnostics.
+- [docs/runbooks/python-source.md](docs/runbooks/python-source.md): trusted
+  project-local Python source setup and workflow-run flow.
 - [docs/wf_api_architecture.md](docs/wf_api_architecture.md): current API,
   server, transport, and source package boundaries.
 - [docs/project_map.md](docs/project_map.md): package map, entrypoints, examples,

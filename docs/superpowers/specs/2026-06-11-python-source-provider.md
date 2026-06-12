@@ -126,6 +126,9 @@ Implemented:
   missing modules, missing registries, invalid registry shapes, and duplicate
   specs before server startup.
 - Capability listing/calling works over JSON-RPC.
+- JSON-RPC integration coverage now proves a Python source capability can be
+  converted into a draft artifact, deployed with required source bindings, and
+  run as a workflow.
 
 Still deferred:
 

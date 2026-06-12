@@ -84,6 +84,11 @@ PythonSourceConfig(path, module, registry)
   -> CapabilitySource(kind="python")
 ```
 
+For a concrete operator flow, see the
+[`Python source runbook`](runbooks/python-source.md). It covers writing `ops.py`,
+configuring `path`/`module`/`registry`, validating the config, calling a
+capability, and running a saved workflow deployment.
+
 ## Built-Ins Versus Configured Sources
 
 `wf.std` and `wf.recipes` are built-in local sources owned by `wf_api.local_sources`.
@@ -97,6 +102,10 @@ Configured sources are explicit server/operator choices:
 
 Do not move `wf.std` or `wf.recipes` into `wf_sources_python`. They are not
 operator-configured project sources.
+
+Generated draft workflows may still require built-in helper sources such as
+`wf.std`; deployment examples should bind both the configured source and any
+built-in requirements reported by validation.
 
 ## `wf_sources_mcp` Internal Layers
 

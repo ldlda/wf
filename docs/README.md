@@ -48,6 +48,9 @@ implementation plans are kept for context, not as active instructions.
   lifecycle flow, and common diagnostics.
 - [`runbooks/rpc-cli-smoke.md`](runbooks/rpc-cli-smoke.md): bounded
   end-to-end smoke test for `wf-rpc-server` plus remote `wf` CLI.
+- [`runbooks/python-source.md`](runbooks/python-source.md): configure trusted
+  project-local Python `NodeSpec` registries, validate them, and run them
+  through `wf-rpc-server`.
 
 ## MCP Platform
 
