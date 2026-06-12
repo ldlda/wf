@@ -11,7 +11,7 @@ from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 
 from wf_api.auth import StoredAuthRecord, auth_record_from_compat
-from wf_sources_mcp.auth import AuthRecord, McpAuthBinder
+from wf_sources_mcp.auth import AuthRecord, HttpxOAuthTokenRefresher, McpAuthBinder
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.transports import HttpSourceTransport, StdioSourceTransport
 
@@ -49,7 +49,7 @@ async def open_mcp_session(
     if transport is None:
         raise ValueError(f"connection {connection.id!r} requires metadata.transport")
 
-    binder = auth_binder or McpAuthBinder()
+    binder = auth_binder or McpAuthBinder(oauth_refresher=HttpxOAuthTokenRefresher())
     stored_auth = _as_stored_auth(auth)
 
     if isinstance(transport, StdioSourceTransport):

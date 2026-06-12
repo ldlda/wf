@@ -167,6 +167,33 @@ class OAuthTokenRefresher(Protocol):
     async def refresh(self, auth: OAuthRefreshTokenAuth) -> OAuthAccessToken: ...
 
 
+class HttpxOAuthTokenRefresher:
+    """Refresh OAuth2 access tokens from stored refresh-token credentials."""
+
+    async def refresh(self, auth: OAuthRefreshTokenAuth) -> OAuthAccessToken:
+        data: dict[str, str] = {
+            "grant_type": "refresh_token",
+            "client_id": auth.client_id,
+            "refresh_token": auth.refresh_token,
+        }
+        if auth.client_secret:
+            data["client_secret"] = auth.client_secret
+        if auth.scopes:
+            data["scope"] = " ".join(auth.scopes)
+        async with httpx.AsyncClient() as client:
+            response = await client.post(str(auth.token_url), data=data)
+            response.raise_for_status()
+            payload = response.json()
+        access_token = payload.get("access_token")
+        if not isinstance(access_token, str) or not access_token:
+            raise ValueError("OAuth token refresh response did not include access_token")
+        expires_in = payload.get("expires_in")
+        return OAuthAccessToken(
+            access_token=access_token,
+            expires_in=expires_in if isinstance(expires_in, int) else None,
+        )
+
+
 @dataclass(frozen=True, slots=True)
 class BoundMcpHttpAuth:
     headers: dict[str, str] = field(default_factory=dict)
@@ -226,6 +253,7 @@ __all__ = [
     "AuthRecord",
     "BoundMcpHttpAuth",
     "BoundMcpStdioAuth",
+    "HttpxOAuthTokenRefresher",
     "McpAuthBinder",
     "OAuthAccessToken",
     "OAuthTokenRefresher",

@@ -297,6 +297,73 @@ async def test_open_mcp_session_uses_binder_for_http_headers(
 
 
 @pytest.mark.asyncio
+async def test_open_mcp_session_refreshes_oauth_record_for_http(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from pydantic import AnyUrl
+
+    from wf_api.auth import OAuthRefreshTokenAuth, StoredAuthRecord
+    from wf_sources_mcp.client.transport import open_mcp_session
+
+    captured_clients: list[dict[str, Any]] = []
+    captured_posts: list[tuple[str, dict[str, str]]] = []
+
+    class _Response:
+        def raise_for_status(self) -> None:
+            return None
+
+        def json(self) -> dict[str, object]:
+            return {"access_token": "fresh-access-token"}
+
+    class _CapturingClient:
+        def __init__(self, **kwargs: Any) -> None:
+            captured_clients.append(kwargs)
+
+        async def __aenter__(self) -> "_CapturingClient":
+            return self
+
+        async def __aexit__(self, *args: object) -> None:
+            return None
+
+        async def post(self, url: str, *, data: dict[str, str]) -> _Response:
+            captured_posts.append((url, data))
+            return _Response()
+
+    import wf_sources_mcp.auth as auth_mod
+    import wf_sources_mcp.client.transport as transport_mod
+
+    monkeypatch.setattr(auth_mod.httpx, "AsyncClient", _CapturingClient)
+    monkeypatch.setattr(transport_mod.httpx, "AsyncClient", _CapturingClient)
+
+    connection = _http_connection()
+    auth = StoredAuthRecord(
+        id="google.drive.personal",
+        auth=OAuthRefreshTokenAuth(
+            client_id="client",
+            client_secret="secret",
+            refresh_token="refresh",
+            token_url=AnyUrl("https://oauth2.googleapis.com/token"),
+        ),
+    )
+
+    async with open_mcp_session(connection, auth):
+        pass
+
+    assert captured_posts[0] == (
+        "https://oauth2.googleapis.com/token",
+        {
+            "grant_type": "refresh_token",
+            "client_id": "client",
+            "client_secret": "secret",
+            "refresh_token": "refresh",
+        },
+    )
+    assert captured_clients[-1]["headers"] == {
+        "Authorization": "Bearer fresh-access-token"
+    }
+
+
+@pytest.mark.asyncio
 async def test_open_mcp_session_uses_binder_for_stdio_env() -> None:
     import wf_sources_mcp.client.transport as mod  # noqa: I001
     from wf_api.auth import EnvAuth, StoredAuthRecord
