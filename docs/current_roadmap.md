@@ -96,6 +96,9 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
   `ops.py` source config, capability call, draft artifact creation, deployment,
   and workflow run. Runbook:
   [`Python source`](runbooks/python-source.md).
+- Completed: static source inventory providers now have an explicit
+  `WorkflowSourceProvider.load_sources()` seam in `wf_server`, and Python
+  source loading is behind `PythonSourceProvider`.
 - Completed: server startup policy moved to `wf_server.cli`; JSON-RPC HTTP
   remains in `wf_transport_rpc_http`:
   [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).

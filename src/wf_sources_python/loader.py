@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from importlib import import_module
 from pathlib import Path
 from typing import Any, Protocol
@@ -21,6 +22,16 @@ class PythonSourceConfigLike(Protocol):
     module: str
     registry: str
     enabled: bool
+
+
+@dataclass(frozen=True, slots=True)
+class PythonSourceProvider:
+    """Static source provider for trusted Python source config entries."""
+
+    configs: Sequence[PythonSourceConfigLike]
+
+    def load_sources(self) -> Mapping[str, CapabilitySource]:
+        return {config.id: python_capability_source(config) for config in self.configs}
 
 
 def load_python_source(

@@ -3,9 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 from wf_config import FilesystemStoreConfig, PythonSourceConfig, WorkflowConfigFile
-from wf_platform import CapabilitySource
 
 from .context import WorkflowServer, build_local_static_workflow_server
+from .sources import WorkflowSourceProvider, collect_static_sources
 
 
 def _has_mcp_sources(config: WorkflowConfigFile) -> bool:
@@ -14,20 +14,20 @@ def _has_mcp_sources(config: WorkflowConfigFile) -> bool:
     )
 
 
-def _python_sources(config: WorkflowConfigFile) -> dict[str, CapabilitySource]:
-    from wf_sources_python import load_python_source
-
-    return {
-        source.id: load_python_source(
-            source_id=source.id,
-            path=source.path,
-            module=source.module,
-            registry=source.registry,
-            enabled=source.enabled,
-        )
+def _static_source_providers(
+    config: WorkflowConfigFile,
+) -> list[WorkflowSourceProvider]:
+    providers: list[WorkflowSourceProvider] = []
+    python_configs = [
+        source
         for source in config.server.sources
         if isinstance(source, PythonSourceConfig)
-    }
+    ]
+    if python_configs:
+        from wf_sources_python import PythonSourceProvider
+
+        providers.append(PythonSourceProvider(python_configs))
+    return providers
 
 
 def _build_mcp_workflow_server_from_workflow_config(
@@ -68,7 +68,7 @@ def build_workflow_server_from_workflow_config(
         raise ValueError("wf-rpc-server currently requires filesystem store")
     return build_local_static_workflow_server(
         store.root,
-        extra_sources=_python_sources(config),
+        extra_sources=collect_static_sources(_static_source_providers(config)),
     )
 
 

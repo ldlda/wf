@@ -65,6 +65,18 @@ wf_config.server.sources[]
   -> transport or CLI
 ```
 
+The first shared provider seam is intentionally static:
+
+```python
+class WorkflowSourceProvider(Protocol):
+    def load_sources(self) -> Mapping[str, CapabilitySource]: ...
+```
+
+This covers source families that can project configured inventory into
+workflow-facing `CapabilitySource` objects. Provider-specific runtime pools,
+admin/apply hooks, auth, catalog caches, and live health checks stay outside
+this narrow seam until a source family needs them.
+
 For MCP, the provider also owns stateful upstream sessions:
 
 ```text
@@ -78,6 +90,7 @@ For Python, the provider is simpler:
 
 ```text
 PythonSourceConfig(path, module, registry)
+  -> PythonSourceProvider
   -> import module
   -> load NodeSpec registry
   -> qualify specs under source id

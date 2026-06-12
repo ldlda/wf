@@ -121,7 +121,8 @@ Implemented:
 - `wf_config` accepts `server.sources[]` entries with `kind: "python"`.
 - `wf_sources_python` loads trusted in-process `NodeSpec` registries from
   `path` plus `module:registry`.
-- `wf_server.config` composes Python sources into local/static servers.
+- `wf_sources_python.PythonSourceProvider` implements the static
+  `WorkflowSourceProvider.load_sources()` seam used by `wf_server.config`.
 - `wf config validate` imports configured trusted Python sources and reports
   missing modules, missing registries, invalid registry shapes, and duplicate
   specs before server startup.

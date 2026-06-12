@@ -5,11 +5,24 @@ from pathlib import Path
 import pytest
 
 from wf_config import WorkflowConfigFile
+from wf_platform import CapabilityBuckets, CapabilitySource
 from wf_server.config import (
     build_workflow_server_from_legacy_mcp_config,
     build_workflow_server_from_workflow_config,
 )
 from wf_server.context import WorkflowServer
+from wf_server.sources import StaticSourceProvider, collect_static_sources
+
+
+class FakeSourceProvider:
+    def load_sources(self):
+        return {
+            "fake.ops": CapabilitySource(
+                id="fake.ops",
+                kind="python",
+                capabilities=CapabilityBuckets(),
+            )
+        }
 
 
 def test_workflow_config_with_python_source_exposes_capability(tmp_path: Path) -> None:
@@ -37,6 +50,27 @@ def test_workflow_config_with_python_source_exposes_capability(tmp_path: Path) -
         "local.ops.echo"
         in server.context.specs.capability_sources["local.ops"].capabilities.node_specs
     )
+
+
+def test_static_source_provider_protocol_collects_sources() -> None:
+    sources = collect_static_sources([FakeSourceProvider()])
+
+    assert set(sources) == {"fake.ops"}
+
+
+def test_static_source_provider_rejects_duplicate_source_ids() -> None:
+    provider = StaticSourceProvider(
+        {
+            "fake.ops": CapabilitySource(
+                id="fake.ops",
+                kind="python",
+                capabilities=CapabilityBuckets(),
+            )
+        }
+    )
+
+    with pytest.raises(ValueError, match="duplicate workflow source ids"):
+        collect_static_sources([provider, FakeSourceProvider()])
 
 
 def test_build_workflow_server_from_workflow_config_uses_local_static_for_no_mcp_sources(

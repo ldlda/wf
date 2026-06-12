@@ -4,7 +4,15 @@ from pathlib import Path
 
 import pytest
 
-from wf_sources_python import load_python_source
+from wf_sources_python import PythonSourceProvider, load_python_source
+
+
+class PythonSourceConfigFixture:
+    id = "local.ops"
+    path = Path(".")
+    module = "tests.fixtures.python_source_ops"
+    registry = "registry"
+    enabled = True
 
 
 def test_load_python_source_from_sequence_registry() -> None:
@@ -21,6 +29,13 @@ def test_load_python_source_from_sequence_registry() -> None:
         "local.ops.upper",
     }
     assert source.permissions.safe_for_workflow is True
+
+
+def test_python_source_provider_loads_configured_sources() -> None:
+    sources = PythonSourceProvider([PythonSourceConfigFixture()]).load_sources()
+
+    assert set(sources) == {"local.ops"}
+    assert "local.ops.echo" in sources["local.ops"].capabilities.node_specs
 
 
 def test_load_python_source_from_callable_registry() -> None:
