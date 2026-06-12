@@ -19,7 +19,8 @@ diagnostics and source registry apply summaries. Slice 3 exposes read-only auth
 admin summaries without secret payload values. Slice 4 adds local/dev file-backed
 auth save/delete through neutral admin, JSON-RPC, and CLI. Responses still
 expose only ids, schemes, metadata, and payload keys; secret payload values
-remain write-only.
+remain write-only. Slice 5 introduces typed stored auth records and MCP auth
+binding while preserving old `scheme + payload` compatibility input.
 
 Next auth work should replace the stringly `scheme + payload` record with typed
 auth variants and source-owned auth binders. Google Drive's remote HTTP MCP

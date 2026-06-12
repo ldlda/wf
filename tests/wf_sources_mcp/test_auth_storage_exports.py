@@ -127,3 +127,47 @@ def test_file_auth_store_writes_new_stored_auth_record_shape(tmp_path: Path) -> 
     assert data["auth"]["kind"] == "bearer"
     assert data["auth"]["access_token"] == "token"
     assert data["metadata"]["provider"] == "google"
+
+
+def test_file_auth_store_loads_old_format_through_load_auth_record(tmp_path: Path) -> None:
+    store = FileAuthStore(tmp_path)
+    path = tmp_path / "auth" / "github.work.json"
+    path.write_text(
+        json.dumps(
+            {
+                "connection_id": "github.work",
+                "scheme": "bearer",
+                "payload": {"token": "secret"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    record = store.load_auth_record("github.work")
+
+    assert isinstance(record, NeutralAuthRecord)
+    assert record.id == "github.work"
+    assert record.scheme == "bearer"
+    assert record.payload["token"] == "secret"
+
+
+def test_file_auth_store_loads_new_format_through_load_auth(tmp_path: Path) -> None:
+    store = FileAuthStore(tmp_path)
+    path = tmp_path / "auth" / "google.drive.personal.json"
+    path.write_text(
+        json.dumps(
+            {
+                "id": "google.drive.personal",
+                "auth": {"kind": "bearer", "access_token": "token"},
+                "metadata": {"provider": "google"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    legacy = store.load_auth("google.drive.personal")
+
+    assert legacy is not None
+    assert legacy.connection_id == "google.drive.personal"
+    assert legacy.scheme == "bearer"
+    assert legacy.payload["token"] == "token"

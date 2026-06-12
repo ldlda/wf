@@ -11,11 +11,39 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from wf_api.auth import AuthRecord as NeutralAuthRecord
-from wf_api.auth import StoredAuthRecord, validate_auth_id
+from wf_api.auth import (
+    BearerAuth,
+    EnvAuth,
+    HeaderAuth,
+    OAuthRefreshTokenAuth,
+    OpaqueAuth,
+    StoredAuthRecord,
+    validate_auth_id,
+)
 from wf_sources_mcp.auth import AuthRecord, mcp_auth_from_neutral, neutral_auth_from_mcp
 
 if TYPE_CHECKING:
     from wf_sources_mcp.catalog.models import CatalogSnapshot
+
+
+def _stored_to_legacy(record: StoredAuthRecord) -> AuthRecord:
+    """Convert a typed StoredAuthRecord back to legacy AuthRecord for compat."""
+    auth = record.auth
+    if isinstance(auth, BearerAuth):
+        return AuthRecord(record.id, "bearer", {"token": auth.access_token})
+    if isinstance(auth, HeaderAuth):
+        return AuthRecord(record.id, "headers", {"headers": dict(auth.headers)})
+    if isinstance(auth, EnvAuth):
+        return AuthRecord(record.id, "env", {"env": dict(auth.env)})
+    if isinstance(auth, OAuthRefreshTokenAuth):
+        return AuthRecord(
+            record.id,
+            "oauth_refresh_token",
+            auth.model_dump(mode="json", exclude={"kind"}),
+        )
+    if isinstance(auth, OpaqueAuth):
+        return AuthRecord(record.id, auth.scheme, dict(auth.payload))
+    raise TypeError(f"unsupported auth variant {type(auth).__name__}")
 
 
 class AuthStore:
@@ -95,6 +123,8 @@ class FileAuthStore(AuthStore):
         if not path.exists():
             return None
         data = json.loads(path.read_text(encoding="utf-8"))
+        if "kind" in data.get("auth", {}):
+            return _stored_to_legacy(StoredAuthRecord.model_validate(data))
         return AuthRecord(**data)
 
     def list_auth_refs(self) -> list[str]:

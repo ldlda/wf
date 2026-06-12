@@ -102,9 +102,10 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
 - Completed: server startup policy moved to `wf_server.cli`; JSON-RPC HTTP
   remains in `wf_transport_rpc_http`:
   [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).
-- Next auth work: typed/discriminated auth records, source-owned auth binders
-  (`McpAuthBinder` first), OAuth refresh-token support, and Google Drive MCP smoke
-  through `https://drivemcp.googleapis.com/mcp/v1`. Production secret manager
+- Next auth work: typed/discriminated auth records and source-owned auth binders
+  (`McpAuthBinder` first) are now completed. Remaining: OAuth refresh-token
+  support and Google Drive MCP smoke through
+  `https://drivemcp.googleapis.com/mcp/v1`. Production secret manager
   integration and encrypted-at-rest file format remain deferred.
 - Active specs:
   - [`workflow config targets and sources`](superpowers/specs/2026-06-03-workflow-config-targets-and-sources.md)
