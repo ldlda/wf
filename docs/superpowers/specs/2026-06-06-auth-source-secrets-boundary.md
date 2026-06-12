@@ -19,8 +19,14 @@ diagnostics and source registry apply summaries. Slice 3 exposes read-only auth
 admin summaries without secret payload values. Slice 4 adds local/dev file-backed
 auth save/delete through neutral admin, JSON-RPC, and CLI. Responses still
 expose only ids, schemes, metadata, and payload keys; secret payload values
-remain write-only. OAuth, production secret managers, and provider-specific auth
-variants remain future work.
+remain write-only.
+
+Next auth work should replace the stringly `scheme + payload` record with typed
+auth variants and source-owned auth binders. Google Drive's remote HTTP MCP
+server is the motivating proof: it is an OAuth-backed MCP source at
+`https://drivemcp.googleapis.com/mcp/v1`, but the platform should model this as
+generic refresh-token auth applied as HTTP bearer headers, not as a Drive-specific
+transport or FastMCP-specific object.
 
 This is not a complete auth product yet. The implemented runtime path only wires
 existing MCP-compatible auth records into source calls, diagnostics, and
@@ -94,23 +100,124 @@ record.
 
 ### Auth Record
 
-The resolved credential record. The neutral API should model the record as:
+The resolved credential record. The current implementation uses `id`,
+`scheme`, `payload`, and `metadata`, where `payload` is stringly and
+provider-specific. That shape was useful as a bridge, but the next model should
+be a discriminated union inside a stored record wrapper:
 
-- `id`: the auth ref
-- `kind` or `scheme`: credential interpretation, such as `bearer`, `headers`,
-  `env`, or `opaque`
-- `payload`: secret-bearing implementation data
-- `metadata`: non-secret annotations, optional
+```python
+StoredAuthRecord(
+    id="google.drive.personal",
+    auth=OAuthRefreshTokenAuth(
+        kind="oauth_refresh_token",
+        client_id="...",
+        client_secret=SecretStr("..."),
+        refresh_token=SecretStr("..."),
+        token_url="https://oauth2.googleapis.com/token",
+        scopes=[
+            "https://www.googleapis.com/auth/drive.readonly",
+            "https://www.googleapis.com/auth/drive.file",
+        ],
+    ),
+    metadata={},
+)
+```
 
-The neutral record should be generic enough for multiple source providers:
+Initial variants should stay small and verifiable:
+
+- `bearer`: one access token, materialized as `Authorization: Bearer ...` by
+  HTTP-capable source providers.
+- `headers`: explicit secret HTTP headers.
+- `env`: explicit secret environment variables for stdio-style providers.
+- `oauth_refresh_token`: refresh-token credential that can mint access tokens
+  and materialize as bearer headers.
+- `opaque`: compatibility escape hatch for records that only a specific source
+  provider understands.
+
+`oauth_refresh_token` is provider-neutral. Provider-specific behavior belongs in
+metadata, token-refresher configuration, or the source-owned binder; do not name
+the auth kind `google_oauth` just because Google Drive MCP is the first proof.
+
+Typed auth records should still be generic enough for multiple source providers:
 
 - upstream MCP over stdio may use `env`
-- upstream MCP over HTTP may use `headers` or `bearer`
+- upstream MCP over HTTP may use `headers`, `bearer`, or `oauth_refresh_token`
+- Google Drive MCP is an HTTP MCP source that should consume OAuth-derived
+  bearer headers
 - plain HTTP/API sources may use their own header/query/body credential adapter
 - Python/local sources may ignore auth or resolve it into an injected client
 
-MCP can continue adapting the neutral record to the existing
-`wf_mcp.models.AuthRecord` until the old type is retired.
+MCP can continue reading compatibility `scheme + payload` records until the old
+type is retired, but new saves should prefer typed auth variants.
+
+Auth records must not own source-specific behavior. Source providers choose
+which auth variants they support and how to materialize them.
+
+### Auth Binding
+
+Auth binding converts a stored auth record into runtime credentials for a
+specific source provider and transport. Auth records are generic and durable;
+binding is source-owned.
+
+```python
+@dataclass(frozen=True)
+class BoundMcpHttpAuth:
+    headers: Mapping[str, str] = field(default_factory=dict)
+    auth: httpx.Auth | None = None
+
+@dataclass(frozen=True)
+class BoundMcpStdioAuth:
+    env: Mapping[str, str] = field(default_factory=dict)
+
+class McpAuthBinder(Protocol):
+    async def bind_http_auth(
+        self,
+        auth: StoredAuthRecord | None,
+    ) -> BoundMcpHttpAuth: ...
+
+    async def bind_stdio_auth(
+        self,
+        auth: StoredAuthRecord | None,
+    ) -> BoundMcpStdioAuth: ...
+```
+
+Provider ownership:
+
+- `wf_sources_mcp` implements `McpAuthBinder`.
+- Future `wf_sources_openapi` implements its own binder shape.
+- `wf_sources_python` should ignore or reject auth until it has a real injection
+  model.
+
+The MCP binder may return `headers` or `httpx.Auth` for HTTP MCP because that is
+what the MCP HTTP client glue needs. This is intentionally MCP-specific and not
+reused as a universal platform DTO. Storage should not persist runtime objects
+such as `httpx.Auth` or FastMCP OAuth helpers.
+
+The concrete client glue remains small and local to `open_mcp_session`:
+
+```python
+bound = await binder.bind_http_auth(auth)
+http_client = httpx.AsyncClient(headers=bound.headers or None, auth=bound.auth)
+
+bound = await binder.bind_stdio_auth(auth)
+env = {**transport.env, **bound.env}
+```
+
+For Google Drive MCP, `oauth_refresh_token` should be handled by an MCP
+auth binder:
+
+```text
+refresh token -> access token -> Authorization: Bearer ... -> HTTP MCP session
+```
+
+The token refresher should be injected behind a small protocol so unit tests can
+verify behavior without Google network or browser login.
+
+First implementation policy: refresh on MCP session open. Do not refresh per
+request in the first slice, and do not add token caches or locks until a real
+long-lived-session expiry case proves they are needed. If a stateful MCP session
+outlives the access token and the server validates each later operation, add a
+refresh-aware HTTP auth implementation as a follow-up.
 
 ### Auth Store
 
@@ -244,12 +351,37 @@ Do not inline secret payloads into:
    - Add mutation only after deciding local-dev file behavior versus production
      secret-manager behavior.
 
+5. **Typed auth records**
+   - Introduce a stored auth record wrapper with a discriminated `auth.kind`.
+   - Keep a compatibility parser for old `scheme + payload` records.
+   - Prefer writing the new shape for new local/dev saves.
+   - Keep payload values write-only in admin and CLI responses.
+
+6. **Source-owned auth binder**
+   - Add `BoundMcpHttpAuth`, `BoundMcpStdioAuth`, and `McpAuthBinder`.
+   - Move MCP header/env interpretation behind `McpAuthBinder`.
+   - Keep source providers responsible for declaring supported auth variants.
+
+7. **OAuth refresh-token support**
+   - Add `oauth_refresh_token` variant and injected token refresher protocol.
+   - Apply OAuth records as bearer headers for HTTP-capable MCP sources.
+   - Unit-test with a fake refresher; do not require Google or browser login.
+
+8. **Google Drive MCP smoke**
+   - Configure a normal HTTP MCP source:
+     `https://drivemcp.googleapis.com/mcp/v1`.
+   - Bind it to an OAuth refresh-token auth record.
+   - Verify `list_tools` or a harmless read-only tool through the durable server
+     path when local credentials are available.
+
 ## Open Decisions
 
 - Whether auth ids should use the exact source id pattern or a slightly wider
   store id pattern.
-- Whether the neutral auth record should be a discriminated union
-  (`bearer` / `headers` / `env` / `opaque`) or keep `scheme + payload`.
+- Resolved direction: move the neutral auth record to a discriminated union
+  (`bearer` / `headers` / `env` / `oauth_refresh_token` / `opaque`) inside a
+  stored record wrapper. Keep `scheme + payload` only as compatibility input
+  until existing local files are migrated or retired.
 - Whether local config may include development-only inline auth records. The
   recommended default is no; use a file auth store even for local development so
   the production boundary stays honest.
