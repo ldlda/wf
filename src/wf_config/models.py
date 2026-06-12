@@ -208,7 +208,22 @@ class ServerConfig(WorkflowConfigModel):
         return self.stores.catalog_cache or self.store
 
 
+class OAuthProviderConfig(WorkflowConfigModel):
+    kind: Literal["oauth_authorization_code_pkce"]
+    auth_url: AnyHttpUrl
+    token_url: AnyHttpUrl
+    client_id_env: str
+    client_secret_env: str | None = None
+    scopes: tuple[str, ...] = ()
+    redirect_uri: str = "http://127.0.0.1:0/oauth/callback"
+
+
+class AuthConfig(WorkflowConfigModel):
+    providers: dict[str, OAuthProviderConfig] = Field(default_factory=dict)
+
+
 class WorkflowConfigFile(WorkflowConfigModel):
     version: Literal[1] = 1
     client: ClientConfig = Field(default_factory=ClientConfig)
     server: ServerConfig = Field(default_factory=ServerConfig)
+    auth: AuthConfig = Field(default_factory=AuthConfig)

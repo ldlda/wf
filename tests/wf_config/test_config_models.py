@@ -456,3 +456,29 @@ def test_server_config_resolves_missing_role_stores_to_default_store() -> None:
     assert config.server.auth_store.root.as_posix() == ".auth"
     assert config.server.source_registry_store.root.as_posix() == ".default"
     assert config.server.catalog_cache_store.root.as_posix() == ".default"
+
+
+def test_workflow_config_parses_oauth_provider_profile() -> None:
+    config = WorkflowConfigFile.model_validate(
+        {
+            "auth": {
+                "providers": {
+                    "google": {
+                        "kind": "oauth_authorization_code_pkce",
+                        "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
+                        "token_url": "https://oauth2.googleapis.com/token",
+                        "client_id_env": "GOOGLE_OAUTH_CLIENT_ID",
+                        "client_secret_env": "GOOGLE_OAUTH_CLIENT_SECRET",
+                        "scopes": [
+                            "https://www.googleapis.com/auth/drive.readonly",
+                        ],
+                    }
+                }
+            }
+        }
+    )
+
+    provider = config.auth.providers["google"]
+    assert provider.kind == "oauth_authorization_code_pkce"
+    assert provider.client_id_env == "GOOGLE_OAUTH_CLIENT_ID"
+    assert provider.scopes == ("https://www.googleapis.com/auth/drive.readonly",)

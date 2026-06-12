@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from .loader import load_workflow_config
 from .models import (
+    AuthConfig,
     ClientConfig,
     FilesystemStoreConfig,
     HttpSourceTransportConfig,
     LocalTargetConfig,
     McpSourceConfig,
+    OAuthProviderConfig,
     PythonSourceConfig,
     RpcHttpTargetConfig,
     RpcHttpTransportConfig,
@@ -21,11 +23,13 @@ from .models import (
 
 __all__ = [
     "load_workflow_config",
+    "AuthConfig",
     "ClientConfig",
     "FilesystemStoreConfig",
     "HttpSourceTransportConfig",
     "LocalTargetConfig",
     "McpSourceConfig",
+    "OAuthProviderConfig",
     "PythonSourceConfig",
     "RpcHttpTargetConfig",
     "RpcHttpTransportConfig",
