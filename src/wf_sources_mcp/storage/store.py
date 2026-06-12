@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from wf_api.auth import AuthRecord as NeutralAuthRecord
-from wf_api.auth import validate_auth_id
+from wf_api.auth import StoredAuthRecord, validate_auth_id
 from wf_sources_mcp.auth import AuthRecord, mcp_auth_from_neutral, neutral_auth_from_mcp
 
 if TYPE_CHECKING:
@@ -28,10 +28,10 @@ class AuthStore:
     def list_auth_refs(self) -> list[str]:
         raise NotImplementedError
 
-    def save_auth_record(self, record: NeutralAuthRecord) -> None:
+    def save_auth_record(self, record: NeutralAuthRecord | StoredAuthRecord) -> None:
         raise NotImplementedError
 
-    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | None:
+    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | StoredAuthRecord | None:
         raise NotImplementedError
 
     def delete_auth(self, connection_id: str) -> bool:
@@ -100,14 +100,23 @@ class FileAuthStore(AuthStore):
     def list_auth_refs(self) -> list[str]:
         return sorted(path.stem for path in self.auth_dir.glob("*.json"))
 
-    def save_auth_record(self, record: NeutralAuthRecord) -> None:
-        self.save_auth(mcp_auth_from_neutral(record))
+    def save_auth_record(self, record: NeutralAuthRecord | StoredAuthRecord) -> None:
+        if isinstance(record, StoredAuthRecord):
+            self._auth_path(record.id).write_text(
+                json.dumps(record.model_dump(mode="json"), indent=2),
+                encoding="utf-8",
+            )
+        else:
+            self.save_auth(mcp_auth_from_neutral(record))
 
-    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | None:
-        record = self.load_auth(auth_ref)
-        if record is None:
+    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | StoredAuthRecord | None:
+        path = self._auth_path(auth_ref)
+        if not path.exists():
             return None
-        return neutral_auth_from_mcp(record)
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if "kind" in data.get("auth", {}):
+            return StoredAuthRecord.model_validate(data)
+        return neutral_auth_from_mcp(AuthRecord(**data))
 
     def delete_auth(self, connection_id: str) -> bool:
         path = self._auth_path(connection_id)
@@ -216,10 +225,10 @@ class FileStore(Store):
     def list_auth_refs(self) -> list[str]:
         return self._auth.list_auth_refs()
 
-    def save_auth_record(self, record: NeutralAuthRecord) -> None:
+    def save_auth_record(self, record: NeutralAuthRecord | StoredAuthRecord) -> None:
         self._auth.save_auth_record(record)
 
-    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | None:
+    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | StoredAuthRecord | None:
         return self._auth.load_auth_record(auth_ref)
 
     def delete_auth(self, connection_id: str) -> bool:

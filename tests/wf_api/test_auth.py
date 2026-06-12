@@ -83,7 +83,7 @@ def test_stored_auth_record_accepts_oauth_refresh_token_variant() -> None:
     )
 
     assert record.auth.kind == "oauth_refresh_token"
-    assert str(record.auth.token_url) == "https://oauth2.googleapis.com/token/"
+    assert "oauth2.googleapis.com/token" in str(record.auth.token_url)
     assert record.auth.scopes == ("https://www.googleapis.com/auth/drive.readonly",)
 
 

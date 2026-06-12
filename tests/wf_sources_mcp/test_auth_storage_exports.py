@@ -1,6 +1,10 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from wf_api.auth import AuthRecord as NeutralAuthRecord
+from wf_api.auth import BearerAuth, StoredAuthRecord
 from wf_sources_mcp.auth import (
     AuthRecord,
     mcp_auth_env,
@@ -84,3 +88,42 @@ def test_wf_sources_mcp_file_stores_keep_existing_disk_shape(tmp_path) -> None:
     assert (tmp_path / "catalog-root" / "catalog" / "demo.personal.json").exists()
     assert (tmp_path / "combined-root" / "auth" / "demo.personal.json").exists()
     assert (tmp_path / "combined-root" / "catalog" / "demo.personal.json").exists()
+
+
+def test_file_auth_store_loads_new_stored_auth_record_shape(tmp_path: Path) -> None:
+    store = FileAuthStore(tmp_path)
+    path = tmp_path / "auth" / "google.drive.personal.json"
+    path.write_text(
+        json.dumps(
+            {
+                "id": "google.drive.personal",
+                "auth": {"kind": "bearer", "access_token": "token"},
+                "metadata": {"provider": "google"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    record = store.load_auth_record("google.drive.personal")
+
+    assert isinstance(record, StoredAuthRecord)
+    assert isinstance(record.auth, BearerAuth)
+    assert record.auth.access_token == "token"
+    assert record.metadata["provider"] == "google"
+
+
+def test_file_auth_store_writes_new_stored_auth_record_shape(tmp_path: Path) -> None:
+    store = FileAuthStore(tmp_path)
+    record = StoredAuthRecord(
+        id="google.drive.personal",
+        auth=BearerAuth(access_token="token"),
+        metadata={"provider": "google"},
+    )
+
+    store.save_auth_record(record)
+
+    data = json.loads((tmp_path / "auth" / "google.drive.personal.json").read_text())
+    assert data["id"] == "google.drive.personal"
+    assert data["auth"]["kind"] == "bearer"
+    assert data["auth"]["access_token"] == "token"
+    assert data["metadata"]["provider"] == "google"
