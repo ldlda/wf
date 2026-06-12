@@ -1,14 +1,16 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from wf_cli.context import load_cli_context_from_typer
+from wf_cli.context import config_path_from_context, load_cli_context_from_typer
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import emit_json
+from wf_cli.oauth import OAuthCodeLoginFlow, OAuthLoginResult, build_oauth_record
 from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
@@ -140,3 +142,80 @@ def delete_auth_record(
     context = load_cli_context_from_typer(ctx)
     result = run_cli_operation(context, context.admin.delete_auth_record(auth_ref))
     emit_json(result)
+
+
+async def _login_with_pasted_response(
+    *,
+    provider,
+    client_id: str,
+    client_secret: str | None,
+    authorization_response: str,
+) -> OAuthLoginResult:
+    from authlib.integrations.httpx_client import AsyncOAuth2Client
+
+    flow = OAuthCodeLoginFlow(client_factory=AsyncOAuth2Client)  # type: ignore[arg-type]
+    return await flow.login_with_authorization_response(
+        provider=provider,
+        client_id=client_id,
+        client_secret=client_secret,
+        authorization_response=authorization_response,
+    )
+
+
+@app.command("oauth-login")
+def oauth_login(
+    ctx: typer.Context,
+    provider_name: Annotated[str, typer.Argument(help="Auth provider profile name.")],
+    auth_ref: Annotated[str, typer.Option("--id", help="Auth record id/ref to save.")],
+    authorization_response: Annotated[
+        str,
+        typer.Option(
+            "--authorization-response",
+            help="Full redirected callback URL after login.",
+        ),
+    ],
+) -> None:
+    """Run an OAuth login flow and save the resulting refresh token as an auth record."""
+    from wf_config import load_workflow_config
+
+    config_path = Path(config_path_from_context(ctx))
+    config = load_workflow_config(config_path)
+    provider = config.auth.providers.get(provider_name)
+    if provider is None:
+        raise typer.BadParameter(f"unknown auth provider {provider_name!r}")
+    client_id = os.environ.get(provider.client_id_env)
+    if not client_id:
+        raise typer.BadParameter(f"missing env var {provider.client_id_env}")
+    client_secret = (
+        os.environ.get(provider.client_secret_env)
+        if provider.client_secret_env is not None
+        else None
+    )
+    result = run_cli_operation(
+        load_cli_context_from_typer(ctx),
+        _login_with_pasted_response(
+            provider=provider,
+            client_id=client_id,
+            client_secret=client_secret,
+            authorization_response=authorization_response,
+        ),
+    )
+    record = build_oauth_record(
+        auth_ref=auth_ref,
+        provider_name=provider_name,
+        provider=provider,
+        client_id=client_id,
+        client_secret=client_secret,
+        result=result,
+    )
+    context = load_cli_context_from_typer(ctx)
+    saved = run_cli_operation(
+        context,
+        context.admin.save_auth_record(
+            auth_ref=record.id,
+            scheme="oauth_refresh_token",
+            payload=record.auth.model_dump(mode="json", exclude={"kind"}),
+            metadata=record.metadata,
+        ),
+    )
+    emit_json(saved)

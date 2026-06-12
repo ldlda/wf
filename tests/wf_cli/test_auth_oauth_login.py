@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+
 import pytest
+from typer.testing import CliRunner
 
 from wf_api.auth import OAuthRefreshTokenAuth
+from wf_cli.app import app
 from wf_cli.oauth import OAuthCodeLoginFlow, OAuthLoginResult, build_oauth_record
 from wf_config import OAuthProviderConfig
 
@@ -97,3 +101,69 @@ async def test_oauth_code_login_flow_uses_injected_client() -> None:
     assert result.refresh_token == "refresh"
     assert result.scopes == ("https://www.googleapis.com/auth/drive.readonly",)
     assert client.fetch_calls == ["http://127.0.0.1/callback?code=abc&state=state-123"]
+
+
+def test_auth_oauth_login_saves_record_from_provider_profile(monkeypatch, tmp_path) -> None:
+    saved: list[object] = []
+
+    class _FakeAdmin:
+        async def save_auth_record(self, **kwargs: object) -> dict[str, object]:
+            saved.append(kwargs)
+            return {"id": kwargs["auth_ref"], "scheme": "oauth_refresh_token"}
+
+    class _FakeContext:
+        admin = _FakeAdmin()
+
+    async def _fake_login(*args: object, **kwargs: object) -> OAuthLoginResult:
+        return OAuthLoginResult(refresh_token="refresh")
+
+    monkeypatch.setattr(
+        "wf_cli.commands.auth_admin.load_cli_context_from_typer",
+        lambda ctx: _FakeContext(),
+    )
+    monkeypatch.setattr(
+        "wf_cli.commands.auth_admin._login_with_pasted_response",
+        _fake_login,
+    )
+
+    config_path = tmp_path / "wf.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "auth": {
+                    "providers": {
+                        "google": {
+                            "kind": "oauth_authorization_code_pkce",
+                            "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
+                            "token_url": "https://oauth2.googleapis.com/token",
+                            "client_id_env": "GOOGLE_OAUTH_CLIENT_ID",
+                            "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
+                        }
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("GOOGLE_OAUTH_CLIENT_ID", "client")
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "admin",
+            "auth",
+            "oauth-login",
+            "google",
+            "--id",
+            "google.drive.personal",
+            "--authorization-response",
+            "http://127.0.0.1/callback?code=abc&state=state",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert saved
+    assert saved[0]["auth_ref"] == "google.drive.personal"
+    assert saved[0]["scheme"] == "oauth_refresh_token"
