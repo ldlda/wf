@@ -445,9 +445,12 @@ Run OAuth login:
 
 ```bash
 wf --config wf.config.json admin auth oauth-login google \
-  --id google.drive.personal \
-  --authorization-response "<redirected URL>"
+  --id google.drive.personal
 ```
+
+The command prints the authorization URL, then prompts for the full redirected
+callback URL after browser login. For non-interactive use, pass the callback URL
+directly with `--authorization-response "<redirected URL>"`.
 
 Refresh tokens are sensitive. The local file auth store is plaintext and
 intended for local/dev use only.

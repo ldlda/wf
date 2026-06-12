@@ -149,9 +149,20 @@ async def _login_with_pasted_response(
     provider,
     client_id: str,
     client_secret: str | None,
-    authorization_response: str,
+    authorization_response: str | None,
 ) -> OAuthLoginResult:
     from authlib.integrations.httpx_client import AsyncOAuth2Client
+
+    def prompt_for_authorization_response(
+        authorization_url: str,
+        state: str,
+    ) -> str | None:
+        if authorization_response is not None:
+            return None
+        typer.echo("Open this URL in your browser to authorize access:")
+        typer.echo(authorization_url)
+        typer.echo(f"Expected OAuth state: {state}")
+        return typer.prompt("Paste the full redirected callback URL")
 
     flow = OAuthCodeLoginFlow(client_factory=AsyncOAuth2Client)  # type: ignore[arg-type]
     return await flow.login_with_authorization_response(
@@ -159,6 +170,7 @@ async def _login_with_pasted_response(
         client_id=client_id,
         client_secret=client_secret,
         authorization_response=authorization_response,
+        authorization_url_callback=prompt_for_authorization_response,
     )
 
 
@@ -168,12 +180,15 @@ def oauth_login(
     provider_name: Annotated[str, typer.Argument(help="Auth provider profile name.")],
     auth_ref: Annotated[str, typer.Option("--id", help="Auth record id/ref to save.")],
     authorization_response: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--authorization-response",
-            help="Full redirected callback URL after login.",
+            help=(
+                "Full redirected callback URL after login. If omitted, prints "
+                "the authorization URL and prompts for the callback URL."
+            ),
         ),
-    ],
+    ] = None,
 ) -> None:
     """Run an OAuth login flow and save the resulting refresh token as an auth record."""
     from wf_config import load_workflow_config

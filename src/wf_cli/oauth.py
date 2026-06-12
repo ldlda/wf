@@ -67,15 +67,26 @@ class OAuthCodeLoginFlow:
         provider: OAuthProviderConfig,
         client_id: str,
         client_secret: str | None,
-        authorization_response: str,
+        authorization_response: str | None,
+        authorization_url_callback: Callable[[str, str], str | None] | None = None,
     ) -> OAuthLoginResult:
         client = self._client_factory(
             client_id=client_id,
             client_secret=client_secret,
             scope=" ".join(provider.scopes),
+            redirect_uri=provider.redirect_uri,
             code_challenge_method="S256",
         )
-        client.create_authorization_url(str(provider.auth_url))
+        authorization_url, state = client.create_authorization_url(
+            str(provider.auth_url),
+            redirect_uri=provider.redirect_uri,
+        )
+        if authorization_url_callback is not None:
+            callback_response = authorization_url_callback(authorization_url, state)
+            if authorization_response is None:
+                authorization_response = callback_response
+        if authorization_response is None:
+            raise ValueError("OAuth authorization response is required")
         token = await client.fetch_token(
             str(provider.token_url),
             authorization_response=authorization_response,
