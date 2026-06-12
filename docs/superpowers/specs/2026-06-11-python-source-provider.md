@@ -122,6 +122,9 @@ Implemented:
 - `wf_sources_python` loads trusted in-process `NodeSpec` registries from
   `path` plus `module:registry`.
 - `wf_server.config` composes Python sources into local/static servers.
+- `wf config validate` imports configured trusted Python sources and reports
+  missing modules, missing registries, invalid registry shapes, and duplicate
+  specs before server startup.
 - Capability listing/calling works over JSON-RPC.
 
 Still deferred:

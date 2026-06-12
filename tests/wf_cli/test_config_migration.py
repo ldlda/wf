@@ -79,3 +79,97 @@ def test_wf_config_migrate_mcp_writes_output_file(tmp_path: Path) -> None:
     assert status["status"] == "written"
     payload = json.loads(output_path.read_text(encoding="utf-8"))
     assert payload["server"]["sources"][0]["transport"]["kind"] == "http"
+
+
+def test_wf_config_validate_loads_python_source(tmp_path: Path) -> None:
+    source_root = tmp_path / "sources"
+    source_root.mkdir()
+    (source_root / "ops.py").write_text(
+        """
+from pydantic import BaseModel
+from wf_authoring import node
+
+
+class EchoInput(BaseModel):
+    text: str
+
+
+class EchoOutput(BaseModel):
+    text: str
+
+
+@node(name="echo")
+def echo(input: EchoInput) -> EchoOutput:
+    return EchoOutput(text=input.text)
+
+
+registry = [echo]
+""",
+        encoding="utf-8",
+    )
+    config_path = tmp_path / "wf.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "store": {"kind": "filesystem", "root": "store"},
+                    "sources": [
+                        {
+                            "kind": "python",
+                            "id": "local.ops",
+                            "path": "sources",
+                            "module": "ops",
+                            "registry": "registry",
+                        }
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["config", "validate", str(config_path)])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["valid"] is True
+    assert payload["sources"] == [
+        {
+            "id": "local.ops",
+            "kind": "python",
+            "status": "ok",
+            "capability_count": 1,
+        }
+    ]
+
+
+def test_wf_config_validate_reports_python_source_import_failure(tmp_path: Path) -> None:
+    config_path = tmp_path / "wf.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "store": {"kind": "filesystem", "root": "store"},
+                    "sources": [
+                        {
+                            "kind": "python",
+                            "id": "local.ops",
+                            "path": ".",
+                            "module": "missing_ops",
+                            "registry": "registry",
+                        }
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(app, ["config", "validate", str(config_path)])
+
+    assert result.exit_code != 0
+    assert "invalid workflow config" in result.output
+    assert "local.ops" in result.output
+    assert "missing_ops" in result.output

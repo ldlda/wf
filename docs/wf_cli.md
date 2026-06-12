@@ -49,6 +49,18 @@ Convert a legacy broker config into the neutral config shape:
 wf config migrate-mcp wf_mcp.config.json --output wf.json
 ```
 
+Validate a neutral workflow config before starting a server:
+
+```bash
+wf config validate wf.json
+```
+
+`validate` checks JSON/model shape, resolves config-relative paths, and imports
+trusted static Python sources so missing modules or registries fail before
+server startup. MCP sources are shape-validated only; use `wf status`,
+`wf source list`, or `wf deploy validate --live` against a running server for
+live upstream checks.
+
 The old `store_root` field maps to
 `server.store: {"kind": "filesystem", "root": ...}`; old `connections[]` map to
 `server.sources[]` entries with `kind: "mcp"`.

@@ -85,12 +85,13 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
 - New source families should follow the generic runtime source lifecycle rather
   than being forced through MCP `ConnectionConfig`:
   [`runtime source lifecycle`](superpowers/specs/2026-06-09-runtime-source-lifecycle.md).
-- Active implementation plan: static config Python sources for trusted
-  project-local `NodeSpec` registries:
-  [`static Python sources`](superpowers/plans/2026-06-11-static-python-sources.md).
 - Completed: static config `kind: "python"` sources can load trusted local
   `NodeSpec` registries and expose them through WorkflowServer. Implementation:
   [`static Python sources`](historical/superpowers/plans/2026-06-11-static-python-sources.md).
+- Completed: `wf config validate` preflights neutral workflow config files,
+  including config-relative path resolution and trusted static Python source
+  imports. MCP sources are shape-validated only; live upstream checks remain a
+  server/status concern.
 - Completed: server startup policy moved to `wf_server.cli`; JSON-RPC HTTP
   remains in `wf_transport_rpc_http`:
   [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).

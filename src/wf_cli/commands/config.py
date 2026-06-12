@@ -6,7 +6,10 @@ from typing import Annotated
 import typer
 
 from wf_cli.io import emit_json
+from wf_config import McpSourceConfig, PythonSourceConfig, StdlibSourceConfig
+from wf_config.loader import load_workflow_config
 from wf_mcp.broker.config import migrate_broker_config_file
+from wf_sources_python import load_python_source
 
 app = typer.Typer(
     name="config",
@@ -37,3 +40,53 @@ def migrate_mcp_config(
         encoding="utf-8",
     )
     emit_json({"status": "written", "path": str(output_path)})
+
+
+@app.command("validate")
+def validate_config(
+    config_path: Annotated[
+        Path,
+        typer.Argument(help="Neutral workflow config JSON path."),
+    ],
+) -> None:
+    """Validate config shape and trusted static source imports."""
+    try:
+        config = load_workflow_config(config_path)
+        sources = [_validate_source(source) for source in config.server.sources]
+    except Exception as exc:
+        raise typer.BadParameter(f"invalid workflow config: {exc}") from exc
+    emit_json(
+        {
+            "valid": True,
+            "path": str(config_path),
+            "sources": sources,
+        }
+    )
+
+
+def _validate_source(
+    source: StdlibSourceConfig | PythonSourceConfig | McpSourceConfig,
+) -> dict[str, object]:
+    """Return a compact source validation summary without live network probes."""
+    if isinstance(source, PythonSourceConfig):
+        try:
+            loaded = load_python_source(
+                source_id=source.id,
+                path=source.path,
+                module=source.module,
+                registry=source.registry,
+                enabled=source.enabled,
+            )
+        except Exception as exc:
+            raise ValueError(f"source {source.id!r}: {exc}") from exc
+        return {
+            "id": source.id,
+            "kind": source.kind,
+            "status": "ok",
+            "capability_count": len(loaded.capabilities.node_specs),
+        }
+    return {
+        "id": source.id,
+        "kind": source.kind,
+        "status": "ok",
+    }
