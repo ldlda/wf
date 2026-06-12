@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+import pytest
+
 from tests.wf_mcp.test_support import echo_tool
 from wf_api import WorkflowApi
 from wf_api.artifacts import WorkflowArtifactApi
@@ -40,14 +42,13 @@ def test_workflow_api_composes_domain_services(tmp_path: Path) -> None:
     assert not hasattr(api, "backend")
 
 
-def test_workflow_api_direct_capability_call(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_workflow_api_direct_capability_call(tmp_path: Path) -> None:
     api = _api(tmp_path / "wf_api_direct_composition")
 
-    result = asyncio.run(
-        api.call_capability(
-            qualified_name="demo.personal.echo_tool",
-            payload={"text": "hello"},
-        )
+    result = await api.call_capability(
+        qualified_name="demo.personal.echo_tool",
+        payload={"text": "hello"},
     )
 
     assert result["kind"] == "node_spec"

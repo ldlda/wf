@@ -58,3 +58,31 @@ docs are the usual places.
 If code has a partial implementation and docs mention the limitation, add a
 short comment or docstring at the code seam too. Future agents see code before
 they see old plans.
+
+# docs formatting
+
+## (caution: unstable) markdown formatting
+
+use `pnpx markdownlint-cli --fix '(glob the md)'`
+
+Note that this will mess things up, if you dont already follow the strict rules of markdownlint
+
+### pitfall
+
+all about indenting.
+
+````md
+1. you have a list, ordered or not?
+
+this line ends the list, because it has no indents.
+
+```bash
+## even this code block has to be indented
+```
+
+2. otherwise this will be "fixed" and renumbered to 1.
+````
+
+### why not prettier? it does much more
+
+when prettier supports compact table i'll switch to it

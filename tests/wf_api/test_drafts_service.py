@@ -4,6 +4,8 @@ import asyncio
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from tests.wf_mcp.test_support import echo_tool
 from wf_api.drafts import WorkflowDraftApi
 from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
@@ -70,21 +72,20 @@ def _draft_api(
     return WorkflowDraftApi(context), service
 
 
-def test_patch_draft_applies_json_patch(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_patch_draft_applies_json_patch(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch")
     api, _service = _draft_api(artifact_store)
 
-    result = asyncio.run(
-        api.patch_draft(
-            draft=_echo_draft(),
-            patch=[
-                {
-                    "op": "replace",
-                    "path": "/steps/echo/input/0/target/parts/0",
-                    "value": "message",
-                }
-            ],
-        )
+    result = await api.patch_draft(
+        draft=_echo_draft(),
+        patch=[
+            {
+                "op": "replace",
+                "path": "/steps/echo/input/0/target/parts/0",
+                "value": "message",
+            }
+        ],
     )
 
     assert result["status"] == "valid"
@@ -94,49 +95,45 @@ def test_patch_draft_applies_json_patch(tmp_path: Path) -> None:
     }
 
 
-def test_create_draft_workspace_creates_workspace(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_create_draft_workspace_creates_workspace(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_workspace")
     api, _service = _draft_api(artifact_store)
 
-    result = asyncio.run(
-        api.create_draft_workspace(
-            workspace_id="echo_ws",
-            title="Echo Workspace",
-            draft=_echo_draft(),
-        )
+    result = await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        title="Echo Workspace",
+        draft=_echo_draft(),
     )
 
     assert result["workspace_id"] == "echo_ws"
     assert result["revision"] == 1
-    fetched = asyncio.run(
-        api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
-    )
+    fetched = await api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
+
     assert fetched["workspace_id"] == "echo_ws"
     assert fetched["title"] == "Echo Workspace"
     assert fetched["draft"]["steps"]["echo"]["use"] == "demo.personal.echo_tool"
 
 
-def test_list_draft_workspaces_returns_sorted_summaries_without_drafts(
+@pytest.mark.asyncio
+async def test_list_draft_workspaces_returns_sorted_summaries_without_drafts(
     tmp_path: Path,
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_list_workspaces")
     api, _service = _draft_api(artifact_store)
-    asyncio.run(
-        api.create_draft_workspace(
-            workspace_id="b_draft",
-            title="B Draft",
-            draft=_echo_draft(),
-        )
-    )
-    asyncio.run(
-        api.create_draft_workspace(
-            workspace_id="a_draft",
-            title="A Draft",
-            draft=_echo_draft(),
-        )
+    await api.create_draft_workspace(
+        workspace_id="b_draft",
+        title="B Draft",
+        draft=_echo_draft(),
     )
 
-    result = asyncio.run(api.list_draft_workspaces())
+    await api.create_draft_workspace(
+        workspace_id="a_draft",
+        title="A Draft",
+        draft=_echo_draft(),
+    )
+
+    result = await api.list_draft_workspaces()
 
     assert [workspace["workspace_id"] for workspace in result["workspaces"]] == [
         "a_draft",
@@ -146,19 +143,18 @@ def test_list_draft_workspaces_returns_sorted_summaries_without_drafts(
     assert "draft" not in result["workspaces"][0]
 
 
-def test_delete_draft_workspace_is_idempotent(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_delete_draft_workspace_is_idempotent(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_delete_workspace")
     api, _service = _draft_api(artifact_store)
-    asyncio.run(
-        api.create_draft_workspace(
-            workspace_id="echo_ws",
-            draft=_echo_draft(),
-        )
+    await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
     )
 
-    deleted = asyncio.run(api.delete_draft_workspace(workspace_id="echo_ws"))
-    deleted_again = asyncio.run(api.delete_draft_workspace(workspace_id="echo_ws"))
-    listed = asyncio.run(api.list_draft_workspaces())
+    deleted = await api.delete_draft_workspace(workspace_id="echo_ws")
+    deleted_again = await api.delete_draft_workspace(workspace_id="echo_ws")
+    listed = await api.list_draft_workspaces()
 
     assert deleted["workspace_id"] == "echo_ws"
     assert deleted["deleted"] is True
@@ -169,75 +165,62 @@ def test_delete_draft_workspace_is_idempotent(tmp_path: Path) -> None:
     assert listed["workspaces"] == []
 
 
-def test_patch_draft_workspace_updates_revision(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_patch_draft_workspace_updates_revision(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch_workspace")
     api, _service = _draft_api(artifact_store)
-    asyncio.run(
-        api.create_draft_workspace(
-            workspace_id="echo_ws",
-            draft=_echo_draft(),
-        )
+    await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
     )
 
-    patched = asyncio.run(
-        api.patch_draft_workspace(
-            workspace_id="echo_ws",
-            revision=1,
-            patch=[{"op": "replace", "path": "/name", "value": "echo_v2"}],
-        )
+    patched = await api.patch_draft_workspace(
+        workspace_id="echo_ws",
+        revision=1,
+        patch=[{"op": "replace", "path": "/name", "value": "echo_v2"}],
     )
 
     assert patched["revision"] == 2
     assert patched["status"] == "valid"
 
 
-def test_draft_workspace_patch_helpers_update_revision_and_bindings(
+@pytest.mark.asyncio
+async def test_draft_workspace_patch_helpers_update_revision_and_bindings(
     tmp_path: Path,
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch_helpers")
     api, _service = _draft_api(artifact_store)
-    asyncio.run(
-        api.create_draft_workspace(
-            workspace_id="echo_ws",
-            draft=_echo_draft(),
-        )
+    await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
     )
 
-    named = asyncio.run(
-        api.set_draft_name(
-            workspace_id="echo_ws",
-            revision=1,
-            name="echo_v2",
-        )
+    named = await api.set_draft_name(
+        workspace_id="echo_ws",
+        revision=1,
+        name="echo_v2",
     )
-    routed = asyncio.run(
-        api.set_draft_route(
-            workspace_id="echo_ws",
-            revision=2,
-            step_id="echo",
-            outcome="error",
-            target="__end__",
-        )
+    routed = await api.set_draft_route(
+        workspace_id="echo_ws",
+        revision=2,
+        step_id="echo",
+        outcome="error",
+        target="__end__",
     )
-    input_mapped = asyncio.run(
-        api.set_step_input_map(
-            workspace_id="echo_ws",
-            revision=3,
-            step_id="echo",
-            input_map={"input.text": "message"},
-        )
+    input_mapped = await api.set_step_input_map(
+        workspace_id="echo_ws",
+        revision=3,
+        step_id="echo",
+        input_map={"input.text": "message"},
     )
-    output_mapped = asyncio.run(
-        api.set_step_output_map(
-            workspace_id="echo_ws",
-            revision=4,
-            step_id="echo",
-            output_map={"echoed": "state.echoed"},
-        )
+
+    output_mapped = await api.set_step_output_map(
+        workspace_id="echo_ws",
+        revision=4,
+        step_id="echo",
+        output_map={"echoed": "state.echoed"},
     )
-    fetched = asyncio.run(
-        api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
-    )
+    fetched = await api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
 
     assert named["revision"] == 2
     assert routed["revision"] == 3
@@ -259,20 +242,19 @@ def test_draft_workspace_patch_helpers_update_revision_and_bindings(
     ]
 
 
-def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_validate_workspace")
     api, service = _draft_api(artifact_store, register_echo=True)
     draft = _echo_draft()
     draft["routes"]["echo"] = {"typo": "__end__"}
-    asyncio.run(
-        api.create_draft_workspace(
-            workspace_id="echo_ws",
-            draft=draft,
-        )
+    await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=draft,
     )
 
-    payload = asyncio.run(api.validate_draft_workspace(workspace_id="echo_ws"))
-    fetched = asyncio.run(api.get_draft_workspace(workspace_id="echo_ws"))
+    payload = await api.validate_draft_workspace(workspace_id="echo_ws")
+    fetched = await api.get_draft_workspace(workspace_id="echo_ws")
 
     assert payload["revision"] == 1
     assert payload["status"] == "invalid"
@@ -280,40 +262,42 @@ def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None:
     assert fetched["status"] == "invalid"
 
 
-def test_create_minimal_draft_workspace_minimal_success_path(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_create_minimal_draft_workspace_minimal_success_path(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_minimal_workspace")
     api, _service = _draft_api(artifact_store, register_echo=True)
 
-    result = asyncio.run(
-        api.create_minimal_draft_workspace(
-            workspace_id="echo_minimal",
-            name="echo",
-            capability_name="demo.personal.echo_tool",
-            input_schema={
-                "type": "object",
-                "properties": {"text": {"type": "string"}},
-                "required": ["text"],
-            },
-            state_schema={"fields": {"echoed": {"type": "string"}}},
-            output_schema={
-                "type": "object",
-                "properties": {"echoed": {"type": "string"}},
-                "required": ["echoed"],
-            },
-            input_map={"input.text": "text"},
-            output_map={"echoed": "state.echoed"},
-        )
+    result = await api.create_minimal_draft_workspace(
+        workspace_id="echo_minimal",
+        name="echo",
+        capability_name="demo.personal.echo_tool",
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
+        state_schema={"fields": {"echoed": {"type": "string"}}},
+        output_schema={
+            "type": "object",
+            "properties": {"echoed": {"type": "string"}},
+            "required": ["echoed"],
+        },
+        input_map={"input.text": "text"},
+        output_map={"echoed": "state.echoed"},
     )
 
     assert result["workspace_id"] == "echo_minimal"
-    fetched = asyncio.run(
-        api.get_draft_workspace(workspace_id="echo_minimal", include_draft=True)
+    fetched = await api.get_draft_workspace(
+        workspace_id="echo_minimal", include_draft=True
     )
     assert fetched["draft"]["routes"]["call"]["ok"] == "__end__"
     assert fetched["draft"]["steps"]["call"]["use"] == "demo.personal.echo_tool"
 
 
-def test_delegation_smoke_validate_draft_equivalence(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_delegation_smoke_validate_draft_equivalence(tmp_path: Path) -> None:
     """WorkflowSurfaceHandlers.validate_draft delegates to WorkflowDraftApi."""
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_delegation_smoke")
     mcp_root = artifact_store.root / "delegation_mcp"
@@ -332,8 +316,8 @@ def test_delegation_smoke_validate_draft_equivalence(tmp_path: Path) -> None:
     api = WorkflowDraftApi(context)
     draft = _echo_draft()
 
-    handler_result = asyncio.run(h.validate_draft(draft=draft))
-    api_result = asyncio.run(api.validate_draft(draft=draft))
+    handler_result = await h.validate_draft(draft=draft)
+    api_result = await api.validate_draft(draft=draft)
 
     assert handler_result["status"] == api_result["status"]
     assert handler_result["diagnostics"] == api_result["diagnostics"]

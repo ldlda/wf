@@ -88,7 +88,7 @@ def reducer(
         def decorate_plain(
             raw: PlainReducerCallable,
         ) -> AuthoredReducer:
-            reducer_name = name or raw.__name__
+            reducer_name = name or getattr(raw, "__name__", "<anonymous plain reducer>")
             reducer_description = description or raw.__doc__
             # if no config model is provided, we assume it's a plain reducer and just wrap it directly
             return AuthoredReducer(
@@ -102,6 +102,7 @@ def reducer(
                 )
             )
 
+        # fail-fast? worse treatment than @node
         if fn is not None:
             return decorate_plain(cast(PlainReducerCallable, fn))
         return decorate_plain
@@ -111,7 +112,7 @@ def reducer(
         def decorate_config(
             raw: ConfigReducerCallable[ConfigT],
         ) -> AuthoredReducer:
-            reducer_name = name or raw.__name__
+            reducer_name = name or getattr(raw, "__name__", "<anonymous config reducer>")
             reducer_description = description or raw.__doc__
 
             model_type = config_model

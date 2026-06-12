@@ -7,6 +7,8 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
 
+import pytest
+
 from tests.wf_mcp.test_support import echo_tool
 from wf_api.deployments import WorkflowDeploymentApi
 from wf_artifacts import (
@@ -96,13 +98,12 @@ def _deployment_api(
     context = context_from_service(service)
     return WorkflowDeploymentApi(context), service
 
-
-def test_save_deployment_stores_and_returns_stable_fields(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_save_deployment_stores_and_returns_stable_fields(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_save")
     api, _service = _deployment_api(artifact_store)
 
-    result = asyncio.run(
-        api.save_deployment(
+    result = await api.save_deployment(
             WorkflowDeployment(
                 id="echo.personal",
                 artifact_id="echo",
@@ -112,15 +113,14 @@ def test_save_deployment_stores_and_returns_stable_fields(tmp_path: Path) -> Non
                 ],
             ).model_dump(mode="json")
         )
-    )
 
     assert result["saved"] is True
     assert result["deployment_id"] == "echo.personal"
     assert result["artifact_id"] == "echo"
     assert result["artifact_version"] == 1
 
-
-def test_list_deployments_returns_compact_summaries(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_list_deployments_returns_compact_summaries(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_list")
     api, _service = _deployment_api(artifact_store)
     artifact_store.save_deployment(
@@ -132,7 +132,7 @@ def test_list_deployments_returns_compact_summaries(tmp_path: Path) -> None:
         )
     )
 
-    result = asyncio.run(api.list_deployments())
+    result = await api.list_deployments()
 
     assert len(result["deployments"]) == 1
     assert result["deployments"][0]["id"] == "echo.personal"
@@ -140,18 +140,20 @@ def test_list_deployments_returns_compact_summaries(tmp_path: Path) -> None:
     assert "bindings" not in result["deployments"][0]
 
 
-def test_list_deployments_returns_empty_without_artifact_store(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_list_deployments_returns_empty_without_artifact_store(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_no_store")
     _api, service = _deployment_api(artifact_store)
     context = replace(context_from_service(service), artifact_store=None)
     api = WorkflowDeploymentApi(context)
 
-    result = asyncio.run(api.list_deployments())
+    result = await api.list_deployments()
 
     assert result["deployments"] == []
 
 
-def test_delete_deployment_removes_one(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_delete_deployment_removes_one(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_delete")
     api, _service = _deployment_api(artifact_store)
     artifact_store.save_deployment(
@@ -163,14 +165,15 @@ def test_delete_deployment_removes_one(tmp_path: Path) -> None:
         )
     )
 
-    result = asyncio.run(api.delete_deployment(deployment_id="echo.personal"))
+    result = await api.delete_deployment(deployment_id="echo.personal")
 
     assert result["deployment_id"] == "echo.personal"
     assert result["deleted"] is True
     assert artifact_store.list_deployments() == []
 
 
-def test_validate_deployment_returns_runnable_for_valid_binding(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_validate_deployment_returns_runnable_for_valid_binding(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_validate_runnable")
     api, service = _deployment_api(artifact_store, register_echo=True)
     artifact_store.save_artifact(_echo_artifact())
@@ -183,9 +186,7 @@ def test_validate_deployment_returns_runnable_for_valid_binding(tmp_path: Path) 
         )
     )
 
-    result = asyncio.run(
-        api.validate_deployment(deployment_id="echo.personal", live_check=False)
-    )
+    result = await api.validate_deployment(deployment_id="echo.personal", live_check=False)
 
     assert result["status"] == "runnable"
     assert result["diagnostics"] == []
@@ -200,7 +201,8 @@ class FailingLivenessAdapter:
         raise OSError("stdio process exited")
 
 
-def test_validate_deployment_live_check_calls_live_checker(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_validate_deployment_live_check_calls_live_checker(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_validate_live")
     api, service = _deployment_api(artifact_store, register_echo=True)
     artifact_store.save_artifact(_echo_artifact())
@@ -217,15 +219,14 @@ def test_validate_deployment_live_check_calls_live_checker(tmp_path: Path) -> No
         cast(BackendAdapter, FailingLivenessAdapter()),
     )
 
-    result = asyncio.run(
-        api.validate_deployment(deployment_id="echo.personal", live_check=True)
-    )
+    result = await api.validate_deployment(deployment_id="echo.personal", live_check=True)
 
     assert result["status"] == "unrunnable"
     assert result["diagnostics"][0]["code"] == "source_unreachable"
 
 
-def test_handler_delegation_for_validate_deployment(tmp_path: Path) -> None:
+@pytest.mark.asyncio
+async def test_handler_delegation_for_validate_deployment(tmp_path: Path) -> None:
     """WorkflowSurfaceHandlers.validate_deployment delegates to WorkflowDeploymentApi."""
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_delegation")
     service = WfMcpService(
@@ -246,8 +247,8 @@ def test_handler_delegation_for_validate_deployment(tmp_path: Path) -> None:
     context = context_from_service(service)
     api = WorkflowDeploymentApi(context)
 
-    handler_result = asyncio.run(h.validate_deployment(deployment_id="echo.personal"))
-    api_result = asyncio.run(api.validate_deployment(deployment_id="echo.personal"))
+    handler_result = await h.validate_deployment(deployment_id="echo.personal")
+    api_result = await api.validate_deployment(deployment_id="echo.personal")
 
     assert handler_result["status"] == api_result["status"]
     assert len(handler_result["diagnostics"]) == len(api_result["diagnostics"])

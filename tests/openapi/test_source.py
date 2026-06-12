@@ -96,7 +96,7 @@ def test_openapi_source_can_be_registered_and_inspected_by_service(
     )
 
 
-def test_source_node_passes_operation_config_and_payload_to_execution(
+async def test_source_node_passes_operation_config_and_payload_to_execution(
     monkeypatch,
 ) -> None:
     captured: dict[str, Any] = {}
@@ -137,7 +137,7 @@ def test_source_node_passes_operation_config_and_payload_to_execution(
             RuntimeContext(current_node_id="petstore.default.get_pet"),
         )
 
-    asyncio.run(run_handler())
+    await run_handler()
 
     operation = captured["operation"]
     config = captured["config"]

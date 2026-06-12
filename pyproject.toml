@@ -34,7 +34,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-p no:cacheprovider -n auto --basetemp .pytest-tmp"
+addopts = "-p no:cacheprovider -n auto --basetemp .pytest-tmp" # in-workspace temp dir
 pythonpath = ["."]
 asyncio_mode = "auto"
 
@@ -42,7 +42,7 @@ asyncio_mode = "auto"
 package = true
 
 [tool.basedpyright]
-typeCheckingMode = "basic"
+typeCheckingMode = "basic" # too many errors
 
 [tool.ruff.format]
 preview = false
