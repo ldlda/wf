@@ -8,6 +8,8 @@ implementation plans are kept for context, not as active instructions.
 
 - [`project_map.md`](project_map.md): package map, entrypoints, examples, tests,
   and verification commands.
+- [`add/2026-06-workflow-platform-presentation.md`](add/2026-06-workflow-platform-presentation.md):
+  concise presentation narrative for the current product shape and demo flow.
 - [`current_roadmap.md`](current_roadmap.md): active next-work list after the
   core type-shape cleanup.
 - [`wf_core_architecture.md`](wf_core_architecture.md): kernel package

@@ -7,6 +7,9 @@ paths should go through `wf_server` plus transport/source packages.
 For the source-provider-specific map, see
 [`source_architecture.md`](source_architecture.md).
 
+For a presentation-oriented summary of the current product path and demo flow,
+see [`workflow platform presentation`](add/2026-06-workflow-platform-presentation.md).
+
 ## Packages
 
 | Package | Purpose | Usual callers |
