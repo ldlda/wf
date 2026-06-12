@@ -10,7 +10,19 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from wf_api.auth import AuthRecord as NeutralAuthRecord
+import httpx
+
+from wf_api.auth import (
+    AuthRecord as NeutralAuthRecord,
+)
+from wf_api.auth import (
+    BearerAuth,
+    EnvAuth,
+    HeaderAuth,
+    OAuthRefreshTokenAuth,
+    OpaqueAuth,
+    StoredAuthRecord,
+)
 from wf_artifacts import DependencyDiagnostic, DiagnosticSeverity
 
 
@@ -145,8 +157,78 @@ def connection_auth_diagnostic(
     )
 
 
+@dataclass(frozen=True, slots=True)
+class OAuthAccessToken:
+    access_token: str
+    expires_in: int | None = None
+
+
+class OAuthTokenRefresher(Protocol):
+    async def refresh(self, auth: OAuthRefreshTokenAuth) -> OAuthAccessToken: ...
+
+
+@dataclass(frozen=True, slots=True)
+class BoundMcpHttpAuth:
+    headers: dict[str, str] = field(default_factory=dict)
+    auth: httpx.Auth | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class BoundMcpStdioAuth:
+    env: dict[str, str] = field(default_factory=dict)
+
+
+class McpAuthBinder:
+    def __init__(self, oauth_refresher: OAuthTokenRefresher | None = None) -> None:
+        self._oauth_refresher = oauth_refresher
+
+    async def bind_http_auth(
+        self,
+        record: StoredAuthRecord | None,
+    ) -> BoundMcpHttpAuth:
+        if record is None:
+            return BoundMcpHttpAuth()
+        auth = record.auth
+        if isinstance(auth, BearerAuth):
+            return BoundMcpHttpAuth(
+                headers={"Authorization": f"Bearer {auth.access_token}"}
+            )
+        if isinstance(auth, HeaderAuth):
+            return BoundMcpHttpAuth(headers=dict(auth.headers))
+        if isinstance(auth, OAuthRefreshTokenAuth):
+            if self._oauth_refresher is None:
+                raise ValueError("oauth_refresh_token requires an OAuthTokenRefresher")
+            token = await self._oauth_refresher.refresh(auth)
+            return BoundMcpHttpAuth(
+                headers={"Authorization": f"Bearer {token.access_token}"}
+            )
+        if isinstance(auth, EnvAuth):
+            raise ValueError("env auth is not supported for MCP HTTP")
+        if isinstance(auth, OpaqueAuth):
+            raise ValueError(f"opaque auth scheme {auth.scheme!r} is not supported for MCP HTTP")
+        raise TypeError(f"unsupported auth variant {type(auth).__name__}")
+
+    async def bind_stdio_auth(
+        self,
+        record: StoredAuthRecord | None,
+    ) -> BoundMcpStdioAuth:
+        if record is None:
+            return BoundMcpStdioAuth()
+        auth = record.auth
+        if isinstance(auth, EnvAuth):
+            return BoundMcpStdioAuth(env=dict(auth.env))
+        if isinstance(auth, BearerAuth | HeaderAuth | OAuthRefreshTokenAuth | OpaqueAuth):
+            raise ValueError(f"{auth.kind} auth is not supported for MCP stdio")
+        raise TypeError(f"unsupported auth variant {type(auth).__name__}")
+
+
 __all__ = [
     "AuthRecord",
+    "BoundMcpHttpAuth",
+    "BoundMcpStdioAuth",
+    "McpAuthBinder",
+    "OAuthAccessToken",
+    "OAuthTokenRefresher",
     "auth_missing_diagnostic",
     "auth_ref_for_connection",
     "connection_auth_diagnostic",
