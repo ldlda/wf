@@ -135,6 +135,7 @@ This DTO is imported by:
 **File:** `src/wf_mcp/connections.py:11-25`
 
 Used by:
+
 - `wf_sources_mcp.source_registry` (runtime import, line 32)
 - `wf_sources_mcp.storage.store` (runtime import inside `_connection_path`, line 132)
 - `wf_mcp.connections` (canonical home)
@@ -150,6 +151,7 @@ RESERVED_CONNECTION_IDS = frozenset({ADMIN_NAMESPACE, "wf.mcp"})
 ```
 
 Used by:
+
 - `wf_sources_mcp.source_registry` (runtime import, line 33)
 - `wf_mcp.broker.service.connection_service` (runtime import, line 14)
 
@@ -158,10 +160,12 @@ Used by:
 ### Blocker 4: `McpSdkAdapter` transport-opening duplication
 
 **Files:**
+
 - `src/wf_mcp/runtime/factory.py:43-90` (`_create_with_stack`)
 - `src/wf_mcp/sdk/adapter.py:34-75` (`_session`)
 
 Both methods contain nearly identical logic for:
+
 - Reading `connection.metadata["transport"]` to select stdio vs streamable HTTP
 - Creating `StdioServerParameters` and calling `stdio_client`
 - Creating `httpx.AsyncClient` and calling `streamable_http_client`
@@ -185,6 +189,7 @@ The difference: factory.py owns the session long-term (persistent actor pattern)
 **File:** `src/wf_mcp/events/models.py`
 
 `McpEvent` is used by:
+
 - `UpstreamTransportService` (event_sink)
 - `SourceCatalogService` (emit_event)
 - `BrokerEventRecorder` (event_bus)
@@ -218,6 +223,7 @@ The transport-opening logic appears in two places:
    - Used for one-shot per-call sessions (discovery, admin operations)
 
 Both import from the same MCP SDK modules:
+
 - `mcp.client.stdio.StdioServerParameters`, `stdio_client`
 - `mcp.client.streamable_http.streamable_http_client`
 - `mcp.client.session.ClientSession`
@@ -226,6 +232,7 @@ Both import from the same MCP SDK modules:
 #### Which client operations are supported by one-shot adapter but not persistent runtime?
 
 The `BackendAdapter` protocol (`wf_sources_mcp.sdk.protocols:26-88`) defines:
+
 - `list_tools`, `list_resources`, `list_prompts`
 - `get_connection_metadata`
 - `read_resource`, `get_prompt`
@@ -233,10 +240,12 @@ The `BackendAdapter` protocol (`wf_sources_mcp.sdk.protocols:26-88`) defines:
 - `call_tool`
 
 The `PersistentMcpSession` (`runtime/session.py:19-49`) only exposes:
+
 - `call_tool`
 - `close`
 
 The `McpRuntimePool` (`runtime/pool.py:43-96`) only exposes:
+
 - `get_session` (returns `PersistentMcpSession`)
 - `call_tool`
 - `close_connection`, `close_all`
@@ -248,11 +257,13 @@ This is intentional -- persistent sessions exist for workflow execution (tool ca
 #### What common `McpClientSession` / `McpClientSessionFactory` interface should exist?
 
 Both factory.py and adapter.py share:
+
 1. Transport selection logic (stdio vs streamable HTTP)
 2. Auth application (env vars for stdio, headers for HTTP)
 3. Session creation and initialization
 
 A shared `open_mcp_session` helper should:
+
 - Accept a connection descriptor (transport type, command/url, env/headers) and optional auth
 - Return an initialized `ClientSession` (or yield it)
 - Be used by both `PersistentSessionFactory._create_with_stack` and `McpSdkAdapter._session`
@@ -272,6 +283,7 @@ The connection descriptor should NOT be `ConnectionConfig` directly -- it should
 #### What is truly MCP-source-provider logic vs broker/catalog projection logic?
 
 **MCP-source-provider logic** (belongs in `wf_sources_mcp`):
+
 - Transport opening (stdio, streamable HTTP) -- currently in `factory.py` and `adapter.py`
 - Auth application (env vars, headers) -- already in `wf_sources_mcp.auth`
 - `BackendAdapter` protocol and `ToolExecutor` protocol -- already in `wf_sources_mcp.sdk`
@@ -282,6 +294,7 @@ The connection descriptor should NOT be `ConnectionConfig` directly -- it should
 - Source registry models -- already in `wf_sources_mcp.source_registry`
 
 **Broker/catalog projection logic** (stays in `wf_mcp`):
+
 - `UpstreamTransportService` -- wraps `BackendAdapter` with auth loading, event recording, catalog refresh orchestration
 - `SourceCatalogService` -- manages `CapabilitySource` registrations, catalog hydration, source inventory
 - `discover_connection_capabilities` -- orchestrates adapter calls and wraps results
@@ -342,6 +355,7 @@ The runtime code (`factory.py`, `adapter.py`) reads these fields from `Connectio
 | `url` | `factory.py:71`, `adapter.py:62` | HTTP transport URL |
 
 A `SourceTransport` union type already exists in `wf_sources_mcp.source_registry:53-69`:
+
 ```python
 class StdioSourceTransport(SourceRegistryBaseModel):
     kind: Literal["stdio"] = "stdio"
@@ -356,6 +370,7 @@ class HttpSourceTransport(SourceRegistryBaseModel):
 ```
 
 The runtime code should consume a `SourceConnection` protocol that exposes:
+
 - `id: str`
 - `transport: StdioSourceTransport | HttpSourceTransport` (or a discriminated union)
 - No `metadata: dict[str, Any]` bag
@@ -378,6 +393,7 @@ This would eliminate the `connection.metadata.get("transport", "stdio")` pattern
 #### What is MCP frontend transport vs old compatibility facade?
 
 **MCP frontend transport** (FastMCP server + proxy + tool registration):
+
 - `server/core.py` -- creates `FastMCP` server, wires everything
 - `proxy/runtime.py` -- `ProxyRuntime` mounts upstream connections as FastMCP proxies
 - `proxy/mounts.py` -- `ProxyMountRegistry`, `create_proxy_mount`, `ResilientFastMCPProxy`
@@ -388,6 +404,7 @@ This would eliminate the `connection.metadata.get("transport", "stdio")` pattern
 - `shared/names.py` -- `ProxyNamespace`, `ADMIN_NAMESPACE`, namespace helpers
 
 **Old compatibility facade** (re-export shims and `WfMcpService`):
+
 - `auth.py` -- re-exports from `wf_sources_mcp.auth`
 - `models.py` -- re-exports broker models
 - `capabilities.py` -- re-exports from `wf_sources_mcp.catalog.entries`
@@ -442,22 +459,26 @@ Ordered smallest-safe-first.
 **Goal:** Break the TYPE_CHECKING dependency from `wf_sources_mcp.sdk.protocols` and `wf_sources_mcp.auth` on `wf_mcp.broker.models.ConnectionConfig` by defining a transport-level protocol that captures what runtime code actually needs.
 
 **Files likely touched:**
+
 - `src/wf_sources_mcp/sdk/protocols.py` -- add `SourceConnection` protocol, update `BackendAdapter` and `ToolExecutor` signatures
 - `src/wf_sources_mcp/auth.py` -- update `auth_ref_for_connection` and `connection_auth_diagnostic` to accept protocol
 - `src/wf_sources_mcp/source_registry.py` -- update TYPE_CHECKING import
 - `src/wf_mcp/broker/models.py` -- make `ConnectionConfig` implement the protocol (no structural change needed, just verify compatibility)
 
 **Tests likely needed:**
+
 - Protocol conformance test: `ConnectionConfig` satisfies `SourceConnection`
 - Verify `BackendAdapter` and `ToolExecutor` protocols still typecheck with `ConnectionConfig`
 
 **What must NOT change:**
+
 - `ConnectionConfig` fields/shape
 - `BackendAdapter` method signatures (only the type of `connection` parameter changes)
 - Any broker service code
 - Any proxy/server code
 
 **Migration/shim strategy:**
+
 - `SourceConnection` is a new protocol, not a replacement. `ConnectionConfig` already satisfies it structurally.
 - Existing `TYPE_CHECKING` imports in `wf_sources_mcp` become `SourceConnection` protocol imports.
 - If any runtime code needs fields beyond the protocol (e.g., `source_config_ownership`), those stay on `ConnectionConfig` and are accessed through a cast or separate parameter.
@@ -469,6 +490,7 @@ Ordered smallest-safe-first.
 **Goal:** Remove the runtime import dependency from `wf_sources_mcp` on `wf_mcp.connections` and `wf_mcp.shared.names`.
 
 **Files likely touched:**
+
 - `src/wf_sources_mcp/source_registry.py` -- replace imports, move validation logic
 - `src/wf_sources_mcp/storage/store.py` -- replace `parse_connection_id` import
 - `src/wf_mcp/connections.py` -- make `parse_connection_id` a re-export shim
@@ -476,15 +498,18 @@ Ordered smallest-safe-first.
 - `src/wf_mcp/broker/service/connection_service.py` -- update import path
 
 **Tests likely needed:**
+
 - Existing tests for `parse_connection_id` should still pass
 - Verify `FileCatalogStore._connection_path` still validates connection IDs
 
 **What must NOT change:**
+
 - Validation logic (same regex, same error messages)
 - `RESERVED_CONNECTION_IDS` values
 - Any broker service behavior
 
 **Migration/shim strategy:**
+
 - Move `CONNECTION_ID_PATTERN`, `parse_connection_id` to `wf_sources_mcp.source_registry` or a new `wf_sources_mcp.validation` module.
 - `wf_mcp.connections` becomes a re-export shim: `from wf_sources_mcp.source_registry import parse_connection_id`
 - `RESERVED_CONNECTION_IDS` moves to `wf_sources_mcp.source_registry` (it's already imported there).
@@ -498,17 +523,20 @@ Ordered smallest-safe-first.
 **Goal:** Eliminate the transport-opening duplication between `runtime/factory.py` and `sdk/adapter.py` by extracting a shared helper.
 
 **Files likely touched:**
+
 - New: `src/wf_sources_mcp/sdk/transport.py` -- `open_mcp_session` async context manager
 - `src/wf_mcp/runtime/factory.py` -- use `open_mcp_session` in `_create_with_stack`
 - `src/wf_mcp/sdk/adapter.py` -- use `open_mcp_session` in `_session`
 
 **Tests likely needed:**
+
 - Unit test for `open_mcp_session` with mock transport
 - Verify `PersistentSessionFactory` still creates persistent sessions correctly
 - Verify `McpSdkAdapter` still creates one-shot sessions correctly
 - Test error handling (unsupported transport, auth failures)
 
 **What must NOT change:**
+
 - `PersistentMcpSession` API
 - `McpRuntimePool` behavior
 - `McpSdkAdapter` method signatures
@@ -516,6 +544,7 @@ Ordered smallest-safe-first.
 - Event emission patterns
 
 **Migration/shim strategy:**
+
 - `open_mcp_session` accepts a `SourceConnection` (from Slice 0) and `AuthRecord | None`.
 - Returns an async context manager yielding `ClientSession`.
 - Both `factory.py` and `adapter.py` call this helper instead of duplicating transport logic.
@@ -528,6 +557,7 @@ Ordered smallest-safe-first.
 **Goal:** Move the persistent MCP runtime into the source provider package where it belongs.
 
 **Files likely touched:**
+
 - New: `src/wf_sources_mcp/runtime/__init__.py` -- package init
 - New: `src/wf_sources_mcp/runtime/factory.py` -- moved from `wf_mcp/runtime/factory.py`
 - New: `src/wf_sources_mcp/runtime/session.py` -- moved from `wf_mcp/runtime/session.py`
@@ -540,11 +570,13 @@ Ordered smallest-safe-first.
 - `src/wf_mcp/broker/service/core.py` -- update import path (if any)
 
 **Tests likely needed:**
+
 - All existing `test_stateful_runtime.py` tests must pass unchanged
 - Verify `CrashingSessionFactory` subclass still works
 - Verify `McpRuntimePool` fingerprint logic still works
 
 **What must NOT change:**
+
 - `PersistentMcpSession` API (connection, auth, call_tool, close)
 - `McpRuntimePool` API (get_session, call_tool, close_connection, close_all)
 - `PersistentSessionFactory.create` signature
@@ -552,6 +584,7 @@ Ordered smallest-safe-first.
 - Any event emission or broker orchestration
 
 **Migration/shim strategy:**
+
 - `wf_mcp.runtime` becomes a re-export shim: `from wf_sources_mcp.runtime import ...`
 - `wf_mcp.runtime.protocols.ToolExecutor` already re-exports from `wf_sources_mcp.sdk`
 - Tests import from `wf_mcp.runtime` still work via shims
@@ -564,6 +597,7 @@ Ordered smallest-safe-first.
 **Goal:** Consolidate the one-shot MCP adapter into the source provider SDK.
 
 **Files likely touched:**
+
 - New: `src/wf_sources_mcp/sdk/adapter.py` -- moved from `wf_mcp/sdk/adapter.py`
 - `src/wf_mcp/sdk/adapter.py` -- becomes re-export shim
 - `src/wf_mcp/sdk/__init__.py` -- update re-exports
@@ -571,15 +605,18 @@ Ordered smallest-safe-first.
 - `src/wf_mcp/server/core.py` -- update import path
 
 **Tests likely needed:**
+
 - Existing `test_sdk_adapter.py` tests must pass
 - Verify `McpSdkAdapter` still implements `BackendAdapter`
 
 **What must NOT change:**
+
 - `McpSdkAdapter` method signatures
 - `BackendAdapter` protocol
 - Any broker service code
 
 **Migration/shim strategy:**
+
 - `wf_mcp.sdk.adapter.McpSdkAdapter` re-exports from `wf_sources_mcp.sdk.adapter`
 - `wf_mcp.sdk.__init__` keeps exporting `McpSdkAdapter`
 
@@ -590,6 +627,7 @@ Ordered smallest-safe-first.
 **Goal:** Replace the `metadata: dict[str, Any]` bag in `ConnectionConfig` with a typed transport DTO for source-provider code.
 
 **Files likely touched:**
+
 - `src/wf_sources_mcp/source_registry.py` -- add `SourceConnection` dataclass
 - `src/wf_mcp/runtime/factory.py` -- accept `SourceConnection` instead of `ConnectionConfig`
 - `src/wf_mcp/sdk/adapter.py` -- accept `SourceConnection` instead of `ConnectionConfig`
@@ -597,16 +635,19 @@ Ordered smallest-safe-first.
 - Conversion helpers in `wf_sources_mcp.source_registry`
 
 **Tests likely needed:**
+
 - Conversion test: `ConnectionConfig` -> `SourceConnection`
 - Round-trip test for fingerprint stability
 - Verify `McpRuntimePool` fingerprint changes correctly
 
 **What must NOT change:**
+
 - `ConnectionConfig` shape (it's still the broker DTO)
 - Broker service behavior
 - Proxy/server behavior
 
 **Migration/shim strategy:**
+
 - `SourceConnection` is a new typed DTO in `wf_sources_mcp`.
 - `ConnectionConfig` gains a `to_source_connection() -> SourceConnection` method or a standalone converter.
 - Runtime code (`factory.py`, `adapter.py`, `pool.py`) accepts `SourceConnection`.
@@ -620,6 +661,7 @@ Ordered smallest-safe-first.
 **Goal:** Remove all compatibility re-export shims from `wf_mcp` once all callers import from canonical packages.
 
 **Files likely touched:**
+
 - `src/wf_mcp/auth.py` -- delete or leave empty
 - `src/wf_mcp/capabilities.py` -- delete or leave empty
 - `src/wf_mcp/source_registry.py` -- delete or leave empty
@@ -629,14 +671,17 @@ Ordered smallest-safe-first.
 - `src/wf_mcp/__init__.py` -- simplify
 
 **Tests likely needed:**
+
 - Verify all existing imports still work (or update them)
 - `test_compat_imports.py` should pass or be updated
 
 **What must NOT change:**
+
 - Any runtime behavior
 - Any broker service behavior
 
 **Migration/shim strategy:**
+
 - This is the final cleanup after all other slices are complete.
 - Search for all `from wf_mcp.auth import` etc. and update to canonical paths.
 - Leave shims in place for one release cycle, then remove.
@@ -648,11 +693,13 @@ Ordered smallest-safe-first.
 **No.** A typed client/session seam must come first.
 
 Reasons:
+
 1. `PersistentSessionFactory._create_with_stack` reads `connection.metadata["transport"]`, `connection.metadata["command"]`, etc. These are `dict[str, Any]` bag accesses that should be replaced by typed protocol access.
 2. `PersistentMcpSession` holds `connection: ConnectionConfig` directly. If factory moves to `wf_sources_mcp`, it drags `ConnectionConfig` (and therefore `wf_mcp.broker.models`) into the source provider package at runtime.
 3. The `PersistentSessionFactory.create` method returns `PersistentMcpSession` which stores `connection: ConnectionConfig`. Without the protocol, this creates a circular import.
 
 **Correct order:**
+
 1. Slice 0: Define `SourceConnection` protocol
 2. Slice 1: Move `parse_connection_id` / `RESERVED_CONNECTION_IDS`
 3. Slice 2: Extract `open_mcp_session` helper

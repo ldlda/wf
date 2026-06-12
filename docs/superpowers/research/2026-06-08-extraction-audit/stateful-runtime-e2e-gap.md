@@ -26,6 +26,7 @@ JSON-RPC request
 ```
 
 **Key files:**
+
 - `src/wf_transport_rpc_http/methods_capabilities.py` - RPC entry point
 - `src/wf_mcp/broker/service/workflow_operation_context.py:78-86` - context_from_service
 - `src/wf_mcp/broker/service/source_catalog.py:257-298` - spec_from_snapshot_entry (hydrated specs)
@@ -46,6 +47,7 @@ ContentAccessService.read_resource(qualified_name)
 ```
 
 **Key files:**
+
 - `src/wf_mcp/broker/service/content_access.py:30-52` - read_resource()
 - `src/wf_mcp/broker/service/upstream_transport.py:97-126` - read_resource()
 
@@ -61,6 +63,7 @@ ContentAccessService.render_prompt(qualified_name, arguments)
 ```
 
 **Key files:**
+
 - `src/wf_mcp/broker/service/content_access.py:54-82` - render_prompt()
 - `src/wf_mcp/broker/service/upstream_transport.py:128-163` - render_prompt()
 
@@ -264,6 +267,7 @@ uv run ruff format
 **Gap:** No JSON-RPC-specific test proves this reuse. Existing tests cover MCP client path and unit-level pool behavior, but not the full RPC transport stack.
 
 **Smallest Fix:** Add one e2e test in `test_mcp_backed_server_rpc.py` that:
+
 1. Builds server from config
 2. Makes two `call_capability` RPC requests
 3. Asserts pool has exactly 1 session (not 2)

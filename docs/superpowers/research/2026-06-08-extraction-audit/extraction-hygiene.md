@@ -17,6 +17,7 @@ self-contained** -- it imports nothing from `wf_mcp` at runtime or
 `TYPE_CHECKING`. The dependency direction is exclusively `wf_mcp` -> `wf_sources_mcp`.
 
 Key achievements since the 2026-06-07 research map:
+
 - `parse_connection_id` and `RESERVED_CONNECTION_IDS` are canonical in
   `wf_sources_mcp.ids` (no more `wf_mcp.connections` or `wf_mcp.shared.names`
   dependency).
@@ -38,7 +39,7 @@ future-work boundary decisions. Nothing is a correctness issue today.
 **File:** `src/wf_mcp/sdk/base.py:1-4`
 **Content:** `"""Compatibility shim for MCP upstream SDK protocol/result types.\nCanonical implementation lives in \`wf_sources_mcp.sdk\`."""`
 **Status:** Stale. The docstring says canonical lives in `wf_sources_mcp.sdk`, which is
-correct, but `wf_mcp.sdk.base` is not referenced by any other code. It is a
+correct, but`wf_mcp.sdk.base` is not referenced by any other code. It is a
 dead re-export module.
 
 **Category:** hygiene
@@ -288,6 +289,7 @@ scan the early items.
 
 **File:** `docs/superpowers/research/2026-06-07-wf-mcp-runtime-source-provider-map.md`
 **Lines 549-650 (Slice 0-6):** The recommended next slices are now mostly completed:
+
 - Slice 0 (SourceConnection protocol): Completed via `McpSourceConnection`
 - Slice 1 (parse_connection_id move): Completed to `wf_sources_mcp.ids`
 - Slice 2 (open_mcp_session): Completed in `wf_sources_mcp.client.transport`

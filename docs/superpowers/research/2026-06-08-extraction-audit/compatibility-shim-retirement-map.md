@@ -108,7 +108,7 @@ These shims exist solely for the test_compat_imports.py regression suite. They c
 
 These are `wf_mcp` modules (not shims) that import from `wf_sources_mcp` directly but could instead import through the shim or vice versa. The inconsistency means some internal callers use the shim while the "real" code uses canonical. This is fine architecturally but creates confusion.
 
-### Production imports currently going through shims (should switch to canonical):
+### Production imports currently going through shims (should switch to canonical)
 
 | File | Current Import | Should Import From |
 |---|---|---|
@@ -127,7 +127,7 @@ These are `wf_mcp` modules (not shims) that import from `wf_sources_mcp` directl
 | `wf_mcp.server.core` | `from wf_sources_mcp.sdk import McpSdkAdapter` | Already canonical |
 | `wf_mcp.server.core` | `from wf_sources_mcp.source_registry import FileSourceRegistryStore` | Already canonical |
 
-### Production imports that are already canonical (no change needed):
+### Production imports that are already canonical (no change needed)
 
 - `wf_mcp.broker.config` → `wf_sources_mcp.runtime`, `wf_sources_mcp.sdk`, `wf_sources_mcp.source_registry`, `wf_sources_mcp.storage`
 - `wf_mcp.broker.server` → `wf_sources_mcp.sdk`, `wf_sources_mcp.source_registry`
@@ -159,6 +159,7 @@ These three changes remove the internal dependency chain where `wf_mcp.broker.se
 **Goal:** Mark shims that have NO production callers (only test_compat_imports) as deprecated.
 
 Candidates:
+
 - `wf_mcp.sdk.base`
 - `wf_mcp.sdk.converters`
 - `wf_mcp.runtime.protocols`

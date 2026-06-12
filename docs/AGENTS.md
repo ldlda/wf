@@ -63,9 +63,12 @@ they see old plans.
 
 ## (caution: unstable) markdown formatting
 
-use `pnpx markdownlint-cli --fix '(glob the md)'`
+use `pnpx markdownlint-cli(2) --fix '(glob the md)'`
+<!-- ill need to setup cli2 -->
 
 Note that this will mess things up, if you dont already follow the strict rules of markdownlint
+
+use `git restore docs/historical` afterwards
 
 ### pitfall
 
