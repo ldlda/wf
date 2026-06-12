@@ -14,6 +14,8 @@ implementation plans are kept for context, not as active instructions.
   boundaries, runtime flow, validation flow, and known runtime gaps.
 - [`wf_api_architecture.md`](wf_api_architecture.md): workflow application API,
   server/transport boundaries, and source package split.
+- [`source_architecture.md`](source_architecture.md): source provider package
+  map for built-in, MCP, Python, and future source families.
 - [`wf_mcp_architecture.md`](wf_mcp_architecture.md): MCP package boundaries,
   dependency rules, reload/proxy behavior, and extraction seams.
 

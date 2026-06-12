@@ -1,80 +1,62 @@
-# Agent guide
+# Agent Guide
 
-## pitfalls / guide
+## Runtime And Syntax
 
-### tech stack
+- Python baseline is 3.14 (`requires-python = ">=3.14"`).
+- Python 3.14 syntax is allowed. Do not rewrite valid new syntax just because it
+  looks unusual.
+- Example: Parentheses-Free Exceptions (PEP 758).
 
-Python baseline is 3.14 (`requires-python = ">=3.14"`). Python 3.14 syntax is allowed; do not "fix" valid new syntax just because it looks unusual.
+## Code Organization
 
-Example new syntax:
+- Prefer focused packages/modules over large flat files when adding new areas.
+- Preserve current package boundaries. If unsure, check `docs/project_map.md`
+  and `docs/source_architecture.md`.
+- Put related files in folders from the start when the area is likely to grow.
+  Example: prefer `src/pack/foo/bar.py` over adding many unrelated
+  `src/pack/foo_bar.py` files.
 
-- Parentheses-Free Exceptions (PEP 758) <!-- coderabbit! -->
+## Tests
 
-### extra fields
+- Prefer pytest `tmp_path` for test-local filesystem state.
+- Avoid fixed paths under `local_temp_root()` unless the test explicitly needs
+  cross-process persistence and cleans up after itself.
+- Prefer `async def test_x()` with pytest-asyncio over
+  `def test_x(): async def scenario(): ...; asyncio.run(scenario())`.
+- Prefer field-level assertions like `actual["field"] == expected["field"]`
+  over whole-object equality unless extra fields are intentionally forbidden.
+- Scope test runs. This repo is large; broad test commands can be slow.
 
-prefer asserts actual['field'] == expected['field'] over assert actual == expected unless we know better (eg. no extra fields allowed)
-
-### tests
-
-Prefer pytest `tmp_path` for test-local filesystem state. Avoid fixed paths under `local_temp_root()` for tests that create durable files unless the test explicitly cleans or needs cross-process persistence; stale files there can change later test runs. (almost never the case btw)
-
-Now that pytest-asyncio is installed, prefer `async def test_x()`
-instead of `def test_x(): async def scenario(): ...; asyncio.run(scenario())`
-
-### mgmt
-
-More packages please. we spent a while cleaning flatten packages/modules; putting files of similar interests in folders and sub-folders.
-example: some of tests/ and some packages. (simple example: src/pack/foo_bar.py -> src/pack/foo/bar.py)
-
-Lets just do that from the start this time, ok?
-
-### Docs mgmt 
-
-read docs/AGENTS.md
-
-more later
-
-## Test suite
+## Verification Commands
 
 ```bash
-uv run /* --env-file .env */ pytest -q
-uv run ruff check; uv run ruff format
-uv run basedpyright # --level error # to cut spam if typeCheckingMode = "recommended", but its "basic" now
-## maybe uvx ty
+uv run pytest -q
+uv run ruff check
+uv run ruff format
+uv run basedpyright --level error
 ```
 
-or so i think.
+Use `uv run --env-file .env pytest -q` when live MCP-backed tests need local
+environment configuration.
 
-### project is getting big
+## Docs
 
-scope your calls lads. else timeouts. not good for rapid testings
+- Before editing docs, read `docs/AGENTS.md`.
+- `docs/current_roadmap.md` is the live roadmap.
+- If docs mention a partial implementation, add a short comment or docstring at
+  the code seam too. Future agents see code before they see old plans.
 
-## code
+## Comments And Docstrings
 
-### docstrings/comment
+- Add comments/docstrings around weird or non-obvious logic.
+- Add docstrings explaining compound return types that otherwise say little,
+  for example `tuple[list[str], Any]`.
+- Polish common helper docs if you keep using the helper.
 
-- add docstrings or comments around weird or non-obvious logic.
-  - Add docstrings explaining compound return types that otherwise say nothing (e.g. `tuple[list[str], Any]`)
-- Polish the thing (at least its docs) if you keep using it (helper fn, common class)
+## Skills And Tools
 
-### partial impls
-
-If code has a partial implementation and docs mention the limitation, add a
-short comment or docstring at the code seam too. Future agents see code before
-they see old plans.
-
-## skills
-
-im looking at you superpowers
-
-skills screaming at you IMPORTANT CRITICAL bs. Use your best judgements. maybe they are critical idk you tell me
-
-### mcp tools
-
-<!-- looking at you opencode/mimo -->
-`serena-agent` is likely set up. You want to use it for symbol discovery (akin to the `outline` tab in vscode)
-(maybe for symbol renames as well). It is a strong tool!
-
-if you reach for it to do general file editing, built-in tools may be better
-
-If you notice an MCP tool that seems irrelevant to the project or is cluttering your available tools, mention it so we can disable it.
+- Skills can be useful but can overstate urgency. Use judgment.
+- Serena is useful for symbol discovery and rename-like navigation. Prefer
+  built-in edit tools for ordinary file edits.
+- If an MCP tool is irrelevant to the project or clutters available tools,
+  mention it so it can be disabled.
