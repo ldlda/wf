@@ -4,6 +4,7 @@ from pathlib import Path
 
 import typer
 import uvicorn
+from dotenv import load_dotenv
 
 from wf_config import (
     FilesystemStoreConfig,
@@ -112,4 +113,5 @@ def serve(
 
 
 def main() -> None:
+    load_dotenv()
     app()

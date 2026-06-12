@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Annotated
 
 import typer
+from dotenv import load_dotenv
 
 from .commands import (
     admin,
@@ -86,4 +87,5 @@ app.command("status")(status.status_command)
 
 def main() -> None:
     """Console script entrypoint for `wf`."""
+    load_dotenv()
     app()

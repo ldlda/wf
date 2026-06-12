@@ -23,6 +23,19 @@ def test_wf_help_lists_lifecycle_groups() -> None:
     assert "explain" in result.output
 
 
+def test_wf_main_loads_dotenv_before_invoking_app(monkeypatch) -> None:
+    import wf_cli.app as mod
+
+    calls: list[str] = []
+
+    monkeypatch.setattr(mod, "load_dotenv", lambda: calls.append("dotenv"))
+    monkeypatch.setattr(mod, "app", lambda: calls.append("app"))
+
+    mod.main()
+
+    assert calls == ["dotenv", "app"]
+
+
 def test_wf_run_group_help_exists() -> None:
     result = runner.invoke(app, ["run", "--help"])
 
