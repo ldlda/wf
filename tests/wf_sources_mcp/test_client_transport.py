@@ -259,3 +259,63 @@ async def test_http_no_auth_creates_client_with_no_auth_headers(
 
     assert len(captured_clients) == 1
     assert "Authorization" not in captured_clients[0].headers
+
+
+@pytest.mark.asyncio
+async def test_open_mcp_session_uses_binder_for_http_headers(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from wf_api.auth import BearerAuth, StoredAuthRecord
+    from wf_sources_mcp.client.transport import open_mcp_session
+
+    captured_clients: list[Any] = []
+
+    class _CapturingClient:
+        def __init__(self, **kwargs: Any) -> None:
+            captured_clients.append(kwargs)
+
+        async def __aenter__(self) -> "_CapturingClient":
+            return self
+
+        async def __aexit__(self, *args: Any) -> None:
+            return None
+
+    import wf_sources_mcp.client.transport as mod
+
+    monkeypatch.setattr(mod.httpx, "AsyncClient", _CapturingClient)
+
+    connection = _http_connection()
+    auth = StoredAuthRecord(
+        id="google.drive.personal",
+        auth=BearerAuth(access_token="token"),
+    )
+
+    async with open_mcp_session(connection, auth):
+        pass
+
+    assert captured_clients[0]["headers"] == {"Authorization": "Bearer token"}
+
+
+@pytest.mark.asyncio
+async def test_open_mcp_session_uses_binder_for_stdio_env() -> None:
+    import wf_sources_mcp.client.transport as mod  # noqa: I001
+    from wf_api.auth import EnvAuth, StoredAuthRecord
+
+    captured_params: list[Any] = []
+
+    @asynccontextmanager
+    async def _capturing_stdio_client(
+        params: Any,
+    ) -> AsyncIterator[tuple[Any, Any]]:
+        captured_params.append(params)
+        yield "read", "write"
+
+    mod.stdio_client = _capturing_stdio_client  # type: ignore[assignment, ty:invalid-assignment]
+
+    connection = _stdio_connection(env={"BASE": "1"})
+    auth = StoredAuthRecord(id="demo.auth", auth=EnvAuth(env={"TOKEN": "abc"}))
+
+    async with open_mcp_session(connection, auth):
+        pass
+
+    assert captured_params[0].env == {"BASE": "1", "TOKEN": "abc"}

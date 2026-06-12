@@ -10,15 +10,29 @@ from mcp.client.session import ClientSession
 from mcp.client.stdio import StdioServerParameters, stdio_client
 from mcp.client.streamable_http import streamable_http_client
 
-from wf_sources_mcp.auth import AuthRecord, mcp_auth_env, mcp_auth_headers
+from wf_api.auth import StoredAuthRecord, auth_record_from_compat
+from wf_sources_mcp.auth import AuthRecord, McpAuthBinder
 from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.transports import HttpSourceTransport, StdioSourceTransport
+
+
+def _as_stored_auth(auth: AuthRecord | StoredAuthRecord | None) -> StoredAuthRecord | None:
+    if auth is None or isinstance(auth, StoredAuthRecord):
+        return auth
+    return auth_record_from_compat(
+        id=auth.connection_id,
+        scheme=auth.scheme,
+        payload=auth.payload,
+        metadata={},
+    )
 
 
 @asynccontextmanager
 async def open_mcp_session(
     connection: McpSourceConnection,
-    auth: AuthRecord | None,
+    auth: AuthRecord | StoredAuthRecord | None,
+    *,
+    auth_binder: McpAuthBinder | None = None,
 ) -> AsyncIterator[ClientSession]:
     """Open and initialize an MCP client session for the given connection.
 
@@ -35,11 +49,14 @@ async def open_mcp_session(
     if transport is None:
         raise ValueError(f"connection {connection.id!r} requires metadata.transport")
 
+    binder = auth_binder or McpAuthBinder()
+    stored_auth = _as_stored_auth(auth)
+
     if isinstance(transport, StdioSourceTransport):
-        auth_env = mcp_auth_env(auth)
+        bound = await binder.bind_stdio_auth(stored_auth)
         env = dict(transport.env)
-        if auth_env:
-            env = {**env, **auth_env}
+        if bound.env:
+            env = {**env, **bound.env}
         params = StdioServerParameters(
             command=transport.command,
             args=list(transport.args),
@@ -53,8 +70,11 @@ async def open_mcp_session(
         return
 
     if isinstance(transport, HttpSourceTransport):
-        headers = mcp_auth_headers(auth)
-        http_client = httpx.AsyncClient(headers=headers or None)
+        bound = await binder.bind_http_auth(stored_auth)
+        http_client = httpx.AsyncClient(
+            headers=bound.headers or None,
+            auth=bound.auth,
+        )
         async with http_client:
             async with streamable_http_client(
                 str(transport.url),
