@@ -80,6 +80,8 @@ class OAuthCodeLoginFlow:
         authorization_url, state = client.create_authorization_url(
             str(provider.auth_url),
             redirect_uri=provider.redirect_uri,
+            access_type="offline",
+            prompt="consent",
         )
         if authorization_url_callback is not None:
             callback_response = authorization_url_callback(authorization_url, state)

@@ -113,6 +113,8 @@ async def test_oauth_code_login_flow_uses_injected_client() -> None:
     client = clients[0]
     assert client.init_kwargs["redirect_uri"] == provider.redirect_uri
     assert client.auth_kwargs["redirect_uri"] == provider.redirect_uri
+    assert client.auth_kwargs["access_type"] == "offline"
+    assert client.auth_kwargs["prompt"] == "consent"
     assert client.fetch_calls == ["http://127.0.0.1/callback?code=abc&state=state-123"]
 
 
