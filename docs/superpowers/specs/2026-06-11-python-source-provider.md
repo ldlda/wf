@@ -56,6 +56,7 @@ Start with static config only:
 {
   "kind": "python",
   "id": "local.ops",
+  "path": ".",
   "module": "my_project.workflow_ops",
   "registry": "registry"
 }
@@ -119,7 +120,7 @@ Implemented:
 
 - `wf_config` accepts `server.sources[]` entries with `kind: "python"`.
 - `wf_sources_python` loads trusted in-process `NodeSpec` registries from
-  `module:registry`.
+  `path` plus `module:registry`.
 - `wf_server.config` composes Python sources into local/static servers.
 - Capability listing/calling works over JSON-RPC.
 

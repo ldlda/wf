@@ -77,7 +77,7 @@ McpSourceConnection
 For Python, the provider is simpler:
 
 ```text
-PythonSourceConfig(module, registry)
+PythonSourceConfig(path, module, registry)
   -> import module
   -> load NodeSpec registry
   -> qualify specs under source id

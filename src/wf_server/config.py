@@ -20,6 +20,7 @@ def _python_sources(config: WorkflowConfigFile) -> dict[str, CapabilitySource]:
     return {
         source.id: load_python_source(
             source_id=source.id,
+            path=source.path,
             module=source.module,
             registry=source.registry,
             enabled=source.enabled,

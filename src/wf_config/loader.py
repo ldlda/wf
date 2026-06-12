@@ -5,7 +5,9 @@ from pathlib import Path
 
 from .models import (
     FilesystemStoreConfig,
+    PythonSourceConfig,
     ServerStoresConfig,
+    SourceConfig,
     StoreConfig,
     WorkflowConfigFile,
 )
@@ -49,6 +51,10 @@ def _resolve_store_paths(
                 update={
                     "store": _resolve_store(server.store, base_dir=base_dir),
                     "stores": resolved_stores,
+                    "sources": _resolve_source_paths(
+                        server.sources,
+                        base_dir=base_dir,
+                    ),
                 }
             )
         }
@@ -63,3 +69,19 @@ def _resolve_store(
     if isinstance(store, FilesystemStoreConfig) and not store.root.is_absolute():
         return store.model_copy(update={"root": (base_dir / store.root).resolve()})
     return store
+
+
+def _resolve_source_paths(
+    sources: list[SourceConfig],
+    *,
+    base_dir: Path,
+) -> list[SourceConfig]:
+    resolved: list[SourceConfig] = []
+    for source in sources:
+        if isinstance(source, PythonSourceConfig) and not source.path.is_absolute():
+            resolved.append(
+                source.model_copy(update={"path": (base_dir / source.path).resolve()})
+            )
+        else:
+            resolved.append(source)
+    return resolved

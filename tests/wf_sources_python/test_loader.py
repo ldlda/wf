@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from wf_sources_python import load_python_source
@@ -32,6 +34,41 @@ def test_load_python_source_from_callable_registry() -> None:
         "local.ops.echo",
         "local.ops.upper",
     }
+
+
+def test_load_python_source_uses_configured_import_path(tmp_path: Path) -> None:
+    source_root = tmp_path / "source_root"
+    source_root.mkdir()
+    (source_root / "project_ops.py").write_text(
+        """
+from __future__ import annotations
+
+from pydantic import BaseModel
+from wf_authoring import node
+
+class EchoInput(BaseModel):
+    text: str
+
+class EchoOutput(BaseModel):
+    echoed: str
+
+@node(name="echo")
+def echo(payload: EchoInput) -> EchoOutput:
+    return EchoOutput(echoed=payload.text)
+
+registry = [echo]
+""",
+        encoding="utf-8",
+    )
+
+    source = load_python_source(
+        source_id="local.ops",
+        path=source_root,
+        module="project_ops",
+        registry="registry",
+    )
+
+    assert set(source.capabilities.node_specs) == {"local.ops.echo"}
 
 
 def test_load_python_source_propagates_enabled_flag() -> None:

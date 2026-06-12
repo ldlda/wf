@@ -406,8 +406,37 @@ def test_workflow_config_parses_python_source() -> None:
     source = config.server.sources[0]
     assert source.kind == "python"
     assert source.id == "local.ops"
+    assert source.path == Path(".")
     assert source.module == "tests.fixtures.python_source_ops"
     assert source.registry == "registry"
+
+
+def test_load_workflow_config_resolves_python_source_path(tmp_path: Path) -> None:
+    config_path = tmp_path / "wf.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "sources": [
+                        {
+                            "kind": "python",
+                            "id": "local.ops",
+                            "path": "src",
+                            "module": "project_ops",
+                        }
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    config = load_workflow_config(config_path)
+
+    source = config.server.sources[0]
+    assert source.kind == "python"
+    assert source.path == (tmp_path / "src").resolve()
 
 
 def test_server_config_resolves_missing_role_stores_to_default_store() -> None:

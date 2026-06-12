@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Mapping, Sequence
 from importlib import import_module
+from pathlib import Path
 from typing import Any, Protocol
 
 from wf_authoring import NodeSpec, node
@@ -15,6 +17,7 @@ from wf_platform import (
 
 class PythonSourceConfigLike(Protocol):
     id: str
+    path: Path
     module: str
     registry: str
     enabled: bool
@@ -26,8 +29,11 @@ def load_python_source(
     module: str,
     registry: str = "registry",
     enabled: bool = True,
+    path: str | Path | None = None,
 ) -> CapabilitySource:
     """Load a trusted in-process Python source from a module registry object."""
+    if path is not None:
+        _ensure_import_path(Path(path))
     module_obj = import_module(module)
     if not hasattr(module_obj, registry):
         raise ValueError(f"missing registry object {registry!r} in module {module!r}")
@@ -59,6 +65,7 @@ def load_python_source(
 def python_capability_source(config: PythonSourceConfigLike) -> CapabilitySource:
     return load_python_source(
         source_id=config.id,
+        path=config.path,
         module=config.module,
         registry=config.registry,
         enabled=config.enabled,
@@ -81,6 +88,13 @@ def _coerce_specs(raw_registry: object) -> list[NodeSpec[Any, Any]]:
             )
         specs.append(value)
     return specs
+
+
+def _ensure_import_path(path: Path) -> None:
+    """Keep configured trusted source roots importable for deferred imports."""
+    resolved = str(path.resolve())
+    if resolved not in sys.path:
+        sys.path.insert(0, resolved)
 
 
 def _qualify_spec(source_id: str, spec: NodeSpec[Any, Any]) -> NodeSpec[Any, Any]:

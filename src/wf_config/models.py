@@ -104,6 +104,7 @@ class PythonSourceConfig(WorkflowConfigModel):
     kind: Literal["python"] = "python"
     id: str
     enabled: bool = True
+    path: Path = Path(".")
     module: str = Field(min_length=1)
     registry: str = Field(default="registry", min_length=1)
 
