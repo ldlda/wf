@@ -129,3 +129,25 @@ def test_typed_auth_rejects_missing_bearer_token() -> None:
             payload={},
             metadata={},
         )
+
+
+def test_auth_record_from_compat_maps_oauth_refresh_token() -> None:
+    from wf_api.auth import OAuthRefreshTokenAuth, auth_record_from_compat
+
+    record = auth_record_from_compat(
+        id="google.drive.personal",
+        scheme="oauth_refresh_token",
+        payload={
+            "client_id": "client",
+            "client_secret": "secret",
+            "refresh_token": "refresh",
+            "token_url": "https://oauth2.googleapis.com/token",
+            "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
+        },
+        metadata={"provider": "google"},
+    )
+
+    assert isinstance(record.auth, OAuthRefreshTokenAuth)
+    assert record.auth.client_id == "client"
+    assert str(record.auth.token_url) == "https://oauth2.googleapis.com/token"
+    assert record.auth.scopes == ("https://www.googleapis.com/auth/drive.readonly",)

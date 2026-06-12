@@ -171,3 +171,36 @@ def test_file_auth_store_loads_new_format_through_load_auth(tmp_path: Path) -> N
     assert legacy.connection_id == "google.drive.personal"
     assert legacy.scheme == "bearer"
     assert legacy.payload["token"] == "token"
+
+
+def test_file_auth_store_oauth_refresh_token_survives_legacy_load_auth_bridge(
+    tmp_path: Path,
+) -> None:
+    from pydantic import AnyUrl
+
+    from wf_api.auth import OAuthRefreshTokenAuth, auth_record_from_compat
+
+    store = FileAuthStore(tmp_path)
+    record = StoredAuthRecord(
+        id="google.drive.personal",
+        auth=OAuthRefreshTokenAuth(
+            client_id="client",
+            client_secret="secret",
+            refresh_token="refresh",
+            token_url=AnyUrl("https://oauth2.googleapis.com/token"),
+            scopes=("https://www.googleapis.com/auth/drive.readonly",),
+        ),
+    )
+    store.save_auth_record(record)
+
+    legacy = store.load_auth("google.drive.personal")
+    assert legacy is not None
+    restored = auth_record_from_compat(
+        id=legacy.connection_id,
+        scheme=legacy.scheme,
+        payload=legacy.payload,
+        metadata={},
+    )
+
+    assert isinstance(restored.auth, OAuthRefreshTokenAuth)
+    assert restored.auth.refresh_token == "refresh"

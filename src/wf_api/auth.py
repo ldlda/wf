@@ -136,6 +136,32 @@ def auth_record_from_compat(
                 else {}
             )
             auth = EnvAuth(env=env)
+        case "oauth_refresh_token":
+            client_id = payload_dict.get("client_id")
+            client_secret = payload_dict.get("client_secret")
+            refresh_token = payload_dict.get("refresh_token")
+            token_url = payload_dict.get("token_url")
+            raw_scopes = payload_dict.get("scopes", ())
+            scopes = (
+                tuple(str(scope) for scope in raw_scopes)
+                if isinstance(raw_scopes, list | tuple)
+                else ()
+            )
+            if not isinstance(client_id, str) or not client_id:
+                raise ValueError("oauth_refresh_token client_id is required")
+            if not isinstance(client_secret, str):
+                raise ValueError("oauth_refresh_token client_secret is required")
+            if not isinstance(refresh_token, str) or not refresh_token:
+                raise ValueError("oauth_refresh_token refresh_token is required")
+            if not isinstance(token_url, str) or not token_url:
+                raise ValueError("oauth_refresh_token token_url is required")
+            auth = OAuthRefreshTokenAuth(
+                client_id=client_id,
+                client_secret=client_secret,
+                refresh_token=refresh_token,
+                token_url=AnyUrl(token_url),
+                scopes=scopes,
+            )
         case _:
             auth = OpaqueAuth(scheme=scheme, payload=payload_dict)
     return StoredAuthRecord(id=id, auth=auth, metadata=metadata_dict)
