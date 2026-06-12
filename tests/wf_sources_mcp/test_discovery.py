@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+import httpx
 import pytest
 from mcp import McpError
 from mcp.types import ErrorData
@@ -155,6 +156,29 @@ class _BrokenResourceAdapter(_Adapter):
         raise RuntimeError("resource listing broke")
 
 
+class _HttpOptionalUnsupportedAdapter(_Adapter):
+    async def list_resources(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredResource]:
+        request = httpx.Request("POST", "https://example.test/mcp")
+        response = httpx.Response(400, request=request)
+        raise ExceptionGroup(
+            "unhandled errors in a TaskGroup",
+            [httpx.HTTPStatusError("bad request", request=request, response=response)],
+        )
+
+    async def list_prompts(
+        self,
+        connection: McpSourceConnection,
+        auth: AuthRecord | None,
+    ) -> list[DiscoveredPrompt]:
+        request = httpx.Request("POST", "https://example.test/mcp")
+        response = httpx.Response(404, request=request)
+        raise httpx.HTTPStatusError("not found", request=request, response=response)
+
+
 async def test_discover_connection_capabilities_collects_all_capability_families() -> (
     None
 ):
@@ -181,6 +205,20 @@ async def test_discover_connection_capabilities_treats_missing_optional_families
         connection=_connection(),
         auth=None,
         adapter=_ToolsOnlyAdapter(),
+    )
+
+    assert [tool.name for tool in capabilities.tools] == ["echo"]
+    assert capabilities.resources == []
+    assert capabilities.prompts == []
+
+
+async def test_discover_connection_capabilities_treats_optional_http_400_404_as_empty() -> (
+    None
+):
+    capabilities = await discover_connection_capabilities(
+        connection=_connection(),
+        auth=None,
+        adapter=_HttpOptionalUnsupportedAdapter(),
     )
 
     assert [tool.name for tool in capabilities.tools] == ["echo"]

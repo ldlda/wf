@@ -4,6 +4,7 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from typing import Any, TypeVar
 
+import httpx
 from mcp import McpError
 from mcp.types import METHOD_NOT_FOUND
 
@@ -63,6 +64,11 @@ async def _list_optional_capabilities(
     except Exception as exc:
         root = _root_exception(exc)
         if isinstance(root, McpError) and root.error.code == METHOD_NOT_FOUND:
+            return []
+        if (
+            isinstance(root, httpx.HTTPStatusError)
+            and root.response.status_code in {400, 404}
+        ):
             return []
         raise
 
