@@ -19,6 +19,12 @@ This plan assumes `docs/superpowers/plans/2026-06-13-typed-auth-records-and-mcp-
 - auth store can save typed records
 - MCP runtime can use typed records through `McpAuthBinder`
 
+Before starting provider-profile/login work, verify that an `oauth_refresh_token`
+record loaded from the auth store reaches `McpAuthBinder` as
+`OAuthRefreshTokenAuth`. The first slice currently preserves some legacy
+`load_auth()` compatibility, and that bridge must not downgrade
+`oauth_refresh_token` into `OpaqueAuth`.
+
 Do not implement this plan first.
 
 ## File Structure
@@ -35,6 +41,144 @@ Do not implement this plan first.
   - `docs/wf_cli.md`
   - `docs/superpowers/specs/2026-06-06-auth-source-secrets-boundary.md`
   - `docs/current_roadmap.md`
+
+## Task 0: OAuth Runtime Bridge Regression
+
+**Files:**
+- Modify: `src/wf_api/auth.py`
+- Test: `tests/wf_api/test_auth.py`
+- Test: `tests/wf_sources_mcp/test_auth_storage_exports.py`
+
+- [ ] **Step 1: Add failing compatibility parser test**
+
+Append to `tests/wf_api/test_auth.py`:
+
+```python
+from pydantic import AnyUrl
+
+from wf_api.auth import OAuthRefreshTokenAuth
+
+
+def test_auth_record_from_compat_maps_oauth_refresh_token() -> None:
+    record = auth_record_from_compat(
+        id="google.drive.personal",
+        scheme="oauth_refresh_token",
+        payload={
+            "client_id": "client",
+            "client_secret": "secret",
+            "refresh_token": "refresh",
+            "token_url": "https://oauth2.googleapis.com/token",
+            "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
+        },
+        metadata={"provider": "google"},
+    )
+
+    assert isinstance(record.auth, OAuthRefreshTokenAuth)
+    assert record.auth.client_id == "client"
+    assert str(record.auth.token_url) == "https://oauth2.googleapis.com/token"
+    assert record.auth.scopes == ("https://www.googleapis.com/auth/drive.readonly",)
+```
+
+- [ ] **Step 2: Add failing store/runtime round-trip test**
+
+Append to `tests/wf_sources_mcp/test_auth_storage_exports.py`:
+
+```python
+from wf_api.auth import OAuthRefreshTokenAuth, auth_record_from_compat
+
+
+def test_file_auth_store_oauth_refresh_token_survives_legacy_load_auth_bridge(
+    tmp_path: Path,
+) -> None:
+    store = FileAuthStore(tmp_path)
+    record = StoredAuthRecord(
+        id="google.drive.personal",
+        auth=OAuthRefreshTokenAuth(
+            client_id="client",
+            client_secret="secret",
+            refresh_token="refresh",
+            token_url="https://oauth2.googleapis.com/token",
+            scopes=("https://www.googleapis.com/auth/drive.readonly",),
+        ),
+    )
+    store.save_auth_record(record)
+
+    legacy = store.load_auth("google.drive.personal")
+    assert legacy is not None
+    restored = auth_record_from_compat(
+        id=legacy.connection_id,
+        scheme=legacy.scheme,
+        payload=legacy.payload,
+        metadata={},
+    )
+
+    assert isinstance(restored.auth, OAuthRefreshTokenAuth)
+    assert restored.auth.refresh_token == "refresh"
+```
+
+- [ ] **Step 3: Run tests and verify failure**
+
+Run:
+
+```bash
+uv run pytest tests/wf_api/test_auth.py::test_auth_record_from_compat_maps_oauth_refresh_token tests/wf_sources_mcp/test_auth_storage_exports.py::test_file_auth_store_oauth_refresh_token_survives_legacy_load_auth_bridge -q
+```
+
+Expected: fails because `auth_record_from_compat()` currently falls through to
+`OpaqueAuth` for `scheme="oauth_refresh_token"`.
+
+- [ ] **Step 4: Implement explicit OAuth compatibility parsing**
+
+In `src/wf_api/auth.py`, add this `match` arm before `case _` in
+`auth_record_from_compat()`:
+
+```python
+        case "oauth_refresh_token":
+            client_id = payload_dict.get("client_id")
+            client_secret = payload_dict.get("client_secret")
+            refresh_token = payload_dict.get("refresh_token")
+            token_url = payload_dict.get("token_url")
+            raw_scopes = payload_dict.get("scopes", ())
+            scopes = (
+                tuple(str(scope) for scope in raw_scopes)
+                if isinstance(raw_scopes, list | tuple)
+                else ()
+            )
+            if not isinstance(client_id, str) or not client_id:
+                raise ValueError("oauth_refresh_token client_id is required")
+            if not isinstance(client_secret, str):
+                raise ValueError("oauth_refresh_token client_secret is required")
+            if not isinstance(refresh_token, str) or not refresh_token:
+                raise ValueError("oauth_refresh_token refresh_token is required")
+            if not isinstance(token_url, str) or not token_url:
+                raise ValueError("oauth_refresh_token token_url is required")
+            auth = OAuthRefreshTokenAuth(
+                client_id=client_id,
+                client_secret=client_secret,
+                refresh_token=refresh_token,
+                token_url=token_url,
+                scopes=scopes,
+            )
+```
+
+- [ ] **Step 5: Run focused verification**
+
+Run:
+
+```bash
+uv run pytest tests/wf_api/test_auth.py tests/wf_sources_mcp/test_auth_storage_exports.py tests/wf_sources_mcp/test_auth.py -q
+uv run basedpyright --level error src/wf_api/auth.py tests/wf_api/test_auth.py tests/wf_sources_mcp/test_auth_storage_exports.py
+uv run ruff check src/wf_api/auth.py tests/wf_api/test_auth.py tests/wf_sources_mcp/test_auth_storage_exports.py
+```
+
+Expected: all pass.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add src/wf_api/auth.py tests/wf_api/test_auth.py tests/wf_sources_mcp/test_auth_storage_exports.py
+git commit -m "fix: preserve oauth refresh auth through runtime bridge"
+```
 
 ## Task 1: OAuth Provider Profile Config
 
