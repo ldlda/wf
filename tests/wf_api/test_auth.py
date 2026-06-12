@@ -50,3 +50,82 @@ def test_auth_store_protocol_is_read_only_lookup() -> None:
 
     assert store.load_auth("github.work") is record
     assert store.load_auth("missing") is None
+
+
+def test_stored_auth_record_accepts_bearer_variant() -> None:
+    from wf_api.auth import BearerAuth, StoredAuthRecord
+
+    record = StoredAuthRecord(
+        id="google.drive.personal",
+        auth=BearerAuth(access_token="access-token"),
+        metadata={"provider": "google"},
+    )
+
+    assert record.id == "google.drive.personal"
+    assert record.auth.kind == "bearer"
+    assert record.metadata["provider"] == "google"
+
+
+def test_stored_auth_record_accepts_oauth_refresh_token_variant() -> None:
+    from pydantic import AnyUrl
+
+    from wf_api.auth import OAuthRefreshTokenAuth, StoredAuthRecord
+
+    record = StoredAuthRecord(
+        id="google.drive.personal",
+        auth=OAuthRefreshTokenAuth(
+            client_id="client-id",
+            client_secret="client-secret",
+            refresh_token="refresh-token",
+            token_url=AnyUrl("https://oauth2.googleapis.com/token"),
+            scopes=("https://www.googleapis.com/auth/drive.readonly",),
+        ),
+    )
+
+    assert record.auth.kind == "oauth_refresh_token"
+    assert str(record.auth.token_url) == "https://oauth2.googleapis.com/token/"
+    assert record.auth.scopes == ("https://www.googleapis.com/auth/drive.readonly",)
+
+
+def test_auth_record_from_compat_maps_existing_scheme_payload_shape() -> None:
+    from wf_api.auth import BearerAuth, StoredAuthRecord, auth_record_from_compat
+
+    record = auth_record_from_compat(
+        id="demo.default",
+        scheme="bearer",
+        payload={"token": "abc"},
+        metadata={"source": "test"},
+    )
+
+    assert isinstance(record, StoredAuthRecord)
+    assert isinstance(record.auth, BearerAuth)
+    assert record.auth.access_token == "abc"
+    assert record.metadata["source"] == "test"
+
+
+def test_auth_record_from_compat_preserves_unknown_as_opaque() -> None:
+    from wf_api.auth import OpaqueAuth, StoredAuthRecord, auth_record_from_compat
+
+    record = auth_record_from_compat(
+        id="demo.default",
+        scheme="custom",
+        payload={"x": "y"},
+        metadata={},
+    )
+
+    assert isinstance(record, StoredAuthRecord)
+    assert isinstance(record.auth, OpaqueAuth)
+    assert record.auth.scheme == "custom"
+    assert record.auth.payload == {"x": "y"}
+
+
+def test_typed_auth_rejects_missing_bearer_token() -> None:
+    from wf_api.auth import auth_record_from_compat
+
+    with pytest.raises(ValueError, match="bearer token"):
+        auth_record_from_compat(
+            id="demo.default",
+            scheme="bearer",
+            payload={},
+            metadata={},
+        )
