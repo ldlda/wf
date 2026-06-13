@@ -67,6 +67,8 @@ Expected:
 
 ```bash
 uv run wf --config wf.config.json source list --format compact
+uv run wf --config wf.config.json source resources everything.default
+uv run wf --config wf.config.json source prompts everything.default --format json
 uv run wf --config wf.config.json cap list --source wf.std --format ids
 uv run wf --config wf.config.json cap inspect wf.std.constant
 ```
@@ -74,6 +76,8 @@ uv run wf --config wf.config.json cap inspect wf.std.constant
 Expected:
 
 - `source list` includes `wf.std`.
+- `source resources` and `source prompts` return bounded inventory only; they do
+  not read resource bodies or render prompt templates.
 - `cap list --source wf.std --format ids` returns bounded identifiers.
 - `cap inspect wf.std.constant` shows the capability contract.
 

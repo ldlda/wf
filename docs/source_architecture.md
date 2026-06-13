@@ -111,6 +111,11 @@ content. A helper capability such as `wf.source.read_resource` receives the ref,
 uses runtime/platform context to resolve the logical source, and applies bounded
 output policy before returning text into workflow state/output.
 
+Prompt rendering uses the same source ownership rules, but it is not yet exposed
+as a workflow helper source. Keep prompt support at inventory/inspection level
+until there is a concrete graph use case, argument schema contract, and bounded
+output policy equivalent to `wf.source.read_resource`.
+
 For MCP, the provider also owns stateful upstream sessions:
 
 ```text
