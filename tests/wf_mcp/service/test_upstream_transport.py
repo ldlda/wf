@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 from wf_artifacts import WorkflowDeployment
+from wf_authoring import build_async_registry
+from wf_core import RuntimeContext
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.source_catalog import SourceCatalogService
 from wf_mcp.broker.service.upstream_transport import UpstreamTransportService
@@ -12,6 +15,7 @@ from wf_mcp.models import AuthRecord, CatalogSnapshot, ConnectionConfig
 from wf_mcp.storage import FileAuthStore, FileCatalogStore, FileStore
 from wf_platform import CapabilityBuckets, CapabilitySource, SourcePermissions
 from wf_sources_mcp.catalog import DiscoveredTool
+from wf_sources_mcp.sdk import ToolCallResult
 
 from ..test_support import FakeAdapter, local_temp_root
 from ..workflow_surface.conftest import echo_artifact
@@ -145,6 +149,82 @@ async def test_upstream_transport_refreshes_catalog_directly() -> None:
     assert len(snapshot.nodes) >= 1
     assert "catalog_refresh_started" in [event.kind for event in events]
     assert "catalog_refresh_completed" in [event.kind for event in events]
+
+
+async def test_refreshed_tool_specs_load_auth_at_call_time(tmp_path: Path) -> None:
+    class RecordingAuthAdapter(FakeAdapter):
+        def __init__(self) -> None:
+            self.seen_auth_payloads: list[dict[str, Any]] = []
+
+        async def call_tool(
+            self,
+            connection,
+            auth,
+            tool_name: str,
+            payload: dict[str, Any],
+        ) -> ToolCallResult:
+            if auth is not None:
+                self.seen_auth_payloads.append(dict(auth.payload))
+            return await super().call_tool(connection, auth, tool_name, payload)
+
+    events: list[McpEvent] = []
+    store = FileStore(tmp_path / "refreshed_spec_auth")
+    connections = ConnectionRegistry()
+    connection = ConnectionConfig(
+        id="demo.personal",
+        server="demo",
+        account="personal",
+        metadata={**_fake_transport_metadata(), "auth_ref": "demo.creds"},
+    )
+    connections.register(connection)
+    transport = UpstreamTransportService(
+        auth_store=store,
+        catalog_store=store,
+        event_sink=events.append,
+    )
+    adapter = RecordingAuthAdapter()
+    transport.register_adapter("demo", adapter)
+    transport.save_auth(
+        AuthRecord(
+            connection_id="demo.creds",
+            scheme="bearer",
+            payload={"token": "old"},
+        )
+    )
+    source_catalog = SourceCatalogService(
+        store=store,
+        connection_lookup=connections.get,
+        connection_list_enabled=connections.list_enabled,
+        connection_list_all=connections.list_all,
+        tool_executor_for=transport.tool_executor_for,
+        load_auth=transport.load_connection_auth,
+        emit_event=events.append,
+    )
+    source_catalog.hydrate_connection_source_from_snapshot(connection)
+
+    await transport.refresh_connection_catalog(
+        connection,
+        source_catalog=source_catalog,
+        record_catalog_change_events=lambda source_id, snapshot, reason: None,
+    )
+    transport.save_auth(
+        AuthRecord(
+            connection_id="demo.creds",
+            scheme="bearer",
+            payload={"token": "new"},
+        )
+    )
+
+    spec = source_catalog.get_qualified_spec("demo.personal.echo_tool")
+    handler = build_async_registry(spec)[spec.name]
+    result = await handler(
+        {"text": "hello"},
+        RuntimeContext(current_node_id="echo"),
+    )
+
+    assert result["outcome"] == "ok"
+    assert result["output"]["echoed"] == "hello"
+    assert adapter.seen_auth_payloads == [{"token": "new"}]
 
 
 async def test_upstream_transport_live_diagnostics_report_missing_connection() -> None:

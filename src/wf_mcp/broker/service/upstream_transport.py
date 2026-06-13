@@ -273,6 +273,7 @@ class UpstreamTransportService:
             specs = specs_from_discovered_tools(
                 connection=connection,
                 auth=auth,
+                auth_loader=lambda: self.load_connection_auth(connection),
                 executor=self.tool_executor_for(connection),
                 tools=capabilities.tools,
                 emit_event=self.event_sink,

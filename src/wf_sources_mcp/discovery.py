@@ -85,6 +85,7 @@ def specs_from_discovered_tools(
     *,
     connection: McpSourceConnection,
     auth: AuthRecord | None,
+    auth_loader: Callable[[], AuthRecord | None] | None = None,
     executor: ToolExecutor,
     tools: list[DiscoveredTool],
     emit_event: ToolWrapperEventSink | None = None,
@@ -93,6 +94,7 @@ def specs_from_discovered_tools(
         wrap_discovered_tool(
             connection=connection,
             auth=auth,
+            auth_loader=auth_loader,
             executor=executor,
             tool=tool,
             emit_event=emit_event,

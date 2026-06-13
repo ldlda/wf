@@ -34,6 +34,7 @@ def specs_from_discovered_tools(
     *,
     connection: ConnectionConfig,
     auth: AuthRecord | None,
+    auth_loader: Callable[[], AuthRecord | None] | None = None,
     executor: ToolExecutor,
     tools: list[DiscoveredTool],
     emit_event: Callable[[McpEvent], None] | None = None,
@@ -50,6 +51,7 @@ def specs_from_discovered_tools(
     return source_specs_from_discovered_tools(
         connection=source_connection,
         auth=auth,
+        auth_loader=auth_loader,
         executor=executor,
         tools=tools,
         emit_event=emit_tool_event if emit_event is not None else None,

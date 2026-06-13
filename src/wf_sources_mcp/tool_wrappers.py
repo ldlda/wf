@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from pydantic import BaseModel
 
 from wf_authoring import NodeReturn, NodeSpec
@@ -20,6 +22,7 @@ def wrap_discovered_tool(
     *,
     connection: McpSourceConnection,
     auth: AuthRecord | None,
+    auth_loader: Callable[[], AuthRecord | None] | None = None,
     executor: ToolExecutor,
     tool: DiscoveredTool,
     emit_event: ToolWrapperEventSink | None = None,
@@ -47,7 +50,7 @@ def wrap_discovered_tool(
             )
         result = await executor.call_tool(
             connection=connection,
-            auth=auth,
+            auth=auth_loader() if auth_loader is not None else auth,
             tool_name=tool.name,
             # Pydantic fills absent optional fields with None, but strict MCP
             # servers such as Playwright distinguish omitted from explicit null.
