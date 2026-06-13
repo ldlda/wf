@@ -23,23 +23,30 @@ def validate_deployment_dependencies(
     diagnostics: list[DependencyDiagnostic] = []
 
     for logical_ref, required in artifact.required_capability_map().items():
-        bound_source_id = bindings.get(required.logical_source)
-        if bound_source_id is None:
-            diagnostics.append(
-                _diagnostic(
-                    code="binding_missing",
-                    logical_ref=logical_ref,
-                    required=required,
-                    message=(
-                        f"No binding exists for logical source "
-                        f"{required.logical_source!r}."
-                    ),
-                    repair_hint=(
-                        "Bind the logical source to a compatible concrete source."
-                    ),
-                )
-            )
-            continue
+        platform_source = sources_by_id.get(required.logical_source)
+        if platform_source is not None and platform_source.platform:
+            bound_source_id = required.logical_source
+        else:
+            bound_source_id = bindings.get(required.logical_source)
+            if bound_source_id is None:
+                if not sources_by_id:
+                    bound_source_id = required.logical_source
+                else:
+                    diagnostics.append(
+                        _diagnostic(
+                            code="binding_missing",
+                            logical_ref=logical_ref,
+                            required=required,
+                            message=(
+                                f"No binding exists for logical source "
+                                f"{required.logical_source!r}."
+                            ),
+                            repair_hint=(
+                                "Bind the logical source to a compatible concrete source."
+                            ),
+                        )
+                    )
+                    continue
 
         source = sources_by_id.get(bound_source_id)
         if source is None:

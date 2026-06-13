@@ -204,3 +204,52 @@ def test_validate_deployment_accepts_reducer_capability() -> None:
     )
 
     assert diagnostics == []
+
+
+def test_platform_source_requirement_does_not_need_binding() -> None:
+    artifact = artifact_with(
+        required_capability(logical_source="wf.std", capability_name="replace")
+    )
+    deployment = WorkflowDeployment(
+        id="demo.default",
+        artifact_id=artifact.id,
+        artifact_version=artifact.version,
+        bindings={},
+    )
+
+    diagnostics = validate_deployment_dependencies(
+        artifact=artifact,
+        deployment=deployment,
+        sources=[
+            AvailableSource(
+                id="wf.std",
+                platform=True,
+                capabilities={
+                    "replace": AvailableCapability(name="replace", kind="node_spec")
+                },
+            )
+        ],
+    )
+
+    assert diagnostics == []
+
+
+def test_missing_platform_source_still_reports_source_missing() -> None:
+    artifact = artifact_with(
+        required_capability(logical_source="wf.std", capability_name="replace")
+    )
+    deployment = WorkflowDeployment(
+        id="demo.default",
+        artifact_id=artifact.id,
+        artifact_version=artifact.version,
+        bindings={},
+    )
+
+    diagnostics = validate_deployment_dependencies(
+        artifact=artifact,
+        deployment=deployment,
+        sources=[],
+    )
+
+    assert [diagnostic.code for diagnostic in diagnostics] == ["source_missing"]
+    assert diagnostics[0].bound_source == "wf.std"

@@ -96,6 +96,7 @@ class AvailableSource(BaseModel):
 
     id: str
     enabled: bool = True
+    platform: bool = False
     capabilities: dict[str, AvailableCapability] = Field(default_factory=dict)
 
 

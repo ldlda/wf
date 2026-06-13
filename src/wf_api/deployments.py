@@ -175,6 +175,7 @@ def _available_sources(
             AvailableSource(
                 id=source.id,
                 enabled=source.enabled,
+                platform=source.policy.platform,
                 capabilities=capabilities,
             )
         )
