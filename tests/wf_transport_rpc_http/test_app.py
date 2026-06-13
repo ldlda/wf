@@ -616,3 +616,18 @@ async def test_rpc_runs_workflow_from_python_source_capability(tmp_path) -> None
     assert deployment["result"]["deployment_id"] == "python_echo.default"
     assert run["result"]["outcome"] == "ok"
     assert run["result"]["output"] == {"echoed": "hello workflow"}
+
+
+async def test_rpc_diagnoses_source(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        payload = await _rpc(
+            client,
+            "workflow.sources.diagnose",
+            {"source_id": "wf.std"},
+        )
+
+    assert payload["result"]["source_id"] == "wf.std"
+    assert payload["result"]["status"] == "unknown"

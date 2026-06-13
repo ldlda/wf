@@ -30,6 +30,9 @@ class BrokenSourceAdmin:
     async def inspect_source(self, *, source_id: str) -> dict[str, Any]:
         raise RuntimeError(f"broken source admin for {source_id}")
 
+    async def diagnose_source(self, *, source_id: str) -> dict[str, Any]:
+        raise RuntimeError(f"broken source admin for {source_id}")
+
 
 def test_load_cli_context_uses_rpc_client_for_rpc_http_target(tmp_path) -> None:
     config_path = tmp_path / "wf.json"
@@ -815,3 +818,19 @@ def test_wf_draft_delete_succeeds_with_confirm(monkeypatch, tmp_path) -> None:
     payload = json.loads(result.output)
     assert payload["workspace_id"] == "delete-me"
     assert payload["deleted"] is True
+
+
+def test_wf_source_diagnose_uses_rpc_url_override(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    result = runner.invoke(app, [*base_args, "source", "diagnose", "wf.std"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["source_id"] == "wf.std"
+    assert payload["status"] == "unknown"

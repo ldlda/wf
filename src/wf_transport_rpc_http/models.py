@@ -50,6 +50,10 @@ class InspectSourceParams(RpcParamsModel):
     source_id: str = Field(min_length=1)
 
 
+class DiagnoseSourceParams(RpcParamsModel):
+    source_id: str = Field(min_length=1)
+
+
 class InspectCapabilityParams(RpcParamsModel):
     qualified_name: str = Field(min_length=1)
 

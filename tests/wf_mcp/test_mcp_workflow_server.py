@@ -163,3 +163,24 @@ async def test_workflow_server_from_service_uses_focused_auth_store(tmp_path) ->
     result = await server.admin.inspect_auth_record("drive.work")
 
     assert result["id"] == "drive.work"
+
+
+async def test_workflow_server_source_admin_reports_mcp_diagnostics(tmp_path) -> None:
+    config = BrokerConfig(
+        store_root=tmp_path / "store",
+        connections=[
+            ConnectionConfig(id="demo.default", server="demo", account="default")
+        ],
+    )
+    service = build_service_from_config(config)
+    server = workflow_server_from_service(
+        service,
+        config=config,
+        source_registry_store=FileSourceRegistryStore(config.store_root),
+    )
+
+    payload = await server.source_admin.diagnose_source(source_id="demo.default")
+
+    assert payload["source_id"] == "demo.default"
+    assert "auth" in payload
+    assert "catalog" in payload

@@ -7,6 +7,7 @@ from wf_api.surface import WorkflowDraftSurface
 from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
+from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
 
 
 def _constant_plan() -> RawWorkflowPlan:
@@ -412,3 +413,19 @@ async def test_rpc_client_lists_runs(tmp_path) -> None:
 
     assert listed["total"] == 1
     assert listed["runs"][0]["run_id"] == started["run_id"]
+
+
+async def test_rpc_client_diagnoses_source(tmp_path) -> None:
+    calls: list[tuple[str, dict[str, object]]] = []
+
+    class Client(RpcSourceAdminClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append((method, params))
+            return {"source_id": params["source_id"], "status": "ok"}
+
+    payload = await Client().diagnose_source(source_id="demo.personal")
+
+    assert payload == {"source_id": "demo.personal", "status": "ok"}
+    assert calls == [
+        ("workflow.sources.diagnose", {"source_id": "demo.personal"})
+    ]

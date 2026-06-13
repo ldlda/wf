@@ -108,6 +108,8 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
   Google OAuth client credentials). OAuth refresh-token support and provider
   profiles are now implemented. Production secret manager integration and
   encrypted-at-rest file format remain deferred.
+- Completed source auth diagnostics: `wf source diagnose <source_id>` now reports
+  transport/auth/catalog state without exposing secret payloads.
 - Active specs:
   - [`workflow config targets and sources`](superpowers/specs/2026-06-03-workflow-config-targets-and-sources.md)
   - [`store-backed source registry`](superpowers/specs/2026-06-03-store-backed-source-registry-design.md)

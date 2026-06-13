@@ -123,6 +123,20 @@ availability, durable run counts/latest run, admin counts, auth record count,
 and desired registry count when the target exposes those surfaces. It does not
 return auth payload values, trace entries, or checkpoint state.
 
+### Diagnose A Source
+
+Use `wf source diagnose <source_id>` to inspect source health before calling
+capabilities:
+
+```bash
+wf --config wf.config.json source diagnose gdrive.personal
+```
+
+The output reports transport kind, auth reference, whether the auth record
+exists, whether the auth scheme is compatible with the transport, catalog
+snapshot counts, and non-secret diagnostics. Secret payload values are never
+printed.
+
 ## Output Policy
 
 JSON is the default output format for every command.

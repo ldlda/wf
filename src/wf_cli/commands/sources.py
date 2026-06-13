@@ -56,3 +56,17 @@ def inspect_source(
         context.source_admin.inspect_source(source_id=source_id),
     )
     emit_json(payload)
+
+
+@app.command("diagnose")
+def diagnose_source(
+    ctx: typer.Context,
+    source_id: Annotated[str, typer.Argument(help="Workflow source id.")],
+) -> None:
+    """Diagnose source transport, auth, and catalog state."""
+    context = load_cli_context_from_typer(ctx)
+    payload = run_cli_operation(
+        context,
+        context.source_admin.diagnose_source(source_id=source_id),
+    )
+    emit_json(payload)

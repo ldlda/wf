@@ -244,6 +244,12 @@ class WorkflowSourceAdminSurface(Protocol):
         source_id: str,
     ) -> dict[str, Any]: ...
 
+    async def diagnose_source(
+        self,
+        *,
+        source_id: str,
+    ) -> dict[str, Any]: ...
+
 
 class WorkflowAdminSurface(Protocol):
     """Read-only connection/config admin methods exposed by platform frontends."""

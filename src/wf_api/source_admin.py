@@ -1,10 +1,20 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Protocol
 
 from wf_platform import page_items
 
 from .operation_context import WorkflowOperationContext
+
+
+class WorkflowSourceDiagnosticsProvider(Protocol):
+    """Optional source-specific diagnostics provider.
+
+    Implementations may know about transport/auth/catalog details. The neutral
+    API only forwards source ids and serializes returned dictionaries.
+    """
+
+    def diagnose_source(self, source_id: str) -> dict[str, Any]: ...
 
 
 class WorkflowSourceAdminApi:
@@ -15,8 +25,14 @@ class WorkflowSourceAdminApi:
     lifecycle execution.
     """
 
-    def __init__(self, context: WorkflowOperationContext) -> None:
+    def __init__(
+        self,
+        context: WorkflowOperationContext,
+        *,
+        diagnostics: WorkflowSourceDiagnosticsProvider | None = None,
+    ) -> None:
         self.context = context
+        self.diagnostics = diagnostics
 
     async def list_sources(
         self,
@@ -43,4 +59,27 @@ class WorkflowSourceAdminApi:
             source = self.context.specs.capability_sources[source_id]
         except KeyError as exc:
             raise KeyError(f"unknown source {source_id!r}") from exc
-        return source.as_inventory().model_dump(mode="json")
+        payload = source.as_inventory().model_dump(mode="json")
+        if self.diagnostics is not None:
+            try:
+                payload["diagnostics"] = self.diagnostics.diagnose_source(source_id)
+            except Exception:
+                payload["diagnostics"] = {
+                    "status": "error",
+                    "message": "Diagnostics unavailable",
+                }
+        return payload
+
+    async def diagnose_source(self, *, source_id: str) -> dict[str, Any]:
+        try:
+            self.context.specs.capability_sources[source_id]
+        except KeyError as exc:
+            raise KeyError(f"unknown source {source_id!r}") from exc
+        if self.diagnostics is None:
+            return {
+                "source_id": source_id,
+                "status": "unknown",
+                "diagnostics": [],
+                "message": "No source diagnostics provider is configured.",
+            }
+        return self.diagnostics.diagnose_source(source_id)

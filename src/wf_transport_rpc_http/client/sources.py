@@ -27,3 +27,9 @@ class RpcSourceAdminClientMixin:
             "workflow.sources.inspect",
             {"source_id": source_id},
         )
+
+    async def diagnose_source(self: RpcCaller, *, source_id: str) -> dict[str, Any]:
+        return await self._call(
+            "workflow.sources.diagnose",
+            {"source_id": source_id},
+        )

@@ -7,7 +7,7 @@ import fastapi_jsonrpc as jsonrpc
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
-from ..models import InspectSourceParams, ListSourcesParams
+from ..models import DiagnoseSourceParams, InspectSourceParams, ListSourcesParams
 from ..params import RpcParams
 
 
@@ -35,5 +35,16 @@ def register_methods(
     ) -> dict[str, Any]:
         try:
             return await server.source_admin.inspect_source(source_id=params.source_id)
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(name="workflow.sources.diagnose", errors=[WorkflowRpcError])
+    async def workflow_sources_diagnose(
+        params: DiagnoseSourceParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.source_admin.diagnose_source(
+                source_id=params.source_id
+            )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)

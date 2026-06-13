@@ -22,6 +22,7 @@ from .prompts import register_broker_prompts
 from .resources import register_broker_resources
 from .service import WfMcpService
 from .service.auth_admin import McpAuthAdminProvider
+from .service.source_diagnostics import SourceDiagnosticsProvider
 from .service.source_registry_admin import SourceRegistryAdminProvider
 from .service.workflow_operation_context import context_from_service
 from .tools import register_broker_tools
@@ -64,7 +65,15 @@ def workflow_server_from_service(
 
     context = context_from_service(service)
     api: WorkflowApi = durable_workflow_api(context)
-    source_admin = WorkflowSourceAdminApi(context)
+    source_diagnostics = SourceDiagnosticsProvider(
+        connection_lookup=service.connections.get,
+        auth_store=service.auth_store or service.store,
+        catalog_store=service.catalog_store or service.store,
+    )
+    source_admin = WorkflowSourceAdminApi(
+        context,
+        diagnostics=source_diagnostics,
+    )
     admin = WorkflowAdminApi(
         connections=service.connection_service,
         events=service.events,

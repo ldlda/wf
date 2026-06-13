@@ -9,6 +9,7 @@ from wf_api import WorkflowSourceAdminApi, WorkflowSourceAdminSurface
 from wf_api.models import RawWorkflowPlan
 from wf_api.operation_context import WorkflowOperationContext
 from wf_api.saved_subgraphs import SavedSubgraphTree
+from wf_api.source_admin import WorkflowSourceDiagnosticsProvider
 from wf_artifacts import WorkflowArtifact, WorkflowDeployment
 from wf_authoring import NodeSpec
 from wf_core import RunState
@@ -152,3 +153,115 @@ def test_source_admin_api_satisfies_surface_protocol() -> None:
     api: WorkflowSourceAdminSurface = _api(_source("demo.personal"))
 
     assert api is not None
+
+
+class _Diagnostics:
+    def __init__(self) -> None:
+        self.calls: list[str] = []
+
+    def diagnose_source(self, source_id: str) -> dict[str, object]:
+        self.calls.append(source_id)
+        return {
+            "source_id": source_id,
+            "status": "ok",
+            "auth": {"record_present": True},
+            "diagnostics": [],
+        }
+
+
+def _api_with_diagnostics(
+    *sources: CapabilitySource,
+    diagnostics: WorkflowSourceDiagnosticsProvider | None = None,
+) -> WorkflowSourceAdminApi:
+    provider = StaticSpecProvider({source.id: source for source in sources})
+    return WorkflowSourceAdminApi(
+        WorkflowOperationContext(
+            artifact_store=None,
+            draft_workspace_store=None,
+            run_store=None,
+            events=DummyEvents(),
+            specs=provider,
+            runtime=DummyRuntime(),
+            live_sources=None,
+        ),
+        diagnostics=diagnostics,
+    )
+
+
+def test_inspect_source_includes_optional_diagnostics() -> None:
+    provider = _Diagnostics()
+    payload = asyncio.run(
+        _api_with_diagnostics(
+            _source("demo.personal"),
+            diagnostics=provider,
+        ).inspect_source(source_id="demo.personal")
+    )
+
+    assert payload["id"] == "demo.personal"
+    assert payload["diagnostics"]["source_id"] == "demo.personal"
+    assert provider.calls == ["demo.personal"]
+
+
+def test_inspect_source_omits_diagnostics_without_provider() -> None:
+    payload = asyncio.run(
+        _api_with_diagnostics(_source("demo.personal")).inspect_source(
+            source_id="demo.personal"
+        )
+    )
+
+    assert payload["id"] == "demo.personal"
+    assert "diagnostics" not in payload
+
+
+class _BrokenDiagnostics:
+    def diagnose_source(self, source_id: str) -> dict[str, object]:
+        raise RuntimeError("diagnostics exploded")
+
+
+def test_inspect_source_tolerates_diagnostics_provider_failure() -> None:
+    payload = asyncio.run(
+        _api_with_diagnostics(
+            _source("demo.personal"),
+            diagnostics=_BrokenDiagnostics(),
+        ).inspect_source(source_id="demo.personal")
+    )
+
+    assert payload["id"] == "demo.personal"
+    assert payload["diagnostics"]["status"] == "error"
+    assert "Diagnostics unavailable" in payload["diagnostics"]["message"]
+
+
+def test_diagnose_source_uses_provider() -> None:
+    payload = asyncio.run(
+        _api_with_diagnostics(
+            _source("demo.personal"),
+            diagnostics=_Diagnostics(),
+        ).diagnose_source(source_id="demo.personal")
+    )
+
+    assert payload["status"] == "ok"
+    assert payload["auth"]["record_present"] is True
+
+
+def test_diagnose_source_without_provider_returns_basic_status() -> None:
+    payload = asyncio.run(
+        _api_with_diagnostics(_source("demo.personal")).diagnose_source(
+            source_id="demo.personal"
+        )
+    )
+
+    assert payload == {
+        "source_id": "demo.personal",
+        "status": "unknown",
+        "diagnostics": [],
+        "message": "No source diagnostics provider is configured.",
+    }
+
+
+def test_diagnose_source_unknown_raises_key_error() -> None:
+    with pytest.raises(KeyError, match="unknown source 'missing.source'"):
+        asyncio.run(
+            _api_with_diagnostics(_source("demo.personal")).diagnose_source(
+                source_id="missing.source"
+            )
+        )
