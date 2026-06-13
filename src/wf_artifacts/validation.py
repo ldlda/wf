@@ -29,24 +29,21 @@ def validate_deployment_dependencies(
         else:
             bound_source_id = bindings.get(required.logical_source)
             if bound_source_id is None:
-                if not sources_by_id:
-                    bound_source_id = required.logical_source
-                else:
-                    diagnostics.append(
-                        _diagnostic(
-                            code="binding_missing",
-                            logical_ref=logical_ref,
-                            required=required,
-                            message=(
-                                f"No binding exists for logical source "
-                                f"{required.logical_source!r}."
-                            ),
-                            repair_hint=(
-                                "Bind the logical source to a compatible concrete source."
-                            ),
-                        )
+                diagnostics.append(
+                    _diagnostic(
+                        code="binding_missing",
+                        logical_ref=logical_ref,
+                        required=required,
+                        message=(
+                            f"No binding exists for logical source "
+                            f"{required.logical_source!r}."
+                        ),
+                        repair_hint=(
+                            "Bind the logical source to a compatible concrete source."
+                        ),
                     )
-                    continue
+                )
+                continue
 
         source = sources_by_id.get(bound_source_id)
         if source is None:

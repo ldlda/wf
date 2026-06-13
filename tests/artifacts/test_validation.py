@@ -234,7 +234,7 @@ def test_platform_source_requirement_does_not_need_binding() -> None:
     assert diagnostics == []
 
 
-def test_missing_platform_source_still_reports_source_missing() -> None:
+def test_missing_platform_source_still_reports_binding_missing() -> None:
     artifact = artifact_with(
         required_capability(logical_source="wf.std", capability_name="replace")
     )
@@ -251,5 +251,4 @@ def test_missing_platform_source_still_reports_source_missing() -> None:
         sources=[],
     )
 
-    assert [diagnostic.code for diagnostic in diagnostics] == ["source_missing"]
-    assert diagnostics[0].bound_source == "wf.std"
+    assert [diagnostic.code for diagnostic in diagnostics] == ["binding_missing"]
