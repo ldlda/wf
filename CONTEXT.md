@@ -5,6 +5,391 @@ This context defines the core workflow runtime language used by `wf_core`,
 
 ## Language
 
+**lda.chat**:
+An AI agent platform for authoring and executing workspace workflows.
+_Avoid_: Chatbot, MCP server
+
+**Agent-Compatible Infrastructure**:
+A platform surface that external AI agents can use to author, validate, run, and
+inspect workflows without bundling a specific agent brain.
+_Avoid_: Built-in autonomous agent, chatbot implementation
+
+**AI Agent Platform**:
+The broader product framing for `lda.chat` when discussing the intended user
+experience and ecosystem role. Use carefully today because the platform is
+currently driven by external agents rather than a bundled autonomous agent.
+_Avoid_: Claiming `lda.chat` already contains the agent brain
+
+**Workspace Operator**:
+The human beneficiary and controller of workspace automation.
+_Avoid_: End user, consumer user
+
+**Workflow Owner**:
+The human who wants the workflow to exist, run, and produce useful output. They
+may review the workflow result without directly operating the CLI or API; an
+external LLM agent can drive those surfaces for them.
+_Avoid_: Assuming the CLI user and product beneficiary are always the same actor
+
+**Workspace**:
+A user-controlled digital work environment where office-style work happens,
+including files, tools, services, credentials, and project context exposed
+through approved capability sources.
+_Avoid_: Filesystem directory, user account
+
+**LLM Agent**:
+An external AI agent, such as Claude Desktop or OpenCode, that can use the
+platform surfaces to plan, edit, validate, and invoke workflow operations.
+_Avoid_: Built-in agent brain, chatbot
+
+**Workspace Workflow**:
+A reusable, typed procedure for digital work in a workspace, represented as a
+graph with schemas, state, outcomes, source bindings, and durable run records.
+_Avoid_: Sequence of tool calls, prompt chain
+
+**Durable Workflow Contract**:
+The persisted workflow intent across time: artifact, deployment bindings,
+validation against current sources, run records, and traces. Persistence keeps
+the objects; validation determines whether the current environment can still run
+them. A deployment becoming unrunnable after incompatible source changes is a
+contract-preserving outcome, not silent failure.
+_Avoid_: Treating durability as only file persistence or tying it to one store
+implementation
+
+**Source Drift**:
+Change in a source catalog, capability contract, provider availability, or source
+binding after an artifact or deployment was created. Source drift is a normal
+lifecycle state surfaced through validation and diagnostics, not an unexpected
+crash.
+_Avoid_: Assuming old deployments remain runnable forever
+
+**Workflow Artifact**:
+An immutable, versioned workflow definition saved from authoring state. It
+captures the workflow graph and declared requirements, but it is not itself a
+live execution.
+_Avoid_: Mutable draft, run record
+
+**Workflow Deployment**:
+A binding from a workflow artifact version to concrete source/runtime context.
+Deployment validation determines whether the artifact can currently run.
+_Avoid_: Artifact version, draft workspace, incidental runtime config
+
+**Binding Contract**:
+The deployment-level mapping from logical workflow requirements to concrete
+sources or runtime context. Binding contracts make workflows portable across
+workspaces/accounts while allowing validation to detect missing, disabled, or
+incompatible sources.
+_Avoid_: Ad-hoc environment variables, hidden source lookup
+
+**Workflow Portability**:
+The goal that a workflow artifact can describe logical requirements separately
+from concrete source/account bindings. Portability is scoped: deployments bind
+artifacts to a specific workspace environment, and local Python code, MCP
+catalogs, auth records, and source stores may still differ between environments.
+_Avoid_: Universal run-anywhere portability
+
+**Draft Workspace**:
+Mutable workflow authoring state where an agent or user can patch, validate, and
+iterate before saving an immutable artifact.
+_Avoid_: Deployed workflow
+
+**Workflow Run**:
+An execution record for a deployment, including status, diagnostics, output,
+trace, and resumable stopped/interrupted state where applicable.
+_Avoid_: Artifact, deployment
+
+**Run Resume**:
+A supporting durable-execution capability where stopped or interrupted workflow
+state can be inspected and continued later. It proves the lifecycle is more than
+final-output storage, but it is not yet full time-travel debugging.
+_Avoid_: Full LangGraph-style time travel
+
+**Run Trace**:
+A bounded debug record attached to a workflow run. Current claims should be based
+on code-supported trace counts and caller-bounded trace slices for debugging,
+not broad production observability.
+_Avoid_: Distributed tracing, metrics platform, OpenTelemetry claims
+
+**Evidence-Backed Claim**:
+A thesis claim grounded in implemented code, tests, live smoke runs, examples, or
+clearly marked future work. The current project stage is making the platform
+good and correct; making it fast is later unless performance is measured.
+_Avoid_: Unmeasured performance, reliability, security, or production-readiness
+claims
+
+**Evidence Package**:
+The thesis evidence set: architecture/code walkthrough tied to the four-layer
+model, automated tests, live smoke runs, source-provider examples, run
+persistence/resume checks, stateful MCP reuse checks, Python source integration,
+and a small failed-attempt case study.
+_Avoid_: Large user study claims without the study
+
+**Case Study Workflow**:
+A concrete representative workflow used in the thesis evidence package. Prefer a
+document/report preparation task over toy echo tools: parse or transform a small
+document, extract key points or action items, and produce structured report
+output. It should run deterministically with current sources; LLM enhancement can
+be future or optional.
+_Avoid_: Echo-only demos, flaky external services
+
+**Reproducible Example Environment**:
+A small runnable example bundle for thesis evidence: fixture input files, source
+provider code, workflow config, store directory setup, and CLI/server commands.
+It should let the case study be rerun without relying on hidden local state.
+_Avoid_: Screenshot-only demo, undocumented local setup
+
+**Representative Workspace Task**:
+A recurring digital work pattern such as document processing, project or
+repository monitoring, data/report preparation, or scheduled workspace
+operations.
+_Avoid_: Generic business process, arbitrary web task
+
+**Automation Platform Baseline**:
+An existing workflow automation product, such as Zapier, used as a comparison
+point for maturity, speed, usability, integrations, and scheduling.
+_Avoid_: Direct competitor claim, full feature parity
+
+**Prototype Platform Substrate**:
+The implemented backend, API, CLI, source-provider, and durable workflow
+lifecycle that external agents or future UI surfaces can drive.
+_Avoid_: Final conversational product, complete user interface
+
+**Prototype Platform**:
+A usable but incomplete platform implementation that demonstrates the core
+workflow lifecycle and source-provider model. It is not yet a full product
+because scheduling, visual workflow editing, production auth/secret storage,
+general fork/gather, richer source lifecycle, and broad evaluation remain
+future work.
+_Avoid_: Production-ready product, finished agent app
+
+**Platform Architecture Contribution**:
+The thesis contribution: separating external-agent planning from typed workflow
+execution through artifact/deployment/run lifecycle, source-provider boundaries,
+durable API/CLI/server surfaces, and validation/inspection mechanisms that
+reduce planner trial-and-error.
+_Avoid_: Framing the work as only another automation tool or AI model
+
+**Automation Baseline**:
+A comparison point used to position the prototype. Direct LLM tool use, manual
+scripts, and mature platforms such as Zapier or RPA systems expose different
+trade-offs: durability and reuse, accessibility and adaptability, or integration
+and operational maturity.
+_Avoid_: Treating one baseline as the entire problem space
+
+**Workflow Automation Accessibility**:
+The goal of making reusable workflow automation available without requiring the
+workspace operator to hand-code scripts or manually chain tools.
+_Avoid_: Fully automatic correctness, no-review automation
+
+**Offline Scheduling**:
+Future execution of deployed workspace workflows without an active chat or
+interactive session.
+_Avoid_: Background prompt, cron job
+
+**Workflow Visualization**:
+Future UI support for inspecting, editing, and explaining workflow graphs
+visually.
+_Avoid_: Current runtime feature, trace log
+
+**LLM Node**:
+A workflow node that calls an LLM as one capability inside the graph, rather
+than making the whole runtime itself an LLM loop.
+_Avoid_: Built-in planner, hidden agent loop
+
+**Deterministic Execution Substrate**:
+The workflow control layer that validates schemas, routes outcomes, commits
+state, records trace, and persists runs predictably even when individual
+capabilities call nondeterministic tools, APIs, Python code, or LLMs.
+_Avoid_: Deterministic external tools, deterministic LLM output
+
+**Planner Efficiency**:
+The degree to which the platform reduces LLM trial-and-error when creating or
+running workflows. Typed schemas, source catalogs, validation errors, dry
+checks, inspectable traces, compact CLI output, and reusable artifacts should
+help an external LLM agent converge without spending excessive tokens probing
+blindly.
+Representative evidence includes fewer failed attempts before a valid workflow
+is created and run.
+_Avoid_: Assuming an LLM planner is cheap enough to brute-force the workflow
+
+**Failed Workflow Attempt**:
+An agent action that tries to advance workflow creation or execution but cannot
+be reused because it hits an avoidable structural, validation, source-binding,
+configuration, session, or runtime issue. Examples include failed draft
+validation, non-runnable deployments, source/session failures, and run failures
+caused by incorrect workflow structure or provider assumptions.
+_Avoid_: Counting deliberate exploration or user clarification as workflow
+failure
+
+**Validation-Centered Workflow Lifecycle**:
+The product principle that LLM-authored workflows should move through explicit
+validation gates before and after execution. Config validation, capability
+contracts, draft validation, deployment validation, run inspection, and output
+safety reduce blind trial-and-error and make workflow automation reviewable.
+_Avoid_: Treating validation as a convenience check after implementation
+
+**Next Actions**:
+Advisory lifecycle guidance returned to clients and LLM agents to suggest the
+next useful operation, such as validating a draft, patching a workspace, saving
+an artifact, or inspecting a run. Next actions guide planner behavior but do not
+replace validation authority.
+_Avoid_: Treating next actions as hard permission checks
+
+**Machine-Client UX**:
+API and CLI response design for LLM agents and other programmatic clients. It
+uses compact structured payloads, stable fields, diagnostics, and next actions
+instead of relying on prose or oversized raw provider output.
+_Avoid_: Assuming only human-readable UI needs interaction design
+
+**Agent-Operable CLI**:
+A CLI designed so external LLM agents can drive workflow lifecycle operations
+predictably through structured output, compact summaries, validation commands,
+status/inspect/list operations, and guarded destructive actions. Humans can use
+it, but it is not only a human terminal UI.
+_Avoid_: Treating the CLI as the workflow runtime
+
+**Workflow API Surface**:
+The application contract for workflow lifecycle operations: capabilities,
+drafts, artifacts, deployments, runs, admin/source operations, validation,
+inspection, and next actions. Process-local clients, JSON-RPC, future MCP
+frontends, and UI backends can implement or consume this surface.
+_Avoid_: Treating JSON-RPC as the product boundary
+
+**Transport Adapter**:
+An implementation that exposes the Workflow API Surface over a specific
+communication mechanism, such as process-local calls or JSON-RPC-over-HTTP.
+Transport adapters should not define workflow semantics.
+_Avoid_: Putting workflow behavior in the transport
+
+**Four-Layer Platform Model**:
+The canonical architecture split: workflow core, platform domain, workflow API
+surface, and server/transport composition. The core owns execution semantics;
+the platform domain owns artifacts, deployments, runs, sources, bindings,
+validation, stores, and admin concepts; the API surface exposes lifecycle
+operations; server/transport composition wires concrete stores, sources,
+runtimes, and communications.
+_Avoid_: Collapsing server, API, platform, and core into one layer
+
+**Authoring Support**:
+Helper libraries and tools that create workflow specs, node specs, drafts, and
+wrapper structures for API surfaces, source providers, and MCP/admin tools.
+Authoring support feeds the platform domain but is not a separate runtime layer
+and does not own workflow semantics.
+_Avoid_: Treating authoring helpers as the execution engine
+
+**Repairable Validation Failure**:
+A validation failure that identifies what failed, where it failed, why it
+matters, and what the caller can try next. It should help an LLM agent patch the
+workflow instead of causing another blind probe.
+_Avoid_: Tracebacks, generic bad-request messages, silent rejection
+
+**Graph Safety Boundary**:
+The safety argument that a typed workflow graph is easier to validate, inspect,
+reuse, and constrain than arbitrary generated code. The graph model limits where
+logic lives and makes source bindings, schemas, state, and outcomes explicit.
+This does not make external tools, trusted Python sources, or credentials safe
+by default.
+_Avoid_: Claiming workflow graphs eliminate all automation risk
+
+**Code Boundary**:
+Code belongs behind source providers and capabilities. A workflow should
+orchestrate typed capabilities through graph structure, bindings, outcomes,
+state, and interrupts; it should not embed arbitrary code directly. Future
+escape hatches such as unsafe Python or LLM nodes should still appear as source
+capabilities.
+_Avoid_: Treating a workflow as an opaque script blob
+
+**LLM Node**:
+A future source capability that calls an LLM for a bounded task such as
+summarization, classification, extraction, or controlled looping. It should have
+typed inputs, outputs, and outcomes like other capabilities.
+_Avoid_: Hidden LLM orchestration engine
+
+**Source-Provider Correctness**:
+The requirement that a source provider preserve the behavior expected by the
+external system it represents. Some providers are not meaningfully stateless:
+they may depend on initialized sessions, created resources, authentication
+context, or provider-local state. Workflow execution should not silently degrade
+those sources into one-off calls when stateful behavior is part of correctness.
+_Avoid_: Treating all capability calls as independent stateless requests
+
+**MCP Source**:
+An MCP-backed source family that exposes upstream tools, resources, and prompts
+through the workflow source boundary. MCP is a source integration and stress
+test for source-provider correctness; it is not the identity of the whole
+platform.
+_Avoid_: Treating `lda.chat` as only an MCP server or MCP proxy
+
+**MCP Frontend**:
+A future transport/frontend role where external MCP clients could operate the
+Workflow API Surface. This is distinct from MCP Source, which consumes upstream
+MCP servers as workflow capabilities. The current thesis should not claim the
+new platform already has a clean MCP frontend.
+_Avoid_: Confusing upstream MCP sources with client-facing MCP transport
+
+**MCP Widget Proxying**:
+Proxying upstream MCP UI resources/widgets, iframe metadata, and related client
+resource behavior through the platform. This is not supported now because it
+requires protocol-specific UI/resource handling beyond ordinary workflow
+capabilities.
+_Avoid_: Claiming durable workflows preserve upstream MCP interactive widgets
+
+**First-Party Workflow UI**:
+A future UI surface owned by the platform, such as listing, inspecting, and
+editing workflows or deployments. This is different from proxying upstream MCP
+widgets.
+_Avoid_: Treating first-party workflow UI as MCP widget passthrough
+
+**Reviewable Lifecycle**:
+The current human-in-the-loop property: drafts, deployments, runs, diagnostics,
+traces, and guarded destructive commands create review points before or after
+execution. This is not a full approval, policy, roles, or multi-user review
+system.
+_Avoid_: Enterprise approval workflow
+
+**Auth Plumbing**:
+Prototype support for auth records, source auth diagnostics, and admin surfaces.
+Auth matters for source readiness, but production secret management and verified
+end-to-end credential workflows are not thesis-core claims yet.
+_Avoid_: Production secret manager, fully verified auth system
+
+**Python Source**:
+A trusted project-local source family that exposes Python-authored `NodeSpec`
+registries as workflow capabilities. Python sources provide developer
+extensibility and prove the source model is not MCP-only, but they are not
+sandboxed non-programmer plugins yet.
+_Avoid_: Safe end-user extension, arbitrary untrusted code
+
+**OpenAPI Source**:
+A future source family that could expose HTTP/OpenAPI operations as typed
+workflow capabilities. It would broaden integration coverage, but MCP and Python
+sources are already enough to demonstrate the source-provider boundary.
+_Avoid_: Claiming HTTP/OpenAPI source support exists today
+
+**Natural-Language Authoring**:
+Using natural language as the way a workspace operator communicates intent to an
+external LLM agent. The durable result should be a typed workflow graph and
+deployment, not an opaque prompt transcript.
+_Avoid_: Treating natural language as the execution model
+
+**Reusable Workspace Procedure**:
+A repeatable digital-work procedure that can be represented as a typed workflow:
+transforming documents, collecting data, calling tools or APIs, preparing
+reports, monitoring changes, or running scheduled checks. The platform automates
+these procedures rather than claiming to solve arbitrary office work end-to-end.
+_Avoid_: Arbitrary job completion, one-off tool click
+
+**Offline Scheduling**:
+Future execution of deployed workflows without an active chat or CLI session.
+Persisted deployments and server-side execution make scheduling plausible, but
+scheduling itself is not implemented yet.
+_Avoid_: Claiming production background scheduling exists today
+
+**Fork/Gather Workflow Control**:
+Future workflow control for parallel branches and explicit gather/join behavior.
+The current product should not claim general fork/gather orchestration yet.
+_Avoid_: Treating current foreach or serial graph execution as full parallel
+workflow orchestration
+
 **Scheduler Foundation**:
 The runtime model that selects runnable frames and advances workflow execution without assuming there is only one active cursor.
 _Avoid_: Foreach feature, concurrent foreach implementation

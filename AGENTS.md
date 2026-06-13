@@ -15,6 +15,10 @@
 - Put related files in folders from the start when the area is likely to grow.
   Example: prefer `src/pack/foo/bar.py` over adding many unrelated
   `src/pack/foo_bar.py` files.
+- Do not add compatibility treatment for unused things. Compatibility is for
+  real callers, real persisted data, or documented external contracts. If a
+  symbol/format has no production callers and no real stored data, prefer
+  removing or migrating it cleanly over preserving ghost behavior.
 
 ## Tests
 

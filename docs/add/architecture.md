@@ -1,12 +1,15 @@
 ---
-title: |
-  lda.chat\
-  \Large wf: Architecture \& Design
+title: "lda.chat wf"
+subtitle: "Workflow Platform Architecture and Demo"
 author: "draft"
-date: "2026-05-30"
+date: "2026-06-12"
+lang: "en-US"
 documentclass: report
 papersize: a4
-fontsize: 12pt
+fontsize: 10pt
+toc: true
+toc-depth: 2
+numbersections: true
 geometry:
   - top=30mm
   - bottom=30mm
@@ -16,527 +19,285 @@ mainfont: "Libertinus Serif"
 sansfont: "Libertinus Sans"
 monofont: "Libertinus Mono"
 mathfont: "Libertinus Math"
+colorlinks: true
+linkcolor: "MidnightBlue"
+urlcolor: "MidnightBlue"
+toccolor: "MidnightBlue"
+keywords:
+  - workflow
+  - agents
+  - JSON-RPC
+  - MCP
+  - Python sources
 header-includes:
   - \usepackage{graphicx}
   - \usepackage{booktabs}
   - \usepackage{hyperref}
+  - \usepackage{hyperxmp}
+  - \usepackage[dvipsnames]{xcolor}
   - \usepackage{fancyhdr}
   - \pagestyle{fancy}
-  - \fancyhead[L]{\small\leftmark}
-  - \fancyhead[R]{\small lda.chat}
+  - \fancyhead[L]{\small wf platform}
+  - \fancyhead[R]{\small\leftmark}
   - \fancyfoot[C]{\thepage}
   - \setlength{\parskip}{0.6em}
   - \setlength{\parindent}{0pt}
   - \setkeys{Gin}{width=\linewidth,height=0.55\textheight,keepaspectratio}
   - \renewcommand{\arraystretch}{1.3}
-  - \newcommand{\status}[1]{\texorpdfstring{\hfill{\normalfont\small\textsc{#1}}}{}}
+  - \hypersetup{pdfauthor={lda.chat}, pdftitle={lda.chat wf Workflow Platform Architecture and Demo}}
 diagram:
   engine:
     mermaid:
       theme: neutral
-      outputFormat: svg
 ---
 
-# Introduction
+# Workflow Platform Presentation
 
-`lda.chat` is an AI agent that turns natural language requests into executable
-workspace workflows. The LLM plans a directed graph of typed steps. A
-deterministic executor runs it. Registered node handlers do the real
-work---whether those handlers call MCP tools, run local Python functions,
-execute saved subworkflows, or compose authoring-layer operations.
+This is a compact presentation narrative for the current product shape. It is
+not a full architecture reference; use the linked docs for implementation
+detail.
 
-The core architectural split:
+## One-Sentence Thesis
 
-> **The LLM plans, but does not execute. The executor executes, but does not
-> think. Nodes do work. Edges are dumb routing.**
+LLMs should plan typed workflows, while a deterministic runtime executes those
+workflows against explicit, validated capability sources.
 
-**Thesis scope** is narrow: prove the planner/executor/tool split end to end
-with a few working MCP tools, LLM-generated workflow JSON, validated execution,
-and structured results. The broader product vision---tool registries, scheduling,
-multi-user---is out of scope.
+## The Problem
 
-# System Architecture \status{implemented}
+Agents are good at deciding what should happen next, but bad at being the thing
+that directly owns side effects, retries, durable state, and schema contracts.
 
-## Package Structure
+The platform separates those jobs:
 
-The system is organized into three main packages with strict dependency
-boundaries.
+- The LLM or human author chooses and edits workflow structure.
+- The workflow runtime executes a typed graph.
+- Source providers expose callable capabilities.
+- Stores persist artifacts, deployments, and stopped runs.
+- Transports let CLI, future UI, and other clients talk to the same server.
 
-```mermaid
-graph TD
-    subgraph Core["wf_core --- Execution Kernel"]
-        direction TB
-        Models["models"]
-        Runtime["runtime"]
-        Scheduler["scheduler"]
-        Ops["runtime.ops"]
-        Validation["validation"]
-        Paths["paths"]
-        RunState["run_state"]
-    end
+## Current Product Path
 
-    subgraph Authoring["wf_authoring --- DSL"]
-        direction TB
-        Builder["WorkflowBuilder"]
-        NodeDec["@node"]
-        DSL["dsl/"]
-        Reducers["reducers/"]
-    end
-
-    subgraph MCP["wf_mcp --- MCP Platform"]
-        direction TB
-        Broker["broker/"]
-        Proxy["proxy/"]
-        SDK["sdk/"]
-        WorkflowSurf["workflow_surface/"]
-        WfConvert["workflow/"]
-    end
-
-    Authoring --> Core
-    MCP --> Core
-    MCP --> Authoring
+```text
+wf CLI
+  -> JSON-RPC transport
+  -> WorkflowServer
+  -> WorkflowApi
+  -> wf_core runtime + wf_artifacts stores + wf_sources_* providers
 ```
 
-**Dependency rules:**
+The preferred server entrypoint is:
 
-- `wf_core` must not import `wf_authoring` or `wf_mcp`.
-- `wf_mcp.sdk` should not import `wf_core` or `wf_authoring`.
-- `wf_mcp.proxy` should not import `wf_mcp.workflow`.
-- `wf_mcp.workflow` is the only layer that converts MCP tools into node specs.
-
-## Data Flow
-
-```mermaid
-flowchart LR
-    User["User request"] --> LLM["LLM Planner"]
-    LLM --> WJ["Workflow JSON"]
-    WJ --> EX["Deterministic Executor"]
-    EX --> NH["Node Handlers"]
-    NH --> State["Shared Workflow State"]
+```powershell
+uv run wf-rpc-server --config wf.config.json
 ```
 
-# Workflow Model \status{implemented}
+The preferred client entrypoint is:
 
-A workflow is a directed graph with explicit schemas and explicit control flow.
-
-## Top-Level Structure
-
-```mermaid
-classDiagram
-    class Workflow {
-        +str name
-        +SchemaRef input_schema
-        +StateSchema state_schema
-        +SchemaRef output_schema
-        +list~InputBinding~ output
-        +list~NodeDef~ node_defs
-        +list~str~ outcomes
-        +str start
-        +list~Step~ nodes
-        +list~Edge~ edges
-    }
-
-    class NodeDef {
-        +str name
-        +SchemaRef input_schema
-        +SchemaRef output_schema
-        +list~str~ outcomes
-    }
-
-    class Edge {
-        +str from
-        +str outcome
-        +str to
-    }
-
-    Workflow --> NodeDef
-    Workflow --> Edge
+```powershell
+uv run wf --config wf.config.json status
 ```
 
-## Schema Boundaries
+`wf-mcp` still exists for legacy/special-purpose MCP-facing work, but the
+durable product path is now `wf-rpc-server` plus `wf`.
 
-Three schemas define distinct contracts:
+## Core Model
 
-- **`input_schema`** validates run input once. Input is stored independently and
-  remains readable throughout execution via `input.*` paths.
-- **`state_schema`** defines typed workflow memory with per-field merge
-  reducers. Nodes read/write state via `state.*` paths.
-- **`output_schema`** declares the output contract. Output is projected via
-  explicit `workflow.output` bindings that can read from `state.*`, `input.*`,
-  or `context.*` paths. A legacy fallback derives output from same-name top-level
-  state keys when bindings are omitted.
+A workflow is a typed graph:
 
-Input, state, and context are **separate read roots**. The runtime resolves
-bindings against all three independently; input is not merged into state.
+- `input_schema` validates run input.
+- `state_schema` defines workflow memory and reducer behavior.
+- `output_schema` defines the final result contract.
+- Nodes do real work through `NodeSpec` handlers.
+- Edges route by declared outcomes.
+- Deployments bind logical source requirements to concrete sources.
 
-## Step Types
+The runtime does not know whether a node came from MCP, Python, OpenAPI, or a
+built-in package. It resolves a `NodeSpec`, validates payloads, executes, records
+trace, and commits reducer-aware state changes.
 
-Steps form a discriminated union on the `type` field:
+## Source Model
 
-```mermaid
-graph
-    Step["Step (type)"]
-    Step --> NU["NodeUse"]
-    Step --> SG["SubgraphNode"]
-    Step --> CN["ConditionNode"]
-    Step --> FE["ForeachNode"]
-    Step --> JN["JoinNode"]
-    Step --> EN["EndNode"]
-    Step --> IN["InterruptNode"]
+The common provider output is `CapabilitySource`.
+
+```text
+source provider
+  -> CapabilitySource
+  -> WorkflowSpecProvider
+  -> WorkflowApi
 ```
 
-**NodeUse** binds a reusable `NodeDef` with explicit input/output path
-bindings. **ConditionNode** evaluates structured JSON expressions (not code
-strings). **ForeachNode** iterates serial or concurrent. **InterruptNode**
-pauses for typed external input. **EndNode** sets non-`ok` workflow outcomes.
+Current source families:
 
-## Path Bindings
+| Source | Kind | Role |
+| --- | --- | --- |
+| `wf.std` | `system` | built-in standard workflow nodes and reducers |
+| `wf.recipes` | `system` | first-party workflow recipes |
+| MCP sources | `connection` | upstream MCP tools/resources/prompts via persistent sessions |
+| Python sources | `python` | trusted project-local `NodeSpec` registries |
 
-Bindings connect graph state to node-local payloads using structural paths:
+The first explicit provider seam is intentionally small:
+
+```python
+class WorkflowSourceProvider(Protocol):
+    def load_sources(self) -> Mapping[str, CapabilitySource]: ...
+```
+
+This seam is for static source inventory. MCP also has runtime pools,
+auth/catalog stores, admin/apply behavior, and live checks, so it should not be
+forced into a tiny static interface too early.
+
+## Demo: Python Source End To End
+
+Write `ops.py`:
+
+```python
+from pydantic import BaseModel
+from wf_authoring import node
+
+
+class EchoInput(BaseModel):
+    text: str
+
+
+class EchoOutput(BaseModel):
+    echoed: str
+
+
+@node(name="echo")
+def echo(payload: EchoInput) -> EchoOutput:
+    return EchoOutput(echoed=payload.text)
+
+
+registry = [echo]
+```
+
+Configure it:
 
 ```json
 {
-  "input": [
-    { "target": { "root": "local", "parts": ["text"] },
-      "path":   { "root": "input", "parts": ["text"] } }
-  ],
-  "output": [
-    { "source": { "root": "local", "parts": ["echoed"] },
-      "target": { "root": "state", "parts": ["echoed"] } }
-  ]
+  "version": 1,
+  "client": {
+    "target": {
+      "kind": "rpc_http",
+      "url": "http://127.0.0.1:8766/rpc",
+      "timeout_seconds": 30
+    }
+  },
+  "server": {
+    "store": {"kind": "filesystem", "root": ".wf_python_store"},
+    "transports": [
+      {"kind": "rpc_http", "host": "127.0.0.1", "port": 8766, "path": "/rpc"}
+    ],
+    "sources": [
+      {
+        "kind": "python",
+        "id": "local.ops",
+        "path": ".",
+        "module": "ops",
+        "registry": "registry"
+      }
+    ]
+  }
 }
 ```
 
-Three path kinds: **LocalPath** (node payload), **GraphSourcePath**
-(read from `input`/`state`/`context`), **StatePath** (write to state).
+Validate before starting:
 
-## State Reducers
-
-State fields declare merge behavior. This matters for parallel and foreach
-execution where multiple writers target the same path.
-
-| Reducer | Policy | Use case |
-|:--------|:-------|:---------|
-| `wf.std.replace` | exclusive | Default scalars |
-| `wf.std.append` | mergeable | Foreach accumulation |
-| `wf.std.merge_object` | mergeable | Parallel object updates |
-| `wf.std.add` | mergeable | Counters |
-| `wf.std.set_union` | mergeable | Tag/ID collection |
-
-# Runtime Execution \status{implemented}
-
-## Execution Flow
-
-```mermaid
-flowchart
-    A["execute_workflow()"] --> B["prepare_new_run()"]
-    B --> C["create_run_state()"]
-    C --> D["resume_workflow()"]
-    D --> E{"select_next_frame()"}
-    E -->|"frame found"| F["step_workflow()"]
-    F --> G{"interrupted?"}
-    G -->|Yes| H["return RunState"]
-    G -->|No| E
-    E -->|"no frames"| I{"classify terminal"}
-    I -->|"completed"| J["finalize_run()"]
-    I -->|"failed"| K["return RunState"]
-    J --> M["return RunState"]
+```powershell
+uv run wf config validate wf.python.config.json
 ```
 
-The executor loops: select a frame from the ready queue, dispatch one step,
-re-enqueue or terminate. It never thinks. It only routes.
+Start the server:
 
-## Step Dispatch
-
-```mermaid
-flowchart LR
-    SW["step_workflow()"] -->|"NodeUse"| NE["execute node"]
-    SW -->|"Condition"| CE["evaluate"]
-    SW -->|"Foreach"| FE["foreach step"]
-    SW -->|"Join"| JO["done"]
-    SW -->|"End"| EN["complete"]
-    SW -->|"Interrupt"| IR["pause run"]
-    SW -->|"Subgraph"| SG["child scope"]
+```powershell
+uv run wf-rpc-server --config wf.python.config.json
 ```
 
-Node handlers are registered callables---anything from a thin MCP tool wrapper
-to a full Python function. The executor does not distinguish handler origin; it
-resolves by name from the registry, invokes, validates, and commits.
+Call the capability:
 
-## Node Execution
-
-```mermaid
-sequenceDiagram
-    participant E as Executor
-    participant H as Handler
-    participant S as State
-
-    E->>E: resolve input bindings
-    E->>H: handler(payload, context)
-    H-->>E: NodeResult{outcome, output}
-    E->>E: validate outcome + output
-    E->>S: commit state patch (reducer-aware)
-    E->>E: record trace, advance frame
+```powershell
+uv run wf --config wf.python.config.json cap call local.ops.echo --input '{"text":"hello"}'
 ```
 
-Two channels stay separate: **outcome** controls routing, **output** carries
-typed business data.
+Turn it into a saved workflow:
 
-## Scheduler
+```powershell
+uv run wf --config wf.python.config.json draft create-from-capability `
+  python_echo_ws local.ops.echo --name python_echo
 
-The scheduler uses an explicit FIFO **ready queue** of frame IDs.
+uv run wf --config wf.python.config.json draft save python_echo_ws `
+  --artifact python_echo `
+  --version 1 `
+  --title "Python Echo" `
+  --outcome ok `
+  --binding local.ops=local.ops `
+  --binding wf.std=wf.std
 
-```mermaid
-stateDiagram-v2
-    [*] --> PENDING
-    PENDING --> RUNNING: scheduler selects
-    RUNNING --> PENDING: re-enqueue
-    RUNNING --> COMPLETED: reached end
-    RUNNING --> FAILED: unhandled error
-    RUNNING --> INTERRUPTED: interrupt node
-    RUNNING --> BLOCKED: waiting on child
-    BLOCKED --> PENDING: child completes
-    INTERRUPTED --> PENDING: resume delivered
+uv run wf --config wf.python.config.json deploy save python_echo.default `
+  --artifact python_echo `
+  --version 1 `
+  --binding local.ops=local.ops `
+  --binding wf.std=wf.std
+
+uv run wf --config wf.python.config.json run start python_echo.default `
+  --input '{"text":"hello workflow"}'
 ```
 
-When the ready queue is empty, the scheduler classifies the run as completed,
-interrupted, failed, or deadlocked.
+Expected run result:
 
-# Foreach \status{implemented}
-
-## Serial
-
-Each iteration creates a child frame, blocks the parent, and runs to
-completion before the next item starts.
-
-## Concurrent
-
-Multiple item frames run simultaneously. Each gets its own **lineage**---a
-write overlay that isolates sibling state. At the barrier, patches commit in
-item-index order through declared reducers.
-
-```mermaid
-flowchart TD
-    PF["foreach parent"] --> C1["item 0"]
-    PF --> C2["item 1"]
-    PF --> C3["item 2"]
-    C1 & C2 & C3 --> BUF["buffer patches"]
-    BUF --> BARRIER["barrier: all done?"]
-    BARRIER --> COMMIT["commit in index order"]
-    COMMIT --> DONE["done / completed_with_errors"]
+```json
+{
+  "status": "completed",
+  "outcome": "ok",
+  "output": {"echoed": "hello workflow"}
+}
 ```
 
-Capacity is bounded by `ForeachConcurrentPolicy`: `max_active` (default 4)
-limits ready/running item frames; `max_outstanding` (default 20) limits
-active + blocked. Item error policies: **fail** (stop), **skip** (continue,
-no state), **collect** (continue, write structured error records).
+## What Works Today
 
-# Interrupts \status{implemented}
+- CLI can target local or remote workflow servers.
+- JSON-RPC server can run from neutral config.
+- `wf config validate` checks config shape, config-relative paths, and trusted
+  Python source imports.
+- `wf status` summarizes target, sources, capabilities, runs, admin surfaces,
+  and registry availability.
+- Capabilities can be listed, inspected, and called directly.
+- Drafts can be created from capabilities and saved as immutable artifacts.
+- Deployments bind logical sources to concrete sources.
+- Runs are persisted at stopped boundaries and can be inspected/listed.
+- MCP upstream sessions are stateful through `McpRuntimePool`.
+- Python sources can run through the full draft -> artifact -> deployment -> run
+  lifecycle.
 
-Interrupts are graph-native and typed, not arbitrary line-level pauses.
+## Honest Limits
 
-```mermaid
-sequenceDiagram
-    participant N as Node
-    participant I as InterruptNode
-    participant R as Runtime
-    participant E as Caller
+- Python sources are trusted in-process code; there is no sandbox.
+- Python sources are static at server startup; no hot reload yet.
+- Python source registry/apply support is not implemented yet.
+- `WorkflowSourceProvider` covers static inventory only, not runtime/admin/apply
+  lifecycle.
+- Run deletion is not implemented.
+- File-backed stores are the proven storage backend; SQL/secret-manager stores
+  are future work.
+- MCP app/widget passthrough is not a durable workflow product feature yet.
 
-    N->>I: outcome "needs_input"
-    I->>R: InterruptRequest{kind, payload}
-    R->>E: surface request
-    E->>R: resume payload + outcome
-    R->>I: map resume into state
-    I->>I: continue routing
-```
+## Next Direction
 
-Pause points stay visible in the graph. Payloads are validated by `kind`.
-Traces stay clean.
+Near-term work should make source providers more regular without prematurely
+flattening them:
 
-# Subgraph Composition \status{implemented}
+- Provider lifecycle for add/update/remove/apply/reload across source families.
+- OpenAPI source provider using the same `CapabilitySource` shape.
+- Clearer config/status diagnostics for source health.
+- Optional Python source development reload.
+- Production-grade auth/secret store integration.
 
-A workflow can be used as a node, giving **graph composition** with one
-consistent contract.
+## Reading Map
 
-```mermaid
-flowchart LR
-    subgraph Parent["Parent"]
-        P1["A"] --> SG["SubgraphNode"]
-        SG --> P2["C"]
-    end
-    subgraph Child["Child (prepared)"]
-        C1["X"] --> C2["Y"]
-    end
-    SG --> C1
-    C2 --> SG
-```
-
-The parent supplies input bindings. The child runs in its own scope with its
-own lineage. Output bindings project child state back to the parent.
-
-**Interrupt bubbling (v1):** When a child subgraph hits an interrupt node, the
-runtime constructs an `InterruptRoute` that identifies the child frame, scope,
-and workflow ref. The parent subgraph frame stays `BLOCKED`; the entire run
-returns `INTERRUPTED`. Resume restores the child scope and continues inside it.
-This works for prepared local children. Artifact/deployment resolution for
-nested saved children remains outside core; the platform resolves saved
-descendants before execution starts.
-
-# Authoring Layer \status{implemented}
-
-## WorkflowBuilder
-
-Fluent Python DSL for constructing workflows without raw dicts:
-
-```mermaid
-flowchart LR
-    WB["WorkflowBuilder"] -->|"use(spec)"| NU["NodeUse"]
-    WB -->|"condition()"| CN["Condition"]
-    WB -->|"foreach()"| FE["Foreach"]
-    WB -->|"interrupt()"| IN["Interrupt"]
-    WB -->|"compile()"| WF["Workflow"]
-```
-
-Common operations: `use(spec)`, `connect(from, outcome, to)`,
-`branch(from, branches)`, `when(cond, then, otherwise)`,
-`match(value, cases)`, `foreach(over, mode)`.
-
-## @node Decorator
-
-Converts a typed Python function into a reusable `NodeSpec`:
-
-```python
-@node(name="summarize", outcomes=["ok"])
-def summarize_doc(input: SummarizeInput, ctx: RuntimeContext) -> SummarizeOutput:
-    """Summarize a single document."""
-    return SummarizeOutput(summary=input.text[:500])
-```
-
-The decorator infers input/output models from type annotations, detects async,
-and generates the `NodeDef` with schema refs.
-
-# MCP Platform \status{implemented}
-
-## Architecture
-
-```mermaid
-flowchart TB
-    subgraph Server["Unified MCP Server"]
-        Admin["wf.admin.*"]
-        Wf["wf.workflow.*"]
-        Proxy["connection.tool_name"]
-    end
-    subgraph Broker["WfMcpService"]
-        Cat["catalog"]
-        Disc["discovery"]
-        Art["artifacts"]
-        Drf["drafts"]
-    end
-    subgraph ProxyLayer["ProxyRuntime"]
-        Mount["mount registry"]
-        FMP["proxy per connection"]
-    end
-    Server --> Broker
-    Server --> ProxyLayer
-    ProxyLayer --> Upstream["Upstream MCP Servers"]
-```
-
-Each upstream connection gets a namespaced `FastMCPProxy` mount
-(`connection_id.tool_name`). Hot reload is best-effort; FastMCP lacks a
-complete unmount lifecycle.
-
-## Tool Conversion
-
-```mermaid
-flowchart LR
-    DT["DiscoveredTool"] --> WDT["wrap_discovered_tool()"]
-    WDT --> NS["NodeSpec"]
-    NS --> CS["CapabilitySource"]
-```
-
-Every MCP tool gets `outcomes=("ok", "error")` by default. The wrapper
-preserves the original JSON Schema as a contract and generates an async
-handler that calls the upstream tool.
-
-# Artifact Lifecycle \status{implemented}
-
-## Draft to Deployment
-
-```mermaid
-flowchart LR
-    D["Draft<br/>(mutable)"] -->|"compile"| A["Artifact<br/>(immutable)"]
-    A -->|"bind sources"| DP["Deployment"]
-    DP -->|"execute"| R["Run"]
-```
-
-**Draft workspaces** support iterative LLM authoring with optimistic
-concurrency (revision-checked patches). **Artifacts** are versioned snapshots
-with dependency contract hashes. **Deployments** bind logical source aliases
-to concrete MCP connections.
-
-## Durable Runs \status{v1 boundaries}
-
-Every `run_deployment` call persists a stopped run record (file-backed JSON)
-with a stable `run_id`. Interrupted runs can be resumed via `resume_run` after
-process restart, provided the same `FileRunStore` root is accessible.
-
-**V1 limits:**
-
-- Checkpointing happens at stopped boundaries only (interrupted, completed,
-  failed). No per-node or mid-call crash recovery.
-- Resume revalidates the pinned dependency environment. If a required source is
-  missing or disabled, resume returns `resume_readiness=blocked` without
-  consuming the payload.
-- During live execution, source failures produce a `failed` run, not a
-  `blocked` one. The `blocked` gate applies only at resume time.
-
-Two deployments can point the same artifact at different accounts:
-
-```
-summarize_docs.personal -> context7.personal
-summarize_docs.work     -> context7.work
-```
-
-# Validation \status{implemented}
-
-## Structural (Pre-Execution)
-
-```mermaid
-flowchart LR
-    VW["validate_workflow()"] --> A["node def uniqueness"]
-    VW --> B["node id uniqueness"]
-    VW --> C["edge source/dest existence"]
-    VW --> D["outcome declarations"]
-    VW --> E["binding path validity"]
-    VW --> F["reachable outcome wiring"]
-```
-
-Reports multiple issues via `ValidationReport` instead of failing at the
-first.
-
-## Runtime
-
-At runtime: outcome is declared, output matches schema, merge conflicts are
-caught, final output validates against `output_schema`.
-
-# Open Questions
-
-- Should the legacy same-name top-level state output fallback be removed once
-  explicit final output bindings are used everywhere?
-- Trace model for raw extra node output?
-- Isolated pure-Python execution: node type, tool backend, or separate API?
-- Retry policy vs non-idempotent side-effecting tools?
-
-# Stack
-
-| Layer | Technology |
-|:------|:-----------|
-| Language | Python 3.14+ |
-| Validation | Pydantic v2 |
-| Tool protocol | MCP |
-| MCP framework | FastMCP 3.2.4+ |
-| Storage | File-backed JSON stores today; SQLite/PostgreSQL planned |
-
----
-
-*Incomplete. See `docs/README.md` for the full documentation index.*
+- [`wf_cli.md`](../wf_cli.md): CLI command reference.
+- [`runbooks/python-source.md`](../runbooks/python-source.md): Python source
+  runbook.
+- [`source_architecture.md`](../source_architecture.md): source provider
+  package map.
+- [`project_map.md`](../project_map.md): package and entrypoint map.
+- [`current_roadmap.md`](../current_roadmap.md): active roadmap.

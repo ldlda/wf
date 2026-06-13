@@ -16,4 +16,6 @@ $filter = Join-Path $PSScriptRoot 'diagram.lua'
 $env:MERMAID_BIN = whereis mmdc
 $env:TIKZ_BIN = 'xelatex'
 
+Write-Host @args
+
 & pandoc --lua-filter $filter --pdf-engine=xelatex @args
