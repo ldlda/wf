@@ -421,53 +421,13 @@ wf admin auth delete drive.work --confirm
 Use source `auth_ref` values to point sources at these records. Do not commit
 payload files containing real secrets.
 
-### Google Drive MCP OAuth Setup
+### Source Provider Setup
 
-Google Drive MCP is a remote HTTP MCP source:
+For MCP HTTP, MCP stdio, Python source, `auth_ref`, and OAuth setup examples,
+see the [`Source Provider Guide`](source_provider_guide.md).
 
-```json
-{
-  "sources": [
-    {
-      "id": "google.drive",
-      "kind": "mcp",
-      "transport": {
-        "kind": "http",
-        "url": "https://drivemcp.googleapis.com/mcp/v1"
-      },
-      "auth_ref": "google.drive.personal"
-    }
-  ],
-  "auth": {
-    "providers": {
-      "google": {
-        "kind": "oauth_authorization_code_pkce",
-        "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
-        "token_url": "https://oauth2.googleapis.com/token",
-        "client_id_env": "GOOGLE_OAUTH_CLIENT_ID",
-        "client_secret_env": "GOOGLE_OAUTH_CLIENT_SECRET",
-        "scopes": [
-          "https://www.googleapis.com/auth/drive.readonly"
-        ]
-      }
-    }
-  }
-}
-```
-
-Run OAuth login:
-
-```bash
-wf --config wf.config.json admin auth oauth-login google \
-  --id google.drive.personal
-```
-
-The command prints the authorization URL, then prompts for the full redirected
-callback URL after browser login. For non-interactive use, pass the callback URL
-directly with `--authorization-response "<redirected URL>"`.
-
-Refresh tokens are sensitive. The local file auth store is plaintext and
-intended for local/dev use only.
+Google Drive MCP is documented there as manual smoke coverage only; do not use
+it as a regression fixture.
 
 ### `source_missing`
 

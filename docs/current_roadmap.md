@@ -110,6 +110,9 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
   encrypted-at-rest file format remain deferred.
 - Completed source auth diagnostics: `wf source diagnose <source_id>` now reports
   transport/auth/catalog state without exposing secret payloads.
+- Completed source provider docs: `docs/source_provider_guide.md` now covers
+  MCP HTTP, MCP stdio, Python sources, auth refs, OAuth refresh-token setup,
+  diagnostics, and the Google Drive MCP caveat.
 - Active specs:
   - [`workflow config targets and sources`](superpowers/specs/2026-06-03-workflow-config-targets-and-sources.md)
   - [`store-backed source registry`](superpowers/specs/2026-06-03-store-backed-source-registry-design.md)
