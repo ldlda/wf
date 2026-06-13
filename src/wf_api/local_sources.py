@@ -33,6 +33,7 @@ from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
     SourcePermissions,
+    SourcePolicy,
     SourceVisibility,
 )
 
@@ -170,6 +171,7 @@ def builtin_sources() -> dict[str, CapabilitySource]:
                 admin_dashboard=True,
             ),
             permissions=SourcePermissions(safe_for_workflow=True),
+            policy=SourcePolicy(platform=True, binding_required=False),
             description="Workflow standard-library nodes.",
         ),
         RECIPE_SOURCE_ID: CapabilitySource(
@@ -182,6 +184,7 @@ def builtin_sources() -> dict[str, CapabilitySource]:
                 admin_dashboard=True,
             ),
             permissions=SourcePermissions(safe_for_workflow=True),
+            policy=SourcePolicy(platform=True, binding_required=False),
             description="First-party workflow recipes composed from standard nodes.",
         ),
     }

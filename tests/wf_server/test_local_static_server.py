@@ -150,3 +150,12 @@ def test_local_static_server_has_no_source_registry_admin(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
 
     assert server.source_registry_admin is None
+
+
+def test_local_static_builtins_are_platform_sources(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path)
+
+    wf_std = server.context.specs.capability_sources["wf.std"]
+
+    assert wf_std.policy.platform is True
+    assert wf_std.policy.binding_required is False

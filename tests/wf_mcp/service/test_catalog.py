@@ -518,6 +518,15 @@ def test_source_catalog_finds_local_documentation_resource_directly(
     assert result.uri == test_resource.uri
 
 
+def test_broker_local_sources_are_platform_sources(tmp_path: Path) -> None:
+    service = WfMcpService(store=FileStore(tmp_path / "platform_sources"))
+
+    wf_recipes = service.capability_sources["wf.recipes"]
+
+    assert wf_recipes.policy.platform is True
+    assert wf_recipes.policy.binding_required is False
+
+
 def test_source_catalog_uses_catalog_store_only(tmp_path: Path) -> None:
     catalog_store = FileCatalogStore(tmp_path / "catalog")
     service = SourceCatalogService(
