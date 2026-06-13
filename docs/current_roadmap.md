@@ -119,6 +119,9 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
 - Completed `wf.source.read_resource`: resource refs are inert pass-by-value
   data using `logical_source`; explicit platform helper nodes dereference them
   through runtime/platform context with bounded output.
+- Completed source inventory CLI polish: `wf source resources` and
+  `wf source prompts` list source-owned resource/prompt names without fetching
+  content.
 - Active specs:
   - [`workflow config targets and sources`](superpowers/specs/2026-06-03-workflow-config-targets-and-sources.md)
   - [`store-backed source registry`](superpowers/specs/2026-06-03-store-backed-source-registry-design.md)

@@ -98,6 +98,7 @@ def test_file_store_saves_and_loads_neutral_auth_record(tmp_path: Path) -> None:
 
     loaded = store.load_auth_record("github.work")
     assert loaded is not None
+    assert isinstance(loaded, NeutralAuthRecord)
     assert loaded.id == record.id
     assert loaded.scheme == record.scheme
     assert loaded.payload == record.payload

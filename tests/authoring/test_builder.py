@@ -473,7 +473,7 @@ def test_builder_adds_explicit_end_node() -> None:
     assert builder.compile().outcomes == ["ok", "error"]
 
 
-class _StructuralKeyMap(Mapping[object, object]):
+class _StructuralKeyMap:
     def __getitem__(self, key: object) -> object:
         raise KeyError(key)
 
@@ -484,6 +484,8 @@ class _StructuralKeyMap(Mapping[object, object]):
         return 1
 
     def items(self) -> list[tuple[dict[str, object], str]]:
+        # Deliberately violates Mapping's item-view contract to exercise the
+        # runtime guard for structural dict keys from malformed mappings.
         return [
             (
                 {"root": "input", "parts": ["email.address"]},
@@ -494,4 +496,4 @@ class _StructuralKeyMap(Mapping[object, object]):
 
 def test_input_map_rejects_structural_dict_keys_with_clear_message() -> None:
     with pytest.raises(TypeError, match="structural path dicts cannot be map keys"):
-        normalize_input_mapping(_StructuralKeyMap())
+        normalize_input_mapping(cast(Mapping[object, object], _StructuralKeyMap()))

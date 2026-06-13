@@ -11,11 +11,13 @@ from wf_artifacts import (
 )
 from wf_mcp.broker import WfMcpService
 from wf_mcp.capabilities import DiscoveredPrompt, DiscoveredResource, DiscoveredTool
-from wf_mcp.models import AuthRecord, ConnectionConfig
+from wf_mcp.models import ConnectionConfig
 from wf_mcp.sdk import ToolCallResult
 from wf_mcp.sdk.base import BackendAdapter
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
+from wf_sources_mcp.auth import AuthRecord
+from wf_sources_mcp.connections import McpSourceConnection
 
 
 class DemoEchoAdapter(BackendAdapter):
@@ -23,7 +25,7 @@ class DemoEchoAdapter(BackendAdapter):
 
     async def list_tools(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredTool]:
         return [
@@ -57,28 +59,28 @@ class DemoEchoAdapter(BackendAdapter):
 
     async def list_resources(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredResource]:
         return []
 
     async def list_prompts(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> list[DiscoveredPrompt]:
         return []
 
     async def get_connection_metadata(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
     ) -> dict[str, Any]:
         return {"server": connection.server, "account": connection.account}
 
     async def read_resource(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         uri: str,
     ) -> dict[str, Any]:
@@ -86,7 +88,7 @@ class DemoEchoAdapter(BackendAdapter):
 
     async def get_prompt(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         prompt_name: str,
         arguments: dict[str, str] | None = None,
@@ -95,7 +97,7 @@ class DemoEchoAdapter(BackendAdapter):
 
     async def invoke_method(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         method: str,
         params: dict[str, Any] | None = None,
@@ -106,7 +108,7 @@ class DemoEchoAdapter(BackendAdapter):
 
     async def send_notification(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         method: str,
         params: dict[str, Any] | None = None,
@@ -115,7 +117,7 @@ class DemoEchoAdapter(BackendAdapter):
 
     async def call_tool(
         self,
-        connection: ConnectionConfig,
+        connection: McpSourceConnection,
         auth: AuthRecord | None,
         tool_name: str,
         payload: dict[str, Any],

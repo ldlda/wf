@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from typing import Any
 
 import pytest
@@ -156,17 +158,29 @@ class _FakeAdapter(McpSdkAdapter):
     def __init__(self, session: _FakeSession) -> None:
         self.fake_session = session
 
-    def _client(self, connection: McpSourceConnection, auth: object | None):
+    @asynccontextmanager
+    async def _client(
+        self,
+        connection: McpSourceConnection,
+        auth: object | None,
+    ) -> AsyncIterator[McpSourceClient]:
         assert connection.id == "demo.personal"
         assert auth is None
-        return _ClientContext(
+        async with _ClientContext(
             McpSourceClient(session=self.fake_session, connection=connection)
-        )
+        ) as client:
+            yield client
 
 
 class _ExplodingClientAdapter(McpSdkAdapter):
-    def _client(self, connection: McpSourceConnection, auth: object | None):
+    @asynccontextmanager
+    async def _client(
+        self,
+        connection: McpSourceConnection,
+        auth: object | None,
+    ) -> AsyncIterator[McpSourceClient]:
         raise AssertionError("metadata lookup must not open an MCP session")
+        yield  # pragma: no cover
 
 
 def test_mcp_sdk_adapter_implements_backend_protocol() -> None:

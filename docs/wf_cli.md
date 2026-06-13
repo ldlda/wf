@@ -137,6 +137,16 @@ exists, whether the auth scheme is compatible with the transport, catalog
 snapshot counts, and non-secret diagnostics. Secret payload values are never
 printed.
 
+List resource and prompt names exposed by a source:
+
+```bash
+wf --config wf.config.json source resources everything.default
+wf --config wf.config.json source prompts everything.default --format json
+```
+
+These commands read source inventory only. They do not fetch resource content or
+render prompts, which can be large or stateful upstream operations.
+
 ## Output Policy
 
 JSON is the default output format for every command.

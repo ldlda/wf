@@ -102,6 +102,7 @@ def test_file_store_accepts_neutral_auth_ref_without_connection_shape(
 
     loaded = store.load_auth_record("api_ci-1")
     assert loaded is not None
+    assert isinstance(loaded, NeutralAuthRecord)
     assert loaded.id == "api_ci-1"
     assert loaded.scheme == "bearer"
     assert loaded.payload == {"token": "secret"}

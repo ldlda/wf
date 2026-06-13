@@ -34,6 +34,34 @@ class BrokenSourceAdmin:
         raise RuntimeError(f"broken source admin for {source_id}")
 
 
+class InventorySourceAdmin:
+    async def list_sources(
+        self,
+        *,
+        cursor: str | None = None,
+        limit: int = 50,
+    ) -> dict[str, Any]:
+        return {"sources": [], "next_cursor": None, "total": 0}
+
+    async def inspect_source(self, *, source_id: str) -> dict[str, Any]:
+        return {
+            "id": source_id,
+            "capabilities": {
+                "resources": [
+                    f"{source_id}.architecture.md",
+                    f"{source_id}.startup.md",
+                ],
+                "prompts": [
+                    f"{source_id}.simple-prompt",
+                    f"{source_id}.args-prompt",
+                ],
+            },
+        }
+
+    async def diagnose_source(self, *, source_id: str) -> dict[str, Any]:
+        return {"source_id": source_id, "status": "ok"}
+
+
 def test_load_cli_context_uses_rpc_client_for_rpc_http_target(tmp_path) -> None:
     config_path = tmp_path / "wf.json"
     config_path.write_text(
@@ -406,6 +434,64 @@ def test_wf_source_commands_use_rpc_url_override(monkeypatch, tmp_path) -> None:
     assert '"id": "wf.std"' in listed.output
     assert inspected.exit_code == 0, inspected.output
     assert '"id": "wf.std"' in inspected.output
+
+
+def test_wf_source_resources_and_prompts_render_names(monkeypatch, tmp_path) -> None:
+    fake_context = CliContext(
+        config_path=Path("dummy"),
+        service=cast(Any, object()),
+        handlers=build_local_static_workflow_server(tmp_path / "store").api,
+        source_admin=InventorySourceAdmin(),
+        admin=cast(Any, object()),
+    )
+    monkeypatch.setattr(
+        "wf_cli.commands.sources.load_cli_context_from_typer",
+        lambda _ctx: fake_context,
+    )
+    runner = CliRunner()
+
+    resources = runner.invoke(app, ["source", "resources", "everything.default"])
+    prompts = runner.invoke(app, ["source", "prompts", "everything.default"])
+
+    assert resources.exit_code == 0, resources.output
+    assert resources.output.splitlines() == [
+        "everything.default.architecture.md",
+        "everything.default.startup.md",
+    ]
+    assert prompts.exit_code == 0, prompts.output
+    assert prompts.output.splitlines() == [
+        "everything.default.simple-prompt",
+        "everything.default.args-prompt",
+    ]
+
+
+def test_wf_source_resources_json_format(monkeypatch, tmp_path) -> None:
+    fake_context = CliContext(
+        config_path=Path("dummy"),
+        service=cast(Any, object()),
+        handlers=build_local_static_workflow_server(tmp_path / "store").api,
+        source_admin=InventorySourceAdmin(),
+        admin=cast(Any, object()),
+    )
+    monkeypatch.setattr(
+        "wf_cli.commands.sources.load_cli_context_from_typer",
+        lambda _ctx: fake_context,
+    )
+
+    result = CliRunner().invoke(
+        app,
+        ["source", "resources", "everything.default", "--format", "json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload == {
+        "source_id": "everything.default",
+        "resources": [
+            "everything.default.architecture.md",
+            "everything.default.startup.md",
+        ],
+    }
 
 
 def test_wf_remote_source_inspect_formats_expected_rpc_error(
