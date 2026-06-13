@@ -76,23 +76,24 @@ def test_workflow_surface_creates_artifact_from_draft_with_binding_suggestions(
     artifact = artifact_store.get_artifact("draft_echo", 1)
 
     assert payload["saved"] is True
-    assert payload["required_logical_sources"] == ["demo", "wf.std"]
-    assert payload["suggested_bindings"]["wf.std"] == "wf.std"
+    assert payload["required_logical_sources"] == ["demo"]
+    assert payload["suggested_bindings"] == {}
     assert artifact.plan["nodes"][0]["node"] == "demo.echo_tool"
     assert artifact.required_capability_map()["demo.echo_tool"].logical_source == "demo"
 
 
-def test_workflow_surface_draft_artifact_requires_std_self_binding(
+def test_workflow_surface_draft_artifact_with_platform_source_succeeds(
     tmp_path: Path,
 ) -> None:
-    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_draft_missing_std")
+    """Platform sources like wf.std don't require explicit bindings."""
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_draft_platform")
     h = handlers(artifact_store)
 
     asyncio.run(
         h.create_artifact_from_draft(
-            artifact_id="draft_echo_missing_std",
+            artifact_id="draft_echo_platform",
             version=1,
-            title="Draft Echo Missing Std",
+            title="Draft Echo Platform",
             draft=echo_draft(),
             outcomes=("completed",),
             source_bindings={"demo": "demo.personal"},
@@ -100,20 +101,23 @@ def test_workflow_surface_draft_artifact_requires_std_self_binding(
     )
     artifact_store.save_deployment(
         WorkflowDeployment(
-            id="draft_echo_missing_std.personal",
-            artifact_id="draft_echo_missing_std",
+            id="draft_echo_platform.personal",
+            artifact_id="draft_echo_platform",
             artifact_version=1,
             bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
         )
     )
 
     payload = asyncio.run(
-        h.validate_deployment(deployment_id="draft_echo_missing_std.personal")
+        h.validate_deployment(deployment_id="draft_echo_platform.personal")
     )
 
+    # wf.std is a platform source, so no binding_missing diagnostic for it
+    # The only diagnostic should be source_missing for demo.personal (not registered)
     assert payload["status"] == "unrunnable"
-    assert payload["diagnostics"][0]["code"] == "binding_missing"
-    assert payload["diagnostics"][0]["logical_ref"] == "wf.std.replace"
+    assert len(payload["diagnostics"]) == 1
+    assert payload["diagnostics"][0]["code"] == "source_missing"
+    assert payload["diagnostics"][0]["logical_ref"] == "demo.echo_tool"
 
 
 def test_workflow_surface_validates_draft_workspace_with_live_outcomes(
