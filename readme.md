@@ -49,6 +49,9 @@ wf_cli
   diagnostics.
 - [docs/runbooks/python-source.md](docs/runbooks/python-source.md): trusted
   project-local Python source setup and workflow-run flow.
+- [docs/source_architecture.md](docs/source_architecture.md): source package
+  boundaries and terms such as source, tool, workflow capability, resource, and
+  prompt.
 - [docs/wf_api_architecture.md](docs/wf_api_architecture.md): current API,
   server, transport, and source package boundaries.
 - [docs/project_map.md](docs/project_map.md): package map, entrypoints, examples,
