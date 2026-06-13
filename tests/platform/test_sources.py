@@ -7,6 +7,7 @@ from wf_platform import (
     DocumentationResource,
     SourceInventory,
     SourcePermissions,
+    SourcePolicy,
     SourceStatus,
     SourceVisibility,
     build_documentation_source,
@@ -100,3 +101,20 @@ def test_documentation_source_owns_provider_neutral_resources() -> None:
     assert source.capabilities.prompts["wf.docs.operator_guide"].text == (
         "Read wf://docs/operator-manual first."
     )
+
+
+def test_capability_source_exposes_policy_snapshot() -> None:
+    source = CapabilitySource(
+        id="wf.std",
+        kind="system",
+        policy=SourcePolicy(platform=True, binding_required=False),
+    )
+
+    status = source.as_status()
+
+    assert status.policy.platform is True
+    assert status.policy.binding_required is False
+    assert status.model_dump(mode="json")["policy"] == {
+        "platform": True,
+        "binding_required": False,
+    }

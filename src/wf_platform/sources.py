@@ -30,6 +30,18 @@ class SourcePermissions:
     mutates_auth: bool = False
 
 
+@dataclass(frozen=True, slots=True)
+class SourcePolicy:
+    """Runtime/deployment policy for one capability source.
+
+    Platform sources are process-provided built-ins such as `wf.std`. They are
+    not account-bound and should not require deployment source bindings.
+    """
+
+    platform: bool = False
+    binding_required: bool = True
+
+
 class SourceVisibilitySnapshot(BaseModel):
     """Serializable visibility flags for one source inventory snapshot."""
 
@@ -45,6 +57,13 @@ class SourcePermissionsSnapshot(BaseModel):
     calls_upstream: bool = False
     mutates_config: bool = False
     mutates_auth: bool = False
+
+
+class SourcePolicySnapshot(BaseModel):
+    """Serializable source policy used by CLI/API inventory responses."""
+
+    platform: bool = False
+    binding_required: bool = True
 
 
 class NodeSpecInventory(BaseModel):
@@ -108,6 +127,7 @@ class SourceStatus(BaseModel):
     enabled: bool
     visibility: SourceVisibilitySnapshot
     permissions: SourcePermissionsSnapshot
+    policy: SourcePolicySnapshot
     description: str | None = None
     tool_count: int
     node_spec_count: int
@@ -142,6 +162,7 @@ class CapabilitySource:
     enabled: bool = True
     visibility: SourceVisibility = field(default_factory=SourceVisibility)
     permissions: SourcePermissions = field(default_factory=SourcePermissions)
+    policy: SourcePolicy = field(default_factory=SourcePolicy)
     description: str | None = None
 
     def as_status(self) -> SourceStatus:
@@ -160,6 +181,10 @@ class CapabilitySource:
                 calls_upstream=self.permissions.calls_upstream,
                 mutates_config=self.permissions.mutates_config,
                 mutates_auth=self.permissions.mutates_auth,
+            ),
+            policy=SourcePolicySnapshot(
+                platform=self.policy.platform,
+                binding_required=self.policy.binding_required,
             ),
             description=self.description,
             tool_count=len(self.capabilities.tools),
