@@ -146,6 +146,40 @@ async def test_local_static_server_inspects_and_reads_bounded_trace(tmp_path) ->
     assert len(trace["trace"]) == 1
 
 
+async def test_local_static_wf_std_deployment_runs_without_source_binding(
+    tmp_path,
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    api = server.api
+    plan = _constant_plan()
+
+    artifact_result = await api.create_artifact_from_plan(
+        artifact_id="server_constant_no_binding",
+        version=1,
+        title="Server Constant No Binding",
+        plan=plan.model_copy(update={"name": "server_constant_no_binding"}),
+        outcomes=["ok"],
+        source_bindings={},
+    )
+    deployment_result = await api.save_deployment(
+        {
+            "id": "server_constant_no_binding.default",
+            "artifact_id": "server_constant_no_binding",
+            "artifact_version": 1,
+            "bindings": {},
+        }
+    )
+    run_result = await api.run_deployment(
+        deployment_id="server_constant_no_binding.default",
+        workflow_input={},
+    )
+
+    assert artifact_result["artifact_id"] == "server_constant_no_binding"
+    assert deployment_result["deployment_id"] == "server_constant_no_binding.default"
+    assert run_result["status"] == "completed"
+    assert run_result["output"]["result"] == "hello from server"
+
+
 def test_local_static_server_has_no_source_registry_admin(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
 
