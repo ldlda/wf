@@ -6,7 +6,7 @@ WorkflowOperationContext so this module stays protocol-neutral.
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from wf_artifacts import (
@@ -18,6 +18,7 @@ from wf_artifacts import (
 from wf_artifacts import (
     create_workflow_artifact_from_plan as build_workflow_artifact_from_plan,
 )
+from wf_platform import CapabilitySource
 
 from .artifact_refs import artifact_capability_id
 from .capability_requirements import observed_node_specs
@@ -189,11 +190,9 @@ class WorkflowArtifactApi:
                 "created_from_draft": True,
             },
         )
-        required_sources = sorted(
-            {
-                capability.logical_source
-                for capability in workflow_artifact.required_capability_map().values()
-            }
+        required_sources = _binding_required_sources(
+            workflow_artifact.required_capability_map(),
+            self.context.specs.capability_sources,
         )
         return {
             "artifact_id": workflow_artifact.id,
@@ -304,10 +303,22 @@ class WorkflowArtifactApi:
 
 
 def _suggested_self_bindings(required_sources: Sequence[str]) -> dict[str, str]:
-    """Suggest local bindings for built-in sources that deploy to themselves."""
-    return {
-        source: source for source in required_sources if source in {"wf.std", "wf.mcp"}
-    }
+    """Suggest local bindings for external sources that deploy to themselves."""
+    return {}
+
+
+def _binding_required_sources(
+    required_capabilities: dict[str, RequiredCapability],
+    sources: Mapping[str, CapabilitySource],
+) -> list[str]:
+    return sorted(
+        {
+            capability.logical_source
+            for capability in required_capabilities.values()
+            if sources.get(capability.logical_source) is None
+            or sources[capability.logical_source].policy.binding_required
+        }
+    )
 
 
 __all__ = [

@@ -9,6 +9,7 @@ from typing import Any
 import pytest
 
 from tests.wf_mcp.test_support import echo_tool
+from wf_api import WorkflowApi
 from wf_api.artifacts import WorkflowArtifactApi
 from wf_artifacts import (
     FileDraftWorkspaceStore,
@@ -312,3 +313,37 @@ async def test_delete_artifact_rejects_referenced_version(tmp_path: Path) -> Non
     assert result["deleted"] is False
     assert result["blocked_by_deployments"] == ["echo.default"]
     assert artifact_store.get_artifact("echo", 1).id == "echo"
+
+
+def _api(root: Path) -> WorkflowApi:
+    mcp_root = root / "mcp"
+    service = WfMcpService(
+        store=FileStore(mcp_root),
+        artifact_store=FileWorkflowArtifactStore(root),
+        draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
+    )
+    return WorkflowApi(context_from_service(service))
+
+
+@pytest.mark.asyncio
+async def test_create_artifact_from_workspace_excludes_platform_sources_from_required_bindings(
+    tmp_path: Path,
+) -> None:
+    api = _api(tmp_path)
+    workspace = await api.create_draft_workspace_from_capability(
+        workspace_id="constant_ws",
+        capability_name="wf.std.constant",
+        name="constant_value",
+    )
+
+    saved = await api.create_artifact_from_workspace(
+        workspace_id=workspace["workspace_id"],
+        artifact_id="constant_artifact",
+        version=1,
+        title="Constant Artifact",
+        outcomes=["ok"],
+    )
+
+    assert saved["saved"] is True
+    assert saved["required_logical_sources"] == []
+    assert saved["suggested_bindings"] == {}
