@@ -438,11 +438,13 @@ async def test_source_catalog_hydrates_connection_source_from_snapshot_directly(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )
 
-    specs = second_service.source_catalog.capability_sources[
+    capabilities = second_service.source_catalog.capability_sources[
         "demo.personal"
-    ].capabilities.node_specs
+    ].capabilities
 
-    assert "demo.personal.echo_tool" in specs
+    assert "demo.personal.echo_tool" in capabilities.node_specs
+    assert "demo.personal.resource.welcome" in capabilities.resources
+    assert "demo.personal.prompt.summarize" in capabilities.prompts
 
 
 def test_source_catalog_register_specs_replaces_discovered_specs_directly(

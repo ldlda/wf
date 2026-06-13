@@ -235,6 +235,14 @@ class SourceCatalogService:
             entry.qualified_name: self.spec_from_snapshot_entry(entry)
             for entry in (() if snapshot is None else snapshot.nodes)
         }
+        resources = {
+            entry.qualified_name: entry
+            for entry in (() if snapshot is None else snapshot.resources)
+        }
+        prompts = {
+            entry.qualified_name: entry
+            for entry in (() if snapshot is None else snapshot.prompts)
+        }
         description = (
             f"Specs restored from catalog for {connection.id}."
             if specs
@@ -245,7 +253,11 @@ class SourceCatalogService:
                 id=connection.id,
                 kind="connection",
                 enabled=connection.enabled,
-                capabilities=CapabilityBuckets(node_specs=specs),
+                capabilities=CapabilityBuckets(
+                    node_specs=specs,
+                    resources=resources,
+                    prompts=prompts,
+                ),
                 visibility=SourceVisibility(
                     planner=True,
                     client=True,
