@@ -265,3 +265,40 @@ async def test_content_access_uses_stateful_runtime_for_upstream_content() -> No
     assert prompt["messages"][0]["content"]["text"] == "stateful prompt"
     assert runtime.resources == ["demo://docs/welcome"]
     assert runtime.prompts == ["prompt.summarize"]
+
+
+async def test_read_resource_by_source_uri_reads_upstream() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "content_source_uri")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+    await service.refresh_connection_catalog("demo.personal")
+
+    result = await service.content_access.read_resource_by_source_uri(
+        source_id="demo.personal",
+        uri="demo://docs/welcome",
+        max_chars=4000,
+    )
+
+    assert result["contents"][0]["text"] == "Welcome from the fake adapter resource."
+
+
+async def test_read_resource_by_source_uri_rejects_unknown_resource() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "content_source_uri_unknown")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+    await service.refresh_connection_catalog("demo.personal")
+
+    with pytest.raises(KeyError, match="unknown resource"):
+        await service.content_access.read_resource_by_source_uri(
+            source_id="demo.personal",
+            uri="demo://nonexistent",
+            max_chars=4000,
+        )

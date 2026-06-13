@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from wf_artifacts import WorkflowDeployment
 from wf_core import END, NodeUse, RunStatus
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.source_catalog import SourceCatalogService
@@ -9,7 +10,7 @@ from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_platform import CapabilityBuckets, CapabilitySource, SourceVisibility
 
-from ..test_support import echo_tool, local_temp_root
+from ..test_support import FakeAdapter, echo_tool, local_temp_root, output_binding
 from .conftest import raw_plan, single_echo_plan
 
 
@@ -70,6 +71,7 @@ def test_wfmcpservice_constructs_workflow_runtime_with_source_catalog() -> None:
 
     assert service.workflow_runtime.source_catalog is service.source_catalog
     assert service.workflow_runtime.artifact_store is service.artifact_store
+    assert service.workflow_runtime.read_resource_handler is not None
 
 
 def test_wfmcpservice_compile_plan_delegates_to_workflow_runtime() -> None:
@@ -98,7 +100,7 @@ def test_workflow_runtime_service_prepares_node_registry_and_reducers() -> None:
         emit_event=lambda event: None,
     )
 
-    workflow, registry, reducers, prepared_subgraphs = runtime.prepare_workflow_runtime(
+    workflow, registry, reducers, prepared_subgraphs, platform_context = runtime.prepare_workflow_runtime(
         single_echo_plan("runtime_prepare", "demo.personal.echo_tool"),
         deployment=None,
         artifact=None,
@@ -108,6 +110,27 @@ def test_workflow_runtime_service_prepares_node_registry_and_reducers() -> None:
     assert "demo.personal.echo_tool" in registry
     assert isinstance(reducers, dict)
     assert prepared_subgraphs == {}
+    assert platform_context.source_bindings == {}
+    assert isinstance(platform_context.platform_sources, set)
+    assert platform_context.read_resource_handler is None
+
+
+def test_wfmcpservice_prepares_platform_context_with_resource_handler() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "runtime_platform_context")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", echo_tool)
+
+    *_runtime, platform_context = service.workflow_runtime.prepare_workflow_runtime(
+        single_echo_plan("runtime_platform_context", "demo.personal.echo_tool"),
+        deployment=None,
+        artifact=None,
+    )
+
+    assert platform_context.read_resource_handler is not None
 
 
 async def test_workflow_runtime_service_runs_plan_and_emits_events() -> None:
@@ -129,6 +152,73 @@ async def test_workflow_runtime_service_runs_plan_and_emits_events() -> None:
         "workflow_run_completed",
     ]
     assert events[1].payload["status"] == "completed"
+
+
+async def test_wf_source_read_resource_runs_through_platform_context() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "runtime_source_resource")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+    await service.refresh_connection_catalog("demo.personal")
+
+    run = await service.workflow_runtime.run_workflow_from_plan(
+        raw_plan(
+            name="runtime_source_resource",
+            input_schema={"type": "object", "properties": {}},
+            state_schema={
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+            },
+            output_schema={
+                "type": "object",
+                "properties": {"text": {"type": "string"}},
+                "required": ["text"],
+            },
+            start="read",
+            nodes=[
+                {
+                    "id": "read",
+                    "type": "node",
+                    "node": "wf.source.read_resource",
+                    "input": [
+                        {
+                            "value": {
+                                "kind": "source_resource_ref",
+                                "logical_source": "drive",
+                                "uri": "demo://docs/welcome",
+                            },
+                            "target": {"root": "local", "parts": ["ref"]},
+                        },
+                        {
+                            "value": 7,
+                            "target": {"root": "local", "parts": ["max_chars"]},
+                        },
+                    ],
+                    "output": [output_binding("text", "state.text")],
+                }
+            ],
+            edges=[{"from": "read", "outcome": "ok", "to": END}],
+            output=[
+                {
+                    "path": {"root": "state", "parts": ["text"]},
+                    "target": {"root": "local", "parts": ["text"]},
+                }
+            ],
+        ),
+        {},
+        deployment=WorkflowDeployment(
+            id="runtime_source_resource.default",
+            artifact_id="runtime_source_resource",
+            artifact_version=1,
+            bindings={"drive": "demo.personal"},
+        ),
+    )
+
+    assert run.status == RunStatus.COMPLETED
+    assert run.output == {"text": "Welcome"}
 
 
 async def test_workflow_runtime_service_emits_failed_event_for_failed_run() -> None:

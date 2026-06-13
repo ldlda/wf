@@ -35,6 +35,7 @@ from .runs import WorkflowRunApi
 from .runtime_dependencies import RuntimeDependencies, resolve_runtime_dependencies
 from .service import WorkflowApi
 from .source_admin import WorkflowSourceAdminApi
+from .source_refs import SourceResourceRef
 from .source_registry_admin import (
     WorkflowSourceRegistryApi,
     WorkflowSourceRegistryApplyProvider,
@@ -110,6 +111,7 @@ __all__ = [
     "WorkflowRuntimeRunner",
     "WorkflowRunApi",
     "WorkflowRunSurface",
+    "SourceResourceRef",
     "WorkflowSourceAdminApi",
     "WorkflowSourceAdminSurface",
     "WorkflowSourceRegistryApi",

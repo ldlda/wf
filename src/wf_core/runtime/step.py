@@ -216,6 +216,7 @@ async def step_workflow_async(
     index: WorkflowIndex | None = None,
     reducers: Mapping[str, ReducerDefinition] | None = None,
     subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
+    platform: object | None = None,
 ) -> RunState:
     """Execute at most one async workflow step."""
     frame = run.current_frame() if run.current_frame_id is not None else None
@@ -232,6 +233,7 @@ async def step_workflow_async(
             index=resolved_index,
             reducers=reducers,
             first_frame=frame,
+            platform=platform,
         )
     prepared = prepare_step(workflow, run, resolved_index)
     if prepared is None:
@@ -249,6 +251,7 @@ async def step_workflow_async(
                 node_def,
                 registry,
                 reducers=reducers,
+                platform=platform,
             )
         except Exception as exc:
             if _mark_handled_item_failure(run, index, frame, exc):
@@ -303,6 +306,7 @@ async def _step_async_foreach_item_batch(
     index: WorkflowIndex,
     first_frame: ExecutionFrame,
     reducers: Mapping[str, ReducerDefinition] | None,
+    platform: object | None = None,
 ) -> RunState:
     """Run one batch of ready concurrent-foreach item node handlers.
 
@@ -322,6 +326,7 @@ async def _step_async_foreach_item_batch(
                 node,
                 index.node_defs[node.node],
                 registry,
+                platform=platform,
             )
         )
     results = await asyncio.gather(*tasks, return_exceptions=True)

@@ -51,6 +51,7 @@ async def execute_workflow_async(
     *,
     reducers: Mapping[str, ReducerDefinition] | None = None,
     subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
+    platform: object | None = None,
 ) -> RunState:
     """Create a run and execute a workflow asynchronously until it stops."""
     run = create_run_state(workflow, workflow_input)
@@ -63,6 +64,7 @@ async def execute_workflow_async(
             registry,
             reducers=reducers,
             subgraphs=subgraphs,
+            platform=platform,
         )
     except Exception as exc:
         run.status = RunStatus.FAILED
@@ -77,6 +79,7 @@ async def execute_workflow_result_async(
     *,
     reducers: Mapping[str, ReducerDefinition] | None = None,
     subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
+    platform: object | None = None,
 ) -> RunState:
     """Execute asynchronously and return failed state instead of raising failures."""
     run = create_run_state(workflow, workflow_input)
@@ -89,6 +92,7 @@ async def execute_workflow_result_async(
             registry,
             reducers=reducers,
             subgraphs=subgraphs,
+            platform=platform,
         )
     except Exception as exc:
         run.status = RunStatus.FAILED
@@ -157,6 +161,7 @@ async def resume_workflow_async(
     resume_outcome: str = "submitted",
     reducers: Mapping[str, ReducerDefinition] | None = None,
     subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
+    platform: object | None = None,
 ) -> RunState:
     """Resume an async run from its current state."""
     interrupted_workflow, interrupted_reducers = _interrupt_resume_target(
@@ -193,6 +198,7 @@ async def resume_workflow_async(
             index=index if frame.scope_id == ROOT_SCOPE_ID else None,
             reducers=active_reducers,
             subgraphs=subgraphs,
+            platform=platform,
         )
         if run.status == RunStatus.INTERRUPTED:
             return run
@@ -209,6 +215,7 @@ async def resume_workflow_result_async(
     resume_outcome: str = "submitted",
     reducers: Mapping[str, ReducerDefinition] | None = None,
     subgraphs: Mapping[str, PreparedSubgraph[AsyncNodeHandler]] | None = None,
+    platform: object | None = None,
 ) -> RunState:
     """Resume asynchronously and return failed state instead of raising failures."""
     try:
@@ -220,6 +227,7 @@ async def resume_workflow_result_async(
             resume_outcome=resume_outcome,
             reducers=reducers,
             subgraphs=subgraphs,
+            platform=platform,
         )
     except Exception as exc:
         run.status = RunStatus.FAILED

@@ -117,16 +117,16 @@ def _resolve_reducers(
     sources: dict[str, CapabilitySource],
 ) -> dict[str, ReducerDefinition]:
     reducers: dict[str, ReducerDefinition] = {}
-    if deployment is None:
-        return reducers
+    bindings = deployment.binding_map() if deployment is not None else {}
 
     for logical_ref, required in required_capabilities.items():
         if required.kind != "reducer":
             continue
-        bound_source_id = deployment.binding_map().get(required.logical_source)
-        if bound_source_id is None:
-            continue
-        source = sources.get(bound_source_id)
+        source = _find_source_for_reducer(
+            logical_source=required.logical_source,
+            bindings=bindings,
+            sources=sources,
+        )
         if source is None:
             continue
         definition = _find_reducer_definition(
@@ -136,6 +136,27 @@ def _resolve_reducers(
         if definition is not None:
             reducers[logical_ref] = definition
     return reducers
+
+
+def _find_source_for_reducer(
+    *,
+    logical_source: str,
+    bindings: dict[str, str],
+    sources: dict[str, CapabilitySource],
+) -> CapabilitySource | None:
+    """Find the source that owns a reducer for a logical source.
+
+    Platform sources resolve by exact ``logical_source`` without a deployment
+    binding.  External sources require a binding entry.
+    """
+    platform_source = sources.get(logical_source)
+    if platform_source is not None and platform_source.policy.platform:
+        return platform_source
+
+    bound_source_id = bindings.get(logical_source)
+    if bound_source_id is None:
+        return None
+    return sources.get(bound_source_id)
 
 
 def _find_reducer_definition(

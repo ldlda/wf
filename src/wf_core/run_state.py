@@ -97,6 +97,7 @@ class RuntimeContext:
     prior_outcome: str | None = None
     activated_incoming_edge: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
+    platform: object | None = None
 
 
 @dataclass(slots=True)

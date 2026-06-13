@@ -3,6 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
+from pydantic import BaseModel, Field
+
 from wf_authoring import (
     NodeSpec,
     coalesce,
@@ -28,6 +30,7 @@ from wf_authoring import (
     runtime_error,
     truthy,
 )
+from wf_core import RuntimeContext
 from wf_core.runtime.ops.merges import DEFAULT_REDUCER_DEFINITIONS
 from wf_platform import (
     CapabilityBuckets,
@@ -36,6 +39,9 @@ from wf_platform import (
     SourcePolicy,
     SourceVisibility,
 )
+
+from .source_helpers import ReadResourceOutput, read_resource
+from .source_refs import SourceResourceRef
 
 if TYPE_CHECKING:
     from wf_core import ReducerSpec
@@ -78,6 +84,24 @@ AUTHORING_STD_SPECS: tuple[NodeSpec[Any, Any], ...] = (
 
 RECIPE_SPECS: tuple[NodeSpec[Any, Any], ...] = (extract_text_content,)
 """Composed first-party recipes exposed as workflow-facing capabilities."""
+
+SOURCE_SOURCE_ID = "wf.source"
+"""Internal source id for explicit source-ref helper nodes."""
+
+
+class ReadResourceInput(BaseModel):
+    """Input model for wf.source.read_resource node."""
+
+    ref: SourceResourceRef
+    max_chars: int = Field(default=4000, ge=1, le=20000)
+
+
+@node(name="read_resource")
+async def read_resource_node(
+    payload: ReadResourceInput,
+    ctx: RuntimeContext,
+) -> ReadResourceOutput:
+    return await read_resource(payload.ref, ctx, max_chars=payload.max_chars)
 
 
 def qualify_node_name(source_id: str, local_name: str) -> str:
@@ -186,6 +210,21 @@ def builtin_sources() -> dict[str, CapabilitySource]:
             permissions=SourcePermissions(safe_for_workflow=True),
             policy=SourcePolicy(platform=True, binding_required=False),
             description="First-party workflow recipes composed from standard nodes.",
+        ),
+        SOURCE_SOURCE_ID: CapabilitySource(
+            id=SOURCE_SOURCE_ID,
+            kind="system",
+            capabilities=CapabilityBuckets(
+                node_specs=_qualified_specs(SOURCE_SOURCE_ID, (read_resource_node,)),
+            ),
+            visibility=SourceVisibility(
+                planner=True,
+                client=True,
+                admin_dashboard=True,
+            ),
+            permissions=SourcePermissions(safe_for_workflow=True, calls_upstream=True),
+            policy=SourcePolicy(platform=True, binding_required=False),
+            description="Platform helpers for explicit source refs.",
         ),
     }
 

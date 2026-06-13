@@ -55,6 +55,7 @@ def _resolve_node_execution(
     frame: ExecutionFrame,
     node: NodeUse,
     node_def: NodeDef,
+    platform: object | None = None,
 ) -> tuple[dict[str, Any], RuntimeContext, dict[str, Any]]:
     context_values = frame_context_values(frame)
     state_view = state_view_for_frame(run, frame)
@@ -90,6 +91,7 @@ def _resolve_node_execution(
         prior_outcome=frame.prior_outcome,
         activated_incoming_edge=frame.activated_incoming_edge,
         metadata=dict(frame.metadata),
+        platform=platform,
     )
     return resolved_input, context, state_view
 
@@ -200,6 +202,7 @@ async def execute_node_use_async(
     node_def: NodeDef,
     registry: Mapping[str, AsyncNodeHandler],
     reducers: Mapping[str, ReducerDefinition] | None = None,
+    platform: object | None = None,
 ) -> StepExecutionResult:
     handler = registry.get(node.node)
     if handler is None:
@@ -214,6 +217,7 @@ async def execute_node_use_async(
         frame=frame,
         node=node,
         node_def=node_def,
+        platform=platform,
     )
     raw_or_awaitable = handler(resolved_input, context)
     if isinstance(raw_or_awaitable, Awaitable):
@@ -240,6 +244,7 @@ async def invoke_node_use_async_for_frame(
     node: NodeUse,
     node_def: NodeDef,
     registry: Mapping[str, AsyncNodeHandler],
+    platform: object | None = None,
 ) -> PendingAsyncNodeResult:
     """Resolve input, await the async handler, and defer state finalization.
 
@@ -258,6 +263,7 @@ async def invoke_node_use_async_for_frame(
         frame=frame,
         node=node,
         node_def=node_def,
+        platform=platform,
     )
     raw_or_awaitable = handler(resolved_input, context)
     if isinstance(raw_or_awaitable, Awaitable):
@@ -302,6 +308,7 @@ async def execute_node_use_async_for_frame(
     node_def: NodeDef,
     registry: Mapping[str, AsyncNodeHandler],
     reducers: Mapping[str, ReducerDefinition] | None = None,
+    platform: object | None = None,
 ) -> StepExecutionResult:
     """Execute one async node against an explicit frame.
 
@@ -316,6 +323,7 @@ async def execute_node_use_async_for_frame(
         node=node,
         node_def=node_def,
         registry=registry,
+        platform=platform,
     )
     return finalize_pending_async_node_result(
         workflow=workflow,

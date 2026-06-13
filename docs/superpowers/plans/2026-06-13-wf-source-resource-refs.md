@@ -1,6 +1,6 @@
 # `wf.source` Resource Ref Helpers Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add explicit source-aware helper capabilities under `wf.source` for pass-by-value resource refs using `logical_source`, starting with bounded `read_resource`.
 
@@ -42,7 +42,7 @@
 - Modify: `src/wf_api/__init__.py`
 - Test: `tests/wf_api/test_source_refs.py`
 
-- [ ] **Step 1: Write model tests**
+- [x] **Step 1: Write model tests**
 
 Create `tests/wf_api/test_source_refs.py`:
 
@@ -73,7 +73,7 @@ def test_source_resource_ref_rejects_empty_logical_source() -> None:
         SourceResourceRef(logical_source="", uri="gdrive://file/abc")
 ```
 
-- [ ] **Step 2: Run tests and confirm failure**
+- [x] **Step 2: Run tests and confirm failure**
 
 Run:
 
@@ -83,7 +83,7 @@ uv run pytest tests/wf_api/test_source_refs.py -q
 
 Expected: fails because `wf_api.source_refs` does not exist.
 
-- [ ] **Step 3: Implement models**
+- [x] **Step 3: Implement models**
 
 Create `src/wf_api/source_refs.py`:
 
@@ -111,7 +111,7 @@ class SourceResourceRef(BaseModel):
 
 In `src/wf_api/__init__.py`, export `SourceResourceRef`.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 Run:
 
@@ -141,7 +141,7 @@ git commit -m "feat: add source resource ref model"
 - Modify: `src/wf_core/runtime/ops/nodes.py`
 - Test: `tests/core/test_runtime_context.py` or existing nearest runtime context test
 
-- [ ] **Step 1: Add context tests**
+- [x] **Step 1: Add context tests**
 
 Create `tests/core/test_runtime_context.py` if no equivalent exists:
 
@@ -163,7 +163,7 @@ def test_runtime_context_can_carry_platform_context() -> None:
     assert ctx.platform is platform
 ```
 
-- [ ] **Step 2: Run test and confirm failure**
+- [x] **Step 2: Run test and confirm failure**
 
 Run:
 
@@ -173,7 +173,7 @@ uv run pytest tests/core/test_runtime_context.py -q
 
 Expected: fails because `RuntimeContext` has no `platform` field.
 
-- [ ] **Step 3: Add platform field**
+- [x] **Step 3: Add platform field**
 
 In `src/wf_core/run_state.py`, update `RuntimeContext`:
 
@@ -208,7 +208,7 @@ class WorkflowPlatformContext(Protocol):
     ) -> dict[str, Any]: ...
 ```
 
-- [ ] **Step 4: Pass platform context through async node execution**
+- [x] **Step 4: Pass platform context through async node execution**
 
 Thread an opaque `platform: object | None = None` through the async runtime
 entrypoints:
@@ -246,7 +246,7 @@ Add one focused async-runtime test that calls
 `execute_workflow_result_async(..., platform=sentinel)` with a node handler
 that asserts `ctx.platform is sentinel`.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 Run:
 
@@ -274,7 +274,7 @@ git commit -m "feat: carry platform context through runtime context"
 - Modify: `src/wf_mcp/broker/service/workflow_runtime.py`
 - Test: `tests/wf_api/test_runtime_dependencies.py` or nearest existing file
 
-- [ ] **Step 1: Add tests for source resolution**
+- [x] **Step 1: Add tests for source resolution**
 
 Create `tests/wf_api/test_platform_context.py`:
 
@@ -312,7 +312,7 @@ def test_platform_context_rejects_unbound_source() -> None:
         context.resolve_source("drive")
 ```
 
-- [ ] **Step 2: Run tests and confirm failure**
+- [x] **Step 2: Run tests and confirm failure**
 
 Run:
 
@@ -322,7 +322,7 @@ uv run pytest tests/wf_api/test_platform_context.py -q
 
 Expected: fails because `SourceBindingPlatformContext` does not exist.
 
-- [ ] **Step 3: Implement platform context**
+- [x] **Step 3: Implement platform context**
 
 In `src/wf_api/platform_context.py`, add:
 
@@ -361,7 +361,7 @@ class SourceBindingPlatformContext:
         return await self.read_resource_handler(source_id, uri, max_chars)
 ```
 
-- [ ] **Step 4: Thread platform context through workflow runners**
+- [x] **Step 4: Thread platform context through workflow runners**
 
 Update `LocalWorkflowRuntimeRunner.prepare_workflow_runtime()` in `src/wf_server/context.py` to also create a platform context from deployment bindings:
 
@@ -414,7 +414,7 @@ content-access helper. If `read_resource_by_source_uri` does not exist yet,
 commit the neutral/local platform context in this task and finish MCP wiring in
 Task 4.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 Run:
 
@@ -442,7 +442,7 @@ git commit -m "feat: build source binding platform context"
 - Test: `tests/wf_api/test_source_helpers.py`
 - Test: `tests/wf_mcp/service/test_content_access.py`
 
-- [ ] **Step 1: Add helper tests**
+- [x] **Step 1: Add helper tests**
 
 Create `tests/wf_api/test_source_helpers.py`:
 
@@ -496,7 +496,7 @@ async def test_read_resource_requires_platform_context() -> None:
         )
 ```
 
-- [ ] **Step 2: Run tests and confirm failure**
+- [x] **Step 2: Run tests and confirm failure**
 
 Run:
 
@@ -506,7 +506,7 @@ uv run pytest tests/wf_api/test_source_helpers.py -q
 
 Expected: fails because `source_helpers.py` does not exist.
 
-- [ ] **Step 3: Implement bounded helper**
+- [x] **Step 3: Implement bounded helper**
 
 Create `src/wf_api/source_helpers.py`:
 
@@ -581,7 +581,7 @@ from typing import cast
 typed_platform = cast(WorkflowPlatformContext, platform)
 ```
 
-- [ ] **Step 4: Add source-uri content access helper**
+- [x] **Step 4: Add source-uri content access helper**
 
 In `src/wf_mcp/broker/service/content_access.py`, add:
 
@@ -614,7 +614,7 @@ async def read_resource_by_source_uri(
 Preserve the `max_chars` parameter in the signature even if truncation is
 performed by `wf_api.source_helpers`; this keeps the platform seam explicit.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 Run:
 
@@ -643,7 +643,7 @@ git commit -m "feat: add bounded source resource reader"
 - Test: `tests/wf_server/test_local_static_server.py`
 - Test: `tests/wf_transport_rpc_http/test_mcp_backed_server_rpc.py`
 
-- [ ] **Step 1: Add source inventory test**
+- [x] **Step 1: Add source inventory test**
 
 In `tests/wf_server/test_local_static_server.py`, add:
 
@@ -658,7 +658,7 @@ def test_local_static_server_exposes_wf_source_platform_source(tmp_path) -> None
     assert "wf.source.read_resource" in source.capabilities.node_specs
 ```
 
-- [ ] **Step 2: Run test and confirm failure**
+- [x] **Step 2: Run test and confirm failure**
 
 Run:
 
@@ -668,7 +668,7 @@ uv run pytest tests/wf_server/test_local_static_server.py::test_local_static_ser
 
 Expected: fails because `wf.source` is not registered.
 
-- [ ] **Step 3: Register source**
+- [x] **Step 3: Register source**
 
 In `src/wf_api/local_sources.py`, import:
 
@@ -714,7 +714,7 @@ If `local_sources.py` already qualifies specs differently, follow the existing `
 
 For MCP-backed servers, ensure `wf.source` is included in the same built-in/platform sources loaded into the broker service. If broker service already imports `builtin_sources()`, no additional change is needed.
 
-- [ ] **Step 4: Add RPC E2E with fake MCP resource**
+- [x] **Step 4: Add RPC E2E with fake MCP resource**
 
 In `tests/wf_transport_rpc_http/test_mcp_backed_server_rpc.py`, add a test that:
 
@@ -737,7 +737,7 @@ In `tests/wf_transport_rpc_http/test_mcp_backed_server_rpc.py`, add a test that:
 
 Use existing fake MCP-backed server helpers in that file; do not create a live network dependency.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 Run:
 
@@ -764,7 +764,7 @@ git commit -m "feat: expose wf source resource helper"
 - Modify: `docs/source_provider_guide.md`
 - Modify: `docs/current_roadmap.md`
 
-- [ ] **Step 1: Update docs**
+- [x] **Step 1: Update docs**
 
 In `docs/source_provider_guide.md`, add:
 
@@ -795,7 +795,7 @@ In `docs/current_roadmap.md`, replace the `wf.source` next-design note with:
   through runtime/platform context with bounded output.
 ```
 
-- [ ] **Step 2: Final verification**
+- [x] **Step 2: Final verification**
 
 Run:
 
@@ -807,7 +807,7 @@ uv run basedpyright --level error src/wf_api src/wf_core src/wf_mcp tests/wf_api
 
 Expected: focused tests pass, ruff clean, typecheck 0 errors.
 
-- [ ] **Step 3: Commit docs**
+- [x] **Step 3: Commit docs**
 
 ```bash
 git add docs/source_provider_guide.md docs/current_roadmap.md

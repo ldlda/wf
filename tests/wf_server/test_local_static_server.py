@@ -193,3 +193,13 @@ def test_local_static_builtins_are_platform_sources(tmp_path) -> None:
 
     assert wf_std.policy.platform is True
     assert wf_std.policy.binding_required is False
+
+
+def test_local_static_server_exposes_wf_source_platform_source(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path)
+
+    source = server.context.specs.capability_sources["wf.source"]
+
+    assert source.policy.platform is True
+    assert source.policy.binding_required is False
+    assert "wf.source.read_resource" in source.capabilities.node_specs

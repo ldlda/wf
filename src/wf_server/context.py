@@ -20,6 +20,7 @@ from wf_api.operation_context import (
     WorkflowRuntimeRunner,
     WorkflowSpecProvider,
 )
+from wf_api.platform_context import SourceBindingPlatformContext
 from wf_api.runtime_dependencies import resolve_runtime_dependencies
 from wf_api.saved_subgraphs import (
     SavedSubgraphTree,
@@ -150,7 +151,7 @@ class LocalWorkflowRuntimeRunner(WorkflowRuntimeRunner):
         deployment: WorkflowDeployment | None,
         artifact: WorkflowArtifact | None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
-    ) -> tuple[Workflow, dict[str, Any], dict[str, Any], dict[str, Any]]:
+    ) -> tuple[Workflow, dict[str, Any], dict[str, Any], dict[str, Any], SourceBindingPlatformContext]:
         plan_node_names = [
             node.node for node in plan.nodes if isinstance(node, NodeUse)
         ]
@@ -189,11 +190,21 @@ class LocalWorkflowRuntimeRunner(WorkflowRuntimeRunner):
                 compile_plan=self.compile_plan,
             )
         workflow = self.compile_plan(plan, dependencies.node_name_bindings)
+        platform_context = SourceBindingPlatformContext(
+            source_bindings={} if deployment is None else deployment.binding_map(),
+            platform_sources={
+                source_id
+                for source_id, source in self.specs.capability_sources.items()
+                if source.policy.platform
+            },
+            read_resource_handler=None,
+        )
         return (
             workflow,
             dependencies.node_registry,
             dependencies.reducers,
             prepared_subgraphs,
+            platform_context,
         )
 
     async def run_workflow_from_plan(
@@ -204,7 +215,7 @@ class LocalWorkflowRuntimeRunner(WorkflowRuntimeRunner):
         artifact: WorkflowArtifact | None = None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
     ) -> RunState:
-        workflow, registry, reducers, prepared_subgraphs = (
+        workflow, registry, reducers, prepared_subgraphs, platform_context = (
             self.prepare_workflow_runtime(
                 plan,
                 deployment=deployment,
@@ -218,6 +229,7 @@ class LocalWorkflowRuntimeRunner(WorkflowRuntimeRunner):
             registry,
             reducers=reducers,
             subgraphs=prepared_subgraphs,
+            platform=platform_context,
         )
 
     async def resume_workflow_from_plan(
@@ -231,7 +243,7 @@ class LocalWorkflowRuntimeRunner(WorkflowRuntimeRunner):
         artifact: WorkflowArtifact | None = None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
     ) -> RunState:
-        workflow, registry, reducers, prepared_subgraphs = (
+        workflow, registry, reducers, prepared_subgraphs, platform_context = (
             self.prepare_workflow_runtime(
                 plan,
                 deployment=deployment,
@@ -247,6 +259,7 @@ class LocalWorkflowRuntimeRunner(WorkflowRuntimeRunner):
             resume_outcome=resume_outcome,
             reducers=reducers,
             subgraphs=prepared_subgraphs,
+            platform=platform_context,
         )
 
 

@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 
 from wf_api.models import RawWorkflowPlan
+from wf_api.platform_context import SourceBindingPlatformContext
 from wf_api.runtime_dependencies import resolve_runtime_dependencies
 from wf_api.saved_subgraphs import (
     SavedSubgraphTree,
@@ -26,6 +27,7 @@ from ...events import McpEvent, make_event
 from .source_catalog import SourceCatalogService
 
 EventEmitter = Callable[[McpEvent], None]
+ReadResourceHandler = Callable[[str, str, int], Awaitable[dict[str, Any]]]
 
 
 @dataclass(slots=True)
@@ -40,6 +42,7 @@ class WorkflowRuntimeService:
     source_catalog: SourceCatalogService
     artifact_store: WorkflowArtifactStore | None
     emit_event: EventEmitter
+    read_resource_handler: ReadResourceHandler | None = None
 
     def compile_plan(
         self,
@@ -85,7 +88,7 @@ class WorkflowRuntimeService:
         deployment: WorkflowDeployment | None,
         artifact: WorkflowArtifact | None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
-    ) -> tuple[Workflow, dict[str, Any], dict[str, Any], dict[str, Any]]:
+    ) -> tuple[Workflow, dict[str, Any], dict[str, Any], dict[str, Any], SourceBindingPlatformContext]:
         """Resolve bindings once into the executable pieces core expects.
 
         Saved-run resume still rebuilds prepared dependencies from the current
@@ -130,11 +133,21 @@ class WorkflowRuntimeService:
                 compile_plan=self.compile_plan,
             )
         workflow = self.compile_plan(plan, dependencies.node_name_bindings)
+        platform_context = SourceBindingPlatformContext(
+            source_bindings={} if deployment is None else deployment.binding_map(),
+            platform_sources={
+                source_id
+                for source_id, source in self.source_catalog.capability_sources.items()
+                if source.policy.platform
+            },
+            read_resource_handler=self.read_resource_handler,
+        )
         return (
             workflow,
             dependencies.node_registry,
             dependencies.reducers,
             prepared_subgraphs,
+            platform_context,
         )
 
     async def run_workflow_from_plan(
@@ -152,7 +165,7 @@ class WorkflowRuntimeService:
                 payload={"input_keys": sorted(workflow_input.keys())},
             )
         )
-        workflow, registry, reducers, prepared_subgraphs = (
+        workflow, registry, reducers, prepared_subgraphs, platform_context = (
             self.prepare_workflow_runtime(
                 plan,
                 deployment=deployment,
@@ -166,6 +179,7 @@ class WorkflowRuntimeService:
             registry,
             reducers=reducers,
             subgraphs=prepared_subgraphs,
+            platform=platform_context,
         )
         self.emit_event(
             make_event(
@@ -190,7 +204,7 @@ class WorkflowRuntimeService:
         saved_subgraph_tree: SavedSubgraphTree | None = None,
     ) -> RunState:
         """Resume one stopped run using its prepared runtime dependency boundary."""
-        workflow, registry, reducers, prepared_subgraphs = (
+        workflow, registry, reducers, prepared_subgraphs, platform_context = (
             self.prepare_workflow_runtime(
                 plan,
                 deployment=deployment,
@@ -206,6 +220,7 @@ class WorkflowRuntimeService:
             resume_outcome=resume_outcome,
             reducers=reducers,
             subgraphs=prepared_subgraphs,
+            platform=platform_context,
         )
         self.emit_event(
             make_event(

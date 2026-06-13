@@ -96,3 +96,28 @@ class ContentAccessService:
             prompt.local_name,
             arguments,
         )
+
+    async def read_resource_by_source_uri(
+        self,
+        *,
+        source_id: str,
+        uri: str,
+        max_chars: int,
+    ) -> dict[str, Any]:
+        """Read one provider URI from a concrete source for wf.source helpers."""
+        resource = next(
+            (
+                entry
+                for entry in self.source_catalog.list_resources(connection_id=source_id)
+                if entry.uri == uri
+            ),
+            None,
+        )
+        if resource is None:
+            raise KeyError(f"unknown resource {uri!r} for source {source_id!r}")
+        connection = self.connection_service.get(source_id)
+        return await self.upstream.read_resource(
+            connection,
+            resource.qualified_name,
+            resource.uri,
+        )

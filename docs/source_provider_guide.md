@@ -157,3 +157,20 @@ wf cap call <source_id>.<capability> --input '{}' --format compact
 ```
 
 Use `wf --verbose ...` only when compact CLI errors are not enough.
+
+## Source Resource Refs
+
+Resource refs are inert workflow data:
+
+```json
+{
+  "kind": "source_resource_ref",
+  "logical_source": "drive",
+  "uri": "demo://docs/welcome"
+}
+```
+
+Input/output/state bindings treat this object as ordinary JSON. Only explicit
+platform helper nodes such as `wf.source.read_resource` dereference it. This
+keeps large MCP resource payloads out of workflow state unless the workflow asks
+for them.

@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from wf_api.models import RawWorkflowPlan
+from wf_api.platform_context import SourceBindingPlatformContext
 from wf_api.saved_subgraphs import SavedSubgraphTree
 from wf_artifacts import (
     DraftWorkspaceStore,
@@ -119,6 +120,13 @@ class WfMcpService:
             source_catalog=self.source_catalog,
             artifact_store=self.artifact_store,
             emit_event=self.events.record_event,
+            read_resource_handler=lambda source_id, uri, max_chars: (
+                self.content_access.read_resource_by_source_uri(
+                    source_id=source_id,
+                    uri=uri,
+                    max_chars=max_chars,
+                )
+            ),
         )
 
     @property
@@ -314,7 +322,13 @@ class WfMcpService:
         deployment: WorkflowDeployment | None,
         artifact: WorkflowArtifact | None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
-    ) -> tuple[Workflow, dict[str, Any], dict[str, Any], dict[str, Any]]:
+    ) -> tuple[
+        Workflow,
+        dict[str, Any],
+        dict[str, Any],
+        dict[str, Any],
+        SourceBindingPlatformContext,
+    ]:
         return self.workflow_runtime.prepare_workflow_runtime(
             plan,
             deployment=deployment,
