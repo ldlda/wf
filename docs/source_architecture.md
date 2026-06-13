@@ -150,9 +150,10 @@ Configured sources are explicit server/operator choices:
 Do not move `wf.std` or `wf.recipes` into `wf_sources_python`. They are not
 operator-configured project sources.
 
-Generated draft workflows may still require built-in helper sources such as
-`wf.std`; deployment examples should bind both the configured source and any
-built-in requirements reported by validation.
+Generated draft workflows may still use built-in helper sources such as
+`wf.std`. Platform sources do not need deployment bindings, so deployment
+examples should bind configured sources only unless validation reports a
+non-platform logical source requirement.
 
 ## `wf_sources_mcp` Internal Layers
 

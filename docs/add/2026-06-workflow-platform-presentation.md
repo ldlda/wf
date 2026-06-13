@@ -179,14 +179,12 @@ uv run wf --config wf.python.config.json draft save python_echo_ws `
   --version 1 `
   --title "Python Echo" `
   --outcome ok `
-  --binding local.ops=local.ops `
-  --binding wf.std=wf.std
+  --binding local.ops=local.ops
 
 uv run wf --config wf.python.config.json deploy save python_echo.default `
   --artifact python_echo `
   --version 1 `
-  --binding local.ops=local.ops `
-  --binding wf.std=wf.std
+  --binding local.ops=local.ops
 
 uv run wf --config wf.python.config.json run start python_echo.default `
   --input '{"text":"hello workflow"}'

@@ -4,7 +4,7 @@ This repository has workflow kernel, API/server, transport, source, CLI, example
 and tests packages. The older MCP package still exists, but new durable client
 paths should go through `wf_server` plus transport/source packages.
 
-For the source-provider-specific map, see
+For the source-provider-specific map and source/tool/capability terminology, see
 [`source_architecture.md`](source_architecture.md).
 For source provider setup examples, see
 [`source_provider_guide.md`](source_provider_guide.md).

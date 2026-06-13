@@ -45,8 +45,8 @@ clear operator feedback before adding more architecture.
   [`RPC CLI smoke runbook`](runbooks/rpc-cli-smoke.md).
 - Completed: automated RPC CLI smoke example:
   [`RPC CLI smoke example`](historical/superpowers/plans/2026-06-09-rpc-cli-smoke-example.md).
-- Next docs/ergonomics cleanup: make `cap call` output safer for humans without
-  changing default JSON semantics. Implementation:
+- Completed: `cap call` output is safer for humans through compact/text modes
+  without changing default JSON semantics. Implementation:
   [`cap call output safety`](historical/superpowers/plans/2026-06-09-cap-call-output-safety.md).
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 

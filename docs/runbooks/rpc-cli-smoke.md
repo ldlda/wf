@@ -107,8 +107,8 @@ Use unique ids so repeated runs do not collide:
 ```bash
 uv run wf --config wf.config.json draft create-from-capability smoke_ws wf.std.constant --name smoke_constant --title "Smoke Constant"
 uv run wf --config wf.config.json draft validate smoke_ws
-uv run wf --config wf.config.json draft save smoke_ws --artifact smoke_artifact --version 1 --title "Smoke Artifact" --outcome ok --binding wf.std=wf.std
-uv run wf --config wf.config.json deploy save smoke_deploy --artifact smoke_artifact --version 1 --binding wf.std=wf.std
+uv run wf --config wf.config.json draft save smoke_ws --artifact smoke_artifact --version 1 --title "Smoke Artifact" --outcome ok
+uv run wf --config wf.config.json deploy save smoke_deploy --artifact smoke_artifact --version 1
 uv run wf --config wf.config.json deploy validate smoke_deploy
 uv run wf --config wf.config.json run start smoke_deploy --input '{"value":"from workflow"}'
 ```

@@ -135,8 +135,8 @@ uv run wf --url http://127.0.0.1:8766/rpc draft create-from-capability `
   python_echo_ws local.ops.echo --name python_echo
 ```
 
-Save it as an artifact. Include both the Python source binding and `wf.std`;
-the generated scaffold can use built-in helper nodes such as `wf.std.replace`.
+Save it as an artifact. Bind the configured Python source. Built-in platform
+sources such as `wf.std` can be used by generated scaffolds without self-binding.
 
 ```powershell
 uv run wf --url http://127.0.0.1:8766/rpc draft save python_echo_ws `
@@ -144,8 +144,7 @@ uv run wf --url http://127.0.0.1:8766/rpc draft save python_echo_ws `
   --version 1 `
   --title "Python Echo" `
   --outcome ok `
-  --binding local.ops=local.ops `
-  --binding wf.std=wf.std
+  --binding local.ops=local.ops
 ```
 
 Save a deployment with the same bindings:
@@ -154,8 +153,7 @@ Save a deployment with the same bindings:
 uv run wf --url http://127.0.0.1:8766/rpc deploy save python_echo.default `
   --artifact python_echo `
   --version 1 `
-  --binding local.ops=local.ops `
-  --binding wf.std=wf.std
+  --binding local.ops=local.ops
 ```
 
 Run it:

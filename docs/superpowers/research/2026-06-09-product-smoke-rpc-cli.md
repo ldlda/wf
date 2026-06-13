@@ -2,6 +2,10 @@
 
 Date: 2026-06-09
 
+Historical note: this smoke captured older platform-source behavior. Current
+deployments no longer need self-bindings such as `wf.std=wf.std` for built-in
+platform sources.
+
 Target:
 
 ```powershell

@@ -149,7 +149,9 @@ render prompts, which can be large or stateful upstream operations.
 
 ## Output Policy
 
-JSON is the default output format for every command.
+JSON is the default for detail, mutation, and execution commands unless a
+command documents a safer human default. Some inventory commands default to
+line-oriented names/ids to avoid dumping large payloads.
 
 List/discovery commands may support:
 
@@ -289,8 +291,7 @@ wf draft save concat_ws \
   --artifact concat_ws \
   --version 1 \
   --title "Concat Workflow" \
-  --outcome ok \
-  --binding wf.std=wf.std
+  --outcome ok
 ```
 
 Use `--kind wrapper` when saving a callable wrapper artifact:
@@ -301,8 +302,7 @@ wf draft save concat_ws \
   --version 1 \
   --title "Concat Wrapper" \
   --kind wrapper \
-  --outcome ok \
-  --binding wf.std=wf.std
+  --outcome ok
 ```
 
 ## Artifacts
@@ -334,8 +334,7 @@ Save a deployment from flags:
 ```bash
 wf deploy save concat_ws.default \
   --artifact concat_ws \
-  --version 1 \
-  --binding wf.std=wf.std
+  --version 1
 ```
 
 Save a deployment from JSON:
