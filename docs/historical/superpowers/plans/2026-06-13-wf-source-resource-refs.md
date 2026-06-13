@@ -12,7 +12,7 @@
 
 ## Preconditions
 
-- Complete `docs/superpowers/plans/2026-06-13-platform-source-policy.md` first.
+- Complete `docs/historical/superpowers/plans/2026-06-13-platform-source-policy.md` first.
 - `CapabilitySource(policy=SourcePolicy(platform=True, binding_required=False))` must exist.
 - `wf.std` deployments should validate/run without `wf.std=wf.std` self-bindings.
 

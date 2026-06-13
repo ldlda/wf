@@ -41,6 +41,11 @@ class SourcePolicy:
     platform: bool = False
     binding_required: bool = True
 
+    def __post_init__(self) -> None:
+        """Reject contradictory deployment policy combinations."""
+        if self.platform and self.binding_required:
+            raise ValueError("platform sources cannot require bindings")
+
 
 class SourceVisibilitySnapshot(BaseModel):
     """Serializable visibility flags for one source inventory snapshot."""

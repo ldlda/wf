@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from wf_platform import (
     CapabilityBuckets,
     CapabilitySource,
@@ -118,3 +120,8 @@ def test_capability_source_exposes_policy_snapshot() -> None:
         "platform": True,
         "binding_required": False,
     }
+
+
+def test_platform_source_policy_rejects_required_bindings() -> None:
+    with pytest.raises(ValueError, match="platform sources cannot require bindings"):
+        SourcePolicy(platform=True, binding_required=True)
