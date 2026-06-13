@@ -514,7 +514,8 @@ class OAuthCodeLoginFlow:
         provider: OAuthProviderConfig,
         client_id: str,
         client_secret: str | None,
-        authorization_response: str,
+        authorization_response: str | None,
+        authorization_url_callback: Callable[[str, str], str | None] | None = None,
     ) -> OAuthLoginResult:
         client = self._client_factory(
             client_id=client_id,
@@ -522,7 +523,17 @@ class OAuthCodeLoginFlow:
             scope=" ".join(provider.scopes),
             code_challenge_method="S256",
         )
-        client.create_authorization_url(str(provider.auth_url))
+        authorization_url, state = client.create_authorization_url(
+            str(provider.auth_url),
+            redirect_uri=provider.redirect_uri,
+            **provider.extra_authorize_params,
+        )
+        if authorization_url_callback is not None:
+            callback_response = authorization_url_callback(authorization_url, state)
+            if authorization_response is None:
+                authorization_response = callback_response
+        if authorization_response is None:
+            raise ValueError("OAuth authorization response is required")
         token = await client.fetch_token(
             str(provider.token_url),
             authorization_response=authorization_response,
@@ -536,6 +547,11 @@ class OAuthCodeLoginFlow:
 ```
 
 This helper supports pasted authorization response first. Browser callback can be a later refinement.
+`authorization_url_callback` is used by the CLI to show the generated URL and
+collect the pasted redirected callback URL; tests can inject it to avoid prompt
+I/O. Provider-specific authorization parameters such as Google's
+`access_type=offline` and `prompt=consent` belong in
+`provider.extra_authorize_params`, not in this generic helper.
 
 - [ ] **Step 4: Run helper tests**
 

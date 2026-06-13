@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Protocol
 
 from wf_platform import page_items
 
 from .operation_context import WorkflowOperationContext
+
+logger = logging.getLogger(__name__)
 
 
 class WorkflowSourceDiagnosticsProvider(Protocol):
@@ -63,7 +66,12 @@ class WorkflowSourceAdminApi:
         if self.diagnostics is not None:
             try:
                 payload["diagnostics"] = self.diagnostics.diagnose_source(source_id)
-            except Exception:
+            except Exception as exc:
+                logger.exception(
+                    "Source diagnostics failed for source_id=%s: %s",
+                    source_id,
+                    exc,
+                )
                 payload["diagnostics"] = {
                     "status": "error",
                     "message": "Diagnostics unavailable",

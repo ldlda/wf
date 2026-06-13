@@ -286,6 +286,26 @@ async def test_read_resource_by_source_uri_reads_upstream() -> None:
     assert result["contents"][0]["text"] == "Welcome from the fake adapter resource."
 
 
+async def test_read_resource_by_source_uri_bounds_text() -> None:
+    service = WfMcpService(
+        store=FileStore(local_temp_root() / "content_source_uri_bound")
+    )
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_adapter("demo", FakeAdapter())
+    await service.refresh_connection_catalog("demo.personal")
+
+    result = await service.content_access.read_resource_by_source_uri(
+        source_id="demo.personal",
+        uri="demo://docs/welcome",
+        max_chars=7,
+    )
+
+    assert result["contents"][0]["text"] == "Welcome"
+    assert result["truncated"] is True
+
+
 async def test_read_resource_by_source_uri_rejects_unknown_resource() -> None:
     service = WfMcpService(
         store=FileStore(local_temp_root() / "content_source_uri_unknown")

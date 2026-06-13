@@ -15,6 +15,7 @@ from wf_config import OAuthProviderConfig
 def _oauth_provider(
     *,
     scopes: tuple[str, ...] = (),
+    extra_authorize_params: dict[str, str] | None = None,
 ) -> OAuthProviderConfig:
     return OAuthProviderConfig(
         kind="oauth_authorization_code_pkce",
@@ -23,6 +24,7 @@ def _oauth_provider(
         client_id_env="GOOGLE_OAUTH_CLIENT_ID",
         client_secret_env="GOOGLE_OAUTH_CLIENT_SECRET",
         scopes=scopes,
+        extra_authorize_params=extra_authorize_params or {},
     )
 
 
@@ -85,12 +87,14 @@ class _FakeOAuthClient:
         return {
             "refresh_token": "refresh",
             "scope": "https://www.googleapis.com/auth/drive.readonly",
+            "sub": "user-123",
         }
 
 
 async def test_oauth_code_login_flow_uses_injected_client() -> None:
     provider = _oauth_provider(
         scopes=("https://www.googleapis.com/auth/drive.readonly",),
+        extra_authorize_params={"access_type": "offline", "prompt": "consent"},
     )
     clients: list[_FakeOAuthClient] = []
 
@@ -109,6 +113,7 @@ async def test_oauth_code_login_flow_uses_injected_client() -> None:
     )
 
     assert result.refresh_token == "refresh"
+    assert result.subject == "user-123"
     assert result.scopes == ("https://www.googleapis.com/auth/drive.readonly",)
     client = clients[0]
     assert client.init_kwargs["redirect_uri"] == provider.redirect_uri
@@ -173,10 +178,14 @@ def test_auth_oauth_login_saves_record_from_provider_profile(monkeypatch, tmp_pa
                             "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
                             "token_url": "https://oauth2.googleapis.com/token",
                             "client_id_env": "GOOGLE_OAUTH_CLIENT_ID",
-                            "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
-                        }
+                        "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
+                        "extra_authorize_params": {
+                            "access_type": "offline",
+                            "prompt": "consent",
+                        },
                     }
                 }
+            }
             }
         ),
         encoding="utf-8",

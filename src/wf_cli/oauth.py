@@ -70,6 +70,16 @@ class OAuthCodeLoginFlow:
         authorization_response: str | None,
         authorization_url_callback: Callable[[str, str], str | None] | None = None,
     ) -> OAuthLoginResult:
+        """Run an OAuth authorization-code login and return durable token data.
+
+        The provider config supplies endpoints, redirect URI, scopes, and any
+        provider-specific authorization parameters. The optional callback lets
+        interactive CLI code display the generated authorization URL and return
+        an out-of-band callback URL; an explicitly supplied authorization
+        response wins over a callback response. `fetch_token` is called only
+        after a response URL is available.
+        """
+
         client = self._client_factory(
             client_id=client_id,
             client_secret=client_secret,
@@ -80,10 +90,11 @@ class OAuthCodeLoginFlow:
         authorization_url, state = client.create_authorization_url(
             str(provider.auth_url),
             redirect_uri=provider.redirect_uri,
-            access_type="offline",
-            prompt="consent",
+            **provider.extra_authorize_params,
         )
         if authorization_url_callback is not None:
+            # Interactive and test callbacks can complete the out-of-band flow;
+            # an explicit authorization_response remains the higher-priority input.
             callback_response = authorization_url_callback(authorization_url, state)
             if authorization_response is None:
                 authorization_response = callback_response
@@ -96,6 +107,13 @@ class OAuthCodeLoginFlow:
         refresh_token = token.get("refresh_token")
         if refresh_token is not None and not isinstance(refresh_token, str):
             raise ValueError("OAuth refresh_token must be a string")
+        subject = token.get("sub")
+        if subject is not None and not isinstance(subject, str):
+            raise ValueError("OAuth sub claim must be a string")
         raw_scope = token.get("scope")
         scopes = tuple(str(raw_scope).split()) if raw_scope else provider.scopes
-        return OAuthLoginResult(refresh_token=refresh_token, scopes=scopes)
+        return OAuthLoginResult(
+            refresh_token=refresh_token,
+            subject=subject,
+            scopes=scopes,
+        )

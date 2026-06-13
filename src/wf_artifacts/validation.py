@@ -25,6 +25,9 @@ def validate_deployment_dependencies(
     for logical_ref, required in artifact.required_capability_map().items():
         platform_source = sources_by_id.get(required.logical_source)
         if platform_source is not None and platform_source.platform:
+            # Platform sources have fixed ids matching required.logical_source, so
+            # sources_by_id can resolve them directly and bindings.get(...) is
+            # intentionally bypassed when choosing bound_source_id.
             bound_source_id = required.logical_source
         else:
             bound_source_id = bindings.get(required.logical_source)

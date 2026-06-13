@@ -472,6 +472,10 @@ def test_workflow_config_parses_oauth_provider_profile() -> None:
                         "scopes": [
                             "https://www.googleapis.com/auth/drive.readonly",
                         ],
+                        "extra_authorize_params": {
+                            "access_type": "offline",
+                            "prompt": "consent",
+                        },
                     }
                 }
             }
@@ -482,3 +486,7 @@ def test_workflow_config_parses_oauth_provider_profile() -> None:
     assert provider.kind == "oauth_authorization_code_pkce"
     assert provider.client_id_env == "GOOGLE_OAUTH_CLIENT_ID"
     assert provider.scopes == ("https://www.googleapis.com/auth/drive.readonly",)
+    assert provider.extra_authorize_params == {
+        "access_type": "offline",
+        "prompt": "consent",
+    }

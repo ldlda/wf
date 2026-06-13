@@ -151,3 +151,31 @@ def test_auth_record_from_compat_maps_oauth_refresh_token() -> None:
     assert record.auth.client_id == "client"
     assert str(record.auth.token_url) == "https://oauth2.googleapis.com/token"
     assert record.auth.scopes == ("https://www.googleapis.com/auth/drive.readonly",)
+
+
+def test_auth_record_from_compat_rejects_bad_oauth_refresh_token_payload() -> None:
+    from wf_api.auth import auth_record_from_compat
+
+    with pytest.raises(ValueError, match="client_secret"):
+        auth_record_from_compat(
+            id="google.drive.personal",
+            scheme="oauth_refresh_token",
+            payload={
+                "client_id": "client",
+                "client_secret": "",
+                "refresh_token": "refresh",
+                "token_url": "https://oauth2.googleapis.com/token",
+            },
+        )
+
+    with pytest.raises(ValueError, match="token_url is invalid"):
+        auth_record_from_compat(
+            id="google.drive.personal",
+            scheme="oauth_refresh_token",
+            payload={
+                "client_id": "client",
+                "client_secret": "secret",
+                "refresh_token": "refresh",
+                "token_url": "not a url",
+            },
+        )

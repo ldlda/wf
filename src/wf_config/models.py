@@ -216,6 +216,7 @@ class OAuthProviderConfig(WorkflowConfigModel):
     client_secret_env: str | None = None
     scopes: tuple[str, ...] = ()
     redirect_uri: str = "http://127.0.0.1:0/oauth/callback"
+    extra_authorize_params: dict[str, str] = Field(default_factory=dict)
 
 
 class AuthConfig(WorkflowConfigModel):

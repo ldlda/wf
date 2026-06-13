@@ -120,7 +120,11 @@ Provider profiles live in config under `auth.providers`:
         "token_url": "https://oauth2.googleapis.com/token",
         "client_id_env": "GOOGLE_OAUTH_CLIENT_ID",
         "client_secret_env": "GOOGLE_OAUTH_CLIENT_SECRET",
-        "scopes": ["https://www.googleapis.com/auth/drive.readonly"]
+        "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
+        "extra_authorize_params": {
+          "access_type": "offline",
+          "prompt": "consent"
+        }
       }
     }
   }

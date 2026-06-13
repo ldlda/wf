@@ -77,6 +77,40 @@ workflow-facing `CapabilitySource` objects. Provider-specific runtime pools,
 admin/apply hooks, auth, catalog caches, and live health checks stay outside
 this narrow seam until a source family needs them.
 
+## Capability, Tool, Resource, And Prompt
+
+Use these terms precisely:
+
+- A **source** is the owner and namespace. Examples: `everything.default`,
+  `wf.std`, `wf.source`, or a future OpenAPI/Python source.
+- A **tool** is provider-native. For MCP, it is an MCP tool discovered from an
+  upstream server.
+- A **workflow capability** is workflow-native. It is the `NodeSpec` shape a
+  graph can call with typed input, typed output, outcomes, validation, and trace
+  behavior. Tools can be projected into workflow capabilities, but the two are
+  not identical concepts.
+- A **resource** is source-owned addressable content. The URI is not globally
+  meaningful by itself; it must be interpreted with the source that owns it.
+- A **prompt** is source-owned prompt/template inventory. Listing prompts is
+  inventory; rendering a prompt is an upstream operation and may be stateful.
+
+Saved workflow data should prefer logical source references over concrete
+source ids. For example, a resource ref should store:
+
+```json
+{"logical_source": "drive", "uri": "gdrive://file/abc"}
+```
+
+The deployment binding decides whether `drive` means `drive.personal`,
+`drive.work`, or another concrete source. Platform sources such as `wf.std` and
+`wf.source` are special because their logical source id is also their concrete
+source id, so they do not require deployment bindings.
+
+Runtime dereference is explicit. Passing a resource ref by value does not fetch
+content. A helper capability such as `wf.source.read_resource` receives the ref,
+uses runtime/platform context to resolve the logical source, and applies bounded
+output policy before returning text into workflow state/output.
+
 For MCP, the provider also owns stateful upstream sessions:
 
 ```text

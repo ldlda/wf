@@ -5,7 +5,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Annotated, Any, Literal, Protocol
 
-from pydantic import AnyUrl, BaseModel, Field
+from pydantic import AnyUrl, BaseModel, Field, ValidationError
 
 AUTH_ID_PATTERN = r"^[A-Za-z0-9_][A-Za-z0-9_.-]*$"
 
@@ -149,17 +149,23 @@ def auth_record_from_compat(
             )
             if not isinstance(client_id, str) or not client_id:
                 raise ValueError("oauth_refresh_token client_id is required")
-            if not isinstance(client_secret, str):
+            if not isinstance(client_secret, str) or not client_secret:
                 raise ValueError("oauth_refresh_token client_secret is required")
             if not isinstance(refresh_token, str) or not refresh_token:
                 raise ValueError("oauth_refresh_token refresh_token is required")
             if not isinstance(token_url, str) or not token_url:
                 raise ValueError("oauth_refresh_token token_url is required")
+            try:
+                validated_token_url = AnyUrl(token_url)
+            except ValidationError as exc:
+                raise ValueError(
+                    f"oauth_refresh_token token_url is invalid: {exc}"
+                ) from exc
             auth = OAuthRefreshTokenAuth(
                 client_id=client_id,
                 client_secret=client_secret,
                 refresh_token=refresh_token,
-                token_url=AnyUrl(token_url),
+                token_url=validated_token_url,
                 scopes=scopes,
             )
         case _:

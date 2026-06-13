@@ -116,8 +116,34 @@ class ContentAccessService:
         if resource is None:
             raise KeyError(f"unknown resource {uri!r} for source {source_id!r}")
         connection = self.connection_service.get(source_id)
-        return await self.upstream.read_resource(
+        payload = await self.upstream.read_resource(
             connection,
             resource.qualified_name,
             resource.uri,
         )
+        return _truncate_resource_payload(payload, max_chars=max_chars)
+
+
+def _truncate_resource_payload(payload: dict[str, Any], *, max_chars: int) -> dict[str, Any]:
+    """Bound text content returned by source URI reads without mutating upstream payload."""
+
+    contents = payload.get("contents")
+    if not isinstance(contents, list):
+        return payload
+    bounded_contents: list[Any] = []
+    truncated = payload.get("truncated") is True
+    for item in contents:
+        if not isinstance(item, dict) or not isinstance(item.get("text"), str):
+            bounded_contents.append(item)
+            continue
+        text = item["text"]
+        if len(text) <= max_chars:
+            bounded_contents.append(item)
+            continue
+        bounded = dict(item)
+        bounded["text"] = text[:max_chars]
+        bounded_contents.append(bounded)
+        truncated = True
+    if not truncated and bounded_contents == contents:
+        return payload
+    return {**payload, "contents": bounded_contents, "truncated": truncated}

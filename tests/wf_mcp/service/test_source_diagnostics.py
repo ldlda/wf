@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from wf_mcp.broker.service.source_diagnostics import SourceDiagnosticsProvider
 from wf_mcp.connections import ConnectionRegistry
 from wf_mcp.models import ConnectionConfig
@@ -18,7 +20,7 @@ def _connection(**metadata: object) -> ConnectionConfig:
     )
 
 
-def _provider(tmp_path, connection: ConnectionConfig) -> SourceDiagnosticsProvider:
+def _provider(tmp_path: Path, connection: ConnectionConfig) -> SourceDiagnosticsProvider:
     registry = ConnectionRegistry()
     registry.register(connection)
     return SourceDiagnosticsProvider(

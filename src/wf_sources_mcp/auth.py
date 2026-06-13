@@ -180,7 +180,7 @@ class HttpxOAuthTokenRefresher:
             data["client_secret"] = auth.client_secret
         if auth.scopes:
             data["scope"] = " ".join(auth.scopes)
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(str(auth.token_url), data=data)
             response.raise_for_status()
             payload = response.json()

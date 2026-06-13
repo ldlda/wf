@@ -41,11 +41,10 @@ async def read_resource(
     contents = payload.get("contents", [])
     first = contents[0] if isinstance(contents, list) and contents else {}
     text = first.get("text") if isinstance(first, dict) else None
+    upstream_truncated = payload.get("truncated") is True
+    truncated = upstream_truncated or (isinstance(text, str) and len(text) > max_chars)
     if isinstance(text, str) and len(text) > max_chars:
         text = text[:max_chars]
-        truncated = True
-    else:
-        truncated = False
     mime_type: str | None = None
     if isinstance(first, dict) and isinstance(first.get("mimeType"), str):
         mime_type = first["mimeType"]

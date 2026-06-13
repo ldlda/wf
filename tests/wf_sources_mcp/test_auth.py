@@ -97,6 +97,9 @@ async def test_httpx_oauth_refresher_posts_refresh_token_grant(
             return {"access_token": "access-token", "expires_in": 3600}
 
     class _Client:
+        def __init__(self, **kwargs: object) -> None:
+            assert kwargs["timeout"] == 10.0
+
         async def __aenter__(self) -> "_Client":
             return self
 

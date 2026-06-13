@@ -6,12 +6,12 @@ param(
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$RemainingArgs
 )
-function funny([string] $output) {
+function New-PandocDiagramMetadata([string] $outputFormat) {
     return @{
         "diagram" = @{
             "engine" = @{
                 "mermaid" = @{
-                    "outputFormat" = "$output"
+                    "outputFormat" = "$outputFormat"
                 }
             }
         }
@@ -29,7 +29,7 @@ else {
     exit 1
 }
 
-$metadata = funny $outputFormat | ConvertTo-Json -Depth 10
+$metadata = New-PandocDiagramMetadata $outputFormat | ConvertTo-Json -Depth 10
 $pandoc_diagram = Join-Path $PSScriptRoot "../../stuff/pandoc-diagram.ps1"
 
 $metatempfile = New-TemporaryFile
