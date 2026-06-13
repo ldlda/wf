@@ -113,6 +113,14 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
 - Completed source provider docs: `docs/source_provider_guide.md` now covers
   MCP HTTP, MCP stdio, Python sources, auth refs, OAuth refresh-token setup,
   diagnostics, and the Google Drive MCP caveat.
+- Next design work: distinguish platform capability sources from external
+  source providers with metadata/policy on `CapabilitySource`. `wf.*` sources
+  such as `wf.std`, `wf.admin`, `wf.recipes`, and future `wf.source` should be
+  process-provided platform sources, not account-bound source bindings.
+- Next design work after platform source policy: add `wf.source` helper
+  capabilities for source-bound refs. Resource/prompt refs should be inert
+  pass-by-value data using `logical_source`; only explicit source-aware nodes
+  should dereference them through runtime/platform context.
 - Active specs:
   - [`workflow config targets and sources`](superpowers/specs/2026-06-03-workflow-config-targets-and-sources.md)
   - [`store-backed source registry`](superpowers/specs/2026-06-03-store-backed-source-registry-design.md)
