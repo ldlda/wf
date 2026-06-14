@@ -183,6 +183,9 @@ stable.
 - Completed thesis case-study evidence bundle: `examples/report_workflow/`
   provides a deterministic report workflow with Python source, fixture input,
   config, runbook, and tests.
+- Completed thesis system-design draft: `docs/add/system-design-implementation.md`
+  now frames the platform as a formal system design/implementation report backed
+  by `docs/add/evidence-index.md` and the report-workflow case study.
 
 ## Historical References
 

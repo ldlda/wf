@@ -1081,6 +1081,8 @@ uv run wf --config examples/report_workflow/wf.config.json run trace <run_id> --
 
 ## Appendix B: Evidence Index
 
+See `evidence-index.md` for the full claim-to-evidence map.
+
 | Claim | Evidence |
 | --- | --- |
 | Workflow lifecycle models | `src/wf_artifacts/models.py`, `src/wf_artifacts/runs/` |

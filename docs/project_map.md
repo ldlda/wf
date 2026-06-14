@@ -70,6 +70,11 @@ see [`workflow platform presentation`](add/2026-06-workflow-platform-presentatio
   lifecycle from the RPC CLI smoke runbook, and cleans up. Use
   `--keep-temp` to preserve the generated config/store on failure.
 
+## Documentation
+
+- `docs/add/system-design-implementation.md` — formal thesis/system-design draft.
+- `docs/add/evidence-index.md` — claim-to-evidence map for the thesis draft.
+
 ## Tests
 
 - `tests/authoring`: builder, node decorator, ops, async runtime, subgraph, and
