@@ -145,14 +145,14 @@ async def test_rpc_workflow_client_runs_and_reads_trace(tmp_path) -> None:
         title="Client Constant",
         plan=_constant_plan(),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
     await server.api.save_deployment(
         {
             "id": "client_constant.default",
             "artifact_id": "client_constant",
             "artifact_version": 1,
-            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            "bindings": {},
         }
     )
     app = create_rpc_app(server)
@@ -215,7 +215,7 @@ async def test_rpc_workflow_client_lists_and_inspects_artifacts(tmp_path) -> Non
         title="Client Art",
         plan=_constant_plan(),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
@@ -242,14 +242,14 @@ async def test_rpc_workflow_client_lists_inspects_validates_and_deletes_deployme
         title="Client Deploy Art",
         plan=_constant_plan(),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
     await server.api.save_deployment(
         {
             "id": "client_deploy_art.default",
             "artifact_id": "client_deploy_art",
             "artifact_version": 1,
-            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            "bindings": {},
         }
     )
     app = create_rpc_app(server)
@@ -310,7 +310,7 @@ async def test_rpc_workflow_client_draft_workspace_lifecycle(tmp_path) -> None:
             title="Client WS Art",
             outcomes=("ok",),
             kind="workflow",
-            source_bindings={"wf.std": "wf.std"},
+            source_bindings={},
         )
 
     assert created["workspace_id"] == "client_ws"
@@ -357,7 +357,7 @@ async def test_rpc_workflow_client_deletes_artifact(tmp_path) -> None:
         title="Delete Me",
         plan=_constant_plan(),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
 
     app = create_rpc_app(server)
@@ -383,14 +383,14 @@ async def test_rpc_client_lists_runs(tmp_path) -> None:
         title="Client List Runs",
         plan=_constant_plan(),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
     await server.api.save_deployment(
         {
             "id": "client_list_runs.default",
             "artifact_id": "client_list_runs",
             "artifact_version": 1,
-            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            "bindings": {},
         }
     )
     started = await server.api.run_deployment(

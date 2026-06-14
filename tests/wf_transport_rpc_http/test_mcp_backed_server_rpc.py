@@ -476,7 +476,6 @@ async def test_mcp_backed_rpc_workflow_reuses_runtime_session_across_runs(
                         "logical_source": "fixture.default",
                         "concrete_source": "fixture.default",
                     },
-                    {"logical_source": "wf.std", "concrete_source": "wf.std"},
                 ],
             }
         )
@@ -569,7 +568,6 @@ async def test_mcp_backed_rpc_workflow_reuses_runtime_session_direct_setup(
                     "logical_source": "fixture.default",
                     "concrete_source": "fixture.default",
                 },
-                {"logical_source": "wf.std", "concrete_source": "wf.std"},
             ],
         }
     )
@@ -665,7 +663,6 @@ async def test_mcp_backed_rpc_deployment_becomes_unrunnable_after_source_removed
                     "logical_source": "fixture.default",
                     "concrete_source": "fixture.default",
                 },
-                {"logical_source": "wf.std", "concrete_source": "wf.std"},
             ],
         }
     )
@@ -752,7 +749,6 @@ async def test_mcp_backed_rpc_workflow_reuses_real_stdio_fixture_session(
                         "logical_source": "fixture.personal",
                         "concrete_source": "fixture.personal",
                     },
-                    {"logical_source": "wf.std", "concrete_source": "wf.std"},
                 ],
             }
         )
@@ -781,7 +777,6 @@ async def test_mcp_backed_rpc_workflow_reuses_real_stdio_fixture_session(
                         "logical_source": "fixture.personal",
                         "concrete_source": "fixture.personal",
                     },
-                    {"logical_source": "wf.std", "concrete_source": "wf.std"},
                 ],
             }
         )

@@ -175,7 +175,7 @@ async def test_rpc_draft_artifact_deployment_lifecycle(tmp_path) -> None:
                     },
                     "outcomes": ["ok"],
                     "required_capabilities": {},
-                    "source_bindings": {"wf.std": "wf.std"},
+                    "source_bindings": {},
                     "plan": compiled_plan,
                 },
             },
@@ -188,9 +188,7 @@ async def test_rpc_draft_artifact_deployment_lifecycle(tmp_path) -> None:
                     "id": "constant_rpc.default",
                     "artifact_id": "constant_rpc",
                     "artifact_version": 1,
-                    "bindings": [
-                        {"logical_source": "wf.std", "concrete_source": "wf.std"}
-                    ],
+                    "bindings": {},
                 },
             },
         )
@@ -215,14 +213,14 @@ async def test_rpc_artifact_and_deployment_catalog_methods(tmp_path) -> None:
         title="RPC Lifecycle",
         plan=_constant_plan(),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
     await server.api.save_deployment(
         {
             "id": "rpc_lifecycle.default",
             "artifact_id": "rpc_lifecycle",
             "artifact_version": 1,
-            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            "bindings": {},
         }
     )
 
@@ -303,7 +301,7 @@ async def test_rpc_draft_workspace_methods(tmp_path) -> None:
                 "title": "Remote Artifact",
                 "outcomes": ["ok"],
                 "kind": "workflow",
-                "source_bindings": {"wf.std": "wf.std"},
+                "source_bindings": {},
             },
         )
 
@@ -346,7 +344,7 @@ async def test_rpc_artifact_delete(tmp_path) -> None:
         title="Delete Me",
         plan=_constant_plan(),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
 
     app = create_rpc_app(server)
@@ -419,14 +417,14 @@ async def test_rpc_runs_deployment_and_reads_bounded_trace(tmp_path) -> None:
         title="RPC Constant",
         plan=_constant_plan(),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
     await server.api.save_deployment(
         {
             "id": "rpc_constant.default",
             "artifact_id": "rpc_constant",
             "artifact_version": 1,
-            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            "bindings": {},
         }
     )
 
@@ -473,14 +471,14 @@ async def test_rpc_run_list_method(tmp_path) -> None:
         title="List Runs RPC",
         plan=_constant_plan(),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
     await server.api.save_deployment(
         {
             "id": "list_runs_rpc.default",
             "artifact_id": "list_runs_rpc",
             "artifact_version": 1,
-            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            "bindings": {},
         }
     )
     started = await server.api.run_deployment(
@@ -584,7 +582,7 @@ async def test_rpc_runs_workflow_from_python_source_capability(tmp_path) -> None
                 "title": "Python Echo",
                 "outcomes": ["ok"],
                 "kind": "workflow",
-                "source_bindings": {"local.ops": "local.ops", "wf.std": "wf.std"},
+                "source_bindings": {"local.ops": "local.ops"},
             },
         )
         deployment = await _rpc(
@@ -597,7 +595,6 @@ async def test_rpc_runs_workflow_from_python_source_capability(tmp_path) -> None
                     "artifact_version": 1,
                     "bindings": [
                         {"logical_source": "local.ops", "concrete_source": "local.ops"},
-                        {"logical_source": "wf.std", "concrete_source": "wf.std"},
                     ],
                 }
             },

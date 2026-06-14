@@ -117,9 +117,10 @@ trace, and commits reducer-aware state changes.
 
 Platform sources such as `wf.std` and `wf.source` are process-provided sources.
 They can appear in artifacts and runs without deployment self-bindings like
-`wf.std=wf.std`; configured sources such as `local.ops` or `everything.default`
-still use deployment bindings when a workflow needs portability across accounts
-or workspaces.
+`wf.std=wf.std`. Deployment validation rejects explicit platform-source
+bindings as stale configuration. Configured sources such as `local.ops` or
+`everything.default` still use deployment bindings when a workflow needs
+portability across accounts or workspaces.
 
 ## Source Model
 

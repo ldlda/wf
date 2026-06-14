@@ -665,8 +665,6 @@ def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> Non
             "Remote Artifact",
             "--outcome",
             "ok",
-            "--binding",
-            "wf.std=wf.std",
         ],
     )
     assert saved_artifact.exit_code == 0, saved_artifact.output
@@ -690,8 +688,6 @@ def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> Non
             "remote_artifact",
             "--version",
             "1",
-            "--binding",
-            "wf.std=wf.std",
         ],
     )
     assert saved_deployment.exit_code == 0, saved_deployment.output
@@ -774,7 +770,7 @@ def test_wf_status_uses_rpc_url_override(monkeypatch, tmp_path) -> None:
             title="Status Constant",
             plan=_constant_plan(),
             outcomes=("ok",),
-            source_bindings={"wf.std": "wf.std"},
+            source_bindings={},
         )
     )
     asyncio.run(
@@ -783,7 +779,7 @@ def test_wf_status_uses_rpc_url_override(monkeypatch, tmp_path) -> None:
                 "id": "status_constant.default",
                 "artifact_id": "status_constant",
                 "artifact_version": 1,
-                "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+                "bindings": {},
             }
         )
     )

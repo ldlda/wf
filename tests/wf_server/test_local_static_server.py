@@ -84,14 +84,14 @@ async def test_local_static_server_runs_deployment_and_persists_run(tmp_path) ->
         title="Server Constant",
         plan=plan,
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
     deployment_result = await api.save_deployment(
         {
             "id": "server_constant.default",
             "artifact_id": "server_constant",
             "artifact_version": 1,
-            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            "bindings": {},
         }
     )
     run_result = await api.run_deployment(
@@ -119,14 +119,14 @@ async def test_local_static_server_inspects_and_reads_bounded_trace(tmp_path) ->
         title="Server Trace",
         plan=plan.model_copy(update={"name": "server_trace"}),
         outcomes=["ok"],
-        source_bindings={"wf.std": "wf.std"},
+        source_bindings={},
     )
     await api.save_deployment(
         {
             "id": "server_trace.default",
             "artifact_id": "server_trace",
             "artifact_version": 1,
-            "bindings": [{"logical_source": "wf.std", "concrete_source": "wf.std"}],
+            "bindings": {},
         }
     )
     run_result = await api.run_deployment(

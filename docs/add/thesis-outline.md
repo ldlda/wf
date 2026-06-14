@@ -3,11 +3,17 @@
 This is a writing scaffold for a thesis/report about the workflow platform. It
 should guide the argument; it is not a changelog.
 
+The final document should read like a formal system design and implementation
+report. Keep detailed command transcripts and long CLI outputs in appendices or
+linked runbooks; inline chapters should show only the commands/results needed to
+support the argument.
+
 ## Core Argument
 
-Agent work should be represented as typed, durable workflows. The LLM should
-plan and revise workflow structure, but a deterministic runtime should own
-execution, state, validation, persistence, and source binding.
+External LLM agents are useful workflow authors and operators, but durable
+workspace automation needs a typed execution substrate. Artifacts, deployments,
+source bindings, validation, runs, traces, and resumability should be owned by
+the platform, not improvised through raw tool-call loops.
 
 The short version:
 
@@ -38,6 +44,65 @@ The thesis contribution is a platform architecture, not a new foundation model:
 4. validation and inspection mechanisms that reduce planner trial-and-error
 5. next-action guidance that points an agent toward useful lifecycle operations
    without replacing validation
+
+## Evidence Strategy
+
+Use one representative workspace case study as the narrative spine: a
+document/report preparation workflow backed by local fixtures and trusted Python
+sources. The case study should read or receive a small document-like input,
+extract structured information such as action items or sections, normalize the
+result, and produce report-shaped JSON or Markdown. MCP-backed sources can be
+secondary evidence, but the thesis-critical demo should not depend on remote
+MCP auth, quota, or provider availability.
+
+The case study should exist as a runnable example, not only prose. Target shape:
+`examples/report_workflow/ops.py`, `input.md`, `wf.config.json`, a short
+`README.md`, and commands for config validation, server startup, capability
+calls, draft/artifact/deployment creation, run, inspect, and trace.
+
+Keep the thesis-critical path deterministic. Do not require an LLM call inside
+the case-study workflow. LLM nodes can be discussed as future work or an
+optional variant, but the evidence path should be reproducible without model
+credentials, cost, or output variance.
+
+Prefer typed report JSON as the primary output, with Markdown rendering optional
+later. A useful output contract is:
+
+```json
+{
+  "title": "Weekly Project Update",
+  "summary": "...",
+  "action_items": [
+    {"owner": "Alice", "task": "Prepare demo config", "due": "Friday"}
+  ],
+  "risks": ["..."],
+  "followups": ["..."]
+}
+```
+
+This makes schemas and validation visible in the case study.
+
+Use CLI lifecycle commands for the thesis narrative because they demonstrate the
+agent-operable surface. Tests may seed `RawWorkflowPlan` objects directly when
+that makes assertions tighter, but the case-study runbook should show config
+validation, server startup, capability inspection/call, draft or artifact
+creation, deployment save/validate, run start, run inspect, run trace, and run
+list.
+
+Support that case study with platform evidence: automated tests, CLI/server
+smoke runs, source-provider examples, run persistence/resume checks, source
+drift producing unrunnable deployments, stateful MCP session reuse, and a small
+failed-attempt case study showing how validation/diagnostics reduced blind
+retries.
+
+Do not frame the evaluation as a broad user study unless that study actually
+exists. The evidence claim is that the prototype demonstrates the architecture
+and workflow lifecycle under controlled examples.
+
+Do not make runtime throughput a central claim. The project targets planner
+efficiency and operational clarity: fewer blind retries through typed contracts,
+validation, diagnostics, compact outputs, and traces. Performance optimization
+is future work unless backed by explicit measurements.
 
 ## Working Title
 
@@ -137,7 +202,31 @@ The design goals should be stated early and then revisited in evaluation:
 - source-provider correctness, especially for external systems whose tools,
   resources, prompts, or authentication depend on initialized stateful sessions
 
-## 4. Architecture
+Auth should be described as prototype source-readiness plumbing, not a completed
+production secret system. The implementation includes typed auth records, OAuth
+refresh-token support, source auth diagnostics, and MCP auth binding. This is
+enough to show how credentials participate in source readiness and diagnostics,
+but encrypted-at-rest storage, production secret-manager integration, and broad
+provider verification remain future work.
+
+## 4. Positioning And Related Systems
+
+Keep this section short and category-oriented. The goal is to position the
+system, not to claim full feature parity with mature platforms.
+
+Compare against:
+
+- direct LLM tool orchestration: flexible but weak durability and validation
+- generated scripts: simple and maintainable for some tasks, but lifecycle
+  affordances are manual
+- Zapier/RPA/workflow automation platforms: mature integrations and scheduling,
+  but less agent-native typed authoring/repair flow in this prototype's terms
+- LangGraph-style agent graphs/durable agents: adjacent durability ideas, but a
+  different emphasis from source-provider-backed reusable workspace workflows
+- MCP: useful protocol for tools/resources/prompts, but not itself the workflow
+  artifact/deployment/run lifecycle
+
+## 5. Architecture
 
 Explain the active package boundaries:
 
@@ -162,6 +251,11 @@ Important layers:
 - `wf_sources_python`: trusted in-process Python source loading
 - `wf_mcp`: legacy/special-purpose MCP compatibility package
 
+Use package names as implementation evidence, not as the main argument. The
+conceptual architecture should lead: workflow core, platform domain, workflow
+API surface, server/transport composition, and source providers. Package names
+then show how those concepts were implemented in this codebase.
+
 The thesis should explain why the old “everything in MCP” shape was split:
 transport, source provider, workflow API, and runtime concerns are different.
 
@@ -185,7 +279,13 @@ If MCP is discussed, distinguish upstream MCP sources from a future client-facin
 MCP frontend. The former exists as a source family; the latter should not be
 claimed as a completed clean platform surface.
 
-## 5. Workflow Model
+MCP is an important source-provider case study, not the product identity. It
+demonstrates why source-provider correctness matters: a source may require
+persistent sessions, auth context, catalog refresh, resources, and prompt
+inventory. The platform treats MCP as one source family behind the workflow
+boundary, not as the whole architecture.
+
+## 6. Workflow Model
 
 Describe workflows as typed graphs:
 
@@ -212,12 +312,18 @@ Key distinction:
 - outcome controls routing
 - output carries business data
 
-The graph model is also a safety boundary. It is not safer because it can make
-all tools safe; it is safer than arbitrary generated scripts because structure,
-schemas, source bindings, state, outcomes, and review points are explicit. This
-is the answer to “why not just have the AI write a Playwright script?” Scripts
-can be simple and maintainable, but they do not automatically provide the same
-validation and lifecycle affordances.
+The graph model improves the safety posture by making automation structure
+explicit. Node contracts, source requirements, state writes, outcomes,
+validation gates, and trace records are visible before and after execution. It
+does not guarantee safe behavior from provider code, credentials, or external
+side effects.
+
+Use generated scripts as a serious baseline, not a strawman. Scripts can be
+simpler and maintainable for many tasks. The platform argument is that reusable
+workspace automation benefits from lifecycle affordances that scripts do not
+automatically provide: typed validation, source binding, artifact/deployment
+separation, run records, resumability, trace inspection, and repairable
+diagnostics.
 
 Code ends at the source-provider boundary. A workflow can call trusted Python,
 Playwright, API, MCP, or future LLM capabilities, but those should appear as
@@ -235,7 +341,7 @@ Trace claims should be grounded in the current code: run summaries expose
 Do not overstate this as production observability, distributed tracing, metrics,
 or OpenTelemetry support.
 
-## 6. Source Model
+## 7. Source Model
 
 The common boundary is `CapabilitySource`.
 
@@ -287,7 +393,7 @@ For MCP, source-provider correctness includes stateful runtime behavior. A
 workflow capability call should not silently turn a stateful external provider
 into a fresh one-off client call when provider state is part of correctness.
 
-## 7. Implementation Vertical Slice
+## 8. Implementation Vertical Slice
 
 Use the working product path as evidence:
 
@@ -317,11 +423,49 @@ A strong demonstration is the Python source flow:
 
 This shows the source abstraction is not MCP-only.
 
+Use diagrams as first-class explanation, especially Mermaid diagrams that can be
+rendered by the existing document generation flow. Each major part should have
+at least one diagram that explains its role and boundaries before code excerpts
+or package names appear. Prefer diagrams for:
+
+- main architecture spine:
+
+  ```mermaid
+  flowchart LR
+    Owner[Workflow Owner] --> Agent[External LLM Agent]
+    Agent --> CLI[wf CLI]
+    CLI --> Transport[JSON-RPC Transport]
+    Transport --> Server[WorkflowServer]
+    Server --> API[Workflow API Surface]
+    API --> Core[Workflow Core]
+    API --> Platform[Artifacts / Deployments / Runs]
+    Server --> Sources[Source Providers]
+    Sources --> Builtins[Platform Sources]
+    Sources --> MCP[MCP Sources]
+    Sources --> Python[Python Sources]
+  ```
+
+- layer architecture: CLI/transport/server/API/core/source providers
+- workflow core: schemas, nodes, outcomes, reducers, trace, interrupts/resume
+- platform domain: draft workspaces, artifacts, deployments, source inventory,
+  validation diagnostics, run records
+- lifecycle: draft -> artifact -> deployment -> run -> trace/list/resume
+- source resolution: logical source -> deployment binding/platform context ->
+  concrete source/runtime
+- source-provider comparison: built-in, MCP, Python, future OpenAPI
+- runtime call path: cap call/run -> Workflow API -> source runtime/client
+
+Use source excerpts sparingly. Include small snippets for key seams such as the
+artifact/deployment/run lifecycle shape, `CapabilitySource`, the
+`WorkflowSourceProvider` protocol, a compact Python source `@node` example, and
+selected CLI/JSON responses. Avoid long file listings; the implementation
+chapter should explain the architecture, not reproduce the repository.
+
 Frame Python sources as trusted developer extensibility. They are useful because
 project-local code can become typed workflow capabilities quickly, but they are
 not sandboxed non-programmer plugins yet.
 
-## 8. Evaluation
+## 9. Evaluation
 
 Evaluation should use concrete evidence:
 
@@ -347,6 +491,35 @@ Evaluation should use concrete evidence:
   or source assumptions caused repeated failed runs
 - source-drift cases where old deployments become unrunnable with diagnostics
   instead of silently executing against incompatible capabilities
+- current agent/tool evaluation with a small repeat count. A practical prototype
+  target is five end-to-end attempts where free or commodity LLM agents try to
+  use the CLI/API surface to complete the deterministic case study. Report
+  pass/fail counts, failure categories, and whether diagnostics were actionable;
+  do not present this as a statistical reliability benchmark.
+
+For the agent/tool evaluation, success means end-to-end completion: the agent
+creates or selects a valid workflow artifact/deployment and completes a run whose
+output matches the expected typed report schema and key content. Merely calling
+a capability, producing a draft, or returning freeform text outside the schema is
+not success.
+
+Count failures explicitly. Useful categories include:
+
+- config/setup failure
+- source discovery or source binding failure
+- draft validation failure
+- deployment validation failure
+- run failure
+- output schema/content mismatch
+- excessive manual intervention
+- agent gave up or looped without progress
+
+Track autonomous and assisted success separately. Autonomous success means the
+agent completes the task with only the initial prompt/runbook. Assisted success
+means completion after limited documented help such as confirming that the
+server is running or pointing at the intended config path. Manual artifact edits,
+code fixes, or changing the expected output should count as failures for
+autonomous evaluation.
 
 Avoid vague claims such as “robust” or “production-ready” unless backed by
 specific checks.
@@ -392,7 +565,7 @@ Possible evaluation questions:
 - Does deployment validation surface source drift as runnable/unrunnable state
   with diagnostics rather than silent behavior changes?
 
-## 8.1 Positioning Against Existing Automation Platforms
+## 9.1 Positioning Against Existing Automation Platforms
 
 The thesis should discuss the space it fits into through multiple baselines:
 direct LLM tool use, manual scripts, Zapier-style automation platforms, RPA
@@ -421,7 +594,7 @@ This prototype explores a different center of gravity:
 Use the comparison to position the work, not as a claim that the prototype
 outperforms existing automation products.
 
-## 9. Limitations
+## 10. Limitations
 
 State limitations explicitly:
 
@@ -430,6 +603,8 @@ State limitations explicitly:
 - Source provider lifecycle is early, especially for non-MCP mutable sources.
 - Workflow portability is scoped; local Python code, MCP catalogs, auth records,
   and source stores can differ between environments.
+- The prototype has not been evaluated against a broad external provider catalog
+  or a large user study.
 - File-backed stores are the current implementation proof for durable lifecycle;
   durability itself should not be framed as filesystem-specific.
 - Auth records/admin surfaces exist as prototype plumbing, but end-to-end
@@ -439,12 +614,14 @@ State limitations explicitly:
   are not carried through the durable workflow path.
 - Crash recovery is at stopped boundaries, not arbitrary mid-node checkpoints.
 - Offline scheduling is not implemented yet.
+- There is no visual workflow editor yet.
+- There is no bundled autonomous agent brain.
 - General fork/gather workflow control is future work.
 - There is no full approval, roles, policy, or multi-user review system.
 
 Limitations make the thesis more credible. They also motivate future work.
 
-## 10. Future Work
+## 11. Future Work
 
 Likely future-work sections:
 
@@ -461,6 +638,24 @@ Likely future-work sections:
 - UI/admin dashboard
 - first-party workflow UI for listing, inspecting, and editing workflows
 - richer evaluation with real workflows and larger source catalogs
+
+## 12. Conclusion
+
+Restate the core argument: external LLM agents can author and operate workflows,
+but the durable workflow lifecycle should live in a typed platform substrate.
+Summarize what the implementation proves: artifacts, deployments, runs,
+validation, source providers, server/API/CLI surfaces, and reproducible evidence
+across built-in, MCP, and Python sources.
+
+## Appendices
+
+Keep long operational material out of the main argument:
+
+- reproducible command transcript for the case study
+- smoke-test commands and abbreviated outputs
+- selected config files
+- generated workflow/artifact/deployment examples
+- test/evidence index
 
 ## What Not To Do
 

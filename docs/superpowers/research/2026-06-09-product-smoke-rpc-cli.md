@@ -4,7 +4,9 @@ Date: 2026-06-09
 
 Historical note: this smoke captured older platform-source behavior. Current
 deployments no longer need self-bindings such as `wf.std=wf.std` for built-in
-platform sources.
+platform sources, and current validation rejects explicit platform-source
+bindings. The two rows below mentioning `wf.std=wf.std` are preserved as
+historical output, not current guidance.
 
 Target:
 
@@ -39,8 +41,8 @@ The remote CLI path is usable end-to-end:
 | `wf --url ... draft create-from-capability smoke_ws_20260609 wf.std.constant ...` | OK; valid draft, high-confidence wrapper hints. |
 | `wf --url ... draft validate smoke_ws_20260609` | OK; valid. |
 | `wf --url ... draft inspect smoke_ws_20260609 --include-draft` | OK; full draft returned. |
-| `wf --url ... draft save smoke_ws_20260609 --artifact smoke_artifact_20260609 --version 1 ...` | OK; artifact saved, suggested binding `wf.std=wf.std`. |
-| `wf --url ... deploy save smoke_deploy_20260609 --artifact smoke_artifact_20260609 --version 1 --binding wf.std=wf.std` | OK. |
+| `wf --url ... draft save smoke_ws_20260609 --artifact smoke_artifact_20260609 --version 1 ...` | Historical: artifact saved and suggested `wf.std=wf.std`; current behavior should not suggest platform bindings. |
+| `wf --url ... deploy save smoke_deploy_20260609 --artifact smoke_artifact_20260609 --version 1 --binding wf.std=wf.std` | Historical: accepted then; current validation rejects explicit platform bindings. |
 | `wf --url ... deploy validate smoke_deploy_20260609` | OK; `status: runnable`. |
 | `wf --url ... run start smoke_deploy_20260609 --input '{"value":"remote lifecycle smoke"}'` | OK; completed with expected output. |
 | `wf --url ... run inspect run_7afdda9f958a4c258866192a78d1ef6b` | OK; compact completed run summary. |

@@ -22,6 +22,26 @@ def validate_deployment_dependencies(
     bindings = deployment.binding_map()
     diagnostics: list[DependencyDiagnostic] = []
 
+    for logical_source, concrete_source in bindings.items():
+        source = sources_by_id.get(logical_source)
+        if source is not None and source.platform:
+            diagnostics.append(
+                DependencyDiagnostic(
+                    severity=DiagnosticSeverity.ERROR,
+                    code="platform_binding_forbidden",
+                    logical_ref=logical_source,
+                    bound_source=concrete_source,
+                    message=(
+                        f"Platform source {logical_source!r} has a fixed runtime "
+                        "identity and cannot be deployment-bound."
+                    ),
+                    repair_hint=(
+                        "Remove this binding. Platform sources resolve by their "
+                        "source id without deployment bindings."
+                    ),
+                )
+            )
+
     for logical_ref, required in artifact.required_capability_map().items():
         platform_source = sources_by_id.get(required.logical_source)
         if platform_source is not None and platform_source.platform:

@@ -84,7 +84,7 @@ _Avoid_: Ad-hoc environment variables, hidden source lookup
 A process-provided source with a fixed identity, such as `wf.std` or
 `wf.source`. Platform sources can satisfy workflow requirements without
 deployment self-bindings because their logical source id is also their concrete
-source id.
+source id, and deployments should not override them with custom bindings.
 _Avoid_: Configured account source, user-installed provider
 
 **Configured Source**:
@@ -106,14 +106,15 @@ An inert pass-by-value reference to source-owned content, carrying a logical
 source and provider URI. The URI is not globally meaningful by itself; runtime
 must resolve the logical source through deployment/platform context before a
 helper such as `wf.source.read_resource` can dereference it.
-_Avoid_: Bare URI, immediate content fetch
+_Avoid_: Resource Ref as the canonical term, bare URI, immediate content fetch
 
 **Prompt Inventory**:
 Source-owned prompt/template names and metadata. Listing prompts is safe
 inventory; rendering a prompt is an upstream operation that may be stateful and
 needs a concrete graph use case, argument schema, and bounded output policy
 before becoming a workflow helper.
-_Avoid_: Treating prompt list entries as already-rendered text
+_Avoid_: Source Prompt Ref as premature symmetry, treating prompt list entries
+as already-rendered text
 
 **Workflow Portability**:
 The goal that a workflow artifact can describe logical requirements separately
