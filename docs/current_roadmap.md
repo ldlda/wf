@@ -115,9 +115,10 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
   diagnostics, and the Google Drive MCP caveat.
 - Completed platform source policy: documented fixed-id sources such as `wf.std`
   and `wf.source` are platform sources. They resolve by fixed source id, do not
-  require self-bindings, and deployment validation rejects explicit
-  platform-source bindings as stale configuration. Other `wf.*` namespaces are
-  described by their own source docs/policies.
+  require self-bindings, and legacy explicit self-bindings such as
+  `wf.std=wf.std` are accepted as no-op compatibility. Deployment validation
+  still rejects non-self platform-source bindings as stale configuration. Other
+  `wf.*` namespaces are described by their own source docs/policies.
 - Completed `wf.source.read_resource`: resource refs are inert pass-by-value
   data using `logical_source`; explicit platform helper nodes dereference them
   through runtime/platform context with bounded output.

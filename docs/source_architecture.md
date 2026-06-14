@@ -104,9 +104,10 @@ source ids. For example, a resource ref should store:
 The deployment binding decides whether `drive` means `drive.personal`,
 `drive.work`, or another concrete source. Platform sources such as `wf.std` and
 `wf.source` are special because their logical source id is also their concrete
-source id, so they do not require deployment bindings. Deployments should not
-bind platform sources explicitly; validation rejects those bindings as stale
-or misleading configuration.
+source id, so they do not require deployment bindings. Legacy explicit
+self-bindings such as `wf.std=wf.std` are accepted as no-op compatibility, but
+new deployments should omit them. Validation rejects non-self platform bindings
+such as `wf.std=custom.std` as stale or misleading configuration.
 
 Runtime dereference is explicit. Passing a resource ref by value does not fetch
 content. A helper capability such as `wf.source.read_resource` receives the ref,
@@ -160,7 +161,8 @@ operator-configured project sources.
 Generated draft workflows may still use built-in helper sources such as
 `wf.std`. Platform sources do not need deployment bindings, so deployment
 examples should bind configured sources only. If validation reports a platform
-source binding, remove it rather than changing the concrete source id.
+source binding, remove it unless it is an old self-binding kept only for
+compatibility.
 
 ## `wf_sources_mcp` Internal Layers
 

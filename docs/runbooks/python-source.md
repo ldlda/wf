@@ -3,10 +3,16 @@
 This runbook shows how to expose project-local Python `NodeSpec` functions as
 workflow capabilities through `wf-rpc-server`.
 
-Python sources are trusted in-process code. Importing the configured module uses
-normal Python import semantics, so top-level module code can run during
-`wf config validate` and server startup. Keep module top-level work small and
-side-effect free; put real work inside `@node` functions.
+Python sources are trusted in-process code. Importing the configured module can
+run top-level module code during `wf config validate` and server startup. Keep
+module top-level work small and side-effect free; put real work inside `@node`
+functions.
+
+Prefer package-style source modules and package-relative imports. For example,
+use `module: "my_source.ops"` with `from .helpers import ...` inside
+`my_source/ops.py`. Bare local imports such as `import helpers` use Python's
+global import cache and are only best-effort when multiple configured sources
+reuse the same helper/module names.
 
 ## 1. Write `ops.py`
 

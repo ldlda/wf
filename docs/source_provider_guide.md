@@ -72,10 +72,14 @@ Python sources expose trusted in-process `NodeSpec` registries:
   "kind": "python",
   "id": "local.ops",
   "path": ".",
-  "module": "ops",
+  "module": "my_source.ops",
   "registry": "registry"
 }
 ```
+
+Package-style modules are preferred. Relative imports inside the configured
+package are source-local; bare local imports use Python's normal global import
+cache and can collide if multiple sources reuse names like `ops` or `helpers`.
 
 For the full runnable flow, see
 [`Python Source Runbook`](runbooks/python-source.md).
