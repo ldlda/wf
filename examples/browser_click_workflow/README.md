@@ -30,25 +30,14 @@ List the configured Python source capabilities:
 uv run wf --config examples/browser_click_workflow/wf.config.json cap list --source local.browser_click
 ```
 
-## Draft Patch Lifecycle
+## Authoring Challenge Notes
 
-This example includes `draft-patch.json`, an RFC 6902 JSON Patch array that
-turns a single-capability draft into the three-node workflow:
+The full workflow shape is intentionally not checked in as a draft patch answer
+file. Agents should author their own RFC 6902 JSON Patch or raw workflow plan
+when using this example as an authoring challenge. The target workflow is:
 
 ```text
 open_click_page -> wait_for_click -> collect_snapshots
-```
-
-Apply and run it through the product-facing CLI:
-
-```powershell
-uv run wf --config examples/browser_click_workflow/wf.config.json draft create-from-capability browser_click_ws local.browser_click.open_click_page --name browser_click_workflow
-uv run wf --config examples/browser_click_workflow/wf.config.json draft patch browser_click_ws --revision 1 --input-file examples/browser_click_workflow/draft-patch.json
-uv run wf --config examples/browser_click_workflow/wf.config.json draft validate browser_click_ws
-uv run wf --config examples/browser_click_workflow/wf.config.json draft save browser_click_ws --artifact browser_click_case_study --version 1 --title "Browser Click Case Study" --outcome ok
-uv run wf --config examples/browser_click_workflow/wf.config.json deploy save browser_click_case_study.default --artifact browser_click_case_study --version 1 --binding local.browser_click=local.browser_click
-uv run wf --config examples/browser_click_workflow/wf.config.json deploy validate browser_click_case_study.default
-uv run wf --config examples/browser_click_workflow/wf.config.json run start browser_click_case_study.default --input-file examples/browser_click_workflow/run-input.json
 ```
 
 The example config has a local client target, so these commands build the

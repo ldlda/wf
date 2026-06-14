@@ -50,6 +50,26 @@ Results are written to:
 examples/agent_challenges/browser_click_challenge/results/
 ```
 
+## Manual Authoring Workspace
+
+For manual authoring trials, use:
+
+```text
+examples/agent_challenges/browser_click_challenge/workspace_template/
+```
+
+It contains a local workflow config and prompt template that point at the
+browser-click Python source without exposing a generated draft patch answer
+file. Use it as the starting context for an agent trial, or copy it under:
+
+```text
+examples/agent_challenges/browser_click_challenge/workspaces/
+```
+
+`workspaces/` is ignored by Git so trial-created patches, plans, and scratch
+files can be graded by hand without polluting the repository. The template's
+store directory is also ignored.
+
 ## Optional Opencode Server Attachment
 
 `--attach` is opencode's server attach flag. It connects this non-interactive

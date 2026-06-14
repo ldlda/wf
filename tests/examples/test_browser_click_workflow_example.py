@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -236,56 +235,3 @@ async def test_browser_click_workflow_artifact_deployment_run_path(tmp_path) -> 
     assert run["output"]["closed"] is True
     assert run["trace_count"] >= 3
 
-
-@pytest.mark.asyncio
-async def test_browser_click_draft_patch_lifecycle_example(tmp_path) -> None:
-    config = load_workflow_config(EXAMPLE_DIR / "wf.config.json")
-    config.server.store.root = tmp_path / "store"
-    server = build_workflow_server_from_workflow_config(config)
-    patch = json.loads((EXAMPLE_DIR / "draft-patch.json").read_text(encoding="utf-8"))
-
-    workspace = await server.api.create_draft_workspace_from_capability(
-        workspace_id="browser_click_ws",
-        capability_name="local.browser_click.open_click_page",
-        name="browser_click_workflow",
-    )
-    patched = await server.api.patch_draft_workspace(
-        workspace_id=workspace["workspace_id"],
-        revision=workspace["revision"],
-        patch=patch,
-    )
-    validated = await server.api.validate_draft_workspace(
-        workspace_id=workspace["workspace_id"],
-    )
-    saved = await server.api.create_artifact_from_workspace(
-        workspace_id=workspace["workspace_id"],
-        artifact_id="browser_click_case_study",
-        version=1,
-        title="Browser Click Case Study",
-        outcomes=["ok"],
-        source_bindings={"local.browser_click": "local.browser_click"},
-    )
-    await server.api.save_deployment(
-        {
-            "id": "browser_click_case_study.default",
-            "artifact_id": "browser_click_case_study",
-            "artifact_version": 1,
-            "bindings": {"local.browser_click": "local.browser_click"},
-        }
-    )
-    run = await server.api.run_deployment(
-        deployment_id="browser_click_case_study.default",
-        workflow_input={
-            "button_label": "Launch Workflow",
-            "open_browser": False,
-            "simulate": True,
-            "timeout_seconds": 2,
-        },
-    )
-
-    assert patched["status"] == "valid"
-    assert validated["status"] == "valid"
-    assert saved["saved"] is True
-    assert run["status"] == "completed"
-    assert run["output"]["before"]["clicked"] is False
-    assert run["output"]["after"]["clicked"] is True

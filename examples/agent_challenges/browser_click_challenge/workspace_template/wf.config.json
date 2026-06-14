@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "client": {
+    "target": {
+      "kind": "local"
+    }
+  },
+  "server": {
+    "store": {
+      "kind": "filesystem",
+      "root": ".wf_browser_click_store"
+    },
+    "sources": [
+      {
+        "kind": "python",
+        "id": "local.browser_click",
+        "path": "../../../browser_click_workflow",
+        "module": "ops",
+        "registry": "registry"
+      }
+    ]
+  }
+}
+

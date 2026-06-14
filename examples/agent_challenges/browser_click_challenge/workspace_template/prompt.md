@@ -1,4 +1,4 @@
-# Browser Click Workflow Challenge
+# Browser Click Workflow Authoring Challenge
 
 Build and successfully run a workflow that:
 
@@ -10,43 +10,36 @@ Build and successfully run a workflow that:
 Use this command prefix for product-facing operations:
 
 ```powershell
-{{wf_command_prefix}}
+uv run wf --config examples/agent_challenges/browser_click_challenge/workspace_template/wf.config.json --local
 ```
 
-{{server_context}}
-
-Use this repository's workflow product path. Start by checking the relevant
-agent skills under `skills/`, especially the workflow/CLI skill references, and
-use broad docs/code search only after those pointers are not enough. You should
-use the `wf` CLI with the command prefix above, create or reuse a workflow
-deployment, and run the deployment through the workflow API. Do not solve the
+Start from `skills/`, especially the workflow/CLI skill references, before doing
+broad docs or code search. Do not read outside this repository. Do not solve the
 challenge with only a standalone Playwright/Python script.
 
-Do not create a new helper script whose only job is to drive `WorkflowApi`
-directly. The challenge is about whether the product-facing CLI/server workflow
-can be discovered and used.
+Acceptable product-facing authoring paths:
 
-If you need to write a workflow definition, write a declarative JSON/YAML file
-and then apply/run it through the product-facing workflow tools. Do not hide the
-workflow construction inside a Python script.
-
-Two product-facing authoring paths are acceptable:
-
-- create a draft from one capability, patch it with RFC 6902 JSON Patch, then
-  validate/save/deploy/run it;
-- or, if you already have a complete raw workflow plan file, use
+- create a draft from one capability, patch it with your own RFC 6902 JSON
+  Patch, then validate/save/deploy/run it;
+- or write your own complete raw JSON/YAML workflow plan and use
   `wf artifact create-from-plan` before deploy/run.
 
 Do not use a pre-existing generated patch or raw-plan answer file. If you find
 one, ignore it and author your own workflow definition.
 
-The repository already includes a deterministic source example at:
+The source capabilities are provided by:
 
 ```text
-examples/browser_click_workflow/
+examples/browser_click_workflow/ops.py
 ```
 
-You may inspect and use it. A successful final answer must include:
+The run input fixture is:
+
+```text
+examples/browser_click_workflow/run-input.json
+```
+
+A successful final answer must include:
 
 - the commands you ran,
 - the deployment id,
@@ -61,7 +54,7 @@ End your answer with exactly one fenced YAML block using this shape:
 challenge_report:
   used_product_path: true
   used_helper_script: false
-  workflow_file: "path/to/workflow.json-or-yaml"
+  workflow_file: "path/to/workflow.json-or-yaml-or-patch.json"
   deployment_id: "browser_click_case_study.default"
   run_id: "run_..."
   before_clicked: false
@@ -77,3 +70,4 @@ the `wf` CLI, either in local same-process mode or through `wf-rpc-server`. Set
 `WorkflowApi` directly.
 
 If something fails, report the exact command and error instead of hiding it.
+
