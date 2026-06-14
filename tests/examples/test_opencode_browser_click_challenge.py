@@ -254,20 +254,34 @@ def test_prepare_trial_workspace_copies_template_to_model_trial_dir(
 ) -> None:
     template = tmp_path / "template"
     template.mkdir()
-    (template / "wf.config.json").write_text('{"version": 1}', encoding="utf-8")
     (template / "prompt.md").write_text("prompt", encoding="utf-8")
     (template / ".gitignore").write_text(".wf_store/\n", encoding="utf-8")
     workspaces = tmp_path / "workspaces"
+    source_root = tmp_path / "browser_click_workflow"
+    source_root.mkdir()
 
     prepared = prepare_trial_workspace(
         model="opencode/mimo-v2.5-free",
         index=7,
         workspaces_dir=workspaces,
         template_dir=template,
+        source_root=source_root,
     )
 
     assert prepared.root == workspaces / "opencode_mimo-v2.5-free-trial-007"
-    assert prepared.config_path.read_text(encoding="utf-8") == '{"version": 1}'
+    config = json.loads(prepared.config_path.read_text(encoding="utf-8"))
+    assert config["client"]["target"] == {"kind": "local"}
+    assert config["server"]["store"] == {
+        "kind": "filesystem",
+        "root": ".wf_browser_click_store",
+    }
+    assert config["server"]["sources"][0] == {
+        "kind": "python",
+        "id": "local.browser_click",
+        "path": "../../browser_click_workflow",
+        "module": "ops",
+        "registry": "registry",
+    }
     assert prepared.prompt_path.read_text(encoding="utf-8") == "prompt"
     assert (prepared.root / ".gitignore").read_text(encoding="utf-8") == ".wf_store/\n"
 
@@ -277,8 +291,9 @@ def test_prepare_trial_workspace_removes_stale_previous_attempt(
 ) -> None:
     template = tmp_path / "template"
     template.mkdir()
-    (template / "wf.config.json").write_text('{"version": 1}', encoding="utf-8")
     (template / "prompt.md").write_text("prompt", encoding="utf-8")
+    source_root = tmp_path / "browser_click_workflow"
+    source_root.mkdir()
     workspaces = tmp_path / "workspaces"
     stale = workspaces / "opencode_mimo-v2.5-free-trial-001" / "old-answer.json"
     stale.parent.mkdir(parents=True)
@@ -289,6 +304,7 @@ def test_prepare_trial_workspace_removes_stale_previous_attempt(
         index=1,
         workspaces_dir=workspaces,
         template_dir=template,
+        source_root=source_root,
     )
 
     assert prepared.root.exists()

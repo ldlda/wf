@@ -19,10 +19,11 @@ uv run wf --config examples/agent_challenges/browser_click_challenge/workspaces/
 ```
 
 For each local-mode trial, the harness copies `workspace_template/` into
-`workspaces/<model>-trial-<n>/` and injects that config path into the prompt.
-This builds the configured workflow server in the CLI process for each command
-and uses the copied workspace's durable store. It does not reuse in-memory
-source sessions across CLI invocations.
+`workspaces/<model>-trial-<n>/`, generates a config whose Python source path is
+relative to that copied config, and injects the config path into the prompt. This
+builds the configured workflow server in the CLI process for each command and
+uses the copied workspace's durable store. It does not reuse in-memory source
+sessions across CLI invocations.
 
 Use `--start-server` when the trial should exercise the JSON-RPC server path.
 With `--start-server`, the harness starts:
@@ -60,10 +61,10 @@ For manual authoring trials, use:
 examples/agent_challenges/browser_click_challenge/workspace_template/
 ```
 
-It contains a local workflow config and prompt template that point at the
-browser-click Python source without exposing a generated draft patch answer
-file. The harness copies it automatically for normal local-mode trials. For
-manual experiments, copy it under:
+It contains the prompt template and local store ignore rules without exposing a
+generated draft patch answer file. The harness copies it automatically for
+normal local-mode trials and writes `wf.config.json` into the copied workspace.
+For manual experiments, copy it under:
 
 ```text
 examples/agent_challenges/browser_click_challenge/workspaces/

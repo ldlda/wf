@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -30,6 +31,7 @@ DEFAULT_WORKSPACES_DIR = CHALLENGE_DIR / "workspaces"
 DEFAULT_WORKSPACE_TEMPLATE = CHALLENGE_DIR / "workspace_template"
 DEFAULT_SERVER_PORT = 8772
 EXAMPLE_CONFIG = ROOT / "examples" / "browser_click_workflow" / "wf.config.json"
+EXAMPLE_SOURCE_ROOT = ROOT / "examples" / "browser_click_workflow"
 EXAMPLE_CONFIG_ARG = "examples/browser_click_workflow/wf.config.json"
 LOCAL_WF_COMMAND_PREFIX = f"uv run wf --config {EXAMPLE_CONFIG_ARG} --local"
 
@@ -127,6 +129,7 @@ def prepare_trial_workspace(
     index: int,
     workspaces_dir: Path = DEFAULT_WORKSPACES_DIR,
     template_dir: Path = DEFAULT_WORKSPACE_TEMPLATE,
+    source_root: Path = EXAMPLE_SOURCE_ROOT,
 ) -> TrialWorkspace:
     """Copy the authoring template into a clean ignored per-trial directory."""
     root = workspaces_dir / f"{_safe_model_name(model)}-trial-{index:03d}"
@@ -135,10 +138,37 @@ def prepare_trial_workspace(
         # the ignored per-trial directory before copying the template.
         shutil.rmtree(root)
     shutil.copytree(template_dir, root)
-    return TrialWorkspace(
+    workspace = TrialWorkspace(
         root=root,
         config_path=root / "wf.config.json",
         prompt_path=root / "prompt.md",
+    )
+    write_trial_config(workspace.config_path, source_root=source_root)
+    return workspace
+
+
+def write_trial_config(config_path: Path, *, source_root: Path) -> None:
+    """Write a per-trial config with Python source path relative to config."""
+    relative_source = Path(os.path.relpath(source_root, config_path.parent)).as_posix()
+    config = {
+        "version": 1,
+        "client": {"target": {"kind": "local"}},
+        "server": {
+            "store": {"kind": "filesystem", "root": ".wf_browser_click_store"},
+            "sources": [
+                {
+                    "kind": "python",
+                    "id": "local.browser_click",
+                    "path": relative_source,
+                    "module": "ops",
+                    "registry": "registry",
+                }
+            ],
+        },
+    }
+    config_path.write_text(
+        json.dumps(config, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
     )
 
 
