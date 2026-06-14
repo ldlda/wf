@@ -14,6 +14,7 @@ from examples.agent_challenges.browser_click_challenge.run_opencode_trials impor
     prepare_trial_workspace,
     render_prompt,
     server_command,
+    starting_trial_index,
     trial_output_path,
     wf_command_prefix_for_config,
 )
@@ -300,17 +301,46 @@ def test_prepare_trial_workspace_uses_next_available_directory(
     first.mkdir(parents=True)
     stale.write_text("stale", encoding="utf-8")
 
+    next_index = starting_trial_index(
+        model="opencode/mimo-v2.5-free",
+        results_dir=tmp_path / "results",
+        workspaces_dir=workspaces,
+    )
     prepared = prepare_trial_workspace(
         model="opencode/mimo-v2.5-free",
-        index=1,
+        index=next_index,
         workspaces_dir=workspaces,
         template_dir=template,
         source_root=source_root,
     )
 
-    assert prepared.root == workspaces / "opencode_mimo-v2.5-free-trial-001-r002"
+    assert prepared.root == workspaces / "opencode_mimo-v2.5-free-trial-002"
     assert prepared.root.exists()
     assert stale.read_text(encoding="utf-8") == "stale"
+
+
+def test_starting_trial_index_accounts_for_existing_results_and_workspaces(
+    tmp_path: Path,
+) -> None:
+    results = tmp_path / "results"
+    workspaces = tmp_path / "workspaces"
+    results.mkdir()
+    workspaces.mkdir()
+    (results / "opencode_mimo-v2.5-free-trial-003.json").write_text(
+        "{}",
+        encoding="utf-8",
+    )
+    (workspaces / "opencode_mimo-v2.5-free-trial-005").mkdir()
+    (workspaces / "other_model-trial-099").mkdir()
+
+    assert (
+        starting_trial_index(
+            model="opencode/mimo-v2.5-free",
+            results_dir=results,
+            workspaces_dir=workspaces,
+        )
+        == 6
+    )
 
 
 def test_wf_command_prefix_for_config_uses_repo_relative_path() -> None:

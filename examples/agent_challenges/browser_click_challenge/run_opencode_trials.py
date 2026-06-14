@@ -132,11 +132,9 @@ def prepare_trial_workspace(
     source_root: Path = EXAMPLE_SOURCE_ROOT,
 ) -> TrialWorkspace:
     """Copy the authoring template into a clean ignored per-trial directory."""
-    root = _next_trial_workspace_root(
-        workspaces_dir=workspaces_dir,
-        model=model,
-        index=index,
-    )
+    root = workspaces_dir / f"{_safe_model_name(model)}-trial-{index:03d}"
+    if root.exists():
+        raise FileExistsError(f"trial workspace already exists: {root}")
     shutil.copytree(template_dir, root)
     workspace = TrialWorkspace(
         root=root,
@@ -147,22 +145,35 @@ def prepare_trial_workspace(
     return workspace
 
 
-def _next_trial_workspace_root(
+def starting_trial_index(
     *,
-    workspaces_dir: Path,
     model: str,
-    index: int,
-) -> Path:
-    stem = f"{_safe_model_name(model)}-trial-{index:03d}"
-    first = workspaces_dir / stem
-    if not first.exists():
-        return first
-    suffix = 2
-    while True:
-        candidate = workspaces_dir / f"{stem}-r{suffix:03d}"
-        if not candidate.exists():
-            return candidate
-        suffix += 1
+    results_dir: Path,
+    workspaces_dir: Path,
+) -> int:
+    """Return the next global trial number for this model across invocations."""
+    safe_model = _safe_model_name(model)
+    highest = 0
+    for directory in (results_dir, workspaces_dir):
+        if not directory.exists():
+            continue
+        for path in directory.iterdir():
+            index = _trial_index_from_name(path.name, safe_model=safe_model)
+            if index is not None:
+                highest = max(highest, index)
+    return highest + 1
+
+
+def _trial_index_from_name(name: str, *, safe_model: str) -> int | None:
+    prefix = f"{safe_model}-trial-"
+    if not name.startswith(prefix):
+        return None
+    suffix = name.removeprefix(prefix)
+    if "." in suffix:
+        suffix = suffix.split(".", 1)[0]
+    if not suffix.isdigit():
+        return None
+    return int(suffix)
 
 
 def write_trial_config(config_path: Path, *, source_root: Path) -> None:
@@ -561,8 +572,13 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         use_trial_workspace = args.server_url is None and not args.start_server
+        first_index = starting_trial_index(
+            model=args.model,
+            results_dir=args.results_dir,
+            workspaces_dir=args.workspaces_dir,
+        )
         summaries: list[dict[str, Any]] = []
-        for index in range(1, args.trials + 1):
+        for index in range(first_index, first_index + args.trials):
             prompt_path = args.prompt
             trial_wf_command_prefix = wf_command_prefix
             trial_server_context = server_context
