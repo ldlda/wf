@@ -1,0 +1,63 @@
+# Opencode Browser Click Challenge Harness
+
+This harness runs agent trials against the browser-click workflow challenge.
+It is evidence tooling, not product runtime code.
+
+The deterministic workflow example is:
+
+```text
+examples/browser_click_workflow/
+```
+
+## One Trial
+
+From the repository root:
+
+```powershell
+uv run python examples/agent_challenges/browser_click_challenge/run_opencode_trials.py `
+  --model opencode/mimo-v2.5-free `
+  --variant high `
+  --trials 1
+```
+
+Results are written to:
+
+```text
+examples/agent_challenges/browser_click_challenge/results/
+```
+
+## Optional Playwright MCP Attachment
+
+If you want the agent to have browser-control tools, pass:
+
+```powershell
+--attach http://127.0.0.1:4096
+```
+
+Start that MCP/tool endpoint separately. For example, one possible MCP server
+command is:
+
+```json
+{
+  "command": "npx",
+  "args": ["-y", "@playwright/mcp@latest"]
+}
+```
+
+The baseline challenge does not require Playwright MCP. The score is based on
+whether the agent used the workflow product path and produced the expected
+workflow output.
+
+## Classification
+
+Each trial is classified as one of:
+
+- `success`: output shows workflow usage and before/after clicked states.
+- `workflow_not_used`: output appears to solve the task without `wf`,
+  `wf-rpc-server`, deployment, or run evidence.
+- `run_failed`: output includes workflow usage but reports a failure.
+- `timeout`: the opencode process exceeded the configured timeout.
+- `parse_error`: the harness could not read opencode JSON/JSONL output.
+- `unknown`: no clear success or failure signal was found.
+
+Committed tests cover harness logic only. They do not invoke opencode.

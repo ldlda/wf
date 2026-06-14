@@ -189,6 +189,9 @@ stable.
   now frames the platform as a formal system design/implementation report backed
   by `docs/add/evidence-index.md` and the report-workflow case study.
 - Completed supplemental browser-click workflow example with serial multi-node lifecycle evidence.
+- Completed: an opencode browser-click challenge harness captures external
+  agent trials against the deterministic browser-click workflow example without
+  changing product runtime code.
 
 ## Historical References
 

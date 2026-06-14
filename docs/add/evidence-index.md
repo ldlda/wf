@@ -77,6 +77,8 @@ Evidence:
 - `tests/wf_sources_python/test_loader.py`
 - `examples/browser_click_workflow/`
 - `tests/examples/test_browser_click_workflow_example.py`
+- `examples/agent_challenges/browser_click_challenge/`
+- `tests/examples/test_opencode_browser_click_challenge.py`
 
 ## Limitations
 
