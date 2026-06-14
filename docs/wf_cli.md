@@ -13,6 +13,12 @@ wf --config wf_mcp.config.json <command>
 
 If `--config` is omitted, `wf_mcp.config.json` is used.
 
+`--local` still uses the selected `--config` file. For neutral workflow configs,
+it builds the configured server in the CLI process, including configured Python
+sources and other local source providers. Use `--url` when you want to force the
+CLI to talk to an already-running `wf-rpc-server`; `--local` and `--url` are
+mutually exclusive.
+
 ## Remote Server
 
 Start a local/static JSON-RPC workflow server:

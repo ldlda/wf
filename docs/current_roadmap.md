@@ -105,6 +105,9 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
 - Completed: static source inventory providers now have an explicit
   `WorkflowSourceProvider.load_sources()` seam in `wf_server`, and Python
   source loading is behind `PythonSourceProvider`.
+- Completed: `wf --local --config <workflow-config>` now composes configured
+  neutral server sources in-process instead of falling back to built-in static
+  sources only.
 - Completed: server startup policy moved to `wf_server.cli`; JSON-RPC HTTP
   remains in `wf_transport_rpc_http`:
   [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).

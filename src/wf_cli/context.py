@@ -151,6 +151,8 @@ def load_cli_context(
         store = config.server.workflow_store
         if not isinstance(store, FilesystemStoreConfig):
             raise ValueError("local CLI target currently requires filesystem store")
+        # Uses config-aware builder so configured sources (Python, etc.) are
+        # composed in-process, matching wf-rpc-server behavior.
         server = build_workflow_server_from_workflow_config(config)
         return CliContext(
             config_path=resolved_config_path,
