@@ -18,63 +18,13 @@ from wf_cli.context import (
 )
 from wf_server.config import build_workflow_server_from_workflow_config
 
+from .conftest import write_python_source_config
+
 
 def _typer_context(obj: object | None) -> typer.Context:
     ctx = typer.Context(click.Command("wf"))
     ctx.obj = obj
     return ctx
-
-
-def _write_python_source_config(root: Path, *, target: dict[str, object]) -> Path:
-    source_root = root / "source"
-    source_root.mkdir()
-    (source_root / "ops.py").write_text(
-        """
-from pydantic import BaseModel
-
-from wf_authoring import node
-
-
-class EchoInput(BaseModel):
-    text: str
-
-
-class EchoOutput(BaseModel):
-    text: str
-
-
-@node(name="echo")
-def echo(payload: EchoInput) -> EchoOutput:
-    return EchoOutput(text=payload.text)
-
-
-registry = [echo]
-""".lstrip(),
-        encoding="utf-8",
-    )
-    config_path = root / "wf.json"
-    config_path.write_text(
-        json.dumps(
-            {
-                "version": 1,
-                "client": {"target": target},
-                "server": {
-                    "store": {"kind": "filesystem", "root": ".wf_store"},
-                    "sources": [
-                        {
-                            "kind": "python",
-                            "id": "local.ops",
-                            "path": "source",
-                            "module": "ops",
-                            "registry": "registry",
-                        }
-                    ],
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
-    return config_path
 
 
 def test_cli_typer_state_reads_typed_context_object() -> None:
@@ -196,7 +146,7 @@ def test_load_cli_context_local_uses_workflow_store_override(
 async def test_load_cli_context_local_composes_configured_python_sources(
     tmp_path: Path,
 ) -> None:
-    config_path = _write_python_source_config(
+    config_path = write_python_source_config(
         tmp_path,
         target={
             "kind": "rpc_http",

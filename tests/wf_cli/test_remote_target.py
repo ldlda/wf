@@ -17,6 +17,8 @@ from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
 from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
 
+from .conftest import write_python_source_config
+
 
 class BrokenSourceAdmin:
     async def list_sources(
@@ -218,63 +220,6 @@ def test_local_cli_context_rejects_rpc_target_for_local_only_commands(tmp_path) 
         raise AssertionError("expected ValueError")
 
     assert "not available for rpc_http targets yet" in message
-
-
-def _write_python_source_cli_config(root: Path) -> Path:
-    source_root = root / "source"
-    source_root.mkdir()
-    (source_root / "ops.py").write_text(
-        """
-from pydantic import BaseModel
-
-from wf_authoring import node
-
-
-class EchoInput(BaseModel):
-    text: str
-
-
-class EchoOutput(BaseModel):
-    text: str
-
-
-@node(name="echo")
-def echo(payload: EchoInput) -> EchoOutput:
-    return EchoOutput(text=payload.text)
-
-
-registry = [echo]
-""".lstrip(),
-        encoding="utf-8",
-    )
-    config_path = root / "wf.json"
-    config_path.write_text(
-        json.dumps(
-            {
-                "version": 1,
-                "client": {
-                    "target": {
-                        "kind": "rpc_http",
-                        "url": "http://127.0.0.1:8765/rpc",
-                    }
-                },
-                "server": {
-                    "store": {"kind": "filesystem", "root": ".wf_store"},
-                    "sources": [
-                        {
-                            "kind": "python",
-                            "id": "local.ops",
-                            "path": "source",
-                            "module": "ops",
-                            "registry": "registry",
-                        }
-                    ],
-                },
-            }
-        ),
-        encoding="utf-8",
-    )
-    return config_path
 
 
 def _constant_plan() -> RawWorkflowPlan:
@@ -976,7 +921,7 @@ def test_wf_source_diagnose_uses_rpc_url_override(monkeypatch, tmp_path) -> None
 
 
 def test_wf_local_uses_selected_config_sources(tmp_path: Path) -> None:
-    config_path = _write_python_source_cli_config(tmp_path)
+    config_path = write_python_source_config(tmp_path)
 
     result = CliRunner().invoke(
         app,
