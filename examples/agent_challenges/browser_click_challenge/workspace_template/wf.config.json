@@ -14,11 +14,10 @@
       {
         "kind": "python",
         "id": "local.browser_click",
-        "path": "../../../browser_click_workflow",
+        "path": "../../../../browser_click_workflow",
         "module": "ops",
         "registry": "registry"
       }
     ]
   }
 }
-
