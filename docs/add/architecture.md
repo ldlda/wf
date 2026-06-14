@@ -115,6 +115,12 @@ The runtime does not know whether a node came from MCP, Python, OpenAPI, or a
 built-in package. It resolves a `NodeSpec`, validates payloads, executes, records
 trace, and commits reducer-aware state changes.
 
+Platform sources such as `wf.std` and `wf.source` are process-provided sources.
+They can appear in artifacts and runs without deployment self-bindings like
+`wf.std=wf.std`; configured sources such as `local.ops` or `everything.default`
+still use deployment bindings when a workflow needs portability across accounts
+or workspaces.
+
 ## Source Model
 
 The common provider output is `CapabilitySource`.
@@ -145,6 +151,17 @@ class WorkflowSourceProvider(Protocol):
 This seam is for static source inventory. MCP also has runtime pools,
 auth/catalog stores, admin/apply behavior, and live checks, so it should not be
 forced into a tiny static interface too early.
+
+Source inventory is broader than workflow-callable nodes. Sources may own tools,
+workflow capabilities, resources, and prompts. Current CLI smoke paths can list
+resource and prompt names with `wf source resources` and `wf source prompts`
+without fetching resource bodies or rendering prompt templates.
+
+Resource refs are pass-by-value data using a logical source plus provider URI.
+`wf.source.read_resource` is the explicit helper that dereferences such refs
+through runtime/platform context and bounded output policy. Prompt rendering is
+intentionally not a workflow helper yet; keep it at inventory/inspection level
+until there is a concrete graph use case and bounded output contract.
 
 ## Demo: Python Source End To End
 
@@ -260,10 +277,17 @@ Expected run result:
 - `wf status` summarizes target, sources, capabilities, runs, admin surfaces,
   and registry availability.
 - Capabilities can be listed, inspected, and called directly.
+- `cap call` has compact/text output options for human and agent smoke checks
+  without dumping large raw provider payloads by default.
+- Source resource/prompt inventories can be listed safely without reading or
+  rendering upstream content.
 - Drafts can be created from capabilities and saved as immutable artifacts.
-- Deployments bind logical sources to concrete sources.
+- Deployments bind configured logical sources to concrete sources; platform
+  sources such as `wf.std` do not need self-bindings.
 - Runs are persisted at stopped boundaries and can be inspected/listed.
 - MCP upstream sessions are stateful through `McpRuntimePool`.
+- Local/dev auth records support typed OAuth refresh-token credentials and
+  source-owned MCP auth binding; production secret storage remains future work.
 - Python sources can run through the full draft -> artifact -> deployment -> run
   lifecycle.
 
@@ -278,6 +302,9 @@ Expected run result:
 - File-backed stores are the proven storage backend; SQL/secret-manager stores
   are future work.
 - MCP app/widget passthrough is not a durable workflow product feature yet.
+- Prompt rendering is not exposed as a workflow helper source yet.
+- Google Drive MCP is useful as manual OAuth/MCP smoke coverage, but not a
+  reliable regression fixture because provider quotas/permissions are unstable.
 
 ## Next Direction
 

@@ -123,6 +123,8 @@ The design goals should be stated early and then revisited in evaluation:
 - validation-centered lifecycle for LLM-authored workflows
 - typed inputs, state, outputs, and node payloads
 - explicit source binding
+- platform sources with fixed process-provided identities, separate from
+  configured workspace/account sources
 - scoped workflow portability through artifact requirements and deployment
   binding contracts
 - durable artifacts, deployments, and stopped runs
@@ -250,6 +252,24 @@ The thesis should stress that the runtime does not care where a `NodeSpec` came
 from. Source-specific behavior belongs in provider packages and server
 composition.
 
+Use precise vocabulary:
+
+- tools are provider-native operations, such as MCP tools
+- workflow capabilities are `NodeSpec` contracts callable from graphs
+- resources are source-owned addressable content; a URI is meaningful only with
+  its owning source
+- prompts are source-owned prompt/template inventory; rendering may be stateful
+
+Platform sources such as `wf.std` and `wf.source` are process-provided and do
+not require deployment self-bindings. Configured sources such as MCP, Python,
+and future OpenAPI sources remain explicit server/operator choices.
+
+`wf.source.read_resource` is the current explicit dereference helper: workflows
+pass inert resource refs by value, then the helper resolves the logical source
+through runtime/platform context and returns bounded text. Prompt rendering is
+deliberately not a workflow helper yet; keep it in future work unless the thesis
+adds a concrete graph use case, argument schema, and bounded output policy.
+
 MCP should be presented as one source family and a useful stress test for
 source-provider correctness, not as the platform identity.
 
@@ -276,6 +296,7 @@ wf config validate
   -> wf-rpc-server --config
   -> wf status
   -> wf source list
+  -> wf source resources / prompts
   -> wf cap list / inspect / call
   -> wf draft create-from-capability
   -> wf draft save
@@ -311,6 +332,10 @@ Evaluation should use concrete evidence:
 - MCP source-provider correctness tests covering tools, resources, prompts, and
   session reuse through the same server path
 - Python source workflow-run integration test
+- bounded source inventory and resource-read tests, especially to avoid raw
+  provider payload spam
+- OAuth refresh-token/auth-binding tests for HTTP MCP sources, with Google Drive
+  MCP treated as manual smoke coverage rather than a regression fixture
 - config validation catching import/path errors before server startup
 - planner-efficiency checks: validation, source catalogs, compact output, and
   inspectable errors should reduce repeated blind LLM attempts
@@ -354,6 +379,10 @@ Possible evaluation questions:
 - Can the same server be used through CLI and JSON-RPC transport?
 - Can a new source family be added without changing `wf_core`?
 - Are large/raw provider payloads bounded in CLI output?
+- Can platform sources such as `wf.std` be used without self-bindings while
+  configured sources still require explicit bindings?
+- Can source resources be referenced by logical source and dereferenced only
+  through an explicit bounded helper?
 - Can an external LLM agent converge on a valid workflow without spending most
   of the interaction on tool-output spam and trial-and-error?
 - Does the structured surface reduce failed attempts before success compared to

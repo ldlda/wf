@@ -80,6 +80,41 @@ workspaces/accounts while allowing validation to detect missing, disabled, or
 incompatible sources.
 _Avoid_: Ad-hoc environment variables, hidden source lookup
 
+**Platform Source**:
+A process-provided source with a fixed identity, such as `wf.std` or
+`wf.source`. Platform sources can satisfy workflow requirements without
+deployment self-bindings because their logical source id is also their concrete
+source id.
+_Avoid_: Configured account source, user-installed provider
+
+**Configured Source**:
+A server/operator-selected source such as an MCP connection, trusted Python
+module registry, or future OpenAPI provider. Configured sources are where
+deployment bindings, source registry state, auth refs, catalog cache, and
+health diagnostics matter most.
+_Avoid_: Built-in standard library source
+
+**Source Inventory**:
+The listable capabilities owned by a source: workflow-callable `NodeSpec`s,
+provider-native tools, resources, prompts, and related metadata. Inventory
+inspection is not the same as invoking a tool, reading a resource, or rendering
+a prompt.
+_Avoid_: Assuming list equals execute
+
+**Source Resource Ref**:
+An inert pass-by-value reference to source-owned content, carrying a logical
+source and provider URI. The URI is not globally meaningful by itself; runtime
+must resolve the logical source through deployment/platform context before a
+helper such as `wf.source.read_resource` can dereference it.
+_Avoid_: Bare URI, immediate content fetch
+
+**Prompt Inventory**:
+Source-owned prompt/template names and metadata. Listing prompts is safe
+inventory; rendering a prompt is an upstream operation that may be stateful and
+needs a concrete graph use case, argument schema, and bounded output policy
+before becoming a workflow helper.
+_Avoid_: Treating prompt list entries as already-rendered text
+
 **Workflow Portability**:
 The goal that a workflow artifact can describe logical requirements separately
 from concrete source/account bindings. Portability is scoped: deployments bind
