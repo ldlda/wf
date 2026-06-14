@@ -9,6 +9,24 @@ The deterministic workflow example is:
 examples/browser_click_workflow/
 ```
 
+## Default Behavior
+
+By default the harness starts:
+
+```powershell
+uv run wf-rpc-server --config examples/browser_click_workflow/wf.config.json --host 127.0.0.1 --port 8772
+```
+
+It waits until:
+
+```powershell
+uv run wf --url http://127.0.0.1:8772/rpc status
+```
+
+passes, injects that URL into the prompt, runs opencode, then stops the server.
+Use `--server-url` to target an already-running server or `--no-start-server` to
+skip lifecycle management.
+
 ## One Trial
 
 From the repository root:

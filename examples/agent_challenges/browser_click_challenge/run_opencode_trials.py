@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import subprocess
+import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -24,6 +25,97 @@ ROOT = Path(__file__).resolve().parents[3]
 CHALLENGE_DIR = Path(__file__).resolve().parent
 DEFAULT_PROMPT = CHALLENGE_DIR / "prompt.md"
 DEFAULT_RESULTS_DIR = CHALLENGE_DIR / "results"
+DEFAULT_SERVER_PORT = 8772
+EXAMPLE_CONFIG = ROOT / "examples" / "browser_click_workflow" / "wf.config.json"
+
+
+def rpc_url_for_port(port: int) -> str:
+    return f"http://127.0.0.1:{port}/rpc"
+
+
+def server_command(*, port: int) -> list[str]:
+    return [
+        "uv",
+        "run",
+        "wf-rpc-server",
+        "--config",
+        str(EXAMPLE_CONFIG.relative_to(ROOT)).replace("\\", "/"),
+        "--host",
+        "127.0.0.1",
+        "--port",
+        str(port),
+    ]
+
+
+def render_prompt(prompt_path: Path, *, rpc_url: str) -> str:
+    command_prefix = f"uv run wf --url {rpc_url}"
+    return (
+        prompt_path.read_text(encoding="utf-8")
+        .replace("{{rpc_url}}", rpc_url)
+        .replace("{{wf_command_prefix}}", command_prefix)
+    )
+
+
+@dataclass(slots=True)
+class ManagedServer:
+    process: subprocess.Popen[str]
+    rpc_url: str
+
+
+def start_server(*, port: int, timeout_seconds: int = 30) -> ManagedServer:
+    command = server_command(port=port)
+    process = subprocess.Popen(
+        command,
+        cwd=ROOT,
+        text=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    rpc_url = rpc_url_for_port(port)
+    try:
+        wait_for_status(rpc_url=rpc_url, timeout_seconds=timeout_seconds)
+    except Exception:
+        stop_server(process)
+        raise
+    return ManagedServer(process=process, rpc_url=rpc_url)
+
+
+def wait_for_status(*, rpc_url: str, timeout_seconds: int) -> None:
+    deadline = time.monotonic() + timeout_seconds
+    command = ["uv", "run", "wf", "--url", rpc_url, "status"]
+    last_stderr = ""
+    while time.monotonic() < deadline:
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            return
+        last_stderr = completed.stderr
+        time.sleep(0.5)
+    raise RuntimeError(f"wf status did not become ready: {last_stderr}")
+
+
+def stop_server(process: subprocess.Popen[str]) -> None:
+    if process.poll() is not None:
+        return
+    if sys.platform == "win32":
+        subprocess.run(
+            ["taskkill", "/F", "/T", "/PID", str(process.pid)],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    else:
+        process.terminate()
+        try:
+            process.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            process.kill()
+            process.wait(timeout=10)
 
 
 @dataclass(frozen=True, slots=True)
@@ -33,10 +125,11 @@ class TrialConfig:
     prompt_path: Path
     attach_url: str | None
     timeout_seconds: int
+    rpc_url: str
 
 
 def build_opencode_command(config: TrialConfig) -> list[str]:
-    prompt_text = config.prompt_path.read_text(encoding="utf-8")
+    prompt_text = render_prompt(config.prompt_path, rpc_url=config.rpc_url)
     command = [
         "opencode",
         "run",
@@ -326,35 +419,56 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--prompt", type=Path, default=DEFAULT_PROMPT)
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS_DIR)
+    parser.add_argument("--server-url", default=None)
+    parser.add_argument("--start-server", action="store_true", default=True)
+    parser.add_argument("--no-start-server", action="store_false", dest="start_server")
+    parser.add_argument("--server-port", type=int, default=DEFAULT_SERVER_PORT)
     args = parser.parse_args(argv)
 
     if args.trials < 1:
         parser.error("--trials must be >= 1")
 
-    config = TrialConfig(
-        model=args.model,
-        variant=args.variant,
-        prompt_path=args.prompt,
-        attach_url=args.attach_url,
-        timeout_seconds=args.timeout_seconds,
-    )
+    if args.server_url is not None:
+        rpc_url = args.server_url
+        managed_server: ManagedServer | None = None
+    elif args.start_server:
+        managed_server = start_server(port=args.server_port)
+        rpc_url = managed_server.rpc_url
+    else:
+        rpc_url = rpc_url_for_port(args.server_port)
+        managed_server = None
 
-    summaries: list[dict[str, Any]] = []
-    for index in range(1, args.trials + 1):
-        result = run_trial(config, index=index, results_dir=args.results_dir)
-        summaries.append(
-            {
-                "index": index,
-                "classification": result["classification"],
-                "returncode": result["returncode"],
-                "duration_seconds": round(float(result["duration_seconds"]), 3),
-            }
+    try:
+        config = TrialConfig(
+            model=args.model,
+            variant=args.variant,
+            prompt_path=args.prompt,
+            attach_url=args.attach_url,
+            timeout_seconds=args.timeout_seconds,
+            rpc_url=rpc_url,
         )
-        print(json.dumps(summaries[-1], sort_keys=True))
 
-    success_count = sum(1 for item in summaries if item["classification"] == "success")
-    print(json.dumps({"success_count": success_count, "trial_count": len(summaries)}))
-    return 0
+        summaries: list[dict[str, Any]] = []
+        for index in range(1, args.trials + 1):
+            result = run_trial(config, index=index, results_dir=args.results_dir)
+            summaries.append(
+                {
+                    "index": index,
+                    "classification": result["classification"],
+                    "returncode": result["returncode"],
+                    "duration_seconds": round(float(result["duration_seconds"]), 3),
+                }
+            )
+            print(json.dumps(summaries[-1], sort_keys=True))
+
+        success_count = sum(
+            1 for item in summaries if item["classification"] == "success"
+        )
+        print(json.dumps({"success_count": success_count, "trial_count": len(summaries)}))
+        return 0
+    finally:
+        if managed_server is not None:
+            stop_server(managed_server.process)
 
 
 if __name__ == "__main__":

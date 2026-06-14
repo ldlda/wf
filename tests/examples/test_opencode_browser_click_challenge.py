@@ -10,6 +10,8 @@ from examples.agent_challenges.browser_click_challenge.run_opencode_trials impor
     classify_output,
     extract_challenge_report,
     parse_opencode_output,
+    render_prompt,
+    server_command,
     trial_output_path,
 )
 
@@ -23,6 +25,7 @@ def test_build_opencode_command_without_attach(tmp_path: Path) -> None:
         prompt_path=prompt,
         attach_url=None,
         timeout_seconds=120,
+        rpc_url="http://127.0.0.1:8772/rpc",
     )
 
     command = build_opencode_command(config)
@@ -45,6 +48,7 @@ def test_build_opencode_command_with_attach(tmp_path: Path) -> None:
         prompt_path=prompt,
         attach_url="http://127.0.0.1:4096",
         timeout_seconds=120,
+        rpc_url="http://127.0.0.1:8772/rpc",
     )
 
     command = build_opencode_command(config)
@@ -238,3 +242,29 @@ def test_trial_output_path_is_zero_padded(tmp_path: Path) -> None:
     path = trial_output_path(tmp_path, model="opencode/mimo-v2.5-free", index=3)
 
     assert path.name == "opencode_mimo-v2.5-free-trial-003.json"
+
+
+def test_render_prompt_injects_rpc_url_and_command_prefix(tmp_path: Path) -> None:
+    prompt = tmp_path / "prompt.md"
+    prompt.write_text(
+        "Use {{rpc_url}} with {{wf_command_prefix}}",
+        encoding="utf-8",
+    )
+
+    rendered = render_prompt(
+        prompt,
+        rpc_url="http://127.0.0.1:8765/rpc",
+    )
+
+    assert "http://127.0.0.1:8765/rpc" in rendered
+    assert "uv run wf --url http://127.0.0.1:8765/rpc" in rendered
+
+
+def test_server_command_uses_example_config_and_requested_port() -> None:
+    command = server_command(port=8765)
+
+    assert command[:3] == ["uv", "run", "wf-rpc-server"]
+    assert "--config" in command
+    assert "examples/browser_click_workflow/wf.config.json" in command
+    assert "--port" in command
+    assert "8765" in command

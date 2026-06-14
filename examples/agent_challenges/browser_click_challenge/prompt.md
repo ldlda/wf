@@ -7,10 +7,22 @@ Build and successfully run a workflow that:
 3. Captures a before snapshot and an after snapshot.
 4. Returns both snapshots as workflow output.
 
+A workflow RPC server is already running at:
+
+```text
+{{rpc_url}}
+```
+
+Use this command prefix for product-facing operations:
+
+```powershell
+{{wf_command_prefix}}
+```
+
 Use this repository's workflow product path. That means you should use the
-`wf` CLI and/or `wf-rpc-server`, create or reuse a workflow deployment, and run
-the deployment through the workflow API. Do not solve the challenge with only a
-standalone Playwright/Python script.
+`wf` CLI against the provided URL, create or reuse a workflow deployment, and
+run the deployment through the workflow API. Do not solve the challenge with
+only a standalone Playwright/Python script.
 
 Do not create a new helper script whose only job is to drive `WorkflowApi`
 directly. The challenge is about whether the product-facing CLI/server workflow
