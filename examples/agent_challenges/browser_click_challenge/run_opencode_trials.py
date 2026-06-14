@@ -8,6 +8,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+import yaml
+
 Classification = Literal[
     "success",
     "workflow_script",
@@ -111,6 +113,10 @@ def _event_text(event: dict[str, Any]) -> str | None:
 
 
 def classify_output(text: str) -> Classification:
+    report = extract_challenge_report(text)
+    if report is not None:
+        return classify_challenge_report(report)
+
     lowered = text.lower()
     product_command_markers = [
         "wf ",
@@ -121,9 +127,7 @@ def classify_output(text: str) -> Classification:
         "run id",
         "run_",
     ]
-    used_product_command = any(
-        marker in lowered for marker in product_command_markers
-    )
+    used_product_command = any(marker in lowered for marker in product_command_markers)
     has_workflow_evidence = any(
         marker in lowered for marker in workflow_evidence_markers
     )
@@ -157,6 +161,59 @@ def classify_output(text: str) -> Classification:
         return "run_failed"
     if not has_workflow_evidence and (
         before_false or after_true or "playwright" in lowered
+    ):
+        return "workflow_not_used"
+    return "unknown"
+
+
+def extract_challenge_report(text: str) -> dict[str, Any] | None:
+    """Extract the required final YAML challenge report from agent output."""
+    marker = "```yaml"
+    start = text.lower().rfind(marker)
+    if start == -1:
+        return None
+    body_start = text.find("\n", start)
+    if body_start == -1:
+        return None
+    end = text.find("```", body_start + 1)
+    if end == -1:
+        return None
+    raw_yaml = text[body_start + 1 : end]
+    loaded = yaml.safe_load(raw_yaml)
+    if not isinstance(loaded, dict):
+        return None
+    report = loaded.get("challenge_report")
+    return report if isinstance(report, dict) else None
+
+
+def classify_challenge_report(report: dict[str, Any]) -> Classification:
+    used_product_path = report.get("used_product_path") is True
+    used_helper_script = report.get("used_helper_script") is True
+    workflow_file = report.get("workflow_file")
+    deployment_id = report.get("deployment_id")
+    run_id = report.get("run_id")
+    before_clicked = report.get("before_clicked")
+    after_clicked = report.get("after_clicked")
+    failed = report.get("run_failed") is True
+
+    if failed:
+        return "run_failed"
+    if used_helper_script:
+        return "workflow_script"
+    if (
+        used_product_path
+        and isinstance(workflow_file, str)
+        and bool(workflow_file)
+        and isinstance(deployment_id, str)
+        and bool(deployment_id)
+        and isinstance(run_id, str)
+        and bool(run_id)
+        and before_clicked is False
+        and after_clicked is True
+    ):
+        return "success"
+    if not used_product_path and (
+        before_clicked is not None or after_clicked is not None
     ):
         return "workflow_not_used"
     return "unknown"

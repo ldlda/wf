@@ -662,6 +662,7 @@ dependencies = [
     { name = "mcp", extra = ["cli", "rich"] },
     { name = "openapi-core" },
     { name = "pydantic" },
+    { name = "pyyaml" },
     { name = "typer" },
     { name = "uvicorn" },
 ]
@@ -686,6 +687,7 @@ requires-dist = [
     { name = "mcp", extras = ["cli", "rich"], specifier = ">=1" },
     { name = "openapi-core", specifier = ">=0.19" },
     { name = "pydantic", specifier = ">=2" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "typer", specifier = ">=0.24.2" },
     { name = "uvicorn", specifier = ">=0.46.0" },
 ]

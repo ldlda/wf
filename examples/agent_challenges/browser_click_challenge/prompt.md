@@ -35,4 +35,24 @@ You may inspect and use it. A successful final answer must include:
 - evidence that `after.clicked` is `true`,
 - whether any server/browser process remains running.
 
+End your answer with exactly one fenced YAML block using this shape:
+
+```yaml
+challenge_report:
+  used_product_path: true
+  used_helper_script: false
+  workflow_file: "path/to/workflow.json-or-yaml"
+  deployment_id: "browser_click_case_study.default"
+  run_id: "run_..."
+  before_clicked: false
+  after_clicked: true
+  run_failed: false
+  leftover_processes: false
+  notes: "short explanation"
+```
+
+Set `used_product_path` to true only if the workflow was applied and run through
+the `wf` CLI or `wf-rpc-server` path. Set `used_helper_script` to true if you
+created a Python script to drive `WorkflowApi` directly.
+
 If something fails, report the exact command and error instead of hiding it.

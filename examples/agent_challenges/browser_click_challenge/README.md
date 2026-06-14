@@ -50,6 +50,27 @@ The baseline challenge does not require Playwright MCP. The score is based on
 whether the agent used the workflow product path and produced the expected
 workflow output.
 
+## Required Agent Report
+
+The prompt asks the agent to end with one fenced YAML block:
+
+```yaml
+challenge_report:
+  used_product_path: true
+  used_helper_script: false
+  workflow_file: "path/to/workflow.json-or-yaml"
+  deployment_id: "browser_click_case_study.default"
+  run_id: "run_..."
+  before_clicked: false
+  after_clicked: true
+  run_failed: false
+  leftover_processes: false
+  notes: "short explanation"
+```
+
+The harness parses this report first. If the report is missing, it falls back to
+best-effort prose classification.
+
 ## Classification
 
 Each trial is classified as one of:

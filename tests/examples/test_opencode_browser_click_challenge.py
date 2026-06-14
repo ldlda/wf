@@ -6,7 +6,9 @@ from pathlib import Path
 from examples.agent_challenges.browser_click_challenge.run_opencode_trials import (
     TrialConfig,
     build_opencode_command,
+    classify_challenge_report,
     classify_output,
+    extract_challenge_report,
     parse_opencode_output,
     trial_output_path,
 )
@@ -52,7 +54,9 @@ def test_build_opencode_command_with_attach(tmp_path: Path) -> None:
 
 
 def test_parse_opencode_output_reads_json_object() -> None:
-    payload = {"text": "wf run start demo.default\nbefore.clicked false\nafter.clicked true"}
+    payload = {
+        "text": "wf run start demo.default\nbefore.clicked false\nafter.clicked true"
+    }
 
     parsed = parse_opencode_output(json.dumps(payload))
 
@@ -106,6 +110,91 @@ def test_classify_output_success() -> None:
     )
 
     assert result == "success"
+
+
+def test_extract_challenge_report_from_yaml_block() -> None:
+    text = """
+    The run worked.
+
+    ```yaml
+    challenge_report:
+      used_product_path: true
+      used_helper_script: false
+      workflow_file: "browser-click.workflow.yaml"
+      deployment_id: "browser_click_case_study.default"
+      run_id: "run_123"
+      before_clicked: false
+      after_clicked: true
+      run_failed: false
+      leftover_processes: false
+      notes: "ok"
+    ```
+    """
+
+    report = extract_challenge_report(text)
+
+    assert report is not None
+    assert report["used_product_path"] is True
+    assert report["before_clicked"] is False
+    assert report["after_clicked"] is True
+
+
+def test_classify_challenge_report_success() -> None:
+    result = classify_challenge_report(
+        {
+            "used_product_path": True,
+            "used_helper_script": False,
+            "workflow_file": "browser-click.workflow.yaml",
+            "deployment_id": "browser_click_case_study.default",
+            "run_id": "run_123",
+            "before_clicked": False,
+            "after_clicked": True,
+            "run_failed": False,
+        }
+    )
+
+    assert result == "success"
+
+
+def test_classify_output_prefers_yaml_report() -> None:
+    result = classify_output(
+        """
+        Some prose that would otherwise be ambiguous.
+
+        ```yaml
+        challenge_report:
+          used_product_path: true
+          used_helper_script: false
+          workflow_file: "browser-click.workflow.yaml"
+          deployment_id: "browser_click_case_study.default"
+          run_id: "run_123"
+          before_clicked: false
+          after_clicked: true
+          run_failed: false
+          leftover_processes: false
+          notes: "ok"
+        ```
+        """
+    )
+
+    assert result == "success"
+
+
+def test_classify_challenge_report_detects_helper_script() -> None:
+    result = classify_challenge_report(
+        {
+            "used_product_path": False,
+            "used_helper_script": True,
+            "workflow_file": "",
+            "deployment_id": "browser_click_case_study.default",
+            "run_id": "run_123",
+            "before_clicked": False,
+            "after_clicked": True,
+            "run_failed": False,
+        }
+    )
+
+    assert result == "workflow_script"
 
 
 def test_classify_output_workflow_script() -> None:
