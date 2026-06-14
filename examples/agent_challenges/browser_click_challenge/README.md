@@ -26,16 +26,18 @@ Results are written to:
 examples/agent_challenges/browser_click_challenge/results/
 ```
 
-## Optional Playwright MCP Attachment
+## Optional Opencode Server Attachment
 
-If you want the agent to have browser-control tools, pass:
+`--attach` is opencode's server attach flag. It connects this non-interactive
+run to an already-running opencode server, for example:
 
 ```powershell
 --attach http://127.0.0.1:4096
 ```
 
-Start that MCP/tool endpoint separately. For example, one possible MCP server
-command is:
+It is not a direct MCP server URL. If that opencode server is configured with
+Playwright MCP tools, then the attached run can use those tools through
+opencode. One possible MCP server command for such an opencode setup is:
 
 ```json
 {

@@ -216,7 +216,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--variant", default="high")
     parser.add_argument("--trials", type=int, default=1)
     parser.add_argument("--timeout-seconds", type=int, default=600)
-    parser.add_argument("--attach", dest="attach_url", default=None)
+    parser.add_argument(
+        "--attach",
+        dest="attach_url",
+        default=None,
+        help=(
+            "Attach to a running opencode server URL. This is not a direct MCP "
+            "server URL."
+        ),
+    )
     parser.add_argument("--prompt", type=Path, default=DEFAULT_PROMPT)
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS_DIR)
     args = parser.parse_args(argv)
