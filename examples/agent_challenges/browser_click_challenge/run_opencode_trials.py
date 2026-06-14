@@ -132,11 +132,11 @@ def prepare_trial_workspace(
     source_root: Path = EXAMPLE_SOURCE_ROOT,
 ) -> TrialWorkspace:
     """Copy the authoring template into a clean ignored per-trial directory."""
-    root = workspaces_dir / f"{_safe_model_name(model)}-trial-{index:03d}"
-    if root.exists():
-        # Stale scratch files can leak answers between trials, so reset only
-        # the ignored per-trial directory before copying the template.
-        shutil.rmtree(root)
+    root = _next_trial_workspace_root(
+        workspaces_dir=workspaces_dir,
+        model=model,
+        index=index,
+    )
     shutil.copytree(template_dir, root)
     workspace = TrialWorkspace(
         root=root,
@@ -145,6 +145,24 @@ def prepare_trial_workspace(
     )
     write_trial_config(workspace.config_path, source_root=source_root)
     return workspace
+
+
+def _next_trial_workspace_root(
+    *,
+    workspaces_dir: Path,
+    model: str,
+    index: int,
+) -> Path:
+    stem = f"{_safe_model_name(model)}-trial-{index:03d}"
+    first = workspaces_dir / stem
+    if not first.exists():
+        return first
+    suffix = 2
+    while True:
+        candidate = workspaces_dir / f"{stem}-r{suffix:03d}"
+        if not candidate.exists():
+            return candidate
+        suffix += 1
 
 
 def write_trial_config(config_path: Path, *, source_root: Path) -> None:

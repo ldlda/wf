@@ -286,7 +286,7 @@ def test_prepare_trial_workspace_copies_template_to_model_trial_dir(
     assert (prepared.root / ".gitignore").read_text(encoding="utf-8") == ".wf_store/\n"
 
 
-def test_prepare_trial_workspace_removes_stale_previous_attempt(
+def test_prepare_trial_workspace_uses_next_available_directory(
     tmp_path: Path,
 ) -> None:
     template = tmp_path / "template"
@@ -295,8 +295,9 @@ def test_prepare_trial_workspace_removes_stale_previous_attempt(
     source_root = tmp_path / "browser_click_workflow"
     source_root.mkdir()
     workspaces = tmp_path / "workspaces"
-    stale = workspaces / "opencode_mimo-v2.5-free-trial-001" / "old-answer.json"
-    stale.parent.mkdir(parents=True)
+    first = workspaces / "opencode_mimo-v2.5-free-trial-001"
+    stale = first / "old-answer.json"
+    first.mkdir(parents=True)
     stale.write_text("stale", encoding="utf-8")
 
     prepared = prepare_trial_workspace(
@@ -307,8 +308,9 @@ def test_prepare_trial_workspace_removes_stale_previous_attempt(
         source_root=source_root,
     )
 
+    assert prepared.root == workspaces / "opencode_mimo-v2.5-free-trial-001-r002"
     assert prepared.root.exists()
-    assert not stale.exists()
+    assert stale.read_text(encoding="utf-8") == "stale"
 
 
 def test_wf_command_prefix_for_config_uses_repo_relative_path() -> None:
