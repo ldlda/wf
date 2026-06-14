@@ -110,7 +110,10 @@ def stop_server(process: subprocess.Popen[str]) -> None:
             check=False,
         )
     else:
-        process.terminate()
+        try:
+            process.terminate()
+        except OSError:
+            return
         try:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
