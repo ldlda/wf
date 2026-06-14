@@ -59,6 +59,9 @@ The case study should exist as a runnable example, not only prose. Target shape:
 `examples/report_workflow/ops.py`, `input.md`, `wf.config.json`, a short
 `README.md`, and commands for config validation, server startup, capability
 calls, draft/artifact/deployment creation, run, inspect, and trace.
+The runnable evidence bundle for this case study lives at
+`examples/report_workflow/README.md`.
+
 
 Keep the thesis-critical path deterministic. Do not require an LLM call inside
 the case-study workflow. LLM nodes can be discussed as future work or an

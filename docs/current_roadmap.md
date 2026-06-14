@@ -180,6 +180,9 @@ stable.
 - `wf run watch` provides polling-based progress UX.
 - CLI expected errors are compact by default; `wf --verbose ...` preserves raw
   tracebacks for debugging.
+- Completed thesis case-study evidence bundle: `examples/report_workflow/`
+  provides a deterministic report workflow with Python source, fixture input,
+  config, runbook, and tests.
 
 ## Historical References
 

@@ -12,7 +12,9 @@
 
 ## Dependency
 
-This plan should run after `docs/superpowers/plans/2026-06-14-thesis-case-study-evidence.md` or after an equivalent report-workflow example exists at `examples/report_workflow/`.
+This plan should run after the completed case-study evidence plan archived at
+`docs/historical/superpowers/plans/2026-06-14-thesis-case-study-evidence.md` or
+after an equivalent report-workflow example exists at `examples/report_workflow/`.
 
 If `examples/report_workflow/README.md` does not exist, stop and implement the evidence plan first.
 

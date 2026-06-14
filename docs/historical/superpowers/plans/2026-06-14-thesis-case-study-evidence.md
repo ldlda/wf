@@ -243,7 +243,7 @@ Create `examples/report_workflow/wf.config.json` with this exact JSON:
 Run from repo root:
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json config validate
+uv run wf config validate examples/report_workflow/wf.config.json
 ```
 
 Expected: command exits `0` and reports a valid config. If this command name differs in current code, inspect `uv run wf config --help` and update the runbook to the real command.
@@ -450,7 +450,7 @@ remote OAuth, LLM calls, or provider quota.
 From the repository root:
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json config validate
+uv run wf config validate examples/report_workflow/wf.config.json
 uv run wf-rpc-server --config examples/report_workflow/wf.config.json
 ```
 

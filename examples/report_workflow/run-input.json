@@ -1,0 +1,3 @@
+{
+  "text": "# Weekly Project Update\n\nSummary:\nThe workflow platform demo is ready for a deterministic thesis case study. The\nteam wants a repeatable report that does not depend on remote OAuth, LLM output,\nor provider quotas.\n\nActions:\n- Alice | Prepare demo config | Friday\n- Bao | Run five agent attempts | Monday\n- Casey | Capture trace screenshots | Tuesday\n\nRisks:\n- Google Drive MCP quota is too low for regression evidence\n- Unbounded provider output can waste tokens\n\nFollowups:\n- Add optional Markdown renderer\n- Compare direct script baseline against workflow lifecycle\n"
+}
