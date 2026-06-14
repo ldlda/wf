@@ -48,3 +48,50 @@ flowchart LR
   Runtime --> Capability[Workflow Capability]
 ```
 
+## Workflow Core
+
+```mermaid
+flowchart LR
+  Input[Input Schema] --> NodeUse[Node Use]
+  NodeSpec[NodeSpec Contract] --> NodeUse
+  NodeUse --> Outcome[Declared Outcome]
+  Outcome --> Edge[Graph Edge]
+  NodeUse --> StateWrite[State Write]
+  StateWrite --> Reducer[Reducer]
+  Reducer --> State[Workflow State]
+  NodeUse --> Trace[Trace Frame]
+  Interrupt[Interrupt] --> RunState[Stopped Run State]
+  RunState --> Resume[Resume]
+```
+
+## Platform Domain
+
+```mermaid
+flowchart LR
+  Draft[Draft Workspace] --> DraftValidation[Draft Validation]
+  DraftValidation --> Artifact[Workflow Artifact]
+  Artifact --> Deployment[Workflow Deployment]
+  SourceInventory[Source Inventory] --> DeploymentValidation[Deployment Validation]
+  Deployment --> DeploymentValidation
+  DeploymentValidation --> Run[Workflow Run]
+  Run --> RunRecord[Run Record]
+  Run --> Trace[Trace Slice]
+  RunRecord --> Resume[Resume]
+  DeploymentValidation --> Diagnostics[Repairable Diagnostics]
+```
+
+## Source Provider Boundary
+
+```mermaid
+flowchart LR
+  Config[Workflow Config Sources] --> Server[WorkflowServer Composition]
+  Server --> Builtin[Platform Sources]
+  Server --> MCP[MCP Source Provider]
+  Server --> Python[Python Source Provider]
+  Builtin --> Inventory[CapabilitySource Inventory]
+  MCP --> Inventory
+  Python --> Inventory
+  Inventory --> API[Workflow API Surface]
+  API --> Runtime[Workflow Runtime]
+```
+
