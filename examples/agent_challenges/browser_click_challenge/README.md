@@ -12,15 +12,17 @@ examples/browser_click_workflow/
 ## Default Behavior
 
 By default the harness does not start a `wf-rpc-server`. It prompts agents to
-use the configured local CLI path:
+use a per-trial configured local CLI path:
 
 ```powershell
-uv run wf --config examples/browser_click_workflow/wf.config.json --local
+uv run wf --config examples/agent_challenges/browser_click_challenge/workspaces/<trial>/wf.config.json --local
 ```
 
+For each local-mode trial, the harness copies `workspace_template/` into
+`workspaces/<model>-trial-<n>/` and injects that config path into the prompt.
 This builds the configured workflow server in the CLI process for each command
-and reuses the configured durable store. It does not reuse in-memory source
-sessions across CLI invocations.
+and uses the copied workspace's durable store. It does not reuse in-memory
+source sessions across CLI invocations.
 
 Use `--start-server` when the trial should exercise the JSON-RPC server path.
 With `--start-server`, the harness starts:
@@ -60,7 +62,8 @@ examples/agent_challenges/browser_click_challenge/workspace_template/
 
 It contains a local workflow config and prompt template that point at the
 browser-click Python source without exposing a generated draft patch answer
-file. Use it as the starting context for an agent trial, or copy it under:
+file. The harness copies it automatically for normal local-mode trials. For
+manual experiments, copy it under:
 
 ```text
 examples/agent_challenges/browser_click_challenge/workspaces/

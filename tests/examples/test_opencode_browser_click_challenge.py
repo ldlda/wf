@@ -11,9 +11,11 @@ from examples.agent_challenges.browser_click_challenge.run_opencode_trials impor
     classify_output,
     extract_challenge_report,
     parse_opencode_output,
+    prepare_trial_workspace,
     render_prompt,
     server_command,
     trial_output_path,
+    wf_command_prefix_for_config,
 )
 
 
@@ -245,6 +247,71 @@ def test_trial_output_path_is_zero_padded(tmp_path: Path) -> None:
     path = trial_output_path(tmp_path, model="opencode/mimo-v2.5-free", index=3)
 
     assert path.name == "opencode_mimo-v2.5-free-trial-003.json"
+
+
+def test_prepare_trial_workspace_copies_template_to_model_trial_dir(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template"
+    template.mkdir()
+    (template / "wf.config.json").write_text('{"version": 1}', encoding="utf-8")
+    (template / "prompt.md").write_text("prompt", encoding="utf-8")
+    (template / ".gitignore").write_text(".wf_store/\n", encoding="utf-8")
+    workspaces = tmp_path / "workspaces"
+
+    prepared = prepare_trial_workspace(
+        model="opencode/mimo-v2.5-free",
+        index=7,
+        workspaces_dir=workspaces,
+        template_dir=template,
+    )
+
+    assert prepared.root == workspaces / "opencode_mimo-v2.5-free-trial-007"
+    assert prepared.config_path.read_text(encoding="utf-8") == '{"version": 1}'
+    assert prepared.prompt_path.read_text(encoding="utf-8") == "prompt"
+    assert (prepared.root / ".gitignore").read_text(encoding="utf-8") == ".wf_store/\n"
+
+
+def test_prepare_trial_workspace_removes_stale_previous_attempt(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template"
+    template.mkdir()
+    (template / "wf.config.json").write_text('{"version": 1}', encoding="utf-8")
+    (template / "prompt.md").write_text("prompt", encoding="utf-8")
+    workspaces = tmp_path / "workspaces"
+    stale = workspaces / "opencode_mimo-v2.5-free-trial-001" / "old-answer.json"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("stale", encoding="utf-8")
+
+    prepared = prepare_trial_workspace(
+        model="opencode/mimo-v2.5-free",
+        index=1,
+        workspaces_dir=workspaces,
+        template_dir=template,
+    )
+
+    assert prepared.root.exists()
+    assert not stale.exists()
+
+
+def test_wf_command_prefix_for_config_uses_repo_relative_path() -> None:
+    config_path = (
+        Path("examples")
+        / "agent_challenges"
+        / "browser_click_challenge"
+        / "workspaces"
+        / "opencode_mimo-v2.5-free-trial-001"
+        / "wf.config.json"
+    )
+
+    prefix = wf_command_prefix_for_config(config_path)
+
+    assert prefix == (
+        "uv run wf --config "
+        "examples/agent_challenges/browser_click_challenge/workspaces/"
+        "opencode_mimo-v2.5-free-trial-001/wf.config.json --local"
+    )
 
 
 def test_render_prompt_injects_command_prefix_and_server_context(

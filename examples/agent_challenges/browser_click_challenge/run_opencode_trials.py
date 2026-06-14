@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shutil
 import subprocess
 import sys
 import time
@@ -25,6 +26,8 @@ ROOT = Path(__file__).resolve().parents[3]
 CHALLENGE_DIR = Path(__file__).resolve().parent
 DEFAULT_PROMPT = CHALLENGE_DIR / "prompt.md"
 DEFAULT_RESULTS_DIR = CHALLENGE_DIR / "results"
+DEFAULT_WORKSPACES_DIR = CHALLENGE_DIR / "workspaces"
+DEFAULT_WORKSPACE_TEMPLATE = CHALLENGE_DIR / "workspace_template"
 DEFAULT_SERVER_PORT = 8772
 EXAMPLE_CONFIG = ROOT / "examples" / "browser_click_workflow" / "wf.config.json"
 EXAMPLE_CONFIG_ARG = "examples/browser_click_workflow/wf.config.json"
@@ -68,6 +71,15 @@ class ManagedServer:
     rpc_url: str
 
 
+@dataclass(frozen=True, slots=True)
+class TrialWorkspace:
+    """Per-trial scratch area copied from the challenge workspace template."""
+
+    root: Path
+    config_path: Path
+    prompt_path: Path
+
+
 def start_server(*, port: int, timeout_seconds: int = 30) -> ManagedServer:
     command = server_command(port=port)
     process = subprocess.Popen(
@@ -102,7 +114,43 @@ def wait_for_status(*, rpc_url: str, timeout_seconds: int) -> None:
             return
         last_stderr = completed.stderr
         time.sleep(0.5)
-    raise RuntimeError(f"wf status did not become ready: {last_stderr}")
+        raise RuntimeError(f"wf status did not become ready: {last_stderr}")
+
+
+def _safe_model_name(model: str) -> str:
+    return model.replace("/", "_").replace(":", "_")
+
+
+def prepare_trial_workspace(
+    *,
+    model: str,
+    index: int,
+    workspaces_dir: Path = DEFAULT_WORKSPACES_DIR,
+    template_dir: Path = DEFAULT_WORKSPACE_TEMPLATE,
+) -> TrialWorkspace:
+    """Copy the authoring template into a clean ignored per-trial directory."""
+    root = workspaces_dir / f"{_safe_model_name(model)}-trial-{index:03d}"
+    if root.exists():
+        # Stale scratch files can leak answers between trials, so reset only
+        # the ignored per-trial directory before copying the template.
+        shutil.rmtree(root)
+    shutil.copytree(template_dir, root)
+    return TrialWorkspace(
+        root=root,
+        config_path=root / "wf.config.json",
+        prompt_path=root / "prompt.md",
+    )
+
+
+def wf_command_prefix_for_config(config_path: Path) -> str:
+    path = config_path
+    if not path.is_absolute():
+        path = ROOT / path
+    try:
+        path_arg = path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        path_arg = str(path.resolve())
+    return f"uv run wf --config {path_arg} --local"
 
 
 def stop_server(process: subprocess.Popen[str]) -> None:
@@ -334,8 +382,7 @@ def _contains_bool_marker(text: str, marker: str, value: str) -> bool:
 
 
 def trial_output_path(results_dir: Path, *, model: str, index: int) -> Path:
-    safe_model = model.replace("/", "_").replace(":", "_")
-    return results_dir / f"{safe_model}-trial-{index:03d}.json"
+    return results_dir / f"{_safe_model_name(model)}-trial-{index:03d}.json"
 
 
 def run_trial(config: TrialConfig, *, index: int, results_dir: Path) -> dict[str, Any]:
@@ -433,6 +480,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--prompt", type=Path, default=DEFAULT_PROMPT)
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS_DIR)
+    parser.add_argument("--workspaces-dir", type=Path, default=DEFAULT_WORKSPACES_DIR)
     parser.add_argument("--server-url", default=None)
     parser.add_argument("--start-server", action="store_true", default=False)
     parser.add_argument("--no-start-server", action="store_false", dest="start_server")
@@ -464,18 +512,37 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     try:
-        config = TrialConfig(
-            model=args.model,
-            variant=args.variant,
-            prompt_path=args.prompt,
-            attach_url=args.attach_url,
-            timeout_seconds=args.timeout_seconds,
-            wf_command_prefix=wf_command_prefix,
-            server_context=server_context,
-        )
-
+        use_trial_workspace = args.server_url is None and not args.start_server
         summaries: list[dict[str, Any]] = []
         for index in range(1, args.trials + 1):
+            prompt_path = args.prompt
+            trial_wf_command_prefix = wf_command_prefix
+            trial_server_context = server_context
+            if use_trial_workspace:
+                workspace = prepare_trial_workspace(
+                    model=args.model,
+                    index=index,
+                    workspaces_dir=args.workspaces_dir,
+                )
+                if args.prompt == DEFAULT_PROMPT:
+                    prompt_path = workspace.prompt_path
+                trial_wf_command_prefix = wf_command_prefix_for_config(
+                    workspace.config_path
+                )
+                trial_server_context = (
+                    "No external workflow RPC server is staged. Use the "
+                    "per-trial workspace config copied to "
+                    f"`{workspace.config_path.relative_to(ROOT).as_posix()}`."
+                )
+            config = TrialConfig(
+                model=args.model,
+                variant=args.variant,
+                prompt_path=prompt_path,
+                attach_url=args.attach_url,
+                timeout_seconds=args.timeout_seconds,
+                wf_command_prefix=trial_wf_command_prefix,
+                server_context=trial_server_context,
+            )
             result = run_trial(config, index=index, results_dir=args.results_dir)
             summaries.append(
                 {

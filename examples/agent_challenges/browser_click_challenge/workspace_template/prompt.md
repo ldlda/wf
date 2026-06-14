@@ -10,8 +10,10 @@ Build and successfully run a workflow that:
 Use this command prefix for product-facing operations:
 
 ```powershell
-uv run wf --config examples/agent_challenges/browser_click_challenge/workspace_template/wf.config.json --local
+{{wf_command_prefix}}
 ```
+
+{{server_context}}
 
 Start from `skills/`, especially the workflow/CLI skill references, before doing
 broad docs or code search. Do not read outside this repository. Do not solve the
@@ -70,4 +72,3 @@ the `wf` CLI, either in local same-process mode or through `wf-rpc-server`. Set
 `WorkflowApi` directly.
 
 If something fails, report the exact command and error instead of hiding it.
-
