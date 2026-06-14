@@ -48,6 +48,12 @@ clear operator feedback before adding more architecture.
 - Completed: `cap call` output is safer for humans through compact/text modes
   without changing default JSON semantics. Implementation:
   [`cap call output safety`](historical/superpowers/plans/2026-06-09-cap-call-output-safety.md).
+- Completed: raw JSON/YAML workflow plans can be turned into artifacts through
+  JSON-RPC and `wf artifact create-from-plan`, allowing agent/evidence harnesses
+  to use the product-facing CLI path.
+- Completed: the opencode browser-click challenge harness stages a real
+  `wf-rpc-server`, injects the RPC URL into the prompt, and tears the server
+  down after trials.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening
