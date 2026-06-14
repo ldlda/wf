@@ -93,11 +93,10 @@ deterministic report-preparation case study backed by a Python source. Section 8
 evaluates the implementation against concrete evidence. Sections 9 and 10
 discuss limitations and future work. Section 11 concludes.
 
-
 # Problem Statement And Requirements
 
-Current agent/tool systems frequently let an LLM directly orchestrate side
-effects through ad hoc tool calls. This pattern creates several practical
+Many direct tool-calling agent patterns let an LLM orchestrate side effects
+through sequential tool calls. This pattern can create several practical
 problems for workspace automation:
 
 - **Weak validation before execution.** A planner that assembles tool-call
@@ -137,14 +136,16 @@ responsibilities of the planner.
 The design requirements that follow from this problem statement are:
 
 1. Typed workflow artifact, deployment, and run lifecycle with explicit schemas.
-2. Source-provider boundary supporting MCP, Python, and future source families.
-3. Durable server, API, and CLI surface that external agents can drive.
+2. Source-provider boundary implemented for built-in, MCP, and Python sources,
+   and designed to admit future source families that can be projected into the
+   existing capability/source contract.
+3. Server, API, and CLI surfaces that external agents can drive, backed by
+   durable lifecycle stores.
 4. Validation and inspection mechanisms intended to reduce planner
    trial-and-error.
 5. Next-action guidance that points an agent toward useful lifecycle operations
    without replacing validation.
 6. Deterministic execution for the thesis-critical evidence path.
-
 
 # Positioning And Related Systems
 
@@ -199,7 +200,6 @@ source-provider correctness matters, because a source may require persistent
 sessions, auth context, catalog refresh, and prompt inventory. The platform
 places this complexity behind a neutral `CapabilitySource` interface.
 
-
 # Conceptual Model
 
 ## Working Glossary
@@ -207,32 +207,45 @@ places this complexity behind a neutral `CapabilitySource` interface.
 The document uses these terms with specific meanings:
 
 | Term | Meaning | Example |
-| --- | --- | --- |
+| --- | ----- | --- |
 | Workflow capability | A workflow-facing callable operation exposed by a source. | `local.report.extract_report` |
-| `NodeSpec` | The typed contract for a capability: input schema, output schema, and outcomes. | a Python `@node` projection |
+| `NodeSpec` | The authoring-layer typed contract produced by decorators or source adapters. | a Python `@node` projection |
+| `NodeDef` | The core-level serializable node contract: input schema, output schema, and declared outcomes. | a workflow plan node definition |
 | Source | A namespace and owner of capabilities, resources, prompts, and metadata. | `local.report`, `wf.std` |
 | Source family | A class of source implementations. | built-in, MCP, Python |
 | Source provider | Server-side code that loads or manages sources for a source family. | Python source loading |
 | Tool | A provider-native operation before projection into workflow form. | MCP tool |
+| Outcome | A control-flow label returned by a node and consumed by graph edges. | `ok`, `error`, `submitted` |
+| Output | The data payload returned by a node or workflow. | `{ "report": "..." }` |
+| Reducer | A pure state-merge operation selected by state schema. | `wf.std.replace`, `wf.std.append` |
+| Platform source | A process-provided source with fixed identity and no deployment binding. | `wf.std`, `wf.source` |
 | Deployment binding | A mapping from logical workflow source requirement to concrete source id. | `local.report=local.report` |
 | Source drift | Divergence between saved workflow requirements and the currently resolved source inventory. | missing capability or changed schema |
 
 ## Workflows as Typed Graphs
 
-A workflow is a typed graph where nodes invoke named capabilities and edges
-route by declared outcomes. The graph model is defined by four schema contracts:
+A workflow is an outcome-routed typed graph. It is not presented here as a
+complete general DAG engine, and it is not a free-form agent state machine.
+Nodes invoke named capabilities; edges route by declared node outcomes. The
+graph model is defined by four schema contracts:
 
 - `input_schema`: validates run input.
 - `state_schema`: defines workflow memory and reducer behavior.
 - `output_schema`: defines the final result shape.
 - Outcome declarations: route control flow through graph edges.
 
-Each node references a `NodeSpec`---a typed contract describing input schema,
-output schema, and declared outcomes. Reducers merge repeated or otherwise
-multi-writer state updates safely. General fork/gather parallelism is future
-work, so this report does not claim complete concurrent graph semantics.
-Interrupts represent typed external input points. Subgraphs compose workflows as
-nodes.
+Each node references a core `NodeDef`---a serializable contract describing input
+schema, output schema, and declared outcomes. Source families commonly produce
+authoring-layer `NodeSpec`s first; those are projected into `NodeDef` contracts
+before the core executes a workflow. The validator checks that routed outcomes
+are declared, that a source node does not have duplicate edges for the same
+outcome, and that reachable outcome edges are present. Reducers merge state
+writes according to state-field declarations. Reducers are pure deterministic
+merge functions invoked by the runtime in workflow execution order; this report
+does not claim CRDT semantics, arbitrary concurrent writes, or order-independent
+aggregation. General fork/gather parallelism is future work, so this report
+does not claim complete concurrent graph semantics. Interrupts represent typed
+external input points. Subgraphs compose workflows as nodes.
 
 The graph model improves the safety posture by making automation structure
 explicit. Node contracts, source requirements, state writes, outcomes,
@@ -274,15 +287,18 @@ execution are distinct operations with distinct lifecycle affordances.
 
 ## Source Model
 
-The common boundary is `CapabilitySource`. The runtime does not care where a
-`NodeSpec` came from; source-specific behavior belongs in provider packages and
-server composition.
+The common boundary is `CapabilitySource`. Source inventory can expose
+provider-derived `NodeSpec`s, reducers, resources, and prompts, but the core
+runtime ultimately executes serialized `NodeDef` contracts and handler
+functions. Source-specific behavior belongs in provider packages and server
+composition.
 
-Four source families exist today:
+Representative sources and source families today:
 
 | Source | Kind | Role |
 | --- | --- | --- |
 | `wf.std` | `system` | Built-in workflow nodes and reducers |
+| `wf.source` | `system` | Built-in source resource helper |
 | `wf.recipes` | `system` | First-party workflow recipes |
 | MCP sources | `connection` | Upstream MCP tools, resources, prompts |
 | Python sources | `python` | Trusted project-local `NodeSpec` registries |
@@ -308,8 +324,9 @@ Python sources.
 
 Source resolution follows a deterministic path: a logical source requirement in
 a workflow is checked against platform sources first, then resolved through
-deployment bindings to concrete sources. The runtime then delegates to the
-appropriate source handler.
+deployment bindings to concrete sources. Platform source IDs have fixed runtime
+identity: deployment validation rejects explicit bindings for platform sources.
+The runtime then delegates to the appropriate source handler.
 
 ## Source Resolution Path
 
@@ -326,7 +343,6 @@ The resolution path for a source reference is:
 This design allows workflow portability across environments: the same artifact
 can be deployed with different concrete source bindings, while the workflow
 graph references logical names only.
-
 
 # System Architecture
 
@@ -353,13 +369,31 @@ flowchart LR
   Sources --> Python[Python Sources]
 ```
 
-The diagram shows the primary flow: a workflow owner expresses intent to an
-external LLM agent, which drives the `wf` CLI. The CLI communicates over
-JSON-RPC transport to a `WorkflowServer`. The server exposes a Workflow API
-Surface that delegates to the deterministic Workflow Core for graph execution and
-to platform domain objects for artifact, deployment, and run management. Source
-providers supply capabilities to the API surface without the core runtime being
-aware of provider-specific details.
+The diagram shows the primary flow from workflow owner through agent, CLI,
+transport, and server to the API surface, core, platform stores, and source
+providers. The server composes configured sources into a unified inventory
+without the core runtime being aware of provider-specific details.
+
+## Layered Package Boundary
+
+Unlike the previous runtime-call diagram, this one maps architectural
+responsibilities onto repository packages. It answers: which package owns each
+boundary in the current implementation?
+
+```mermaid
+flowchart TB
+  CLI[wf_cli] --> Transport[wf_transport_rpc_http]
+  Transport --> Server[wf_server]
+  Server --> API[wf_api]
+  API --> Artifacts[wf_artifacts]
+  API --> Core[wf_core]
+  API --> Platform[wf_platform]
+  Server --> MCP[wf_sources_mcp]
+  Server --> Python[wf_sources_python]
+  MCP --> Platform
+  Python --> Platform
+  Artifacts --> Platform
+```
 
 ## Layer Responsibilities
 
@@ -371,10 +405,13 @@ The layered architecture separates concerns as follows:
 - **Workflow API Surface.** Application operations over capabilities, drafts,
   artifacts, deployments, and runs. The API surface consumes source DTOs through
   a neutral `WorkflowSpecProvider` and delegates to the core for execution.
+  `WorkflowSpecProvider` is the API-facing reader over capability specs derived
+  from source inventory; it is distinct from `WorkflowSourceProvider`, which
+  loads source inventory into the server.
 
-- **Platform Domain.** Draft workspaces, workflow artifacts, deployments, run
-  records, source inventory snapshots, validation diagnostics, and next-action
-  guidance.
+- **Platform Records And Policies.** Draft workspaces, workflow artifacts,
+  deployments, run records, source inventory snapshots, validation diagnostics,
+  and next-action guidance.
 
 - **Server Composition.** `WorkflowServer` assembles concrete stores, sources,
   runtimes, and admin surfaces into a long-lived service. The server composes
@@ -384,9 +421,10 @@ The layered architecture separates concerns as follows:
   The transport is protocol-neutral; the Workflow API Surface is the stable
   boundary.
 
-- **Source Providers.** MCP, Python, and future source families project their
-  inventory into `CapabilitySource` objects. Provider-specific behavior such as
-  MCP session pools or Python module loading stays within the provider package.
+- **Source Providers.** Built-in, MCP, and Python providers project their
+  inventory into `CapabilitySource` objects. The boundary is designed to admit
+  future source families. Provider-specific behavior such as MCP session pools
+  or Python module loading stays within the provider package.
 
 ## Workflow Lifecycle
 
@@ -414,6 +452,8 @@ divergence between saved artifact capability requirements and the currently
 resolved source inventory: missing bindings, missing or disabled sources,
 missing capabilities, or changed schema contracts. Run execution produces
 persisted records with trace slices and resumable stopped state.
+Only interrupted or explicitly stopped runs enter the resume path; completed
+and failed runs remain inspectable records.
 
 ## Workflow Core Model
 
@@ -421,23 +461,60 @@ The core model processes graph execution through typed stages:
 this diagram answers what happens during one run at the graph-execution level.
 
 ```mermaid
-flowchart LR
-  Input[Input Schema] --> NodeUse[Node Use]
-  NodeSpec[NodeSpec Contract] --> NodeUse
-  NodeUse --> Outcome[Declared Outcome]
-  Outcome --> Edge[Graph Edge]
-  NodeUse --> StateWrite[State Write]
-  StateWrite --> Reducer[Reducer]
-  Reducer --> State[Workflow State]
-  NodeUse --> Trace[Trace Frame]
-  Interrupt[Interrupt] --> RunState[Stopped Run State]
-  RunState --> Resume[Resume]
+flowchart TD
+  Start[Prepare Run] --> ValidateInput[Validate Workflow Input]
+  ValidateInput --> Select[Select Ready Frame]
+  Select --> Step{Step Type}
+  Step --> Node[NodeUse]
+  Step --> Condition[Condition]
+  Step --> Foreach[Foreach]
+  Step --> Subgraph[Subgraph]
+  Step --> Interrupt[Interrupt]
+  Step --> Join[Join / Minimal Done Step]
+  Step --> End[End]
+  Node --> ResolveInput[Resolve Input Bindings]
+  ResolveInput --> Handler[Invoke NodeDef Handler]
+  Handler --> CheckOutcome[Check Declared Outcome]
+  CheckOutcome --> StatePatch[Build Reducer-Aware State Patch]
+  StatePatch --> Trace[Append Trace Frame]
+  Condition --> Trace
+  Foreach --> Trace
+  Subgraph --> Trace
+  Join --> Trace
+  Trace --> Route[Route By Outcome Edge]
+  Interrupt --> Stop[Persist Interrupt Request]
+  End --> Finalize[Project Workflow Output]
+  Route --> Select
+  Stop --> Resume[Resume Payload + Outcome]
+  Resume --> Route
 ```
 
-Input validation gates entry. Each node use invokes a `NodeSpec` and produces a
-declared outcome, a state write, and a trace frame. Outcomes route through graph
-edges. Reducers merge state writes safely. Interrupts produce stopped run state
-that can be resumed.
+Input validation gates entry. The runtime then repeatedly selects a ready frame
+and executes one step. A `NodeUse` resolves input bindings from workflow input,
+state, and context; invokes the handler for the selected `NodeDef`; checks that
+the returned outcome is declared; builds reducer-aware state writes; records a
+trace frame; and advances through the edge for that outcome. `Condition`,
+`foreach`, `subgraph`, `join`, `interrupt`, and `end` steps are explicit core
+model variants, not provider-specific hacks. `Join` is currently a minimal step
+that returns a `"done"` outcome; it reserves a graph-level concept for future
+fork/gather semantics.
+
+`foreach` is implemented as an explicit runtime step with frame and lineage
+bookkeeping for iteration and state isolation. This report does not claim a
+general parallel fork/gather model or arbitrary concurrent reducer semantics.
+
+Failure has three visible forms. Structural and dependency failures are
+reported before execution through validation diagnostics. Runtime execution
+failures set the run status to `failed` and store an error string. Business
+failures are modeled as ordinary declared outcomes only when the workflow
+author defines and routes those outcomes.
+
+Interrupts are first-class stop points: an `InterruptNode` builds a typed
+request payload, stores an `InterruptRequest` on the run state, and marks the
+run interrupted. Resume supplies a payload and resume outcome; resume bindings
+write the payload back into state, and routing continues from the declared
+resume outcome. This is resumability at explicit boundaries, not arbitrary
+mid-handler checkpointing.
 
 ## Source Provider Boundary
 
@@ -463,7 +540,6 @@ declared in the workflow config. The server composes all sources into a unified
 `CapabilitySource` inventory that the workflow API surface consumes without
 provider-specific knowledge.
 
-
 # Implementation
 
 ## Package Structure
@@ -473,14 +549,14 @@ The implementation is organized into focused packages with clear boundaries:
 | Package | Responsibility |
 | --- | --- |
 | `wf_core` | Deterministic workflow kernel: graph execution, state, outcomes, trace, resume |
-| `wf_authoring` | Authoring support: `NodeSpec`, drafts, wrappers, API surfaces, source providers |
+| `wf_authoring` | Authoring primitives: `NodeSpec`, `WorkflowBuilder`, DSL, reducer authoring, recipes |
 | `wf_platform` | Neutral source DTOs, source visibility, permissions, and policy |
 | `wf_artifacts` | Artifact, deployment, and run models; file-backed stores; validation |
 | `wf_api` | Application surface: capabilities, drafts, artifacts, deployments, runs |
 | `wf_server` | `WorkflowServer` composition from config, stores, and source providers |
 | `wf_transport_rpc_http` | JSON-RPC over HTTP transport for CLI and future clients |
 | `wf_sources_mcp` | MCP upstream source implementation and persistent runtime pool |
-| `wf_sources_python` | Trusted in-process Python source loading and `NodeSpec` projection |
+| `wf_sources_python` | Trusted in-process Python source loading and `NodeSpec`-to-`NodeDef` projection |
 | `wf_cli` | CLI commands driving the JSON-RPC transport |
 
 (Evidence: `docs/source_architecture.md`, package boundaries in `src/`.)
@@ -490,15 +566,20 @@ The implementation is organized into focused packages with clear boundaries:
 The workflow core implements deterministic execution semantics. It processes a
 typed graph definition, validates input against `input_schema`, executes the
 selected node use, routes by declared outcomes, applies reducers to state
-writes, and produces trace frames. The current public semantics are serial graph
-execution with explicit outcomes and interrupts; general fork/gather
-parallelism is future work. The core is provider-agnostic; it sees `NodeSpec`
-contracts, not source-specific implementations.
+writes, and produces trace frames. The current public semantics are
+outcome-routed graph execution with explicit condition, foreach, subgraph,
+join, interrupt, and end steps. The async runtime has internal frame and lineage
+machinery for foreach admission and state isolation, but this report does not
+claim a complete general fork/gather programming model. The core is
+provider-agnostic; it sees `NodeDef` contracts and handler functions, not
+source-specific implementations.
 
-State writes go through reducers. The platform includes a built-in `wf.std`
-reducer family. Reducers are themselves `NodeSpec` contracts that can be
-composed into workflows. Interrupts produce stopped run state with a resumable
-checkpoint.
+State writes go through reducers. The platform includes built-in `wf.std`
+reducer definitions such as `replace`, `append`, `merge_object`, `add`,
+`set_union`, and `max`. Reducers are pure merge functions paired with
+inspectable `ReducerSpec` metadata; they are exposed in source inventory, but
+they are not ordinary executable node handlers. Interrupts produce stopped run
+state with a resumable checkpoint.
 
 (Evidence: `src/wf_core/`.)
 
@@ -512,9 +593,53 @@ The platform domain defines the lifecycle objects as Pydantic models:
   contract.
 - Run records track execution status, diagnostics, output, and trace counts.
 
-Source binding uses `SourceBinding` objects that map logical source names to
-concrete source identifiers. The `CapabilitySource` dataclass is the neutral
-DTO that all source providers project into.
+Source binding uses `SourceBinding` objects defined in `wf_artifacts.models`
+that map logical source names to concrete source identifiers. The
+`CapabilitySource` dataclass is the neutral DTO that all source providers
+project into.
+
+The lifecycle models are stored in `wf_artifacts`; orchestration of lifecycle
+operations happens one layer above, in `wf_api`.
+
+The API layer holds the lifecycle together rather than acting as thin CRUD over
+files. `WorkflowApi` composes capability, draft, artifact, deployment, and run
+sub-APIs from one `WorkflowOperationContext`. That context carries stores,
+event recording, source inventory, runtime execution, and optional live-source
+checks. This is why CLI, JSON-RPC, and future transports can share the same
+domain operations without importing source-provider internals.
+
+`wf_platform` is intentionally smaller than the API layer. It owns stable
+neutral source vocabulary: `CapabilitySource`, source inventory snapshots,
+declarative visibility and permission metadata, source policy, source refs,
+capability refs, and schema hashes. These flags describe source behavior for
+inventory and validation surfaces; they are not an authorization or
+policy-enforcement layer. `wf_platform` should not grow into a dumping ground
+for stores, runtimes, or provider lifecycle. Those belong in `wf_api`,
+`wf_server`, or the specific `wf_sources_*` package.
+
+The API lifecycle is deliberately centralized through one facade:
+
+```mermaid
+flowchart LR
+  Context[WorkflowOperationContext] --> API[WorkflowApi]
+  API --> Caps[Capability API]
+  API --> Drafts[Draft API]
+  API --> Artifacts[Artifact API]
+  API --> Deployments[Deployment API]
+  API --> Runs[Run API]
+  Caps --> Specs[WorkflowSpecProvider]
+  Drafts --> DraftStore[Draft Store]
+  Artifacts --> ArtifactStore[Artifact Store]
+  Deployments --> ArtifactStore
+  Runs --> RunStore[Run Store]
+  Runs --> Runtime[WorkflowRuntimeRunner]
+  Runs --> Live[Optional Live Source Checker]
+```
+
+The diagram is important because it shows the design contribution at the
+application layer: drafts, artifacts, deployments, and runs are not independent
+file operations. They share source inventory, stores, event recording, runtime
+execution, validation, and live-source checks through one operation context.
 
 (Evidence: `src/wf_artifacts/models.py`, `src/wf_platform/sources.py`.)
 
@@ -534,10 +659,27 @@ severity, error code, logical source reference, repair hint, and the bound
 source. These diagnostics are designed for machine clients: an LLM agent can
 read the diagnostic and determine what to fix without blind probing.
 
+For example, an invalid deployment binding can produce a diagnostic shaped like
+this:
+
+```json
+{
+  "severity": "error",
+  "code": "binding_missing",
+  "logical_ref": "local.report.extract_report",
+  "bound_source": null,
+  "message": "No binding exists for logical source 'local.report'.",
+  "repair_hint": "Bind the logical source to a compatible concrete source."
+}
+```
+
 Deployment validation also detects source drift. If a source changes
 incompatibly and a deployment becomes unrunnable, the system reports the
 diagnostic with a repair hint rather than silently executing against
-incompatible capabilities.
+incompatible capabilities. In this prototype, schema drift is detected through
+saved required-capability schema hashes compared with current source inventory
+hashes when both sides provide hashes; it does not attempt semantic
+backward-compatibility analysis.
 
 (Evidence: `src/wf_artifacts/validation.py`, `tests/artifacts/test_validation.py`.)
 
@@ -548,10 +690,11 @@ object tells a machine client whether there is an obvious next workflow-surface
 tool call, what that tool is, and why. It is guidance, not authority: validation
 diagnostics and runtime status remain the source of truth.
 
-The `NextActions` object includes `can_continue`, `recommended_next_tool`,
-`reason`, and `patch_examples` with concrete request payloads. This makes the
-surface agent-operable: an LLM agent can read the hint and execute the suggested
-operation without reconstructing the lifecycle state.
+The `NextActions` object includes `can_continue`, `can_save_now`,
+`recommended_next_tool`, `reason`, `patch_examples` with concrete request
+payloads, and `warnings`. This makes the surface agent-operable: an LLM agent
+can read the hint and execute the suggested operation without reconstructing
+the lifecycle state.
 
 (Evidence: `src/wf_api/next_actions.py`.)
 
@@ -563,8 +706,9 @@ does not own workflow semantics; it delegates to `WorkflowApi` for application
 operations.
 
 The config model specifies store configuration, transport endpoints, and source
-provider declarations. Sources are declared as discriminated unions by kind:
-`mcp`, `python`, or future kinds like `openapi`.
+provider declarations. The current config model includes implemented source
+kinds such as `mcp` and `python`; future kinds such as `openapi` would extend
+the same discriminated-union pattern.
 
 (Evidence: `src/wf_server/config.py`.)
 
@@ -597,11 +741,11 @@ The MCP source provider manages:
 - A persistent session pool for stateful upstream operations.
 - MCP-to-workflow converters for tools, resources, and prompts.
 
-The provider projects MCP tools into `NodeSpec` contracts, making them callable
-from workflow graphs through the same `CapabilitySource` boundary as Python or
-built-in sources.
+The provider projects MCP tools into `NodeSpec` contracts and corresponding
+core `NodeDef` contracts, making them callable from workflow graphs through the
+same `CapabilitySource` boundary as Python or built-in sources.
 
-(Evidence: `src/wf_sources_mcp/`, `tests/wf_sources_mcp/test_runtime.py`,
+(Evidence: `src/wf_sources_mcp/`, `tests/wf_sources_mcp/test_runtime.py`,  
 `tests/wf_transport_rpc_http/test_mcp_backed_server_rpc.py`.)
 
 ## Python Source Provider
@@ -617,16 +761,18 @@ PythonSourceConfig(path, module, registry)
   -> PythonSourceProvider
   -> import module
   -> load NodeSpec registry
+  -> project specs into NodeDef contracts
   -> qualify specs under source id
   -> CapabilitySource(kind="python")
 ```
 
 Python sources are static at server startup. No hot reload is implemented yet.
 The provider imports the configured module, reads the named registry attribute,
-and projects each `NodeSpec` into the workflow capability inventory.
+projects each `NodeSpec` into the workflow capability inventory, and makes the
+corresponding `NodeDef` contract available to workflow plans. This keeps the
+core provider-agnostic.
 
 (Evidence: `src/wf_sources_python/`, `tests/wf_sources_python/test_loader.py`.)
-
 
 # Case Study: Deterministic Report Workflow
 
@@ -636,6 +782,11 @@ config validation, server startup, capability discovery, draft creation,
 artifact saving, deployment validation, run execution, run inspection, and
 trace viewing. The case study is deterministic and does not require an LLM
 call, remote OAuth, or provider quota.
+
+This case study evaluates lifecycle integration rather than graph
+expressiveness. Graph features such as interrupts, foreach, subgraphs, joins,
+and reducer behavior are covered by targeted tests and code evidence in the
+evaluation section.
 
 ## Case Study Components
 
@@ -775,8 +926,13 @@ programmatically:
    bindings, starts a run, and asserts that the run completes with the expected
    typed output.
 
-(Evidence: `tests/examples/test_report_workflow_example.py`.)
+The thesis-critical run path therefore demonstrates the full lifecycle using a
+single deterministic extraction node. The surrounding Python source includes
+additional capabilities used for capability discovery and extensibility
+evidence; it is not evaluated as a multi-node read -> extract -> render
+pipeline in this artifact.
 
+(Evidence: `tests/examples/test_report_workflow_example.py`.)
 
 # Evaluation
 
@@ -791,7 +947,8 @@ The evaluation is organized around criteria derived from the research question:
 | Criterion | Question | Evidence Type |
 | --- | --- | --- |
 | Representation | Can workflow intent be represented as artifacts, deployments, and runs? | model/API tests |
-| Validation | Can invalid drafts, deployments, source bindings, and source drift be reported before or during execution? | validation/diagnostic tests |
+| Validation | Can invalid drafts, deployments, source bindings, and source drift be reported before execution? | validation/diagnostic tests |
+| Runtime observability | Can runtime failures be persisted as failed run records with inspectable error state? | run API tests |
 | Execution | Can a deterministic workflow execute through the same API/CLI lifecycle used by agents? | report-workflow case study |
 | Persistence | Are lifecycle records persisted, and can stopped/interrupted runs resume at defined boundaries? | run-store and resume tests |
 | Source extensibility | Can different source families expose capabilities without changing `wf_core`? | built-in, MCP, and Python source tests |
@@ -818,6 +975,16 @@ the prototype outperforms mature automation products.
 ## Evidence Package
 
 The evidence supporting the thesis claims includes:
+
+| Claim | Evidence | What it asserts | Result |
+| --- | --- | --- | --- |
+| Deployment validation catches source drift | `tests/artifacts/test_validation.py` | Missing, disabled, or changed capabilities produce diagnostics | Pass in focused test suite |
+| Interrupted runs resume at explicit boundaries | `tests/wf_api/test_run_api.py` and resume-concurrency tests | Stopped run state is persisted and resumed through the run API | Pass in focused test suite |
+| Python source lifecycle works | `tests/examples/test_report_workflow_example.py` | Python capability -> artifact -> deployment -> run completes | Pass in focused test suite |
+| CLI and JSON-RPC share the API surface | `tests/wf_transport_rpc_http/` and `tests/wf_cli/` | Transport and CLI delegate to the same workflow operations | Pass in focused test suite |
+
+The table summarizes repository evidence; it is not a substitute for rerunning
+the verification commands before final submission.
 
 ### Architecture And Code Walkthrough
 
@@ -861,7 +1028,7 @@ workflow calls rather than creating fresh one-off clients. This demonstrates
 source-provider correctness for providers whose behavior depends on session
 state.
 
-(Evidence: `tests/wf_sources_mcp/test_runtime.py`,
+(Evidence: `tests/wf_sources_mcp/test_runtime.py`,  
 `tests/wf_transport_rpc_http/test_mcp_backed_server_rpc.py`.)
 
 ### Python Source Case Study
@@ -884,8 +1051,8 @@ machine-readable responses.
 ### Config Validation
 
 Config validation catches import and path errors before server startup. This
-prevents the server from starting with broken source configurations, reducing
-blind agent retries.
+prevents the server from starting with broken source configurations and
+provides earlier, structured failure feedback.
 
 (Evidence: `src/wf_config/`.)
 
@@ -954,7 +1121,6 @@ The implementation addresses these evaluation questions:
    deployment validation reports unrunnable state with diagnostics instead of
    silently executing against incompatible capabilities.
 
-
 # Limitations
 
 The following limitations are stated explicitly to maintain credibility and
@@ -1017,7 +1183,6 @@ deployment concerns beyond the controlled system-design evidence in this report.
 - **No approval, roles, policy, or multi-user review.** There is no
   role-based access control or review workflow.
 
-
 # Future Work
 
 The following areas are identified as likely future work:
@@ -1058,7 +1223,6 @@ The following areas are identified as likely future work:
   benchmarks, and broader agent evaluation with more attempts and failure
   categories.
 
-
 # Conclusion
 
 External LLM agents can author and operate workflows, but reusable workflow
@@ -1071,8 +1235,10 @@ The implementation supports five claims:
 
 1. A typed artifact, deployment, and run lifecycle provides persisted workflow
    records and resumability at explicit stopped/interrupted boundaries.
-2. The source-provider boundary allows MCP, Python, and future source families
-   to share one workflow surface without core-runtime changes.
+2. The source-provider boundary lets built-in, MCP, and Python sources share
+   one workflow surface, and is designed to admit future source families that
+   can be projected into the existing capability/source contract without
+   core-runtime changes.
 3. Validation and diagnostics produce machine-readable repairable failure
    states intended to reduce planner trial-and-error.
 4. The CLI and JSON-RPC transport provide an agent-operable surface that
@@ -1085,7 +1251,6 @@ scheduling, fork/gather, richer debugging, and broader evaluation. The prototype
 demonstrates the architecture; the thesis contribution is the platform design
 and evidence that the design can work across multiple source families under
 controlled conditions.
-
 
 # Appendices
 
@@ -1115,49 +1280,63 @@ uv run wf --config examples/report_workflow/wf.config.json status
 ### Capability Discovery
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json cap list --source local.report
+uv run wf --config examples/report_workflow/wf.config.json `
+ cap list --source local.report
 ```
 
 ### Capability Call
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json cap call local.report.extract_report --input-file examples/report_workflow/cap-input.json --format compact
+uv run wf --config examples/report_workflow/wf.config.json `
+cap call local.report.extract_report `
+--input-file examples/report_workflow/cap-input.json --format compact
 ```
 
 ### Draft Creation
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json draft create-from-capability report_ws local.report.extract_report --name report_case_study --title "Report Case Study"
+uv run wf --config examples/report_workflow/wf.config.json `
+draft create-from-capability report_ws local.report.extract_report `
+ --name report_case_study --title "Report Case Study"
 ```
 
 ### Draft Validation
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json draft validate report_ws
+uv run wf --config examples/report_workflow/wf.config.json `
+draft validate report_ws
 ```
 
 ### Artifact Saving
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json draft save report_ws --artifact report_case_study --version 1 --title "Report Case Study" --binding local.report=local.report
+uv run wf --config examples/report_workflow/wf.config.json `
+draft save report_ws --artifact report_case_study --version 1 `
+--title "Report Case Study" --binding local.report=local.report
 ```
 
 ### Deployment Saving
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json deploy save report_case_study.default --artifact report_case_study --version 1 --binding local.report=local.report
+uv run wf --config examples/report_workflow/wf.config.json `
+deploy save report_case_study.default --artifact report_case_study `
+--version 1 --binding local.report=local.report
 ```
 
 ### Deployment Validation
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json deploy validate report_case_study.default
+uv run wf --config examples/report_workflow/wf.config.json `
+deploy validate report_case_study.default
 ```
 
 ### Run Execution
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json run start report_case_study.default --input-file examples/report_workflow/run-input.json --trace-from 0 --trace-limit 5
+uv run wf --config examples/report_workflow/wf.config.json `
+run start report_case_study.default `
+--input-file examples/report_workflow/run-input.json `
+--trace-from 0 --trace-limit 5
 ```
 
 ### Run Inspection
@@ -1170,7 +1349,8 @@ uv run wf --config examples/report_workflow/wf.config.json run inspect <run_id>
 ### Run Trace
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json run trace <run_id> --from 0 --limit 5
+uv run wf --config examples/report_workflow/wf.config.json `
+run trace <run_id> --from 0 --limit 5
 ```
 
 ## Appendix B: Evidence Index
@@ -1178,7 +1358,7 @@ uv run wf --config examples/report_workflow/wf.config.json run trace <run_id> --
 See [evidence-index.md](evidence-index.md) for the full claim-to-evidence map.
 
 | Claim | Evidence |
-| --- | --- |
+| --- | ----- |
 | Workflow lifecycle models | `src/wf_artifacts/models.py`, `src/wf_artifacts/runs/` |
 | Source provider boundary | `src/wf_platform/sources.py`, `src/wf_server/config.py` |
 | JSON-RPC/CLI surface | `src/wf_transport_rpc_http/`, `src/wf_cli/` |

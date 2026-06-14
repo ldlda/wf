@@ -21,6 +21,25 @@ flowchart LR
   Sources --> Python[Python Sources]
 ```
 
+## Layered Package Boundary
+
+> Package ownership view, not a runtime call graph.
+
+```mermaid
+flowchart TB
+  CLI[wf_cli] --> Transport[wf_transport_rpc_http]
+  Transport --> Server[wf_server]
+  Server --> API[wf_api]
+  API --> Artifacts[wf_artifacts]
+  API --> Core[wf_core]
+  API --> Platform[wf_platform]
+  Server --> MCP[wf_sources_mcp]
+  Server --> Python[wf_sources_python]
+  MCP --> Platform
+  Python --> Platform
+  Artifacts --> Platform
+```
+
 ## Workflow Lifecycle
 
 > Simplified view. For the detailed platform-domain version with source inventory
@@ -54,17 +73,32 @@ flowchart LR
 ## Workflow Core
 
 ```mermaid
-flowchart LR
-  Input[Input Schema] --> NodeUse[Node Use]
-  NodeSpec[NodeSpec Contract] --> NodeUse
-  NodeUse --> Outcome[Declared Outcome]
-  Outcome --> Edge[Graph Edge]
-  NodeUse --> StateWrite[State Write]
-  StateWrite --> Reducer[Reducer]
-  Reducer --> State[Workflow State]
-  NodeUse --> Trace[Trace Frame]
-  Interrupt[Interrupt] --> RunState[Stopped Run State]
-  RunState --> Resume[Resume]
+flowchart TD
+  Start[Prepare Run] --> ValidateInput[Validate Workflow Input]
+  ValidateInput --> Select[Select Ready Frame]
+  Select --> Step{Step Type}
+  Step --> Node[NodeUse]
+  Step --> Condition[Condition]
+  Step --> Foreach[Foreach]
+  Step --> Subgraph[Subgraph]
+  Step --> Interrupt[Interrupt]
+  Step --> Join[Join / Minimal Done Step]
+  Step --> End[End]
+  Node --> ResolveInput[Resolve Input Bindings]
+  ResolveInput --> Handler[Invoke NodeDef Handler]
+  Handler --> CheckOutcome[Check Declared Outcome]
+  CheckOutcome --> StatePatch[Build Reducer-Aware State Patch]
+  StatePatch --> Trace[Append Trace Frame]
+  Condition --> Trace
+  Foreach --> Trace
+  Subgraph --> Trace
+  Join --> Trace
+  Trace --> Route[Route By Outcome Edge]
+  Interrupt --> Stop[Persist Interrupt Request]
+  End --> Finalize[Project Workflow Output]
+  Route --> Select
+  Stop --> Resume[Resume Payload + Outcome]
+  Resume --> Route
 ```
 
 ## Platform Domain
@@ -79,8 +113,27 @@ flowchart LR
   DeploymentValidation --> Run[Workflow Run]
   Run --> RunRecord[Run Record]
   Run --> Trace[Trace Slice]
-  RunRecord --> Resume[Resume]
+  RunRecord --> Resume[Resume If Interrupted / Stopped]
   DeploymentValidation --> Diagnostics[Repairable Diagnostics]
+```
+
+## Workflow API Lifecycle Cohesion
+
+```mermaid
+flowchart LR
+  Context[WorkflowOperationContext] --> API[WorkflowApi]
+  API --> Caps[Capability API]
+  API --> Drafts[Draft API]
+  API --> Artifacts[Artifact API]
+  API --> Deployments[Deployment API]
+  API --> Runs[Run API]
+  Caps --> Specs[WorkflowSpecProvider]
+  Drafts --> DraftStore[Draft Store]
+  Artifacts --> ArtifactStore[Artifact Store]
+  Deployments --> ArtifactStore
+  Runs --> RunStore[Run Store]
+  Runs --> Runtime[WorkflowRuntimeRunner]
+  Runs --> Live[Optional Live Source Checker]
 ```
 
 ## Source Provider Boundary
@@ -97,4 +150,3 @@ flowchart LR
   Inventory --> API[Workflow API Surface]
   API --> Runtime[Workflow Runtime]
 ```
-
