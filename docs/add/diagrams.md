@@ -23,6 +23,9 @@ flowchart LR
 
 ## Workflow Lifecycle
 
+> Simplified view. For the detailed platform-domain version with source inventory
+> and diagnostics, see "Platform Domain" below.
+
 ```mermaid
 flowchart LR
   Draft[Draft Workspace] --> ValidateDraft[Draft Validation]

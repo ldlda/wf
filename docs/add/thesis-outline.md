@@ -1,5 +1,9 @@
 # Thesis Outline
 
+> **Note:** All sections below have been transferred to the formal Big Doc at
+> [`system-design-implementation.md`](system-design-implementation.md). This
+> outline is now historical scaffolding; maintain the Big Doc directly.
+
 This is a writing scaffold for a thesis/report about the workflow platform. It
 should guide the argument; it is not a changelog.
 
