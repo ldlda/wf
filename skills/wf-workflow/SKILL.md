@@ -13,7 +13,7 @@ Use this skill for the workflow lifecycle, regardless of front door:
 
 Prefer small discovery calls, draft workspaces, validation, and bounded trace
 reads. Do not write raw workflow plans unless the user explicitly asks for the
-low-level escape hatch.
+low-level escape hatch or you already have a complete compiler/generated plan.
 
 ## Workflow Lifecycle
 
@@ -41,6 +41,9 @@ low-level escape hatch.
   lifecycle behavior.
 - Treat wrapper hints as scaffolding, not semantic truth.
 - Use draft workspaces for iterative authoring; avoid rewriting full drafts.
+- If a complete raw JSON/YAML plan already exists, the CLI escape hatch is
+  `wf artifact create-from-plan`; do not write helper scripts that call
+  `WorkflowApi.create_artifact_from_plan` directly.
 - Use explicit source bindings at deployment time.
 - Keep traces bounded with `trace_range`.
 - Do not expect a newly saved workflow to become a new MCP tool mid-session.

@@ -278,6 +278,14 @@ wf draft patch concat_ws \
   --input '[{"op":"replace","path":"/name","value":"concat_ws_v2"}]'
 ```
 
+For larger structural edits, prefer a patch file:
+
+```bash
+wf draft patch concat_ws \
+  --revision 1 \
+  --input-file draft-patch.json
+```
+
 Validate:
 
 ```bash
@@ -326,6 +334,20 @@ wf artifact inspect concat_ws 1
 
 Artifacts are immutable saved workflow definitions. List output is compact by
 design; use `inspect` for full details.
+
+Create an artifact directly from a raw JSON/YAML workflow plan file:
+
+```bash
+wf artifact create-from-plan workflow.plan.json \
+  --artifact concat_ws \
+  --version 1 \
+  --title "Concat Workflow" \
+  --outcome ok \
+  --binding local.ops=local.ops
+```
+
+Prefer draft workspaces for iterative authoring. Use `create-from-plan` when a
+compiler, fixture, or advanced client already has a complete raw workflow plan.
 
 Delete an unreferenced artifact version:
 

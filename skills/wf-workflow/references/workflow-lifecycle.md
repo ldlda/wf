@@ -27,6 +27,30 @@ validated, runnable deployment.
 8. Run the deployment.
 9. Inspect the run summary first; read bounded traces only when needed.
 
+## Raw Plan Escape Hatch
+
+Draft workspaces are the normal interactive authoring path. If a compiler,
+fixture, or advanced client already has a complete raw JSON/YAML workflow plan,
+use the CLI escape hatch instead of writing a helper script around the Python
+API:
+
+```bash
+wf artifact create-from-plan workflow.plan.json \
+  --artifact <artifact_id> \
+  --version 1 \
+  --title "Workflow Title" \
+  --outcome ok \
+  --binding <logical_source>=<concrete_source>
+```
+
+Then continue with the normal deployment and run steps:
+
+```bash
+wf deploy save <deployment_id> --artifact <artifact_id> --version 1
+wf deploy validate <deployment_id>
+wf run start <deployment_id> --input-file input.json
+```
+
 ## Object Model
 
 - **Source**: owner of capabilities, such as `wf.std` or `everything.default`.

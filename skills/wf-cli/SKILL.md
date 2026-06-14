@@ -36,6 +36,7 @@ wf draft patch <workspace_id> --revision <n> --input-file patch.json
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
+wf artifact create-from-plan workflow.plan.json --artifact <artifact_id> --version <n> --title <title>
 wf deploy save <deployment_id> --artifact <artifact_id> --version <n> --binding <logical>=<concrete>
 wf deploy validate <deployment_id>
 wf run start <deployment_id> --input-file input.json
@@ -47,6 +48,8 @@ wf run trace <run_id> --from 0 --limit 25
 - Prefer `--input-file` for large JSON.
 - Prefer `--format ids` or `--format compact` for discovery.
 - Use `wf cap call` as a cheap smoke test before creating a draft.
+- Prefer draft workspaces for iterative authoring; use `artifact create-from-plan`
+  only when you already have a complete raw JSON/YAML workflow plan.
 - Do not request unbounded traces.
 - Do not treat wrapper hints as semantic guarantees.
 - If validation fails, run `wf explain <code>` or `wf explain --input-file <validation-output.json>`.

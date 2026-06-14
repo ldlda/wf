@@ -30,6 +30,13 @@ If you need to write a workflow definition, write a declarative JSON/YAML file
 and then apply/run it through the product-facing workflow tools. Do not hide the
 workflow construction inside a Python script.
 
+Two product-facing authoring paths are acceptable:
+
+- create a draft from one capability, patch it with RFC 6902 JSON Patch, then
+  validate/save/deploy/run it;
+- or, if you already have a complete raw workflow plan file, use
+  `wf artifact create-from-plan` before deploy/run.
+
 The repository already includes a deterministic source example at:
 
 ```text

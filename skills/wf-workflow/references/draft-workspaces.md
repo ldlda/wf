@@ -70,3 +70,12 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_step_output_map`
 
 Use JSON Patch for structural edits the helpers do not cover.
+
+For larger patches, write a JSON Patch array to a file and pass it with
+`--input-file`:
+
+```bash
+wf draft patch <workspace_id> --revision <n> --input-file draft-patch.json
+```
+
+The patch file must be an RFC 6902 JSON Patch array, not a full draft object.

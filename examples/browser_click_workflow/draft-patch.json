@@ -1,0 +1,75 @@
+[
+  {"op": "replace", "path": "/name", "value": "browser_click_case_study"},
+  {"op": "replace", "path": "/start", "value": "open"},
+  {"op": "replace", "path": "/input_schema", "value": {
+    "type": "object",
+    "properties": {
+      "button_label": {"type": "string"},
+      "open_browser": {"type": "boolean"},
+      "simulate": {"type": "boolean"},
+      "timeout_seconds": {"type": "number"}
+    },
+    "required": ["button_label", "open_browser", "simulate", "timeout_seconds"]
+  }},
+  {"op": "replace", "path": "/state_schema", "value": {
+    "type": "object",
+    "properties": {
+      "opened": {"type": "object", "reducer": "wf.std.replace"},
+      "clicked": {"type": "object", "reducer": "wf.std.replace"},
+      "result": {"type": "object", "reducer": "wf.std.replace"}
+    }
+  }},
+  {"op": "replace", "path": "/output_schema", "value": {
+    "type": "object",
+    "properties": {
+      "before": {"type": "object"},
+      "after": {"type": "object"},
+      "closed": {"type": "boolean"}
+    },
+    "required": ["before", "after", "closed"]
+  }},
+  {"op": "replace", "path": "/routes", "value": {
+    "open": {"ok": "wait"},
+    "wait": {"ok": "collect"},
+    "collect": {"ok": "__end__"}
+  }},
+  {"op": "replace", "path": "/steps", "value": {
+    "open": {
+      "use": "local.browser_click.open_click_page",
+      "input": [
+        {"path": {"root": "input", "parts": ["button_label"]}, "target": {"root": "local", "parts": ["button_label"]}},
+        {"path": {"root": "input", "parts": ["open_browser"]}, "target": {"root": "local", "parts": ["open_browser"]}}
+      ],
+      "output": [
+        {"source": {"root": "local", "parts": []}, "target": {"root": "state", "parts": ["opened"]}}
+      ]
+    },
+    "wait": {
+      "use": "local.browser_click.wait_for_click",
+      "input": [
+        {"path": {"root": "state", "parts": ["opened", "session_id"]}, "target": {"root": "local", "parts": ["session_id"]}},
+        {"path": {"root": "input", "parts": ["simulate"]}, "target": {"root": "local", "parts": ["simulate"]}},
+        {"path": {"root": "input", "parts": ["timeout_seconds"]}, "target": {"root": "local", "parts": ["timeout_seconds"]}}
+      ],
+      "output": [
+        {"source": {"root": "local", "parts": []}, "target": {"root": "state", "parts": ["clicked"]}}
+      ]
+    },
+    "collect": {
+      "use": "local.browser_click.collect_snapshots",
+      "input": [
+        {"path": {"root": "state", "parts": ["opened", "session_id"]}, "target": {"root": "local", "parts": ["session_id"]}},
+        {"path": {"root": "state", "parts": ["opened", "before"]}, "target": {"root": "local", "parts": ["before"]}},
+        {"path": {"root": "state", "parts": ["clicked", "after"]}, "target": {"root": "local", "parts": ["after"]}}
+      ],
+      "output": [
+        {"source": {"root": "local", "parts": []}, "target": {"root": "state", "parts": ["result"]}}
+      ]
+    }
+  }},
+  {"op": "replace", "path": "/output", "value": [
+    {"path": {"root": "state", "parts": ["result", "before"]}, "target": {"root": "local", "parts": ["before"]}},
+    {"path": {"root": "state", "parts": ["result", "after"]}, "target": {"root": "local", "parts": ["after"]}},
+    {"path": {"root": "state", "parts": ["result", "closed"]}, "target": {"root": "local", "parts": ["closed"]}}
+  ]}
+]
