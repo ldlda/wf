@@ -220,6 +220,63 @@ def test_local_cli_context_rejects_rpc_target_for_local_only_commands(tmp_path) 
     assert "not available for rpc_http targets yet" in message
 
 
+def _write_python_source_cli_config(root: Path) -> Path:
+    source_root = root / "source"
+    source_root.mkdir()
+    (source_root / "ops.py").write_text(
+        """
+from pydantic import BaseModel
+
+from wf_authoring import node
+
+
+class EchoInput(BaseModel):
+    text: str
+
+
+class EchoOutput(BaseModel):
+    text: str
+
+
+@node(name="echo")
+def echo(payload: EchoInput) -> EchoOutput:
+    return EchoOutput(text=payload.text)
+
+
+registry = [echo]
+""".lstrip(),
+        encoding="utf-8",
+    )
+    config_path = root / "wf.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "client": {
+                    "target": {
+                        "kind": "rpc_http",
+                        "url": "http://127.0.0.1:8765/rpc",
+                    }
+                },
+                "server": {
+                    "store": {"kind": "filesystem", "root": ".wf_store"},
+                    "sources": [
+                        {
+                            "kind": "python",
+                            "id": "local.ops",
+                            "path": "source",
+                            "module": "ops",
+                            "registry": "registry",
+                        }
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    return config_path
+
+
 def _constant_plan() -> RawWorkflowPlan:
     return RawWorkflowPlan.model_validate(
         {
@@ -916,3 +973,28 @@ def test_wf_source_diagnose_uses_rpc_url_override(monkeypatch, tmp_path) -> None
     payload = json.loads(result.output)
     assert payload["source_id"] == "wf.std"
     assert payload["status"] == "unknown"
+
+
+def test_wf_local_uses_selected_config_sources(tmp_path: Path) -> None:
+    config_path = _write_python_source_cli_config(tmp_path)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "--local",
+            "cap",
+            "list",
+            "--source",
+            "local.ops",
+            "--limit",
+            "100",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert {
+        capability["name"] for capability in payload["capabilities"]
+    } == {"local.ops.echo"}
