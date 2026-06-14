@@ -144,6 +144,19 @@ class CreateWrapperFromWorkspaceParams(RpcParamsModel):
     created_from_catalog_version: str | None = None
 
 
+class CreateArtifactFromPlanParams(RpcParamsModel):
+    artifact_id: str = Field(min_length=1)
+    version: int = Field(ge=1)
+    title: str = Field(min_length=1)
+    plan: dict[str, Any]
+    outcomes: list[str]
+    kind: Literal["workflow", "wrapper"] = "workflow"
+    description: str | None = None
+    required_capabilities: dict[str, dict[str, Any]] | None = None
+    source_bindings: dict[str, str] | None = None
+    created_from_catalog_version: str | None = None
+
+
 class ListArtifactsParams(RpcParamsModel):
     query: str | None = None
     kind: Literal["workflow", "wrapper"] | None = None

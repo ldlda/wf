@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Any, Literal
 
 from .base import RpcCaller
@@ -45,4 +46,34 @@ class RpcArtifactClientMixin:
         return await self._call(
             "workflow.artifacts.delete",
             {"artifact_id": artifact_id, "version": version},
+        )
+
+    async def create_artifact_from_plan(
+        self: RpcCaller,
+        *,
+        artifact_id: str,
+        version: int,
+        title: str,
+        plan: dict[str, Any],
+        outcomes: Sequence[str],
+        kind: Literal["workflow", "wrapper"] = "workflow",
+        description: str | None = None,
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
+        created_from_catalog_version: str | None = None,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.artifacts.create_from_plan",
+            {
+                "artifact_id": artifact_id,
+                "version": version,
+                "title": title,
+                "plan": plan,
+                "outcomes": list(outcomes),
+                "kind": kind,
+                "description": description,
+                "required_capabilities": required_capabilities,
+                "source_bindings": source_bindings,
+                "created_from_catalog_version": created_from_catalog_version,
+            },
         )

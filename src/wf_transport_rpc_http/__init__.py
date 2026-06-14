@@ -6,6 +6,7 @@ from .errors import WorkflowRpcError
 from .models import (
     AdminEmptyParams,
     CallCapabilityParams,
+    CreateArtifactFromPlanParams,
     CreateArtifactFromWorkspaceParams,
     CreateDraftFromCapabilityParams,
     CreateWrapperFromWorkspaceParams,
@@ -36,6 +37,7 @@ from .models import (
 )
 
 __all__ = [
+    "CreateArtifactFromPlanParams",
     "CreateArtifactFromWorkspaceParams",
     "AdminEmptyParams",
     "CallCapabilityParams",

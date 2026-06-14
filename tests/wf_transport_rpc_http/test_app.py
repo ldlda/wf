@@ -615,6 +615,35 @@ async def test_rpc_runs_workflow_from_python_source_capability(tmp_path) -> None
     assert run["result"]["output"] == {"echoed": "hello workflow"}
 
 
+async def test_rpc_create_artifact_from_plan(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.artifacts.create_from_plan",
+            {
+                "artifact_id": "rpc_plan",
+                "version": 1,
+                "title": "RPC Plan",
+                "plan": _constant_plan().model_dump(mode="json", by_alias=True),
+                "outcomes": ["ok"],
+                "source_bindings": {},
+            },
+        )
+        inspected = await _rpc(
+            client,
+            "workflow.artifacts.inspect",
+            {"artifact_id": "rpc_plan", "version": 1},
+        )
+
+    assert created["result"]["artifact_id"] == "rpc_plan"
+    assert created["result"]["version"] == 1
+    assert inspected["result"]["id"] == "rpc_plan"
+    assert inspected["result"]["plan"]["name"] == "rpc_constant"
+
+
 async def test_rpc_diagnoses_source(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

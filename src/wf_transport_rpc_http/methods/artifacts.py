@@ -8,6 +8,7 @@ from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
 from ..models import (
+    CreateArtifactFromPlanParams,
     DeleteArtifactParams,
     InspectArtifactParams,
     ListArtifactsParams,
@@ -21,6 +22,29 @@ def register_methods(
     server: WorkflowServer,
 ) -> None:
     """Register artifact JSON-RPC methods."""
+
+    @entrypoint.method(
+        name="workflow.artifacts.create_from_plan",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_artifacts_create_from_plan(
+        params: CreateArtifactFromPlanParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.create_artifact_from_plan(
+                artifact_id=params.artifact_id,
+                version=params.version,
+                title=params.title,
+                plan=params.plan,
+                outcomes=tuple(params.outcomes),
+                kind=params.kind,
+                description=params.description,
+                required_capabilities=params.required_capabilities,
+                source_bindings=params.source_bindings,
+                created_from_catalog_version=params.created_from_catalog_version,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
 
     @entrypoint.method(name="workflow.artifacts.save", errors=[WorkflowRpcError])
     async def workflow_artifacts_save(

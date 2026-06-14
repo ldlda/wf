@@ -415,6 +415,36 @@ async def test_rpc_client_lists_runs(tmp_path) -> None:
     assert listed["runs"][0]["run_id"] == started["run_id"]
 
 
+async def test_rpc_client_creates_artifact_from_plan(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://test",
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            timeout_seconds=5,
+            http_client=http_client,
+        )
+        created = await client.create_artifact_from_plan(
+            artifact_id="client_plan",
+            version=1,
+            title="Client Plan",
+            plan=_constant_plan().model_dump(mode="json", by_alias=True),
+            outcomes=("ok",),
+            source_bindings={},
+        )
+        inspected = await client.inspect_artifact(
+            artifact_id="client_plan",
+            version=1,
+        )
+
+    assert created["artifact_id"] == "client_plan"
+    assert inspected["id"] == "client_plan"
+
+
 async def test_rpc_client_diagnoses_source(tmp_path) -> None:
     calls: list[tuple[str, dict[str, object]]] = []
 
