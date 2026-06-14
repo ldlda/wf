@@ -50,7 +50,7 @@ header-includes:
 
 # Introduction
 
-External LLM agents are useful workflow authors and operators, but durable
+External LLM agents are useful workflow authors and operators, but reusable
 workspace automation needs a typed execution substrate. This report describes
 the design and implementation of `lda.chat`, a prototype platform where agents
 can author, validate, execute, and inspect reusable workspace workflows without
@@ -67,8 +67,16 @@ platform represent, validate, execute, and persist reusable workspace
 automations while keeping planning separate from deterministic execution?
 
 The short version of the thesis is: the LLM plans; the runtime executes; source
-providers expose capabilities; stores preserve durable workflow state. The
-implementation proves this model across built-in, MCP, and Python sources.
+providers expose capabilities; stores preserve durable lifecycle records. The
+implementation demonstrates this model across controlled built-in, MCP, and
+Python source examples.
+
+**Scope of claims.** This report does not claim production security, broad
+external-agent evaluation, arbitrary mid-node crash recovery, scheduling,
+role-based access control, general workflow parallelism, or a bundled autonomous
+agent brain. Claims about planner efficiency are design hypotheses supported by
+structured diagnostics and controlled examples, not measured retry-reduction
+results.
 
 ## Report Outline
 
@@ -115,18 +123,20 @@ problems for workspace automation:
 
 The automation target for this platform is reusable workspace procedures, not
 arbitrary office work end-to-end. Examples include document transformation, data
-collection, tool and API calls, report preparation, monitoring checks, and
-scheduled workspace operations. The thesis frames the platform as a response to
-these pressures: a typed execution substrate where durable workflow state,
-validation, source binding, and trace inspection are first-class platform
-concerns rather than responsibilities of the planner.
+collection, tool and API calls, report preparation, and monitoring checks.
+Scheduled execution is a future deployment mode, not implemented in this
+prototype. The thesis frames the platform as a response to these pressures: a
+typed execution substrate where durable lifecycle records, validation, source
+binding, and trace inspection are first-class platform concerns rather than
+responsibilities of the planner.
 
 The design requirements that follow from this problem statement are:
 
 1. Typed workflow artifact, deployment, and run lifecycle with explicit schemas.
 2. Source-provider boundary supporting MCP, Python, and future source families.
 3. Durable server, API, and CLI surface that external agents can drive.
-4. Validation and inspection mechanisms that reduce planner trial-and-error.
+4. Validation and inspection mechanisms intended to reduce planner
+   trial-and-error.
 5. Next-action guidance that points an agent toward useful lifecycle operations
    without replacing validation.
 6. Deterministic execution for the thesis-critical evidence path.
@@ -188,6 +198,21 @@ places this complexity behind a neutral `CapabilitySource` interface.
 
 # Conceptual Model
 
+## Working Glossary
+
+The document uses these terms with specific meanings:
+
+| Term | Meaning | Example |
+| --- | --- | --- |
+| Workflow capability | A workflow-facing callable operation exposed by a source. | `local.report.extract_report` |
+| `NodeSpec` | The typed contract for a capability: input schema, output schema, and outcomes. | a Python `@node` projection |
+| Source | A namespace and owner of capabilities, resources, prompts, and metadata. | `local.report`, `wf.std` |
+| Source family | A class of source implementations. | built-in, MCP, Python |
+| Source provider | Server-side code that loads or manages sources for a source family. | Python source loading |
+| Tool | A provider-native operation before projection into workflow form. | MCP tool |
+| Deployment binding | A mapping from logical workflow source requirement to concrete source id. | `local.report=local.report` |
+| Source drift | Divergence between saved workflow requirements and the currently resolved source inventory. | missing capability or changed schema |
+
 ## Workflows as Typed Graphs
 
 A workflow is a typed graph where nodes invoke named capabilities and edges
@@ -199,9 +224,11 @@ route by declared outcomes. The graph model is defined by four schema contracts:
 - Outcome declarations: route control flow through graph edges.
 
 Each node references a `NodeSpec`---a typed contract describing input schema,
-output schema, and declared outcomes. Reducers merge concurrent or repeated
-writes to workflow state safely. Interrupts represent typed external input
-points. Subgraphs compose workflows as nodes.
+output schema, and declared outcomes. Reducers merge repeated or otherwise
+multi-writer state updates safely. General fork/gather parallelism is future
+work, so this report does not claim complete concurrent graph semantics.
+Interrupts represent typed external input points. Subgraphs compose workflows as
+nodes.
 
 The graph model improves the safety posture by making automation structure
 explicit. Node contracts, source requirements, state writes, outcomes,
@@ -233,8 +260,10 @@ Four distinct lifecycle objects separate concerns across the workflow lifecycle:
    behavior when source catalogs change.
 
 4. **Run.** An execution record with status, diagnostics, output, trace, and
-   resumable stopped or interrupted state. Runs are durable stopped records that
-   survive process restart.
+   resumable stopped or interrupted state. In this report, durability means
+   persisted artifact/deployment/run records and resumability from explicit
+   stopped or interrupted boundaries. It does not mean arbitrary mid-node crash
+   recovery, transactional side-effect recovery, or exactly-once execution.
 
 This separation ensures that authoring, versioning, environment binding, and
 execution are distinct operations with distinct lifecycle affordances.
@@ -268,7 +297,10 @@ class WorkflowSourceProvider(Protocol):
 This covers source families that can project configured inventory into
 workflow-facing `CapabilitySource` objects. Provider-specific runtime pools,
 admin hooks, auth, catalog caches, and health checks stay outside this seam
-until a source family needs them.
+until multiple source families need the same abstraction. The narrow seam is
+intentional: it prevents MCP-specific session/auth lifecycle concerns from
+becoming requirements for simpler source families such as built-ins or trusted
+Python sources.
 
 Source resolution follows a deterministic path: a logical source requirement in
 a workflow is checked against platform sources first, then resolved through
@@ -298,6 +330,9 @@ The architecture is organized into layered boundaries, each with a distinct
 responsibility.
 
 ## Architecture Spine
+
+This diagram answers: who calls whom across the user, agent, transport, server,
+API, runtime, and source-provider boundaries?
 
 ```mermaid
 flowchart LR
@@ -352,6 +387,8 @@ The layered architecture separates concerns as follows:
 ## Workflow Lifecycle
 
 The lifecycle of a workflow through the platform follows a defined path:
+this diagram answers what durable record or validation gate is created at each
+stage.
 
 ```mermaid
 flowchart LR
@@ -368,12 +405,16 @@ flowchart LR
 Each stage is a distinct platform operation with typed inputs and outputs.
 Draft validation checks schema conformance and source availability. Artifact
 saving captures an immutable snapshot. Deployment validation verifies that
-bound sources are currently available and compatible. Run execution produces
-durable records with trace slices and resumable stopped state.
+bound sources are currently available and compatible. Source drift is treated as
+divergence between saved artifact capability requirements and the currently
+resolved source inventory: missing bindings, missing or disabled sources,
+missing capabilities, or changed schema contracts. Run execution produces
+persisted records with trace slices and resumable stopped state.
 
 ## Workflow Core Model
 
 The core model processes graph execution through typed stages:
+this diagram answers what happens during one run at the graph-execution level.
 
 ```mermaid
 flowchart LR
@@ -397,7 +438,8 @@ that can be resumed.
 ## Source Provider Boundary
 
 The source provider boundary separates configured source families from the
-workflow API surface:
+workflow API surface. This diagram answers where source-specific code stops and
+workflow-facing inventory begins.
 
 ```mermaid
 flowchart LR
@@ -442,10 +484,12 @@ The implementation is organized into focused packages with clear boundaries:
 ## Workflow Core
 
 The workflow core implements deterministic execution semantics. It processes a
-typed graph definition, validates input against `input_schema`, executes node
-invocations in topological order, routes by declared outcomes, applies reducers
-to state writes, and produces trace frames. The core is provider-agnostic; it
-sees `NodeSpec` contracts, not source-specific implementations.
+typed graph definition, validates input against `input_schema`, executes the
+selected node use, routes by declared outcomes, applies reducers to state
+writes, and produces trace frames. The current public semantics are serial graph
+execution with explicit outcomes and interrupts; general fork/gather
+parallelism is future work. The core is provider-agnostic; it sees `NodeSpec`
+contracts, not source-specific implementations.
 
 State writes go through reducers. The platform includes a built-in `wf.std`
 reducer family. Reducers are themselves `NodeSpec` contracts that can be
@@ -538,7 +582,8 @@ practical surface for external agents.
 MCP is one source family and a useful stress test for source-provider
 correctness. A workflow capability call should not silently turn a stateful
 external provider into a fresh one-off client call when provider state is part
-of correctness.
+of correctness. The platform contribution is the source-provider boundary and
+workflow lifecycle, not an MCP wrapper.
 
 The MCP source provider manages:
 
@@ -734,6 +779,37 @@ The evaluation uses concrete evidence: automated tests, live smoke tests, and
 the deterministic case study. The evidence claim is that the prototype
 demonstrates the architecture and workflow lifecycle under controlled examples.
 
+## Evaluation Criteria
+
+The evaluation is organized around criteria derived from the research question:
+
+| Criterion | Question | Evidence Type |
+| --- | --- | --- |
+| Representation | Can workflow intent be represented as artifacts, deployments, and runs? | model/API tests |
+| Validation | Can invalid drafts, deployments, source bindings, and source drift be reported before or during execution? | validation/diagnostic tests |
+| Execution | Can a deterministic workflow execute through the same API/CLI lifecycle used by agents? | report-workflow case study |
+| Persistence | Are lifecycle records persisted, and can stopped/interrupted runs resume at defined boundaries? | run-store and resume tests |
+| Source extensibility | Can different source families expose capabilities without changing `wf_core`? | built-in, MCP, and Python source tests |
+| Agent-operable surface | Can clients drive the lifecycle through structured CLI/API responses? | CLI and JSON-RPC tests |
+
+This is a prototype system evaluation, not a broad user study or reliability
+benchmark.
+
+## Qualitative Comparison
+
+| Capability | Direct LLM tool loop | Generated script | Mature automation platform | `lda.chat` prototype |
+| --- | --- | --- | --- | --- |
+| Versioned workflow artifact | Usually no | Manual | Often yes | Yes |
+| Deployment/source binding | Usually no | Manual config | Platform-specific | Yes |
+| Typed validation before run | Limited | Custom | Varies | Yes |
+| Durable run record | Conversation/log | Custom | Often yes | Yes, at stopped boundaries |
+| Source drift diagnostics | No | Custom | Varies | Yes, controlled examples |
+| Agent-operable repair hints | No | No | Usually human UI | Prototype support |
+| Scheduling | Depends on agent | External scheduler | Yes | Future work |
+
+The comparison positions the architecture; it is not a quantitative claim that
+the prototype outperforms mature automation products.
+
 ## Evidence Package
 
 The evidence supporting the thesis claims includes:
@@ -767,8 +843,7 @@ repairable.
 MCP source provider tests cover tool discovery, resource listing, prompt
 inventory, stateful session reuse, and auth binding. Python source provider
 tests cover module import, `NodeSpec` projection, and capability calling. The
-tests demonstrate that the source-provider boundary works across different source
-families.
+tests exercise the source-provider boundary across different source families.
 
 (Evidence: `tests/wf_sources_mcp/test_runtime.py`,
 `tests/wf_sources_python/test_loader.py`,
@@ -809,24 +884,30 @@ blind agent retries.
 
 (Evidence: `src/wf_config/`.)
 
-## Planner Efficiency Argument
+## Planner Efficiency Hypothesis
 
 The platform targets planner efficiency and operational clarity rather than
-runtime throughput. The argument is that typed contracts, validation,
-diagnostics, compact outputs, and traces reduce blind retries:
+runtime throughput. The design hypothesis is that typed contracts, validation,
+diagnostics, compact outputs, and traces are intended to reduce blind retries:
 
-- Validation calls return structured diagnostics with repair hints, reducing
-  the number of attempts an agent needs to converge on a valid workflow.
+- Validation calls return structured diagnostics with repair hints.
 - Source catalogs let agents discover available capabilities without probing.
-- Compact JSON output reduces token usage compared to raw provider payloads.
+- Compact JSON output is intended to reduce token usage compared to raw
+  provider payloads.
 - Next-action guidance provides a suggested next step without the agent having
   to reconstruct lifecycle state.
 
 A before/after comparison is illustrative: in early ad-hoc agent/tool
 interaction, an agent might spend multiple attempts discovering a valid tool
 sequence through trial and error. With the typed lifecycle, the agent validates
-a draft, reads the diagnostic, fixes the specific issue, and proceeds. The
-number of failed attempts decreases because the diagnostic surface is actionable.
+a draft, reads the diagnostic, fixes the specific issue, and proceeds. This
+report evaluates whether the diagnostic and lifecycle surfaces exist and are
+actionable; it does not yet measure retry reduction, token savings, or
+convergence rates across agents.
+
+Threat to validity: no controlled agent study was conducted. Claims regarding
+agent efficiency, convergence, retry reduction, or token savings should be
+interpreted as design hypotheses rather than experimentally validated results.
 
 ## Evaluation Questions
 
@@ -836,8 +917,8 @@ The implementation addresses these evaluation questions:
    deployed, and run? --- Yes, demonstrated by the Python source case study and
    its automated tests.
 
-2. Can an interrupted run survive process restart and resume? --- Yes,
-   demonstrated by run persistence and resume tests.
+2. Can an interrupted run persist at an explicit interruption boundary and
+   resume? --- Yes, demonstrated by run persistence and resume tests.
 
 3. Can the same server be used through CLI and JSON-RPC transport? --- Yes,
    the CLI and transport tests exercise both surfaces against the same server
@@ -859,11 +940,10 @@ The implementation addresses these evaluation questions:
    through a bounded helper? --- Yes, `wf.source.read_resource` resolves
    logical source refs through runtime context with bounded output policy.
 
-8. Does the structured surface reduce failed attempts before success? --- The
-   validation diagnostics, compact output, and next-action guidance are
-   designed for this purpose. Evidence comes from draft-validation and
-   run-failure analysis cases where diagnostics explained the failure and
-   suggested a repair.
+8. Does the structured surface reduce failed attempts before success? --- Not
+   measured in this report. The validation diagnostics, compact output, and
+   next-action guidance are designed for this purpose, but retry reduction
+   remains future evaluation work.
 
 9. Do validation and deployment validation catch source drift? --- Yes,
    deployment validation reports unrunnable state with diagnostics instead of
@@ -874,6 +954,14 @@ The implementation addresses these evaluation questions:
 
 The following limitations are stated explicitly to maintain credibility and
 motivate future work:
+
+## Threat Model And Non-Goals
+
+The prototype assumes trusted operators, trusted local Python sources, and
+non-production credential handling. It does not attempt sandboxing,
+least-privilege execution, multi-tenant isolation, human approval gates,
+role-based authorization, or secret-manager-backed auth. These are product and
+deployment concerns beyond the controlled system-design evidence in this report.
 
 - **Python sources are trusted in-process code.** No sandbox is implemented.
   A Python source can execute arbitrary code within the server process.
@@ -968,19 +1056,20 @@ The following areas are identified as likely future work:
 
 # Conclusion
 
-External LLM agents can author and operate workflows, but the durable workflow
-life cycle should live in a typed platform substrate. This report described the
-design and implementation of `lda.chat`, a prototype platform that separates
-planning from execution across built-in, MCP, and Python sources.
+External LLM agents can author and operate workflows, but reusable workflow
+life cycle records should live in a typed platform substrate. This report
+described the design and implementation of `lda.chat`, a prototype platform
+that separates planning from execution across controlled built-in, MCP, and
+Python source examples.
 
-The implementation proves five claims:
+The implementation supports five claims:
 
-1. A typed artifact, deployment, and run lifecycle provides durable workflow
-   state that survives process restart and source drift.
+1. A typed artifact, deployment, and run lifecycle provides persisted workflow
+   records and resumability at explicit stopped/interrupted boundaries.
 2. The source-provider boundary allows MCP, Python, and future source families
    to share one workflow surface without core-runtime changes.
 3. Validation and diagnostics produce machine-readable repairable failure
-   states that reduce planner trial-and-error.
+   states intended to reduce planner trial-and-error.
 4. The CLI and JSON-RPC transport provide an agent-operable surface that
    external LLM agents can drive without direct runtime access.
 5. The deterministic report-workflow case study demonstrates the full lifecycle
@@ -989,7 +1078,7 @@ The implementation proves five claims:
 The remaining work is clear and bounded: provider lifecycle, production auth,
 scheduling, fork/gather, richer debugging, and broader evaluation. The prototype
 demonstrates the architecture; the thesis contribution is the platform design
-and the evidence that the design works across multiple source families under
+and evidence that the design can work across multiple source families under
 controlled conditions.
 
 
