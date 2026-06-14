@@ -24,7 +24,11 @@ def validate_deployment_dependencies(
 
     for logical_source, concrete_source in bindings.items():
         source = sources_by_id.get(logical_source)
-        if source is not None and source.platform:
+        if (
+            source is not None
+            and source.platform
+            and concrete_source != logical_source
+        ):
             diagnostics.append(
                 DependencyDiagnostic(
                     severity=DiagnosticSeverity.ERROR,
@@ -47,7 +51,9 @@ def validate_deployment_dependencies(
         if platform_source is not None and platform_source.platform:
             # Platform sources have fixed ids matching required.logical_source, so
             # sources_by_id can resolve them directly and bindings.get(...) is
-            # intentionally bypassed when choosing bound_source_id.
+            # intentionally bypassed when choosing bound_source_id. A legacy
+            # explicit self-binding such as wf.std -> wf.std is accepted for
+            # compatibility, but it has no effect.
             bound_source_id = required.logical_source
         else:
             bound_source_id = bindings.get(required.logical_source)

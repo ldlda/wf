@@ -234,6 +234,34 @@ def test_platform_source_requirement_does_not_need_binding() -> None:
     assert diagnostics == []
 
 
+def test_platform_source_accepts_legacy_self_binding() -> None:
+    artifact = artifact_with(
+        required_capability(logical_source="wf.std", capability_name="replace")
+    )
+    deployment = WorkflowDeployment(
+        id="demo.default",
+        artifact_id=artifact.id,
+        artifact_version=artifact.version,
+        bindings={"wf.std": "wf.std"},
+    )
+
+    diagnostics = validate_deployment_dependencies(
+        artifact=artifact,
+        deployment=deployment,
+        sources=[
+            AvailableSource(
+                id="wf.std",
+                platform=True,
+                capabilities={
+                    "replace": AvailableCapability(name="replace", kind="node_spec")
+                },
+            )
+        ],
+    )
+
+    assert diagnostics == []
+
+
 def test_platform_source_rejects_explicit_deployment_binding() -> None:
     artifact = artifact_with(
         required_capability(logical_source="wf.std", capability_name="replace")
