@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from examples.agent_challenges.browser_click_challenge.run_opencode_trials import (
+    LOCAL_WF_COMMAND_PREFIX,
     TrialConfig,
     build_opencode_command,
     classify_challenge_report,
@@ -25,7 +26,8 @@ def test_build_opencode_command_without_attach(tmp_path: Path) -> None:
         prompt_path=prompt,
         attach_url=None,
         timeout_seconds=120,
-        rpc_url="http://127.0.0.1:8772/rpc",
+        wf_command_prefix=LOCAL_WF_COMMAND_PREFIX,
+        server_context="Use local CLI mode.",
     )
 
     command = build_opencode_command(config)
@@ -48,7 +50,8 @@ def test_build_opencode_command_with_attach(tmp_path: Path) -> None:
         prompt_path=prompt,
         attach_url="http://127.0.0.1:4096",
         timeout_seconds=120,
-        rpc_url="http://127.0.0.1:8772/rpc",
+        wf_command_prefix=LOCAL_WF_COMMAND_PREFIX,
+        server_context="Use local CLI mode.",
     )
 
     command = build_opencode_command(config)
@@ -244,20 +247,23 @@ def test_trial_output_path_is_zero_padded(tmp_path: Path) -> None:
     assert path.name == "opencode_mimo-v2.5-free-trial-003.json"
 
 
-def test_render_prompt_injects_rpc_url_and_command_prefix(tmp_path: Path) -> None:
+def test_render_prompt_injects_command_prefix_and_server_context(
+    tmp_path: Path,
+) -> None:
     prompt = tmp_path / "prompt.md"
     prompt.write_text(
-        "Use {{rpc_url}} with {{wf_command_prefix}}",
+        "Use {{wf_command_prefix}}. {{server_context}}",
         encoding="utf-8",
     )
 
     rendered = render_prompt(
         prompt,
-        rpc_url="http://127.0.0.1:8765/rpc",
+        wf_command_prefix=LOCAL_WF_COMMAND_PREFIX,
+        server_context="No RPC server is staged.",
     )
 
-    assert "http://127.0.0.1:8765/rpc" in rendered
-    assert "uv run wf --url http://127.0.0.1:8765/rpc" in rendered
+    assert LOCAL_WF_COMMAND_PREFIX in rendered
+    assert "No RPC server is staged." in rendered
 
 
 def test_server_command_uses_example_config_and_requested_port() -> None:

@@ -27,6 +27,8 @@ DEFAULT_PROMPT = CHALLENGE_DIR / "prompt.md"
 DEFAULT_RESULTS_DIR = CHALLENGE_DIR / "results"
 DEFAULT_SERVER_PORT = 8772
 EXAMPLE_CONFIG = ROOT / "examples" / "browser_click_workflow" / "wf.config.json"
+EXAMPLE_CONFIG_ARG = "examples/browser_click_workflow/wf.config.json"
+LOCAL_WF_COMMAND_PREFIX = f"uv run wf --config {EXAMPLE_CONFIG_ARG} --local"
 
 
 def rpc_url_for_port(port: int) -> str:
@@ -39,7 +41,7 @@ def server_command(*, port: int) -> list[str]:
         "run",
         "wf-rpc-server",
         "--config",
-        str(EXAMPLE_CONFIG.relative_to(ROOT)).replace("\\", "/"),
+        EXAMPLE_CONFIG_ARG,
         "--host",
         "127.0.0.1",
         "--port",
@@ -47,12 +49,16 @@ def server_command(*, port: int) -> list[str]:
     ]
 
 
-def render_prompt(prompt_path: Path, *, rpc_url: str) -> str:
-    command_prefix = f"uv run wf --url {rpc_url}"
+def render_prompt(
+    prompt_path: Path,
+    *,
+    wf_command_prefix: str,
+    server_context: str,
+) -> str:
     return (
         prompt_path.read_text(encoding="utf-8")
-        .replace("{{rpc_url}}", rpc_url)
-        .replace("{{wf_command_prefix}}", command_prefix)
+        .replace("{{wf_command_prefix}}", wf_command_prefix)
+        .replace("{{server_context}}", server_context)
     )
 
 
@@ -128,11 +134,16 @@ class TrialConfig:
     prompt_path: Path
     attach_url: str | None
     timeout_seconds: int
-    rpc_url: str
+    wf_command_prefix: str
+    server_context: str
 
 
 def build_opencode_command(config: TrialConfig) -> list[str]:
-    prompt_text = render_prompt(config.prompt_path, rpc_url=config.rpc_url)
+    prompt_text = render_prompt(
+        config.prompt_path,
+        wf_command_prefix=config.wf_command_prefix,
+        server_context=config.server_context,
+    )
     command = [
         "opencode",
         "run",
@@ -423,7 +434,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prompt", type=Path, default=DEFAULT_PROMPT)
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS_DIR)
     parser.add_argument("--server-url", default=None)
-    parser.add_argument("--start-server", action="store_true", default=True)
+    parser.add_argument("--start-server", action="store_true", default=False)
     parser.add_argument("--no-start-server", action="store_false", dest="start_server")
     parser.add_argument("--server-port", type=int, default=DEFAULT_SERVER_PORT)
     args = parser.parse_args(argv)
@@ -434,12 +445,23 @@ def main(argv: list[str] | None = None) -> int:
     if args.server_url is not None:
         rpc_url = args.server_url
         managed_server: ManagedServer | None = None
+        wf_command_prefix = f"uv run wf --url {rpc_url}"
+        server_context = f"A workflow RPC server is available at `{rpc_url}`."
     elif args.start_server:
         managed_server = start_server(port=args.server_port)
         rpc_url = managed_server.rpc_url
+        wf_command_prefix = f"uv run wf --url {rpc_url}"
+        server_context = (
+            f"The harness started a workflow RPC server at `{rpc_url}` for this trial."
+        )
     else:
-        rpc_url = rpc_url_for_port(args.server_port)
         managed_server = None
+        wf_command_prefix = LOCAL_WF_COMMAND_PREFIX
+        server_context = (
+            "No external workflow RPC server is staged. The command prefix uses "
+            "`--local`, which builds the configured workflow server in the CLI "
+            "process for each command."
+        )
 
     try:
         config = TrialConfig(
@@ -448,7 +470,8 @@ def main(argv: list[str] | None = None) -> int:
             prompt_path=args.prompt,
             attach_url=args.attach_url,
             timeout_seconds=args.timeout_seconds,
-            rpc_url=rpc_url,
+            wf_command_prefix=wf_command_prefix,
+            server_context=server_context,
         )
 
         summaries: list[dict[str, Any]] = []

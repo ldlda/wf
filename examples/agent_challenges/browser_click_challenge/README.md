@@ -11,21 +11,27 @@ examples/browser_click_workflow/
 
 ## Default Behavior
 
-By default the harness starts:
+By default the harness does not start a `wf-rpc-server`. It prompts agents to
+use the configured local CLI path:
+
+```powershell
+uv run wf --config examples/browser_click_workflow/wf.config.json --local
+```
+
+This builds the configured workflow server in the CLI process for each command
+and reuses the configured durable store. It does not reuse in-memory source
+sessions across CLI invocations.
+
+Use `--start-server` when the trial should exercise the JSON-RPC server path.
+With `--start-server`, the harness starts:
 
 ```powershell
 uv run wf-rpc-server --config examples/browser_click_workflow/wf.config.json --host 127.0.0.1 --port 8772
 ```
 
-It waits until:
-
-```powershell
-uv run wf --url http://127.0.0.1:8772/rpc status
-```
-
-passes, injects that URL into the prompt, runs opencode, then stops the server.
-Use `--server-url` to target an already-running server or `--no-start-server` to
-skip lifecycle management.
+It waits until `uv run wf --url http://127.0.0.1:8772/rpc status` passes,
+injects that URL into the prompt, runs opencode, then stops the server. Use
+`--server-url` to target an already-running server.
 
 ## One Trial
 
