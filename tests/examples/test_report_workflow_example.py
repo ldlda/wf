@@ -4,10 +4,42 @@ from pathlib import Path
 
 import pytest
 
+from examples.report_workflow.ops import (
+    ActionItem,
+    ExtractInput,
+    MarkdownInput,
+    ReadInput,
+    ReportOutput,
+    _extract_report,
+    _read_notes,
+    _render_markdown_report,
+)
 from wf_config import load_workflow_config
 from wf_server.config import build_workflow_server_from_workflow_config
 
 EXAMPLE_DIR = Path(__file__).resolve().parents[2] / "examples" / "report_workflow"
+
+
+def test_report_workflow_read_notes_rejects_paths_outside_example() -> None:
+    with pytest.raises(ValueError, match="inside the example"):
+        _read_notes(ReadInput(path="../pyproject.toml"))
+
+
+def test_report_workflow_markdown_renderer_round_trips_through_extractor() -> None:
+    report = ReportOutput(
+        title="Weekly Project Update",
+        summary="Demo summary.",
+        action_items=[
+            ActionItem(owner="Alice", task="Prepare demo config", due="Friday")
+        ],
+        risks=["Quota is low"],
+        followups=["Render Markdown"],
+    )
+
+    rendered = _render_markdown_report(MarkdownInput(report=report))
+    extracted = _extract_report(ExtractInput(text=rendered.markdown))
+
+    assert extracted == report
 
 
 @pytest.mark.asyncio

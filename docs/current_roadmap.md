@@ -113,10 +113,11 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
 - Completed source provider docs: `docs/source_provider_guide.md` now covers
   MCP HTTP, MCP stdio, Python sources, auth refs, OAuth refresh-token setup,
   diagnostics, and the Google Drive MCP caveat.
-- Completed platform source policy: `wf.*` process-provided sources are marked
-  as platform sources. They resolve by fixed source id, do not require
-  self-bindings, and deployment validation rejects explicit platform-source
-  bindings as stale configuration.
+- Completed platform source policy: documented fixed-id sources such as `wf.std`
+  and `wf.source` are platform sources. They resolve by fixed source id, do not
+  require self-bindings, and deployment validation rejects explicit
+  platform-source bindings as stale configuration. Other `wf.*` namespaces are
+  described by their own source docs/policies.
 - Completed `wf.source.read_resource`: resource refs are inert pass-by-value
   data using `logical_source`; explicit platform helper nodes dereference them
   through runtime/platform context with bounded output.

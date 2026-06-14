@@ -64,7 +64,7 @@ The case study should exist as a runnable example, not only prose. Target shape:
 `README.md`, and commands for config validation, server startup, capability
 calls, draft/artifact/deployment creation, run, inspect, and trace.
 The runnable evidence bundle for this case study lives at
-`examples/report_workflow/README.md`.
+`examples/report_workflow/`.
 
 
 Keep the thesis-critical path deterministic. Do not require an LLM call inside

@@ -46,6 +46,10 @@ header-includes:
   - \setkeys{Gin}{width=\linewidth,height=0.55\textheight,keepaspectratio}
   - \renewcommand{\arraystretch}{1.3}
   - \hypersetup{pdfauthor={lda.chat}, pdftitle={Design and Implementation of lda.chat}}
+diagram:
+  engine:
+    mermaid:
+      theme: neutral
 ---
 
 # Introduction
@@ -635,7 +639,8 @@ call, remote OAuth, or provider quota.
 
 ## Case Study Components
 
-The example bundle lives at `examples/report_workflow/` and contains:
+The example bundle lives at
+[`examples/report_workflow/`](../../examples/report_workflow/) and contains:
 
 - `ops.py` --- a Python source exposing `read_notes`, `extract_report`, and
   `render_markdown_report` as typed `NodeSpec` capabilities.
@@ -1170,7 +1175,7 @@ uv run wf --config examples/report_workflow/wf.config.json run trace <run_id> --
 
 ## Appendix B: Evidence Index
 
-See `evidence-index.md` for the full claim-to-evidence map.
+See [evidence-index.md](evidence-index.md) for the full claim-to-evidence map.
 
 | Claim | Evidence |
 | --- | --- |

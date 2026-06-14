@@ -6,6 +6,8 @@ from pydantic import BaseModel, Field
 
 from wf_authoring import node
 
+_EXAMPLE_DIR = Path(__file__).resolve().parent
+
 
 class ReadInput(BaseModel):
     path: str = Field(description="Path to a UTF-8 Markdown notes file.")
@@ -43,11 +45,25 @@ class MarkdownOutput(BaseModel):
 
 @node(name="read_notes")
 def read_notes(payload: ReadInput) -> ReadOutput:
-    return ReadOutput(text=Path(payload.path).read_text(encoding="utf-8"))
+    return _read_notes(payload)
 
 
 @node(name="extract_report")
 def extract_report(payload: ExtractInput) -> ReportOutput:
+    return _extract_report(payload)
+
+
+@node(name="render_markdown_report")
+def render_markdown_report(payload: MarkdownInput) -> MarkdownOutput:
+    return _render_markdown_report(payload)
+
+
+def _read_notes(payload: ReadInput) -> ReadOutput:
+    path = _resolve_example_path(payload.path)
+    return ReadOutput(text=path.read_text(encoding="utf-8"))
+
+
+def _extract_report(payload: ExtractInput) -> ReportOutput:
     title = ""
     summary_lines: list[str] = []
     actions: list[ActionItem] = []
@@ -86,25 +102,36 @@ def extract_report(payload: ExtractInput) -> ReportOutput:
     )
 
 
-@node(name="render_markdown_report")
-def render_markdown_report(payload: MarkdownInput) -> MarkdownOutput:
+def _render_markdown_report(payload: MarkdownInput) -> MarkdownOutput:
     report = payload.report
     lines = [
         f"# {report.title}",
         "",
+        "Summary:",
         report.summary,
         "",
-        "## Action Items",
+        "Actions:",
     ]
     lines.extend(
-        f"- {item.owner}: {item.task} (due: {item.due})"
+        f"- {item.owner} | {item.task} | {item.due}"
         for item in report.action_items
     )
-    lines.extend(["", "## Risks"])
+    lines.extend(["", "Risks:"])
     lines.extend(f"- {risk}" for risk in report.risks)
-    lines.extend(["", "## Followups"])
+    lines.extend(["", "Followups:"])
     lines.extend(f"- {followup}" for followup in report.followups)
     return MarkdownOutput(markdown="\n".join(lines))
+
+
+def _resolve_example_path(path: str) -> Path:
+    """Resolve user input to a file inside this example directory only."""
+    candidate = Path(path)
+    if candidate.is_absolute():
+        raise ValueError("read_notes only accepts paths relative to the example")
+    resolved = (_EXAMPLE_DIR / candidate).resolve()
+    if not resolved.is_relative_to(_EXAMPLE_DIR):
+        raise ValueError("read_notes path must stay inside the example directory")
+    return resolved
 
 
 registry = [read_notes, extract_report, render_markdown_report]

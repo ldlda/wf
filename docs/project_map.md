@@ -72,8 +72,10 @@ see [`workflow platform presentation`](add/2026-06-workflow-platform-presentatio
 
 ## Documentation
 
-- `docs/add/system-design-implementation.md` — formal thesis/system-design draft.
-- `docs/add/evidence-index.md` — claim-to-evidence map for the thesis draft.
+- [`docs/add/system-design-implementation.md`](add/system-design-implementation.md)
+  — formal thesis/system-design draft.
+- [`docs/add/evidence-index.md`](add/evidence-index.md) — claim-to-evidence
+  map for the thesis draft.
 
 ## Tests
 
