@@ -107,7 +107,8 @@ auth admin are implemented. The next work is polish, not new broad surfaces.
   source loading is behind `PythonSourceProvider`.
 - Completed: `wf --local --config <workflow-config>` now composes configured
   neutral server sources in-process instead of falling back to built-in static
-  sources only.
+  sources only. `--local` is process-local server composition, not local-only
+  source transports or shared in-memory source sessions.
 - Completed: server startup policy moved to `wf_server.cli`; JSON-RPC HTTP
   remains in `wf_transport_rpc_http`:
   [`server CLI and transport boundary`](superpowers/specs/2026-06-10-server-cli-transport-boundary.md).

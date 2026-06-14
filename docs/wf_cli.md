@@ -15,9 +15,12 @@ If `--config` is omitted, `wf_mcp.config.json` is used.
 
 `--local` still uses the selected `--config` file. For neutral workflow configs,
 it builds the configured server in the CLI process, including configured Python
-sources and other local source providers. Use `--url` when you want to force the
-CLI to talk to an already-running `wf-rpc-server`; `--local` and `--url` are
-mutually exclusive.
+sources and other source providers. Local means "same-process workflow server",
+not "local-only source transports": configured MCP HTTP/stdio sources may still
+open external transports from inside the CLI process. The configured durable
+store is reused, but a running server's in-memory source sessions/runtime pools
+are not reused. Use `--url` when you want to force the CLI to talk to an
+already-running `wf-rpc-server`; `--local` and `--url` are mutually exclusive.
 
 ## Remote Server
 
