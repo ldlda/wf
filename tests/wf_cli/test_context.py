@@ -16,7 +16,7 @@ from wf_cli.context import (
     rpc_timeout_from_context,
     rpc_url_from_context,
 )
-from wf_server import build_local_static_workflow_server
+from wf_server.config import build_workflow_server_from_workflow_config
 
 
 def _typer_context(obj: object | None) -> typer.Context:
@@ -177,13 +177,13 @@ def test_load_cli_context_local_uses_workflow_store_override(
     )
     captured: dict[str, object] = {}
 
-    def fake_build_local_static_workflow_server(root):
-        captured["store_root"] = root
-        return build_local_static_workflow_server(tmp_path / "actual")
+    def fake_build_workflow_server_from_workflow_config(config):
+        captured["store_root"] = config.server.workflow_store.root
+        return build_workflow_server_from_workflow_config(config)
 
     monkeypatch.setattr(
-        "wf_cli.context.build_local_static_workflow_server",
-        fake_build_local_static_workflow_server,
+        "wf_cli.context.build_workflow_server_from_workflow_config",
+        fake_build_workflow_server_from_workflow_config,
     )
 
     context = load_cli_context(config_path)

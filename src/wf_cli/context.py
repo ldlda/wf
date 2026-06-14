@@ -26,7 +26,7 @@ from wf_config import (
 from wf_mcp.broker import build_service_from_config, load_broker_config
 from wf_mcp.broker.service import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
-from wf_server import build_local_static_workflow_server
+from wf_server.config import build_workflow_server_from_workflow_config
 from wf_transport_rpc_http import RpcWorkflowApiClient
 
 
@@ -151,7 +151,7 @@ def load_cli_context(
         store = config.server.workflow_store
         if not isinstance(store, FilesystemStoreConfig):
             raise ValueError("local CLI target currently requires filesystem store")
-        server = build_local_static_workflow_server(store.root)
+        server = build_workflow_server_from_workflow_config(config)
         return CliContext(
             config_path=resolved_config_path,
             service=None,
