@@ -1,0 +1,6 @@
+{
+  "button_label": "Launch Workflow",
+  "open_browser": false,
+  "simulate": true,
+  "timeout_seconds": 2
+}
