@@ -69,6 +69,8 @@ see [`workflow platform presentation`](add/2026-06-workflow-platform-presentatio
 - `examples/rpc_cli_smoke.py` spawns `wf-rpc-server`, runs the bounded CLI
   lifecycle from the RPC CLI smoke runbook, and cleans up. Use
   `--keep-temp` to preserve the generated config/store on failure.
+- `examples/browser_click_workflow/` is a serial browser-click workflow
+  example with bounded before/after snapshots and full lifecycle tests.
 
 ## Documentation
 

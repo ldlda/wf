@@ -75,6 +75,8 @@ Evidence:
 - `src/wf_sources_python/`
 - `tests/examples/test_report_workflow_example.py`
 - `tests/wf_sources_python/test_loader.py`
+- `examples/browser_click_workflow/`
+- `tests/examples/test_browser_click_workflow_example.py`
 
 ## Limitations
 

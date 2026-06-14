@@ -931,6 +931,9 @@ single deterministic extraction node. The surrounding Python source includes
 additional capabilities used for capability discovery and extensibility
 evidence; it is not evaluated as a multi-node read -> extract -> render
 pipeline in this artifact.
+A supplemental browser-click example demonstrates a serial three-node workflow
+with bounded before/after snapshots; it is supporting evidence, not the main
+case study.
 
 (Evidence: `tests/examples/test_report_workflow_example.py`.)
 

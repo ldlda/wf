@@ -187,6 +187,7 @@ stable.
 - Completed thesis system-design draft: `docs/add/system-design-implementation.md`
   now frames the platform as a formal system design/implementation report backed
   by `docs/add/evidence-index.md` and the report-workflow case study.
+- Completed supplemental browser-click workflow example with serial multi-node lifecycle evidence.
 
 ## Historical References
 
