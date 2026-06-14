@@ -35,7 +35,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-addopts = "-p no:cacheprovider -n auto --basetemp .pytest-tmp" # in-workspace temp dir
+addopts = "-p no:cacheprovider -n auto"
 pythonpath = ["."]
 asyncio_mode = "auto"
 
