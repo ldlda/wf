@@ -10,6 +10,7 @@ from typing import Any, Literal
 
 Classification = Literal[
     "success",
+    "workflow_script",
     "workflow_not_used",
     "run_failed",
     "timeout",
@@ -71,6 +72,7 @@ def parse_opencode_output(stdout: str) -> dict[str, Any]:
 
 def _parse_jsonl_tail(text: str) -> dict[str, Any]:
     last_error: json.JSONDecodeError | None = None
+    parsed_events: list[dict[str, Any]] = []
     for line in reversed(text.splitlines()):
         stripped = line.strip()
         if not stripped:
@@ -81,22 +83,55 @@ def _parse_jsonl_tail(text: str) -> dict[str, Any]:
             last_error = exc
             continue
         if isinstance(parsed, dict):
-            return parsed
+            parsed_events.append(parsed)
+            event_text = _event_text(parsed)
+            if event_text is not None:
+                return {"text": event_text, "event": parsed}
+    if parsed_events:
+        return parsed_events[0]
     if last_error is not None:
         raise last_error
     raise ValueError("opencode output did not contain JSON lines")
 
 
+def _event_text(event: dict[str, Any]) -> str | None:
+    """Extract assistant text from opencode JSON events.
+
+    `opencode run --format json` emits many events. The final event can be a
+    `step_finish`; the answer text is usually the previous `text` event under
+    `part.text`.
+    """
+    part = event.get("part")
+    if isinstance(part, dict):
+        text = part.get("text")
+        if isinstance(text, str):
+            return text
+    text = event.get("text")
+    return text if isinstance(text, str) else None
+
+
 def classify_output(text: str) -> Classification:
     lowered = text.lower()
-    workflow_markers = [
+    product_command_markers = [
         "wf ",
         "wf-rpc-server",
+    ]
+    workflow_evidence_markers = [
         "deployment",
         "run id",
         "run_",
     ]
-    used_workflow = any(marker in lowered for marker in workflow_markers)
+    used_product_command = any(
+        marker in lowered for marker in product_command_markers
+    )
+    has_workflow_evidence = any(
+        marker in lowered for marker in workflow_evidence_markers
+    )
+    used_helper_script = (
+        "uv run python" in lowered
+        or "python examples/" in lowered
+        or "run_workflow.py" in lowered
+    )
     failed = any(
         marker in lowered
         for marker in [
@@ -107,24 +142,31 @@ def classify_output(text: str) -> Classification:
             "validation failed",
         ]
     )
-    before_false = (
-        "before.clicked is false" in lowered
-        or '"before"' in lowered
-        and '"clicked": false' in lowered
+    before_false = _contains_bool_marker(lowered, "before.clicked", "false") or (
+        '"before"' in lowered and '"clicked": false' in lowered
     )
-    after_true = (
-        "after.clicked is true" in lowered
-        or '"after"' in lowered
-        and '"clicked": true' in lowered
+    after_true = _contains_bool_marker(lowered, "after.clicked", "true") or (
+        '"after"' in lowered and '"clicked": true' in lowered
     )
 
-    if used_workflow and before_false and after_true and not failed:
+    if used_product_command and before_false and after_true and not failed:
         return "success"
-    if used_workflow and failed:
+    if has_workflow_evidence and used_helper_script and before_false and after_true:
+        return "workflow_script"
+    if (used_product_command or has_workflow_evidence) and failed:
         return "run_failed"
-    if not used_workflow and (before_false or after_true or "playwright" in lowered):
+    if not has_workflow_evidence and (
+        before_false or after_true or "playwright" in lowered
+    ):
         return "workflow_not_used"
     return "unknown"
+
+
+def _contains_bool_marker(text: str, marker: str, value: str) -> bool:
+    marker_index = text.find(marker)
+    if marker_index == -1:
+        return False
+    return value in text[marker_index : marker_index + 80]
 
 
 def trial_output_path(results_dir: Path, *, model: str, index: int) -> Path:

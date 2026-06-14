@@ -72,6 +72,27 @@ def test_parse_opencode_output_reads_last_jsonl_object() -> None:
     assert parsed["text"] == "final"
 
 
+def test_parse_opencode_output_prefers_text_event_before_step_finish() -> None:
+    payload = "\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "text",
+                    "part": {
+                        "type": "text",
+                        "text": "deployment id: demo.default\nbefore.clicked is false",
+                    },
+                }
+            ),
+            json.dumps({"type": "step_finish", "part": {"type": "step-finish"}}),
+        ]
+    )
+
+    parsed = parse_opencode_output(payload)
+
+    assert parsed["text"] == "deployment id: demo.default\nbefore.clicked is false"
+
+
 def test_classify_output_success() -> None:
     result = classify_output(
         """
@@ -85,6 +106,20 @@ def test_classify_output_success() -> None:
     )
 
     assert result == "success"
+
+
+def test_classify_output_workflow_script() -> None:
+    result = classify_output(
+        """
+        uv run python examples/browser_click_workflow/run_workflow.py
+        Deployment id: browser_click_case_study.default
+        Run id: run_123
+        `before.clicked`: `False`
+        `after.clicked`: `True`
+        """
+    )
+
+    assert result == "workflow_script"
 
 
 def test_classify_output_workflow_not_used() -> None:

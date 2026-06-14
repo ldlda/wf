@@ -55,6 +55,8 @@ workflow output.
 Each trial is classified as one of:
 
 - `success`: output shows workflow usage and before/after clicked states.
+- `workflow_script`: output shows a workflow run, but the agent drove it through
+  a new helper script instead of the product-facing CLI/server path.
 - `workflow_not_used`: output appears to solve the task without `wf`,
   `wf-rpc-server`, deployment, or run evidence.
 - `run_failed`: output includes workflow usage but reports a failure.
