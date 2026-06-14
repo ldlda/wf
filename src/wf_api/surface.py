@@ -144,6 +144,21 @@ class WorkflowArtifactSurface(Protocol):
         version: int,
     ) -> dict[str, Any]: ...
 
+    async def create_artifact_from_plan(
+        self,
+        *,
+        artifact_id: str,
+        version: int,
+        title: str,
+        plan: dict[str, Any],
+        outcomes: Sequence[str],
+        kind: ArtifactKind = "workflow",
+        description: str | None = None,
+        required_capabilities: dict[str, dict[str, Any]] | None = None,
+        source_bindings: dict[str, str] | None = None,
+        created_from_catalog_version: str | None = None,
+    ) -> dict[str, Any]: ...
+
 
 class WorkflowDeploymentSurface(Protocol):
     """Deployment methods exposed by workflow frontends."""

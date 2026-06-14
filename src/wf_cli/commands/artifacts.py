@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Annotated, Literal
 
 import typer
 
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
-from wf_cli.io import emit_json
+from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_structured_file
 from wf_cli.remote_errors import run_cli_operation
 
 app = typer.Typer(
@@ -96,6 +97,52 @@ def _resolve_artifact_version(
         return version_option
     assert version_arg is not None
     return version_arg
+
+
+@app.command("create-from-plan")
+def create_artifact_from_plan(
+    ctx: typer.Context,
+    plan_file: Annotated[Path, typer.Argument(exists=True, dir_okay=False)],
+    artifact_id: Annotated[str, typer.Option("--artifact", help="Artifact id.")],
+    version: Annotated[int, typer.Option("--version", min=1, help="Artifact version.")],
+    title: Annotated[str, typer.Option("--title", help="Artifact title.")],
+    outcome: Annotated[
+        list[str] | None,
+        typer.Option("--outcome", help="Artifact outcome. Repeatable."),
+    ] = None,
+    kind: Annotated[
+        Literal["workflow", "wrapper"], typer.Option("--kind", help="Artifact kind.")
+    ] = "workflow",
+    description: Annotated[
+        str | None, typer.Option("--description", help="Artifact description.")
+    ] = None,
+    binding: Annotated[
+        list[str] | None,
+        typer.Option("--binding", help="Logical=concrete source binding. Repeatable."),
+    ] = None,
+) -> None:
+    """Create an artifact from a raw JSON/YAML workflow plan file."""
+    try:
+        plan = parse_structured_file(plan_file)
+        source_bindings = parse_bindings(binding or [])
+    except CliInputError as exc:
+        raise typer.BadParameter(str(exc)) from exc
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.create_artifact_from_plan(
+                artifact_id=artifact_id,
+                version=version,
+                title=title,
+                plan=plan,
+                outcomes=tuple(outcome or ["ok"]),
+                kind=kind,
+                description=description,
+                source_bindings=source_bindings or None,
+            ),
+        )
+    )
 
 
 @app.command("delete")

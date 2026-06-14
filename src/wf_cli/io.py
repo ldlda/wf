@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 
 class CliInputError(ValueError):
     """Raised when CLI JSON/file input cannot be parsed safely."""
@@ -56,6 +58,21 @@ def parse_bindings(bindings: list[str]) -> dict[str, str]:
             raise CliInputError(f"duplicate --binding for {logical!r}")
         parsed[logical] = concrete
     return parsed
+
+
+def parse_structured_file(path: Path) -> dict[str, Any]:
+    """Parse one JSON/YAML object file for declarative workflow inputs."""
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise CliInputError(f"could not read file {path!s}: {exc}") from exc
+    try:
+        payload = yaml.safe_load(raw)
+    except yaml.YAMLError as exc:
+        raise CliInputError(f"invalid YAML/JSON file {path!s}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise CliInputError("structured file must contain an object")
+    return payload
 
 
 def _read_input_file(path: Path | None) -> str:
