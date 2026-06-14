@@ -995,6 +995,6 @@ def test_wf_local_uses_selected_config_sources(tmp_path: Path) -> None:
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
-    assert {
-        capability["name"] for capability in payload["capabilities"]
-    } == {"local.ops.echo"}
+    assert {capability["name"] for capability in payload["capabilities"]} == {
+        "local.ops.echo"
+    }

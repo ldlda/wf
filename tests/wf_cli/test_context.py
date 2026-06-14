@@ -210,6 +210,6 @@ async def test_load_cli_context_local_composes_configured_python_sources(
         source_id="local.ops",
         limit=100,
     )
-    assert {
-        capability["name"] for capability in listed["capabilities"]
-    } == {"local.ops.echo"}
+    assert {capability["name"] for capability in listed["capabilities"]} == {
+        "local.ops.echo"
+    }
