@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from examples.browser_click_workflow.ops import (
@@ -11,6 +13,8 @@ from examples.browser_click_workflow.ops import (
     _open_click_page,
     _wait_for_click,
 )
+from wf_config import load_workflow_config
+from wf_server.config import build_workflow_server_from_workflow_config
 
 
 def test_browser_click_source_simulates_click_and_cleans_up() -> None:
@@ -64,15 +68,10 @@ def test_browser_click_source_human_timeout_cleans_up() -> None:
     assert _active_session_count() == 0
 
 
-from pathlib import Path
-
-from wf_config import load_workflow_config
-from wf_server.config import build_workflow_server_from_workflow_config
-
-
 EXAMPLE_DIR = Path(__file__).resolve().parents[2] / "examples" / "browser_click_workflow"
 
 
+@pytest.mark.asyncio
 async def test_browser_click_workflow_artifact_deployment_run_path(tmp_path) -> None:
     config = load_workflow_config(EXAMPLE_DIR / "wf.config.json")
     config.server.store.root = tmp_path / "store"
