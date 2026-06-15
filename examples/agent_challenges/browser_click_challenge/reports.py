@@ -9,8 +9,8 @@ from examples.agent_challenges.browser_click_challenge.classification import (
     extract_challenge_report,
 )
 from examples.agent_challenges.browser_click_challenge.opencode_io import (
-    _result_text,
     parse_opencode_output,
+    result_text,
 )
 
 
@@ -61,7 +61,7 @@ def save_report_from_result_payload(
 def _report_text_from_result(result: dict[str, object]) -> str:
     parsed = result.get("parsed")
     if isinstance(parsed, dict):
-        return _result_text(parsed)
+        return result_text(parsed)
 
     stdout = result.get("stdout")
     if isinstance(stdout, str) and stdout.strip():
@@ -71,7 +71,7 @@ def _report_text_from_result(result: dict[str, object]) -> str:
             raise ValueError(
                 "result file is missing parsed output and stdout has no report text"
             ) from exc
-        return _result_text(recovered)
+        return result_text(recovered)
 
     raise ValueError("result file is missing parsed output")
 

@@ -10,6 +10,7 @@ from examples.browser_click_workflow.ops import (
     WaitForClickInput,
     _active_session_count,
     _collect_snapshots,
+    _get_session,
     _open_click_page,
     _wait_for_click,
 )
@@ -66,6 +67,47 @@ def test_browser_click_source_human_timeout_cleans_up() -> None:
         )
     )
     assert _active_session_count() == 0
+
+
+def test_browser_click_session_events_are_bounded() -> None:
+    opened = _open_click_page(OpenPageInput(open_browser=False))
+    try:
+        session = _get_session(opened.session_id)
+        for index in range(20):
+            session.add_event(f"event-{index}")
+
+        snapshot = session.snapshot()
+
+        assert len(snapshot.events) == 10
+        assert snapshot.events == [f"event-{index}" for index in range(10, 20)]
+    finally:
+        _collect_snapshots(
+            CollectSnapshotsInput(
+                session_id=opened.session_id,
+                before=opened.before,
+                after=opened.before,
+            )
+        )
+
+
+def test_browser_click_open_browser_failure_does_not_fail_workflow(monkeypatch) -> None:
+    def fail_open(_url: str) -> bool:
+        raise RuntimeError("no browser")
+
+    monkeypatch.setattr("examples.browser_click_workflow.ops.webbrowser.open", fail_open)
+
+    opened = _open_click_page(OpenPageInput(open_browser=True))
+    try:
+        assert opened.url.startswith("http://127.0.0.1:")
+        assert opened.before.clicked is False
+    finally:
+        _collect_snapshots(
+            CollectSnapshotsInput(
+                session_id=opened.session_id,
+                before=opened.before,
+                after=opened.before,
+            )
+        )
 
 
 EXAMPLE_DIR = (

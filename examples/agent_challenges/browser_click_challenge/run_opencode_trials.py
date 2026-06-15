@@ -46,9 +46,9 @@ from examples.agent_challenges.browser_click_challenge.classification import (  
 from examples.agent_challenges.browser_click_challenge.opencode_io import (  # noqa: E402
     _event_text,
     _parse_jsonl_tail,
-    _result_text,
     build_opencode_command,
     parse_opencode_output,
+    result_text,
 )
 from examples.agent_challenges.browser_click_challenge.reports import (  # noqa: E402
     save_report_from_result_payload,
@@ -76,7 +76,6 @@ __all__ = [
     "_contains_bool_marker",
     "_event_text",
     "_parse_jsonl_tail",
-    "_result_text",
     "build_opencode_command",
     "challenge_report_schema_errors",
     "classify_challenge_report",
@@ -86,6 +85,7 @@ __all__ = [
     "parse_opencode_output",
     "prepare_trial_workspace",
     "render_prompt",
+    "result_text",
     "rpc_url_for_port",
     "run_trial",
     "save_report_from_result_payload",
@@ -300,7 +300,7 @@ def run_trial(config: TrialConfig, *, index: int, results_dir: Path) -> dict[str
     parsed: dict[str, Any] | None
     try:
         parsed = parse_opencode_output(completed.stdout)
-        text = _result_text(parsed)
+        text = result_text(parsed)
         classification = classify_output(text)
     except Exception:
         parsed = None

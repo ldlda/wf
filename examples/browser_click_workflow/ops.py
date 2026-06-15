@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import html
 import json
+import logging
 import threading
 import uuid
 import webbrowser
@@ -9,11 +10,15 @@ from dataclasses import dataclass
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import ClassVar
+from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from pydantic import BaseModel, Field
 
 from wf_authoring import node
+
+_LOGGER = logging.getLogger(__name__)
+_MAX_SESSION_EVENTS = 10
 
 
 class Snapshot(BaseModel):
@@ -91,10 +96,21 @@ class _ClickSession:
             events=list(self.events[-10:]),
         )
 
+    def add_event(self, event: str) -> None:
+        """Record bounded click-session events for compact snapshots."""
+        self.events.append(event)
+        if len(self.events) > _MAX_SESSION_EVENTS:
+            del self.events[: len(self.events) - _MAX_SESSION_EVENTS]
+
     def close(self) -> None:
         self.server.shutdown()
         self.server.server_close()
         self.thread.join(timeout=2)
+        if self.thread.is_alive():
+            _LOGGER.warning(
+                "click session %s server thread did not stop within timeout",
+                self.session_id,
+            )
 
 
 _SESSIONS: dict[str, _ClickSession] = {}
@@ -122,7 +138,7 @@ class _ClickHandler(BaseHTTPRequestHandler):
             return
         session = self.server.session
         session.clicked.set()
-        session.events.append("click")
+        session.add_event("click")
         self._send_json(session.snapshot().model_dump(mode="json"))
 
     def _send_html(self) -> None:
@@ -206,7 +222,13 @@ def _open_click_page(payload: OpenPageInput) -> OpenPageOutput:
         _SESSIONS[session_id] = session
     session.thread.start()
     if payload.open_browser:
-        webbrowser.open(session.url)
+        try:
+            opened = webbrowser.open(session.url)
+        except Exception:
+            _LOGGER.exception("failed to open browser for click session %s", session_id)
+        else:
+            if not opened:
+                _LOGGER.warning("browser did not report opening %s", session.url)
     return OpenPageOutput(
         session_id=session_id,
         url=session.url,
@@ -218,8 +240,13 @@ def _wait_for_click(payload: WaitForClickInput) -> WaitForClickOutput:
     session = _get_session(payload.session_id)
     if payload.simulate:
         request = Request(f"{session.url}click", method="POST")
-        with urlopen(request, timeout=payload.timeout_seconds) as response:
-            response.read()
+        try:
+            with urlopen(request, timeout=payload.timeout_seconds) as response:
+                response.read()
+        except (HTTPError, URLError) as exc:
+            raise RuntimeError(
+                f"simulated click failed for session {payload.session_id!r}"
+            ) from exc
     elif not session.clicked.wait(timeout=payload.timeout_seconds):
         raise TimeoutError("timed out waiting for click")
     return WaitForClickOutput(

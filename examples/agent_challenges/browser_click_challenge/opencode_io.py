@@ -90,7 +90,7 @@ def _event_text(event: dict[str, Any]) -> str | None:
     return text if isinstance(text, str) else None
 
 
-def _result_text(parsed: dict[str, Any]) -> str:
+def result_text(parsed: dict[str, Any]) -> str:
     for key in ("text", "message", "content", "output"):
         value = parsed.get(key)
         if isinstance(value, str):
