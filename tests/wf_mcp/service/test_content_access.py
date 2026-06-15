@@ -268,9 +268,7 @@ async def test_content_access_uses_stateful_runtime_for_upstream_content() -> No
 
 
 async def test_read_resource_by_source_uri_reads_upstream() -> None:
-    service = WfMcpService(
-        store=FileStore(local_temp_root() / "content_source_uri")
-    )
+    service = WfMcpService(store=FileStore(local_temp_root() / "content_source_uri"))
     service.register_connection(
         ConnectionConfig(id="demo.personal", server="demo", account="personal")
     )

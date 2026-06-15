@@ -68,7 +68,9 @@ def test_browser_click_source_human_timeout_cleans_up() -> None:
     assert _active_session_count() == 0
 
 
-EXAMPLE_DIR = Path(__file__).resolve().parents[2] / "examples" / "browser_click_workflow"
+EXAMPLE_DIR = (
+    Path(__file__).resolve().parents[2] / "examples" / "browser_click_workflow"
+)
 
 
 @pytest.mark.asyncio
@@ -234,4 +236,3 @@ async def test_browser_click_workflow_artifact_deployment_run_path(tmp_path) -> 
     assert run["output"]["after"]["status_text"] == "Button clicked"
     assert run["output"]["closed"] is True
     assert run["trace_count"] >= 3
-

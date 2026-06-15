@@ -100,10 +100,12 @@ def test_workflow_runtime_service_prepares_node_registry_and_reducers() -> None:
         emit_event=lambda event: None,
     )
 
-    workflow, registry, reducers, prepared_subgraphs, platform_context = runtime.prepare_workflow_runtime(
-        single_echo_plan("runtime_prepare", "demo.personal.echo_tool"),
-        deployment=None,
-        artifact=None,
+    workflow, registry, reducers, prepared_subgraphs, platform_context = (
+        runtime.prepare_workflow_runtime(
+            single_echo_plan("runtime_prepare", "demo.personal.echo_tool"),
+            deployment=None,
+            artifact=None,
+        )
     )
 
     assert "demo.personal.echo_tool" in [nd.name for nd in workflow.node_defs]

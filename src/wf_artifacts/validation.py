@@ -24,11 +24,7 @@ def validate_deployment_dependencies(
 
     for logical_source, concrete_source in bindings.items():
         source = sources_by_id.get(logical_source)
-        if (
-            source is not None
-            and source.platform
-            and concrete_source != logical_source
-        ):
+        if source is not None and source.platform and concrete_source != logical_source:
             diagnostics.append(
                 DependencyDiagnostic(
                     severity=DiagnosticSeverity.ERROR,

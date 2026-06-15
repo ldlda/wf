@@ -20,7 +20,9 @@ def _connection(**metadata: object) -> ConnectionConfig:
     )
 
 
-def _provider(tmp_path: Path, connection: ConnectionConfig) -> SourceDiagnosticsProvider:
+def _provider(
+    tmp_path: Path, connection: ConnectionConfig
+) -> SourceDiagnosticsProvider:
     registry = ConnectionRegistry()
     registry.register(connection)
     return SourceDiagnosticsProvider(

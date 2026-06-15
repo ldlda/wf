@@ -214,7 +214,9 @@ edges: []
     assert payload["source_bindings"] == {"local.ops": "local.ops"}
 
 
-def test_artifact_create_from_plan_rejects_non_object_yaml(monkeypatch, tmp_path) -> None:
+def test_artifact_create_from_plan_rejects_non_object_yaml(
+    monkeypatch, tmp_path
+) -> None:
     handlers = _ArtifactHandlers()
     monkeypatch.setattr(
         "wf_cli.commands.artifacts.load_cli_context",

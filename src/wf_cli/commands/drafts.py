@@ -22,6 +22,7 @@ def _parse_map_flags(values: list[str] | None) -> dict[str, str]:
         parsed[source] = target
     return parsed
 
+
 app = typer.Typer(
     name="draft",
     help="Create, inspect, patch, validate, and save draft workflows.",
@@ -162,9 +163,7 @@ def set_draft_route(
     ],
     step_id: Annotated[str, typer.Option("--step", help="Draft step id.")],
     outcome: Annotated[str, typer.Option("--outcome", help="Step outcome.")],
-    target: Annotated[
-        str, typer.Option("--to", help="Target step id or __end__.")
-    ],
+    target: Annotated[str, typer.Option("--to", help="Target step id or __end__.")],
 ) -> None:
     """Set one route: steps.<step> outcome -> target."""
     context = load_cli_context(ctx)

@@ -112,7 +112,9 @@ def reducer(
         def decorate_config(
             raw: ConfigReducerCallable[ConfigT],
         ) -> AuthoredReducer:
-            reducer_name = name or getattr(raw, "__name__", "<anonymous config reducer>")
+            reducer_name = name or getattr(
+                raw, "__name__", "<anonymous config reducer>"
+            )
             reducer_description = description or raw.__doc__
 
             model_type = config_model

@@ -151,7 +151,13 @@ class LocalWorkflowRuntimeRunner(WorkflowRuntimeRunner):
         deployment: WorkflowDeployment | None,
         artifact: WorkflowArtifact | None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
-    ) -> tuple[Workflow, dict[str, Any], dict[str, Any], dict[str, Any], SourceBindingPlatformContext]:
+    ) -> tuple[
+        Workflow,
+        dict[str, Any],
+        dict[str, Any],
+        dict[str, Any],
+        SourceBindingPlatformContext,
+    ]:
         plan_node_names = [
             node.node for node in plan.nodes if isinstance(node, NodeUse)
         ]

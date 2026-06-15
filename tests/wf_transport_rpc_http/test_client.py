@@ -449,7 +449,9 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)
     transport = httpx.ASGITransport(app=app)
-    async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as http_client:
         client = RpcWorkflowApiClient(
             url="http://test/rpc",
             timeout_seconds=5,
@@ -503,6 +505,4 @@ async def test_rpc_client_diagnoses_source(tmp_path) -> None:
     payload = await Client().diagnose_source(source_id="demo.personal")
 
     assert payload == {"source_id": "demo.personal", "status": "ok"}
-    assert calls == [
-        ("workflow.sources.diagnose", {"source_id": "demo.personal"})
-    ]
+    assert calls == [("workflow.sources.diagnose", {"source_id": "demo.personal"})]

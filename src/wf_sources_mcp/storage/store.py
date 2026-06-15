@@ -59,7 +59,9 @@ class AuthStore:
     def save_auth_record(self, record: NeutralAuthRecord | StoredAuthRecord) -> None:
         raise NotImplementedError
 
-    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | StoredAuthRecord | None:
+    def load_auth_record(
+        self, auth_ref: str
+    ) -> NeutralAuthRecord | StoredAuthRecord | None:
         raise NotImplementedError
 
     def delete_auth(self, connection_id: str) -> bool:
@@ -139,7 +141,9 @@ class FileAuthStore(AuthStore):
         else:
             self.save_auth(mcp_auth_from_neutral(record))
 
-    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | StoredAuthRecord | None:
+    def load_auth_record(
+        self, auth_ref: str
+    ) -> NeutralAuthRecord | StoredAuthRecord | None:
         path = self._auth_path(auth_ref)
         if not path.exists():
             return None
@@ -258,7 +262,9 @@ class FileStore(Store):
     def save_auth_record(self, record: NeutralAuthRecord | StoredAuthRecord) -> None:
         self._auth.save_auth_record(record)
 
-    def load_auth_record(self, auth_ref: str) -> NeutralAuthRecord | StoredAuthRecord | None:
+    def load_auth_record(
+        self, auth_ref: str
+    ) -> NeutralAuthRecord | StoredAuthRecord | None:
         return self._auth.load_auth_record(auth_ref)
 
     def delete_auth(self, connection_id: str) -> bool:

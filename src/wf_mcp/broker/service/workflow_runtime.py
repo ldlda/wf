@@ -88,7 +88,13 @@ class WorkflowRuntimeService:
         deployment: WorkflowDeployment | None,
         artifact: WorkflowArtifact | None,
         saved_subgraph_tree: SavedSubgraphTree | None = None,
-    ) -> tuple[Workflow, dict[str, Any], dict[str, Any], dict[str, Any], SourceBindingPlatformContext]:
+    ) -> tuple[
+        Workflow,
+        dict[str, Any],
+        dict[str, Any],
+        dict[str, Any],
+        SourceBindingPlatformContext,
+    ]:
         """Resolve bindings once into the executable pieces core expects.
 
         Saved-run resume still rebuilds prepared dependencies from the current

@@ -467,7 +467,9 @@ def main(argv: list[str] | None = None) -> int:
         success_count = sum(
             1 for item in summaries if item["classification"] == "success"
         )
-        print(json.dumps({"success_count": success_count, "trial_count": len(summaries)}))
+        print(
+            json.dumps({"success_count": success_count, "trial_count": len(summaries)})
+        )
         return 0
     finally:
         if managed_server is not None:

@@ -129,7 +129,9 @@ def test_file_auth_store_writes_new_stored_auth_record_shape(tmp_path: Path) -> 
     assert data["metadata"]["provider"] == "google"
 
 
-def test_file_auth_store_loads_old_format_through_load_auth_record(tmp_path: Path) -> None:
+def test_file_auth_store_loads_old_format_through_load_auth_record(
+    tmp_path: Path,
+) -> None:
     store = FileAuthStore(tmp_path)
     path = tmp_path / "auth" / "github.work.json"
     path.write_text(

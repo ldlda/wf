@@ -113,8 +113,7 @@ def _render_markdown_report(payload: MarkdownInput) -> MarkdownOutput:
         "Actions:",
     ]
     lines.extend(
-        f"- {item.owner} | {item.task} | {item.due}"
-        for item in report.action_items
+        f"- {item.owner} | {item.task} | {item.due}" for item in report.action_items
     )
     lines.extend(["", "Risks:"])
     lines.extend(f"- {risk}" for risk in report.risks)

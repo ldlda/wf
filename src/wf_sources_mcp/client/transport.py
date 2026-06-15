@@ -16,7 +16,9 @@ from wf_sources_mcp.connections import McpSourceConnection
 from wf_sources_mcp.transports import HttpSourceTransport, StdioSourceTransport
 
 
-def _as_stored_auth(auth: AuthRecord | StoredAuthRecord | None) -> StoredAuthRecord | None:
+def _as_stored_auth(
+    auth: AuthRecord | StoredAuthRecord | None,
+) -> StoredAuthRecord | None:
     if auth is None or isinstance(auth, StoredAuthRecord):
         return auth
     return auth_record_from_compat(

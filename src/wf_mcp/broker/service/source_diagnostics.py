@@ -150,7 +150,9 @@ class SourceDiagnosticsProvider:
                 "fetched_at_epoch_ms": None
                 if snapshot is None
                 else snapshot.fetched_at_epoch_ms,
-                "max_age_seconds": None if snapshot is None else snapshot.max_age_seconds,
+                "max_age_seconds": None
+                if snapshot is None
+                else snapshot.max_age_seconds,
                 "node_count": 0 if snapshot is None else len(snapshot.nodes),
                 "resource_count": 0 if snapshot is None else len(snapshot.resources),
                 "prompt_count": 0 if snapshot is None else len(snapshot.prompts),

@@ -186,7 +186,9 @@ class HttpxOAuthTokenRefresher:
             payload = response.json()
         access_token = payload.get("access_token")
         if not isinstance(access_token, str) or not access_token:
-            raise ValueError("OAuth token refresh response did not include access_token")
+            raise ValueError(
+                "OAuth token refresh response did not include access_token"
+            )
         expires_in = payload.get("expires_in")
         return OAuthAccessToken(
             access_token=access_token,
@@ -232,7 +234,9 @@ class McpAuthBinder:
         if isinstance(auth, EnvAuth):
             raise ValueError("env auth is not supported for MCP HTTP")
         if isinstance(auth, OpaqueAuth):
-            raise ValueError(f"opaque auth scheme {auth.scheme!r} is not supported for MCP HTTP")
+            raise ValueError(
+                f"opaque auth scheme {auth.scheme!r} is not supported for MCP HTTP"
+            )
         raise TypeError(f"unsupported auth variant {type(auth).__name__}")
 
     async def bind_stdio_auth(
@@ -244,7 +248,9 @@ class McpAuthBinder:
         auth = record.auth
         if isinstance(auth, EnvAuth):
             return BoundMcpStdioAuth(env=dict(auth.env))
-        if isinstance(auth, BearerAuth | HeaderAuth | OAuthRefreshTokenAuth | OpaqueAuth):
+        if isinstance(
+            auth, BearerAuth | HeaderAuth | OAuthRefreshTokenAuth | OpaqueAuth
+        ):
             raise ValueError(f"{auth.kind} auth is not supported for MCP stdio")
         raise TypeError(f"unsupported auth variant {type(auth).__name__}")
 

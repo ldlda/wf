@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from dataclasses import replace
 from pathlib import Path
 from typing import Any, cast
@@ -98,26 +97,26 @@ def _deployment_api(
     context = context_from_service(service)
     return WorkflowDeploymentApi(context), service
 
+
 @pytest.mark.asyncio
 async def test_save_deployment_stores_and_returns_stable_fields(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_save")
     api, _service = _deployment_api(artifact_store)
 
     result = await api.save_deployment(
-            WorkflowDeployment(
-                id="echo.personal",
-                artifact_id="echo",
-                artifact_version=1,
-                bindings=[
-                    {"logical_source": "demo", "concrete_source": "demo.personal"}
-                ],
-            ).model_dump(mode="json")
-        )
+        WorkflowDeployment(
+            id="echo.personal",
+            artifact_id="echo",
+            artifact_version=1,
+            bindings=[{"logical_source": "demo", "concrete_source": "demo.personal"}],
+        ).model_dump(mode="json")
+    )
 
     assert result["saved"] is True
     assert result["deployment_id"] == "echo.personal"
     assert result["artifact_id"] == "echo"
     assert result["artifact_version"] == 1
+
 
 @pytest.mark.asyncio
 async def test_list_deployments_returns_compact_summaries(tmp_path: Path) -> None:
@@ -141,7 +140,9 @@ async def test_list_deployments_returns_compact_summaries(tmp_path: Path) -> Non
 
 
 @pytest.mark.asyncio
-async def test_list_deployments_returns_empty_without_artifact_store(tmp_path: Path) -> None:
+async def test_list_deployments_returns_empty_without_artifact_store(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_no_store")
     _api, service = _deployment_api(artifact_store)
     context = replace(context_from_service(service), artifact_store=None)
@@ -173,7 +174,9 @@ async def test_delete_deployment_removes_one(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_validate_deployment_returns_runnable_for_valid_binding(tmp_path: Path) -> None:
+async def test_validate_deployment_returns_runnable_for_valid_binding(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_validate_runnable")
     api, service = _deployment_api(artifact_store, register_echo=True)
     artifact_store.save_artifact(_echo_artifact())
@@ -186,7 +189,9 @@ async def test_validate_deployment_returns_runnable_for_valid_binding(tmp_path: 
         )
     )
 
-    result = await api.validate_deployment(deployment_id="echo.personal", live_check=False)
+    result = await api.validate_deployment(
+        deployment_id="echo.personal", live_check=False
+    )
 
     assert result["status"] == "runnable"
     assert result["diagnostics"] == []
@@ -202,7 +207,9 @@ class FailingLivenessAdapter:
 
 
 @pytest.mark.asyncio
-async def test_validate_deployment_live_check_calls_live_checker(tmp_path: Path) -> None:
+async def test_validate_deployment_live_check_calls_live_checker(
+    tmp_path: Path,
+) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "deploy_validate_live")
     api, service = _deployment_api(artifact_store, register_echo=True)
     artifact_store.save_artifact(_echo_artifact())
@@ -219,7 +226,9 @@ async def test_validate_deployment_live_check_calls_live_checker(tmp_path: Path)
         cast(BackendAdapter, FailingLivenessAdapter()),
     )
 
-    result = await api.validate_deployment(deployment_id="echo.personal", live_check=True)
+    result = await api.validate_deployment(
+        deployment_id="echo.personal", live_check=True
+    )
 
     assert result["status"] == "unrunnable"
     assert result["diagnostics"][0]["code"] == "source_unreachable"

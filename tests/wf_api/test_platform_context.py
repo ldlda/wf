@@ -25,7 +25,9 @@ def test_platform_context_uses_identity_for_platform_sources() -> None:
 
 
 def test_platform_context_rejects_unbound_source() -> None:
-    context = SourceBindingPlatformContext(source_bindings={}, read_resource_handler=None)
+    context = SourceBindingPlatformContext(
+        source_bindings={}, read_resource_handler=None
+    )
 
     with pytest.raises(KeyError, match="unbound logical source"):
         context.resolve_source("drive")

@@ -145,7 +145,9 @@ def challenge_report_schema_errors(report: dict[str, Any]) -> list[str]:
     read = report.get("read")
     if isinstance(read, dict):
         missing_read = sorted(CHALLENGE_REPORT_READ_FIELDS.difference(read))
-        errors.extend(f"missing challenge_report.read.{field}" for field in missing_read)
+        errors.extend(
+            f"missing challenge_report.read.{field}" for field in missing_read
+        )
         for field in CHALLENGE_REPORT_READ_FIELDS.intersection(read):
             if not isinstance(read[field], bool):
                 errors.append(f"challenge_report.read.{field} must be boolean")
@@ -156,8 +158,7 @@ def challenge_report_schema_errors(report: dict[str, Any]) -> list[str]:
     if isinstance(attempts, dict):
         missing_attempts = sorted(CHALLENGE_REPORT_ATTEMPT_FIELDS.difference(attempts))
         errors.extend(
-            f"missing challenge_report.attempts.{field}"
-            for field in missing_attempts
+            f"missing challenge_report.attempts.{field}" for field in missing_attempts
         )
         for field in CHALLENGE_REPORT_ATTEMPT_FIELDS.intersection(attempts):
             value = attempts[field]

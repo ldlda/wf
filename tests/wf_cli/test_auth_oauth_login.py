@@ -77,12 +77,16 @@ class _FakeOAuthClient:
         self.auth_kwargs: dict[str, object] = {}
         self.fetch_calls: list[str] = []
 
-    def create_authorization_url(self, auth_url: str, **kwargs: object) -> tuple[str, str]:
+    def create_authorization_url(
+        self, auth_url: str, **kwargs: object
+    ) -> tuple[str, str]:
         assert auth_url == "https://accounts.google.com/o/oauth2/v2/auth"
         self.auth_kwargs = dict(kwargs)
         return self.authorization_url, "state-123"
 
-    async def fetch_token(self, token_url: str, authorization_response: str) -> dict[str, object]:
+    async def fetch_token(
+        self, token_url: str, authorization_response: str
+    ) -> dict[str, object]:
         self.fetch_calls.append(authorization_response)
         return {
             "refresh_token": "refresh",
@@ -144,7 +148,9 @@ async def test_oauth_code_login_flow_callback_can_supply_response() -> None:
     assert client.fetch_calls == ["http://127.0.0.1/callback?code=abc&state=state-123"]
 
 
-def test_auth_oauth_login_saves_record_from_provider_profile(monkeypatch, tmp_path) -> None:
+def test_auth_oauth_login_saves_record_from_provider_profile(
+    monkeypatch, tmp_path
+) -> None:
     saved: list[dict[str, object]] = []
 
     class _FakeAdmin:
@@ -178,14 +184,16 @@ def test_auth_oauth_login_saves_record_from_provider_profile(monkeypatch, tmp_pa
                             "auth_url": "https://accounts.google.com/o/oauth2/v2/auth",
                             "token_url": "https://oauth2.googleapis.com/token",
                             "client_id_env": "GOOGLE_OAUTH_CLIENT_ID",
-                        "scopes": ["https://www.googleapis.com/auth/drive.readonly"],
-                        "extra_authorize_params": {
-                            "access_type": "offline",
-                            "prompt": "consent",
-                        },
+                            "scopes": [
+                                "https://www.googleapis.com/auth/drive.readonly"
+                            ],
+                            "extra_authorize_params": {
+                                "access_type": "offline",
+                                "prompt": "consent",
+                            },
+                        }
                     }
                 }
-            }
             }
         ),
         encoding="utf-8",

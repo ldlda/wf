@@ -43,8 +43,6 @@ def register_methods(
         params: DiagnoseSourceParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
-            return await server.source_admin.diagnose_source(
-                source_id=params.source_id
-            )
+            return await server.source_admin.diagnose_source(source_id=params.source_id)
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)

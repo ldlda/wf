@@ -170,12 +170,12 @@ def test_wf_config_validate_uses_global_config_when_path_omitted(
     payload = json.loads(result.output)
     assert payload["valid"] is True
     assert payload["path"] == str(config_path)
-    assert payload["sources"] == [
-        {"id": "wf.std", "kind": "stdlib", "status": "ok"}
-    ]
+    assert payload["sources"] == [{"id": "wf.std", "kind": "stdlib", "status": "ok"}]
 
 
-def test_wf_config_validate_reports_python_source_import_failure(tmp_path: Path) -> None:
+def test_wf_config_validate_reports_python_source_import_failure(
+    tmp_path: Path,
+) -> None:
     config_path = tmp_path / "wf.config.json"
     config_path.write_text(
         json.dumps(

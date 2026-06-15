@@ -124,7 +124,9 @@ class ContentAccessService:
         return _truncate_resource_payload(payload, max_chars=max_chars)
 
 
-def _truncate_resource_payload(payload: dict[str, Any], *, max_chars: int) -> dict[str, Any]:
+def _truncate_resource_payload(
+    payload: dict[str, Any], *, max_chars: int
+) -> dict[str, Any]:
     """Bound text content returned by source URI reads without mutating upstream payload."""
 
     contents = payload.get("contents")

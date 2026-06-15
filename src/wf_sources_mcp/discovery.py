@@ -65,10 +65,10 @@ async def _list_optional_capabilities(
         root = _root_exception(exc)
         if isinstance(root, McpError) and root.error.code == METHOD_NOT_FOUND:
             return []
-        if (
-            isinstance(root, httpx.HTTPStatusError)
-            and root.response.status_code in {400, 404}
-        ):
+        if isinstance(root, httpx.HTTPStatusError) and root.response.status_code in {
+            400,
+            404,
+        }:
             return []
         raise
 

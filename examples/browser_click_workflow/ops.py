@@ -1,11 +1,11 @@
 from __future__ import annotations
 
+import html
 import json
 import threading
 import uuid
 import webbrowser
 from dataclasses import dataclass
-import html
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import ClassVar

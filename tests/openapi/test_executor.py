@@ -103,7 +103,9 @@ async def test_call_openapi_operation_maps_unexpected_status() -> None:
 
 
 @pytest.mark.asyncio
-async def test_call_openapi_operation_maps_invalid_request_to_validation_error() -> None:
+async def test_call_openapi_operation_maps_invalid_request_to_validation_error() -> (
+    None
+):
     app = load_openapi_app(FIXTURE)
     operation = next(
         op for op in load_openapi_operations(FIXTURE) if op.name == "create_pet"

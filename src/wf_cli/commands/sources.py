@@ -148,5 +148,7 @@ def _source_capability_names(
         raise ValueError("source inventory missing capabilities object")
     value = capabilities.get(capability_key)
     if not isinstance(value, list):
-        raise ValueError(f"source inventory capabilities.{capability_key} must be a list")
+        raise ValueError(
+            f"source inventory capabilities.{capability_key} must be a list"
+        )
     return [str(item) for item in value]
