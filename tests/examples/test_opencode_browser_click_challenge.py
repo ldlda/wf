@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from pathlib import Path
 
+from examples.agent_challenges.browser_click_challenge import (
+    reports,
+    run_opencode_trials,
+)
 from examples.agent_challenges.browser_click_challenge.challenge import (
     LOCAL_WF_COMMAND_PREFIX,
     TrialConfig,
@@ -25,6 +30,7 @@ from examples.agent_challenges.browser_click_challenge.reports import (
 )
 from examples.agent_challenges.browser_click_challenge.run_opencode_trials import (
     prepare_trial_workspace,
+    run_trial,
     starting_trial_index,
     trial_output_path,
     wf_command_prefix_for_config,
@@ -102,6 +108,115 @@ def test_build_opencode_command_with_attach(tmp_path: Path) -> None:
 
     assert "--attach" in command
     assert "http://127.0.0.1:4096" in command
+
+
+def test_run_trial_saves_final_report_from_successful_result(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    workspace = tmp_path / "trial"
+    workspace.mkdir()
+    prompt = workspace / "prompt.md"
+    prompt.write_text("hello", encoding="utf-8")
+    workflow_file = workspace / "workflow.plan.json"
+    report = "\n".join(
+        [
+            "## Report",
+            "",
+            "```yaml",
+            "challenge_report:",
+            "  used_product_path: true",
+            "  used_helper_script: false",
+            f'  workflow_file: "{workflow_file.as_posix()}"',
+            '  deployment_id: "browser_click_case_study.default"',
+            '  run_id: "run_123"',
+            "  before_clicked: false",
+            "  after_clicked: true",
+            "  run_failed: false",
+            "  leftover_processes: false",
+            "  read:",
+            "    skills: true",
+            "    docs: true",
+            "    product_code: false",
+            "    adjacent_attempts: false",
+            "    prior_store: false",
+            "    existing_solution: false",
+            "  attempts:",
+            "    total: 1",
+            "    failed: 0",
+            "  missed_requirements:",
+            '    - "none"',
+            '  notes: "ok"',
+            "```",
+            "",
+        ]
+    )
+
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=["opencode"],
+            returncode=0,
+            stdout=json.dumps({"text": report}),
+            stderr="",
+        )
+
+    monkeypatch.setattr(run_opencode_trials.subprocess, "run", fake_run)
+    config = TrialConfig(
+        model="opencode/mimo-v2.5-free",
+        variant="high",
+        prompt_path=prompt,
+        attach_url=None,
+        timeout_seconds=120,
+        wf_command_prefix=LOCAL_WF_COMMAND_PREFIX,
+        server_context="Use local CLI mode.",
+    )
+
+    result = run_trial(config, index=1, results_dir=tmp_path / "results")
+
+    assert result["classification"] == "success"
+    assert result["report_path"] == (workspace / "final-report.md").as_posix()
+    assert (workspace / "final-report.md").read_text(encoding="utf-8") == (
+        report.rstrip() + "\n"
+    )
+    saved_result = json.loads(
+        (tmp_path / "results" / "opencode_mimo-v2.5-free-trial-001.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert saved_result["report_path"] == (workspace / "final-report.md").as_posix()
+
+
+def test_run_trial_records_report_save_error_for_timeout(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    prompt = tmp_path / "prompt.md"
+    prompt.write_text("hello", encoding="utf-8")
+
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        raise subprocess.TimeoutExpired(cmd=["opencode"], timeout=120)
+
+    monkeypatch.setattr(run_opencode_trials.subprocess, "run", fake_run)
+    config = TrialConfig(
+        model="opencode/mimo-v2.5-free",
+        variant="high",
+        prompt_path=prompt,
+        attach_url=None,
+        timeout_seconds=120,
+        wf_command_prefix=LOCAL_WF_COMMAND_PREFIX,
+        server_context="Use local CLI mode.",
+    )
+
+    result = run_trial(config, index=1, results_dir=tmp_path / "results")
+
+    assert result["classification"] == "timeout"
+    assert result["report_save_error"] == "result file is missing parsed output"
+    saved_result = json.loads(
+        (tmp_path / "results" / "opencode_mimo-v2.5-free-trial-001.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert saved_result["report_save_error"] == "result file is missing parsed output"
 
 
 def test_parse_opencode_output_reads_json_object() -> None:
@@ -374,6 +489,29 @@ def test_report_from_result_infers_workspace_from_prompt_path(tmp_path: Path) ->
     assert report_text == "# Report\n\nok"
 
 
+def test_report_from_result_recovers_text_from_stdout_when_parsed_is_null(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "trial"
+    workspace.mkdir()
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "config": {"prompt_path": str(workspace / "prompt.md")},
+                "parsed": None,
+                "stdout": json.dumps({"type": "message", "text": "# Partial report"}),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    inferred_workspace, report_text = report_from_result(result_path)
+
+    assert inferred_workspace == workspace
+    assert report_text == "# Partial report"
+
+
 def test_save_trial_report_from_result_writes_inferred_workspace(
     tmp_path: Path,
     capsys,
@@ -397,6 +535,29 @@ def test_save_trial_report_from_result_writes_inferred_workspace(
         "# Report\n\nok\n"
     )
     assert (workspace / "final-report.md").as_posix() in capsys.readouterr().out
+
+
+def test_save_trial_report_requires_input_when_workspace_only(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    class _InteractiveStdin:
+        def isatty(self) -> bool:
+            return True
+
+        def read(self) -> str:
+            raise AssertionError("should not block on interactive stdin")
+
+    workspace = tmp_path / "trial"
+    workspace.mkdir()
+    monkeypatch.setattr(reports.sys, "stdin", _InteractiveStdin())
+
+    try:
+        save_trial_report_main([str(workspace)])
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:
+        raise AssertionError("expected argparse failure")
 
 
 def test_prepare_trial_workspace_uses_next_available_directory(

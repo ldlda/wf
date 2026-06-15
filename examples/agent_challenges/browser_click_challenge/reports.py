@@ -8,7 +8,10 @@ from pathlib import Path
 from examples.agent_challenges.browser_click_challenge.classification import (
     extract_challenge_report,
 )
-from examples.agent_challenges.browser_click_challenge.opencode_io import _result_text
+from examples.agent_challenges.browser_click_challenge.opencode_io import (
+    _result_text,
+    parse_opencode_output,
+)
 
 
 def save_report(
@@ -35,12 +38,42 @@ def report_from_result(result_path: Path) -> tuple[Path, str]:
     result = json.loads(result_path.read_text(encoding="utf-8"))
     if not isinstance(result, dict):
         raise ValueError("result file must contain a JSON object")
-    parsed = result.get("parsed")
-    if not isinstance(parsed, dict):
-        raise ValueError("result file is missing parsed output")
-    report_text = _result_text(parsed)
+    report_text = _report_text_from_result(result)
     workspace = _workspace_from_result(result, report_text)
     return workspace, report_text
+
+
+def save_report_from_result_payload(
+    result: dict[str, object],
+    *,
+    output_name: str = "final-report.md",
+) -> Path:
+    """Save final report text from an in-memory harness result payload."""
+    report_text = _report_text_from_result(result)
+    workspace = _workspace_from_result(result, report_text)
+    return save_report(
+        workspace=workspace,
+        report_text=report_text,
+        output_name=output_name,
+    )
+
+
+def _report_text_from_result(result: dict[str, object]) -> str:
+    parsed = result.get("parsed")
+    if isinstance(parsed, dict):
+        return _result_text(parsed)
+
+    stdout = result.get("stdout")
+    if isinstance(stdout, str) and stdout.strip():
+        try:
+            recovered = parse_opencode_output(stdout)
+        except ValueError as exc:
+            raise ValueError(
+                "result file is missing parsed output and stdout has no report text"
+            ) from exc
+        return _result_text(recovered)
+
+    raise ValueError("result file is missing parsed output")
 
 
 def _workspace_from_result(result: dict[str, object], report_text: str) -> Path:
@@ -61,6 +94,10 @@ def _workspace_from_result(result: dict[str, object], report_text: str) -> Path:
 
 def _read_report_text(input_file: Path | None) -> str:
     if input_file is None:
+        if sys.stdin.isatty():
+            raise ValueError(
+                "manual report mode needs piped stdin, --input-file, or --from-result"
+            )
         return sys.stdin.read()
     return input_file.read_text(encoding="utf-8")
 

@@ -50,6 +50,9 @@ from examples.agent_challenges.browser_click_challenge.opencode_io import (  # n
     build_opencode_command,
     parse_opencode_output,
 )
+from examples.agent_challenges.browser_click_challenge.reports import (  # noqa: E402
+    save_report_from_result_payload,
+)
 
 __all__ = [
     "CHALLENGE_DIR",
@@ -85,6 +88,7 @@ __all__ = [
     "render_prompt",
     "rpc_url_for_port",
     "run_trial",
+    "save_report_from_result_payload",
     "server_command",
     "start_server",
     "starting_trial_index",
@@ -282,6 +286,7 @@ def run_trial(config: TrialConfig, *, index: int, results_dir: Path) -> dict[str
             "stderr": exc.stderr or "",
             "parsed": None,
         }
+        _write_trial_report(payload)
         _write_trial_result(results_dir, config=config, index=index, payload=payload)
         return payload
 
@@ -305,6 +310,7 @@ def run_trial(config: TrialConfig, *, index: int, results_dir: Path) -> dict[str
         "stderr": completed.stderr,
         "parsed": parsed,
     }
+    _write_trial_report(payload)
     _write_trial_result(results_dir, config=config, index=index, payload=payload)
     return payload
 
@@ -325,6 +331,15 @@ def _write_trial_result(
     results_dir.mkdir(parents=True, exist_ok=True)
     path = trial_output_path(results_dir, model=config.model, index=index)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _write_trial_report(payload: dict[str, Any]) -> None:
+    try:
+        report_path = save_report_from_result_payload(payload)
+    except ValueError as exc:
+        payload["report_save_error"] = str(exc)
+        return
+    payload["report_path"] = report_path.as_posix()
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -422,6 +437,8 @@ def main(argv: list[str] | None = None) -> int:
                     "classification": result["classification"],
                     "returncode": result["returncode"],
                     "duration_seconds": round(float(result["duration_seconds"]), 3),
+                    "report_path": result.get("report_path"),
+                    "report_save_error": result.get("report_save_error"),
                 }
             )
             print(json.dumps(summaries[-1], sort_keys=True))
