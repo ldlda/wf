@@ -139,7 +139,7 @@ def wait_for_status(*, rpc_url: str, timeout_seconds: int) -> None:
             return
         last_stderr = completed.stderr
         time.sleep(0.5)
-        raise RuntimeError(f"wf status did not become ready: {last_stderr}")
+    raise RuntimeError(f"wf status did not become ready: {last_stderr}")
 
 
 def _safe_model_name(model: str) -> str:

@@ -5,6 +5,7 @@ import threading
 import uuid
 import webbrowser
 from dataclasses import dataclass
+import html
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from typing import ClassVar
@@ -127,7 +128,7 @@ class _ClickHandler(BaseHTTPRequestHandler):
     def _send_html(self) -> None:
         session = self.server.session
         status = "Button clicked" if session.clicked.is_set() else "Waiting for click"
-        html = f"""<!doctype html>
+        html_doc = f"""<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -142,8 +143,8 @@ class _ClickHandler(BaseHTTPRequestHandler):
 <body>
   <main>
     <h1>Workflow Click Fixture</h1>
-    <button id="continue" type="button">{session.button_label}</button>
-    <p id="status">{status}</p>
+    <button id="continue" type="button">{html.escape(session.button_label)}</button>
+    <p id="status">{html.escape(status)}</p>
   </main>
   <script>
     document.getElementById("continue").addEventListener("click", async () => {{
@@ -153,7 +154,7 @@ class _ClickHandler(BaseHTTPRequestHandler):
   </script>
 </body>
 </html>"""
-        encoded = html.encode("utf-8")
+        encoded = html_doc.encode("utf-8")
         self.send_response(HTTPStatus.OK)
         self.send_header("Content-Type", "text/html; charset=utf-8")
         self.send_header("Content-Length", str(len(encoded)))
