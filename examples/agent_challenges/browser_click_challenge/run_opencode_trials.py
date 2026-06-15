@@ -593,10 +593,13 @@ def main(argv: list[str] | None = None) -> int:
                 trial_wf_command_prefix = wf_command_prefix_for_config(
                     workspace.config_path
                 )
+                workspace_path = workspace.root.relative_to(ROOT).as_posix()
+                config_path = workspace.config_path.relative_to(ROOT).as_posix()
                 trial_server_context = (
                     "No external workflow RPC server is staged. Use the "
                     "per-trial workspace config copied to "
-                    f"`{workspace.config_path.relative_to(ROOT).as_posix()}`."
+                    f"`{config_path}`. Your writable trial workspace is "
+                    f"`{workspace_path}`."
                 )
             config = TrialConfig(
                 model=args.model,
