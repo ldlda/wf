@@ -36,7 +36,7 @@ $metatempfile = New-TemporaryFile
 
 try {
     Set-Content -Path $metatempfile -Value $metadata
-    & $pandoc_diagram --metadata-file=$metatempfile --embed-resources --standalone @RemainingArgs
+    & $pandoc_diagram --metadata-file=$metatempfile --embed-resources --standalone --citeproc @RemainingArgs
 }
 finally {
     Remove-Item $metatempfile

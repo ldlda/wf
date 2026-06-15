@@ -41,6 +41,8 @@ Evidence:
 - `tests/wf_cli/`
 - `tests/wf_transport_rpc_http/`
 - `docs/wf_cli.md`
+- `examples/agent_challenges/browser_click_challenge/` — challenge harness for
+  CLI-operability trials; aggregate model results require manual audit.
 
 ## Validation And Diagnostics
 
@@ -78,6 +80,24 @@ Evidence:
 - `examples/browser_click_workflow/`
 - `tests/examples/test_browser_click_workflow_example.py`
 - `examples/agent_challenges/browser_click_challenge/`
+- `tests/examples/test_opencode_browser_click_challenge.py`
+
+## Agent Challenge Evaluation Protocol
+
+Claim: The project has a repeatable protocol for evaluating whether external
+agents can use the product-facing CLI lifecycle, but aggregate model results are
+not yet claimed.
+
+Evidence:
+
+- `examples/agent_challenges/browser_click_challenge/workspace_template/prompt.md`
+  — challenge prompt and self-report schema.
+- `examples/agent_challenges/browser_click_challenge/run_opencode_trials.py` —
+  trial runner.
+- `examples/agent_challenges/browser_click_challenge/classification.py` —
+  convenience classifier for returned reports.
+- `examples/agent_challenges/browser_click_challenge/reports.py` — report
+  extraction and saving.
 - `tests/examples/test_opencode_browser_click_challenge.py`
 
 ## Limitations
