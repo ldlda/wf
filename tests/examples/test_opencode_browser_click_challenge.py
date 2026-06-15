@@ -592,6 +592,63 @@ def test_prepare_trial_workspace_uses_next_available_directory(
     assert stale.read_text(encoding="utf-8") == "stale"
 
 
+def test_main_uses_custom_workspace_template_and_source_root(
+    tmp_path: Path,
+    monkeypatch,
+    capsys,
+) -> None:
+    template = tmp_path / "template"
+    template.mkdir()
+    (template / "prompt.md").write_text("custom prompt", encoding="utf-8")
+    source_root = tmp_path / "source"
+    source_root.mkdir()
+    workspaces = tmp_path / "workspaces"
+    results = tmp_path / "results"
+
+    def fake_run_trial(
+        config: TrialConfig,
+        *,
+        index: int,
+        results_dir: Path,
+    ) -> dict[str, object]:
+        return {
+            "index": index,
+            "classification": "success",
+            "returncode": 0,
+            "duration_seconds": 1.0,
+            "report_path": config.prompt_path.parent / "final-report.md",
+        }
+
+    monkeypatch.setattr(run_opencode_trials, "run_trial", fake_run_trial)
+
+    assert (
+        run_opencode_trials.main(
+            [
+                "--model",
+                "check/model",
+                "--trials",
+                "1",
+                "--workspace-template",
+                str(template),
+                "--source-root",
+                str(source_root),
+                "--workspaces-dir",
+                str(workspaces),
+                "--results-dir",
+                str(results),
+            ]
+        )
+        == 0
+    )
+
+    workspace = workspaces / "check_model-trial-001"
+    assert workspace.exists()
+    assert (workspace / "prompt.md").read_text(encoding="utf-8") == "custom prompt"
+    config = json.loads((workspace / "wf.config.json").read_text(encoding="utf-8"))
+    assert config["server"]["sources"][0]["path"] == "../../source"
+    assert '"success_count": 1' in capsys.readouterr().out
+
+
 def test_starting_trial_index_accounts_for_existing_results_and_workspaces(
     tmp_path: Path,
 ) -> None:

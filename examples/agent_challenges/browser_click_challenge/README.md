@@ -25,6 +25,10 @@ builds the configured workflow server in the CLI process for each command and
 uses the copied workspace's durable store. It does not reuse in-memory source
 sessions across CLI invocations.
 
+Use `--workspace-template` and `--source-root` to run a same-shape challenge with
+a different prompt template or Python source root. Both default to the bundled
+browser-click example settings.
+
 Use `--start-server` when the trial should exercise the JSON-RPC server path.
 With `--start-server`, the harness starts:
 
@@ -45,6 +49,16 @@ uv run python examples/agent_challenges/browser_click_challenge/run_opencode_tri
   --model opencode/mimo-v2.5-free `
   --variant high `
   --trials 1
+```
+
+Variant challenge example:
+
+```powershell
+uv run python examples/agent_challenges/browser_click_challenge/run_opencode_trials.py `
+  --workspace-template examples/agent_challenges/browser_click_challenge/workspace_template `
+  --source-root examples/browser_click_workflow `
+  --workspaces-dir examples/agent_challenges/browser_click_challenge/workspaces_alt `
+  --results-dir examples/agent_challenges/browser_click_challenge/results_alt
 ```
 
 Results are written to:

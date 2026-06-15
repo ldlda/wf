@@ -144,6 +144,37 @@ registry = [echo]
     ]
 
 
+def test_wf_config_validate_uses_global_config_when_path_omitted(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "wf.config.json"
+    config_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "server": {
+                    "store": {"kind": "filesystem", "root": "store"},
+                    "sources": [{"kind": "stdlib", "id": "wf.std"}],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = CliRunner().invoke(
+        app,
+        ["--config", str(config_path), "config", "validate"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["valid"] is True
+    assert payload["path"] == str(config_path)
+    assert payload["sources"] == [
+        {"id": "wf.std", "kind": "stdlib", "status": "ok"}
+    ]
+
+
 def test_wf_config_validate_reports_python_source_import_failure(tmp_path: Path) -> None:
     config_path = tmp_path / "wf.config.json"
     config_path.write_text(

@@ -5,6 +5,7 @@ from typing import Annotated
 
 import typer
 
+from wf_cli.context import config_path_from_context
 from wf_cli.io import emit_json
 from wf_config import McpSourceConfig, PythonSourceConfig, StdlibSourceConfig
 from wf_config.loader import load_workflow_config
@@ -44,21 +45,25 @@ def migrate_mcp_config(
 
 @app.command("validate")
 def validate_config(
+    ctx: typer.Context,
     config_path: Annotated[
-        Path,
-        typer.Argument(help="Neutral workflow config JSON path."),
-    ],
+        Path | None,
+        typer.Argument(
+            help="Neutral workflow config JSON path. Defaults to global --config.",
+        ),
+    ] = None,
 ) -> None:
     """Validate config shape and trusted static source imports."""
+    resolved_config_path = config_path or Path(config_path_from_context(ctx))
     try:
-        config = load_workflow_config(config_path)
+        config = load_workflow_config(resolved_config_path)
         sources = [_validate_source(source) for source in config.server.sources]
     except Exception as exc:
         raise typer.BadParameter(f"invalid workflow config: {exc}") from exc
     emit_json(
         {
             "valid": True,
-            "path": str(config_path),
+            "path": str(resolved_config_path),
             "sources": sources,
         }
     )

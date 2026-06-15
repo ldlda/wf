@@ -235,6 +235,13 @@ def wf_command_prefix_for_config(config_path: Path) -> str:
     return f"uv run wf --config {path_arg} --local"
 
 
+def _display_path(path: Path) -> str:
+    try:
+        return path.resolve().relative_to(ROOT.resolve()).as_posix()
+    except ValueError:
+        return str(path.resolve())
+
+
 def stop_server(process: subprocess.Popen[str]) -> None:
     if process.poll() is not None:
         return
@@ -360,6 +367,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--prompt", type=Path, default=DEFAULT_PROMPT)
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS_DIR)
     parser.add_argument("--workspaces-dir", type=Path, default=DEFAULT_WORKSPACES_DIR)
+    parser.add_argument(
+        "--workspace-template",
+        type=Path,
+        default=DEFAULT_WORKSPACE_TEMPLATE,
+        help="Template directory copied for each local-mode trial workspace.",
+    )
+    parser.add_argument(
+        "--source-root",
+        type=Path,
+        default=EXAMPLE_SOURCE_ROOT,
+        help="Python source root written into each generated trial config.",
+    )
     parser.add_argument("--server-url", default=None)
     parser.add_argument("--start-server", action="store_true", default=False)
     parser.add_argument("--no-start-server", action="store_false", dest="start_server")
@@ -407,14 +426,16 @@ def main(argv: list[str] | None = None) -> int:
                     model=args.model,
                     index=index,
                     workspaces_dir=args.workspaces_dir,
+                    template_dir=args.workspace_template,
+                    source_root=args.source_root,
                 )
                 if args.prompt == DEFAULT_PROMPT:
                     prompt_path = workspace.prompt_path
                 trial_wf_command_prefix = wf_command_prefix_for_config(
                     workspace.config_path
                 )
-                workspace_path = workspace.root.relative_to(ROOT).as_posix()
-                config_path = workspace.config_path.relative_to(ROOT).as_posix()
+                workspace_path = _display_path(workspace.root)
+                config_path = _display_path(workspace.config_path)
                 trial_server_context = (
                     "No external workflow RPC server is staged. Use the "
                     "per-trial workspace config copied to "
@@ -437,7 +458,7 @@ def main(argv: list[str] | None = None) -> int:
                     "classification": result["classification"],
                     "returncode": result["returncode"],
                     "duration_seconds": round(float(result["duration_seconds"]), 3),
-                    "report_path": result.get("report_path"),
+                    "report_path": _optional_string(result.get("report_path")),
                     "report_save_error": result.get("report_save_error"),
                 }
             )
@@ -451,6 +472,10 @@ def main(argv: list[str] | None = None) -> int:
     finally:
         if managed_server is not None:
             stop_server(managed_server.process)
+
+
+def _optional_string(value: object) -> str | None:
+    return None if value is None else str(value)
 
 
 if __name__ == "__main__":
