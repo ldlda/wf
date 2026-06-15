@@ -54,6 +54,9 @@ clear operator feedback before adding more architecture.
 - Completed: the opencode browser-click challenge harness is local-first via
   `wf --config examples/browser_click_workflow/wf.config.json --local`, with
   optional `--start-server` / `--server-url` modes for JSON-RPC-path trials.
+- Completed: focused draft edit helpers are exposed through RPC/CLI, and
+  `wf deploy create` is accepted as an alias for `wf deploy save`. Docs now
+  distinguish draft shape from raw plan shape for agent authoring.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

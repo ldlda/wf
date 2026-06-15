@@ -667,6 +667,22 @@ the authoring envelope while raw JSON Schema fields remain plain JSON objects.
 path. It validates and compiles the same draft workspace, but fixes the saved
 artifact kind to `wrapper` so clients do not need to pass `kind` manually.
 
+## Focused Edit Commands
+
+For routine edits, prefer focused commands over hand-written JSON Patch:
+
+```bash
+wf draft set-name <workspace_id> --revision <n> --name <name>
+wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome ok --to <target_step_or___end__>
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.text=text
+wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
+```
+
+Use `draft patch` when these focused commands do not cover the structural edit.
+
+Drafts are not raw workflow plans. Drafts use `steps`, `routes`, and step field
+`use`. Raw plans use `nodes`, `edges`, and node field `node`.
+
 ## Patching Drafts
 
 `patch_draft` accepts JSON Patch operations.

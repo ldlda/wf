@@ -76,6 +76,42 @@ class WorkflowDraftSurface(Protocol):
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]: ...
 
+    async def set_draft_name(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        name: str,
+    ) -> dict[str, Any]: ...
+
+    async def set_draft_route(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        outcome: str,
+        target: str,
+    ) -> dict[str, Any]: ...
+
+    async def set_step_input_map(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        input_map: dict[str, str],
+    ) -> dict[str, Any]: ...
+
+    async def set_step_output_map(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        output_map: dict[str, str],
+    ) -> dict[str, Any]: ...
+
     async def validate_draft_workspace(
         self,
         *,

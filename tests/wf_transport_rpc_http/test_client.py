@@ -445,6 +445,53 @@ async def test_rpc_client_creates_artifact_from_plan(tmp_path) -> None:
     assert inspected["id"] == "client_plan"
 
 
+async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            timeout_seconds=5,
+            http_client=http_client,
+        )
+        await client.create_draft_workspace_from_capability(
+            workspace_id="client_focused_ws",
+            capability_name="wf.std.constant",
+            name="client_initial",
+        )
+
+        named = await client.set_draft_name(
+            workspace_id="client_focused_ws",
+            revision=1,
+            name="client_renamed",
+        )
+        routed = await client.set_draft_route(
+            workspace_id="client_focused_ws",
+            revision=2,
+            step_id="call",
+            outcome="ok",
+            target="__end__",
+        )
+        input_mapped = await client.set_step_input_map(
+            workspace_id="client_focused_ws",
+            revision=3,
+            step_id="call",
+            input_map={"input.value": "value"},
+        )
+        output_mapped = await client.set_step_output_map(
+            workspace_id="client_focused_ws",
+            revision=4,
+            step_id="call",
+            output_map={"value": "state.value"},
+        )
+
+    assert named["revision"] == 2
+    assert routed["revision"] == 3
+    assert input_mapped["revision"] == 4
+    assert output_mapped["revision"] == 5
+
+
 async def test_rpc_client_diagnoses_source(tmp_path) -> None:
     calls: list[tuple[str, dict[str, object]]] = []
 

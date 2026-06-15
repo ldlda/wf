@@ -16,6 +16,10 @@ from ..models import (
     ListDraftWorkspacesParams,
     PatchDraftParams,
     PatchDraftWorkspaceParams,
+    SetDraftNameParams,
+    SetDraftRouteParams,
+    SetStepInputMapParams,
+    SetStepOutputMapParams,
     ValidateDraftParams,
     ValidateDraftWorkspaceParams,
 )
@@ -101,6 +105,72 @@ def register_methods(
                 workspace_id=params.workspace_id,
                 revision=params.revision,
                 patch=params.patch,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.set_name", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_set_name(
+        params: SetDraftNameParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.set_draft_name(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                name=params.name,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.set_route", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_set_route(
+        params: SetDraftRouteParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.set_draft_route(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+                outcome=params.outcome,
+                target=params.target,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.set_step_input_map",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_draft_workspaces_set_step_input_map(
+        params: SetStepInputMapParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.set_step_input_map(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+                input_map=params.input_map,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.set_step_output_map",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_draft_workspaces_set_step_output_map(
+        params: SetStepOutputMapParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.set_step_output_map(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+                output_map=params.output_map,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)

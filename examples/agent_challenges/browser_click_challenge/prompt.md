@@ -32,10 +32,17 @@ workflow construction inside a Python script.
 
 Two product-facing authoring paths are acceptable:
 
-- create a draft from one capability, patch it with RFC 6902 JSON Patch, then
-  validate/save/deploy/run it;
-- or, if you already have a complete raw workflow plan file, use
+- draft path: create a draft from one capability, use focused draft edit
+  commands or your own RFC 6902 JSON Patch, then validate/save/deploy/run it;
+- raw-plan path: write your own complete raw workflow plan file and use
   `wf artifact create-from-plan` before deploy/run.
+
+Do not mix the formats. Drafts use `steps`, `routes`, and step field `use`.
+Raw plans use `nodes`, `edges`, and node field `node`. Do not pass draft JSON to
+`wf artifact create-from-plan`.
+
+The deployment command is `wf deploy save`; `wf deploy create` is accepted as an
+alias.
 
 Do not use a pre-existing generated patch or raw-plan answer file. If you find
 one, ignore it and author your own workflow definition.

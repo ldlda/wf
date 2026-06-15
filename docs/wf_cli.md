@@ -286,6 +286,22 @@ wf draft patch concat_ws \
   --input-file draft-patch.json
 ```
 
+Focused draft edit commands cover common graph edits without writing RFC 6902
+patches directly:
+
+```bash
+wf draft set-name concat_ws --revision 1 --name concat_ws_v2
+wf draft set-route concat_ws --revision 2 --step call --outcome ok --to __end__
+wf draft set-input concat_ws --revision 3 --step call --map input.items=items --map input.separator=separator
+wf draft set-output concat_ws --revision 4 --step call --map value=state.value
+```
+
+`set-input` maps graph source paths to node-local input fields:
+`input.text=text` means `input.text -> local.text`.
+
+`set-output` maps node-local output fields to workflow state paths:
+`text=state.text` means `local.text -> state.text`.
+
 Validate:
 
 ```bash
@@ -346,6 +362,10 @@ wf artifact create-from-plan workflow.plan.json \
   --binding local.ops=local.ops
 ```
 
+`artifact create-from-plan` expects the raw workflow plan shape (`nodes`,
+`edges`, `node`). It does not accept draft workspace shape (`steps`, `routes`,
+`use`).
+
 Prefer draft workspaces for iterative authoring. Use `create-from-plan` when a
 compiler, fixture, or advanced client already has a complete raw workflow plan.
 
@@ -367,6 +387,9 @@ wf deploy save concat_ws.default \
   --artifact concat_ws \
   --version 1
 ```
+
+`wf deploy create` is accepted as an alias for `wf deploy save`; docs use
+`save` as the canonical verb because deployments are mutable records.
 
 Save a deployment from JSON:
 
@@ -527,5 +550,4 @@ wf explain --input-file validation-output.json
 - The CLI reuses `wf_mcp` service/config/store wiring in v1.
 - Config loading registers stores and connections, but not arbitrary in-memory
   test `NodeSpec` functions.
-- Targeted draft editing helpers such as `wf draft step add` are not in v1.
 - `wf` does not replace MCP resources/prompts or interactive MCP clients.

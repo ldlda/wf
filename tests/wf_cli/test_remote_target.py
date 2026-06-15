@@ -943,3 +943,151 @@ def test_wf_local_uses_selected_config_sources(tmp_path: Path) -> None:
     assert {capability["name"] for capability in payload["capabilities"]} == {
         "local.ops.echo"
     }
+
+
+def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create-from-capability",
+            "focused_ws",
+            "wf.std.constant",
+            "--name",
+            "focused_initial",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+
+    named = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-name",
+            "focused_ws",
+            "--revision",
+            "1",
+            "--name",
+            "focused_renamed",
+        ],
+    )
+    routed = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-route",
+            "focused_ws",
+            "--revision",
+            "2",
+            "--step",
+            "call",
+            "--outcome",
+            "ok",
+            "--to",
+            "__end__",
+        ],
+    )
+    input_mapped = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-input",
+            "focused_ws",
+            "--revision",
+            "3",
+            "--step",
+            "call",
+            "--map",
+            "input.value=value",
+        ],
+    )
+    output_mapped = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-output",
+            "focused_ws",
+            "--revision",
+            "4",
+            "--step",
+            "call",
+            "--map",
+            "value=state.value",
+        ],
+    )
+    inspected = runner.invoke(
+        app,
+        [*base_args, "draft", "inspect", "focused_ws", "--include-draft"],
+    )
+
+    assert named.exit_code == 0, named.output
+    assert routed.exit_code == 0, routed.output
+    assert input_mapped.exit_code == 0, input_mapped.output
+    assert output_mapped.exit_code == 0, output_mapped.output
+    assert inspected.exit_code == 0, inspected.output
+    payload = json.loads(inspected.output)
+    draft = payload["draft"]
+    assert draft["name"] == "focused_renamed"
+    assert draft["routes"]["call"]["ok"] == "__end__"
+    assert draft["steps"]["call"]["input"] == [
+        {
+            "target": {"root": "local", "parts": ["value"]},
+            "path": {"root": "input", "parts": ["value"]},
+        }
+    ]
+    assert draft["steps"]["call"]["output"] == [
+        {
+            "source": {"root": "local", "parts": ["value"]},
+            "target": {"root": "state", "parts": ["value"]},
+        }
+    ]
+
+
+def test_wf_deploy_create_alias_saves_deployment(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    asyncio.run(
+        server.api.create_artifact_from_plan(
+            artifact_id="alias_artifact",
+            version=1,
+            title="Alias Artifact",
+            plan=_constant_plan(),
+            outcomes=("ok",),
+        )
+    )
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+
+    created = runner.invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "--url",
+            "http://test/rpc",
+            "deploy",
+            "create",
+            "alias_artifact.default",
+            "--artifact",
+            "alias_artifact",
+            "--version",
+            "1",
+        ],
+    )
+
+    assert created.exit_code == 0, created.output
+    payload = json.loads(created.output)
+    assert payload["deployment_id"] == "alias_artifact.default"

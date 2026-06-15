@@ -69,6 +69,74 @@ class RpcDraftClientMixin:
             {"workspace_id": workspace_id, "revision": revision, "patch": patch},
         )
 
+    async def set_draft_name(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        name: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.set_name",
+            {"workspace_id": workspace_id, "revision": revision, "name": name},
+        )
+
+    async def set_draft_route(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        outcome: str,
+        target: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.set_route",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "outcome": outcome,
+                "target": target,
+            },
+        )
+
+    async def set_step_input_map(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        input_map: dict[str, str],
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.set_step_input_map",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "input_map": input_map,
+            },
+        )
+
+    async def set_step_output_map(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        output_map: dict[str, str],
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.set_step_output_map",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "output_map": output_map,
+            },
+        )
+
     async def validate_draft_workspace(
         self: RpcCaller,
         *,

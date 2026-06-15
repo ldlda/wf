@@ -69,6 +69,21 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_step_input_map`
 - `set_step_output_map`
 
+CLI equivalents:
+
+```bash
+wf draft set-name <workspace_id> --revision <n> --name <name>
+wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome ok --to <target>
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.text=text
+wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
+```
+
+`set-input` direction: `input.text=text` means graph source `input.text` maps to
+node-local target `local.text`.
+
+`set-output` direction: `text=state.text` means node-local source `local.text`
+maps to graph target `state.text`.
+
 Use JSON Patch for structural edits the helpers do not cover.
 
 For larger patches, write a JSON Patch array to a file and pass it with

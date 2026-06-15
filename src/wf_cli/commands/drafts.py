@@ -10,6 +10,18 @@ from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_value
 from wf_cli.remote_errors import run_cli_operation
 
+
+def _parse_map_flags(values: list[str] | None) -> dict[str, str]:
+    parsed: dict[str, str] = {}
+    for item in values or []:
+        source, separator, target = item.partition("=")
+        if separator != "=" or not source or not target:
+            raise typer.BadParameter("--map must use source=target")
+        if source in parsed:
+            raise typer.BadParameter(f"duplicate --map for {source!r}")
+        parsed[source] = target
+    return parsed
+
 app = typer.Typer(
     name="draft",
     help="Create, inspect, patch, validate, and save draft workflows.",
@@ -113,6 +125,122 @@ def patch_draft(
                 workspace_id=workspace_id,
                 revision=revision,
                 patch=patch,
+            ),
+        )
+    )
+
+
+@app.command("set-name")
+def set_draft_name(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    name: Annotated[str, typer.Option("--name", help="New draft workflow name.")],
+) -> None:
+    """Set the draft workflow name without writing JSON Patch manually."""
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.set_draft_name(
+                workspace_id=workspace_id,
+                revision=revision,
+                name=name,
+            ),
+        )
+    )
+
+
+@app.command("set-route")
+def set_draft_route(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step_id: Annotated[str, typer.Option("--step", help="Draft step id.")],
+    outcome: Annotated[str, typer.Option("--outcome", help="Step outcome.")],
+    target: Annotated[
+        str, typer.Option("--to", help="Target step id or __end__.")
+    ],
+) -> None:
+    """Set one route: steps.<step> outcome -> target."""
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.set_draft_route(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step_id,
+                outcome=outcome,
+                target=target,
+            ),
+        )
+    )
+
+
+@app.command("set-input")
+def set_step_input_map(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step_id: Annotated[str, typer.Option("--step", help="Draft step id.")],
+    mapping: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--map",
+            help="Input binding SOURCE=LOCAL_TARGET. Repeatable. Example: input.text=text",
+        ),
+    ] = None,
+) -> None:
+    """Replace one step's input map without writing JSON Patch manually."""
+    input_map = _parse_map_flags(mapping)
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.set_step_input_map(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step_id,
+                input_map=input_map,
+            ),
+        )
+    )
+
+
+@app.command("set-output")
+def set_step_output_map(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step_id: Annotated[str, typer.Option("--step", help="Draft step id.")],
+    mapping: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--map",
+            help="Output binding LOCAL_SOURCE=STATE_TARGET. Repeatable. Example: text=state.text",
+        ),
+    ] = None,
+) -> None:
+    """Replace one step's output map without writing JSON Patch manually."""
+    output_map = _parse_map_flags(mapping)
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.set_step_output_map(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step_id,
+                output_map=output_map,
             ),
         )
     )

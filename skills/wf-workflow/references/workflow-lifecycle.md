@@ -18,12 +18,14 @@ validated, runnable deployment.
    - MCP: `wf.workflow.create_draft_workspace_from_capability`
    - CLI: `wf draft create-from-capability <workspace_id> <capability>`
 5. Inspect/patch/validate the workspace until valid.
-   - Prefer focused helpers when available.
-   - Use JSON Patch only for general edits.
+   - Use focused CLI commands (`set-name`, `set-route`, `set-input`, `set-output`)
+     for common edits.
+   - Use JSON Patch only for general structural edits.
 6. Save an artifact.
    - Full workflow: `create_artifact_from_workspace`
    - Reusable wrapper: `create_wrapper_from_workspace`
 7. Save and validate a deployment.
+   - `wf deploy save` (or `wf deploy create` alias)
 8. Run the deployment.
 9. Inspect the run summary first; read bounded traces only when needed.
 
@@ -42,6 +44,10 @@ wf artifact create-from-plan workflow.plan.json \
   --outcome ok \
   --binding <logical_source>=<concrete_source>
 ```
+
+Do not pass draft JSON to `artifact create-from-plan`. Drafts use `steps`,
+`routes`, and step field `use`. Raw plans use `nodes`, `edges`, and node field
+`node`.
 
 Then continue with the normal deployment and run steps:
 

@@ -111,6 +111,34 @@ class PatchDraftWorkspaceParams(RpcParamsModel):
     patch: list[dict[str, Any]]
 
 
+class SetDraftNameParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    name: str = Field(min_length=1)
+
+
+class SetDraftRouteParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    outcome: str = Field(min_length=1)
+    target: str = Field(min_length=1)
+
+
+class SetStepInputMapParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    input_map: dict[str, str]
+
+
+class SetStepOutputMapParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    output_map: dict[str, str]
+
+
 class ValidateDraftWorkspaceParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
 

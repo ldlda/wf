@@ -644,6 +644,89 @@ async def test_rpc_create_artifact_from_plan(tmp_path) -> None:
     assert inspected["result"]["plan"]["name"] == "rpc_constant"
 
 
+async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "focused_ws",
+                "capability_name": "wf.std.constant",
+                "name": "focused_initial",
+            },
+        )
+        assert created["result"]["workspace_id"] == "focused_ws"
+
+        named = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_name",
+            {
+                "workspace_id": "focused_ws",
+                "revision": 1,
+                "name": "focused_renamed",
+            },
+        )
+        routed = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_route",
+            {
+                "workspace_id": "focused_ws",
+                "revision": 2,
+                "step_id": "call",
+                "outcome": "ok",
+                "target": "__end__",
+            },
+        )
+        input_mapped = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_step_input_map",
+            {
+                "workspace_id": "focused_ws",
+                "revision": 3,
+                "step_id": "call",
+                "input_map": {"input.value": "value"},
+            },
+        )
+        output_mapped = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_step_output_map",
+            {
+                "workspace_id": "focused_ws",
+                "revision": 4,
+                "step_id": "call",
+                "output_map": {"value": "state.value"},
+            },
+        )
+        fetched = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "focused_ws", "include_draft": True},
+        )
+
+    assert named["result"]["revision"] == 2
+    assert routed["result"]["revision"] == 3
+    assert input_mapped["result"]["revision"] == 4
+    assert output_mapped["result"]["revision"] == 5
+    draft = fetched["result"]["draft"]
+    assert draft["name"] == "focused_renamed"
+    assert draft["routes"]["call"]["ok"] == "__end__"
+    assert draft["steps"]["call"]["input"] == [
+        {
+            "target": {"root": "local", "parts": ["value"]},
+            "path": {"root": "input", "parts": ["value"]},
+        }
+    ]
+    assert draft["steps"]["call"]["output"] == [
+        {
+            "source": {"root": "local", "parts": ["value"]},
+            "target": {"root": "state", "parts": ["value"]},
+        }
+    ]
+
+
 async def test_rpc_diagnoses_source(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

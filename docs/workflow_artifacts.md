@@ -718,6 +718,26 @@ workflow can wrap a raw MCP call and map result content to outcomes such as
 `found`, `not_found`, `unauthorized`, or `rate_limited` when those meanings are
 known for that tool.
 
+## Raw Plan Import
+
+`wf artifact create-from-plan` imports a complete raw workflow plan. This is an
+advanced/compiler path, not the interactive draft authoring path.
+
+Raw plans use execution-model fields such as:
+
+- `nodes`
+- `edges`
+- node field `node`
+
+Draft workspaces use authoring fields such as:
+
+- `steps`
+- `routes`
+- step field `use`
+
+Do not pass draft JSON to `artifact create-from-plan`; save drafts with
+`wf draft save`.
+
 ## Open Questions
 
 - How should child workflow interrupts compose with parent workflow execution

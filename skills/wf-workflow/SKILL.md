@@ -41,9 +41,12 @@ low-level escape hatch or you already have a complete compiler/generated plan.
   lifecycle behavior.
 - Treat wrapper hints as scaffolding, not semantic truth.
 - Use draft workspaces for iterative authoring; avoid rewriting full drafts.
+- Prefer focused draft edit commands before hand-writing JSON Patch.
 - If a complete raw JSON/YAML plan already exists, the CLI escape hatch is
   `wf artifact create-from-plan`; do not write helper scripts that call
   `WorkflowApi.create_artifact_from_plan` directly.
+- Use `artifact create-from-plan` only for complete raw plans; do not pass draft
+  JSON to it.
 - Use explicit source bindings at deployment time.
 - Keep traces bounded with `trace_range`.
 - Do not expect a newly saved workflow to become a new MCP tool mid-session.
