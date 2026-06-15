@@ -9,77 +9,96 @@ import sys
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Literal
-
-import yaml
-
-Classification = Literal[
-    "success",
-    "workflow_script",
-    "workflow_not_used",
-    "run_failed",
-    "timeout",
-    "parse_error",
-    "unknown",
-]
+from typing import Any
 
 ROOT = Path(__file__).resolve().parents[3]
-CHALLENGE_DIR = Path(__file__).resolve().parent
-DEFAULT_PROMPT = CHALLENGE_DIR / "prompt.md"
-DEFAULT_RESULTS_DIR = CHALLENGE_DIR / "results"
-DEFAULT_WORKSPACES_DIR = CHALLENGE_DIR / "workspaces"
-DEFAULT_WORKSPACE_TEMPLATE = CHALLENGE_DIR / "workspace_template"
-DEFAULT_SERVER_PORT = 8772
-EXAMPLE_CONFIG = ROOT / "examples" / "browser_click_workflow" / "wf.config.json"
-EXAMPLE_SOURCE_ROOT = ROOT / "examples" / "browser_click_workflow"
-EXAMPLE_CONFIG_ARG = "examples/browser_click_workflow/wf.config.json"
-LOCAL_WF_COMMAND_PREFIX = f"uv run wf --config {EXAMPLE_CONFIG_ARG} --local"
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
+from examples.agent_challenges.browser_click_challenge.challenge import (  # noqa: E402
+    CHALLENGE_DIR,
+    CHALLENGE_REPORT_ATTEMPT_FIELDS,
+    CHALLENGE_REPORT_READ_FIELDS,
+    CHALLENGE_REPORT_REQUIRED_FIELDS,
+    DEFAULT_PROMPT,
+    DEFAULT_RESULTS_DIR,
+    DEFAULT_SERVER_PORT,
+    DEFAULT_WORKSPACE_TEMPLATE,
+    DEFAULT_WORKSPACES_DIR,
+    EXAMPLE_CONFIG,
+    EXAMPLE_CONFIG_ARG,
+    EXAMPLE_SOURCE_ROOT,
+    LOCAL_WF_COMMAND_PREFIX,
+    Classification,
+    TrialConfig,
+    TrialWorkspace,
+    render_prompt,
+    rpc_url_for_port,
+    server_command,
+)
+from examples.agent_challenges.browser_click_challenge.classification import (  # noqa: E402
+    _contains_bool_marker,
+    challenge_report_schema_errors,
+    classify_challenge_report,
+    classify_output,
+    extract_challenge_report,
+)
+from examples.agent_challenges.browser_click_challenge.opencode_io import (  # noqa: E402
+    _event_text,
+    _parse_jsonl_tail,
+    _result_text,
+    build_opencode_command,
+    parse_opencode_output,
+)
 
-def rpc_url_for_port(port: int) -> str:
-    return f"http://127.0.0.1:{port}/rpc"
-
-
-def server_command(*, port: int) -> list[str]:
-    return [
-        "uv",
-        "run",
-        "wf-rpc-server",
-        "--config",
-        EXAMPLE_CONFIG_ARG,
-        "--host",
-        "127.0.0.1",
-        "--port",
-        str(port),
-    ]
-
-
-def render_prompt(
-    prompt_path: Path,
-    *,
-    wf_command_prefix: str,
-    server_context: str,
-) -> str:
-    return (
-        prompt_path.read_text(encoding="utf-8")
-        .replace("{{wf_command_prefix}}", wf_command_prefix)
-        .replace("{{server_context}}", server_context)
-    )
+__all__ = [
+    "CHALLENGE_DIR",
+    "CHALLENGE_REPORT_ATTEMPT_FIELDS",
+    "CHALLENGE_REPORT_READ_FIELDS",
+    "CHALLENGE_REPORT_REQUIRED_FIELDS",
+    "DEFAULT_PROMPT",
+    "DEFAULT_RESULTS_DIR",
+    "DEFAULT_SERVER_PORT",
+    "DEFAULT_WORKSPACE_TEMPLATE",
+    "DEFAULT_WORKSPACES_DIR",
+    "EXAMPLE_CONFIG",
+    "EXAMPLE_CONFIG_ARG",
+    "EXAMPLE_SOURCE_ROOT",
+    "LOCAL_WF_COMMAND_PREFIX",
+    "ROOT",
+    "Classification",
+    "ManagedServer",
+    "TrialConfig",
+    "TrialWorkspace",
+    "_contains_bool_marker",
+    "_event_text",
+    "_parse_jsonl_tail",
+    "_result_text",
+    "build_opencode_command",
+    "challenge_report_schema_errors",
+    "classify_challenge_report",
+    "classify_output",
+    "extract_challenge_report",
+    "main",
+    "parse_opencode_output",
+    "prepare_trial_workspace",
+    "render_prompt",
+    "rpc_url_for_port",
+    "run_trial",
+    "server_command",
+    "start_server",
+    "starting_trial_index",
+    "stop_server",
+    "trial_output_path",
+    "wf_command_prefix_for_config",
+    "write_trial_config",
+]
 
 
 @dataclass(slots=True)
 class ManagedServer:
     process: subprocess.Popen[str]
     rpc_url: str
-
-
-@dataclass(frozen=True, slots=True)
-class TrialWorkspace:
-    """Per-trial scratch area copied from the challenge workspace template."""
-
-    root: Path
-    config_path: Path
-    prompt_path: Path
 
 
 def start_server(*, port: int, timeout_seconds: int = 30) -> ManagedServer:
@@ -234,212 +253,6 @@ def stop_server(process: subprocess.Popen[str]) -> None:
             process.wait(timeout=10)
 
 
-@dataclass(frozen=True, slots=True)
-class TrialConfig:
-    model: str
-    variant: str
-    prompt_path: Path
-    attach_url: str | None
-    timeout_seconds: int
-    wf_command_prefix: str
-    server_context: str
-
-
-def build_opencode_command(config: TrialConfig) -> list[str]:
-    prompt_text = render_prompt(
-        config.prompt_path,
-        wf_command_prefix=config.wf_command_prefix,
-        server_context=config.server_context,
-    )
-    command = [
-        "opencode",
-        "run",
-    ]
-    if config.attach_url is not None:
-        command.extend(["--attach", config.attach_url])
-    command.extend(
-        [
-            prompt_text,
-            "--format",
-            "json",
-            "--model",
-            config.model,
-            "--variant",
-            config.variant,
-        ]
-    )
-    return command
-
-
-def parse_opencode_output(stdout: str) -> dict[str, Any]:
-    text = stdout.strip()
-    if not text:
-        raise ValueError("opencode produced no JSON output")
-
-    try:
-        parsed = json.loads(text)
-    except json.JSONDecodeError:
-        parsed = _parse_jsonl_tail(text)
-
-    if not isinstance(parsed, dict):
-        raise ValueError("opencode output was not a JSON object")
-    return parsed
-
-
-def _parse_jsonl_tail(text: str) -> dict[str, Any]:
-    last_error: json.JSONDecodeError | None = None
-    parsed_events: list[dict[str, Any]] = []
-    for line in reversed(text.splitlines()):
-        stripped = line.strip()
-        if not stripped:
-            continue
-        try:
-            parsed = json.loads(stripped)
-        except json.JSONDecodeError as exc:
-            last_error = exc
-            continue
-        if isinstance(parsed, dict):
-            parsed_events.append(parsed)
-            event_text = _event_text(parsed)
-            if event_text is not None:
-                return {"text": event_text, "event": parsed}
-    if parsed_events:
-        return parsed_events[0]
-    if last_error is not None:
-        raise last_error
-    raise ValueError("opencode output did not contain JSON lines")
-
-
-def _event_text(event: dict[str, Any]) -> str | None:
-    """Extract assistant text from opencode JSON events.
-
-    `opencode run --format json` emits many events. The final event can be a
-    `step_finish`; the answer text is usually the previous `text` event under
-    `part.text`.
-    """
-    part = event.get("part")
-    if isinstance(part, dict):
-        text = part.get("text")
-        if isinstance(text, str):
-            return text
-    text = event.get("text")
-    return text if isinstance(text, str) else None
-
-
-def classify_output(text: str) -> Classification:
-    report = extract_challenge_report(text)
-    if report is not None:
-        return classify_challenge_report(report)
-
-    lowered = text.lower()
-    product_command_markers = [
-        "wf ",
-        "wf-rpc-server",
-    ]
-    workflow_evidence_markers = [
-        "deployment",
-        "run id",
-        "run_",
-    ]
-    used_product_command = any(marker in lowered for marker in product_command_markers)
-    has_workflow_evidence = any(
-        marker in lowered for marker in workflow_evidence_markers
-    )
-    used_helper_script = (
-        "uv run python" in lowered
-        or "python examples/" in lowered
-        or "run_workflow.py" in lowered
-    )
-    failed = any(
-        marker in lowered
-        for marker in [
-            "error:",
-            "failed",
-            "traceback",
-            "exception",
-            "validation failed",
-        ]
-    )
-    before_false = _contains_bool_marker(lowered, "before.clicked", "false") or (
-        '"before"' in lowered and '"clicked": false' in lowered
-    )
-    after_true = _contains_bool_marker(lowered, "after.clicked", "true") or (
-        '"after"' in lowered and '"clicked": true' in lowered
-    )
-
-    if used_product_command and before_false and after_true and not failed:
-        return "success"
-    if has_workflow_evidence and used_helper_script and before_false and after_true:
-        return "workflow_script"
-    if (used_product_command or has_workflow_evidence) and failed:
-        return "run_failed"
-    if not has_workflow_evidence and (
-        before_false or after_true or "playwright" in lowered
-    ):
-        return "workflow_not_used"
-    return "unknown"
-
-
-def extract_challenge_report(text: str) -> dict[str, Any] | None:
-    """Extract the required final YAML challenge report from agent output."""
-    marker = "```yaml"
-    start = text.lower().rfind(marker)
-    if start == -1:
-        return None
-    body_start = text.find("\n", start)
-    if body_start == -1:
-        return None
-    end = text.find("```", body_start + 1)
-    if end == -1:
-        return None
-    raw_yaml = text[body_start + 1 : end]
-    loaded = yaml.safe_load(raw_yaml)
-    if not isinstance(loaded, dict):
-        return None
-    report = loaded.get("challenge_report")
-    return report if isinstance(report, dict) else None
-
-
-def classify_challenge_report(report: dict[str, Any]) -> Classification:
-    used_product_path = report.get("used_product_path") is True
-    used_helper_script = report.get("used_helper_script") is True
-    workflow_file = report.get("workflow_file")
-    deployment_id = report.get("deployment_id")
-    run_id = report.get("run_id")
-    before_clicked = report.get("before_clicked")
-    after_clicked = report.get("after_clicked")
-    failed = report.get("run_failed") is True
-
-    if failed:
-        return "run_failed"
-    if used_helper_script:
-        return "workflow_script"
-    if (
-        used_product_path
-        and isinstance(workflow_file, str)
-        and bool(workflow_file)
-        and isinstance(deployment_id, str)
-        and bool(deployment_id)
-        and isinstance(run_id, str)
-        and bool(run_id)
-        and before_clicked is False
-        and after_clicked is True
-    ):
-        return "success"
-    if not used_product_path and (
-        before_clicked is not None or after_clicked is not None
-    ):
-        return "workflow_not_used"
-    return "unknown"
-
-
-def _contains_bool_marker(text: str, marker: str, value: str) -> bool:
-    marker_index = text.find(marker)
-    if marker_index == -1:
-        return False
-    return value in text[marker_index : marker_index + 80]
-
-
 def trial_output_path(results_dir: Path, *, model: str, index: int) -> Path:
     return results_dir / f"{_safe_model_name(model)}-trial-{index:03d}.json"
 
@@ -496,14 +309,6 @@ def run_trial(config: TrialConfig, *, index: int, results_dir: Path) -> dict[str
     return payload
 
 
-def _result_text(parsed: dict[str, Any]) -> str:
-    for key in ("text", "message", "content", "output"):
-        value = parsed.get(key)
-        if isinstance(value, str):
-            return value
-    return json.dumps(parsed, sort_keys=True)
-
-
 def _jsonable_config(config: TrialConfig) -> dict[str, Any]:
     payload = asdict(config)
     payload["prompt_path"] = str(config.prompt_path)
@@ -527,7 +332,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default="opencode/mimo-v2.5-free")
     parser.add_argument("--variant", default="high")
     parser.add_argument("--trials", type=int, default=1)
-    parser.add_argument("--timeout-seconds", type=int, default=600)
+    parser.add_argument("--timeout-seconds", type=int, default=1000)
     parser.add_argument(
         "--attach",
         dest="attach_url",

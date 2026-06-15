@@ -74,6 +74,20 @@ examples/agent_challenges/browser_click_challenge/workspaces/
 files can be graded by hand without polluting the repository. The template's
 store directory is also ignored.
 
+## Saving Trial Reports
+
+To save an agent's final answer from a harness result into its trial workspace:
+
+```powershell
+uv run python examples/agent_challenges/browser_click_challenge/save_trial_report.py `
+  --from-result examples/agent_challenges/browser_click_challenge/results/<trial>.json
+```
+
+The script infers the workspace from the result file and only writes
+`<trial>/final-report.md`. Add evaluator commentary by editing that file after it
+is saved. For manually copied reports, pass an explicit workspace and
+`--input-file final-answer.md`.
+
 ## Optional Opencode Server Attachment
 
 `--attach` is opencode's server attach flag. It connects this non-interactive
@@ -113,6 +127,18 @@ challenge_report:
   after_clicked: true
   run_failed: false
   leftover_processes: false
+  read:
+    skills: true
+    docs: true
+    product_code: false
+    adjacent_attempts: false
+    prior_store: false
+    existing_solution: false
+  attempts:
+    total: 1
+    failed: 0
+  missed_requirements:
+    - "none"
   notes: "short explanation"
 ```
 

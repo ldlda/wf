@@ -55,14 +55,17 @@ The repository already includes a deterministic source example at:
 examples/browser_click_workflow/
 ```
 
-You may inspect and use it. A successful final answer must include:
+You may inspect and use it.
+
+Your final answer should include a short human-readable report with:
 
 - the commands you ran,
 - the deployment id,
 - the run id if one was produced,
 - evidence that `before.clicked` is `false`,
 - evidence that `after.clicked` is `true`,
-- whether any server/browser process remains running.
+- whether any server/browser process remains running,
+- important failed attempts and how you fixed them.
 
 End your answer with exactly one fenced YAML block using this shape:
 
@@ -77,6 +80,18 @@ challenge_report:
   after_clicked: true
   run_failed: false
   leftover_processes: false
+  read:
+    skills: true
+    docs: true
+    product_code: false
+    adjacent_attempts: false
+    prior_store: false
+    existing_solution: false
+  attempts:
+    total: 1
+    failed: 0
+  missed_requirements:
+    - "none"
   notes: "short explanation"
 ```
 

@@ -3,21 +3,62 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from examples.agent_challenges.browser_click_challenge.run_opencode_trials import (
+from examples.agent_challenges.browser_click_challenge.challenge import (
     LOCAL_WF_COMMAND_PREFIX,
     TrialConfig,
-    build_opencode_command,
+    render_prompt,
+    server_command,
+)
+from examples.agent_challenges.browser_click_challenge.classification import (
+    challenge_report_schema_errors,
     classify_challenge_report,
     classify_output,
     extract_challenge_report,
+)
+from examples.agent_challenges.browser_click_challenge.opencode_io import (
+    build_opencode_command,
     parse_opencode_output,
+)
+from examples.agent_challenges.browser_click_challenge.reports import (
+    report_from_result,
+    save_report,
+)
+from examples.agent_challenges.browser_click_challenge.run_opencode_trials import (
     prepare_trial_workspace,
-    render_prompt,
-    server_command,
     starting_trial_index,
     trial_output_path,
     wf_command_prefix_for_config,
 )
+from examples.agent_challenges.browser_click_challenge.save_trial_report import (
+    main as save_trial_report_main,
+)
+
+
+def _valid_challenge_report(**overrides: object) -> dict[str, object]:
+    report: dict[str, object] = {
+        "used_product_path": True,
+        "used_helper_script": False,
+        "workflow_file": "browser-click.workflow.yaml",
+        "deployment_id": "browser_click_case_study.default",
+        "run_id": "run_123",
+        "before_clicked": False,
+        "after_clicked": True,
+        "run_failed": False,
+        "leftover_processes": False,
+        "read": {
+            "skills": True,
+            "docs": True,
+            "product_code": False,
+            "adjacent_attempts": False,
+            "prior_store": False,
+            "existing_solution": False,
+        },
+        "attempts": {"total": 1, "failed": 0},
+        "missed_requirements": ["none"],
+        "notes": "ok",
+    }
+    report.update(overrides)
+    return report
 
 
 def test_build_opencode_command_without_attach(tmp_path: Path) -> None:
@@ -137,6 +178,18 @@ def test_extract_challenge_report_from_yaml_block() -> None:
       after_clicked: true
       run_failed: false
       leftover_processes: false
+      read:
+        skills: true
+        docs: true
+        product_code: false
+        adjacent_attempts: false
+        prior_store: false
+        existing_solution: false
+      attempts:
+        total: 1
+        failed: 0
+      missed_requirements:
+        - "none"
       notes: "ok"
     ```
     """
@@ -150,20 +203,17 @@ def test_extract_challenge_report_from_yaml_block() -> None:
 
 
 def test_classify_challenge_report_success() -> None:
-    result = classify_challenge_report(
-        {
-            "used_product_path": True,
-            "used_helper_script": False,
-            "workflow_file": "browser-click.workflow.yaml",
-            "deployment_id": "browser_click_case_study.default",
-            "run_id": "run_123",
-            "before_clicked": False,
-            "after_clicked": True,
-            "run_failed": False,
-        }
-    )
+    result = classify_challenge_report(_valid_challenge_report())
 
     assert result == "success"
+
+
+def test_challenge_report_schema_errors_reject_missing_read_block() -> None:
+    report = _valid_challenge_report()
+    report.pop("read")
+
+    assert challenge_report_schema_errors(report) == ["missing challenge_report.read"]
+    assert classify_challenge_report(report) == "unknown"
 
 
 def test_classify_output_prefers_yaml_report() -> None:
@@ -182,6 +232,18 @@ def test_classify_output_prefers_yaml_report() -> None:
           after_clicked: true
           run_failed: false
           leftover_processes: false
+          read:
+            skills: true
+            docs: true
+            product_code: false
+            adjacent_attempts: false
+            prior_store: false
+            existing_solution: false
+          attempts:
+            total: 1
+            failed: 0
+          missed_requirements:
+            - "none"
           notes: "ok"
         ```
         """
@@ -192,16 +254,11 @@ def test_classify_output_prefers_yaml_report() -> None:
 
 def test_classify_challenge_report_detects_helper_script() -> None:
     result = classify_challenge_report(
-        {
-            "used_product_path": False,
-            "used_helper_script": True,
-            "workflow_file": "",
-            "deployment_id": "browser_click_case_study.default",
-            "run_id": "run_123",
-            "before_clicked": False,
-            "after_clicked": True,
-            "run_failed": False,
-        }
+        _valid_challenge_report(
+            used_product_path=False,
+            used_helper_script=True,
+            workflow_file="",
+        )
     )
 
     assert result == "workflow_script"
@@ -285,6 +342,61 @@ def test_prepare_trial_workspace_copies_template_to_model_trial_dir(
     }
     assert prepared.prompt_path.read_text(encoding="utf-8") == "prompt"
     assert (prepared.root / ".gitignore").read_text(encoding="utf-8") == ".wf_store/\n"
+
+
+def test_save_trial_report_copies_report_into_workspace(tmp_path: Path) -> None:
+    workspace = tmp_path / "trial"
+    workspace.mkdir()
+
+    output = save_report(workspace=workspace, report_text="# Report\n\nok\n")
+
+    assert output == workspace / "final-report.md"
+    assert output.read_text(encoding="utf-8") == "# Report\n\nok\n"
+
+
+def test_report_from_result_infers_workspace_from_prompt_path(tmp_path: Path) -> None:
+    workspace = tmp_path / "trial"
+    workspace.mkdir()
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "config": {"prompt_path": str(workspace / "prompt.md")},
+                "parsed": {"text": "# Report\n\nok"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    inferred_workspace, report_text = report_from_result(result_path)
+
+    assert inferred_workspace == workspace
+    assert report_text == "# Report\n\nok"
+
+
+def test_save_trial_report_from_result_writes_inferred_workspace(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    workspace = tmp_path / "trial"
+    workspace.mkdir()
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "config": {"prompt_path": str(workspace / "prompt.md")},
+                "parsed": {"text": "# Report\n\nok"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert save_trial_report_main(["--from-result", str(result_path)]) == 0
+
+    assert (workspace / "final-report.md").read_text(encoding="utf-8") == (
+        "# Report\n\nok\n"
+    )
+    assert (workspace / "final-report.md").as_posix() in capsys.readouterr().out
 
 
 def test_prepare_trial_workspace_uses_next_available_directory(
