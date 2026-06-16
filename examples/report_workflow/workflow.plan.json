@@ -1,0 +1,208 @@
+{
+  "name": "report_case_study",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "path": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "path"
+    ]
+  },
+  "state_schema": {
+    "type": "object",
+    "properties": {
+      "notes": {
+        "type": "string",
+        "reducer": "wf.std.replace"
+      },
+      "report": {
+        "type": "object",
+        "reducer": "wf.std.replace"
+      },
+      "markdown": {
+        "type": "string",
+        "reducer": "wf.std.replace"
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "report": {
+        "type": "object"
+      },
+      "markdown": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "report",
+      "markdown"
+    ]
+  },
+  "outcomes": [
+    "ok"
+  ],
+  "start": "read",
+  "nodes": [
+    {
+      "id": "read",
+      "type": "node",
+      "node": "local.report.read_notes",
+      "input": [
+        {
+          "path": {
+            "root": "input",
+            "parts": [
+              "path"
+            ]
+          },
+          "target": {
+            "root": "local",
+            "parts": [
+              "path"
+            ]
+          }
+        }
+      ],
+      "output": [
+        {
+          "source": {
+            "root": "local",
+            "parts": [
+              "text"
+            ]
+          },
+          "target": {
+            "root": "state",
+            "parts": [
+              "notes"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "extract",
+      "type": "node",
+      "node": "local.report.extract_report",
+      "input": [
+        {
+          "path": {
+            "root": "state",
+            "parts": [
+              "notes"
+            ]
+          },
+          "target": {
+            "root": "local",
+            "parts": [
+              "text"
+            ]
+          }
+        }
+      ],
+      "output": [
+        {
+          "source": {
+            "root": "local",
+            "parts": []
+          },
+          "target": {
+            "root": "state",
+            "parts": [
+              "report"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "render",
+      "type": "node",
+      "node": "local.report.render_markdown_report",
+      "input": [
+        {
+          "path": {
+            "root": "state",
+            "parts": [
+              "report"
+            ]
+          },
+          "target": {
+            "root": "local",
+            "parts": [
+              "report"
+            ]
+          }
+        }
+      ],
+      "output": [
+        {
+          "source": {
+            "root": "local",
+            "parts": [
+              "markdown"
+            ]
+          },
+          "target": {
+            "root": "state",
+            "parts": [
+              "markdown"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "from": "read",
+      "outcome": "ok",
+      "to": "extract"
+    },
+    {
+      "from": "extract",
+      "outcome": "ok",
+      "to": "render"
+    },
+    {
+      "from": "render",
+      "outcome": "ok",
+      "to": "__end__"
+    }
+  ],
+  "output": [
+    {
+      "path": {
+        "root": "state",
+        "parts": [
+          "report"
+        ]
+      },
+      "target": {
+        "root": "local",
+        "parts": [
+          "report"
+        ]
+      }
+    },
+    {
+      "path": {
+        "root": "state",
+        "parts": [
+          "markdown"
+        ]
+      },
+      "target": {
+        "root": "local",
+        "parts": [
+          "markdown"
+        ]
+      }
+    }
+  ]
+}

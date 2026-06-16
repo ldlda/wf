@@ -257,7 +257,7 @@ report remain grounded in repository evidence.
 The document uses these terms with specific meanings:
 
 | Term | Meaning | Example |
-| --- | ----- | --- |
+| --- | ------ | ---- |
 | Workflow capability | A workflow-facing callable operation exposed by a source. | `local.report.extract_report` |
 | `NodeSpec` | The authoring-layer typed contract produced by decorators or source adapters. | a Python `@node` projection |
 | `NodeDef` | The core-level serializable node contract: input schema, output schema, and declared outcomes. | a workflow plan node definition |
@@ -347,7 +347,7 @@ composition.
 Representative sources and source families today:
 
 | Source | Kind | Role |
-| --- | --- | --- |
+| --- | --- | ----- |
 | `wf.std` | `system` | Built-in workflow nodes and reducers |
 | `wf.source` | `system` | Built-in source resource helper |
 | `wf.recipes` | `system` | First-party workflow recipes |
@@ -598,7 +598,7 @@ provider-specific knowledge.
 The implementation is organized into focused packages with clear boundaries:
 
 | Package | Responsibility |
-| --- | --------- |
+| --- | -------- |
 | `wf_core` | Deterministic workflow kernel: graph execution, state, outcomes, trace, resume |
 | `wf_authoring` | Authoring primitives: `NodeSpec`, `WorkflowBuilder`, DSL, reducer authoring, recipes |
 | `wf_platform` | Neutral source DTOs, source visibility, permission metadata, and policy |
@@ -839,11 +839,12 @@ expressiveness. Graph features such as interrupts, foreach, subgraphs, joins,
 and reducer behavior are covered by targeted tests and code evidence in the
 evaluation section.
 
-The thesis-critical automated report-workflow run is intentionally narrow: it
-executes a single deterministic extraction node through the artifact,
-deployment, and run lifecycle. The same Python source exposes additional
-capabilities for discovery and extensibility evidence, and the supplemental
-browser-click example covers a serial three-node workflow.
+The thesis-critical automated report-workflow run executes the full deterministic
+report pipeline through the artifact, deployment, and run lifecycle:
+`read_notes -> extract_report -> render_markdown_report`. This keeps the case
+study small enough to audit while still exercising source discovery, multi-node
+dataflow, state mapping, artifact saving, deployment binding, run output, and
+trace inspection.
 
 ## Case Study Components
 
@@ -855,7 +856,9 @@ The example bundle lives at
 - `input.md` --- fixture Markdown notes with summary, actions, risks, and
   followups sections.
 - `cap-input.json` --- a capability-call payload generated from the fixture.
-- `run-input.json` --- a workflow-run payload generated from the fixture.
+- `run-input.json` --- a workflow-run payload pointing at the fixture.
+- `workflow.plan.json` --- the three-node raw workflow plan used for artifact
+  creation.
 - `wf.config.json` --- a local server and client config using the
   `local.report` Python source.
 
@@ -946,54 +949,70 @@ demonstrate the agent-operable surface:
    wf cap call local.report.extract_report --input-file cap-input.json --format compact
    ```
 
-6. **Draft creation.** A draft workspace is seeded from the capability's
+6. **Draft bootstrap.** A draft workspace can be seeded from a capability's
    input/output schemas:
 
    ```powershell
    wf draft create-from-capability report_ws local.report.extract_report
    ```
 
-7. **Draft validation.** The draft is checked for schema conformance and source
+   This is intentionally a best-effort bootstrap, not a complete workflow
+   synthesizer. It creates an editable one-step draft from wrapper hints.
+
+7. **Focused draft edits.** Common edits can be applied without writing JSON
+   Patch manually:
+
+   ```powershell
+   wf draft set-name report_ws --revision 1 --name report_case_study
+   wf draft set-input report_ws --revision 2 --step call --map input.text=text
+   wf draft set-output report_ws --revision 3 --step call --map title=state.title --map summary=state.summary
+   ```
+
+   These commands edit existing draft fields. Structural edits, such as adding
+   the `read_notes` and `render_markdown_report` steps around `extract_report`,
+   still use `wf draft patch` or the raw-plan import path below.
+
+8. **Draft validation.** The draft is checked for schema conformance and source
    availability:
 
    ```powershell
    wf draft validate report_ws
    ```
 
-8. **Artifact saving.** The draft becomes an immutable artifact with source
-   bindings:
+9. **Artifact saving.** The tested case study imports the complete three-node
+   plan as an immutable artifact with source bindings:
 
    ```powershell
-   wf draft save report_ws --artifact report_case_study --version 1 --title "Report Case Study" --binding local.report=local.report
+   wf artifact create-from-plan workflow.plan.json --artifact report_case_study --version 1 --title "Report Case Study" --outcome ok --binding local.report=local.report
    ```
 
-9. **Deployment saving.** The artifact is bound into a runnable deployment:
+10. **Deployment saving.** The artifact is bound into a runnable deployment:
 
    ```powershell
    wf deploy save report_case_study.default --artifact report_case_study --version 1 --binding local.report=local.report
    ```
 
-10. **Deployment validation.** The deployment is checked for bound source
+11. **Deployment validation.** The deployment is checked for bound source
     availability and compatibility:
 
     ```powershell
     wf deploy validate report_case_study.default
     ```
 
-11. **Run execution.** A workflow run starts from the deployment:
+12. **Run execution.** A workflow run starts from the deployment:
 
     ```powershell
     wf run start report_case_study.default --input-file run-input.json --trace-from 0 --trace-limit 5
     ```
 
-12. **Run inspection.** The run status, output, and diagnostics can be
+13. **Run inspection.** The run status, output, and diagnostics can be
     inspected:
 
     ```powershell
     wf run inspect <run_id>
     ```
 
-13. **Run trace.** Trace frames recorded during execution can be listed:
+14. **Run trace.** Trace frames recorded during execution can be listed:
 
     ```powershell
     wf run trace <run_id> --from 0 --limit 5
@@ -1009,9 +1028,10 @@ The case study produces a structured report with:
 - Three action items with owner, task, and due date
 - Risks mentioning Google Drive MCP quota
 - Followups for Markdown rendering and baseline comparison
+- Rendered Markdown beginning with `# Weekly Project Update`
 
-The output matches the typed `ReportOutput` schema, making validation
-deterministic.
+The workflow output includes both the typed `ReportOutput` object and a
+Markdown rendering produced by the final node, making validation deterministic.
 
 ## Automated Test Evidence
 
@@ -1023,19 +1043,16 @@ programmatically:
    fixture input. The test asserts the outcome is `ok`, the title matches, and
    the action items and risks contain expected values.
 
-2. **Artifact/deployment/run path.** A test builds a workflow plan with a
-   single `extract` node, saves the artifact, creates a deployment with source
-   bindings, starts a run, and asserts that the run completes with the expected
-   typed output.
+2. **Artifact/deployment/run path.** A test loads `workflow.plan.json`, which
+   runs `read_notes -> extract_report -> render_markdown_report`, saves the
+   artifact, creates a deployment with source bindings, starts a run, and
+   asserts that the run completes with both structured report output and
+   rendered Markdown output.
 
 The thesis-critical run path therefore demonstrates the full lifecycle using a
-single deterministic extraction node. The surrounding Python source includes
-additional capabilities used for capability discovery and extensibility
-evidence; it is not evaluated as a multi-node read -> extract -> render
-pipeline in this artifact.
-A supplemental browser-click example demonstrates a serial three-node workflow
-with bounded before/after snapshots; it is supporting evidence, not the main
-case study.
+deterministic three-node pipeline. A supplemental browser-click example remains
+supporting evidence for human-interaction-style workflows and before/after
+snapshot outputs.
 
 (Evidence: `tests/examples/test_report_workflow_example.py`.)
 
@@ -1437,13 +1454,31 @@ cap call local.report.extract_report `
 --input-file examples/report_workflow/cap-input.json --format compact
 ```
 
-### Draft Creation
+### Draft Bootstrap And Focused Edits
+
+`create-from-capability` is a best-effort bootstrap. It creates a one-step
+draft from the selected capability's wrapper hints. Focused commands then cover
+common edits without requiring the agent to write RFC 6902 patches by hand.
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
 draft create-from-capability report_ws local.report.extract_report `
  --name report_case_study --title "Report Case Study"
+
+uv run wf --config examples/report_workflow/wf.config.json `
+draft set-name report_ws --revision 1 --name report_case_study
+
+uv run wf --config examples/report_workflow/wf.config.json `
+draft set-input report_ws --revision 2 --step call `
+--map input.text=text
+
+uv run wf --config examples/report_workflow/wf.config.json `
+draft set-output report_ws --revision 3 --step call `
+--map title=state.title --map summary=state.summary
 ```
+
+Structural edits, such as adding `read_notes` before `extract_report` and
+`render_markdown_report` after it, use `draft patch` or a complete raw plan.
 
 ### Draft Validation
 
@@ -1454,10 +1489,14 @@ draft validate report_ws
 
 ### Artifact Saving
 
+The tested case-study artifact imports the complete three-node plan:
+
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
-draft save report_ws --artifact report_case_study --version 1 `
---title "Report Case Study" --binding local.report=local.report
+artifact create-from-plan examples/report_workflow/workflow.plan.json `
+--artifact report_case_study --version 1 `
+--title "Report Case Study" --outcome ok `
+--binding local.report=local.report
 ```
 
 ### Deployment Saving

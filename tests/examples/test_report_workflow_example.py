@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -76,51 +77,7 @@ async def test_report_workflow_artifact_deployment_run_path(tmp_path) -> None:
     config.server.store.root = tmp_path / "store"
     server = build_workflow_server_from_workflow_config(config)
 
-    plan = {
-        "name": "report_case_study",
-        "input_schema": {
-            "type": "object",
-            "properties": {"text": {"type": "string"}},
-            "required": ["text"],
-        },
-        "state_schema": {
-            "type": "object",
-            "properties": {"report": {"type": "object", "reducer": "wf.std.replace"}},
-        },
-        "output_schema": {
-            "type": "object",
-            "properties": {"report": {"type": "object"}},
-            "required": ["report"],
-        },
-        "outcomes": ["ok"],
-        "start": "extract",
-        "nodes": [
-            {
-                "id": "extract",
-                "type": "node",
-                "node": "local.report.extract_report",
-                "input": [
-                    {
-                        "path": {"root": "input", "parts": ["text"]},
-                        "target": {"root": "local", "parts": ["text"]},
-                    }
-                ],
-                "output": [
-                    {
-                        "source": {"root": "local", "parts": []},
-                        "target": {"root": "state", "parts": ["report"]},
-                    }
-                ],
-            }
-        ],
-        "edges": [{"from": "extract", "outcome": "ok", "to": "__end__"}],
-        "output": [
-            {
-                "path": {"root": "state", "parts": ["report"]},
-                "target": {"root": "local", "parts": ["report"]},
-            }
-        ],
-    }
+    plan = json.loads((EXAMPLE_DIR / "workflow.plan.json").read_text(encoding="utf-8"))
 
     await server.api.create_artifact_from_plan(
         artifact_id="report_case_study",
@@ -140,9 +97,10 @@ async def test_report_workflow_artifact_deployment_run_path(tmp_path) -> None:
     )
     run = await server.api.run_deployment(
         deployment_id="report_case_study.default",
-        workflow_input={"text": (EXAMPLE_DIR / "input.md").read_text(encoding="utf-8")},
+        workflow_input={"path": "input.md"},
     )
 
     assert run["status"] == "completed"
     assert run["output"]["report"]["title"] == "Weekly Project Update"
     assert len(run["output"]["report"]["action_items"]) == 3
+    assert run["output"]["markdown"].startswith("# Weekly Project Update")
