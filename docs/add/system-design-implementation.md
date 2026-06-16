@@ -43,11 +43,18 @@ header-includes:
     </style>
   - \usepackage{graphicx}
   - \usepackage{booktabs}
+  - \usepackage{tabulary}
   - \usepackage{hyperref}
   - \usepackage{hyperxmp}
   - \usepackage[dvipsnames]{xcolor}
   - \usepackage{fancyhdr}
   - \pagestyle{fancy}
+  - \usepackage{seqsplit}
+  # Pandoc emits inline code as \texttt{...}. This blunt wrapper keeps long
+  # paths and commands from overflowing PDF table cells.
+  - |
+    \let\origtexttt\texttt
+    \renewcommand{\texttt}[1]{{\origtexttt{\seqsplit{#1}}}}
   - \usepackage{fvextra}
   - \fvset{breaklines=true, breaknonspaceingroup=true, breakanywhere=true}
   - \fancyhead[L]{\small lda.chat}
@@ -591,7 +598,7 @@ provider-specific knowledge.
 The implementation is organized into focused packages with clear boundaries:
 
 | Package | Responsibility |
-| --- | --- |
+| --- | --------- |
 | `wf_core` | Deterministic workflow kernel: graph execution, state, outcomes, trace, resume |
 | `wf_authoring` | Authoring primitives: `NodeSpec`, `WorkflowBuilder`, DSL, reducer authoring, recipes |
 | `wf_platform` | Neutral source DTOs, source visibility, permission metadata, and policy |
@@ -905,47 +912,92 @@ under the `local.report` namespace.
 The case study exercises the full lifecycle through CLI commands. The commands
 demonstrate the agent-operable surface:
 
-1. **Config validation.** `wf config validate` checks that the config file is
-   well-formed and that the Python source module can be imported.
+1. **Config validation.** The config file is checked before server startup:
 
-2. **Server startup.** `wf-rpc-server --config wf.config.json` starts the
-   workflow server with the configured store, transport, and source providers.
+   ```powershell
+   wf config validate
+   ```
 
-3. **Status check.** `wf status` confirms the server is reachable.
+   This verifies that the file is well-formed and that the Python source module
+   can be imported.
 
-4. **Capability discovery.** `wf cap list --source local.report` lists the
-   three capabilities exposed by the Python source.
+2. **Server startup.** The configured workflow server starts with its store,
+   transport, and source providers:
 
-5. **Capability call.** `wf cap call local.report.extract_report --input-file
-   cap-input.json --format compact` invokes the extraction capability and
-   returns structured JSON.
+   ```powershell
+   wf-rpc-server --config wf.config.json
+   ```
 
-6. **Draft creation.** `wf draft create-from-capability report_ws
-   local.report.extract_report` seeds a draft workspace from the capability's
-   input/output schemas.
+3. **Status check.** The status command confirms the server is reachable:
 
-7. **Draft validation.** `wf draft validate report_ws` checks schema
-   conformance and source availability.
+   ```powershell
+   wf status
+   ```
 
-8. **Artifact saving.** `wf draft save report_ws --artifact report_case_study
-   --version 1 --title "Report Case Study" --binding local.report=local.report`
-   saves an immutable artifact with source bindings.
+4. **Capability discovery.** The report source exposes three capabilities:
 
-9. **Deployment saving.** `wf deploy save report_case_study.default --artifact
-   report_case_study --version 1 --binding local.report=local.report` creates
-   a deployment binding.
+   ```powershell
+   wf cap list --source local.report
+   ```
 
-10. **Deployment validation.** `wf deploy validate report_case_study.default`
-    verifies that bound sources are available and compatible.
+5. **Capability call.** The extraction capability returns structured JSON:
 
-11. **Run execution.** `wf run start report_case_study.default --input-file
-    run-input.json --trace-from 0 --trace-limit 5` starts a workflow run.
+   ```powershell
+   wf cap call local.report.extract_report --input-file cap-input.json --format compact
+   ```
 
-12. **Run inspection.** `wf run inspect <run_id>` shows the run status, output,
-    and diagnostics.
+6. **Draft creation.** A draft workspace is seeded from the capability's
+   input/output schemas:
 
-13. **Run trace.** `wf run trace <run_id> --from 0 --limit 5` shows the trace
-    frames recorded during execution.
+   ```powershell
+   wf draft create-from-capability report_ws local.report.extract_report
+   ```
+
+7. **Draft validation.** The draft is checked for schema conformance and source
+   availability:
+
+   ```powershell
+   wf draft validate report_ws
+   ```
+
+8. **Artifact saving.** The draft becomes an immutable artifact with source
+   bindings:
+
+   ```powershell
+   wf draft save report_ws --artifact report_case_study --version 1 --title "Report Case Study" --binding local.report=local.report
+   ```
+
+9. **Deployment saving.** The artifact is bound into a runnable deployment:
+
+   ```powershell
+   wf deploy save report_case_study.default --artifact report_case_study --version 1 --binding local.report=local.report
+   ```
+
+10. **Deployment validation.** The deployment is checked for bound source
+    availability and compatibility:
+
+    ```powershell
+    wf deploy validate report_case_study.default
+    ```
+
+11. **Run execution.** A workflow run starts from the deployment:
+
+    ```powershell
+    wf run start report_case_study.default --input-file run-input.json --trace-from 0 --trace-limit 5
+    ```
+
+12. **Run inspection.** The run status, output, and diagnostics can be
+    inspected:
+
+    ```powershell
+    wf run inspect <run_id>
+    ```
+
+13. **Run trace.** Trace frames recorded during execution can be listed:
+
+    ```powershell
+    wf run trace <run_id> --from 0 --limit 5
+    ```
 
 (Evidence: `examples/report_workflow/README.md`, `tests/examples/test_report_workflow_example.py`.)
 
@@ -1050,13 +1102,18 @@ claims auditable from the text. A final submission should regenerate this table
 from the exact submitted commit.
 
 | Field | Value |
-| --- | --- |
+| --- | --------- |
 | Date run | 2026-06-16 |
 | Baseline commit | `e24f2892` before subsequent document-polish edits |
-| Command | `uv run pytest tests/docs tests/examples/test_report_workflow_example.py tests/examples/test_browser_click_workflow_example.py tests/examples/test_opencode_browser_click_challenge.py tests/artifacts/test_validation.py tests/wf_api/test_run_api.py -q` |
 | Result | `72 passed in 9.22s` |
 | Environment | Local Windows development environment, Python via `uv` |
 | Scope | Documentation links, report workflow, browser-click workflow, challenge harness, deployment validation, and run API tests |
+
+Command:
+
+```powershell
+uv run pytest tests/docs tests/examples/test_report_workflow_example.py tests/examples/test_browser_click_workflow_example.py tests/examples/test_opencode_browser_click_challenge.py tests/artifacts/test_validation.py tests/wf_api/test_run_api.py -q
+```
 
 ## Implemented Scope Matrix
 
