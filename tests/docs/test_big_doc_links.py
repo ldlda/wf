@@ -11,14 +11,16 @@ def markdown_links(text: str) -> set[str]:
     return set(re.findall(r"(?<!!)\[[^\]]+\]\(([^)]+)\)", text))
 
 
-def test_big_doc_links_case_study_and_evidence_index() -> None:
+def test_big_doc_links_case_study_and_embeds_evidence_index() -> None:
     doc = (ROOT / "docs" / "add" / "system-design-implementation.md").read_text(
         encoding="utf-8"
     )
     links = markdown_links(doc)
 
-    assert "evidence-index.md" in links
     assert any(link.startswith("../../examples/report_workflow") for link in links)
+    assert "## Appendix B: Evidence Index" in doc
+    assert "### Core Workflow Lifecycle" in doc
+    assert "### Agent Challenge Evaluation Protocol" in doc
 
 
 def test_project_map_links_big_doc() -> None:

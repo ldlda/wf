@@ -34,6 +34,13 @@ keywords:
   - MCP
   - Python sources
 header-includes:
+  - |
+    <style>
+      code {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+    </style>
   - \usepackage{graphicx}
   - \usepackage{booktabs}
   - \usepackage{hyperref}
@@ -41,6 +48,8 @@ header-includes:
   - \usepackage[dvipsnames]{xcolor}
   - \usepackage{fancyhdr}
   - \pagestyle{fancy}
+  - \usepackage{fvextra}
+  - \fvset{breaklines=true, breaknonspaceingroup=true, breakanywhere=true}
   - \fancyhead[L]{\small lda.chat}
   - \fancyhead[R]{\small\leftmark}
   - \fancyfoot[C]{\thepage}
@@ -48,7 +57,7 @@ header-includes:
   - \setlength{\parindent}{0pt}
   - \setkeys{Gin}{width=\linewidth,height=0.55\textheight,keepaspectratio}
   - \renewcommand{\arraystretch}{1.3}
-  - \hypersetup{pdfauthor={lda.chat}, pdftitle={Design and Implementation of lda.chat}}
+  # - \hypersetup{pdfauthor={lda.chat}, pdftitle={Design and Implementation of lda.chat}}
 diagram:
   engine:
     mermaid:
@@ -57,12 +66,12 @@ diagram:
 
 # Introduction
 
-External LLM agents are useful workflow authors and operators, but reusable
-workspace automation needs a typed execution substrate. This report describes
-the design and implementation of `lda.chat`, a prototype platform where agents
-can author, validate, execute, and inspect reusable workspace workflows without
-making the LLM itself responsible for runtime state, validation, source binding,
-or persistence.
+This report assumes a setting in which external LLM agents are used as workflow
+authors and operators, and asks what platform substrate they need for reusable
+workspace automation. It describes the design and implementation of `lda.chat`,
+a prototype platform where agents can author, validate, execute, and inspect
+reusable workspace workflows without making the LLM itself responsible for
+runtime state, validation, source binding, or persistence.
 
 The central claim is that agent-facing workflow automation should separate
 planning from execution. The LLM or human author can propose and revise workflow
@@ -74,7 +83,7 @@ platform represent, validate, execute, and persist reusable workspace
 automations while keeping planning separate from deterministic execution?
 
 The short version of the thesis is: the LLM plans; the runtime executes; source
-providers expose capabilities; stores preserve durable lifecycle records. The
+providers expose capabilities; stores preserve persisted lifecycle records. The
 implementation demonstrates this model across controlled built-in, MCP, and
 Python source examples.
 
@@ -98,23 +107,34 @@ discuss limitations and future work. Section 11 concludes.
 
 # Problem Statement And Requirements
 
-Many direct tool-calling agent patterns let an LLM orchestrate side effects
-through sequential tool calls. This pattern can create several practical
-problems for workspace automation:
+A common pattern in agent systems lets an LLM orchestrate side effects
+through sequential tool calls. ReAct-style prompting demonstrates interleaved
+reasoning and action, while Toolformer-style work demonstrates learned external
+API/tool use [@react-2022; @toolformer-2023].
+The problem statement here is narrower: when a tool loop is used as a reusable
+workspace automation substrate, several practical platform concerns appear.
 
 - **Weak validation before execution.** A planner that assembles tool-call
   sequences often lacks a typed contract describing what each step expects and
   produces. Invalid plans reach the runtime and fail at execution time rather
-  than during authoring.
+  than during authoring. Structured-output work supports the design assumption
+  that schema adherence can be treated as an API/runtime contract rather than
+  left entirely to planner inference [@openai-structured-outputs-2024].
 
 - **Poor resumability after interruption.** Raw tool-call loops do not
   checkpoint their progress. If the process restarts, the agent must reconstruct
-  its prior state from scratch or lose work.
+  its prior state from scratch or lose work. Durable agent frameworks expose
+  persistence/checkpoint layers specifically because continuation, failure
+  recovery, and memory across interactions are runtime concerns
+  [@langgraph-persistence-2026].
 
 - **Hard-to-audit traces.** Successful tool-call chains leave logs, but the
   causal structure of a multi-step procedure is not separated from the transport
   or provider noise. Inspecting what happened, why a step failed, or what the
-  intermediate state was requires manual log parsing.
+  intermediate state was requires manual log parsing. Recent
+  agent-auditability and LLM-accountability work frames action recoverability,
+  lifecycle coverage, and evidence integrity as explicit requirements
+  [@auditable-agents-2026; @audit-trails-llm-2026].
 
 - **Limited reuse.** A successful tool-call procedure is embedded in a
   conversation transcript or script. Extracting it into a named, versioned,
@@ -132,7 +152,7 @@ arbitrary office work end-to-end. Examples include document transformation, data
 collection, tool and API calls, report preparation, and monitoring checks.
 Scheduled execution is a future deployment mode, not implemented in this
 prototype. The thesis frames the platform as a response to these pressures: a
-typed execution substrate where durable lifecycle records, validation, source
+typed execution substrate where persisted lifecycle records, validation, source
 binding, and trace inspection are first-class platform concerns rather than
 responsibilities of the planner.
 
@@ -143,7 +163,7 @@ The design requirements that follow from this problem statement are:
    and designed to admit future source families that can be projected into the
    existing capability/source contract.
 3. Server, API, and CLI surfaces that external agents can drive, backed by
-   durable lifecycle stores.
+   persisted lifecycle stores.
 4. Validation and inspection mechanisms intended to reduce planner
    trial-and-error.
 5. Next-action guidance that points an agent toward useful lifecycle operations
@@ -163,9 +183,12 @@ qualitative positioning, not a benchmark across products.
 Direct tool orchestration through an LLM is the most open-ended approach: the
 planner can choose tools dynamically and adapt immediately. In this report's
 framing, that flexibility becomes a problem when the tool loop is also expected
-to provide durable lifecycle state, validation, audit structure, and
+to provide persisted lifecycle records, validation, audit structure, and
 resumability. The platform argues that reusable workspace automation benefits
 from separating planning from a typed execution substrate.
+
+This comparison is to the bare tool-loop pattern, not to a tool loop embedded
+inside an additional workflow, tracing, persistence, or orchestration framework.
 
 ## Generated Scripts
 
@@ -174,49 +197,49 @@ more maintainable, and easier to debug than a workflow graph. The platform
 argument is that reusable workspace automation benefits from lifecycle
 affordances that scripts do not automatically provide: typed validation, source
 binding, artifact/deployment separation, run records, resumability, trace
-inspection, and repairable diagnostics.
+inspection, and diagnostics with repair hints.
+
+A script can be wrapped with these affordances, but then the comparison shifts
+from "script" to a custom workflow platform assembled around the script.
 
 ## Workflow Automation Platforms
 
-Platforms such as Zapier and RPA tools are stronger today at polished
+Zapier-style automation platforms are stronger today at polished
 non-programmer UIs, large integration catalogs, hosted scheduling and triggers,
-and operational maturity. Zapier's own documentation describes a hosted,
-stateless runtime with explicit execution-time and payload constraints, plus
-published Zap limits and rate limits. The prototype does not claim feature
-parity with these products. Instead, it explores a different trade-off: a
-platform where external AI agents can operate the full lifecycle directly,
-where local Python and MCP sources share one workflow surface, and where
-artifacts, deployments, runs, and traces are first-class inspectable records.
+and operational maturity. This report uses Zapier as a representative hosted
+automation platform rather than surveying the full RPA/workflow market.
+Zapier's own documentation describes a hosted, stateless runtime with explicit
+execution-time and payload constraints, plus published Zap limits and rate
+limits [@zapier-operating-constraints; @zapier-zap-limits]. The prototype does
+not claim feature parity with these products. Instead, it explores a different
+trade-off: a platform where external AI agents can operate the full lifecycle
+directly, where local Python and MCP sources share one workflow surface, and
+where artifacts, deployments, runs, and traces are first-class inspectable
+records.
 
 ## Agent Graph Frameworks
 
 LangGraph-style durable agent graphs share the idea of typed execution
 substrates for agent workflows. LangGraph's official documentation positions it
 as an orchestration runtime for long-running, stateful agents, with persistence,
-human-in-the-loop behavior, and durable execution. The lda.chat platform focuses
-on reusable workspace workflows backed by explicit source providers, where the
-workflow is a deployable artifact independent of any particular agent instance.
+human-in-the-loop behavior, and durable execution [@langgraph-overview-2026;
+@langgraph-persistence-2026]. This is not a claim that `lda.chat` is more
+durable or more general than LangGraph. The difference claimed here is the
+artifact/deployment/run lifecycle and source-provider binding model for
+reusable workspace automations.
 
 ## Model Context Protocol
 
 MCP is a useful protocol for exposing tools, resources, and prompts. Its
 official lifecycle is a client-server connection lifecycle: initialization,
-operation, and shutdown. It is not itself the workflow artifact, deployment, and
-run lifecycle. The lda.chat platform treats MCP as one source family behind a
-provider boundary, not as the product identity. This distinction is important:
-MCP demonstrates why source-provider correctness matters, because a source may
-require persistent sessions, auth context, catalog refresh, and prompt
-inventory. The platform places this complexity behind a neutral
-`CapabilitySource` interface.
+operation, and shutdown [@mcp-tools-2025; @mcp-lifecycle-2025]. It is not
+itself the workflow artifact, deployment, and run lifecycle. The lda.chat
+platform treats MCP as one source family behind a provider boundary, not as the
+product identity. This distinction is important: MCP demonstrates why
+source-provider correctness matters, because a source may require persistent
+sessions, auth context, catalog refresh, and prompt inventory. The platform
+places this complexity behind a neutral `CapabilitySource` interface.
 
-External references used for this positioning include the MCP tools and
-lifecycle specifications [@mcp-tools-2025; @mcp-lifecycle-2025], LangGraph's
-overview and persistence documentation [@langgraph-overview-2026;
-@langgraph-persistence-2026], Zapier's operating constraints and Zap limits
-[@zapier-operating-constraints; @zapier-zap-limits], and agent evaluation
-discussions such as SWE-bench Verified, NIST CAISI's examples of agent
-evaluation cheating, and OpenAI's SWE-bench Verified audit
-[@swebench-verified; @nist-agent-cheating-2025; @openai-swebench-audit-2026].
 These sources contextualize the comparison; the implementation claims in this
 report remain grounded in repository evidence.
 
@@ -235,6 +258,7 @@ The document uses these terms with specific meanings:
 | Source family | A class of source implementations. | built-in, MCP, Python |
 | Source provider | Server-side code that loads or manages sources for a source family. | Python source loading |
 | Tool | A provider-native operation before projection into workflow form. | MCP tool |
+| Agent-operable | A surface designed for machine clients: structured output, explicit validation, stable commands, inspectability, and bounded summaries. It does not mean independently proven agent success rates. | `wf deploy validate`, `wf run trace` |
 | Outcome | A control-flow label returned by a node and consumed by graph edges. | `ok`, `error`, `submitted` |
 | Output | The data payload returned by a node or workflow. | `{ "report": "..." }` |
 | Reducer | A pure state-merge operation selected by state schema. | `wf.std.replace`, `wf.std.append` |
@@ -267,7 +291,7 @@ aggregation. General fork/gather parallelism is future work, so this report
 does not claim complete concurrent graph semantics. Interrupts represent typed
 external input points. Subgraphs compose workflows as nodes.
 
-The graph model improves the safety posture by making automation structure
+The graph model improves inspectability by making automation structure
 explicit. Node contracts, source requirements, state writes, outcomes,
 validation gates, and trace records are visible before and after execution. The
 platform does not guarantee safe behavior from provider code, credentials, or
@@ -360,9 +384,9 @@ The resolution path for a source reference is:
 4. The concrete source is looked up in the server's source inventory and
    delegated to the appropriate runtime handler.
 
-This design allows workflow portability across environments: the same artifact
-can be deployed with different concrete source bindings, while the workflow
-graph references logical names only.
+This design provides a portability mechanism across environments: the same
+artifact can be deployed with different concrete source bindings, while the
+workflow graph references logical names only.
 
 # System Architecture
 
@@ -570,7 +594,7 @@ The implementation is organized into focused packages with clear boundaries:
 | --- | --- |
 | `wf_core` | Deterministic workflow kernel: graph execution, state, outcomes, trace, resume |
 | `wf_authoring` | Authoring primitives: `NodeSpec`, `WorkflowBuilder`, DSL, reducer authoring, recipes |
-| `wf_platform` | Neutral source DTOs, source visibility, permissions, and policy |
+| `wf_platform` | Neutral source DTOs, source visibility, permission metadata, and policy |
 | `wf_artifacts` | Artifact, deployment, and run models; file-backed stores; validation |
 | `wf_api` | Application surface: capabilities, drafts, artifacts, deployments, runs |
 | `wf_server` | `WorkflowServer` composition from config, stores, and source providers |
@@ -656,7 +680,7 @@ flowchart LR
   Runs --> Live[Optional Live Source Checker]
 ```
 
-The diagram is important because it shows the design contribution at the
+This diagram highlights the design contribution at the
 application layer: drafts, artifacts, deployments, and runs are not independent
 file operations. They share source inventory, stores, event recording, runtime
 execution, validation, and live-source checks through one operation context.
@@ -712,9 +736,9 @@ diagnostics and runtime status remain the source of truth.
 
 The `NextActions` object includes `can_continue`, `can_save_now`,
 `recommended_next_tool`, `reason`, `patch_examples` with concrete request
-payloads, and `warnings`. This makes the surface agent-operable: an LLM agent
-can read the hint and execute the suggested operation without reconstructing
-the lifecycle state.
+payloads, and `warnings`. This is intended to make the surface agent-operable:
+an LLM agent can read the hint and execute the suggested operation without
+reconstructing the lifecycle state.
 
 (Evidence: `src/wf_api/next_actions.py`.)
 
@@ -738,10 +762,10 @@ The JSON-RPC-over-HTTP transport exposes the Workflow API Surface to CLI and
 future HTTP clients. The transport is protocol-neutral; it maps JSON-RPC
 method calls to `WorkflowApi` operations and returns structured JSON responses.
 
-The CLI communicates over this transport. CLI commands are designed as
-agent-operable first: structured output, status and inspect commands, validation
-commands, compact summaries, and guarded destructive actions make the CLI a
-practical surface for external agents.
+The CLI communicates over this transport. CLI commands are designed for machine
+clients as well as humans: structured output, status and inspect commands,
+validation commands, compact summaries, and guarded destructive actions make
+the CLI a practical surface for external agents.
 
 (Evidence: `src/wf_transport_rpc_http/`, `src/wf_cli/`, `tests/wf_cli/`.)
 
@@ -807,6 +831,12 @@ This case study evaluates lifecycle integration rather than graph
 expressiveness. Graph features such as interrupts, foreach, subgraphs, joins,
 and reducer behavior are covered by targeted tests and code evidence in the
 evaluation section.
+
+The thesis-critical automated report-workflow run is intentionally narrow: it
+executes a single deterministic extraction node through the artifact,
+deployment, and run lifecycle. The same Python source exposes additional
+capabilities for discovery and extensibility evidence, and the supplemental
+browser-click example covers a serial three-node workflow.
 
 ## Case Study Components
 
@@ -988,7 +1018,7 @@ benchmark.
 | Deployment/source binding | Not inherent | Manual config | Platform-specific | Yes |
 | Typed validation before run | Tool-schema dependent | Custom | Varies | Yes |
 | Durable run record | Not inherent | Custom | Often yes | Yes, at stopped boundaries |
-| Source drift diagnostics | Not inherent | Custom | Varies | Yes, controlled examples |
+| Source drift diagnostics | Not inherent | Custom | Varies | Yes, schema-hash controlled examples |
 | Agent-operable repair hints | Not inherent | Custom | Usually human UI | Prototype support |
 | Scheduling | Depends on agent | External scheduler | Yes | Future work |
 
@@ -1007,11 +1037,36 @@ The evidence supporting the thesis claims includes:
 | Interrupted runs resume at explicit boundaries | `tests/wf_api/test_run_api.py` and resume-concurrency tests | Stopped run state is persisted and resumed through the run API | Pass in focused test suite |
 | Python source lifecycle works | `tests/examples/test_report_workflow_example.py` | Python capability -> artifact -> deployment -> run completes | Pass in focused test suite |
 | Serial multi-node workflow works | `tests/examples/test_browser_click_workflow_example.py` | `open_click_page` -> `wait_for_click` -> `collect_snapshots` completes with before/after evidence | Pass in focused test suite |
-| Agent challenge harness exists | `examples/agent_challenges/browser_click_challenge/` | Agents can be prompted, classified, and manually audited against a browser-click workflow challenge | Harness tests pass; aggregate model results pending |
+| Agent challenge harness implementation exists; no aggregate agent-performance claim | `examples/agent_challenges/browser_click_challenge/` | Agents can be prompted, classified, and manually audited against a browser-click workflow challenge | Harness tests pass; aggregate model results pending |
 | CLI and JSON-RPC share the API surface | `tests/wf_transport_rpc_http/` and `tests/wf_cli/` | Transport and CLI delegate to the same workflow operations | Pass in focused test suite |
 
 The table summarizes repository evidence; it is not a substitute for rerunning
 the verification commands before final submission.
+
+## Verification Snapshot
+
+This draft includes one focused verification snapshot to make the evidence
+claims auditable from the text. A final submission should regenerate this table
+from the exact submitted commit.
+
+| Field | Value |
+| --- | --- |
+| Date run | 2026-06-16 |
+| Baseline commit | `e24f2892` before subsequent document-polish edits |
+| Command | `uv run pytest tests/docs tests/examples/test_report_workflow_example.py tests/examples/test_browser_click_workflow_example.py tests/examples/test_opencode_browser_click_challenge.py tests/artifacts/test_validation.py tests/wf_api/test_run_api.py -q` |
+| Result | `72 passed in 9.22s` |
+| Environment | Local Windows development environment, Python via `uv` |
+| Scope | Documentation links, report workflow, browser-click workflow, challenge harness, deployment validation, and run API tests |
+
+## Implemented Scope Matrix
+
+| Area | Implemented evidence | Not claimed | Future work |
+| --- | ---- | ---- | ---- |
+| Workflow lifecycle | Draft, artifact, deployment, run, trace, and list/inspect/resume surfaces | Exactly-once execution or arbitrary mid-node crash recovery | Transactional stores and richer run debugging |
+| Source providers | Built-in, MCP, and Python source families | Symmetric feature depth across all providers | Provider add/update/remove/reload lifecycle |
+| Execution model | Outcome-routed graph with node, condition, foreach, subgraph, join, interrupt, and end steps | General fork/gather programming model | Parallel fork/gather and aggregation |
+| Agent-operable surface | CLI, JSON-RPC, validation diagnostics, next-action hints, compact output | Measured agent success or token reduction | Broader agent challenge suite and aggregate evaluation |
+| Auth/security | Auth record plumbing and source diagnostics | Production security, encrypted-at-rest secrets, RBAC, sandboxing | Secret-manager integration and policy enforcement |
 
 ### Architecture And Code Walkthrough
 
@@ -1032,8 +1087,8 @@ from plan to completed run.
 
 Tests verify that draft validation catches schema violations, deployment
 validation detects source drift, and diagnostics include repair hints. The
-validation tests demonstrate that failed states are machine-readable and
-repairable.
+validation tests demonstrate that failed states are machine-readable and include
+repair guidance.
 
 (Evidence: `tests/artifacts/test_validation.py`, `tests/wf_api/test_source_admin_api.py`.)
 
@@ -1068,7 +1123,7 @@ The browser-click example complements this with a serial three-node Python
 workflow.
 
 (Evidence: `examples/report_workflow/`,
-`examples/browser_click_workflow/`,
+`examples/browser_click_workflow/`,  
 `tests/examples/test_report_workflow_example.py`,
 `tests/examples/test_browser_click_workflow_example.py`.)
 
@@ -1258,11 +1313,11 @@ The following areas are identified as likely future work:
 
 # Conclusion
 
-External LLM agents can author and operate workflows, but reusable workflow
-life cycle records should live in a typed platform substrate. This report
-described the design and implementation of `lda.chat`, a prototype platform
-that separates planning from execution across controlled built-in, MCP, and
-Python source examples.
+External LLM agents can be used to author and operate workflows, but reusable
+workflow lifecycle records should live in a typed platform substrate. This
+report described the design and implementation of `lda.chat`, a prototype
+platform that separates planning from execution across controlled built-in,
+MCP, and Python source examples.
 
 The implementation supports five claims:
 
@@ -1272,10 +1327,10 @@ The implementation supports five claims:
    one workflow surface, and is designed to admit future source families that
    can be projected into the existing capability/source contract without
    core-runtime changes.
-3. Validation and diagnostics produce machine-readable repairable failure
-   states intended to reduce planner trial-and-error.
-4. The CLI and JSON-RPC transport provide an agent-operable surface that
-   external LLM agents can drive without direct runtime access.
+3. Validation and diagnostics produce machine-readable failure states with
+   repair hints, intended to reduce planner trial-and-error.
+4. The CLI and JSON-RPC transport provide a surface designed for external LLM
+   agents to drive without direct runtime access.
 5. The deterministic report-workflow case study demonstrates the full lifecycle
    from config validation through run execution and trace inspection.
 
@@ -1388,18 +1443,119 @@ run trace <run_id> --from 0 --limit 5
 
 ## Appendix B: Evidence Index
 
-See [evidence-index.md](evidence-index.md) for the full claim-to-evidence map.
+This appendix maps thesis claims to implementation evidence. It is a guardrail
+against unsupported claims and complements the focused verification snapshot in
+the Evaluation section.
 
-| Claim | Evidence |
-| --- | ----- |
-| Workflow lifecycle models | `src/wf_artifacts/models.py`, `src/wf_artifacts/runs/` |
-| Source provider boundary | `src/wf_platform/sources.py`, `src/wf_server/config.py` |
-| JSON-RPC/CLI surface | `src/wf_transport_rpc_http/`, `src/wf_cli/` |
-| Python source case study | `examples/report_workflow/`, `tests/examples/test_report_workflow_example.py` |
-| MCP stateful runtime | `tests/wf_sources_mcp/test_runtime.py`, `tests/wf_transport_rpc_http/test_mcp_backed_server_rpc.py` |
-| Validation/diagnostics | `src/wf_artifacts/validation.py`, `src/wf_api/next_actions.py`, `tests/artifacts/test_validation.py` |
-| Agent-operable surface | `src/wf_cli/`, `tests/wf_cli/` |
-| Platform domain | `src/wf_api/service.py`, `tests/wf_api/test_artifact_api.py`, `tests/wf_api/test_run_api.py` |
+### Core Workflow Lifecycle
+
+Claim: The platform separates mutable drafts, immutable artifacts, deployments,
+runs, and traces.
+
+Evidence:
+
+- `src/wf_artifacts/models.py` — artifact/deployment models.
+- `src/wf_artifacts/runs/` — run records and run store.
+- `src/wf_api/service.py` — facade for workflow lifecycle operations.
+- `tests/wf_api/test_artifact_api.py`
+- `tests/wf_api/test_run_api.py`
+
+### Source Provider Boundary
+
+Claim: Workflow execution consumes source-provided capabilities without making
+the core runtime MCP-specific.
+
+Evidence:
+
+- `src/wf_platform/sources.py` — neutral source DTOs and source policy.
+- `src/wf_server/config.py` — server composition for configured sources.
+- `src/wf_sources_mcp/` — MCP source family.
+- `src/wf_sources_python/` — Python source family.
+- `docs/source_architecture.md`
+
+### Agent-Operable Surface
+
+Claim: The workflow lifecycle is designed to be operated by external agents
+through stable CLI/API surfaces.
+
+Evidence:
+
+- `src/wf_cli/`
+- `src/wf_transport_rpc_http/`
+- `tests/wf_cli/`
+- `tests/wf_transport_rpc_http/`
+- `docs/wf_cli.md`
+- `examples/agent_challenges/browser_click_challenge/` — challenge harness for
+  CLI-operability trials; aggregate model results require manual audit.
+
+### Validation And Diagnostics
+
+Claim: Validation and diagnostics make failed workflow states machine-readable
+and include repair hints.
+
+Evidence:
+
+- `src/wf_artifacts/validation.py`
+- `src/wf_api/next_actions.py`
+- `src/wf_api/source_admin.py`
+- `tests/artifacts/test_validation.py`
+- `tests/wf_api/test_source_admin_api.py`
+
+### Stateful MCP Source Correctness
+
+Claim: MCP-backed sources can preserve stateful sessions across workflow calls.
+
+Evidence:
+
+- `src/wf_sources_mcp/runtime/`
+- `src/wf_sources_mcp/client/`
+- `tests/wf_sources_mcp/test_runtime.py`
+- `tests/wf_transport_rpc_http/test_mcp_backed_server_rpc.py`
+
+### Python Source Case Study
+
+Claim: The source-provider model is not MCP-only.
+
+Evidence:
+
+- `examples/report_workflow/`
+- `src/wf_sources_python/`
+- `tests/examples/test_report_workflow_example.py`
+- `tests/wf_sources_python/test_loader.py`
+- `examples/browser_click_workflow/`
+- `tests/examples/test_browser_click_workflow_example.py`
+- `examples/agent_challenges/browser_click_challenge/`
+- `tests/examples/test_opencode_browser_click_challenge.py`
+
+### Agent Challenge Evaluation Protocol
+
+Claim: The project has a repeatable protocol for evaluating whether external
+agents can use the product-facing CLI lifecycle, but aggregate model results are
+not yet claimed.
+
+Evidence:
+
+- `examples/agent_challenges/browser_click_challenge/workspace_template/prompt.md`
+  — challenge prompt and self-report schema.
+- `examples/agent_challenges/browser_click_challenge/run_opencode_trials.py` —
+  trial runner.
+- `examples/agent_challenges/browser_click_challenge/classification.py` —
+  convenience classifier for returned reports.
+- `examples/agent_challenges/browser_click_challenge/reports.py` — report
+  extraction and saving.
+- `tests/examples/test_opencode_browser_click_challenge.py`
+
+### Limitations
+
+Claim: This is a prototype platform substrate, not a finished automation
+product.
+
+Evidence:
+
+- `docs/add/thesis-outline.md`
+- `docs/current_roadmap.md`
+- Absence of scheduler, visual-editor, and secret-manager production packages
+  in the current source tree.
 
 ## Appendix C: Agent Challenge Harness
 
@@ -1423,6 +1579,15 @@ The current browser-click prompt allows two product-facing authoring paths:
 2. **Raw-plan path.** Write a raw workflow plan and load it with
    `wf artifact create-from-plan`, then deploy and run.
 
+```mermaid
+flowchart LR
+  Transcript[Agent transcript and files] --> YAML[YAML self-report]
+  YAML --> Classifier[Automatic convenience classification]
+  Transcript --> Audit[Manual audit]
+  Classifier --> Audit
+  Audit --> Outcome[Official outcome]
+```
+
 The challenge report is a YAML self-report with fields for product-path use,
 helper-script use, workflow file, deployment id, run id, before/after booleans,
 read-behavior flags, attempt counts, missed requirements, and notes. The harness
@@ -1433,14 +1598,15 @@ product source code, adjacent attempts, prior stores, or existing solutions.
 
 This distinction is intentional. Agent benchmark literature and practice show
 that automated scores and self-reports can be misleading when an agent can
-inspect hidden answers, prior artifacts, source code, or evaluator state. The
-harness therefore records possible invalidation flags such as helper-script
-bypass, adjacent-attempt leakage, prior-store reuse, product-code dependency,
-false YAML claims, timeouts, parse failures, and missing run evidence.
+inspect hidden answers, prior artifacts, source code, or evaluator state
+[@nist-agent-cheating-2025; @openai-swebench-audit-2026]. The harness therefore
+records possible invalidation flags such as helper-script bypass,
+adjacent-attempt leakage, prior-store reuse, product-code dependency, false YAML
+claims, timeouts, parse failures, and missing run evidence.
 
 At the time of this report, the harness and browser-click workflow are
-implemented and unit-tested, and preliminary manual trials have already informed
-CLI and prompt improvements. The report does not claim aggregate model success
+implemented and unit-tested, and informal preliminary trials have informed CLI
+and prompt improvements. The report does not claim aggregate model success
 rates, timeout distributions, command counts, or retry-reduction results yet.
 Those require repeated, clean-workspace trials across the selected free opencode
 models and manual audit of saved trial reports.
