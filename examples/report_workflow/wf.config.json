@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "client": {
+    "target": {
+      "kind": "rpc_http",
+      "url": "http://127.0.0.1:8771/rpc",
+      "timeout_seconds": 30
+    }
+  },
+  "server": {
+    "store": {
+      "kind": "filesystem",
+      "root": ".wf_report_store"
+    },
+    "transports": [
+      {
+        "kind": "rpc_http",
+        "host": "127.0.0.1",
+        "port": 8771,
+        "path": "/rpc"
+      }
+    ],
+    "sources": [
+      {
+        "kind": "python",
+        "id": "local.report",
+        "path": ".",
+        "module": "ops",
+        "registry": "registry"
+      }
+    ]
+  }
+}

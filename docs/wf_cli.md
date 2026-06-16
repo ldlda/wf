@@ -5,13 +5,15 @@ beside MCP: useful for shell-driven authoring, local validation, file-based
 patches, and agent workflows that do better with commands than giant MCP
 schemas.
 
-`wf` uses the same config/store stack as the MCP server in v1:
+`wf` uses the same config/store stack as the workflow server:
 
 ```bash
-wf --config wf_mcp.config.json <command>
+wf --config wf.config.json <command>
 ```
 
-If `--config` is omitted, `wf_mcp.config.json` is used.
+If `--config` is omitted, `wf.config.json` in the current working directory is
+used. Legacy `wf_mcp.config.json` files are still supported when passed
+explicitly with `--config`.
 
 `--local` still uses the selected `--config` file. For neutral workflow configs,
 it builds the configured server in the CLI process, including configured Python

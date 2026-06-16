@@ -94,7 +94,9 @@ def test_browser_click_open_browser_failure_does_not_fail_workflow(monkeypatch) 
     def fail_open(_url: str) -> bool:
         raise RuntimeError("no browser")
 
-    monkeypatch.setattr("examples.browser_click_workflow.ops.webbrowser.open", fail_open)
+    monkeypatch.setattr(
+        "examples.browser_click_workflow.ops.webbrowser.open", fail_open
+    )
 
     opened = _open_click_page(OpenPageInput(open_browser=True))
     try:

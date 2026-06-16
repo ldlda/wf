@@ -4,13 +4,15 @@ import json
 import subprocess
 from pathlib import Path
 
+import yaml
+
+from examples.agent_challenges import reports as generic_reports
 from examples.agent_challenges.browser_click_challenge import (
-    reports,
     run_opencode_trials,
 )
 from examples.agent_challenges.browser_click_challenge.challenge import (
+    BROWSER_CLICK_DEF,
     LOCAL_WF_COMMAND_PREFIX,
-    TrialConfig,
     render_prompt,
     server_command,
 )
@@ -35,8 +37,19 @@ from examples.agent_challenges.browser_click_challenge.run_opencode_trials impor
     trial_output_path,
     wf_command_prefix_for_config,
 )
+from examples.agent_challenges.browser_click_challenge.save_manual_audit import (
+    main as save_manual_audit_main,
+)
 from examples.agent_challenges.browser_click_challenge.save_trial_report import (
     main as save_trial_report_main,
+)
+from examples.agent_challenges.workspace import (
+    ChallengeDef,
+    TrialConfig,
+    write_trial_config,
+)
+from examples.agent_challenges.workspace import (
+    prepare_trial_workspace as generic_prepare_trial_workspace,
 )
 
 
@@ -110,6 +123,24 @@ def test_build_opencode_command_with_attach(tmp_path: Path) -> None:
     assert "http://127.0.0.1:4096" in command
 
 
+def test_run_opencode_trials_script_supports_direct_execution() -> None:
+    result = subprocess.run(
+        [
+            "uv",
+            "run",
+            "python",
+            "examples/agent_challenges/browser_click_challenge/run_opencode_trials.py",
+            "--help",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0
+    assert "--model" in result.stdout
+
+
 def test_run_trial_saves_final_report_from_successful_result(
     tmp_path: Path,
     monkeypatch,
@@ -160,7 +191,9 @@ def test_run_trial_saves_final_report_from_successful_result(
             stderr="",
         )
 
-    monkeypatch.setattr(run_opencode_trials.subprocess, "run", fake_run)
+    from examples.agent_challenges import runner as generic_runner
+
+    monkeypatch.setattr(generic_runner.subprocess, "run", fake_run)
     config = TrialConfig(
         model="opencode/mimo-v2.5-free",
         variant="high",
@@ -196,7 +229,9 @@ def test_run_trial_records_report_save_error_for_timeout(
     def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
         raise subprocess.TimeoutExpired(cmd=["opencode"], timeout=120)
 
-    monkeypatch.setattr(run_opencode_trials.subprocess, "run", fake_run)
+    from examples.agent_challenges import runner as generic_runner
+
+    monkeypatch.setattr(generic_runner.subprocess, "run", fake_run)
     config = TrialConfig(
         model="opencode/mimo-v2.5-free",
         variant="high",
@@ -550,10 +585,224 @@ def test_save_trial_report_requires_input_when_workspace_only(
 
     workspace = tmp_path / "trial"
     workspace.mkdir()
-    monkeypatch.setattr(reports.sys, "stdin", _InteractiveStdin())
+    monkeypatch.setattr(generic_reports.sys, "stdin", _InteractiveStdin())
 
     try:
         save_trial_report_main([str(workspace)])
+    except SystemExit as exc:
+        assert exc.code == 2
+    else:
+        raise AssertionError("expected argparse failure")
+
+
+def test_save_manual_audit_from_result_infers_report_and_applies_overrides(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    workspace = tmp_path / "trial"
+    workspace.mkdir()
+    report_text = "\n".join(
+        [
+            "## Report",
+            "",
+            "```yaml",
+            "challenge_report:",
+            "  used_product_path: true",
+            "  used_helper_script: false",
+            '  workflow_file: "workflow.plan.json"',
+            '  deployment_id: "browser_click_case_study.default"',
+            '  run_id: "run_123"',
+            "  before_clicked: false",
+            "  after_clicked: true",
+            "  run_failed: false",
+            "  leftover_processes: false",
+            "  read:",
+            "    skills: true",
+            "    docs: true",
+            "    product_code: false",
+            "    adjacent_attempts: false",
+            "    prior_store: false",
+            "    existing_solution: false",
+            "  attempts:",
+            "    total: 1",
+            "    failed: 0",
+            "  missed_requirements:",
+            '    - "none"',
+            '  notes: "agent said clean"',
+            "```",
+            "",
+        ]
+    )
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "classification": "success",
+                "duration_seconds": 42.5,
+                "returncode": 0,
+                "config": {"prompt_path": str(workspace / "prompt.md")},
+                "parsed": {"text": report_text},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        save_manual_audit_main(
+            [
+                "--from-result",
+                str(result_path),
+                "--manual-classification",
+                "success_code_assisted",
+                "--audited-at",
+                "2026-06-16T00:00:00Z",
+                "--set-read",
+                "product_code=true",
+                "--set-evidence",
+                "trace_count=3",
+                "--correction",
+                "read.product_code: agent reported false, audited true",
+                "--notes",
+                "Valid product run, but code-assisted.",
+            ]
+        )
+        == 0
+    )
+
+    audit_path = workspace / "manual-audit.yaml"
+    audit = yaml.safe_load(audit_path.read_text(encoding="utf-8"))["manual_audit"]
+    assert audit["auto_classification"] == "success"
+    assert audit["manual_classification"] == "success_code_assisted"
+    assert audit["audited_at"] == "2026-06-16T00:00:00Z"
+    assert audit["valid_product_run"] is True
+    assert audit["product_path_used"] is True
+    assert audit["helper_script_used"] is False
+    assert audit["run_succeeded"] is True
+    assert audit["evidence"]["deployment_id"] == "browser_click_case_study.default"
+    assert audit["evidence"]["run_id"] == "run_123"
+    assert audit["evidence"]["before_clicked"] is False
+    assert audit["evidence"]["after_clicked"] is True
+    assert audit["evidence"]["trace_count"] == 3
+    assert audit["read_flags"]["product_code"] is True
+    assert audit["read_flags"]["adjacent_attempts"] is False
+    assert audit["attempts"] == {"total": 1, "failed": 0}
+    assert audit["corrections"] == [
+        "read.product_code: agent reported false, audited true"
+    ]
+    assert audit["notes"] == "Valid product run, but code-assisted."
+    assert audit_path.as_posix() in capsys.readouterr().out
+
+
+def test_save_manual_audit_from_report_overrides_timeout_result_stream(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    workspace = tmp_path / "trial"
+    workspace.mkdir()
+    report_path = workspace / "final-report.md"
+    report_path.write_text(
+        "\n".join(
+            [
+                "```yaml",
+                "challenge_report:",
+                "  used_product_path: true",
+                "  used_helper_script: false",
+                '  workflow_file: "workflow.plan.json"',
+                '  deployment_id: "browser_click_deployment"',
+                '  run_id: "run_123"',
+                "  before_clicked: false",
+                "  after_clicked: true",
+                "  run_failed: false",
+                "  leftover_processes: false",
+                "  read:",
+                "    skills: false",
+                "    docs: true",
+                "    product_code: true",
+                "    adjacent_attempts: false",
+                "    prior_store: false",
+                "    existing_solution: true",
+                "  attempts:",
+                "    total: 1",
+                "    failed: 0",
+                "  missed_requirements:",
+                '    - "none"',
+                '  notes: "manual UI recovery"',
+                "```",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "classification": "timeout",
+                "duration_seconds": 1000,
+                "returncode": None,
+                "config": {"prompt_path": str(workspace / "prompt.md")},
+                "parsed": {"text": "stale event stream, no final report"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        save_manual_audit_main(
+            [
+                "--from-result",
+                str(result_path),
+                "--from-report",
+                str(report_path),
+                "--manual-classification",
+                "success_code_assisted",
+                "--audited-at",
+                "2026-06-16T00:00:00Z",
+            ]
+        )
+        == 0
+    )
+
+    audit_path = workspace / "manual-audit.yaml"
+    audit = yaml.safe_load(audit_path.read_text(encoding="utf-8"))["manual_audit"]
+    assert audit["auto_classification"] == "timeout"
+    assert audit["manual_classification"] == "success_code_assisted"
+    assert audit["valid_product_run"] is True
+    assert audit["product_path_used"] is True
+    assert audit["run_succeeded"] is True
+    assert audit["evidence"]["deployment_id"] == "browser_click_deployment"
+    assert audit["evidence"]["run_id"] == "run_123"
+    assert audit["read_flags"]["product_code"] is True
+    assert audit["agent_notes"] == "manual UI recovery"
+    assert audit_path.as_posix() in capsys.readouterr().out
+
+
+def test_save_manual_audit_rejects_non_boolean_read_override(tmp_path: Path) -> None:
+    workspace = tmp_path / "trial"
+    workspace.mkdir()
+    result_path = tmp_path / "result.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "classification": "unknown",
+                "config": {"prompt_path": str(workspace / "prompt.md")},
+                "parsed": {"text": "no yaml"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    try:
+        save_manual_audit_main(
+            [
+                "--from-result",
+                str(result_path),
+                "--manual-classification",
+                "invalid",
+                "--set-read",
+                "product_code=maybe",
+            ]
+        )
     except SystemExit as exc:
         assert exc.code == 2
     else:
@@ -610,6 +859,7 @@ def test_main_uses_custom_workspace_template_and_source_root(
         *,
         index: int,
         results_dir: Path,
+        classify_fn: object = None,
     ) -> dict[str, object]:
         return {
             "index": index,
@@ -619,7 +869,9 @@ def test_main_uses_custom_workspace_template_and_source_root(
             "report_path": config.prompt_path.parent / "final-report.md",
         }
 
-    monkeypatch.setattr(run_opencode_trials, "run_trial", fake_run_trial)
+    from examples.agent_challenges import runner as generic_runner
+
+    monkeypatch.setattr(generic_runner, "run_trial", fake_run_trial)
 
     assert (
         run_opencode_trials.main(
@@ -712,10 +964,171 @@ def test_render_prompt_injects_command_prefix_and_server_context(
 
 
 def test_server_command_uses_example_config_and_requested_port() -> None:
-    command = server_command(port=8765)
+    command = server_command(
+        port=8765, config_arg="examples/browser_click_workflow/wf.config.json"
+    )
 
     assert command[:3] == ["uv", "run", "wf-rpc-server"]
     assert "--config" in command
     assert "examples/browser_click_workflow/wf.config.json" in command
     assert "--port" in command
     assert "8765" in command
+
+
+# --- New generic-module tests ---
+
+
+def test_generic_workspace_preparation_writes_config_for_arbitrary_challenge_def(
+    tmp_path: Path,
+) -> None:
+    template = tmp_path / "template"
+    template.mkdir()
+    (template / "prompt.md").write_text("test prompt", encoding="utf-8")
+    workspaces = tmp_path / "workspaces"
+    source_root = tmp_path / "my_source"
+    source_root.mkdir()
+
+    defn = ChallengeDef(
+        name="custom_challenge",
+        source_root=source_root,
+        source_id="local.custom",
+        source_module="custom_ops",
+        source_registry="custom_registry",
+        store_root=".custom_store",
+        default_workspace_template=template,
+        default_workspaces_dir=workspaces,
+        default_results_dir=tmp_path / "results",
+        default_prompt=template / "prompt.md",
+        default_server_port=9999,
+        server_config_arg="examples/custom/wf.config.json",
+    )
+
+    ws = generic_prepare_trial_workspace(
+        defn,
+        model="test-model",
+        index=1,
+    )
+
+    assert ws.root == workspaces / "test-model-trial-001"
+    config = json.loads(ws.config_path.read_text(encoding="utf-8"))
+    assert config["client"]["target"] == {"kind": "local"}
+    assert config["server"]["store"] == {"kind": "filesystem", "root": ".custom_store"}
+    assert config["server"]["sources"][0] == {
+        "kind": "python",
+        "id": "local.custom",
+        "path": "../../my_source",
+        "module": "custom_ops",
+        "registry": "custom_registry",
+    }
+    assert (ws.root / "prompt.md").read_text(encoding="utf-8") == "test prompt"
+
+
+def test_browser_click_wrapper_produces_expected_paths_and_command_prefix() -> None:
+    assert BROWSER_CLICK_DEF.name == "browser_click"
+    assert BROWSER_CLICK_DEF.source_id == "local.browser_click"
+    assert BROWSER_CLICK_DEF.server_config_arg == (
+        "examples/browser_click_workflow/wf.config.json"
+    )
+    assert LOCAL_WF_COMMAND_PREFIX == (
+        "uv run wf --config examples/browser_click_workflow/wf.config.json --local"
+    )
+    assert BROWSER_CLICK_DEF.default_prompt.name == "prompt.md"
+    assert BROWSER_CLICK_DEF.default_prompt.parent.name == "workspace_template"
+
+
+def test_generic_runner_can_be_configured_with_fake_challenge_and_fake_opencode(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    from examples.agent_challenges.runner import main as generic_main
+
+    template = tmp_path / "template"
+    template.mkdir()
+    (template / "prompt.md").write_text("fake {{wf_command_prefix}}", encoding="utf-8")
+    source_root = tmp_path / "source"
+    source_root.mkdir()
+    workspaces = tmp_path / "workspaces"
+    results = tmp_path / "results"
+
+    defn = ChallengeDef(
+        name="fake_challenge",
+        source_root=source_root,
+        source_id="local.fake",
+        source_module="fake_ops",
+        source_registry="fake_registry",
+        store_root=".fake_store",
+        default_workspace_template=template,
+        default_workspaces_dir=workspaces,
+        default_results_dir=results,
+        default_prompt=template / "prompt.md",
+        default_server_port=9000,
+        server_config_arg="fake/config.json",
+    )
+
+    def classify_fn(text: str) -> str:
+        if "success" in text.lower():
+            return "success"
+        return "unknown"
+
+    sent_text = json.dumps({"text": "success!"})
+
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=["opencode"],
+            returncode=0,
+            stdout=sent_text,
+            stderr="",
+        )
+
+    from examples.agent_challenges import runner as generic_runner
+
+    monkeypatch.setattr(generic_runner.subprocess, "run", fake_run)
+
+    exit_code = generic_main(
+        defn,
+        classify_fn,
+        [
+            "--model",
+            "fake/model",
+            "--trials",
+            "1",
+        ],
+    )
+
+    assert exit_code == 0
+    assert (workspaces / "fake_model-trial-001").exists()
+    assert (results / "fake_model-trial-001.json").exists()
+
+
+def test_generic_write_trial_config_with_custom_source_root(
+    tmp_path: Path,
+) -> None:
+    config_path = tmp_path / "wf.config.json"
+    source_root = tmp_path / "custom_root"
+    source_root.mkdir()
+
+    defn = ChallengeDef(
+        name="test",
+        source_root=source_root,
+        source_id="local.test",
+        source_module="test_mod",
+        source_registry="test_reg",
+        store_root=".test_store",
+        default_workspace_template=tmp_path / "template",
+        default_workspaces_dir=tmp_path / "workspaces",
+        default_results_dir=tmp_path / "results",
+        default_prompt=tmp_path / "template" / "prompt.md",
+        default_server_port=8000,
+        server_config_arg="test/config.json",
+    )
+
+    write_trial_config(config_path, defn=defn)
+    config = json.loads(config_path.read_text(encoding="utf-8"))
+
+    assert config["server"]["sources"][0] == {
+        "kind": "python",
+        "id": "local.test",
+        "path": "custom_root",
+        "module": "test_mod",
+        "registry": "test_reg",
+    }

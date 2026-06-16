@@ -3,6 +3,11 @@
 This harness runs agent trials against the browser-click workflow challenge.
 It is evidence tooling, not product runtime code.
 
+The harness mechanics (workspace preparation, opencode I/O, report handling,
+trial runner) live in the shared modules under
+[`examples/agent_challenges/`](../). The browser-click challenge provides
+challenge-specific metadata, prompt template, classification, and defaults.
+
 The deterministic workflow example is:
 
 ```text
@@ -102,6 +107,26 @@ The script infers the workspace from the result file and only writes
 is saved. For manually copied reports, pass an explicit workspace and
 `--input-file final-answer.md`.
 
+## Saving Manual Audits
+
+Keep `final-report.md` as captured agent output. If manual review finds that
+the agent's YAML self-report was wrong or incomplete, write a sidecar audit:
+
+```powershell
+uv run python examples/agent_challenges/browser_click_challenge/save_manual_audit.py `
+  --from-result examples/agent_challenges/browser_click_challenge/results/<trial>.json `
+  --manual-classification success_code_assisted `
+  --set-read product_code=true `
+  --set-evidence trace_count=3 `
+  --correction "read.product_code: agent reported false, audited true" `
+  --notes "Valid product run, but raw plan shape came from product code/tests."
+```
+
+The script infers the workspace, run id, deployment id, automatic
+classification, read flags, attempts, and notes from the result file. It writes
+`<trial>/manual-audit.yaml`. Later benchmark summaries should treat the sidecar
+as the human override, not mutate the captured agent report.
+
 ## Optional Opencode Server Attachment
 
 `--attach` is opencode's server attach flag. It connects this non-interactive
@@ -172,5 +197,23 @@ Each trial is classified as one of:
 - `timeout`: the opencode process exceeded the configured timeout.
 - `parse_error`: the harness could not read opencode JSON/JSONL output.
 - `unknown`: no clear success or failure signal was found.
+
+## Shared Harness Modules
+
+The generic modules in `examples/agent_challenges/` provide reusable harness
+logic:
+
+| Module | Purpose |
+|--------|---------|
+| `workspace.py` | `ChallengeDef`, `TrialConfig`, `TrialWorkspace`, `prepare_trial_workspace`, `write_trial_config`, `starting_trial_index`, `wf_command_prefix_for_config`, `render_prompt`, `server_command` |
+| `runner.py` | `ManagedServer`, `start_server`, `run_trial`, `main` — generic trial runner parameterized by `ChallengeDef` and a classification function |
+| `opencode_io.py` | `build_opencode_command`, `parse_opencode_output`, `result_text` |
+| `reports.py` | `save_report`, `report_from_result`, `save_report_from_result_payload` |
+| `classification.py` | `extract_challenge_report` (generic YAML extraction), `_contains_bool_marker` |
+
+The browser-click challenge's `run_opencode_trials.py` and `save_trial_report.py`
+are thin wrappers that pass `BROWSER_CLICK_DEF` and the browser-click
+classification function to the generic runner. The same pattern can be used to
+add new challenges without duplicating the harness.
 
 Committed tests cover harness logic only. They do not invoke opencode.

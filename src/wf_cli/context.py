@@ -60,7 +60,7 @@ class CliTyperState:
     root CLI options through this adapter instead of spelling dict keys locally.
     """
 
-    config_path: str = "wf_mcp.config.json"
+    config_path: str = "wf.config.json"
     force_local: bool = False
     rpc_url: str | None = None
     rpc_timeout_seconds: float | None = None

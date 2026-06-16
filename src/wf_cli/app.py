@@ -39,7 +39,7 @@ def root(
             "--config",
             help="Path to workflow/MCP config JSON.",
         ),
-    ] = "wf_mcp.config.json",
+    ] = "wf.config.json",
     local: Annotated[
         bool,
         typer.Option("--local", help="Force same-process local workflow target."),

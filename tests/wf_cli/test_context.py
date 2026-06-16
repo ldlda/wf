@@ -62,7 +62,7 @@ def test_cli_typer_state_accepts_legacy_dict_context_object() -> None:
 def test_cli_typer_state_defaults_for_missing_context_object() -> None:
     ctx = _typer_context(None)
 
-    assert config_path_from_context(ctx) == "wf_mcp.config.json"
+    assert config_path_from_context(ctx) == "wf.config.json"
     assert force_local_from_context(ctx) is False
     assert rpc_url_from_context(ctx) is None
     assert rpc_timeout_from_context(ctx) is None
