@@ -205,6 +205,10 @@ stable.
 - Completed: an opencode browser-click challenge harness captures external
   agent trials against the deterministic browser-click workflow example without
   changing product runtime code.
+- Next thesis/evaluation polish: treat `skills/`, runbooks, and challenge
+  prompt templates as the agent instruction layer. Strengthen them before
+  claiming aggregate agent-operability results, and track when trials rely on
+  product code, prior stores, adjacent attempts, or existing example solutions.
 
 ## Historical References
 

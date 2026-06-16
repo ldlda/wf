@@ -173,8 +173,8 @@ The design requirements that follow from this problem statement are:
 2. Source-provider boundary implemented for built-in, MCP, and Python sources,
    and designed to admit future source families that can be projected into the
    existing capability/source contract.
-3. Server, API, and CLI surfaces that external agents can drive, backed by
-   persisted lifecycle stores.
+3. Server, API, and CLI surfaces intended for external-agent operation, backed
+   by persisted lifecycle stores.
 4. Validation and inspection mechanisms intended to reduce planner
    trial-and-error.
 5. Next-action guidance that points an agent toward useful lifecycle operations
@@ -185,9 +185,9 @@ The design requirements that follow from this problem statement are:
 
 The system occupies a specific position in the automation landscape. It does
 not attempt to replace mature platforms in their strengths, but rather explores
-a different center of gravity: external AI agents can drive the authoring and
-execution lifecycle directly through typed contracts. The comparison below is
-qualitative positioning, not a benchmark across products.
+a different center of gravity: typed lifecycle contracts intended to be driven
+by external AI agents. The comparison below is qualitative positioning, not a
+benchmark across products.
 
 ## Direct LLM Tool Orchestration
 
@@ -223,10 +223,10 @@ Zapier's own documentation describes a hosted, stateless runtime with explicit
 execution-time and payload constraints, plus published Zap limits and rate
 limits [@zapier-operating-constraints; @zapier-zap-limits]. The prototype does
 not claim feature parity with these products. Instead, it explores a different
-trade-off: a platform where external AI agents can operate the full lifecycle
-directly, where local Python and MCP sources share one workflow surface, and
-where artifacts, deployments, runs, and traces are first-class inspectable
-records.
+trade-off: a platform exposing the full lifecycle through typed contracts
+intended for external-agent operation, where local Python and MCP sources share
+one workflow surface, and where artifacts, deployments, runs, and traces are
+first-class inspectable records.
 
 ## Agent Graph Frameworks
 
@@ -397,7 +397,9 @@ The resolution path for a source reference is:
 
 This design provides a portability mechanism across environments: the same
 artifact can be deployed with different concrete source bindings, while the
-workflow graph references logical names only.
+workflow graph references logical names only. Portability is still scoped by
+provider availability: local Python code, MCP catalogs, auth records, and source
+stores can differ between environments.
 
 # System Architecture
 
@@ -536,11 +538,44 @@ and failed runs remain inspectable records.
 
 ## Workflow Core Model
 
-The core model processes graph execution through typed stages.
-[@fig:core-step-execution] answers what happens during one run at the
-graph-execution level.
+The core model processes graph execution through typed stages. Because figures
+may float in the generated PDF, this section separates the broad runtime loop
+from the ordinary callable-node path. [@fig:core-runtime-loop] shows how the
+runtime selects a frame, dispatches by step kind, records trace, and routes by
+outcome. [@fig:nodeuse-execution-path] then zooms into the `NodeUse` path,
+where most source-backed work occurs; it expands the `NodeUse` branch from
+[@fig:core-runtime-loop].
 
-```{.mermaid #fig:core-step-execution height=80% caption="Core step execution: a node step resolves bindings, invokes a NodeDef handler, merges reducer-aware state, appends trace, and routes by outcome."}
+```{.mermaid #fig:core-runtime-loop image-width="0.88\\linewidth" caption="Workflow core runtime loop: after workflow input validation, the runtime repeatedly selects a ready frame, dispatches by explicit step kind, records trace for routable steps, and either routes onward, stops for interrupt, or projects final output."}
+flowchart TB
+  Start[Validate workflow input] --> Select[Select ready frame]
+  Select --> Dispatch{Step kind}
+
+  Dispatch --> Node[NodeUse]
+  Dispatch --> Cond[Condition]
+  Dispatch --> Each[Foreach]
+  Dispatch --> Sub[Subgraph]
+  Dispatch --> Join[Join]
+  Dispatch --> Int[Interrupt]
+  Dispatch --> End[End]
+
+  Node --> Trace[Append trace frame]
+  Cond --> Trace
+  Each --> Trace
+  Sub --> Trace
+  Join --> Trace
+
+  Trace --> Route[Route by outcome edge]
+  Route --> Select
+
+  Int --> Stop[Persist interrupt request]
+  Stop --> Resume[Resume payload and outcome]
+  Resume --> Route
+
+  End --> Output[Project workflow output]
+```
+
+```{.mermaid #fig:nodeuse-execution-path height=80% caption="NodeUse execution path: a callable node resolves bindings, invokes a NodeDef handler, checks the declared outcome, applies reducer-aware state writes, appends trace, and returns to outcome routing."}
 sequenceDiagram
   participant Runtime as Workflow Runtime
   participant Bindings as Binding Resolver
@@ -558,13 +593,6 @@ sequenceDiagram
   Reducers-->>Runtime: updated state
   Runtime->>Trace: append trace frame
   Runtime->>Runtime: route by outcome edge
-
-  alt interrupt step
-    Runtime->>Trace: store interrupt request
-    Runtime-->>Runtime: stop until resume payload
-  else end step
-    Runtime-->>Runtime: project workflow output
-  end
 ```
 
 Input validation gates entry. The runtime then repeatedly selects a ready frame
@@ -655,6 +683,10 @@ claim a complete general fork/gather programming model. The core is
 provider-agnostic; it sees `NodeDef` contracts and handler functions, not
 source-specific implementations.
 
+Determinism here refers to core routing, state, and trace semantics for a given
+workflow definition and handler results. Provider code, remote MCP calls,
+resource reads, and other external side effects may still be nondeterministic.
+
 State writes go through reducers. The platform includes built-in `wf.std`
 reducer definitions such as `replace`, `append`, `merge_object`, `add`,
 `set_union`, and `max`. Reducers are pure merge functions paired with
@@ -699,6 +731,8 @@ for stores, runtimes, or provider lifecycle. Those belong in `wf_api`,
 `wf_server`, or the specific `wf_sources_*` package.
 
 The API lifecycle is deliberately centralized through one facade, per [@fig:api-lifecycle-facade].
+This is not a second architecture diagram; it is the application-layer mechanism
+that prevents lifecycle operations from becoming disconnected CRUD calls.
 
 ```{.mermaid #fig:api-lifecycle-facade caption="API lifecycle facade: one WorkflowOperationContext carries stores, source inventory, runtime execution, and live checks for all lifecycle sub-APIs."}
 classDiagram
@@ -788,9 +822,9 @@ diagnostics and runtime status remain the source of truth.
 
 The `NextActions` object includes `can_continue`, `can_save_now`,
 `recommended_next_tool`, `reason`, `patch_examples` with concrete request
-payloads, and `warnings`. This is intended to make the surface agent-operable:
-an LLM agent can read the hint and execute the suggested operation without
-reconstructing the lifecycle state.
+payloads, and `warnings`. This supports external-agent operation as a surface
+property: a machine client can read the hint and execute the suggested
+operation without reconstructing the lifecycle state.
 
 (Evidence: `src/wf_api/next_actions.py`.)
 
@@ -957,113 +991,53 @@ under the `local.report` namespace.
 
 ## Lifecycle Runbook
 
-The case study exercises the full lifecycle through CLI commands. The commands
-demonstrate the agent-operable surface. The abbreviated commands below assume
-execution from `examples/report_workflow/`; the appendix gives repository-root
-commands with explicit config paths.
+The case study exercises the full lifecycle through the same CLI/API surface
+that external agents use. The main body summarizes the state transitions; the
+appendix gives the complete repository-root command transcript.
 
-1. **Config validation.** The config file is checked before server startup:
+First, config validation preflights the static Python source before server
+startup. This catches malformed source config or import failures before the
+workflow server is asked to compose source inventory. Starting the configured
+server then creates a `WorkflowServer` with stores, transport, platform sources,
+and the `local.report` Python source loaded into capability inventory.
 
-   ```powershell
-   wf config validate
-   ```
+Capability discovery shows the available report operations, and a direct
+capability call to `local.report.extract_report` verifies the typed source
+contract independently of the workflow lifecycle. This is useful because an
+agent can inspect or smoke-test a source before saving a workflow artifact.
 
-   This verifies that the file is well-formed and that the Python source module
-   can be imported.
+The draft path demonstrates agent-oriented authoring. A draft workspace can be
+seeded from one capability's input and output schemas:
 
-2. **Server startup.** The configured workflow server starts with its store,
-   transport, and source providers:
+```powershell
+wf draft create-from-capability report_ws local.report.extract_report
+```
 
-   ```powershell
-   wf-rpc-server --config wf.config.json
-   ```
+That command is intentionally a best-effort bootstrap, not a complete workflow
+synthesizer. Focused edit commands such as `wf draft set-name`,
+`wf draft set-input`, and `wf draft set-output` cover common schema and mapping
+edits without forcing an agent to write RFC 6902 JSON Patch by hand. Structural
+edits, such as adding `read_notes` before `extract_report` and
+`render_markdown_report` after it, still use `wf draft patch` or the raw-plan
+import path.
 
-3. **Status check.** The status command confirms the server is reachable:
+The tested thesis path imports the complete three-node plan as an immutable
+artifact:
 
-   ```powershell
-   wf status
-   ```
+```powershell
+wf artifact create-from-plan workflow.plan.json --artifact report_case_study --version 1 --title "Report Case Study" --outcome ok --binding local.report=local.report
+```
 
-4. **Capability discovery.** The report source exposes three capabilities:
+Artifact creation captures the workflow graph, required capability snapshots,
+declared outcome, and logical source requirements. Deployment saving then binds
+the logical source `local.report` to the concrete configured source
+`local.report`. Deployment validation checks that the bound source exists and
+still satisfies the artifact's saved requirements before execution.
 
-   ```powershell
-   wf cap list --source local.report
-   ```
-
-5. **Capability call.** The extraction capability returns structured JSON:
-
-   ```powershell
-   wf cap call local.report.extract_report --input-file cap-input.json --format compact
-   ```
-
-6. **Draft bootstrap.** A draft workspace can be seeded from a capability's
-   input/output schemas:
-
-   ```powershell
-   wf draft create-from-capability report_ws local.report.extract_report
-   ```
-
-   This is intentionally a best-effort bootstrap, not a complete workflow
-   synthesizer. It creates an editable one-step draft from wrapper hints.
-
-7. **Focused draft edits.** Common edits can be applied without writing JSON
-   Patch manually:
-
-   ```powershell
-   wf draft set-name report_ws --revision 1 --name report_case_study
-   wf draft set-input report_ws --revision 2 --step call --map input.text=text
-   wf draft set-output report_ws --revision 3 --step call --map title=state.title --map summary=state.summary
-   ```
-
-   These commands edit existing draft fields. Structural edits, such as adding
-   the `read_notes` and `render_markdown_report` steps around `extract_report`,
-   still use `wf draft patch` or the raw-plan import path below.
-
-8. **Draft validation.** The draft is checked for schema conformance and source
-   availability:
-
-   ```powershell
-   wf draft validate report_ws
-   ```
-
-9. **Artifact saving.** The tested case study imports the complete three-node
-   plan as an immutable artifact with source bindings:
-
-   ```powershell
-   wf artifact create-from-plan workflow.plan.json --artifact report_case_study --version 1 --title "Report Case Study" --outcome ok --binding local.report=local.report
-   ```
-
-10. **Deployment saving.** The artifact is bound into a runnable deployment:
-
-    ```powershell
-    wf deploy save report_case_study.default --artifact report_case_study --version 1 --binding local.report=local.report
-    ```
-
-11. **Deployment validation.** The deployment is checked for bound source
-    availability and compatibility:
-
-    ```powershell
-    wf deploy validate report_case_study.default
-    ```
-
-12. **Run execution.** A workflow run starts from the deployment:
-
-    ```powershell
-    wf run start report_case_study.default --input-file run-input.json --trace-from 0 --trace-limit 5
-    ```
-
-13. **Run inspection.** The run status, output, and diagnostics can be
-    inspected:
-
-    ```powershell
-    wf run inspect <run_id>
-    ```
-
-14. **Run trace.** Trace frames recorded during execution can be listed:
-
-    ```powershell
-    wf run trace <run_id> --from 0 --limit 5
-    ```
+Run execution starts from the deployment, validates input, executes the
+three-node pipeline, records trace frames, and stores a completed run record
+with output and diagnostics. `run inspect`, `run trace`, and `run list` then
+provide the inspection surface used by both humans and agents.
 
 (Evidence: `examples/report_workflow/README.md`, `tests/examples/test_report_workflow_example.py`.)
 
@@ -1109,9 +1083,14 @@ The evaluation uses concrete evidence: automated tests, live smoke tests, and
 the deterministic case study. The evidence claim is that the prototype
 demonstrates the architecture and workflow lifecycle under controlled examples.
 
-## Evaluation Criteria
+## Prototype Conformance Criteria
 
-The evaluation is organized around criteria derived from the research question:
+The evaluation is organized around prototype conformance criteria derived from
+the research question. These criteria test whether the implemented substrate has
+the intended lifecycle, validation, source, and inspection behavior under
+controlled examples; they do not constitute a broad reliability or user study.
+The later Agent Instruction Layer section explains why CLI/API conformance is
+necessary but not sufficient for aggregate agent-success claims.
 
 | Criterion | Question | Evidence Type |
 | --- | --- | --- |
@@ -1130,11 +1109,11 @@ benchmark.
 
 | Capability | Direct LLM tool loop | Generated script | Mature automation platform | `lda.chat` prototype |
 | --- | --- | --- | --- | --- |
-| Versioned workflow artifact | Not inherent | Manual | Often yes | Yes |
-| Deployment/source binding | Not inherent | Manual config | Platform-specific | Yes |
-| Typed validation before run | Tool-schema dependent | Custom | Varies | Yes |
-| Durable run record | Not inherent | Custom | Often yes | Yes, at stopped boundaries |
-| Source drift diagnostics | Not inherent | Custom | Varies | Yes, schema-hash controlled examples |
+| Versioned workflow artifact | Not inherent | Manual | Often yes | Prototype support |
+| Deployment/source binding | Not inherent | Manual config | Platform-specific | Prototype support |
+| Typed validation before run | Tool-schema dependent | Custom | Varies | Controlled-test support |
+| Durable run record | Not inherent | Custom | Often yes | Prototype support at stopped boundaries |
+| Source drift diagnostics | Not inherent | Custom | Varies | Schema-hash controlled examples |
 | Agent-operable repair hints | Not inherent | Custom | Usually human UI | Prototype support |
 | Scheduling | Depends on agent | External scheduler | Yes | Future work |
 
@@ -1153,7 +1132,7 @@ The evidence supporting the thesis claims includes:
 | Interrupted runs resume at explicit boundaries | `tests/wf_api/test_run_api.py` and resume-concurrency tests | Stopped run state is persisted and resumed through the run API | Pass in focused test suite |
 | Python source lifecycle works | `tests/examples/test_report_workflow_example.py` | Python capability -> artifact -> deployment -> run completes | Pass in focused test suite |
 | Serial multi-node workflow works | `tests/examples/test_browser_click_workflow_example.py` | `open_click_page` -> `wait_for_click` -> `collect_snapshots` completes with before/after evidence | Pass in focused test suite |
-| Agent challenge harness implementation exists; no aggregate agent-performance claim | `examples/agent_challenges/browser_click_challenge/` | Agents can be prompted, classified, and manually audited against a browser-click workflow challenge | Harness tests pass; aggregate model results pending |
+| Agent challenge harness implementation exists; no aggregate agent-performance claim | `examples/agent_challenges/browser_click_challenge/` and Appendix C | The harness can prompt, classify, and support manual audit of browser-click workflow trials | Harness tests pass; aggregate model results pending |
 | CLI and JSON-RPC share the API surface | `tests/wf_transport_rpc_http/` and `tests/wf_cli/` | Transport and CLI delegate to the same workflow operations | Pass in focused test suite |
 
 The table summarizes repository evidence; it is not a substitute for rerunning
@@ -1250,9 +1229,9 @@ Python workflow.
 
 ### CLI And Transport Tests
 
-CLI and transport tests verify that the agent-operable surface works through
-JSON-RPC. Structured output, validation commands, and inspect commands produce
-machine-readable responses.
+CLI and transport tests verify that the surface intended for external-agent
+operation is exposed through JSON-RPC. Structured output, validation commands,
+and inspect commands produce machine-readable responses.
 
 (Evidence: `tests/wf_cli/`, `tests/wf_transport_rpc_http/`.)
 
@@ -1285,50 +1264,99 @@ report evaluates whether the diagnostic and lifecycle surfaces exist and are
 actionable; it does not yet measure retry reduction, token savings, or
 convergence rates across agents.
 
+The tradeoff is that this lifecycle can require more authoring turns up front:
+an agent may discover capabilities, create or patch a draft, validate, save an
+artifact, bind a deployment, and validate again before the first production
+run. The intended exchange is higher authoring overhead for more deterministic,
+inspectable, and reusable runtime execution.
+
 Threat to validity: no controlled agent study was conducted. Claims regarding
 agent efficiency, convergence, retry reduction, or token savings should be
 interpreted as design hypotheses rather than experimentally validated results.
+
+## Agent Instruction Layer
+
+The product-facing CLI and JSON-RPC surfaces are not sufficient by themselves
+for agent operability. External agents also need an instruction layer: skills,
+runbooks, and prompt templates that explain the lifecycle, valid command paths,
+plan shapes, validation workflow, and failure rules without requiring the agent
+to inspect implementation code.
+
+This became visible in early browser-click challenge trials. When the prompt
+or skills did not clearly explain the raw-plan and draft-authoring paths,
+agents sometimes looked at tests, source files, prior trial artifacts, or
+existing example stores to infer the correct shape. That behavior may still
+produce a successful workflow run, but it weakens the evaluation because the
+trial no longer measures whether the public product surface and instruction
+layer were sufficient.
+
+For this reason, the challenge report schema tracks read-behavior flags such as
+skills, docs, product code, adjacent attempts, prior stores, and existing
+solutions. These flags are not moral judgments about an agent; they are audit
+metadata. They distinguish product-surface success from success that depended
+on reverse-engineering implementation details or reading nearby answers.
+
+The design implication is that agent-facing infrastructure has three layers:
+the operation surface (`wf` and JSON-RPC), the repair surface (validation
+diagnostics, traces, compact output, and next actions), and the instruction
+surface (skills and runbooks). A future aggregate evaluation should measure all
+three together.
+
+## Falsifiability Criteria
+
+The design would fail its own criteria if source providers routinely required
+changes to `wf_core`, if deployments could not detect missing or drifted source
+requirements before execution, if run records could not be inspected or resumed
+at explicit interruption boundaries, or if external agents had to import
+implementation internals rather than using the public CLI/API lifecycle for
+ordinary authoring and execution.
 
 ## Evaluation Questions
 
 The implementation addresses these evaluation questions:
 
 1. Can a source capability be discovered, called, saved into a workflow,
-   deployed, and run? --- Yes, demonstrated by the Python source case study and
-   its automated tests.
+   deployed, and run? --- Demonstrated in controlled tests by the Python source
+   case study and its automated tests.
 
 2. Can an interrupted run persist at an explicit interruption boundary and
-   resume? --- Yes, demonstrated by run persistence and resume tests.
+   resume? --- Demonstrated in controlled tests by run persistence and resume
+   tests.
 
-3. Can the same server be used through CLI and JSON-RPC transport? --- Yes,
-   the CLI and transport tests exercise both surfaces against the same server
-   composition.
+3. Can the same server be used through CLI and JSON-RPC transport? ---
+   Demonstrated in controlled tests: the CLI and transport tests exercise both
+   surfaces against the same server composition.
 
-4. Can a new source family be added without changing `wf_core`? --- Yes, the
+4. Can a new source family be added without changing `wf_core`? ---
+   Demonstrated for the implemented built-in, MCP, and Python split: the
    source-provider boundary is in `wf_platform` and `wf_server`, not in the
-   core. Python sources were added without modifying the core package.
+   core. Future source families should fit this pattern if they can be
+   projected into the same capability/source contract.
 
 5. Are large raw provider payloads bounded in CLI output? --- Partially. Source
    inventory previews are bounded by `SOURCE_PREVIEW_LIMIT`; `wf cap call`
    offers compact/text rendering with `--max-output-chars`. Raw JSON output
    remains intentionally lossless.
 
-6. Can platform sources such as `wf.std` be used without self-bindings? --- Yes,
-   platform sources have `binding_required: False` in their source policy, and
-   deployment validation rejects unnecessary platform source bindings.
+6. Can platform sources such as `wf.std` be used without self-bindings? ---
+   Demonstrated in validation tests: platform sources have
+   `binding_required: False` in their source policy, and deployment validation
+   rejects unnecessary platform source bindings.
 
 7. Can source resources be referenced by logical source and dereferenced
-   through a bounded helper? --- Yes, `wf.source.read_resource` resolves
-   logical source refs through runtime context with bounded output policy.
+   through a bounded helper? --- Demonstrated for `wf.source.read_resource`,
+   which resolves logical source refs through runtime context with bounded
+   output policy.
 
 8. Does the structured surface reduce failed attempts before success? --- Not
    measured in this report. The validation diagnostics, compact output, and
    next-action guidance are designed for this purpose, but retry reduction
    remains future evaluation work.
 
-9. Do validation and deployment validation catch source drift? --- Yes,
-   deployment validation reports unrunnable state with diagnostics instead of
-   silently executing against incompatible capabilities.
+9. Do validation and deployment validation catch source drift? --- Demonstrated
+   in controlled validation tests: deployment validation reports unrunnable
+   state with diagnostics instead of silently executing against incompatible
+   capabilities.
 
 # Limitations
 
@@ -1362,7 +1390,8 @@ deployment concerns beyond the controlled system-design evidence in this report.
   is limited to controlled examples.
 
 - **File-backed stores.** The current implementation uses filesystem stores as
-  proof for durable lifecycle. Durability itself should not be framed as
+  proof for durable lifecycle and to keep serialized records inspectable during
+  prototype development. Durability itself should not be framed as
   filesystem-specific; SQL or transactional stores are future work.
 
 - **Prototype auth.** Auth records and admin surfaces exist as plumbing for
@@ -1708,9 +1737,10 @@ Evidence:
 
 # Agent Challenge Harness
 
-The browser-click challenge harness is an evaluation instrument for the
-agent-operable CLI surface. It asks an external agent to build and successfully
-run a workflow that opens a local page with a visible button, records a
+The browser-click challenge harness is an evaluation instrument for the CLI
+surface intended for external-agent operation. It asks an external agent to
+build and successfully run a workflow that opens a local page with a visible
+button, records a
 before-click snapshot, performs or waits for a click, records an after-click
 snapshot, and returns both snapshots from a deployed workflow run.
 
