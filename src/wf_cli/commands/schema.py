@@ -4,6 +4,9 @@ import typer
 
 app = typer.Typer(
     name="schema",
-    help="Print expected input shapes for wf commands.",
+    help=(
+        "Work in progress: intended to print expected input shapes for wf "
+        "commands, but currently has no schema subcommands."
+    ),
     no_args_is_help=True,
 )

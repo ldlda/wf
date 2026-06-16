@@ -47,7 +47,7 @@ wf artifact create-from-plan workflow.plan.json \
 
 Do not pass draft JSON to `artifact create-from-plan`. Drafts use `steps`,
 `routes`, and step field `use`. Raw plans use `nodes`, `edges`, and node field
-`node`.
+`node`. See `direct-plan-import.md` for the exact shape.
 
 Then continue with the normal deployment and run steps:
 

@@ -23,14 +23,19 @@ Canonical docs:
 - `docs/workflow_artifacts.md`
 - `docs/durable_run_operations.md`
 
+If the workflow object model is unclear, read
+`skills/wf-workflow/references/system-model.md` before choosing commands.
+
 ## Core Commands
 
 ```bash
+wf --config wf.config.json status
 wf cap list --format ids
 wf cap inspect <capability>
 wf cap call <capability> --input '{"field":"value"}'
 
 wf draft create-from-capability <workspace_id> <capability>
+# There is currently no `wf draft create --capability` alias.
 wf draft inspect <workspace_id> --include-draft
 wf draft patch <workspace_id> --revision <n> --input-file patch.json
 wf draft set-name <workspace_id> --revision <n> --name <name>
@@ -50,6 +55,9 @@ wf run trace <run_id> --from 0 --limit 25
 
 ## Rules
 
+- Use explicit `--config <path>` for examples, challenge workspaces, and
+  non-root configs. The default is `wf.config.json` in the current working
+  directory.
 - Prefer `--input-file` for large JSON.
 - Prefer `--format ids` or `--format compact` for discovery.
 - Use `wf cap call` as a cheap smoke test before creating a draft.
@@ -61,3 +69,5 @@ wf run trace <run_id> --from 0 --limit 25
 - Do not use planning-session specs or implementation plans as user-facing runtime guidance.
 - Do not confuse draft shape with raw plan shape: drafts use `steps/routes/use`;
   raw plans use `nodes/edges/node`.
+- `wf schema` is currently only an empty command group; do not rely on it for
+  workflow plan shape until subcommands exist.

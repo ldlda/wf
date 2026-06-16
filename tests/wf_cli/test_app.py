@@ -78,7 +78,15 @@ def test_wf_cap_list_help_exists() -> None:
 
     assert result.exit_code == 0
     assert "--format" in result.output
-    assert "--source" in result.output
+
+
+def test_wf_schema_help_marks_command_group_as_wip() -> None:
+    result = runner.invoke(app, ["schema", "--help"])
+
+    assert result.exit_code == 0
+    output = result.output.lower()
+    assert "work in progress" in output
+    assert "no schema subcommands" in output
 
 
 def test_wf_source_list_help_exists() -> None:

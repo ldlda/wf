@@ -63,17 +63,22 @@ Useful patterns:
 
 ```bash
 # PowerShell preview
-Get-Content skills/wf-workflow/references/workflow-lifecycle.md -TotalCount 40
+Get-Content skills/wf-workflow/references/system-model.md -TotalCount 80
 
 # Targeted search
 rg -n "trace|resume|binding_missing|wrapper_hints" skills/wf-workflow/references
 ```
 
+- `references/system-model.md`: short explanation of how sources,
+  capabilities, drafts, artifacts, deployments, runs, bindings, and traces fit
+  together.
 - `references/workflow-lifecycle.md`: end-to-end lifecycle and tool order.
 - `references/capabilities-and-wrappers.md`: raw capability vs workflow
   capability, wrapper artifacts, and content-block handling.
 - `references/draft-workspaces.md`: draft shape, mappings, patches, and save
   path.
+- `references/direct-plan-import.md`: complete workflow plan JSON shape for
+  `wf artifact create-from-plan`.
 - `references/troubleshooting.md`: missing source/capability, unrunnable
   deployment, run/trace issues.
 
