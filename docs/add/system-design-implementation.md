@@ -12,6 +12,10 @@ toc-depth: 2
 numbersections: true
 bibliography: references.bib
 link-citations: true
+figureTitle: "Figure"
+figPrefix: "Figure"
+chapters: true
+appendix: true
 syntax-highlighting: idiomatic
 geometry:
   - top=30mm
@@ -270,7 +274,7 @@ The document uses these terms with specific meanings:
 | Output | The data payload returned by a node or workflow. | `{ "report": "..." }` |
 | Reducer | A pure state-merge operation selected by state schema. | `wf.std.replace`, `wf.std.append` |
 | Platform source | A process-provided source with fixed identity and no deployment binding. | `wf.std`, `wf.source` |
-| Deployment binding | A mapping from logical workflow source requirement to concrete source id. | `local.report=local.report` |
+| Deployment binding | A mapping from logical workflow source requirement to concrete source id. | `local.report=local.report`, `playwright=playwright.default` |
 | Source drift | Divergence between saved workflow requirements and the currently resolved source inventory. | missing capability or changed schema |
 
 ## Workflows as Typed Graphs
@@ -402,36 +406,51 @@ responsibility.
 
 ## Architecture Spine
 
-This diagram answers: who calls whom across the user, agent, transport, server,
-API, runtime, and source-provider boundaries?
+[@fig:architecture-spine] answers: who calls whom across the user,
+agent, transport, server, API, runtime, and source-provider boundaries?
 
-```mermaid
-flowchart LR
-  Owner[Workflow Owner] --> Agent[External LLM Agent]
-  Agent --> CLI[wf CLI]
-  CLI --> Transport[JSON-RPC Transport]
-  Transport --> Server[WorkflowServer]
-  Server --> API[Workflow API Surface]
-  API --> Core[Workflow Core]
-  API --> Platform[Artifacts / Deployments / Runs]
-  Server --> Sources[Source Providers]
-  Sources --> Builtins[Platform Sources]
-  Sources --> MCP[MCP Sources]
-  Sources --> Python[Python Sources]
+```{.mermaid #fig:architecture-spine height=80% caption="Architecture spine: external agent commands flow through the CLI/transport boundary into server-composed API operations and deterministic core execution."}
+flowchart TB
+  subgraph Operator["Human and agent front door"]
+    Owner[Workflow Owner] --> Agent[External LLM Agent]
+    Agent --> CLI[wf CLI]
+  end
+
+  subgraph Boundary["Transport boundary"]
+    CLI --> Transport[JSON-RPC / Local Adapter]
+    Transport --> Server[WorkflowServer]
+  end
+
+  subgraph ServerSide["Server-composed platform"]
+    Server --> API[Workflow API Surface]
+    Server --> Inventory[CapabilitySource Inventory]
+    Inventory --> API
+    API --> Records[Drafts / Artifacts / Deployments / Runs]
+    API --> Core[Workflow Core]
+  end
+
+  subgraph Providers["Source providers"]
+    Server --> Sources[Configured Source Providers]
+    Sources --> Inventory
+  end
+
+  Core --> Result[Status / Output / Trace]
+  Result --> CLI
 ```
 
-The diagram shows the primary flow from workflow owner through agent, CLI,
-transport, and server to the API surface, core, platform stores, and source
-providers. The server composes configured sources into a unified inventory
-without the core runtime being aware of provider-specific details.
+[@fig:architecture-spine] shows the primary flow from workflow owner
+through agent, CLI, transport, and server to the API surface, core, platform
+stores, and source providers. The server composes configured sources into a
+unified inventory without the core runtime being aware of provider-specific
+details.
 
 ## Layered Package Boundary
 
-Unlike the previous runtime-call diagram, this one maps architectural
+Unlike the runtime-call diagram, [@fig:package-boundary] maps architectural
 responsibilities onto repository packages. It answers: which package owns each
 boundary in the current implementation?
 
-```mermaid
+```{.mermaid #fig:package-boundary caption="Package boundary: repository packages form a dependency direction from CLI and transport down to API, core, artifacts, platform DTOs, and source providers."}
 flowchart TB
   CLI[wf_cli] --> Transport[wf_transport_rpc_http]
   Transport --> Server[wf_server]
@@ -479,20 +498,29 @@ The layered architecture separates concerns as follows:
 
 ## Workflow Lifecycle
 
-The lifecycle of a workflow through the platform follows a defined path:
-this diagram answers what durable record or validation gate is created at each
-stage.
+The lifecycle of a workflow through the platform follows a defined path.
+[@fig:workflow-lifecycle] answers what durable record or validation gate
+is created at each stage.
 
-```mermaid
-flowchart LR
-  Draft[Draft Workspace] --> ValidateDraft[Draft Validation]
-  ValidateDraft --> Artifact[Workflow Artifact]
-  Artifact --> Deployment[Workflow Deployment]
-  Deployment --> ValidateDeploy[Deployment Validation]
-  ValidateDeploy --> Run[Workflow Run]
-  Run --> Trace[Run Trace]
-  Run --> Inspect[Run Inspect / List]
-  Run --> Resume[Resume If Interrupted]
+```{.mermaid #fig:workflow-lifecycle height=80% caption="Workflow lifecycle: mutable drafts become immutable artifacts; deployments bind those artifacts to live sources; runs produce inspectable records and bounded traces."}
+stateDiagram-v2
+  direction TB
+  [*] --> DraftWorkspace
+  DraftWorkspace --> DraftValidated: validate draft
+  DraftValidated --> Artifact: save immutable version
+  Artifact --> Deployment: bind sources
+  Deployment --> DeploymentValidated: validate deployment
+  DeploymentValidated --> Run: start run
+
+  Run --> Completed: outcome produced
+  Run --> Failed: runtime error
+  Run --> Interrupted: explicit interrupt
+  Interrupted --> Run: resume payload
+
+  Completed --> Inspectable
+  Failed --> Inspectable
+  Interrupted --> Inspectable
+  Inspectable --> TraceSlice: bounded trace read
 ```
 
 Each stage is a distinct platform operation with typed inputs and outputs.
@@ -508,36 +536,35 @@ and failed runs remain inspectable records.
 
 ## Workflow Core Model
 
-The core model processes graph execution through typed stages:
-this diagram answers what happens during one run at the graph-execution level.
+The core model processes graph execution through typed stages.
+[@fig:core-step-execution] answers what happens during one run at the
+graph-execution level.
 
-```mermaid
-flowchart TD
-  Start[Prepare Run] --> ValidateInput[Validate Workflow Input]
-  ValidateInput --> Select[Select Ready Frame]
-  Select --> Step{Step Type}
-  Step --> Node[NodeUse]
-  Step --> Condition[Condition]
-  Step --> Foreach[Foreach]
-  Step --> Subgraph[Subgraph]
-  Step --> Interrupt[Interrupt]
-  Step --> Join[Join / Minimal Done Step]
-  Step --> End[End]
-  Node --> ResolveInput[Resolve Input Bindings]
-  ResolveInput --> Handler[Invoke NodeDef Handler]
-  Handler --> CheckOutcome[Check Declared Outcome]
-  CheckOutcome --> StatePatch[Build Reducer-Aware State Patch]
-  StatePatch --> Trace[Append Trace Frame]
-  Condition --> Trace
-  Foreach --> Trace
-  Subgraph --> Trace
-  Join --> Trace
-  Trace --> Route[Route By Outcome Edge]
-  Interrupt --> Stop[Persist Interrupt Request]
-  End --> Finalize[Project Workflow Output]
-  Route --> Select
-  Stop --> Resume[Resume Payload + Outcome]
-  Resume --> Route
+```{.mermaid #fig:core-step-execution height=80% caption="Core step execution: a node step resolves bindings, invokes a NodeDef handler, merges reducer-aware state, appends trace, and routes by outcome."}
+sequenceDiagram
+  participant Runtime as Workflow Runtime
+  participant Bindings as Binding Resolver
+  participant Node as NodeDef Handler
+  participant Reducers as State Reducers
+  participant Trace as Trace Store
+
+  Runtime->>Runtime: validate workflow input
+  Runtime->>Bindings: resolve NodeUse input map
+  Bindings-->>Runtime: local node input
+  Runtime->>Node: invoke handler
+  Node-->>Runtime: outcome + output payload
+  Runtime->>Runtime: check declared outcome
+  Runtime->>Reducers: merge output into state
+  Reducers-->>Runtime: updated state
+  Runtime->>Trace: append trace frame
+  Runtime->>Runtime: route by outcome edge
+
+  alt interrupt step
+    Runtime->>Trace: store interrupt request
+    Runtime-->>Runtime: stop until resume payload
+  else end step
+    Runtime-->>Runtime: project workflow output
+  end
 ```
 
 Input validation gates entry. The runtime then repeatedly selects a ready frame
@@ -570,18 +597,21 @@ mid-handler checkpointing.
 ## Source Provider Boundary
 
 The source provider boundary separates configured source families from the
-workflow API surface. This diagram answers where source-specific code stops and
-workflow-facing inventory begins.
+workflow API surface. [@fig:source-provider-boundary] answers where
+source-specific code stops and workflow-facing inventory begins.
 
-```mermaid
-flowchart LR
+```{.mermaid #fig:source-provider-boundary height=70% caption="Source provider boundary: configured provider families stop at CapabilitySource inventory consumed by the workflow API surface."}
+flowchart TB
   Config[Workflow Config Sources] --> Server[WorkflowServer Composition]
+
   Server --> Builtin[Platform Sources]
   Server --> MCP[MCP Source Provider]
   Server --> Python[Python Source Provider]
+
   Builtin --> Inventory[CapabilitySource Inventory]
   MCP --> Inventory
   Python --> Inventory
+
   Inventory --> API[Workflow API Surface]
   API --> Runtime[Workflow Runtime]
 ```
@@ -668,26 +698,41 @@ policy-enforcement layer. `wf_platform` should not grow into a dumping ground
 for stores, runtimes, or provider lifecycle. Those belong in `wf_api`,
 `wf_server`, or the specific `wf_sources_*` package.
 
-The API lifecycle is deliberately centralized through one facade:
+The API lifecycle is deliberately centralized through one facade, per [@fig:api-lifecycle-facade].
 
-```mermaid
-flowchart LR
-  Context[WorkflowOperationContext] --> API[WorkflowApi]
-  API --> Caps[Capability API]
-  API --> Drafts[Draft API]
-  API --> Artifacts[Artifact API]
-  API --> Deployments[Deployment API]
-  API --> Runs[Run API]
-  Caps --> Specs[WorkflowSpecProvider]
-  Drafts --> DraftStore[Draft Store]
-  Artifacts --> ArtifactStore[Artifact Store]
-  Deployments --> ArtifactStore
-  Runs --> RunStore[Run Store]
-  Runs --> Runtime[WorkflowRuntimeRunner]
-  Runs --> Live[Optional Live Source Checker]
+```{.mermaid #fig:api-lifecycle-facade caption="API lifecycle facade: one WorkflowOperationContext carries stores, source inventory, runtime execution, and live checks for all lifecycle sub-APIs."}
+classDiagram
+  class WorkflowApi {
+    capabilities
+    drafts
+    artifacts
+    deployments
+    runs
+  }
+  class WorkflowOperationContext {
+    stores
+    source_inventory
+    event_recorder
+    runtime_runner
+    live_source_checker
+  }
+  class WorkflowSpecProvider
+  class DraftStore
+  class ArtifactStore
+  class RunStore
+  class WorkflowRuntimeRunner
+  class LiveSourceChecker
+
+  WorkflowApi --> WorkflowOperationContext
+  WorkflowOperationContext --> WorkflowSpecProvider
+  WorkflowOperationContext --> DraftStore
+  WorkflowOperationContext --> ArtifactStore
+  WorkflowOperationContext --> RunStore
+  WorkflowOperationContext --> WorkflowRuntimeRunner
+  WorkflowOperationContext --> LiveSourceChecker
 ```
 
-This diagram highlights the design contribution at the
+[@fig:api-lifecycle-facade] highlights the design contribution at the
 application layer: drafts, artifacts, deployments, and runs are not independent
 file operations. They share source inventory, stores, event recording, runtime
 execution, validation, and live-source checks through one operation context.
@@ -913,7 +958,9 @@ under the `local.report` namespace.
 ## Lifecycle Runbook
 
 The case study exercises the full lifecycle through CLI commands. The commands
-demonstrate the agent-operable surface:
+demonstrate the agent-operable surface. The abbreviated commands below assume
+execution from `examples/report_workflow/`; the appendix gives repository-root
+commands with explicit config paths.
 
 1. **Config validation.** The config file is checked before server startup:
 
@@ -988,9 +1035,9 @@ demonstrate the agent-operable surface:
 
 10. **Deployment saving.** The artifact is bound into a runnable deployment:
 
-   ```powershell
-   wf deploy save report_case_study.default --artifact report_case_study --version 1 --binding local.report=local.report
-   ```
+    ```powershell
+    wf deploy save report_case_study.default --artifact report_case_study --version 1 --binding local.report=local.report
+    ```
 
 11. **Deployment validation.** The deployment is checked for bound source
     availability and compatibility:
@@ -1191,10 +1238,10 @@ state.
 
 The report workflow example demonstrates the source abstraction is not
 MCP-only. A Python source with three typed capabilities is loaded and exposed
-through the source inventory; the automated lifecycle test runs a deterministic
-single-node extraction workflow through artifact, deployment, and run records.
-The browser-click example complements this with a serial three-node Python
-workflow.
+through the source inventory; the automated lifecycle test runs the
+deterministic three-node report pipeline through artifact, deployment, and run
+records. The browser-click example complements this with a serial three-node
+Python workflow.
 
 (Evidence: `examples/report_workflow/`,
 `examples/browser_click_workflow/`,  
@@ -1414,39 +1461,45 @@ demonstrates the architecture; the thesis contribution is the platform design
 and evidence that the design can work across multiple source families under
 controlled conditions.
 
-# Appendices
+<!-- References -->
+# References {#sec:refs .unnumbered}
 
-## Appendix A: Case Study Command Transcript
+::: {#refs}
+:::
+
+\appendix
+<!-- Appendices -->
+# Case Study Command Transcript
 
 The following commands demonstrate the full lifecycle of the report workflow
 case study. All commands assume execution from the repository root.
 
-### Config Validation
+## Config Validation
 
 ```powershell
 uv run wf config validate examples/report_workflow/wf.config.json
 ```
 
-### Server Startup
+## Server Startup
 
 ```powershell
 uv run wf-rpc-server --config examples/report_workflow/wf.config.json
 ```
 
-### Status Check
+## Status Check
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json status
 ```
 
-### Capability Discovery
+## Capability Discovery
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
  cap list --source local.report
 ```
 
-### Capability Call
+## Capability Call
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
@@ -1454,7 +1507,7 @@ cap call local.report.extract_report `
 --input-file examples/report_workflow/cap-input.json --format compact
 ```
 
-### Draft Bootstrap And Focused Edits
+## Draft Bootstrap And Focused Edits
 
 `create-from-capability` is a best-effort bootstrap. It creates a one-step
 draft from the selected capability's wrapper hints. Focused commands then cover
@@ -1480,14 +1533,14 @@ draft set-output report_ws --revision 3 --step call `
 Structural edits, such as adding `read_notes` before `extract_report` and
 `render_markdown_report` after it, use `draft patch` or a complete raw plan.
 
-### Draft Validation
+## Draft Validation
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
 draft validate report_ws
 ```
 
-### Artifact Saving
+## Artifact Saving
 
 The tested case-study artifact imports the complete three-node plan:
 
@@ -1499,7 +1552,7 @@ artifact create-from-plan examples/report_workflow/workflow.plan.json `
 --binding local.report=local.report
 ```
 
-### Deployment Saving
+## Deployment Saving
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
@@ -1507,14 +1560,14 @@ deploy save report_case_study.default --artifact report_case_study `
 --version 1 --binding local.report=local.report
 ```
 
-### Deployment Validation
+## Deployment Validation
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
 deploy validate report_case_study.default
 ```
 
-### Run Execution
+## Run Execution
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
@@ -1523,53 +1576,53 @@ run start report_case_study.default `
 --trace-from 0 --trace-limit 5
 ```
 
-### Run Inspection
+## Run Inspection
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json run list --limit 5
 uv run wf --config examples/report_workflow/wf.config.json run inspect <run_id>
 ```
 
-### Run Trace
+## Run Trace
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
 run trace <run_id> --from 0 --limit 5
 ```
 
-## Appendix B: Evidence Index
+# Evidence Index
 
 This appendix maps thesis claims to implementation evidence. It is a guardrail
 against unsupported claims and complements the focused verification snapshot in
 the Evaluation section.
 
-### Core Workflow Lifecycle
+## Core Workflow Lifecycle
 
 Claim: The platform separates mutable drafts, immutable artifacts, deployments,
 runs, and traces.
 
 Evidence:
 
-- `src/wf_artifacts/models.py` — artifact/deployment models.
-- `src/wf_artifacts/runs/` — run records and run store.
-- `src/wf_api/service.py` — facade for workflow lifecycle operations.
+- `src/wf_artifacts/models.py`: artifact/deployment models.
+- `src/wf_artifacts/runs/`: run records and run store.
+- `src/wf_api/service.py`: facade for workflow lifecycle operations.
 - `tests/wf_api/test_artifact_api.py`
 - `tests/wf_api/test_run_api.py`
 
-### Source Provider Boundary
+## Source Provider Boundary
 
 Claim: Workflow execution consumes source-provided capabilities without making
 the core runtime MCP-specific.
 
 Evidence:
 
-- `src/wf_platform/sources.py` — neutral source DTOs and source policy.
-- `src/wf_server/config.py` — server composition for configured sources.
-- `src/wf_sources_mcp/` — MCP source family.
-- `src/wf_sources_python/` — Python source family.
+- `src/wf_platform/sources.py`: neutral source DTOs and source policy.
+- `src/wf_server/config.py`: server composition for configured sources.
+- `src/wf_sources_mcp/`: MCP source family.
+- `src/wf_sources_python/`: Python source family.
 - `docs/source_architecture.md`
 
-### Agent-Operable Surface
+## Agent-Operable Surface
 
 Claim: The workflow lifecycle is designed to be operated by external agents
 through stable CLI/API surfaces.
@@ -1581,10 +1634,10 @@ Evidence:
 - `tests/wf_cli/`
 - `tests/wf_transport_rpc_http/`
 - `docs/wf_cli.md`
-- `examples/agent_challenges/browser_click_challenge/` — challenge harness for
+- `examples/agent_challenges/browser_click_challenge/`: challenge harness for
   CLI-operability trials; aggregate model results require manual audit.
 
-### Validation And Diagnostics
+## Validation And Diagnostics
 
 Claim: Validation and diagnostics make failed workflow states machine-readable
 and include repair hints.
@@ -1597,7 +1650,7 @@ Evidence:
 - `tests/artifacts/test_validation.py`
 - `tests/wf_api/test_source_admin_api.py`
 
-### Stateful MCP Source Correctness
+## Stateful MCP Source Correctness
 
 Claim: MCP-backed sources can preserve stateful sessions across workflow calls.
 
@@ -1608,7 +1661,7 @@ Evidence:
 - `tests/wf_sources_mcp/test_runtime.py`
 - `tests/wf_transport_rpc_http/test_mcp_backed_server_rpc.py`
 
-### Python Source Case Study
+## Python Source Case Study
 
 Claim: The source-provider model is not MCP-only.
 
@@ -1623,7 +1676,7 @@ Evidence:
 - `examples/agent_challenges/browser_click_challenge/`
 - `tests/examples/test_opencode_browser_click_challenge.py`
 
-### Agent Challenge Evaluation Protocol
+## Agent Challenge Evaluation Protocol
 
 Claim: The project has a repeatable protocol for evaluating whether external
 agents can use the product-facing CLI lifecycle, but aggregate model results are
@@ -1631,17 +1684,17 @@ not yet claimed.
 
 Evidence:
 
-- `examples/agent_challenges/browser_click_challenge/workspace_template/prompt.md`
-  — challenge prompt and self-report schema.
-- `examples/agent_challenges/browser_click_challenge/run_opencode_trials.py` —
+- `examples/agent_challenges/browser_click_challenge/workspace_template/prompt.md`:
+  challenge prompt and self-report schema.
+- `examples/agent_challenges/browser_click_challenge/run_opencode_trials.py`:
   trial runner.
-- `examples/agent_challenges/browser_click_challenge/classification.py` —
+- `examples/agent_challenges/browser_click_challenge/classification.py`:
   convenience classifier for returned reports.
-- `examples/agent_challenges/browser_click_challenge/reports.py` — report
+- `examples/agent_challenges/browser_click_challenge/reports.py`: report
   extraction and saving.
 - `tests/examples/test_opencode_browser_click_challenge.py`
 
-### Limitations
+## Limitations
 
 Claim: This is a prototype platform substrate, not a finished automation
 product.
@@ -1653,7 +1706,7 @@ Evidence:
 - Absence of scheduler, visual-editor, and secret-manager production packages
   in the current source tree.
 
-## Appendix C: Agent Challenge Harness
+# Agent Challenge Harness
 
 The browser-click challenge harness is an evaluation instrument for the
 agent-operable CLI surface. It asks an external agent to build and successfully
@@ -1675,8 +1728,8 @@ The current browser-click prompt allows two product-facing authoring paths:
 2. **Raw-plan path.** Write a raw workflow plan and load it with
    `wf artifact create-from-plan`, then deploy and run.
 
-```mermaid
-flowchart LR
+```{.mermaid #fig:agent-challenge-audit width=50% caption="Agent challenge audit flow: automatic YAML classification is only a convenience input to manual audit, which determines the official outcome."}
+flowchart TB
   Transcript[Agent transcript and files] --> YAML[YAML self-report]
   YAML --> Classifier[Automatic convenience classification]
   Transcript --> Audit[Manual audit]
@@ -1713,5 +1766,3 @@ Evidence:
 - `examples/agent_challenges/browser_click_challenge/`
 - `tests/examples/test_browser_click_workflow_example.py`
 - `tests/examples/test_opencode_browser_click_challenge.py`
-
-# References
