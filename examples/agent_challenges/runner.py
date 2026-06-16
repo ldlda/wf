@@ -139,13 +139,18 @@ def run_trial(
         return payload
 
     parsed: dict[str, Any] | None
+    parse_error: dict[str, str] | None = None
     try:
         parsed = parse_opencode_output(completed.stdout)
         text = result_text(parsed)
         classification = classify_fn(text)
-    except Exception:
+    except Exception as exc:
         parsed = None
         classification = "parse_error"
+        parse_error = {
+            "type": type(exc).__name__,
+            "message": str(exc),
+        }
 
     payload = {
         "index": index,
@@ -158,6 +163,8 @@ def run_trial(
         "stderr": completed.stderr,
         "parsed": parsed,
     }
+    if parse_error is not None:
+        payload["parse_error"] = parse_error
     _write_trial_report(payload)
     _write_trial_result(results_dir, config=config, index=index, payload=payload)
     return payload

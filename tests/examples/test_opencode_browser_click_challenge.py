@@ -254,6 +254,47 @@ def test_run_trial_records_report_save_error_for_timeout(
     assert saved_result["report_save_error"] == "result file is missing parsed output"
 
 
+def test_run_trial_records_parse_error_details(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    prompt = tmp_path / "prompt.md"
+    prompt.write_text("hello", encoding="utf-8")
+
+    def fake_run(*args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(
+            args=["opencode"],
+            returncode=0,
+            stdout="not-json",
+            stderr="",
+        )
+
+    from examples.agent_challenges import runner as generic_runner
+
+    monkeypatch.setattr(generic_runner.subprocess, "run", fake_run)
+    config = TrialConfig(
+        model="opencode/mimo-v2.5-free",
+        variant="high",
+        prompt_path=prompt,
+        attach_url=None,
+        timeout_seconds=120,
+        wf_command_prefix=LOCAL_WF_COMMAND_PREFIX,
+        server_context="Use local CLI mode.",
+    )
+
+    result = run_trial(config, index=1, results_dir=tmp_path / "results")
+
+    assert result["classification"] == "parse_error"
+    assert result["parse_error"]["type"] == "JSONDecodeError"
+    assert "Expecting value" in result["parse_error"]["message"]
+    saved_result = json.loads(
+        (tmp_path / "results" / "opencode_mimo-v2.5-free-trial-001.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert saved_result["parse_error"] == result["parse_error"]
+
+
 def test_parse_opencode_output_reads_json_object() -> None:
     payload = {
         "text": "wf run start demo.default\nbefore.clicked false\nafter.clicked true"

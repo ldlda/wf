@@ -3,6 +3,7 @@ from __future__ import annotations
 import subprocess
 import sys
 from pathlib import Path
+from typing import Any
 
 # Support direct execution as `python examples/.../run_opencode_trials.py`.
 # ruff: noqa: I001 - imports must stay after sys.path.insert
@@ -135,7 +136,7 @@ def run_trial(
     *,
     index: int,
     results_dir: Path,
-) -> dict:
+) -> dict[str, Any]:
     return _generic_run_trial(
         config, index=index, results_dir=results_dir, classify_fn=classify_output
     )
