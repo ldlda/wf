@@ -52,6 +52,7 @@ header-includes:
   - \usepackage{hyperxmp}
   - \usepackage[dvipsnames]{xcolor}
   - \usepackage{fancyhdr}
+  - \usepackage{float}
   - \pagestyle{fancy}
   - \usepackage{seqsplit}
   # Pandoc emits inline code as \texttt{...}. This blunt wrapper keeps long
@@ -289,18 +290,21 @@ graph model is defined by four schema contracts:
 - `output_schema`: defines the final result shape.
 - Outcome declarations: route control flow through graph edges.
 
-Each node references a core `NodeDef`---a serializable contract describing input
-schema, output schema, and declared outcomes. Source families commonly produce
-authoring-layer `NodeSpec`s first; those are projected into `NodeDef` contracts
-before the core executes a workflow. The validator checks that routed outcomes
-are declared, that a source node does not have duplicate edges for the same
-outcome, and that reachable outcome edges are present. Reducers merge state
-writes according to state-field declarations. Reducers are pure deterministic
-merge functions invoked by the runtime in workflow execution order; this report
-does not claim CRDT semantics, arbitrary concurrent writes, or order-independent
-aggregation. General fork/gather parallelism is future work, so this report
-does not claim complete concurrent graph semantics. Interrupts represent typed
-external input points. Subgraphs compose workflows as nodes.
+Each callable `NodeUse` step references a core `NodeDef`---a serializable
+contract describing input schema, output schema, and declared outcomes.
+Source families commonly produce authoring-layer `NodeSpec`s first; those are
+projected into `NodeDef` contracts before the core executes a workflow. Control
+steps such as conditions, foreach, joins, interrupts, subgraphs, and end steps
+are separate core step variants rather than `NodeDef` calls. The validator
+checks that routed outcomes are declared, that a source node does not have
+duplicate edges for the same outcome, and that reachable outcome edges are
+present. Reducers merge state writes according to state-field declarations.
+Reducers are pure deterministic merge functions invoked by the runtime in
+workflow execution order; this report does not claim CRDT semantics, arbitrary
+concurrent writes, or order-independent aggregation. General fork/gather
+parallelism is future work, so this report does not claim complete concurrent
+graph semantics. Interrupts represent typed external input points. Subgraphs
+compose workflows as nodes.
 
 The graph model improves inspectability by making automation structure
 explicit. Node contracts, source requirements, state writes, outcomes,
@@ -508,8 +512,10 @@ is created at each stage.
 stateDiagram-v2
   direction TB
   [*] --> DraftWorkspace
+  [*] --> RawPlan
   DraftWorkspace --> DraftValidated: validate draft
   DraftValidated --> Artifact: save immutable version
+  RawPlan --> Artifact: create artifact from plan
   Artifact --> Deployment: bind sources
   Deployment --> DeploymentValidated: validate deployment
   DeploymentValidated --> Run: start run
@@ -526,20 +532,22 @@ stateDiagram-v2
 ```
 
 Each stage is a distinct platform operation with typed inputs and outputs.
-Draft validation checks schema conformance and source availability. Artifact
-saving captures an immutable snapshot. Deployment validation verifies that
+`DraftValidated` and `DeploymentValidated` in [@fig:workflow-lifecycle] are
+validation gates, not separate persisted record types. Draft validation checks
+schema conformance and source availability. Artifact saving captures an
+immutable snapshot either from a draft save path or directly from a raw workflow
+plan through `artifact create-from-plan`. Deployment validation verifies that
 bound sources are currently available and compatible. Source drift is treated as
 divergence between saved artifact capability requirements and the currently
 resolved source inventory: missing bindings, missing or disabled sources,
 missing capabilities, or changed schema contracts. Run execution produces
-persisted records with trace slices and resumable stopped state.
-Only interrupted or explicitly stopped runs enter the resume path; completed
-and failed runs remain inspectable records.
+persisted records with trace slices and resumable stopped state. Only
+interrupted or explicitly stopped runs enter the resume path; completed and
+failed runs remain inspectable records.
 
 ## Workflow Core Model
 
-The core model processes graph execution through typed stages. Because figures
-may float in the generated PDF, this section separates the broad runtime loop
+The core model processes graph execution through typed stages. To improve clarity, this section separates the broad runtime loop
 from the ordinary callable-node path. [@fig:core-runtime-loop] shows how the
 runtime selects a frame, dispatches by step kind, records trace, and routes by
 outcome. [@fig:nodeuse-execution-path] then zooms into the `NodeUse` path,
@@ -628,7 +636,7 @@ The source provider boundary separates configured source families from the
 workflow API surface. [@fig:source-provider-boundary] answers where
 source-specific code stops and workflow-facing inventory begins.
 
-```{.mermaid #fig:source-provider-boundary height=70% caption="Source provider boundary: configured provider families stop at CapabilitySource inventory consumed by the workflow API surface."}
+```{.mermaid #fig:source-provider-boundary latex-placement="H" height=69% caption="Source provider boundary: configured provider families stop at CapabilitySource inventory consumed by the workflow API surface."}
 flowchart TB
   Config[Workflow Config Sources] --> Server[WorkflowServer Composition]
 
@@ -1017,9 +1025,11 @@ That command is intentionally a best-effort bootstrap, not a complete workflow
 synthesizer. Focused edit commands such as `wf draft set-name`,
 `wf draft set-input`, and `wf draft set-output` cover common schema and mapping
 edits without forcing an agent to write RFC 6902 JSON Patch by hand. Structural
-edits, such as adding `read_notes` before `extract_report` and
-`render_markdown_report` after it, still use `wf draft patch` or the raw-plan
-import path.
+edits to an existing draft, such as adding `read_notes` before `extract_report`
+and `render_markdown_report` after it, still use `wf draft patch`. The
+raw-plan import path is the alternative route when the author already has a
+complete plan: it bypasses the draft workspace and creates the artifact
+directly.
 
 The tested thesis path imports the complete three-node plan as an immutable
 artifact:
@@ -1093,7 +1103,7 @@ The later Agent Instruction Layer section explains why CLI/API conformance is
 necessary but not sufficient for aggregate agent-success claims.
 
 | Criterion | Question | Evidence Type |
-| --- | --- | --- |
+| --- | ---- | --- |
 | Representation | Can workflow intent be represented as artifacts, deployments, and runs? | model/API tests |
 | Validation | Can invalid drafts, deployments, source bindings, and source drift be reported before execution? | validation/diagnostic tests |
 | Runtime observability | Can runtime failures be persisted as failed run records with inspectable error state? | run API tests |
