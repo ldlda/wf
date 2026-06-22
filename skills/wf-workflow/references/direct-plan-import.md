@@ -3,6 +3,16 @@
 Use direct plan import only when you already have a complete workflow plan. For
 interactive authoring, prefer draft workspaces and focused edit commands.
 
+Before writing a plan, inspect the current public shape:
+
+    wf schema raw
+    wf schema NodeUse
+    wf schema InputPathBinding
+    wf schema OutputBinding
+
+Use `wf schema raw --verbose` only when the complete validation schema is
+required.
+
 ## Command Path
 
 ```bash

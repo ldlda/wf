@@ -13,7 +13,6 @@ from wf_api.models import RawWorkflowPlan
 from wf_artifacts.drafts.models import WorkflowDraft
 from wf_core.models.workflow import Workflow
 
-
 JsonObject: TypeAlias = dict[str, Any]
 SCHEMA_DIALECT = Draft202012Validator.META_SCHEMA["$id"]
 ROOT_MODELS: dict[str, type[Any]] = {
@@ -63,7 +62,11 @@ class SchemaCatalog:
     def entry(self, name: str) -> SchemaEntry:
         canonical = self.resolve(name)
         schema = self.schema(canonical)
-        aliases = tuple(sorted(alias for alias, target in self.aliases.items() if target == canonical))
+        aliases = tuple(
+            sorted(
+                alias for alias, target in self.aliases.items() if target == canonical
+            )
+        )
         return SchemaEntry(
             name=canonical,
             aliases=aliases,
@@ -145,8 +148,7 @@ def _compact_node(schema: object, related: set[str]) -> object:
     properties = schema.get("properties")
     if isinstance(properties, dict):
         result["properties"] = {
-            name: _compact_node(value, related)
-            for name, value in properties.items()
+            name: _compact_node(value, related) for name, value in properties.items()
         }
     if "items" in schema:
         result["items"] = _compact_node(schema["items"], related)
@@ -157,7 +159,9 @@ def _compact_node(schema: object, related: set[str]) -> object:
         result["one_of"] = [_compact_node(branch, related) for branch in branches]
         break
     discriminator = schema.get("discriminator")
-    if isinstance(discriminator, dict) and isinstance(discriminator.get("propertyName"), str):
+    if isinstance(discriminator, dict) and isinstance(
+        discriminator.get("propertyName"), str
+    ):
         result["discriminator"] = discriminator["propertyName"]
     return result
 

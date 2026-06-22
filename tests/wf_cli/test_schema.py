@@ -8,7 +8,11 @@ from jsonschema import Draft202012Validator
 from typer.testing import CliRunner
 
 from wf_cli.app import app
-
+from wf_cli.schema_catalog import (
+    compact_schema_outline,
+    schema_catalog,
+    verbose_schema_document,
+)
 
 runner = CliRunner()
 
@@ -112,9 +116,6 @@ def test_schema_unknown_name_fails_with_suggestion() -> None:
     assert "NodeUse" in result.output
 
 
-from wf_cli.schema_catalog import schema_catalog
-
-
 def test_schema_catalog_resolves_aliases_and_components() -> None:
     catalog = schema_catalog()
 
@@ -123,9 +124,6 @@ def test_schema_catalog_resolves_aliases_and_components() -> None:
     assert catalog.resolve("NodeUse") == "NodeUse"
     assert catalog.entry("draft").kind == "root"
     assert catalog.entry("NodeUse").kind == "definition"
-
-
-from wf_cli.schema_catalog import compact_schema_outline, verbose_schema_document
 
 
 def test_compact_outline_replaces_local_refs_with_names() -> None:

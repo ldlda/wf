@@ -69,5 +69,8 @@ wf run trace <run_id> --from 0 --limit 25
 - Do not use planning-session specs or implementation plans as user-facing runtime guidance.
 - Do not confuse draft shape with raw plan shape: drafts use `steps/routes/use`;
   raw plans use `nodes/edges/node`.
-- `wf schema` is currently only an empty command group; do not rely on it for
-  workflow plan shape until subcommands exist.
+- Use `wf schema` to list workflow document/component shapes.
+- Use `wf schema draft`, `wf schema raw`, or `wf schema <Component>` for compact
+  JSON guidance before authoring.
+- Add `--verbose` only when a complete JSON Schema document is required; it may
+  be large.

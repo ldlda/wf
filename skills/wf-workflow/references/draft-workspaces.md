@@ -3,6 +3,11 @@
 Use draft workspaces for iterative workflow authoring. They are mutable and
 revisioned; artifacts are immutable and versioned.
 
+Before writing or patching a draft, inspect the current public shape:
+
+    wf schema draft
+    wf schema DraftUseStep
+
 ## Draft Shape
 
 A draft has:
