@@ -84,6 +84,7 @@ app.command("explain")(explain.explain_command)
 app.command("status")(status.status_command)
 app.command("schema")(schema.schema_command)
 
+
 def main() -> None:
     """Console script entrypoint for `wf`."""
     load_dotenv()

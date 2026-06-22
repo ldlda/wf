@@ -33,7 +33,5 @@ def schema_command(
         message = exc.args[0] if exc.args else str(exc)
         raise typer.BadParameter(message, param_hint="NAME") from exc
     emit_json(
-        verbose_schema_document(name)
-        if verbose
-        else compact_schema_outline(name)
+        verbose_schema_document(name) if verbose else compact_schema_outline(name)
     )
