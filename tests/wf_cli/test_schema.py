@@ -123,3 +123,24 @@ def test_schema_catalog_resolves_aliases_and_components() -> None:
     assert catalog.resolve("NodeUse") == "NodeUse"
     assert catalog.entry("draft").kind == "root"
     assert catalog.entry("NodeUse").kind == "definition"
+
+
+from wf_cli.schema_catalog import compact_schema_outline, verbose_schema_document
+
+
+def test_compact_outline_replaces_local_refs_with_names() -> None:
+    payload = compact_schema_outline("NodeUse")
+
+    assert payload["properties"]["input"]["items"]["one_of"] == [
+        "InputPathBinding",
+        "InputValueBinding",
+    ]
+    assert "$ref" not in json.dumps(payload)
+
+
+def test_verbose_component_uses_generated_definitions() -> None:
+    payload = verbose_schema_document("NodeUse")
+
+    assert payload["$schema"] == Draft202012Validator.META_SCHEMA["$id"]
+    assert payload["$ref"] == "#/$defs/NodeUse"
+    assert "InputPathBinding" in payload["$defs"]

@@ -99,3 +99,111 @@ def schema_catalog() -> SchemaCatalog:
                 raise RuntimeError(f"conflicting workflow schema definition: {name}")
             definitions.setdefault(name, deepcopy(value))
     return SchemaCatalog(roots=roots, definitions=definitions, aliases=dict(ALIASES))
+
+
+PRESENTATION_KEYS = (
+    "type",
+    "description",
+    "default",
+    "enum",
+    "const",
+    "minimum",
+    "maximum",
+    "exclusiveMinimum",
+    "exclusiveMaximum",
+    "minLength",
+    "maxLength",
+    "minItems",
+    "maxItems",
+)
+
+
+def _ref_name(ref: str) -> str:
+    prefix = "#/$defs/"
+    if not ref.startswith(prefix):
+        return ref
+    return ref.removeprefix(prefix)
+
+
+def _compact_node(schema: object, related: set[str]) -> object:
+    if not isinstance(schema, dict):
+        return deepcopy(schema)
+    ref = schema.get("$ref")
+    if isinstance(ref, str):
+        name = _ref_name(ref)
+        if name != ref:
+            related.add(name)
+        return name
+
+    result: JsonObject = {}
+    for key in PRESENTATION_KEYS:
+        if key in schema:
+            result[key] = deepcopy(schema[key])
+    required = schema.get("required")
+    if isinstance(required, list):
+        result["required"] = deepcopy(required)
+    properties = schema.get("properties")
+    if isinstance(properties, dict):
+        result["properties"] = {
+            name: _compact_node(value, related)
+            for name, value in properties.items()
+        }
+    if "items" in schema:
+        result["items"] = _compact_node(schema["items"], related)
+    for source_key in ("oneOf", "anyOf"):
+        branches = schema.get(source_key)
+        if not isinstance(branches, list):
+            continue
+        result["one_of"] = [_compact_node(branch, related) for branch in branches]
+        break
+    discriminator = schema.get("discriminator")
+    if isinstance(discriminator, dict) and isinstance(discriminator.get("propertyName"), str):
+        result["discriminator"] = discriminator["propertyName"]
+    return result
+
+
+def compact_schema_outline(name: str) -> JsonObject:
+    catalog = schema_catalog()
+    canonical = catalog.resolve(name)
+    schema = catalog.schema(canonical)
+    related: set[str] = set()
+    body = _compact_node(schema, related)
+    if not isinstance(body, dict):
+        body = {"schema": body}
+    return {
+        "name": canonical,
+        "kind": "schema_outline",
+        **body,
+        "related": sorted(related - {canonical}),
+        "full_schema_command": f"wf schema {name} --verbose",
+    }
+
+
+def verbose_schema_document(name: str) -> JsonObject:
+    catalog = schema_catalog()
+    canonical = catalog.resolve(name)
+    if canonical in catalog.roots:
+        document = catalog.schema(canonical)
+        document.setdefault("$schema", SCHEMA_DIALECT)
+    else:
+        document = {
+            "$schema": SCHEMA_DIALECT,
+            "$ref": f"#/$defs/{canonical}",
+            "$defs": deepcopy(catalog.definitions),
+        }
+    Draft202012Validator.check_schema(document)
+    return document
+
+
+def schema_catalog_payload() -> JsonObject:
+    return {
+        "schemas": [
+            {
+                "name": entry.name,
+                "aliases": list(entry.aliases),
+                "kind": entry.kind,
+                "description": entry.description,
+            }
+            for entry in schema_catalog().entries()
+        ]
+    }
