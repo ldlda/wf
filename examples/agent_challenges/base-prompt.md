@@ -14,3 +14,8 @@ Use this command prefix:
 Your writable trial workspace is `{{workspace_path}}`. Write attempt files only
 inside it. End with the challenge's requested YAML self-report. The self-report
 will be checked against observed tool calls and manually audited.
+
+Files under `tests/` and `examples/` may contain complete or partial solutions.
+If you inspect them, report `read.product_code: true`; also report
+`read.existing_solution: true` when they provide a ready-made solution, or
+`read.adjacent_attempts: true` when they contain prior trial outputs.

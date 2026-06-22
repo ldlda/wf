@@ -101,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
                 "task_outcome": result["task_outcome"],
                 "evaluation_validity": result["evaluation_validity"],
                 "duration_seconds": result["duration_seconds"],
+                "result_path": result.get("result_path"),
+                "report_paths": result.get("report_paths"),
             }
         )
         print(json.dumps(summaries[-1], sort_keys=True))

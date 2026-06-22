@@ -1092,3 +1092,132 @@ def test_both_challenges_produce_different_challenge_hashes_but_same_base(
     assert hashes["browser_none"] != hashes["report_none"]
     for profile in InstructionProfile:
         assert hashes[f"browser_{profile.value}"] != hashes[f"report_{profile.value}"]
+
+
+def test_runner_to_report_success(tmp_path: Path) -> None:
+    from examples.agent_challenges.runner import run_v2_trial
+
+    challenge = load_challenge_manifest(_write_manifest(tmp_path / "challenge"))
+    bundle = ROOT / "examples/agent_challenges/instruction_bundles/workflow_cli.yaml"
+    workspaces_dir = tmp_path / "workspaces"
+    results_dir = tmp_path / "results"
+    results_dir.mkdir()
+
+    agent_answer = "Deployment dep_abc created."
+    stdout_jsonl = "\n".join(
+        [
+            json.dumps({"type": "step_start", "step": 1}),
+            json.dumps(
+                {
+                    "type": "step_finish",
+                    "tokens": {"total": 50, "input": 20, "output": 15},
+                    "cost": 0.002,
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "text",
+                    "part": {"text": f"Final answer: {agent_answer}"},
+                }
+            ),
+        ]
+    )
+
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: str,
+        text: bool,
+        capture_output: bool,
+        timeout: float | None,
+        check: bool,
+    ) -> object:
+        return type(
+            "Result",
+            (),
+            {"returncode": 0, "stdout": stdout_jsonl, "stderr": ""},
+        )()
+
+    result = run_v2_trial(
+        challenge,
+        profile=InstructionProfile.NONE,
+        model="test-model",
+        variant="high",
+        index=1,
+        workspaces_dir=workspaces_dir,
+        results_dir=results_dir,
+        instruction_bundle=bundle,
+        run_fn=fake_run,
+    )
+
+    assert result["challenge_id"] == "fixture"
+    assert isinstance(result["workspace_path"], str)
+    assert isinstance(result["result_path"], str)
+    assert isinstance(result["report_paths"], dict)
+    assert "markdown" in result["report_paths"]
+    assert "machine" in result["report_paths"]
+
+    raw_path = Path(result["result_path"])
+    md_path = Path(result["report_paths"]["markdown"])
+    machine_path = Path(result["report_paths"]["machine"])
+
+    assert raw_path.is_file()
+    assert md_path.is_file()
+    assert machine_path.is_file()
+
+    machine = json.loads(machine_path.read_text(encoding="utf-8"))
+    assert machine["identity"]["challenge_id"] == "fixture"
+
+    md = md_path.read_text(encoding="utf-8")
+    assert agent_answer in md
+
+
+def test_runner_to_report_timeout(tmp_path: Path) -> None:
+    import subprocess as sp
+
+    from examples.agent_challenges.runner import run_v2_trial
+
+    challenge = load_challenge_manifest(_write_manifest(tmp_path / "challenge"))
+    bundle = ROOT / "examples/agent_challenges/instruction_bundles/workflow_cli.yaml"
+    workspaces_dir = tmp_path / "workspaces"
+    results_dir = tmp_path / "results"
+    results_dir.mkdir()
+
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: str,
+        text: bool,
+        capture_output: bool,
+        timeout: float | None,
+        check: bool,
+    ) -> object:
+        raise sp.TimeoutExpired(cmd=command, timeout=3600)
+
+    result = run_v2_trial(
+        challenge,
+        profile=InstructionProfile.NONE,
+        model="test-model",
+        variant="high",
+        index=1,
+        workspaces_dir=workspaces_dir,
+        results_dir=results_dir,
+        instruction_bundle=bundle,
+        run_fn=fake_run,
+    )
+
+    assert result["task_outcome"] == "timeout"
+    assert isinstance(result.get("workspace_path"), str)
+    assert isinstance(result.get("report_paths"), dict)
+
+
+BASE_PROMPT = ROOT / "examples/agent_challenges/base-prompt.md"
+
+
+def test_base_prompt_mentions_self_report_rules() -> None:
+    text = BASE_PROMPT.read_text(encoding="utf-8")
+    assert "tests/" in text or "tests" in text
+    assert "examples/" in text or "examples" in text
+    assert "read.product_code" in text
+    assert "read.existing_solution" in text
+    assert "read.adjacent_attempts" in text

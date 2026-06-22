@@ -3,10 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 from examples.agent_challenges.classification import extract_challenge_report
 from examples.agent_challenges.opencode_io import parse_opencode_output, result_text
+from examples.agent_challenges.report_models import TrialReport
 
 
 def save_report(
@@ -198,3 +200,169 @@ def report_from_v2_result(result: dict[str, object]) -> str:
     lines.append("")
 
     return "\n".join(lines)
+
+
+@dataclass(frozen=True, slots=True)
+class TrialReportPaths:
+    markdown: Path
+    machine: Path
+
+
+def _atomic_write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_name(f".{path.name}.tmp")
+    temporary.write_text(text, encoding="utf-8")
+    temporary.replace(path)
+
+
+def render_trial_report_markdown(report: TrialReport) -> str:
+    lines: list[str] = []
+
+    lines.append("# Trial Report")
+    lines.append("")
+
+    lines.append("## Outcome")
+    lines.append("")
+    o = report.outcome
+    lines.append(f"- Task outcome: {o.task_outcome}")
+    lines.append(f"- Evaluation validity: {o.evaluation_validity}")
+    lines.append(f"- Duration: {o.duration_seconds}s")
+    if o.returncode is not None:
+        lines.append(f"- Return code: {o.returncode}")
+    if o.assertion_failures:
+        lines.append("- Assertion failures:")
+        for af in o.assertion_failures:
+            lines.append(f"  - {af}")
+    if o.parse_errors:
+        for key, err in o.parse_errors.items():
+            lines.append(
+                f"- Parse error ({key}): {err.get('type', '')} - {err.get('message', '')}"
+            )
+    lines.append("")
+
+    lines.append("## Agent Self-Report")
+    lines.append("")
+    if report.agent_self_report is not None:
+        lines.append("```yaml")
+        for key, value in report.agent_self_report.items():
+            lines.append(f"{key}: {value}")
+        lines.append("```")
+    else:
+        lines.append("No agent self-report captured.")
+    if report.final_agent_answer:
+        lines.append("")
+        lines.append("Final agent answer:")
+        lines.append("")
+        lines.append(report.final_agent_answer)
+    lines.append("")
+
+    lines.append("## Commands And Tool Calls")
+    lines.append("")
+    if report.commands_and_tools:
+        for cmd in report.commands_and_tools:
+            parts = [
+                f"{cmd.ordinal}. **{cmd.tool}** ({cmd.status})",
+                f"   - Title: {cmd.title}",
+            ]
+            if cmd.detail:
+                parts.append(f"   - Detail: `{cmd.detail}`")
+            parts.append(
+                f"   - Output: {cmd.output_chars} chars, sha256: `{cmd.output_sha256}`"
+            )
+            lines.extend(parts)
+    else:
+        lines.append("No commands or tool calls recorded.")
+    lines.append("")
+
+    lines.append("## Automatic Evidence")
+    lines.append("")
+    ev = report.automatic_evidence
+    lines.append(f"- Steps: {ev.step_count}")
+    lines.append(
+        f"- Tool calls: {ev.tool_call_count} ({ev.failed_tool_call_count} failed)"
+    )
+    if ev.tool_counts:
+        for tool, count in sorted(ev.tool_counts.items()):
+            lines.append(f"  - {tool}: {count}")
+    lines.append(
+        f"- Tokens: total={ev.tokens.total}, input={ev.tokens.input}, output={ev.tokens.output}, reasoning={ev.tokens.reasoning}, cache_read={ev.tokens.cache_read}, cache_write={ev.tokens.cache_write}"
+    )
+    lines.append(f"- Cost: {ev.cost}")
+    if ev.unknown_event_count:
+        lines.append(f"- Unknown events: {ev.unknown_event_count}")
+    if ev.reads_by_category:
+        for category, paths in sorted(ev.reads_by_category.items()):
+            lines.append(f"- {category}: {len(paths)} path(s)")
+    if ev.disallowed_reads:
+        lines.append(f"- Disallowed reads: {len(ev.disallowed_reads)} path(s)")
+    if ev.opaque_shell_commands:
+        lines.append(
+            f"- Opaque shell commands: {len(ev.opaque_shell_commands)} command(s)"
+        )
+    if ev.escalated_to_product_code:
+        lines.append("- Escalated to product code: yes")
+    lines.append("")
+
+    lines.append("## Policy Findings")
+    lines.append("")
+    if report.policy_findings:
+        for pf in report.policy_findings:
+            lines.append(f"- {pf}")
+    else:
+        lines.append("No policy findings.")
+    lines.append("")
+
+    lines.append("## Self-Report Discrepancies")
+    lines.append("")
+    if report.self_report_discrepancies:
+        for sd in report.self_report_discrepancies:
+            lines.append(f"- {sd}")
+    else:
+        lines.append("No discrepancies detected.")
+    lines.append("")
+
+    lines.append("## Manual Audit")
+    lines.append("")
+    ma = report.manual_audit
+    lines.append(f"- Status: {ma.status}")
+    if ma.official_outcome is not None:
+        lines.append(f"- Official outcome: {ma.official_outcome}")
+    if ma.auditor is not None:
+        lines.append(f"- Auditor: {ma.auditor}")
+    if ma.audited_at is not None:
+        lines.append(f"- Audited at: {ma.audited_at}")
+    if ma.corrections:
+        for c in ma.corrections:
+            lines.append(f"- Correction: {c}")
+    if ma.notes:
+        lines.append(f"- Notes: {ma.notes}")
+    if ma.read_flags:
+        for key, val in ma.read_flags.items():
+            lines.append(f"- read.{key}: {val}")
+    lines.append("")
+
+    lines.append("## Follow-Up Notes")
+    lines.append("")
+    if report.follow_up_notes:
+        for fn in report.follow_up_notes:
+            lines.append(f"- {fn}")
+    else:
+        lines.append("No follow-up notes.")
+    lines.append("")
+
+    return "\n".join(lines)
+
+
+def write_trial_report_projections(
+    report: TrialReport,
+    *,
+    markdown_path: Path,
+    machine_path: Path,
+) -> TrialReportPaths:
+    machine = (
+        json.dumps(report.model_dump(mode="json"), indent=2, sort_keys=True) + "\n"
+    )
+    markdown = render_trial_report_markdown(report).rstrip() + "\n"
+    _atomic_write_text(machine_path, machine)
+    _atomic_write_text(markdown_path, markdown)
+    return TrialReportPaths(markdown=markdown_path, machine=machine_path)

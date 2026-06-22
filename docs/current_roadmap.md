@@ -221,6 +221,10 @@ stable.
   manual-audited reports. Two data-driven challenges exist: browser-click and
   report-workflow. The central `run_trials.py` runner accepts any challenge
   manifest.
+- Completed: report projections generate bounded Markdown and JSON reports for
+  every V2 trial and regenerate both after audit without mutating raw evidence.
+  Implementation:
+  [`report projections`](historical/superpowers/plans/2026-06-23-agent-challenge-report-projections.md).
 
 ## Historical References
 

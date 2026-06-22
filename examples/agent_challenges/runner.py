@@ -20,8 +20,12 @@ from examples.agent_challenges.opencode_io import (  # noqa: E402
     parse_opencode_output,
     result_text,
 )
+from examples.agent_challenges.report_models import (  # noqa: E402
+    build_trial_report,
+)
 from examples.agent_challenges.reports import (  # noqa: E402
     save_report_from_result_payload,
+    write_trial_report_projections,
 )
 from examples.agent_challenges.workspace import (  # noqa: E402
     ChallengeDef,
@@ -575,7 +579,23 @@ def run_v2_trial(
     if assertion_failures:
         task_outcome = "failed"
 
+    results_dir.mkdir(parents=True, exist_ok=True)
+    result_path = (
+        results_dir
+        / f"{model.replace('/', '_').replace(':', '_')}-trial-{index:03d}.json"
+    )
+    workspace_root_str = str(workspace.root.resolve())
+    result_path_str = str(result_path.resolve())
+
+    markdown_path = workspace.root / "final-report.md"
+    machine_report_path = result_path.with_suffix(".report.json")
+    report_paths = {
+        "markdown": str(markdown_path.resolve()),
+        "machine": str(machine_report_path.resolve()),
+    }
+
     result: dict[str, Any] = {
+        "challenge_id": challenge.manifest.id,
         "instruction_profile": profile.value,
         "task_outcome": task_outcome,
         "evaluation_validity": policy.validity.value,
@@ -591,6 +611,9 @@ def run_v2_trial(
             "disallowed_reads": list(policy.disallowed_reads),
             "escalated_to_product_code": policy.escalated_to_product_code,
             "opaque_shell_commands": list(policy.opaque_shell_commands),
+            "reads_by_category": {
+                k: list(v) for k, v in policy.reads_by_category.items()
+            },
         },
         "repository_commit": _get_git_commit(),
         "repository_dirty": _get_git_dirty(),
@@ -598,11 +621,15 @@ def run_v2_trial(
         "index": index,
         "model": model,
         "variant": variant,
+        "trial_index": index,
         "duration_seconds": round(duration_seconds, 3),
         "returncode": returncode,
         "stdout": stdout,
         "stderr": stderr,
         "parsed": parsed_output,
+        "workspace_path": workspace_root_str,
+        "result_path": result_path_str,
+        "report_paths": report_paths,
     }
 
     if assertion_failures:
@@ -614,13 +641,25 @@ def run_v2_trial(
     if challenge_report is not None:
         result["challenge_report"] = challenge_report
 
-    results_dir.mkdir(parents=True, exist_ok=True)
-    result_path = (
-        results_dir
-        / f"{model.replace('/', '_').replace(':', '_')}-trial-{index:03d}.json"
-    )
     result_path.write_text(
         json.dumps(result, indent=2, sort_keys=True), encoding="utf-8"
     )
+
+    report_generation_error: str | None = None
+    try:
+        trial_report = build_trial_report(
+            result,
+            audit=None,
+            raw_result_path=result_path_str,
+            workspace_path=workspace_root_str,
+        )
+        write_trial_report_projections(
+            trial_report,
+            markdown_path=markdown_path,
+            machine_path=machine_report_path,
+        )
+    except Exception as exc:
+        report_generation_error = str(exc)
+        result["report_generation_error"] = report_generation_error
 
     return result
