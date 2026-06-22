@@ -47,6 +47,40 @@ def parse_opencode_output(stdout: str) -> dict[str, Any]:
     return parsed
 
 
+def opencode_text_results(stdout: str) -> list[dict[str, Any]]:
+    """Return text-bearing OpenCode events in stream order.
+
+    Agents may emit a complete challenge report and then a shorter closing
+    summary. Keeping every text event lets callers select the latest event that
+    satisfies their own report contract instead of blindly taking the tail.
+    """
+    text = stdout.strip()
+    if not text:
+        return []
+
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError:
+        events: list[dict[str, Any]] = []
+        for line in text.splitlines():
+            try:
+                event = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(event, dict):
+                event_text = _event_text(event)
+                if event_text is not None:
+                    events.append({"text": event_text, "event": event})
+        return events
+
+    if not isinstance(parsed, dict):
+        return []
+    event_text = _event_text(parsed)
+    if event_text is None:
+        return []
+    return [{"text": event_text, "event": parsed}]
+
+
 def _parse_jsonl_tail(text: str) -> dict[str, Any]:
     last_error: json.JSONDecodeError | None = None
     parsed_events: list[dict[str, Any]] = []

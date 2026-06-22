@@ -309,6 +309,78 @@ def test_extract_trial_metrics_handles_nested_part_state_format() -> None:
     assert metrics.cost == 0.005
 
 
+def test_extract_trial_metrics_handles_nested_step_finish_format() -> None:
+    from examples.agent_challenges.metrics import extract_trial_metrics
+
+    stdout = "\n".join(
+        [
+            json.dumps(
+                {
+                    "type": "step_finish",
+                    "part": {
+                        "tokens": {
+                            "total": 100,
+                            "input": 40,
+                            "output": 30,
+                            "reasoning": 10,
+                            "cache": {"read": 20, "write": 0},
+                        },
+                        "cost": 0.005,
+                    },
+                }
+            ),
+            json.dumps(
+                {
+                    "type": "step_finish",
+                    "part": {
+                        "tokens": {
+                            "total": 50,
+                            "input": 20,
+                            "output": 20,
+                            "reasoning": 5,
+                            "cache": {"read": 5, "write": 0},
+                        },
+                        "cost": 0.002,
+                    },
+                }
+            ),
+        ]
+    )
+
+    metrics = extract_trial_metrics(stdout)
+
+    assert metrics.tokens.total == 150
+    assert metrics.tokens.input == 60
+    assert metrics.tokens.output == 50
+    assert metrics.tokens.reasoning == 15
+    assert metrics.tokens.cache_read == 25
+    assert metrics.cost == 0.007
+
+
+def test_opencode_text_results_preserve_report_before_later_summary() -> None:
+    from examples.agent_challenges.opencode_io import opencode_text_results
+
+    report = "```yaml\nchallenge_report:\n  run_failed: false\n```"
+    stdout = "\n".join(
+        [
+            json.dumps({"type": "text", "part": {"text": report}}),
+            json.dumps(
+                {
+                    "type": "text",
+                    "part": {"text": "Challenge completed successfully."},
+                }
+            ),
+        ]
+    )
+
+    results = opencode_text_results(stdout)
+
+    assert [result["text"] for result in results] == [
+        report,
+        "Challenge completed successfully.",
+    ]
+
+
 def test_policy_evidence_classifies_reads(tmp_path: Path) -> None:
     from examples.agent_challenges.metrics import ToolCallEvidence
     from examples.agent_challenges.policy import evaluate_policy
@@ -395,6 +467,29 @@ def test_policy_evidence_classifies_reads(tmp_path: Path) -> None:
     )
     assert bash_policy.validity.value == "unauditable"
     assert len(bash_policy.opaque_shell_commands) == 1
+
+    wf_tc = ToolCallEvidence(
+        ordinal=2,
+        call_id="c2",
+        tool="bash",
+        status="success",
+        title="run workflow",
+        input={"command": "uv run wf --config trial/wf.config.json --local status"},
+        metadata={},
+        output_chars=100,
+        output_preview="",
+        output_sha256="ghi",
+        failed=False,
+    )
+    wf_policy = evaluate_policy(
+        "all",
+        [wf_tc],
+        workspace_root=workspace_root,
+        repository_root=repository_root,
+        workspaces_root=workspaces_root,
+    )
+    assert wf_policy.validity.value == "clean"
+    assert wf_policy.opaque_shell_commands == ()
 
 
 def test_v2_runner_default_timeout_and_workspace_cwd(tmp_path: Path) -> None:
@@ -800,6 +895,9 @@ def test_v2_runner_to_report_shows_final_answer(tmp_path: Path) -> None:
             json.dumps({"type": "step_finish", "tokens": {"total": 50}, "cost": 0.001}),
             json.dumps(
                 {"text": f"Final answer: {agent_answer}\n\n{challenge_report_yaml}"}
+            ),
+            json.dumps(
+                {"text": "Challenge completed successfully after the full report."}
             ),
         ]
     )

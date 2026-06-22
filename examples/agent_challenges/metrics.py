@@ -182,7 +182,9 @@ def extract_trial_metrics(stdout: str, *, preview_chars: int = 500) -> TrialMetr
             )
 
         elif event_type == "step_finish":
-            tokens = _dict(event.get("tokens"))
+            part = _dict(event.get("part"))
+            payload = part or event
+            tokens = _dict(payload.get("tokens"))
             cache = _dict(tokens.get("cache"))
             step_tokens = TokenMetrics(
                 total=_int(tokens.get("total")),
@@ -193,7 +195,7 @@ def extract_trial_metrics(stdout: str, *, preview_chars: int = 500) -> TrialMetr
                 cache_write=_int(cache.get("write")),
             )
             metrics.tokens = _add_tokens(metrics.tokens, step_tokens)
-            metrics.cost += _float(event.get("cost"))
+            metrics.cost += _float(payload.get("cost"))
 
         else:
             metrics.unknown_event_count += 1

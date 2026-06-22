@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
@@ -87,6 +88,18 @@ def _extract_shell_command(tc: ToolCallEvidence) -> str | None:
     return None
 
 
+def _is_auditable_product_command(command: str) -> bool:
+    """Recognize direct workflow CLI calls without blessing arbitrary shell."""
+    return (
+        re.match(
+            r"^(?:uv\s+run(?:\s+--env-file\s+\S+)?\s+)?wf(?:\s|$)",
+            command.strip(),
+            flags=re.IGNORECASE,
+        )
+        is not None
+    )
+
+
 def evaluate_policy(
     profile: InstructionProfile | str,
     tool_calls: list[ToolCallEvidence],
@@ -128,7 +141,7 @@ def evaluate_policy(
                     escalated_to_product_code = True
 
         shell_cmd = _extract_shell_command(tc)
-        if shell_cmd is not None:
+        if shell_cmd is not None and not _is_auditable_product_command(shell_cmd):
             opaque_shell_commands.append(shell_cmd)
 
     if disallowed_reads:

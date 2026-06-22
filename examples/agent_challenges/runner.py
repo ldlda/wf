@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 
 from examples.agent_challenges.opencode_io import (  # noqa: E402
     build_opencode_command,
+    opencode_text_results,
     parse_opencode_output,
     result_text,
 )
@@ -527,13 +528,20 @@ def run_v2_trial(
 
     if stdout.strip():
         try:
-            parsed_output = parse_opencode_output(stdout)
-            report_text = result_text(parsed_output)
             from examples.agent_challenges.classification import (
                 extract_challenge_report,
             )
 
-            challenge_report = extract_challenge_report(report_text)
+            text_results = opencode_text_results(stdout)
+            parsed_output = (
+                text_results[-1] if text_results else parse_opencode_output(stdout)
+            )
+            for candidate in reversed(text_results):
+                candidate_report = extract_challenge_report(result_text(candidate))
+                if candidate_report is not None:
+                    parsed_output = candidate
+                    challenge_report = candidate_report
+                    break
         except (ValueError, KeyError, yaml.YAMLError) as exc:
             challenge_report = None
             report_parse_error = {
