@@ -110,3 +110,16 @@ def test_schema_unknown_name_fails_with_suggestion() -> None:
     assert result.exit_code != 0
     assert "unknown schema 'Node'" in result.output
     assert "NodeUse" in result.output
+
+
+from wf_cli.schema_catalog import schema_catalog
+
+
+def test_schema_catalog_resolves_aliases_and_components() -> None:
+    catalog = schema_catalog()
+
+    assert catalog.resolve("raw") == "RawWorkflowPlan"
+    assert catalog.resolve("RawWorkflowPlan") == "RawWorkflowPlan"
+    assert catalog.resolve("NodeUse") == "NodeUse"
+    assert catalog.entry("draft").kind == "root"
+    assert catalog.entry("NodeUse").kind == "definition"
