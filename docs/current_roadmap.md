@@ -215,6 +215,10 @@ stable.
 - Completed: workflow/CLI agent instructions now form an explicit copyable
   bundle for controlled challenge profiles, use `wf schema` for public shape
   discovery, and avoid implementation/test-file guidance.
+- Completed: the generic agent challenge harness now supports data-driven
+  manifests, layered prompts, explicit `none|skills|all` profiles, one-hour hard
+  ceilings, normalized OpenCode tool/token evidence, policy findings, and
+  manual-audited reports.
 
 ## Historical References
 

@@ -209,3 +209,50 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(str(exc))
     print(output_path.as_posix())
     return 0
+
+
+def manual_audit_from_v2_result(
+    result: dict[str, object],
+    *,
+    workspace: Path | None = None,
+    official_outcome: str = "pending",
+    auditor_notes: str = "",
+    audited_at: str | None = None,
+    auditor: str = "human",
+    output_name: str = "manual-audit.yaml",
+) -> tuple[Path, dict[str, Any]]:
+    task_outcome = result.get("task_outcome", "unknown")
+    evaluation_validity = result.get("evaluation_validity", "unknown")
+    policy = result.get("policy", {})
+    if not isinstance(policy, dict):
+        policy = {}
+
+    audit: dict[str, Any] = {
+        "manual_audit": {
+            "auditor": auditor,
+            "audited_at": audited_at or _utc_now(),
+            "task_outcome": task_outcome,
+            "evaluation_validity": evaluation_validity,
+            "official_outcome": official_outcome,
+            "auditor_notes": auditor_notes,
+            "automatic_evidence": {
+                "task_outcome": task_outcome,
+                "evaluation_validity": evaluation_validity,
+                "policy": policy,
+            },
+            "duration_seconds": result.get("duration_seconds"),
+            "returncode": result.get("returncode"),
+        }
+    }
+
+    output_path: Path
+    if workspace is not None:
+        output_path = workspace / output_name
+        output_path.write_text(
+            yaml.safe_dump(audit, sort_keys=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+    else:
+        output_path = Path(output_name)
+
+    return output_path, audit

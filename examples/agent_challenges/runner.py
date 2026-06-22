@@ -10,6 +10,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+import yaml
+
 ROOT = Path(__file__).resolve().parents[2]
 
 from examples.agent_challenges.opencode_io import (  # noqa: E402
@@ -339,3 +341,278 @@ def main(
 
 def _optional_string(value: object) -> str | None:
     return None if value is None else str(value)
+
+
+def _get_git_commit() -> str:
+    try:
+        completed = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            return completed.stdout.strip()
+    except Exception:
+        pass
+    return "unknown"
+
+
+def _get_git_dirty() -> bool:
+    try:
+        completed = subprocess.run(
+            ["git", "status", "--porcelain"],
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if completed.returncode == 0:
+            return bool(completed.stdout.strip())
+    except Exception:
+        pass
+    return False
+
+
+def run_v2_trial(
+    challenge: object,
+    *,
+    profile: object,
+    model: str,
+    variant: str,
+    index: int,
+    workspaces_dir: Path,
+    results_dir: Path,
+    instruction_bundle: Path,
+    timeout_seconds: int = 3600,
+    attach_url: str | None = None,
+    run_fn: Any = None,
+) -> dict[str, Any]:
+    from .metrics import extract_trial_metrics, metrics_payload
+    from .models import InstructionProfile, LoadedChallenge
+    from .policy import evaluate_policy
+    from .prompts import compose_trial_prompt
+    from .workspace import (
+        _display_path,
+        prepare_v2_trial_workspace,
+        wf_command_prefix_for_config,
+    )
+
+    if run_fn is None:
+        run_fn = subprocess.run
+
+    if not isinstance(challenge, LoadedChallenge):
+        raise TypeError("challenge must be a LoadedChallenge")
+    if not isinstance(profile, InstructionProfile):
+        profile = InstructionProfile(profile)
+
+    workspace = prepare_v2_trial_workspace(
+        challenge,
+        profile=profile,
+        model=model,
+        index=index,
+        workspaces_dir=workspaces_dir,
+        instruction_bundle=instruction_bundle,
+    )
+
+    wf_command_prefix = wf_command_prefix_for_config(workspace.config_path)
+    workspace_path = _display_path(workspace.root)
+    config_path_display = _display_path(workspace.config_path)
+    server_context = (
+        "No external workflow RPC server is staged. Use the "
+        "per-trial workspace config copied to "
+        f"`{config_path_display}`. Your writable trial workspace is "
+        f"`{workspace_path}`."
+    )
+
+    rendered = compose_trial_prompt(
+        challenge,
+        profile=profile,
+        wf_command_prefix=wf_command_prefix,
+        server_context=server_context,
+        workspace_path=workspace.root,
+    )
+
+    workspace.rendered_prompt_path.write_text(rendered.text, encoding="utf-8")
+
+    command = [
+        "opencode",
+        "run",
+    ]
+    if attach_url is not None:
+        command.extend(["--attach", attach_url])
+    command.extend(
+        [
+            rendered.text,
+            "--format",
+            "json",
+            "--model",
+            model,
+            "--variant",
+            variant,
+        ]
+    )
+
+    started = time.monotonic()
+    stdout = ""
+    stderr = ""
+    returncode = 0
+    task_outcome = "success"
+    parse_error: dict[str, str] | None = None
+
+    try:
+        completed = run_fn(
+            command,
+            cwd=str(workspace.root),
+            text=True,
+            capture_output=True,
+            timeout=timeout_seconds,
+            check=False,
+        )
+        duration_seconds = time.monotonic() - started
+        stdout = completed.stdout
+        stderr = completed.stderr
+        returncode = completed.returncode
+        if returncode != 0:
+            task_outcome = "failed"
+    except subprocess.TimeoutExpired as exc:
+        duration_seconds = time.monotonic() - started
+        stdout = (
+            exc.stdout
+            if isinstance(exc.stdout, str)
+            else (exc.stdout or b"").decode("utf-8", errors="replace")
+            if exc.stdout
+            else ""
+        )
+        stderr = (
+            exc.stderr
+            if isinstance(exc.stderr, str)
+            else (exc.stderr or b"").decode("utf-8", errors="replace")
+            if exc.stderr
+            else ""
+        )
+        task_outcome = "timeout"
+    except Exception as exc:
+        duration_seconds = time.monotonic() - started
+        task_outcome = "parse_error"
+        parse_error = {
+            "type": type(exc).__name__,
+            "message": str(exc),
+        }
+
+    metrics = extract_trial_metrics(stdout)
+    metrics_dir = workspace.root
+    metrics_dir.mkdir(parents=True, exist_ok=True)
+    (metrics_dir / "metrics.json").write_text(
+        json.dumps(metrics_payload(metrics), indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+
+    repository_root = ROOT
+    policy = evaluate_policy(
+        profile,
+        metrics.tool_calls,
+        workspace_root=workspace.root,
+        repository_root=repository_root,
+        workspaces_root=workspaces_dir,
+    )
+
+    success_assertions = challenge.manifest.report.success_assertions
+    required_fields = challenge.manifest.report.required_fields
+    assertion_failures: list[str] = []
+    challenge_report: dict[str, Any] | None = None
+    parsed_output: dict[str, Any] | None = None
+    report_parse_error: dict[str, str] | None = None
+
+    if stdout.strip():
+        try:
+            parsed_output = parse_opencode_output(stdout)
+            report_text = result_text(parsed_output)
+            from examples.agent_challenges.classification import (
+                extract_challenge_report,
+            )
+
+            challenge_report = extract_challenge_report(report_text)
+        except (ValueError, KeyError, yaml.YAMLError) as exc:
+            challenge_report = None
+            report_parse_error = {
+                "type": type(exc).__name__,
+                "message": str(exc),
+            }
+
+    if task_outcome == "success":
+        if required_fields and challenge_report is None:
+            assertion_failures.append(
+                "could not extract challenge report for required_fields evaluation"
+            )
+        elif required_fields and challenge_report is not None:
+            for field in required_fields:
+                if field not in challenge_report:
+                    assertion_failures.append(f"required field missing: {field}")
+
+        if success_assertions and challenge_report is not None:
+            for field, expected in success_assertions.items():
+                actual = challenge_report.get(field)
+                if actual != expected:
+                    assertion_failures.append(
+                        f"{field}: expected {expected!r}, got {actual!r}"
+                    )
+        elif success_assertions and challenge_report is None:
+            if not assertion_failures:
+                assertion_failures.append(
+                    "could not extract challenge report for success_assertions evaluation"
+                )
+
+    if assertion_failures:
+        task_outcome = "failed"
+
+    result: dict[str, Any] = {
+        "instruction_profile": profile.value,
+        "task_outcome": task_outcome,
+        "evaluation_validity": policy.validity.value,
+        "prompt_hashes": {
+            "base": rendered.base_sha256,
+            "profile": rendered.profile_sha256,
+            "challenge": rendered.challenge_sha256,
+            "rendered": rendered.rendered_sha256,
+        },
+        "metrics": metrics_payload(metrics),
+        "policy": {
+            "validity": policy.validity.value,
+            "disallowed_reads": list(policy.disallowed_reads),
+            "escalated_to_product_code": policy.escalated_to_product_code,
+            "opaque_shell_commands": list(policy.opaque_shell_commands),
+        },
+        "repository_commit": _get_git_commit(),
+        "repository_dirty": _get_git_dirty(),
+        "harness_version": "v2",
+        "index": index,
+        "model": model,
+        "variant": variant,
+        "duration_seconds": round(duration_seconds, 3),
+        "returncode": returncode,
+        "stdout": stdout,
+        "stderr": stderr,
+        "parsed": parsed_output,
+    }
+
+    if assertion_failures:
+        result["assertion_failures"] = assertion_failures
+    if parse_error is not None:
+        result["parse_error"] = parse_error
+    if report_parse_error is not None:
+        result["report_parse_error"] = report_parse_error
+    if challenge_report is not None:
+        result["challenge_report"] = challenge_report
+
+    results_dir.mkdir(parents=True, exist_ok=True)
+    result_path = (
+        results_dir
+        / f"{model.replace('/', '_').replace(':', '_')}-trial-{index:03d}.json"
+    )
+    result_path.write_text(
+        json.dumps(result, indent=2, sort_keys=True), encoding="utf-8"
+    )
+
+    return result

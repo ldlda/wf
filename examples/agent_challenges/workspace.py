@@ -189,3 +189,97 @@ def _display_path(path: Path) -> str:
         return path.resolve().relative_to(PROJECT_ROOT.resolve()).as_posix()
     except ValueError:
         return str(path.resolve())
+
+
+@dataclass(frozen=True, slots=True)
+class V2TrialWorkspace:
+    root: Path
+    config_path: Path
+    rendered_prompt_path: Path
+    instruction_files: tuple[Path, ...]
+
+
+def _load_instruction_bundle(
+    bundle_path: Path,
+) -> list[tuple[str, str]]:
+    import yaml
+
+    loaded = yaml.safe_load(bundle_path.read_text(encoding="utf-8"))
+    if not isinstance(loaded, dict) or not isinstance(loaded.get("files"), list):
+        raise ValueError(f"invalid instruction bundle: {bundle_path}")
+    entries: list[tuple[str, str]] = []
+    for entry in loaded["files"]:
+        if not isinstance(entry, dict):
+            raise ValueError(f"invalid bundle entry: {entry}")
+        source = entry.get("source")
+        destination = entry.get("destination")
+        if not isinstance(source, str) or not isinstance(destination, str):
+            raise ValueError(f"bundle entry missing source/destination: {entry}")
+        entries.append((source, destination))
+    return entries
+
+
+def prepare_v2_trial_workspace(
+    challenge: object,
+    *,
+    profile: object,
+    model: str,
+    index: int,
+    workspaces_dir: Path,
+    instruction_bundle: Path,
+) -> V2TrialWorkspace:
+    from .models import InstructionProfile, LoadedChallenge
+
+    if not isinstance(challenge, LoadedChallenge):
+        raise TypeError("challenge must be a LoadedChallenge")
+    if not isinstance(profile, InstructionProfile):
+        raise TypeError("profile must be an InstructionProfile")
+
+    root = workspaces_dir / f"{_safe_model_name(model)}-trial-{index:03d}"
+    if root.exists():
+        raise FileExistsError(f"trial workspace already exists: {root}")
+
+    shutil.copytree(challenge.workspace_template, root)
+
+    config_path = root / "wf.config.json"
+    relative_source = Path(
+        os.path.relpath(challenge.source_root, config_path.parent)
+    ).as_posix()
+    config = {
+        "version": 1,
+        "client": {"target": {"kind": "local"}},
+        "server": {
+            "store": {"kind": "filesystem", "root": challenge.manifest.store_root},
+            "sources": [
+                {
+                    "kind": "python",
+                    "id": challenge.manifest.source.id,
+                    "path": relative_source,
+                    "module": challenge.manifest.source.module,
+                    "registry": challenge.manifest.source.registry,
+                }
+            ],
+        },
+    }
+    config_path.write_text(
+        json.dumps(config, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    instruction_files: list[Path] = []
+    if profile in (InstructionProfile.SKILLS, InstructionProfile.ALL):
+        bundle_entries = _load_instruction_bundle(instruction_bundle)
+        for source_rel, destination_rel in bundle_entries:
+            source_file = PROJECT_ROOT / source_rel
+            dest_file = root / ".agent" / "skills" / destination_rel
+            dest_file.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(source_file, dest_file)
+            instruction_files.append(dest_file)
+
+    rendered_prompt_path = root / "rendered-prompt.md"
+    return V2TrialWorkspace(
+        root=root,
+        config_path=config_path,
+        rendered_prompt_path=rendered_prompt_path,
+        instruction_files=tuple(instruction_files),
+    )

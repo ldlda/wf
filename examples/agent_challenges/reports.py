@@ -116,3 +116,85 @@ def main(argv: list[str] | None = None) -> int:
         parser.error(str(exc))
     print(output_path.as_posix())
     return 0
+
+
+def _format_tokens(tokens: dict[str, object]) -> str:
+    parts = []
+    for key in ("total", "input", "output", "reasoning", "cache_read", "cache_write"):
+        val = tokens.get(key)
+        if val is not None:
+            parts.append(f"{key}: {val}")
+    return ", ".join(parts)
+
+
+def report_from_v2_result(result: dict[str, object]) -> str:
+    lines: list[str] = []
+
+    profile = result.get("instruction_profile", "unknown")
+    lines.append(f"Instruction profile: {profile}")
+    lines.append("")
+
+    task_outcome = result.get("task_outcome", "unknown")
+    evaluation_validity = result.get("evaluation_validity", "unknown")
+    lines.append(f"Task outcome: {task_outcome}")
+    lines.append(f"Evaluation validity: {evaluation_validity}")
+    lines.append("")
+
+    duration = result.get("duration_seconds", 0)
+    lines.append(f"Duration: {duration}s")
+    lines.append("")
+
+    metrics = result.get("metrics", {})
+    if isinstance(metrics, dict):
+        tokens = metrics.get("tokens", {})
+        if isinstance(tokens, dict):
+            lines.append("Observed token metrics:")
+            lines.append(f"  {_format_tokens(tokens)}")
+        cost = metrics.get("cost")
+        if cost is not None:
+            lines.append(f"  cost: {cost}")
+        tool_counts = metrics.get("tool_counts", {})
+        if isinstance(tool_counts, dict) and tool_counts:
+            lines.append("")
+            lines.append("Tool calls by tool:")
+            for tool, count in sorted(tool_counts.items()):
+                lines.append(f"  {tool}: {count}")
+        tool_calls = metrics.get("tool_calls", [])
+        if isinstance(tool_calls, list) and tool_calls:
+            lines.append("")
+            lines.append("Tool call details:")
+            for tc in tool_calls:
+                if isinstance(tc, dict):
+                    tool = tc.get("tool", "unknown")
+                    status = tc.get("status", "unknown")
+                    preview = tc.get("output_preview", "")
+                    lines.append(f"  [{tc.get('ordinal', '?')}] {tool} ({status})")
+                    if preview:
+                        lines.append(f"    preview: {preview[:200]}")
+    lines.append("")
+
+    policy = result.get("policy", {})
+    if isinstance(policy, dict):
+        disallowed = policy.get("disallowed_reads", [])
+        if disallowed:
+            lines.append("Disallowed reads:")
+            for path in disallowed:
+                lines.append(f"  - {path}")
+            lines.append("")
+
+    lines.append("Agent self-report discrepancies:")
+    lines.append("  (pending manual audit)")
+    lines.append("")
+
+    parsed = result.get("parsed")
+    if isinstance(parsed, dict):
+        text = parsed.get("text", "")
+        if text:
+            lines.append("Final agent answer:")
+            lines.append(text)
+            lines.append("")
+
+    lines.append("Manual audit: pending")
+    lines.append("")
+
+    return "\n".join(lines)

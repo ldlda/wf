@@ -1,0 +1,16 @@
+# Workflow Agent Challenge
+
+Use the repository's public `wf` product path to complete the challenge below.
+Do not replace the workflow lifecycle with a helper script that imports internal
+workflow APIs. Preserve exact commands, failures, run ids, and evidence in your
+final answer.
+
+Use this command prefix:
+
+    {{wf_command_prefix}}
+
+{{server_context}}
+
+Your writable trial workspace is `{{workspace_path}}`. Write attempt files only
+inside it. End with the challenge's requested YAML self-report. The self-report
+will be checked against observed tool calls and manually audited.
