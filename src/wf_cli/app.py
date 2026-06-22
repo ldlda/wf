@@ -79,11 +79,10 @@ app.add_typer(runs.app, name="run")
 app.add_typer(sources.app, name="source")
 app.add_typer(admin.app, name="admin")
 app.add_typer(docs.app, name="docs")
-app.add_typer(schema.app, name="schema")
 app.add_typer(config_commands.app, name="config")
 app.command("explain")(explain.explain_command)
 app.command("status")(status.status_command)
-
+app.command("schema")(schema.schema_command)
 
 def main() -> None:
     """Console script entrypoint for `wf`."""
