@@ -7,17 +7,16 @@ unrunnable, or surprising.
 
 Check in this order:
 
-1. `wf.admin.list_sources`
-2. `wf.admin.inspect_source`
-3. `wf.workflow.list_capabilities`
-4. `wf.workflow.inspect_capability`
+1. `wf status`
+2. `wf cap inspect <capability>`
+3. `wf cap list --format ids`
 
 Remember: MCP control tools are not workflow capabilities. They appear in
-MCP `tools/list`, not `wf.workflow.list_capabilities`.
+MCP `tools/list`, not `wf cap list`.
 
 ## Unrunnable Deployment
 
-Run `validate_deployment` before `run_deployment`.
+Run `wf deploy validate <deployment_id>` before `wf run start`.
 
 Common diagnostics:
 
@@ -27,16 +26,16 @@ Common diagnostics:
 - `schema_changed`: saved snapshot no longer matches current source.
 - `source_unreachable`: live check could not contact an upstream source.
 
-Use `live_check=true` only when you intentionally want to contact upstream
-sources. It may spawn stdio servers or perform network I/O.
+Use `wf explain <diagnostic-code>` after validation failures to get
+human-readable explanations.
 
 ## Run Debugging
 
 If a run fails:
 
 1. Read `status`, `error`, `diagnostics`, and `trace_count`.
-2. Use `inspect_run` for stored summary.
-3. Use `read_run_trace` with a bounded range.
+2. Use `wf run inspect <run_id>` for stored summary.
+3. Use `wf run trace <run_id> --from <n> --limit <n>` with a bounded range.
 
 Do not request full traces unless the user explicitly asks and the trace is
 known to be small.
@@ -44,5 +43,5 @@ known to be small.
 ## Harness Problems
 
 Some LLM harnesses do not refresh `tools/list` mid-session. Do not rely on new
-saved workflows becoming new tools. Use `run_deployment` and `call_capability`
+saved workflows becoming new tools. Use `wf run start` and `wf cap call`
 instead.

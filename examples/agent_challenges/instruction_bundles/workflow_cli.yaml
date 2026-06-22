@@ -1,0 +1,20 @@
+version: 1
+id: workflow-cli
+description: Public workflow lifecycle and CLI instructions for agent trials.
+files:
+  - source: skills/wf-cli/SKILL.md
+    destination: wf-cli/SKILL.md
+  - source: skills/wf-workflow/SKILL.md
+    destination: wf-workflow/SKILL.md
+  - source: skills/wf-workflow/references/system-model.md
+    destination: wf-workflow/references/system-model.md
+  - source: skills/wf-workflow/references/workflow-lifecycle.md
+    destination: wf-workflow/references/workflow-lifecycle.md
+  - source: skills/wf-workflow/references/capabilities-and-wrappers.md
+    destination: wf-workflow/references/capabilities-and-wrappers.md
+  - source: skills/wf-workflow/references/draft-workspaces.md
+    destination: wf-workflow/references/draft-workspaces.md
+  - source: skills/wf-workflow/references/direct-plan-import.md
+    destination: wf-workflow/references/direct-plan-import.md
+  - source: skills/wf-workflow/references/troubleshooting.md
+    destination: wf-workflow/references/troubleshooting.md

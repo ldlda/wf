@@ -53,6 +53,20 @@ wf run start <deployment_id> --input-file input.json
 wf run trace <run_id> --from 0 --limit 25
 ```
 
+## Public Discovery Order
+
+Use public CLI surfaces before broader documentation or implementation search:
+
+1. `wf status`
+2. `wf cap list --format ids`
+3. `wf cap inspect <capability>`
+4. `wf schema` to list workflow document/component shapes
+5. `wf schema draft`, `wf schema raw`, or `wf schema <Component>`
+6. `wf explain <diagnostic-code>` after validation failures
+
+Use `wf schema <name> --verbose` only when the complete JSON Schema is required;
+the default compact outline is preferred for agent context.
+
 ## Rules
 
 - Use explicit `--config <path>` for examples, challenge workspaces, and
@@ -74,3 +88,9 @@ wf run trace <run_id> --from 0 --limit 25
   JSON guidance before authoring.
 - Add `--verbose` only when a complete JSON Schema document is required; it may
   be large.
+- Prefer `wf schema` over searching tests or implementation code for draft/raw
+  plan shape.
+- Treat compact schema output as authoring guidance; use validation commands as
+  the source of truth for a concrete document.
+- If public commands and supplied skills are insufficient, report the exact
+  blocker instead of guessing undocumented fields.

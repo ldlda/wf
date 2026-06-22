@@ -55,9 +55,17 @@ low-level escape hatch or you already have a complete compiler/generated plan.
 
 ## References
 
-Read only the reference needed for the current task. Start with a small preview
-or search hit, then open the relevant section; do not dump every reference into
-context.
+Read only the reference needed for the current task:
+
+- Start with `system-model.md` when lifecycle vocabulary is unclear.
+- Use `workflow-lifecycle.md` for operation order.
+- Use `capabilities-and-wrappers.md` before selecting a source capability.
+- Use `draft-workspaces.md` for iterative editing.
+- Use `direct-plan-import.md` only when a complete raw plan is required.
+- Use `troubleshooting.md` after a public validation/run failure.
+
+Before authoring JSON, query the live public model with `wf schema`; the
+references explain semantics while the command reflects the current shape.
 
 Useful patterns:
 

@@ -212,6 +212,9 @@ stable.
   prompt templates as the agent instruction layer. Strengthen them before
   claiming aggregate agent-operability results, and track when trials rely on
   product code, prior stores, adjacent attempts, or existing example solutions.
+- Completed: workflow/CLI agent instructions now form an explicit copyable
+  bundle for controlled challenge profiles, use `wf schema` for public shape
+  discovery, and avoid implementation/test-file guidance.
 
 ## Historical References
 
