@@ -123,6 +123,3 @@ The plan file is the low-level workflow model. It is not a draft workspace.
 - Do not omit deployment bindings for ordinary sources. Platform sources such
   as `wf.std` may be omitted or self-bound, but configured sources usually need
   explicit deployment bindings.
-- If a challenge asks what you read, source files, tests, and examples count as
-  product code. Report `product_code: true` if you inspected them for plan shape
-  or capability behavior.

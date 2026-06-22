@@ -69,14 +69,3 @@ Use trace commands only with explicit bounds:
 ```bash
 wf run trace <run_id> --from 0 --limit 25
 ```
-
-## Agent Reporting
-
-If a challenge asks whether product code was read, count source files, tests,
-and examples as product code. Reading `tests/...` to learn plan shape means
-`product_code: true`.
-
-Do not run repository-wide `ruff`, `basedpyright`, or test suites unless the
-task asks for repo changes. For workflow operation tasks, validate with `wf`
-commands: capability inspection, draft/deployment validation, run status, and
-bounded trace reads.
