@@ -80,13 +80,16 @@ def test_wf_cap_list_help_exists() -> None:
     assert "--format" in result.output
 
 
-def test_wf_schema_help_marks_command_group_as_wip() -> None:
+def test_wf_schema_help_describes_catalog_and_verbose_output() -> None:
     result = runner.invoke(app, ["schema", "--help"])
 
     assert result.exit_code == 0
     output = result.output.lower()
-    assert "work in progress" in output
-    assert "no schema subcommands" in output
+    assert "compact workflow schema outline" in output
+    assert "--verbose" in output
+    assert "draft" in output
+    assert "raw" in output
+    assert "core" in output
 
 
 def test_wf_source_list_help_exists() -> None:
