@@ -1723,15 +1723,28 @@ not yet claimed.
 
 Evidence:
 
-- `examples/agent_challenges/browser_click_challenge/workspace_template/prompt.md`:
-  challenge prompt and self-report schema.
-- `examples/agent_challenges/browser_click_challenge/run_opencode_trials.py`:
-  trial runner.
-- `examples/agent_challenges/browser_click_challenge/classification.py`:
-  convenience classifier for returned reports.
-- `examples/agent_challenges/browser_click_challenge/reports.py`: report
-  extraction and saving.
+- `examples/agent_challenges/browser_click_challenge/challenge.yaml`:
+  browser-click challenge manifest with success assertions.
+- `examples/agent_challenges/browser_click_challenge/challenge-prompt.md`:
+  task-specific prompt for the browser-click challenge.
+- `examples/agent_challenges/report_workflow_challenge/challenge.yaml`:
+  report-workflow challenge manifest with success assertions.
+- `examples/agent_challenges/report_workflow_challenge/challenge-prompt.md`:
+  task-specific prompt for the report-workflow challenge.
+- `examples/agent_challenges/run_trials.py`:
+  central trial runner accepting any challenge manifest and instruction profile.
+- `examples/agent_challenges/manifests.py`:
+  generic manifest loading and path resolution.
+- `examples/agent_challenges/prompts.py`:
+  prompt composition with base, profile, and challenge fragments.
 - `tests/examples/test_opencode_browser_click_challenge.py`
+- `tests/examples/test_report_workflow_challenge.py`
+- `tests/examples/test_agent_challenge_harness_v2.py`
+
+Two data-driven challenges now exist (browser-click and report-workflow), both
+supporting `none`, `skills`, and `all` instruction profiles. Normalized metrics
+and manual audit are implemented. Repeated audited model results are still
+pending; no aggregate success claim is made.
 
 ## Limitations
 
@@ -1804,5 +1817,7 @@ Evidence:
 
 - `examples/browser_click_workflow/`
 - `examples/agent_challenges/browser_click_challenge/`
+- `examples/agent_challenges/report_workflow_challenge/`
 - `tests/examples/test_browser_click_workflow_example.py`
 - `tests/examples/test_opencode_browser_click_challenge.py`
+- `tests/examples/test_report_workflow_challenge.py`

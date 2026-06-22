@@ -218,7 +218,9 @@ stable.
 - Completed: the generic agent challenge harness now supports data-driven
   manifests, layered prompts, explicit `none|skills|all` profiles, one-hour hard
   ceilings, normalized OpenCode tool/token evidence, policy findings, and
-  manual-audited reports.
+  manual-audited reports. Two data-driven challenges exist: browser-click and
+  report-workflow. The central `run_trials.py` runner accepts any challenge
+  manifest.
 
 ## Historical References
 

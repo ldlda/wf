@@ -1,12 +1,8 @@
-# Opencode Browser Click Challenge Harness
+# Browser Click Challenge
 
-This harness runs agent trials against the browser-click workflow challenge.
-It is evidence tooling, not product runtime code.
-
-The harness mechanics (workspace preparation, opencode I/O, report handling,
-trial runner) live in the shared modules under
-[`examples/agent_challenges/`](../). The browser-click challenge provides
-challenge-specific metadata, prompt template, classification, and defaults.
+This challenge tests whether an agent can discover and use the workflow product
+path to build and run a browser-click workflow. It is evidence tooling, not
+product runtime code.
 
 The deterministic workflow example is:
 
@@ -14,142 +10,51 @@ The deterministic workflow example is:
 examples/browser_click_workflow/
 ```
 
-## Default Behavior
+## Running Trials
 
-By default the harness does not start a `wf-rpc-server`. It prompts agents to
-use a per-trial configured local CLI path:
-
-```powershell
-uv run wf --config examples/agent_challenges/browser_click_challenge/workspaces/<trial>/wf.config.json --local
-```
-
-For each local-mode trial, the harness copies `workspace_template/` into
-`workspaces/<model>-trial-<n>/`, generates a config whose Python source path is
-relative to that copied config, and injects the config path into the prompt. This
-builds the configured workflow server in the CLI process for each command and
-uses the copied workspace's durable store. It does not reuse in-memory source
-sessions across CLI invocations.
-
-Use `--workspace-template` and `--source-root` to run a same-shape challenge with
-a different prompt template or Python source root. Both default to the bundled
-browser-click example settings.
-
-Use `--start-server` when the trial should exercise the JSON-RPC server path.
-With `--start-server`, the harness starts:
+Use the central runner from the repository root:
 
 ```powershell
-uv run wf-rpc-server --config examples/browser_click_workflow/wf.config.json --host 127.0.0.1 --port 8772
-```
-
-It waits until `uv run wf --url http://127.0.0.1:8772/rpc status` passes,
-injects that URL into the prompt, runs opencode, then stops the server. Use
-`--server-url` to target an already-running server.
-
-## One Trial
-
-From the repository root:
-
-```powershell
-uv run python examples/agent_challenges/browser_click_challenge/run_opencode_trials.py `
+uv run python examples/agent_challenges/run_trials.py `
+  --challenge examples/agent_challenges/browser_click_challenge/challenge.yaml `
+  --instruction-profile skills `
   --model opencode/mimo-v2.5-free `
   --variant high `
+  --trials 1 `
+  --attach http://127.0.0.1:4096
+```
+
+Profiles `none` and `all` are separate invocations:
+
+```powershell
+uv run python examples/agent_challenges/run_trials.py `
+  --challenge examples/agent_challenges/browser_click_challenge/challenge.yaml `
+  --instruction-profile none `
+  --model opencode/mimo-v2.5-free `
+  --trials 1
+
+uv run python examples/agent_challenges/run_trials.py `
+  --challenge examples/agent_challenges/browser_click_challenge/challenge.yaml `
+  --instruction-profile all `
+  --model opencode/mimo-v2.5-free `
   --trials 1
 ```
 
-Variant challenge example:
+The hard timeout ceiling is 3,600 seconds per trial.
 
-```powershell
-uv run python examples/agent_challenges/browser_click_challenge/run_opencode_trials.py `
-  --workspace-template examples/agent_challenges/browser_click_challenge/workspace_template `
-  --source-root examples/browser_click_workflow `
-  --workspaces-dir examples/agent_challenges/browser_click_challenge/workspaces_alt `
-  --results-dir examples/agent_challenges/browser_click_challenge/results_alt
-```
+## Default Behavior
 
-Results are written to:
+By default the harness does not start a `wf-rpc-server`. It prompts agents to
+use a per-trial configured local CLI path. Use `--start-server` when the trial
+should exercise the JSON-RPC server path.
 
-```text
-examples/agent_challenges/browser_click_challenge/results/
-```
+## Workspace Layout
 
-## Manual Authoring Workspace
-
-For manual authoring trials, use:
-
-```text
-examples/agent_challenges/browser_click_challenge/workspace_template/
-```
-
-It contains the prompt template and local store ignore rules without exposing a
-generated draft patch answer file. The harness copies it automatically for
-normal local-mode trials and writes `wf.config.json` into the copied workspace.
-For manual experiments, copy it under:
-
-```text
-examples/agent_challenges/browser_click_challenge/workspaces/
-```
-
-`workspaces/` is ignored by Git so trial-created patches, plans, and scratch
-files can be graded by hand without polluting the repository. The template's
-store directory is also ignored.
-
-## Saving Trial Reports
-
-To save an agent's final answer from a harness result into its trial workspace:
-
-```powershell
-uv run python examples/agent_challenges/browser_click_challenge/save_trial_report.py `
-  --from-result examples/agent_challenges/browser_click_challenge/results/<trial>.json
-```
-
-The script infers the workspace from the result file and only writes
-`<trial>/final-report.md`. Add evaluator commentary by editing that file after it
-is saved. For manually copied reports, pass an explicit workspace and
-`--input-file final-answer.md`.
-
-## Saving Manual Audits
-
-Keep `final-report.md` as captured agent output. If manual review finds that
-the agent's YAML self-report was wrong or incomplete, write a sidecar audit:
-
-```powershell
-uv run python examples/agent_challenges/browser_click_challenge/save_manual_audit.py `
-  --from-result examples/agent_challenges/browser_click_challenge/results/<trial>.json `
-  --manual-classification success_code_assisted `
-  --set-read product_code=true `
-  --set-evidence trace_count=3 `
-  --correction "read.product_code: agent reported false, audited true" `
-  --notes "Valid product run, but raw plan shape came from product code/tests."
-```
-
-The script infers the workspace, run id, deployment id, automatic
-classification, read flags, attempts, and notes from the result file. It writes
-`<trial>/manual-audit.yaml`. Later benchmark summaries should treat the sidecar
-as the human override, not mutate the captured agent report.
-
-## Optional Opencode Server Attachment
-
-`--attach` is opencode's server attach flag. It connects this non-interactive
-run to an already-running opencode server, for example:
-
-```powershell
---attach http://127.0.0.1:4096
-```
-
-It is not a direct MCP server URL. If that opencode server is configured with
-Playwright MCP tools, then the attached run can use those tools through
-opencode. One possible MCP server command for such an opencode setup is:
-
-```json
-{
-  "command": "npx",
-  "args": ["-y", "@playwright/mcp@latest"]
-}
-```
-
-The baseline challenge does not require Playwright MCP. The score is based on
-whether the agent used the workflow product path and produced the expected
-workflow output.
+- `workspace_template/` contains files copied into each isolated trial workspace.
+- `workspaces/` holds per-trial workspaces (gitignored).
+- `results/` holds per-trial result JSON files (gitignored).
+- `challenge.yaml` declares the manifest, source, server, and report schema.
+- `challenge-prompt.md` contains the task-specific prompt.
 
 ## Required Agent Report
 
@@ -198,22 +103,12 @@ Each trial is classified as one of:
 - `parse_error`: the harness could not read opencode JSON/JSONL output.
 - `unknown`: no clear success or failure signal was found.
 
+Automatic success assertions are provisional until manual audit.
+
 ## Shared Harness Modules
 
 The generic modules in `examples/agent_challenges/` provide reusable harness
-logic:
-
-| Module | Purpose |
-|--------|---------|
-| `workspace.py` | `ChallengeDef`, `TrialConfig`, `TrialWorkspace`, `prepare_trial_workspace`, `write_trial_config`, `starting_trial_index`, `wf_command_prefix_for_config`, `render_prompt`, `server_command` |
-| `runner.py` | `ManagedServer`, `start_server`, `run_trial`, `main` — generic trial runner parameterized by `ChallengeDef` and a classification function |
-| `opencode_io.py` | `build_opencode_command`, `parse_opencode_output`, `result_text` |
-| `reports.py` | `save_report`, `report_from_result`, `save_report_from_result_payload` |
-| `classification.py` | `extract_challenge_report` (generic YAML extraction), `_contains_bool_marker` |
-
-The browser-click challenge's `run_opencode_trials.py` and `save_trial_report.py`
-are thin wrappers that pass `BROWSER_CLICK_DEF` and the browser-click
-classification function to the generic runner. The same pattern can be used to
-add new challenges without duplicating the harness.
+logic. See `workspace.py`, `runner.py`, `opencode_io.py`, `reports.py`,
+`classification.py`, and `manifests.py`.
 
 Committed tests cover harness logic only. They do not invoke opencode.

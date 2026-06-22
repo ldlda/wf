@@ -7,30 +7,11 @@ Build and successfully run a workflow that:
 3. Captures a before snapshot and an after snapshot.
 4. Returns both snapshots as workflow output.
 
-Use this command prefix for product-facing operations:
+Discover the `local.browser_click` source capabilities through `wf cap list`,
+`wf cap inspect`, and `wf schema`. Repository implementation inspection is
+profile-controlled; do not read source files unless your profile permits it.
 
-```powershell
-{{wf_command_prefix}}
-```
-
-{{server_context}}
-
-Use this repository's workflow product path. Start by checking the relevant
-agent skills under `skills/`, especially the workflow/CLI skill references, and
-use broad docs/code search only after those pointers are not enough. You should
-use the `wf` CLI with the command prefix above, create or reuse a workflow
-deployment, and run the deployment through the workflow API. Do not solve the
-challenge with only a standalone Playwright/Python script.
-
-Do not create a new helper script whose only job is to drive `WorkflowApi`
-directly. The challenge is about whether the product-facing CLI/server workflow
-can be discovered and used.
-
-If you need to write a workflow definition, write a declarative JSON/YAML file
-and then apply/run it through the product-facing workflow tools. Do not hide the
-workflow construction inside a Python script.
-
-Write all files you create for this attempt inside the designated workspace.
+## Workflow Authoring Paths
 
 Two product-facing authoring paths are acceptable:
 
@@ -49,6 +30,8 @@ alias.
 Do not use a pre-existing generated patch or raw-plan answer file. If you find
 one, ignore it and author your own workflow definition.
 
+## Disallowed Approaches
+
 These do not satisfy the challenge, even if they produce the right output:
 
 - importing `WorkflowApi`, `WorkflowServer`, or source functions directly;
@@ -61,13 +44,7 @@ These do not satisfy the challenge, even if they produce the right output:
 - reusing artifacts, deployments, stores, workflow files, or run outputs created
   by earlier trials.
 
-The repository already includes a deterministic source example at:
-
-```text
-examples/browser_click_workflow/
-```
-
-You may inspect and use it.
+## Evidence Requirements
 
 Your final answer should include a short human-readable report with:
 
@@ -78,6 +55,8 @@ Your final answer should include a short human-readable report with:
 - evidence that `after.clicked` is `true`,
 - whether any server/browser process remains running,
 - important failed attempts and how you fixed them.
+
+## Required YAML Report
 
 End your answer with exactly one fenced YAML block using this shape:
 

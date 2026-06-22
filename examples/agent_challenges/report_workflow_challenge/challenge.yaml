@@ -1,0 +1,31 @@
+version: 1
+id: report_workflow
+prompt: challenge-prompt.md
+workspace_template: workspace_template
+source:
+  id: local.report
+  root: ../../report_workflow
+  module: ops
+  registry: registry
+store_root: .wf_report_challenge_store
+server:
+  config: ../../report_workflow/wf.config.json
+  default_port: 8773
+report:
+  required_fields:
+    - used_product_path
+    - used_helper_script
+    - workflow_file
+    - deployment_id
+    - run_id
+    - title_matches
+    - markdown_rendered
+    - run_failed
+    - read
+    - attempts
+    - missed_requirements
+    - notes
+  success_assertions:
+    title_matches: true
+    markdown_rendered: true
+    run_failed: false

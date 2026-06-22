@@ -1,0 +1,33 @@
+version: 1
+id: browser_click
+prompt: challenge-prompt.md
+workspace_template: workspace_template
+source:
+  id: local.browser_click
+  root: ../../browser_click_workflow
+  module: ops
+  registry: registry
+store_root: .wf_browser_click_store
+server:
+  config: ../../browser_click_workflow/wf.config.json
+  default_port: 8772
+report:
+  required_fields:
+    - used_product_path
+    - used_helper_script
+    - workflow_file
+    - deployment_id
+    - run_id
+    - before_clicked
+    - after_clicked
+    - run_failed
+    - leftover_processes
+    - read
+    - attempts
+    - missed_requirements
+    - notes
+  success_assertions:
+    before_clicked: false
+    after_clicked: true
+    run_failed: false
+    leftover_processes: false

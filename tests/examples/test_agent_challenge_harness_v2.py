@@ -896,3 +896,101 @@ def test_v2_runner_preserves_report_parse_error_on_malformed_yaml(
         "YAMLError",
     )
     assert result.get("challenge_report") is None
+
+
+BROWSER_CHALLENGE = (
+    ROOT
+    / "examples"
+    / "agent_challenges"
+    / "browser_click_challenge"
+    / "challenge.yaml"
+)
+REPORT_CHALLENGE = (
+    ROOT
+    / "examples"
+    / "agent_challenges"
+    / "report_workflow_challenge"
+    / "challenge.yaml"
+)
+INSTRUCTION_BUNDLE = (
+    ROOT / "examples" / "agent_challenges" / "instruction_bundles" / "workflow_cli.yaml"
+)
+
+
+@pytest.mark.parametrize(
+    "manifest_path",
+    [BROWSER_CHALLENGE, REPORT_CHALLENGE],
+    ids=["browser_click", "report_workflow"],
+)
+def test_both_challenges_load_through_same_manifest(manifest_path: Path) -> None:
+    loaded = load_challenge_manifest(manifest_path)
+
+    assert loaded.manifest.version == 1
+    assert loaded.prompt_path.is_file()
+    assert loaded.workspace_template.is_dir()
+    assert loaded.manifest.report.required_fields
+
+
+@pytest.mark.parametrize(
+    "manifest_path, expected_id, expected_source_id",
+    [
+        (BROWSER_CHALLENGE, "browser_click", "local.browser_click"),
+        (REPORT_CHALLENGE, "report_workflow", "local.report"),
+    ],
+    ids=["browser_click", "report_workflow"],
+)
+def test_both_challenges_prepare_workspaces_under_each_profile(
+    manifest_path: Path,
+    expected_id: str,
+    expected_source_id: str,
+    tmp_path: Path,
+) -> None:
+    loaded = load_challenge_manifest(manifest_path)
+
+    assert loaded.manifest.id == expected_id
+    assert loaded.manifest.source.id == expected_source_id
+
+    for profile in InstructionProfile:
+        workspace = prepare_v2_trial_workspace(
+            loaded,
+            profile=profile,
+            model="test-model",
+            index=1,
+            workspaces_dir=tmp_path / profile.value,
+            instruction_bundle=INSTRUCTION_BUNDLE,
+        )
+
+        assert workspace.config_path.is_file()
+        config = json.loads(workspace.config_path.read_text(encoding="utf-8"))
+        assert config["client"]["target"] == {"kind": "local"}
+        assert config["server"]["store"]["root"] == loaded.manifest.store_root
+
+        if profile in (InstructionProfile.SKILLS, InstructionProfile.ALL):
+            assert (workspace.root / ".agent/skills/wf-cli/SKILL.md").is_file()
+        else:
+            assert not (workspace.root / ".agent").exists()
+
+
+def test_both_challenges_produce_different_challenge_hashes_but_same_base(
+    tmp_path: Path,
+) -> None:
+    from examples.agent_challenges.prompts import compose_trial_prompt
+
+    browser = load_challenge_manifest(BROWSER_CHALLENGE)
+    report = load_challenge_manifest(REPORT_CHALLENGE)
+
+    hashes: dict[str, str] = {}
+    for name, challenge in [("browser", browser), ("report", report)]:
+        for profile in InstructionProfile:
+            rendered = compose_trial_prompt(
+                challenge,
+                profile=profile,
+                wf_command_prefix="uv run wf --config wf.config.json --local",
+                server_context="Local mode.",
+                workspace_path=tmp_path / f"{name}_{profile.value}",
+            )
+            hashes[f"{name}_{profile.value}"] = rendered.challenge_sha256
+
+    assert hashes["browser_none"] != hashes["report_none"]
+    for profile in InstructionProfile:
+        assert hashes[f"browser_{profile.value}"] != hashes[f"report_{profile.value}"]

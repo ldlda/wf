@@ -2,82 +2,79 @@ from __future__ import annotations
 
 import json
 import subprocess
+import sys
 from pathlib import Path
 
 import yaml
 
 from examples.agent_challenges import reports as generic_reports
-from examples.agent_challenges.browser_click_challenge import (
-    run_opencode_trials,
+from examples.agent_challenges.audit import (
+    main as save_manual_audit_main,
 )
-from examples.agent_challenges.browser_click_challenge.challenge import (
-    BROWSER_CLICK_DEF,
-    LOCAL_WF_COMMAND_PREFIX,
-    render_prompt,
-    server_command,
-)
-from examples.agent_challenges.browser_click_challenge.classification import (
-    challenge_report_schema_errors,
-    classify_challenge_report,
-    classify_output,
-    extract_challenge_report,
-)
-from examples.agent_challenges.browser_click_challenge.opencode_io import (
+from examples.agent_challenges.manifests import load_challenge_manifest
+from examples.agent_challenges.models import InstructionProfile
+from examples.agent_challenges.opencode_io import (
     build_opencode_command,
     parse_opencode_output,
 )
-from examples.agent_challenges.browser_click_challenge.reports import (
+from examples.agent_challenges.reports import (
+    main as save_trial_report_main,
+)
+from examples.agent_challenges.reports import (
     report_from_result,
     save_report,
 )
-from examples.agent_challenges.browser_click_challenge.run_opencode_trials import (
-    prepare_trial_workspace,
-    run_trial,
-    starting_trial_index,
-    trial_output_path,
-    wf_command_prefix_for_config,
-)
-from examples.agent_challenges.browser_click_challenge.save_manual_audit import (
-    main as save_manual_audit_main,
-)
-from examples.agent_challenges.browser_click_challenge.save_trial_report import (
-    main as save_trial_report_main,
-)
+from examples.agent_challenges.runner import main as generic_runner_main
+from examples.agent_challenges.runner import run_trial
 from examples.agent_challenges.workspace import (
     ChallengeDef,
     TrialConfig,
+    prepare_trial_workspace,
+    prepare_v2_trial_workspace,
+    render_prompt,
+    server_command,
+    starting_trial_index,
+    trial_output_path,
+    wf_command_prefix_for_config,
     write_trial_config,
 )
-from examples.agent_challenges.workspace import (
-    prepare_trial_workspace as generic_prepare_trial_workspace,
+
+ROOT = Path(__file__).resolve().parents[2]
+
+LOCAL_WF_COMMAND_PREFIX = (
+    "uv run wf --config examples/browser_click_workflow/wf.config.json --local"
 )
 
-
-def _valid_challenge_report(**overrides: object) -> dict[str, object]:
-    report: dict[str, object] = {
-        "used_product_path": True,
-        "used_helper_script": False,
-        "workflow_file": "browser-click.workflow.yaml",
-        "deployment_id": "browser_click_case_study.default",
-        "run_id": "run_123",
-        "before_clicked": False,
-        "after_clicked": True,
-        "run_failed": False,
-        "leftover_processes": False,
-        "read": {
-            "skills": True,
-            "docs": True,
-            "product_code": False,
-            "adjacent_attempts": False,
-            "prior_store": False,
-            "existing_solution": False,
-        },
-        "attempts": {"total": 1, "failed": 0},
-        "missed_requirements": ["none"],
-        "notes": "ok",
-    }
-    report.update(overrides)
-    return report
+BROWSER_CLICK_DEF = ChallengeDef(
+    name="browser_click",
+    source_root=ROOT / "examples" / "browser_click_workflow",
+    source_id="local.browser_click",
+    source_module="ops",
+    source_registry="registry",
+    store_root=".wf_browser_click_store",
+    default_workspace_template=ROOT
+    / "examples"
+    / "agent_challenges"
+    / "browser_click_challenge"
+    / "workspace_template",
+    default_workspaces_dir=ROOT
+    / "examples"
+    / "agent_challenges"
+    / "browser_click_challenge"
+    / "workspaces",
+    default_results_dir=ROOT
+    / "examples"
+    / "agent_challenges"
+    / "browser_click_challenge"
+    / "results",
+    default_prompt=ROOT
+    / "examples"
+    / "agent_challenges"
+    / "browser_click_challenge"
+    / "challenge-prompt.md",
+    default_server_port=8772,
+    server_config_arg="examples/browser_click_workflow/wf.config.json",
+)
 
 
 def test_build_opencode_command_without_attach(tmp_path: Path) -> None:
@@ -121,24 +118,6 @@ def test_build_opencode_command_with_attach(tmp_path: Path) -> None:
 
     assert "--attach" in command
     assert "http://127.0.0.1:4096" in command
-
-
-def test_run_opencode_trials_script_supports_direct_execution() -> None:
-    result = subprocess.run(
-        [
-            "uv",
-            "run",
-            "python",
-            "examples/agent_challenges/browser_click_challenge/run_opencode_trials.py",
-            "--help",
-        ],
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-
-    assert result.returncode == 0
-    assert "--model" in result.stdout
 
 
 def test_run_trial_saves_final_report_from_successful_result(
@@ -204,7 +183,12 @@ def test_run_trial_saves_final_report_from_successful_result(
         server_context="Use local CLI mode.",
     )
 
-    result = run_trial(config, index=1, results_dir=tmp_path / "results")
+    result = run_trial(
+        config,
+        index=1,
+        results_dir=tmp_path / "results",
+        classify_fn=lambda _text: "success",
+    )
 
     assert result["classification"] == "success"
     assert result["report_path"] == (workspace / "final-report.md").as_posix()
@@ -242,7 +226,12 @@ def test_run_trial_records_report_save_error_for_timeout(
         server_context="Use local CLI mode.",
     )
 
-    result = run_trial(config, index=1, results_dir=tmp_path / "results")
+    result = run_trial(
+        config,
+        index=1,
+        results_dir=tmp_path / "results",
+        classify_fn=lambda _text: "unknown",
+    )
 
     assert result["classification"] == "timeout"
     assert result["report_save_error"] == "result file is missing parsed output"
@@ -282,7 +271,12 @@ def test_run_trial_records_parse_error_details(
         server_context="Use local CLI mode.",
     )
 
-    result = run_trial(config, index=1, results_dir=tmp_path / "results")
+    result = run_trial(
+        config,
+        index=1,
+        results_dir=tmp_path / "results",
+        classify_fn=lambda _text: "unknown",
+    )
 
     assert result["classification"] == "parse_error"
     assert result["parse_error"]["type"] == "JSONDecodeError"
@@ -339,159 +333,6 @@ def test_parse_opencode_output_prefers_text_event_before_step_finish() -> None:
     assert parsed["text"] == "deployment id: demo.default\nbefore.clicked is false"
 
 
-def test_classify_output_success() -> None:
-    result = classify_output(
-        """
-        uv run wf-rpc-server --config examples/browser_click_workflow/wf.config.json
-        uv run wf run start browser_click_case_study.default
-        deployment id: browser_click_case_study.default
-        run id: run_123
-        before.clicked is false
-        after.clicked is true
-        """
-    )
-
-    assert result == "success"
-
-
-def test_extract_challenge_report_from_yaml_block() -> None:
-    text = """
-    The run worked.
-
-    ```yaml
-    challenge_report:
-      used_product_path: true
-      used_helper_script: false
-      workflow_file: "browser-click.workflow.yaml"
-      deployment_id: "browser_click_case_study.default"
-      run_id: "run_123"
-      before_clicked: false
-      after_clicked: true
-      run_failed: false
-      leftover_processes: false
-      read:
-        skills: true
-        docs: true
-        product_code: false
-        adjacent_attempts: false
-        prior_store: false
-        existing_solution: false
-      attempts:
-        total: 1
-        failed: 0
-      missed_requirements:
-        - "none"
-      notes: "ok"
-    ```
-    """
-
-    report = extract_challenge_report(text)
-
-    assert report is not None
-    assert report["used_product_path"] is True
-    assert report["before_clicked"] is False
-    assert report["after_clicked"] is True
-
-
-def test_classify_challenge_report_success() -> None:
-    result = classify_challenge_report(_valid_challenge_report())
-
-    assert result == "success"
-
-
-def test_challenge_report_schema_errors_reject_missing_read_block() -> None:
-    report = _valid_challenge_report()
-    report.pop("read")
-
-    assert challenge_report_schema_errors(report) == ["missing challenge_report.read"]
-    assert classify_challenge_report(report) == "unknown"
-
-
-def test_classify_output_prefers_yaml_report() -> None:
-    result = classify_output(
-        """
-        Some prose that would otherwise be ambiguous.
-
-        ```yaml
-        challenge_report:
-          used_product_path: true
-          used_helper_script: false
-          workflow_file: "browser-click.workflow.yaml"
-          deployment_id: "browser_click_case_study.default"
-          run_id: "run_123"
-          before_clicked: false
-          after_clicked: true
-          run_failed: false
-          leftover_processes: false
-          read:
-            skills: true
-            docs: true
-            product_code: false
-            adjacent_attempts: false
-            prior_store: false
-            existing_solution: false
-          attempts:
-            total: 1
-            failed: 0
-          missed_requirements:
-            - "none"
-          notes: "ok"
-        ```
-        """
-    )
-
-    assert result == "success"
-
-
-def test_classify_challenge_report_detects_helper_script() -> None:
-    result = classify_challenge_report(
-        _valid_challenge_report(
-            used_product_path=False,
-            used_helper_script=True,
-            workflow_file="",
-        )
-    )
-
-    assert result == "workflow_script"
-
-
-def test_classify_output_workflow_script() -> None:
-    result = classify_output(
-        """
-        uv run python examples/browser_click_workflow/run_workflow.py
-        Deployment id: browser_click_case_study.default
-        Run id: run_123
-        `before.clicked`: `False`
-        `after.clicked`: `True`
-        """
-    )
-
-    assert result == "workflow_script"
-
-
-def test_classify_output_workflow_not_used() -> None:
-    result = classify_output(
-        """
-        I wrote a Playwright script.
-        before clicked false
-        after clicked true
-        """
-    )
-
-    assert result == "workflow_not_used"
-
-
-def test_classify_output_run_failed() -> None:
-    result = classify_output(
-        """
-        wf run start browser_click_case_study.default
-        error: deployment validation failed
-        """
-    )
-
-    assert result == "run_failed"
-
-
 def test_trial_output_path_is_zero_padded(tmp_path: Path) -> None:
     path = trial_output_path(tmp_path, model="opencode/mimo-v2.5-free", index=3)
 
@@ -509,7 +350,23 @@ def test_prepare_trial_workspace_copies_template_to_model_trial_dir(
     source_root = tmp_path / "browser_click_workflow"
     source_root.mkdir()
 
+    defn = ChallengeDef(
+        name="browser_click",
+        source_root=source_root,
+        source_id="local.browser_click",
+        source_module="ops",
+        source_registry="registry",
+        store_root=".wf_browser_click_store",
+        default_workspace_template=template,
+        default_workspaces_dir=workspaces,
+        default_results_dir=tmp_path / "results",
+        default_prompt=template / "prompt.md",
+        default_server_port=8772,
+        server_config_arg="examples/browser_click_workflow/wf.config.json",
+    )
+
     prepared = prepare_trial_workspace(
+        defn,
         model="opencode/mimo-v2.5-free",
         index=7,
         workspaces_dir=workspaces,
@@ -864,12 +721,28 @@ def test_prepare_trial_workspace_uses_next_available_directory(
     first.mkdir(parents=True)
     stale.write_text("stale", encoding="utf-8")
 
+    defn = ChallengeDef(
+        name="browser_click",
+        source_root=source_root,
+        source_id="local.browser_click",
+        source_module="ops",
+        source_registry="registry",
+        store_root=".wf_browser_click_store",
+        default_workspace_template=template,
+        default_workspaces_dir=workspaces,
+        default_results_dir=tmp_path / "results",
+        default_prompt=template / "prompt.md",
+        default_server_port=8772,
+        server_config_arg="examples/browser_click_workflow/wf.config.json",
+    )
+
     next_index = starting_trial_index(
         model="opencode/mimo-v2.5-free",
         results_dir=tmp_path / "results",
         workspaces_dir=workspaces,
     )
     prepared = prepare_trial_workspace(
+        defn,
         model="opencode/mimo-v2.5-free",
         index=next_index,
         workspaces_dir=workspaces,
@@ -915,7 +788,9 @@ def test_main_uses_custom_workspace_template_and_source_root(
     monkeypatch.setattr(generic_runner, "run_trial", fake_run_trial)
 
     assert (
-        run_opencode_trials.main(
+        generic_runner_main(
+            BROWSER_CLICK_DEF,
+            lambda _text: "success",
             [
                 "--model",
                 "check/model",
@@ -929,7 +804,7 @@ def test_main_uses_custom_workspace_template_and_source_root(
                 str(workspaces),
                 "--results-dir",
                 str(results),
-            ]
+            ],
         )
         == 0
     )
@@ -1044,7 +919,7 @@ def test_generic_workspace_preparation_writes_config_for_arbitrary_challenge_def
         server_config_arg="examples/custom/wf.config.json",
     )
 
-    ws = generic_prepare_trial_workspace(
+    ws = prepare_trial_workspace(
         defn,
         model="test-model",
         index=1,
@@ -1073,8 +948,8 @@ def test_browser_click_wrapper_produces_expected_paths_and_command_prefix() -> N
     assert LOCAL_WF_COMMAND_PREFIX == (
         "uv run wf --config examples/browser_click_workflow/wf.config.json --local"
     )
-    assert BROWSER_CLICK_DEF.default_prompt.name == "prompt.md"
-    assert BROWSER_CLICK_DEF.default_prompt.parent.name == "workspace_template"
+    assert BROWSER_CLICK_DEF.default_prompt.name == "challenge-prompt.md"
+    assert BROWSER_CLICK_DEF.default_prompt.parent.name == "browser_click_challenge"
 
 
 def test_generic_runner_can_be_configured_with_fake_challenge_and_fake_opencode(
@@ -1173,3 +1048,60 @@ def test_generic_write_trial_config_with_custom_source_root(
         "module": "test_mod",
         "registry": "test_reg",
     }
+
+
+BROWSER_CHALLENGE = (
+    ROOT
+    / "examples"
+    / "agent_challenges"
+    / "browser_click_challenge"
+    / "challenge.yaml"
+)
+
+
+def test_browser_click_manifest_declares_task_success_contract() -> None:
+    loaded = load_challenge_manifest(BROWSER_CHALLENGE)
+
+    assert loaded.manifest.id == "browser_click"
+    assert loaded.manifest.source.id == "local.browser_click"
+    assert loaded.manifest.report.success_assertions == {
+        "before_clicked": False,
+        "after_clicked": True,
+        "run_failed": False,
+        "leftover_processes": False,
+    }
+
+
+def test_browser_click_workspace_uses_generic_profile_copy(tmp_path: Path) -> None:
+    loaded = load_challenge_manifest(BROWSER_CHALLENGE)
+    bundle = ROOT / "examples/agent_challenges/instruction_bundles/workflow_cli.yaml"
+
+    workspace = prepare_v2_trial_workspace(
+        loaded,
+        profile=InstructionProfile.SKILLS,
+        model="opencode/test",
+        index=1,
+        workspaces_dir=tmp_path,
+        instruction_bundle=bundle,
+    )
+
+    assert workspace.config_path.is_file()
+    assert (workspace.root / ".agent/skills/wf-cli/SKILL.md").is_file()
+
+
+def test_central_runner_accepts_browser_challenge() -> None:
+    result = subprocess.run(
+        [
+            sys.executable,
+            "examples/agent_challenges/run_trials.py",
+            "--help",
+        ],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "--challenge" in result.stdout
+    assert "--instruction-profile" in result.stdout
