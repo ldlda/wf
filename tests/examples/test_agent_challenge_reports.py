@@ -428,6 +428,32 @@ def test_follow_up_notes_for_test_reads(tmp_path: Path) -> None:
     assert any("test file(s)" in n for n in report.follow_up_notes)
 
 
+def test_follow_up_notes_for_example_implementation_reads(tmp_path: Path) -> None:
+    from examples.agent_challenges.report_models import build_trial_report
+
+    result = _raw_result(tmp_path)
+    _policy_mut(result)["reads_by_category"] = {
+        "example_implementation": [
+            str(tmp_path / "examples" / "report_workflow" / "ops.py")
+        ],
+    }
+
+    report = build_trial_report(result, audit=None)
+    assert any("example implementation" in n for n in report.follow_up_notes)
+
+
+def test_follow_up_notes_for_search_intent(tmp_path: Path) -> None:
+    from examples.agent_challenges.report_models import build_trial_report
+
+    result = _raw_result(tmp_path)
+    _policy_mut(result)["reads_by_category"] = {
+        "search_intent": ["**/report_workflow/**"],
+    }
+
+    report = build_trial_report(result, audit=None)
+    assert any("search pattern" in n for n in report.follow_up_notes)
+
+
 def test_build_report_raises_on_missing_paths(tmp_path: Path) -> None:
     from examples.agent_challenges.report_models import build_trial_report
 

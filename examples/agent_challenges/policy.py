@@ -39,6 +39,15 @@ def _classify_path(
     repository_root: str,
     workspaces_root: str,
 ) -> str:
+    if path_str.startswith(".agent/skills/"):
+        return "supplied_skills"
+
+    # OpenCode glob/grep evidence may contain only a search pattern, not the
+    # concrete matched files. Treat broad patterns as search intent so they
+    # produce follow-up notes without pretending a forbidden file was read.
+    if any(marker in path_str for marker in ("*", "?")):
+        return "search_intent"
+
     try:
         p = Path(path_str).resolve()
     except OSError, ValueError:
@@ -69,6 +78,10 @@ def _classify_path(
         if parts and parts[0] == "docs":
             return "docs"
         if parts and parts[0] == "examples":
+            if parts[-1:] == ("workflow.plan.json",):
+                return "existing_solution"
+            if parts[-1:] == ("ops.py",):
+                return "example_implementation"
             return "examples"
         return "source"
 
@@ -129,6 +142,13 @@ def evaluate_policy(
     opaque_shell_commands: list[str] = []
     reads_by_category: dict[str, list[str]] = {}
     escalated_to_product_code = False
+    allowed_skills_categories = {
+        "workspace",
+        "supplied_skills",
+        "search_intent",
+        "example_implementation",
+        "unknown",
+    }
 
     for tc in tool_calls:
         paths = _extract_paths_from_tool_call(tc)
@@ -145,11 +165,20 @@ def evaluate_policy(
                 if category not in ("workspace", "unknown"):
                     disallowed_reads.append(path_str)
             elif profile == InstructionProfile.SKILLS:
-                if category not in ("workspace", "supplied_skills", "unknown"):
+                if category not in allowed_skills_categories:
                     disallowed_reads.append(path_str)
             elif profile == InstructionProfile.ALL:
-                if category in ("source", "tests", "docs", "examples"):
+                if category in (
+                    "source",
+                    "tests",
+                    "docs",
+                    "examples",
+                    "example_implementation",
+                ):
                     escalated_to_product_code = True
+
+            if category == "example_implementation":
+                escalated_to_product_code = True
 
         shell_cmd = _extract_shell_command(tc)
         if shell_cmd is not None and not _is_auditable_product_command(shell_cmd):

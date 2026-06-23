@@ -528,6 +528,191 @@ def test_policy_reads_real_filepath_input(tmp_path: Path) -> None:
     assert policy.reads_by_category["source"] == (str(source_path),)
 
 
+def test_policy_allows_supplied_skill_globs_for_skills_profile(tmp_path: Path) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    repository = tmp_path / "repo"
+    workspace = repository / "examples" / "challenge" / "workspaces" / "trial"
+    workspace.mkdir(parents=True)
+    call = ToolCallEvidence(
+        ordinal=1,
+        call_id="glob-1",
+        tool="glob",
+        status="completed",
+        title="Find supplied skills",
+        input={"pattern": ".agent/skills/**/*"},
+        metadata={},
+        output_chars=10,
+        output_preview="",
+        output_sha256="abc",
+        failed=False,
+    )
+
+    policy = evaluate_policy(
+        "skills",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+
+    assert policy.validity.value == "clean"
+    assert policy.reads_by_category["supplied_skills"] == (".agent/skills/**/*",)
+    assert policy.disallowed_reads == ()
+
+
+def test_policy_treats_workspace_challenge_paths_as_workspace(tmp_path: Path) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    repository = tmp_path / "repo"
+    workspace = (
+        repository
+        / "examples"
+        / "agent_challenges"
+        / "report_workflow_challenge"
+        / "workspaces"
+        / "trial-001"
+    )
+    workspace.mkdir(parents=True)
+    workspace_file = workspace / "rendered-prompt.md"
+    call = ToolCallEvidence(
+        ordinal=1,
+        call_id="read-1",
+        tool="read",
+        status="completed",
+        title="Read prompt",
+        input={"filePath": str(workspace_file)},
+        metadata={},
+        output_chars=10,
+        output_preview="",
+        output_sha256="abc",
+        failed=False,
+    )
+
+    policy = evaluate_policy(
+        "skills",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+
+    assert policy.validity.value == "clean"
+    assert policy.reads_by_category["workspace"] == (str(workspace_file),)
+    assert policy.disallowed_reads == ()
+
+
+def test_policy_records_broad_globs_without_contaminating(tmp_path: Path) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    repository = tmp_path / "repo"
+    workspace = repository / "examples" / "challenge" / "workspaces" / "trial"
+    workspace.mkdir(parents=True)
+    call = ToolCallEvidence(
+        ordinal=1,
+        call_id="glob-1",
+        tool="glob",
+        status="completed",
+        title="Search report workflow files",
+        input={"pattern": "**/report_workflow/**"},
+        metadata={},
+        output_chars=10,
+        output_preview="",
+        output_sha256="abc",
+        failed=False,
+    )
+
+    policy = evaluate_policy(
+        "skills",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+
+    assert policy.validity.value == "clean"
+    assert policy.reads_by_category["search_intent"] == ("**/report_workflow/**",)
+    assert policy.disallowed_reads == ()
+
+
+def test_policy_classifies_example_implementation_reads_separately(
+    tmp_path: Path,
+) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    repository = tmp_path / "repo"
+    workspace = repository / "examples" / "challenge" / "workspaces" / "trial"
+    workspace.mkdir(parents=True)
+    ops_path = repository / "examples" / "report_workflow" / "ops.py"
+    call = ToolCallEvidence(
+        ordinal=1,
+        call_id="read-1",
+        tool="read",
+        status="completed",
+        title="Read example implementation",
+        input={"filePath": str(ops_path)},
+        metadata={},
+        output_chars=10,
+        output_preview="",
+        output_sha256="abc",
+        failed=False,
+    )
+
+    policy = evaluate_policy(
+        "skills",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+
+    assert policy.validity.value == "clean"
+    assert policy.escalated_to_product_code is True
+    assert policy.reads_by_category["example_implementation"] == (str(ops_path),)
+    assert policy.disallowed_reads == ()
+
+
+def test_policy_classifies_ready_made_example_plans_as_existing_solution(
+    tmp_path: Path,
+) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    repository = tmp_path / "repo"
+    workspace = repository / "examples" / "challenge" / "workspaces" / "trial"
+    workspace.mkdir(parents=True)
+    plan_path = repository / "examples" / "report_workflow" / "workflow.plan.json"
+    call = ToolCallEvidence(
+        ordinal=1,
+        call_id="read-1",
+        tool="read",
+        status="completed",
+        title="Read ready-made plan",
+        input={"filePath": str(plan_path)},
+        metadata={},
+        output_chars=10,
+        output_preview="",
+        output_sha256="abc",
+        failed=False,
+    )
+
+    policy = evaluate_policy(
+        "skills",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+
+    assert policy.validity.value == "contaminated"
+    assert policy.reads_by_category["existing_solution"] == (str(plan_path),)
+    assert policy.disallowed_reads == (str(plan_path),)
+
+
 def test_v2_runner_default_timeout_and_workspace_cwd(tmp_path: Path) -> None:
     from examples.agent_challenges.runner import run_v2_trial
 

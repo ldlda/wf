@@ -351,12 +351,27 @@ def _build_follow_up_notes(
         reads_by_cat_raw = policy_raw.get("reads_by_category")
         if isinstance(reads_by_cat_raw, dict):
             examples = reads_by_cat_raw.get("examples", [])
+            example_implementation = reads_by_cat_raw.get("example_implementation", [])
+            search_intent = reads_by_cat_raw.get("search_intent", [])
             tests = reads_by_cat_raw.get("tests", [])
             existing_solution_raw = reads_by_cat_raw.get("existing_solution", [])
             if isinstance(examples, (list, tuple)) and examples:
                 notes.append(
                     f"Agent read {len(examples)} example file(s); verify whether "
                     "existing_solution applies"
+                )
+            if (
+                isinstance(example_implementation, (list, tuple))
+                and example_implementation
+            ):
+                notes.append(
+                    f"Agent read {len(example_implementation)} example implementation "
+                    "file(s); verify whether this was debugging or solution copying"
+                )
+            if isinstance(search_intent, (list, tuple)) and search_intent:
+                notes.append(
+                    f"Agent used {len(search_intent)} broad search pattern(s); "
+                    "review matched files if available"
                 )
             if isinstance(tests, (list, tuple)) and tests:
                 notes.append(
