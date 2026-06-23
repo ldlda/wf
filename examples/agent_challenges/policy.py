@@ -15,9 +15,17 @@ class EvaluationValidity(StrEnum):
     UNAUDITABLE = "unauditable"
 
 
+class PolicyCoverage(StrEnum):
+    """How much of the recorded evidence the automatic policy pass can inspect."""
+
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+
+
 @dataclass(frozen=True, slots=True)
 class PolicyEvidence:
     validity: EvaluationValidity
+    coverage: PolicyCoverage
     disallowed_reads: tuple[str, ...]
     escalated_to_product_code: bool
     opaque_shell_commands: tuple[str, ...]
@@ -73,7 +81,10 @@ def _extract_paths_from_tool_call(
     tool_name = tc.tool.lower()
     if tool_name in ("read", "glob", "grep", "list", "search"):
         path_val = (
-            tc.input.get("path") or tc.input.get("file") or tc.input.get("pattern")
+            tc.input.get("path")
+            or tc.input.get("file")
+            or tc.input.get("filePath")
+            or tc.input.get("pattern")
         )
         if isinstance(path_val, str) and path_val:
             return [path_val]
@@ -144,17 +155,23 @@ def evaluate_policy(
         if shell_cmd is not None and not _is_auditable_product_command(shell_cmd):
             opaque_shell_commands.append(shell_cmd)
 
-    if disallowed_reads:
-        validity = EvaluationValidity.CONTAMINATED
-    elif opaque_shell_commands and not disallowed_reads:
-        validity = EvaluationValidity.UNAUDITABLE
-    else:
-        validity = EvaluationValidity.CLEAN
+    # Validity is about observed rule violations. Opaque shell commands reduce
+    # automatic coverage, but they are not violations by themselves: the manual
+    # audit layer is responsible for reviewing those command bodies.
+    validity = (
+        EvaluationValidity.CONTAMINATED
+        if disallowed_reads
+        else EvaluationValidity.CLEAN
+    )
+    coverage = (
+        PolicyCoverage.PARTIAL if opaque_shell_commands else PolicyCoverage.COMPLETE
+    )
 
     frozen_reads_by_category = {k: tuple(v) for k, v in reads_by_category.items()}
 
     return PolicyEvidence(
         validity=validity,
+        coverage=coverage,
         disallowed_reads=tuple(disallowed_reads),
         escalated_to_product_code=escalated_to_product_code,
         opaque_shell_commands=tuple(opaque_shell_commands),

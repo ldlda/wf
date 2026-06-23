@@ -71,6 +71,7 @@ def _raw_result(tmp_path: Path) -> dict[str, object]:
         },
         "policy": {
             "validity": "clean",
+            "coverage": "complete",
             "disallowed_reads": [],
             "escalated_to_product_code": False,
             "opaque_shell_commands": [],
@@ -162,6 +163,32 @@ def test_markdown_projection_has_stable_headings(tmp_path: Path) -> None:
     assert "The deployment succeeded" in md
     assert "large raw stream" not in md
     assert "full tool output" not in md
+
+
+def test_markdown_command_items_indent_by_marker_width(tmp_path: Path) -> None:
+    from examples.agent_challenges.report_models import (
+        CommandToolBrief,
+        build_trial_report,
+    )
+    from examples.agent_challenges.reports import render_trial_report_markdown
+
+    report = build_trial_report(_raw_result(tmp_path), audit=None)
+    command = report.commands_and_tools[0]
+    report = report.model_copy(
+        update={
+            "commands_and_tools": [
+                CommandToolBrief(**{**command.model_dump(), "ordinal": 9}),
+                CommandToolBrief(**{**command.model_dump(), "ordinal": 10}),
+            ]
+        }
+    )
+
+    markdown = render_trial_report_markdown(report)
+
+    assert "9. **read**" in markdown
+    assert "\n   - Title:" in markdown
+    assert "\n\n10. **read**" in markdown
+    assert "\n    - Title:" in markdown
 
 
 def test_projections_write_both_files(tmp_path: Path) -> None:

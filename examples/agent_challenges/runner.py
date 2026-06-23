@@ -608,6 +608,7 @@ def run_v2_trial(
         "metrics": metrics_payload(metrics),
         "policy": {
             "validity": policy.validity.value,
+            "coverage": policy.coverage.value,
             "disallowed_reads": list(policy.disallowed_reads),
             "escalated_to_product_code": policy.escalated_to_product_code,
             "opaque_shell_commands": list(policy.opaque_shell_commands),

@@ -59,6 +59,7 @@ class AutomaticEvidence(StrictReportModel):
     tokens: TokenSummary = Field(default_factory=TokenSummary)
     cost: float = 0.0
     unknown_event_count: int = 0
+    policy_coverage: str = "complete"
     reads_by_category: dict[str, list[str]] = Field(default_factory=dict)
     escalated_to_product_code: bool = False
     disallowed_reads: list[str] = Field(default_factory=list)
@@ -198,6 +199,7 @@ def _build_automatic_evidence(result: dict[str, object]) -> AutomaticEvidence:
     disallowed_reads: list[str] = []
     escalated_to_product_code = False
     opaque_shell_commands: list[str] = []
+    policy_coverage = "complete"
     if isinstance(policy, dict):
         reads_in = policy.get("reads_by_category")
         if isinstance(reads_in, dict):
@@ -208,6 +210,7 @@ def _build_automatic_evidence(result: dict[str, object]) -> AutomaticEvidence:
         disallowed_reads = _list_str(policy.get("disallowed_reads"))
         escalated_to_product_code = bool(policy.get("escalated_to_product_code", False))
         opaque_shell_commands = _list_str(policy.get("opaque_shell_commands"))
+        policy_coverage = _str(policy.get("coverage"), default="complete")
 
     return AutomaticEvidence(
         step_count=step_count,
@@ -217,6 +220,7 @@ def _build_automatic_evidence(result: dict[str, object]) -> AutomaticEvidence:
         tokens=tokens,
         cost=cost,
         unknown_event_count=unknown_event_count,
+        policy_coverage=policy_coverage,
         reads_by_category=reads_by_category,
         escalated_to_product_code=escalated_to_product_code,
         disallowed_reads=disallowed_reads,
@@ -284,6 +288,8 @@ def _build_policy_findings(
         findings.append(
             f"Opaque shell commands ({len(evidence.opaque_shell_commands)} commands)"
         )
+    if evidence.policy_coverage == "partial":
+        findings.append("Automatic policy coverage is partial; manual review required")
     return findings
 
 

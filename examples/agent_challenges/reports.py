@@ -260,16 +260,19 @@ def render_trial_report_markdown(report: TrialReport) -> str:
     lines.append("")
     if report.commands_and_tools:
         for cmd in report.commands_and_tools:
+            marker = f"{cmd.ordinal}. "
+            indent = " " * len(marker)
             parts = [
-                f"{cmd.ordinal}. **{cmd.tool}** ({cmd.status})",
-                f"   - Title: {cmd.title}",
+                f"{marker}**{cmd.tool}** ({cmd.status})",
+                f"{indent}- Title: {cmd.title}",
             ]
             if cmd.detail:
-                parts.append(f"   - Detail: `{cmd.detail}`")
+                parts.append(f"{indent}- Detail: `{cmd.detail}`")
             parts.append(
-                f"   - Output: {cmd.output_chars} chars, sha256: `{cmd.output_sha256}`"
+                f"{indent}- Output: {cmd.output_chars} chars, sha256: `{cmd.output_sha256}`"
             )
             lines.extend(parts)
+            lines.append("")
     else:
         lines.append("No commands or tool calls recorded.")
     lines.append("")
@@ -288,6 +291,7 @@ def render_trial_report_markdown(report: TrialReport) -> str:
         f"- Tokens: total={ev.tokens.total}, input={ev.tokens.input}, output={ev.tokens.output}, reasoning={ev.tokens.reasoning}, cache_read={ev.tokens.cache_read}, cache_write={ev.tokens.cache_write}"
     )
     lines.append(f"- Cost: {ev.cost}")
+    lines.append(f"- Policy coverage: {ev.policy_coverage}")
     if ev.unknown_event_count:
         lines.append(f"- Unknown events: {ev.unknown_event_count}")
     if ev.reads_by_category:

@@ -465,7 +465,8 @@ def test_policy_evidence_classifies_reads(tmp_path: Path) -> None:
         repository_root=repository_root,
         workspaces_root=workspaces_root,
     )
-    assert bash_policy.validity.value == "unauditable"
+    assert bash_policy.validity.value == "clean"
+    assert bash_policy.coverage.value == "partial"
     assert len(bash_policy.opaque_shell_commands) == 1
 
     wf_tc = ToolCallEvidence(
@@ -489,7 +490,42 @@ def test_policy_evidence_classifies_reads(tmp_path: Path) -> None:
         workspaces_root=workspaces_root,
     )
     assert wf_policy.validity.value == "clean"
+    assert wf_policy.coverage.value == "complete"
     assert wf_policy.opaque_shell_commands == ()
+
+
+def test_policy_reads_real_filepath_input(tmp_path: Path) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    repository = tmp_path / "repo"
+    workspace = repository / "examples" / "challenge" / "workspaces" / "trial"
+    workspace.mkdir(parents=True)
+    source_path = repository / "src" / "app.py"
+    call = ToolCallEvidence(
+        ordinal=1,
+        call_id="read-1",
+        tool="read",
+        status="completed",
+        title="Read source",
+        input={"filePath": str(source_path)},
+        metadata={},
+        output_chars=10,
+        output_preview="",
+        output_sha256="abc",
+        failed=False,
+    )
+
+    policy = evaluate_policy(
+        "all",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+
+    assert policy.escalated_to_product_code is True
+    assert policy.reads_by_category["source"] == (str(source_path),)
 
 
 def test_v2_runner_default_timeout_and_workspace_cwd(tmp_path: Path) -> None:
