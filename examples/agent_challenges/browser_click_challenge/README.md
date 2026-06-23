@@ -4,6 +4,9 @@ This challenge tests whether an agent can discover and use the workflow product
 path to build and run a browser-click workflow. It is evidence tooling, not
 product runtime code.
 
+For the shared operator workflow, audit commands, and report interpretation, see
+[`docs/runbooks/agent-challenge-evaluation.md`](../../../docs/runbooks/agent-challenge-evaluation.md).
+
 The deterministic workflow example is:
 
 ```text

@@ -4,6 +4,9 @@ This challenge tests whether an agent can discover and use the workflow product
 path to build and run a three-node report pipeline. It is evidence tooling, not
 product runtime code.
 
+For the shared operator workflow, audit commands, and report interpretation, see
+[`docs/runbooks/agent-challenge-evaluation.md`](../../../docs/runbooks/agent-challenge-evaluation.md).
+
 The deterministic workflow steps are: `read_notes -> extract_report ->
 render_markdown_report`.
 

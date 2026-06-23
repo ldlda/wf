@@ -11,6 +11,8 @@ For source provider setup examples, see
 
 For a presentation-oriented summary of the current product path and demo flow,
 see [`workflow platform presentation`](add/2026-06-workflow-platform-presentation.md).
+For running and auditing external-agent workflow challenges, see
+[`agent challenge evaluation`](runbooks/agent-challenge-evaluation.md).
 
 ## Packages
 
@@ -71,6 +73,8 @@ see [`workflow platform presentation`](add/2026-06-workflow-platform-presentatio
   `--keep-temp` to preserve the generated config/store on failure.
 - `examples/browser_click_workflow/` is a serial browser-click workflow
   example with bounded before/after snapshots and full lifecycle tests.
+- `examples/agent_challenges/` contains reusable opencode challenge harnesses
+  for evaluating whether agents can use the public workflow CLI/server path.
 
 ## Documentation
 
@@ -78,6 +82,9 @@ see [`workflow platform presentation`](add/2026-06-workflow-platform-presentatio
   — formal thesis/system-design draft.
 - [`docs/add/evidence-index.md`](add/evidence-index.md) — claim-to-evidence
   map for the thesis draft.
+- [`docs/runbooks/agent-challenge-evaluation.md`](runbooks/agent-challenge-evaluation.md)
+  — operator runbook for challenge trials, manual audits, and report
+  interpretation.
 
 ## Tests
 

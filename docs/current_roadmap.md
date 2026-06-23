@@ -225,6 +225,10 @@ stable.
   every V2 trial and regenerate both after audit without mutating raw evidence.
   Implementation:
   [`report projections`](historical/superpowers/plans/2026-06-23-agent-challenge-report-projections.md).
+- Completed: shared agent challenge evaluation runbook documents trial
+  execution, instruction profiles, manual audit, and the distinction between
+  evaluation validity and policy coverage:
+  [`agent challenge evaluation`](runbooks/agent-challenge-evaluation.md).
 
 ## Historical References
 
