@@ -10,7 +10,14 @@ _EXAMPLE_DIR = Path(__file__).resolve().parent
 
 
 class ReadInput(BaseModel):
-    path: str = Field(description="Path to a UTF-8 Markdown notes file.")
+    text: str | None = Field(
+        default=None,
+        description="Structured Markdown notes passed by value. Preferred for workflows.",
+    )
+    path: str | None = Field(
+        default=None,
+        description="Legacy path to a UTF-8 Markdown notes file inside the example.",
+    )
 
 
 class ReadOutput(BaseModel):
@@ -59,6 +66,10 @@ def render_markdown_report(payload: MarkdownInput) -> MarkdownOutput:
 
 
 def _read_notes(payload: ReadInput) -> ReadOutput:
+    if payload.text is not None:
+        return ReadOutput(text=payload.text)
+    if payload.path is None:
+        raise ValueError("read_notes requires either text or path")
     path = _resolve_example_path(payload.path)
     return ReadOutput(text=path.read_text(encoding="utf-8"))
 

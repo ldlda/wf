@@ -5,9 +5,13 @@ rendered markdown report.
 
 The workflow must execute these three steps in sequence:
 
-1. `read_notes` -- read structured input notes
+1. `read_notes` -- accept structured input notes by value
 2. `extract_report` -- extract report content from the notes
 3. `render_markdown_report` -- render the extracted content as a markdown report
+
+Prefer passing the notes as workflow input field `text`; do not rely on a file
+path into the source example directory. The challenge workspace is isolated, and
+the workflow definition should be self-contained.
 
 ## Workflow Authoring Paths
 

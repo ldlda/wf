@@ -8,8 +8,8 @@ remote OAuth, LLM calls, or provider quota.
 
 - `input.md` — fixture notes.
 - `cap-input.json` — capability-call payload generated from the fixture notes.
-- `run-input.json` — workflow-run payload pointing at the fixture notes.
-- `workflow.plan.json` — three-node raw plan:
+- `run-input.json` — workflow-run payload containing the fixture notes by value.
+- `workflow.plan.json` — three-node raw plan that passes notes by value:
   `read_notes -> extract_report -> render_markdown_report`.
 - `ops.py` — Python source exposing `read_notes`, `extract_report`, and
   `render_markdown_report`.
@@ -70,6 +70,10 @@ The expected report includes:
 - at least one risk mentioning Google Drive MCP quota
 - followups for Markdown rendering and baseline comparison
 - rendered Markdown beginning with `# Weekly Project Update`
+
+`read_notes` still accepts a relative `path` for compatibility, but workflow
+runs should prefer the by-value `text` input. This keeps challenge workspaces
+self-contained and avoids source-directory path resolution surprises.
 
 ## Thesis Evidence
 

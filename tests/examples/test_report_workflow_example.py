@@ -56,9 +56,10 @@ async def test_report_workflow_python_source_loads_and_calls_capability(
 
     assert "local.report.extract_report" in names
 
+    payload = json.loads((EXAMPLE_DIR / "cap-input.json").read_text(encoding="utf-8"))
     result = await server.api.call_capability(
         qualified_name="local.report.extract_report",
-        payload={"text": (EXAMPLE_DIR / "input.md").read_text(encoding="utf-8")},
+        payload=payload,
     )
 
     assert result["outcome"] == "ok"
@@ -95,12 +96,21 @@ async def test_report_workflow_artifact_deployment_run_path(tmp_path) -> None:
             "bindings": {"local.report": "local.report"},
         }
     )
+    run_input = json.loads((EXAMPLE_DIR / "cap-input.json").read_text(encoding="utf-8"))
     run = await server.api.run_deployment(
         deployment_id="report_case_study.default",
-        workflow_input={"path": "input.md"},
+        workflow_input=run_input,
     )
 
     assert run["status"] == "completed"
     assert run["output"]["report"]["title"] == "Weekly Project Update"
     assert len(run["output"]["report"]["action_items"]) == 3
     assert run["output"]["markdown"].startswith("# Weekly Project Update")
+
+
+def test_report_workflow_read_notes_accepts_text_by_value() -> None:
+    payload = json.loads((EXAMPLE_DIR / "cap-input.json").read_text(encoding="utf-8"))
+
+    notes = _read_notes(ReadInput(**payload))
+
+    assert notes.text.startswith("# Weekly Project Update")

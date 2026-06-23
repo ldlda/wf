@@ -3,12 +3,12 @@
   "input_schema": {
     "type": "object",
     "properties": {
-      "path": {
+      "text": {
         "type": "string"
       }
     },
     "required": [
-      "path"
+      "text"
     ]
   },
   "state_schema": {
@@ -57,13 +57,13 @@
           "path": {
             "root": "input",
             "parts": [
-              "path"
+              "text"
             ]
           },
           "target": {
             "root": "local",
             "parts": [
-              "path"
+              "text"
             ]
           }
         }

@@ -207,6 +207,9 @@ poetry.toml
 # LSP config files
 pyrightconfig.json
 
+# Local agent skill links
+.agent/
+
 
 # local config file
 /wf*.config.json
