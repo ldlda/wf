@@ -61,6 +61,34 @@ def test_workflow_cli_bundle_uses_public_surfaces_not_implementation_files() -> 
     assert "no schema subcommands" not in contents
 
 
+def test_workflow_cli_bundle_uses_cli_names_not_mcp_method_names() -> None:
+    contents = "\n".join(
+        (ROOT / entry["source"]).read_text(encoding="utf-8") for entry in _entries()
+    )
+
+    assert "wf.workflow." not in contents
+    assert "wf.admin." not in contents
+    assert "WorkflowApi." not in contents
+
+
+def test_workflow_cli_bundle_avoids_challenge_specific_names() -> None:
+    contents = "\n".join(
+        (ROOT / entry["source"]).read_text(encoding="utf-8") for entry in _entries()
+    )
+
+    forbidden = [
+        "browser_click",
+        "report_workflow",
+        "report_case_study",
+        "local.report",
+        "read_notes",
+        "extract_report",
+        "render_markdown_report",
+    ]
+    for term in forbidden:
+        assert term not in contents
+
+
 def test_bundle_destinations_form_two_skills() -> None:
     destinations = {entry["destination"] for entry in _entries()}
 

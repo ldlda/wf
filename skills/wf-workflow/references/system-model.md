@@ -6,9 +6,8 @@ tool calls.
 
 ## Core Objects
 
-- **Source**: an owner of callable capabilities, such as `wf.std`,
-  `local.report`, `local.browser_click`, or an MCP connection. Sources may be
-  built in, configured Python sources, MCP sources, or future provider types.
+- **Source**: an owner of callable capabilities, such as `wf.std`, a configured
+  Python source, an MCP connection, or a future provider type.
 - **Capability**: a graph-facing callable contract exposed by a source. It has
   input/output schemas and outcomes. Build workflows from workflow
   capabilities, not raw provider internals.
@@ -30,8 +29,8 @@ live source satisfies each requirement.
 Example:
 
 ```text
-artifact requires: local.browser_click
-deployment binds: local.browser_click -> local.browser_click
+artifact requires: logical.source
+deployment binds: logical.source -> concrete.source
 ```
 
 Platform sources such as `wf.std` are special: they can be omitted or self-bound.

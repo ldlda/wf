@@ -42,13 +42,13 @@ The plan file is the low-level workflow model. It is not a draft workspace.
 
 ```json
 {
-  "name": "report_case_study",
+  "name": "example_workflow",
   "input_schema": {
     "type": "object",
     "properties": {
-      "path": { "type": "string" }
+      "text": { "type": "string" }
     },
-    "required": ["path"]
+    "required": ["text"]
   },
   "state_schema": {
     "type": "object",
@@ -70,11 +70,11 @@ The plan file is the low-level workflow model. It is not a draft workspace.
     {
       "id": "read",
       "type": "node",
-      "node": "local.report.read_notes",
+      "node": "example.source.read",
       "input": [
         {
-          "path": { "root": "input", "parts": ["path"] },
-          "target": { "root": "local", "parts": ["path"] }
+          "path": { "root": "input", "parts": ["text"] },
+          "target": { "root": "local", "parts": ["text"] }
         }
       ],
       "output": [
@@ -87,7 +87,7 @@ The plan file is the low-level workflow model. It is not a draft workspace.
     {
       "id": "extract",
       "type": "node",
-      "node": "local.report.extract_report",
+      "node": "example.source.extract",
       "input": [
         {
           "path": { "root": "state", "parts": ["notes"] },

@@ -427,8 +427,7 @@ def run_v2_trial(
     server_context = (
         "No external workflow RPC server is staged. Use the "
         "per-trial workspace config copied to "
-        f"`{config_path_display}`. Your writable trial workspace is "
-        f"`{workspace_path}`."
+        f"`{config_path_display}`."
     )
 
     rendered = compose_trial_prompt(
@@ -436,7 +435,7 @@ def run_v2_trial(
         profile=profile,
         wf_command_prefix=wf_command_prefix,
         server_context=server_context,
-        workspace_path=workspace.root,
+        workspace_path=workspace_path,
     )
 
     workspace.rendered_prompt_path.write_text(rendered.text, encoding="utf-8")

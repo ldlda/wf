@@ -14,10 +14,10 @@ capabilities are graph-facing contracts with schemas and outcomes.
 
 ## Discovery Order
 
-1. Use `wf.admin.list_sources` to understand owners.
-2. Use `wf.workflow.list_capabilities` for graph-ready capabilities.
-3. Use `wf.workflow.inspect_capability` for one full contract.
-4. Use `wf.workflow.call_capability` to test a single workflow-facing contract.
+1. Use `wf source list` or `wf status` when source ownership is unclear.
+2. Use `wf cap list --format ids` for graph-ready capabilities.
+3. Use `wf cap inspect <capability>` for one full contract.
+4. Use `wf cap call <capability>` to test a single workflow-facing contract.
 
 ## Wrapper Artifacts
 

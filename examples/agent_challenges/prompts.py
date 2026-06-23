@@ -48,7 +48,7 @@ def compose_trial_prompt(
     profile: InstructionProfile,
     wf_command_prefix: str,
     server_context: str,
-    workspace_path: Path,
+    workspace_path: Path | str,
 ) -> RenderedPrompt:
     base_text = _BASE_PROMPT.read_text(encoding="utf-8")
     profile_text = _load_profile_fragment(profile)

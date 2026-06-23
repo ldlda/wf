@@ -5,11 +5,8 @@ description: Use when an agent needs to discover workflow capabilities, create o
 
 # wf Workflow
 
-Use this skill for the workflow lifecycle, regardless of front door:
-
-- MCP tools exposed by `wf.workflow.*`
-- repo-local `wf` CLI commands
-- future `wf_api` callers
+Use this skill for the workflow lifecycle when the available front door is the
+repo-local `wf` CLI.
 
 Prefer small discovery calls, draft workspaces, validation, and bounded trace
 reads. Do not write raw workflow plans unless the user explicitly asks for the
@@ -17,21 +14,19 @@ low-level escape hatch or you already have a complete compiler/generated plan.
 
 ## Workflow Lifecycle
 
-1. Discover sources with `wf.admin.list_sources` or `wf cap list`.
-2. Discover workflow-ready capabilities with `wf.workflow.list_capabilities`.
-3. Inspect one candidate with `wf.workflow.inspect_capability`.
-4. Call one candidate with `wf.workflow.call_capability` or `wf cap call` when
-   payload shape or upstream source reachability is uncertain.
-5. Create a patchable draft workspace with
-   `wf.workflow.create_draft_workspace_from_capability`.
-6. Patch targeted fields with focused helpers or JSON Patch.
-7. Validate with `wf.workflow.validate_draft_workspace`.
-8. Save with `wf.workflow.create_artifact_from_workspace` or
-   `wf.workflow.create_wrapper_from_workspace`.
-9. Save a deployment with `wf.workflow.save_deployment`.
-10. Validate with `wf.workflow.validate_deployment`.
-11. Run with `wf.workflow.run_deployment`.
-12. Inspect stopped runs with `wf.workflow.inspect_run`; read bounded trace
+1. Discover available capabilities with `wf cap list`.
+2. Inspect one candidate with `wf cap inspect`.
+3. Call one candidate with `wf cap call` when payload shape or upstream source
+   reachability is uncertain.
+4. Create a patchable draft workspace with `wf draft create-from-capability`.
+5. Patch targeted fields with focused draft commands or JSON Patch.
+6. Validate with `wf draft validate`.
+7. Save an artifact with `wf draft save`, or import a complete raw plan with
+   `wf artifact create-from-plan`.
+8. Save a deployment with `wf deploy save` or `wf deploy create`.
+9. Validate with `wf deploy validate`.
+10. Run with `wf run start`.
+11. Inspect stopped runs with `wf run inspect`; read bounded trace
     slices only when debugging.
 
 ## Rules
@@ -44,7 +39,7 @@ low-level escape hatch or you already have a complete compiler/generated plan.
 - Prefer focused draft edit commands before hand-writing JSON Patch.
 - If a complete raw JSON/YAML plan already exists, the CLI escape hatch is
   `wf artifact create-from-plan`; do not write helper scripts that call
-  `WorkflowApi.create_artifact_from_plan` directly.
+  internal APIs directly.
 - Use `artifact create-from-plan` only for complete raw plans; do not pass draft
   JSON to it.
 - Use explicit source bindings at deployment time.

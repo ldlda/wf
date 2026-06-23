@@ -6,24 +6,20 @@ validated, runnable deployment.
 ## Primary Path
 
 1. List sources.
-   - MCP: `wf.admin.list_sources`
    - CLI: `wf cap list --format ids`
 2. List workflow capabilities.
-   - MCP: `wf.workflow.list_capabilities`
    - CLI: `wf cap list`
 3. Inspect one capability.
-   - MCP: `wf.workflow.inspect_capability`
    - CLI: `wf cap inspect <name>`
 4. Bootstrap a draft workspace.
-   - MCP: `wf.workflow.create_draft_workspace_from_capability`
    - CLI: `wf draft create-from-capability <workspace_id> <capability>`
 5. Inspect/patch/validate the workspace until valid.
    - Use focused CLI commands (`set-name`, `set-route`, `set-input`, `set-output`)
      for common edits.
    - Use JSON Patch only for general structural edits.
 6. Save an artifact.
-   - Full workflow: `create_artifact_from_workspace`
-   - Reusable wrapper: `create_wrapper_from_workspace`
+   - Draft artifact: `wf draft save`
+   - Complete raw plan: `wf artifact create-from-plan`
 7. Save and validate a deployment.
    - `wf deploy save` (or `wf deploy create` alias)
 8. Run the deployment.
@@ -67,12 +63,11 @@ wf run start <deployment_id> --input-file input.json
 
 ## Result Handling
 
-`run_deployment` returns compact status by default. Capture `run_id` even for
+`wf run start` returns compact status by default. Capture `run_id` even for
 completed or failed runs. Use:
 
-- `inspect_run` for compact stored result.
-- `read_run_trace` for explicit debug slices, for example
-  `{"start": 0, "limit": 25}`.
-- `resume_run` only for interrupted runs.
+- `wf run inspect <run_id>` for compact stored result.
+- `wf run trace <run_id> --from 0 --limit 25` for explicit debug slices.
+- `wf run resume <run_id>` only for interrupted runs.
 
 Do not ask for unbounded traces.
