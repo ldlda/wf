@@ -13,6 +13,16 @@ Prefer passing the notes as workflow input field `text`; do not rely on a file
 path into the source example directory. The challenge workspace is isolated, and
 the workflow definition should be self-contained.
 
+The writable trial workspace includes safe fixture input files:
+
+- `input.md` -- structured notes for the report
+- `run-input.json` -- run input containing the same notes by value in field
+  `text`
+
+You may use `run-input.json` with `wf run start --input-file`. Do not copy files
+into `examples/report_workflow/`, and do not inspect source implementation files
+to learn path behavior. Use `wf cap inspect` for node contracts.
+
 ## Workflow Authoring Paths
 
 Two product-facing authoring paths are acceptable:

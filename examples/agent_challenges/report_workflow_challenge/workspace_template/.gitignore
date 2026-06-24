@@ -1,2 +1,5 @@
 *
 !.gitignore
+!TASK_FILES.md
+!input.md
+!run-input.json

@@ -12,7 +12,10 @@ _EXAMPLE_DIR = Path(__file__).resolve().parent
 class ReadInput(BaseModel):
     text: str | None = Field(
         default=None,
-        description="Structured Markdown notes passed by value. Preferred for workflows.",
+        description=(
+            "Structured Markdown notes passed by value. Preferred for workflows "
+            "and challenge workspaces."
+        ),
     )
     path: str | None = Field(
         default=None,
@@ -25,7 +28,12 @@ class ReadOutput(BaseModel):
 
 
 class ExtractInput(BaseModel):
-    text: str
+    text: str = Field(
+        description=(
+            "Structured notes with '# Title', 'Summary:', 'Actions:', 'Risks:', "
+            "and 'Followups:' sections. Action lines use '- owner | task | due'."
+        )
+    )
 
 
 class ActionItem(BaseModel):
@@ -43,24 +51,41 @@ class ReportOutput(BaseModel):
 
 
 class MarkdownInput(BaseModel):
-    report: ReportOutput
+    report: ReportOutput = Field(
+        description="Typed report object returned by extract_report."
+    )
 
 
 class MarkdownOutput(BaseModel):
     markdown: str
 
 
-@node(name="read_notes")
+@node(
+    name="read_notes",
+    description=(
+        "Return structured Markdown notes. Prefer input.text; input.path is a "
+        "legacy source-local fallback."
+    ),
+)
 def read_notes(payload: ReadInput) -> ReadOutput:
     return _read_notes(payload)
 
 
-@node(name="extract_report")
+@node(
+    name="extract_report",
+    description=(
+        "Extract a typed report from structured notes containing title, summary, "
+        "actions, risks, and followups."
+    ),
+)
 def extract_report(payload: ExtractInput) -> ReportOutput:
     return _extract_report(payload)
 
 
-@node(name="render_markdown_report")
+@node(
+    name="render_markdown_report",
+    description="Render the typed report object as Markdown text.",
+)
 def render_markdown_report(payload: MarkdownInput) -> MarkdownOutput:
     return _render_markdown_report(payload)
 
