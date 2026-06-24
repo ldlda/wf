@@ -24,6 +24,7 @@ validated, runnable deployment.
      `wf artifact create-from-plan workflow.plan.json --artifact <artifact_id> --version 1 --title "Workflow Title" --outcome ok`
 7. Save and validate a deployment.
    - `wf deploy save <deployment_id> --artifact <artifact_id> --version 1 --binding <logical_source>=<concrete_source>` (or `wf deploy create` alias)
+   - `wf deploy validate <deployment_id>`
 8. Run the deployment.
 9. Inspect the run summary first; read bounded traces only when needed.
 

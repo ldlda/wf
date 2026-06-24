@@ -147,12 +147,13 @@ def _build_tool_briefs(result: dict[str, object]) -> list[CommandToolBrief]:
             tc_input.get("path")
             or tc_input.get("filePath")
             or tc_input.get("file")
+            or tc_input.get("pattern")
             or ""
         )
         if isinstance(path_val, str) and path_val:
             detail_str = path_val[:_MAX_COMMAND_DETAIL_CHARS]
-        elif "command" in tc_input:
-            cmd = tc_input["command"]
+        elif "command" in tc_input or "cmd" in tc_input:
+            cmd = tc_input.get("command") or tc_input.get("cmd")
             if isinstance(cmd, str):
                 detail_str = cmd[:_MAX_COMMAND_DETAIL_CHARS]
 

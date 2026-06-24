@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -152,7 +153,7 @@ def report_from_v2_result(result: dict[str, object]) -> str:
     metrics = result.get("metrics", {})
     if isinstance(metrics, dict):
         tokens = metrics.get("tokens", {})
-        if isinstance(tokens, dict):
+        if isinstance(tokens, dict) and tokens:
             lines.append("Observed token metrics:")
             lines.append(f"  {_format_tokens(tokens)}")
         cost = metrics.get("cost")
@@ -213,7 +214,7 @@ class TrialReportPaths:
 
 def _atomic_write_text(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.tmp")
+    temporary = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
     temporary.write_text(text, encoding="utf-8")
     temporary.replace(path)
 

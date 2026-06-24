@@ -65,6 +65,8 @@ def parse_model_profile(raw: str) -> ModelProfile:
     model, separator, variant = raw.partition("=")
     if not model:
         raise ValueError("model cannot be empty")
+    if separator and not variant:
+        raise ValueError("variant cannot be empty when using MODEL=VARIANT")
     return ModelProfile(model=model, variant=variant if separator else "high")
 
 
@@ -80,11 +82,15 @@ def build_matrix_tasks(
     for challenge in challenges:
         results_dir = challenge.root / "results"
         workspaces_dir = challenge.root / "workspaces"
+        next_indices: dict[str, int] = {}
         for model in models:
-            next_index = starting_trial_index(
-                model=model.model,
-                results_dir=results_dir,
-                workspaces_dir=workspaces_dir,
+            next_index = next_indices.setdefault(
+                model.model,
+                starting_trial_index(
+                    model=model.model,
+                    results_dir=results_dir,
+                    workspaces_dir=workspaces_dir,
+                ),
             )
             for profile in profiles:
                 for _ in range(trials):
@@ -100,6 +106,7 @@ def build_matrix_tasks(
                         )
                     )
                     next_index += 1
+            next_indices[model.model] = next_index
     return tasks
 
 

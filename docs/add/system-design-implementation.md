@@ -1035,14 +1035,16 @@ The tested thesis path imports the complete three-node plan as an immutable
 artifact:
 
 ```powershell
-wf artifact create-from-plan workflow.plan.json --artifact report_case_study --version 1 --title "Report Case Study" --outcome ok --binding local.report=local.report
+wf artifact create-from-plan workflow.plan.json --artifact report_case_study --version 1 --title "Report Case Study" --outcome ok
 ```
 
 Artifact creation captures the workflow graph, required capability snapshots,
 declared outcome, and logical source requirements. Deployment saving then binds
 the logical source `local.report` to the concrete configured source
-`local.report`. Deployment validation checks that the bound source exists and
-still satisfies the artifact's saved requirements before execution.
+`local.report`, for example with
+`wf deploy save report_case_study.default --artifact report_case_study --version 1 --binding local.report=local.report`.
+Deployment validation checks that the bound source exists and still satisfies
+the artifact's saved requirements before execution.
 
 Run execution starts from the deployment, validates input, executes the
 three-node pipeline, records trace frames, and stores a completed run record

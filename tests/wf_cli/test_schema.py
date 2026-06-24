@@ -116,6 +116,13 @@ def test_schema_unknown_name_fails_with_suggestion() -> None:
     assert "NodeUse" in result.output
 
 
+def test_schema_verbose_without_name_fails() -> None:
+    result = runner.invoke(app, ["schema", "--verbose"])
+
+    assert result.exit_code != 0
+    assert "--verbose requires a schema name" in result.output
+
+
 def test_schema_catalog_resolves_aliases_and_components() -> None:
     catalog = schema_catalog()
 

@@ -8,8 +8,8 @@ unrunnable, or surprising.
 Check in this order:
 
 1. `wf status`
-2. `wf cap inspect <capability>`
-3. `wf cap list --format ids`
+2. `wf cap list --format ids`
+3. `wf cap inspect <capability>`
 
 Remember: MCP control tools are not workflow capabilities. They appear in
 MCP `tools/list`, not `wf cap list`.

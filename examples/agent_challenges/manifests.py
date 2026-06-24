@@ -7,11 +7,21 @@ import yaml
 from .models import ChallengeManifest, LoadedChallenge
 
 
-def _inside(root: Path, relative: str, *, field: str) -> Path:
+def _inside(
+    root: Path, relative: str, *, field: str, boundary: Path | None = None
+) -> Path:
     candidate = (root / relative).resolve()
-    if not candidate.is_relative_to(root):
+    allowed_root = (boundary or root).resolve()
+    if not candidate.is_relative_to(allowed_root):
         raise ValueError(f"challenge {field} must stay inside challenge directory")
     return candidate
+
+
+def _source_boundary(root: Path) -> Path:
+    """Real challenge bundles may point at sibling example source directories."""
+    if root.parent.name == "agent_challenges":
+        return root.parent.parent
+    return root
 
 
 def load_challenge_manifest(path: Path) -> LoadedChallenge:
@@ -23,8 +33,18 @@ def load_challenge_manifest(path: Path) -> LoadedChallenge:
     workspace_template = _inside(
         root, manifest.workspace_template, field="workspace_template"
     )
-    source_root = (root / manifest.source.root).resolve()
-    server_config = (root / manifest.server.config).resolve()
+    source_root = _inside(
+        root,
+        manifest.source.root,
+        field="source.root",
+        boundary=_source_boundary(root),
+    )
+    server_config = _inside(
+        root,
+        manifest.server.config,
+        field="server.config",
+        boundary=_source_boundary(root),
+    )
     if not prompt_path.is_file():
         raise ValueError(f"challenge prompt does not exist: {prompt_path}")
     if not workspace_template.is_dir():

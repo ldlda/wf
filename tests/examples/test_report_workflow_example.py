@@ -114,3 +114,20 @@ def test_report_workflow_read_notes_accepts_text_by_value() -> None:
     notes = _read_notes(ReadInput(**payload))
 
     assert notes.text.startswith("# Weekly Project Update")
+
+
+def test_report_workflow_read_input_requires_text_or_path() -> None:
+    with pytest.raises(ValueError, match="text or path"):
+        ReadInput.model_validate({})
+
+
+def test_report_workflow_read_input_rejects_text_and_path_together() -> None:
+    with pytest.raises(ValueError, match="exactly one"):
+        ReadInput(text="hello", path="input.md")
+
+
+def test_report_workflow_read_input_schema_requires_text_or_path() -> None:
+    schema = ReadInput.model_json_schema()
+
+    assert schema["oneOf"] == [{"required": ["text"]}, {"required": ["path"]}]
+    assert set(schema["properties"]) == {"text", "path"}

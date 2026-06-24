@@ -1,5 +1,5 @@
 param(
-    [string]$AttachUrl = "http://127.0.0.1:8192",
+    [string]$AttachUrl = "",
     [int]$Trials = 5,
     [int]$Concurrency = 2,
     [int]$TimeoutSeconds = 3600,
@@ -45,11 +45,13 @@ try {
         "$Trials",
         "--concurrency",
         "$Concurrency",
-        "--attach",
-        "$AttachUrl",
         "--timeout-seconds",
         "$TimeoutSeconds"
     )
+    if ($AttachUrl) {
+        $argsList += "--attach"
+        $argsList += "$AttachUrl"
+    }
     foreach ($model in $models) {
         $argsList += "--model"
         $argsList += "$($model.Model)=$($model.Variant)"

@@ -105,16 +105,16 @@ one. Structurally identical definitions may be deduplicated.
 {
   "schemas": [
     {
-      "name": "WorkflowDraft",
-      "aliases": ["draft"],
-      "kind": "root",
-      "description": "Patch-friendly JSON authoring document."
-    },
-    {
       "name": "NodeUse",
       "aliases": [],
       "kind": "definition",
       "description": "Concrete use of a reusable node definition."
+    },
+    {
+      "name": "WorkflowDraft",
+      "aliases": ["draft"],
+      "kind": "root",
+      "description": "Patch-friendly JSON authoring document."
     }
   ]
 }
@@ -176,8 +176,8 @@ Example:
   constants, and basic validation bounds when present.
 - Preserve object property names.
 - Convert local `$ref` values to canonical definition-name strings.
-- Convert `oneOf`/`anyOf` reference unions to `one_of` name lists when all
-  branches are named references.
+- Convert `oneOf` reference unions to `one_of` and `anyOf` reference unions to
+  `any_of` when branches are named references.
 - Preserve simple inline primitive unions in compact JSON form.
 - For arrays, summarize the item schema recursively.
 - Add a sorted `related` list containing definitions referenced by the outline.
@@ -203,19 +203,20 @@ For a component definition such as `NodeUse`, emit a valid root document:
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$ref": "#/$defs/NodeUse",
   "$defs": {
-    "NodeUse": {},
-    "InputPathBinding": {},
-    "InputValueBinding": {},
-    "OutputBinding": {}
+    "NodeUse": {"type": "object", "properties": {"node": {"type": "string"}}},
+    "InputPathBinding": {"type": "object", "properties": {"path": {"type": "string"}}},
+    "InputValueBinding": {"type": "object", "properties": {"value": true}},
+    "OutputBinding": {"type": "object", "properties": {"to": {"type": "string"}}}
   }
 }
 ```
 
-The `$defs` table contains the full combined Pydantic-generated definition
-catalog. Do not hand-roll transitive reference pruning or JSON Schema reference
-resolution in the first implementation. The larger verbose payload is an
-acceptable tradeoff for correctness; `--verbose` is explicitly the unbounded
-form.
+The short `$defs` bodies above are representative excerpts, not complete
+runtime output. The real `$defs` table contains the full combined
+Pydantic-generated definition catalog. Do not hand-roll transitive reference
+pruning or JSON Schema reference resolution in the first implementation. The
+larger verbose payload is an acceptable tradeoff for correctness; `--verbose`
+is explicitly the unbounded form.
 
 All verbose documents must pass `Draft202012Validator.check_schema()` and a
 validator-backed local-reference resolution test.

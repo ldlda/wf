@@ -38,7 +38,7 @@ The full artifact/deployment/run path is covered by
 three-node lifecycle manually through the CLI, import the raw plan:
 
 ```powershell
-uv run wf --config examples/report_workflow/wf.config.json artifact create-from-plan examples/report_workflow/workflow.plan.json --artifact report_case_study --version 1 --title "Report Case Study" --outcome ok --binding local.report=local.report
+uv run wf --config examples/report_workflow/wf.config.json artifact create-from-plan examples/report_workflow/workflow.plan.json --artifact report_case_study --version 1 --title "Report Case Study" --outcome ok
 uv run wf --config examples/report_workflow/wf.config.json deploy save report_case_study.default --artifact report_case_study --version 1 --binding local.report=local.report
 uv run wf --config examples/report_workflow/wf.config.json deploy validate report_case_study.default
 uv run wf --config examples/report_workflow/wf.config.json run start report_case_study.default --input-file examples/report_workflow/run-input.json --trace-from 0 --trace-limit 5

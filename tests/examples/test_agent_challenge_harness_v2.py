@@ -76,6 +76,30 @@ def test_invalid_manifest_rejects_parent_traversal(tmp_path: Path) -> None:
         load_challenge_manifest(path)
 
 
+def test_invalid_manifest_rejects_source_root_escape(tmp_path: Path) -> None:
+    path = _write_manifest(tmp_path)
+    text = path.read_text(encoding="utf-8").replace(
+        "  root: source",
+        "  root: ../source",
+    )
+    path.write_text(text, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="source.root"):
+        load_challenge_manifest(path)
+
+
+def test_invalid_manifest_rejects_server_config_escape(tmp_path: Path) -> None:
+    path = _write_manifest(tmp_path)
+    text = path.read_text(encoding="utf-8").replace(
+        "  config: wf.config.json",
+        "  config: ../wf.config.json",
+    )
+    path.write_text(text, encoding="utf-8")
+
+    with pytest.raises(ValueError, match="server.config"):
+        load_challenge_manifest(path)
+
+
 ROOT = Path(__file__).resolve().parents[2]
 
 
@@ -968,6 +992,7 @@ def test_v2_runner_timeout_preserves_partial_evidence(tmp_path: Path) -> None:
     )
 
     assert result["task_outcome"] == "timeout"
+    assert result["returncode"] == -1
     assert "metrics" in result
 
 
@@ -1252,7 +1277,8 @@ def test_v2_runner_preserves_evidence_on_parse_failure(tmp_path: Path) -> None:
         run_fn=fake_run,
     )
 
-    assert result["task_outcome"] == "parse_error"
+    assert result["task_outcome"] == "runner_error"
+    assert result["returncode"] == -2
     assert "parse_error" in result
     assert result["parse_error"]["type"] == "RuntimeError"
     assert "subprocess exploded" in result["parse_error"]["message"]
@@ -1595,6 +1621,7 @@ def test_runner_to_report_timeout(tmp_path: Path) -> None:
     )
 
     assert result["task_outcome"] == "timeout"
+    assert result["returncode"] == -1
     assert isinstance(result.get("workspace_path"), str)
     assert isinstance(result.get("report_paths"), dict)
 

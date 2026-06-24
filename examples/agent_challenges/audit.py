@@ -317,14 +317,13 @@ def save_v2_manual_audit(
             f"got {harness_version!r}"
         )
 
-    workspace_path_str = result.get("workspace_path")
-    if not isinstance(workspace_path_str, str) or not workspace_path_str:
-        raise ValueError("result is missing workspace_path")
-    workspace_path = Path(workspace_path_str)
-
     result_path_str = result.get("result_path")
     if not isinstance(result_path_str, str) or not result_path_str:
         raise ValueError("result is missing result_path")
+    if Path(result_path_str).resolve() != result_path.resolve():
+        raise ValueError("result_path field does not match audited result file")
+    workspace_path = _trusted_workspace_for_result(result_path, result)
+    workspace_path_str = str(workspace_path)
 
     audit_payload: dict[str, object] = {
         "manual_audit": {
@@ -371,3 +370,23 @@ def save_v2_manual_audit(
         machine=machine_path,
         results_markdown=results_markdown_path,
     )
+
+
+def _trusted_workspace_for_result(result_path: Path, result: dict[str, object]) -> Path:
+    """Resolve the audited workspace without trusting arbitrary JSON paths."""
+    resolved_result = result_path.resolve()
+    challenge_root = resolved_result.parent.parent
+    if resolved_result.parent.name == "results":
+        sibling_workspace = (
+            challenge_root / "workspaces" / resolved_result.with_suffix("").name
+        ).resolve()
+        if sibling_workspace.exists():
+            return sibling_workspace
+
+    workspace_path_str = result.get("workspace_path")
+    if not isinstance(workspace_path_str, str) or not workspace_path_str:
+        raise ValueError("result is missing workspace_path")
+    workspace_path = Path(workspace_path_str).resolve()
+    if not workspace_path.is_relative_to(challenge_root.resolve()):
+        raise ValueError("workspace_path escapes audited challenge directory")
+    return workspace_path

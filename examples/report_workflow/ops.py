@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from wf_authoring import node
 
@@ -10,6 +10,10 @@ _EXAMPLE_DIR = Path(__file__).resolve().parent
 
 
 class ReadInput(BaseModel):
+    model_config = ConfigDict(
+        json_schema_extra={"oneOf": [{"required": ["text"]}, {"required": ["path"]}]}
+    )
+
     text: str | None = Field(
         default=None,
         description=(
@@ -21,6 +25,12 @@ class ReadInput(BaseModel):
         default=None,
         description="Legacy path to a UTF-8 Markdown notes file inside the example.",
     )
+
+    @model_validator(mode="after")
+    def require_exactly_one_input(self) -> ReadInput:
+        if (self.text is None) == (self.path is None):
+            raise ValueError("read_notes requires exactly one of text or path")
+        return self
 
 
 class ReadOutput(BaseModel):
@@ -94,7 +104,7 @@ def _read_notes(payload: ReadInput) -> ReadOutput:
     if payload.text is not None:
         return ReadOutput(text=payload.text)
     if payload.path is None:
-        raise ValueError("read_notes requires either text or path")
+        raise ValueError("read_notes requires exactly one of text or path")
     path = _resolve_example_path(payload.path)
     return ReadOutput(text=path.read_text(encoding="utf-8"))
 

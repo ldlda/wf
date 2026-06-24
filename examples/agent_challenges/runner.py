@@ -482,6 +482,7 @@ def run_v2_trial(
             task_outcome = "failed"
     except subprocess.TimeoutExpired as exc:
         duration_seconds = time.monotonic() - started
+        returncode = -1
         stdout = (
             exc.stdout
             if isinstance(exc.stdout, str)
@@ -499,7 +500,8 @@ def run_v2_trial(
         task_outcome = "timeout"
     except Exception as exc:
         duration_seconds = time.monotonic() - started
-        task_outcome = "parse_error"
+        returncode = -2
+        task_outcome = "runner_error"
         parse_error = {
             "type": type(exc).__name__,
             "message": str(exc),

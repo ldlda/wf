@@ -25,6 +25,10 @@ def schema_command(
 ) -> None:
     """Print a compact workflow schema outline or full JSON Schema."""
     if name is None or name == "list":
+        if verbose:
+            raise typer.BadParameter(
+                "--verbose requires a schema name", param_hint="NAME"
+            )
         emit_json(schema_catalog_payload())
         return
     try:

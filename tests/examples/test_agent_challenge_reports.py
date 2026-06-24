@@ -138,6 +138,46 @@ def test_command_brief_supports_filepath(tmp_path: Path) -> None:
     assert cmd["detail"].endswith("app.py")
 
 
+def test_command_brief_supports_cmd_and_pattern(tmp_path: Path) -> None:
+    from examples.agent_challenges.report_models import build_trial_report
+
+    result = _raw_result(tmp_path)
+    metrics = result.get("metrics", {})
+    if isinstance(metrics, dict):
+        metrics["tool_calls"] = [
+            {
+                "ordinal": 1,
+                "call_id": "c3",
+                "tool": "grep",
+                "status": "success",
+                "title": "Search files",
+                "input": {"pattern": "*.json"},
+                "metadata": {},
+                "output_chars": 100,
+                "output_preview": "content",
+                "output_sha256": "xyz",
+                "failed": False,
+            },
+            {
+                "ordinal": 2,
+                "call_id": "c4",
+                "tool": "shell",
+                "status": "success",
+                "title": "Run command",
+                "input": {"cmd": "uv run wf status"},
+                "metadata": {},
+                "output_chars": 100,
+                "output_preview": "content",
+                "output_sha256": "xyz",
+                "failed": False,
+            },
+        ]
+
+    payload = build_trial_report(result, audit=None).model_dump(mode="json")
+    assert payload["commands_and_tools"][0]["detail"] == "*.json"
+    assert payload["commands_and_tools"][1]["detail"] == "uv run wf status"
+
+
 def test_markdown_projection_has_stable_headings(tmp_path: Path) -> None:
     from examples.agent_challenges.report_models import build_trial_report
     from examples.agent_challenges.reports import render_trial_report_markdown
@@ -224,7 +264,7 @@ def test_projections_write_both_files(tmp_path: Path) -> None:
     assert machine_content["schema_version"] == 1
     assert machine_content["manual_audit"]["status"] == "pending"
 
-    assert list(tmp_path.iterdir()) == [markdown_path, machine_path]
+    assert set(tmp_path.iterdir()) == {markdown_path, machine_path}
 
 
 def test_projections_exclude_raw_outputs(tmp_path: Path) -> None:
@@ -338,6 +378,30 @@ def test_manual_audit_invalid_outcome_raises_and_preserves_projections(
     assert md_path.read_bytes() == md_before
     assert machine_path.read_bytes() == machine_before
     assert results_md_path.read_bytes() == results_md_before
+
+
+def test_manual_audit_rejects_mismatched_result_path(tmp_path: Path) -> None:
+    from examples.agent_challenges.audit import save_v2_manual_audit
+
+    result_path = _write_v2_result(tmp_path)
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    payload["result_path"] = str(tmp_path / "results" / "other.json")
+    result_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="result_path field"):
+        save_v2_manual_audit(result_path, official_outcome="pass")
+
+
+def test_manual_audit_rejects_workspace_escape(tmp_path: Path) -> None:
+    from examples.agent_challenges.audit import save_v2_manual_audit
+
+    result_path = _write_v2_result(tmp_path)
+    payload = json.loads(result_path.read_text(encoding="utf-8"))
+    payload["workspace_path"] = str(tmp_path.parent / "outside")
+    result_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="workspace_path escapes"):
+        save_v2_manual_audit(result_path, official_outcome="pass")
 
 
 def test_trial_report_bounds_agent_self_report_payload(tmp_path: Path) -> None:
