@@ -186,6 +186,22 @@ disqualifying evidence is found. Use `fail` when the task was not completed.
 Use `invalid` when the workflow ran but the evaluation is contaminated,
 bypassed, or otherwise not usable as clean benchmark evidence.
 
+## Summarize Audited Results
+
+After manual audits, generate a compact matrix table from the bounded report
+projections:
+
+```powershell
+uv run python examples/agent_challenges/summarize_trials.py `
+  examples/agent_challenges/browser_click_challenge `
+  examples/agent_challenges/report_workflow_challenge
+```
+
+The table uses `manual_audit.official_outcome` when present, while keeping the
+automatic task outcome, policy validity, duration, token count, attempt count,
+and read flags visible. Use it as a working operator summary, not as a
+statistical claim by itself.
+
 ## Common Invalid Patterns
 
 Mark the trial invalid or at least contaminated when any of these happen:

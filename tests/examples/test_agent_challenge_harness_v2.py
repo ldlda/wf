@@ -447,9 +447,14 @@ def test_policy_evidence_classifies_reads(tmp_path: Path) -> None:
         )
 
     source_read = _tc("read", str(repository_root / "src" / "app.py"))
+    repository_index_read = _tc("read", str(repository_root))
     skills_read = _tc(
         "read",
         str(workspace_root / ".agent" / "skills" / "wf-cli" / "SKILL.md"),
+    )
+    canonical_skills_read = _tc(
+        "read",
+        str(repository_root / "skills" / "wf-cli" / "SKILL.md"),
     )
     workspace_read = _tc("read", str(workspace_root / "attempt.md"))
     test_read = _tc("read", str(repository_root / "tests" / "test_app.py"))
@@ -464,19 +469,58 @@ def test_policy_evidence_classifies_reads(tmp_path: Path) -> None:
     assert none_policy.validity.value == "contaminated"
     assert any("app.py" in p for p in none_policy.disallowed_reads)
 
+    none_skills_policy = evaluate_policy(
+        "none",
+        [repository_index_read, canonical_skills_read],
+        workspace_root=workspace_root,
+        repository_root=repository_root,
+        workspaces_root=workspaces_root,
+    )
+    assert none_skills_policy.validity.value == "contaminated"
+
+    skills_only_policy = evaluate_policy(
+        "skills",
+        [workspace_read, repository_index_read, skills_read, canonical_skills_read],
+        workspace_root=workspace_root,
+        repository_root=repository_root,
+        workspaces_root=workspaces_root,
+    )
+    assert skills_only_policy.validity.value == "clean"
+    assert not skills_only_policy.escalated_to_product_code
+
     skills_policy = evaluate_policy(
         "skills",
-        [workspace_read, skills_read, source_read, test_read],
+        [
+            workspace_read,
+            repository_index_read,
+            skills_read,
+            canonical_skills_read,
+            source_read,
+            test_read,
+        ],
         workspace_root=workspace_root,
         repository_root=repository_root,
         workspaces_root=workspaces_root,
     )
     assert skills_policy.validity.value == "contaminated"
     assert not skills_policy.escalated_to_product_code
+    assert skills_policy.reads_by_category["repository_index"] == (
+        str(repository_root),
+    )
+    assert str(repository_root / "skills" / "wf-cli" / "SKILL.md") not in (
+        skills_policy.disallowed_reads
+    )
 
     all_policy = evaluate_policy(
         "all",
-        [workspace_read, skills_read, source_read, test_read],
+        [
+            workspace_read,
+            repository_index_read,
+            skills_read,
+            canonical_skills_read,
+            source_read,
+            test_read,
+        ],
         workspace_root=workspace_root,
         repository_root=repository_root,
         workspaces_root=workspaces_root,
@@ -915,6 +959,9 @@ def test_v2_runner_default_timeout_and_workspace_cwd(tmp_path: Path) -> None:
 
     assert captured["timeout"] == 3600
     assert isinstance(captured["cwd"], str)
+    command = captured["command"]
+    assert isinstance(command, list)
+    assert command[command.index("--title") + 1] == "fixture test-model none 001"
     assert result["instruction_profile"] == "none"
     assert "prompt_hashes" in result
     assert "metrics" in result
@@ -931,6 +978,29 @@ def test_safe_model_name_replaces_windows_path_separators() -> None:
     assert "/" not in safe
     assert ":" not in safe
     assert ".." not in safe
+
+
+def test_opencode_trial_title_uses_short_matrix_labels() -> None:
+    from examples.agent_challenges.runner import _opencode_trial_title
+
+    assert (
+        _opencode_trial_title(
+            challenge_id="browser_click",
+            model="opencode/deepseek-v4-flash-free",
+            profile="skills",
+            index=4,
+        )
+        == "browser deepseek skills 004"
+    )
+    assert (
+        _opencode_trial_title(
+            challenge_id="report_workflow",
+            model="opencode/nemotron-3-ultra-free",
+            profile="all",
+            index=12,
+        )
+        == "report nemotron all 012"
+    )
 
 
 def test_instruction_bundle_rejects_path_traversal(tmp_path: Path) -> None:

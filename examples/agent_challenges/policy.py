@@ -101,8 +101,12 @@ def _classify_path(
     if p.is_relative_to(repository):
         rel = p.relative_to(repository)
         parts = rel.parts
+        if not parts:
+            return "repository_index"
         if parts and parts[0] == ".wf_store":
             return "prior_store"
+        if parts and parts[0] in (".agent", "skills"):
+            return "supplied_skills"
         if parts and parts[0] == "tests":
             return "tests"
         if parts and parts[0] == "src":
@@ -175,6 +179,7 @@ def evaluate_policy(
     reads_by_category: dict[str, list[str]] = {}
     escalated_to_product_code = False
     allowed_skills_categories = {
+        "repository_index",
         "workspace",
         "supplied_skills",
         "search_intent",

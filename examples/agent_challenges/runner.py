@@ -40,6 +40,19 @@ from examples.agent_challenges.workspace import (  # noqa: E402
 )
 
 
+def _opencode_trial_title(
+    *, challenge_id: str, model: str, profile: str, index: int
+) -> str:
+    """Build a compact OpenCode session title for crowded trial matrices."""
+    challenge_name = {
+        "browser_click": "browser",
+        "report_workflow": "report",
+    }.get(challenge_id, challenge_id)
+    model_name = model.rsplit("/", 1)[-1].replace("-v4-flash-free", "")
+    model_name = model_name.replace("-v2.5-free", "").replace("-3-ultra-free", "")
+    return f"{challenge_name} {model_name} {profile} {index:03d}"
+
+
 @dataclass(slots=True)
 class ManagedServer:
     process: subprocess.Popen[str]
@@ -449,6 +462,13 @@ def run_v2_trial(
     command.extend(
         [
             rendered.text,
+            "--title",
+            _opencode_trial_title(
+                challenge_id=challenge.manifest.id,
+                model=model,
+                profile=profile.value,
+                index=index,
+            ),
             "--format",
             "json",
             "--model",

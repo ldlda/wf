@@ -233,6 +233,9 @@ stable.
   execution, instruction profiles, manual audit, and the distinction between
   evaluation validity and policy coverage:
   [`agent challenge evaluation`](runbooks/agent-challenge-evaluation.md).
+- Completed: challenge matrix operations now have compact OpenCode thread
+  titles, policy handling for canonical skill-document reads, and a central
+  `summarize_trials.py` command for audited result tables.
 
 ## Historical References
 
