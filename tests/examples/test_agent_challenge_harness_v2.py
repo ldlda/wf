@@ -494,6 +494,47 @@ def test_policy_evidence_classifies_reads(tmp_path: Path) -> None:
     assert wf_policy.opaque_shell_commands == ()
 
 
+def test_policy_classifies_sibling_workspace_solution_reads(tmp_path: Path) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    workspace_root = tmp_path / "workspaces" / "trial-002"
+    workspace_root.mkdir(parents=True)
+    repository_root = tmp_path / "repo"
+    repository_root.mkdir()
+    workspaces_root = tmp_path / "workspaces"
+    solution_path = workspaces_root / "trial-001" / "workflow.plan.json"
+    notes_path = workspaces_root / "trial-001" / "notes.txt"
+
+    def _read(path: Path) -> ToolCallEvidence:
+        return ToolCallEvidence(
+            ordinal=1,
+            call_id="c1",
+            tool="read",
+            status="success",
+            title="read",
+            input={"path": str(path)},
+            metadata={},
+            output_chars=100,
+            output_preview="",
+            output_sha256="abc",
+            failed=False,
+        )
+
+    policy = evaluate_policy(
+        "all",
+        [_read(solution_path), _read(notes_path)],
+        workspace_root=workspace_root,
+        repository_root=repository_root,
+        workspaces_root=workspaces_root,
+    )
+
+    assert policy.validity.value == "contaminated"
+    assert policy.disallowed_reads == (str(solution_path),)
+    assert policy.reads_by_category["existing_solution"] == (str(solution_path),)
+    assert policy.reads_by_category["adjacent_attempts"] == (str(notes_path),)
+
+
 def test_policy_reads_real_filepath_input(tmp_path: Path) -> None:
     from examples.agent_challenges.metrics import ToolCallEvidence
     from examples.agent_challenges.policy import evaluate_policy
@@ -1376,14 +1417,17 @@ def test_runner_to_report_success(tmp_path: Path) -> None:
     assert isinstance(result["result_path"], str)
     assert isinstance(result["report_paths"], dict)
     assert "markdown" in result["report_paths"]
+    assert "results_markdown" in result["report_paths"]
     assert "machine" in result["report_paths"]
 
     raw_path = Path(result["result_path"])
     md_path = Path(result["report_paths"]["markdown"])
+    results_md_path = Path(result["report_paths"]["results_markdown"])
     machine_path = Path(result["report_paths"]["machine"])
 
     assert raw_path.is_file()
     assert md_path.is_file()
+    assert results_md_path.is_file()
     assert machine_path.is_file()
 
     machine = json.loads(machine_path.read_text(encoding="utf-8"))
@@ -1391,6 +1435,7 @@ def test_runner_to_report_success(tmp_path: Path) -> None:
 
     md = md_path.read_text(encoding="utf-8")
     assert agent_answer in md
+    assert results_md_path.read_text(encoding="utf-8") == md
 
 
 def test_runner_to_report_timeout(tmp_path: Path) -> None:

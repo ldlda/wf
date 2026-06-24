@@ -154,6 +154,38 @@ def test_wrapper_hints_mark_nested_outputs_as_low_confidence() -> None:
     assert dumped["output_map"] == {"results": "state.results"}
 
 
+def test_wrapper_hints_preserve_local_defs_for_mapped_output_refs() -> None:
+    hints = wrapper_hints_for_capability(
+        capability_name="local.browser_click.open_click_page",
+        input_schema={"type": "object", "properties": {}},
+        output_schema={
+            "type": "object",
+            "$defs": {
+                "Snapshot": {
+                    "type": "object",
+                    "properties": {"clicked": {"type": "boolean"}},
+                }
+            },
+            "properties": {
+                "before": {"$ref": "#/$defs/Snapshot"},
+                "session_id": {"type": "string"},
+            },
+            "required": ["before", "session_id"],
+        },
+        outcomes=["ok"],
+    )
+
+    dumped = hints.model_dump(mode="json")
+
+    assert dumped["state_schema"]["properties"]["before"] == {
+        "$ref": "#/$defs/Snapshot"
+    }
+    assert dumped["state_schema"]["$defs"]["Snapshot"]["properties"]["clicked"] == {
+        "type": "boolean"
+    }
+    assert dumped["output_schema"]["$defs"] == dumped["state_schema"]["$defs"]
+
+
 def test_wrapper_hints_do_not_auto_map_raw_mcp_content_blocks() -> None:
     hints = wrapper_hints_for_capability(
         capability_name="everything.default.echo",

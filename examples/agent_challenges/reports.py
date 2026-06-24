@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -362,6 +363,7 @@ def write_trial_report_projections(
     *,
     markdown_path: Path,
     machine_path: Path,
+    extra_markdown_paths: Sequence[Path] = (),
 ) -> TrialReportPaths:
     machine = (
         json.dumps(report.model_dump(mode="json"), indent=2, sort_keys=True) + "\n"
@@ -369,4 +371,6 @@ def write_trial_report_projections(
     markdown = render_trial_report_markdown(report).rstrip() + "\n"
     _atomic_write_text(machine_path, machine)
     _atomic_write_text(markdown_path, markdown)
+    for extra_path in extra_markdown_paths:
+        _atomic_write_text(extra_path, markdown)
     return TrialReportPaths(markdown=markdown_path, machine=machine_path)

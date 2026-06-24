@@ -396,6 +396,28 @@ def test_example_read_does_not_create_discrepancy(tmp_path: Path) -> None:
     assert any("example file(s)" in n for n in report.follow_up_notes)
 
 
+def test_existing_solution_read_creates_discrepancy(tmp_path: Path) -> None:
+    from examples.agent_challenges.report_models import build_trial_report
+
+    result = _raw_result(tmp_path)
+    policy = result.get("policy", {})
+    if isinstance(policy, dict):
+        policy["reads_by_category"] = {
+            "existing_solution": [
+                str(tmp_path / "workspaces" / "trial-001" / "workflow.plan.json")
+            ],
+        }
+    result["challenge_report"] = {
+        "run_failed": False,
+        "read": {"existing_solution": False},
+    }
+
+    report = build_trial_report(result, audit=None)
+
+    assert any("read.existing_solution" in d for d in report.self_report_discrepancies)
+    assert any("existing solution" in n for n in report.follow_up_notes)
+
+
 def _policy_mut(result: dict[str, object]) -> dict[str, object]:
     p = result.get("policy", {})
     if not isinstance(p, dict):

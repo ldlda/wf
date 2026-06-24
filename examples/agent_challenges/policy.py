@@ -32,6 +32,31 @@ class PolicyEvidence:
     reads_by_category: dict[str, tuple[str, ...]]
 
 
+SOLUTION_FILE_NAMES = {
+    "final-report.md",
+    "workflow.plan.json",
+}
+SOLUTION_FILE_SUFFIXES = (
+    ".plan.json",
+    ".report.json",
+    ".report.md",
+)
+SOLUTION_FILE_PREFIXES = ("patch",)
+
+
+def _looks_like_solution_artifact(path: Path) -> bool:
+    """Return true for prior-trial files likely to contain a full answer."""
+    name = path.name
+    return (
+        name in SOLUTION_FILE_NAMES
+        or name.endswith(SOLUTION_FILE_SUFFIXES)
+        or any(
+            name.startswith(prefix) and name.endswith(".json")
+            for prefix in SOLUTION_FILE_PREFIXES
+        )
+    )
+
+
 def _classify_path(
     path_str: str,
     *,
@@ -64,6 +89,8 @@ def _classify_path(
         return "workspace"
 
     if p.is_relative_to(workspaces):
+        if _looks_like_solution_artifact(p):
+            return "existing_solution"
         return "adjacent_attempts"
 
     if p.is_relative_to(repository):
@@ -161,7 +188,9 @@ def evaluate_policy(
             )
             reads_by_category.setdefault(category, []).append(path_str)
 
-            if profile == InstructionProfile.NONE:
+            if category == "existing_solution":
+                disallowed_reads.append(path_str)
+            elif profile == InstructionProfile.NONE:
                 if category not in ("workspace", "unknown"):
                     disallowed_reads.append(path_str)
             elif profile == InstructionProfile.SKILLS:

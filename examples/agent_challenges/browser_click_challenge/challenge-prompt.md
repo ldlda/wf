@@ -11,6 +11,15 @@ Discover the `local.browser_click` source capabilities through `wf cap list`,
 `wf cap inspect`, and `wf schema`. Repository implementation inspection is
 profile-controlled; do not read source files unless your profile permits it.
 
+The writable trial workspace includes a safe fixture input file:
+
+- `run-input.json` -- run input with `button_label`, `open_browser`,
+  `simulate`, and `timeout_seconds`.
+
+You may use `run-input.json` with `wf run start --input-file`. Do not inspect
+source implementation files to learn input behavior. Use `wf cap inspect` for
+node contracts.
+
 ## Workflow Authoring Paths
 
 Two product-facing authoring paths are acceptable:

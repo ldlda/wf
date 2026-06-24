@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from copy import deepcopy
 from enum import StrEnum
 from typing import Any
 
@@ -110,12 +111,12 @@ def wrapper_hints_for_capability(
         output_schema, output_properties
     )
     output_map = {name: f"state.{name}" for name in sorted(output_map_properties)}
-    mapped_output_schema = {
-        "type": "object",
-        "properties": {
+    mapped_output_schema = _schema_with_local_definitions(
+        output_schema,
+        properties={
             name: schema for name, schema in sorted(output_map_properties.items())
         },
-    }
+    )
     # The minimal wrapper stores mapped outputs in state and returns the same
     # fields. Split this later only when wrappers support separate return shape.
     state_schema = mapped_output_schema
@@ -175,7 +176,10 @@ def workflow_output_schema_for_authoring(output_schema: JsonObject) -> JsonObjec
     ``content[0].text`` or handle resources/images, but the authoring surface
     must not invent that decision as a top-level schema field.
     """
-    return {"type": "object", "properties": _object_properties(output_schema)}
+    return _schema_with_local_definitions(
+        output_schema,
+        properties=_object_properties(output_schema),
+    )
 
 
 def _object_properties(schema: JsonObject) -> dict[str, JsonObject]:
@@ -184,10 +188,33 @@ def _object_properties(schema: JsonObject) -> dict[str, JsonObject]:
     if not isinstance(properties, dict):
         return {}
     return {
-        str(name): value
+        str(name): deepcopy(value)
         for name, value in properties.items()
         if isinstance(value, dict)
     }
+
+
+def _schema_with_local_definitions(
+    schema: JsonObject,
+    *,
+    properties: dict[str, JsonObject],
+) -> JsonObject:
+    """Build an object schema while preserving local reusable definitions.
+
+    Capability schemas commonly use refs such as ``{"$ref":
+    "#/$defs/Snapshot"}``. Wrapper hints project selected top-level fields into
+    workflow state/output schemas, but those refs become invalid unless the
+    local definition block is copied with them.
+    """
+    projected: JsonObject = {
+        "type": "object",
+        "properties": deepcopy(properties),
+    }
+    for definition_key in ("$defs", "definitions"):
+        definitions = schema.get(definition_key)
+        if isinstance(definitions, dict):
+            projected[definition_key] = deepcopy(definitions)
+    return projected
 
 
 def _has_raw_mcp_content(schema: JsonObject) -> bool:

@@ -1087,6 +1087,16 @@ def test_browser_click_workspace_uses_generic_profile_copy(tmp_path: Path) -> No
 
     assert workspace.config_path.is_file()
     assert (workspace.root / ".agent/skills/wf-cli/SKILL.md").is_file()
+    run_input = json.loads((workspace.root / "run-input.json").read_text())
+    assert run_input == {
+        "button_label": "Launch Workflow",
+        "open_browser": False,
+        "simulate": True,
+        "timeout_seconds": 2,
+    }
+    assert "safe fixture inputs" in (workspace.root / "TASK_FILES.md").read_text(
+        encoding="utf-8"
+    )
 
 
 def test_central_runner_accepts_browser_challenge() -> None:

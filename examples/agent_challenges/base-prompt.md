@@ -15,6 +15,11 @@ Your writable trial workspace is `{{workspace_path}}`. Write attempt files only
 inside it. End with the challenge's requested YAML self-report. The self-report
 will be checked against observed tool calls and manually audited.
 
+Do not read files under other `workspaces/*` trial directories. Prior trial
+workspaces may contain complete answers. If you do read another trial workspace,
+report `read.adjacent_attempts: true`; if the file is a workflow plan, patch, or
+report for this challenge, also report `read.existing_solution: true`.
+
 Files under `tests/` and `examples/` may contain complete or partial solutions.
 If you inspect them, report `read.product_code: true`; also report
 `read.existing_solution: true` when they provide a ready-made solution, or

@@ -1,2 +1,5 @@
 .wf_browser_click_store/
-
+*
+!.gitignore
+!run-input.json
+!TASK_FILES.md

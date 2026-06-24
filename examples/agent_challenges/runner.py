@@ -588,8 +588,10 @@ def run_v2_trial(
 
     markdown_path = workspace.root / "final-report.md"
     machine_report_path = result_path.with_suffix(".report.json")
+    results_markdown_path = result_path.with_suffix(".report.md")
     report_paths = {
         "markdown": str(markdown_path.resolve()),
+        "results_markdown": str(results_markdown_path.resolve()),
         "machine": str(machine_report_path.resolve()),
     }
 
@@ -657,6 +659,7 @@ def run_v2_trial(
             trial_report,
             markdown_path=markdown_path,
             machine_path=machine_report_path,
+            extra_markdown_paths=[results_markdown_path],
         )
     except Exception as exc:
         report_generation_error = str(exc)
