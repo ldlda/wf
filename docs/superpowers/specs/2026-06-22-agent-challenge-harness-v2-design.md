@@ -100,7 +100,7 @@ Challenge directories become data-only:
 ```text
 examples/agent_challenges/
   run_trials.py
-  extract_metrics.py
+  metrics.py
   save_trial_report.py
   save_manual_audit.py
   base-prompt.md

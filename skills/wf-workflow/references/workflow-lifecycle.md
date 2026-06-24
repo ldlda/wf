@@ -6,7 +6,7 @@ validated, runnable deployment.
 ## Primary Path
 
 1. List sources.
-   - CLI: `wf cap list --format ids`
+   - CLI: `wf source list`
 2. List workflow capabilities.
    - CLI: `wf cap list`
 3. Inspect one capability.
@@ -18,10 +18,12 @@ validated, runnable deployment.
      for common edits.
    - Use JSON Patch only for general structural edits.
 6. Save an artifact.
-   - Draft artifact: `wf draft save`
-   - Complete raw plan: `wf artifact create-from-plan`
+   - Draft artifact:
+     `wf draft save <workspace_id> --artifact <artifact_id> --version 1 --title "Workflow Title"`
+   - Complete raw plan:
+     `wf artifact create-from-plan workflow.plan.json --artifact <artifact_id> --version 1 --title "Workflow Title" --outcome ok`
 7. Save and validate a deployment.
-   - `wf deploy save` (or `wf deploy create` alias)
+   - `wf deploy save <deployment_id> --artifact <artifact_id> --version 1 --binding <logical_source>=<concrete_source>` (or `wf deploy create` alias)
 8. Run the deployment.
 9. Inspect the run summary first; read bounded traces only when needed.
 

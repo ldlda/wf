@@ -7,6 +7,8 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+import yaml
+
 from examples.agent_challenges.classification import extract_challenge_report
 from examples.agent_challenges.opencode_io import parse_opencode_output, result_text
 from examples.agent_challenges.report_models import TrialReport
@@ -245,8 +247,13 @@ def render_trial_report_markdown(report: TrialReport) -> str:
     lines.append("")
     if report.agent_self_report is not None:
         lines.append("```yaml")
-        for key, value in report.agent_self_report.items():
-            lines.append(f"{key}: {value}")
+        lines.append(
+            yaml.safe_dump(
+                report.agent_self_report,
+                sort_keys=False,
+                allow_unicode=True,
+            ).rstrip()
+        )
         lines.append("```")
     else:
         lines.append("No agent self-report captured.")

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from examples.agent_challenges.manifests import load_challenge_manifest
@@ -61,7 +62,12 @@ def test_report_challenge_workspace_template_contains_safe_input_files(
         .read_text(encoding="utf-8")
         .startswith("# Weekly Project Update")
     )
-    assert '"text"' in (workspace.root / "run-input.json").read_text(encoding="utf-8")
+    run_input = json.loads(
+        (workspace.root / "run-input.json").read_text(encoding="utf-8")
+    )
+    assert isinstance(run_input, dict)
+    assert isinstance(run_input.get("text"), str)
+    assert "path" not in run_input
     assert "not workflow solutions" in (workspace.root / "TASK_FILES.md").read_text(
         encoding="utf-8"
     )

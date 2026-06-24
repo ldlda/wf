@@ -156,7 +156,9 @@ def _compact_node(schema: object, related: set[str]) -> object:
         branches = schema.get(source_key)
         if not isinstance(branches, list):
             continue
-        result["one_of"] = [_compact_node(branch, related) for branch in branches]
+        result["one_of" if source_key == "oneOf" else "any_of"] = [
+            _compact_node(branch, related) for branch in branches
+        ]
         break
     discriminator = schema.get("discriminator")
     if isinstance(discriminator, dict) and isinstance(

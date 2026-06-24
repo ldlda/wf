@@ -48,11 +48,13 @@ def main(argv: list[str] | None = None) -> int:
     if _is_v2_result(result_path):
         if args.from_report is not None:
             parser.error("--from-report is not supported for V2 results")
-        read_overrides = dict(_parse_bool_assignment(item) for item in args.set_read)
-        evidence_overrides = dict(
-            _parse_value_assignment(item) for item in args.set_evidence
-        )
         try:
+            read_overrides = dict(
+                _parse_bool_assignment(item) for item in args.set_read
+            )
+            evidence_overrides = dict(
+                _parse_value_assignment(item) for item in args.set_evidence
+            )
             paths = save_v2_manual_audit(
                 result_path,
                 official_outcome=args.manual_classification,
@@ -69,6 +71,11 @@ def main(argv: list[str] | None = None) -> int:
                         "audit": paths.audit.as_posix(),
                         "markdown": paths.markdown.as_posix(),
                         "machine": paths.machine.as_posix(),
+                        "results_markdown": (
+                            paths.results_markdown.as_posix()
+                            if paths.results_markdown is not None
+                            else None
+                        ),
                     }
                 )
             )

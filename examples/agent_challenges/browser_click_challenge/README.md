@@ -47,15 +47,15 @@ The hard timeout ceiling is 3,600 seconds per trial.
 
 ## Default Behavior
 
-By default the harness does not start a `wf-rpc-server`. It prompts agents to
-use a per-trial configured local CLI path. Use `--start-server` when the trial
-should exercise the JSON-RPC server path.
+The V2 harness does not start a `wf-rpc-server`. It prompts agents to use a
+per-trial configured local CLI path.
 
 ## Workspace Layout
 
 - `workspace_template/` contains files copied into each isolated trial workspace.
 - `workspaces/` holds per-trial workspaces (gitignored).
-- `results/` holds per-trial result JSON files (gitignored).
+- `results/` holds per-trial raw result JSON and report projections
+  (gitignored).
 - `challenge.yaml` declares the manifest, source, server, and report schema.
 - `challenge-prompt.md` contains the task-specific prompt.
 

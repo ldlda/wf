@@ -142,7 +142,9 @@ def test_markdown_projection_has_stable_headings(tmp_path: Path) -> None:
     from examples.agent_challenges.report_models import build_trial_report
     from examples.agent_challenges.reports import render_trial_report_markdown
 
-    report = build_trial_report(_raw_result(tmp_path), audit=None)
+    result = _raw_result(tmp_path)
+    result["challenge_report"] = {"run_failed": False, "notes": "ok"}
+    report = build_trial_report(result, audit=None)
     md = render_trial_report_markdown(report)
 
     expected_headings = [
@@ -163,6 +165,8 @@ def test_markdown_projection_has_stable_headings(tmp_path: Path) -> None:
     assert "The deployment succeeded" in md
     assert "large raw stream" not in md
     assert "full tool output" not in md
+    assert "```yaml\n" in md
+    assert "run_failed: false" in md
 
 
 def test_markdown_command_items_indent_by_marker_width(tmp_path: Path) -> None:
@@ -292,6 +296,8 @@ def test_manual_audit_regenerates_projections(tmp_path: Path) -> None:
     assert paths.audit.is_file()
     assert paths.markdown.is_file()
     assert paths.machine.is_file()
+    assert paths.results_markdown is not None
+    assert paths.results_markdown.is_file()
 
     audit_yaml = paths.audit.read_text(encoding="utf-8")
     assert "official_outcome: pass" in audit_yaml
@@ -300,6 +306,7 @@ def test_manual_audit_regenerates_projections(tmp_path: Path) -> None:
     md = paths.markdown.read_text(encoding="utf-8")
     assert "Official outcome: pass" in md
     assert "Agent inspected a ready-made workflow plan." in md
+    assert paths.results_markdown.read_text(encoding="utf-8") == md
 
     machine = json.loads(paths.machine.read_text(encoding="utf-8"))
     assert machine["manual_audit"]["official_outcome"] == "pass"
@@ -314,9 +321,12 @@ def test_manual_audit_invalid_outcome_raises_and_preserves_projections(
     result_path = _write_v2_result_with_projections(tmp_path)
     md_path = tmp_path / "final-report.md"
     machine_path = tmp_path / "results" / "trial.report.json"
+    results_md_path = tmp_path / "results" / "trial.report.md"
+    results_md_path.write_text("existing report markdown\n", encoding="utf-8")
 
     md_before = md_path.read_bytes()
     machine_before = machine_path.read_bytes()
+    results_md_before = results_md_path.read_bytes()
 
     with pytest.raises(ValueError, match="official_outcome"):
         save_v2_manual_audit(
@@ -327,6 +337,24 @@ def test_manual_audit_invalid_outcome_raises_and_preserves_projections(
 
     assert md_path.read_bytes() == md_before
     assert machine_path.read_bytes() == machine_before
+    assert results_md_path.read_bytes() == results_md_before
+
+
+def test_trial_report_bounds_agent_self_report_payload(tmp_path: Path) -> None:
+    from examples.agent_challenges.report_models import build_trial_report
+
+    result = _raw_result(tmp_path)
+    result["challenge_report"] = {
+        "run_failed": False,
+        "notes": "x" * 10_000,
+        "nested": {"items": list(range(100))},
+    }
+
+    report = build_trial_report(result, audit=None)
+
+    assert report.agent_self_report is not None
+    assert len(report.agent_self_report["notes"]) == 2_000
+    assert len(report.agent_self_report["nested"]["items"]) == 50
 
 
 def test_discrepancy_detects_run_failed_contradiction(tmp_path: Path) -> None:

@@ -18,9 +18,11 @@ def test_big_doc_links_case_study_and_embeds_evidence_index() -> None:
     links = markdown_links(doc)
 
     assert any(link.startswith("../../examples/report_workflow") for link in links)
-    assert "Evidence Index" in doc
-    assert "Core Workflow Lifecycle" in doc
-    assert "Agent Challenge Evaluation Protocol" in doc
+    assert re.search(r"^# Evidence Index$", doc, flags=re.MULTILINE)
+    assert re.search(r"^## Core Workflow Lifecycle$", doc, flags=re.MULTILINE)
+    assert re.search(
+        r"^## Agent Challenge Evaluation Protocol$", doc, flags=re.MULTILINE
+    )
 
 
 def test_project_map_links_big_doc() -> None:

@@ -75,7 +75,9 @@ def server_command(*, port: int, config_arg: str) -> list[str]:
 
 
 def _safe_model_name(model: str) -> str:
-    return model.replace("/", "_").replace(":", "_")
+    return (
+        model.replace("/", "_").replace("\\", "_").replace(":", "_").replace("..", "_")
+    )
 
 
 def prepare_trial_workspace(
@@ -208,6 +210,7 @@ def _load_instruction_bundle(
     if not isinstance(loaded, dict) or not isinstance(loaded.get("files"), list):
         raise ValueError(f"invalid instruction bundle: {bundle_path}")
     entries: list[tuple[str, str]] = []
+    project_root = PROJECT_ROOT.resolve()
     for entry in loaded["files"]:
         if not isinstance(entry, dict):
             raise ValueError(f"invalid bundle entry: {entry}")
@@ -215,6 +218,19 @@ def _load_instruction_bundle(
         destination = entry.get("destination")
         if not isinstance(source, str) or not isinstance(destination, str):
             raise ValueError(f"bundle entry missing source/destination: {entry}")
+        source_path = Path(source)
+        destination_path = Path(destination)
+        if source_path.is_absolute() or destination_path.is_absolute():
+            raise ValueError(f"bundle paths must be relative: {entry}")
+        resolved_source = (project_root / source_path).resolve()
+        resolved_destination = (
+            project_root / ".agent" / "skills" / destination_path
+        ).resolve()
+        trusted_destination_root = (project_root / ".agent" / "skills").resolve()
+        if not resolved_source.is_relative_to(project_root):
+            raise ValueError(f"bundle source escapes project root: {source}")
+        if not resolved_destination.is_relative_to(trusted_destination_root):
+            raise ValueError(f"bundle destination escapes skill root: {destination}")
         entries.append((source, destination))
     return entries
 

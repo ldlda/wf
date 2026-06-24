@@ -207,10 +207,10 @@ stable.
 - Completed supplemental browser-click workflow example with serial multi-node lifecycle evidence.
 - Completed: an opencode browser-click challenge harness captures external
   agent trials against the deterministic browser-click workflow example without
-  changing product runtime code.
-- Next thesis/evaluation polish: treat `skills/`, runbooks, and challenge
-  prompt templates as the agent instruction layer. Strengthen them before
-  claiming aggregate agent-operability results, and track when trials rely on
+  changing product runtime code. The old staged-server modes were replaced by
+  per-trial local configs in the generic V2 harness.
+- Completed: `skills/`, runbooks, and challenge prompt templates are treated as
+  the agent instruction layer. Challenge reports now track when trials rely on
   product code, prior stores, adjacent attempts, or existing example solutions.
 - Completed: workflow/CLI agent instructions now form an explicit copyable
   bundle for controlled challenge profiles, use `wf schema` for public shape
@@ -225,6 +225,10 @@ stable.
   every V2 trial and regenerate both after audit without mutating raw evidence.
   Implementation:
   [`report projections`](historical/superpowers/plans/2026-06-23-agent-challenge-report-projections.md).
+- Completed: challenge trial collection now supports bounded concurrency through
+  `run_trials.py --concurrency` and a Python matrix runner,
+  `examples/agent_challenges/run_matrix.py`. The PowerShell matrix helper now
+  delegates to the Python runner.
 - Completed: shared agent challenge evaluation runbook documents trial
   execution, instruction profiles, manual audit, and the distinction between
   evaluation validity and policy coverage:

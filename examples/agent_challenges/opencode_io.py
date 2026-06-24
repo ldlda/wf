@@ -73,6 +73,15 @@ def opencode_text_results(stdout: str) -> list[dict[str, Any]]:
                     events.append({"text": event_text, "event": event})
         return events
 
+    if isinstance(parsed, list):
+        events = []
+        for event in parsed:
+            if not isinstance(event, dict):
+                continue
+            event_text = _event_text(event)
+            if event_text is not None:
+                events.append({"text": event_text, "event": event})
+        return events
     if not isinstance(parsed, dict):
         return []
     event_text = _event_text(parsed)

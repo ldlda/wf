@@ -44,7 +44,8 @@ The hard timeout ceiling is 3,600 seconds per trial.
 
 - `workspace_template/` holds local store ignore rules (gitignored contents).
 - `workspaces/` holds per-trial workspaces (gitignored).
-- `results/` holds per-trial result JSON files (gitignored).
+- `results/` holds per-trial raw result JSON and report projections
+  (gitignored).
 - `challenge.yaml` declares the manifest, source, server, and report schema.
 - `challenge-prompt.md` contains the task-specific prompt.
 

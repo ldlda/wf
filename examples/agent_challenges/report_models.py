@@ -93,6 +93,10 @@ class TrialReport(StrictReportModel):
 
 _MAX_FINAL_TEXT_CHARS = 8_000
 _MAX_COMMAND_DETAIL_CHARS = 1_000
+_MAX_SELF_REPORT_STRING_CHARS = 2_000
+_MAX_SELF_REPORT_LIST_ITEMS = 50
+_MAX_SELF_REPORT_DICT_ITEMS = 50
+_MAX_SELF_REPORT_DEPTH = 4
 
 
 def _build_identity(
@@ -243,7 +247,7 @@ def _build_trial_report(
     agent_self_report: dict[str, Any] | None = None
     challenge_report = result.get("challenge_report")
     if isinstance(challenge_report, dict):
-        agent_self_report = challenge_report
+        agent_self_report = _bounded_report_mapping(challenge_report)
 
     final_agent_answer: str | None = None
     parsed = result.get("parsed")
@@ -529,6 +533,46 @@ def _dict_str_bool(value: object) -> dict[str, bool]:
 
 def _dict_any(value: object) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
+
+
+def _bounded_report_mapping(value: dict[object, object]) -> dict[str, Any]:
+    """Project agent YAML to bounded JSON-like data for reports.
+
+    The raw challenge report is untrusted model output. Keep useful keys, but
+    cap strings, container sizes, and nesting so generated report projections
+    cannot balloon or carry arbitrary deep payloads.
+    """
+    bounded: dict[str, Any] = {}
+    for index, (key, item) in enumerate(value.items()):
+        if index >= _MAX_SELF_REPORT_DICT_ITEMS:
+            break
+        if not isinstance(key, str):
+            continue
+        bounded[key] = _bounded_report_value(item, depth=0)
+    return bounded
+
+
+def _bounded_report_value(value: object, *, depth: int) -> Any:
+    if depth >= _MAX_SELF_REPORT_DEPTH:
+        return _str(value)[:_MAX_SELF_REPORT_STRING_CHARS]
+    if isinstance(value, str):
+        return value[:_MAX_SELF_REPORT_STRING_CHARS]
+    if isinstance(value, bool | int | float) or value is None:
+        return value
+    if isinstance(value, (list, tuple)):
+        return [
+            _bounded_report_value(item, depth=depth + 1)
+            for item in value[:_MAX_SELF_REPORT_LIST_ITEMS]
+        ]
+    if isinstance(value, dict):
+        bounded: dict[str, Any] = {}
+        for index, (key, item) in enumerate(value.items()):
+            if index >= _MAX_SELF_REPORT_DICT_ITEMS:
+                break
+            if isinstance(key, str):
+                bounded[key] = _bounded_report_value(item, depth=depth + 1)
+        return bounded
+    return _str(value)[:_MAX_SELF_REPORT_STRING_CHARS]
 
 
 def _parse_errors(result: dict[str, object]) -> dict[str, dict[str, str]]:

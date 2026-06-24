@@ -11,20 +11,22 @@ commands, or product gaps.
 
 ## What The Harness Produces
 
-Each trial writes three kinds of evidence:
+Each trial writes four kinds of evidence:
 
 - Raw result JSON in the challenge `results/` directory. This is immutable raw
   evidence from the runner.
 - Machine report JSON beside the raw result, named `*.report.json`. This is the
   bounded projection for analysis.
+- Human report Markdown beside the raw result, named `*.report.md`. This is
+  useful for reviewing results after workspace cleanup.
 - Human report Markdown inside the trial workspace, named `final-report.md`.
   This is the file to read first during manual review.
 
 Manual audits add one more file:
 
 - `manual-audit.yaml` inside the trial workspace. Re-running the audit command
-  regenerates the human and machine report projections without mutating the raw
-  result JSON.
+  regenerates the workspace Markdown, result Markdown, and machine report
+  projections without mutating the raw result JSON.
 
 ## Run One Trial
 
@@ -56,6 +58,45 @@ uv run python examples/agent_challenges/run_trials.py `
 The runner prints summary JSON with the trial classification, result path, and
 report paths. Read the corresponding `final-report.md` before trusting the
 classification.
+
+Use bounded concurrency when collecting larger samples:
+
+```powershell
+uv run python examples/agent_challenges/run_trials.py `
+  --challenge examples/agent_challenges/report_workflow_challenge/challenge.yaml `
+  --instruction-profile skills `
+  --model opencode/deepseek-v4-flash-free `
+  --variant high `
+  --trials 5 `
+  --concurrency 2 `
+  --attach http://127.0.0.1:4096
+```
+
+`--trials 5 --concurrency 2` creates five unique trial workspaces and lets at
+most two OpenCode subprocesses run at once.
+
+## Run The Default Matrix
+
+The Python matrix runner expands the bundled challenges, instruction profiles,
+and default model set, then schedules them with one global concurrency limit:
+
+```powershell
+uv run python examples/agent_challenges/run_matrix.py `
+  --trials 5 `
+  --concurrency 2 `
+  --attach http://127.0.0.1:4096
+```
+
+The PowerShell helper is now only a convenience wrapper around the Python
+runner:
+
+```powershell
+.\examples\agent_challenges\run_matrix.ps1 -Trials 5 -Concurrency 2
+```
+
+Avoid treating high-concurrency runs as the same dataset as sequential runs.
+Large concurrency can measure provider queueing, OpenCode timeouts, and local
+machine contention rather than workflow UX.
 
 ## Instruction Profiles
 
@@ -140,10 +181,10 @@ uv run python examples/agent_challenges/save_manual_audit.py `
   --notes "Technical workflow run succeeded, but the trial is invalid because the agent inspected an existing solution."
 ```
 
-Use `--manual-classification valid` when the run satisfies the challenge and no
-disqualifying evidence is found. Use `invalid` when the workflow ran but the
-evaluation is contaminated or bypassed. Use another classification only when the
-challenge manifest or report schema explicitly defines it.
+Use `--manual-classification pass` when the run satisfies the challenge and no
+disqualifying evidence is found. Use `fail` when the task was not completed.
+Use `invalid` when the workflow ran but the evaluation is contaminated,
+bypassed, or otherwise not usable as clean benchmark evidence.
 
 ## Common Invalid Patterns
 
@@ -181,4 +222,3 @@ Avoid stronger claims until the matrix has enough audited trials:
 Use the challenge evidence as product-design feedback first. Treat aggregate
 model benchmarking as a later result once trial counts and audit rules are
 stable.
-

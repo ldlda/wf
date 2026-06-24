@@ -1142,7 +1142,7 @@ The evidence supporting the thesis claims includes:
 | Interrupted runs resume at explicit boundaries | `tests/wf_api/test_run_api.py` and resume-concurrency tests | Stopped run state is persisted and resumed through the run API | Pass in focused test suite |
 | Python source lifecycle works | `tests/examples/test_report_workflow_example.py` | Python capability -> artifact -> deployment -> run completes | Pass in focused test suite |
 | Serial multi-node workflow works | `tests/examples/test_browser_click_workflow_example.py` | `open_click_page` -> `wait_for_click` -> `collect_snapshots` completes with before/after evidence | Pass in focused test suite |
-| Agent challenge harness implementation exists; no aggregate agent-performance claim | `examples/agent_challenges/browser_click_challenge/` and Appendix C | The harness can prompt, classify, and support manual audit of browser-click workflow trials | Harness tests pass; aggregate model results pending |
+| Agent challenge harness implementation exists; no aggregate agent-performance claim | `examples/agent_challenges/browser_click_challenge/`, `examples/agent_challenges/report_workflow_challenge/`, and Appendix C | The shared harness can prompt, classify, collect tool/token evidence, and support manual audit across browser-click and report-workflow trials | Harness tests pass; aggregate model results pending |
 | CLI and JSON-RPC share the API surface | `tests/wf_transport_rpc_http/` and `tests/wf_cli/` | Transport and CLI delegate to the same workflow operations | Pass in focused test suite |
 
 The table summarizes repository evidence; it is not a substitute for rerunning

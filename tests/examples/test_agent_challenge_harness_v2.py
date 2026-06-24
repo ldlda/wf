@@ -381,6 +381,21 @@ def test_opencode_text_results_preserve_report_before_later_summary() -> None:
     ]
 
 
+def test_opencode_text_results_accept_json_array_output() -> None:
+    from examples.agent_challenges.opencode_io import opencode_text_results
+
+    stdout = json.dumps(
+        [
+            {"type": "text", "part": {"text": "first"}},
+            {"type": "text", "part": {"text": "second"}},
+        ]
+    )
+
+    results = opencode_text_results(stdout)
+
+    assert [result["text"] for result in results] == ["first", "second"]
+
+
 def test_policy_evidence_classifies_reads(tmp_path: Path) -> None:
     from examples.agent_challenges.metrics import ToolCallEvidence
     from examples.agent_challenges.policy import evaluate_policy
@@ -679,6 +694,42 @@ def test_policy_records_broad_globs_without_contaminating(tmp_path: Path) -> Non
     assert policy.disallowed_reads == ()
 
 
+def test_policy_none_records_broad_globs_without_contaminating(
+    tmp_path: Path,
+) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    repository = tmp_path / "repo"
+    workspace = repository / "examples" / "challenge" / "workspaces" / "trial"
+    workspace.mkdir(parents=True)
+    call = ToolCallEvidence(
+        ordinal=1,
+        call_id="glob-1",
+        tool="glob",
+        status="completed",
+        title="Search workspace files",
+        input={"pattern": "*.json"},
+        metadata={},
+        output_chars=10,
+        output_preview="",
+        output_sha256="abc",
+        failed=False,
+    )
+
+    policy = evaluate_policy(
+        "none",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+
+    assert policy.validity.value == "clean"
+    assert policy.reads_by_category["search_intent"] == ("*.json",)
+    assert policy.disallowed_reads == ()
+
+
 def test_policy_classifies_example_implementation_reads_separately(
     tmp_path: Path,
 ) -> None:
@@ -711,10 +762,43 @@ def test_policy_classifies_example_implementation_reads_separately(
         workspaces_root=workspace.parent,
     )
 
-    assert policy.validity.value == "clean"
+    assert policy.validity.value == "contaminated"
     assert policy.escalated_to_product_code is True
     assert policy.reads_by_category["example_implementation"] == (str(ops_path),)
-    assert policy.disallowed_reads == ()
+    assert policy.disallowed_reads == (str(ops_path),)
+
+
+def test_policy_anchors_relative_paths_to_workspace(tmp_path: Path) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    repository = tmp_path / "repo"
+    workspace = repository / "examples" / "challenge" / "workspaces" / "trial"
+    workspace.mkdir(parents=True)
+    call = ToolCallEvidence(
+        ordinal=1,
+        call_id="read-1",
+        tool="read",
+        status="completed",
+        title="Read workspace plan",
+        input={"path": "workflow.plan.json"},
+        metadata={},
+        output_chars=10,
+        output_preview="",
+        output_sha256="abc",
+        failed=False,
+    )
+
+    policy = evaluate_policy(
+        "none",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+
+    assert policy.validity.value == "clean"
+    assert policy.reads_by_category["workspace"] == ("workflow.plan.json",)
 
 
 def test_policy_classifies_ready_made_example_plans_as_existing_solution(
@@ -812,6 +896,41 @@ def test_v2_runner_default_timeout_and_workspace_cwd(tmp_path: Path) -> None:
     assert "metrics" in result
     assert "policy" in result
     assert "repository_commit" in result
+
+
+def test_safe_model_name_replaces_windows_path_separators() -> None:
+    from examples.agent_challenges.workspace import _safe_model_name
+
+    safe = _safe_model_name(r"..\bad/model:name")
+
+    assert "\\" not in safe
+    assert "/" not in safe
+    assert ":" not in safe
+    assert ".." not in safe
+
+
+def test_instruction_bundle_rejects_path_traversal(tmp_path: Path) -> None:
+    import yaml
+
+    from examples.agent_challenges.workspace import _load_instruction_bundle
+
+    bundle = tmp_path / "bundle.yaml"
+    bundle.write_text(
+        yaml.safe_dump(
+            {
+                "files": [
+                    {
+                        "source": "../outside.md",
+                        "destination": "wf-cli/SKILL.md",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="escapes project root"):
+        _load_instruction_bundle(bundle)
 
 
 def test_v2_runner_timeout_preserves_partial_evidence(tmp_path: Path) -> None:
@@ -951,8 +1070,11 @@ def test_v2_manual_audit_includes_automatic_evidence(tmp_path: Path) -> None:
         result_payload,
         official_outcome="pass",
         auditor_notes="Reviewed and passed.",
+        output_name=str(tmp_path / "manual-audit.yaml"),
     )
 
+    assert workspace == tmp_path / "manual-audit.yaml"
+    assert workspace.is_file()
     assert audit["manual_audit"]["task_outcome"] == "success"
     assert audit["manual_audit"]["evaluation_validity"] == "contaminated"
     assert audit["manual_audit"]["official_outcome"] == "pass"

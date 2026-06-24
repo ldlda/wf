@@ -253,12 +253,12 @@ def manual_audit_from_v2_result(
     output_path: Path
     if workspace is not None:
         output_path = workspace / output_name
-        output_path.write_text(
-            yaml.safe_dump(audit, sort_keys=False, allow_unicode=True),
-            encoding="utf-8",
-        )
     else:
         output_path = Path(output_name)
+    output_path.write_text(
+        yaml.safe_dump(audit, sort_keys=False, allow_unicode=True),
+        encoding="utf-8",
+    )
 
     return output_path, audit
 
@@ -271,6 +271,7 @@ class V2AuditPaths:
     audit: Path
     markdown: Path
     machine: Path
+    results_markdown: Path | None = None
 
 
 def save_v2_manual_audit(
@@ -350,10 +351,12 @@ def save_v2_manual_audit(
 
     markdown_path = workspace_path / "final-report.md"
     machine_path = result_path.with_suffix(".report.json")
+    results_markdown_path = result_path.with_suffix(".report.md")
     write_trial_report_projections(
         trial_report,
         markdown_path=markdown_path,
         machine_path=machine_path,
+        extra_markdown_paths=[results_markdown_path],
     )
 
     audit_path = workspace_path / "manual-audit.yaml"
@@ -366,4 +369,5 @@ def save_v2_manual_audit(
         audit=audit_path,
         markdown=markdown_path,
         machine=machine_path,
+        results_markdown=results_markdown_path,
     )

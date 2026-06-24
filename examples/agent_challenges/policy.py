@@ -74,7 +74,12 @@ def _classify_path(
         return "search_intent"
 
     try:
-        p = Path(path_str).resolve()
+        raw_path = Path(path_str)
+        p = (
+            raw_path.resolve()
+            if raw_path.is_absolute()
+            else (Path(workspace_root) / raw_path).resolve()
+        )
     except OSError, ValueError:
         return "unknown"
 
@@ -173,7 +178,6 @@ def evaluate_policy(
         "workspace",
         "supplied_skills",
         "search_intent",
-        "example_implementation",
         "unknown",
     }
 
@@ -191,7 +195,7 @@ def evaluate_policy(
             if category == "existing_solution":
                 disallowed_reads.append(path_str)
             elif profile == InstructionProfile.NONE:
-                if category not in ("workspace", "unknown"):
+                if category not in ("workspace", "search_intent", "unknown"):
                     disallowed_reads.append(path_str)
             elif profile == InstructionProfile.SKILLS:
                 if category not in allowed_skills_categories:

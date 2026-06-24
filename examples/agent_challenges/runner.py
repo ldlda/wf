@@ -664,5 +664,8 @@ def run_v2_trial(
     except Exception as exc:
         report_generation_error = str(exc)
         result["report_generation_error"] = report_generation_error
+        result_path.write_text(
+            json.dumps(result, indent=2, sort_keys=True), encoding="utf-8"
+        )
 
     return result
