@@ -138,8 +138,8 @@ Check these items:
 - Did the agent write a helper script that directly drives `WorkflowApi` or
   bypasses the CLI/server path?
 - Did the agent read implementation code under `src/` or tests under `tests/`?
-- Did the agent read a ready-made solution, prior store, adjacent attempt, or
-  generated workspace from another trial?
+- Did the agent read a ready-made solution, store internals, adjacent attempt,
+  or generated workspace from another trial?
 - Did the agent self-report those reads honestly in the YAML block?
 - Did opaque shell commands hide important behavior that needs manual review?
 - Did the report include a real `run_id`, deployment id, and workflow file path?
@@ -212,6 +212,11 @@ Mark the trial invalid or at least contaminated when any of these happen:
   instead of using `wf` or the JSON-RPC server path.
 - The agent solves the browser/report task outside the workflow runtime.
 - The agent uses prior trial artifacts or adjacent generated workspaces.
+- The agent reads `.wf_*` store internals under the current or another trial
+  workspace in `none` or `skills` profile. Use public commands such as
+  `wf draft inspect`, `wf artifact inspect`, `wf deploy validate`, and
+  `wf run trace` instead. Store inspection is only acceptable in `all` profile
+  and should still be reported.
 - The agent reports `product_code: false` after reading `src/`, `tests/`, or
   example implementation files needed to infer the answer.
 

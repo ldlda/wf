@@ -91,6 +91,8 @@ def _classify_path(
         rel = p.relative_to(workspace)
         if rel.parts and rel.parts[0] == ".agent":
             return "supplied_skills"
+        if rel.parts and rel.parts[0].startswith(".wf"):
+            return "prior_store"
         return "workspace"
 
     if p.is_relative_to(workspaces):

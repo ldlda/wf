@@ -836,6 +836,65 @@ def test_policy_classifies_example_implementation_reads_separately(
     assert policy.disallowed_reads == (str(ops_path),)
 
 
+def test_policy_treats_current_workspace_store_as_store_access(
+    tmp_path: Path,
+) -> None:
+    from examples.agent_challenges.metrics import ToolCallEvidence
+    from examples.agent_challenges.policy import evaluate_policy
+
+    repository = tmp_path / "repo"
+    workspace = repository / "examples" / "challenge" / "workspaces" / "trial"
+    store_file = (
+        workspace / ".wf_browser_click_store" / "draft_workspaces" / "draft.json"
+    )
+    store_file.parent.mkdir(parents=True)
+    store_file.write_text("{}", encoding="utf-8")
+    call = ToolCallEvidence(
+        ordinal=1,
+        call_id="read-1",
+        tool="read",
+        status="completed",
+        title="Read draft store internals",
+        input={"filePath": str(store_file)},
+        metadata={},
+        output_chars=10,
+        output_preview="",
+        output_sha256="abc",
+        failed=False,
+    )
+
+    none_policy = evaluate_policy(
+        "none",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+    assert none_policy.validity.value == "contaminated"
+    assert none_policy.reads_by_category["prior_store"] == (str(store_file),)
+    assert none_policy.disallowed_reads == (str(store_file),)
+
+    skills_policy = evaluate_policy(
+        "skills",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+    assert skills_policy.validity.value == "contaminated"
+    assert skills_policy.disallowed_reads == (str(store_file),)
+
+    all_policy = evaluate_policy(
+        "all",
+        [call],
+        workspace_root=workspace,
+        repository_root=repository,
+        workspaces_root=workspace.parent,
+    )
+    assert all_policy.validity.value == "clean"
+    assert all_policy.disallowed_reads == ()
+
+
 def test_policy_anchors_relative_paths_to_workspace(tmp_path: Path) -> None:
     from examples.agent_challenges.metrics import ToolCallEvidence
     from examples.agent_challenges.policy import evaluate_policy
