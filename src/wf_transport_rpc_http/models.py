@@ -130,6 +130,7 @@ class SetStepInputMapParams(RpcParamsModel):
     revision: int = Field(ge=1)
     step_id: str = Field(min_length=1)
     input_map: dict[str, str]
+    merge: bool = False
 
 
 class SetStepOutputMapParams(RpcParamsModel):
@@ -137,6 +138,7 @@ class SetStepOutputMapParams(RpcParamsModel):
     revision: int = Field(ge=1)
     step_id: str = Field(min_length=1)
     output_map: dict[str, str]
+    merge: bool = False
 
 
 class ValidateDraftWorkspaceParams(RpcParamsModel):

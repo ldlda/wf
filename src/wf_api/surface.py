@@ -101,6 +101,7 @@ class WorkflowDraftSurface(Protocol):
         revision: int,
         step_id: str,
         input_map: dict[str, str],
+        merge: bool = False,
     ) -> dict[str, Any]: ...
 
     async def set_step_output_map(
@@ -110,6 +111,7 @@ class WorkflowDraftSurface(Protocol):
         revision: int,
         step_id: str,
         output_map: dict[str, str],
+        merge: bool = False,
     ) -> dict[str, Any]: ...
 
     async def validate_draft_workspace(

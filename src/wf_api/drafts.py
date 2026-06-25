@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from wf_artifacts import (
@@ -207,7 +207,15 @@ class WorkflowDraftApi:
         revision: int,
         step_id: str,
         input_map: dict[str, str],
+        merge: bool = False,
     ) -> dict[str, Any]:
+        input_values: dict[str, Any] = {}
+        if merge:
+            existing_map, input_values = self._step_input_maps(
+                workspace_id=workspace_id,
+                step_id=step_id,
+            )
+            input_map = {**existing_map, **input_map}
         return await self.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -215,7 +223,7 @@ class WorkflowDraftApi:
                 {
                     "op": "replace",
                     "path": f"/steps/{_escape_json_pointer(step_id)}/input",
-                    "value": _draft_input_bindings_payload(input_map, {}),
+                    "value": _draft_input_bindings_payload(input_map, input_values),
                 }
             ],
         )
@@ -227,7 +235,13 @@ class WorkflowDraftApi:
         revision: int,
         step_id: str,
         output_map: dict[str, str],
+        merge: bool = False,
     ) -> dict[str, Any]:
+        if merge:
+            output_map = {
+                **self._step_output_map(workspace_id=workspace_id, step_id=step_id),
+                **output_map,
+            }
         return await self.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -239,6 +253,21 @@ class WorkflowDraftApi:
                 }
             ],
         )
+
+    def _step_input_maps(
+        self,
+        *,
+        workspace_id: str,
+        step_id: str,
+    ) -> tuple[dict[str, str], dict[str, Any]]:
+        workspace = self._draft_store().get_workspace(workspace_id)
+        step = _draft_step(workspace.draft, step_id)
+        return _input_maps_from_payload(step.get("input", []))
+
+    def _step_output_map(self, *, workspace_id: str, step_id: str) -> dict[str, str]:
+        workspace = self._draft_store().get_workspace(workspace_id)
+        step = _draft_step(workspace.draft, step_id)
+        return _output_map_from_payload(step.get("output", []))
 
     async def create_minimal_draft_workspace(
         self,
@@ -372,6 +401,72 @@ def _draft_output_bindings_payload(output_map: dict[str, str]) -> list[dict[str,
         {"source": _local_path_payload(source), "target": _state_path_payload(target)}
         for source, target in output_map.items()
     ]
+
+
+def _draft_step(draft: Mapping[str, Any], step_id: str) -> Mapping[str, Any]:
+    steps = draft.get("steps", {})
+    if not isinstance(steps, Mapping):
+        raise KeyError("draft steps are not available")
+    step = steps[step_id]
+    if not isinstance(step, Mapping):
+        raise KeyError(f"draft step {step_id!r} is not an object")
+    return step
+
+
+def _input_maps_from_payload(
+    payload: Any,
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """Read stored canonical input bindings back into focused draft maps."""
+    input_map: dict[str, str] = {}
+    input_values: dict[str, Any] = {}
+    if not isinstance(payload, list):
+        return input_map, input_values
+    for item in payload:
+        if not isinstance(item, Mapping) or "target" not in item:
+            continue
+        target = _path_text(item["target"], expected_root="local")
+        if "path" in item:
+            input_map[_path_text(item["path"])] = target
+        elif "value" in item:
+            input_values[target] = item["value"]
+    return input_map, input_values
+
+
+def _output_map_from_payload(payload: Any) -> dict[str, str]:
+    """Read stored canonical output bindings back into the focused output map."""
+    output_map: dict[str, str] = {}
+    if not isinstance(payload, list):
+        return output_map
+    for item in payload:
+        if not isinstance(item, Mapping):
+            continue
+        if "source" in item and "target" in item:
+            output_map[_path_text(item["source"], expected_root="local")] = _path_text(
+                item["target"],
+                expected_root="state",
+            )
+    return output_map
+
+
+def _path_text(value: Any, *, expected_root: str | None = None) -> str:
+    """Return compact dotted text for stored structural path JSON."""
+    if isinstance(value, str):
+        return value
+    if not isinstance(value, Mapping):
+        raise ValueError(f"expected path object, got {value!r}")
+    root = value.get("root")
+    if expected_root is not None and root != expected_root:
+        raise ValueError(f"expected {expected_root} path root")
+    if not isinstance(root, str):
+        raise ValueError("path root must be a string")
+    raw_parts = value.get("parts", [])
+    if not isinstance(raw_parts, list) or not all(
+        isinstance(part, str) for part in raw_parts
+    ):
+        raise ValueError("path parts must be strings")
+    if root == "local":
+        return "." if not raw_parts else ".".join(raw_parts)
+    return root if not raw_parts else f"{root}.{'.'.join(raw_parts)}"
 
 
 def _graph_path_payload(value: str | GraphSourcePath) -> dict[str, str | list[str]]:

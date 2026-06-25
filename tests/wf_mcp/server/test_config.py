@@ -107,6 +107,11 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "input" in from_capability_request["properties"]
             assert "output" in from_capability_request["properties"]
             assert "output_map" in from_capability_request["properties"]
+            set_input_schema = tools_by_name[
+                "wf.workflow.set_step_input_map"
+            ].inputSchema
+            set_input_request = set_input_schema["properties"]["request"]
+            assert "merge" in set_input_request["properties"]
             from_capability_output = tools_by_name[
                 "wf.workflow.create_draft_workspace_from_capability"
             ].outputSchema

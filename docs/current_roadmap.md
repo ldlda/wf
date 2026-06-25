@@ -57,6 +57,9 @@ clear operator feedback before adding more architecture.
 - Completed: focused draft edit helpers are exposed through RPC/CLI, and
   `wf deploy create` is accepted as an alias for `wf deploy save`. Docs now
   distinguish draft shape from raw plan shape for agent authoring.
+- Completed: `wf draft set-input` and `wf draft set-output` now accept
+  `--merge`, preserving existing bindings when agents split map edits across
+  multiple revisions.
 - Completed: `wf schema` now lists workflow document/component models, emits
   compact JSON outlines for agent discovery, and emits valid self-contained
   JSON Schema with `--verbose`.

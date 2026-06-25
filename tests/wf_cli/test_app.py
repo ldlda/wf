@@ -126,3 +126,19 @@ def test_wf_draft_create_from_capability_help_exists() -> None:
 
     assert result.exit_code == 0
     assert "--title" in result.output
+
+
+def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
+    input_result = runner.invoke(app, ["draft", "set-input", "--help"])
+    output_result = runner.invoke(app, ["draft", "set-output", "--help"])
+
+    assert input_result.exit_code == 0
+    assert output_result.exit_code == 0
+    input_help = " ".join(input_result.output.split())
+    output_help = " ".join(output_result.output.split())
+    assert "replaces the full input map" in input_help
+    assert "Use --merge only" in input_help
+    assert "draft validate" in input_help
+    assert "replaces the full output map" in output_help
+    assert "Use --merge only" in output_help
+    assert "draft validate" in output_help

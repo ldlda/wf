@@ -16,6 +16,8 @@ validated, runnable deployment.
 5. Inspect/patch/validate the workspace until valid.
    - Use focused CLI commands (`set-name`, `set-route`, `set-input`, `set-output`)
      for common edits.
+   - `set-input` and `set-output` replace full maps by default; pass `--merge`
+     only when adding or updating one entry across a later revision.
    - Use JSON Patch only for general structural edits.
 6. Save an artifact.
    - Draft artifact:

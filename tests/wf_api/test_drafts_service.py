@@ -242,6 +242,58 @@ async def test_draft_workspace_patch_helpers_update_revision_and_bindings(
 
 
 @pytest.mark.asyncio
+async def test_step_map_helpers_merge_with_existing_bindings(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch_helper_merge")
+    api, _service = _draft_api(artifact_store)
+    await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
+    )
+
+    input_mapped = await api.set_step_input_map(
+        workspace_id="echo_ws",
+        revision=1,
+        step_id="echo",
+        input_map={"input.extra": "extra"},
+        merge=True,
+    )
+    output_mapped = await api.set_step_output_map(
+        workspace_id="echo_ws",
+        revision=2,
+        step_id="echo",
+        output_map={"extra": "state.extra"},
+        merge=True,
+    )
+    replaced = await api.set_step_input_map(
+        workspace_id="echo_ws",
+        revision=3,
+        step_id="echo",
+        input_map={"input.final": "final"},
+    )
+    fetched = await api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
+
+    assert input_mapped["revision"] == 2
+    assert output_mapped["revision"] == 3
+    assert replaced["revision"] == 4
+    assert fetched["draft"]["steps"]["echo"]["input"] == [
+        {
+            "target": {"root": "local", "parts": ["final"]},
+            "path": {"root": "input", "parts": ["final"]},
+        }
+    ]
+    assert fetched["draft"]["steps"]["echo"]["output"] == [
+        {
+            "source": {"root": "local", "parts": ["echoed"]},
+            "target": {"root": "state", "parts": ["echoed"]},
+        },
+        {
+            "source": {"root": "local", "parts": ["extra"]},
+            "target": {"root": "state", "parts": ["extra"]},
+        },
+    ]
+
+
+@pytest.mark.asyncio
 async def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_validate_workspace")
     api, service = _draft_api(artifact_store, register_echo=True)

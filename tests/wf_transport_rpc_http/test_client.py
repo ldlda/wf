@@ -487,11 +487,27 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
             step_id="call",
             output_map={"value": "state.value"},
         )
+        input_merged = await client.set_step_input_map(
+            workspace_id="client_focused_ws",
+            revision=5,
+            step_id="call",
+            input_map={"input.extra": "extra"},
+            merge=True,
+        )
+        output_merged = await client.set_step_output_map(
+            workspace_id="client_focused_ws",
+            revision=6,
+            step_id="call",
+            output_map={"extra": "state.extra"},
+            merge=True,
+        )
 
     assert named["revision"] == 2
     assert routed["revision"] == 3
     assert input_mapped["revision"] == 4
     assert output_mapped["revision"] == 5
+    assert input_merged["revision"] == 6
+    assert output_merged["revision"] == 7
 
 
 async def test_rpc_client_diagnoses_source(tmp_path) -> None:

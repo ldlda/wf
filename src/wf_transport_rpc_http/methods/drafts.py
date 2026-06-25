@@ -154,6 +154,7 @@ def register_methods(
                 revision=params.revision,
                 step_id=params.step_id,
                 input_map=params.input_map,
+                merge=params.merge,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
@@ -171,6 +172,7 @@ def register_methods(
                 revision=params.revision,
                 step_id=params.step_id,
                 output_map=params.output_map,
+                merge=params.merge,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)

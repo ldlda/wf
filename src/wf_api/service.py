@@ -335,12 +335,14 @@ class WorkflowApi:
         revision: int,
         step_id: str,
         input_map: dict[str, str],
+        merge: bool = False,
     ) -> dict[str, Any]:
         return await self.drafts.set_step_input_map(
             workspace_id=workspace_id,
             revision=revision,
             step_id=step_id,
             input_map=input_map,
+            merge=merge,
         )
 
     async def set_step_output_map(
@@ -350,12 +352,14 @@ class WorkflowApi:
         revision: int,
         step_id: str,
         output_map: dict[str, str],
+        merge: bool = False,
     ) -> dict[str, Any]:
         return await self.drafts.set_step_output_map(
             workspace_id=workspace_id,
             revision=revision,
             step_id=step_id,
             output_map=output_map,
+            merge=merge,
         )
 
     async def create_minimal_draft_workspace(

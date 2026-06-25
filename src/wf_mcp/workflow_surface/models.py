@@ -206,21 +206,35 @@ class SetDraftRouteRequest(BaseModel):
 
 
 class SetStepInputMapRequest(BaseModel):
-    """Typed MCP request for replacing one step input map."""
+    """Typed MCP request for replacing or merging one step input map."""
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
     step_id: str = Field(description="Draft step id whose input map should change.")
     input_map: DraftPathMap
+    merge: bool = Field(
+        default=False,
+        description=(
+            "When false, replace the full input map. When true, preserve existing "
+            "bindings and add/update only input_map entries."
+        ),
+    )
 
 
 class SetStepOutputMapRequest(BaseModel):
-    """Typed MCP request for replacing one step output map."""
+    """Typed MCP request for replacing or merging one step output map."""
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
     step_id: str = Field(description="Draft step id whose output map should change.")
     output_map: DraftPathMap
+    merge: bool = Field(
+        default=False,
+        description=(
+            "When false, replace the full output map. When true, preserve existing "
+            "bindings and add/update only output_map entries."
+        ),
+    )
 
 
 class DeleteDraftWorkspaceRequest(BaseModel):

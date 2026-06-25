@@ -296,6 +296,7 @@ wf draft set-name concat_ws --revision 1 --name concat_ws_v2
 wf draft set-route concat_ws --revision 2 --step call --outcome ok --to __end__
 wf draft set-input concat_ws --revision 3 --step call --map input.items=items --map input.separator=separator
 wf draft set-output concat_ws --revision 4 --step call --map value=state.value
+wf draft set-input concat_ws --revision 5 --step call --merge --map input.limit=limit
 ```
 
 `set-input` maps graph source paths to node-local input fields:
@@ -303,6 +304,11 @@ wf draft set-output concat_ws --revision 4 --step call --map value=state.value
 
 `set-output` maps node-local output fields to workflow state paths:
 `text=state.text` means `local.text -> state.text`.
+
+By default, `set-input` and `set-output` replace the whole map for that step.
+Use repeated `--map` flags in one command when you know the complete map. Use
+`--merge` when adding or updating one entry across a later revision while
+preserving existing bindings.
 
 Validate:
 

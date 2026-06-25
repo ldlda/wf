@@ -1027,6 +1027,38 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
             "value=state.value",
         ],
     )
+    input_merged = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-input",
+            "focused_ws",
+            "--revision",
+            "5",
+            "--step",
+            "call",
+            "--map",
+            "input.extra=extra",
+            "--merge",
+        ],
+    )
+    output_merged = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-output",
+            "focused_ws",
+            "--revision",
+            "6",
+            "--step",
+            "call",
+            "--map",
+            "extra=state.extra",
+            "--merge",
+        ],
+    )
     inspected = runner.invoke(
         app,
         [*base_args, "draft", "inspect", "focused_ws", "--include-draft"],
@@ -1036,6 +1068,8 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
     assert routed.exit_code == 0, routed.output
     assert input_mapped.exit_code == 0, input_mapped.output
     assert output_mapped.exit_code == 0, output_mapped.output
+    assert input_merged.exit_code == 0, input_merged.output
+    assert output_merged.exit_code == 0, output_merged.output
     assert inspected.exit_code == 0, inspected.output
     payload = json.loads(inspected.output)
     draft = payload["draft"]
@@ -1045,13 +1079,21 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
         {
             "target": {"root": "local", "parts": ["value"]},
             "path": {"root": "input", "parts": ["value"]},
-        }
+        },
+        {
+            "target": {"root": "local", "parts": ["extra"]},
+            "path": {"root": "input", "parts": ["extra"]},
+        },
     ]
     assert draft["steps"]["call"]["output"] == [
         {
             "source": {"root": "local", "parts": ["value"]},
             "target": {"root": "state", "parts": ["value"]},
-        }
+        },
+        {
+            "source": {"root": "local", "parts": ["extra"]},
+            "target": {"root": "state", "parts": ["extra"]},
+        },
     ]
 
 

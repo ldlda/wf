@@ -41,7 +41,9 @@ wf draft patch <workspace_id> --revision <n> --input-file patch.json
 wf draft set-name <workspace_id> --revision <n> --name <name>
 wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome <outcome> --to <target>
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.text=text
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
+wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
@@ -66,6 +68,10 @@ Use public CLI surfaces before broader documentation or implementation search:
 
 Use `wf schema <name> --verbose` only when the complete JSON Schema is required;
 the default compact outline is preferred for agent context.
+
+For `draft set-input` and `draft set-output`, repeated `--map` flags in one
+command define the complete replacement map. If you split map edits across
+multiple commands, pass `--merge` or the later command replaces the earlier map.
 
 ## Rules
 

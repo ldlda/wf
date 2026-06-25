@@ -80,7 +80,9 @@ CLI equivalents:
 wf draft set-name <workspace_id> --revision <n> --name <name>
 wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome ok --to <target>
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.text=text
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
+wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
 ```
 
 `set-input` direction: `input.text=text` means graph source `input.text` maps to
@@ -88,6 +90,10 @@ node-local target `local.text`.
 
 `set-output` direction: `text=state.text` means node-local source `local.text`
 maps to graph target `state.text`.
+
+Without `--merge`, `set-input` and `set-output` replace the whole map for that
+step. Use repeated `--map` flags in one command for a complete replacement. Use
+`--merge` only when adding/updating entries over multiple revisions.
 
 Use JSON Patch for structural edits the helpers do not cover.
 

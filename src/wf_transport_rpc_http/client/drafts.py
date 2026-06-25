@@ -108,6 +108,7 @@ class RpcDraftClientMixin:
         revision: int,
         step_id: str,
         input_map: dict[str, str],
+        merge: bool = False,
     ) -> dict[str, Any]:
         return await self._call(
             "workflow.draft_workspaces.set_step_input_map",
@@ -116,6 +117,7 @@ class RpcDraftClientMixin:
                 "revision": revision,
                 "step_id": step_id,
                 "input_map": input_map,
+                "merge": merge,
             },
         )
 
@@ -126,6 +128,7 @@ class RpcDraftClientMixin:
         revision: int,
         step_id: str,
         output_map: dict[str, str],
+        merge: bool = False,
     ) -> dict[str, Any]:
         return await self._call(
             "workflow.draft_workspaces.set_step_output_map",
@@ -134,6 +137,7 @@ class RpcDraftClientMixin:
                 "revision": revision,
                 "step_id": step_id,
                 "output_map": output_map,
+                "merge": merge,
             },
         )
 

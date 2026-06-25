@@ -399,7 +399,8 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         name="wf.workflow.set_step_input_map",
         title="Set Step Input Map",
         description=(
-            "Replace one compatibility step input map in a draft workspace. "
+            "Replace or merge one compatibility step input map in a draft workspace. "
+            "Set merge=true to preserve existing bindings while adding/updating entries. "
             "New one-capability bootstraps should prefer canonical input bindings."
         ),
     )
@@ -412,6 +413,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 revision=request.revision,
                 step_id=request.step_id,
                 input_map=request.input_map,
+                merge=request.merge,
             )
         )
 
@@ -419,7 +421,8 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         name="wf.workflow.set_step_output_map",
         title="Set Step Output Map",
         description=(
-            "Replace one compatibility step output map in a draft workspace. "
+            "Replace or merge one compatibility step output map in a draft workspace. "
+            "Set merge=true to preserve existing bindings while adding/updating entries. "
             "New one-capability bootstraps should prefer canonical output bindings."
         ),
     )
@@ -432,6 +435,7 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 revision=request.revision,
                 step_id=request.step_id,
                 output_map=request.output_map,
+                merge=request.merge,
             )
         )
 

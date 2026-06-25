@@ -193,11 +193,26 @@ def set_step_input_map(
         list[str] | None,
         typer.Option(
             "--map",
-            help="Input binding SOURCE=LOCAL_TARGET. Repeatable. Example: input.text=text",
+            help="One input binding SOURCE=LOCAL_TARGET. Repeat in one command.",
         ),
     ] = None,
+    merge: Annotated[
+        bool,
+        typer.Option(
+            "--merge",
+            help="Preserve existing input bindings and add/update the passed --map entries.",
+        ),
+    ] = False,
 ) -> None:
-    """Replace one step's input map without writing JSON Patch manually."""
+    """Set one step's input map without writing JSON Patch manually.
+
+    Default behavior replaces the full input map for this step. Pass all desired
+    --map entries in one command for a complete replacement. Use --merge only
+    when adding or updating entries across a later revision.
+
+    Run `wf draft validate <workspace_id>` after map edits; validation reports
+    unresolved paths and conflicting writes.
+    """
     input_map = _parse_map_flags(mapping)
     context = load_cli_context(ctx)
     emit_json(
@@ -208,6 +223,7 @@ def set_step_input_map(
                 revision=revision,
                 step_id=step_id,
                 input_map=input_map,
+                merge=merge,
             ),
         )
     )
@@ -225,11 +241,26 @@ def set_step_output_map(
         list[str] | None,
         typer.Option(
             "--map",
-            help="Output binding LOCAL_SOURCE=STATE_TARGET. Repeatable. Example: text=state.text",
+            help="One output binding LOCAL_SOURCE=STATE_TARGET. Repeat in one command.",
         ),
     ] = None,
+    merge: Annotated[
+        bool,
+        typer.Option(
+            "--merge",
+            help="Preserve existing output bindings and add/update the passed --map entries.",
+        ),
+    ] = False,
 ) -> None:
-    """Replace one step's output map without writing JSON Patch manually."""
+    """Set one step's output map without writing JSON Patch manually.
+
+    Default behavior replaces the full output map for this step. Pass all
+    desired --map entries in one command for a complete replacement. Use
+    --merge only when adding or updating entries across a later revision.
+
+    Run `wf draft validate <workspace_id>` after map edits; validation reports
+    unresolved paths and conflicting writes.
+    """
     output_map = _parse_map_flags(mapping)
     context = load_cli_context(ctx)
     emit_json(
@@ -240,6 +271,7 @@ def set_step_output_map(
                 revision=revision,
                 step_id=step_id,
                 output_map=output_map,
+                merge=merge,
             ),
         )
     )
