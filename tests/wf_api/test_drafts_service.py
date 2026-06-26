@@ -762,3 +762,74 @@ async def test_bind_output_to_state_rejects_step_without_capability_use(
             output_field="after",
             state_path="state.after",
         )
+
+
+@pytest.mark.asyncio
+async def test_add_step_from_capability_wires_route_inputs_and_state_outputs(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_add_step")
+    api, service = _draft_api(artifact_store, register_echo=True)
+    service.register_specs("demo.personal", echo_tool, _snapshot_tool)
+    await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
+    )
+
+    result = await api.add_step_from_capability(
+        workspace_id="echo_ws",
+        revision=1,
+        step_id="snap",
+        capability_name="demo.personal.snapshot_tool",
+        route_from_step="echo",
+        route_from_outcome="ok",
+        route_outcome="ok",
+        route_to="__end__",
+        input_map={},
+        bind_outputs={"after": "state.after"},
+    )
+
+    assert result["revision"] == 2
+    assert result["status"] == "valid"
+    fetched = await api.get_draft_workspace(workspace_id="echo_ws", include_draft=True)
+    draft = fetched["draft"]
+    assert draft["steps"]["snap"]["use"] == "demo.personal.snapshot_tool"
+    assert draft["routes"]["echo"]["ok"] == "snap"
+    assert draft["routes"]["snap"]["ok"] == "__end__"
+    assert draft["steps"]["snap"]["output"] == [
+        {
+            "source": {"root": "local", "parts": ["after"]},
+            "target": {"root": "state", "parts": ["after"]},
+        }
+    ]
+    assert draft["state_schema"]["properties"]["after"]["$ref"] == "#/$defs/_Snapshot"
+    assert draft["state_schema"]["$defs"]["_Snapshot"]["properties"]["clicked"] == {
+        "title": "Clicked",
+        "type": "boolean",
+    }
+
+
+@pytest.mark.asyncio
+async def test_add_step_from_capability_rejects_existing_step_id(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_add_step_duplicate")
+    api, _service = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
+    )
+
+    with pytest.raises(ValueError, match="draft step 'echo' already exists"):
+        await api.add_step_from_capability(
+            workspace_id="echo_ws",
+            revision=1,
+            step_id="echo",
+            capability_name="demo.personal.echo_tool",
+            route_from_step=None,
+            route_from_outcome="ok",
+            route_outcome="ok",
+            route_to="__end__",
+            input_map={},
+            bind_outputs={},
+        )

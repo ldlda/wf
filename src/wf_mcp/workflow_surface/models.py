@@ -265,6 +265,39 @@ class BindOutputToStateRequest(BaseModel):
     )
 
 
+class AddStepFromCapabilityRequest(BaseModel):
+    """Typed MCP request for adding one capability-backed draft step with wiring."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected workspace revision.")
+    step_id: str = Field(description="New draft step id.")
+    capability_name: str = Field(description="Qualified capability name.")
+    route_from_step: str | None = Field(
+        default=None,
+        description="Optional existing step whose outcome should route to the new step.",
+    )
+    route_from_outcome: str = Field(
+        default="ok",
+        description="Outcome on route_from_step that should route to the new step.",
+    )
+    route_outcome: str = Field(
+        default="ok",
+        description="Outcome emitted by the new step.",
+    )
+    route_to: str = Field(
+        default="__end__",
+        description="Target step id or __end__ for the new step outcome.",
+    )
+    input_map: dict[str, str] = Field(
+        default_factory=dict,
+        description="Graph source path to node-local target field.",
+    )
+    bind_outputs: dict[str, str] = Field(
+        default_factory=dict,
+        description="Node-local output field to state path with schema projection.",
+    )
+
+
 class DeleteDraftWorkspaceRequest(BaseModel):
     """Typed MCP request payload for deleting one draft workspace."""
 

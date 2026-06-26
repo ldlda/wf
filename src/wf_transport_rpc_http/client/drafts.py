@@ -181,6 +181,36 @@ class RpcDraftClientMixin:
             },
         )
 
+    async def add_step_from_capability(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        capability_name: str,
+        route_from_step: str | None = None,
+        route_from_outcome: str = "ok",
+        route_outcome: str = "ok",
+        route_to: str = "__end__",
+        input_map: dict[str, str] | None = None,
+        bind_outputs: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.add_step_from_capability",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "capability_name": capability_name,
+                "route_from_step": route_from_step,
+                "route_from_outcome": route_from_outcome,
+                "route_outcome": route_outcome,
+                "route_to": route_to,
+                "input_map": input_map or {},
+                "bind_outputs": bind_outputs or {},
+            },
+        )
+
     async def validate_draft_workspace(
         self: RpcCaller,
         *,

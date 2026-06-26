@@ -161,3 +161,12 @@ def test_wf_draft_bind_output_to_state_help_explains_composed_edit() -> None:
     assert "state schema" in result.output
     assert "output binding" in result.output
     assert "validate" in result.output
+
+
+def test_wf_draft_add_step_from_capability_help_explains_explicit_wiring() -> None:
+    result = runner.invoke(app, ["draft", "add-step-from-capability", "--help"])
+
+    assert result.exit_code == 0
+    assert "--from-step" in result.output
+    assert "--bind-output" in result.output
+    assert "does not guess" in result.output

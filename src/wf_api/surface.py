@@ -134,6 +134,21 @@ class WorkflowDraftSurface(Protocol):
         state_path: str,
     ) -> dict[str, Any]: ...
 
+    async def add_step_from_capability(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        capability_name: str,
+        route_from_step: str | None = None,
+        route_from_outcome: str = "ok",
+        route_outcome: str = "ok",
+        route_to: str = "__end__",
+        input_map: dict[str, str] | None = None,
+        bind_outputs: dict[str, str] | None = None,
+    ) -> dict[str, Any]: ...
+
     async def validate_draft_workspace(
         self,
         *,

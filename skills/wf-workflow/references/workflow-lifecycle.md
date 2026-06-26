@@ -23,6 +23,13 @@ validated, runnable deployment.
    - Use `bind-output-to-state` when a capability output should become state;
      it declares the matching state schema and merges the output binding in one
      revision-checked edit.
+   - When adding a new capability-backed step, prefer:
+     ```bash
+     wf draft add-step-from-capability ...
+     wf draft validate <workspace_id>
+     ```
+     Use raw `wf draft patch` only when changing structure that no focused helper
+     covers.
    - Use JSON Patch only for general structural edits.
 6. Save an artifact.
    - Draft artifact:

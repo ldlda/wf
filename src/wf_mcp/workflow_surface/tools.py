@@ -13,6 +13,7 @@ from wf_mcp.broker.service.workflow_operation_context import context_from_servic
 
 from .models import (
     AddStateFromOutputRequest,
+    AddStepFromCapabilityRequest,
     BindOutputToStateRequest,
     CallCapabilityResult,
     CreateArtifactFromWorkspaceRequest,
@@ -480,6 +481,32 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 step_id=request.step_id,
                 output_field=request.output_field,
                 state_path=request.state_path,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.add_step_from_capability",
+        title="Add Step From Capability",
+        description=(
+            "Add one capability-backed draft step with explicit route, input, "
+            "and output-to-state binding hints."
+        ),
+    )
+    async def add_step_from_capability(
+        request: AddStepFromCapabilityRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.add_step_from_capability(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                capability_name=request.capability_name,
+                route_from_step=request.route_from_step,
+                route_from_outcome=request.route_from_outcome,
+                route_outcome=request.route_outcome,
+                route_to=request.route_to,
+                input_map=request.input_map,
+                bind_outputs=request.bind_outputs,
             )
         )
 

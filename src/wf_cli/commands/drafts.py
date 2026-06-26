@@ -359,6 +359,81 @@ def bind_output_to_state(
     )
 
 
+@app.command("add-step-from-capability")
+def add_step_from_capability(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step_id: Annotated[str, typer.Option("--step", help="New draft step id.")],
+    capability_name: Annotated[
+        str, typer.Option("--capability", help="Qualified capability name.")
+    ],
+    route_from_step: Annotated[
+        str | None,
+        typer.Option(
+            "--from-step",
+            help="Optional existing step whose outcome should route to this step.",
+        ),
+    ] = None,
+    route_from_outcome: Annotated[
+        str,
+        typer.Option("--from-outcome", help="Outcome on --from-step."),
+    ] = "ok",
+    route_outcome: Annotated[
+        str,
+        typer.Option("--outcome", help="Outcome emitted by the new step."),
+    ] = "ok",
+    route_to: Annotated[
+        str,
+        typer.Option("--to", help="Target step id or __end__ for the new step."),
+    ] = "__end__",
+    input_mapping: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--input",
+            help="Input binding SOURCE=LOCAL_TARGET. Repeat for multiple inputs.",
+        ),
+    ] = None,
+    output_mapping: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--bind-output",
+            help=(
+                "Output binding LOCAL_OUTPUT=STATE_TARGET with state schema "
+                "projection. Repeat for multiple outputs."
+            ),
+        ),
+    ] = None,
+) -> None:
+    """Add one capability step with explicit route, input, and output wiring.
+
+    This command does not guess missing maps. Pass the route and bindings you
+    want, then run `wf draft validate <workspace_id>`.
+    """
+    input_map = _parse_map_flags(input_mapping)
+    bind_outputs = _parse_map_flags(output_mapping)
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.add_step_from_capability(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step_id,
+                capability_name=capability_name,
+                route_from_step=route_from_step,
+                route_from_outcome=route_from_outcome,
+                route_outcome=route_outcome,
+                route_to=route_to,
+                input_map=input_map,
+                bind_outputs=bind_outputs,
+            ),
+        )
+    )
+
+
 @app.command("validate")
 def validate_draft(
     ctx: typer.Context,

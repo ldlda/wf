@@ -157,6 +157,19 @@ class BindOutputToStateParams(RpcParamsModel):
     state_path: str = Field(min_length=1)
 
 
+class AddStepFromCapabilityParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    capability_name: str = Field(min_length=1)
+    route_from_step: str | None = None
+    route_from_outcome: str = Field(default="ok", min_length=1)
+    route_outcome: str = Field(default="ok", min_length=1)
+    route_to: str = Field(default="__end__", min_length=1)
+    input_map: dict[str, str] = Field(default_factory=dict)
+    bind_outputs: dict[str, str] = Field(default_factory=dict)
+
+
 class ValidateDraftWorkspaceParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
 

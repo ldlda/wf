@@ -339,6 +339,27 @@ The command combines two common edits:
 
 Use `set-route` separately for outcome routing.
 
+### Add A Capability Step To A Draft
+
+Use `wf draft add-step-from-capability` when adding a new capability-backed step
+to an existing draft. The command is explicit: it does not guess missing maps.
+
+```bash
+wf draft add-step-from-capability report_ws \
+  --revision 3 \
+  --step render \
+  --capability local.report.render_markdown_report \
+  --from-step extract \
+  --from-outcome ok \
+  --outcome ok \
+  --to __end__ \
+  --input state.title=title \
+  --bind-output markdown=state.markdown
+```
+
+Run `wf draft validate report_ws` after adding the step. If validation returns
+a `repair_hint`, prefer the focused helper in that hint before JSON Patch.
+
 Validate:
 
 ```bash

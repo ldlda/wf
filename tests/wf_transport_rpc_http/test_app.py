@@ -787,6 +787,43 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     )
 
 
+async def test_rpc_draft_workspace_add_step_from_capability(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "add_step_ws",
+                "capability_name": "wf.std.constant",
+                "name": "add_step",
+            },
+        )
+
+        response = await _rpc(
+            client,
+            "workflow.draft_workspaces.add_step_from_capability",
+            {
+                "workspace_id": "add_step_ws",
+                "revision": 1,
+                "step_id": "second",
+                "capability_name": "wf.std.constant",
+                "route_from_step": "call",
+                "route_from_outcome": "ok",
+                "route_outcome": "ok",
+                "route_to": "__end__",
+                "input_map": {"input.value": "value"},
+                "bind_outputs": {"value": "state.second_value"},
+            },
+        )
+
+    result = response["result"]
+    assert result["revision"] == 2
+    assert result["status"] == "valid"
+
+
 async def test_rpc_diagnoses_source(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

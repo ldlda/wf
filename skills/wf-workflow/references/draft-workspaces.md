@@ -75,6 +75,7 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_step_output_map`
 - `add_state_schema_from_output`
 - `bind_output_to_state`
+- `add_step_from_capability`
 
 CLI equivalents:
 
@@ -87,6 +88,7 @@ wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=st
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
 wf draft add-state-from-output <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
 wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --outcome ok --to <next-or-__end__> --input input.text=text --bind-output result=state.result
 ```
 
 `set-input` direction: `input.text=text` means graph source `input.text` maps to
@@ -115,6 +117,19 @@ output schema. This prevents dangling `$ref` values by copying local `$defs` /
 
 ```bash
 wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft validate <workspace_id>
+```
+
+- `add_step_from_capability`
+
+  Adds a new capability-backed step with explicit route, input bindings, and
+  output-to-state schema/binding wiring in one revision. It can set the incoming
+  edge, outgoing edge, input map, and output-to-state schema/binding. It still
+  requires explicit choices; if you do not know a map, inspect the capability or
+  run validation rather than guessing.
+
+```bash
+wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --outcome ok --to <next-or-__end__> --input input.text=text --bind-output result=state.result
 wf draft validate <workspace_id>
 ```
 

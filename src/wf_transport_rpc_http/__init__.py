@@ -4,6 +4,7 @@ from .app import create_rpc_app
 from .client import RpcWorkflowApiClient
 from .errors import WorkflowRpcError
 from .models import (
+    AddStepFromCapabilityParams,
     AdminEmptyParams,
     CallCapabilityParams,
     CreateArtifactFromPlanParams,
@@ -43,6 +44,7 @@ from .models import (
 __all__ = [
     "CreateArtifactFromPlanParams",
     "CreateArtifactFromWorkspaceParams",
+    "AddStepFromCapabilityParams",
     "AdminEmptyParams",
     "CallCapabilityParams",
     "CreateDraftFromCapabilityParams",

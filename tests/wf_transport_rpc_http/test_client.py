@@ -526,6 +526,40 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
     assert state_bound["revision"] == 9
 
 
+async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            timeout_seconds=5,
+            http_client=http_client,
+        )
+        await client.create_draft_workspace_from_capability(
+            workspace_id="client_add_step_ws",
+            capability_name="wf.std.constant",
+            name="client_add_step",
+        )
+        result = await client.add_step_from_capability(
+            workspace_id="client_add_step_ws",
+            revision=1,
+            step_id="second",
+            capability_name="wf.std.constant",
+            route_from_step="call",
+            route_from_outcome="ok",
+            route_outcome="ok",
+            route_to="__end__",
+            input_map={"input.value": "value"},
+            bind_outputs={"value": "state.second_value"},
+        )
+
+    assert result["revision"] == 2
+    assert result["status"] == "valid"
+
+
 async def test_rpc_client_diagnoses_source(tmp_path) -> None:
     calls: list[tuple[str, dict[str, object]]] = []
 

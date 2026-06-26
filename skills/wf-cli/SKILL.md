@@ -46,6 +46,7 @@ wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=st
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
 wf draft add-state-from-output <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
 wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --outcome ok --to <next-or-__end__> --input input.text=text --bind-output result=state.result
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
@@ -89,6 +90,10 @@ binding in one revision-checked edit. Use `draft add-state-from-output` only
 when you need the schema declaration without changing bindings.
 `bind-output-to-state` requires a capability-backed step with `use`; use JSON
 Patch for non-capability/control draft steps.
+
+To add a capability step, prefer `wf draft add-step-from-capability` over raw
+JSON Patch when the route, input bindings, and output-to-state bindings are
+known. It is explicit and does not guess missing maps.
 
 ## Rules
 

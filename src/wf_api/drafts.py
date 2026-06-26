@@ -389,6 +389,96 @@ class WorkflowDraftApi:
             ],
         )
 
+    async def add_step_from_capability(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        capability_name: str,
+        route_from_step: str | None = None,
+        route_from_outcome: str = DEFAULT_OK_OUTCOME,
+        route_outcome: str = DEFAULT_OK_OUTCOME,
+        route_to: str = "__end__",
+        input_map: dict[str, str] | None = None,
+        bind_outputs: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Add one capability step plus explicit route/map/schema wiring.
+
+        This is a composed authoring helper for agents.  It edits the draft in
+        one revision so callers do not have to interleave add-step, route,
+        input-map, state-schema, and output-map operations by hand.
+        """
+        workspace = self._draft_store().get_workspace(workspace_id)
+        steps = workspace.draft.get("steps")
+        if not isinstance(steps, dict):
+            raise ValueError("draft steps must be an object")
+        if step_id in steps:
+            raise ValueError(f"draft step {step_id!r} already exists")
+
+        spec = self.context.specs.get_qualified_spec(capability_name)
+        output_schema = (
+            spec.output_schema_contract or spec.output_model.model_json_schema()
+        )
+        state_schema = workspace.draft.get("state_schema", {})
+        if not isinstance(state_schema, dict):
+            raise ValueError("draft state_schema must be an object")
+
+        input_map = input_map or {}
+        bind_outputs = bind_outputs or {}
+        projected_state_schema = state_schema
+        for output_field, state_path in bind_outputs.items():
+            state_field = _state_root_field(state_path)
+            projected_state_schema = project_output_property_to_state_schema(
+                state_schema=projected_state_schema,
+                output_schema=output_schema,
+                output_field=output_field,
+                state_field=state_field,
+            )
+
+        patch: list[dict[str, Any]] = [
+            {
+                "op": "add",
+                "path": f"/steps/{_escape_json_pointer(step_id)}",
+                "value": {
+                    "use": capability_name,
+                    "input": _draft_input_bindings_payload(input_map, {}),
+                    "output": _draft_output_bindings_payload(bind_outputs),
+                },
+            },
+            {
+                "op": "add",
+                "path": f"/routes/{_escape_json_pointer(step_id)}",
+                "value": {route_outcome: route_to},
+            },
+        ]
+        if projected_state_schema != state_schema:
+            patch.insert(
+                0,
+                {
+                    "op": "replace",
+                    "path": "/state_schema",
+                    "value": projected_state_schema,
+                },
+            )
+        if route_from_step is not None:
+            patch.append(
+                {
+                    "op": "add",
+                    "path": (
+                        f"/routes/{_escape_json_pointer(route_from_step)}/"
+                        f"{_escape_json_pointer(route_from_outcome)}"
+                    ),
+                    "value": step_id,
+                }
+            )
+
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
+        )
+
     def _step_input_maps(
         self,
         *,
