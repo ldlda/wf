@@ -38,6 +38,7 @@ from .constants import (
     RUNTIME_ERROR_CAPABILITY,
 )
 from .operation_context import WorkflowOperationContext
+from .schema_projection import project_output_property_to_state_schema
 
 
 class WorkflowDraftApi:
@@ -250,6 +251,48 @@ class WorkflowDraftApi:
                     "op": "replace",
                     "path": f"/steps/{_escape_json_pointer(step_id)}/output",
                     "value": _draft_output_bindings_payload(output_map),
+                }
+            ],
+        )
+
+    async def add_state_schema_from_output(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        output_field: str,
+        state_path: str,
+    ) -> dict[str, Any]:
+        workspace = self._draft_store().get_workspace(workspace_id)
+        step = _draft_step(workspace.draft, step_id)
+        capability_name = step.get("use")
+        if not isinstance(capability_name, str) or not capability_name:
+            raise ValueError(
+                f"draft step {step_id!r} does not declare a capability use"
+            )
+        state_field = _state_root_field(state_path)
+        spec = self.context.specs.get_qualified_spec(capability_name)
+        output_schema = (
+            spec.output_schema_contract or spec.output_model.model_json_schema()
+        )
+        state_schema = workspace.draft.get("state_schema", {})
+        if not isinstance(state_schema, dict):
+            raise ValueError("draft state_schema must be an object")
+        projected = project_output_property_to_state_schema(
+            state_schema=state_schema,
+            output_schema=output_schema,
+            output_field=output_field,
+            state_field=state_field,
+        )
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=[
+                {
+                    "op": "replace",
+                    "path": "/state_schema",
+                    "value": projected,
                 }
             ],
         )
@@ -485,3 +528,10 @@ def _state_path_payload(value: str) -> dict[str, str | list[str]]:
 def _escape_json_pointer(value: str) -> str:
     """Escape one JSON Pointer path segment for generated JSON Patch helpers."""
     return value.replace("~", "~0").replace("/", "~1")
+
+
+def _state_root_field(value: str) -> str:
+    path = StatePath.parse(value)
+    if len(path.parts) != 1:
+        raise ValueError("state_path must name one root field, such as state.after")
+    return path.parts[0]

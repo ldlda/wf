@@ -73,6 +73,7 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_draft_route`
 - `set_step_input_map`
 - `set_step_output_map`
+- `add_state_schema_from_output`
 
 CLI equivalents:
 
@@ -83,6 +84,7 @@ wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.te
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
+wf draft add-state-from-output <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
 ```
 
 `set-input` direction: `input.text=text` means graph source `input.text` maps to
@@ -94,6 +96,10 @@ maps to graph target `state.text`.
 Without `--merge`, `set-input` and `set-output` replace the whole map for that
 step. Use repeated `--map` flags in one command for a complete replacement. Use
 `--merge` only when adding/updating entries over multiple revisions.
+
+Use `add-state-from-output` when the target state field should reuse a capability
+output schema. This prevents dangling `$ref` values by copying local `$defs` /
+`definitions` with the selected property schema.
 
 Use JSON Patch for structural edits the helpers do not cover.
 

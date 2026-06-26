@@ -362,6 +362,23 @@ class WorkflowApi:
             merge=merge,
         )
 
+    async def add_state_schema_from_output(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        output_field: str,
+        state_path: str,
+    ) -> dict[str, Any]:
+        return await self.drafts.add_state_schema_from_output(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            output_field=output_field,
+            state_path=state_path,
+        )
+
     async def create_minimal_draft_workspace(
         self,
         *,

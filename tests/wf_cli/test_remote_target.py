@@ -1059,6 +1059,23 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
             "--merge",
         ],
     )
+    state_added = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "add-state-from-output",
+            "focused_ws",
+            "--revision",
+            "7",
+            "--step",
+            "call",
+            "--output",
+            "value",
+            "--state",
+            "state.extra_value",
+        ],
+    )
     inspected = runner.invoke(
         app,
         [*base_args, "draft", "inspect", "focused_ws", "--include-draft"],
@@ -1070,6 +1087,7 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
     assert output_mapped.exit_code == 0, output_mapped.output
     assert input_merged.exit_code == 0, input_merged.output
     assert output_merged.exit_code == 0, output_merged.output
+    assert state_added.exit_code == 0, state_added.output
     assert inspected.exit_code == 0, inspected.output
     payload = json.loads(inspected.output)
     draft = payload["draft"]
@@ -1095,6 +1113,7 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
             "target": {"root": "state", "parts": ["extra"]},
         },
     ]
+    assert "extra_value" in draft["state_schema"]["properties"]
 
 
 def test_wf_deploy_create_alias_saves_deployment(monkeypatch, tmp_path) -> None:

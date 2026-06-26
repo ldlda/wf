@@ -722,6 +722,17 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
                 "merge": True,
             },
         )
+        state_added = await _rpc(
+            client,
+            "workflow.draft_workspaces.add_state_from_output",
+            {
+                "workspace_id": "focused_ws",
+                "revision": 7,
+                "step_id": "call",
+                "output_field": "value",
+                "state_path": "state.extra_value",
+            },
+        )
         fetched = await _rpc(
             client,
             "workflow.draft_workspaces.get",
@@ -734,6 +745,7 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     assert output_mapped["result"]["revision"] == 5
     assert input_merged["result"]["revision"] == 6
     assert output_merged["result"]["revision"] == 7
+    assert state_added["result"]["revision"] == 8
     draft = fetched["result"]["draft"]
     assert draft["name"] == "focused_renamed"
     assert draft["routes"]["call"]["ok"] == "__end__"
@@ -757,6 +769,10 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
             "target": {"root": "state", "parts": ["extra"]},
         },
     ]
+    assert (
+        draft["state_schema"]["properties"]["extra_value"]
+        == draft["state_schema"]["properties"]["value"]
+    )
 
 
 async def test_rpc_diagnoses_source(tmp_path) -> None:

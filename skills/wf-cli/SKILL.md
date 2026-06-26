@@ -44,6 +44,7 @@ wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.te
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
+wf draft add-state-from-output <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
@@ -72,6 +73,10 @@ the default compact outline is preferred for agent context.
 For `draft set-input` and `draft set-output`, repeated `--map` flags in one
 command define the complete replacement map. If you split map edits across
 multiple commands, pass `--merge` or the later command replaces the earlier map.
+
+If mapping `LOCAL_SOURCE=state.new_field`, declare the state field first with
+`draft add-state-from-output` when the schema should match a capability output
+field. Do not hand-copy `$defs` unless the helper cannot express the shape.
 
 ## Rules
 

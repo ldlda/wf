@@ -4,10 +4,12 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from pydantic import BaseModel
 
 from tests.wf_mcp.test_support import echo_tool
 from wf_api.drafts import WorkflowDraftApi
 from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
+from wf_authoring import node
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.models import ConnectionConfig
@@ -49,6 +51,23 @@ def _echo_draft() -> dict[str, Any]:
         },
         "routes": {"echo": {"ok": "__end__"}},
     }
+
+
+class _Snapshot(BaseModel):
+    clicked: bool
+
+
+class _SnapshotOutput(BaseModel):
+    after: _Snapshot
+
+
+class _SnapshotInput(BaseModel):
+    pass
+
+
+@node(name="snapshot_tool")
+def _snapshot_tool(payload: _SnapshotInput) -> _SnapshotOutput:
+    return _SnapshotOutput(after=_Snapshot(clicked=True))
 
 
 def _draft_api(
@@ -375,3 +394,92 @@ async def test_delegation_smoke_validate_draft_equivalence(tmp_path: Path) -> No
     assert (
         handler_result["compiled_plan"]["nodes"] == api_result["compiled_plan"]["nodes"]
     )
+
+
+@pytest.mark.asyncio
+async def test_add_state_schema_from_output_copies_output_property_defs(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_state_from_output")
+    api, service = _draft_api(artifact_store)
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", _snapshot_tool)
+    await api.create_draft_workspace(
+        workspace_id="snapshot_ws",
+        draft={
+            "name": "snapshot",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "snap",
+            "steps": {
+                "snap": {
+                    "use": "demo.personal.snapshot_tool",
+                    "input": [],
+                    "output": [],
+                }
+            },
+            "routes": {"snap": {"ok": "__end__"}},
+        },
+    )
+
+    updated = await api.add_state_schema_from_output(
+        workspace_id="snapshot_ws",
+        revision=1,
+        step_id="snap",
+        output_field="after",
+        state_path="state.after",
+    )
+    fetched = await api.get_draft_workspace(
+        workspace_id="snapshot_ws",
+        include_draft=True,
+    )
+
+    state_schema = fetched["draft"]["state_schema"]
+    assert updated["revision"] == 2
+    assert state_schema["properties"]["after"]["$ref"] == "#/$defs/_Snapshot"
+    assert state_schema["$defs"]["_Snapshot"]["properties"]["clicked"] == {
+        "title": "Clicked",
+        "type": "boolean",
+    }
+
+
+@pytest.mark.asyncio
+async def test_add_state_schema_from_output_rejects_nested_state_path(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_nested_state_output")
+    api, service = _draft_api(artifact_store)
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", _snapshot_tool)
+    await api.create_draft_workspace(
+        workspace_id="snapshot_ws",
+        draft={
+            "name": "snapshot",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "snap",
+            "steps": {
+                "snap": {
+                    "use": "demo.personal.snapshot_tool",
+                    "input": [],
+                    "output": [],
+                }
+            },
+            "routes": {"snap": {"ok": "__end__"}},
+        },
+    )
+
+    with pytest.raises(ValueError, match="state_path must name one root field"):
+        await api.add_state_schema_from_output(
+            workspace_id="snapshot_ws",
+            revision=1,
+            step_id="snap",
+            output_field="after",
+            state_path="state.after.clicked",
+        )

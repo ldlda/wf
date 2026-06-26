@@ -63,6 +63,9 @@ clear operator feedback before adding more architecture.
 - Completed: `wf schema` now lists workflow document/component models, emits
   compact JSON outlines for agent discovery, and emits valid self-contained
   JSON Schema with `--verbose`.
+- Completed: `wf draft add-state-from-output` projects capability output
+  property schemas into draft state schemas, preserving `$defs` / `definitions`
+  for schema refs and reducing brittle whole-`state_schema` patches.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

@@ -114,6 +114,16 @@ class WorkflowDraftSurface(Protocol):
         merge: bool = False,
     ) -> dict[str, Any]: ...
 
+    async def add_state_schema_from_output(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        output_field: str,
+        state_path: str,
+    ) -> dict[str, Any]: ...
+
     async def validate_draft_workspace(
         self,
         *,

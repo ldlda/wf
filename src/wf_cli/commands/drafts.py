@@ -277,6 +277,47 @@ def set_step_output_map(
     )
 
 
+@app.command("add-state-from-output")
+def add_state_from_output(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step_id: Annotated[str, typer.Option("--step", help="Draft step id.")],
+    output_field: Annotated[
+        str,
+        typer.Option("--output", help="Top-level capability output field."),
+    ],
+    state_path: Annotated[
+        str,
+        typer.Option("--state", help="Root state path, for example state.after."),
+    ],
+) -> None:
+    """Copy one capability output field schema into draft state_schema.
+
+    Use this before mapping a step output into a new state field. The command
+    reads the selected draft step's capability output schema, copies the
+    requested output property schema, and preserves local $defs/definitions so
+    JSON Schema refs remain valid.
+
+    Run `wf draft validate <workspace_id>` after adding state schema fields.
+    """
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.add_state_schema_from_output(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step_id,
+                output_field=output_field,
+                state_path=state_path,
+            ),
+        )
+    )
+
+
 @app.command("validate")
 def validate_draft(
     ctx: typer.Context,

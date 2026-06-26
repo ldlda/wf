@@ -56,6 +56,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.set_draft_route" in names
             assert "wf.workflow.set_step_input_map" in names
             assert "wf.workflow.set_step_output_map" in names
+            assert "wf.workflow.add_state_from_output" in names
             assert "wf.workflow.create_minimal_draft_workspace" in names
             assert "wf.workflow.create_draft_workspace_from_capability" in names
             assert "wf.workflow.create_artifact_from_workspace" in names
@@ -112,6 +113,12 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             ].inputSchema
             set_input_request = set_input_schema["properties"]["request"]
             assert "merge" in set_input_request["properties"]
+            state_from_output_schema = tools_by_name[
+                "wf.workflow.add_state_from_output"
+            ].inputSchema
+            state_request = state_from_output_schema["properties"]["request"]
+            assert "output_field" in state_request["properties"]
+            assert "state_path" in state_request["properties"]
             from_capability_output = tools_by_name[
                 "wf.workflow.create_draft_workspace_from_capability"
             ].outputSchema

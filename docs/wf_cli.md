@@ -297,6 +297,7 @@ wf draft set-route concat_ws --revision 2 --step call --outcome ok --to __end__
 wf draft set-input concat_ws --revision 3 --step call --map input.items=items --map input.separator=separator
 wf draft set-output concat_ws --revision 4 --step call --map value=state.value
 wf draft set-input concat_ws --revision 5 --step call --merge --map input.limit=limit
+wf draft add-state-from-output concat_ws --revision 5 --step call --output value --state state.value
 ```
 
 `set-input` maps graph source paths to node-local input fields:
@@ -309,6 +310,13 @@ By default, `set-input` and `set-output` replace the whole map for that step.
 Use repeated `--map` flags in one command when you know the complete map. Use
 `--merge` when adding or updating one entry across a later revision while
 preserving existing bindings.
+
+Before mapping a step output to a new state field, the state schema must declare
+that root field. `add-state-from-output` copies the selected step capability's
+top-level output property schema into `state_schema.properties`, including local
+`$defs` / `definitions` blocks needed by `$ref` schemas. It only declares the
+state field; still run `set-output` or `draft patch` to write values into that
+field, then run `wf draft validate`.
 
 Validate:
 

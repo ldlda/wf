@@ -237,6 +237,20 @@ class SetStepOutputMapRequest(BaseModel):
     )
 
 
+class AddStateFromOutputRequest(BaseModel):
+    """Typed MCP request for declaring a state field from a step output schema."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    step_id: str = Field(description="Draft step id whose capability output is used.")
+    output_field: str = Field(
+        description="Top-level output field to copy, for example after."
+    )
+    state_path: str = Field(
+        description="Root state path to declare, for example state.after."
+    )
+
+
 class DeleteDraftWorkspaceRequest(BaseModel):
     """Typed MCP request payload for deleting one draft workspace."""
 
