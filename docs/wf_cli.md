@@ -345,6 +345,10 @@ Validate:
 wf draft validate concat_ws
 ```
 
+Draft validation diagnostics may include `repair_hint` commands. Treat these as
+the next focused command to try, not as proof that the draft is fixed. Re-run
+`wf draft validate <workspace_id>` after applying a hint.
+
 Delete a draft workspace:
 
 ```bash

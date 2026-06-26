@@ -652,6 +652,48 @@ def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> Non
     assert validated.exit_code == 0, validated.output
     assert '"status": "valid"' in validated.output
 
+    invalid_created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create-from-capability",
+            "repair_ws",
+            "wf.std.constant",
+            "--name",
+            "repair_constant",
+        ],
+    )
+    assert invalid_created.exit_code == 0, invalid_created.output
+
+    invalid_patch = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-output",
+            "repair_ws",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--map",
+            "value=state.missing",
+        ],
+    )
+    assert invalid_patch.exit_code == 0, invalid_patch.output
+
+    invalid_validated = runner.invoke(
+        app,
+        [*base_args, "draft", "validate", "repair_ws"],
+    )
+    assert invalid_validated.exit_code == 0, invalid_validated.output
+    assert '"status": "invalid"' in invalid_validated.output
+    assert "bind-output-to-state repair_ws --revision 2" in invalid_validated.output
+    assert (
+        "--step call --output value --state state.missing" in invalid_validated.output
+    )
+
     saved_artifact = runner.invoke(
         app,
         [

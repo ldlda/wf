@@ -69,6 +69,8 @@ clear operator feedback before adding more architecture.
 - Completed: `wf draft bind-output-to-state` composes state schema projection
   with output binding merge, reducing manual draft patch repairs in agent
   challenge runs.
+- Completed: draft validation now preserves structured core validation issues
+  and adds exact `bind-output-to-state` repair hints for missing state fields.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

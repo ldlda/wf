@@ -49,6 +49,10 @@ wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --o
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
+When `wf draft validate` returns a `repair_hint`, prefer running that focused
+command before writing JSON Patch manually. Re-run `wf draft validate` after the
+repair.
+
 wf artifact create-from-plan workflow.plan.json --artifact <artifact_id> --version <n> --title <title>
 wf deploy save <deployment_id> --artifact <artifact_id> --version <n> --binding <logical>=<concrete>
 wf deploy create <deployment_id> --artifact <artifact_id> --version <n>

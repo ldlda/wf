@@ -118,6 +118,10 @@ wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --o
 wf draft validate <workspace_id>
 ```
 
+Validation repair hints are product guidance. If a diagnostic suggests
+`bind-output-to-state`, use it before hand-editing `state_schema` or step output
+bindings.
+
 Use JSON Patch for structural edits the helpers do not cover.
 
 For larger patches, write a JSON Patch array to a file and pass it with

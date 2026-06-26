@@ -18,6 +18,7 @@ from wf_artifacts import (
 from wf_artifacts import (
     patch_draft_workspace as patch_draft_workspace_record,
 )
+from wf_core.models.schemas import NodeDef
 from wf_core.models.steps import (
     InputBinding,
     InputPathBinding,
@@ -65,10 +66,32 @@ class WorkflowDraftApi:
         outcomes = getattr(spec, "outcomes", None)
         return tuple(outcomes) if outcomes is not None else None
 
+    def _node_defs_for_draft(self, draft: dict[str, Any]) -> list[NodeDef]:
+        """Derive node defs from context specs for each use step in the draft."""
+        steps = draft.get("steps")
+        if not isinstance(steps, dict):
+            return []
+        node_defs = []
+        seen = set()
+        for step in steps.values():
+            if not isinstance(step, dict):
+                continue
+            capability = step.get("use")
+            if not isinstance(capability, str) or capability in seen:
+                continue
+            seen.add(capability)
+            try:
+                spec = self.context.specs.get_qualified_spec(capability)
+            except KeyError:
+                continue
+            node_defs.append(spec.to_node_def())
+        return node_defs
+
     async def validate_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
         return validate_workflow_draft(
             draft,
             outcome_lookup=self._outcomes_for_capability,
+            node_defs=self._node_defs_for_draft(draft),
         )
 
     async def compile_draft(self, *, draft: dict[str, Any]) -> dict[str, Any]:
@@ -90,7 +113,11 @@ class WorkflowDraftApi:
         draft: dict[str, Any],
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
-        return patch_workflow_draft(draft, patch)
+        return patch_workflow_draft(
+            draft,
+            patch,
+            node_defs_for_draft=self._node_defs_for_draft,
+        )
 
     async def list_draft_workspaces(self) -> dict[str, Any]:
         """Return compact summaries for stored draft workspaces."""
@@ -140,7 +167,11 @@ class WorkflowDraftApi:
         """Refresh stored validation status without changing draft revision."""
         store = self._draft_store()
         workspace = store.get_workspace(workspace_id)
-        validation = await self.validate_draft(draft=workspace.draft)
+        validation = _with_workspace_repair_hints(
+            await self.validate_draft(draft=workspace.draft),
+            workspace_id=workspace_id,
+            revision=workspace.revision,
+        )
         refreshed = workspace.model_copy(
             update={
                 "status": validation["status"],
@@ -157,11 +188,13 @@ class WorkflowDraftApi:
         revision: int,
         patch: list[dict[str, Any]],
     ) -> dict[str, Any]:
+        store = self._draft_store()
         return patch_draft_workspace_record(
-            self._draft_store(),
+            store,
             workspace_id=workspace_id,
             revision=revision,
             patch=patch,
+            node_defs_for_draft=self._node_defs_for_draft,
         )
 
     async def set_draft_name(
@@ -587,6 +620,58 @@ def _state_path_payload(value: str) -> dict[str, str | list[str]]:
 def _escape_json_pointer(value: str) -> str:
     """Escape one JSON Pointer path segment for generated JSON Patch helpers."""
     return value.replace("~", "~0").replace("/", "~1")
+
+
+def _with_workspace_repair_hints(
+    payload: dict[str, Any],
+    *,
+    workspace_id: str,
+    revision: int,
+) -> dict[str, Any]:
+    diagnostics = payload.get("diagnostics")
+    if not isinstance(diagnostics, list):
+        return payload
+    enriched = []
+    changed = False
+    for diagnostic in diagnostics:
+        if not isinstance(diagnostic, dict):
+            enriched.append(diagnostic)
+            continue
+        repaired = dict(diagnostic)
+        hint = _draft_repair_hint(
+            repaired,
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if hint is not None:
+            repaired["repair_hint"] = hint
+            changed = True
+        enriched.append(repaired)
+    if not changed:
+        return payload
+    return {**payload, "diagnostics": enriched}
+
+
+def _draft_repair_hint(
+    diagnostic: Mapping[str, Any],
+    *,
+    workspace_id: str,
+    revision: int,
+) -> str | None:
+    if diagnostic.get("code") != "invalid_destination_path":
+        return None
+    step_id = diagnostic.get("step_id")
+    details = diagnostic.get("details")
+    if not isinstance(step_id, str) or not isinstance(details, dict):
+        return None
+    output_field = details.get("output_field")
+    state_path = details.get("state_path")
+    if not isinstance(output_field, str) or not isinstance(state_path, str):
+        return None
+    return (
+        f"wf draft bind-output-to-state {workspace_id} --revision {revision} "
+        f"--step {step_id} --output {output_field} --state {state_path}"
+    )
 
 
 def _state_root_field(value: str) -> str:

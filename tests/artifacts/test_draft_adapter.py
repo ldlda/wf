@@ -478,3 +478,51 @@ def test_adapter_lowers_foreach_policy_through_builder() -> None:
     assert foreach.concurrent.max_outstanding == 4
     assert foreach.item_error.action == "collect"
     assert str(foreach.item_error.collect_to) == "state.item_errors"
+
+
+def test_validate_workflow_draft_reports_structured_output_destination_issue() -> None:
+    draft = {
+        "name": "missing_state_field",
+        "input_schema": {},
+        "state_schema": {"type": "object", "properties": {}},
+        "output_schema": {},
+        "start": "snap",
+        "steps": {
+            "snap": {
+                "use": "demo.snapshot",
+                "output": [
+                    {
+                        "source": {"root": "local", "parts": ["after"]},
+                        "target": {"root": "state", "parts": ["after"]},
+                    }
+                ],
+            }
+        },
+        "routes": {"snap": {"ok": "__end__"}},
+    }
+    node_defs = [
+        NodeDef(
+            name="demo.snapshot",
+            input_schema=SchemaRef.model_validate({"type": "object", "properties": {}}),
+            output_schema=SchemaRef.model_validate(
+                {"type": "object", "properties": {"after": {"type": "string"}}}
+            ),
+            outcomes=["ok"],
+        )
+    ]
+
+    result = validate_workflow_draft(draft, node_defs=node_defs)
+
+    assert result["status"] == "invalid"
+    destination_diagnostics = [
+        d for d in result["diagnostics"] if d["code"] == "invalid_destination_path"
+    ]
+    assert len(destination_diagnostics) == 1
+    diagnostic = destination_diagnostics[0]
+    assert diagnostic["path"] == "nodes[0].output[0].target"
+    assert diagnostic["step_id"] == "snap"
+    assert diagnostic["details"] == {
+        "output_field": "after",
+        "state_path": "state.after",
+    }
+    assert "repair_hint" not in diagnostic

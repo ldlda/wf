@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+from collections.abc import Callable, Sequence
 from typing import Any
 
 from wf_artifacts.drafts import (
@@ -8,12 +9,14 @@ from wf_artifacts.drafts import (
     patch_workflow_draft,
     validate_workflow_draft,
 )
+from wf_core.models.schemas import NodeDef
 
 from .models import WorkflowDraftWorkspace, summarize_draft_workspace
 from .store import DraftWorkspaceConflictError, DraftWorkspaceStore
 
 JsonObject = dict[str, Any]
 JsonPatch = list[dict[str, Any]]
+NodeDefsForDraft = Callable[[JsonObject], Sequence[NodeDef]]
 
 
 def create_draft_workspace(
@@ -56,12 +59,19 @@ def patch_draft_workspace(
     workspace_id: str,
     revision: int,
     patch: JsonPatch,
+    node_defs: Sequence[NodeDef] | None = None,
+    node_defs_for_draft: NodeDefsForDraft | None = None,
 ) -> JsonObject:
     """Apply JSON Patch to a stored workspace when the revision matches."""
     workspace = store.get_workspace(workspace_id)
     if workspace.revision != revision:
         return _revision_conflict_payload(workspace, revision)
-    patched = patch_workflow_draft(workspace.draft, patch)
+    patched = patch_workflow_draft(
+        workspace.draft,
+        patch,
+        node_defs=node_defs,
+        node_defs_for_draft=node_defs_for_draft,
+    )
     if "draft" not in patched:
         # A malformed JSON Patch is not a draft revision. Return diagnostics
         # without mutating the stored workspace or burning a revision number.

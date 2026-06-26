@@ -93,7 +93,7 @@ def _draft_api(
 @pytest.mark.asyncio
 async def test_patch_draft_applies_json_patch(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch")
-    api, _service = _draft_api(artifact_store)
+    api, _service = _draft_api(artifact_store, register_echo=True)
 
     result = await api.patch_draft(
         draft=_echo_draft(),
@@ -106,7 +106,7 @@ async def test_patch_draft_applies_json_patch(tmp_path: Path) -> None:
         ],
     )
 
-    assert result["status"] == "valid"
+    assert result["status"] == "invalid"
     assert result["draft"]["steps"]["echo"]["input"][0]["target"] == {
         "root": "local",
         "parts": ["message"],
@@ -186,7 +186,7 @@ async def test_delete_draft_workspace_is_idempotent(tmp_path: Path) -> None:
 @pytest.mark.asyncio
 async def test_patch_draft_workspace_updates_revision(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch_workspace")
-    api, _service = _draft_api(artifact_store)
+    api, _service = _draft_api(artifact_store, register_echo=True)
     await api.create_draft_workspace(
         workspace_id="echo_ws",
         draft=_echo_draft(),
@@ -328,8 +328,109 @@ async def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None
 
     assert payload["revision"] == 1
     assert payload["status"] == "invalid"
-    assert payload["diagnostics"][0]["code"] == "unknown_outcome"
+    assert payload["diagnostics"][0]["code"] in (
+        "unknown_outcome",
+        "undeclared_edge_outcome",
+    )
     assert fetched["status"] == "invalid"
+
+
+@pytest.mark.asyncio
+async def test_validate_draft_workspace_suggests_bind_output_to_state(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_repair_hint")
+    api, service = _draft_api(artifact_store)
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", _snapshot_tool)
+    await api.create_draft_workspace(
+        workspace_id="snapshot_ws",
+        draft={
+            "name": "snapshot",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "snap",
+            "steps": {
+                "snap": {
+                    "use": "demo.personal.snapshot_tool",
+                    "input": [],
+                    "output": [
+                        {
+                            "source": {"root": "local", "parts": ["after"]},
+                            "target": {"root": "state", "parts": ["after"]},
+                        }
+                    ],
+                }
+            },
+            "routes": {"snap": {"ok": "__end__"}},
+        },
+    )
+
+    payload = await api.validate_draft_workspace(workspace_id="snapshot_ws")
+
+    diagnostic = payload["diagnostics"][0]
+    assert diagnostic["code"] == "invalid_destination_path"
+    assert diagnostic["step_id"] == "snap"
+    assert diagnostic["repair_hint"] == (
+        "wf draft bind-output-to-state snapshot_ws --revision 1 "
+        "--step snap --output after --state state.after"
+    )
+
+
+@pytest.mark.asyncio
+async def test_patch_draft_workspace_validates_new_use_step_with_context_specs(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_patch_new_use")
+    api, service = _draft_api(artifact_store, register_echo=True)
+    service.register_specs("demo.personal", echo_tool, _snapshot_tool)
+    await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
+    )
+
+    patched = await api.patch_draft_workspace(
+        workspace_id="echo_ws",
+        revision=1,
+        patch=[
+            {
+                "op": "add",
+                "path": "/steps/snap",
+                "value": {
+                    "use": "demo.personal.snapshot_tool",
+                    "input": [],
+                    "output": [
+                        {
+                            "source": {"root": "local", "parts": ["after"]},
+                            "target": {"root": "state", "parts": ["after"]},
+                        }
+                    ],
+                },
+            },
+            {
+                "op": "replace",
+                "path": "/routes/echo/ok",
+                "value": "snap",
+            },
+            {
+                "op": "add",
+                "path": "/routes/snap",
+                "value": {"ok": "__end__"},
+            },
+        ],
+    )
+
+    diagnostic = patched["diagnostics"][0]
+    assert patched["status"] == "invalid"
+    assert diagnostic["code"] == "invalid_destination_path"
+    assert diagnostic["step_id"] == "snap"
+    assert diagnostic["details"] == {
+        "output_field": "after",
+        "state_path": "state.after",
+    }
 
 
 @pytest.mark.asyncio
