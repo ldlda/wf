@@ -74,6 +74,7 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_step_input_map`
 - `set_step_output_map`
 - `add_state_schema_from_output`
+- `bind_output_to_state`
 
 CLI equivalents:
 
@@ -85,6 +86,7 @@ wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map 
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
 wf draft add-state-from-output <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
 ```
 
 `set-input` direction: `input.text=text` means graph source `input.text` maps to
@@ -100,6 +102,21 @@ step. Use repeated `--map` flags in one command for a complete replacement. Use
 Use `add-state-from-output` when the target state field should reuse a capability
 output schema. This prevents dangling `$ref` values by copying local `$defs` /
 `definitions` with the selected property schema.
+
+- `bind_output_to_state`
+
+  Declares one root state field from a step capability output schema and merges
+  `local.<output> -> state.<field>` into that step's output map. Prefer this
+  over manual JSON Patch when validation says a state output target is missing
+  from `state_schema`.
+  The selected step must have `use` so the helper can find the capability
+  output schema. It intentionally rejects non-capability/control steps instead
+  of guessing.
+
+```bash
+wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft validate <workspace_id>
+```
 
 Use JSON Patch for structural edits the helpers do not cover.
 

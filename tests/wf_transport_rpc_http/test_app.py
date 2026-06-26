@@ -733,6 +733,17 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
                 "state_path": "state.extra_value",
             },
         )
+        state_bound = await _rpc(
+            client,
+            "workflow.draft_workspaces.bind_output_to_state",
+            {
+                "workspace_id": "focused_ws",
+                "revision": state_added["result"]["revision"],
+                "step_id": "call",
+                "output_field": "value",
+                "state_path": "state.extra_value",
+            },
+        )
         fetched = await _rpc(
             client,
             "workflow.draft_workspaces.get",
@@ -746,6 +757,7 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     assert input_merged["result"]["revision"] == 6
     assert output_merged["result"]["revision"] == 7
     assert state_added["result"]["revision"] == 8
+    assert state_bound["result"]["revision"] == 9
     draft = fetched["result"]["draft"]
     assert draft["name"] == "focused_renamed"
     assert draft["routes"]["call"]["ok"] == "__end__"
@@ -762,7 +774,7 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     assert draft["steps"]["call"]["output"] == [
         {
             "source": {"root": "local", "parts": ["value"]},
-            "target": {"root": "state", "parts": ["value"]},
+            "target": {"root": "state", "parts": ["extra_value"]},
         },
         {
             "source": {"root": "local", "parts": ["extra"]},

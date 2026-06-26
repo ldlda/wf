@@ -20,6 +20,9 @@ validated, runnable deployment.
      only when adding or updating one entry across a later revision.
    - Before output-mapping into a new state field, declare it with
      `add-state-from-output` when it should mirror a capability output property.
+   - Use `bind-output-to-state` when a capability output should become state;
+     it declares the matching state schema and merges the output binding in one
+     revision-checked edit.
    - Use JSON Patch only for general structural edits.
 6. Save an artifact.
    - Draft artifact:

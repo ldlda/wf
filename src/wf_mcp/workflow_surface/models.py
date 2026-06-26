@@ -251,6 +251,20 @@ class AddStateFromOutputRequest(BaseModel):
     )
 
 
+class BindOutputToStateRequest(BaseModel):
+    """Typed MCP request for binding one step output to one root state field."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    step_id: str = Field(description="Draft step id whose capability output is used.")
+    output_field: str = Field(
+        description="Top-level output field to bind, for example after."
+    )
+    state_path: str = Field(
+        description="Root state path to declare and bind, for example state.after."
+    )
+
+
 class DeleteDraftWorkspaceRequest(BaseModel):
     """Typed MCP request payload for deleting one draft workspace."""
 

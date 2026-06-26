@@ -297,6 +297,65 @@ class WorkflowDraftApi:
             ],
         )
 
+    async def bind_output_to_state(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        output_field: str,
+        state_path: str,
+    ) -> dict[str, Any]:
+        """Declare a state field from a step output and bind that output to it.
+
+        This is the common draft-authoring repair for validation errors where a
+        step writes to ``state.x`` before ``state_schema.properties.x`` exists.
+        It deliberately edits only one root state field and one step output map.
+        Route changes remain explicit through ``set_draft_route``.
+        """
+        workspace = self._draft_store().get_workspace(workspace_id)
+        step = _draft_step(workspace.draft, step_id)
+        capability_name = step.get("use")
+        if not isinstance(capability_name, str) or not capability_name:
+            raise ValueError(
+                f"draft step {step_id!r} does not declare a capability use"
+            )
+
+        state_field = _state_root_field(state_path)
+        spec = self.context.specs.get_qualified_spec(capability_name)
+        output_schema = (
+            spec.output_schema_contract or spec.output_model.model_json_schema()
+        )
+        state_schema = workspace.draft.get("state_schema", {})
+        if not isinstance(state_schema, dict):
+            raise ValueError("draft state_schema must be an object")
+        projected = project_output_property_to_state_schema(
+            state_schema=state_schema,
+            output_schema=output_schema,
+            output_field=output_field,
+            state_field=state_field,
+        )
+        output_map = {
+            **self._step_output_map(workspace_id=workspace_id, step_id=step_id),
+            output_field: state_path,
+        }
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=[
+                {
+                    "op": "replace",
+                    "path": "/state_schema",
+                    "value": projected,
+                },
+                {
+                    "op": "replace",
+                    "path": f"/steps/{_escape_json_pointer(step_id)}/output",
+                    "value": _draft_output_bindings_payload(output_map),
+                },
+            ],
+        )
+
     def _step_input_maps(
         self,
         *,

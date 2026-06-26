@@ -149,6 +149,14 @@ class AddStateFromOutputParams(RpcParamsModel):
     state_path: str = Field(min_length=1)
 
 
+class BindOutputToStateParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    output_field: str = Field(min_length=1)
+    state_path: str = Field(min_length=1)
+
+
 class ValidateDraftWorkspaceParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
 

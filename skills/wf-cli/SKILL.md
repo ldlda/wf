@@ -45,6 +45,7 @@ wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map 
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
 wf draft add-state-from-output <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
@@ -77,6 +78,13 @@ multiple commands, pass `--merge` or the later command replaces the earlier map.
 If mapping `LOCAL_SOURCE=state.new_field`, declare the state field first with
 `draft add-state-from-output` when the schema should match a capability output
 field. Do not hand-copy `$defs` unless the helper cannot express the shape.
+
+Prefer `draft bind-output-to-state` when a step output should write to a new
+root state field. It declares the matching state schema and merges the output
+binding in one revision-checked edit. Use `draft add-state-from-output` only
+when you need the schema declaration without changing bindings.
+`bind-output-to-state` requires a capability-backed step with `use`; use JSON
+Patch for non-capability/control draft steps.
 
 ## Rules
 

@@ -318,6 +318,47 @@ def add_state_from_output(
     )
 
 
+@app.command("bind-output-to-state")
+def bind_output_to_state(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step_id: Annotated[str, typer.Option("--step", help="Draft step id.")],
+    output_field: Annotated[
+        str,
+        typer.Option("--output", help="Top-level capability output field."),
+    ],
+    state_path: Annotated[
+        str,
+        typer.Option("--state", help="Root state path, for example state.after."),
+    ],
+) -> None:
+    """Declare state schema and bind one step output to that state field.
+
+    This is the common command to run before validation when a step output
+    should write to a new state field. It copies the selected capability output
+    field schema into state_schema and merges the output binding
+    local.<output> -> state.<field>.
+
+    Run `wf draft validate <workspace_id>` after this command.
+    """
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.bind_output_to_state(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step_id,
+                output_field=output_field,
+                state_path=state_path,
+            ),
+        )
+    )
+
+
 @app.command("validate")
 def validate_draft(
     ctx: typer.Context,

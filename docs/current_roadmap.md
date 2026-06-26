@@ -66,6 +66,9 @@ clear operator feedback before adding more architecture.
 - Completed: `wf draft add-state-from-output` projects capability output
   property schemas into draft state schemas, preserving `$defs` / `definitions`
   for schema refs and reducing brittle whole-`state_schema` patches.
+- Completed: `wf draft bind-output-to-state` composes state schema projection
+  with output binding merge, reducing manual draft patch repairs in agent
+  challenge runs.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

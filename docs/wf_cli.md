@@ -318,6 +318,27 @@ top-level output property schema into `state_schema.properties`, including local
 state field; still run `set-output` or `draft patch` to write values into that
 field, then run `wf draft validate`.
 
+### Bind A Step Output To State
+
+Use `bind-output-to-state` when a step output should become workflow state and
+the state schema should match that capability output field.
+The selected step must be capability-backed (`use: ...`) because the command
+derives the output schema from that capability. Use JSON Patch for uncommon
+control-flow or non-capability draft steps.
+
+```bash
+wf draft bind-output-to-state concat_ws --revision 6 --step call --output value --state state.value
+wf draft validate concat_ws
+```
+
+The command combines two common edits:
+
+- It copies the selected capability output field schema into the root state
+  field.
+- It merges the output binding `local.<output> -> state.<field>` for the step.
+
+Use `set-route` separately for outcome routing.
+
 Validate:
 
 ```bash

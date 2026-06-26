@@ -161,6 +161,26 @@ class RpcDraftClientMixin:
             },
         )
 
+    async def bind_output_to_state(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        output_field: str,
+        state_path: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.bind_output_to_state",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "output_field": output_field,
+                "state_path": state_path,
+            },
+        )
+
     async def validate_draft_workspace(
         self: RpcCaller,
         *,

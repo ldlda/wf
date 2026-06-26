@@ -508,6 +508,13 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
             output_field="value",
             state_path="state.extra_value",
         )
+        state_bound = await client.bind_output_to_state(
+            workspace_id="client_focused_ws",
+            revision=state_added["revision"],
+            step_id="call",
+            output_field="value",
+            state_path="state.extra_value",
+        )
 
     assert named["revision"] == 2
     assert routed["revision"] == 3
@@ -516,6 +523,7 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
     assert input_merged["revision"] == 6
     assert output_merged["revision"] == 7
     assert state_added["revision"] == 8
+    assert state_bound["revision"] == 9
 
 
 async def test_rpc_client_diagnoses_source(tmp_path) -> None:

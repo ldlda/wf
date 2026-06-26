@@ -57,6 +57,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.set_step_input_map" in names
             assert "wf.workflow.set_step_output_map" in names
             assert "wf.workflow.add_state_from_output" in names
+            assert "wf.workflow.bind_output_to_state" in names
             assert "wf.workflow.create_minimal_draft_workspace" in names
             assert "wf.workflow.create_draft_workspace_from_capability" in names
             assert "wf.workflow.create_artifact_from_workspace" in names

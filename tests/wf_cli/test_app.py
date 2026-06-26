@@ -152,3 +152,12 @@ def test_wf_draft_add_state_from_output_help_explains_schema_copy() -> None:
     assert "capability output field schema" in help_text
     assert "$defs" in help_text
     assert "draft validate" in help_text
+
+
+def test_wf_draft_bind_output_to_state_help_explains_composed_edit() -> None:
+    result = runner.invoke(app, ["draft", "bind-output-to-state", "--help"])
+
+    assert result.exit_code == 0
+    assert "state schema" in result.output
+    assert "output binding" in result.output
+    assert "validate" in result.output

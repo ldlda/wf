@@ -483,3 +483,181 @@ async def test_add_state_schema_from_output_rejects_nested_state_path(
             output_field="after",
             state_path="state.after.clicked",
         )
+
+
+@pytest.mark.asyncio
+async def test_bind_output_to_state_projects_schema_and_merges_output_map(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_bind_output_state")
+    api, service = _draft_api(artifact_store)
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", _snapshot_tool)
+    await api.create_draft_workspace(
+        workspace_id="snapshot_ws",
+        draft={
+            "name": "snapshot",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {
+                "type": "object",
+                "properties": {"before": {"type": "object"}},
+            },
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "snap",
+            "steps": {
+                "snap": {
+                    "use": "demo.personal.snapshot_tool",
+                    "input": [],
+                    "output": [
+                        {
+                            "source": {"root": "local", "parts": ["before"]},
+                            "target": {"root": "state", "parts": ["before"]},
+                        }
+                    ],
+                }
+            },
+            "routes": {"snap": {"ok": "__end__"}},
+        },
+    )
+
+    updated = await api.bind_output_to_state(
+        workspace_id="snapshot_ws",
+        revision=1,
+        step_id="snap",
+        output_field="after",
+        state_path="state.after",
+    )
+    fetched = await api.get_draft_workspace(
+        workspace_id="snapshot_ws",
+        include_draft=True,
+    )
+
+    draft = fetched["draft"]
+    assert updated["revision"] == 2
+    assert draft["state_schema"]["properties"]["after"]["$ref"] == "#/$defs/_Snapshot"
+    assert draft["state_schema"]["$defs"]["_Snapshot"]["properties"]["clicked"] == {
+        "title": "Clicked",
+        "type": "boolean",
+    }
+    assert draft["steps"]["snap"]["output"] == [
+        {
+            "source": {"root": "local", "parts": ["before"]},
+            "target": {"root": "state", "parts": ["before"]},
+        },
+        {
+            "source": {"root": "local", "parts": ["after"]},
+            "target": {"root": "state", "parts": ["after"]},
+        },
+    ]
+
+
+@pytest.mark.asyncio
+async def test_bind_output_to_state_rejects_nested_state_path(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_bind_nested_state")
+    api, service = _draft_api(artifact_store)
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", _snapshot_tool)
+    await api.create_draft_workspace(
+        workspace_id="snapshot_ws",
+        draft={
+            "name": "snapshot",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "snap",
+            "steps": {
+                "snap": {
+                    "use": "demo.personal.snapshot_tool",
+                    "input": [],
+                    "output": [],
+                }
+            },
+            "routes": {"snap": {"ok": "__end__"}},
+        },
+    )
+
+    with pytest.raises(ValueError, match="state_path must name one root field"):
+        await api.bind_output_to_state(
+            workspace_id="snapshot_ws",
+            revision=1,
+            step_id="snap",
+            output_field="after",
+            state_path="state.after.clicked",
+        )
+
+
+@pytest.mark.asyncio
+async def test_bind_output_to_state_rejects_missing_output_field(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_bind_missing_output")
+    api, service = _draft_api(artifact_store)
+    service.register_connection(
+        ConnectionConfig(id="demo.personal", server="demo", account="personal")
+    )
+    service.register_specs("demo.personal", _snapshot_tool)
+    await api.create_draft_workspace(
+        workspace_id="snapshot_ws",
+        draft={
+            "name": "snapshot",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "snap",
+            "steps": {
+                "snap": {
+                    "use": "demo.personal.snapshot_tool",
+                    "input": [],
+                    "output": [],
+                }
+            },
+            "routes": {"snap": {"ok": "__end__"}},
+        },
+    )
+
+    with pytest.raises(ValueError, match="output field 'missing'"):
+        await api.bind_output_to_state(
+            workspace_id="snapshot_ws",
+            revision=1,
+            step_id="snap",
+            output_field="missing",
+            state_path="state.missing",
+        )
+
+
+@pytest.mark.asyncio
+async def test_bind_output_to_state_rejects_step_without_capability_use(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_bind_no_use")
+    api, _service = _draft_api(artifact_store)
+    await api.create_draft_workspace(
+        workspace_id="snapshot_ws",
+        draft={
+            "name": "snapshot",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "snap",
+            "steps": {
+                "snap": {
+                    "input": [],
+                    "output": [],
+                }
+            },
+            "routes": {"snap": {"ok": "__end__"}},
+        },
+    )
+
+    with pytest.raises(ValueError, match="does not declare a capability use"):
+        await api.bind_output_to_state(
+            workspace_id="snapshot_ws",
+            revision=1,
+            step_id="snap",
+            output_field="after",
+            state_path="state.after",
+        )
