@@ -556,6 +556,15 @@ wf explain --list --format compact
 `wf explain` is exact-match and docs-backed. It is not fuzzy search and does not
 generate prose.
 
+Draft authoring diagnostics commonly include:
+
+- `invalid_source_path`
+- `invalid_destination_path`
+- `unknown_edge_destination`
+- `unknown_outcome`
+- `patch_invalid`
+- `revision_conflict`
+
 ## Common Diagnostics
 
 ### Local/dev auth records

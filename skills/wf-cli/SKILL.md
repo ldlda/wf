@@ -108,6 +108,9 @@ top-level `compiled_plan` key from the CLI output.
 - Do not request unbounded traces.
 - Do not treat wrapper hints as semantic guarantees.
 - If validation fails, run `wf explain <code>` or `wf explain --input-file <validation-output.json>`.
+- For draft validation errors, run `wf explain <code>`. If routes point to a
+  missing step, create the target step first or repair routes with
+  `wf draft handle` / `wf draft branch`.
 - Do not use planning-session specs or implementation plans as user-facing runtime guidance.
 - Do not confuse draft shape with raw plan shape: drafts use `steps/routes/use`;
   raw plans use `nodes/edges/node`.

@@ -29,6 +29,9 @@ Common diagnostics:
 Use `wf explain <diagnostic-code>` after validation failures to get
 human-readable explanations.
 
+`unknown_edge_destination`: a route points to a missing step. Add the target
+step or repair the route; do not guess `draft step add` or `draft export`.
+
 ## Run Debugging
 
 If a run fails:
