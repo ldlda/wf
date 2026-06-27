@@ -16,6 +16,11 @@ from wf_core.validation.issues import ValidationIssue, ValidationIssueCode
 from .adapter import build_workflow_from_draft
 from .models import WorkflowDraft
 
+DRAFT_INVALID_CODE = "draft_invalid"
+PATCH_INVALID_CODE = "patch_invalid"
+DRAFT_NOT_OBJECT_CODE = "draft_not_object"
+UNKNOWN_OUTCOME_CODE = "unknown_outcome"
+
 JsonObject = dict[str, Any]
 JsonPatch = list[dict[str, Any]]
 OutcomeLookup = Callable[[str], tuple[str, ...] | None]
@@ -89,7 +94,7 @@ def patch_workflow_draft(
     except Exception as exc:
         return _invalid_result(
             DraftDiagnostic(
-                code="patch_invalid",
+                code=PATCH_INVALID_CODE,
                 path="patch",
                 message=str(exc),
             )
@@ -97,7 +102,7 @@ def patch_workflow_draft(
     if not isinstance(patched, dict):
         return _invalid_result(
             DraftDiagnostic(
-                code="draft_not_object",
+                code=DRAFT_NOT_OBJECT_CODE,
                 path="",
                 message="patched draft must be a JSON object",
             )
@@ -124,12 +129,12 @@ def _diagnostic_from_exception(exc: Exception) -> DraftDiagnostic:
     if isinstance(exc, ValidationError):
         error = exc.errors()[0]
         return DraftDiagnostic(
-            code="draft_invalid",
+            code=DRAFT_INVALID_CODE,
             path=_format_location(error["loc"]),
             message=error["msg"],
         )
     return DraftDiagnostic(
-        code="draft_invalid",
+        code=DRAFT_INVALID_CODE,
         path="",
         message=str(exc),
     )
@@ -237,7 +242,7 @@ def _validate_known_outcomes(
         for outcome in route_map:
             if outcome not in known_outcomes:
                 return DraftDiagnostic(
-                    code="unknown_outcome",
+                    code=UNKNOWN_OUTCOME_CODE,
                     path=f"routes.{step_id}.{outcome}",
                     step_id=step_id,
                     message=(

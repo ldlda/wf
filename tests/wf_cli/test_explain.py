@@ -165,6 +165,51 @@ def test_explain_related_docs_do_not_point_to_planning_artifacts() -> None:
             assert "docs/superpowers/" not in related_doc
 
 
+def test_explain_registry_covers_core_validation_codes() -> None:
+    from wf_core.validation.issues import ValidationIssueCode
+
+    expected = {
+        ValidationIssueCode.INVALID_SOURCE_PATH.value,
+        ValidationIssueCode.INVALID_DESTINATION_PATH.value,
+        ValidationIssueCode.UNKNOWN_EDGE_DESTINATION.value,
+        ValidationIssueCode.UNDECLARED_EDGE_OUTCOME.value,
+        ValidationIssueCode.MISSING_OUTCOME_EDGE.value,
+    }
+    registry_codes = {
+        entry.code for entry in DEFAULT_EXPLAIN_REGISTRY.list_full_entries()
+    }
+
+    assert expected <= registry_codes
+
+
+def test_explain_unknown_edge_destination_mentions_forward_route_repair() -> None:
+    card = DEFAULT_EXPLAIN_REGISTRY.get("unknown_edge_destination")
+
+    text = "\n".join(card.how_to_fix)
+
+    assert "wf draft handle" in text
+    assert "wf draft branch" in text
+    assert "target step first" in text.lower()
+
+
+def test_explain_registry_uses_exported_draft_codes() -> None:
+    from wf_artifacts.draft_workspaces.api import REVISION_CONFLICT_CODE
+    from wf_artifacts.drafts.api import (
+        DRAFT_INVALID_CODE,
+        PATCH_INVALID_CODE,
+        UNKNOWN_OUTCOME_CODE,
+    )
+
+    registry_codes = {
+        entry.code for entry in DEFAULT_EXPLAIN_REGISTRY.list_full_entries()
+    }
+
+    assert DRAFT_INVALID_CODE in registry_codes
+    assert PATCH_INVALID_CODE in registry_codes
+    assert UNKNOWN_OUTCOME_CODE in registry_codes
+    assert REVISION_CONFLICT_CODE in registry_codes
+
+
 def test_explain_related_doc_files_exist() -> None:
     repo_root = Path(__file__).resolve().parents[2]
     for entry in DEFAULT_EXPLAIN_REGISTRY.list_full_entries():

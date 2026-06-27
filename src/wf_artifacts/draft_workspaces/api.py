@@ -14,6 +14,9 @@ from wf_core.models.schemas import NodeDef
 from .models import WorkflowDraftWorkspace, summarize_draft_workspace
 from .store import DraftWorkspaceConflictError, DraftWorkspaceStore
 
+WORKSPACE_EXISTS_CODE = "workspace_exists"
+REVISION_CONFLICT_CODE = "revision_conflict"
+
 JsonObject = dict[str, Any]
 JsonPatch = list[dict[str, Any]]
 NodeDefsForDraft = Callable[[JsonObject], Sequence[NodeDef]]
@@ -47,7 +50,7 @@ def create_draft_workspace(
     except DraftWorkspaceConflictError as exc:
         return _conflict_payload(
             exc.workspace,
-            code="workspace_exists",
+            code=WORKSPACE_EXISTS_CODE,
             message=f"draft workspace {workspace_id!r} already exists",
         )
     return summarize_draft_workspace(workspace)
@@ -139,7 +142,7 @@ def _revision_conflict_payload(
 ) -> JsonObject:
     return _conflict_payload(
         workspace,
-        code="revision_conflict",
+        code=REVISION_CONFLICT_CODE,
         message=(
             f"workspace {workspace.id!r} is at revision "
             f"{workspace.revision}, not {expected_revision}"
