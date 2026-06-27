@@ -1073,6 +1073,8 @@ async def test_add_step_persists_invalid_forward_route(tmp_path: Path) -> None:
         name="browser",
     )
 
+    # Use only state.session_id — simulate/timeout_seconds are not declared
+    # in the workflow input schema from open_click_page.
     result = await api.add_step_from_capability(
         workspace_id="browser",
         revision=1,
@@ -1082,8 +1084,6 @@ async def test_add_step_persists_invalid_forward_route(tmp_path: Path) -> None:
         routes={"ok": "collect"},
         input_map={
             "state.session_id": "session_id",
-            "input.simulate": "simulate",
-            "input.timeout_seconds": "timeout_seconds",
         },
         bind_outputs={"after": "state.after"},
     )
@@ -1148,3 +1148,48 @@ async def test_invalid_forward_route_cannot_compile_or_save(tmp_path: Path) -> N
         item["code"] == "unknown_edge_destination"
         for item in saved["diagnostics"]
     )
+
+
+@pytest.mark.asyncio
+async def test_forward_route_becomes_valid_after_target_step_is_added(
+    tmp_path: Path,
+) -> None:
+    api, _service = _browser_click_api(
+        FileWorkflowArtifactStore(tmp_path / "drafts_repair_path")
+    )
+
+    await api.create_draft_workspace_from_capability(
+        workspace_id="browser",
+        capability_name="local.browser_click.open_click_page",
+        name="browser",
+    )
+
+    await api.add_step_from_capability(
+        workspace_id="browser",
+        revision=1,
+        step_id="wait",
+        capability_name="local.browser_click.wait_for_click",
+        route_from_step="call",
+        routes={"ok": "collect"},
+        input_map={
+            "state.session_id": "session_id",
+        },
+        bind_outputs={"after": "state.after"},
+    )
+
+    await api.add_step_from_capability(
+        workspace_id="browser",
+        revision=2,
+        step_id="collect",
+        capability_name="local.browser_click.collect_snapshots",
+        route_from_step="wait",
+        input_map={
+            "state.session_id": "session_id",
+            "state.before": "before",
+            "state.after": "after",
+        },
+        bind_outputs={"before": "state.final_before", "after": "state.final_after"},
+    )
+
+    validated = await api.validate_draft_workspace(workspace_id="browser")
+    assert validated["status"] == "valid"

@@ -65,6 +65,11 @@ Top-level workflow output uses `path` / `target`, not step-level
 If a patch returns `revision_conflict`, fetch the workspace again and retry
 against the latest revision.
 
+Forward routes in drafts are allowed as invalid intermediate state. If
+`wf draft add-step --route ok=collect` returns `status: invalid`, add the
+missing `collect` step next, then run `wf draft validate`. Do not save or
+compile until validation is valid.
+
 ## Focused Helpers
 
 Prefer focused helpers over JSON Patch for common edits:
