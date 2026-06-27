@@ -992,6 +992,7 @@ async def test_compile_draft_workspace_invalid_returns_diagnostics(
 
 # -- Browser-click test helpers for forward-route tests --
 
+
 class _OpenClickPageInput(BaseModel):
     pass
 
@@ -1091,15 +1092,16 @@ async def test_add_step_persists_invalid_forward_route(tmp_path: Path) -> None:
     assert result["revision"] == 2
     assert result["status"] == "invalid"
     assert any(
-        item["code"] == "unknown_edge_destination"
-        for item in result["diagnostics"]
+        item["code"] == "unknown_edge_destination" for item in result["diagnostics"]
     )
 
     stored = await api.get_draft_workspace(
         workspace_id="browser",
         include_draft=True,
     )
-    assert stored["draft"]["steps"]["wait"]["use"] == "local.browser_click.wait_for_click"
+    assert (
+        stored["draft"]["steps"]["wait"]["use"] == "local.browser_click.wait_for_click"
+    )
     assert stored["draft"]["routes"]["wait"]["ok"] == "collect"
 
 
@@ -1130,8 +1132,7 @@ async def test_invalid_forward_route_cannot_compile_or_save(tmp_path: Path) -> N
 
     assert compiled["status"] == "invalid"
     assert any(
-        item["code"] == "unknown_edge_destination"
-        for item in compiled["diagnostics"]
+        item["code"] == "unknown_edge_destination" for item in compiled["diagnostics"]
     )
 
     saved = await api.create_artifact_from_workspace(
@@ -1145,8 +1146,7 @@ async def test_invalid_forward_route_cannot_compile_or_save(tmp_path: Path) -> N
     assert saved["status"] == "invalid"
     assert saved["saved"] is False
     assert any(
-        item["code"] == "unknown_edge_destination"
-        for item in saved["diagnostics"]
+        item["code"] == "unknown_edge_destination" for item in saved["diagnostics"]
     )
 
 

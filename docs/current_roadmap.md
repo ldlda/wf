@@ -84,10 +84,10 @@ clear operator feedback before adding more architecture.
   `unknown_edge_destination`, `invalid_source_path`, and `patch_invalid`.
   Implementation plan:
   [`draft explain diagnostics`](historical/superpowers/plans/2026-06-28-explain-draft-diagnostics.md).
-- Planned: let draft workspaces persist invalid intermediate route states so
-  agents can add forward-routed target steps before final validation/save.
-  Implementation plan:
-  [`invalid intermediate draft authoring`](superpowers/plans/2026-06-28-draft-invalid-intermediate-authoring.md).
+- Completed: draft workspaces can persist invalid intermediate route states,
+  allowing agents to add missing target steps before final validation/save.
+  Implementation:
+  [`invalid intermediate draft authoring`](historical/superpowers/plans/2026-06-28-draft-invalid-intermediate-authoring.md).
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

@@ -359,6 +359,10 @@ wf draft add-step report_ws \
 Run `wf draft validate report_ws` after adding the step. If validation returns
 a `repair_hint`, prefer the focused helper in that hint before JSON Patch.
 
+Draft commands may return `status: invalid` after persisting an edit. That is
+normal for intermediate authoring. Repair diagnostics, run `wf draft validate`,
+then save/compile only after the workspace is valid.
+
 ### Branch And Handle Existing Steps
 
 Use `wf draft branch` to update routes for an existing step in one revision:

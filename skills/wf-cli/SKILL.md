@@ -125,3 +125,6 @@ top-level `compiled_plan` key from the CLI output.
   the source of truth for a concrete document.
 - If public commands and supplied skills are insufficient, report the exact
   blocker instead of guessing undocumented fields.
+- `status: invalid` from a draft edit is not always a command failure. Inspect
+  diagnostics and continue repairing the same workspace unless the command
+  reports a conflict or malformed patch.
