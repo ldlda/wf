@@ -1362,3 +1362,56 @@ def test_wf_deploy_create_alias_saves_deployment(monkeypatch, tmp_path) -> None:
     assert created.exit_code == 0, created.output
     payload = json.loads(created.output)
     assert payload["deployment_id"] == "alias_artifact.default"
+
+
+def test_wf_draft_forward_route_invalid_via_rpc(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "fwd_ws",
+            "--capability",
+            "wf.std.constant",
+            "--name",
+            "forward_route",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+
+    result = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "add-step",
+            "fwd_ws",
+            "--revision",
+            "1",
+            "--step",
+            "second",
+            "--capability",
+            "wf.std.constant",
+            "--from-step",
+            "call",
+            "--route",
+            "ok=missing",
+            "--input",
+            "input.value=value",
+            "--bind-output",
+            "value=state.val",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["status"] == "invalid"
+    assert payload["revision"] == 2

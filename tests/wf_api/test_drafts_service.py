@@ -1101,3 +1101,50 @@ async def test_add_step_persists_invalid_forward_route(tmp_path: Path) -> None:
     )
     assert stored["draft"]["steps"]["wait"]["use"] == "local.browser_click.wait_for_click"
     assert stored["draft"]["routes"]["wait"]["ok"] == "collect"
+
+
+@pytest.mark.asyncio
+async def test_invalid_forward_route_cannot_compile_or_save(tmp_path: Path) -> None:
+    api, _service = _browser_click_api(
+        FileWorkflowArtifactStore(tmp_path / "drafts_compile_boundary")
+    )
+
+    await api.create_draft_workspace_from_capability(
+        workspace_id="browser",
+        capability_name="local.browser_click.open_click_page",
+        name="browser",
+    )
+
+    await api.add_step_from_capability(
+        workspace_id="browser",
+        revision=1,
+        step_id="wait",
+        capability_name="local.browser_click.wait_for_click",
+        route_from_step="call",
+        routes={"ok": "collect"},
+        input_map={"state.session_id": "session_id"},
+        bind_outputs={"after": "state.after"},
+    )
+
+    compiled = await api.compile_draft_workspace(workspace_id="browser")
+
+    assert compiled["status"] == "invalid"
+    assert any(
+        item["code"] == "unknown_edge_destination"
+        for item in compiled["diagnostics"]
+    )
+
+    saved = await api.create_artifact_from_workspace(
+        workspace_id="browser",
+        artifact_id="browser_workflow",
+        version=1,
+        title="Browser Workflow",
+        outcomes=["ok"],
+    )
+
+    assert saved["status"] == "invalid"
+    assert saved["saved"] is False
+    assert any(
+        item["code"] == "unknown_edge_destination"
+        for item in saved["diagnostics"]
+    )
