@@ -1018,7 +1018,7 @@ The draft path demonstrates agent-oriented authoring. A draft workspace can be
 seeded from one capability's input and output schemas:
 
 ```powershell
-wf draft create-from-capability report_ws local.report.extract_report
+wf draft create report_ws --capability local.report.extract_report
 ```
 
 That command is intentionally a best-effort bootstrap, not a complete workflow
@@ -1550,13 +1550,13 @@ cap call local.report.extract_report `
 
 ## Draft Bootstrap And Focused Edits
 
-`create-from-capability` is a best-effort bootstrap. It creates a one-step
+`wf draft create --capability` is a best-effort bootstrap. It creates a one-step
 draft from the selected capability's wrapper hints. Focused commands then cover
 common edits without requiring the agent to write RFC 6902 patches by hand.
 
 ```powershell
 uv run wf --config examples/report_workflow/wf.config.json `
-draft create-from-capability report_ws local.report.extract_report `
+draft create report_ws --capability local.report.extract_report `
  --name report_case_study --title "Report Case Study"
 
 uv run wf --config examples/report_workflow/wf.config.json `

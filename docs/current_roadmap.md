@@ -64,9 +64,9 @@ clear operator feedback before adding more architecture.
   compact JSON outlines for agent discovery, and emits valid self-contained
   JSON Schema with `--verbose`.
 - Completed: `wf draft bind --from ... --to ...` composes input/state/output
-  schema projection with step binding merge, replacing the narrower
-  `bind-output-to-state` helper and reducing manual draft patch repairs in
-  agent challenge runs.
+  schema projection with step binding merge, replacing the prior narrower
+  output-to-state helper and reducing manual draft patch repairs in agent
+  challenge runs.
 - Completed: draft CLI vocabulary now uses `wf draft create --capability` and
   `wf draft add-step --capability`, replacing the longer
   `*-from-capability` commands that agents repeatedly guessed around.

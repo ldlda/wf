@@ -77,6 +77,24 @@ def test_load_trial_summary_uses_short_labels_and_manual_outcome(
     assert summary.notes == "Pass | with newline and spacing."
 
 
+def test_load_trial_summary_prefers_manual_attempt_evidence(
+    tmp_path: Path,
+) -> None:
+    from examples.agent_challenges.summarize_trials import load_trial_summary
+
+    report = _write_report(tmp_path / "results" / "trial.report.json")
+    payload = json.loads(report.read_text(encoding="utf-8"))
+    payload["manual_audit"]["evidence"] = {
+        "attempts_total": 3,
+        "attempts_failed": 2,
+    }
+    report.write_text(json.dumps(payload), encoding="utf-8")
+
+    summary = load_trial_summary(report)
+
+    assert summary.attempts == "2/3"
+
+
 def test_render_markdown_escapes_table_cells(tmp_path: Path) -> None:
     from examples.agent_challenges.summarize_trials import (
         load_trial_summary,

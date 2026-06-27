@@ -44,7 +44,15 @@ def _dict(value: object) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
-def _attempts(agent_self_report: dict[str, Any]) -> str:
+def _attempts(agent_self_report: dict[str, Any], manual_audit: dict[str, Any]) -> str:
+    # Manual audits are authoritative for aggregate tables; the raw self-report
+    # remains visible in final-report.md for traceability.
+    audit_evidence = _dict(manual_audit.get("evidence"))
+    audit_total = audit_evidence.get("attempts_total")
+    audit_failed = audit_evidence.get("attempts_failed")
+    if isinstance(audit_total, int) and isinstance(audit_failed, int):
+        return f"{audit_failed}/{audit_total}"
+
     attempts = _dict(agent_self_report.get("attempts"))
     total = attempts.get("total")
     failed = attempts.get("failed")
@@ -86,7 +94,7 @@ def load_trial_summary(path: Path) -> TrialSummary:
         validity=_string(outcome.get("evaluation_validity")),
         duration_seconds=_float(outcome.get("duration_seconds")),
         tokens_total=_int(tokens.get("total")),
-        attempts=_attempts(self_report),
+        attempts=_attempts(self_report, manual_audit),
         read_flags=_read_flags(self_report),
         notes=" ".join(notes.split()),
     )

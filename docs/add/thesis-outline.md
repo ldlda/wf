@@ -411,7 +411,7 @@ wf config validate
   -> wf source list
   -> wf source resources / prompts
   -> wf cap list / inspect / call
-  -> wf draft create-from-capability
+  -> wf draft create --capability
   -> wf draft save
   -> wf deploy save / validate
   -> wf run start

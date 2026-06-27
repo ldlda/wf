@@ -240,8 +240,8 @@ uv run wf --config wf.python.config.json cap call local.ops.echo --input '{"text
 Turn it into a saved workflow:
 
 ```powershell
-uv run wf --config wf.python.config.json draft create-from-capability `
-  python_echo_ws local.ops.echo --name python_echo
+uv run wf --config wf.python.config.json draft create `
+  python_echo_ws --capability local.ops.echo --name python_echo
 
 uv run wf --config wf.python.config.json draft save python_echo_ws `
   --artifact python_echo `
