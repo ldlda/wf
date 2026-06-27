@@ -342,7 +342,7 @@ async def test_validate_draft_workspace_refreshes_status(tmp_path: Path) -> None
 
 
 @pytest.mark.asyncio
-async def test_validate_draft_workspace_suggests_bind_output_to_state(
+async def test_validate_draft_workspace_suggests_bind(
     tmp_path: Path,
 ) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_repair_hint")
@@ -381,8 +381,8 @@ async def test_validate_draft_workspace_suggests_bind_output_to_state(
     assert diagnostic["code"] == "invalid_destination_path"
     assert diagnostic["step_id"] == "snap"
     assert diagnostic["repair_hint"] == (
-        "wf draft bind-output-to-state snapshot_ws --revision 1 "
-        "--step snap --output after --state state.after"
+        "wf draft bind snapshot_ws --revision 1 "
+        "--step snap --from local.after --to state.after"
     )
 
 
@@ -560,7 +560,9 @@ async def test_bind_draft_workflow_input_to_step_input_projects_input_schema(
         source_path="input.text",
         target_path="local.text",
     )
-    workspace = await api.get_draft_workspace(workspace_id="bind_ws", include_draft=True)
+    workspace = await api.get_draft_workspace(
+        workspace_id="bind_ws", include_draft=True
+    )
 
     assert result["revision"] == 2
     assert workspace["draft"]["input_schema"]["properties"]["text"]["type"] == "string"
@@ -584,7 +586,13 @@ async def test_bind_draft_output_to_nested_state_projects_state_schema(
             "state_schema": {"type": "object", "properties": {}},
             "output_schema": {"type": "object", "properties": {}},
             "start": "snap",
-            "steps": {"snap": {"use": "demo.personal.snapshot_tool", "input": [], "output": []}},
+            "steps": {
+                "snap": {
+                    "use": "demo.personal.snapshot_tool",
+                    "input": [],
+                    "output": [],
+                }
+            },
             "routes": {"snap": {"ok": "__end__"}},
         },
     )
@@ -596,11 +604,15 @@ async def test_bind_draft_output_to_nested_state_projects_state_schema(
         source_path="local.after",
         target_path="state.session.after",
     )
-    workspace = await api.get_draft_workspace(workspace_id="snapshot_ws", include_draft=True)
+    workspace = await api.get_draft_workspace(
+        workspace_id="snapshot_ws", include_draft=True
+    )
 
     assert result["revision"] == 2
     assert (
-        workspace["draft"]["state_schema"]["properties"]["session"]["properties"]["after"]["$ref"]
+        workspace["draft"]["state_schema"]["properties"]["session"]["properties"][
+            "after"
+        ]["$ref"]
         == "#/$defs/_Snapshot"
     )
     assert workspace["draft"]["steps"]["snap"]["output"] == [

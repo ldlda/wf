@@ -180,15 +180,27 @@ class WorkflowDraftAuthoringApi:
         step = draft_step(workspace.draft, step_id)
         capability_name = step.get("use")
         if not isinstance(capability_name, str) or not capability_name:
-            raise ValueError(f"draft step {step_id!r} does not declare a capability use")
+            raise ValueError(
+                f"draft step {step_id!r} does not declare a capability use"
+            )
         spec = self.context.specs.get_qualified_spec(capability_name)
 
-        source_root, source_parts = _graph_parts(source_path) if not source_path.startswith("local.") else ("local", LocalPath.parse(source_path).parts)
-        target_root, target_parts = _graph_parts(target_path) if not target_path.startswith("local.") else ("local", LocalPath.parse(target_path).parts)
+        source_root, source_parts = (
+            _graph_parts(source_path)
+            if not source_path.startswith("local.")
+            else ("local", LocalPath.parse(source_path).parts)
+        )
+        target_root, target_parts = (
+            _graph_parts(target_path)
+            if not target_path.startswith("local.")
+            else ("local", LocalPath.parse(target_path).parts)
+        )
 
         if target_root == "local" and source_root in {"input", "state"}:
             local_field = _local_field(target_path)
-            input_schema = spec.input_schema_contract or spec.input_model.model_json_schema()
+            input_schema = (
+                spec.input_schema_contract or spec.input_model.model_json_schema()
+            )
             schema_key = "input_schema" if source_root == "input" else "state_schema"
             target_schema = workspace.draft.get(schema_key, {})
             if not isinstance(target_schema, dict):
@@ -218,7 +230,9 @@ class WorkflowDraftAuthoringApi:
 
         if source_root == "local" and target_root in {"state", "output"}:
             local_field = _local_field(source_path)
-            output_schema = spec.output_schema_contract or spec.output_model.model_json_schema()
+            output_schema = (
+                spec.output_schema_contract or spec.output_model.model_json_schema()
+            )
             schema_key = "state_schema" if target_root == "state" else "output_schema"
             target_schema = workspace.draft.get(schema_key, {})
             if not isinstance(target_schema, dict):
@@ -230,7 +244,9 @@ class WorkflowDraftAuthoringApi:
                 target_parts=target_parts,
             )
             output_map = {
-                **self.drafts._step_output_map(workspace_id=workspace_id, step_id=step_id),
+                **self.drafts._step_output_map(
+                    workspace_id=workspace_id, step_id=step_id
+                ),
                 local_field: target_path,
             }
             return await self.drafts.patch_draft_workspace(
@@ -246,7 +262,9 @@ class WorkflowDraftAuthoringApi:
                 ],
             )
 
-        raise ValueError(f"unsupported bind direction: {source_path!r} -> {target_path!r}")
+        raise ValueError(
+            f"unsupported bind direction: {source_path!r} -> {target_path!r}"
+        )
 
     async def add_step_from_capability(
         self,

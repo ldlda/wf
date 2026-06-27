@@ -18,10 +18,10 @@ validated, runnable deployment.
      for common edits.
    - `set-input` and `set-output` replace full maps by default; pass `--merge`
      only when adding or updating one entry across a later revision.
-    - Before output-mapping into a new state field, declare it with
-      `bind-output-to-state` when it should mirror a capability output property.
-      It declares the matching state schema and merges the output binding in one
-      revision-checked edit.
+   - Before mapping into a new workflow input, state, or output field, prefer
+     `wf draft bind --from ... --to ...` when it should mirror a capability
+     local input/output property. It declares the matching schema and merges
+     the binding in one revision-checked edit.
    - When adding a new capability-backed step, prefer:
      ```bash
      wf draft add-step-from-capability ...

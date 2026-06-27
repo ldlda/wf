@@ -6,6 +6,7 @@ from .errors import WorkflowRpcError
 from .models import (
     AddStepFromCapabilityParams,
     AdminEmptyParams,
+    BindDraftParams,
     BranchDraftParams,
     CallCapabilityParams,
     CompileDraftWorkspaceParams,
@@ -48,6 +49,7 @@ from .models import (
 __all__ = [
     "AddStepFromCapabilityParams",
     "AdminEmptyParams",
+    "BindDraftParams",
     "BranchDraftParams",
     "CallCapabilityParams",
     "CompileDraftWorkspaceParams",

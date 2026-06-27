@@ -501,12 +501,12 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
             output_map={"extra": "state.extra"},
             merge=True,
         )
-        state_bound = await client.bind_output_to_state(
+        state_bound = await client.bind_draft(
             workspace_id="client_focused_ws",
             revision=7,
             step_id="call",
-            output_field="value",
-            state_path="state.extra_value",
+            source_path="local.value",
+            target_path="state.extra_value",
         )
 
     assert named["revision"] == 2

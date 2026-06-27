@@ -9,7 +9,7 @@ from wf_server import WorkflowServer
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
 from ..models import (
     AddStepFromCapabilityParams,
-    BindOutputToStateParams,
+    BindDraftParams,
     BranchDraftParams,
     CompileDraftWorkspaceParams,
     CreateArtifactFromWorkspaceParams,
@@ -183,19 +183,19 @@ def register_methods(
             raise_workflow_rpc_error(exc)
 
     @entrypoint.method(
-        name="workflow.draft_workspaces.bind_output_to_state",
+        name="workflow.draft_workspaces.bind",
         errors=[WorkflowRpcError],
     )
-    async def workflow_draft_workspaces_bind_output_to_state(
-        params: BindOutputToStateParams = RpcParams(),
+    async def workflow_draft_workspaces_bind(
+        params: BindDraftParams = RpcParams(),
     ) -> dict[str, Any]:
         try:
-            return await server.api.bind_output_to_state(
+            return await server.api.bind_draft(
                 workspace_id=params.workspace_id,
                 revision=params.revision,
                 step_id=params.step_id,
-                output_field=params.output_field,
-                state_path=params.state_path,
+                source_path=params.source_path,
+                target_path=params.target_path,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)

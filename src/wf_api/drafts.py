@@ -473,6 +473,6 @@ def _draft_repair_hint(
     if not isinstance(output_field, str) or not isinstance(state_path, str):
         return None
     return (
-        f"wf draft bind-output-to-state {workspace_id} --revision {revision} "
-        f"--step {step_id} --output {output_field} --state {state_path}"
+        f"wf draft bind {workspace_id} --revision {revision} "
+        f"--step {step_id} --from local.{output_field} --to {state_path}"
     )

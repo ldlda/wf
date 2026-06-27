@@ -13,7 +13,7 @@ from wf_mcp.broker.service.workflow_operation_context import context_from_servic
 
 from .models import (
     AddStepFromCapabilityRequest,
-    BindOutputToStateRequest,
+    BindDraftRequest,
     BranchDraftRequest,
     CallCapabilityResult,
     CompileDraftWorkspaceRequest,
@@ -461,23 +461,24 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         )
 
     @server.tool(
-        name="wf.workflow.bind_output_to_state",
-        title="Bind Output To State",
+        name="wf.workflow.bind",
+        title="Bind Draft",
         description=(
-            "Declare one root state field from a draft step capability output "
-            "schema and bind local.<output> to that state path."
+            "Bind a capability step path and project the matching schema. "
+            "Use input/state -> local for step inputs and local -> state/output "
+            "for step outputs."
         ),
     )
-    async def bind_output_to_state(
-        request: BindOutputToStateRequest,
+    async def bind_draft(
+        request: BindDraftRequest,
     ) -> DraftWorkspaceResult:
         return DraftWorkspaceResult.model_validate(
-            await handlers.bind_output_to_state(
+            await handlers.bind_draft(
                 workspace_id=request.workspace_id,
                 revision=request.revision,
                 step_id=request.step_id,
-                output_field=request.output_field,
-                state_path=request.state_path,
+                source_path=request.source_path,
+                target_path=request.target_path,
             )
         )
 

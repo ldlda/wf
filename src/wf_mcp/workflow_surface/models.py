@@ -243,18 +243,14 @@ class SetStepOutputMapRequest(BaseModel):
     )
 
 
-class BindOutputToStateRequest(BaseModel):
-    """Typed MCP request for binding one step output to one root state field."""
+class BindDraftRequest(BaseModel):
+    """Typed MCP request for binding one draft step path with schema projection."""
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
-    step_id: str = Field(description="Draft step id whose capability output is used.")
-    output_field: str = Field(
-        description="Top-level output field to bind, for example after."
-    )
-    state_path: str = Field(
-        description="Root state path to declare and bind, for example state.after."
-    )
+    step_id: str = Field(description="Capability-backed draft step id.")
+    source_path: str = Field(description="Source path, for example input.x or local.y.")
+    target_path: str = Field(description="Target path, for example local.x or state.y.")
 
 
 class AddStepFromCapabilityRequest(BaseModel):

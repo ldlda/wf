@@ -299,42 +299,39 @@ def set_step_output_map(
     )
 
 
-@app.command("bind-output-to-state")
-def bind_output_to_state(
+@app.command("bind")
+def bind_draft(
     ctx: typer.Context,
     workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
     revision: Annotated[
         int, typer.Option("--revision", min=1, help="Expected workspace revision.")
     ],
     step_id: Annotated[str, typer.Option("--step", help="Draft step id.")],
-    output_field: Annotated[
+    source_path: Annotated[
         str,
-        typer.Option("--output", help="Top-level capability output field."),
+        typer.Option("--from", help="Source path, for example input.x or local.y."),
     ],
-    state_path: Annotated[
+    target_path: Annotated[
         str,
-        typer.Option("--state", help="Root state path, for example state.after."),
+        typer.Option("--to", help="Target path, for example local.x or state.y."),
     ],
 ) -> None:
-    """Declare state schema and bind one step output to that state field.
+    """Bind a capability step path and project the matching schema.
 
-    This is the common command to run before validation when a step output
-    should write to a new state field. It copies the selected capability output
-    field schema into state_schema and merges the output binding
-    local.<output> -> state.<field>.
-
-    Run `wf draft validate <workspace_id>` after this command.
+    Direction matters. Use input/state -> local for step inputs and local ->
+    state/output for step outputs. Run `wf draft validate <workspace_id>` after
+    this command.
     """
     context = load_cli_context(ctx)
     emit_json(
         run_cli_operation(
             context,
-            context.handlers.bind_output_to_state(
+            context.handlers.bind_draft(
                 workspace_id=workspace_id,
                 revision=revision,
                 step_id=step_id,
-                output_field=output_field,
-                state_path=state_path,
+                source_path=source_path,
+                target_path=target_path,
             ),
         )
     )

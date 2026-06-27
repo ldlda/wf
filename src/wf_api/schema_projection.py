@@ -31,17 +31,23 @@ def project_property_to_schema_path(
     _ensure_object_schema(projected, "target_schema")
     parent = projected
     for index, part in enumerate(target_parts[:-1]):
-        properties = _properties_for_object(parent, ".".join(target_parts[:index]) or "target_schema")
+        properties = _properties_for_object(
+            parent, ".".join(target_parts[:index]) or "target_schema"
+        )
         child = properties.get(part)
         if child is None:
             child = {"type": "object", "properties": {}}
             properties[part] = child
         if not isinstance(child, dict):
-            raise ValueError(f"schema path {'.'.join(target_parts[: index + 1])!r} is not an object")
+            raise ValueError(
+                f"schema path {'.'.join(target_parts[: index + 1])!r} is not an object"
+            )
         _ensure_object_schema(child, ".".join(target_parts[: index + 1]))
         parent = child
 
-    properties = _properties_for_object(parent, ".".join(target_parts[:-1]) or "target_schema")
+    properties = _properties_for_object(
+        parent, ".".join(target_parts[:-1]) or "target_schema"
+    )
     leaf = target_parts[-1]
     if leaf in properties:
         raise ValueError(f"schema path {'.'.join(target_parts)!r} already exists")
@@ -76,15 +82,21 @@ def project_output_property_to_state_schema(
         if msg.startswith("source field ") and "is not declared" in msg:
             raise ValueError(f"output field {output_field!r} is not declared") from exc
         if msg.startswith("source field ") and "not a JSON Schema" in msg:
-            raise ValueError(f"output field {output_field!r} is not a JSON Schema object") from exc
+            raise ValueError(
+                f"output field {output_field!r} is not a JSON Schema object"
+            ) from exc
         if "schema path 'target_schema'" in msg and "is not an object" in msg:
             raise ValueError("state_schema must be an object schema") from exc
         if msg.startswith("schema path ") and "already exists" in msg:
             raise ValueError(f"state field {state_field!r} already exists") from exc
         if "target_schema is not valid JSON Schema" in msg:
-            raise ValueError(f"state_schema is not valid JSON Schema: {msg.split(': ', 1)[1]}") from exc
+            raise ValueError(
+                f"state_schema is not valid JSON Schema: {msg.split(': ', 1)[1]}"
+            ) from exc
         if "source_schema is not valid JSON Schema" in msg:
-            raise ValueError(f"output_schema is not valid JSON Schema: {msg.split(': ', 1)[1]}") from exc
+            raise ValueError(
+                f"output_schema is not valid JSON Schema: {msg.split(': ', 1)[1]}"
+            ) from exc
         raise
 
 

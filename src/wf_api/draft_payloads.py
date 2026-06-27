@@ -39,7 +39,10 @@ def input_bindings_payload(
 def output_bindings_payload(output_map: dict[str, str]) -> list[dict[str, Any]]:
     """Serialize draft output maps into canonical string-path binding payloads."""
     return [
-        {"source": _local_path_payload(source), "target": _graph_source_path_payload(target)}
+        {
+            "source": _local_path_payload(source),
+            "target": _graph_source_path_payload(target),
+        }
         for source, target in output_map.items()
     ]
 

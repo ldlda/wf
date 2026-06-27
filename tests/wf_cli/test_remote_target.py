@@ -689,9 +689,9 @@ def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> Non
     )
     assert invalid_validated.exit_code == 0, invalid_validated.output
     assert '"status": "invalid"' in invalid_validated.output
-    assert "bind-output-to-state repair_ws --revision 2" in invalid_validated.output
+    assert "bind repair_ws --revision 2" in invalid_validated.output
     assert (
-        "--step call --output value --state state.missing" in invalid_validated.output
+        "--step call --from local.value --to state.missing" in invalid_validated.output
     )
 
     saved_artifact = runner.invoke(
@@ -1139,7 +1139,7 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
     ]
 
 
-def test_wf_draft_bind_output_to_state_uses_rpc_target(monkeypatch, tmp_path) -> None:
+def test_wf_draft_bind_uses_rpc_target(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)
     config_path = tmp_path / "wf.json"
@@ -1166,16 +1166,16 @@ def test_wf_draft_bind_output_to_state_uses_rpc_target(monkeypatch, tmp_path) ->
         [
             *base_args,
             "draft",
-            "bind-output-to-state",
+            "bind",
             "snapshot_ws",
             "--revision",
             "1",
             "--step",
             "call",
-            "--output",
-            "value",
-            "--state",
-            "state.value",
+            "--from",
+            "local.value",
+            "--to",
+            "state.result",
         ],
     )
 

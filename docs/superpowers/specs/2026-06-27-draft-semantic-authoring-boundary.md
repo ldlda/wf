@@ -109,7 +109,7 @@ The public draft surface is documented in descending order of preference.
 
 - `create-from-capability`
 - `add-step-from-capability`
-- `bind-output-to-state`
+- `bind`
 - `branch`
 - `handle`
 
@@ -123,9 +123,10 @@ graph intent. They are the preferred agent authoring surface.
 - `set-input`
 - `set-output`
 
-These remain available for precise repairs. `set-output` does not project the
-destination state schema; callers should prefer `bind-output-to-state` when
-writing a capability output into state.
+These remain available for precise repairs. `set-input` and `set-output` do
+not project workflow schemas; callers should prefer `bind` when a capability
+input/output should also declare the matching workflow input, state, or output
+schema.
 
 ### Escape Hatch
 
@@ -213,11 +214,22 @@ pairs remain unchanged.
 
 `handle` is not a join. It creates ordinary directed edges to one target.
 
-### Bind Output To State
+### Bind
 
-`bind-output-to-state` remains the capability-aware schema propagation
-operation. It projects the selected output property and required `$defs` into
-the root state schema, then merges the output binding in the same revision.
+`bind` is the capability-aware schema propagation operation. It projects the
+selected capability local input/output property and required `$defs` into the
+workflow input, state, or output schema, then merges the matching step input or
+output binding in the same revision.
+
+```powershell
+wf draft bind WORKSPACE --revision 4 --step wait `
+  --from input.simulate `
+  --to local.simulate
+
+wf draft bind WORKSPACE --revision 5 --step wait `
+  --from local.after `
+  --to state.after
+```
 
 The partial `add-state-from-output` operation is removed from API, RPC, MCP,
 CLI, docs, and skills. It was superseded before acquiring a real caller or

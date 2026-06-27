@@ -724,13 +724,13 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
         )
         state_bound = await _rpc(
             client,
-            "workflow.draft_workspaces.bind_output_to_state",
+            "workflow.draft_workspaces.bind",
             {
                 "workspace_id": "focused_ws",
                 "revision": 7,
                 "step_id": "call",
-                "output_field": "value",
-                "state_path": "state.extra_value",
+                "source_path": "local.value",
+                "target_path": "state.extra_value",
             },
         )
         fetched = await _rpc(

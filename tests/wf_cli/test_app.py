@@ -144,13 +144,13 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "draft validate" in output_help
 
 
-def test_wf_draft_bind_output_to_state_help_explains_composed_edit() -> None:
-    result = runner.invoke(app, ["draft", "bind-output-to-state", "--help"])
+def test_wf_draft_bind_help_explains_direction() -> None:
+    result = runner.invoke(app, ["draft", "bind", "--help"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
-    assert "state schema" in output
-    assert "output binding" in output
+    assert "--from" in output
+    assert "--to" in output
     assert "validate" in output
 
 

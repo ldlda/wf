@@ -313,24 +313,25 @@ Use repeated `--map` flags in one command when you know the complete map. Use
 `--merge` when adding or updating one entry across a later revision while
 preserving existing bindings.
 
-### Bind A Step Output To State
+### Bind A Step Path
 
-Use `bind-output-to-state` when a step output should become workflow state and
-the state schema should match that capability output field.
-The selected step must be capability-backed (`use: ...`) because the command
-derives the output schema from that capability. Use JSON Patch for uncommon
-control-flow or non-capability draft steps.
+Use `bind` when a capability step input/output binding also needs workflow
+schema projection. The selected step must be capability-backed (`use: ...`)
+because the command derives the schema from that capability. Direction matters:
+use `input.*` or `state.*` to `local.*` for step inputs, and `local.*` to
+`state.*` or `output.*` for step outputs.
 
 ```bash
-wf draft bind-output-to-state concat_ws --revision 6 --step call --output value --state state.value
+wf draft bind concat_ws --revision 6 --step call --from local.value --to state.value
+wf draft bind concat_ws --revision 7 --step call --from input.text --to local.text
 wf draft validate concat_ws
 ```
 
 The command combines two common edits:
 
-- It copies the selected capability output field schema into the root state
-  field.
-- It merges the output binding `local.<output> -> state.<field>` for the step.
+- It copies the selected capability local field schema into the workflow input,
+  state, or output schema at the graph path.
+- It merges the matching step input or output binding.
 
 Use `set-route` separately for outcome routing.
 

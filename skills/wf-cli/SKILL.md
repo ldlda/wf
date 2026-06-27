@@ -47,7 +47,8 @@ wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
-wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
 wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
@@ -82,11 +83,10 @@ For `draft set-input` and `draft set-output`, repeated `--map` flags in one
 command define the complete replacement map. If you split map edits across
 multiple commands, pass `--merge` or the later command replaces the earlier map.
 
-Prefer `draft bind-output-to-state` when a step output should write to a new
-root state field. It declares the matching state schema and merges the output
-binding in one revision-checked edit.
-`bind-output-to-state` requires a capability-backed step with `use`; use JSON
-Patch for non-capability/control draft steps.
+Prefer `draft bind` when a capability step binding also needs schema
+projection. Use `input/state -> local` for step inputs and `local ->
+state/output` for step outputs. It requires a capability-backed step with
+`use`; use JSON Patch for non-capability/control draft steps.
 
 To add a capability step, prefer `wf draft add-step-from-capability` over raw
 JSON Patch when the route, input bindings, and output-to-state bindings are

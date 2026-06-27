@@ -141,12 +141,12 @@ class SetStepOutputMapParams(RpcParamsModel):
     merge: bool = False
 
 
-class BindOutputToStateParams(RpcParamsModel):
+class BindDraftParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     revision: int = Field(ge=1)
     step_id: str = Field(min_length=1)
-    output_field: str = Field(min_length=1)
-    state_path: str = Field(min_length=1)
+    source_path: str = Field(min_length=1)
+    target_path: str = Field(min_length=1)
 
 
 class AddStepFromCapabilityParams(RpcParamsModel):

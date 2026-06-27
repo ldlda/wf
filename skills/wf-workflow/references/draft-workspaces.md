@@ -73,7 +73,7 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_draft_route`
 - `set_step_input_map`
 - `set_step_output_map`
-- `bind_output_to_state`
+- `bind_draft`
 - `add_step_from_capability`
 - `branch_draft`
 - `handle_draft`
@@ -91,7 +91,8 @@ wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
-wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
 wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
 ```
 
@@ -105,18 +106,19 @@ Without `--merge`, `set-input` and `set-output` replace the whole map for that
 step. Use repeated `--map` flags in one command for a complete replacement. Use
 `--merge` only when adding/updating entries over multiple revisions.
 
-- `bind_output_to_state`
+- `bind_draft`
 
-  Declares one root state field from a step capability output schema and merges
-  `local.<output> -> state.<field>` into that step's output map. Prefer this
-  over manual JSON Patch when validation says a state output target is missing
-  from `state_schema`.
-  The selected step must have `use` so the helper can find the capability
-  output schema. It intentionally rejects non-capability/control steps instead
-  of guessing.
+  Declares a workflow input/state/output schema field from a capability local
+  input/output schema and merges the matching step binding. Use `input/state ->
+  local` for step inputs and `local -> state/output` for step outputs. Prefer
+  this over manual JSON Patch when validation says a target schema field is
+  missing. The selected step must have `use` so the helper can find the
+  capability schema. It intentionally rejects non-capability/control steps
+  instead of guessing.
 
 ```bash
-wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
 wf draft validate <workspace_id>
 ```
 
@@ -156,8 +158,7 @@ wf draft validate <workspace_id>
   a `compiled_plan`.
 
 Validation repair hints are product guidance. If a diagnostic suggests
-`bind-output-to-state`, use it before hand-editing `state_schema` or step output
-bindings.
+`wf draft bind`, use it before hand-editing schemas or step bindings.
 
 Use JSON Patch for structural edits the helpers do not cover.
 
