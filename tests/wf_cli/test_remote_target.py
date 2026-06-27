@@ -1101,23 +1101,6 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
             "--merge",
         ],
     )
-    state_added = runner.invoke(
-        app,
-        [
-            *base_args,
-            "draft",
-            "add-state-from-output",
-            "focused_ws",
-            "--revision",
-            "7",
-            "--step",
-            "call",
-            "--output",
-            "value",
-            "--state",
-            "state.extra_value",
-        ],
-    )
     inspected = runner.invoke(
         app,
         [*base_args, "draft", "inspect", "focused_ws", "--include-draft"],
@@ -1129,7 +1112,6 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
     assert output_mapped.exit_code == 0, output_mapped.output
     assert input_merged.exit_code == 0, input_merged.output
     assert output_merged.exit_code == 0, output_merged.output
-    assert state_added.exit_code == 0, state_added.output
     assert inspected.exit_code == 0, inspected.output
     payload = json.loads(inspected.output)
     draft = payload["draft"]
@@ -1137,25 +1119,24 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
     assert draft["routes"]["call"]["ok"] == "__end__"
     assert draft["steps"]["call"]["input"] == [
         {
-            "target": {"root": "local", "parts": ["value"]},
-            "path": {"root": "input", "parts": ["value"]},
+            "target": "value",
+            "path": "input.value",
         },
         {
-            "target": {"root": "local", "parts": ["extra"]},
-            "path": {"root": "input", "parts": ["extra"]},
+            "target": "extra",
+            "path": "input.extra",
         },
     ]
     assert draft["steps"]["call"]["output"] == [
         {
-            "source": {"root": "local", "parts": ["value"]},
-            "target": {"root": "state", "parts": ["value"]},
+            "source": "value",
+            "target": "state.value",
         },
         {
-            "source": {"root": "local", "parts": ["extra"]},
-            "target": {"root": "state", "parts": ["extra"]},
+            "source": "extra",
+            "target": "state.extra",
         },
     ]
-    assert "extra_value" in draft["state_schema"]["properties"]
 
 
 def test_wf_draft_bind_output_to_state_uses_rpc_target(monkeypatch, tmp_path) -> None:
@@ -1244,10 +1225,8 @@ def test_wf_draft_add_step_from_capability_uses_rpc_target(
             "call",
             "--from-outcome",
             "ok",
-            "--outcome",
-            "ok",
-            "--to",
-            "__end__",
+            "--route",
+            "ok=__end__",
             "--input",
             "input.value=value",
             "--bind-output",
@@ -1259,6 +1238,85 @@ def test_wf_draft_add_step_from_capability_uses_rpc_target(
     payload = json.loads(result.output)
     assert payload["revision"] == 2
     assert payload["status"] == "valid"
+
+
+def test_wf_draft_compile_prints_compiled_plan(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create-from-capability",
+            "compile_ws",
+            "wf.std.constant",
+            "--name",
+            "compile_me",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+
+    result = runner.invoke(app, [*base_args, "draft", "compile", "compile_ws"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["name"] == "compile_me"
+    assert "compiled_plan" not in payload
+
+
+def test_wf_draft_compile_invalid_prints_diagnostics_to_stderr(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    asyncio.run(
+        server.api.create_draft_workspace(
+            workspace_id="invalid_compile_ws",
+            draft={
+                "name": "invalid_compile",
+                "input_schema": {"type": "object"},
+                "state_schema": {"type": "object", "properties": {}},
+                "output_schema": {"type": "object", "properties": {}},
+                "start": "call",
+                "steps": {
+                    "call": {
+                        "use": "wf.std.constant",
+                        "input": [],
+                        "output": [],
+                    }
+                },
+                "routes": {"call": {"typo": "__end__"}},
+            },
+        )
+    )
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+
+    result = runner.invoke(
+        app,
+        [
+            "--config",
+            str(config_path),
+            "--url",
+            "http://test/rpc",
+            "draft",
+            "compile",
+            "invalid_compile_ws",
+        ],
+    )
+
+    assert result.exit_code == 1
+    # This Typer test runner mixes stderr into output; the command implementation
+    # writes invalid compile diagnostics with err=True for real terminals.
+    assert '"status": "invalid"' in result.output
+    assert "compiled_plan" not in result.output
 
 
 def test_wf_deploy_create_alias_saves_deployment(monkeypatch, tmp_path) -> None:

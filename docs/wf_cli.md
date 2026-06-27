@@ -297,7 +297,9 @@ wf draft set-route concat_ws --revision 2 --step call --outcome ok --to __end__
 wf draft set-input concat_ws --revision 3 --step call --map input.items=items --map input.separator=separator
 wf draft set-output concat_ws --revision 4 --step call --map value=state.value
 wf draft set-input concat_ws --revision 5 --step call --merge --map input.limit=limit
-wf draft add-state-from-output concat_ws --revision 5 --step call --output value --state state.value
+wf draft branch concat_ws --revision 6 --step call --route ok=__end__ --route error=tool_error
+wf draft handle concat_ws --revision 7 --to fail --branch lookup:error --branch transform:error
+wf draft compile concat_ws
 ```
 
 `set-input` maps graph source paths to node-local input fields:
@@ -310,13 +312,6 @@ By default, `set-input` and `set-output` replace the whole map for that step.
 Use repeated `--map` flags in one command when you know the complete map. Use
 `--merge` when adding or updating one entry across a later revision while
 preserving existing bindings.
-
-Before mapping a step output to a new state field, the state schema must declare
-that root field. `add-state-from-output` copies the selected step capability's
-top-level output property schema into `state_schema.properties`, including local
-`$defs` / `definitions` blocks needed by `$ref` schemas. It only declares the
-state field; still run `set-output` or `draft patch` to write values into that
-field, then run `wf draft validate`.
 
 ### Bind A Step Output To State
 
@@ -351,14 +346,40 @@ wf draft add-step-from-capability report_ws \
   --capability local.report.render_markdown_report \
   --from-step extract \
   --from-outcome ok \
-  --outcome ok \
-  --to __end__ \
+  --route ok=__end__ \
+  --route error=tool_error \
   --input state.title=title \
   --bind-output markdown=state.markdown
 ```
 
 Run `wf draft validate report_ws` after adding the step. If validation returns
 a `repair_hint`, prefer the focused helper in that hint before JSON Patch.
+
+### Branch And Handle Existing Steps
+
+Use `wf draft branch` to update routes for an existing step in one revision:
+
+```bash
+wf draft branch concat_ws --revision 6 --step call --route ok=__end__ --route error=tool_error
+```
+
+Use `wf draft handle` to route multiple source step outcomes to a common target:
+
+```bash
+wf draft handle concat_ws --revision 7 --to fail --branch lookup:error --branch transform:error
+```
+
+### Compile A Draft Workspace
+
+Use `wf draft compile` to return the compiled raw plan plus required
+capabilities without mutating or saving the draft:
+
+```bash
+wf draft compile concat_ws
+```
+
+On success, prints the compiled plan to stdout. On invalid draft status, prints
+the structured diagnostic envelope to stderr and exits nonzero.
 
 Validate:
 

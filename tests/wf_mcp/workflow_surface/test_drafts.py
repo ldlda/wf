@@ -44,7 +44,7 @@ def test_workflow_surface_rejects_unknown_draft_route_outcome_when_spec_is_known
     payload = asyncio.run(h.validate_draft(draft=draft))
 
     assert payload["status"] == "invalid"
-    assert payload["diagnostics"][0]["path"] == "routes.echo.typo"
+    assert payload["diagnostics"][0]["path"] == "edges[0].outcome"
 
 
 def test_workflow_surface_creates_artifact_from_draft_with_binding_suggestions(
@@ -150,7 +150,7 @@ def test_workflow_surface_validates_draft_workspace_with_live_outcomes(
 
     assert payload["revision"] == 1
     assert payload["status"] == "invalid"
-    assert payload["diagnostics"][0]["code"] == "unknown_outcome"
+    assert payload["diagnostics"][0]["code"] == "undeclared_edge_outcome"
     assert fetched["status"] == "invalid"
 
 

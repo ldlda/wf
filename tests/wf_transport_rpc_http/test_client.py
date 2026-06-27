@@ -293,7 +293,7 @@ async def test_rpc_workflow_client_draft_workspace_lifecycle(tmp_path) -> None:
             name="client_constant",
             title="Client Constant",
             input_map={},
-            output_map={"value": "state.result"},
+            output_map={},
         )
         listed = await client.list_draft_workspaces()
         fetched = await client.get_draft_workspace(workspace_id="client_ws")
@@ -501,16 +501,9 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
             output_map={"extra": "state.extra"},
             merge=True,
         )
-        state_added = await client.add_state_schema_from_output(
-            workspace_id="client_focused_ws",
-            revision=7,
-            step_id="call",
-            output_field="value",
-            state_path="state.extra_value",
-        )
         state_bound = await client.bind_output_to_state(
             workspace_id="client_focused_ws",
-            revision=state_added["revision"],
+            revision=7,
             step_id="call",
             output_field="value",
             state_path="state.extra_value",
@@ -522,8 +515,7 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
     assert output_mapped["revision"] == 5
     assert input_merged["revision"] == 6
     assert output_merged["revision"] == 7
-    assert state_added["revision"] == 8
-    assert state_bound["revision"] == 9
+    assert state_bound["revision"] == 8
 
 
 async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> None:
@@ -550,8 +542,7 @@ async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> 
             capability_name="wf.std.constant",
             route_from_step="call",
             route_from_outcome="ok",
-            route_outcome="ok",
-            route_to="__end__",
+            routes={"ok": "__end__"},
             input_map={"input.value": "value"},
             bind_outputs={"value": "state.second_value"},
         )

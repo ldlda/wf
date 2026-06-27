@@ -141,14 +141,6 @@ class SetStepOutputMapParams(RpcParamsModel):
     merge: bool = False
 
 
-class AddStateFromOutputParams(RpcParamsModel):
-    workspace_id: str = Field(min_length=1)
-    revision: int = Field(ge=1)
-    step_id: str = Field(min_length=1)
-    output_field: str = Field(min_length=1)
-    state_path: str = Field(min_length=1)
-
-
 class BindOutputToStateParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     revision: int = Field(ge=1)
@@ -164,13 +156,35 @@ class AddStepFromCapabilityParams(RpcParamsModel):
     capability_name: str = Field(min_length=1)
     route_from_step: str | None = None
     route_from_outcome: str = Field(default="ok", min_length=1)
-    route_outcome: str = Field(default="ok", min_length=1)
-    route_to: str = Field(default="__end__", min_length=1)
+    routes: dict[str, str] | None = None
     input_map: dict[str, str] = Field(default_factory=dict)
     bind_outputs: dict[str, str] = Field(default_factory=dict)
 
 
+class BranchDraftParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    routes: dict[str, str]
+
+
+class HandleDraftBranch(RpcParamsModel):
+    step_id: str = Field(min_length=1)
+    outcome: str = Field(min_length=1)
+
+
+class HandleDraftParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    branches: list[HandleDraftBranch]
+    target: str = Field(min_length=1)
+
+
 class ValidateDraftWorkspaceParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+
+
+class CompileDraftWorkspaceParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
 
 

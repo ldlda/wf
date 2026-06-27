@@ -266,7 +266,7 @@ async def test_rpc_draft_workspace_methods(tmp_path) -> None:
                 "name": "remote_constant",
                 "title": "Remote Constant",
                 "input_map": {},
-                "output_map": {"value": "state.result"},
+                "output_map": {},
             },
         )
         listed = await _rpc(client, "workflow.draft_workspaces.list", {})
@@ -722,23 +722,12 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
                 "merge": True,
             },
         )
-        state_added = await _rpc(
-            client,
-            "workflow.draft_workspaces.add_state_from_output",
-            {
-                "workspace_id": "focused_ws",
-                "revision": 7,
-                "step_id": "call",
-                "output_field": "value",
-                "state_path": "state.extra_value",
-            },
-        )
         state_bound = await _rpc(
             client,
             "workflow.draft_workspaces.bind_output_to_state",
             {
                 "workspace_id": "focused_ws",
-                "revision": state_added["result"]["revision"],
+                "revision": 7,
                 "step_id": "call",
                 "output_field": "value",
                 "state_path": "state.extra_value",
@@ -756,8 +745,7 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     assert output_mapped["result"]["revision"] == 5
     assert input_merged["result"]["revision"] == 6
     assert output_merged["result"]["revision"] == 7
-    assert state_added["result"]["revision"] == 8
-    assert state_bound["result"]["revision"] == 9
+    assert state_bound["result"]["revision"] == 8
     draft = fetched["result"]["draft"]
     assert draft["name"] == "focused_renamed"
     assert draft["routes"]["call"]["ok"] == "__end__"
@@ -812,8 +800,7 @@ async def test_rpc_draft_workspace_add_step_from_capability(tmp_path) -> None:
                 "capability_name": "wf.std.constant",
                 "route_from_step": "call",
                 "route_from_outcome": "ok",
-                "route_outcome": "ok",
-                "route_to": "__end__",
+                "routes": {"ok": "__end__"},
                 "input_map": {"input.value": "value"},
                 "bind_outputs": {"value": "state.second_value"},
             },

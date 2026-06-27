@@ -8,6 +8,7 @@ from wf_artifacts import ArtifactKind
 from .artifacts import WorkflowArtifactApi
 from .capabilities import WorkflowCapabilityApi
 from .deployments import WorkflowDeploymentApi
+from .draft_authoring import WorkflowDraftAuthoringApi
 from .drafts import WorkflowDraftApi
 from .models import RawWorkflowPlan
 from .operation_context import WorkflowOperationContext
@@ -26,6 +27,7 @@ class WorkflowApi:
         self.context = context
         self.capabilities = WorkflowCapabilityApi(context)
         self.drafts = WorkflowDraftApi(context)
+        self.draft_authoring = WorkflowDraftAuthoringApi(context, self.drafts)
         self.artifacts = WorkflowArtifactApi(context)
         self.deployments = WorkflowDeploymentApi(context)
         self.runs = WorkflowRunApi(context)
@@ -285,6 +287,13 @@ class WorkflowApi:
     ) -> dict[str, Any]:
         return await self.drafts.validate_draft_workspace(workspace_id=workspace_id)
 
+    async def compile_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+    ) -> dict[str, Any]:
+        return await self.drafts.compile_draft_workspace(workspace_id=workspace_id)
+
     async def patch_draft_workspace(
         self,
         *,
@@ -362,23 +371,6 @@ class WorkflowApi:
             merge=merge,
         )
 
-    async def add_state_schema_from_output(
-        self,
-        *,
-        workspace_id: str,
-        revision: int,
-        step_id: str,
-        output_field: str,
-        state_path: str,
-    ) -> dict[str, Any]:
-        return await self.drafts.add_state_schema_from_output(
-            workspace_id=workspace_id,
-            revision=revision,
-            step_id=step_id,
-            output_field=output_field,
-            state_path=state_path,
-        )
-
     async def bind_output_to_state(
         self,
         *,
@@ -388,7 +380,7 @@ class WorkflowApi:
         output_field: str,
         state_path: str,
     ) -> dict[str, Any]:
-        return await self.drafts.bind_output_to_state(
+        return await self.draft_authoring.bind_output_to_state(
             workspace_id=workspace_id,
             revision=revision,
             step_id=step_id,
@@ -405,22 +397,56 @@ class WorkflowApi:
         capability_name: str,
         route_from_step: str | None = None,
         route_from_outcome: str = "ok",
-        route_outcome: str = "ok",
-        route_to: str = "__end__",
+        routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
         bind_outputs: dict[str, str] | None = None,
     ) -> dict[str, Any]:
-        return await self.drafts.add_step_from_capability(
+        return await self.draft_authoring.add_step_from_capability(
             workspace_id=workspace_id,
             revision=revision,
             step_id=step_id,
             capability_name=capability_name,
             route_from_step=route_from_step,
             route_from_outcome=route_from_outcome,
-            route_outcome=route_outcome,
-            route_to=route_to,
+            routes=routes,
             input_map=input_map,
             bind_outputs=bind_outputs,
+        )
+
+    async def branch_draft(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        routes: dict[str, str],
+    ) -> dict[str, Any]:
+        return await self.draft_authoring.branch_draft(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            routes=routes,
+        )
+
+    async def handle_draft(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        branches: list[dict[str, str]],
+        target: str,
+    ) -> dict[str, Any]:
+        from .draft_authoring import DraftOutcomeRef
+
+        refs = [
+            DraftOutcomeRef(step_id=b["step_id"], outcome=b["outcome"])
+            for b in branches
+        ]
+        return await self.draft_authoring.handle_draft(
+            workspace_id=workspace_id,
+            revision=revision,
+            branches=refs,
+            target=target,
         )
 
     async def create_minimal_draft_workspace(
@@ -439,7 +465,7 @@ class WorkflowApi:
         error_message_source: Any | None = None,
         title: str | None = None,
     ) -> dict[str, Any]:
-        return await self.drafts.create_minimal_draft_workspace(
+        return await self.draft_authoring.create_minimal_draft_workspace(
             workspace_id=workspace_id,
             name=name,
             capability_name=capability_name,

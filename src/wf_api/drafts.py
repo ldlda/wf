@@ -25,21 +25,24 @@ from wf_core.models.steps import (
     InputValueBinding,
     OutputBinding,
 )
-from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 
 from .capability_requirements import (
     required_capabilities_for_plan,
     required_capability_payloads,
 )
-from .constants import (
-    DEFAULT_CALL_STEP_ID,
-    DEFAULT_ERROR_OUTCOME,
-    DEFAULT_ERROR_STEP_ID,
-    DEFAULT_OK_OUTCOME,
-    RUNTIME_ERROR_CAPABILITY,
+from .draft_payloads import (
+    draft_step as _draft_step,
+)
+from .draft_payloads import (
+    escape_json_pointer as _escape_json_pointer,
+)
+from .draft_payloads import (
+    input_bindings_payload as _draft_input_bindings_payload,
+)
+from .draft_payloads import (
+    output_bindings_payload as _draft_output_bindings_payload,
 )
 from .operation_context import WorkflowOperationContext
-from .schema_projection import project_output_property_to_state_schema
 
 
 class WorkflowDraftApi:
@@ -181,6 +184,14 @@ class WorkflowDraftApi:
         store.save_workspace(refreshed)
         return get_draft_workspace_record(store, workspace_id=workspace_id)
 
+    async def compile_draft_workspace(self, *, workspace_id: str) -> dict[str, Any]:
+        """Compile a stored draft workspace without mutating it."""
+        workspace = self._draft_store().get_workspace(workspace_id)
+        validation = await self.validate_draft(draft=workspace.draft)
+        if validation["status"] != "valid":
+            return validation
+        return await self.compile_draft(draft=workspace.draft)
+
     async def patch_draft_workspace(
         self,
         *,
@@ -288,197 +299,6 @@ class WorkflowDraftApi:
             ],
         )
 
-    async def add_state_schema_from_output(
-        self,
-        *,
-        workspace_id: str,
-        revision: int,
-        step_id: str,
-        output_field: str,
-        state_path: str,
-    ) -> dict[str, Any]:
-        workspace = self._draft_store().get_workspace(workspace_id)
-        step = _draft_step(workspace.draft, step_id)
-        capability_name = step.get("use")
-        if not isinstance(capability_name, str) or not capability_name:
-            raise ValueError(
-                f"draft step {step_id!r} does not declare a capability use"
-            )
-        state_field = _state_root_field(state_path)
-        spec = self.context.specs.get_qualified_spec(capability_name)
-        output_schema = (
-            spec.output_schema_contract or spec.output_model.model_json_schema()
-        )
-        state_schema = workspace.draft.get("state_schema", {})
-        if not isinstance(state_schema, dict):
-            raise ValueError("draft state_schema must be an object")
-        projected = project_output_property_to_state_schema(
-            state_schema=state_schema,
-            output_schema=output_schema,
-            output_field=output_field,
-            state_field=state_field,
-        )
-        return await self.patch_draft_workspace(
-            workspace_id=workspace_id,
-            revision=revision,
-            patch=[
-                {
-                    "op": "replace",
-                    "path": "/state_schema",
-                    "value": projected,
-                }
-            ],
-        )
-
-    async def bind_output_to_state(
-        self,
-        *,
-        workspace_id: str,
-        revision: int,
-        step_id: str,
-        output_field: str,
-        state_path: str,
-    ) -> dict[str, Any]:
-        """Declare a state field from a step output and bind that output to it.
-
-        This is the common draft-authoring repair for validation errors where a
-        step writes to ``state.x`` before ``state_schema.properties.x`` exists.
-        It deliberately edits only one root state field and one step output map.
-        Route changes remain explicit through ``set_draft_route``.
-        """
-        workspace = self._draft_store().get_workspace(workspace_id)
-        step = _draft_step(workspace.draft, step_id)
-        capability_name = step.get("use")
-        if not isinstance(capability_name, str) or not capability_name:
-            raise ValueError(
-                f"draft step {step_id!r} does not declare a capability use"
-            )
-
-        state_field = _state_root_field(state_path)
-        spec = self.context.specs.get_qualified_spec(capability_name)
-        output_schema = (
-            spec.output_schema_contract or spec.output_model.model_json_schema()
-        )
-        state_schema = workspace.draft.get("state_schema", {})
-        if not isinstance(state_schema, dict):
-            raise ValueError("draft state_schema must be an object")
-        projected = project_output_property_to_state_schema(
-            state_schema=state_schema,
-            output_schema=output_schema,
-            output_field=output_field,
-            state_field=state_field,
-        )
-        output_map = {
-            **self._step_output_map(workspace_id=workspace_id, step_id=step_id),
-            output_field: state_path,
-        }
-        return await self.patch_draft_workspace(
-            workspace_id=workspace_id,
-            revision=revision,
-            patch=[
-                {
-                    "op": "replace",
-                    "path": "/state_schema",
-                    "value": projected,
-                },
-                {
-                    "op": "replace",
-                    "path": f"/steps/{_escape_json_pointer(step_id)}/output",
-                    "value": _draft_output_bindings_payload(output_map),
-                },
-            ],
-        )
-
-    async def add_step_from_capability(
-        self,
-        *,
-        workspace_id: str,
-        revision: int,
-        step_id: str,
-        capability_name: str,
-        route_from_step: str | None = None,
-        route_from_outcome: str = DEFAULT_OK_OUTCOME,
-        route_outcome: str = DEFAULT_OK_OUTCOME,
-        route_to: str = "__end__",
-        input_map: dict[str, str] | None = None,
-        bind_outputs: dict[str, str] | None = None,
-    ) -> dict[str, Any]:
-        """Add one capability step plus explicit route/map/schema wiring.
-
-        This is a composed authoring helper for agents.  It edits the draft in
-        one revision so callers do not have to interleave add-step, route,
-        input-map, state-schema, and output-map operations by hand.
-        """
-        workspace = self._draft_store().get_workspace(workspace_id)
-        steps = workspace.draft.get("steps")
-        if not isinstance(steps, dict):
-            raise ValueError("draft steps must be an object")
-        if step_id in steps:
-            raise ValueError(f"draft step {step_id!r} already exists")
-
-        spec = self.context.specs.get_qualified_spec(capability_name)
-        output_schema = (
-            spec.output_schema_contract or spec.output_model.model_json_schema()
-        )
-        state_schema = workspace.draft.get("state_schema", {})
-        if not isinstance(state_schema, dict):
-            raise ValueError("draft state_schema must be an object")
-
-        input_map = input_map or {}
-        bind_outputs = bind_outputs or {}
-        projected_state_schema = state_schema
-        for output_field, state_path in bind_outputs.items():
-            state_field = _state_root_field(state_path)
-            projected_state_schema = project_output_property_to_state_schema(
-                state_schema=projected_state_schema,
-                output_schema=output_schema,
-                output_field=output_field,
-                state_field=state_field,
-            )
-
-        patch: list[dict[str, Any]] = [
-            {
-                "op": "add",
-                "path": f"/steps/{_escape_json_pointer(step_id)}",
-                "value": {
-                    "use": capability_name,
-                    "input": _draft_input_bindings_payload(input_map, {}),
-                    "output": _draft_output_bindings_payload(bind_outputs),
-                },
-            },
-            {
-                "op": "add",
-                "path": f"/routes/{_escape_json_pointer(step_id)}",
-                "value": {route_outcome: route_to},
-            },
-        ]
-        if projected_state_schema != state_schema:
-            patch.insert(
-                0,
-                {
-                    "op": "replace",
-                    "path": "/state_schema",
-                    "value": projected_state_schema,
-                },
-            )
-        if route_from_step is not None:
-            patch.append(
-                {
-                    "op": "add",
-                    "path": (
-                        f"/routes/{_escape_json_pointer(route_from_step)}/"
-                        f"{_escape_json_pointer(route_from_outcome)}"
-                    ),
-                    "value": step_id,
-                }
-            )
-
-        return await self.patch_draft_workspace(
-            workspace_id=workspace_id,
-            revision=revision,
-            patch=patch,
-        )
-
     def _step_input_maps(
         self,
         *,
@@ -493,76 +313,6 @@ class WorkflowDraftApi:
         workspace = self._draft_store().get_workspace(workspace_id)
         step = _draft_step(workspace.draft, step_id)
         return _output_map_from_payload(step.get("output", []))
-
-    async def create_minimal_draft_workspace(
-        self,
-        *,
-        workspace_id: str,
-        name: str,
-        capability_name: str,
-        input_schema: dict[str, Any],
-        state_schema: dict[str, Any],
-        output_schema: dict[str, Any],
-        input: Sequence[InputBinding] | None = None,
-        output: Sequence[OutputBinding] | None = None,
-        input_map: dict[str, str] | None = None,
-        output_map: dict[str, str] | None = None,
-        error_message_source: str | GraphSourcePath | None = None,
-        title: str | None = None,
-    ) -> dict[str, Any]:
-        """Bootstrap the smallest patchable draft around one workflow capability."""
-        draft_input, draft_with = _draft_input_maps(
-            input=input,
-            input_map=input_map,
-        )
-        draft_output = _draft_output_map(output=output, output_map=output_map)
-        outcomes = self._outcomes_for_capability(capability_name) or (
-            DEFAULT_OK_OUTCOME,
-        )
-        steps: dict[str, Any] = {
-            DEFAULT_CALL_STEP_ID: {
-                "use": capability_name,
-                "input": _draft_input_bindings_payload(draft_input, draft_with),
-                "output": _draft_output_bindings_payload(draft_output),
-            }
-        }
-        routes: dict[str, dict[str, str]] = {
-            DEFAULT_CALL_STEP_ID: {DEFAULT_OK_OUTCOME: "__end__"}
-        }
-        if DEFAULT_ERROR_OUTCOME in outcomes:
-            # The bootstrapper cannot infer provider-specific error envelopes.
-            # Use a static default unless the caller explicitly supplies the
-            # state path containing a better provider error message.
-            error_input: dict[str, Any] = {
-                "target": {"root": "local", "parts": ["message"]},
-                "value": "Capability call failed",
-            }
-            if error_message_source is not None:
-                error_input = {
-                    "target": {"root": "local", "parts": ["message"]},
-                    "path": _graph_path_payload(error_message_source),
-                }
-            steps[DEFAULT_ERROR_STEP_ID] = {
-                "use": RUNTIME_ERROR_CAPABILITY,
-                "input": [error_input],
-                "output": [],
-            }
-            routes[DEFAULT_CALL_STEP_ID][DEFAULT_ERROR_OUTCOME] = DEFAULT_ERROR_STEP_ID
-            routes[DEFAULT_ERROR_STEP_ID] = {DEFAULT_OK_OUTCOME: "__end__"}
-        draft = {
-            "name": name,
-            "input_schema": input_schema,
-            "state_schema": state_schema,
-            "output_schema": output_schema,
-            "start": DEFAULT_CALL_STEP_ID,
-            "steps": steps,
-            "routes": routes,
-        }
-        return await self.create_draft_workspace(
-            workspace_id=workspace_id,
-            title=title,
-            draft=draft,
-        )
 
 
 def _draft_input_maps(
@@ -604,38 +354,6 @@ def _draft_output_map(
     if output is None:
         return dict(output_map or {})
     return {str(binding.source): str(binding.target) for binding in output}
-
-
-def _draft_input_bindings_payload(
-    input_map: dict[str, str],
-    input_values: dict[str, Any],
-) -> list[dict[str, Any]]:
-    """Serialize draft input maps into canonical structural binding payloads."""
-    return [
-        {"target": _local_path_payload(target), "value": value}
-        for target, value in input_values.items()
-    ] + [
-        {"target": _local_path_payload(target), "path": _graph_path_payload(source)}
-        for source, target in input_map.items()
-    ]
-
-
-def _draft_output_bindings_payload(output_map: dict[str, str]) -> list[dict[str, Any]]:
-    """Serialize draft output maps into canonical structural binding payloads."""
-    return [
-        {"source": _local_path_payload(source), "target": _state_path_payload(target)}
-        for source, target in output_map.items()
-    ]
-
-
-def _draft_step(draft: Mapping[str, Any], step_id: str) -> Mapping[str, Any]:
-    steps = draft.get("steps", {})
-    if not isinstance(steps, Mapping):
-        raise KeyError("draft steps are not available")
-    step = steps[step_id]
-    if not isinstance(step, Mapping):
-        raise KeyError(f"draft step {step_id!r} is not an object")
-    return step
 
 
 def _input_maps_from_payload(
@@ -694,24 +412,6 @@ def _path_text(value: Any, *, expected_root: str | None = None) -> str:
     return root if not raw_parts else f"{root}.{'.'.join(raw_parts)}"
 
 
-def _graph_path_payload(value: str | GraphSourcePath) -> str:
-    path = value if isinstance(value, GraphSourcePath) else GraphSourcePath.parse(value)
-    return GraphSourcePath._serialize(path)
-
-
-def _local_path_payload(value: str) -> str:
-    return LocalPath._serialize(LocalPath.parse(value))
-
-
-def _state_path_payload(value: str) -> str:
-    return StatePath._serialize(StatePath.parse(value))
-
-
-def _escape_json_pointer(value: str) -> str:
-    """Escape one JSON Pointer path segment for generated JSON Patch helpers."""
-    return value.replace("~", "~0").replace("/", "~1")
-
-
 def _with_workspace_repair_hints(
     payload: dict[str, Any],
     *,
@@ -762,10 +462,3 @@ def _draft_repair_hint(
         f"wf draft bind-output-to-state {workspace_id} --revision {revision} "
         f"--step {step_id} --output {output_field} --state {state_path}"
     )
-
-
-def _state_root_field(value: str) -> str:
-    path = StatePath.parse(value)
-    if len(path.parts) != 1:
-        raise ValueError("state_path must name one root field, such as state.after")
-    return path.parts[0]

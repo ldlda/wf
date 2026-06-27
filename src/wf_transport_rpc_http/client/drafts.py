@@ -141,26 +141,6 @@ class RpcDraftClientMixin:
             },
         )
 
-    async def add_state_schema_from_output(
-        self: RpcCaller,
-        *,
-        workspace_id: str,
-        revision: int,
-        step_id: str,
-        output_field: str,
-        state_path: str,
-    ) -> dict[str, Any]:
-        return await self._call(
-            "workflow.draft_workspaces.add_state_from_output",
-            {
-                "workspace_id": workspace_id,
-                "revision": revision,
-                "step_id": step_id,
-                "output_field": output_field,
-                "state_path": state_path,
-            },
-        )
-
     async def bind_output_to_state(
         self: RpcCaller,
         *,
@@ -190,8 +170,7 @@ class RpcDraftClientMixin:
         capability_name: str,
         route_from_step: str | None = None,
         route_from_outcome: str = "ok",
-        route_outcome: str = "ok",
-        route_to: str = "__end__",
+        routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
         bind_outputs: dict[str, str] | None = None,
     ) -> dict[str, Any]:
@@ -204,10 +183,45 @@ class RpcDraftClientMixin:
                 "capability_name": capability_name,
                 "route_from_step": route_from_step,
                 "route_from_outcome": route_from_outcome,
-                "route_outcome": route_outcome,
-                "route_to": route_to,
+                "routes": routes,
                 "input_map": input_map or {},
                 "bind_outputs": bind_outputs or {},
+            },
+        )
+
+    async def branch_draft(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        routes: dict[str, str],
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.branch",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "routes": routes,
+            },
+        )
+
+    async def handle_draft(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        branches: list[dict[str, str]],
+        target: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.handle",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "branches": branches,
+                "target": target,
             },
         )
 
@@ -218,6 +232,16 @@ class RpcDraftClientMixin:
     ) -> dict[str, Any]:
         return await self._call(
             "workflow.draft_workspaces.validate",
+            {"workspace_id": workspace_id},
+        )
+
+    async def compile_draft_workspace(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.compile",
             {"workspace_id": workspace_id},
         )
 

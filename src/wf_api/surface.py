@@ -114,16 +114,6 @@ class WorkflowDraftSurface(Protocol):
         merge: bool = False,
     ) -> dict[str, Any]: ...
 
-    async def add_state_schema_from_output(
-        self,
-        *,
-        workspace_id: str,
-        revision: int,
-        step_id: str,
-        output_field: str,
-        state_path: str,
-    ) -> dict[str, Any]: ...
-
     async def bind_output_to_state(
         self,
         *,
@@ -143,13 +133,36 @@ class WorkflowDraftSurface(Protocol):
         capability_name: str,
         route_from_step: str | None = None,
         route_from_outcome: str = "ok",
-        route_outcome: str = "ok",
-        route_to: str = "__end__",
+        routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
         bind_outputs: dict[str, str] | None = None,
     ) -> dict[str, Any]: ...
 
+    async def branch_draft(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        routes: dict[str, str],
+    ) -> dict[str, Any]: ...
+
+    async def handle_draft(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        branches: list[dict[str, str]],
+        target: str,
+    ) -> dict[str, Any]: ...
+
     async def validate_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+    ) -> dict[str, Any]: ...
+
+    async def compile_draft_workspace(
         self,
         *,
         workspace_id: str,

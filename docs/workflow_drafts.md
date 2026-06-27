@@ -614,6 +614,9 @@ The workflow MCP surface exposes these draft tools:
 | `wf.workflow.compile_draft` | Return the compiled raw plan plus dependency summaries. |
 | `wf.workflow.patch_draft` | Apply RFC 6902 JSON Patch and validate the patched draft. |
 | `wf.workflow.create_artifact_from_draft` | Compile, normalize, and save a workflow artifact. |
+| `wf.workflow.branch_draft` | Update routes for an existing step in one revision. |
+| `wf.workflow.handle_draft` | Route multiple source step outcomes to a common target. |
+| `wf.workflow.compile_draft_workspace` | Return compiled plan plus capabilities without mutation. |
 
 Use `validate_draft` before saving. Use `patch_draft` when an LLM client needs a
 small targeted correction instead of rewriting the whole workflow.
@@ -665,6 +668,9 @@ wf draft set-name <workspace_id> --revision <n> --name <name>
 wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome ok --to <target_step_or___end__>
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.text=text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
+wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=tool_error
+wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
+wf draft compile <workspace_id>
 ```
 
 Use `draft patch` when these focused commands do not cover the structural edit.

@@ -73,9 +73,11 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_draft_route`
 - `set_step_input_map`
 - `set_step_output_map`
-- `add_state_schema_from_output`
 - `bind_output_to_state`
 - `add_step_from_capability`
+- `branch_draft`
+- `handle_draft`
+- `compile_draft_workspace`
 
 CLI equivalents:
 
@@ -86,9 +88,11 @@ wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.te
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
-wf draft add-state-from-output <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
+wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
+wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
+wf draft compile <workspace_id>
 wf draft bind-output-to-state <workspace_id> --revision <n> --step <step_id> --output <field> --state state.<field>
-wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --outcome ok --to <next-or-__end__> --input input.text=text --bind-output result=state.result
+wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
 ```
 
 `set-input` direction: `input.text=text` means graph source `input.text` maps to
@@ -100,10 +104,6 @@ maps to graph target `state.text`.
 Without `--merge`, `set-input` and `set-output` replace the whole map for that
 step. Use repeated `--map` flags in one command for a complete replacement. Use
 `--merge` only when adding/updating entries over multiple revisions.
-
-Use `add-state-from-output` when the target state field should reuse a capability
-output schema. This prevents dangling `$ref` values by copying local `$defs` /
-`definitions` with the selected property schema.
 
 - `bind_output_to_state`
 
@@ -124,14 +124,34 @@ wf draft validate <workspace_id>
 
   Adds a new capability-backed step with explicit route, input bindings, and
   output-to-state schema/binding wiring in one revision. It can set the incoming
-  edge, outgoing edge, input map, and output-to-state schema/binding. It still
+  edge, outgoing edges, input map, and output-to-state schema/binding. Use
+  `--route OUTCOME=TARGET` for each outcome; when omitted and the capability
+  declares a single outcome, that outcome routes to `__end__`. It still
   requires explicit choices; if you do not know a map, inspect the capability or
   run validation rather than guessing.
 
 ```bash
-wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --outcome ok --to <next-or-__end__> --input input.text=text --bind-output result=state.result
+wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
 wf draft validate <workspace_id>
 ```
+
+- `branch_draft`
+
+  Updates routes for an existing step in one revision without rewriting the
+  full routes object. Supply `--route OUTCOME=TARGET` for each outcome to
+  set or update.
+
+- `handle_draft`
+
+  Routes multiple source step outcomes to a common target. Supply
+  `--branch STEP:OUTCOME` for each source outcome and `--to TARGET` for the
+  shared destination.
+
+- `compile_draft_workspace`
+
+  Returns the compiled raw plan plus required capabilities without mutating
+  or saving the draft workspace. On invalid draft status, returns structured
+  diagnostics without a `compiled_plan`.
 
 Validation repair hints are product guidance. If a diagnostic suggests
 `bind-output-to-state`, use it before hand-editing `state_schema` or step output

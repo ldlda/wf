@@ -63,16 +63,17 @@ clear operator feedback before adding more architecture.
 - Completed: `wf schema` now lists workflow document/component models, emits
   compact JSON outlines for agent discovery, and emits valid self-contained
   JSON Schema with `--verbose`.
-- Completed: `wf draft add-state-from-output` projects capability output
-  property schemas into draft state schemas, preserving `$defs` / `definitions`
-  for schema refs and reducing brittle whole-`state_schema` patches.
 - Completed: `wf draft bind-output-to-state` composes state schema projection
   with output binding merge, reducing manual draft patch repairs in agent
   challenge runs.
 - Completed: `wf draft add-step-from-capability` inserts one explicit
   capability-backed step with route, input, and output-to-state schema/binding
   wiring in a single revision, reducing brittle JSON Patch authoring for
-  multi-step workflows.
+  multi-step workflows. Accepts `--route OUTCOME=TARGET` for multi-outcome steps.
+- Completed: `wf draft branch` and `wf draft handle` provide atomic route
+  editing for existing draft steps without rewriting the full routes object.
+- Completed: `wf draft compile` returns the compiled raw plan plus required
+  capabilities without mutating or saving the draft workspace.
 - Completed: draft validation now preserves structured core validation issues
   and adds exact `bind-output-to-state` repair hints for missing state fields.
 - Keep status read-only; do not mutate registry, auth, config, or stores.

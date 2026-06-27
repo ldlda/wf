@@ -8,14 +8,16 @@ from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
 from ..models import (
-    AddStateFromOutputParams,
     AddStepFromCapabilityParams,
     BindOutputToStateParams,
+    BranchDraftParams,
+    CompileDraftWorkspaceParams,
     CreateArtifactFromWorkspaceParams,
     CreateDraftFromCapabilityParams,
     CreateWrapperFromWorkspaceParams,
     DeleteDraftWorkspaceParams,
     GetDraftWorkspaceParams,
+    HandleDraftParams,
     ListDraftWorkspacesParams,
     PatchDraftParams,
     PatchDraftWorkspaceParams,
@@ -181,24 +183,6 @@ def register_methods(
             raise_workflow_rpc_error(exc)
 
     @entrypoint.method(
-        name="workflow.draft_workspaces.add_state_from_output",
-        errors=[WorkflowRpcError],
-    )
-    async def workflow_draft_workspaces_add_state_from_output(
-        params: AddStateFromOutputParams = RpcParams(),
-    ) -> dict[str, Any]:
-        try:
-            return await server.api.add_state_schema_from_output(
-                workspace_id=params.workspace_id,
-                revision=params.revision,
-                step_id=params.step_id,
-                output_field=params.output_field,
-                state_path=params.state_path,
-            )
-        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
-            raise_workflow_rpc_error(exc)
-
-    @entrypoint.method(
         name="workflow.draft_workspaces.bind_output_to_state",
         errors=[WorkflowRpcError],
     )
@@ -231,10 +215,44 @@ def register_methods(
                 capability_name=params.capability_name,
                 route_from_step=params.route_from_step,
                 route_from_outcome=params.route_from_outcome,
-                route_outcome=params.route_outcome,
-                route_to=params.route_to,
+                routes=params.routes,
                 input_map=params.input_map,
                 bind_outputs=params.bind_outputs,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.branch", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_branch(
+        params: BranchDraftParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.branch_draft(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+                routes=params.routes,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.handle", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_handle(
+        params: HandleDraftParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.handle_draft(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                branches=[
+                    {"step_id": b.step_id, "outcome": b.outcome}
+                    for b in params.branches
+                ],
+                target=params.target,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
@@ -247,6 +265,19 @@ def register_methods(
     ) -> dict[str, Any]:
         try:
             return await server.api.validate_draft_workspace(
+                workspace_id=params.workspace_id,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.compile", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_compile(
+        params: CompileDraftWorkspaceParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.compile_draft_workspace(
                 workspace_id=params.workspace_id,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:

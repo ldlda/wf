@@ -18,6 +18,7 @@ from wf_platform import CapabilitySource
 from .artifact_plans import raw_plan_from_artifact
 from .artifact_refs import artifact_capability_id
 from .capability_requirements import required_capability_payloads
+from .draft_authoring import WorkflowDraftAuthoringApi
 from .drafts import WorkflowDraftApi
 from .listing import matches_query, paged_list_payload
 from .next_actions import NextActions
@@ -64,6 +65,7 @@ class WorkflowCapabilityApi:
     def __init__(self, context: WorkflowOperationContext) -> None:
         self.context = context
         self.drafts = WorkflowDraftApi(context)
+        self.draft_authoring = WorkflowDraftAuthoringApi(context, self.drafts)
 
     async def list_capabilities(
         self,
@@ -353,7 +355,7 @@ class WorkflowCapabilityApi:
         """Create a patchable draft workspace from inspect_capability hints."""
         capability = await self.inspect_capability(qualified_name=capability_name)
         hints = capability["wrapper_hints"]
-        result = await self.drafts.create_minimal_draft_workspace(
+        result = await self.draft_authoring.create_minimal_draft_workspace(
             workspace_id=workspace_id,
             name=name or _draft_name_from_capability(capability_name),
             capability_name=capability_name,

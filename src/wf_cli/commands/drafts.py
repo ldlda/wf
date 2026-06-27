@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -277,47 +278,6 @@ def set_step_output_map(
     )
 
 
-@app.command("add-state-from-output")
-def add_state_from_output(
-    ctx: typer.Context,
-    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
-    revision: Annotated[
-        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
-    ],
-    step_id: Annotated[str, typer.Option("--step", help="Draft step id.")],
-    output_field: Annotated[
-        str,
-        typer.Option("--output", help="Top-level capability output field."),
-    ],
-    state_path: Annotated[
-        str,
-        typer.Option("--state", help="Root state path, for example state.after."),
-    ],
-) -> None:
-    """Copy one capability output field schema into draft state_schema.
-
-    Use this before mapping a step output into a new state field. The command
-    reads the selected draft step's capability output schema, copies the
-    requested output property schema, and preserves local $defs/definitions so
-    JSON Schema refs remain valid.
-
-    Run `wf draft validate <workspace_id>` after adding state schema fields.
-    """
-    context = load_cli_context(ctx)
-    emit_json(
-        run_cli_operation(
-            context,
-            context.handlers.add_state_schema_from_output(
-                workspace_id=workspace_id,
-                revision=revision,
-                step_id=step_id,
-                output_field=output_field,
-                state_path=state_path,
-            ),
-        )
-    )
-
-
 @app.command("bind-output-to-state")
 def bind_output_to_state(
     ctx: typer.Context,
@@ -381,14 +341,13 @@ def add_step_from_capability(
         str,
         typer.Option("--from-outcome", help="Outcome on --from-step."),
     ] = "ok",
-    route_outcome: Annotated[
-        str,
-        typer.Option("--outcome", help="Outcome emitted by the new step."),
-    ] = "ok",
-    route_to: Annotated[
-        str,
-        typer.Option("--to", help="Target step id or __end__ for the new step."),
-    ] = "__end__",
+    route: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--route",
+            help="Route mapping OUTCOME=TARGET. Repeat for multiple outcomes.",
+        ),
+    ] = None,
     input_mapping: Annotated[
         list[str] | None,
         typer.Option(
@@ -414,6 +373,15 @@ def add_step_from_capability(
     """
     input_map = _parse_map_flags(input_mapping)
     bind_outputs = _parse_map_flags(output_mapping)
+    routes: dict[str, str] = {}
+    if route:
+        for r in route:
+            key, _, value = r.partition("=")
+            if not key or not value:
+                raise typer.BadParameter(
+                    f"invalid route: {r!r} (expected OUTCOME=TARGET)"
+                )
+            routes[key] = value
     context = load_cli_context(ctx)
     emit_json(
         run_cli_operation(
@@ -425,10 +393,89 @@ def add_step_from_capability(
                 capability_name=capability_name,
                 route_from_step=route_from_step,
                 route_from_outcome=route_from_outcome,
-                route_outcome=route_outcome,
-                route_to=route_to,
+                routes=routes or None,
                 input_map=input_map,
                 bind_outputs=bind_outputs,
+            ),
+        )
+    )
+
+
+@app.command("branch")
+def branch_draft(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step: Annotated[str, typer.Option("--step", help="Draft step id.")],
+    route: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--route",
+            help="Route mapping OUTCOME=TARGET. Repeat for multiple outcomes.",
+        ),
+    ] = None,
+) -> None:
+    """Branch multiple outcome routes on a single step atomically."""
+    routes: dict[str, str] = {}
+    if route:
+        for r in route:
+            key, _, value = r.partition("=")
+            if not key or not value:
+                raise typer.BadParameter(
+                    f"invalid route: {r!r} (expected OUTCOME=TARGET)"
+                )
+            routes[key] = value
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.branch_draft(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step,
+                routes=routes,
+            ),
+        )
+    )
+
+
+@app.command("handle")
+def handle_draft(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    to: Annotated[str, typer.Option("--to", help="Target step id or __end__.")],
+    branch: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--branch",
+            help="Branch mapping STEP:OUTCOME. Repeat for multiple branches.",
+        ),
+    ] = None,
+) -> None:
+    """Set a common target for multiple step/outcome pairs atomically."""
+    branches: list[dict[str, str]] = []
+    if branch:
+        for b in branch:
+            parts = b.rsplit(":", 1)
+            if len(parts) != 2 or not parts[0] or not parts[1]:
+                raise typer.BadParameter(
+                    f"invalid branch: {b!r} (expected STEP:OUTCOME)"
+                )
+            branches.append({"step_id": parts[0], "outcome": parts[1]})
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.handle_draft(
+                workspace_id=workspace_id,
+                revision=revision,
+                branches=branches,
+                target=to,
             ),
         )
     )
@@ -447,6 +494,24 @@ def validate_draft(
             context.handlers.validate_draft_workspace(workspace_id=workspace_id),
         )
     )
+
+
+@app.command("compile")
+def compile_draft(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+) -> None:
+    """Compile a stored draft workspace without mutating it."""
+    context = load_cli_context(ctx)
+    result = run_cli_operation(
+        context,
+        context.handlers.compile_draft_workspace(workspace_id=workspace_id),
+    )
+    if "compiled_plan" in result:
+        emit_json(result["compiled_plan"])
+        return
+    typer.echo(json.dumps(result, indent=2, sort_keys=True), err=True)
+    raise typer.Exit(1)
 
 
 @app.command("delete")

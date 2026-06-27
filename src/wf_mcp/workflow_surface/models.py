@@ -187,6 +187,12 @@ class ValidateDraftWorkspaceRequest(BaseModel):
     workspace_id: WorkspaceId
 
 
+class CompileDraftWorkspaceRequest(BaseModel):
+    """Typed MCP request for compiling one workspace draft without mutation."""
+
+    workspace_id: WorkspaceId
+
+
 class SetDraftNameRequest(BaseModel):
     """Typed MCP request for changing the workflow draft name."""
 
@@ -237,20 +243,6 @@ class SetStepOutputMapRequest(BaseModel):
     )
 
 
-class AddStateFromOutputRequest(BaseModel):
-    """Typed MCP request for declaring a state field from a step output schema."""
-
-    workspace_id: WorkspaceId
-    revision: int = Field(ge=1, description="Expected current workspace revision.")
-    step_id: str = Field(description="Draft step id whose capability output is used.")
-    output_field: str = Field(
-        description="Top-level output field to copy, for example after."
-    )
-    state_path: str = Field(
-        description="Root state path to declare, for example state.after."
-    )
-
-
 class BindOutputToStateRequest(BaseModel):
     """Typed MCP request for binding one step output to one root state field."""
 
@@ -280,13 +272,13 @@ class AddStepFromCapabilityRequest(BaseModel):
         default="ok",
         description="Outcome on route_from_step that should route to the new step.",
     )
-    route_outcome: str = Field(
-        default="ok",
-        description="Outcome emitted by the new step.",
-    )
-    route_to: str = Field(
-        default="__end__",
-        description="Target step id or __end__ for the new step outcome.",
+    routes: dict[str, str] | None = Field(
+        default=None,
+        description=(
+            "Outcome to target route map for the new step. If omitted, a single "
+            "declared outcome routes to __end__; multiple declared outcomes "
+            "require explicit routes."
+        ),
     )
     input_map: dict[str, str] = Field(
         default_factory=dict,
@@ -296,6 +288,31 @@ class AddStepFromCapabilityRequest(BaseModel):
         default_factory=dict,
         description="Node-local output field to state path with schema projection.",
     )
+
+
+class BranchDraftRequest(BaseModel):
+    """Typed MCP request for branching routes on a draft step."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected workspace revision.")
+    step_id: str = Field(description="Draft step id whose routes should be branched.")
+    routes: dict[str, str] = Field(description="Outcome to target step map.")
+
+
+class HandleDraftBranchItem(BaseModel):
+    """Single branch item for handle_draft."""
+
+    step_id: str = Field(description="Draft step id.")
+    outcome: str = Field(description="Outcome label.")
+
+
+class HandleDraftRequest(BaseModel):
+    """Typed MCP request for handling draft branches."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected workspace revision.")
+    branches: list[HandleDraftBranchItem] = Field(description="Branch items to handle.")
+    target: str = Field(description="Target step id or __end__.")
 
 
 class DeleteDraftWorkspaceRequest(BaseModel):

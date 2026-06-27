@@ -12,10 +12,11 @@ from wf_mcp.broker.service import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
 
 from .models import (
-    AddStateFromOutputRequest,
     AddStepFromCapabilityRequest,
     BindOutputToStateRequest,
+    BranchDraftRequest,
     CallCapabilityResult,
+    CompileDraftWorkspaceRequest,
     CreateArtifactFromWorkspaceRequest,
     CreateDraftWorkspaceFromCapabilityRequest,
     CreateDraftWorkspaceFromCapabilityResult,
@@ -26,6 +27,7 @@ from .models import (
     DeleteDraftWorkspaceResult,
     DraftWorkspaceListResult,
     DraftWorkspaceResult,
+    HandleDraftRequest,
     PatchDraftWorkspaceRequest,
     RunDeploymentResult,
     SetDraftNameRequest,
@@ -369,6 +371,22 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         )
 
     @server.tool(
+        name="wf.workflow.compile_draft_workspace",
+        title="Compile Draft Workspace",
+        description=(
+            "Compile a stored draft workspace without mutating it. Returns "
+            "compiled_plan and required_capabilities when valid, or diagnostics "
+            "when invalid."
+        ),
+    )
+    async def compile_draft_workspace(
+        request: CompileDraftWorkspaceRequest,
+    ) -> dict[str, Any]:
+        return await handlers.compile_draft_workspace(
+            workspace_id=request.workspace_id,
+        )
+
+    @server.tool(
         name="wf.workflow.set_draft_name",
         title="Set Draft Name",
         description="Replace the name field of a stored draft workspace.",
@@ -443,27 +461,6 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
         )
 
     @server.tool(
-        name="wf.workflow.add_state_from_output",
-        title="Add State From Output",
-        description=(
-            "Declare one root state field by copying a draft step capability output "
-            "field schema, including local $defs/definitions when present."
-        ),
-    )
-    async def add_state_from_output(
-        request: AddStateFromOutputRequest,
-    ) -> DraftWorkspaceResult:
-        return DraftWorkspaceResult.model_validate(
-            await handlers.add_state_schema_from_output(
-                workspace_id=request.workspace_id,
-                revision=request.revision,
-                step_id=request.step_id,
-                output_field=request.output_field,
-                state_path=request.state_path,
-            )
-        )
-
-    @server.tool(
         name="wf.workflow.bind_output_to_state",
         title="Bind Output To State",
         description=(
@@ -503,10 +500,45 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 capability_name=request.capability_name,
                 route_from_step=request.route_from_step,
                 route_from_outcome=request.route_from_outcome,
-                route_outcome=request.route_outcome,
-                route_to=request.route_to,
+                routes=request.routes,
                 input_map=request.input_map,
                 bind_outputs=request.bind_outputs,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.branch_draft",
+        title="Branch Draft",
+        description=(
+            "Branch multiple outcome routes on a single draft step atomically. "
+            "Provided outcomes are updated while unspecified outcomes are preserved."
+        ),
+    )
+    async def branch_draft(request: BranchDraftRequest) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.branch_draft(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                routes=request.routes,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.handle_draft",
+        title="Handle Draft",
+        description=("Set a common target for multiple step/outcome pairs atomically."),
+    )
+    async def handle_draft(request: HandleDraftRequest) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.handle_draft(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                branches=[
+                    {"step_id": b.step_id, "outcome": b.outcome}
+                    for b in request.branches
+                ],
+                target=request.target,
             )
         )
 
