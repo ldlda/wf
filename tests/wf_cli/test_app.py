@@ -121,11 +121,20 @@ def test_wf_deploy_save_help_exists() -> None:
     assert "--binding" in result.output
 
 
-def test_wf_draft_create_from_capability_help_exists() -> None:
-    result = runner.invoke(app, ["draft", "create-from-capability", "--help"])
+def test_wf_draft_create_help_accepts_capability_option() -> None:
+    result = runner.invoke(app, ["draft", "create", "--help"])
 
     assert result.exit_code == 0
-    assert "--title" in result.output
+    output = " ".join(result.output.split())
+    assert "--capability" in output
+    assert "--title" in output
+
+
+def test_wf_draft_help_does_not_list_old_create_from_capability() -> None:
+    result = runner.invoke(app, ["draft", "--help"])
+
+    assert result.exit_code == 0
+    assert "create-from-capability" not in result.output
 
 
 def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
@@ -154,14 +163,22 @@ def test_wf_draft_bind_help_explains_direction() -> None:
     assert "validate" in output
 
 
-def test_wf_draft_add_step_from_capability_help_explains_explicit_wiring() -> None:
-    result = runner.invoke(app, ["draft", "add-step-from-capability", "--help"])
+def test_wf_draft_add_step_help_explains_explicit_wiring() -> None:
+    result = runner.invoke(app, ["draft", "add-step", "--help"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
+    assert "--capability" in output
     assert "--from-step" in output
     assert "--bind-output" in output
     assert "does not guess" in output
+
+
+def test_wf_draft_help_does_not_list_old_add_step_from_capability() -> None:
+    result = runner.invoke(app, ["draft", "--help"])
+
+    assert result.exit_code == 0
+    assert "add-step-from-capability" not in result.output
 
 
 def test_wf_draft_route_flags_reject_duplicate_outcomes() -> None:
@@ -169,7 +186,7 @@ def test_wf_draft_route_flags_reject_duplicate_outcomes() -> None:
         app,
         [
             "draft",
-            "add-step-from-capability",
+            "add-step",
             "ws",
             "--revision",
             "1",

@@ -12,7 +12,7 @@ validated, runnable deployment.
 3. Inspect one capability.
    - CLI: `wf cap inspect <name>`
 4. Bootstrap a draft workspace.
-   - CLI: `wf draft create-from-capability <workspace_id> <capability>`
+   - CLI: `wf draft create <workspace_id> --capability <capability>`
 5. Inspect/patch/validate the workspace until valid.
    - Use focused CLI commands (`set-name`, `set-route`, `set-input`, `set-output`)
      for common edits.
@@ -24,7 +24,7 @@ validated, runnable deployment.
      the binding in one revision-checked edit.
    - When adding a new capability-backed step, prefer:
      ```bash
-     wf draft add-step-from-capability ...
+      wf draft add-step ...
      wf draft validate <workspace_id>
      ```
      Use raw `wf draft patch` only when changing structure that no focused helper

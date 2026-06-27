@@ -107,8 +107,8 @@ The public draft surface is documented in descending order of preference.
 
 ### Semantic Authoring Operations
 
-- `create-from-capability`
-- `add-step-from-capability`
+- `create`
+- `add-step`
 - `bind`
 - `branch`
 - `handle`
@@ -149,7 +149,7 @@ authoring intent.
 
 ### Add Step From Capability
 
-`add-step-from-capability` atomically adds:
+`add-step` atomically adds:
 
 - one capability-backed `use` step;
 - explicit input bindings;
@@ -160,7 +160,7 @@ authoring intent.
 The outgoing CLI option is repeatable:
 
 ```powershell
-wf draft add-step-from-capability WORKSPACE `
+wf draft add-step WORKSPACE `
   --revision 4 `
   --step second_echo `
   --capability everything.default.echo `

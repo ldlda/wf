@@ -41,7 +41,7 @@ Configured sources usually need explicit deployment bindings.
 Use the guided draft path when editing step-by-step:
 
 ```bash
-wf draft create-from-capability <workspace_id> <capability>
+wf draft create <workspace_id> --capability <capability>
 wf draft set-input ...
 wf draft set-output ...
 wf draft validate <workspace_id>

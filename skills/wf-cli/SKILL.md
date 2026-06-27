@@ -34,8 +34,7 @@ wf cap list --format ids
 wf cap inspect <capability>
 wf cap call <capability> --input '{"field":"value"}'
 
-wf draft create-from-capability <workspace_id> <capability>
-# There is currently no `wf draft create --capability` alias.
+wf draft create <workspace_id> --capability <capability>
 wf draft inspect <workspace_id> --include-draft
 wf draft patch <workspace_id> --revision <n> --input-file patch.json
 wf draft set-name <workspace_id> --revision <n> --name <name>
@@ -49,7 +48,7 @@ wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --
 wf draft compile <workspace_id>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
-wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
@@ -88,7 +87,7 @@ projection. Use `input/state -> local` for step inputs and `local ->
 state/output` for step outputs. It requires a capability-backed step with
 `use`; use JSON Patch for non-capability/control draft steps.
 
-To add a capability step, prefer `wf draft add-step-from-capability` over raw
+To add a capability step, prefer `wf draft add-step` over raw
 JSON Patch when the route, input bindings, and output-to-state bindings are
 known. It is explicit and does not guess missing maps.
 If a capability has multiple outcomes, pass one `--route OUTCOME=TARGET` for

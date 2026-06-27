@@ -93,7 +93,7 @@ wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --
 wf draft compile <workspace_id>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
-wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
 ```
 
 `set-input` direction: `input.text=text` means graph source `input.text` maps to
@@ -134,7 +134,7 @@ wf draft validate <workspace_id>
   know a map, inspect the capability or run validation rather than guessing.
 
 ```bash
-wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
 wf draft validate <workspace_id>
 ```
 

@@ -67,7 +67,10 @@ clear operator feedback before adding more architecture.
   schema projection with step binding merge, replacing the narrower
   `bind-output-to-state` helper and reducing manual draft patch repairs in
   agent challenge runs.
-- Completed: `wf draft add-step-from-capability` inserts one explicit
+- Completed: draft CLI vocabulary now uses `wf draft create --capability` and
+  `wf draft add-step --capability`, replacing the longer
+  `*-from-capability` commands that agents repeatedly guessed around.
+- Completed: `wf draft add-step` inserts one explicit
   capability-backed step with route, input, and output-to-state schema/binding
   wiring in a single revision, reducing brittle JSON Patch authoring for
   multi-step workflows. Accepts `--route OUTCOME=TARGET` for multi-outcome steps.

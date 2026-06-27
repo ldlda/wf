@@ -127,8 +127,7 @@ The plan file is the low-level workflow model. It is not a draft workspace.
 
 ## Common Mistakes
 
-- Do not use `wf draft create --capability`; current CLI command is
-  `wf draft create-from-capability <workspace_id> <capability>`.
+- Use `wf draft create <workspace_id> --capability <capability>` for draft creation.
 - Do not pass draft JSON to `artifact create-from-plan`.
 - Do not omit deployment bindings for ordinary sources. Platform sources such
   as `wf.std` may be omitted or self-bound, but configured sources usually need

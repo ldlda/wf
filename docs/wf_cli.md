@@ -261,7 +261,7 @@ specific upstream source.
 Create a draft from a capability:
 
 ```bash
-wf draft create-from-capability concat_ws wf.std.concat --name concat_ws
+wf draft create concat_ws --capability wf.std.concat --name concat_ws
 ```
 
 List and inspect drafts:
@@ -337,14 +337,14 @@ Use `set-route` separately for outcome routing.
 
 ### Add A Capability Step To A Draft
 
-Use `wf draft add-step-from-capability` when adding a new capability-backed step
+Use `wf draft add-step` when adding a new capability-backed step
 to an existing draft. The command is explicit: it does not guess missing maps.
 When the capability declares multiple outcomes, provide exactly one
 `--route OUTCOME=TARGET` for each declared outcome. Missing or unknown outcomes
 are rejected before the draft is mutated.
 
 ```bash
-wf draft add-step-from-capability report_ws \
+wf draft add-step report_ws \
   --revision 3 \
   --step render \
   --capability local.report.render_markdown_report \

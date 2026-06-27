@@ -137,8 +137,8 @@ Expected output includes:
 Create a draft from the Python capability:
 
 ```powershell
-uv run wf --url http://127.0.0.1:8766/rpc draft create-from-capability `
-  python_echo_ws local.ops.echo --name python_echo
+uv run wf --url http://127.0.0.1:8766/rpc draft create `
+  python_echo_ws --capability local.ops.echo --name python_echo
 ```
 
 Save it as an artifact. Bind the configured Python source. Built-in platform

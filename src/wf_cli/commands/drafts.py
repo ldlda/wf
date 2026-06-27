@@ -92,11 +92,17 @@ def inspect_draft(
     )
 
 
-@app.command("create-from-capability")
+@app.command("create")
 def create_from_capability(
     ctx: typer.Context,
     workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
-    capability_name: Annotated[str, typer.Argument(help="Workflow capability name.")],
+    capability_name: Annotated[
+        str,
+        typer.Option(
+            "--capability",
+            help="Qualified capability name used to bootstrap the draft.",
+        ),
+    ],
     name: Annotated[
         str | None, typer.Option("--name", help="Draft workflow name.")
     ] = None,
@@ -104,7 +110,7 @@ def create_from_capability(
         str | None, typer.Option("--title", help="Workspace title.")
     ] = None,
 ) -> None:
-    """Bootstrap a draft workspace from inspect_capability wrapper hints."""
+    """Create a patchable draft workspace from one capability."""
     context = load_cli_context(ctx)
     emit_json(
         run_cli_operation(
@@ -337,7 +343,7 @@ def bind_draft(
     )
 
 
-@app.command("add-step-from-capability")
+@app.command("add-step")
 def add_step_from_capability(
     ctx: typer.Context,
     workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
@@ -384,7 +390,7 @@ def add_step_from_capability(
         ),
     ] = None,
 ) -> None:
-    """Add one capability step with explicit route, input, and output wiring.
+    """Add one capability-backed step with explicit route, input, and output wiring.
 
     This command does not guess missing maps. Pass the route and bindings you
     want, then run `wf draft validate <workspace_id>`.
