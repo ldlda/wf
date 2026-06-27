@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import pytest
 
-from wf_api.schema_projection import project_output_property_to_state_schema
+from wf_api.schema_projection import (
+    project_output_property_to_state_schema,
+    project_property_to_schema_path,
+)
 
 
 def test_project_output_property_copies_schema_and_defs() -> None:
@@ -106,4 +109,67 @@ def test_project_output_property_rejects_invalid_output_schema() -> None:
             },
             output_field="after",
             state_field="after",
+        )
+
+
+def test_project_schema_property_inserts_nested_path_and_defs() -> None:
+    projected = project_property_to_schema_path(
+        target_schema={"type": "object", "properties": {}},
+        source_schema={
+            "type": "object",
+            "properties": {"after": {"$ref": "#/$defs/Snapshot"}},
+            "$defs": {
+                "Snapshot": {
+                    "type": "object",
+                    "properties": {"clicked": {"type": "boolean"}},
+                }
+            },
+        },
+        source_field="after",
+        target_parts=("session", "after"),
+    )
+
+    assert projected["properties"]["session"]["type"] == "object"
+    assert projected["properties"]["session"]["properties"]["after"] == {
+        "$ref": "#/$defs/Snapshot"
+    }
+    assert projected["$defs"]["Snapshot"]["properties"]["clicked"] == {
+        "type": "boolean"
+    }
+
+
+def test_project_schema_property_rejects_existing_nested_target() -> None:
+    with pytest.raises(ValueError, match="schema path 'session.after' already exists"):
+        project_property_to_schema_path(
+            target_schema={
+                "type": "object",
+                "properties": {
+                    "session": {
+                        "type": "object",
+                        "properties": {"after": {"type": "string"}},
+                    }
+                },
+            },
+            source_schema={
+                "type": "object",
+                "properties": {"after": {"type": "object"}},
+            },
+            source_field="after",
+            target_parts=("session", "after"),
+        )
+
+
+def test_project_schema_property_rejects_non_object_ancestor() -> None:
+    with pytest.raises(ValueError, match="schema path 'session' is not an object"):
+        project_property_to_schema_path(
+            target_schema={
+                "type": "object",
+                "properties": {"session": {"type": "string"}},
+            },
+            source_schema={
+                "type": "object",
+                "properties": {"after": {"type": "object"}},
+            },
+            source_field="after",
+            target_parts=("session", "after"),
         )

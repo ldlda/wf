@@ -8,6 +8,51 @@ from jsonschema import Draft202012Validator, SchemaError
 JsonObject = dict[str, Any]
 
 
+def project_property_to_schema_path(
+    *,
+    target_schema: JsonObject,
+    source_schema: JsonObject,
+    source_field: str,
+    target_parts: tuple[str, ...],
+) -> JsonObject:
+    """Copy one source property schema into a target JSON Schema object path."""
+    if not target_parts:
+        raise ValueError("target schema path must not be empty")
+    _check_schema("target_schema", target_schema)
+    _check_schema("source_schema", source_schema)
+    source_properties = source_schema.get("properties")
+    if not isinstance(source_properties, dict) or source_field not in source_properties:
+        raise ValueError(f"source field {source_field!r} is not declared")
+    source_property = source_properties[source_field]
+    if not isinstance(source_property, dict):
+        raise ValueError(f"source field {source_field!r} is not a JSON Schema object")
+
+    projected = deepcopy(target_schema)
+    _ensure_object_schema(projected, "target_schema")
+    parent = projected
+    for index, part in enumerate(target_parts[:-1]):
+        properties = _properties_for_object(parent, ".".join(target_parts[:index]) or "target_schema")
+        child = properties.get(part)
+        if child is None:
+            child = {"type": "object", "properties": {}}
+            properties[part] = child
+        if not isinstance(child, dict):
+            raise ValueError(f"schema path {'.'.join(target_parts[: index + 1])!r} is not an object")
+        _ensure_object_schema(child, ".".join(target_parts[: index + 1]))
+        parent = child
+
+    properties = _properties_for_object(parent, ".".join(target_parts[:-1]) or "target_schema")
+    leaf = target_parts[-1]
+    if leaf in properties:
+        raise ValueError(f"schema path {'.'.join(target_parts)!r} already exists")
+    properties[leaf] = deepcopy(source_property)
+
+    _merge_definition_block(projected, source_schema, "$defs")
+    _merge_definition_block(projected, source_schema, "definitions")
+    _check_schema("projected target_schema", projected)
+    return projected
+
+
 def project_output_property_to_state_schema(
     *,
     state_schema: JsonObject,
@@ -15,38 +60,32 @@ def project_output_property_to_state_schema(
     output_field: str,
     state_field: str,
 ) -> JsonObject:
-    """Project one capability output property schema into workflow state schema.
+    """Root state projection convenience wrapper.
 
-    Capability output schemas may use local references such as
-    ``{"$ref": "#/$defs/Snapshot"}``. Copying only the property schema would
-    create dangling references, so this helper also merges local definition
-    blocks and rejects conflicting definition names.
+    Preserves the original error message wording for backward compatibility.
     """
-    _check_schema("state_schema", state_schema)
-    _check_schema("output_schema", output_schema)
-    output_properties = output_schema.get("properties")
-    if not isinstance(output_properties, dict) or output_field not in output_properties:
-        raise ValueError(f"output field {output_field!r} is not declared")
-    output_property = output_properties[output_field]
-    if not isinstance(output_property, dict):
-        raise ValueError(f"output field {output_field!r} is not a JSON Schema object")
-
-    projected = deepcopy(state_schema)
-    state_type = projected.get("type")
-    if state_type is not None and state_type != "object":
-        raise ValueError("state_schema must be an object schema")
-    projected.setdefault("type", "object")
-    properties = projected.setdefault("properties", {})
-    if not isinstance(properties, dict):
-        raise ValueError("state_schema.properties must be an object")
-    if state_field in properties:
-        raise ValueError(f"state field {state_field!r} already exists")
-    properties[state_field] = deepcopy(output_property)
-
-    _merge_definition_block(projected, output_schema, "$defs")
-    _merge_definition_block(projected, output_schema, "definitions")
-    _check_schema("projected state_schema", projected)
-    return projected
+    try:
+        return project_property_to_schema_path(
+            target_schema=state_schema,
+            source_schema=output_schema,
+            source_field=output_field,
+            target_parts=(state_field,),
+        )
+    except ValueError as exc:
+        msg = str(exc)
+        if msg.startswith("source field ") and "is not declared" in msg:
+            raise ValueError(f"output field {output_field!r} is not declared") from exc
+        if msg.startswith("source field ") and "not a JSON Schema" in msg:
+            raise ValueError(f"output field {output_field!r} is not a JSON Schema object") from exc
+        if "schema path 'target_schema'" in msg and "is not an object" in msg:
+            raise ValueError("state_schema must be an object schema") from exc
+        if msg.startswith("schema path ") and "already exists" in msg:
+            raise ValueError(f"state field {state_field!r} already exists") from exc
+        if "target_schema is not valid JSON Schema" in msg:
+            raise ValueError(f"state_schema is not valid JSON Schema: {msg.split(': ', 1)[1]}") from exc
+        if "source_schema is not valid JSON Schema" in msg:
+            raise ValueError(f"output_schema is not valid JSON Schema: {msg.split(': ', 1)[1]}") from exc
+        raise
 
 
 def _check_schema(name: str, schema: JsonObject) -> None:
@@ -54,6 +93,20 @@ def _check_schema(name: str, schema: JsonObject) -> None:
         Draft202012Validator.check_schema(schema)
     except SchemaError as exc:
         raise ValueError(f"{name} is not valid JSON Schema: {exc.message}") from exc
+
+
+def _ensure_object_schema(schema: JsonObject, label: str) -> None:
+    schema_type = schema.get("type")
+    if schema_type is not None and schema_type != "object":
+        raise ValueError(f"schema path {label!r} is not an object")
+    schema.setdefault("type", "object")
+
+
+def _properties_for_object(schema: JsonObject, label: str) -> JsonObject:
+    properties = schema.setdefault("properties", {})
+    if not isinstance(properties, dict):
+        raise ValueError(f"{label}.properties must be an object")
+    return properties
 
 
 def _merge_definition_block(
