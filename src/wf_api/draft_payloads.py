@@ -53,13 +53,13 @@ def state_root_field(value: str) -> str:
 
 
 def _local_path_payload(value: str) -> str:
-    return LocalPath._serialize(LocalPath.parse(value))
+    return str(LocalPath.parse(value))
 
 
 def _graph_path_payload(value: str | GraphSourcePath) -> str:
     path = value if isinstance(value, GraphSourcePath) else GraphSourcePath.parse(value)
-    return GraphSourcePath._serialize(path)
+    return str(path)
 
 
 def _state_path_payload(value: str) -> str:
-    return StatePath._serialize(StatePath.parse(value))
+    return str(StatePath.parse(value))

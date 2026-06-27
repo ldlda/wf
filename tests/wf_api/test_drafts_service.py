@@ -907,6 +907,26 @@ async def test_branch_draft_no_change_when_routes_unchanged(tmp_path: Path) -> N
 
 
 @pytest.mark.asyncio
+async def test_branch_draft_no_change_still_checks_revision(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_branch_noop_stale")
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="noop_ws",
+        draft=_echo_draft(),
+    )
+
+    result = await authoring.branch_draft(
+        workspace_id="noop_ws",
+        revision=2,
+        step_id="echo",
+        routes={"ok": "__end__"},
+    )
+
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+
+
+@pytest.mark.asyncio
 async def test_handle_draft_empty_branches_noop(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_handle_noop")
     api, _service, authoring = _draft_api(artifact_store, register_echo=True)
@@ -925,6 +945,26 @@ async def test_handle_draft_empty_branches_noop(tmp_path: Path) -> None:
     after = await api.get_draft_workspace(workspace_id="noop_ws", include_draft=True)
     assert result["revision"] == 1
     assert after == before
+
+
+@pytest.mark.asyncio
+async def test_handle_draft_no_change_still_checks_revision(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_handle_noop_stale")
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="noop_ws",
+        draft=_echo_draft(),
+    )
+
+    result = await authoring.handle_draft(
+        workspace_id="noop_ws",
+        revision=2,
+        branches=[],
+        target="fail",
+    )
+
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
 
 
 @pytest.mark.asyncio

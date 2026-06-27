@@ -8,7 +8,7 @@ from wf_artifacts import ArtifactKind
 from .artifacts import WorkflowArtifactApi
 from .capabilities import WorkflowCapabilityApi
 from .deployments import WorkflowDeploymentApi
-from .draft_authoring import WorkflowDraftAuthoringApi
+from .draft_authoring import DraftOutcomeRef, WorkflowDraftAuthoringApi
 from .drafts import WorkflowDraftApi
 from .models import RawWorkflowPlan
 from .operation_context import WorkflowOperationContext
@@ -436,8 +436,6 @@ class WorkflowApi:
         branches: list[dict[str, str]],
         target: str,
     ) -> dict[str, Any]:
-        from .draft_authoring import DraftOutcomeRef
-
         refs = [
             DraftOutcomeRef(step_id=b["step_id"], outcome=b["outcome"])
             for b in branches

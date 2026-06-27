@@ -14,6 +14,10 @@ import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
 
+from examples.agent_challenges.names import (  # noqa: E402
+    short_challenge_name,
+    short_model_name,
+)
 from examples.agent_challenges.opencode_io import (  # noqa: E402
     build_opencode_command,
     opencode_text_results,
@@ -44,13 +48,10 @@ def _opencode_trial_title(
     *, challenge_id: str, model: str, profile: str, index: int
 ) -> str:
     """Build a compact OpenCode session title for crowded trial matrices."""
-    challenge_name = {
-        "browser_click": "browser",
-        "report_workflow": "report",
-    }.get(challenge_id, challenge_id)
-    model_name = model.rsplit("/", 1)[-1].replace("-v4-flash-free", "")
-    model_name = model_name.replace("-v2.5-free", "").replace("-3-ultra-free", "")
-    return f"{challenge_name} {model_name} {profile} {index:03d}"
+    return (
+        f"{short_challenge_name(challenge_id)} "
+        f"{short_model_name(model)} {profile} {index:03d}"
+    )
 
 
 @dataclass(slots=True)

@@ -4,6 +4,10 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from wf_artifacts.draft_workspaces.models import (
+    WorkflowDraftWorkspace,
+    summarize_draft_workspace,
+)
 from wf_core.models.steps import (
     InputBinding,
     OutputBinding,
@@ -44,6 +48,31 @@ class WorkflowDraftAuthoringApi:
     ) -> None:
         self.context = context
         self.drafts = drafts
+
+    def _workspace_if_revision_matches(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+    ) -> WorkflowDraftWorkspace | dict[str, Any]:
+        """Load a workspace for no-op edits while still enforcing optimistic locks."""
+        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        if workspace.revision == revision:
+            return workspace
+        return {
+            **summarize_draft_workspace(workspace),
+            "status": "conflict",
+            "diagnostics": [
+                {
+                    "code": "revision_conflict",
+                    "path": "revision",
+                    "message": (
+                        f"workspace {workspace.id!r} is at revision "
+                        f"{workspace.revision}, not {revision}"
+                    ),
+                }
+            ],
+        }
 
     def _outcomes_for_capability(self, qualified_name: str) -> tuple[str, ...] | None:
         try:
@@ -317,9 +346,13 @@ class WorkflowDraftAuthoringApi:
             raise ValueError(f"routes for step {step_id!r} must be an object")
         merged = {**existing, **routes}
         if merged == existing:
-            return await self.drafts.get_draft_workspace(
+            checked = self._workspace_if_revision_matches(
                 workspace_id=workspace_id,
+                revision=revision,
             )
+            if isinstance(checked, dict):
+                return checked
+            return summarize_draft_workspace(checked)
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -342,9 +375,13 @@ class WorkflowDraftAuthoringApi:
     ) -> dict[str, Any]:
         """Update the target for multiple (step, outcome) pairs atomically."""
         if not branches:
-            return await self.drafts.get_draft_workspace(
+            checked = self._workspace_if_revision_matches(
                 workspace_id=workspace_id,
+                revision=revision,
             )
+            if isinstance(checked, dict):
+                return checked
+            return summarize_draft_workspace(checked)
         workspace = self.drafts._draft_store().get_workspace(workspace_id)
         draft_routes = workspace.draft.get("routes", {})
         if not isinstance(draft_routes, dict):
@@ -374,9 +411,13 @@ class WorkflowDraftAuthoringApi:
                 }
             )
         if not patch:
-            return await self.drafts.get_draft_workspace(
+            checked = self._workspace_if_revision_matches(
                 workspace_id=workspace_id,
+                revision=revision,
             )
+            if isinstance(checked, dict):
+                return checked
+            return summarize_draft_workspace(checked)
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,

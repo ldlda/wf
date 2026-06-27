@@ -6,6 +6,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from examples.agent_challenges.names import short_challenge_name, short_model_name
+
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHALLENGES_ROOT = ROOT / "examples" / "agent_challenges"
 
@@ -24,20 +26,6 @@ class TrialSummary:
     attempts: str
     read_flags: str
     notes: str
-
-
-def _short_model(model: str) -> str:
-    name = model.rsplit("/", 1)[-1]
-    for suffix in ("-v4-flash-free", "-v2.5-free", "-3-ultra-free"):
-        name = name.replace(suffix, "")
-    return name
-
-
-def _short_challenge(challenge: str) -> str:
-    return {
-        "browser_click": "browser",
-        "report_workflow": "report",
-    }.get(challenge, challenge)
 
 
 def _string(value: object, default: str = "") -> str:
@@ -83,8 +71,8 @@ def load_trial_summary(path: Path) -> TrialSummary:
     tokens = _dict(evidence.get("tokens"))
     self_report = _dict(data.get("agent_self_report"))
 
-    challenge = _short_challenge(_string(identity.get("challenge_id")))
-    model = _short_model(_string(identity.get("model")))
+    challenge = short_challenge_name(_string(identity.get("challenge_id")))
+    model = short_model_name(_string(identity.get("model")))
     manual = _string(manual_audit.get("official_outcome"), "pending")
     notes = _string(manual_audit.get("notes"))
 

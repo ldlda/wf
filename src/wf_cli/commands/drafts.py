@@ -12,16 +12,37 @@ from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_value
 from wf_cli.remote_errors import run_cli_operation
 
 
-def _parse_map_flags(values: list[str] | None) -> dict[str, str]:
+def _parse_assignment_flags(
+    values: list[str] | None,
+    *,
+    option_name: str,
+    expected: str,
+) -> dict[str, str]:
     parsed: dict[str, str] = {}
     for item in values or []:
         source, separator, target = item.partition("=")
         if separator != "=" or not source or not target:
-            raise typer.BadParameter("--map must use source=target")
+            raise typer.BadParameter(f"{option_name} must use {expected}")
         if source in parsed:
-            raise typer.BadParameter(f"duplicate --map for {source!r}")
+            raise typer.BadParameter(f"duplicate {option_name} for {source!r}")
         parsed[source] = target
     return parsed
+
+
+def _parse_map_flags(values: list[str] | None) -> dict[str, str]:
+    return _parse_assignment_flags(
+        values,
+        option_name="--map",
+        expected="source=target",
+    )
+
+
+def _parse_route_flags(values: list[str] | None) -> dict[str, str]:
+    return _parse_assignment_flags(
+        values,
+        option_name="--route",
+        expected="OUTCOME=TARGET",
+    )
 
 
 app = typer.Typer(
@@ -373,15 +394,7 @@ def add_step_from_capability(
     """
     input_map = _parse_map_flags(input_mapping)
     bind_outputs = _parse_map_flags(output_mapping)
-    routes: dict[str, str] = {}
-    if route:
-        for r in route:
-            key, _, value = r.partition("=")
-            if not key or not value:
-                raise typer.BadParameter(
-                    f"invalid route: {r!r} (expected OUTCOME=TARGET)"
-                )
-            routes[key] = value
+    routes = _parse_route_flags(route)
     context = load_cli_context(ctx)
     emit_json(
         run_cli_operation(
@@ -418,15 +431,7 @@ def branch_draft(
     ] = None,
 ) -> None:
     """Branch multiple outcome routes on a single step atomically."""
-    routes: dict[str, str] = {}
-    if route:
-        for r in route:
-            key, _, value = r.partition("=")
-            if not key or not value:
-                raise typer.BadParameter(
-                    f"invalid route: {r!r} (expected OUTCOME=TARGET)"
-                )
-            routes[key] = value
+    routes = _parse_route_flags(route)
     context = load_cli_context(ctx)
     emit_json(
         run_cli_operation(

@@ -67,6 +67,35 @@ def test_project_output_property_rejects_conflicting_defs() -> None:
         )
 
 
+def test_project_output_property_rejects_non_object_state_schema() -> None:
+    with pytest.raises(ValueError, match="state_schema must be an object schema"):
+        project_output_property_to_state_schema(
+            state_schema={"type": "array", "items": {"type": "string"}},
+            output_schema={
+                "type": "object",
+                "properties": {"after": {"type": "object"}},
+            },
+            output_field="after",
+            state_field="after",
+        )
+
+
+def test_project_output_property_rejects_existing_state_field() -> None:
+    with pytest.raises(ValueError, match="state field 'after' already exists"):
+        project_output_property_to_state_schema(
+            state_schema={
+                "type": "object",
+                "properties": {"after": {"type": "string"}},
+            },
+            output_schema={
+                "type": "object",
+                "properties": {"after": {"type": "object"}},
+            },
+            output_field="after",
+            state_field="after",
+        )
+
+
 def test_project_output_property_rejects_invalid_output_schema() -> None:
     with pytest.raises(ValueError, match="output_schema is not valid JSON Schema"):
         project_output_property_to_state_schema(

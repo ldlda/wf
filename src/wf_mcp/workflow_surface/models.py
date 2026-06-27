@@ -280,11 +280,11 @@ class AddStepFromCapabilityRequest(BaseModel):
             "require explicit routes."
         ),
     )
-    input_map: dict[str, str] = Field(
+    input_map: DraftPathMap = Field(
         default_factory=dict,
         description="Graph source path to node-local target field.",
     )
-    bind_outputs: dict[str, str] = Field(
+    bind_outputs: DraftPathMap = Field(
         default_factory=dict,
         description="Node-local output field to state path with schema projection.",
     )

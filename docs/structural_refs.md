@@ -1,4 +1,4 @@
-# Structured Refs
+# Structural Refs
 
 Qualified names are display strings. They are not authoritative identifiers.
 

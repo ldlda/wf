@@ -274,7 +274,7 @@ def test_interrupt_node_rejects_mixed_old_and_new_binding_styles():
         )
 
 
-def test_foreach_node_serializes_over_path_as_structural_json():
+def test_foreach_node_serializes_over_path_as_canonical_string():
     node = ForeachNode.model_validate(
         {
             "id": "each_item",

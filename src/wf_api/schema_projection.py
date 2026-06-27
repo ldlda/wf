@@ -32,10 +32,15 @@ def project_output_property_to_state_schema(
         raise ValueError(f"output field {output_field!r} is not a JSON Schema object")
 
     projected = deepcopy(state_schema)
+    state_type = projected.get("type")
+    if state_type is not None and state_type != "object":
+        raise ValueError("state_schema must be an object schema")
     projected.setdefault("type", "object")
     properties = projected.setdefault("properties", {})
     if not isinstance(properties, dict):
         raise ValueError("state_schema.properties must be an object")
+    if state_field in properties:
+        raise ValueError(f"state field {state_field!r} already exists")
     properties[state_field] = deepcopy(output_property)
 
     _merge_definition_block(projected, output_schema, "$defs")

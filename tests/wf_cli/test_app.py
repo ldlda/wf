@@ -148,15 +148,59 @@ def test_wf_draft_bind_output_to_state_help_explains_composed_edit() -> None:
     result = runner.invoke(app, ["draft", "bind-output-to-state", "--help"])
 
     assert result.exit_code == 0
-    assert "state schema" in result.output
-    assert "output binding" in result.output
-    assert "validate" in result.output
+    output = " ".join(result.output.split())
+    assert "state schema" in output
+    assert "output binding" in output
+    assert "validate" in output
 
 
 def test_wf_draft_add_step_from_capability_help_explains_explicit_wiring() -> None:
     result = runner.invoke(app, ["draft", "add-step-from-capability", "--help"])
 
     assert result.exit_code == 0
-    assert "--from-step" in result.output
-    assert "--bind-output" in result.output
-    assert "does not guess" in result.output
+    output = " ".join(result.output.split())
+    assert "--from-step" in output
+    assert "--bind-output" in output
+    assert "does not guess" in output
+
+
+def test_wf_draft_route_flags_reject_duplicate_outcomes() -> None:
+    add_result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add-step-from-capability",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--capability",
+            "demo.call",
+            "--route",
+            "ok=call",
+            "--route",
+            "ok=__end__",
+        ],
+    )
+    branch_result = runner.invoke(
+        app,
+        [
+            "draft",
+            "branch",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--route",
+            "ok=call",
+            "--route",
+            "ok=__end__",
+        ],
+    )
+
+    assert add_result.exit_code == 2
+    assert branch_result.exit_code == 2
+    assert "duplicate --route for 'ok'" in add_result.output
+    assert "duplicate --route for 'ok'" in branch_result.output
