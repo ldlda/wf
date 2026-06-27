@@ -114,14 +114,14 @@ class WorkflowDraftSurface(Protocol):
         merge: bool = False,
     ) -> dict[str, Any]: ...
 
-    async def bind_output_to_state(
+    async def bind_draft(
         self,
         *,
         workspace_id: str,
         revision: int,
         step_id: str,
-        output_field: str,
-        state_path: str,
+        source_path: str,
+        target_path: str,
     ) -> dict[str, Any]: ...
 
     async def add_step_from_capability(

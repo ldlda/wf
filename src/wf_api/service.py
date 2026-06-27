@@ -371,21 +371,21 @@ class WorkflowApi:
             merge=merge,
         )
 
-    async def bind_output_to_state(
+    async def bind_draft(
         self,
         *,
         workspace_id: str,
         revision: int,
         step_id: str,
-        output_field: str,
-        state_path: str,
+        source_path: str,
+        target_path: str,
     ) -> dict[str, Any]:
-        return await self.draft_authoring.bind_output_to_state(
+        return await self.draft_authoring.bind_draft(
             workspace_id=workspace_id,
             revision=revision,
             step_id=step_id,
-            output_field=output_field,
-            state_path=state_path,
+            source_path=source_path,
+            target_path=target_path,
         )
 
     async def add_step_from_capability(

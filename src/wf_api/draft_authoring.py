@@ -12,7 +12,7 @@ from wf_core.models.steps import (
     InputBinding,
     OutputBinding,
 )
-from wf_core.paths import GraphSourcePath
+from wf_core.paths import GraphSourcePath, LocalPath
 
 from .constants import (
     DEFAULT_CALL_STEP_ID,
@@ -33,9 +33,26 @@ from .drafts import (
     WorkflowDraftApi,
     _draft_input_maps,
     _draft_output_map,
+    _input_map_from_payload,
 )
 from .operation_context import WorkflowOperationContext
-from .schema_projection import project_output_property_to_state_schema
+from .schema_projection import (
+    project_output_property_to_state_schema,
+    project_property_to_schema_path,
+)
+
+
+def _graph_parts(path: str) -> tuple[str, tuple[str, ...]]:
+    parsed = GraphSourcePath.parse(path)
+    return parsed.root, parsed.parts
+
+
+def _local_field(path: str) -> str:
+    raw = path.removeprefix("local.")
+    parsed = LocalPath.parse(raw)
+    if len(parsed.parts) != 1:
+        raise ValueError("local path must name one capability field")
+    return parsed.parts[0]
 
 
 class WorkflowDraftAuthoringApi:
@@ -149,64 +166,87 @@ class WorkflowDraftAuthoringApi:
             draft=draft,
         )
 
-    async def bind_output_to_state(
+    async def bind_draft(
         self,
         *,
         workspace_id: str,
         revision: int,
         step_id: str,
-        output_field: str,
-        state_path: str,
+        source_path: str,
+        target_path: str,
     ) -> dict[str, Any]:
-        """Declare a state field from a step output and bind that output to it.
-
-        This is the common draft-authoring repair for validation errors where a
-        step writes to ``state.x`` before ``state_schema.properties.x`` exists.
-        It deliberately edits only one root state field and one step output map.
-        Route changes remain explicit through ``set_draft_route``.
-        """
+        """Bind a graph path to/from one capability local field with schema projection."""
         workspace = self.drafts._draft_store().get_workspace(workspace_id)
         step = draft_step(workspace.draft, step_id)
         capability_name = step.get("use")
         if not isinstance(capability_name, str) or not capability_name:
-            raise ValueError(
-                f"draft step {step_id!r} does not declare a capability use"
+            raise ValueError(f"draft step {step_id!r} does not declare a capability use")
+        spec = self.context.specs.get_qualified_spec(capability_name)
+
+        source_root, source_parts = _graph_parts(source_path) if not source_path.startswith("local.") else ("local", LocalPath.parse(source_path).parts)
+        target_root, target_parts = _graph_parts(target_path) if not target_path.startswith("local.") else ("local", LocalPath.parse(target_path).parts)
+
+        if target_root == "local" and source_root in {"input", "state"}:
+            local_field = _local_field(target_path)
+            input_schema = spec.input_schema_contract or spec.input_model.model_json_schema()
+            schema_key = "input_schema" if source_root == "input" else "state_schema"
+            target_schema = workspace.draft.get(schema_key, {})
+            if not isinstance(target_schema, dict):
+                raise ValueError(f"draft {schema_key} must be an object")
+            projected = project_property_to_schema_path(
+                target_schema=target_schema,
+                source_schema=input_schema,
+                source_field=local_field,
+                target_parts=source_parts,
+            )
+            input_map = {
+                **_input_map_from_payload(step.get("input", [])),
+                source_path: local_field,
+            }
+            return await self.drafts.patch_draft_workspace(
+                workspace_id=workspace_id,
+                revision=revision,
+                patch=[
+                    {"op": "replace", "path": f"/{schema_key}", "value": projected},
+                    {
+                        "op": "replace",
+                        "path": f"/steps/{escape_json_pointer(step_id)}/input",
+                        "value": input_bindings_payload(input_map, {}),
+                    },
+                ],
             )
 
-        state_field = state_root_field(state_path)
-        spec = self.context.specs.get_qualified_spec(capability_name)
-        output_schema = (
-            spec.output_schema_contract or spec.output_model.model_json_schema()
-        )
-        state_schema = workspace.draft.get("state_schema", {})
-        if not isinstance(state_schema, dict):
-            raise ValueError("draft state_schema must be an object")
-        projected = project_output_property_to_state_schema(
-            state_schema=state_schema,
-            output_schema=output_schema,
-            output_field=output_field,
-            state_field=state_field,
-        )
-        output_map = {
-            **self.drafts._step_output_map(workspace_id=workspace_id, step_id=step_id),
-            output_field: state_path,
-        }
-        return await self.drafts.patch_draft_workspace(
-            workspace_id=workspace_id,
-            revision=revision,
-            patch=[
-                {
-                    "op": "replace",
-                    "path": "/state_schema",
-                    "value": projected,
-                },
-                {
-                    "op": "replace",
-                    "path": f"/steps/{escape_json_pointer(step_id)}/output",
-                    "value": output_bindings_payload(output_map),
-                },
-            ],
-        )
+        if source_root == "local" and target_root in {"state", "output"}:
+            local_field = _local_field(source_path)
+            output_schema = spec.output_schema_contract or spec.output_model.model_json_schema()
+            schema_key = "state_schema" if target_root == "state" else "output_schema"
+            target_schema = workspace.draft.get(schema_key, {})
+            if not isinstance(target_schema, dict):
+                raise ValueError(f"draft {schema_key} must be an object")
+            projected = project_property_to_schema_path(
+                target_schema=target_schema,
+                source_schema=output_schema,
+                source_field=local_field,
+                target_parts=target_parts,
+            )
+            output_map = {
+                **self.drafts._step_output_map(workspace_id=workspace_id, step_id=step_id),
+                local_field: target_path,
+            }
+            return await self.drafts.patch_draft_workspace(
+                workspace_id=workspace_id,
+                revision=revision,
+                patch=[
+                    {"op": "replace", "path": f"/{schema_key}", "value": projected},
+                    {
+                        "op": "replace",
+                        "path": f"/steps/{escape_json_pointer(step_id)}/output",
+                        "value": output_bindings_payload(output_map),
+                    },
+                ],
+            )
+
+        raise ValueError(f"unsupported bind direction: {source_path!r} -> {target_path!r}")
 
     async def add_step_from_capability(
         self,

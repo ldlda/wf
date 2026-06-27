@@ -375,6 +375,21 @@ def _input_maps_from_payload(
     return input_map, input_values
 
 
+def _input_map_from_payload(payload: Any) -> dict[str, str]:
+    """Read stored canonical input bindings back into a source -> local field map."""
+    input_map: dict[str, str] = {}
+    if not isinstance(payload, list):
+        return input_map
+    for item in payload:
+        if not isinstance(item, Mapping):
+            continue
+        if "path" in item and "target" in item:
+            input_map[_path_text(item["path"])] = _path_text(
+                item["target"], expected_root="local"
+            )
+    return input_map
+
+
 def _output_map_from_payload(payload: Any) -> dict[str, str]:
     """Read stored canonical output bindings back into the focused output map."""
     output_map: dict[str, str] = {}
@@ -386,7 +401,6 @@ def _output_map_from_payload(payload: Any) -> dict[str, str]:
         if "source" in item and "target" in item:
             output_map[_path_text(item["source"], expected_root="local")] = _path_text(
                 item["target"],
-                expected_root="state",
             )
     return output_map
 
