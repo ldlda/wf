@@ -47,10 +47,7 @@ def test_authoring_foreach_accepts_item_error_mapping_with_authoring_path() -> N
 
     foreach = builder.compile().nodes[0]
 
-    assert foreach.model_dump(mode="json")["item_error"]["collect_to"] == {
-        "root": "state",
-        "parts": ["errors"],
-    }
+    assert foreach.model_dump(mode="json")["item_error"]["collect_to"] == "state.errors"
 
 
 def test_authoring_foreach_accepts_item_error_action_string() -> None:

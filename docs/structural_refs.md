@@ -1,4 +1,4 @@
-# Structural Refs
+# Structured Refs
 
 Qualified names are display strings. They are not authoritative identifiers.
 
@@ -78,14 +78,16 @@ Path strings such as `input.text`, `state.person.name`, and `output.echoed`
 describe graph data movement. Do not reuse capability-ref parsing rules for
 graph paths.
 
-New canonical graph path JSON uses root/parts objects:
+New canonical graph path JSON uses TOML-key strings:
 
 ```json
-{
-  "root": "input",
-  "parts": ["message"]
-}
+"input.message"
 ```
+
+Structural root/parts objects are still accepted at model-parse boundaries for
+old persisted records, but new schemas and new examples should emit strings.
+Quote a segment when the field name itself contains a dot or space, for example
+`state."person.name"` or `state.person."full name"`.
 
 ## Authoring Path Inputs
 
@@ -114,14 +116,14 @@ g.use(
     node,
     input=[
         {
-            "target": {"root": "local", "parts": ["payload.email"]},
-            "path": {"root": "input", "parts": ["email.address"]},
+            "target": '"payload.email"',
+            "path": 'input."email.address"',
         }
     ],
     output=[
         {
-            "source": {"root": "local", "parts": ["result.score"]},
-            "target": {"root": "state", "parts": ["score"]},
+            "source": '"result.score"',
+            "target": "state.score",
         }
     ],
 )
@@ -132,22 +134,15 @@ node-local input path. In an output binding, `source` is a node-local output
 path and `target` is a workflow state destination path.
 
 `in_map`, `input_values`, and `out_map` remain deprecated Python sugar for
-concise authoring. Structural path dicts are not valid map keys because Python
-dict keys must be hashable. Use canonical binding lists when working from
-JSON/MCP or when path segments contain display punctuation.
+concise authoring. Use canonical binding lists when working from JSON/MCP or
+when path segments contain display punctuation.
 
 ```json
-{
-  "root": "state",
-  "parts": ["person.name", "three and four"]
-}
+"state.\"person.name\".\"three and four\""
 ```
 
 ```json
-{
-  "root": "local",
-  "parts": []
-}
+"."
 ```
 
 Old strings are accepted at parse boundaries for compatibility. Structural

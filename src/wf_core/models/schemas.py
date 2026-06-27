@@ -98,7 +98,7 @@ class StateFieldDecl(BaseModel):
         return schema_type if isinstance(schema_type, str) else None
 
     @field_serializer("path")
-    def _serialize_path(self, path: StatePath) -> dict[str, str | list[str]]:
+    def _serialize_path(self, path: StatePath) -> str:
         return StatePath._serialize(path)
 
     @model_validator(mode="before")

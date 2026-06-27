@@ -200,7 +200,7 @@ def test_workflow_surface_creates_minimal_draft_workspace_with_error_route(
     assert workspace.draft["steps"]["tool_error"]["use"] == "wf.std.runtime_error"
     assert workspace.draft["steps"]["tool_error"]["input"] == [
         {
-            "target": {"root": "local", "parts": ["message"]},
+            "target": "message",
             "value": "Capability call failed",
         }
     ]
@@ -242,8 +242,8 @@ def test_workflow_surface_minimal_draft_honors_explicit_error_message_source(
 
     assert workspace.draft["steps"]["tool_error"]["input"] == [
         {
-            "target": {"root": "local", "parts": ["message"]},
-            "path": {"root": "state", "parts": ["error_message"]},
+            "target": "message",
+            "path": "state.error_message",
         }
     ]
 
@@ -311,14 +311,14 @@ def test_workflow_surface_accepts_canonical_bindings_for_minimal_workspace(
     assert result["workspace_id"] == "echo_draft_canonical"
     assert workspace.draft["steps"]["call"]["input"] == [
         {
-            "target": {"root": "local", "parts": ["text"]},
-            "path": {"root": "input", "parts": ["text"]},
+            "target": "text",
+            "path": "input.text",
         }
     ]
     assert workspace.draft["steps"]["call"]["output"] == [
         {
-            "source": {"root": "local", "parts": ["echoed"]},
-            "target": {"root": "state", "parts": ["echoed"]},
+            "source": "echoed",
+            "target": "state.echoed",
         }
     ]
 
@@ -369,14 +369,14 @@ def test_workflow_surface_creates_draft_workspace_from_capability_hints(
     assert workspace.draft["steps"]["call"]["use"] == "demo.personal.echo_tool"
     assert workspace.draft["steps"]["call"]["input"] == [
         {
-            "target": {"root": "local", "parts": ["text"]},
-            "path": {"root": "input", "parts": ["text"]},
+            "target": "text",
+            "path": "input.text",
         }
     ]
     assert workspace.draft["steps"]["call"]["output"] == [
         {
-            "source": {"root": "local", "parts": ["echoed"]},
-            "target": {"root": "state", "parts": ["echoed"]},
+            "source": "echoed",
+            "target": "state.echoed",
         }
     ]
 

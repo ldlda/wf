@@ -289,14 +289,14 @@ arguments:
         "use": "demo.personal.echo_tool",
         "input": [
           {
-            "target": {"root": "local", "parts": ["text"]},
-            "path": {"root": "input", "parts": ["text"]}
+            "target": "text",
+            "path": "input.text"
           }
         ],
         "output": [
           {
-            "source": {"root": "local", "parts": ["echoed"]},
-            "target": {"root": "state", "parts": ["echoed"]}
+            "source": "echoed",
+            "target": "state.echoed"
           }
         ]
       }
@@ -666,8 +666,8 @@ For explicit final output projection from state, use:
 
 ```json
 {
-  "path": { "root": "state", "parts": ["result_text"] },
-  "target": { "root": "local", "parts": ["result_text"] }
+  "path": "state.result_text",
+  "target": "result_text"
 }
 ```
 

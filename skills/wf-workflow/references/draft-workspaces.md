@@ -30,8 +30,8 @@ Step input bindings read graph values into node-local input:
 
 ```json
 {
-  "target": { "root": "local", "parts": ["text"] },
-  "path": { "root": "input", "parts": ["text"] }
+  "target": "text",
+  "path": "input.text"
 }
 ```
 
@@ -39,8 +39,8 @@ Step output bindings write node-local output into workflow state:
 
 ```json
 {
-  "source": { "root": "local", "parts": ["echoed"] },
-  "target": { "root": "state", "parts": ["echoed"] }
+  "source": "echoed",
+  "target": "state.echoed"
 }
 ```
 
@@ -49,8 +49,8 @@ Top-level workflow output uses `path` / `target`, not step-level
 
 ```json
 {
-  "path": { "root": "state", "parts": ["echoed"] },
-  "target": { "root": "local", "parts": ["echoed"] }
+  "path": "state.echoed",
+  "target": "echoed"
 }
 ```
 

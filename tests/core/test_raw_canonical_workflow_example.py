@@ -32,11 +32,11 @@ def test_raw_canonical_workflow_serializes_new_shape() -> None:
     assert "in_map" not in node
     assert "input_values" not in node
     assert "out_map" not in node
-    assert node["input"][0]["path"] == {"root": "input", "parts": ["text"]}
-    assert node["input"][0]["target"] == {"root": "local", "parts": ["text"]}
+    assert node["input"][0]["path"] == "input.text"
+    assert node["input"][0]["target"] == "text"
     assert node["input"][1]["value"] == "raw:"
-    assert node["output"][0]["source"] == {"root": "local", "parts": ["message"]}
-    assert node["output"][0]["target"] == {"root": "state", "parts": ["message"]}
+    assert node["output"][0]["source"] == "message"
+    assert node["output"][0]["target"] == "state.message"
     assert message_schema["type"] == "string"
     assert message_schema["reducer"] == "wf.std.replace"
 
@@ -62,8 +62,5 @@ def test_raw_concurrent_foreach_serializes_canonical_policy_shape() -> None:
     assert foreach["mode"] == "concurrent"
     assert foreach["concurrent"]["max_active"] == 2
     assert foreach["item_error"]["action"] == "collect"
-    assert foreach["item_error"]["collect_to"] == {
-        "root": "state",
-        "parts": ["errors"],
-    }
+    assert foreach["item_error"]["collect_to"] == "state.errors"
     assert "on_item_error" not in foreach

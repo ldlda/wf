@@ -71,14 +71,14 @@ A minimal draft looks like this:
       "use": "demo.personal.echo_tool",
       "input": [
         {
-          "target": { "root": "local", "parts": ["text"] },
-          "path": { "root": "input", "parts": ["text"] }
+          "target": "text",
+          "path": "input.text"
         }
       ],
       "output": [
         {
-          "source": { "root": "local", "parts": ["echoed"] },
-          "target": { "root": "state", "parts": ["echoed"] }
+          "source": "echoed",
+          "target": "state.echoed"
         }
       ]
     }
@@ -117,8 +117,8 @@ Step output writes a node's local return payload into workflow state. It uses
 
 ```json
 {
-  "source": { "root": "local", "parts": ["text"] },
-  "target": { "root": "state", "parts": ["result_text"] }
+  "source": "text",
+  "target": "state.result_text"
 }
 ```
 
@@ -137,8 +137,8 @@ step-level node output bindings only.
 
 ```json
 {
-  "path": { "root": "state", "parts": ["result_text"] },
-  "target": { "root": "local", "parts": ["result_text"] }
+  "path": "state.result_text",
+  "target": "result_text"
 }
 ```
 
@@ -192,8 +192,8 @@ This complete draft shape:
   "outcomes": ["ok", "error"],
   "output": [
     {
-      "target": { "root": "local", "parts": ["message"] },
-      "path": { "root": "state", "parts": ["raw", "echoed"] }
+      "target": "message",
+      "path": "state.raw.echoed"
     }
   ],
   "start": "call",
@@ -202,18 +202,18 @@ This complete draft shape:
       "use": "demo.echo",
       "input": [
         {
-          "target": { "root": "local", "parts": ["text"] },
-          "path": { "root": "input", "parts": ["text"] }
+          "target": "text",
+          "path": "input.text"
         },
         {
-          "target": { "root": "local", "parts": ["fail"] },
-          "path": { "root": "input", "parts": ["fail"] }
+          "target": "fail",
+          "path": "input.fail"
         }
       ],
       "output": [
         {
-          "source": { "root": "local", "parts": ["echoed"] },
-          "target": { "root": "state", "parts": ["raw", "echoed"] }
+          "source": "echoed",
+          "target": "state.raw.echoed"
         }
       ]
     },
@@ -246,18 +246,18 @@ Draft `use` steps use the same canonical binding structs as core `NodeUse`:
 {
   "input": [
     {
-      "target": { "root": "local", "parts": ["message"] },
-      "path": { "root": "input", "parts": ["text"] }
+      "target": "message",
+      "path": "input.text"
     },
     {
-      "target": { "root": "local", "parts": ["limit"] },
+      "target": "limit",
       "value": 3
     }
   ],
   "output": [
     {
-      "source": { "root": "local", "parts": ["echoed"] },
-      "target": { "root": "state", "parts": ["echoed"] }
+      "source": "echoed",
+      "target": "state.echoed"
     }
   ]
 }
@@ -271,19 +271,9 @@ Graph source paths in `in` normally start with `input.`, `state.`, or
 `context.`. Node-local paths do not use those prefixes; they are paths inside
 the target capability's input or output payload.
 
-In canonical structural paths, `parts` is a list of literal path segments. Do
-not put `"user.name"` in one segment unless the actual JSON property name is
-literally `user.name`. For normal nested objects, write:
-
-```json
-{ "root": "input", "parts": ["user", "name"] }
-```
-
-not:
-
-```json
-{ "root": "input", "parts": ["user.name"] }
-```
+In canonical string paths, segments are joined with dots. For nested objects,
+use `"input.user.name"`. For literal dots in property names, use TOML quoting:
+`state."person.name"`.
 
 For example, this canonical input/output pair:
 
@@ -291,22 +281,22 @@ For example, this canonical input/output pair:
 {
   "input": [
     {
-      "target": { "root": "local", "parts": ["user", "name"] },
-      "path": { "root": "input", "parts": ["user", "name"] }
+      "target": "user.name",
+      "path": "input.user.name"
     },
     {
-      "target": { "root": "local", "parts": ["job", "title"] },
-      "path": { "root": "state", "parts": ["job", "title"] }
+      "target": "job.title",
+      "path": "state.job.title"
     }
   ],
   "output": [
     {
-      "source": { "root": "local", "parts": ["user", "age"] },
-      "target": { "root": "state", "parts": ["person", "age"] }
+      "source": "user.age",
+      "target": "state.person.age"
     },
     {
-      "source": { "root": "local", "parts": ["job", "years"] },
-      "target": { "root": "state", "parts": ["experience", "years"] }
+      "source": "job.years",
+      "target": "state.experience.years"
     }
   ]
 }
@@ -325,8 +315,8 @@ Do not reverse the direction. This is wrong:
 {
   "input": [
     {
-      "target": { "root": "input", "parts": ["text"] },
-      "path": { "root": "local", "parts": ["message"] }
+      "target": "input.text",
+      "path": "message"
     }
   ]
 }
@@ -341,8 +331,8 @@ Do not put constants in path bindings. This is wrong:
 {
   "input": [
     {
-      "target": { "root": "local", "parts": ["value"] },
-      "path": { "root": "input", "parts": ["CLICKED"] }
+      "target": "value",
+      "path": "input.CLICKED"
     }
   ]
 }
@@ -361,14 +351,14 @@ Calls a workflow capability.
   "use": "demo.personal.echo_tool",
   "input": [
     {
-      "target": { "root": "local", "parts": ["text"] },
-      "path": { "root": "input", "parts": ["text"] }
+      "target": "text",
+      "path": "input.text"
     }
   ],
   "output": [
     {
-      "source": { "root": "local", "parts": ["echoed"] },
-      "target": { "root": "state", "parts": ["echoed"] }
+      "source": "echoed",
+      "target": "state.echoed"
     }
   ]
 }
@@ -386,14 +376,14 @@ are part of the graph definition:
   "use": "wf.std.constant",
   "input": [
     {
-      "target": { "root": "local", "parts": ["value"] },
+      "target": "value",
       "value": "CLICKED"
     }
   ],
   "output": [
     {
-      "source": { "root": "local", "parts": ["value"] },
-      "target": { "root": "state", "parts": ["wait_text"] }
+      "source": "value",
+      "target": "state.wait_text"
     }
   ]
 }
@@ -429,7 +419,7 @@ model: use `item_error` and `concurrent`, not draft-only field names.
 ```json
 {
   "foreach": {
-    "over": { "root": "state", "parts": ["items"] },
+    "over": "state.items",
     "as": "item",
     "mode": "serial",
     "item_error": "fail"
@@ -442,7 +432,7 @@ Concurrent foreach uses the same canonical policy shape as core:
 ```json
 {
   "foreach": {
-    "over": { "root": "state", "parts": ["items"] },
+    "over": "state.items",
     "as": "item",
     "mode": "concurrent",
     "concurrent": {
@@ -451,7 +441,7 @@ Concurrent foreach uses the same canonical policy shape as core:
     },
     "item_error": {
       "action": "collect",
-      "collect_to": { "root": "state", "parts": ["item_errors"] }
+      "collect_to": "state.item_errors"
     }
   }
 }
@@ -472,14 +462,14 @@ Declares an interrupting step.
     "kind": "input",
     "request": [
       {
-        "target": { "root": "local", "parts": ["question"] },
-        "path": { "root": "state", "parts": ["question"] }
+        "target": "question",
+        "path": "state.question"
       }
     ],
     "resume": [
       {
-        "source": { "root": "local", "parts": ["answer"] },
-        "target": { "root": "state", "parts": ["answer"] }
+        "source": "answer",
+        "target": "state.answer"
       }
     ],
     "outcomes": ["resumed", "cancelled"]
@@ -654,10 +644,9 @@ It does not guess that a normal output state path is also an error message.
 Provider-specific error envelopes still belong in saved wrapper artifacts or
 follow-up patches.
 
-`error_message_source` accepts the same structural graph path shape used by
-other mapping fields, for example
-`{"root": "state", "parts": ["error_message"]}`. Legacy strings such as
-`state.error_message` remain accepted for compatibility.
+`error_message_source` accepts the same canonical string path shape used by
+other mapping fields, for example `"state.error_message"`. Legacy structural
+shapes remain accepted for compatibility.
 
 In MCP Inspector, workspace mutation tools accept a single `request` object.
 This is deliberate: the request object carries descriptions and validation for

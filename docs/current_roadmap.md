@@ -251,6 +251,9 @@ stable.
 - Completed: challenge matrix operations now have compact OpenCode thread
   titles, policy handling for canonical skill-document reads, and a central
   `summarize_trials.py` command for audited result tables.
+- Completed: canonical TOML path strings replace structural JSON path objects
+  in workflow drafts. Paths now emit as `"input.text"`, `"state.echoed"`,
+  `"message"` (local) instead of `{"root": "input", "parts": ["text"]}`.
 
 ## Historical References
 

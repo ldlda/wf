@@ -763,22 +763,22 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     assert draft["routes"]["call"]["ok"] == "__end__"
     assert draft["steps"]["call"]["input"] == [
         {
-            "target": {"root": "local", "parts": ["value"]},
-            "path": {"root": "input", "parts": ["value"]},
+            "target": "value",
+            "path": "input.value",
         },
         {
-            "target": {"root": "local", "parts": ["extra"]},
-            "path": {"root": "input", "parts": ["extra"]},
+            "target": "extra",
+            "path": "input.extra",
         },
     ]
     assert draft["steps"]["call"]["output"] == [
         {
-            "source": {"root": "local", "parts": ["value"]},
-            "target": {"root": "state", "parts": ["extra_value"]},
+            "source": "value",
+            "target": "state.extra_value",
         },
         {
-            "source": {"root": "local", "parts": ["extra"]},
-            "target": {"root": "state", "parts": ["extra"]},
+            "source": "extra",
+            "target": "state.extra",
         },
     ]
     assert (

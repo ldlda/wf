@@ -43,18 +43,9 @@ def test_workflow_draft_accepts_legacy_use_maps_but_dumps_canonical_bindings() -
     assert "in" not in dumped["steps"]["echo"]
     assert "with" not in dumped["steps"]["echo"]
     assert "out" not in dumped["steps"]["echo"]
-    assert dumped["steps"]["echo"]["input"][0]["target"] == {
-        "root": "local",
-        "parts": ["limit"],
-    }
-    assert dumped["steps"]["echo"]["input"][1]["path"] == {
-        "root": "input",
-        "parts": ["text"],
-    }
-    assert dumped["steps"]["echo"]["output"][0]["target"] == {
-        "root": "state",
-        "parts": ["echoed"],
-    }
+    assert dumped["steps"]["echo"]["input"][0]["target"] == "limit"
+    assert dumped["steps"]["echo"]["input"][1]["path"] == "input.text"
+    assert dumped["steps"]["echo"]["output"][0]["target"] == "state.echoed"
 
 
 def test_workflow_draft_accepts_legacy_interrupt_maps_but_dumps_canonical_bindings() -> (
@@ -79,22 +70,15 @@ def test_workflow_draft_accepts_legacy_interrupt_maps_but_dumps_canonical_bindin
 
     dumped = draft.model_dump(mode="json")
 
-    assert dumped["steps"]["approval"]["interrupt"]["request"][0]["path"] == {
-        "root": "input",
-        "parts": ["text"],
-    }
-    assert dumped["steps"]["approval"]["interrupt"]["request"][0]["target"] == {
-        "root": "local",
-        "parts": ["message"],
-    }
-    assert dumped["steps"]["approval"]["interrupt"]["resume"][0]["source"] == {
-        "root": "local",
-        "parts": ["approved"],
-    }
-    assert dumped["steps"]["approval"]["interrupt"]["resume"][0]["target"] == {
-        "root": "state",
-        "parts": ["approved"],
-    }
+    assert (
+        dumped["steps"]["approval"]["interrupt"]["request"][0]["path"] == "input.text"
+    )
+    assert dumped["steps"]["approval"]["interrupt"]["request"][0]["target"] == "message"
+    assert dumped["steps"]["approval"]["interrupt"]["resume"][0]["source"] == "approved"
+    assert (
+        dumped["steps"]["approval"]["interrupt"]["resume"][0]["target"]
+        == "state.approved"
+    )
 
 
 def test_draft_step_requires_exactly_one_kind_key() -> None:
@@ -206,10 +190,7 @@ def test_workflow_draft_foreach_over_dumps_structural_path() -> None:
 
     dumped = draft.model_dump(mode="json")
 
-    assert dumped["steps"]["each_item"]["foreach"]["over"] == {
-        "root": "state",
-        "parts": ["items"],
-    }
+    assert dumped["steps"]["each_item"]["foreach"]["over"] == "state.items"
 
 
 def test_workflow_draft_foreach_accepts_canonical_item_error_policy() -> None:
@@ -241,7 +222,7 @@ def test_workflow_draft_foreach_accepts_canonical_item_error_policy() -> None:
     assert isinstance(step, DraftForeachStep)
     assert dumped["steps"]["each_item"]["foreach"]["item_error"] == {
         "action": "collect",
-        "collect_to": {"root": "state", "parts": ["item_errors"]},
+        "collect_to": "state.item_errors",
     }
     assert "on_item_error" not in dumped["steps"]["each_item"]["foreach"]
 

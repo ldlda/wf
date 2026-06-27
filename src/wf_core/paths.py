@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import json
+import re
+import tomllib
 from collections.abc import Mapping, MutableMapping
 from dataclasses import dataclass
 from typing import Any, ClassVar, Literal
@@ -17,6 +20,10 @@ GraphRoot = Literal["input", "state", "context"]
 def _validate_segment(segment: str, *, path_kind: str) -> str:
     if not segment or not segment.strip():
         raise PathResolutionError(f"invalid {path_kind} segment {segment!r}")
+    if _CONTROL_CHAR.search(segment):
+        raise PathResolutionError(
+            f"invalid {path_kind} segment {segment!r}; control characters are not allowed"
+        )
     return segment
 
 
@@ -34,25 +41,52 @@ def _parse_fragments(*fragments: str, path_kind: str) -> tuple[str, ...]:
     return tuple(parts)
 
 
-def _path_json_schema(root: str | list[str], description: str) -> dict[str, Any]:
-    """Return the canonical structural schema for saved path fields."""
-    root_schema: dict[str, Any]
-    if isinstance(root, str):
-        root_schema = {"const": root}
-    else:
-        root_schema = {"enum": root}
+_BARE_TOML_KEY = re.compile(r"^[A-Za-z0-9_-]+$")
+_CONTROL_CHAR = re.compile(r"[\x00-\x1f\x7f]")
+
+
+def parse_toml_path_segments(expr: str) -> tuple[str, ...]:
+    """Parse a TOML key expression into literal path segments."""
+    try:
+        # An inline table constrains ``expr`` to TOML key syntax. Parsing it as
+        # a whole document would also accept table headers and extra statements.
+        parsed = tomllib.loads(f"__wf_path__ = {{ {expr} = true }}")
+    except tomllib.TOMLDecodeError as exc:
+        raise PathResolutionError(
+            f"invalid TOML path {expr!r}; quote path segments containing dots or spaces"
+        ) from exc
+
+    parts: list[str] = []
+    current: object = parsed.get("__wf_path__")
+    while isinstance(current, dict):
+        if len(current) != 1:
+            raise PathResolutionError(f"invalid TOML path {expr!r}")
+        key, current = next(iter(current.items()))
+        parts.append(_validate_segment(key, path_kind="TOML path"))
+    if current is not True or not parts:
+        raise PathResolutionError(f"invalid TOML path {expr!r}")
+    return tuple(parts)
+
+
+def format_toml_path_segments(parts: tuple[str, ...]) -> str:
+    """Format literal segments as one canonical TOML key expression."""
+    if not parts:
+        raise PathResolutionError("cannot format an empty TOML path")
+    return ".".join(
+        part if _BARE_TOML_KEY.fullmatch(part) else json.dumps(part, ensure_ascii=False)
+        for part in parts
+    )
+
+
+def _path_json_schema(description: str) -> dict[str, Any]:
+    """Return the canonical string schema for path fields.
+
+    Structural objects remain input-only compatibility for persisted records.
+    New schemas and serializers expose the canonical TOML-key string form.
+    """
     return {
-        "type": "object",
+        "type": "string",
         "description": description,
-        "properties": {
-            "root": root_schema,
-            "parts": {
-                "type": "array",
-                "items": {"type": "string", "minLength": 1},
-            },
-        },
-        "required": ["root", "parts"],
-        "additionalProperties": False,
     }
 
 
@@ -88,10 +122,6 @@ class LocalPath:
 
     parts: tuple[str, ...]
 
-    _JSON_PATTERN: ClassVar[str] = (
-        r"^(\.|[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*)$"
-    )
-
     def __post_init__(self) -> None:
         object.__setattr__(
             self,
@@ -113,10 +143,13 @@ class LocalPath:
     def parse(cls, raw: str) -> LocalPath:
         if raw == ".":
             return cls.root()
-        return cls.of(raw)
+        all_parts = parse_toml_path_segments(raw)
+        return cls(all_parts)
 
     def __str__(self) -> str:
-        return "." if not self.parts else ".".join(self.parts)
+        if not self.parts:
+            return "."
+        return format_toml_path_segments(self.parts)
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -142,17 +175,16 @@ class LocalPath:
         )
 
     @staticmethod
-    def _serialize(value: LocalPath) -> dict[str, str | list[str]]:
-        """Serialize canonical path JSON without relying on dotted display text."""
-        return {"root": "local", "parts": list(value.parts)}
+    def _serialize(value: LocalPath) -> str:
+        """Serialize canonical path JSON as a TOML-key string."""
+        return str(value)
 
     @classmethod
     def __get_pydantic_json_schema__(
         cls, _core_schema: core_schema.CoreSchema, _handler: object
     ) -> dict[str, Any]:
         return _path_json_schema(
-            "local",
-            "Node-local path. Use an empty parts list for the whole payload.",
+            "Node-local path. Use the root marker `.` for the whole payload.",
         )
 
 
@@ -164,7 +196,6 @@ class GraphSourcePath:
     parts: tuple[str, ...] = ()
 
     _ROOTS: ClassVar[set[str]] = {"input", "state", "context"}
-    _JSON_PATTERN: ClassVar[str] = r"^(input|state|context)(\.[A-Za-z_][A-Za-z0-9_]*)*$"
 
     def __post_init__(self) -> None:
         if self.root not in self._ROOTS:
@@ -179,13 +210,13 @@ class GraphSourcePath:
 
     @classmethod
     def parse(cls, raw: str) -> GraphSourcePath:
-        root, *raw_parts = raw.split(".")
+        all_parts = parse_toml_path_segments(raw)
+        if not all_parts:
+            raise PathResolutionError(f"invalid graph source path {raw!r}")
+        root, *parts = all_parts
         if root not in cls._ROOTS:
             raise PathResolutionError(f"unknown path root {root!r}")
-        parts = tuple(
-            _validate_segment(part, path_kind="graph source") for part in raw_parts
-        )
-        return cls(root, parts)  # type: ignore[arg-type]
+        return cls(root, tuple(parts))  # type: ignore[arg-type]
 
     @classmethod
     def input(cls, *fragments: str) -> GraphSourcePath:
@@ -200,7 +231,8 @@ class GraphSourcePath:
         return cls("context", _parse_fragments(*fragments, path_kind="graph source"))
 
     def __str__(self) -> str:
-        return self.root if not self.parts else f"{self.root}.{'.'.join(self.parts)}"
+        all_parts = (self.root, *self.parts)
+        return format_toml_path_segments(all_parts)
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -227,16 +259,15 @@ class GraphSourcePath:
         )
 
     @staticmethod
-    def _serialize(value: GraphSourcePath) -> dict[str, str | list[str]]:
-        """Serialize canonical path JSON without relying on dotted display text."""
-        return {"root": value.root, "parts": list(value.parts)}
+    def _serialize(value: GraphSourcePath) -> str:
+        """Serialize canonical path JSON as a TOML-key string."""
+        return str(value)
 
     @classmethod
     def __get_pydantic_json_schema__(
         cls, _core_schema: core_schema.CoreSchema, _handler: object
     ) -> dict[str, Any]:
         return _path_json_schema(
-            sorted(cls._ROOTS),
             "Readable graph path rooted at input, state, or context.",
         )
 
@@ -246,10 +277,6 @@ class StatePath:
     """Writable workflow state path. Bare `state` is intentionally invalid."""
 
     parts: tuple[str, ...]
-
-    _JSON_PATTERN: ClassVar[str] = (
-        r"^state\.[A-Za-z_][A-Za-z0-9_]*(\.[A-Za-z_][A-Za-z0-9_]*)*$"
-    )
 
     def __post_init__(self) -> None:
         parts = tuple(_validate_segment(part, path_kind="state") for part in self.parts)
@@ -272,7 +299,8 @@ class StatePath:
         return cls(parsed.parts)
 
     def __str__(self) -> str:
-        return f"state.{'.'.join(self.parts)}"
+        all_parts = ("state", *self.parts)
+        return format_toml_path_segments(all_parts)
 
     @classmethod
     def __get_pydantic_core_schema__(
@@ -298,15 +326,15 @@ class StatePath:
         )
 
     @staticmethod
-    def _serialize(value: StatePath) -> dict[str, str | list[str]]:
-        """Serialize canonical path JSON without relying on dotted display text."""
-        return {"root": "state", "parts": list(value.parts)}
+    def _serialize(value: StatePath) -> str:
+        """Serialize canonical path JSON as a TOML-key string."""
+        return str(value)
 
     @classmethod
     def __get_pydantic_json_schema__(
         cls, _core_schema: core_schema.CoreSchema, _handler: object
     ) -> dict[str, Any]:
-        return _path_json_schema("state", "Writable workflow state path.")
+        return _path_json_schema("Writable workflow state path.")
 
 
 def split_graph_path(path: str | GraphSourcePath | StatePath) -> tuple[str, list[str]]:

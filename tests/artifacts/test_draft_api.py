@@ -24,10 +24,7 @@ def test_patch_workflow_draft_uses_stable_step_paths() -> None:
     )
 
     assert result["status"] == "valid"
-    assert result["draft"]["steps"]["echo"]["input"][0]["target"] == {
-        "root": "local",
-        "parts": ["message"],
-    }
+    assert result["draft"]["steps"]["echo"]["input"][0]["target"] == "message"
 
 
 def _keyed_echo_draft() -> dict[str, object]:

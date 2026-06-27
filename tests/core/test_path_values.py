@@ -161,7 +161,7 @@ def test_pydantic_revalidates_existing_path_objects() -> None:
         )
 
 
-def test_pydantic_accepts_path_strings_and_serializes_structural_json() -> None:
+def test_pydantic_accepts_path_strings_and_serializes_path_strings() -> None:
     class Payload(BaseModel):
         source: GraphSourcePath
         target: StatePath
@@ -180,17 +180,17 @@ def test_pydantic_accepts_path_strings_and_serializes_structural_json() -> None:
     assert payload.local == LocalPath.of("user")
 
     dumped = payload.model_dump(mode="json")
-    assert dumped["source"] == {"root": "input", "parts": ["user"]}
-    assert dumped["target"] == {"root": "state", "parts": ["person"]}
-    assert dumped["local"] == {"root": "local", "parts": ["user"]}
+    assert dumped["source"] == "input.user"
+    assert dumped["target"] == "state.person"
+    assert dumped["local"] == "user"
 
     python_dumped = payload.model_dump()
-    assert python_dumped["source"] == {"root": "input", "parts": ["user"]}
-    assert python_dumped["target"] == {"root": "state", "parts": ["person"]}
-    assert python_dumped["local"] == {"root": "local", "parts": ["user"]}
+    assert python_dumped["source"] == "input.user"
+    assert python_dumped["target"] == "state.person"
+    assert python_dumped["local"] == "user"
 
 
-def test_path_json_schema_advertises_structural_shape() -> None:
+def test_path_json_schema_advertises_string_type() -> None:
     class Payload(BaseModel):
         source: GraphSourcePath
         target: StatePath
@@ -198,24 +198,16 @@ def test_path_json_schema_advertises_structural_shape() -> None:
 
     schema = Payload.model_json_schema()
 
-    assert schema["properties"]["source"]["type"] == "object"
-    assert schema["properties"]["source"]["properties"]["root"]["enum"] == [
-        "context",
-        "input",
-        "state",
-    ]
-    assert schema["properties"]["target"]["properties"]["root"]["const"] == "state"
-    assert schema["properties"]["local"]["properties"]["root"]["const"] == "local"
+    assert schema["properties"]["source"]["type"] == "string"
+    assert schema["properties"]["target"]["type"] == "string"
+    assert schema["properties"]["local"]["type"] == "string"
 
 
-def test_condition_path_operand_serializes_path_as_structural_json() -> None:
+def test_condition_path_operand_serializes_path_as_string() -> None:
     operand = PathOperand.model_validate({"path": "state.x"})
 
-    assert operand.model_dump()["path"] == {"root": "state", "parts": ["x"]}
-    assert operand.model_dump(mode="json")["path"] == {
-        "root": "state",
-        "parts": ["x"],
-    }
+    assert operand.model_dump()["path"] == "state.x"
+    assert operand.model_dump(mode="json")["path"] == "state.x"
 
 
 def test_pydantic_accepts_existing_path_objects() -> None:
@@ -279,3 +271,87 @@ def test_path_parts_overlap_detects_equality_and_ancestry(
     expected: bool,
 ) -> None:
     assert path_parts_overlap(left, right) is expected
+
+
+def test_toml_path_strings_round_trip_literal_segments() -> None:
+    source = GraphSourcePath.parse('input."customer.name"."display name"')
+    target = StatePath.parse('state."report.title"')
+    local = LocalPath.parse('payload."raw.value"')
+
+    assert source.parts == ("customer.name", "display name")
+    assert target.parts == ("report.title",)
+    assert local.parts == ("payload", "raw.value")
+    assert str(source) == 'input."customer.name"."display name"'
+    assert str(target) == 'state."report.title"'
+    assert str(local) == 'payload."raw.value"'
+
+
+def test_toml_path_strings_bare_keys_round_trip() -> None:
+    source = GraphSourcePath.parse("input.user.name")
+    assert source.parts == ("user", "name")
+    assert str(source) == "input.user.name"
+
+
+def test_local_path_parse_root_marker() -> None:
+    local = LocalPath.parse(".")
+    assert local.parts == ()
+    assert str(local) == "."
+
+
+def test_toml_path_strings_reject_malformed_toml() -> None:
+    with pytest.raises(PathResolutionError, match="invalid TOML path"):
+        GraphSourcePath.parse('input."unclosed')
+
+
+@pytest.mark.parametrize("raw", ["[input]\nname", "[input.user]\nname"])
+def test_toml_path_strings_reject_document_table_syntax(raw: str) -> None:
+    with pytest.raises(PathResolutionError, match="invalid TOML path"):
+        GraphSourcePath.parse(raw)
+
+
+def test_toml_path_strings_reject_inline_table_breakout_syntax() -> None:
+    with pytest.raises(PathResolutionError, match="invalid TOML path"):
+        LocalPath.parse("uhh = 1}\nfoo={bar")
+
+
+def test_toml_path_strings_reject_control_characters_in_segments() -> None:
+    with pytest.raises(PathResolutionError, match="control characters"):
+        LocalPath.parse('"uhh = 1}\\nfoo={bar"')
+
+
+def test_toml_path_strings_allow_brackets_inside_quoted_segments() -> None:
+    assert GraphSourcePath.parse('input."[name]"') == GraphSourcePath(
+        "input", ("[name]",)
+    )
+
+
+def test_toml_path_strings_reject_invalid_root() -> None:
+    with pytest.raises(PathResolutionError, match="unknown path root"):
+        GraphSourcePath.parse('output."foo"')
+
+
+def test_state_path_rejects_bare_state_without_segments() -> None:
+    with pytest.raises(PathResolutionError, match="state path"):
+        StatePath.parse("state")
+
+
+def test_path_models_serialize_strings_but_accept_structural_compat() -> None:
+    class Payload(BaseModel):
+        source: GraphSourcePath
+        target: StatePath
+        local: LocalPath
+
+    payload = Payload.model_validate(
+        {
+            "source": {"root": "input", "parts": ["user.name"]},
+            "target": {"root": "state", "parts": ["person name"]},
+            "local": {"root": "local", "parts": ["payload.text"]},
+        }
+    )
+
+    assert payload.model_dump(mode="json") == {
+        "source": 'input."user.name"',
+        "target": 'state."person name"',
+        "local": '"payload.text"',
+    }
+    assert Payload.model_json_schema()["properties"]["source"]["type"] == "string"

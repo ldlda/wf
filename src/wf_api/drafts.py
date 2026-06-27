@@ -694,16 +694,16 @@ def _path_text(value: Any, *, expected_root: str | None = None) -> str:
     return root if not raw_parts else f"{root}.{'.'.join(raw_parts)}"
 
 
-def _graph_path_payload(value: str | GraphSourcePath) -> dict[str, str | list[str]]:
+def _graph_path_payload(value: str | GraphSourcePath) -> str:
     path = value if isinstance(value, GraphSourcePath) else GraphSourcePath.parse(value)
     return GraphSourcePath._serialize(path)
 
 
-def _local_path_payload(value: str) -> dict[str, str | list[str]]:
+def _local_path_payload(value: str) -> str:
     return LocalPath._serialize(LocalPath.parse(value))
 
 
-def _state_path_payload(value: str) -> dict[str, str | list[str]]:
+def _state_path_payload(value: str) -> str:
     return StatePath._serialize(StatePath.parse(value))
 
 

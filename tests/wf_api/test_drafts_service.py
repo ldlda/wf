@@ -248,14 +248,14 @@ async def test_draft_workspace_patch_helpers_update_revision_and_bindings(
     assert fetched["draft"]["routes"]["echo"]["error"] == "__end__"
     assert fetched["draft"]["steps"]["echo"]["input"] == [
         {
-            "target": {"root": "local", "parts": ["message"]},
-            "path": {"root": "input", "parts": ["text"]},
+            "target": "message",
+            "path": "input.text",
         }
     ]
     assert fetched["draft"]["steps"]["echo"]["output"] == [
         {
-            "source": {"root": "local", "parts": ["echoed"]},
-            "target": {"root": "state", "parts": ["echoed"]},
+            "source": "echoed",
+            "target": "state.echoed",
         }
     ]
 
@@ -296,18 +296,18 @@ async def test_step_map_helpers_merge_with_existing_bindings(tmp_path: Path) -> 
     assert replaced["revision"] == 4
     assert fetched["draft"]["steps"]["echo"]["input"] == [
         {
-            "target": {"root": "local", "parts": ["final"]},
-            "path": {"root": "input", "parts": ["final"]},
+            "target": "final",
+            "path": "input.final",
         }
     ]
     assert fetched["draft"]["steps"]["echo"]["output"] == [
         {
-            "source": {"root": "local", "parts": ["echoed"]},
-            "target": {"root": "state", "parts": ["echoed"]},
+            "source": "echoed",
+            "target": "state.echoed",
         },
         {
-            "source": {"root": "local", "parts": ["extra"]},
-            "target": {"root": "state", "parts": ["extra"]},
+            "source": "extra",
+            "target": "state.extra",
         },
     ]
 
@@ -644,12 +644,12 @@ async def test_bind_output_to_state_projects_schema_and_merges_output_map(
     }
     assert draft["steps"]["snap"]["output"] == [
         {
-            "source": {"root": "local", "parts": ["before"]},
-            "target": {"root": "state", "parts": ["before"]},
+            "source": "before",
+            "target": "state.before",
         },
         {
-            "source": {"root": "local", "parts": ["after"]},
-            "target": {"root": "state", "parts": ["after"]},
+            "source": "after",
+            "target": "state.after",
         },
     ]
 
@@ -798,8 +798,8 @@ async def test_add_step_from_capability_wires_route_inputs_and_state_outputs(
     assert draft["routes"]["snap"]["ok"] == "__end__"
     assert draft["steps"]["snap"]["output"] == [
         {
-            "source": {"root": "local", "parts": ["after"]},
-            "target": {"root": "state", "parts": ["after"]},
+            "source": "after",
+            "target": "state.after",
         }
     ]
     assert draft["state_schema"]["properties"]["after"]["$ref"] == "#/$defs/_Snapshot"

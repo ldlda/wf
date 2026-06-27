@@ -190,11 +190,8 @@ def test_state_field_decl_model_dump_serializes_path_structurally() -> None:
         }
     )
 
-    assert field.model_dump()["path"] == {"root": "state", "parts": ["person", "name"]}
-    assert field.model_dump(mode="json")["path"] == {
-        "root": "state",
-        "parts": ["person", "name"],
-    }
+    assert field.model_dump()["path"] == "state.person.name"
+    assert field.model_dump(mode="json")["path"] == "state.person.name"
 
 
 def test_state_schema_model_dump_serializes_paths_as_strings() -> None:

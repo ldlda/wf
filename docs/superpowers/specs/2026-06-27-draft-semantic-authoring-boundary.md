@@ -2,7 +2,7 @@
 
 Date: 2026-06-27
 
-Status: Approved for implementation planning.
+Status: Approved for implementation planning. Canonical Path Strings section implemented.
 
 Related:
 

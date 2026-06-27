@@ -49,7 +49,7 @@ def test_structural_path_dicts_validate_through_core_models() -> None:
 
 
 def test_invalid_toml_path_expression_has_actionable_message() -> None:
-    with pytest.raises(ValueError, match="TOML key expression"):
+    with pytest.raises(ValueError, match="TOML path"):
         coerce_state_path("person..name")
 
 
@@ -68,3 +68,12 @@ def test_state_expr_helper_uses_same_path_input_rules() -> None:
     assert isinstance(condition, BinaryCondition)
     assert isinstance(condition.left, PathOperand)
     assert condition.left.path == GraphSourcePath("state", ("person.name",))
+
+
+def test_authoring_paths_share_core_toml_grammar() -> None:
+    assert coerce_graph_path('state."person.name"') == GraphSourcePath(
+        "state", ("person.name",)
+    )
+    assert coerce_graph_path('"person.name"', root="state") == GraphSourcePath(
+        "state", ("person.name",)
+    )

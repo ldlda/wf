@@ -56,14 +56,14 @@ def test_node_use_converts_old_maps_to_canonical_bindings():
     assert "input_values" not in dumped
     assert "out_map" not in dumped
     assert dumped["input"][0]["value"] == "fast"
-    assert dumped["input"][0]["target"] == {"root": "local", "parts": ["mode"]}
-    assert dumped["input"][1]["path"] == {"root": "input", "parts": ["message"]}
-    assert dumped["input"][1]["target"] == {"root": "local", "parts": ["message"]}
-    assert dumped["output"][0]["source"] == {"root": "local", "parts": ["echoed"]}
-    assert dumped["output"][0]["target"] == {"root": "state", "parts": ["echoed"]}
+    assert dumped["input"][0]["target"] == "mode"
+    assert dumped["input"][1]["path"] == "input.message"
+    assert dumped["input"][1]["target"] == "message"
+    assert dumped["output"][0]["source"] == "echoed"
+    assert dumped["output"][0]["target"] == "state.echoed"
 
 
-def test_node_use_serializes_canonical_binding_paths_as_structural_json():
+def test_node_use_serializes_canonical_binding_paths_as_strings():
     node = NodeUse.model_validate(
         {
             "id": "echo",
@@ -77,38 +77,14 @@ def test_node_use_serializes_canonical_binding_paths_as_structural_json():
     python_dumped = node.model_dump()
     json_dumped = node.model_dump(mode="json")
 
-    assert python_dumped["input"][0]["target"] == {
-        "root": "local",
-        "parts": ["message"],
-    }
-    assert python_dumped["input"][0]["path"] == {
-        "root": "input",
-        "parts": ["message"],
-    }
-    assert python_dumped["output"][0]["source"] == {
-        "root": "local",
-        "parts": ["echoed"],
-    }
-    assert python_dumped["output"][0]["target"] == {
-        "root": "state",
-        "parts": ["echoed"],
-    }
-    assert json_dumped["input"][0]["target"] == {
-        "root": "local",
-        "parts": ["message"],
-    }
-    assert json_dumped["input"][0]["path"] == {
-        "root": "input",
-        "parts": ["message"],
-    }
-    assert json_dumped["output"][0]["source"] == {
-        "root": "local",
-        "parts": ["echoed"],
-    }
-    assert json_dumped["output"][0]["target"] == {
-        "root": "state",
-        "parts": ["echoed"],
-    }
+    assert python_dumped["input"][0]["target"] == "message"
+    assert python_dumped["input"][0]["path"] == "input.message"
+    assert python_dumped["output"][0]["source"] == "echoed"
+    assert python_dumped["output"][0]["target"] == "state.echoed"
+    assert json_dumped["input"][0]["target"] == "message"
+    assert json_dumped["input"][0]["path"] == "input.message"
+    assert json_dumped["output"][0]["source"] == "echoed"
+    assert json_dumped["output"][0]["target"] == "state.echoed"
 
 
 def test_canonical_binding_json_schema_describes_nested_fields():
@@ -218,14 +194,14 @@ def test_deprecated_conversion_preserves_input_value_then_in_map_order():
     )
 
     dumped_input = node.model_dump(mode="json")["input"]
-    assert dumped_input[0]["target"] == {"root": "local", "parts": ["first"]}
+    assert dumped_input[0]["target"] == "first"
     assert dumped_input[0]["value"] == 1
-    assert dumped_input[1]["target"] == {"root": "local", "parts": ["second"]}
+    assert dumped_input[1]["target"] == "second"
     assert dumped_input[1]["value"] == 2
-    assert dumped_input[2]["target"] == {"root": "local", "parts": ["third"]}
-    assert dumped_input[2]["path"] == {"root": "input", "parts": ["third"]}
-    assert dumped_input[3]["target"] == {"root": "local", "parts": ["fourth"]}
-    assert dumped_input[3]["path"] == {"root": "state", "parts": ["fourth"]}
+    assert dumped_input[2]["target"] == "third"
+    assert dumped_input[2]["path"] == "input.third"
+    assert dumped_input[3]["target"] == "fourth"
+    assert dumped_input[3]["path"] == "state.fourth"
 
 
 def test_deprecated_input_value_preserves_explicit_null():
@@ -243,7 +219,7 @@ def test_deprecated_input_value_preserves_explicit_null():
     assert value_binding.value is None
 
     dumped_input = node.model_dump(mode="json")["input"]
-    assert dumped_input[0]["target"] == {"root": "local", "parts": ["maybe"]}
+    assert dumped_input[0]["target"] == "maybe"
     assert dumped_input[0]["value"] is None
 
 
@@ -279,10 +255,10 @@ def test_interrupt_node_converts_old_maps_to_canonical_bindings():
     dumped = node.model_dump(mode="json")
     assert "request_map" not in dumped
     assert "out_map" not in dumped
-    assert dumped["request"][0]["path"] == {"root": "input", "parts": ["message"]}
-    assert dumped["request"][0]["target"] == {"root": "local", "parts": ["message"]}
-    assert dumped["resume"][0]["source"] == {"root": "local", "parts": ["approved"]}
-    assert dumped["resume"][0]["target"] == {"root": "state", "parts": ["approved"]}
+    assert dumped["request"][0]["path"] == "input.message"
+    assert dumped["request"][0]["target"] == "message"
+    assert dumped["resume"][0]["source"] == "approved"
+    assert dumped["resume"][0]["target"] == "state.approved"
 
 
 def test_interrupt_node_rejects_mixed_old_and_new_binding_styles():
@@ -309,7 +285,4 @@ def test_foreach_node_serializes_over_path_as_structural_json():
     )
 
     assert node.over == GraphSourcePath.state("items")
-    assert node.model_dump(mode="json")["over"] == {
-        "root": "state",
-        "parts": ["items"],
-    }
+    assert node.model_dump(mode="json")["over"] == "state.items"

@@ -77,10 +77,10 @@ def test_adapter_lowers_use_steps_to_canonical_bindings() -> None:
     dumped = node.model_dump(mode="json")
     assert "in_map" not in dumped
     assert "out_map" not in dumped
-    assert dumped["input"][0]["target"] == {"root": "local", "parts": ["text"]}
-    assert dumped["input"][0]["path"] == {"root": "input", "parts": ["text"]}
-    assert dumped["output"][0]["source"] == {"root": "local", "parts": ["echoed"]}
-    assert dumped["output"][0]["target"] == {"root": "state", "parts": ["echoed"]}
+    assert dumped["input"][0]["target"] == "text"
+    assert dumped["input"][0]["path"] == "input.text"
+    assert dumped["output"][0]["source"] == "echoed"
+    assert dumped["output"][0]["target"] == "state.echoed"
 
 
 def test_adapter_lowers_root_workflow_output_bindings() -> None:
@@ -111,8 +111,8 @@ def test_adapter_lowers_root_workflow_output_bindings() -> None:
     workflow = build_workflow_from_draft(draft)
     dumped = workflow.model_dump(mode="json")
 
-    assert dumped["output"][0]["target"] == {"root": "local", "parts": ["message"]}
-    assert dumped["output"][0]["path"] == {"root": "state", "parts": ["raw", "echoed"]}
+    assert dumped["output"][0]["target"] == "message"
+    assert dumped["output"][0]["path"] == "state.raw.echoed"
 
 
 def test_adapter_golden_draft_executes_ok_and_error_outcomes() -> None:

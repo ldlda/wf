@@ -1,42 +1,19 @@
 from __future__ import annotations
 
-import tomllib
 from collections.abc import Iterable, Mapping
 from typing import TypeAlias, cast
 
-from wf_core.paths import GraphRoot, GraphSourcePath, LocalPath, StatePath
+from wf_core.paths import (
+    GraphRoot,
+    GraphSourcePath,
+    LocalPath,
+    StatePath,
+    parse_toml_path_segments,
+)
 
 PathInput: TypeAlias = (
     str | Iterable[str] | Mapping[str, object] | GraphSourcePath | StatePath | LocalPath
 )
-
-
-def _parse_toml_key_expr(expr: str) -> tuple[str, ...]:
-    """Parse one authoring string as a TOML key expression.
-
-    We intentionally lean on `tomllib` instead of maintaining our own dotted-key
-    parser. Quoted TOML keys are the escape hatch for literal dots and spaces.
-    """
-    try:
-        parsed = tomllib.loads(f"{expr} = true")
-    except tomllib.TOMLDecodeError as exc:
-        raise ValueError(
-            f"invalid TOML key expression {expr!r}; use quoted keys, varargs, "
-            "or an iterable for literal path segments"
-        ) from exc
-
-    parts: list[str] = []
-    current: object = parsed
-    while isinstance(current, dict):
-        if len(current) != 1:
-            raise ValueError(f"invalid TOML key expression {expr!r}")
-        key, current = next(iter(current.items()))
-        if not isinstance(key, str):
-            raise ValueError(f"invalid TOML key expression {expr!r}")
-        parts.append(key)
-    if current is not True or not parts:
-        raise ValueError(f"invalid TOML key expression {expr!r}")
-    return tuple(parts)
 
 
 def _literal_parts(values: tuple[object, ...]) -> tuple[str, ...]:
@@ -46,7 +23,7 @@ def _literal_parts(values: tuple[object, ...]) -> tuple[str, ...]:
     if len(values) == 1:
         value = values[0]
         if isinstance(value, str):
-            return _parse_toml_key_expr(value)
+            return parse_toml_path_segments(value)
         if isinstance(value, Iterable) and not isinstance(value, Mapping):
             parts = tuple(value)
             if all(isinstance(part, str) for part in parts):

@@ -43,18 +43,18 @@ Examples:
 {
   "input": [
     {
-      "target": { "root": "local", "parts": ["user", "name"] },
-      "path": { "root": "state", "parts": ["person", "name"] }
+      "target": "user.name",
+      "path": "state.person.name"
     },
     {
-      "target": { "root": "local", "parts": ["mode"] },
+      "target": "mode",
       "value": "fast"
     }
   ],
   "output": [
     {
-      "source": { "root": "local", "parts": ["job", "wage"] },
-      "target": { "root": "state", "parts": ["job", "wage"] }
+      "source": "job.wage",
+      "target": "state.job.wage"
     }
   ]
 }
@@ -66,14 +66,14 @@ Whole-object mapping remains valid:
 {
   "input": [
     {
-      "target": { "root": "local", "parts": ["user"] },
-      "path": { "root": "state", "parts": ["person"] }
+      "target": "user",
+      "path": "state.person"
     }
   ],
   "output": [
     {
-      "source": { "root": "local", "parts": ["user"] },
-      "target": { "root": "state", "parts": ["person"] }
+      "source": "user",
+      "target": "state.person"
     }
   ]
 }
@@ -85,14 +85,14 @@ Whole-payload mapping uses the local root path `"."`:
 {
   "input": [
     {
-      "target": { "root": "local", "parts": [] },
-      "path": { "root": "state", "parts": ["rates"] }
+      "target": ".",
+      "path": "state.rates"
     }
   ],
   "output": [
     {
-      "source": { "root": "local", "parts": [] },
-      "target": { "root": "state", "parts": ["rates"] }
+      "source": ".",
+      "target": "state.rates"
     }
   ]
 }
@@ -122,12 +122,12 @@ Valid:
 ```json
 [
   {
-    "target": { "root": "local", "parts": ["user", "name"] },
-    "path": { "root": "state", "parts": ["person", "name"] }
+    "target": "user.name",
+    "path": "state.person.name"
   },
   {
-    "target": { "root": "local", "parts": ["user", "email"] },
-    "path": { "root": "state", "parts": ["person", "email"] }
+    "target": "user.email",
+    "path": "state.person.email"
   }
 ]
 ```
@@ -137,12 +137,12 @@ Invalid:
 ```json
 [
   {
-    "target": { "root": "local", "parts": ["user"] },
-    "path": { "root": "state", "parts": ["person"] }
+    "target": "user",
+    "path": "state.person"
   },
   {
-    "target": { "root": "local", "parts": ["user", "name"] },
-    "path": { "root": "state", "parts": ["person", "name"] }
+    "target": "user.name",
+    "path": "state.person.name"
   }
 ]
 ```
@@ -160,12 +160,12 @@ Invalid:
 ```json
 [
   {
-    "source": { "root": "local", "parts": ["user"] },
-    "target": { "root": "state", "parts": ["person"] }
+    "source": "user",
+    "target": "state.person"
   },
   {
-    "source": { "root": "local", "parts": ["user", "name"] },
-    "target": { "root": "state", "parts": ["person", "name"] }
+    "source": "user.name",
+    "target": "state.person.name"
   }
 ]
 ```

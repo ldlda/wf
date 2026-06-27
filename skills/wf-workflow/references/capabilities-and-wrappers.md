@@ -54,7 +54,7 @@ and wrapper hints before using it. Do not assume every content block is text.
 Incorrect:
 
 ```json
-{"source": {"root": "local", "parts": ["content"]}, "target": {"root": "state", "parts": ["summary"]}}
+{"source": "content", "target": "state.summary"}
 ```
 
 Correct: filter `content` to text blocks, extract each `text`, then combine or
