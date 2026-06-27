@@ -237,11 +237,11 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
     ),
     ExplainCard(
         code=DRAFT_INVALID_CODE,
-        summary="A draft workspace contains an invalid draft shape or invalid workflow structure.",
+        summary="A draft document contains an invalid shape or cannot be compiled.",
         why_it_happens=[
             "The payload mixed draft-workspace shape with raw-plan shape.",
             "A JSON Patch produced a draft that does not satisfy the draft model.",
-            "The draft model is syntactically valid but workflow validation found structural issues.",
+            "The draft payload does not satisfy the WorkflowDraft model schema or builder contract.",
         ],
         how_to_fix=[
             "Run `wf schema draft` for draft workspace payloads.",
