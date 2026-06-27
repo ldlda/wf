@@ -126,9 +126,10 @@ wf draft validate <workspace_id>
   output-to-state schema/binding wiring in one revision. It can set the incoming
   edge, outgoing edges, input map, and output-to-state schema/binding. Use
   `--route OUTCOME=TARGET` for each outcome; when omitted and the capability
-  declares a single outcome, that outcome routes to `__end__`. It still
-  requires explicit choices; if you do not know a map, inspect the capability or
-  run validation rather than guessing.
+  declares a single outcome, that outcome routes to `__end__`. Multi-outcome
+  capabilities require exact route coverage; missing or unknown outcomes are
+  rejected before mutation. It still requires explicit choices; if you do not
+  know a map, inspect the capability or run validation rather than guessing.
 
 ```bash
 wf draft add-step-from-capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
@@ -149,9 +150,10 @@ wf draft validate <workspace_id>
 
 - `compile_draft_workspace`
 
-  Returns the compiled raw plan plus required capabilities without mutating
-  or saving the draft workspace. On invalid draft status, returns structured
-  diagnostics without a `compiled_plan`.
+  API/RPC/MCP returns the compiled raw plan plus required capabilities without
+  mutating or saving the draft workspace. The CLI prints only the raw plan JSON
+  on success. On invalid draft status, it returns structured diagnostics without
+  a `compiled_plan`.
 
 Validation repair hints are product guidance. If a diagnostic suggests
 `bind-output-to-state`, use it before hand-editing `state_schema` or step output

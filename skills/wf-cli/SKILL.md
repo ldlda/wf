@@ -91,6 +91,10 @@ Patch for non-capability/control draft steps.
 To add a capability step, prefer `wf draft add-step-from-capability` over raw
 JSON Patch when the route, input bindings, and output-to-state bindings are
 known. It is explicit and does not guess missing maps.
+If a capability has multiple outcomes, pass one `--route OUTCOME=TARGET` for
+each declared outcome; extra outcome names are rejected.
+`wf draft compile` prints the raw plan JSON directly on success. Do not expect a
+top-level `compiled_plan` key from the CLI output.
 
 ## Rules
 

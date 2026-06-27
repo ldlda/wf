@@ -338,6 +338,9 @@ Use `set-route` separately for outcome routing.
 
 Use `wf draft add-step-from-capability` when adding a new capability-backed step
 to an existing draft. The command is explicit: it does not guess missing maps.
+When the capability declares multiple outcomes, provide exactly one
+`--route OUTCOME=TARGET` for each declared outcome. Missing or unknown outcomes
+are rejected before the draft is mutated.
 
 ```bash
 wf draft add-step-from-capability report_ws \
@@ -371,15 +374,17 @@ wf draft handle concat_ws --revision 7 --to fail --branch lookup:error --branch 
 
 ### Compile A Draft Workspace
 
-Use `wf draft compile` to return the compiled raw plan plus required
-capabilities without mutating or saving the draft:
+Use `wf draft compile` to print the compiled raw plan without mutating or saving
+the draft:
 
 ```bash
 wf draft compile concat_ws
 ```
 
-On success, prints the compiled plan to stdout. On invalid draft status, prints
-the structured diagnostic envelope to stderr and exits nonzero.
+On success, stdout is the raw plan JSON itself, not a `compiled_plan` envelope.
+The API/RPC/MCP operation also returns required capability metadata. On invalid
+draft status, the CLI prints the structured diagnostic envelope to stderr and
+exits nonzero.
 
 Validate:
 
