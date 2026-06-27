@@ -64,7 +64,10 @@ def validate_workflow_draft(
         return _invalid_result(_diagnostic_from_exception(exc))
     if node_defs is not None:
         workflow = workflow.model_copy(update={"node_defs": list(node_defs)})
-        diagnostics = _diagnostics_from_workflow_issues(workflow)
+        try:
+            diagnostics = _diagnostics_from_workflow_issues(workflow)
+        except (KeyError, ValueError) as exc:
+            return _invalid_result(_diagnostic_from_exception(exc))
         if diagnostics:
             return _invalid_result(*diagnostics)
     if outcome_lookup is not None:
@@ -113,6 +116,9 @@ def patch_workflow_draft(
     result = validate_workflow_draft(patched, node_defs=effective_node_defs)
     if result["status"] == "valid":
         patched = WorkflowDraft.model_validate(patched).model_dump(mode="json")
+    # Forward-route references to steps added later must persist as invalid
+    # so the next edit can resolve the missing edge.  Always return the
+    # patched draft alongside diagnostics.
     return {"draft": patched, **result}
 
 

@@ -192,7 +192,9 @@ def _validate_reachable_outcomes(
     reachable = reachable_node_ids(workflow.start, workflow.edges, nodes_by_id)
 
     for node_id in reachable:
-        node = nodes_by_id[node_id]
+        node = nodes_by_id.get(node_id)
+        if node is None:
+            continue
         declared_outcomes = declared_outcomes_for_step(node, node_defs)
         wired = outgoing.get(node_id, set())
         missing = declared_outcomes - wired

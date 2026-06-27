@@ -988,3 +988,116 @@ async def test_compile_draft_workspace_invalid_returns_diagnostics(
     assert result["status"] == "invalid"
     assert "compiled_plan" not in result
     assert result["diagnostics"]
+
+
+# -- Browser-click test helpers for forward-route tests --
+
+class _OpenClickPageInput(BaseModel):
+    pass
+
+
+class _OpenClickPageOutput(BaseModel):
+    before: dict = {}
+    session_id: str = ""
+
+
+class _WaitForClickInput(BaseModel):
+    session_id: str
+    simulate: dict
+    timeout_seconds: int
+
+
+class _WaitForClickOutput(BaseModel):
+    after: dict = {}
+
+
+class _CollectSnapshotsInput(BaseModel):
+    session_id: str
+    before: dict
+    after: dict
+
+
+class _CollectSnapshotsOutput(BaseModel):
+    before: dict = {}
+    after: dict = {}
+
+
+@node(name="open_click_page", outcomes=("ok",))
+def _open_click_page(payload: _OpenClickPageInput) -> _OpenClickPageOutput:
+    return _OpenClickPageOutput(before={}, session_id="")
+
+
+@node(name="wait_for_click", outcomes=("ok",))
+def _wait_for_click(payload: _WaitForClickInput) -> _WaitForClickOutput:
+    return _WaitForClickOutput(after={})
+
+
+@node(name="collect_snapshots", outcomes=("ok",))
+def _collect_snapshots(payload: _CollectSnapshotsInput) -> _CollectSnapshotsOutput:
+    return _CollectSnapshotsOutput(before={}, after={})
+
+
+def _browser_click_api(
+    artifact_store: FileWorkflowArtifactStore,
+) -> tuple[WorkflowApi, WfMcpService]:
+    mcp_root = artifact_store.root / "browser_mcp" / str(id(artifact_store))
+    service = WfMcpService(
+        store=FileStore(mcp_root),
+        artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(mcp_root),
+    )
+    service.register_connection(
+        ConnectionConfig(
+            id="local.browser_click", server="local", account="browser_click"
+        )
+    )
+    service.register_specs(
+        "local.browser_click",
+        _open_click_page,
+        _wait_for_click,
+        _collect_snapshots,
+    )
+    context = context_from_service(service)
+    return WorkflowApi(context), service
+
+
+@pytest.mark.asyncio
+async def test_add_step_persists_invalid_forward_route(tmp_path: Path) -> None:
+    api, _service = _browser_click_api(
+        FileWorkflowArtifactStore(tmp_path / "drafts_forward_route")
+    )
+
+    await api.create_draft_workspace_from_capability(
+        workspace_id="browser",
+        capability_name="local.browser_click.open_click_page",
+        name="browser",
+    )
+
+    result = await api.add_step_from_capability(
+        workspace_id="browser",
+        revision=1,
+        step_id="wait",
+        capability_name="local.browser_click.wait_for_click",
+        route_from_step="call",
+        routes={"ok": "collect"},
+        input_map={
+            "state.session_id": "session_id",
+            "input.simulate": "simulate",
+            "input.timeout_seconds": "timeout_seconds",
+        },
+        bind_outputs={"after": "state.after"},
+    )
+
+    assert result["revision"] == 2
+    assert result["status"] == "invalid"
+    assert any(
+        item["code"] == "unknown_edge_destination"
+        for item in result["diagnostics"]
+    )
+
+    stored = await api.get_draft_workspace(
+        workspace_id="browser",
+        include_draft=True,
+    )
+    assert stored["draft"]["steps"]["wait"]["use"] == "local.browser_click.wait_for_click"
+    assert stored["draft"]["routes"]["wait"]["ok"] == "collect"
