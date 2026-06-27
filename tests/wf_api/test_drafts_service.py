@@ -1177,7 +1177,7 @@ async def test_forward_route_becomes_valid_after_target_step_is_added(
         bind_outputs={"after": "state.after"},
     )
 
-    await api.add_step_from_capability(
+    add_collect = await api.add_step_from_capability(
         workspace_id="browser",
         revision=2,
         step_id="collect",
@@ -1191,5 +1191,6 @@ async def test_forward_route_becomes_valid_after_target_step_is_added(
         bind_outputs={"before": "state.final_before", "after": "state.final_after"},
     )
 
+    assert add_collect["revision"] == 3
     validated = await api.validate_draft_workspace(workspace_id="browser")
     assert validated["status"] == "valid"

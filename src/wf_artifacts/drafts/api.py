@@ -118,7 +118,9 @@ def patch_workflow_draft(
         patched = WorkflowDraft.model_validate(patched).model_dump(mode="json")
     # Forward-route references to steps added later must persist as invalid
     # so the next edit can resolve the missing edge.  Always return the
-    # patched draft alongside diagnostics.
+    # patched draft alongside diagnostics.  Malformed patches still hit the
+    # early-return path above (no "draft" key), so this branch only fires
+    # for structurally valid patches.
     return {"draft": patched, **result}
 
 
