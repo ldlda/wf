@@ -775,6 +775,42 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     )
 
 
+async def test_rpc_draft_workspace_set_workflow_output_map(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "output_ws",
+                "capability_name": "wf.std.constant",
+                "name": "output_test",
+            },
+        )
+
+        result = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_workflow_output_map",
+            {
+                "workspace_id": "output_ws",
+                "revision": created["result"]["revision"],
+                "output_map": {"state.value": "value"},
+            },
+        )
+        fetched = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "output_ws", "include_draft": True},
+        )
+
+    assert result["result"]["revision"] == 2
+    assert fetched["result"]["draft"]["output"] == [
+        {"path": "state.value", "target": "value"},
+    ]
+
+
 async def test_rpc_draft_workspace_remove_route(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

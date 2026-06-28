@@ -448,6 +448,39 @@ async def test_rpc_client_creates_artifact_from_plan(tmp_path) -> None:
     assert inspected["id"] == "client_plan"
 
 
+async def test_rpc_client_set_workflow_output_map(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test"
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            timeout_seconds=5,
+            http_client=http_client,
+        )
+        await client.create_draft_workspace_from_capability(
+            workspace_id="client_output_ws",
+            capability_name="wf.std.constant",
+            name="client_output",
+        )
+        result = await client.set_workflow_output_map(
+            workspace_id="client_output_ws",
+            revision=1,
+            output_map={"state.value": "value"},
+        )
+        fetched = await client.get_draft_workspace(
+            workspace_id="client_output_ws",
+            include_draft=True,
+        )
+
+    assert result["revision"] == 2
+    assert fetched["draft"]["output"] == [
+        {"path": "state.value", "target": "value"},
+    ]
+
+
 async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

@@ -141,6 +141,13 @@ class SetStepOutputMapParams(RpcParamsModel):
     merge: bool = False
 
 
+class SetWorkflowOutputMapParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    output_map: dict[str, str]
+    merge: bool = False
+
+
 class BindDraftParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     revision: int = Field(ge=1)

@@ -308,9 +308,10 @@ wf draft set-name concat_ws --revision 1 --name concat_ws_v2
 wf draft set-route concat_ws --revision 2 --step call --outcome ok --to __end__
 wf draft set-input concat_ws --revision 3 --step call --map input.items=items --map input.separator=separator
 wf draft set-output concat_ws --revision 4 --step call --map value=state.value
-wf draft set-input concat_ws --revision 5 --step call --merge --map input.limit=limit
-wf draft branch concat_ws --revision 6 --step call --route ok=__end__ --route error=tool_error
-wf draft handle concat_ws --revision 7 --to fail --branch lookup:error --branch transform:error
+wf draft set-workflow-output concat_ws --revision 5 --map state.value=result
+wf draft set-input concat_ws --revision 6 --step call --merge --map input.limit=limit
+wf draft branch concat_ws --revision 7 --step call --route ok=__end__ --route error=tool_error
+wf draft handle concat_ws --revision 8 --to fail --branch lookup:error --branch transform:error
 wf draft compile concat_ws
 ```
 
@@ -320,10 +321,17 @@ wf draft compile concat_ws
 `set-output` maps node-local output fields to workflow state paths:
 `text=state.text` means `local.text -> state.text`.
 
-By default, `set-input` and `set-output` replace the whole map for that step.
-Use repeated `--map` flags in one command when you know the complete map. Use
-`--merge` when adding or updating one entry across a later revision while
-preserving existing bindings.
+`set-workflow-output` maps graph source paths (`input.*`, `state.*`, or
+`context.*`) to top-level output fields: `state.value=result` means
+`state.value -> output.result`.
+
+The output field must already be declared in `output_schema`. The command edits
+the projection map; it does not infer or add output schema fields.
+
+By default, `set-input`, `set-output`, and `set-workflow-output` replace the
+whole map for that step or output scope. Use repeated `--map` flags in one
+command when you know the complete map. Use `--merge` when adding or updating
+one entry across a later revision while preserving existing bindings.
 
 ### Bind A Step Path
 
@@ -334,8 +342,8 @@ use `input.*` or `state.*` to `local.*` for step inputs, and `local.*` to
 `state.*` or `output.*` for step outputs.
 
 ```bash
-wf draft bind concat_ws --revision 6 --step call --from local.value --to state.value
-wf draft bind concat_ws --revision 7 --step call --from input.text --to local.text
+wf draft bind concat_ws --revision 9 --step call --from local.value --to state.value
+wf draft bind concat_ws --revision 9 --step call --from input.text --to local.text
 wf draft validate concat_ws
 ```
 

@@ -92,6 +92,10 @@ clear operator feedback before adding more architecture.
   and step bindings so agents can recover from bad edits without raw JSON Patch.
   Implementation:
   [`draft remove commands`](historical/superpowers/plans/2026-06-28-draft-remove-commands.md).
+- Completed: `wf draft set-workflow-output` and full-stack API/RPC/CLI support
+  for editing top-level workflow output bindings. Accepts repeatable `--map`
+  and `--merge` flag. Implementation:
+  [`set-workflow-output API/RPC/CLI`](historical/superpowers/plans/2026-06-29-set-workflow-output.md).
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

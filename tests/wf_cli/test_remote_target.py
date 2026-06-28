@@ -11,6 +11,7 @@ from typer.testing import CliRunner
 import wf_cli.context as cli_context
 from wf_api.models import RawWorkflowPlan
 from wf_cli.app import app
+from wf_cli.commands import drafts as drafts_module
 from wf_cli.context import CliContext, load_cli_context, load_local_cli_context
 from wf_core import END
 from wf_server import build_local_static_workflow_server
@@ -1140,6 +1141,51 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
             "source": "extra",
             "target": "state.extra",
         },
+    ]
+
+
+def test_wf_draft_set_workflow_output_uses_rpc_target(monkeypatch, tmp_path) -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeDrafts:
+        async def set_workflow_output_map(self, **kwargs: object) -> dict[str, object]:
+            calls.append(kwargs)
+            return {"workspace_id": "report", "revision": 2}
+
+    def _fake_context(ctx: object) -> CliContext:
+        return CliContext(
+            config_path=Path("dummy"),
+            service=None,
+            handlers=FakeDrafts(),  # type: ignore[arg-type]
+            source_admin=cast(Any, object()),
+            admin=cast(Any, object()),
+        )
+
+    monkeypatch.setattr(drafts_module, "load_cli_context", _fake_context)
+    runner = CliRunner()
+    result = runner.invoke(
+        app,
+        [
+            "--url",
+            "http://example.test/rpc",
+            "draft",
+            "set-workflow-output",
+            "report",
+            "--revision",
+            "1",
+            "--map",
+            "state.markdown=markdown",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert calls == [
+        {
+            "workspace_id": "report",
+            "revision": 1,
+            "output_map": {"state.markdown": "markdown"},
+            "merge": False,
+        }
     ]
 
 

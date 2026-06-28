@@ -299,6 +299,58 @@ class WorkflowDraftApi:
             ],
         )
 
+    async def set_workflow_output_map(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        output_map: dict[str, str],
+        merge: bool = False,
+    ) -> dict[str, Any]:
+        output_bindings: list[dict[str, Any]]
+        if merge:
+            workspace = self._draft_store().get_workspace(workspace_id)
+            remaining = dict(output_map)
+            output_bindings = []
+            output_payload = workspace.draft.get("output")
+            if isinstance(output_payload, list):
+                for binding in output_payload:
+                    if not isinstance(binding, dict):
+                        continue
+                    source = binding.get("path")
+                    target = binding.get("target")
+                    if isinstance(source, str) and isinstance(target, str):
+                        output_bindings.append(
+                            {
+                                "path": source,
+                                "target": remaining.pop(source, target),
+                            }
+                        )
+                    elif isinstance(target, str) and "value" in binding:
+                        # Literal workflow outputs cannot be represented by the
+                        # path-only CLI map, but --merge must not discard them.
+                        output_bindings.append(dict(binding))
+            output_bindings.extend(
+                {"path": source, "target": target}
+                for source, target in remaining.items()
+            )
+        else:
+            output_bindings = [
+                {"path": source, "target": target}
+                for source, target in output_map.items()
+            ]
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=[
+                {
+                    "op": "replace",
+                    "path": "/output",
+                    "value": output_bindings,
+                }
+            ],
+        )
+
     def _step_input_maps(
         self,
         *,

@@ -43,6 +43,8 @@ wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.te
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
+wf draft set-workflow-output <workspace_id> --revision <n> --map state.value=result
+wf draft set-workflow-output <workspace_id> --revision <n> --merge --map state.other=other
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>

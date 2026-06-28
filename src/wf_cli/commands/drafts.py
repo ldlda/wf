@@ -330,6 +330,60 @@ def set_step_output_map(
     )
 
 
+@app.command("set-workflow-output")
+def set_workflow_output(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    mapping: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--map",
+            help=(
+                "One output binding GRAPH_SOURCE=OUTPUT_FIELD, for example "
+                "state.markdown=markdown. Repeat in one command."
+            ),
+        ),
+    ] = None,
+    merge: Annotated[
+        bool,
+        typer.Option(
+            "--merge",
+            help="Preserve existing workflow output bindings and add/update the passed --map entries.",
+        ),
+    ] = False,
+) -> None:
+    """Set the top-level workflow output projection without writing JSON Patch manually.
+
+    Default behavior replaces the full workflow output map. Pass all desired
+    --map entries in one command for a complete replacement. Use --merge only
+    when adding or updating entries across a later revision.
+
+    This edits WorkflowDraft.output (top-level workflow output). Use
+    wf draft set-output for step-level output bindings.
+
+    Repeat --map for multiple mappings:
+    --map state.markdown=markdown --map state.title=title
+
+    Run `wf draft validate <workspace_id>` after editing the projection.
+    """
+    output_map = _parse_map_flags(mapping)
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.set_workflow_output_map(
+                workspace_id=workspace_id,
+                revision=revision,
+                output_map=output_map,
+                merge=merge,
+            ),
+        )
+    )
+
+
 @app.command("bind")
 def bind_draft(
     ctx: typer.Context,

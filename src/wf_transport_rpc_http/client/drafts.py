@@ -141,6 +141,24 @@ class RpcDraftClientMixin:
             },
         )
 
+    async def set_workflow_output_map(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        output_map: dict[str, str],
+        merge: bool = False,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.set_workflow_output_map",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "output_map": output_map,
+                "merge": merge,
+            },
+        )
+
     async def bind_draft(
         self: RpcCaller,
         *,

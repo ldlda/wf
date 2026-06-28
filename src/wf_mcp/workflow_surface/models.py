@@ -243,6 +243,21 @@ class SetStepOutputMapRequest(BaseModel):
     )
 
 
+class SetWorkflowOutputMapRequest(BaseModel):
+    """Typed MCP request for replacing or merging workflow output projection."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    output_map: DraftPathMap
+    merge: bool = Field(
+        default=False,
+        description=(
+            "When false, replace the full workflow output map. When true, "
+            "preserve existing bindings and add/update only output_map entries."
+        ),
+    )
+
+
 class BindDraftRequest(BaseModel):
     """Typed MCP request for binding one draft step path with schema projection."""
 

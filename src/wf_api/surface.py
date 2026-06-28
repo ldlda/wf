@@ -114,6 +114,15 @@ class WorkflowDraftSurface(Protocol):
         merge: bool = False,
     ) -> dict[str, Any]: ...
 
+    async def set_workflow_output_map(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        output_map: dict[str, str],
+        merge: bool = False,
+    ) -> dict[str, Any]: ...
+
     async def bind_draft(
         self,
         *,

@@ -18,7 +18,7 @@
 - Modify: `src/wf_api/surface.py`
 - Test: `tests/wf_api/test_drafts_service.py`
 
-- [ ] **Step 1: Write failing API tests**
+- [x] **Step 1: Write failing API tests**
 
 Add tests that create a draft with empty `output`, call `set_workflow_output_map`, and assert the stored draft has top-level output bindings:
 
@@ -60,7 +60,7 @@ async def test_set_workflow_output_map_merges_top_level_output(tmp_path: Path) -
     ]
 ```
 
-- [ ] **Step 2: Run tests RED**
+- [x] **Step 2: Run tests RED**
 
 Run:
 
@@ -70,7 +70,7 @@ uv run pytest tests/wf_api/test_drafts_service.py::test_set_workflow_output_map_
 
 Expected: fail because `set_workflow_output_map` does not exist.
 
-- [ ] **Step 3: Implement API method**
+- [x] **Step 3: Implement API method**
 
 In `WorkflowDraftApi`, add:
 
@@ -111,11 +111,11 @@ async def set_workflow_output_map(
 
 Add delegates to `WorkflowApi` and `WorkflowDraftSurface`.
 
-- [ ] **Step 4: Run API tests GREEN**
+- [x] **Step 4: Run API tests GREEN**
 
 Run the two tests from Step 2. Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/wf_api/drafts.py src/wf_api/service.py src/wf_api/surface.py tests/wf_api/test_drafts_service.py
@@ -135,7 +135,7 @@ git commit -m "feat: edit workflow output map in draft api"
 - Test: `tests/wf_cli/test_remote_target.py`
 - Test: `tests/wf_cli/test_app.py`
 
-- [ ] **Step 1: Add failing transport and CLI tests**
+- [x] **Step 1: Add failing transport and CLI tests**
 
 Add RPC app/client tests that call `workflow.draft_workspaces.set_workflow_output_map` with `{"state.echoed": "message"}`.
 
@@ -177,7 +177,7 @@ def test_wf_draft_set_workflow_output_uses_rpc_target(monkeypatch: pytest.Monkey
     ]
 ```
 
-- [ ] **Step 2: Run tests RED**
+- [x] **Step 2: Run tests RED**
 
 Run:
 
@@ -187,7 +187,7 @@ uv run pytest tests/wf_transport_rpc_http/test_app.py::test_rpc_draft_workspace_
 
 Expected: fail because DTO/method/command are missing.
 
-- [ ] **Step 3: Implement transport and CLI**
+- [x] **Step 3: Implement transport and CLI**
 
 Add `SetWorkflowOutputMapParams` with `workspace_id`, `revision`, `output_map`, `merge`.
 
@@ -228,11 +228,11 @@ def set_workflow_output(...):
 
 Use the existing `_parse_map_flags` helper. Add `--merge` with the same replace/merge wording used by `set-input` and `set-output`.
 
-- [ ] **Step 4: Run tests GREEN**
+- [x] **Step 4: Run tests GREEN**
 
 Run the tests from Step 2. Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/wf_transport_rpc_http src/wf_cli/commands/drafts.py tests/wf_transport_rpc_http tests/wf_cli
@@ -248,7 +248,7 @@ git commit -m "feat: expose workflow output draft command"
 - Modify: `skills/wf-workflow/references/draft-workspaces.md`
 - Modify: `docs/current_roadmap.md`
 
-- [ ] **Step 1: Document command**
+- [x] **Step 1: Document command**
 
 Add example:
 
@@ -261,7 +261,7 @@ wf draft set-workflow-output report_ws \
 
 State clearly: this edits top-level `WorkflowDraft.output`; step-level `wf draft set-output` edits one step's node-output-to-state bindings.
 
-- [ ] **Step 2: Update skills**
+- [x] **Step 2: Update skills**
 
 Add a rule:
 
@@ -270,7 +270,7 @@ Use `wf draft set-workflow-output` for final workflow output projection.
 Use `wf draft set-output` only for step output bindings.
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -280,7 +280,7 @@ uv run ruff check src/wf_api src/wf_cli src/wf_transport_rpc_http tests/wf_api t
 uv run basedpyright --level error src/wf_api/drafts.py src/wf_cli/commands/drafts.py src/wf_transport_rpc_http tests/wf_api/test_drafts_service.py tests/wf_cli/test_remote_target.py
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add docs/wf_cli.md docs/workflow_drafts.md skills/wf-cli/SKILL.md skills/wf-workflow/references/draft-workspaces.md docs/current_roadmap.md

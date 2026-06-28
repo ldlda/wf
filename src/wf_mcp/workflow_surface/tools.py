@@ -37,6 +37,7 @@ from .models import (
     SetDraftRouteRequest,
     SetStepInputMapRequest,
     SetStepOutputMapRequest,
+    SetWorkflowOutputMapRequest,
     TraceRange,
     ValidateDeploymentResult,
     ValidateDraftWorkspaceRequest,
@@ -458,6 +459,27 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 workspace_id=request.workspace_id,
                 revision=request.revision,
                 step_id=request.step_id,
+                output_map=request.output_map,
+                merge=request.merge,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.set_workflow_output_map",
+        title="Set Workflow Output Map",
+        description=(
+            "Replace or merge the top-level workflow output projection. "
+            "Map graph source paths such as state.markdown to public output "
+            "fields such as markdown."
+        ),
+    )
+    async def set_workflow_output_map(
+        request: SetWorkflowOutputMapRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.set_workflow_output_map(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
                 output_map=request.output_map,
                 merge=request.merge,
             )

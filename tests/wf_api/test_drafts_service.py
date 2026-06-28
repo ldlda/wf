@@ -1154,6 +1154,69 @@ async def test_compile_draft_workspace_invalid_returns_diagnostics(
     assert result["diagnostics"]
 
 
+@pytest.mark.asyncio
+async def test_set_workflow_output_map_replaces_top_level_output(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_out_replace")
+    api, _service, _authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(workspace_id="report", draft=_echo_draft())
+
+    result = await api.set_workflow_output_map(
+        workspace_id="report",
+        revision=1,
+        output_map={"state.echoed": "echoed"},
+    )
+
+    assert result["revision"] == 2
+    assert result["status"] == "valid", result["diagnostics"]
+    fetched = await api.get_draft_workspace(workspace_id="report", include_draft=True)
+    assert fetched["draft"]["output"] == [{"path": "state.echoed", "target": "echoed"}]
+
+
+@pytest.mark.asyncio
+async def test_set_workflow_output_map_merges_top_level_output(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_out_merge")
+    api, _service, _authoring = _draft_api(artifact_store, register_echo=True)
+    draft = {
+        **_echo_draft(),
+        "state_schema": {
+            "fields": {
+                "echoed": {"type": "string"},
+                "other": {"type": "string"},
+            }
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {
+                "echoed": {"type": "string"},
+                "kind": {"type": "string"},
+                "other": {"type": "string"},
+            },
+        },
+        "output": [
+            {"path": "state.echoed", "target": "echoed"},
+            {"value": "report", "target": "kind"},
+        ],
+    }
+    await api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    result = await api.set_workflow_output_map(
+        workspace_id="report",
+        revision=1,
+        output_map={"state.other": "other"},
+        merge=True,
+    )
+
+    assert result["status"] == "valid", result["diagnostics"]
+    fetched = await api.get_draft_workspace(workspace_id="report", include_draft=True)
+    assert fetched["draft"]["output"] == [
+        {"path": "state.echoed", "target": "echoed"},
+        {"value": "report", "target": "kind"},
+        {"path": "state.other", "target": "other"},
+    ]
+
+
 # -- Browser-click test helpers for forward-route tests --
 
 

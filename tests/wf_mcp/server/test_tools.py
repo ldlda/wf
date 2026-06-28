@@ -40,6 +40,7 @@ def test_server_search_mode_pins_stable_control_and_workflow_tools() -> None:
             assert "wf.workflow.set_draft_route" in names
             assert "wf.workflow.set_step_input_map" in names
             assert "wf.workflow.set_step_output_map" in names
+            assert "wf.workflow.set_workflow_output_map" in names
             assert "wf.workflow.create_minimal_draft_workspace" in names
             assert "wf.workflow.create_artifact_from_workspace" in names
             assert "wf.workflow.create_wrapper_from_workspace" in names

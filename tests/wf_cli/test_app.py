@@ -140,17 +140,26 @@ def test_wf_draft_help_does_not_list_old_create_from_capability() -> None:
 def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     input_result = runner.invoke(app, ["draft", "set-input", "--help"])
     output_result = runner.invoke(app, ["draft", "set-output", "--help"])
+    workflow_output_result = runner.invoke(
+        app, ["draft", "set-workflow-output", "--help"]
+    )
 
     assert input_result.exit_code == 0
     assert output_result.exit_code == 0
+    assert workflow_output_result.exit_code == 0
     input_help = " ".join(input_result.output.split())
     output_help = " ".join(output_result.output.split())
+    workflow_output_help = " ".join(workflow_output_result.output.split())
     assert "replaces the full input map" in input_help
     assert "Use --merge only" in input_help
     assert "draft validate" in input_help
     assert "replaces the full output map" in output_help
     assert "Use --merge only" in output_help
     assert "draft validate" in output_help
+    assert "replaces the full workflow output map" in workflow_output_help
+    assert "Use --merge only" in workflow_output_help
+    assert "GRAPH_SOURCE=OUTPUT_FIELD" in workflow_output_help
+    assert "draft validate" in workflow_output_help
 
 
 def test_wf_draft_bind_help_explains_direction() -> None:

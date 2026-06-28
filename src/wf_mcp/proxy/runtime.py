@@ -50,6 +50,7 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     "wf.workflow.set_draft_route",
     "wf.workflow.set_step_input_map",
     "wf.workflow.set_step_output_map",
+    "wf.workflow.set_workflow_output_map",
     "wf.workflow.create_minimal_draft_workspace",
     "wf.workflow.create_artifact_from_workspace",
     "wf.workflow.create_wrapper_from_workspace",

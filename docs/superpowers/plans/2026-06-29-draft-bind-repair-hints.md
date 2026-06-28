@@ -2,34 +2,48 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make schema-aware `wf draft bind` discoverable from validation output for workflow input, state, and workflow output projection errors.
+**Goal:** Make schema-aware `wf draft bind` correctly support workflow output projection and make focused bind repairs discoverable from validation output.
 
-**Architecture:** Draft validation already enriches diagnostics through `_with_workspace_repair_hints()` in `src/wf_api/drafts.py`. Extend `_draft_repair_hint()` beyond `invalid_destination_path` so agents get concrete `wf draft bind` or `wf draft set-workflow-output` commands instead of falling to JSON Patch.
+**Architecture:** Node output bindings can only target workflow state. Therefore `local.x -> output.y` must lower atomically into `local.x -> state.y` plus top-level `state.y -> output.y`, while projecting the capability field schema into both state and output schemas. Draft validation already enriches diagnostics through `_with_workspace_repair_hints()` in `src/wf_api/drafts.py`; extend those hints after the bind behavior is correct.
 
 **Tech Stack:** Python 3.14, validation diagnostics, Typer CLI help/docs, pytest.
 
 ---
 
-### Task 1: Repair Hint For Missing Workflow Output Schema
+### Task 1: Make `bind local -> output` Produce Valid Workflow Output
 
 **Files:**
-- Modify: `src/wf_api/drafts.py`
+- Modify: `src/wf_api/draft_authoring.py`
 - Test: `tests/wf_api/test_drafts_service.py`
 - Test: `tests/wf_cli/test_remote_target.py`
 
 - [ ] **Step 1: Write failing tests**
 
-Add a draft with top-level output binding `{"path": "state.markdown", "target": "markdown"}` and empty `output_schema.properties`. Validate the workspace and assert the diagnostic has:
+Add a capability-backed `render` step whose capability output schema declares `markdown`. Call:
 
 ```python
-assert diagnostic["code"] == "invalid_workflow_output_field"
-assert "wf draft bind" in diagnostic["repair_hint"] or "wf draft set-workflow-output" in diagnostic["repair_hint"]
+result = await authoring.bind_draft(
+    workspace_id="report",
+    revision=1,
+    step_id="render",
+    source_path="local.markdown",
+    target_path="output.markdown",
+)
 ```
 
-If the source came from a capability local output in the same step, prefer a `wf draft bind ... --from local.markdown --to output.markdown` hint. If the diagnostic lacks step/local context, use:
+Assert the edit is valid and lowered through state:
 
-```text
-wf draft set-workflow-output <workspace> --revision <n> --map state.markdown=markdown
+```python
+assert result["status"] == "valid"
+workspace = await drafts.get_draft_workspace(workspace_id="report", include_draft=True)
+assert workspace["draft"]["steps"]["render"]["output"] == [
+    {"source": "markdown", "target": "state.markdown"}
+]
+assert workspace["draft"]["output"] == [
+    {"path": "state.markdown", "target": "markdown"}
+]
+assert workspace["draft"]["state_schema"]["properties"]["markdown"]["type"] == "string"
+assert workspace["draft"]["output_schema"]["properties"]["markdown"]["type"] == "string"
 ```
 
 - [ ] **Step 2: Run tests RED**
@@ -37,36 +51,35 @@ wf draft set-workflow-output <workspace> --revision <n> --map state.markdown=mar
 Run:
 
 ```powershell
-uv run pytest tests/wf_api/test_drafts_service.py::test_validate_draft_workspace_hints_workflow_output_projection -q
+uv run pytest tests/wf_api/test_drafts_service.py::test_bind_draft_local_output_to_workflow_output_lowers_through_state -q
 ```
 
-Expected: fail because no repair hint is present.
+Expected: fail because current code writes an illegal `output.*` node destination.
 
 - [ ] **Step 3: Implement hint branch**
 
-In `_draft_repair_hint`, add handling for:
+In `WorkflowDraftAuthoringApi.bind_draft`, split the existing local-output branch:
 
 ```python
-if diagnostic.get("code") == "invalid_workflow_output_field":
-    path = diagnostic.get("path")
-    # For output[N].target diagnostics, tell the user how to edit top-level output.
-    return (
-        f"wf draft set-workflow-output {workspace_id} --revision {revision} "
-        "--map <input.or.state.path>=<output_field>"
-    )
+if source_root == "local" and target_root == "output":
+    output_parts = target_parts
+    state_path = f"state.{'.'.join(output_parts)}"
+    # Project the capability output field into state_schema and output_schema.
+    # Merge the step local->state binding and top-level state->output binding
+    # in one revision-checked patch.
 ```
 
-Keep this generic if details do not include enough fields. Do not invent source paths.
+Use `project_property_to_schema_path` for both schemas so `$defs` are preserved. Do not create a node output binding with an `output.*` target; `OutputBinding.target` is `StatePath`.
 
 - [ ] **Step 4: Run tests GREEN**
 
-Run the test from Step 2. Expected: pass.
+Run the test from Step 2. Expected: pass with `status: valid`.
 
 - [ ] **Step 5: Commit**
 
 ```powershell
-git add src/wf_api/drafts.py tests/wf_api/test_drafts_service.py tests/wf_cli/test_remote_target.py
-git commit -m "fix: hint workflow output draft repairs"
+git add src/wf_api/draft_authoring.py tests/wf_api/test_drafts_service.py tests/wf_cli/test_remote_target.py
+git commit -m "fix: lower workflow output binds through state"
 ```
 
 ### Task 2: Repair Hint For Undeclared Workflow Input Used By Step Input
@@ -148,7 +161,7 @@ wf draft set-workflow-output report_ws --revision 6 --map state.markdown=markdow
 Add:
 
 ```md
-When validation gives a `repair_hint`, run that exact focused command before JSON Patch. For input/output schema errors, prefer `wf draft bind`.
+When validation gives a `repair_hint`, run that exact focused command before JSON Patch. Use `wf draft bind local.x -> output.y` when one capability output should become public workflow output; it creates the required state intermediary and schemas atomically.
 ```
 
 - [ ] **Step 3: Verify**

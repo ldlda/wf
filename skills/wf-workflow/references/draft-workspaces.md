@@ -78,6 +78,7 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_draft_route`
 - `set_step_input_map`
 - `set_step_output_map`
+- `set_workflow_output_map`
 - `bind_draft`
 - `add_step_from_capability`
 - `branch_draft`
@@ -93,6 +94,8 @@ wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.te
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
+wf draft set-workflow-output <workspace_id> --revision <n> --map state.value=result
+wf draft set-workflow-output <workspace_id> --revision <n> --merge --map state.other=other
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
@@ -101,15 +104,21 @@ wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field
 wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
 ```
 
+`set-workflow-output` maps a graph source path (`input.*`, `state.*`, or
+`context.*`) to one public workflow output field. It edits top-level
+`WorkflowDraft.output`; `set-output` edits one step's local-to-state bindings.
+The public output field must already exist in `output_schema`.
+
 `set-input` direction: `input.text=text` means graph source `input.text` maps to
 node-local target `local.text`.
 
 `set-output` direction: `text=state.text` means node-local source `local.text`
 maps to graph target `state.text`.
 
-Without `--merge`, `set-input` and `set-output` replace the whole map for that
-step. Use repeated `--map` flags in one command for a complete replacement. Use
-`--merge` only when adding/updating entries over multiple revisions.
+Without `--merge`, `set-input`, `set-output`, and `set-workflow-output` replace
+the whole map for that step or output scope. Use repeated `--map` flags in one
+command for a complete replacement. Use `--merge` only when adding/updating
+entries over multiple revisions.
 
 - `bind_draft`
 
