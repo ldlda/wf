@@ -5,6 +5,7 @@ from pathlib import Path
 from examples.agent_challenges.manifests import load_challenge_manifest
 from examples.agent_challenges.models import InstructionProfile
 from examples.agent_challenges.run_matrix import (
+    DEFAULT_PROFILES,
     ModelProfile,
     build_matrix_tasks,
     parse_model_profile,
@@ -30,6 +31,14 @@ def test_parse_model_profile_rejects_empty_variant() -> None:
 
     with pytest.raises(ValueError, match="variant cannot be empty"):
         parse_model_profile("opencode/deepseek-v4-flash-free=")
+
+
+def test_default_matrix_profiles_exclude_debug() -> None:
+    assert DEFAULT_PROFILES == (
+        InstructionProfile.NONE,
+        InstructionProfile.SKILLS,
+        InstructionProfile.ALL,
+    )
 
 
 def test_matrix_tasks_allocate_indices_across_profiles(tmp_path: Path) -> None:
@@ -124,3 +133,39 @@ def test_run_trials_concurrency_invokes_all_indices(
     assert exit_code == 0
     assert sorted(seen) == [1, 2, 3]
     assert '"trial_count": 3' in capsys.readouterr().out
+
+
+def test_run_matrix_reports_worker_exceptions(
+    monkeypatch,
+    tmp_path: Path,
+    capsys,
+) -> None:
+    from examples.agent_challenges import run_matrix
+
+    manifest = _write_manifest(tmp_path / "challenge")
+
+    def fake_run_v2_trial(*args: object, **kwargs: object) -> dict[str, object]:
+        raise RuntimeError("lost result")
+
+    monkeypatch.setattr(run_matrix, "run_v2_trial", fake_run_v2_trial)
+
+    exit_code = run_matrix.main(
+        [
+            "--challenge",
+            str(manifest),
+            "--instruction-profile",
+            "debug",
+            "--model",
+            "opencode/test=max",
+            "--trials",
+            "1",
+            "--concurrency",
+            "1",
+        ]
+    )
+
+    output = capsys.readouterr().out
+    assert exit_code == 0
+    assert '"task_outcome": "runner_error"' in output
+    assert '"evaluation_validity": "unauditable"' in output
+    assert "lost result" in output

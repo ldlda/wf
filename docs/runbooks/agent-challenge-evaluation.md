@@ -107,9 +107,16 @@ Use profiles to separate product usability from instruction quality:
 | `none` | Base prompt plus challenge prompt only. | Tests discoverability with almost no agent instructions. |
 | `skills` | Adds the workflow CLI skill bundle. | Tests the intended public agent instruction layer. |
 | `all` | Allows broader docs/code exploration. | Tests whether the repository contains enough information to solve the task, but results are less clean. |
+| `debug` | Adds the workflow CLI skill bundle and asks the agent to keep detailed UX notes before escalating beyond public surfaces. | Mines command, docs, schema, and validation friction; keep separate from normal benchmark scoring. |
 
 The same model/challenge should be run across profiles when comparing the value
 of the instruction layer.
+
+`debug` is opt-in and is not part of the default matrix. Use it when you want a
+trial report to preserve failed commands, mistaken assumptions, confusing help
+text, schema-shape problems, and any point where the agent became genuinely
+blocked. A debug run may still complete the workflow, but its main value is the
+`ux_issues_found` list in the self-report.
 
 ## Suggested Matrix
 

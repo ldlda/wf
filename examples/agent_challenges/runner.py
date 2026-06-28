@@ -620,6 +620,12 @@ def run_v2_trial(
                 assertion_failures.append(
                     "could not extract challenge report for success_assertions evaluation"
                 )
+        if profile == InstructionProfile.DEBUG and challenge_report is not None:
+            ux_issues = challenge_report.get("ux_issues_found")
+            if not isinstance(ux_issues, list):
+                assertion_failures.append(
+                    "debug profile requires ux_issues_found list in challenge_report"
+                )
 
     if assertion_failures:
         task_outcome = "failed"

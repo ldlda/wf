@@ -283,7 +283,11 @@ def prepare_v2_trial_workspace(
     )
 
     instruction_files: list[Path] = []
-    if profile in (InstructionProfile.SKILLS, InstructionProfile.ALL):
+    if profile in (
+        InstructionProfile.SKILLS,
+        InstructionProfile.ALL,
+        InstructionProfile.DEBUG,
+    ):
         bundle_entries = _load_instruction_bundle(instruction_bundle)
         for source_rel, destination_rel in bundle_entries:
             source_file = PROJECT_ROOT / source_rel

@@ -61,6 +61,7 @@ def test_instruction_profiles_are_exactly_the_supported_conditions() -> None:
         "none",
         "skills",
         "all",
+        "debug",
     ]
 
 
@@ -119,12 +120,14 @@ def test_challenge_prompt_is_identical_across_profiles(tmp_path: Path) -> None:
     assert {value.challenge_sha256 for value in rendered.values()} == {
         rendered[InstructionProfile.NONE].challenge_sha256
     }
-    assert len({value.rendered_sha256 for value in rendered.values()}) == 3
+    assert len({value.rendered_sha256 for value in rendered.values()}) == 4
     assert "report the exact blocker" in rendered[InstructionProfile.NONE].text.replace(
         "\n", " "
     )
     assert ".agent/skills" in rendered[InstructionProfile.SKILLS].text
     assert "inspect broader repository" in rendered[InstructionProfile.ALL].text
+    assert "genuinely blocked" in rendered[InstructionProfile.DEBUG].text
+    assert "ux_issues_found" in rendered[InstructionProfile.DEBUG].text
 
 
 def test_skills_profile_copies_bundle_but_none_does_not(tmp_path: Path) -> None:
@@ -536,6 +539,23 @@ def test_policy_evidence_classifies_reads(tmp_path: Path) -> None:
     )
     assert all_policy.validity.value == "clean"
     assert all_policy.escalated_to_product_code is True
+
+    debug_policy = evaluate_policy(
+        "debug",
+        [
+            workspace_read,
+            repository_index_read,
+            skills_read,
+            canonical_skills_read,
+            source_read,
+            test_read,
+        ],
+        workspace_root=workspace_root,
+        repository_root=repository_root,
+        workspaces_root=workspaces_root,
+    )
+    assert debug_policy.validity.value == "clean"
+    assert debug_policy.escalated_to_product_code is True
 
     bash_tc = ToolCallEvidence(
         ordinal=1,
@@ -1333,6 +1353,53 @@ def test_v2_runner_assertions_pass_on_matching_report(tmp_path: Path) -> None:
     assert result.get("challenge_report") is not None
 
 
+def test_v2_runner_debug_profile_requires_ux_issues_found(
+    tmp_path: Path,
+) -> None:
+    from examples.agent_challenges.runner import run_v2_trial
+
+    challenge = load_challenge_manifest(_write_manifest(tmp_path / "challenge"))
+    bundle = ROOT / "examples/agent_challenges/instruction_bundles/workflow_cli.yaml"
+    workspaces_dir = tmp_path / "workspaces"
+    results_dir = tmp_path / "results"
+    results_dir.mkdir()
+
+    report_yaml = (
+        "```yaml\nchallenge_report:\n  value: expected\n  run_failed: false\n```\n"
+    )
+    stdout_jsonl = json.dumps({"text": report_yaml})
+
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: str,
+        text: bool,
+        capture_output: bool,
+        timeout: float | None,
+        check: bool,
+    ) -> object:
+        return type(
+            "Result",
+            (),
+            {"returncode": 0, "stdout": stdout_jsonl, "stderr": ""},
+        )()
+
+    result = run_v2_trial(
+        challenge,
+        profile=InstructionProfile.DEBUG,
+        model="test-model",
+        variant="high",
+        index=1,
+        workspaces_dir=workspaces_dir,
+        results_dir=results_dir,
+        instruction_bundle=bundle,
+        run_fn=fake_run,
+    )
+
+    assert result["task_outcome"] == "failed"
+    assert any("ux_issues_found" in f for f in result["assertion_failures"])
+
+
 def test_v2_runner_assertions_fail_on_mismatched_report(tmp_path: Path) -> None:
     from examples.agent_challenges.runner import run_v2_trial
 
@@ -1653,7 +1720,11 @@ def test_both_challenges_prepare_workspaces_under_each_profile(
         assert config["client"]["target"] == {"kind": "local"}
         assert config["server"]["store"]["root"] == loaded.manifest.store_root
 
-        if profile in (InstructionProfile.SKILLS, InstructionProfile.ALL):
+        if profile in (
+            InstructionProfile.SKILLS,
+            InstructionProfile.ALL,
+            InstructionProfile.DEBUG,
+        ):
             assert (workspace.root / ".agent/skills/wf-cli/SKILL.md").is_file()
         else:
             assert not (workspace.root / ".agent").exists()

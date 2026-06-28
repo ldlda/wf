@@ -248,11 +248,12 @@ stable.
   bundle for controlled challenge profiles, use `wf schema` for public shape
   discovery, and avoid implementation/test-file guidance.
 - Completed: the generic agent challenge harness now supports data-driven
-  manifests, layered prompts, explicit `none|skills|all` profiles, one-hour hard
-  ceilings, normalized OpenCode tool/token evidence, policy findings, and
-  manual-audited reports. Two data-driven challenges exist: browser-click and
-  report-workflow. The central `run_trials.py` runner accepts any challenge
-  manifest.
+  manifests, layered prompts, explicit `none|skills|all|debug` profiles,
+  one-hour hard ceilings, normalized OpenCode tool/token evidence, policy
+  findings, and manual-audited reports. Two data-driven challenges exist:
+  browser-click and report-workflow. The central `run_trials.py` runner accepts
+  any challenge manifest. The `debug` profile is opt-in and captures
+  evidence-backed UX issue reports separately from normal benchmark scoring.
 - Completed: report projections generate bounded Markdown and JSON reports for
   every V2 trial and regenerate both after audit without mutating raw evidence.
   Implementation:

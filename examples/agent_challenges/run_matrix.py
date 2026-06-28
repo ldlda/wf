@@ -125,6 +125,23 @@ def _summary_from_result(task: MatrixTask, result: dict[str, Any]) -> dict[str, 
     }
 
 
+def _summary_from_exception(task: MatrixTask, exc: BaseException) -> dict[str, object]:
+    """Return an auditable summary when a worker fails before writing a result."""
+    return {
+        "challenge": task.challenge.manifest.id,
+        "instruction_profile": task.profile.value,
+        "model": task.model,
+        "variant": task.variant,
+        "index": task.index,
+        "task_outcome": "runner_error",
+        "evaluation_validity": "unauditable",
+        "duration_seconds": 0.0,
+        "result_path": None,
+        "report_paths": None,
+        "error": {"type": type(exc).__name__, "message": str(exc)},
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
@@ -141,7 +158,10 @@ def main(argv: list[str] | None = None) -> int:
         action="append",
         choices=[p.value for p in InstructionProfile],
         default=None,
-        help="Instruction profile. May be repeated. Defaults to none, skills, all.",
+        help=(
+            "Instruction profile. May be repeated. Defaults to none, skills, "
+            "all; use debug explicitly for UX issue mining."
+        ),
     )
     parser.add_argument(
         "--model",
@@ -213,9 +233,13 @@ def main(argv: list[str] | None = None) -> int:
 
     summaries: list[dict[str, object]] = []
     with ThreadPoolExecutor(max_workers=min(args.concurrency, len(tasks))) as pool:
-        futures = [pool.submit(_run_task, task) for task in tasks]
+        futures = {pool.submit(_run_task, task): task for task in tasks}
         for future in as_completed(futures):
-            summary = future.result()
+            task = futures[future]
+            try:
+                summary = future.result()
+            except Exception as exc:
+                summary = _summary_from_exception(task, exc)
             summaries.append(summary)
             print(json.dumps(summary, sort_keys=True))
 

@@ -11,6 +11,7 @@ class InstructionProfile(StrEnum):
     NONE = "none"
     SKILLS = "skills"
     ALL = "all"
+    DEBUG = "debug"
 
 
 class SourceManifest(BaseModel):

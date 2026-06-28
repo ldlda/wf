@@ -207,7 +207,7 @@ def evaluate_policy(
             elif profile == InstructionProfile.SKILLS:
                 if category not in allowed_skills_categories:
                     disallowed_reads.append(path_str)
-            elif profile == InstructionProfile.ALL:
+            elif profile in (InstructionProfile.ALL, InstructionProfile.DEBUG):
                 if category in (
                     "source",
                     "tests",
