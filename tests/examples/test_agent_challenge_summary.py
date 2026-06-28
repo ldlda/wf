@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 
@@ -117,3 +118,47 @@ def test_find_report_files_accepts_challenge_and_results_dirs(tmp_path: Path) ->
 
     assert find_report_files([challenge]) == [report]
     assert find_report_files([challenge / "results"]) == [report]
+
+
+def test_find_report_files_can_select_newest_with_padding(tmp_path: Path) -> None:
+    from examples.agent_challenges.summarize_trials import find_report_files
+
+    challenge = tmp_path / "browser_click_challenge"
+    reports = [
+        _write_report(challenge / "results" / f"trial-{index}.report.json")
+        for index in range(4)
+    ]
+    for index, report in enumerate(reports):
+        timestamp = 1000 + index
+        os.utime(report, (timestamp, timestamp))
+
+    before_mtimes = {path: path.stat().st_mtime for path in reports}
+
+    selected = find_report_files([challenge], last=1, over_list=2)
+
+    assert [path.name for path in selected] == [
+        "trial-1.report.json",
+        "trial-2.report.json",
+        "trial-3.report.json",
+    ]
+    assert {path: path.stat().st_mtime for path in reports} == before_mtimes
+
+
+def test_summarize_trials_direct_script_execution_smoke(tmp_path: Path) -> None:
+    import subprocess
+    import sys
+
+    report = _write_report(tmp_path / "results" / "trial.report.json")
+
+    completed = subprocess.run(
+        [
+            sys.executable,
+            "examples/agent_challenges/summarize_trials.py",
+            str(report),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "| browser | deepseek | skills | 004 | pass |" in completed.stdout

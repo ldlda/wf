@@ -2,11 +2,18 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
-from examples.agent_challenges.names import short_challenge_name, short_model_name
+try:
+    from .names import short_challenge_name, short_model_name
+except ImportError:
+    _project_root = Path(__file__).resolve().parents[2]
+    if str(_project_root) not in sys.path:
+        sys.path.insert(0, str(_project_root))
+    from examples.agent_challenges.names import short_challenge_name, short_model_name
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_CHALLENGES_ROOT = ROOT / "examples" / "agent_challenges"
@@ -100,7 +107,12 @@ def load_trial_summary(path: Path) -> TrialSummary:
     )
 
 
-def find_report_files(paths: list[Path]) -> list[Path]:
+def find_report_files(
+    paths: list[Path],
+    *,
+    last: int | None = None,
+    over_list: int = 0,
+) -> list[Path]:
     roots = paths or sorted(DEFAULT_CHALLENGES_ROOT.glob("*_challenge"))
     reports: list[Path] = []
     for root in roots:
@@ -112,7 +124,18 @@ def find_report_files(paths: list[Path]) -> list[Path]:
             reports.extend(sorted(results_dir.glob("*.report.json")))
             continue
         reports.extend(sorted(root.glob("*.report.json")))
-    return sorted(set(reports))
+    unique_reports = sorted(set(reports))
+    if last is None:
+        return unique_reports
+    limit = last + over_list
+    # Active matrix review wants "newest completed report projections"; sort
+    # only this selection by mtime and keep the final display deterministic.
+    newest = sorted(
+        unique_reports,
+        key=lambda path: (path.stat().st_mtime, path.as_posix()),
+        reverse=True,
+    )[:limit]
+    return sorted(newest)
 
 
 def _markdown_escape(value: object) -> str:
@@ -186,12 +209,32 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="markdown",
         help="Output format.",
     )
+    parser.add_argument(
+        "--last",
+        type=int,
+        default=None,
+        help="Summarize the newest N report files by modification time.",
+    )
+    parser.add_argument(
+        "--over-list",
+        type=int,
+        default=0,
+        help="With --last, include this many extra newest reports as padding.",
+    )
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    reports = find_report_files(args.paths)
+    if args.last is not None and args.last < 1:
+        raise SystemExit("--last must be >= 1")
+    if args.over_list < 0:
+        raise SystemExit("--over-list must be >= 0")
+    reports = find_report_files(
+        args.paths,
+        last=args.last,
+        over_list=args.over_list,
+    )
     summaries = [load_trial_summary(path) for path in reports]
     if args.format == "json":
         print(render_json(summaries))
