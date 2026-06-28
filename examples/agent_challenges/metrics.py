@@ -123,11 +123,13 @@ def _normalize_tool_event(event: dict[str, Any]) -> dict[str, Any]:
     return merged
 
 
-def extract_trial_metrics(stdout: str, *, preview_chars: int = 500) -> TrialMetrics:
+def extract_trial_metrics(
+    stdout: str | None, *, preview_chars: int = 500
+) -> TrialMetrics:
     metrics = TrialMetrics()
     ordinal = 0
 
-    for line in stdout.splitlines():
+    for line in (stdout or "").splitlines():
         stripped = line.strip()
         if not stripped:
             continue

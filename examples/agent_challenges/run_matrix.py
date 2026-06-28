@@ -136,6 +136,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--instruction-profile",
+        "--profile",
+        dest="instruction_profile",
         action="append",
         choices=[p.value for p in InstructionProfile],
         default=None,

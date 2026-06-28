@@ -214,6 +214,15 @@ def test_extract_trial_metrics_parses_jsonl_events() -> None:
     assert len(metrics.tool_calls[0].output_preview) <= 500
 
 
+def test_extract_trial_metrics_accepts_missing_stdout() -> None:
+    from examples.agent_challenges.metrics import extract_trial_metrics
+
+    metrics = extract_trial_metrics(None)
+
+    assert metrics.step_count == 0
+    assert metrics.tool_call_count == 0
+
+
 def test_extract_trial_metrics_sums_tokens_across_steps() -> None:
     from examples.agent_challenges.metrics import extract_trial_metrics
 
@@ -1122,6 +1131,48 @@ def test_v2_runner_timeout_preserves_partial_evidence(tmp_path: Path) -> None:
 
     assert result["task_outcome"] == "timeout"
     assert result["returncode"] == -1
+    assert "metrics" in result
+
+
+def test_v2_runner_handles_missing_completed_stdout(tmp_path: Path) -> None:
+    from examples.agent_challenges.runner import run_v2_trial
+
+    challenge = load_challenge_manifest(_write_manifest(tmp_path / "challenge"))
+    bundle = ROOT / "examples/agent_challenges/instruction_bundles/workflow_cli.yaml"
+    workspaces_dir = tmp_path / "workspaces"
+    results_dir = tmp_path / "results"
+    results_dir.mkdir()
+
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: str,
+        text: bool,
+        capture_output: bool,
+        timeout: float | None,
+        check: bool,
+    ) -> object:
+        return type(
+            "Result",
+            (),
+            {"returncode": 0, "stdout": None, "stderr": None},
+        )()
+
+    result = run_v2_trial(
+        challenge,
+        profile=InstructionProfile.NONE,
+        model="test-model",
+        variant="high",
+        index=1,
+        workspaces_dir=workspaces_dir,
+        results_dir=results_dir,
+        instruction_bundle=bundle,
+        run_fn=fake_run,
+    )
+
+    assert result["stdout"] == ""
+    assert result["stderr"] == ""
+    assert result["task_outcome"] == "failed"
     assert "metrics" in result
 
 

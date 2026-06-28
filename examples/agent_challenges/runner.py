@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -13,6 +14,21 @@ from typing import Any
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _utf8_subprocess_env() -> dict[str, str]:
+    """Force child tools toward UTF-8 so captured agent output is decodable.
+
+    OpenCode emits UTF-8 JSONL, but Windows defaults Python's subprocess text
+    decoding to the active ANSI code page unless an encoding is supplied. The
+    environment nudges child Python tools too; the explicit subprocess encoding
+    below is the actual guard against cp1252 reader-thread crashes.
+    """
+    env = dict(os.environ)
+    env.setdefault("PYTHONUTF8", "1")
+    env.setdefault("PYTHONIOENCODING", "utf-8")
+    return env
+
 
 from examples.agent_challenges.names import (  # noqa: E402
     short_challenge_name,
@@ -418,8 +434,14 @@ def run_v2_trial(
         wf_command_prefix_for_config,
     )
 
+    run_kwargs: dict[str, object] = {}
     if run_fn is None:
         run_fn = subprocess.run
+        run_kwargs = {
+            "encoding": "utf-8",
+            "errors": "replace",
+            "env": _utf8_subprocess_env(),
+        }
 
     if not isinstance(challenge, LoadedChallenge):
         raise TypeError("challenge must be a LoadedChallenge")
@@ -494,10 +516,11 @@ def run_v2_trial(
             capture_output=True,
             timeout=timeout_seconds,
             check=False,
+            **run_kwargs,
         )
         duration_seconds = time.monotonic() - started
-        stdout = completed.stdout
-        stderr = completed.stderr
+        stdout = completed.stdout or ""
+        stderr = completed.stderr or ""
         returncode = completed.returncode
         if returncode != 0:
             task_outcome = "failed"

@@ -107,11 +107,27 @@ def load_trial_summary(path: Path) -> TrialSummary:
     )
 
 
+def _raw_result_path_for_report(report_path: Path) -> Path:
+    name = report_path.name
+    if name.endswith(".report.json"):
+        return report_path.with_name(name.removesuffix(".report.json") + ".json")
+    return report_path
+
+
+def _sort_mtime(path: Path, *, sort_by: str) -> float:
+    if sort_by == "result":
+        raw_result = _raw_result_path_for_report(path)
+        if raw_result.exists():
+            return raw_result.stat().st_mtime
+    return path.stat().st_mtime
+
+
 def find_report_files(
     paths: list[Path],
     *,
     last: int | None = None,
     over_list: int = 0,
+    sort_by: str = "result",
 ) -> list[Path]:
     roots = paths or sorted(DEFAULT_CHALLENGES_ROOT.glob("*_challenge"))
     reports: list[Path] = []
@@ -128,11 +144,11 @@ def find_report_files(
     if last is None:
         return unique_reports
     limit = last + over_list
-    # Active matrix review wants "newest completed report projections"; sort
-    # only this selection by mtime and keep the final display deterministic.
+    # Active matrix review wants newest completed trials. Manual audits rewrite
+    # .report.json projections, so default to raw result mtimes when present.
     newest = sorted(
         unique_reports,
-        key=lambda path: (path.stat().st_mtime, path.as_posix()),
+        key=lambda path: (_sort_mtime(path, sort_by=sort_by), path.as_posix()),
         reverse=True,
     )[:limit]
     return sorted(newest)
@@ -213,13 +229,23 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--last",
         type=int,
         default=None,
-        help="Summarize the newest N report files by modification time.",
+        help="Summarize the newest N trials by raw result modification time.",
     )
     parser.add_argument(
         "--over-list",
         type=int,
         default=0,
         help="With --last, include this many extra newest reports as padding.",
+    )
+    parser.add_argument(
+        "--sort-by",
+        choices=("result", "report"),
+        default="result",
+        help=(
+            "When using --last, choose newest by raw result mtime or report "
+            "projection mtime. Defaults to result so manual audits do not "
+            "change batch selection."
+        ),
     )
     return parser.parse_args(argv)
 
@@ -234,6 +260,7 @@ def main(argv: list[str] | None = None) -> int:
         args.paths,
         last=args.last,
         over_list=args.over_list,
+        sort_by=args.sort_by,
     )
     summaries = [load_trial_summary(path) for path in reports]
     if args.format == "json":

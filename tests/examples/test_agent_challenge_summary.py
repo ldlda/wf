@@ -144,6 +144,28 @@ def test_find_report_files_can_select_newest_with_padding(tmp_path: Path) -> Non
     assert {path: path.stat().st_mtime for path in reports} == before_mtimes
 
 
+def test_find_report_files_prefers_raw_result_mtime_for_last(tmp_path: Path) -> None:
+    from examples.agent_challenges.summarize_trials import find_report_files
+
+    challenge = tmp_path / "browser_click_challenge"
+    old_report = _write_report(challenge / "results" / "old.report.json")
+    new_report = _write_report(challenge / "results" / "new.report.json")
+    old_raw = challenge / "results" / "old.json"
+    new_raw = challenge / "results" / "new.json"
+    old_raw.write_text("{}", encoding="utf-8")
+    new_raw.write_text("{}", encoding="utf-8")
+
+    os.utime(old_raw, (1000, 1000))
+    os.utime(new_raw, (2000, 2000))
+    os.utime(old_report, (3000, 3000))
+    os.utime(new_report, (1500, 1500))
+
+    selected = find_report_files([challenge], last=1)
+
+    assert selected == [new_report]
+    assert find_report_files([challenge], last=1, sort_by="report") == [old_report]
+
+
 def test_summarize_trials_direct_script_execution_smoke(tmp_path: Path) -> None:
     import subprocess
     import sys

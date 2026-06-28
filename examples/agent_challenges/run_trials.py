@@ -36,6 +36,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument(
         "--instruction-profile",
+        "--profile",
+        dest="instruction_profile",
         type=str,
         choices=[p.value for p in InstructionProfile],
         required=True,
