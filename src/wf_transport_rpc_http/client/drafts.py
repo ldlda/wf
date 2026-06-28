@@ -225,6 +225,60 @@ class RpcDraftClientMixin:
             },
         )
 
+    async def remove_draft_route(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        outcome: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.remove_route",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "outcome": outcome,
+            },
+        )
+
+    async def remove_draft_step(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.remove_step",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+            },
+        )
+
+    async def remove_draft_binding(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        inputs: Sequence[str] = (),
+        outputs: Sequence[str] = (),
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.remove_binding",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "inputs": list(inputs),
+                "outputs": list(outputs),
+            },
+        )
+
     async def validate_draft_workspace(
         self: RpcCaller,
         *,

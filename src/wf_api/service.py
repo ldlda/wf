@@ -478,6 +478,51 @@ class WorkflowApi:
             title=title,
         )
 
+    async def remove_draft_route(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        outcome: str,
+    ) -> dict[str, Any]:
+        return await self.draft_authoring.remove_draft_route(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            outcome=outcome,
+        )
+
+    async def remove_draft_step(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+    ) -> dict[str, Any]:
+        return await self.draft_authoring.remove_draft_step(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+        )
+
+    async def remove_draft_binding(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        inputs: Sequence[str] = (),
+        outputs: Sequence[str] = (),
+    ) -> dict[str, Any]:
+        return await self.draft_authoring.remove_draft_binding(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            inputs=inputs,
+            outputs=outputs,
+        )
+
     async def create_draft_workspace_from_capability(
         self,
         *,

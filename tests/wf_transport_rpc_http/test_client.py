@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any
+
 import httpx
 
 from wf_api.models import RawWorkflowPlan, TraceRange
@@ -7,6 +9,7 @@ from wf_api.surface import WorkflowDraftSurface
 from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
+from wf_transport_rpc_http.client.drafts import RpcDraftClientMixin
 from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
 
 
@@ -516,6 +519,43 @@ async def test_rpc_client_draft_workspace_focused_edit_methods(tmp_path) -> None
     assert input_merged["revision"] == 6
     assert output_merged["revision"] == 7
     assert state_bound["revision"] == 8
+
+
+async def test_rpc_client_draft_remove_methods(tmp_path) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"revision": 2}
+
+    client = Client()
+    route_result = await client.remove_draft_route(
+        workspace_id="ws",
+        revision=1,
+        step_id="call",
+        outcome="ok",
+    )
+    step_result = await client.remove_draft_step(
+        workspace_id="ws",
+        revision=1,
+        step_id="call",
+    )
+    binding_result = await client.remove_draft_binding(
+        workspace_id="ws",
+        revision=1,
+        step_id="echo",
+        inputs=["message"],
+        outputs=["debug"],
+    )
+
+    assert route_result == {"revision": 2}
+    assert step_result == {"revision": 2}
+    assert binding_result == {"revision": 2}
+    assert calls[0]["method"] == "workflow.draft_workspaces.remove_route"
+    assert calls[1]["method"] == "workflow.draft_workspaces.remove_step"
+    assert calls[2]["method"] == "workflow.draft_workspaces.remove_binding"
+    assert calls[2]["params"]["inputs"] == ["message"]
 
 
 async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> None:

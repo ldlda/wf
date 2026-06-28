@@ -165,6 +165,10 @@ wf draft validate <workspace_id>
 Validation repair hints are product guidance. If a diagnostic suggests
 `wf draft bind`, use it before hand-editing schemas or step bindings.
 
+Remove commands are for recovery. They do not delete schema fields and
+`remove-step` does not remove inbound routes. Validate after removal and repair
+the resulting diagnostics explicitly.
+
 Use JSON Patch for structural edits the helpers do not cover.
 
 For larger patches, write a JSON Patch array to a file and pass it with

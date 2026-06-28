@@ -95,6 +95,9 @@ each declared outcome; extra outcome names are rejected.
 `wf draft compile` prints the raw plan JSON directly on success. Do not expect a
 top-level `compiled_plan` key from the CLI output.
 
+- To undo a bad draft edit, prefer `wf draft remove-route`,
+  `wf draft remove-step`, or `wf draft remove-binding` over JSON Patch.
+
 ## Rules
 
 - Use explicit `--config <path>` for examples, challenge workspaces, and

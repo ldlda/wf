@@ -180,6 +180,27 @@ class HandleDraftParams(RpcParamsModel):
     target: str = Field(min_length=1)
 
 
+class RemoveDraftRouteParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    outcome: str = Field(min_length=1)
+
+
+class RemoveDraftStepParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+
+
+class RemoveDraftBindingParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    inputs: list[str] = Field(default_factory=list)
+    outputs: list[str] = Field(default_factory=list)
+
+
 class ValidateDraftWorkspaceParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
 

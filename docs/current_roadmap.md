@@ -88,6 +88,10 @@ clear operator feedback before adding more architecture.
   allowing agents to add missing target steps before final validation/save.
   Implementation:
   [`invalid intermediate draft authoring`](historical/superpowers/plans/2026-06-28-draft-invalid-intermediate-authoring.md).
+- Completed: draft workspaces expose focused remove commands for routes, steps,
+  and step bindings so agents can recover from bad edits without raw JSON Patch.
+  Implementation:
+  [`draft remove commands`](historical/superpowers/plans/2026-06-28-draft-remove-commands.md).
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

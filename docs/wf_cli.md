@@ -377,6 +377,22 @@ Use `wf draft handle` to route multiple source step outcomes to a common target:
 wf draft handle concat_ws --revision 7 --to fail --branch lookup:error --branch transform:error
 ```
 
+### Remove Draft Elements
+
+Use remove commands to back out one bad route, step, or binding without writing
+JSON Patch:
+
+```bash
+wf draft remove-route report_ws --revision 8 --step extract --outcome ok
+wf draft remove-step report_ws --revision 9 --step render
+wf draft remove-binding report_ws --revision 10 --step render --input title
+wf draft remove-binding report_ws --revision 11 --step render --output markdown
+```
+
+Removal may leave the workspace `status: invalid`. That is normal for
+intermediate authoring. Run `wf draft validate`, then repair routes or bindings
+before saving or compiling.
+
 ### Compile A Draft Workspace
 
 Use `wf draft compile` to print the compiled raw plan without mutating or saving

@@ -181,6 +181,22 @@ def test_wf_draft_help_does_not_list_old_add_step_from_capability() -> None:
     assert "add-step-from-capability" not in result.output
 
 
+def test_wf_draft_remove_commands_help_mentions_options() -> None:
+    route_result = runner.invoke(app, ["draft", "remove-route", "--help"])
+    step_result = runner.invoke(app, ["draft", "remove-step", "--help"])
+    binding_result = runner.invoke(app, ["draft", "remove-binding", "--help"])
+
+    assert route_result.exit_code == 0
+    assert "--step" in route_result.output
+    assert "--outcome" in route_result.output
+    assert step_result.exit_code == 0
+    assert "--step" in step_result.output
+    assert binding_result.exit_code == 0
+    assert "--input" in binding_result.output
+    assert "--output" in binding_result.output
+    assert "status: invalid" in binding_result.output
+
+
 def test_wf_draft_route_flags_reject_duplicate_outcomes() -> None:
     add_result = runner.invoke(
         app,

@@ -489,6 +489,92 @@ def handle_draft(
     )
 
 
+@app.command("remove-route")
+def remove_draft_route(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step: Annotated[str, typer.Option("--step", help="Draft step id.")],
+    outcome: Annotated[str, typer.Option("--outcome", help="Outcome route to remove.")],
+) -> None:
+    """Remove one route from a draft step."""
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.remove_draft_route(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step,
+                outcome=outcome,
+            ),
+        )
+    )
+
+
+@app.command("remove-step")
+def remove_draft_step(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step: Annotated[str, typer.Option("--step", help="Draft step id.")],
+) -> None:
+    """Remove one step and its outgoing draft route map."""
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.remove_draft_step(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step,
+            ),
+        )
+    )
+
+
+@app.command("remove-binding")
+def remove_draft_binding(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step: Annotated[str, typer.Option("--step", help="Draft step id.")],
+    input_name: Annotated[
+        list[str] | None,
+        typer.Option("--input", help="Local input target to remove. Repeatable."),
+    ] = None,
+    output_name: Annotated[
+        list[str] | None,
+        typer.Option("--output", help="Local output source to remove. Repeatable."),
+    ] = None,
+) -> None:
+    """Remove selected input/output bindings from one draft step.
+
+    Removal may return status: invalid. Run `wf draft validate` after cleanup.
+    """
+    if not input_name and not output_name:
+        raise typer.BadParameter("pass at least one --input or --output")
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.remove_draft_binding(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step,
+                inputs=input_name or [],
+                outputs=output_name or [],
+            ),
+        )
+    )
+
+
 @app.command("validate")
 def validate_draft(
     ctx: typer.Context,

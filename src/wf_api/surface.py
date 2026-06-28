@@ -156,6 +156,33 @@ class WorkflowDraftSurface(Protocol):
         target: str,
     ) -> dict[str, Any]: ...
 
+    async def remove_draft_route(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        outcome: str,
+    ) -> dict[str, Any]: ...
+
+    async def remove_draft_step(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+    ) -> dict[str, Any]: ...
+
+    async def remove_draft_binding(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        inputs: Sequence[str] = (),
+        outputs: Sequence[str] = (),
+    ) -> dict[str, Any]: ...
+
     async def validate_draft_workspace(
         self,
         *,

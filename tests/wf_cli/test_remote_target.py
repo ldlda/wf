@@ -1143,6 +1143,50 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
     ]
 
 
+def test_wf_draft_remove_route_uses_rpc_target(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "remove_route_ws",
+            "--capability",
+            "wf.std.constant",
+            "--name",
+            "remove_route",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+
+    result = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "remove-route",
+            "remove_route_ws",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--outcome",
+            "ok",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["revision"] == 2
+
+
 def test_wf_draft_bind_uses_rpc_target(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)

@@ -954,6 +954,170 @@ async def test_add_step_from_capability_rejects_unknown_routes_for_multi_outcome
         )
 
 
+# -- Draft remove helpers --
+
+
+@pytest.mark.asyncio
+async def test_remove_draft_route_persists_invalid_workspace(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "remove_route")
+    api, _service, authoring = _draft_api(artifact_store)
+    await api.create_draft_workspace(
+        workspace_id="route_ws",
+        draft={
+            "name": "route_ws",
+            "start": "echo",
+            "steps": {
+                "echo": {"use": "demo.personal.echo_tool", "input": [], "output": []}
+            },
+            "routes": {"echo": {"ok": "__end__"}},
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+        },
+    )
+
+    result = await authoring.remove_draft_route(
+        workspace_id="route_ws",
+        revision=1,
+        step_id="echo",
+        outcome="ok",
+    )
+
+    assert result["revision"] == 2
+    assert result["status"] == "invalid"
+    fetched = await api.get_draft_workspace(
+        workspace_id="route_ws",
+        include_draft=True,
+    )
+    assert fetched["draft"]["routes"]["echo"] == {}
+
+
+@pytest.mark.asyncio
+async def test_remove_draft_step_removes_outgoing_routes_not_inbound_routes(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "remove_step")
+    api, _service, authoring = _draft_api(artifact_store)
+    await api.create_draft_workspace(
+        workspace_id="step_ws",
+        draft={
+            "name": "step_ws",
+            "start": "first",
+            "steps": {
+                "first": {"use": "demo.personal.echo_tool", "input": [], "output": []},
+                "second": {"use": "demo.personal.echo_tool", "input": [], "output": []},
+            },
+            "routes": {
+                "first": {"ok": "second"},
+                "second": {"ok": "__end__"},
+            },
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+        },
+    )
+
+    result = await authoring.remove_draft_step(
+        workspace_id="step_ws",
+        revision=1,
+        step_id="second",
+    )
+
+    assert result["revision"] == 2
+    assert result["status"] == "invalid"
+    assert any(
+        item["code"] == "unknown_edge_destination" for item in result["diagnostics"]
+    )
+    fetched = await api.get_draft_workspace(
+        workspace_id="step_ws",
+        include_draft=True,
+    )
+    assert "second" not in fetched["draft"]["steps"]
+    assert "second" not in fetched["draft"]["routes"]
+    assert fetched["draft"]["routes"]["first"]["ok"] == "second"
+
+
+@pytest.mark.asyncio
+async def test_remove_draft_binding_removes_input_and_output_bindings(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "remove_binding")
+    api, _service, authoring = _draft_api(artifact_store)
+    await api.create_draft_workspace(
+        workspace_id="binding_ws",
+        draft={
+            "name": "binding_ws",
+            "start": "echo",
+            "steps": {
+                "echo": {
+                    "use": "demo.personal.echo_tool",
+                    "input": [
+                        {"path": "input.message", "target": "message"},
+                        {"path": "input.extra", "target": "extra"},
+                    ],
+                    "output": [
+                        {"source": "echoed", "target": "state.echoed"},
+                        {"source": "debug", "target": "state.debug"},
+                    ],
+                }
+            },
+            "routes": {"echo": {"ok": "__end__"}},
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+        },
+    )
+
+    result = await authoring.remove_draft_binding(
+        workspace_id="binding_ws",
+        revision=1,
+        step_id="echo",
+        inputs=("message",),
+        outputs=("debug",),
+    )
+
+    assert result["revision"] == 2
+    fetched = await api.get_draft_workspace(
+        workspace_id="binding_ws",
+        include_draft=True,
+    )
+    assert fetched["draft"]["steps"]["echo"]["input"] == [
+        {"path": "input.extra", "target": "extra"}
+    ]
+    assert fetched["draft"]["steps"]["echo"]["output"] == [
+        {"source": "echoed", "target": "state.echoed"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_remove_missing_draft_element_is_noop(tmp_path: Path) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "remove_noop")
+    api, _service, authoring = _draft_api(artifact_store)
+    await api.create_draft_workspace(
+        workspace_id="noop_ws",
+        draft={
+            "name": "noop_ws",
+            "start": "echo",
+            "steps": {
+                "echo": {"use": "demo.personal.echo_tool", "input": [], "output": []}
+            },
+            "routes": {"echo": {"ok": "__end__"}},
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+        },
+    )
+
+    result = await authoring.remove_draft_route(
+        workspace_id="noop_ws",
+        revision=1,
+        step_id="echo",
+        outcome="missing",
+    )
+
+    assert result["revision"] == 1
+
+
 @pytest.mark.asyncio
 async def test_compile_draft_workspace_returns_compiled_plan(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_compile")

@@ -286,6 +286,39 @@ class AddStepFromCapabilityRequest(BaseModel):
     )
 
 
+class RemoveDraftRouteRequest(BaseModel):
+    """Typed MCP request for removing one route from a draft step."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    step_id: str = Field(description="Draft step id whose route should be removed.")
+    outcome: str = Field(description="Outcome label to remove from the step route map.")
+
+
+class RemoveDraftStepRequest(BaseModel):
+    """Typed MCP request for removing a draft step and its outgoing routes."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    step_id: str = Field(description="Draft step id to remove.")
+
+
+class RemoveDraftBindingRequest(BaseModel):
+    """Typed MCP request for removing input/output bindings from a draft step."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    step_id: str = Field(description="Draft step id whose bindings should be removed.")
+    inputs: list[str] = Field(
+        default_factory=list,
+        description="Local input target names to remove.",
+    )
+    outputs: list[str] = Field(
+        default_factory=list,
+        description="Local output source names to remove.",
+    )
+
+
 class BranchDraftRequest(BaseModel):
     """Typed MCP request for branching routes on a draft step."""
 

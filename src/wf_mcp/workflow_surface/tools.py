@@ -29,6 +29,9 @@ from .models import (
     DraftWorkspaceResult,
     HandleDraftRequest,
     PatchDraftWorkspaceRequest,
+    RemoveDraftBindingRequest,
+    RemoveDraftRouteRequest,
+    RemoveDraftStepRequest,
     RunDeploymentResult,
     SetDraftNameRequest,
     SetDraftRouteRequest,
@@ -540,6 +543,67 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                     for b in request.branches
                 ],
                 target=request.target,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.remove_draft_route",
+        title="Remove Draft Route",
+        description=(
+            "Remove one route from a draft step. Missing routes are safe no-ops. "
+            "Removal may return status: invalid; validate after cleanup."
+        ),
+    )
+    async def remove_draft_route(
+        request: RemoveDraftRouteRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.remove_draft_route(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                outcome=request.outcome,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.remove_draft_step",
+        title="Remove Draft Step",
+        description=(
+            "Remove a step and its outgoing route map from a draft workspace. "
+            "Inbound routes remain explicit. Use remove_draft_route to clean them up."
+        ),
+    )
+    async def remove_draft_step(
+        request: RemoveDraftStepRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.remove_draft_step(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.remove_draft_binding",
+        title="Remove Draft Binding",
+        description=(
+            "Remove selected input/output bindings from one draft step. "
+            "Pass inputs and/or outputs lists to identify bindings by target/source name. "
+            "Removal may return status: invalid; validate after cleanup."
+        ),
+    )
+    async def remove_draft_binding(
+        request: RemoveDraftBindingRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.remove_draft_binding(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                inputs=request.inputs,
+                outputs=request.outputs,
             )
         )
 

@@ -482,6 +482,143 @@ class WorkflowDraftAuthoringApi:
             patch=patch,
         )
 
+    async def remove_draft_route(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        outcome: str,
+    ) -> dict[str, Any]:
+        """Remove one route; missing routes are revision-checked no-ops."""
+        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        draft_routes = workspace.draft.get("routes", {})
+        if not isinstance(draft_routes, dict):
+            raise ValueError("draft routes must be an object")
+        step_routes = draft_routes.get(step_id, {})
+        if not isinstance(step_routes, dict):
+            raise ValueError(f"routes for step {step_id!r} must be an object")
+        if outcome not in step_routes:
+            checked = self._workspace_if_revision_matches(
+                workspace_id=workspace_id,
+                revision=revision,
+            )
+            if isinstance(checked, dict):
+                return checked
+            return summarize_draft_workspace(checked)
+        return await self.drafts.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=[
+                {
+                    "op": "remove",
+                    "path": (
+                        f"/routes/{escape_json_pointer(step_id)}/"
+                        f"{escape_json_pointer(outcome)}"
+                    ),
+                }
+            ],
+        )
+
+    async def remove_draft_step(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+    ) -> dict[str, Any]:
+        """Remove a step and its own route map; inbound routes are left explicit."""
+        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        steps = workspace.draft.get("steps", {})
+        if not isinstance(steps, dict):
+            raise ValueError("draft steps must be an object")
+        if step_id not in steps:
+            checked = self._workspace_if_revision_matches(
+                workspace_id=workspace_id,
+                revision=revision,
+            )
+            if isinstance(checked, dict):
+                return checked
+            return summarize_draft_workspace(checked)
+        patch = [
+            {
+                "op": "remove",
+                "path": f"/steps/{escape_json_pointer(step_id)}",
+            }
+        ]
+        routes = workspace.draft.get("routes", {})
+        if isinstance(routes, dict) and step_id in routes:
+            patch.append(
+                {
+                    "op": "remove",
+                    "path": f"/routes/{escape_json_pointer(step_id)}",
+                }
+            )
+        return await self.drafts.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
+        )
+
+    async def remove_draft_binding(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        inputs: Sequence[str] = (),
+        outputs: Sequence[str] = (),
+    ) -> dict[str, Any]:
+        """Remove selected local input/output bindings from one draft step."""
+        if not inputs and not outputs:
+            raise ValueError("pass at least one input or output binding to remove")
+        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        step = draft_step(workspace.draft, step_id)
+        current_inputs = step.get("input", [])
+        current_outputs = step.get("output", [])
+        if not isinstance(current_inputs, list):
+            raise ValueError(f"input bindings for step {step_id!r} must be a list")
+        if not isinstance(current_outputs, list):
+            raise ValueError(f"output bindings for step {step_id!r} must be a list")
+        input_targets = set(inputs)
+        output_sources = set(outputs)
+        next_inputs = [
+            item for item in current_inputs if item.get("target") not in input_targets
+        ]
+        next_outputs = [
+            item for item in current_outputs if item.get("source") not in output_sources
+        ]
+        if next_inputs == current_inputs and next_outputs == current_outputs:
+            checked = self._workspace_if_revision_matches(
+                workspace_id=workspace_id,
+                revision=revision,
+            )
+            if isinstance(checked, dict):
+                return checked
+            return summarize_draft_workspace(checked)
+        patch: list[dict[str, Any]] = []
+        if next_inputs != current_inputs:
+            patch.append(
+                {
+                    "op": "replace",
+                    "path": f"/steps/{escape_json_pointer(step_id)}/input",
+                    "value": next_inputs,
+                }
+            )
+        if next_outputs != current_outputs:
+            patch.append(
+                {
+                    "op": "replace",
+                    "path": f"/steps/{escape_json_pointer(step_id)}/output",
+                    "value": next_outputs,
+                }
+            )
+        return await self.drafts.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
+        )
+
 
 @dataclass(frozen=True)
 class DraftOutcomeRef:

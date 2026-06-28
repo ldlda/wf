@@ -21,6 +21,9 @@ from ..models import (
     ListDraftWorkspacesParams,
     PatchDraftParams,
     PatchDraftWorkspaceParams,
+    RemoveDraftBindingParams,
+    RemoveDraftRouteParams,
+    RemoveDraftStepParams,
     SetDraftNameParams,
     SetDraftRouteParams,
     SetStepInputMapParams,
@@ -292,6 +295,54 @@ def register_methods(
         try:
             return await server.api.delete_draft_workspace(
                 workspace_id=params.workspace_id,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.remove_route", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_remove_route(
+        params: RemoveDraftRouteParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.remove_draft_route(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+                outcome=params.outcome,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.remove_step", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_remove_step(
+        params: RemoveDraftStepParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.remove_draft_step(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.remove_binding", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_remove_binding(
+        params: RemoveDraftBindingParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.remove_draft_binding(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+                inputs=params.inputs,
+                outputs=params.outputs,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
