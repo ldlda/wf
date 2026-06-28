@@ -139,9 +139,13 @@ wf draft validate <workspace_id>
   know a map, inspect the capability or run validation rather than guessing.
 
 ```bash
-wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --input input.other=other --bind-output result=state.result --bind-output title=state.title
 wf draft validate <workspace_id>
 ```
+
+Repeat `--input` and `--bind-output` once per mapping. Do not write
+`--bind-output title=state.title summary=state.summary`; the second mapping is
+an unexpected extra argument because it is not attached to its own flag.
 
 - `branch_draft`
 

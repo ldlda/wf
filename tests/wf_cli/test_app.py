@@ -172,6 +172,11 @@ def test_wf_draft_add_step_help_explains_explicit_wiring() -> None:
     assert "--from-step" in output
     assert "--bind-output" in output
     assert "does not guess" in output
+    assert "Repeat the flag" in output
+    assert "--input state.title=title --input state.summary=summary" in output
+    assert (
+        "--bind-output title=state.title --bind-output summary=state.summary" in output
+    )
 
 
 def test_wf_draft_help_does_not_list_old_add_step_from_capability() -> None:

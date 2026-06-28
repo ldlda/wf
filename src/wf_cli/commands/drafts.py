@@ -401,7 +401,10 @@ def add_step_from_capability(
         list[str] | None,
         typer.Option(
             "--input",
-            help="Input binding SOURCE=LOCAL_TARGET. Repeat for multiple inputs.",
+            help=(
+                "Input binding SOURCE=LOCAL_TARGET. Repeat the flag for each "
+                "input; do not put multiple mappings after one --input."
+            ),
         ),
     ] = None,
     output_mapping: Annotated[
@@ -410,7 +413,8 @@ def add_step_from_capability(
             "--bind-output",
             help=(
                 "Output binding LOCAL_OUTPUT=STATE_TARGET with state schema "
-                "projection. Repeat for multiple outputs."
+                "projection. Repeat the flag for each output; do not put "
+                "multiple mappings after one --bind-output."
             ),
         ),
     ] = None,
@@ -419,6 +423,10 @@ def add_step_from_capability(
 
     This command does not guess missing maps. Pass the route and bindings you
     want, then run `wf draft validate <workspace_id>`.
+
+    Repeat the flag for multiple bindings:
+    `--input state.title=title --input state.summary=summary`
+    `--bind-output title=state.title --bind-output summary=state.summary`
     """
     input_map = _parse_map_flags(input_mapping)
     bind_outputs = _parse_output_map_flags(output_mapping)

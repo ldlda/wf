@@ -93,6 +93,13 @@ JSON Patch when the route, input bindings, and output-to-state bindings are
 known. It is explicit and does not guess missing maps.
 If a capability has multiple outcomes, pass one `--route OUTCOME=TARGET` for
 each declared outcome; extra outcome names are rejected.
+Repeat `--input` and `--bind-output` once per mapping. Do not put multiple
+mappings after one flag.
+
+```bash
+wf draft add-step <workspace_id> --revision <n> --step render --capability local.report.render_markdown_report --input state.title=title --input state.summary=summary --bind-output markdown=state.markdown --bind-output title=state.title
+```
+
 `wf draft compile` prints the raw plan JSON directly on success. Do not expect a
 top-level `compiled_plan` key from the CLI output.
 

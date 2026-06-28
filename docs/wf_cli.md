@@ -365,8 +365,14 @@ wf draft add-step report_ws \
   --route ok=__end__ \
   --route error=tool_error \
   --input state.title=title \
-  --bind-output markdown=state.markdown
+  --input state.summary=summary \
+  --bind-output markdown=state.markdown \
+  --bind-output title=state.title
 ```
+
+Repeat `--input` and `--bind-output` once per mapping. Do not put multiple
+mappings after a single flag; `--bind-output title=state.title
+summary=state.summary` is parsed as an unexpected extra argument.
 
 Run `wf draft validate report_ws` after adding the step. If validation returns
 a `repair_hint`, prefer the focused helper in that hint before JSON Patch.
