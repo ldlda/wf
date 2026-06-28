@@ -69,6 +69,19 @@ wf deploy validate <deployment_id>
 wf run start <deployment_id> --input-file input.json
 ```
 
+If artifact save returns `suggested_bindings`, include each suggestion as a
+deployment binding:
+
+```bash
+wf deploy save <deployment_id> \
+  --artifact <artifact_id> \
+  --version 1 \
+  --binding local.report=local.report
+```
+
+If no suggestion is present, do not guess an account-like source binding; inspect
+sources and choose the concrete source explicitly.
+
 ## Object Model
 
 - **Source**: owner of capabilities, such as `wf.std` or `everything.default`.

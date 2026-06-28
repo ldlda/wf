@@ -19,6 +19,7 @@ def schema_command(
     verbose: bool = typer.Option(
         False,
         "--verbose",
+        "--full",
         "-v",
         help="Print complete valid JSON Schema; output may be large.",
     ),

@@ -271,6 +271,10 @@ stable.
 - Completed: canonical TOML path strings replace structural JSON path objects
   in workflow drafts. Paths now emit as `"input.text"`, `"state.echoed"`,
   `"message"` (local) instead of `{"root": "input", "parts": ["text"]}`.
+- Completed: challenge-driven CLI UX fixes now provide exact available
+  deployment binding suggestions, reject bare `--bind-output` state targets
+  before RPC with compact guidance, and accept `wf schema --full` as an alias
+  for `--verbose`.
 
 ## Historical References
 

@@ -134,6 +134,18 @@ availability, durable run counts/latest run, admin counts, auth record count,
 and desired registry count when the target exposes those surfaces. It does not
 return auth payload values, trace entries, or checkpoint state.
 
+Schema discovery:
+
+```bash
+wf schema
+wf schema draft
+wf schema raw --verbose
+wf schema raw --full
+```
+
+`--full` is an alias for `--verbose`; docs use `--verbose` as the canonical
+flag.
+
 ### Diagnose A Source
 
 Use `wf source diagnose <source_id>` to inspect source health before calling
@@ -477,6 +489,9 @@ wf artifact create-from-plan workflow.plan.json \
 
 Prefer draft workspaces for iterative authoring. Use `create-from-plan` when a
 compiler, fixture, or advanced client already has a complete raw workflow plan.
+Artifact save responses include `required_logical_sources` and may include
+`suggested_bindings`. Copy suggested bindings into `wf deploy save --binding`
+when they are present; otherwise choose the concrete source/account explicitly.
 
 Delete an unreferenced artifact version:
 

@@ -10,6 +10,7 @@ from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_value
 from wf_cli.remote_errors import run_cli_operation
+from wf_core.paths import LocalPath, PathResolutionError, StatePath
 
 
 def _parse_assignment_flags(
@@ -35,6 +36,30 @@ def _parse_map_flags(values: list[str] | None) -> dict[str, str]:
         option_name="--map",
         expected="source=target",
     )
+
+
+def _parse_output_map_flags(values: list[str] | None) -> dict[str, str]:
+    parsed = _parse_assignment_flags(
+        values,
+        option_name="--bind-output",
+        expected="LOCAL_OUTPUT=STATE_TARGET",
+    )
+    for local_output, state_target in parsed.items():
+        try:
+            LocalPath.parse(local_output)
+        except PathResolutionError as exc:
+            raise typer.BadParameter(
+                f"--bind-output source {local_output!r} must be a node-local "
+                "output path such as value or ."
+            ) from exc
+        try:
+            StatePath.parse(state_target)
+        except PathResolutionError as exc:
+            raise typer.BadParameter(
+                f"--bind-output target {state_target!r} must be a state path "
+                "such as state.value"
+            ) from exc
+    return parsed
 
 
 def _parse_route_flags(values: list[str] | None) -> dict[str, str]:
@@ -396,7 +421,7 @@ def add_step_from_capability(
     want, then run `wf draft validate <workspace_id>`.
     """
     input_map = _parse_map_flags(input_mapping)
-    bind_outputs = _parse_map_flags(output_mapping)
+    bind_outputs = _parse_output_map_flags(output_mapping)
     routes = _parse_route_flags(route)
     context = load_cli_context(ctx)
     emit_json(

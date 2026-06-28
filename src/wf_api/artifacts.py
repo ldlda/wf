@@ -199,7 +199,10 @@ class WorkflowArtifactApi:
             "version": workflow_artifact.version,
             "saved": True,
             "required_logical_sources": required_sources,
-            "suggested_bindings": _suggested_self_bindings(required_sources),
+            "suggested_bindings": _suggested_self_bindings(
+                required_sources,
+                self.context.specs.capability_sources,
+            ),
         }
 
     async def create_artifact_from_workspace(
@@ -302,9 +305,23 @@ class WorkflowArtifactApi:
         }
 
 
-def _suggested_self_bindings(required_sources: Sequence[str]) -> dict[str, str]:
-    """Suggest local bindings for external sources that deploy to themselves."""
-    return {}
+def _suggested_self_bindings(
+    required_sources: Sequence[str],
+    sources: Mapping[str, CapabilitySource],
+) -> dict[str, str]:
+    """Suggest only exact, enabled concrete sources as deployment bindings.
+
+    Ambiguous logical sources such as ``drive`` with multiple concrete accounts
+    must stay unsuggested. Exact ids such as ``local.report`` are safe because
+    the same source is already present in the active inventory.
+    """
+    return {
+        source_id: source_id
+        for source_id in required_sources
+        if (source := sources.get(source_id)) is not None
+        and source.enabled
+        and source.policy.binding_required
+    }
 
 
 def _binding_required_sources(

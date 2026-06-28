@@ -76,7 +76,8 @@ Use public CLI surfaces before broader documentation or implementation search:
 6. `wf explain <diagnostic-code>` after validation failures
 
 Use `wf schema <name> --verbose` only when the complete JSON Schema is required;
-the default compact outline is preferred for agent context.
+the default compact outline is preferred for agent context. `--full` is accepted
+as an alias for `--verbose`.
 
 For `draft set-input` and `draft set-output`, repeated `--map` flags in one
 command define the complete replacement map. If you split map edits across
@@ -121,13 +122,15 @@ top-level `compiled_plan` key from the CLI output.
 - Use `wf schema draft`, `wf schema raw`, or `wf schema <Component>` for compact
   JSON guidance before authoring.
 - Add `--verbose` only when a complete JSON Schema document is required; it may
-  be large.
+  be large. `--full` is an alias if you already tried that spelling.
 - Prefer `wf schema` over searching tests or implementation code for draft/raw
   plan shape.
 - Treat compact schema output as authoring guidance; use validation commands as
   the source of truth for a concrete document.
 - If public commands and supplied skills are insufficient, report the exact
   blocker instead of guessing undocumented fields.
+- When artifact save returns `suggested_bindings`, copy those values into
+  `wf deploy save --binding`; otherwise choose the concrete source explicitly.
 - `status: invalid` from a draft edit is not always a command failure. Inspect
   diagnostics and continue repairing the same workspace unless the command
   reports a conflict or malformed patch.

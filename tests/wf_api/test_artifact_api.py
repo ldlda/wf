@@ -185,6 +185,32 @@ async def test_create_artifact_from_plan_saves_with_observed_node_specs(
     assert saved.id == "echo"
 
 
+@pytest.mark.asyncio
+async def test_create_artifact_from_workspace_suggests_exact_available_source_binding(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "artifacts_binding_hint")
+    api, service = _artifact_api(artifact_store, register_echo=True)
+    from wf_api.drafts import WorkflowDraftApi
+
+    drafts_api = WorkflowDraftApi(context_from_service(service))
+    await drafts_api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
+    )
+
+    result = await api.create_artifact_from_workspace(
+        workspace_id="echo_ws",
+        artifact_id="echo",
+        version=1,
+        title="Echo",
+        outcomes=("completed",),
+    )
+
+    assert result["required_logical_sources"] == ["demo.personal"]
+    assert result["suggested_bindings"] == {"demo.personal": "demo.personal"}
+
+
 async def test_create_artifact_from_workspace_returns_saved_false_when_invalid(
     tmp_path: Path,
 ) -> None:

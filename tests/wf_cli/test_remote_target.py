@@ -1290,6 +1290,55 @@ def test_wf_draft_add_step_from_capability_uses_rpc_target(
     assert payload["status"] == "valid"
 
 
+def test_wf_draft_add_step_reports_bare_output_target_without_traceback(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "add_step_ws",
+            "--capability",
+            "wf.std.constant",
+            "--name",
+            "add_step",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+
+    result = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "add-step",
+            "add_step_ws",
+            "--revision",
+            "1",
+            "--step",
+            "second",
+            "--capability",
+            "wf.std.constant",
+            "--bind-output",
+            "value=value",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Traceback" not in result.output
+    assert "--bind-output" in result.output
+    assert "state.value" in result.output
+
+
 def test_wf_draft_compile_prints_compiled_plan(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)

@@ -96,6 +96,10 @@ def test_schema_verbose_root_is_valid_json_schema() -> None:
     assert payload["title"] == "RawWorkflowPlan"
 
 
+def test_schema_full_alias_matches_verbose() -> None:
+    assert _json_result("raw", "--full") == _json_result("raw", "--verbose")
+
+
 def test_schema_verbose_component_is_self_contained() -> None:
     payload = _json_result("NodeUse", "--verbose")
 
