@@ -298,6 +298,19 @@ stable.
   Implementation plan:
   [`required-only wrapper inputs`](historical/superpowers/plans/2026-06-29-required-only-wrapper-inputs.md).
 
+Planned challenge-driven UX follow-ups:
+
+- Improve `wf draft set-input` diagnostics when agents write local targets as
+  `local.x`; the command expects bare local field names such as `x`.
+- Improve `wf draft add-step --route` diagnostics when agents route undeclared
+  outcomes, for example `error=fail` on a single-`ok` capability. The error
+  should include declared outcomes and a compact repair hint.
+- Add an explicit re-invocation regression for idempotent
+  `wf draft bind input.x -> local.x` / `state.x -> local.x` repairs.
+- Design a separate composite-binding/data-shaping slice for cases such as
+  mapping state fields into a structured `report` object. Do not hide this
+  behind the existing path binding syntax without a deliberate model.
+
 ## Historical References
 
 - [`wf_api extraction roadmap`](historical/superpowers/plans/2026-06-01-wf-api-extraction-roadmap.md)
