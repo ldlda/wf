@@ -234,12 +234,15 @@ class WorkflowDraftAuthoringApi:
             target_schema = workspace.draft.get(schema_key, {})
             if not isinstance(target_schema, dict):
                 raise ValueError(f"draft {schema_key} must be an object")
-            projected = project_property_to_schema_path(
-                target_schema=target_schema,
-                source_schema=input_schema,
-                source_field=local_field,
-                target_parts=source_parts,
-            )
+            if _schema_path_exists(target_schema, source_parts):
+                projected = target_schema
+            else:
+                projected = project_property_to_schema_path(
+                    target_schema=target_schema,
+                    source_schema=input_schema,
+                    source_field=local_field,
+                    target_parts=source_parts,
+                )
             input_map = {
                 **_input_map_from_payload(step.get("input", [])),
                 source_path: local_field,
