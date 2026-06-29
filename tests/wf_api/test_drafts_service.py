@@ -602,6 +602,40 @@ async def test_bind_draft_workflow_input_to_step_input_reuses_existing_schema(
 
 
 @pytest.mark.asyncio
+async def test_bind_draft_workflow_input_to_step_input_can_repeat(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_bind_repeat")
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(workspace_id="bind_ws", draft=_echo_draft())
+
+    first = await authoring.bind_draft(
+        workspace_id="bind_ws",
+        revision=1,
+        step_id="echo",
+        source_path="input.text",
+        target_path="local.text",
+    )
+    second = await authoring.bind_draft(
+        workspace_id="bind_ws",
+        revision=first["revision"],
+        step_id="echo",
+        source_path="input.text",
+        target_path="local.text",
+    )
+    workspace = await api.get_draft_workspace(
+        workspace_id="bind_ws", include_draft=True
+    )
+
+    assert first["status"] == "valid"
+    assert second["status"] == "valid"
+    assert second["revision"] == 3
+    assert workspace["draft"]["steps"]["echo"]["input"] == [
+        {"target": "text", "path": "input.text"}
+    ]
+
+
+@pytest.mark.asyncio
 async def test_bind_draft_workflow_state_to_step_input_reuses_existing_schema(
     tmp_path: Path,
 ) -> None:
