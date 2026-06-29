@@ -196,7 +196,7 @@ class WorkflowDraftAuthoringApi:
         source_path: str,
         target_path: str,
     ) -> dict[str, Any]:
-        """Bind a graph path to/from one capability local field with schema projection."""
+        """Bind a graph path to/from one capability local field, projecting missing schema when needed."""
         workspace = self.drafts._draft_store().get_workspace(workspace_id)
         step = draft_step(workspace.draft, step_id)
         capability_name = step.get("use")

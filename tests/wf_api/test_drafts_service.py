@@ -541,7 +541,6 @@ async def test_facade_delegates_semantic_authoring_to_authoring_service(
 
 
 @pytest.mark.asyncio
-@pytest.mark.asyncio
 async def test_bind_draft_workflow_input_to_step_input_projects_input_schema(
     tmp_path: Path,
 ) -> None:
