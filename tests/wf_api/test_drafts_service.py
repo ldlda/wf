@@ -1421,3 +1421,257 @@ async def test_forward_route_becomes_valid_after_target_step_is_added(
     assert add_collect["revision"] == 3
     validated = await api.validate_draft_workspace(workspace_id="browser")
     assert validated["status"] == "valid"
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_local_output_to_workflow_output_lowers_through_state(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "drafts_bind_output_workflow_output"
+    )
+    api, service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="report",
+        draft={
+            "name": "report",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "render",
+            "steps": {
+                "render": {
+                    "use": "demo.personal.echo_tool",
+                    "input": [],
+                    "output": [],
+                }
+            },
+            "routes": {"render": {"ok": "__end__"}},
+        },
+    )
+
+    result = await authoring.bind_draft(
+        workspace_id="report",
+        revision=1,
+        step_id="render",
+        source_path="local.echoed",
+        target_path="output.echoed",
+    )
+
+    assert result["status"] == "valid"
+    workspace = await api.get_draft_workspace(workspace_id="report", include_draft=True)
+    assert workspace["draft"]["steps"]["render"]["output"] == [
+        {"source": "echoed", "target": "state.echoed"}
+    ]
+    assert workspace["draft"]["output"] == [
+        {"path": "state.echoed", "target": "echoed"}
+    ]
+    assert (
+        workspace["draft"]["state_schema"]["properties"]["echoed"]["type"] == "string"
+    )
+    assert (
+        workspace["draft"]["output_schema"]["properties"]["echoed"]["type"] == "string"
+    )
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_local_output_to_workflow_output_reuses_compatible_state(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "drafts_bind_existing_output_state"
+    )
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="report",
+        draft={
+            "name": "report",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {
+                "type": "object",
+                "properties": {
+                    "echoed": {
+                        "description": "Echoed text",
+                        "title": "Echoed",
+                        "type": "string",
+                    }
+                },
+            },
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "render",
+            "steps": {
+                "render": {
+                    "use": "demo.personal.echo_tool",
+                    "input": [],
+                    "output": [{"source": "echoed", "target": "state.echoed"}],
+                }
+            },
+            "routes": {"render": {"ok": "__end__"}},
+        },
+    )
+
+    result = await authoring.bind_draft(
+        workspace_id="report",
+        revision=1,
+        step_id="render",
+        source_path="local.echoed",
+        target_path="output.echoed",
+    )
+
+    assert result["status"] == "valid"
+    workspace = await api.get_draft_workspace(workspace_id="report", include_draft=True)
+    assert workspace["draft"]["steps"]["render"]["output"] == [
+        {"source": "echoed", "target": "state.echoed"}
+    ]
+    assert workspace["draft"]["output"] == [
+        {"path": "state.echoed", "target": "echoed"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_local_output_to_quoted_workflow_output_field(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_bind_quoted_output")
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    draft = _echo_draft()
+    draft["state_schema"] = {"type": "object", "properties": {}}
+    draft["output_schema"] = {"type": "object", "properties": {}}
+    draft["steps"]["echo"]["output"] = []
+    await api.create_draft_workspace(workspace_id="quoted", draft=draft)
+
+    result = await authoring.bind_draft(
+        workspace_id="quoted",
+        revision=1,
+        step_id="echo",
+        source_path="local.echoed",
+        target_path='output."public.echoed"',
+    )
+
+    assert result["status"] == "valid"
+    workspace = await api.get_draft_workspace(workspace_id="quoted", include_draft=True)
+    assert workspace["draft"]["steps"]["echo"]["output"] == [
+        {"source": "echoed", "target": 'state."public.echoed"'}
+    ]
+    assert workspace["draft"]["output"] == [
+        {"path": 'state."public.echoed"', "target": '"public.echoed"'}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_validate_draft_workspace_omits_unusable_nested_input_repair_hint(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "drafts_nested_input_schema_hint"
+    )
+    api, _service, _authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="nested_ws",
+        draft={
+            "name": "nested",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "call",
+            "steps": {
+                "call": {
+                    "use": "demo.personal.echo_tool",
+                    "input": [{"target": "payload.text", "path": "input.undeclared"}],
+                    "output": [],
+                }
+            },
+            "routes": {"call": {"ok": "__end__"}},
+        },
+    )
+
+    payload = await api.validate_draft_workspace(workspace_id="nested_ws")
+
+    diagnostic = next(
+        item for item in payload["diagnostics"] if item["code"] == "invalid_source_path"
+    )
+    assert "repair_hint" not in diagnostic
+
+
+@pytest.mark.asyncio
+async def test_validate_draft_workspace_details_invalid_input_source_path(
+    tmp_path: Path,
+) -> None:
+    """invalid_source_path on a step input must carry step_id, source_path, target_field."""
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "drafts_invalid_source_details"
+    )
+    api, service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="wait_ws",
+        draft={
+            "name": "wait",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "wait",
+            "steps": {
+                "wait": {
+                    "use": "demo.personal.echo_tool",
+                    "input": [
+                        {
+                            "target": "text",
+                            "path": "input.undeclared",
+                        }
+                    ],
+                    "output": [],
+                }
+            },
+            "routes": {"wait": {"ok": "__end__"}},
+        },
+    )
+
+    payload = await api.validate_draft_workspace(workspace_id="wait_ws")
+
+    diagnostic = payload["diagnostics"][0]
+    assert diagnostic["code"] == "invalid_source_path"
+    assert diagnostic["step_id"] == "wait"
+    assert diagnostic["details"]["source_path"] == "input.undeclared"
+    assert diagnostic["details"]["target_field"] == "text"
+
+
+@pytest.mark.asyncio
+async def test_validate_draft_workspace_hints_input_schema_projection(
+    tmp_path: Path,
+) -> None:
+    """invalid_source_path with input.* source must produce a repair_hint."""
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_input_schema_hint")
+    api, service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="wait_ws",
+        draft={
+            "name": "wait",
+            "input_schema": {"type": "object", "properties": {}},
+            "state_schema": {"type": "object", "properties": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "start": "wait",
+            "steps": {
+                "wait": {
+                    "use": "demo.personal.echo_tool",
+                    "input": [
+                        {
+                            "target": "text",
+                            "path": "input.undeclared",
+                        }
+                    ],
+                    "output": [],
+                }
+            },
+            "routes": {"wait": {"ok": "__end__"}},
+        },
+    )
+
+    payload = await api.validate_draft_workspace(workspace_id="wait_ws")
+
+    diagnostic = payload["diagnostics"][0]
+    assert diagnostic["code"] == "invalid_source_path"
+    assert diagnostic["step_id"] == "wait"
+    assert diagnostic["repair_hint"] == (
+        "wf draft bind wait_ws --revision 1 "
+        "--step wait --from input.undeclared --to local.text"
+    )

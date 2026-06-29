@@ -17,7 +17,7 @@
 - Test: `tests/wf_api/test_drafts_service.py`
 - Test: `tests/wf_cli/test_remote_target.py`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add a capability-backed `render` step whose capability output schema declares `markdown`. Call:
 
@@ -46,7 +46,7 @@ assert workspace["draft"]["state_schema"]["properties"]["markdown"]["type"] == "
 assert workspace["draft"]["output_schema"]["properties"]["markdown"]["type"] == "string"
 ```
 
-- [ ] **Step 2: Run tests RED**
+- [x] **Step 2: Run tests RED**
 
 Run:
 
@@ -56,7 +56,7 @@ uv run pytest tests/wf_api/test_drafts_service.py::test_bind_draft_local_output_
 
 Expected: fail because current code writes an illegal `output.*` node destination.
 
-- [ ] **Step 3: Implement hint branch**
+- [x] **Step 3: Implement hint branch**
 
 In `WorkflowDraftAuthoringApi.bind_draft`, split the existing local-output branch:
 
@@ -71,11 +71,11 @@ if source_root == "local" and target_root == "output":
 
 Use `project_property_to_schema_path` for both schemas so `$defs` are preserved. Do not create a node output binding with an `output.*` target; `OutputBinding.target` is `StatePath`.
 
-- [ ] **Step 4: Run tests GREEN**
+- [x] **Step 4: Run tests GREEN**
 
 Run the test from Step 2. Expected: pass with `status: valid`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Prepare for the integration commit**
 
 ```powershell
 git add src/wf_api/draft_authoring.py tests/wf_api/test_drafts_service.py tests/wf_cli/test_remote_target.py
@@ -89,7 +89,7 @@ git commit -m "fix: lower workflow output binds through state"
 - Modify: `src/wf_api/drafts.py`
 - Test: `tests/wf_api/test_drafts_service.py`
 
-- [ ] **Step 1: Add diagnostic details**
+- [x] **Step 1: Add diagnostic details**
 
 When core reports `invalid_source_path` for a step input path like `steps.wait.input[0].path`, draft diagnostics should include enough details to build a hint:
 
@@ -103,7 +103,7 @@ When core reports `invalid_source_path` for a step input path like `steps.wait.i
 
 Write a failing test that validates a draft using `input.simulate` without declaring `input_schema.properties.simulate` and asserts those details exist.
 
-- [ ] **Step 2: Run test RED**
+- [x] **Step 2: Run test RED**
 
 Run:
 
@@ -113,7 +113,7 @@ uv run pytest tests/wf_api/test_drafts_service.py::test_validate_draft_workspace
 
 Expected: fail because details are missing or incomplete.
 
-- [ ] **Step 3: Add repair hint**
+- [x] **Step 3: Add repair hint**
 
 In `_draft_repair_hint`, if code is `invalid_source_path`, details include a step id, and `source_path` starts with `input.`, return:
 
@@ -123,7 +123,7 @@ wf draft bind <workspace> --revision <n> --step <step_id> --from input.<field> -
 
 This command declares the workflow input schema field from the capability input field and merges the step input binding.
 
-- [ ] **Step 4: Run tests GREEN**
+- [x] **Step 4: Run tests GREEN**
 
 Run:
 
@@ -131,7 +131,7 @@ Run:
 uv run pytest tests/wf_api/test_drafts_service.py::test_validate_draft_workspace_details_invalid_input_source_path tests/wf_api/test_drafts_service.py::test_validate_draft_workspace_hints_input_schema_projection -q
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Prepare for the integration commit**
 
 ```powershell
 git add src/wf_artifacts/drafts/api.py src/wf_api/drafts.py tests/wf_api/test_drafts_service.py
@@ -146,7 +146,7 @@ git commit -m "fix: hint workflow input schema repairs"
 - Modify: `skills/wf-workflow/references/draft-workspaces.md`
 - Modify: `docs/current_roadmap.md`
 
-- [ ] **Step 1: Add repair-hint examples**
+- [x] **Step 1: Add repair-hint examples**
 
 Document:
 
@@ -156,7 +156,7 @@ wf draft bind report_ws --revision 5 --step render --from local.markdown --to ou
 wf draft set-workflow-output report_ws --revision 6 --map state.markdown=markdown
 ```
 
-- [ ] **Step 2: Add skill rule**
+- [x] **Step 2: Add skill rule**
 
 Add:
 
@@ -164,7 +164,7 @@ Add:
 When validation gives a `repair_hint`, run that exact focused command before JSON Patch. Use `wf draft bind local.x -> output.y` when one capability output should become public workflow output; it creates the required state intermediary and schemas atomically.
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -174,7 +174,7 @@ uv run ruff check src/wf_api src/wf_artifacts tests/wf_api tests/wf_cli
 uv run basedpyright --level error src/wf_api/drafts.py src/wf_artifacts/drafts/api.py tests/wf_api/test_drafts_service.py
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Prepare for the integration commit**
 
 ```powershell
 git add docs/wf_cli.md skills/wf-cli/SKILL.md skills/wf-workflow/references/draft-workspaces.md docs/current_roadmap.md

@@ -12,7 +12,12 @@ from wf_core.models.steps import (
     InputBinding,
     OutputBinding,
 )
-from wf_core.paths import GraphSourcePath, LocalPath
+from wf_core.paths import (
+    GraphSourcePath,
+    LocalPath,
+    format_toml_path_segments,
+    parse_toml_path_segments,
+)
 
 from .constants import (
     DEFAULT_CALL_STEP_ID,
@@ -190,11 +195,19 @@ class WorkflowDraftAuthoringApi:
             if not source_path.startswith("local.")
             else ("local", LocalPath.parse(source_path).parts)
         )
-        target_root, target_parts = (
-            _graph_parts(target_path)
-            if not target_path.startswith("local.")
-            else ("local", LocalPath.parse(target_path).parts)
-        )
+        if target_path.startswith("output."):
+            # GraphSourcePath excludes output targets, but output fields still
+            # use the same canonical TOML-key grammar as other workflow paths.
+            output_path_parts = parse_toml_path_segments(target_path)
+            target_root = output_path_parts[0]
+            target_parts = output_path_parts[1:]
+            if target_root != "output" or not target_parts:
+                raise ValueError("output path must name a field, such as output.result")
+        elif target_path.startswith("local."):
+            target_root = "local"
+            target_parts = LocalPath.parse(target_path).parts
+        else:
+            target_root, target_parts = _graph_parts(target_path)
 
         if target_root == "local" and source_root in {"input", "state"}:
             local_field = _local_field(target_path)
@@ -228,15 +241,89 @@ class WorkflowDraftAuthoringApi:
                 ],
             )
 
-        if source_root == "local" and target_root in {"state", "output"}:
+        if source_root == "local" and target_root == "output":
+            local_field = _local_field(source_path)
+            output_schema_source = (
+                spec.output_schema_contract or spec.output_model.model_json_schema()
+            )
+            state_path_str = format_toml_path_segments(("state", *target_parts))
+            output_target_str = format_toml_path_segments(target_parts)
+
+            state_schema = workspace.draft.get("state_schema", {})
+            if not isinstance(state_schema, dict):
+                raise ValueError("draft state_schema must be an object")
+            projected_state = project_property_to_schema_path(
+                target_schema=state_schema,
+                source_schema=output_schema_source,
+                source_field=local_field,
+                target_parts=target_parts,
+                allow_existing_equivalent=True,
+            )
+
+            output_schema = workspace.draft.get("output_schema", {})
+            if not isinstance(output_schema, dict):
+                raise ValueError("draft output_schema must be an object")
+            projected_output = project_property_to_schema_path(
+                target_schema=output_schema,
+                source_schema=output_schema_source,
+                source_field=local_field,
+                target_parts=target_parts,
+                allow_existing_equivalent=True,
+            )
+
+            output_map = {
+                **self.drafts._step_output_map(
+                    workspace_id=workspace_id, step_id=step_id
+                ),
+                local_field: state_path_str,
+            }
+
+            existing_output = workspace.draft.get("output")
+            if isinstance(existing_output, list):
+                output_bindings = [
+                    b
+                    for b in existing_output
+                    if not (
+                        isinstance(b, dict) and b.get("target") == output_target_str
+                    )
+                ]
+            else:
+                output_bindings = []
+            output_bindings.append(
+                {"path": state_path_str, "target": output_target_str}
+            )
+
+            return await self.drafts.patch_draft_workspace(
+                workspace_id=workspace_id,
+                revision=revision,
+                patch=[
+                    {
+                        "op": "replace",
+                        "path": "/state_schema",
+                        "value": projected_state,
+                    },
+                    {
+                        "op": "replace",
+                        "path": "/output_schema",
+                        "value": projected_output,
+                    },
+                    {
+                        "op": "replace",
+                        "path": f"/steps/{escape_json_pointer(step_id)}/output",
+                        "value": output_bindings_payload(output_map),
+                    },
+                    {"op": "replace", "path": "/output", "value": output_bindings},
+                ],
+            )
+
+        if source_root == "local" and target_root == "state":
             local_field = _local_field(source_path)
             output_schema = (
                 spec.output_schema_contract or spec.output_model.model_json_schema()
             )
-            schema_key = "state_schema" if target_root == "state" else "output_schema"
-            target_schema = workspace.draft.get(schema_key, {})
+            target_schema = workspace.draft.get("state_schema", {})
             if not isinstance(target_schema, dict):
-                raise ValueError(f"draft {schema_key} must be an object")
+                raise ValueError("draft state_schema must be an object")
             projected = project_property_to_schema_path(
                 target_schema=target_schema,
                 source_schema=output_schema,
@@ -253,7 +340,7 @@ class WorkflowDraftAuthoringApi:
                 workspace_id=workspace_id,
                 revision=revision,
                 patch=[
-                    {"op": "replace", "path": f"/{schema_key}", "value": projected},
+                    {"op": "replace", "path": "/state_schema", "value": projected},
                     {
                         "op": "replace",
                         "path": f"/steps/{escape_json_pointer(step_id)}/output",

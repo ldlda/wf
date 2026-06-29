@@ -344,7 +344,22 @@ use `input.*` or `state.*` to `local.*` for step inputs, and `local.*` to
 ```bash
 wf draft bind concat_ws --revision 9 --step call --from local.value --to state.value
 wf draft bind concat_ws --revision 9 --step call --from input.text --to local.text
+wf draft bind concat_ws --revision 9 --step call --from local.result --to output.result
 wf draft validate concat_ws
+```
+
+When validation gives a `repair_hint` with an exact focused `wf draft bind`
+command, run it before falling back to JSON Patch.
+
+Repair-hint examples:
+
+```bash
+# Declare an undeclared workflow input field and bind it to a step input
+wf draft bind report_ws --revision 4 --step read --from input.path --to local.path
+# Lower a capability output through state into workflow output
+wf draft bind report_ws --revision 5 --step render --from local.markdown --to output.markdown
+# Set workflow output independently (no schema projection)
+wf draft set-workflow-output report_ws --revision 6 --map state.markdown=markdown
 ```
 
 The command combines two common edits:

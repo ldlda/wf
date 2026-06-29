@@ -514,17 +514,31 @@ def _draft_repair_hint(
     workspace_id: str,
     revision: int,
 ) -> str | None:
-    if diagnostic.get("code") != "invalid_destination_path":
-        return None
+    code = diagnostic.get("code")
     step_id = diagnostic.get("step_id")
     details = diagnostic.get("details")
     if not isinstance(step_id, str) or not isinstance(details, dict):
         return None
-    output_field = details.get("output_field")
-    state_path = details.get("state_path")
-    if not isinstance(output_field, str) or not isinstance(state_path, str):
-        return None
-    return (
-        f"wf draft bind {workspace_id} --revision {revision} "
-        f"--step {step_id} --from local.{output_field} --to {state_path}"
-    )
+
+    if code == "invalid_destination_path":
+        output_field = details.get("output_field")
+        state_path = details.get("state_path")
+        if not isinstance(output_field, str) or not isinstance(state_path, str):
+            return None
+        return (
+            f"wf draft bind {workspace_id} --revision {revision} "
+            f"--step {step_id} --from local.{output_field} --to {state_path}"
+        )
+
+    if code == "invalid_source_path":
+        source_path = details.get("source_path")
+        target_field = details.get("target_field")
+        if not isinstance(source_path, str) or not isinstance(target_field, str):
+            return None
+        if source_path.startswith("input."):
+            return (
+                f"wf draft bind {workspace_id} --revision {revision} "
+                f"--step {step_id} --from {source_path} --to local.{target_field}"
+            )
+
+    return None

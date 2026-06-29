@@ -14,8 +14,13 @@ def project_property_to_schema_path(
     source_schema: JsonObject,
     source_field: str,
     target_parts: tuple[str, ...],
+    allow_existing_equivalent: bool = False,
 ) -> JsonObject:
-    """Copy one source property schema into a target JSON Schema object path."""
+    """Copy one source property schema into a target JSON Schema object path.
+
+    ``allow_existing_equivalent`` accepts exact schema equality only. It does
+    not attempt semantic JSON Schema compatibility analysis.
+    """
     if not target_parts:
         raise ValueError("target schema path must not be empty")
     _check_schema("target_schema", target_schema)
@@ -50,6 +55,11 @@ def project_property_to_schema_path(
     )
     leaf = target_parts[-1]
     if leaf in properties:
+        if allow_existing_equivalent and properties[leaf] == source_property:
+            _merge_definition_block(projected, source_schema, "$defs")
+            _merge_definition_block(projected, source_schema, "definitions")
+            _check_schema("projected target_schema", projected)
+            return projected
         raise ValueError(f"schema path {'.'.join(target_parts)!r} already exists")
     properties[leaf] = deepcopy(source_property)
 

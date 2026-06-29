@@ -9,7 +9,7 @@ import jsonpatch
 from pydantic import BaseModel, Field, ValidationError
 
 from wf_core.models.schemas import NodeDef
-from wf_core.models.steps import OutputBinding
+from wf_core.models.steps import InputPathBinding, OutputBinding
 from wf_core.models.workflow import Workflow
 from wf_core.validation.issues import ValidationIssue, ValidationIssueCode
 
@@ -155,6 +155,9 @@ def _format_location(location: tuple[object, ...]) -> str:
 _NODE_OUTPUT_TARGET_RE = re.compile(
     r"^nodes\[(?P<node_index>\d+)\]\.output\[(?P<output_index>\d+)\]\.target$"
 )
+_NODE_INPUT_PATH_RE = re.compile(
+    r"^nodes\[(?P<node_index>\d+)\]\.input\[(?P<input_index>\d+)\]\.path$"
+)
 
 
 def _diagnostics_from_workflow_issues(workflow: Workflow) -> list[DraftDiagnostic]:
@@ -191,8 +194,17 @@ def _details_for_issue(
     workflow: Workflow,
     issue: ValidationIssue,
 ) -> dict[str, Any]:
-    if issue.code is not ValidationIssueCode.INVALID_DESTINATION_PATH:
-        return {}
+    if issue.code is ValidationIssueCode.INVALID_DESTINATION_PATH:
+        return _details_for_invalid_destination(workflow, issue)
+    if issue.code is ValidationIssueCode.INVALID_SOURCE_PATH:
+        return _details_for_invalid_source(workflow, issue)
+    return {}
+
+
+def _details_for_invalid_destination(
+    workflow: Workflow,
+    issue: ValidationIssue,
+) -> dict[str, Any]:
     match = _NODE_OUTPUT_TARGET_RE.match(issue.path)
     if match is None:
         return {}
@@ -215,11 +227,42 @@ def _details_for_issue(
     }
 
 
+def _details_for_invalid_source(
+    workflow: Workflow,
+    issue: ValidationIssue,
+) -> dict[str, Any]:
+    """Extract step_input source_path and target_field for INVALID_SOURCE_PATH."""
+    match = _NODE_INPUT_PATH_RE.match(issue.path)
+    if match is None:
+        return {}
+    node_index = int(match.group("node_index"))
+    input_index = int(match.group("input_index"))
+    if node_index >= len(workflow.nodes):
+        return {}
+    inputs = getattr(workflow.nodes[node_index], "input", None)
+    if not isinstance(inputs, list) or input_index >= len(inputs):
+        return {}
+    binding = inputs[input_index]
+    if not isinstance(binding, InputPathBinding):
+        return {}
+    target_field = _single_local_path(binding.target)
+    if target_field is None:
+        return {}
+    return {
+        "source_path": str(binding.path),
+        "target_field": target_field,
+    }
+
+
 def _single_local_field(binding: OutputBinding) -> str | None:
+    return _single_local_path(binding.source)
+
+
+def _single_local_path(value: object) -> str | None:
     from wf_core.local_paths import LocalPathError, split_local_path
 
     try:
-        parts = split_local_path(binding.source)
+        parts = split_local_path(str(value))
     except LocalPathError:
         return None
     if len(parts) != 1:

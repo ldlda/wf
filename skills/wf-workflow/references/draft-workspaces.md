@@ -128,11 +128,15 @@ entries over multiple revisions.
   this over manual JSON Patch when validation says a target schema field is
   missing. The selected step must have `use` so the helper can find the
   capability schema. It intentionally rejects non-capability/control steps
-  instead of guessing.
+  instead of guessing. A `local.x -> output.y` bind is atomic: it projects the
+  capability field schema into both workflow state and output schemas, writes
+  `local.x -> state.y` on the step, and publishes `state.y -> output.y` at the
+  workflow boundary.
 
 ```bash
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to output.<field>
 wf draft validate <workspace_id>
 ```
 
@@ -176,7 +180,8 @@ an unexpected extra argument because it is not attached to its own flag.
   a `compiled_plan`.
 
 Validation repair hints are product guidance. If a diagnostic suggests
-`wf draft bind`, use it before hand-editing schemas or step bindings.
+`wf draft bind`, run that exact focused command before hand-editing schemas or
+step bindings, then validate the new revision.
 
 Remove commands are for recovery. They do not delete schema fields and
 `remove-step` does not remove inbound routes. Validate after removal and repair

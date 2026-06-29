@@ -280,11 +280,13 @@ stable.
   deployment binding suggestions, reject bare `--bind-output` state targets
   before RPC with compact guidance, and accept `wf schema --full` as an alias
   for `--verbose`.
-- Planned: close the next draft-authoring UX gaps found by debug challenge
-  runs: add a first-class workflow-level output command, improve schema-aware
-  `wf draft bind` discoverability and repair hints for workflow input/output
-  projection, and stop auto-binding optional capability inputs unless explicitly
-  requested or safely defaulted.
+- Completed: `wf draft bind local.x -> output.y` now lowers through state
+  atomically (projecting into both state_schema and output_schema), and
+  validation repair hints cover undeclared workflow input source paths.
+  Implementation plan:
+  [`bind repair hints`](historical/superpowers/plans/2026-06-29-draft-bind-repair-hints.md).
+- Planned: stop capability-backed draft creation from auto-binding optional
+  capability inputs unless they are explicitly requested or safely defaulted.
 
 ## Historical References
 

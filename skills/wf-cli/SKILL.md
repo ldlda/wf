@@ -54,9 +54,11 @@ wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <q
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
-When `wf draft validate` returns a `repair_hint`, prefer running that focused
-command before writing JSON Patch manually. Re-run `wf draft validate` after the
-repair.
+When `wf draft validate` returns a `repair_hint`, run that exact focused command
+before writing JSON Patch manually. Use `wf draft bind local.x -> output.y` when
+one capability output should become public workflow output; it creates the
+required state intermediary and projects the field schema into both state and
+output schemas atomically. Re-run `wf draft validate` after the repair.
 
 wf artifact create-from-plan workflow.plan.json --artifact <artifact_id> --version <n> --title <title>
 wf deploy save <deployment_id> --artifact <artifact_id> --version <n> --binding <logical>=<concrete>
