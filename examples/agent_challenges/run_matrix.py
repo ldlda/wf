@@ -45,7 +45,7 @@ class ModelProfile:
 DEFAULT_MODELS = (
     ModelProfile("opencode/deepseek-v4-flash-free", "max"),
     ModelProfile("opencode/mimo-v2.5-free", "high"),
-    ModelProfile("opencode/nemotron-3-ultra-free", "high"),
+    # ModelProfile("opencode/nemotron-3-ultra-free", "high"),
 )
 
 

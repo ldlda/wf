@@ -84,6 +84,14 @@ this line ends the list, because it has no indents.
 ```
 
 2. otherwise this will be "fixed" and renumbered to 1.
+
+<!-- in case -->
+9. we have come far
+   - notice the indents
+<!-- a blank line here is standard -->
+10. after this point
+    - the indent increases
+    - since the list marker is longer
 ````
 
 ### why not prettier? it does much more

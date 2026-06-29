@@ -127,6 +127,7 @@ def test_challenge_prompt_is_identical_across_profiles(tmp_path: Path) -> None:
     assert ".agent/skills" in rendered[InstructionProfile.SKILLS].text
     assert "inspect broader repository" in rendered[InstructionProfile.ALL].text
     assert "genuinely blocked" in rendered[InstructionProfile.DEBUG].text
+    assert "debug profile only" in rendered[InstructionProfile.DEBUG].text
     assert "ux_issues_found" in rendered[InstructionProfile.DEBUG].text
 
 

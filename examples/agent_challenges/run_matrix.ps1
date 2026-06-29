@@ -5,8 +5,8 @@ param(
     [int]$TimeoutSeconds = 3600,
     [object[]]$models = @( # object[] because ModelProfile is not known yet
         [ModelProfile]::new("opencode/deepseek-v4-flash-free", "max"),
-        [ModelProfile]::new("opencode/mimo-v2.5-free", "high"),
-        [ModelProfile]::new("opencode/nemotron-3-ultra-free", "high")
+        [ModelProfile]::new("opencode/mimo-v2.5-free", "high")
+        # [ModelProfile]::new("opencode/nemotron-3-ultra-free", "high")
     )
 )
 

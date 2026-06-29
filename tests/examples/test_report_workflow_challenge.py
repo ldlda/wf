@@ -40,7 +40,7 @@ def test_report_challenge_prompt_requires_full_product_lifecycle() -> None:
     assert "render_markdown_report" in prompt
     assert "deployment" in prompt.lower()
     assert "run_id" in prompt
-    assert "ux_issues_found: []" in prompt
+    assert "Debug profile only: include ux_issues_found here" in prompt
 
 
 def test_report_challenge_workspace_template_contains_safe_input_files(

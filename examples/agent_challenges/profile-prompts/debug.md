@@ -23,8 +23,10 @@ honestly in the `read` flags and explain why. Never read or copy adjacent trial
 answers, prior result files, prior stores, or complete ready-made solution plans
 for the same challenge.
 
-In the final `challenge_report`, include a `ux_issues_found` list. Use an empty
-list if there were no issues. Each issue should be concrete and evidence-backed:
+For this debug profile only, extend the final `challenge_report` YAML with a
+top-level `ux_issues_found` list next to `missed_requirements` and `notes`. Use
+an empty list if there were no issues. Each issue should be concrete and
+evidence-backed:
 
 ```yaml
 ux_issues_found:
