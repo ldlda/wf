@@ -1097,9 +1097,7 @@ async def test_add_step_rejects_unknown_single_outcome_route_with_repair(
 async def test_add_step_rejects_missing_outcomes_only_with_repair(
     tmp_path: Path,
 ) -> None:
-    artifact_store = FileWorkflowArtifactStore(
-        tmp_path / "drafts_missing_outcome_only"
-    )
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_missing_outcome_only")
     api, service, authoring = _draft_api(artifact_store, register_echo=True)
     service.register_specs("demo.personal", _snapshot_tool)
     await api.create_draft_workspace(
