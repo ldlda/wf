@@ -572,6 +572,79 @@ async def test_bind_draft_workflow_input_to_step_input_projects_input_schema(
 
 
 @pytest.mark.asyncio
+async def test_bind_draft_workflow_input_to_step_input_reuses_existing_schema(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "drafts_bind_existing_input_schema"
+    )
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="bind_ws",
+        draft=_echo_draft(),
+    )
+
+    result = await authoring.bind_draft(
+        workspace_id="bind_ws",
+        revision=1,
+        step_id="echo",
+        source_path="input.text",
+        target_path="local.text",
+    )
+    workspace = await api.get_draft_workspace(
+        workspace_id="bind_ws", include_draft=True
+    )
+
+    assert result["status"] == "valid", result["diagnostics"]
+    assert result["revision"] == 2
+    assert workspace["draft"]["steps"]["echo"]["input"] == [
+        {"target": "text", "path": "input.text"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_workflow_state_to_step_input_reuses_existing_schema(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "drafts_bind_existing_state_schema"
+    )
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    draft = {
+        **_echo_draft(),
+        "state_schema": {
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+        },
+        "steps": {
+            "echo": {
+                "use": "demo.personal.echo_tool",
+                "input": [],
+                "output": [],
+            }
+        },
+    }
+    await api.create_draft_workspace(workspace_id="bind_ws", draft=draft)
+
+    result = await authoring.bind_draft(
+        workspace_id="bind_ws",
+        revision=1,
+        step_id="echo",
+        source_path="state.text",
+        target_path="local.text",
+    )
+    workspace = await api.get_draft_workspace(
+        workspace_id="bind_ws", include_draft=True
+    )
+
+    assert result["status"] == "valid", result["diagnostics"]
+    assert result["revision"] == 2
+    assert workspace["draft"]["steps"]["echo"]["input"] == [
+        {"target": "text", "path": "state.text"}
+    ]
+
+
+@pytest.mark.asyncio
 async def test_bind_draft_output_to_nested_state_projects_state_schema(
     tmp_path: Path,
 ) -> None:
