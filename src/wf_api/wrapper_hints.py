@@ -104,9 +104,14 @@ def wrapper_hints_for_capability(
     create routes by itself.
     """
     input_properties = _object_properties(input_schema)
+    required_input_fields = _required_property_names(input_schema)
     hint_output_schema = workflow_output_schema_for_authoring(output_schema)
     output_properties = _object_properties(hint_output_schema)
-    input_map = {f"input.{name}": name for name in sorted(input_properties)}
+    input_map = {
+        f"input.{name}": name
+        for name in sorted(input_properties)
+        if name in required_input_fields
+    }
     output_map_properties = _default_output_map_properties(
         output_schema, output_properties
     )
@@ -146,6 +151,11 @@ def wrapper_hints_for_capability(
             "inference is not automatic."
         ),
     ]
+    notes.extend(
+        f"Optional input {name!r} is not auto-bound; bind it explicitly if needed."
+        for name in sorted(input_properties)
+        if name not in required_input_fields
+    )
     if _has_raw_mcp_content(output_schema):
         notes.append(
             "Raw MCP content blocks are not workflow-shaped. Use an explicit "
@@ -192,6 +202,14 @@ def _object_properties(schema: JsonObject) -> dict[str, JsonObject]:
         for name, value in properties.items()
         if isinstance(value, dict)
     }
+
+
+def _required_property_names(schema: JsonObject) -> set[str]:
+    """Return well-formed top-level JSON Schema required property names."""
+    required = schema.get("required")
+    if not isinstance(required, list):
+        return set()
+    return {name for name in required if isinstance(name, str)}
 
 
 def _schema_with_local_definitions(

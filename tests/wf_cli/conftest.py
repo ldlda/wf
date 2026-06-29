@@ -29,6 +29,7 @@ from wf_authoring import node
 
 class EchoInput(BaseModel):
     text: str
+    path: str | None = None
 
 
 class EchoOutput(BaseModel):

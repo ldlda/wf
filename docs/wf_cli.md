@@ -276,6 +276,18 @@ Create a draft from a capability:
 wf draft create concat_ws --capability wf.std.concat --name concat_ws
 ```
 
+Capability-backed draft creation auto-binds required capability inputs only.
+Optional inputs remain available in the workflow input schema but are not wired
+to the step until explicitly requested. Bind one when the workflow should
+expose it:
+
+```bash
+wf draft bind report_ws --revision 2 --step call --from input.path --to local.path
+```
+
+Use `wf draft set-input --merge` instead when adding several explicit mappings
+to an existing step input map.
+
 List and inspect drafts:
 
 ```bash

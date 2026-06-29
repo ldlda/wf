@@ -1221,7 +1221,7 @@ async def test_set_workflow_output_map_merges_top_level_output(tmp_path: Path) -
 
 
 class _OpenClickPageInput(BaseModel):
-    pass
+    open_browser: bool = False
 
 
 class _OpenClickPageOutput(BaseModel):
@@ -1287,6 +1287,29 @@ def _browser_click_api(
     )
     context = context_from_service(service)
     return WorkflowApi(context), service
+
+
+@pytest.mark.asyncio
+async def test_create_draft_from_capability_does_not_bind_optional_inputs(
+    tmp_path: Path,
+) -> None:
+    api, _service = _browser_click_api(
+        FileWorkflowArtifactStore(tmp_path / "drafts_required_inputs")
+    )
+
+    created = await api.create_draft_workspace_from_capability(
+        workspace_id="browser",
+        capability_name="local.browser_click.open_click_page",
+        name="browser",
+    )
+    workspace = await api.get_draft_workspace(
+        workspace_id="browser",
+        include_draft=True,
+    )
+
+    assert created["wrapper_hints"]["input_map"] == {}
+    assert workspace["draft"]["steps"]["call"]["input"] == []
+    assert any("open_browser" in note for note in created["wrapper_hints"]["notes"])
 
 
 @pytest.mark.asyncio

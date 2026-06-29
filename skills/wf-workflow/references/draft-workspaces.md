@@ -62,6 +62,14 @@ Top-level workflow output uses `path` / `target`, not step-level
 4. Validate workspace.
 5. Save artifact or wrapper from workspace.
 
+Capability-backed creation auto-binds required capability inputs only. Optional
+inputs remain declared by the capability but are omitted from the initial step
+input map. Add one deliberately when the workflow should expose it:
+
+```bash
+wf draft bind report_ws --revision 2 --step call --from input.path --to local.path
+```
+
 If a patch returns `revision_conflict`, fetch the workspace again and retry
 against the latest revision.
 

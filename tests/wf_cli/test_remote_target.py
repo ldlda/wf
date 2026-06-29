@@ -991,6 +991,38 @@ def test_wf_local_uses_selected_config_sources(tmp_path: Path) -> None:
     }
 
 
+def test_wf_draft_create_reports_optional_inputs_without_binding(
+    tmp_path: Path,
+) -> None:
+    config_path = write_python_source_config(tmp_path)
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--local"]
+
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "echo_ws",
+            "--capability",
+            "local.ops.echo",
+        ],
+    )
+    inspected = runner.invoke(
+        app,
+        [*base_args, "draft", "inspect", "echo_ws", "--include-draft"],
+    )
+
+    assert created.exit_code == 0, created.output
+    assert inspected.exit_code == 0, inspected.output
+    created_payload = json.loads(created.output)
+    draft = json.loads(inspected.output)["draft"]
+    assert created_payload["wrapper_hints"]["input_map"] == {"input.text": "text"}
+    assert draft["steps"]["call"]["input"] == [{"path": "input.text", "target": "text"}]
+    assert any("path" in note for note in created_payload["wrapper_hints"]["notes"])
+
+
 def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)

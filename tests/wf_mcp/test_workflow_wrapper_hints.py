@@ -241,7 +241,11 @@ def test_wrapper_hints_keep_content_only_mcp_output_explicit() -> None:
 def test_wrapper_hints_mark_empty_output_schema_as_low_confidence() -> None:
     hints = wrapper_hints_for_capability(
         capability_name="demo.personal.no_output",
-        input_schema={"type": "object", "properties": {"text": {"type": "string"}}},
+        input_schema={
+            "type": "object",
+            "properties": {"text": {"type": "string"}},
+            "required": ["text"],
+        },
         output_schema={"type": "object", "properties": {}},
         outcomes=["ok"],
     )

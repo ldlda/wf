@@ -285,8 +285,10 @@ stable.
   validation repair hints cover undeclared workflow input source paths.
   Implementation plan:
   [`bind repair hints`](historical/superpowers/plans/2026-06-29-draft-bind-repair-hints.md).
-- Planned: stop capability-backed draft creation from auto-binding optional
-  capability inputs unless they are explicitly requested or safely defaulted.
+- Completed: capability-backed draft creation now auto-binds required inputs
+  only; optional inputs are surfaced in wrapper-hint notes for explicit binding.
+  Implementation plan:
+  [`required-only wrapper inputs`](historical/superpowers/plans/2026-06-29-required-only-wrapper-inputs.md).
 
 ## Historical References
 

@@ -16,7 +16,7 @@
 - Modify: `src/wf_api/wrapper_hints.py`
 - Test: `tests/wf_api/test_wrapper_hints.py` or `tests/wf_api/test_drafts_service.py`
 
-- [ ] **Step 1: Write failing test**
+- [x] **Step 1: Write failing test**
 
 Create an input schema with required `text` and optional `path`:
 
@@ -38,7 +38,7 @@ assert hints["input_map"] == {"input.text": "text"}
 assert "path" in hints["missing_decisions"] or any("path" in note for note in hints["notes"])
 ```
 
-- [ ] **Step 2: Run test RED**
+- [x] **Step 2: Run test RED**
 
 Run:
 
@@ -48,7 +48,7 @@ uv run pytest tests/wf_api/test_wrapper_hints.py::test_wrapper_hints_only_auto_b
 
 Expected: fail because optional `path` is currently auto-bound.
 
-- [ ] **Step 3: Implement required-only policy**
+- [x] **Step 3: Implement required-only policy**
 
 In wrapper hint input-map generation, compute:
 
@@ -69,11 +69,11 @@ f"Optional input {name!r} is not auto-bound; bind it explicitly if needed."
 
 Do not bind optional fields merely because they are present in the capability schema.
 
-- [ ] **Step 4: Run test GREEN**
+- [x] **Step 4: Run test GREEN**
 
 Run the test from Step 2. Expected: pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Prepare for the integration commit**
 
 ```powershell
 git add src/wf_api/wrapper_hints.py tests/wf_api/test_wrapper_hints.py
@@ -86,7 +86,7 @@ git commit -m "fix: avoid auto-binding optional wrapper inputs"
 - Test: `tests/wf_api/test_drafts_service.py`
 - Test: `tests/wf_cli/test_remote_target.py`
 
-- [ ] **Step 1: Add draft creation regression**
+- [x] **Step 1: Add draft creation regression**
 
 Use the browser-click or report source fixture. Create a draft from a capability with optional input fields and assert omitted optional fields are not in step input bindings.
 
@@ -96,17 +96,17 @@ Expected shape:
 assert {"path": "input.path", "target": "path"} not in workspace["draft"]["steps"]["call"]["input"]
 ```
 
-- [ ] **Step 2: Add CLI smoke**
+- [x] **Step 2: Add CLI smoke**
 
 For `wf draft create <id> --capability local.report.read_notes`, assert output JSON wrapper hints mention optional omitted input rather than creating a binding that later fails at run time.
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 ```powershell
 uv run pytest tests/wf_api/test_drafts_service.py::test_create_draft_from_capability_does_not_bind_optional_inputs tests/wf_cli/test_remote_target.py::test_wf_draft_create_reports_optional_inputs_without_binding -q
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Prepare for the integration commit**
 
 ```powershell
 git add tests/wf_api/test_drafts_service.py tests/wf_cli/test_remote_target.py
@@ -121,7 +121,7 @@ git commit -m "test: cover required-only wrapper input binding"
 - Modify: `skills/wf-workflow/references/draft-workspaces.md`
 - Modify: `docs/current_roadmap.md`
 
-- [ ] **Step 1: Document policy**
+- [x] **Step 1: Document policy**
 
 Add:
 
@@ -129,7 +129,7 @@ Add:
 Draft wrapper creation auto-binds required capability inputs only. Optional inputs must be bound explicitly with `wf draft bind` or `wf draft set-input --merge`.
 ```
 
-- [ ] **Step 2: Give explicit repair example**
+- [x] **Step 2: Give explicit repair example**
 
 Add:
 
@@ -137,7 +137,7 @@ Add:
 wf draft bind report_ws --revision 2 --step call --from input.path --to local.path
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run:
 
@@ -147,7 +147,7 @@ uv run ruff check src/wf_api tests/wf_api tests/wf_cli
 uv run basedpyright --level error src/wf_api/wrapper_hints.py tests/wf_api/test_drafts_service.py tests/wf_cli/test_remote_target.py
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Prepare for the integration commit**
 
 ```powershell
 git add docs/wf_cli.md skills/wf-cli/SKILL.md skills/wf-workflow/references/draft-workspaces.md docs/current_roadmap.md
