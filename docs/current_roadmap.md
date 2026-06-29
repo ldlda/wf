@@ -304,6 +304,29 @@ stable.
 - Completed: repeated idempotent `wf draft bind input/state -> local` behavior
   is covered by regression tests.
 
+Agent evaluation cohort policy and collection plan:
+
+- Treat trials collected while product code, prompts, fixtures, harness logic,
+  or workspace isolation were changing as formative evaluation. Preserve them
+  as qualitative evidence linking observed agent failures to product/harness
+  fixes, but do not pool their timing, token, or success metrics with a frozen
+  cohort.
+- The first frozen two-model matrix used product baseline `c926eb5`, two
+  challenges, `none|skills|all` profiles, one run per cell, concurrency 4, and
+  the same OpenCode/MCP tool environment. It produced 12/12 technical workflow
+  successes and 11/12 manually valid benchmark results; one run was invalidated
+  for using an existing solution.
+- Collect two additional runs per matrix cell next (`--trials 2`) to reach
+  N=3 per cell / 36 total frozen-matrix trials. Review and audit that cohort
+  before deciding whether to add two more runs per cell for N=5 / 60 total.
+- Keep product code, challenge prompts, supplied skill bundle, model variants,
+  timeout, concurrency, fixtures, and enabled tool set fixed during a cohort.
+  Roadmap/evaluation notes may evolve, but record the product baseline and
+  rendered prompt hashes with every result.
+- Keep manual audit authoritative for final pass/fail/invalid interpretation.
+  Automatic policy findings remain review inputs, not bespoke exceptions or
+  final benchmark outcomes.
+
 Planned challenge-driven UX follow-ups:
 
 - Design a separate composite-binding/data-shaping slice for cases such as
