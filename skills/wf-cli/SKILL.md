@@ -106,7 +106,7 @@ Repeat `--input` and `--bind-output` once per mapping. Do not put multiple
 mappings after one flag.
 
 ```bash
-wf draft add-step <workspace_id> --revision <n> --step render --capability local.report.render_markdown_report --input state.title=title --input state.summary=summary --bind-output markdown=state.markdown --bind-output title=state.title
+wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --input state.title=title --input state.summary=summary --bind-output markdown=state.markdown --bind-output title=state.title
 ```
 
 `wf draft compile` prints the raw plan JSON directly on success. Do not expect a

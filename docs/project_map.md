@@ -13,6 +13,8 @@ For a presentation-oriented summary of the current product path and demo flow,
 see [`workflow platform presentation`](add/2026-06-workflow-platform-presentation.md).
 For running and auditing external-agent workflow challenges, see
 [`agent challenge evaluation`](runbooks/agent-challenge-evaluation.md).
+For verified Python 3.14 dependency constraints and their removal criteria, see
+[`dependency compatibility`](runbooks/dependency-compatibility.md).
 
 ## Packages
 

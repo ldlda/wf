@@ -6,6 +6,9 @@ readme = "readme.md"
 authors = [{ name = "lda", email = "lda@ldlda.com" }]
 requires-python = ">=3.14"
 dependencies = [
+    # AnyIO 4.14.x exposes a FastMCP 3.4.2 stateful-proxy teardown bug.
+    # Remove after a FastMCP release includes PR #4363; see docs/runbooks/dependency-compatibility.md.
+    "anyio<4.14",
     "authlib>=1.7.0",
     "fastapi-jsonrpc>=3.5.0",
     "fastmcp>=3.2.4",

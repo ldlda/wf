@@ -76,7 +76,7 @@ deployment binding:
 wf deploy save <deployment_id> \
   --artifact <artifact_id> \
   --version 1 \
-  --binding local.report=local.report
+  --binding <logical_source>=<concrete_source>
 ```
 
 If no suggestion is present, do not guess an account-like source binding; inspect

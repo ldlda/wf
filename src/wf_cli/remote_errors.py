@@ -4,8 +4,8 @@ import asyncio
 from collections.abc import Coroutine
 from typing import Any, TypeVar
 
-import click
 import httpx
+import typer
 
 from wf_cli.context import CliContext
 
@@ -25,7 +25,10 @@ def run_cli_operation(context: CliContext, operation: Coroutine[Any, Any, T]) ->
     except (RuntimeError, httpx.HTTPError) as exc:
         if context.verbose:
             raise
-        raise click.ClickException(_operation_error_message(exc)) from exc
+        # Typer 0.26 vendors Click, so external ClickException classes bypass
+        # its formatter. Keep this boundary entirely on Typer's public API.
+        typer.echo(f"Error: {_operation_error_message(exc)}", err=True)
+        raise typer.Exit(code=1) from exc
 
 
 def _operation_error_message(exc: RuntimeError | httpx.HTTPError) -> str:
