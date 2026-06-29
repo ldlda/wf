@@ -190,7 +190,7 @@ def test_pydantic_accepts_path_strings_and_serializes_path_strings() -> None:
     assert python_dumped["local"] == "user"
 
 
-def test_path_json_schema_advertises_string_type() -> None:
+def test_path_json_schema_advertises_strings_and_structural_objects() -> None:
     class Payload(BaseModel):
         source: GraphSourcePath
         target: StatePath
@@ -198,9 +198,22 @@ def test_path_json_schema_advertises_string_type() -> None:
 
     schema = Payload.model_json_schema()
 
-    assert schema["properties"]["source"]["type"] == "string"
-    assert schema["properties"]["target"]["type"] == "string"
-    assert schema["properties"]["local"]["type"] == "string"
+    assert schema["properties"]["source"]["oneOf"][0]["type"] == "string"
+    assert schema["properties"]["source"]["oneOf"][1]["properties"]["root"]["enum"] == [
+        "input",
+        "state",
+        "context",
+    ]
+    assert schema["properties"]["target"]["oneOf"][0]["type"] == "string"
+    assert (
+        schema["properties"]["target"]["oneOf"][1]["properties"]["root"]["const"]
+        == "state"
+    )
+    assert schema["properties"]["local"]["oneOf"][0]["type"] == "string"
+    assert (
+        schema["properties"]["local"]["oneOf"][1]["properties"]["root"]["const"]
+        == "local"
+    )
 
 
 def test_condition_path_operand_serializes_path_as_string() -> None:
@@ -354,4 +367,15 @@ def test_path_models_serialize_strings_but_accept_structural_compat() -> None:
         "target": 'state."person name"',
         "local": '"payload.text"',
     }
-    assert Payload.model_json_schema()["properties"]["source"]["type"] == "string"
+    assert (
+        Payload.model_json_schema()["properties"]["source"]["oneOf"][0]["type"]
+        == "string"
+    )
+
+
+def test_json_encoded_structural_path_string_is_invalid() -> None:
+    class Payload(BaseModel):
+        source: GraphSourcePath
+
+    with pytest.raises(ValidationError, match="invalid TOML path"):
+        Payload.model_validate({"source": '{"root":"input","parts":["button_label"]}'})

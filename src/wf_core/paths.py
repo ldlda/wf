@@ -78,15 +78,47 @@ def format_toml_path_segments(parts: tuple[str, ...]) -> str:
     )
 
 
-def _path_json_schema(description: str) -> dict[str, Any]:
-    """Return the canonical string schema for path fields.
+def _path_json_schema(
+    description: str, *, roots: tuple[str, ...], allow_empty_parts: bool
+) -> dict[str, Any]:
+    """Return the public schema for path fields.
 
-    Structural objects remain input-only compatibility for persisted records.
-    New schemas and serializers expose the canonical TOML-key string form.
+    Strings are the canonical serialized form. Structural objects are still a
+    first-class input form, so the JSON Schema must advertise both; otherwise
+    machine clients tend to quote structural objects and produce invalid TOML
+    path strings.
     """
+    root_schema: dict[str, Any]
+    if len(roots) == 1:
+        root_schema = {"const": roots[0]}
+    else:
+        root_schema = {"enum": list(roots)}
+    min_items = 0 if allow_empty_parts else 1
     return {
-        "type": "string",
         "description": description,
+        "oneOf": [
+            {
+                "type": "string",
+                "description": "Canonical TOML-key path string.",
+            },
+            {
+                "type": "object",
+                "description": ("Structural path object accepted as input."),
+                "additionalProperties": False,
+                "required": ["root", "parts"],
+                "properties": {
+                    "root": {
+                        "type": "string",
+                        **root_schema,
+                    },
+                    "parts": {
+                        "type": "array",
+                        "items": {"type": "string", "minLength": 1},
+                        "minItems": min_items,
+                    },
+                },
+            },
+        ],
     }
 
 
@@ -185,6 +217,8 @@ class LocalPath:
     ) -> dict[str, Any]:
         return _path_json_schema(
             "Node-local path. Use the root marker `.` for the whole payload.",
+            roots=("local",),
+            allow_empty_parts=True,
         )
 
 
@@ -269,6 +303,8 @@ class GraphSourcePath:
     ) -> dict[str, Any]:
         return _path_json_schema(
             "Readable graph path rooted at input, state, or context.",
+            roots=("input", "state", "context"),
+            allow_empty_parts=True,
         )
 
 
@@ -334,7 +370,11 @@ class StatePath:
     def __get_pydantic_json_schema__(
         cls, _core_schema: core_schema.CoreSchema, _handler: object
     ) -> dict[str, Any]:
-        return _path_json_schema("Writable workflow state path.")
+        return _path_json_schema(
+            "Writable workflow state path.",
+            roots=("state",),
+            allow_empty_parts=False,
+        )
 
 
 def split_graph_path(path: str | GraphSourcePath | StatePath) -> tuple[str, list[str]]:

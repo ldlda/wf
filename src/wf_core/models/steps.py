@@ -18,15 +18,18 @@ class InputPathBinding(BaseModel):
 
     target: LocalPath = Field(
         description=(
-            "Node-local input path to populate. Use {'root': 'local', "
-            "'parts': ['field']} or {'root': 'local', 'parts': []} for the "
-            "whole node input payload."
+            "Node-local input path to populate. Prefer canonical strings such "
+            "as `field` or `.` for the whole node input payload. Structural "
+            "objects such as {'root': 'local', 'parts': ['field']} are also "
+            "accepted as input."
         )
     )
     path: GraphSourcePath = Field(
         description=(
             "Workflow source path to read from input, state, or context. "
-            "Example: {'root': 'input', 'parts': ['text']}."
+            "Prefer canonical strings such as `input.text` or `state.report`. "
+            "Structural objects such as {'root': 'input', 'parts': ['text']} "
+            "are also accepted as input."
         )
     )
 
@@ -67,14 +70,17 @@ class OutputBinding(BaseModel):
 
     source: LocalPath = Field(
         description=(
-            "Node-local output path to read. Use {'root': 'local', 'parts': []} "
-            "to write the whole node output payload."
+            "Node-local output path to read. Prefer canonical strings such as "
+            "`result` or `.` for the whole node output payload. Structural "
+            "objects such as {'root': 'local', 'parts': []} are also accepted "
+            "as input."
         )
     )
     target: StatePath = Field(
         description=(
             "Writable workflow state path. Bare state is invalid; use a field "
-            "path such as {'root': 'state', 'parts': ['echoed']}."
+            "path such as `state.echoed`. Structural objects such as "
+            "{'root': 'state', 'parts': ['echoed']} are also accepted as input."
         )
     )
 

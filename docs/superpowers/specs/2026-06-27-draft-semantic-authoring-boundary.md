@@ -313,12 +313,11 @@ formatter. The shared grammar must support quoted TOML keys for literal dots,
 spaces, and other non-bare segments. Parse errors identify the complete input
 and recommend quoting the invalid segment.
 
-Pydantic JSON schemas advertise path strings rather than the structural
-`{root, parts}` object. Serializers emit canonical strings. Validators continue
-to accept the structural object only as a read-compatibility path for existing
-persisted drafts, artifacts, and runs; new public examples and writes use
-strings. This is compatibility for real stored data, not a second documented
-syntax.
+Pydantic JSON schemas advertise both canonical path strings and structural
+`{root, parts}` objects. Serializers emit canonical strings. Validators continue
+to accept structural objects so machine clients and old persisted drafts,
+artifacts, and runs can use the explicit root/parts form; new public examples
+and writes prefer strings.
 
 ## Compatibility And Migration
 
@@ -346,7 +345,7 @@ shim is added without a real external caller.
 - an inferred route targets `__end__` unless explicitly overridden;
 - output binding still projects referenced schema definitions;
 - all path models parse and serialize the canonical TOML-key string grammar;
-- structural path objects remain readable but are not emitted;
+- structural path objects remain accepted input but are not emitted;
 - stored-workspace compile equals `compile_workflow_draft` output;
 - compile does not change revision, timestamps, status, or diagnostics.
 

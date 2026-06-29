@@ -280,9 +280,10 @@ stable.
 - Completed: challenge matrix operations now have compact OpenCode thread
   titles, policy handling for canonical skill-document reads, and a central
   `summarize_trials.py` command for audited result tables.
-- Completed: canonical TOML path strings replace structural JSON path objects
-  in workflow drafts. Paths now emit as `"input.text"`, `"state.echoed"`,
-  `"message"` (local) instead of `{"root": "input", "parts": ["text"]}`.
+- Completed: canonical TOML path strings are the emitted workflow path form.
+  Paths now serialize as `"input.text"`, `"state.echoed"`, and `"message"`
+  (local). Structural `{"root": "input", "parts": ["text"]}` path objects
+  remain accepted and are now advertised in generated schemas as an input form.
 - Completed: challenge-driven CLI UX fixes now provide exact available
   deployment binding suggestions, reject bare `--bind-output` state targets
   before RPC with compact guidance, and accept `wf schema --full` as an alias

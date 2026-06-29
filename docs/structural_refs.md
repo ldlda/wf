@@ -84,8 +84,9 @@ New canonical graph path JSON uses TOML-key strings:
 "input.message"
 ```
 
-Structural root/parts objects are still accepted at model-parse boundaries for
-old persisted records, but new schemas and new examples should emit strings.
+Structural root/parts objects are still accepted at model-parse boundaries and
+are advertised by generated schemas as an input form. Serializers and new
+examples should emit strings.
 Quote a segment when the field name itself contains a dot or space, for example
 `state."person.name"` or `state.person."full name"`.
 
