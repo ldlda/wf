@@ -140,6 +140,10 @@ top-level `compiled_plan` key from the CLI output.
   missing step, create the target step first or repair routes with
   `wf draft handle` / `wf draft branch`.
 - Do not use planning-session specs or implementation plans as user-facing runtime guidance.
+- `set-input --map` is `GRAPH_SOURCE=BARE_LOCAL_FIELD`; never prefix the target
+  with `local.`.
+- For `add-step --route`, route only outcomes reported by `wf cap inspect` or
+  the command error's `declared_outcomes` field.
 - Do not confuse draft shape with raw plan shape: drafts use `steps/routes/use`;
   raw plans use `nodes/edges/node`.
 - Use `wf schema` to list workflow document/component shapes.

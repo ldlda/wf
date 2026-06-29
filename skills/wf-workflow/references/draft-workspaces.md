@@ -119,7 +119,8 @@ For single-field `input.*` and `state.*` sources, missing public output schema
 fields are projected automatically from the source schema.
 
 `set-input` direction: `input.text=text` means graph source `input.text` maps to
-node-local target `local.text`.
+node-local target `local.text`. Targets are bare node-local field names; never
+prefix the target with `local.`.
 
 `set-output` direction: `text=state.text` means node-local source `local.text`
 maps to graph target `state.text`.
@@ -162,7 +163,10 @@ wf draft validate <workspace_id>
   `--route OUTCOME=TARGET` for each outcome; when omitted and the capability
   declares a single outcome, that outcome routes to `__end__`. Multi-outcome
   capabilities require exact route coverage; missing or unknown outcomes are
-  rejected before mutation. It still requires explicit choices; if you do not
+  rejected before mutation. When `add-step --route` rejects an outcome, the
+  error reports declared outcomes and direct add/remove repair guidance. Remove
+  unknown route entries and add one route for each missing declared outcome. It
+  still requires explicit choices; if you do not
   know a map, inspect the capability or run validation rather than guessing.
   Explicit top-level `--input input.x=x` and `--input state.x=x` mappings
   project the corresponding workflow input/state schema fields from the

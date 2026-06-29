@@ -328,7 +328,9 @@ wf draft compile concat_ws
 ```
 
 `set-input` maps graph source paths to node-local input fields:
-`input.text=text` means `input.text -> local.text`.
+`input.text=text` means `input.text -> local.text`. Targets are bare
+node-local field names: write `--map input.text=text`, not
+`--map input.text=local.text`.
 
 `set-output` maps node-local output fields to workflow state paths:
 `text=state.text` means `local.text -> state.text`.
@@ -396,7 +398,9 @@ the corresponding workflow input/state schema fields from the capability input
 schema.
 When the capability declares multiple outcomes, provide exactly one
 `--route OUTCOME=TARGET` for each declared outcome. Missing or unknown outcomes
-are rejected before the draft is mutated.
+are rejected before the draft is mutated. When `add-step --route` rejects an
+outcome, use the declared outcomes and repair text from the error. Remove
+unknown route entries and add one route for each missing declared outcome.
 
 ```bash
 wf draft add-step report_ws \
