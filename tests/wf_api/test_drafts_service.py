@@ -1093,6 +1093,35 @@ async def test_add_step_rejects_unknown_single_outcome_route_with_repair(
     assert "remove --route entries for ['error']" in message
 
 
+@pytest.mark.asyncio
+async def test_add_step_rejects_missing_outcomes_only_with_repair(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "drafts_missing_outcome_only"
+    )
+    api, service, authoring = _draft_api(artifact_store, register_echo=True)
+    service.register_specs("demo.personal", _snapshot_tool)
+    await api.create_draft_workspace(
+        workspace_id="missing_single",
+        draft=_echo_draft(),
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        await authoring.add_step_from_capability(
+            workspace_id="missing_single",
+            revision=1,
+            step_id="snap",
+            capability_name="demo.personal.snapshot_tool",
+            routes={"ok": "__end__"},
+        )
+
+    message = str(exc_info.value)
+    assert "declares outcomes ('ok', 'skipped')" in message
+    assert "missing routes ['skipped']" in message
+    assert "add --route OUTCOME=TARGET for ['skipped']" in message
+
+
 # -- Draft remove helpers --
 
 
