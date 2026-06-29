@@ -27,7 +27,7 @@
 - Modify: `src/wf_artifacts/draft_workspaces/api.py`
 - Test: `tests/wf_cli/test_explain.py`
 
-- [ ] **Step 1: Write the failing import test**
+- [x] **Step 1: Write the failing import test**
 
 Add this test to `tests/wf_cli/test_explain.py`:
 
@@ -50,7 +50,7 @@ def test_explain_registry_uses_exported_draft_codes() -> None:
     assert REVISION_CONFLICT_CODE in registry_codes
 ```
 
-- [ ] **Step 2: Run the test and verify RED**
+- [x] **Step 2: Run the test and verify RED**
 
 Run:
 
@@ -60,7 +60,7 @@ uv run pytest tests/wf_cli/test_explain.py::test_explain_registry_uses_exported_
 
 Expected: import failure for the new constants.
 
-- [ ] **Step 3: Add exported constants near producers**
+- [x] **Step 3: Add exported constants near producers**
 
 In `src/wf_artifacts/drafts/api.py`, near the type aliases, add:
 
@@ -94,7 +94,7 @@ code=WORKSPACE_EXISTS_CODE
 code=REVISION_CONFLICT_CODE
 ```
 
-- [ ] **Step 4: Run the focused test and verify it now reaches registry failure**
+- [x] **Step 4: Run the focused test and verify it now reaches registry failure**
 
 Run:
 
@@ -104,7 +104,7 @@ uv run pytest tests/wf_cli/test_explain.py::test_explain_registry_uses_exported_
 
 Expected: failure because the registry does not yet contain the new codes.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```powershell
 git add src/wf_artifacts/drafts/api.py src/wf_artifacts/draft_workspaces/api.py tests/wf_cli/test_explain.py
@@ -117,7 +117,7 @@ git commit -m "refactor: name draft diagnostic codes"
 - Modify: `src/wf_cli/explain/entries.py`
 - Modify: `tests/wf_cli/test_explain.py`
 
-- [ ] **Step 1: Write failing tests for workflow validation cards**
+- [x] **Step 1: Write failing tests for workflow validation cards**
 
 Add this test to `tests/wf_cli/test_explain.py`:
 
@@ -152,7 +152,7 @@ def test_explain_unknown_edge_destination_mentions_forward_route_repair() -> Non
     assert "target step first" in text.lower()
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -162,7 +162,7 @@ uv run pytest tests/wf_cli/test_explain.py::test_explain_registry_covers_core_va
 
 Expected: unknown code / missing registry entries.
 
-- [ ] **Step 3: Import real code sources**
+- [x] **Step 3: Import real code sources**
 
 At the top of `src/wf_cli/explain/entries.py`, add:
 
@@ -176,7 +176,7 @@ from wf_artifacts.drafts.api import (
 from wf_core.validation.issues import ValidationIssueCode
 ```
 
-- [ ] **Step 4: Add the new cards**
+- [x] **Step 4: Add the new cards**
 
 Append these `ExplainCard` entries to `EXPLAIN_CARDS`:
 
@@ -354,7 +354,7 @@ ExplainCard(
 ),
 ```
 
-- [ ] **Step 5: Run explain tests**
+- [x] **Step 5: Run explain tests**
 
 Run:
 
@@ -364,7 +364,7 @@ uv run pytest tests/wf_cli/test_explain.py -q
 
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add src/wf_cli/explain/entries.py tests/wf_cli/test_explain.py
@@ -379,7 +379,7 @@ git commit -m "feat: explain draft validation codes"
 - Modify: `skills/wf-workflow/references/troubleshooting.md`
 - Modify: `docs/current_roadmap.md`
 
-- [ ] **Step 1: Update docs**
+- [x] **Step 1: Update docs**
 
 In `docs/wf_cli.md`, under `## Explain`, add a short list of draft examples:
 
@@ -409,7 +409,7 @@ In `skills/wf-workflow/references/troubleshooting.md`, add:
 step or repair the route; do not guess `draft step add` or `draft export`.
 ```
 
-- [ ] **Step 2: Update roadmap**
+- [x] **Step 2: Update roadmap**
 
 Add a completed bullet under Priority 1:
 
@@ -418,7 +418,7 @@ Add a completed bullet under Priority 1:
   `unknown_edge_destination`, `invalid_source_path`, and `patch_invalid`.
 ```
 
-- [ ] **Step 3: Verify docs and skills**
+- [x] **Step 3: Verify docs and skills**
 
 Run:
 
@@ -430,7 +430,7 @@ uv run basedpyright --level error src/wf_cli/explain/entries.py tests/wf_cli/tes
 
 Expected: all pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add docs/wf_cli.md skills/wf-cli/SKILL.md skills/wf-workflow/references/troubleshooting.md docs/current_roadmap.md
@@ -443,7 +443,7 @@ git commit -m "docs: teach draft explain codes"
 - Move: `docs/superpowers/plans/2026-06-28-explain-draft-diagnostics.md`
 - Modify: `docs/current_roadmap.md`
 
-- [ ] **Step 1: Smoke the CLI**
+- [x] **Step 1: Smoke the CLI**
 
 Run:
 
@@ -455,7 +455,7 @@ uv run wf explain --list --format compact
 
 Expected: each command exits 0 and prints useful text.
 
-- [ ] **Step 2: Archive the plan**
+- [x] **Step 2: Archive the plan**
 
 Move this plan to:
 
@@ -463,7 +463,7 @@ Move this plan to:
 docs/historical/superpowers/plans/2026-06-28-explain-draft-diagnostics.md
 ```
 
-- [ ] **Step 3: Run final checks**
+- [x] **Step 3: Run final checks**
 
 Run:
 
@@ -476,7 +476,7 @@ uv run basedpyright --level error src/wf_cli/explain/entries.py tests/wf_cli/tes
 
 Expected: all pass.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```powershell
 git add docs/current_roadmap.md docs/historical/superpowers/plans/2026-06-28-explain-draft-diagnostics.md

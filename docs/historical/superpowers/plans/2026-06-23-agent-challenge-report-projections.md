@@ -25,7 +25,7 @@
 - Modify: `examples/agent_challenges/reports.py`
 - Create: `tests/examples/test_agent_challenge_reports.py`
 
-- [ ] **Step 1: Write a failing bounded-report test**
+- [x] **Step 1: Write a failing bounded-report test**
 
 Build a `_raw_result(tmp_path)` fixture matching the current V2 result shape,
 including explicit paths, identity, challenge report, parsed text, metrics,
@@ -48,13 +48,13 @@ def test_trial_report_is_bounded_machine_projection(tmp_path: Path) -> None:
     assert payload["manual_audit"]["status"] == "pending"
 ```
 
-- [ ] **Step 2: Run and verify import failure**
+- [x] **Step 2: Run and verify import failure**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_reports.py::test_trial_report_is_bounded_machine_projection -q
 ```
 
-- [ ] **Step 3: Implement strict DTOs**
+- [x] **Step 3: Implement strict DTOs**
 
 Create `TrialIdentity`, `TrialOutcome`, `CommandToolBrief`, `TokenSummary`,
 `AutomaticEvidence`, `ManualAuditSummary`, and `TrialReport` using
@@ -151,7 +151,7 @@ prompt hashes, raw path, and workspace path. Outcome holds task outcome,
 validity, duration, return code, assertions, and parser errors. Evidence holds
 bounded metrics, read categories, disallowed reads, and opaque commands.
 
-- [ ] **Step 4: Implement the builder**
+- [x] **Step 4: Implement the builder**
 
 ```python
 def build_trial_report(
@@ -168,7 +168,7 @@ failure, output size/hash; exclude stdout/stderr/previews/metadata/full input.
 Flag observable self-report conflicts. Treat example reads plus
 `existing_solution=false` as a manual follow-up, not automatic guilt.
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_reports.py -q
@@ -182,19 +182,19 @@ git commit -m "feat: add normalized agent trial report model"
 - Modify: `examples/agent_challenges/reports.py`
 - Modify: `tests/examples/test_agent_challenge_reports.py`
 
-- [ ] **Step 1: Add failing projection tests**
+- [x] **Step 1: Add failing projection tests**
 
 Assert writes to `workspace/final-report.md` and `results/trial.report.json`,
 stable heading order, bounded commands, no raw outputs, pending audit, valid
 JSON, and no temporary-file residue.
 
-- [ ] **Step 2: Run and verify missing APIs**
+- [x] **Step 2: Run and verify missing APIs**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_reports.py -k projection -q
 ```
 
-- [ ] **Step 3: Implement Markdown renderer**
+- [x] **Step 3: Implement Markdown renderer**
 
 Use exactly these headings:
 
@@ -212,7 +212,7 @@ Use exactly these headings:
 
 Render empty sections explicitly and commands as ordered bounded entries.
 
-- [ ] **Step 4: Implement atomic writes**
+- [x] **Step 4: Implement atomic writes**
 
 ```python
 @dataclass(frozen=True, slots=True)
@@ -243,7 +243,7 @@ def write_trial_report_projections(
     return TrialReportPaths(markdown=markdown_path, machine=machine_path)
 ```
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_reports.py -q
@@ -258,19 +258,19 @@ git commit -m "feat: write human and machine trial reports"
 - Modify: `examples/agent_challenges/run_trials.py`
 - Modify: `tests/examples/test_agent_challenge_harness_v2.py`
 
-- [ ] **Step 1: Extend runner integration tests**
+- [x] **Step 1: Extend runner integration tests**
 
 For success and timeout, assert explicit `workspace_path`, `result_path`, and
 `report_paths`; raw, Markdown, and machine files exist; machine challenge id is
 correct; Markdown contains the final answer.
 
-- [ ] **Step 2: Run and verify failure**
+- [x] **Step 2: Run and verify failure**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_harness_v2.py -k "runner_to_report or timeout" -q
 ```
 
-- [ ] **Step 3: Add explicit paths before the single raw write**
+- [x] **Step 3: Add explicit paths before the single raw write**
 
 ```python
 "challenge_id": challenge.manifest.id,
@@ -285,17 +285,17 @@ uv run pytest tests/examples/test_agent_challenge_harness_v2.py -k "runner_to_re
 Include `reads_by_category` in policy. Write raw result once before projection
 generation; never rewrite it.
 
-- [ ] **Step 4: Generate pending-audit projections**
+- [x] **Step 4: Generate pending-audit projections**
 
 Call `build_trial_report(result, audit=None)` and
 `write_trial_report_projections`. On failure preserve raw evidence and return a
 concise `report_generation_error`.
 
-- [ ] **Step 5: Print report paths**
+- [x] **Step 5: Print report paths**
 
 Add `result_path` and `report_paths` to each central-runner summary.
 
-- [ ] **Step 6: Verify and commit**
+- [x] **Step 6: Verify and commit**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_harness_v2.py -k "runner or timeout" -q
@@ -310,7 +310,7 @@ git commit -m "feat: generate reports after agent trials"
 - Modify: `examples/agent_challenges/save_manual_audit.py`
 - Modify: `tests/examples/test_agent_challenge_reports.py`
 
-- [ ] **Step 1: Add failing regeneration test**
+- [x] **Step 1: Add failing regeneration test**
 
 ```python
 paths = save_v2_manual_audit(
@@ -326,18 +326,18 @@ paths = save_v2_manual_audit(
 
 Assert YAML, JSON, and Markdown contain the official grade/corrections.
 
-- [ ] **Step 2: Add invalid-audit preservation test**
+- [x] **Step 2: Add invalid-audit preservation test**
 
 Use outcome `maybe`, expect `ValueError`, and assert previous projections remain
 byte-for-byte unchanged.
 
-- [ ] **Step 3: Run and verify missing API**
+- [x] **Step 3: Run and verify missing API**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_reports.py -k "manual_audit or invalid" -q
 ```
 
-- [ ] **Step 4: Implement V2 audit writer**
+- [x] **Step 4: Implement V2 audit writer**
 
 Add:
 
@@ -367,13 +367,13 @@ Allow only `pass`, `fail`, `invalid`; require V2; use explicit raw paths;
 validate before writes; atomically write audit; rebuild both projections; never
 rewrite raw result.
 
-- [ ] **Step 5: Route existing CLI by harness version**
+- [x] **Step 5: Route existing CLI by harness version**
 
 For V2, interpret `--manual-classification` as official outcome, reject
 `--from-report`, and print JSON containing all three paths. Preserve referenced
 V1 behavior.
 
-- [ ] **Step 6: Verify and commit**
+- [x] **Step 6: Verify and commit**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_reports.py -q
@@ -388,12 +388,12 @@ git commit -m "feat: regenerate trial reports after audit"
 - Modify: `examples/agent_challenges/base-prompt.md`
 - Modify: `tests/examples/test_agent_challenge_harness_v2.py`
 
-- [ ] **Step 1: Add failing assertions**
+- [x] **Step 1: Add failing assertions**
 
 Assert the prompt mentions `tests/`, `examples/`, `read.product_code: true`,
 `read.existing_solution: true`, and `read.adjacent_attempts: true`.
 
-- [ ] **Step 2: Add approved paragraph**
+- [x] **Step 2: Add approved paragraph**
 
 ```markdown
 Files under `tests/` and `examples/` may contain complete or partial solutions.
@@ -402,7 +402,7 @@ If you inspect them, report `read.product_code: true`; also report
 `read.adjacent_attempts: true` when they contain prior trial outputs.
 ```
 
-- [ ] **Step 3: Verify and commit**
+- [x] **Step 3: Verify and commit**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_harness_v2.py -k base_prompt -q
@@ -416,7 +416,7 @@ git commit -m "docs: clarify challenge self-report rules"
 - Modify: `docs/current_roadmap.md`
 - Move this plan to `docs/historical/superpowers/plans/`.
 
-- [ ] **Step 1: Run verification**
+- [x] **Step 1: Run verification**
 
 ```powershell
 uv run pytest tests/examples/test_agent_challenge_reports.py tests/examples/test_agent_challenge_harness_v2.py tests/examples/test_agent_challenge_skill_bundle.py tests/examples/test_opencode_browser_click_challenge.py tests/examples/test_report_workflow_challenge.py -q
@@ -426,25 +426,25 @@ uv run basedpyright --level error examples/agent_challenges tests/examples/test_
 git diff --check
 ```
 
-- [ ] **Step 2: Smoke CLI help**
+- [x] **Step 2: Smoke CLI help**
 
 ```powershell
 uv run python examples/agent_challenges/run_trials.py --help
 uv run python examples/agent_challenges/save_manual_audit.py --help
 ```
 
-- [ ] **Step 3: Update roadmap and archive**
+- [x] **Step 3: Update roadmap and archive**
 
 Record completion, then move this plan to
 `docs/historical/superpowers/plans/2026-06-23-agent-challenge-report-projections.md`.
 
-- [ ] **Step 4: Review boundaries**
+- [x] **Step 4: Review boundaries**
 
 Confirm raw result is written once, machine report excludes raw outputs,
 Markdown headings are stable, explicit paths are used, audit regenerates both,
 V1 remains intact, and no runbook/branching challenge leaked into this slice.
 
-- [ ] **Step 5: Commit completion docs**
+- [x] **Step 5: Commit completion docs**
 
 ```powershell
 git add docs/current_roadmap.md docs/superpowers/plans/2026-06-23-agent-challenge-report-projections.md docs/historical/superpowers/plans/2026-06-23-agent-challenge-report-projections.md

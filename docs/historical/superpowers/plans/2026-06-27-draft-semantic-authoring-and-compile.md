@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.14, Pydantic v2, JSON Patch, Typer, JSON-RPC, FastMCP, pytest, Ruff, basedpyright.
 
-**Prerequisite:** Complete `docs/superpowers/plans/2026-06-27-canonical-toml-path-strings.md` first.
+**Prerequisite:** Complete `docs/historical/superpowers/plans/2026-06-27-canonical-toml-path-strings.md` first.
 
 ---
 
