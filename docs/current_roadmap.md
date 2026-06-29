@@ -280,7 +280,8 @@ stable.
   deployment binding suggestions, reject bare `--bind-output` state targets
   before RPC with compact guidance, and accept `wf schema --full` as an alias
   for `--verbose`.
-- Completed: `wf draft bind local.x -> output.y` now lowers through state
+- Completed: `wf draft bind` with `--from local.x --to output.y` now lowers
+  through state
   atomically (projecting into both state_schema and output_schema), and
   validation repair hints cover undeclared workflow input source paths.
   Implementation plan:

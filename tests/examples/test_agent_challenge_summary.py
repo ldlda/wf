@@ -15,6 +15,7 @@ def _write_report(
     manual: str | None = "pass",
 ) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
+    raw_result_path = path.with_name(path.name.removesuffix(".report.json") + ".json")
     path.write_text(
         json.dumps(
             {
@@ -24,7 +25,7 @@ def _write_report(
                     "variant": "high",
                     "instruction_profile": profile,
                     "trial_index": trial,
-                    "raw_result_path": str(path.with_suffix(".json")),
+                    "raw_result_path": str(raw_result_path),
                     "workspace_path": str(
                         path.parent.parent / "workspaces" / path.stem
                     ),
@@ -164,6 +165,35 @@ def test_find_report_files_prefers_raw_result_mtime_for_last(tmp_path: Path) -> 
 
     assert selected == [new_report]
     assert find_report_files([challenge], last=1, sort_by="report") == [old_report]
+
+
+def test_find_report_files_uses_recorded_raw_result_path_for_last(
+    tmp_path: Path,
+) -> None:
+    from examples.agent_challenges.summarize_trials import find_report_files
+
+    challenge = tmp_path / "browser_click_challenge"
+    old_report = _write_report(challenge / "results" / "old.report.json")
+    new_report = _write_report(challenge / "results" / "new.report.json")
+    actual_old_raw = challenge / "raw" / "actual-old.json"
+    actual_new_raw = challenge / "raw" / "actual-new.json"
+    actual_old_raw.parent.mkdir()
+    actual_old_raw.write_text("{}", encoding="utf-8")
+    actual_new_raw.write_text("{}", encoding="utf-8")
+    for report, raw_path in (
+        (old_report, actual_old_raw),
+        (new_report, actual_new_raw),
+    ):
+        payload = json.loads(report.read_text(encoding="utf-8"))
+        payload["identity"]["raw_result_path"] = str(raw_path)
+        report.write_text(json.dumps(payload), encoding="utf-8")
+
+    os.utime(actual_old_raw, (1000, 1000))
+    os.utime(actual_new_raw, (2000, 2000))
+    os.utime(old_report, (3000, 3000))
+    os.utime(new_report, (1500, 1500))
+
+    assert find_report_files([challenge], last=1) == [new_report]
 
 
 def test_summarize_trials_direct_script_execution_smoke(tmp_path: Path) -> None:

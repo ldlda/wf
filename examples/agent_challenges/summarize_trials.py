@@ -114,9 +114,28 @@ def _raw_result_path_for_report(report_path: Path) -> Path:
     return report_path
 
 
+def _recorded_raw_result_path(report_path: Path) -> Path | None:
+    """Read the raw result identity recorded in a machine report."""
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except OSError, json.JSONDecodeError:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    identity = payload.get("identity")
+    if not isinstance(identity, dict):
+        return None
+    raw_result_path = identity.get("raw_result_path")
+    if not isinstance(raw_result_path, str) or not raw_result_path:
+        return None
+    return Path(raw_result_path)
+
+
 def _sort_mtime(path: Path, *, sort_by: str) -> float:
     if sort_by == "result":
-        raw_result = _raw_result_path_for_report(path)
+        raw_result = _recorded_raw_result_path(path) or _raw_result_path_for_report(
+            path
+        )
         if raw_result.exists():
             return raw_result.stat().st_mtime
     return path.stat().st_mtime

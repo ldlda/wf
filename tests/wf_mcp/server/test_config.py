@@ -126,6 +126,18 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             ]
             assert "output_map" in set_workflow_output_request["properties"]
             assert "merge" in set_workflow_output_request["properties"]
+            bind_schema = tools_by_name["wf.workflow.bind"].inputSchema
+            bind_request = bind_schema["properties"]["request"]
+            assert set(bind_request["required"]) == {
+                "workspace_id",
+                "revision",
+                "step_id",
+                "source_path",
+                "target_path",
+            }
+            assert bind_request["properties"]["step_id"]["minLength"] == 1
+            assert bind_request["properties"]["source_path"]["minLength"] == 1
+            assert bind_request["properties"]["target_path"]["minLength"] == 1
             add_step_schema = tools_by_name[
                 "wf.workflow.add_step_from_capability"
             ].inputSchema

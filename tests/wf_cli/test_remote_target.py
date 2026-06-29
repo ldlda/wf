@@ -11,7 +11,6 @@ from typer.testing import CliRunner
 import wf_cli.context as cli_context
 from wf_api.models import RawWorkflowPlan
 from wf_cli.app import app
-from wf_cli.commands import drafts as drafts_module
 from wf_cli.context import CliContext, load_cli_context, load_local_cli_context
 from wf_core import END
 from wf_server import build_local_static_workflow_server
@@ -1177,29 +1176,27 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
 
 
 def test_wf_draft_set_workflow_output_uses_rpc_target(monkeypatch, tmp_path) -> None:
-    calls: list[dict[str, object]] = []
-
-    class FakeDrafts:
-        async def set_workflow_output_map(self, **kwargs: object) -> dict[str, object]:
-            calls.append(kwargs)
-            return {"workspace_id": "report", "revision": 2}
-
-    def _fake_context(ctx: object) -> CliContext:
-        return CliContext(
-            config_path=Path("dummy"),
-            service=None,
-            handlers=FakeDrafts(),  # type: ignore[arg-type]
-            source_admin=cast(Any, object()),
-            admin=cast(Any, object()),
-        )
-
-    monkeypatch.setattr(drafts_module, "load_cli_context", _fake_context)
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
     runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "report",
+            "--capability",
+            "wf.std.constant",
+        ],
+    )
     result = runner.invoke(
         app,
         [
-            "--url",
-            "http://example.test/rpc",
+            *base_args,
             "draft",
             "set-workflow-output",
             "report",
@@ -1209,16 +1206,16 @@ def test_wf_draft_set_workflow_output_uses_rpc_target(monkeypatch, tmp_path) -> 
             "state.markdown=markdown",
         ],
     )
+    inspected = runner.invoke(
+        app,
+        [*base_args, "draft", "inspect", "report", "--include-draft"],
+    )
 
-    assert result.exit_code == 0
-    assert calls == [
-        {
-            "workspace_id": "report",
-            "revision": 1,
-            "output_map": {"state.markdown": "markdown"},
-            "merge": False,
-        }
-    ]
+    assert created.exit_code == 0, created.output
+    assert result.exit_code == 0, result.output
+    assert inspected.exit_code == 0, inspected.output
+    draft = json.loads(inspected.output)["draft"]
+    assert draft["output"] == [{"path": "state.markdown", "target": "markdown"}]
 
 
 def test_wf_draft_remove_route_uses_rpc_target(monkeypatch, tmp_path) -> None:
@@ -1263,6 +1260,13 @@ def test_wf_draft_remove_route_uses_rpc_target(monkeypatch, tmp_path) -> None:
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert payload["revision"] == 2
+    inspected = runner.invoke(
+        app,
+        [*base_args, "draft", "inspect", "remove_route_ws", "--include-draft"],
+    )
+    assert inspected.exit_code == 0, inspected.output
+    draft = json.loads(inspected.output)["draft"]
+    assert "ok" not in draft["routes"]["call"]
 
 
 def test_wf_draft_bind_uses_rpc_target(monkeypatch, tmp_path) -> None:
@@ -1309,6 +1313,15 @@ def test_wf_draft_bind_uses_rpc_target(monkeypatch, tmp_path) -> None:
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert payload["revision"] == 2
+    inspected = runner.invoke(
+        app,
+        [*base_args, "draft", "inspect", "snapshot_ws", "--include-draft"],
+    )
+    assert inspected.exit_code == 0, inspected.output
+    draft = json.loads(inspected.output)["draft"]
+    assert draft["steps"]["call"]["output"] == [
+        {"source": "value", "target": "state.result"}
+    ]
 
 
 def test_wf_draft_add_step_from_capability_uses_rpc_target(

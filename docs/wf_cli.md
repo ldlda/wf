@@ -368,7 +368,7 @@ Repair-hint examples:
 ```bash
 # Declare an undeclared workflow input field and bind it to a step input
 wf draft bind report_ws --revision 4 --step read --from input.path --to local.path
-# Lower a capability output through state into workflow output
+# Request a public workflow output; bind lowers it through state internally
 wf draft bind report_ws --revision 5 --step render --from local.markdown --to output.markdown
 # Set workflow output independently (no schema projection)
 wf draft set-workflow-output report_ws --revision 6 --map state.markdown=markdown

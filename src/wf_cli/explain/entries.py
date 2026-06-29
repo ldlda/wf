@@ -154,8 +154,10 @@ EXPLAIN_CARDS: tuple[ExplainCard, ...] = (
             "A draft patch changed output bindings without changing the matching schema.",
         ],
         how_to_fix=[
-            "For capability output to state, prefer `wf draft bind --from local.FIELD --to state.FIELD`.",
+            "For capability output to state, prefer `wf draft bind <workspace_id> --revision N --step STEP --from local.FIELD --to state.FIELD`.",
+            "To publish one capability output, use the same bind command with `--to output.FIELD`.",
             "For multiple output bindings, use `wf draft set-output --merge` when preserving existing mappings.",
+            "For an existing state-to-public-output projection, use `wf draft set-workflow-output <workspace_id> --revision N --merge --map state.FIELD=FIELD`.",
             "Read any `repair_hint` returned by `wf draft validate` before writing JSON Patch.",
             "Run `wf draft validate <workspace_id>` after the edit.",
         ],

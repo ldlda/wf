@@ -589,6 +589,7 @@ async def test_rpc_client_draft_remove_methods(tmp_path) -> None:
     assert calls[1]["method"] == "workflow.draft_workspaces.remove_step"
     assert calls[2]["method"] == "workflow.draft_workspaces.remove_binding"
     assert calls[2]["params"]["inputs"] == ["message"]
+    assert calls[2]["params"]["outputs"] == ["debug"]
 
 
 async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> None:

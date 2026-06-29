@@ -18,7 +18,8 @@ low-level escape hatch or you already have a complete compiler/generated plan.
 2. Inspect one candidate with `wf cap inspect`.
 3. Call one candidate with `wf cap call` when payload shape or upstream source
    reachability is uncertain.
-4. Create a patchable draft workspace with `wf draft create --capability`.
+4. Create a patchable draft workspace with
+   `wf draft create <workspace_id> --capability <qualified_name>`.
 5. Patch targeted fields with focused draft commands or JSON Patch.
 6. Validate with `wf draft validate`.
 7. Save an artifact with `wf draft save`, or import a complete raw plan with

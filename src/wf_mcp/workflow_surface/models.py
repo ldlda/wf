@@ -35,6 +35,7 @@ DraftPathMap = Annotated[
         )
     ),
 ]
+NonEmptyString = Annotated[str, Field(min_length=1)]
 DraftInputBindings = Annotated[
     list[InputBinding],
     Field(
@@ -216,7 +217,9 @@ class SetStepInputMapRequest(BaseModel):
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
-    step_id: str = Field(description="Draft step id whose input map should change.")
+    step_id: NonEmptyString = Field(
+        description="Draft step id whose input map should change."
+    )
     input_map: DraftPathMap
     merge: bool = Field(
         default=False,
@@ -232,7 +235,9 @@ class SetStepOutputMapRequest(BaseModel):
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
-    step_id: str = Field(description="Draft step id whose output map should change.")
+    step_id: NonEmptyString = Field(
+        description="Draft step id whose output map should change."
+    )
     output_map: DraftPathMap
     merge: bool = Field(
         default=False,
@@ -263,9 +268,13 @@ class BindDraftRequest(BaseModel):
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
-    step_id: str = Field(description="Capability-backed draft step id.")
-    source_path: str = Field(description="Source path, for example input.x or local.y.")
-    target_path: str = Field(description="Target path, for example local.x or state.y.")
+    step_id: NonEmptyString = Field(description="Capability-backed draft step id.")
+    source_path: NonEmptyString = Field(
+        description="Source path, for example input.x or local.y."
+    )
+    target_path: NonEmptyString = Field(
+        description="Target path, for example local.x or state.y."
+    )
 
 
 class AddStepFromCapabilityRequest(BaseModel):
@@ -273,13 +282,14 @@ class AddStepFromCapabilityRequest(BaseModel):
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected workspace revision.")
-    step_id: str = Field(description="New draft step id.")
-    capability_name: str = Field(description="Qualified capability name.")
+    step_id: NonEmptyString = Field(description="New draft step id.")
+    capability_name: NonEmptyString = Field(description="Qualified capability name.")
     route_from_step: str | None = Field(
         default=None,
+        min_length=1,
         description="Optional existing step whose outcome should route to the new step.",
     )
-    route_from_outcome: str = Field(
+    route_from_outcome: NonEmptyString = Field(
         default="ok",
         description="Outcome on route_from_step that should route to the new step.",
     )
@@ -306,8 +316,12 @@ class RemoveDraftRouteRequest(BaseModel):
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
-    step_id: str = Field(description="Draft step id whose route should be removed.")
-    outcome: str = Field(description="Outcome label to remove from the step route map.")
+    step_id: NonEmptyString = Field(
+        description="Draft step id whose route should be removed."
+    )
+    outcome: NonEmptyString = Field(
+        description="Outcome label to remove from the step route map."
+    )
 
 
 class RemoveDraftStepRequest(BaseModel):
@@ -315,7 +329,7 @@ class RemoveDraftStepRequest(BaseModel):
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
-    step_id: str = Field(description="Draft step id to remove.")
+    step_id: NonEmptyString = Field(description="Draft step id to remove.")
 
 
 class RemoveDraftBindingRequest(BaseModel):
@@ -323,7 +337,9 @@ class RemoveDraftBindingRequest(BaseModel):
 
     workspace_id: WorkspaceId
     revision: int = Field(ge=1, description="Expected current workspace revision.")
-    step_id: str = Field(description="Draft step id whose bindings should be removed.")
+    step_id: NonEmptyString = Field(
+        description="Draft step id whose bindings should be removed."
+    )
     inputs: list[str] = Field(
         default_factory=list,
         description="Local input target names to remove.",

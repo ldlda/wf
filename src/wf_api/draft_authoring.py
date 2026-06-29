@@ -53,11 +53,15 @@ def _graph_parts(path: str) -> tuple[str, tuple[str, ...]]:
 
 
 def _local_field(path: str) -> str:
-    raw = path.removeprefix("local.")
-    parsed = LocalPath.parse(raw)
-    if len(parsed.parts) != 1:
+    parts = _local_parts(path)
+    if len(parts) != 1:
         raise ValueError("local path must name one capability field")
-    return parsed.parts[0]
+    return parts[0]
+
+
+def _local_parts(path: str) -> tuple[str, ...]:
+    """Parse a CLI local-root path as the rootless core LocalPath value."""
+    return LocalPath.parse(path.removeprefix("local.")).parts
 
 
 class WorkflowDraftAuthoringApi:
@@ -193,7 +197,7 @@ class WorkflowDraftAuthoringApi:
         source_root, source_parts = (
             _graph_parts(source_path)
             if not source_path.startswith("local.")
-            else ("local", LocalPath.parse(source_path).parts)
+            else ("local", _local_parts(source_path))
         )
         if target_path.startswith("output."):
             # GraphSourcePath excludes output targets, but output fields still
@@ -205,7 +209,7 @@ class WorkflowDraftAuthoringApi:
                 raise ValueError("output path must name a field, such as output.result")
         elif target_path.startswith("local."):
             target_root = "local"
-            target_parts = LocalPath.parse(target_path).parts
+            target_parts = _local_parts(target_path)
         else:
             target_root, target_parts = _graph_parts(target_path)
 
@@ -271,10 +275,12 @@ class WorkflowDraftAuthoringApi:
                 allow_existing_equivalent=True,
             )
 
+            current_output_map = self.drafts._step_output_map(
+                workspace_id=workspace_id, step_id=step_id
+            )
+            previous_state_path = current_output_map.get(local_field)
             output_map = {
-                **self.drafts._step_output_map(
-                    workspace_id=workspace_id, step_id=step_id
-                ),
+                **current_output_map,
                 local_field: state_path_str,
             }
 
@@ -284,7 +290,15 @@ class WorkflowDraftAuthoringApi:
                     b
                     for b in existing_output
                     if not (
-                        isinstance(b, dict) and b.get("target") == output_target_str
+                        isinstance(b, dict)
+                        and (
+                            b.get("target") == output_target_str
+                            or b.get("path") == state_path_str
+                            or (
+                                previous_state_path is not None
+                                and b.get("path") == previous_state_path
+                            )
+                        )
                     )
                 ]
             else:
@@ -667,6 +681,14 @@ class WorkflowDraftAuthoringApi:
             raise ValueError(f"input bindings for step {step_id!r} must be a list")
         if not isinstance(current_outputs, list):
             raise ValueError(f"output bindings for step {step_id!r} must be a list")
+        if not all(isinstance(item, dict) for item in current_inputs):
+            raise ValueError(
+                f"input binding entries for step {step_id!r} must be objects"
+            )
+        if not all(isinstance(item, dict) for item in current_outputs):
+            raise ValueError(
+                f"output binding entries for step {step_id!r} must be objects"
+            )
         input_targets = set(inputs)
         output_sources = set(outputs)
         next_inputs = [

@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned. This design generalizes the two remaining capability-specific draft
+Implemented. This design generalized the two capability-specific draft
 CLI verbs:
 
 - `wf draft create-from-capability`
@@ -13,10 +13,9 @@ They are replaced at the CLI layer by:
 - `wf draft create --capability <qualified_name>`
 - `wf draft add-step --capability <qualified_name>`
 
-The long commands should be removed from the CLI, docs, and skills rather than
-kept as aliases. The programmatic API/RPC/MCP method names are not renamed in
-this slice because they are older, tested surfaces with broader callers than
-the CLI benchmark loop.
+The long commands are removed from the CLI, docs, and skills rather than kept
+as aliases. The focused bind/remove surface is threaded through API, RPC, and
+MCP layers; CLI/docs/skills expose only the concise command vocabulary.
 
 ## Problem
 
@@ -27,16 +26,16 @@ wf draft create --capability local.report.extract_report ...
 wf draft add-step --capability local.report.render_markdown_report ...
 ```
 
-The product currently exposes:
+Before this change, the product exposed:
 
 ```powershell
 wf draft create-from-capability ...
 wf draft add-step-from-capability ...
 ```
 
-The long names are precise but hostile to discovery. Skills currently have to
-warn agents that `wf draft create --capability` does not exist, which is a sign
-that the CLI shape is wrong.
+The long names were precise but hostile to discovery. Skills had to warn agents
+that `wf draft create --capability` did not exist, which showed that the CLI
+shape was wrong.
 
 ## New CLI Shape
 

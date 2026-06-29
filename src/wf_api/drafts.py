@@ -535,7 +535,7 @@ def _draft_repair_hint(
         target_field = details.get("target_field")
         if not isinstance(source_path, str) or not isinstance(target_field, str):
             return None
-        if source_path.startswith("input."):
+        if source_path.startswith(("input.", "state.")):
             return (
                 f"wf draft bind {workspace_id} --revision {revision} "
                 f"--step {step_id} --from {source_path} --to local.{target_field}"

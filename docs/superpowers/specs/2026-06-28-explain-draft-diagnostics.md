@@ -71,7 +71,10 @@ use wf artifact create-from-plan instead.
 
 ```text
 For capability output to state, prefer:
-wf draft bind --from local.FIELD --to state.FIELD
+wf draft bind WORKSPACE --revision N --step STEP --from local.FIELD --to state.FIELD
+
+For capability output to public workflow output, prefer:
+wf draft bind WORKSPACE --revision N --step STEP --from local.FIELD --to output.FIELD
 ```
 
 `draft_invalid` must distinguish draft shape from raw plan shape:

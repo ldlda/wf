@@ -1400,6 +1400,60 @@ def test_v2_runner_debug_profile_requires_ux_issues_found(
     assert any("ux_issues_found" in f for f in result["assertion_failures"])
 
 
+def test_v2_runner_debug_profile_requires_challenge_report(tmp_path: Path) -> None:
+    from examples.agent_challenges.runner import run_v2_trial
+
+    manifest_path = _write_manifest(tmp_path / "challenge")
+    manifest_path.write_text(
+        manifest_path.read_text(encoding="utf-8").replace(
+            "  required_fields: [value, run_failed]\n"
+            "  success_assertions:\n"
+            "    value: expected\n"
+            "    run_failed: false\n",
+            "  required_fields: []\n  success_assertions: {}\n",
+        ),
+        encoding="utf-8",
+    )
+    challenge = load_challenge_manifest(manifest_path)
+    bundle = ROOT / "examples/agent_challenges/instruction_bundles/workflow_cli.yaml"
+    results_dir = tmp_path / "results"
+    results_dir.mkdir()
+
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: str,
+        text: bool,
+        capture_output: bool,
+        timeout: float | None,
+        check: bool,
+    ) -> object:
+        return type(
+            "Result",
+            (),
+            {
+                "returncode": 0,
+                "stdout": json.dumps({"text": "Completed without a report."}),
+                "stderr": "",
+            },
+        )()
+
+    result = run_v2_trial(
+        challenge,
+        profile=InstructionProfile.DEBUG,
+        model="test-model",
+        variant="high",
+        index=1,
+        workspaces_dir=tmp_path / "workspaces",
+        results_dir=results_dir,
+        instruction_bundle=bundle,
+        run_fn=fake_run,
+    )
+
+    assert result["task_outcome"] == "failed"
+    assert any("challenge_report" in f for f in result["assertion_failures"])
+
+
 def test_v2_runner_assertions_fail_on_mismatched_report(tmp_path: Path) -> None:
     from examples.agent_challenges.runner import run_v2_trial
 

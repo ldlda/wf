@@ -59,10 +59,11 @@ reported in wrapper-hint notes; bind them explicitly with `wf draft bind` or
 `wf draft set-input --merge` only when the workflow should expose them.
 
 When `wf draft validate` returns a `repair_hint`, run that exact focused command
-before writing JSON Patch manually. Use `wf draft bind local.x -> output.y` when
-one capability output should become public workflow output; it creates the
-required state intermediary and projects the field schema into both state and
-output schemas atomically. Re-run `wf draft validate` after the repair.
+before writing JSON Patch manually. To make one capability output public, use
+`wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.x
+--to output.y`; it creates the required state intermediary and projects the
+field schema into both state and output schemas atomically. Re-run
+`wf draft validate` after the repair.
 
 wf artifact create-from-plan workflow.plan.json --artifact <artifact_id> --version <n> --title <title>
 wf deploy save <deployment_id> --artifact <artifact_id> --version <n> --binding <logical>=<concrete>
