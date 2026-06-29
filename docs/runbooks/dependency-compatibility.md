@@ -46,46 +46,30 @@ passes with AnyIO 4.14.1 or newer, and the full suite remains clean.
 | `ddcdf648` from PR #4363 | 4.14.1 | Pass |
 | `main` at `de521e65` | 4.14.1 | Pass |
 
-## Typer Command Callback Errors
+## Typer Vendored Click Error Boundary
 
-With Typer 0.26.8 and Click 8.4.2, a nested Typer command that raises
-`click.ClickException` exits with code 1 under `typer.testing.CliRunner`, but
-both captured output streams are empty. The unformatted `ClickException`
-remains on `result.exception`. Single-command applications behave the same way,
-and direct invocation renders a traceback instead of a concise error.
+Typer 0.26.0 intentionally vendored Click and stopped supporting direct use of
+Click-specific functionality. External `click.ClickException` instances are
+therefore distinct from Typer's internal exception classes and bypass Typer's
+concise error formatter.
 
 The CLI therefore writes its concise remote-operation error explicitly to
 stderr and raises `typer.Exit(1)` instead of relying on standalone Click
 exception formatting. This keeps real CLI and test-runner behavior aligned.
 
-Minimal reproducer:
+The CLI uses Typer's supported public API instead:
 
 ```python
-import click
 import typer
-from typer.testing import CliRunner
 
-app = typer.Typer()
-
-
-@app.command()
-def fail() -> None:
-    raise click.ClickException("broken")
-
-
-result = CliRunner().invoke(app)
-assert result.exit_code == 1
-assert result.stderr == ""  # Expected to contain "Error: broken".
-assert isinstance(result.exception, click.ClickException)
+typer.echo("Error: broken", err=True)
+raise typer.Exit(code=1)
 ```
 
-This regression is tracked as Typer issue
-[#1867](https://github.com/fastapi/typer/issues/1867). The repository copy of
-the verified issue report is
-[`2026-06-29-typer-click-exception-regression.md`](../superpowers/research/2026-06-29-typer-click-exception-regression.md).
-Typer 0.24.2 and 0.25.0 format the exception normally. Vendoring Click in Typer
-0.26.0 introduced the exception-class identity mismatch; Typer 0.26.8 and
-current `master` at `b210c0e2` reproduce the failure.
+Typer issue [#1867](https://github.com/fastapi/typer/issues/1867) now tracks the
+narrower feature request for a public general-purpose Typer CLI error. The
+repository copy of the request is
+[`2026-06-29-typer-public-cli-error-feature.md`](../superpowers/research/2026-06-29-typer-public-cli-error-feature.md).
 
 ## Separate Warning Backlog
 
