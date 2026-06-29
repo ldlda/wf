@@ -62,6 +62,19 @@ def _parse_output_map_flags(values: list[str] | None) -> dict[str, str]:
     return parsed
 
 
+def _parse_step_input_map_flags(values: list[str] | None) -> dict[str, str]:
+    """Parse graph-source to bare-local input mappings for one draft step."""
+    parsed = _parse_map_flags(values)
+    for source, target in parsed.items():
+        if target.startswith("local."):
+            bare_target = target.removeprefix("local.")
+            raise typer.BadParameter(
+                "--map target must be a bare local field; "
+                f"use {source}={bare_target}, not {source}={target}"
+            )
+    return parsed
+
+
 def _parse_route_flags(values: list[str] | None) -> dict[str, str]:
     return _parse_assignment_flags(
         values,
@@ -263,10 +276,13 @@ def set_step_input_map(
     --map entries in one command for a complete replacement. Use --merge only
     when adding or updating entries across a later revision.
 
+    Targets are bare node-local field names. Use `--map input.text=text`, not
+    `--map input.text=local.text`.
+
     Run `wf draft validate <workspace_id>` after map edits; validation reports
     unresolved paths and conflicting writes.
     """
-    input_map = _parse_map_flags(mapping)
+    input_map = _parse_step_input_map_flags(mapping)
     context = load_cli_context(ctx)
     emit_json(
         run_cli_operation(

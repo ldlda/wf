@@ -153,6 +153,8 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "replaces the full input map" in input_help
     assert "Use --merge only" in input_help
     assert "draft validate" in input_help
+    assert "input.text=text" in input_help
+    assert "input.text=local.text" in input_help
     assert "replaces the full output map" in output_help
     assert "Use --merge only" in output_help
     assert "draft validate" in output_help
@@ -254,3 +256,26 @@ def test_wf_draft_route_flags_reject_duplicate_outcomes() -> None:
     assert branch_result.exit_code == 2
     assert "duplicate --route for 'ok'" in add_result.output
     assert "duplicate --route for 'ok'" in branch_result.output
+
+
+def test_wf_draft_set_input_rejects_local_prefixed_target() -> None:
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-input",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--map",
+            "input.text=local.text",
+        ],
+    )
+
+    assert result.exit_code == 2
+    output = " ".join(result.output.split())
+    assert "bare local field" in output
+    assert "input.text=text" in output
+    assert "input.text=local.text" in output
