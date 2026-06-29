@@ -57,8 +57,9 @@ wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <tit
 Draft creation auto-binds required capability inputs only. Optional inputs are
 reported in wrapper-hint notes; bind them explicitly only when the workflow
 should expose them. Use `wf draft bind --from input.x --to local.x` for an
-existing step, or `wf draft add-step --input input.x=x` while adding a step;
-both project the workflow input schema for top-level fields.
+existing step when schema projection may be needed; it is safe if the schema
+field already exists. Use `wf draft set-input --merge --map input.x=x` for a
+pure input-map edit when the workflow schema is already declared.
 
 `wf draft set-workflow-output` projects missing public output schema fields for
 single-field `input.*` and `state.*` sources. Prefer it for final workflow

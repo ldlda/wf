@@ -129,6 +129,11 @@ the whole map for that step or output scope. Use repeated `--map` flags in one
 command for a complete replacement. Use `--merge` only when adding/updating
 entries over multiple revisions.
 
+`bind input.x -> local.x` is schema-aware and idempotent when `input.x` is
+already declared. Use it for repair hints or schema projection. Use
+`set-input --merge --map input.x=x` when you only need to update a step input
+map.
+
 - `bind_draft`
 
   Declares a workflow input/state/output schema field from a capability local

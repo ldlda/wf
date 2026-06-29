@@ -404,11 +404,13 @@ def bind_draft(
         typer.Option("--to", help="Target path, for example local.x or state.y."),
     ],
 ) -> None:
-    """Bind a capability step path and project the matching schema.
+    """Bind a capability step path and project missing schema when needed.
 
     Direction matters. Use input/state -> local for step inputs and local ->
-    state/output for step outputs. Run `wf draft validate <workspace_id>` after
-    this command.
+    state/output for step outputs. If the workflow schema field already exists,
+    the command reuses it and updates the step binding. For pure input-map edits
+    where schema is already known, `wf draft set-input --merge` is also valid.
+    Run `wf draft validate <workspace_id>` after this command.
     """
     context = load_cli_context(ctx)
     emit_json(

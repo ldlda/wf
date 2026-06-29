@@ -167,10 +167,12 @@ def test_wf_draft_bind_help_explains_direction() -> None:
     result = runner.invoke(app, ["draft", "bind", "--help"])
 
     assert result.exit_code == 0
-    output = " ".join(result.output.split())
-    assert "--from" in output
-    assert "--to" in output
-    assert "validate" in output
+    help_text = " ".join(result.output.split())
+    assert "--from" in help_text
+    assert "--to" in help_text
+    assert "validate" in help_text
+    assert "project missing schema" in help_text
+    assert "set-input --merge" in help_text
 
 
 def test_wf_draft_add_step_help_explains_explicit_wiring() -> None:

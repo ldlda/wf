@@ -361,6 +361,10 @@ wf draft bind concat_ws --revision 9 --step call --from local.result --to output
 wf draft validate concat_ws
 ```
 
+If the workflow schema field already exists, `bind` reuses it and only updates
+the step binding. Use `set-input --merge` for pure input-map edits when no
+schema projection is needed.
+
 When validation gives a `repair_hint` with an exact focused `wf draft bind`
 command, run it before falling back to JSON Patch.
 

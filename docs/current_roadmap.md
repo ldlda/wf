@@ -100,6 +100,9 @@ clear operator feedback before adding more architecture.
   project missing top-level output schema fields from declared `input.*` and
   `state.*` sources, and challenge prompt templates now always include
   `ux_issues_found: []` so debug-profile reports do not fail by omission.
+- Completed: `wf draft bind` now reuses existing workflow input/state schema
+  fields when binding to step-local inputs, avoiding redundant-schema failures
+  found by debug challenge runs.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening
