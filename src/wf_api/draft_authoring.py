@@ -430,11 +430,23 @@ class WorkflowDraftAuthoringApi:
                     f"missing_outcomes={sorted(missing_outcomes)!r}",
                     f"unknown_outcomes={sorted(unknown_outcomes)!r}",
                 ]
+                repairs: list[str] = []
+                if unknown_outcomes:
+                    repairs.append(
+                        f"remove --route entries for {sorted(unknown_outcomes)!r}"
+                    )
+                if missing_outcomes:
+                    repairs.append(
+                        f"add --route OUTCOME=TARGET for {sorted(missing_outcomes)!r}"
+                    )
                 raise ValueError(
                     f"capability {capability_name!r} declares outcomes "
-                    f"{declared_outcomes}, but routes has "
-                    f"missing routes {sorted(missing_outcomes)} and unknown "
-                    f"routes {sorted(unknown_outcomes)}; " + ", ".join(details)
+                    f"{declared_outcomes}, but routes has missing routes "
+                    f"{sorted(missing_outcomes)} and unknown routes "
+                    f"{sorted(unknown_outcomes)}; "
+                    + ", ".join(details)
+                    + "; repair: "
+                    + "; ".join(repairs)
                 )
             step_routes = dict(routes)
         else:

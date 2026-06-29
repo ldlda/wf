@@ -1016,7 +1016,7 @@ async def test_add_step_from_capability_rejects_unknown_routes_for_multi_outcome
         draft=_echo_draft(),
     )
 
-    with pytest.raises(ValueError, match="unknown routes"):
+    with pytest.raises(ValueError, match="unknown routes") as exc_info:
         await authoring.add_step_from_capability(
             workspace_id="unknown_multi",
             revision=1,
@@ -1024,6 +1024,39 @@ async def test_add_step_from_capability_rejects_unknown_routes_for_multi_outcome
             capability_name="demo.personal.snapshot_tool",
             routes={"ok": "__end__", "skipped": "__end__", "typo": "__end__"},
         )
+
+    message = str(exc_info.value)
+    assert "declares outcomes ('ok', 'skipped')" in message
+    assert "unknown routes ['typo']" in message
+    assert "remove --route entries for ['typo']" in message
+
+
+@pytest.mark.asyncio
+async def test_add_step_rejects_unknown_single_outcome_route_with_repair(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "drafts_unknown_single_outcome"
+    )
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="unknown_single",
+        draft=_echo_draft(),
+    )
+
+    with pytest.raises(ValueError) as exc_info:
+        await authoring.add_step_from_capability(
+            workspace_id="unknown_single",
+            revision=1,
+            step_id="second",
+            capability_name="demo.personal.echo_tool",
+            routes={"ok": "__end__", "error": "fail"},
+        )
+
+    message = str(exc_info.value)
+    assert "declares outcomes ('ok',)" in message
+    assert "unknown routes ['error']" in message
+    assert "remove --route entries for ['error']" in message
 
 
 # -- Draft remove helpers --
