@@ -75,6 +75,7 @@ def project_output_property_to_state_schema(
     output_schema: JsonObject,
     output_field: str,
     state_field: str,
+    allow_existing_equivalent: bool = False,
 ) -> JsonObject:
     """Root state projection convenience wrapper.
 
@@ -86,6 +87,7 @@ def project_output_property_to_state_schema(
             source_schema=output_schema,
             source_field=output_field,
             target_parts=(state_field,),
+            allow_existing_equivalent=allow_existing_equivalent,
         )
     except ValueError as exc:
         msg = str(exc)

@@ -364,6 +364,9 @@ def set_workflow_output(
     This edits WorkflowDraft.output (top-level workflow output). Use
     wf draft set-output for step-level output bindings.
 
+    For single-field input/state sources, missing output_schema fields are
+    projected automatically from the source schema.
+
     Repeat --map for multiple mappings:
     --map state.markdown=markdown --map state.title=title
 

@@ -115,7 +115,8 @@ wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <q
 `set-workflow-output` maps a graph source path (`input.*`, `state.*`, or
 `context.*`) to one public workflow output field. It edits top-level
 `WorkflowDraft.output`; `set-output` edits one step's local-to-state bindings.
-The public output field must already exist in `output_schema`.
+For single-field `input.*` and `state.*` sources, missing public output schema
+fields are projected automatically from the source schema.
 
 `set-input` direction: `input.text=text` means graph source `input.text` maps to
 node-local target `local.text`.
@@ -158,6 +159,9 @@ wf draft validate <workspace_id>
   capabilities require exact route coverage; missing or unknown outcomes are
   rejected before mutation. It still requires explicit choices; if you do not
   know a map, inspect the capability or run validation rather than guessing.
+  Explicit top-level `--input input.x=x` and `--input state.x=x` mappings
+  project the corresponding workflow input/state schema fields from the
+  capability input schema.
 
 ```bash
 wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --input input.other=other --bind-output result=state.result --bind-output title=state.title

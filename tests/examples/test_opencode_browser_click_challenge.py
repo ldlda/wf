@@ -950,6 +950,9 @@ def test_browser_click_wrapper_produces_expected_paths_and_command_prefix() -> N
     )
     assert BROWSER_CLICK_DEF.default_prompt.name == "challenge-prompt.md"
     assert BROWSER_CLICK_DEF.default_prompt.parent.name == "browser_click_challenge"
+    assert "ux_issues_found: []" in BROWSER_CLICK_DEF.default_prompt.read_text(
+        encoding="utf-8"
+    )
 
 
 def test_generic_runner_can_be_configured_with_fake_challenge_and_fake_opencode(

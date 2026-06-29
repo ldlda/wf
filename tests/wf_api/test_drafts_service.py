@@ -1217,6 +1217,41 @@ async def test_set_workflow_output_map_merges_top_level_output(tmp_path: Path) -
     ]
 
 
+@pytest.mark.asyncio
+async def test_set_workflow_output_map_projects_missing_output_schema(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_out_project")
+    api, _service, _authoring = _draft_api(artifact_store, register_echo=True)
+    draft = {
+        **_echo_draft(),
+        "state_schema": {
+            "type": "object",
+            "properties": {
+                "echoed": {"type": "string"},
+                "after": {"type": "object"},
+            },
+        },
+        "output_schema": {"type": "object", "properties": {}},
+        "output": [],
+    }
+    await api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    result = await api.set_workflow_output_map(
+        workspace_id="report",
+        revision=1,
+        output_map={"state.after": "after"},
+        merge=True,
+    )
+
+    assert result["status"] == "valid", result["diagnostics"]
+    fetched = await api.get_draft_workspace(workspace_id="report", include_draft=True)
+    assert fetched["draft"]["output"] == [{"path": "state.after", "target": "after"}]
+    assert fetched["draft"]["output_schema"]["properties"]["after"] == {
+        "type": "object"
+    }
+
+
 # -- Browser-click test helpers for forward-route tests --
 
 
@@ -1310,6 +1345,44 @@ async def test_create_draft_from_capability_does_not_bind_optional_inputs(
     assert created["wrapper_hints"]["input_map"] == {}
     assert workspace["draft"]["steps"]["call"]["input"] == []
     assert any("open_browser" in note for note in created["wrapper_hints"]["notes"])
+
+
+@pytest.mark.asyncio
+async def test_add_step_projects_explicit_optional_workflow_inputs(
+    tmp_path: Path,
+) -> None:
+    api, _service = _browser_click_api(
+        FileWorkflowArtifactStore(tmp_path / "drafts_explicit_optional_input")
+    )
+
+    await api.create_draft_workspace_from_capability(
+        workspace_id="browser",
+        capability_name="local.browser_click.open_click_page",
+        name="browser",
+    )
+
+    result = await api.add_step_from_capability(
+        workspace_id="browser",
+        revision=1,
+        step_id="wait",
+        capability_name="local.browser_click.wait_for_click",
+        route_from_step="call",
+        routes={"ok": "__end__"},
+        input_map={
+            "state.session_id": "session_id",
+            "input.simulate": "simulate",
+            "input.timeout_seconds": "timeout_seconds",
+        },
+        bind_outputs={"after": "state.after"},
+    )
+
+    assert result["status"] == "valid", result["diagnostics"]
+    workspace = await api.get_draft_workspace(
+        workspace_id="browser", include_draft=True
+    )
+    properties = workspace["draft"]["input_schema"]["properties"]
+    assert properties["simulate"]["type"] == "object"
+    assert properties["timeout_seconds"]["type"] == "integer"
 
 
 @pytest.mark.asyncio
@@ -1548,6 +1621,40 @@ async def test_bind_draft_local_output_to_workflow_output_reuses_compatible_stat
     ]
     assert workspace["draft"]["output"] == [
         {"path": "state.echoed", "target": "echoed"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_local_output_to_state_reuses_compatible_state(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_bind_existing_state")
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    draft = _echo_draft()
+    draft["state_schema"] = {
+        "type": "object",
+        "properties": {
+            "echoed": {
+                "description": "Echoed text",
+                "title": "Echoed",
+                "type": "string",
+            }
+        },
+    }
+    await api.create_draft_workspace(workspace_id="report", draft=draft)
+
+    result = await authoring.bind_draft(
+        workspace_id="report",
+        revision=1,
+        step_id="echo",
+        source_path="local.echoed",
+        target_path="state.echoed",
+    )
+
+    assert result["status"] == "valid", result["diagnostics"]
+    workspace = await api.get_draft_workspace(workspace_id="report", include_draft=True)
+    assert workspace["draft"]["steps"]["echo"]["output"] == [
+        {"source": "echoed", "target": "state.echoed"}
     ]
 
 

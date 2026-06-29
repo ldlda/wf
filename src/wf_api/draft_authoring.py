@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -62,6 +62,18 @@ def _local_field(path: str) -> str:
 def _local_parts(path: str) -> tuple[str, ...]:
     """Parse a CLI local-root path as the rootless core LocalPath value."""
     return LocalPath.parse(path.removeprefix("local.")).parts
+
+
+def _schema_path_exists(schema: Mapping[str, Any], parts: Sequence[str]) -> bool:
+    current: Any = schema
+    for part in parts:
+        if not isinstance(current, Mapping):
+            return False
+        properties = current.get("properties")
+        if not isinstance(properties, Mapping) or part not in properties:
+            return False
+        current = properties[part]
+    return True
 
 
 class WorkflowDraftAuthoringApi:
@@ -343,6 +355,7 @@ class WorkflowDraftAuthoringApi:
                 source_schema=output_schema,
                 source_field=local_field,
                 target_parts=target_parts,
+                allow_existing_equivalent=True,
             )
             output_map = {
                 **self.drafts._step_output_map(
@@ -434,7 +447,40 @@ class WorkflowDraftAuthoringApi:
 
         input_map = input_map or {}
         bind_outputs = bind_outputs or {}
+        projected_input_schema = workspace.draft.get("input_schema", {})
+        if not isinstance(projected_input_schema, dict):
+            raise ValueError("draft input_schema must be an object")
         projected_state_schema = state_schema
+        input_schema = (
+            spec.input_schema_contract or spec.input_model.model_json_schema()
+        )
+        for graph_path, local_path in input_map.items():
+            try:
+                source_root, source_parts = _graph_parts(graph_path)
+                local_parts = LocalPath.parse(local_path).parts
+            except ValueError:
+                continue
+            if source_root not in {"input", "state"} or len(local_parts) != 1:
+                continue
+            schema_key = "input_schema" if source_root == "input" else "state_schema"
+            target_schema = (
+                projected_input_schema
+                if source_root == "input"
+                else projected_state_schema
+            )
+            if _schema_path_exists(target_schema, source_parts):
+                continue
+            projected = project_property_to_schema_path(
+                target_schema=target_schema,
+                source_schema=input_schema,
+                source_field=local_parts[0],
+                target_parts=source_parts,
+                allow_existing_equivalent=True,
+            )
+            if schema_key == "input_schema":
+                projected_input_schema = projected
+            else:
+                projected_state_schema = projected
         for output_field, path in bind_outputs.items():
             sf = state_root_field(path)
             projected_state_schema = project_output_property_to_state_schema(
@@ -442,6 +488,7 @@ class WorkflowDraftAuthoringApi:
                 output_schema=output_schema,
                 output_field=output_field,
                 state_field=sf,
+                allow_existing_equivalent=True,
             )
 
         patch: list[dict[str, Any]] = [
@@ -460,6 +507,15 @@ class WorkflowDraftAuthoringApi:
                 "value": step_routes,
             },
         ]
+        if projected_input_schema != workspace.draft.get("input_schema", {}):
+            patch.insert(
+                0,
+                {
+                    "op": "replace",
+                    "path": "/input_schema",
+                    "value": projected_input_schema,
+                },
+            )
         if projected_state_schema != state_schema:
             patch.insert(
                 0,

@@ -159,6 +159,7 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "replaces the full workflow output map" in workflow_output_help
     assert "Use --merge only" in workflow_output_help
     assert "GRAPH_SOURCE=OUTPUT_FIELD" in workflow_output_help
+    assert "output_schema fields are projected" in workflow_output_help
     assert "draft validate" in workflow_output_help
 
 

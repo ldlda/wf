@@ -92,6 +92,7 @@ challenge_report:
     failed: 0
   missed_requirements:
     - "none"
+  ux_issues_found: []
   notes: "short explanation"
 ```
 
@@ -122,6 +123,8 @@ Reporting rules:
   abandoned workflow plans.
 - `attempts.failed` should count attempts that failed validation, failed to run,
   produced wrong output, or were abandoned.
+- `ux_issues_found` should always be present. Use an empty list when you found
+  no UX issues; otherwise include concrete command/error/workaround notes.
 
 Spawned subagents count as you. If a subagent reads product code, set
 `read.product_code: true`. If a subagent reads prior attempts, set

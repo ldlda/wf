@@ -55,8 +55,15 @@ wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
 Draft creation auto-binds required capability inputs only. Optional inputs are
-reported in wrapper-hint notes; bind them explicitly with `wf draft bind` or
-`wf draft set-input --merge` only when the workflow should expose them.
+reported in wrapper-hint notes; bind them explicitly only when the workflow
+should expose them. Use `wf draft bind --from input.x --to local.x` for an
+existing step, or `wf draft add-step --input input.x=x` while adding a step;
+both project the workflow input schema for top-level fields.
+
+`wf draft set-workflow-output` projects missing public output schema fields for
+single-field `input.*` and `state.*` sources. Prefer it for final workflow
+outputs; use `wf draft bind --from local.x --to output.y` when the source is a
+step-local capability output.
 
 When `wf draft validate` returns a `repair_hint`, run that exact focused command
 before writing JSON Patch manually. To make one capability output public, use

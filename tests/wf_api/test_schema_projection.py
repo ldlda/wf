@@ -99,6 +99,26 @@ def test_project_output_property_rejects_existing_state_field() -> None:
         )
 
 
+def test_project_output_property_allows_equivalent_existing_state_field() -> None:
+    state_schema = {
+        "type": "object",
+        "properties": {"after": {"type": "object"}},
+    }
+
+    projected = project_output_property_to_state_schema(
+        state_schema=state_schema,
+        output_schema={
+            "type": "object",
+            "properties": {"after": {"type": "object"}},
+        },
+        output_field="after",
+        state_field="after",
+        allow_existing_equivalent=True,
+    )
+
+    assert projected == state_schema
+
+
 def test_project_output_property_rejects_invalid_output_schema() -> None:
     with pytest.raises(ValueError, match="output_schema is not valid JSON Schema"):
         project_output_property_to_state_schema(

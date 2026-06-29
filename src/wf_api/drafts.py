@@ -25,6 +25,7 @@ from wf_core.models.steps import (
     InputValueBinding,
     OutputBinding,
 )
+from wf_core.paths import GraphSourcePath, parse_toml_path_segments
 
 from .capability_requirements import (
     required_capabilities_for_plan,
@@ -43,6 +44,7 @@ from .draft_payloads import (
     output_bindings_payload as _draft_output_bindings_payload,
 )
 from .operation_context import WorkflowOperationContext
+from .schema_projection import project_property_to_schema_path
 
 
 class WorkflowDraftApi:
@@ -339,17 +341,87 @@ class WorkflowDraftApi:
                 {"path": source, "target": target}
                 for source, target in output_map.items()
             ]
+        workspace = self._draft_store().get_workspace(workspace_id)
+        output_schema = self._workflow_output_schema_for_bindings(
+            draft=workspace.draft,
+            output_bindings=output_bindings,
+        )
+        patch = [
+            {
+                "op": "replace",
+                "path": "/output",
+                "value": output_bindings,
+            }
+        ]
+        if output_schema is not workspace.draft.get("output_schema"):
+            patch.insert(
+                0,
+                {
+                    "op": "replace",
+                    "path": "/output_schema",
+                    "value": output_schema,
+                },
+            )
         return await self.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
-            patch=[
-                {
-                    "op": "replace",
-                    "path": "/output",
-                    "value": output_bindings,
-                }
-            ],
+            patch=patch,
         )
+
+    def _workflow_output_schema_for_bindings(
+        self,
+        *,
+        draft: dict[str, Any],
+        output_bindings: Sequence[Mapping[str, Any]],
+    ) -> dict[str, Any]:
+        """Project missing top-level output fields from input/state schemas.
+
+        This is intentionally conservative: only single-field ``input.x`` and
+        ``state.x`` sources can be copied unambiguously. More complex sources
+        still fall through to existing validation diagnostics instead of
+        guessing a schema.
+        """
+        output_schema = draft.get("output_schema", {})
+        if not isinstance(output_schema, dict):
+            raise ValueError("draft output_schema must be an object")
+        projected = output_schema
+        changed = False
+        for binding in output_bindings:
+            source = binding.get("path")
+            target = binding.get("target")
+            if not isinstance(source, str) or not isinstance(target, str):
+                continue
+            source_schema = _workflow_source_schema(draft, source)
+            if source_schema is None:
+                continue
+            try:
+                target_parts = parse_toml_path_segments(target)
+            except ValueError:
+                continue
+            if _schema_path_exists(projected, target_parts):
+                continue
+            try:
+                source_path = GraphSourcePath.parse(source)
+            except ValueError:
+                continue
+            if len(source_path.parts) != 1:
+                continue
+            try:
+                updated = project_property_to_schema_path(
+                    target_schema=projected,
+                    source_schema=source_schema,
+                    source_field=source_path.parts[0],
+                    target_parts=target_parts,
+                    allow_existing_equivalent=True,
+                )
+            except ValueError as exc:
+                if str(exc).startswith("source field "):
+                    continue
+                raise
+            if updated != projected:
+                changed = True
+                projected = updated
+        return projected if changed else output_schema
 
     def _step_input_maps(
         self,
@@ -365,6 +437,35 @@ class WorkflowDraftApi:
         workspace = self._draft_store().get_workspace(workspace_id)
         step = _draft_step(workspace.draft, step_id)
         return _output_map_from_payload(step.get("output", []))
+
+
+def _workflow_source_schema(
+    draft: Mapping[str, Any],
+    source_path: str,
+) -> dict[str, Any] | None:
+    try:
+        parsed = GraphSourcePath.parse(source_path)
+    except ValueError:
+        return None
+    if parsed.root == "input":
+        schema = draft.get("input_schema")
+    elif parsed.root == "state":
+        schema = draft.get("state_schema")
+    else:
+        return None
+    return schema if isinstance(schema, dict) else None
+
+
+def _schema_path_exists(schema: Mapping[str, Any], parts: Sequence[str]) -> bool:
+    current: Any = schema
+    for part in parts:
+        if not isinstance(current, Mapping):
+            return False
+        properties = current.get("properties")
+        if not isinstance(properties, Mapping) or part not in properties:
+            return False
+        current = properties[part]
+    return True
 
 
 def _draft_input_maps(

@@ -96,6 +96,10 @@ clear operator feedback before adding more architecture.
   for editing top-level workflow output bindings. Accepts repeatable `--map`
   and `--merge` flag. Implementation:
   [`set-workflow-output API/RPC/CLI`](historical/superpowers/plans/2026-06-29-set-workflow-output.md).
+- Completed: challenge-driven output UX polish makes `set-workflow-output`
+  project missing top-level output schema fields from declared `input.*` and
+  `state.*` sources, and challenge prompt templates now always include
+  `ux_issues_found: []` so debug-profile reports do not fail by omission.
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

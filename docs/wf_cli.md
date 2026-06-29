@@ -277,15 +277,15 @@ wf draft create concat_ws --capability wf.std.concat --name concat_ws
 ```
 
 Capability-backed draft creation auto-binds required capability inputs only.
-Optional inputs remain available in the workflow input schema but are not wired
-to the step until explicitly requested. Bind one when the workflow should
-expose it:
+Optional inputs are not wired by default. Bind one when the workflow should
+expose it; the focused helper projects the workflow input schema:
 
 ```bash
 wf draft bind report_ws --revision 2 --step call --from input.path --to local.path
 ```
 
 Use `wf draft set-input --merge` instead when adding several explicit mappings
+for fields already declared in the workflow input or state schema.
 to an existing step input map.
 
 List and inspect drafts:
@@ -337,8 +337,9 @@ wf draft compile concat_ws
 `context.*`) to top-level output fields: `state.value=result` means
 `state.value -> output.result`.
 
-The output field must already be declared in `output_schema`. The command edits
-the projection map; it does not infer or add output schema fields.
+For single-field `input.*` and `state.*` sources, the command projects missing
+top-level `output_schema` fields from the source schema. More complex or
+undeclared paths still rely on `wf draft validate` diagnostics.
 
 By default, `set-input`, `set-output`, and `set-workflow-output` replace the
 whole map for that step or output scope. Use repeated `--map` flags in one
@@ -386,6 +387,9 @@ Use `set-route` separately for outcome routing.
 
 Use `wf draft add-step` when adding a new capability-backed step
 to an existing draft. The command is explicit: it does not guess missing maps.
+Explicit top-level `--input input.x=x` and `--input state.x=x` mappings project
+the corresponding workflow input/state schema fields from the capability input
+schema.
 When the capability declares multiple outcomes, provide exactly one
 `--route OUTCOME=TARGET` for each declared outcome. Missing or unknown outcomes
 are rejected before the draft is mutated.
