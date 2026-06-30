@@ -11,11 +11,18 @@ from pathlib import Path
 from typing import Any
 
 try:
-    from .opencode_resume import display_resume_command, resume_result_path
+    from .opencode_resume import (
+        PromptMode,
+        display_resume_command,
+        resume_command_from_result,
+        resume_result_path,
+    )
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     from examples.agent_challenges.opencode_resume import (
+        PromptMode,
         display_resume_command,
+        resume_command_from_result,
         resume_result_path,
     )
 
@@ -30,16 +37,23 @@ def _utf8_subprocess_env() -> dict[str, str]:
     return env
 
 
-def _load_command(result: dict[str, Any]) -> list[str]:
-    opencode = result.get("opencode")
-    if not isinstance(opencode, dict):
-        raise ValueError("result has no opencode metadata")
-    command = opencode.get("resume_command")
-    if not isinstance(command, list) or not all(
-        isinstance(part, str) for part in command
-    ):
-        raise ValueError("result has no resume_command; session id may be missing")
-    return command
+def _load_command(
+    result: dict[str, Any],
+    *,
+    session_id: str | None = None,
+    attach_url: str | None = None,
+    model: str | None = None,
+    variant: str | None = None,
+    prompt_mode: PromptMode = "auto",
+) -> list[str]:
+    return resume_command_from_result(
+        result,
+        session_id=session_id,
+        attach_url=attach_url,
+        model=model,
+        variant=variant,
+        prompt_mode=prompt_mode,
+    )
 
 
 def _display_command(command: list[str]) -> str:
@@ -49,12 +63,24 @@ def _display_command(command: list[str]) -> str:
 def resume_from_result(
     result_path: Path,
     *,
+    session_id: str | None = None,
+    attach_url: str | None = None,
+    model: str | None = None,
+    variant: str | None = None,
+    prompt_mode: PromptMode = "auto",
     run_fn: RunFn = subprocess.run,
 ) -> Path:
     result = json.loads(result_path.read_text(encoding="utf-8"))
     if not isinstance(result, dict):
         raise ValueError("result file must contain a JSON object")
-    command = _load_command(result)
+    command = _load_command(
+        result,
+        session_id=session_id,
+        attach_url=attach_url,
+        model=model,
+        variant=variant,
+        prompt_mode=prompt_mode,
+    )
     workspace_path = result.get("workspace_path")
     cwd = str(workspace_path) if isinstance(workspace_path, str) else None
     started = time.monotonic()
@@ -89,6 +115,16 @@ def main(argv: list[str] | None = None) -> int:
         description="Print or run an OpenCode trial resume command."
     )
     parser.add_argument("--from-result", type=Path, required=True)
+    parser.add_argument("--session")
+    parser.add_argument("--attach", dest="attach_url")
+    parser.add_argument("--model")
+    parser.add_argument("--variant")
+    parser.add_argument(
+        "--prompt-mode",
+        choices=("auto", "continue", "final-report"),
+        default="auto",
+        help="Choose the resume prompt instead of relying on auto detection.",
+    )
     parser.add_argument("--print-command", action="store_true")
     parser.add_argument("--run", action="store_true")
     args = parser.parse_args(argv)
@@ -97,9 +133,25 @@ def main(argv: list[str] | None = None) -> int:
         result = json.loads(args.from_result.read_text(encoding="utf-8"))
         if not isinstance(result, dict):
             raise ValueError("result file must contain a JSON object")
-        command = _load_command(result)
+        command = _load_command(
+            result,
+            session_id=args.session,
+            attach_url=args.attach_url,
+            model=args.model,
+            variant=args.variant,
+            prompt_mode=args.prompt_mode,
+        )
         if args.run:
-            print(resume_from_result(args.from_result).as_posix())
+            print(
+                resume_from_result(
+                    args.from_result,
+                    session_id=args.session,
+                    attach_url=args.attach_url,
+                    model=args.model,
+                    variant=args.variant,
+                    prompt_mode=args.prompt_mode,
+                ).as_posix()
+            )
         else:
             print(_display_command(command))
     except ValueError as exc:

@@ -9,6 +9,7 @@ from examples.agent_challenges.opencode_resume import (
     build_resume_command,
     display_resume_command,
     extract_session_id,
+    resume_command_from_result,
     resume_prompt_for_result,
     resume_result_path,
 )
@@ -105,6 +106,83 @@ def test_display_resume_command_quotes_prompt_with_spaces() -> None:
     assert rendered == 'opencode run --session ses_cli "continue this trial"'
 
 
+def test_resume_command_recovers_old_raw_result_stdout_session() -> None:
+    command = resume_command_from_result(
+        {
+            "model": "opencode/mimo-v2.5-free",
+            "variant": "high",
+            "task_outcome": "failed",
+            "assertion_failures": [
+                "could not extract challenge report for required_fields evaluation"
+            ],
+            "stdout": _event(type="step_start", sessionID="ses_old"),
+        },
+        attach_url="http://127.0.0.1:8192/",
+    )
+
+    assert command[0:4] == ["opencode", "run", "--session", "ses_old"]
+    assert "--attach" in command
+    assert "opencode/mimo-v2.5-free" in command
+    assert any("Do not continue coding" in part for part in command)
+
+
+def test_resume_command_accepts_explicit_session_when_stdout_is_empty() -> None:
+    command = resume_command_from_result(
+        {
+            "model": "opencode/mimo-v2.5-free",
+            "variant": "high",
+            "task_outcome": "timeout",
+            "stdout": "",
+        },
+        session_id="ses_manual",
+    )
+
+    assert command[0:4] == ["opencode", "run", "--session", "ses_manual"]
+
+
+def test_resume_command_prompt_mode_forces_continue_over_auto_final_report() -> None:
+    command = resume_command_from_result(
+        {
+            "model": "opencode/mimo-v2.5-free",
+            "variant": "high",
+            "task_outcome": "failed",
+            "assertion_failures": [
+                "could not extract challenge report for required_fields evaluation"
+            ],
+            "stdout": _event(type="step_start", sessionID="ses_old"),
+        },
+        prompt_mode="continue",
+    )
+
+    assert any("Continue this same trial" in part for part in command)
+    assert not any("Do not continue coding" in part for part in command)
+
+
+def test_resume_command_prompt_mode_overrides_stored_command() -> None:
+    command = resume_command_from_result(
+        {
+            "stdout": "",
+            "opencode": {
+                "model": "opencode/mimo-v2.5-free",
+                "variant": "high",
+                "session_id": "ses_metadata",
+                "resume_command": [
+                    "opencode",
+                    "run",
+                    "--session",
+                    "ses_metadata",
+                    "old prompt",
+                ],
+            },
+        },
+        prompt_mode="continue",
+    )
+
+    assert command[0:4] == ["opencode", "run", "--session", "ses_metadata"]
+    assert "old prompt" not in command
+    assert any("Continue this same trial" in part for part in command)
+
+
 def test_resume_result_path_uses_next_resume_index(tmp_path: Path) -> None:
     original = tmp_path / "trial.json"
     original.write_text("{}", encoding="utf-8")
@@ -152,6 +230,79 @@ def test_resume_trial_prints_resume_command(
     assert main(["--from-result", str(result_path), "--print-command"]) == 0
     output = capsys.readouterr().out
     assert "opencode run --session ses_cli" in output
+
+
+def test_resume_trial_prints_command_for_old_raw_result(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from examples.agent_challenges.resume_trial import main
+
+    result_path = tmp_path / "trial.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "model": "opencode/mimo-v2.5-free",
+                "variant": "high",
+                "task_outcome": "failed",
+                "stdout": _event(type="step_start", sessionID="ses_old"),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "--from-result",
+                str(result_path),
+                "--attach",
+                "http://127.0.0.1:8192/",
+                "--print-command",
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert "opencode run --session ses_old" in output
+    assert "--attach http://127.0.0.1:8192/" in output
+
+
+def test_resume_trial_prints_forced_continue_prompt(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from examples.agent_challenges.resume_trial import main
+
+    result_path = tmp_path / "trial.json"
+    result_path.write_text(
+        json.dumps(
+            {
+                "model": "opencode/mimo-v2.5-free",
+                "variant": "high",
+                "task_outcome": "failed",
+                "assertion_failures": [
+                    "could not extract challenge report for required_fields evaluation"
+                ],
+                "stdout": _event(type="step_start", sessionID="ses_old"),
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert (
+        main(
+            [
+                "--from-result",
+                str(result_path),
+                "--prompt-mode",
+                "continue",
+                "--print-command",
+            ]
+        )
+        == 0
+    )
+    output = capsys.readouterr().out
+    assert "Continue this same trial" in output
+    assert "Do not continue coding" not in output
 
 
 def test_resume_trial_run_writes_resume_result(tmp_path: Path) -> None:

@@ -129,6 +129,9 @@ def test_challenge_prompt_is_identical_across_profiles(tmp_path: Path) -> None:
     assert "genuinely blocked" in rendered[InstructionProfile.DEBUG].text
     assert "debug profile only" in rendered[InstructionProfile.DEBUG].text
     assert "ux_issues_found" in rendered[InstructionProfile.DEBUG].text
+    none_prompt = rendered[InstructionProfile.NONE].text.replace("\n", " ")
+    assert "inline in your" in none_prompt
+    assert "without an inline self-report is invalid" in none_prompt
 
 
 def test_skills_profile_copies_bundle_but_none_does_not(tmp_path: Path) -> None:
