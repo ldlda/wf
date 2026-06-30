@@ -60,6 +60,10 @@ def build_interrupt_request(
         kind=node.kind,
         payload=payload,
         route=route,
+        outcomes=list(node.outcomes),
+        request_schema=dict(node.request_schema),
+        resume_schema=dict(node.resume_schema),
+        typed=node.has_explicit_contract,
     )
 
 

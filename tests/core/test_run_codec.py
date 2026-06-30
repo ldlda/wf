@@ -81,6 +81,42 @@ def test_run_state_codec_round_trips_child_interrupt_lineage_types() -> None:
     assert isinstance(restored.interrupt.route.workflow_ref, WorkflowRef)
 
 
+def test_run_state_codec_round_trips_interrupt_contract_fields() -> None:
+    run = RunState(
+        workflow_name="approval",
+        status=RunStatus.INTERRUPTED,
+        workflow_input={},
+        state={},
+        interrupt=InterruptRequest(
+            id="interrupt:approval",
+            frame_id="frame_1",
+            node_id="approval",
+            kind="approval",
+            payload={"message": "approve?"},
+            outcomes=["submitted", "cancelled"],
+            request_schema={
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+            },
+            resume_schema={
+                "type": "object",
+                "properties": {"approved": {"type": "boolean"}},
+                "required": ["approved"],
+            },
+            typed=True,
+        ),
+    )
+
+    restored = load_run_state(dump_run_state(run))
+
+    assert restored.interrupt is not None
+    assert restored.interrupt.outcomes == ["submitted", "cancelled"]
+    assert restored.interrupt.request_schema["required"] == ["message"]
+    assert restored.interrupt.resume_schema["required"] == ["approved"]
+    assert restored.interrupt.typed is True
+
+
 def test_run_state_codec_restores_root_state_alias_for_resume_writes() -> None:
     """Root-scope commits after restore must be visible to final output."""
     state = {"text": "before"}

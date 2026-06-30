@@ -137,6 +137,11 @@ class InterruptRoute:
     workflow_ref: WorkflowRef
 
 
+def _object_schema() -> dict[str, object]:
+    """Default legacy interrupt contract used when older checkpoints are loaded."""
+    return {"type": "object", "additionalProperties": True}
+
+
 @dataclass(slots=True)
 class InterruptRequest:
     id: str
@@ -146,6 +151,10 @@ class InterruptRequest:
     payload: dict[str, Any] = field(default_factory=dict)
     resumable: bool = True
     route: InterruptRoute | None = None
+    outcomes: list[str] = field(default_factory=lambda: ["submitted"])
+    request_schema: dict[str, object] = field(default_factory=_object_schema)
+    resume_schema: dict[str, object] = field(default_factory=_object_schema)
+    typed: bool = False
 
 
 @dataclass(slots=True)
