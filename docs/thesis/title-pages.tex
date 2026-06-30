@@ -1,0 +1,69 @@
+\usepackage{tikz}
+\usetikzlibrary{calc}
+
+\makeatletter
+\renewcommand{\maketitle}{
+  \begin{titlepage}
+  \thispagestyle{empty}
+  % Draw the border against the physical page, not the content box, so the
+  % frame can be larger without squeezing the title-page layout.
+  \begin{tikzpicture}[remember picture, overlay]
+    \draw[line width=1.1pt]
+      ($(current page.north west) + (1.7cm,-1.7cm)$)
+      rectangle
+      ($(current page.south east) + (-1.7cm,1.7cm)$);
+  \end{tikzpicture}
+  \noindent\makebox[\textwidth][c]{%
+    \begin{minipage}[c][0.88\textheight][c]{0.86\textwidth}
+    \centering
+    {\Large UNIVERSITY OF SCIENCE AND TECHNOLOGY OF HANOI\par}
+    \vspace{0.35cm}
+    {\large\bfseries DEPARTMENT OF INFORMATION AND COMMUNICATION TECHNOLOGY\par}
+    \vspace{0.9cm}
+    \IfFileExists{docs/thesis/assets/usth-logo.png}{%
+      \includegraphics[width=0.32\textwidth]{docs/thesis/assets/usth-logo.png}\par
+    }{%
+      \includegraphics[width=0.32\textwidth]{assets/usth-logo.png}\par
+    }
+    \vspace{1.0cm}
+    {\Large\bfseries BACHELOR THESIS\par}
+    \vspace{0.9cm}
+    {\large By\par}
+    \vspace{0.2cm}
+    {\large\bfseries Lương Đức Anh\par}
+    \vspace{0.9cm}
+    {\large Title:\par}
+    \vspace{0.2cm}
+    {\Large\bfseries Design and Implementation of lda.chat:\par}
+    \vspace{0.18cm}
+    {\Large\bfseries An AI Agent for Automating and Creating Workspace Workflows\par}
+    \vspace{0.45cm}
+    {\small\itshape Implementation boundary: this thesis evaluates the workflow substrate used by external agents, not a bundled autonomous agent brain.\par}
+    \vfill
+    \begin{tabular}{@{}r@{\hspace{0.5em}}l@{}}
+    External Supervisor: & \textbf{Eng. Trần Văn Trường}\\
+    Internal Supervisor: & \textbf{Dr. Nghiêm Thị Phương}
+    \end{tabular}
+    \vfill
+    {\large Hanoi, \@date\par}
+    \end{minipage}%
+  }
+  \end{titlepage}
+  \clearpage
+  \thispagestyle{empty}
+  \section*{Supervisor Certification}
+  To whom it may concern,
+
+  I, \textbf{Eng. Trần Văn Trường}, certify that the bachelor thesis of
+  \textbf{Lương Đức Anh} is qualified to be presented to the thesis jury.
+
+  \vspace{1.5cm}
+  Hanoi, \@date
+
+  \vspace{2.0cm}
+  \begin{flushright}
+  Supervisor's signature
+  \end{flushright}
+  \clearpage
+}
+\makeatother

@@ -76,7 +76,8 @@ def test_thesis_bundle_has_reproducible_agent_evaluation_assets() -> None:
         "agent-challenge-audited-outcomes-by-cell",
         "agent-challenge-automatic-vs-manual-outcomes",
         "agent-challenge-longitudinal-outcomes",
-        "agent-challenge-duration-and-tokens",
+        "agent-challenge-duration",
+        "agent-challenge-token-volume",
     )
 
     assert (thesis / "agent-challenge-cohort.json").is_file()

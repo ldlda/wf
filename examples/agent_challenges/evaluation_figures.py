@@ -312,23 +312,24 @@ def _scatter_metric(
     axis.grid(axis="y")
 
 
-def _duration_and_tokens(cohort: EvaluationCohort, plt: Any) -> Figure:
+def _metric_by_challenge(
+    cohort: EvaluationCohort,
+    plt: Any,
+    *,
+    metric: str,
+) -> Figure:
+    """Render one readable metric panel per challenge."""
     from matplotlib.lines import Line2D
 
-    figure, axes = plt.subplots(2, 2, figsize=(9.6, 6.8), sharex=True)
+    figure, axes = plt.subplots(2, 1, figsize=(7.4, 6.8), sharex=True)
     challenges = (("browser", "Browser click"), ("report", "Report workflow"))
-    for row, (challenge, challenge_label) in enumerate(challenges):
+    for axis, (challenge, challenge_label) in zip(axes, challenges, strict=True):
         trials = [trial for trial in cohort.trials if trial.challenge == challenge]
-        duration_axis, token_axis = axes[row]
-        _scatter_metric(duration_axis, trials, metric="duration")
-        _scatter_metric(token_axis, trials, metric="tokens")
-        duration_axis.set_ylabel(f"{challenge_label}\nMinutes")
-        token_axis.set_ylabel(f"{challenge_label}\nMillion tokens")
+        _scatter_metric(axis, trials, metric=metric)
+        unit = "Minutes" if metric == "duration" else "Million tokens"
+        axis.set_ylabel(f"{challenge_label}\n{unit}")
 
-    axes[0, 0].set_title("Wall-clock duration")
-    axes[0, 1].set_title("Recorded token volume")
-    axes[1, 0].set_xlabel("Instruction profile")
-    axes[1, 1].set_xlabel("Instruction profile")
+    axes[-1].set_xlabel("Instruction profile")
     legend_handles = [
         Line2D(
             [],
@@ -342,8 +343,13 @@ def _duration_and_tokens(cohort: EvaluationCohort, plt: Any) -> Figure:
         )
         for model, style in _MODEL_STYLES.items()
     ]
+    title = (
+        "Wall-clock duration by profile, model, and wave"
+        if metric == "duration"
+        else "Recorded token volume by profile, model, and wave"
+    )
     figure.suptitle(
-        "Runtime evidence by challenge, profile, model, and wave",
+        title,
         fontsize=13,
         fontweight="bold",
     )
@@ -357,7 +363,11 @@ def _duration_and_tokens(cohort: EvaluationCohort, plt: Any) -> Figure:
     figure.text(
         0.5,
         0.015,
-        "Point labels 1–3 identify waves; token totals include OpenCode cache-read accounting.",
+        (
+            "Point labels 1–3 identify waves."
+            if metric == "duration"
+            else "Point labels 1–3 identify waves; totals include OpenCode cache-read accounting."
+        ),
         ha="center",
         color="#4C5961",
         fontsize=8,
@@ -378,7 +388,14 @@ def render_evaluation_figures(
             _automatic_vs_manual(cohort, plt),
         ),
         ("agent-challenge-longitudinal-outcomes", _longitudinal_outcomes(cohort, plt)),
-        ("agent-challenge-duration-and-tokens", _duration_and_tokens(cohort, plt)),
+        (
+            "agent-challenge-duration",
+            _metric_by_challenge(cohort, plt, metric="duration"),
+        ),
+        (
+            "agent-challenge-token-volume",
+            _metric_by_challenge(cohort, plt, metric="tokens"),
+        ),
     )
     written: list[Path] = []
     for stem, figure in figures:

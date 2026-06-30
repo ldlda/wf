@@ -105,8 +105,11 @@ def test_evaluation_markdown_states_counts_and_longitudinal_limit() -> None:
     cohort = load_evaluation_cohort(COHORT_PATH, repository_root=ROOT)
     markdown = render_evaluation_markdown(cohort)
 
-    assert "36 audited trials" in markdown
-    assert "27 passes, 8 invalid samples, and 1 failure" in markdown
+    assert "36 manually audited trials" in markdown
+    assert "27 clean product-path passes under the campaign rules" in markdown
+    assert "not a model-success-rate estimate" in markdown
+    assert "8 invalid evaluation samples" in markdown
+    assert "and 1 failure" in markdown
     assert "not a controlled model comparison" in markdown
     assert "agent-challenge-audited-outcomes-by-cell.svg" in markdown
     assert "agent-challenge-longitudinal-outcomes.svg" in markdown

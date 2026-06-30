@@ -1,8 +1,8 @@
 ---
-title: "Design and Implementation of lda.chat"
-subtitle: "Infrastructure for AI Agents to Author and Execute Workspace Workflows"
-author: "lda"
-date: "2026-06-30"
+title: "Design and Implementation of lda.chat: An AI Agent for Automating and Creating Workspace Workflows"
+subtitle: ""
+author: "Lương Đức Anh"
+date: "July 1, 2026"
 lang: "en-US"
 documentclass: report
 papersize: a4
@@ -80,13 +80,13 @@ diagram:
 
 # Acknowledgements {.unnumbered}
 
-I thank **[External Supervisor Name]** at **[Company Name]** for providing the
-trust, autonomy, and practical space to pursue this project and to develop its
-technical direction independently.
+I would like to express my sincere gratitude to **Eng. Trần Văn Trường** at **Dicom Technology Co. Ltd.** for the trust, autonomy, and practical space to pursue this project and develop its technical direction independently. His thoughtful input, critical perspective, and support throughout the development process helped shape the project into a concrete and technically grounded engineering project.
 
-I also thank **[Internal Supervisor Name]** at **[University Name]** for academic
-guidance, critical feedback, and support in shaping the work into a formal
-thesis.
+I am also grateful to **Dr. Nghiêm Thị Phương** at the **University of Science and Technology of Hanoi** for coordinating the university--company requirements of the thesis, providing academic guidance on the submission process, and helping ensure that the final report met the university's formal academic requirements.
+
+I would also like to thank the **University of Science and Technology of Hanoi**, the **Department of Information and Communication Technology**, and **Dicom Technology Co. Ltd.** for providing the academic and professional environment in which this thesis could be carried out.
+
+Finally, I am deeply thankful to my family and friends for their encouragement, patience, and support during the development and writing of this thesis.
 
 # List of Abbreviations {.unnumbered}
 
@@ -101,7 +101,7 @@ thesis.
 | RPC | Remote Procedure Call |
 | USTH | University of Science and Technology of Hanoi |
 
-: Abbreviations used in the thesis. {#tbl:abbreviations}
+: Abbreviations used in the thesis. {#tbl:abbreviations .unnumbered}
 
 # Abstract {.unnumbered}
 
@@ -114,17 +114,21 @@ workflows as outcome-routed graphs and manages them through a
 Draft--Artifact--Deployment--Run lifecycle. A neutral source-provider boundary
 projects built-in, Model Context Protocol, and Python capabilities into the same
 workflow surface, while structured diagnostics and repair guidance support
-agent-operated authoring through CLI and JSON-RPC interfaces.
+agent-operable authoring through CLI and JSON-RPC interfaces. Here, "AI Agent"
+names the agent-facing project context; the submitted implementation is the
+workflow substrate exposed to external agents.
 
 The implementation is evaluated through automated conformance tests, a
 deterministic three-node report workflow, a browser-interaction workflow, and a
 manually audited external-agent campaign. The campaign contains 36 trials across
 two challenges, two hosted models, three instruction profiles, and three
-longitudinal waves. Manual audit classified 27 trials as passes, eight as invalid
-evaluation samples, and one as a failure. The disagreement between automatic
-completion and manual outcomes demonstrates why successful execution alone is
-insufficient evidence when agents can inspect implementation files, prior
-artifacts, or evaluator state.
+longitudinal waves. Manual audit, performed by the author, classified 27 trials
+as clean product-path passes under the campaign rules, eight as invalid
+evaluation samples, and one as a failure. These counts are not a
+model-success-rate estimate. The disagreement
+between automatic completion and manual outcomes demonstrates why successful
+execution alone is insufficient evidence when agents can inspect implementation
+files, prior artifacts, or evaluator state.
 
 The contribution is architectural rather than algorithmic: a typed workflow
 lifecycle, a provider-neutral capability boundary, and an agent-operable
@@ -135,6 +139,14 @@ is therefore longitudinal engineering evidence rather than a controlled model
 comparison.
 
 # Introduction
+
+In the thesis title, "AI Agent" refers to the broader `lda.chat`
+agent-facing automation project. The submitted implementation focuses on the
+workflow substrate that such agents use: a typed runtime and lifecycle layer
+exposed through CLI and API surfaces. Experimental agent-harness work exists in
+adjacent project work, but it is outside the submitted implementation boundary;
+this report evaluates the substrate rather than claiming a production
+autonomous agent brain.
 
 This report assumes a setting in which external LLM agents are used as workflow
 authors and operators, and asks what platform substrate they need for reusable
@@ -177,7 +189,7 @@ This work makes five architectural and systems-engineering contributions:
    MCP, and Python sources share one workflow model without provider logic in
    the core runtime.
 4. It exposes structured validation diagnostics, repair hints, next-action
-   guidance, and inspection surfaces intended for agent-operated authoring.
+   guidance, and inspection surfaces intended for agent-operable authoring.
 5. It implements and evaluates the design through deterministic case studies,
    automated conformance tests, and a bounded manually audited agent campaign.
 
@@ -366,6 +378,7 @@ The document uses these terms with specific meanings:
 | Source provider | Server-side code that loads or manages sources for a source family. | Python source loading |
 | Tool | A provider-native operation before projection into workflow form. | MCP tool |
 | Agent-operable | A surface designed for machine clients: structured output, explicit validation, stable commands, inspectability, and bounded summaries. It does not mean independently proven agent success rates. | `wf deploy validate`, `wf run trace` |
+| `RawWorkflowPlan` | A serialized workflow plan used to create an immutable artifact without first going through a mutable draft workspace. | `wf artifact create-from-plan` |
 | Outcome | A control-flow label returned by a node and consumed by graph edges. | `ok`, `error`, `submitted` |
 | Output | The data payload returned by a node or workflow. | `{ "report": "..." }` |
 | Reducer | A pure state-merge operation selected by state schema. | `wf.std.replace`, `wf.std.append` |
@@ -611,10 +624,10 @@ is created at each stage.
 stateDiagram-v2
   direction TB
   [*] --> DraftWorkspace
-  [*] --> RawPlan
+  [*] --> RawWorkflowPlan
   DraftWorkspace --> DraftValidated: validate draft
   DraftValidated --> Artifact: save immutable version
-  RawPlan --> Artifact: create artifact from plan
+  RawWorkflowPlan --> Artifact: create artifact from plan
   Artifact --> Deployment: bind sources
   Deployment --> DeploymentValidated: validate deployment
   DeploymentValidated --> Run: start run
@@ -646,8 +659,9 @@ failed runs remain inspectable records.
 
 ## Workflow Core Model
 
-The core model processes graph execution through typed stages. To improve clarity, this section separates the broad runtime loop
-from the ordinary callable-node path. [@fig:core-runtime-loop] shows how the
+The core model processes graph execution through typed stages. This section
+separates the broad runtime loop from the ordinary callable-node path.
+[@fig:core-runtime-loop] shows how the
 runtime selects a frame, dispatches by step kind, records trace, and routes by
 outcome. [@fig:nodeuse-execution-path] then zooms into the `NodeUse` path,
 where most source-backed work occurs; it expands the `NodeUse` branch from
@@ -680,6 +694,10 @@ flowchart TB
   Resume --> Route
 
   End --> Output[Project workflow output]
+```
+
+```{=latex}
+\clearpage
 ```
 
 ```{.mermaid #fig:nodeuse-execution-path height=80% caption="NodeUse execution path: a callable node resolves bindings, invokes a NodeDef handler, checks the declared outcome, applies reducer-aware state writes, appends trace, and returns to outcome routing."}
@@ -784,7 +802,7 @@ The implementation is organized into focused packages with clear boundaries:
 The workflow core implements deterministic execution semantics. It processes a
 typed graph definition, validates input against `input_schema`, executes the
 selected node use, routes by declared outcomes, applies reducers to state
-writes, and produces trace frames. The current public semantics are
+writes, and produces trace frames. The public semantics are
 outcome-routed graph execution with explicit condition, foreach, subgraph,
 join, interrupt, and end steps. The async runtime has internal frame and lineage
 machinery for foreach admission and state isolation, but this report does not
@@ -839,9 +857,9 @@ policy-enforcement layer. `wf_platform` should not grow into a dumping ground
 for stores, runtimes, or provider lifecycle. Those belong in `wf_api`,
 `wf_server`, or the specific `wf_sources_*` package.
 
-The API lifecycle is deliberately centralized through one facade, per [@fig:api-lifecycle-facade].
-This is not a second architecture diagram; it is the application-layer mechanism
-that prevents lifecycle operations from becoming disconnected CRUD calls.
+The API lifecycle is deliberately centralized through one facade, per
+[@fig:api-lifecycle-facade]. The facade is the application-layer mechanism that
+prevents lifecycle operations from becoming disconnected CRUD calls.
 
 ```{.mermaid #fig:api-lifecycle-facade caption="API lifecycle facade: one WorkflowOperationContext carries stores, source inventory, runtime execution, and live checks for all lifecycle sub-APIs."}
 classDiagram
@@ -1230,12 +1248,12 @@ benchmark.
 
 ## Qualitative Comparison
 
-| Capability | Direct LLM tool loop | Generated script | Mature automation platform | `lda.chat` prototype |
+| Capability | Direct LLM tool loop | Generated script | Representative hosted automation platform | `lda.chat` prototype |
 | --- | --- | --- | --- | --- |
 | Versioned workflow artifact | Not inherent | Manual | Often yes | Prototype support |
 | Deployment/source binding | Not inherent | Manual config | Platform-specific | Prototype support |
 | Typed validation before run | Tool-schema dependent | Custom | Varies | Controlled-test support |
-| Durable run record | Not inherent | Custom | Often yes | Prototype support at stopped boundaries |
+| Persisted prototype run record | Not inherent | Custom | Often yes | Explicit stopped/interrupted boundaries only |
 | Source drift diagnostics | Not inherent | Custom | Varies | Schema-hash controlled examples |
 | Agent-operable repair hints | Not inherent | Custom | Usually human UI | Prototype support |
 | Scheduling | Depends on agent | External scheduler | Yes | Future work |
@@ -1245,7 +1263,9 @@ benchmark.
 The comparison positions the architecture; it is not a quantitative claim that
 the prototype outperforms mature automation products. "Not inherent" means the
 feature can be added by surrounding infrastructure, but is not provided by the
-bare strategy alone.
+bare strategy alone. "Mature automation platform" summarizes representative
+hosted automation products discussed in the Related Work chapter; it is not a
+market-wide survey.
 
 ## Formative Agent-Trial Findings
 
@@ -1274,21 +1294,34 @@ the same failures.
 
 ## Evidence Package
 
-The evidence supporting the thesis claims includes:
+The evidence supporting the thesis claims is summarized below.
 
-| Claim | Evidence | What it asserts | Result |
-| --- | --- | --- | --- |
-| Deployment validation catches source drift | `tests/artifacts/test_validation.py` | Missing, disabled, or changed capabilities produce diagnostics | Pass in focused test suite |
-| Interrupted runs resume at explicit boundaries | `tests/wf_api/test_run_api.py` and resume-concurrency tests | Stopped run state is persisted and resumed through the run API | Pass in focused test suite |
-| Python source lifecycle works | `tests/examples/test_report_workflow_example.py` | Python capability -> artifact -> deployment -> run completes | Pass in focused test suite |
-| Serial multi-node workflow works | `tests/examples/test_browser_click_workflow_example.py` | `open_click_page` -> `wait_for_click` -> `collect_snapshots` completes with before/after evidence | Pass in focused test suite |
-| Bounded agent-operability campaign is checkable | `docs/thesis/agent-challenge-cohort.json`, generated results/figures, local report hashes, and Appendix C | Two challenges, two models, three instruction profiles, and three audited repetitions per cell | 36 audited trials: 27 pass, 8 invalid, 1 fail |
-| CLI and JSON-RPC share the API surface | `tests/wf_transport_rpc_http/` and `tests/wf_cli/` | Transport and CLI delegate to the same workflow operations | Pass in focused test suite |
+- **Deployment validation catches source drift.** Evidence:
+  `test_validation.py`. It asserts that missing, disabled, or changed
+  capabilities produce diagnostics. Result: pass in the focused test suite.
+- **Interrupted runs resume at explicit boundaries.** Evidence:
+  `test_run_api.py` and resume-concurrency tests. They assert that stopped run
+  state is persisted and resumed through the run API. Result: pass in the
+  focused test suite.
+- **Python source lifecycle works.** Evidence:
+  `test_report_workflow_example.py`. It asserts that a Python capability can be
+  loaded, saved as an artifact, deployed, and executed. Result: pass in the
+  focused test suite.
+- **Serial multi-node workflow works.** Evidence:
+  `test_browser_click_workflow_example.py`. It asserts that `open_click_page`,
+  `wait_for_click`, and `collect_snapshots` complete with before/after evidence.
+  Result: pass in the focused test suite.
+- **Bounded agent-operability campaign is checkable.** Evidence:
+  `agent-challenge-cohort.json`, generated results and figures, local report
+  hashes, and Appendix C. It asserts that two challenges, two models, three
+  instruction profiles, and three audited repetitions per cell are explicitly
+  recorded. Result: 36 audited trials: 27 pass, 8 invalid, 1 fail.
+- **CLI and JSON-RPC share the API surface.** Evidence:
+  `tests/wf_transport_rpc_http/` and `tests/wf_cli/`. They assert that transport
+  and CLI operations delegate to the same workflow API surface. Result: pass in
+  the focused test suite.
 
-: Claim-to-evidence summary for the thesis evaluation. {#tbl:evidence-package}
-
-The table summarizes repository evidence; it is not a substitute for rerunning
-the verification commands before final submission.
+The bullet list summarizes repository evidence verified at the recorded commit.
 
 ::: {#include-agent-challenge-results}
 :::
@@ -1296,8 +1329,7 @@ the verification commands before final submission.
 ## Verification Snapshot
 
 This report records one focused verification snapshot to make the evidence
-claims auditable from the text. A final submission should regenerate this table
-from the exact submitted commit.
+claims auditable from the text.
 
 | Field | Value |
 | --- | --------- |
@@ -1420,7 +1452,7 @@ provides earlier, structured failure feedback.
 
 (Evidence: `src/wf_config/`.)
 
-## Planner Efficiency Hypothesis
+## Planner-Efficiency Design Hypothesis, Not Measured Outcome
 
 The platform targets planner efficiency and operational clarity rather than
 runtime throughput. The design hypothesis is that typed contracts, validation,
@@ -1635,6 +1667,11 @@ operational foundation or expands its feature scope.
   `NodeSpec` contracts, allowing planners to compose LLM steps into workflows
   without making the core runtime model-aware.
 
+- **Integrated agent harness.** Adjacent experimental work can be integrated
+  once the substrate boundary is stable. That future layer would provide the
+  autonomous planning loop that drives the workflow lifecycle; it remains
+  outside the implementation and evidence claims of this report.
+
 - **Scheduler and daemon operations.** Offline scheduling for deployments,
   cron-triggered runs, and server daemon lifecycle.
 
@@ -1656,7 +1693,7 @@ report described the design and implementation of `lda.chat`, a prototype
 platform that separates planning from execution across controlled built-in,
 MCP, and Python source examples.
 
-The implementation supports five claims:
+The implementation supports five bounded claims:
 
 1. A typed artifact, deployment, and run lifecycle provides persisted workflow
    records and resumability at explicit stopped/interrupted boundaries.
@@ -1665,7 +1702,7 @@ The implementation supports five claims:
    can be projected into the existing capability/source contract without
    core-runtime changes.
 3. Validation and diagnostics produce machine-readable failure states with
-   repair hints, intended to reduce planner trial-and-error.
+   repair hints intended to support planner repair loops.
 4. The CLI and JSON-RPC transport provide a surface designed for external LLM
    agents to drive without direct runtime access.
 5. The deterministic report-workflow case study demonstrates the full lifecycle
@@ -1675,7 +1712,10 @@ The remaining work is clear and bounded: provider lifecycle, production auth,
 scheduling, fork/gather, richer debugging, and broader evaluation. The prototype
 demonstrates the architecture; the thesis contribution is the platform design
 and evidence that the design can work across multiple source families under
-controlled conditions.
+controlled conditions. The implemented contribution is therefore the durable,
+typed workflow substrate required by an agent-facing automation system; the
+autonomous planning layer remains outside the submitted implementation
+boundary.
 
 <!-- References -->
 # References {#sec:refs .unnumbered}
@@ -1940,34 +1980,62 @@ Evidence:
 
 # Agent Challenge Harness
 
-The browser-click challenge harness is an evaluation instrument for the CLI
-surface intended for external-agent operation. It asks an external agent to
-build and successfully run a workflow that opens a local page with a visible
-button. The workflow records a before-click snapshot, performs or waits for a
-click, records an after-click snapshot, and returns both snapshots from a
-deployed workflow run.
+## Shared Challenge Protocol
 
-The harness deliberately evaluates the product-facing lifecycle rather than
-general Python programmability. A valid solution uses `uv run wf ...` commands
-for artifact creation, deployment saving, and run execution. Importing
-`WorkflowApi`, building `WorkflowServer` directly, calling source functions
-directly, or solving the task as a standalone browser script is treated as a
-bypass even if the visible output is correct.
+The agent-challenge harness is an evaluation instrument for the CLI surface
+intended for external-agent operation. It deliberately evaluates the
+product-facing lifecycle rather than general Python programmability. A valid
+solution uses `uv run wf ...` commands for artifact creation, deployment saving,
+and run execution. Importing `WorkflowApi`, building `WorkflowServer` directly,
+calling source functions directly, or solving the task as a standalone script is
+treated as a bypass even if the visible output is correct.
 
-The browser-click challenge accepts two product-facing authoring paths:
+Both checked challenges accept two product-facing authoring paths:
 
 1. **Draft path.** Create a draft from one capability, apply focused draft edits
    or an RFC 6902 patch, validate, save, deploy, and run.
-2. **Raw-plan path.** Write a raw workflow plan and load it with
+2. **Raw-plan path.** Write a `RawWorkflowPlan` and load it with
    `wf artifact create-from-plan`, then deploy and run.
 
-The challenge report is a YAML self-report with fields for product-path use,
-helper-script use, workflow file, deployment id, run id, before/after booleans,
-read-behavior flags, attempt counts, missed requirements, and notes. The harness
-uses that block for automatic convenience classification, but the official
-outcome is manually reviewed. Manual review checks the command transcript, the
-workflow file, the run id, the run output or trace, and whether the agent read
-product source code, adjacent attempts, prior stores, or existing solutions.
+The challenge report is an inline YAML self-report with fields for product-path
+use, helper-script use, workflow file, deployment id, run id, read-behavior
+flags, attempt counts, missed requirements, and challenge-specific assertions.
+The harness uses that block for automatic convenience classification, but the
+official outcome is manually reviewed.
+
+## Browser-Click Challenge
+
+The browser-click challenge asks an external agent to build and successfully run
+a workflow that opens a local page with a visible button. The workflow records a
+before-click snapshot, performs or waits for a click, records an after-click
+snapshot, and returns both snapshots from a deployed workflow run. Its success
+contract requires `before_clicked: false`, `after_clicked: true`, no failed run,
+and no leftover browser or HTTP-server process.
+
+## Report-Workflow Challenge
+
+The report-workflow challenge asks an external agent to build and successfully
+run a three-step workflow over a local Python source: `read_notes`,
+`extract_report`, and `render_markdown_report`. Its success contract requires a
+deployed workflow run, a title matching the expected report title, rendered
+Markdown output, and no helper-script or direct-API bypass.
+
+## Manual Audit Rubric
+
+Manual review checks the command transcript, the workflow file, the deployment
+id, the run id, the run output or trace, and whether the agent read product
+source code, adjacent attempts, prior stores, or existing solutions. The
+decision precedence is:
+
+| Condition | Official outcome | Reason |
+| --- | --- | --- |
+| Product path completed and the audit trail has no disqualifying reads or bypasses | Pass | Supports product-surface operability |
+| Product path completed but the agent used a disqualifying source, prior artifact, adjacent attempt, or hidden answer | Invalid | The output exists but cannot support clean evaluation |
+| No product-path artifact, deployment, and run evidence | Fail | The task contract was not established |
+| Product path exists, but a helper script or direct API bypass materially contributed | Invalid | Output exists, but the trial is contaminated |
+| No product-path artifact, deployment, and run evidence; task solved through a helper script or direct API | Fail | The product-facing challenge contract was not established |
+
+: Manual audit decision rules for agent-challenge trials. {#tbl:agent-challenge-audit-rubric}
 
 This distinction is intentional. Agent benchmark literature and practice show
 that automated scores and self-reports can be misleading when an agent can
@@ -1977,12 +2045,14 @@ records possible invalidation flags such as helper-script bypass,
 adjacent-attempt leakage, prior-store reuse, product-code dependency, false YAML
 claims, timeouts, parse failures, and missing run evidence.
 
+## Cohort Manifest And Reproducibility
+
 The harness, both challenge workflows, and the 36-trial checked cohort are
-implemented and manually audited. The Evaluation
-chapter reports official outcomes, automatic/manual disagreement, duration,
-and recorded token totals. It does not claim controlled model superiority,
-normalized throughput, or retry reduction because the product, prompts, and
-hosted service conditions were not held constant across waves.
+implemented and manually audited. The Evaluation chapter reports official
+outcomes, automatic/manual disagreement, duration, and recorded token totals.
+It does not claim controlled model superiority, normalized throughput, or retry
+reduction because the product, prompts, and hosted service conditions were not
+held constant across waves.
 
 ```{=latex}
 \clearpage

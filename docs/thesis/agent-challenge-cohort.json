@@ -6,7 +6,9 @@
   "limitations": [
     "The three waves span repository snapshots; they are longitudinal engineering evidence, not a controlled model comparison.",
     "The base prompt changed before wave 3 to require the challenge report inline.",
-    "The models were free hosted OpenCode endpoints, so service load and latency were not controlled."
+    "The models were free hosted OpenCode endpoints, so service load and latency were not controlled.",
+    "The campaign is limited to two tasks and two hosted models, so results may not transfer to other workflows, providers, models, or deployment conditions.",
+    "All manual audits were performed by the author; no second-rater reliability check was conducted."
   ],
   "runs": [
     {

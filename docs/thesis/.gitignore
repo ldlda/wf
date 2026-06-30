@@ -3,3 +3,4 @@
 *.tex
 *.typ
 !figures/*.svg
+!title-pages.tex
