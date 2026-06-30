@@ -258,6 +258,14 @@ def test_wf_draft_route_flags_reject_duplicate_outcomes() -> None:
     assert "duplicate --route for 'ok'" in branch_result.output
 
 
+def test_wf_run_resume_help_exists() -> None:
+    result = runner.invoke(app, ["run", "resume", "--help"])
+
+    assert result.exit_code == 0
+    assert "resume payload" in result.output.lower()
+    assert "schema" in result.output.lower()
+
+
 def test_wf_draft_set_input_rejects_local_prefixed_target() -> None:
     result = runner.invoke(
         app,

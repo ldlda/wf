@@ -17,6 +17,7 @@ from wf_api.runs import WorkflowRunApi
 from wf_artifacts import (
     FileRunStore,
     FileWorkflowArtifactStore,
+    WorkflowArtifact,
     WorkflowDeployment,
 )
 from wf_mcp.broker import WfMcpService
@@ -379,3 +380,101 @@ async def test_workflow_api_facade_lists_runs(tmp_path: Path) -> None:
 
     assert payload["total"] == 1
     assert payload["runs"][0]["deployment_id"] == "echo.personal"
+
+
+def _interrupt_artifact_with_resume_schema() -> WorkflowArtifact:
+    return WorkflowArtifact(
+        id="approval",
+        version=1,
+        title="Approval",
+        input_schema={
+            "type": "object",
+            "properties": {"message": {"type": "string"}},
+            "required": ["message"],
+        },
+        output_schema={"type": "object", "properties": {}},
+        outcomes=("submitted",),
+        plan={
+            "name": "approval",
+            "input_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+            },
+            "state_schema": {"fields": {}},
+            "output_schema": {"type": "object", "properties": {}},
+            "outcomes": ["submitted"],
+            "start": "approval",
+            "nodes": [
+                {
+                    "id": "approval",
+                    "type": "interrupt",
+                    "kind": "approval",
+                    "request": [
+                        {
+                            "path": {"root": "input", "parts": ["message"]},
+                            "target": {"root": "local", "parts": ["message"]},
+                        }
+                    ],
+                    "resume": [],
+                    "outcomes": ["submitted"],
+                    "resume_schema": {
+                        "type": "object",
+                        "properties": {"approved": {"type": "boolean"}},
+                        "required": ["approved"],
+                        "additionalProperties": False,
+                    },
+                },
+                {"id": "end_submitted", "type": "end", "outcome": "submitted"},
+            ],
+            "edges": [
+                {"from": "approval", "outcome": "submitted", "to": "end_submitted"}
+            ],
+        },
+    )
+
+
+def _seed_interrupt_deployment_with_resume_schema(
+    root: Path,
+) -> tuple[WfMcpService, str]:
+    artifact_store = FileWorkflowArtifactStore(root)
+    artifact_store.save_artifact(_interrupt_artifact_with_resume_schema())
+    artifact_store.save_deployment(
+        WorkflowDeployment(
+            id="approval.default",
+            artifact_id="approval",
+            artifact_version=1,
+            bindings=[],
+        )
+    )
+    service = WfMcpService(
+        store=FileStore(root / "mcp"),
+        artifact_store=artifact_store,
+        run_store=FileRunStore(root / "mcp"),
+    )
+    return service, "approval.default"
+
+
+async def test_resume_run_rejects_payload_that_violates_interrupt_schema(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path / "run_api_resume_schema_validation"
+    service, deployment_id = _seed_interrupt_deployment_with_resume_schema(root)
+    context = context_from_service(service)
+    api = WorkflowRunApi(context)
+
+    started = await api.run_deployment(
+        deployment_id=deployment_id,
+        workflow_input={"message": "approve?"},
+    )
+    run_id = started["run_id"]
+    assert run_id is not None
+
+    resumed = await api.resume_run(
+        run_id=run_id,
+        resume_payload={"approved": "yes"},
+        resume_outcome="submitted",
+    )
+
+    assert resumed["status"] == "failed"
+    assert "interrupt resume for approval" in resumed["error"]

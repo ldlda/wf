@@ -159,11 +159,17 @@ def resume_run(
     run_id: Annotated[str, typer.Argument(help="Interrupted durable run id.")],
     payload_json: Annotated[
         str | None,
-        typer.Option("--payload", help="Resume payload JSON object."),
+        typer.Option(
+            "--payload",
+            help="Resume payload JSON object; interrupted runs may validate it against their resume schema.",
+        ),
     ] = None,
     payload_file: Annotated[
         Path | None,
-        typer.Option("--payload-file", help="Path to resume payload JSON object."),
+        typer.Option(
+            "--payload-file",
+            help="Path to resume payload JSON object; schema validation happens before state mutation.",
+        ),
     ] = None,
     outcome: Annotated[
         str,
@@ -184,6 +190,9 @@ def resume_run(
 
     The target store owns the paused run. With `--local`, this is the local file
     store; with `--url`, this is the long-lived JSON-RPC server's store.
+
+    The interrupted run may expose a resume schema through `wf run inspect`.
+    Invalid resume payloads are rejected before workflow state is mutated.
     """
     try:
         resume_payload = parse_json_input(
