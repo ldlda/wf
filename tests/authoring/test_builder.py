@@ -299,6 +299,33 @@ def test_builder_interrupt_accepts_canonical_request_and_resume_bindings() -> No
     assert interrupt.resume[0].target == StatePath.of("text")
 
 
+def test_builder_interrupt_accepts_request_and_resume_schemas() -> None:
+    builder = WorkflowBuilder(
+        name="interrupt_contract",
+        input_schema={"type": "object", "properties": {}},
+        state_schema={"fields": {}},
+        output_schema={"type": "object", "properties": {}},
+    )
+
+    interrupt = builder.interrupt(
+        kind="approval",
+        request_schema={
+            "type": "object",
+            "properties": {"message": {"type": "string"}},
+            "required": ["message"],
+        },
+        resume_schema={
+            "type": "object",
+            "properties": {"approved": {"type": "boolean"}},
+            "required": ["approved"],
+        },
+    )
+
+    assert interrupt.request_schema["required"] == ["message"]
+    assert interrupt.resume_schema["required"] == ["approved"]
+    assert interrupt.has_explicit_contract is True
+
+
 def test_builder_connect_can_use_node_specs_and_returns_resolved_refs() -> None:
     builder = WorkflowBuilder(
         name="connect_specs_demo",

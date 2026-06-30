@@ -603,6 +603,8 @@ class WorkflowBuilder:
         request: Sequence[InputBindingArg] | None = None,
         resume: Sequence[OutputBindingArg] | None = None,
         outcomes: list[str] | None = None,
+        request_schema: Mapping[str, Any] | None = None,
+        resume_schema: Mapping[str, Any] | None = None,
     ) -> InterruptNode: ...
 
     @overload
@@ -615,6 +617,8 @@ class WorkflowBuilder:
         request_map: MapArg | None = None,
         out_map: MapArg | None = None,
         outcomes: list[str] | None = None,
+        request_schema: Mapping[str, Any] | None = None,
+        resume_schema: Mapping[str, Any] | None = None,
     ) -> InterruptNode: ...
 
     def interrupt(
@@ -627,6 +631,8 @@ class WorkflowBuilder:
         request_map: MapArg | None = None,
         out_map: MapArg | None = None,
         outcomes: list[str] | None = None,
+        request_schema: Mapping[str, Any] | None = None,
+        resume_schema: Mapping[str, Any] | None = None,
     ) -> InterruptNode:
         if request is not None and request_map is not None:
             raise TypeError("cannot mix canonical request with deprecated request_map")
@@ -652,14 +658,19 @@ class WorkflowBuilder:
             if resume is not None
             else _canonical_output_bindings(normalize_output_mapping(out_map))
         )
-        node = InterruptNode(
-            id=id or self._next_step_id(f"interrupt_{slug_id(kind)}"),
-            type="interrupt",
-            kind=kind,
-            request=request_bindings,
-            resume=resume_bindings,
-            outcomes=outcomes or ["submitted"],
-        )
+        payload: dict[str, Any] = {
+            "id": id or self._next_step_id(f"interrupt_{slug_id(kind)}"),
+            "type": "interrupt",
+            "kind": kind,
+            "request": request_bindings,
+            "resume": resume_bindings,
+            "outcomes": outcomes or ["submitted"],
+        }
+        if request_schema is not None:
+            payload["request_schema"] = dict(request_schema)
+        if resume_schema is not None:
+            payload["resume_schema"] = dict(resume_schema)
+        node = InterruptNode.model_validate(payload)
         self.nodes.append(node)
         return node
 
