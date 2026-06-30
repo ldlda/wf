@@ -114,9 +114,10 @@ workflows as outcome-routed graphs and manages them through a
 Draft--Artifact--Deployment--Run lifecycle. A neutral source-provider boundary
 projects built-in, Model Context Protocol, and Python capabilities into the same
 workflow surface, while structured diagnostics and repair guidance support
-agent-operable authoring through CLI and JSON-RPC interfaces. Here, "AI Agent"
-names the agent-facing project context; the submitted implementation is the
-workflow substrate exposed to external agents.
+agent-operable authoring through CLI and JSON-RPC interfaces. An external agent
+interface can be layered over these operations; this thesis focuses on the
+lower-level substrate that makes such an interface useful rather than proposing
+a new autonomous planning algorithm.
 
 The implementation is evaluated through automated conformance tests, a
 deterministic three-node report workflow, a browser-interaction workflow, and a
@@ -140,13 +141,14 @@ comparison.
 
 # Introduction
 
-In the thesis title, "AI Agent" refers to the broader `lda.chat`
-agent-facing automation project. The submitted implementation focuses on the
-workflow substrate that such agents use: a typed runtime and lifecycle layer
-exposed through CLI and API surfaces. Experimental agent-harness work exists in
-adjacent project work, but it is outside the submitted implementation boundary;
-this report evaluates the substrate rather than claiming a production
-autonomous agent brain.
+`lda.chat` is positioned as an AI-agent-facing workflow platform. An agent
+interface can be implemented as a surrounding layer that combines a chat or web
+front end, a planner graph, and `wf` CLI/API operations exposed as tools. This
+thesis focuses on the workflow substrate beneath that layer: typed lifecycle
+records, source bindings, validation, execution, diagnostics, traces, and
+resumability boundaries. The contribution is therefore the infrastructure that
+lets external agents and human operators create reusable workspace workflows,
+not a new autonomous planning algorithm.
 
 This report assumes a setting in which external LLM agents are used as workflow
 authors and operators, and asks what platform substrate they need for reusable
@@ -172,7 +174,7 @@ Python source examples.
 **Scope of claims.** This report does not claim production security, broad or
 representative external-agent evaluation, arbitrary mid-node crash recovery,
 scheduling, role-based access control, general workflow parallelism, or a
-bundled autonomous agent brain. It reports a bounded, manually audited
+bundled autonomous planning layer. It reports a bounded, manually audited
 36-trial agent-operability campaign. Claims about planner efficiency remain
 design hypotheses: the campaign was not a controlled retry-reduction or token
 efficiency experiment.
@@ -787,10 +789,13 @@ The implementation is organized into focused packages with clear boundaries:
 | `wf_platform` | Neutral source DTOs, source visibility, permission metadata, and policy |
 | `wf_artifacts` | Artifact, deployment, and run models; file-backed stores; validation |
 | `wf_api` | Application surface: capabilities, drafts, artifacts, deployments, runs |
+| `wf_config` | Neutral workflow configuration models and config loading |
 | `wf_server` | `WorkflowServer` composition from config, stores, and source providers |
 | `wf_transport_rpc_http` | JSON-RPC over HTTP transport for CLI and future clients |
+| `wf_mcp` | Legacy MCP frontend, broker/admin compatibility, and migration shims |
 | `wf_sources_mcp` | MCP upstream source implementation and persistent runtime pool |
 | `wf_sources_python` | Trusted in-process Python source loading and `NodeSpec`-to-`NodeDef` projection |
+| `wf_openapi` | Experimental OpenAPI source provider for typed HTTP operations |
 | `wf_cli` | CLI commands driving the JSON-RPC transport |
 
 : Package responsibilities in the implementation. {#tbl:package-responsibilities}
@@ -1034,6 +1039,16 @@ core provider-agnostic.
 
 (Evidence: `src/wf_sources_python/`, `tests/wf_sources_python/test_loader.py`.)
 
+## Experimental OpenAPI Source Provider
+
+The repository also contains an experimental `wf_openapi` source provider. It
+parses OpenAPI documents, projects HTTP operations into typed `NodeSpec`
+contracts, and executes calls through HTTP request/response validation. This
+shows the provider boundary can extend beyond MCP and trusted Python sources,
+but it is not used by the thesis case study or agent challenge evaluation.
+
+(Evidence: `src/wf_openapi/`, `tests/openapi/`.)
+
 # Case Study: Deterministic Report Workflow
 
 The thesis case study is a document/report preparation workflow backed by local
@@ -1145,13 +1160,14 @@ wf draft create report_ws --capability local.report.extract_report
 
 That command is intentionally a best-effort bootstrap, not a complete workflow
 synthesizer. Focused edit commands such as `wf draft set-name`,
-`wf draft set-input`, and `wf draft set-output` cover common schema and mapping
-edits without forcing an agent to write RFC 6902 JSON Patch by hand. Structural
-edits to an existing draft, such as adding `read_notes` before `extract_report`
-and `render_markdown_report` after it, still use `wf draft patch`. The
-raw-plan import path is the alternative route when the author already has a
-complete plan: it bypasses the draft workspace and creates the artifact
-directly.
+`wf draft set-input`, `wf draft set-output`, `wf draft bind`,
+`wf draft add-step`, `wf draft branch`, `wf draft handle`, and
+`wf draft set-workflow-output` cover common schema, mapping, step, and routing
+edits without forcing an agent to write RFC 6902 JSON Patch by hand. Raw
+`wf draft patch` remains the escape hatch for structural edits that focused
+commands do not yet cover. The raw-plan import path is the alternative route
+when the author already has a complete plan: it bypasses the draft workspace
+and creates the artifact directly.
 
 The tested thesis path imports the complete three-node plan as an immutable
 artifact:
@@ -1627,8 +1643,9 @@ deployment concerns beyond the controlled system-design evidence in this report.
 - **No visual workflow editor.** The platform is driven through CLI and API
   surfaces; no graphical editor exists yet.
 
-- **No bundled autonomous agent brain.** The platform serves external agents;
-  it does not include a built-in agent.
+- **External planner boundary.** The platform serves external agents through
+  public workflow operations; an integrated autonomous planning layer is not
+  part of the current prototype.
 
 - **No general fork/gather.** Fork and gather workflow control is future work.
 
@@ -1660,17 +1677,19 @@ operational foundation or expands its feature scope.
 
 ## Longer-Term Capability Expansion
 
-- **OpenAPI or fetch-style source provider.** Broader HTTP integration through
-  a new source family, complementing MCP and Python sources.
+- **OpenAPI or fetch-style source provider stabilization.** The repository has
+  an experimental OpenAPI source family; future work is hardening, operator
+  documentation, auth integration, and broader HTTP coverage rather than the
+  first proof of concept.
 
 - **LLM nodes as typed source capabilities.** LLM calls exposed as
   `NodeSpec` contracts, allowing planners to compose LLM steps into workflows
   without making the core runtime model-aware.
 
-- **Integrated agent harness.** Adjacent experimental work can be integrated
-  once the substrate boundary is stable. That future layer would provide the
-  autonomous planning loop that drives the workflow lifecycle; it remains
-  outside the implementation and evidence claims of this report.
+- **Agent interface and planner loop.** Add a surrounding layer that combines a
+  chat or web interface, a planner graph, and `wf` operations exposed as tools.
+  This layer can drive the implemented workflow lifecycle without moving
+  planning logic into the core runtime.
 
 - **Scheduler and daemon operations.** Offline scheduling for deployments,
   cron-triggered runs, and server daemon lifecycle.
@@ -1714,8 +1733,8 @@ demonstrates the architecture; the thesis contribution is the platform design
 and evidence that the design can work across multiple source families under
 controlled conditions. The implemented contribution is therefore the durable,
 typed workflow substrate required by an agent-facing automation system; the
-autonomous planning layer remains outside the submitted implementation
-boundary.
+agent interface and autonomous planning loop can be layered over it as future
+work.
 
 <!-- References -->
 # References {#sec:refs .unnumbered}
@@ -1786,8 +1805,10 @@ draft set-output report_ws --revision 3 --step call `
 --map title=state.title --map summary=state.summary
 ```
 
-Structural edits, such as adding `read_notes` before `extract_report` and
-`render_markdown_report` after it, use `draft patch` or a complete raw plan.
+For structural growth, prefer focused helpers such as `draft add-step`,
+`draft branch`, `draft handle`, and `draft bind` when they cover the intended
+edit. Use `draft patch` only as the low-level fallback, or import a complete
+raw plan when the full graph is already available.
 
 ## Draft Validation
 

@@ -22,6 +22,37 @@ The durable product path is now `wf-rpc-server` plus neutral `wf_config` /
 `wf_server` composition. The old `wf-mcp` script remains a legacy/special-purpose
 MCP entrypoint and compatibility surface.
 
+## Active Initiative: Workflow Console And Defense Demo
+
+The next product-facing push is a local-first web console and defense demo that
+shows the lifecycle without forcing viewers to read raw JSON. It connects to a
+loopback `wf-rpc-server` through JSON-RPC, displays lifecycle records and traces,
+and runs a prepared `lda.chat` report workflow with a typed human approval
+interrupt.
+
+Design contracts:
+
+- [`workflow console, agent demo, and defense presentation`](superpowers/specs/2026-07-01-workflow-console-agent-demo.md)
+- [`self-describing interrupt contracts`](superpowers/specs/2026-07-01-self-describing-interrupt-contracts.md)
+
+Implementation order:
+
+1. Add self-describing interrupt request/resume schemas to the core run/inspect
+   contract.
+2. Add a deterministic `examples/lda_report_workflow/` case study with local
+   document, report, and issue-board sources.
+3. Add a top-level `web/` Astro/Effect app with loopback JSON-RPC connection and
+   method registry.
+4. Add console read/inspect views for sources, drafts, artifacts, deployments,
+   runs, traces, and raw RPC drawers.
+5. Add lifecycle autoplay, typed approval, issue-board output, and replay.
+6. Add a constrained demo agent that invokes one prepared recipe macro.
+7. Add presentation and appendix routes for the 15-minute defense.
+
+Boundaries: this is not a production admin panel, generic visual workflow
+editor, scheduler, external Google Drive/mail integration, or benchmark evidence
+for free-form autonomous planning.
+
 ## Priority 1: Product Smoke And Status UX
 
 The platform is usable enough to test as a product. Next work should focus on

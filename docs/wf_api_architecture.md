@@ -43,6 +43,7 @@ Examples that belong in `wf_api`:
   `WorkflowRunSurface`
 - `WorkflowCapabilityApi`
 - `WorkflowDraftApi`
+- `WorkflowDraftAuthoringApi`
 - `WorkflowArtifactApi`
 - `WorkflowDeploymentApi`
 - `WorkflowRunApi`
@@ -154,6 +155,7 @@ contract itself.
 WorkflowApi
   capabilities: WorkflowCapabilityApi
   drafts: WorkflowDraftApi
+  draft_authoring: WorkflowDraftAuthoringApi
   artifacts: WorkflowArtifactApi
   deployments: WorkflowDeploymentApi
   runs: WorkflowRunApi
@@ -163,6 +165,12 @@ These domain services are allowed to return `dict[str, Any]` payloads because
 they define application-facing response contracts consumed by multiple
 frontends. Internally, they should prefer typed models from `wf_core`,
 `wf_artifacts`, and `wf_platform`, then serialize at the boundary.
+
+`WorkflowDraftApi` owns draft workspace lifecycle, validation, compilation,
+JSON Patch application, and focused low-level map edits. `WorkflowDraftAuthoringApi`
+is the semantic authoring layer above it: capability-aware bootstrap, bind,
+add-step, branch, handle, and remove helpers lower intent into ordinary draft
+workspace patches while preserving revision checks.
 
 ## Relationship To wf_core
 
