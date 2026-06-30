@@ -387,6 +387,8 @@ def _interrupt_payload(run: RunState) -> dict[str, Any] | None:
     """Return a JSON-safe interrupt payload for the current run, if paused."""
     if run.interrupt is None:
         return None
+    # The interrupt contract is copied into RunState at pause time so clients
+    # can render/resume without reloading mutable workflow definitions.
     payload = asdict(run.interrupt)
     route = payload.get("route")
     if isinstance(route, dict) and "workflow_ref" in route:

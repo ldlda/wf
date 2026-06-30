@@ -83,6 +83,18 @@ def _interrupt_plan() -> RawWorkflowPlan:
                     ],
                     "resume": [],
                     "outcomes": ["submitted"],
+                    "request_schema": {
+                        "type": "object",
+                        "properties": {"message": {"type": "string"}},
+                        "required": ["message"],
+                        "additionalProperties": False,
+                    },
+                    "resume_schema": {
+                        "type": "object",
+                        "properties": {"approved": {"type": "boolean"}},
+                        "required": ["approved"],
+                        "additionalProperties": False,
+                    },
                 },
                 {"id": "end_submitted", "type": "end", "outcome": "submitted"},
             ],
@@ -410,6 +422,10 @@ async def test_mcp_backed_rpc_resumes_interrupted_run_after_server_rebuild(
 
     assert started["status"] == "interrupted"
     assert started["interrupt"]["payload"]["message"] == "approve after restart?"
+    assert started["interrupt"]["outcomes"] == ["submitted"]
+    assert started["interrupt"]["typed"] is True
+    assert started["interrupt"]["request_schema"]["required"] == ["message"]
+    assert started["interrupt"]["resume_schema"]["required"] == ["approved"]
 
     rebuilt_server = build_workflow_server_from_workflow_config(workflow_config)
     async with httpx.AsyncClient(
@@ -423,7 +439,7 @@ async def test_mcp_backed_rpc_resumes_interrupted_run_after_server_rebuild(
         inspected = await rebuilt_client.inspect_run(run_id=started["run_id"])
         resumed = await rebuilt_client.resume_run(
             run_id=started["run_id"],
-            resume_payload={},
+            resume_payload={"approved": True},
         )
 
     assert inspected["status"] == "interrupted"

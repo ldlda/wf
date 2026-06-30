@@ -310,6 +310,8 @@ def test_wf_run_watch_stops_on_interrupted_run(tmp_path: Path) -> None:
     assert payload["run_id"] == run_id
     assert payload["status"] == "interrupted"
     assert payload["resume_readiness"] == "ready"
+    assert payload["interrupt"]["typed"] is True
+    assert payload["interrupt"]["request_schema"]["required"] == ["message"]
 
 
 def test_wf_run_watch_can_include_trace_slice(tmp_path: Path) -> None:
@@ -533,6 +535,17 @@ def _interrupt_artifact() -> WorkflowArtifact:
                     "request": [input_binding("input.message", "message")],
                     "resume": [],
                     "outcomes": ["submitted"],
+                    "request_schema": {
+                        "type": "object",
+                        "properties": {"message": {"type": "string"}},
+                        "required": ["message"],
+                        "additionalProperties": False,
+                    },
+                    "resume_schema": {
+                        "type": "object",
+                        "properties": {},
+                        "additionalProperties": False,
+                    },
                 },
                 {"id": "end_submitted", "type": "end", "outcome": "submitted"},
             ],
