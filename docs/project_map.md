@@ -80,9 +80,9 @@ For verified Python 3.14 dependency constraints and their removal criteria, see
 
 ## Documentation
 
-- [`docs/add/system-design-implementation.md`](add/system-design-implementation.md)
+- [`docs/thesis/system-design-implementation.md`](thesis/system-design-implementation.md)
   — formal thesis/system-design draft.
-- [`docs/add/evidence-index.md`](add/evidence-index.md) — claim-to-evidence
+- [`docs/thesis/evidence-index.md`](thesis/evidence-index.md) — claim-to-evidence
   map for the thesis draft.
 - [`docs/runbooks/agent-challenge-evaluation.md`](runbooks/agent-challenge-evaluation.md)
   — operator runbook for challenge trials, manual audits, and report

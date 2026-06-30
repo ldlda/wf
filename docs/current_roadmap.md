@@ -244,9 +244,9 @@ stable.
 - Completed thesis case-study evidence bundle: `examples/report_workflow/`
   provides a deterministic report workflow with Python source, fixture input,
   config, runbook, and tests.
-- Completed thesis system-design draft: `docs/add/system-design-implementation.md`
+- Completed thesis system-design draft: `docs/thesis/system-design-implementation.md`
   now frames the platform as a formal system design/implementation report backed
-  by `docs/add/evidence-index.md` and the report-workflow case study.
+  by `docs/thesis/evidence-index.md` and the report-workflow case study.
 - Completed supplemental browser-click workflow example with serial multi-node lifecycle evidence.
 - Completed: an opencode browser-click challenge harness captures external
   agent trials against the deterministic browser-click workflow example without
@@ -308,25 +308,24 @@ stable.
 - Completed: repeated idempotent `wf draft bind input/state -> local` behavior
   is covered by regression tests.
 
-Agent evaluation cohort policy and collection plan:
+Agent evaluation cohort status and policy:
 
 - Treat trials collected while product code, prompts, fixtures, harness logic,
   or workspace isolation were changing as formative evaluation. Preserve them
   as qualitative evidence linking observed agent failures to product/harness
   fixes, but do not pool their timing, token, or success metrics with a frozen
   cohort.
-- The first frozen two-model matrix used product baseline `c926eb5`, two
-  challenges, `none|skills|all` profiles, one run per cell, concurrency 4, and
-  the same OpenCode/MCP tool environment. It produced 12/12 technical workflow
-  successes and 11/12 manually valid benchmark results; one run was invalidated
-  for using an existing solution.
-- Collect two additional runs per matrix cell next (`--trials 2`) to reach
-  N=3 per cell / 36 total frozen-matrix trials. Review and audit that cohort
-  before deciding whether to add two more runs per cell for N=5 / 60 total.
+- Completed: the primary longitudinal campaign now has N=3 per cell / 36
+  manually audited trials across two challenges, two models, and
+  `none|skills|all` profiles. The explicit cohort manifest, aggregate Markdown,
+  and SVG/PDF figures live in `docs/thesis/`.
+- The 36 trials span repository snapshots and a base-prompt change before the
+  third wave. Treat the aggregate as longitudinal product/prompt engineering
+  evidence, not as a frozen model comparison or causal profile experiment.
 - Keep product code, challenge prompts, supplied skill bundle, model variants,
-  timeout, concurrency, fixtures, and enabled tool set fixed during a cohort.
-  Roadmap/evaluation notes may evolve, but record the product baseline and
-  rendered prompt hashes with every result.
+  timeout, concurrency, fixtures, and enabled tool set fixed if a future
+  controlled cohort is collected. Record the product baseline and rendered
+  prompt hashes with every result.
 - Keep manual audit authoritative for final pass/fail/invalid interpretation.
   Automatic policy findings remain review inputs, not bespoke exceptions or
   final benchmark outcomes.

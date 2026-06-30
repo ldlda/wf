@@ -9,3 +9,6 @@ This file remains as a stable pointer for older roadmap and project-map links.
 For the external-agent challenge evaluation workflow, including trial profiles,
 manual audits, and report interpretation, see
 [`../runbooks/agent-challenge-evaluation.md`](../runbooks/agent-challenge-evaluation.md).
+The primary checked cohort and generated aggregate are
+[`agent-challenge-cohort.json`](agent-challenge-cohort.json) and
+[`agent-challenge-results.md`](agent-challenge-results.md).

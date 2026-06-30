@@ -10,7 +10,7 @@ implementation plans are kept for context, not as active instructions.
   and verification commands.
 - [`add/2026-06-workflow-platform-presentation.md`](add/2026-06-workflow-platform-presentation.md):
   concise presentation narrative for the current product shape and demo flow.
-- [`add/thesis-outline.md`](add/thesis-outline.md): thesis/report scaffold,
+- [`thesis/thesis-outline.md`](thesis/thesis-outline.md): thesis/report scaffold,
   argument structure, evidence checklist, limitations, and future work.
 - [`current_roadmap.md`](current_roadmap.md): active next-work list after the
   core type-shape cleanup.

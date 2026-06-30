@@ -13,7 +13,14 @@
   "mcp": {
     "serena": {
       "type": "local",
-      "command": ["serena", "start-mcp-server", "--project-from-cwd"]
+      "command": ["serena", "start-mcp-server", "--project-from-cwd"],
+      "enabled": false
+    }
+  },
+  "permission": {
+    "skill": {
+        "wf-*": "allow",
+        "*": "deny"
     }
   }
 }
