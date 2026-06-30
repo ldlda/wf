@@ -40,6 +40,11 @@ from examples.agent_challenges.opencode_io import (  # noqa: E402
     parse_opencode_output,
     result_text,
 )
+from examples.agent_challenges.opencode_resume import (  # noqa: E402
+    build_resume_command,
+    extract_session_id,
+    resume_prompt_for_result,
+)
 from examples.agent_challenges.report_models import (  # noqa: E402
     build_trial_report,
 )
@@ -648,6 +653,8 @@ def run_v2_trial(
         "machine": str(machine_report_path.resolve()),
     }
 
+    opencode_session_id = extract_session_id(stdout)
+
     result: dict[str, Any] = {
         "challenge_id": challenge.manifest.id,
         "instruction_profile": profile.value,
@@ -695,6 +702,27 @@ def run_v2_trial(
         result["report_parse_error"] = report_parse_error
     if challenge_report is not None:
         result["challenge_report"] = challenge_report
+
+    resume_prompt = resume_prompt_for_result(result)
+    result["opencode"] = {
+        "attach_url": attach_url,
+        "command": command,
+        "model": model,
+        "variant": variant,
+        "session_id": opencode_session_id,
+        "resume_prompt": resume_prompt,
+        "resume_command": (
+            build_resume_command(
+                session_id=opencode_session_id,
+                attach_url=attach_url,
+                model=model,
+                variant=variant,
+                prompt=resume_prompt,
+            )
+            if opencode_session_id is not None
+            else None
+        ),
+    }
 
     result_path.write_text(
         json.dumps(result, indent=2, sort_keys=True), encoding="utf-8"

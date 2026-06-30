@@ -280,6 +280,9 @@ stable.
 - Completed: challenge matrix operations now have compact OpenCode thread
   titles, policy handling for canonical skill-document reads, and a central
   `summarize_trials.py` command for audited result tables.
+- Completed: agent challenge results now record OpenCode session metadata and
+  resume commands, so incomplete provider runs can be continued without
+  mutating original raw evidence.
 - Completed: canonical TOML path strings are the emitted workflow path form.
   Paths now serialize as `"input.text"`, `"state.echoed"`, and `"message"`
   (local). Structural `{"root": "input", "parts": ["text"]}` path objects

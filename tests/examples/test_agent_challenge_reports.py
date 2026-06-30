@@ -577,3 +577,42 @@ def test_build_report_raises_on_missing_paths(tmp_path: Path) -> None:
 
     with pytest.raises(ValueError, match="raw_result_path"):
         build_trial_report(result, audit=None)
+
+
+def test_trial_report_renders_opencode_resume_metadata(tmp_path: Path) -> None:
+    from examples.agent_challenges.report_models import build_trial_report
+    from examples.agent_challenges.reports import render_trial_report_markdown
+
+    result = _raw_result(tmp_path)
+    result["opencode"] = {
+        "attach_url": "http://127.0.0.1:8192/",
+        "command": ["opencode", "run", "--format", "json", "prompt"],
+        "model": "opencode/deepseek-v4-flash-free",
+        "variant": "max",
+        "session_id": "ses_report",
+        "resume_prompt": "continue?",
+        "resume_command": [
+            "opencode",
+            "run",
+            "--session",
+            "ses_report",
+            "--attach",
+            "http://127.0.0.1:8192/",
+            "--format",
+            "json",
+            "--model",
+            "opencode/deepseek-v4-flash-free",
+            "--variant",
+            "max",
+            "continue?",
+        ],
+    }
+
+    report = build_trial_report(result, audit=None)
+    rendered = render_trial_report_markdown(report)
+    machine = report.model_dump(mode="json")
+
+    assert machine["opencode"]["session_id"] == "ses_report"
+    assert "## OpenCode Resume" in rendered
+    assert "ses_report" in rendered
+    assert "opencode run --session ses_report" in rendered

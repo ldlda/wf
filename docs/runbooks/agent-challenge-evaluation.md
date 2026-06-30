@@ -193,6 +193,28 @@ disqualifying evidence is found. Use `fail` when the task was not completed.
 Use `invalid` when the workflow ran but the evaluation is contaminated,
 bypassed, or otherwise not usable as clean benchmark evidence.
 
+## Resume An Incomplete OpenCode Trial
+
+When a result captures an OpenCode `sessionID`, the report includes an
+`OpenCode Resume` section. Print the resume command with:
+
+```powershell
+uv run python examples/agent_challenges/resume_trial.py `
+  --from-result examples/agent_challenges/browser_click_challenge/results/opencode_deepseek-v4-flash-free-trial-034.json
+```
+
+Run the resume and save a sidecar result with:
+
+```powershell
+uv run python examples/agent_challenges/resume_trial.py `
+  --from-result examples/agent_challenges/browser_click_challenge/results/opencode_deepseek-v4-flash-free-trial-034.json `
+  --run
+```
+
+The resume command writes `*.resume-001.json` beside the original result and
+does not mutate the original raw result. Use manual audit to decide whether the
+resumed output completes the trial or only provides additional evidence.
+
 ## Summarize Audited Results
 
 After manual audits, generate a compact matrix table from the bounded report

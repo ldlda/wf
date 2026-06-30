@@ -22,6 +22,16 @@ class TrialIdentity(StrictReportModel):
     workspace_path: str
 
 
+class OpenCodeRunMetadata(StrictReportModel):
+    attach_url: str | None = None
+    command: list[str] = Field(default_factory=list)
+    model: str = ""
+    variant: str = ""
+    session_id: str | None = None
+    resume_prompt: str = ""
+    resume_command: list[str] | None = None
+
+
 class TrialOutcome(StrictReportModel):
     task_outcome: str
     evaluation_validity: str
@@ -85,6 +95,7 @@ class TrialReport(StrictReportModel):
     final_agent_answer: str | None = None
     commands_and_tools: list[CommandToolBrief] = Field(default_factory=list)
     automatic_evidence: AutomaticEvidence
+    opencode: OpenCodeRunMetadata | None = None
     policy_findings: list[str] = Field(default_factory=list)
     self_report_discrepancies: list[str] = Field(default_factory=list)
     manual_audit: ManualAuditSummary = Field(default_factory=ManualAuditSummary)
@@ -233,6 +244,24 @@ def _build_automatic_evidence(result: dict[str, object]) -> AutomaticEvidence:
     )
 
 
+def _build_opencode_metadata(result: dict[str, object]) -> OpenCodeRunMetadata | None:
+    raw = result.get("opencode")
+    if not isinstance(raw, dict):
+        return None
+    resume_command = raw.get("resume_command")
+    return OpenCodeRunMetadata(
+        attach_url=_str_none(raw.get("attach_url")),
+        command=_list_str(raw.get("command")),
+        model=_str(raw.get("model")),
+        variant=_str(raw.get("variant")),
+        session_id=_str_none(raw.get("session_id")),
+        resume_prompt=_str(raw.get("resume_prompt")),
+        resume_command=_list_str(resume_command)
+        if isinstance(resume_command, list)
+        else None,
+    )
+
+
 def _build_trial_report(
     result: dict[str, object],
     *,
@@ -271,6 +300,7 @@ def _build_trial_report(
         final_agent_answer=final_agent_answer,
         commands_and_tools=commands_and_tools,
         automatic_evidence=automatic_evidence,
+        opencode=_build_opencode_metadata(result),
         policy_findings=policy_findings,
         self_report_discrepancies=self_report_discrepancies,
         follow_up_notes=follow_up_notes,

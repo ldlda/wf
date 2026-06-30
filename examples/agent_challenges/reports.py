@@ -12,6 +12,7 @@ import yaml
 
 from examples.agent_challenges.classification import extract_challenge_report
 from examples.agent_challenges.opencode_io import parse_opencode_output, result_text
+from examples.agent_challenges.opencode_resume import display_resume_command
 from examples.agent_challenges.report_models import TrialReport
 
 
@@ -219,6 +220,10 @@ def _atomic_write_text(path: Path, text: str) -> None:
     temporary.replace(path)
 
 
+def _shell_join(command: list[str]) -> str:
+    return display_resume_command(command)
+
+
 def render_trial_report_markdown(report: TrialReport) -> str:
     lines: list[str] = []
 
@@ -243,6 +248,29 @@ def render_trial_report_markdown(report: TrialReport) -> str:
                 f"- Parse error ({key}): {err.get('type', '')} - {err.get('message', '')}"
             )
     lines.append("")
+
+    if report.opencode is not None:
+        lines.append("## OpenCode Resume")
+        lines.append("")
+        if report.opencode.session_id:
+            lines.append(f"- Session: `{report.opencode.session_id}`")
+        else:
+            lines.append("- Session: not captured")
+        if report.opencode.attach_url:
+            lines.append(f"- Attach URL: `{report.opencode.attach_url}`")
+        if report.opencode.resume_command:
+            lines.append("")
+            lines.append("```powershell")
+            lines.append(_shell_join(report.opencode.resume_command))
+            lines.append("```")
+        if report.opencode.resume_prompt:
+            lines.append("")
+            lines.append("Resume prompt:")
+            lines.append("")
+            lines.append("```text")
+            lines.append(report.opencode.resume_prompt)
+            lines.append("```")
+        lines.append("")
 
     lines.append("## Agent Self-Report")
     lines.append("")

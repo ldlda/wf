@@ -1942,3 +1942,149 @@ def test_base_prompt_mentions_self_report_rules() -> None:
     assert "read.product_code" in text
     assert "read.existing_solution" in text
     assert "read.adjacent_attempts" in text
+
+
+def test_v2_runner_stores_opencode_resume_metadata(tmp_path: Path) -> None:
+    from examples.agent_challenges.models import InstructionProfile
+    from examples.agent_challenges.runner import run_v2_trial
+
+    challenge = load_challenge_manifest(_write_manifest(tmp_path / "challenge"))
+    bundle = ROOT / "examples/agent_challenges/instruction_bundles/workflow_cli.yaml"
+    stdout = (
+        '{"type":"step_start","sessionID":"ses_runner"}\n'
+        '{"type":"text","sessionID":"ses_runner","text":"```yaml\\n'
+        "challenge_report:\\n"
+        "  used_product_path: true\\n"
+        "  used_helper_script: false\\n"
+        "  before_clicked: false\\n"
+        "  after_clicked: true\\n"
+        "  run_failed: false\\n"
+        "  leftover_processes: false\\n"
+        '```"}\n'
+    )
+
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: str,
+        text: bool,
+        capture_output: bool,
+        timeout: float | None,
+        check: bool,
+    ) -> object:
+        return type(
+            "Result",
+            (),
+            {"returncode": 0, "stdout": stdout, "stderr": ""},
+        )()
+
+    result = run_v2_trial(
+        challenge,
+        profile=InstructionProfile.NONE,
+        model="opencode/deepseek-v4-flash-free",
+        variant="max",
+        index=1,
+        results_dir=tmp_path / "results",
+        workspaces_dir=tmp_path / "workspaces",
+        instruction_bundle=bundle,
+        attach_url="http://127.0.0.1:8192/",
+        run_fn=fake_run,
+    )
+
+    opencode = result["opencode"]
+    assert opencode["session_id"] == "ses_runner"
+    assert opencode["attach_url"] == "http://127.0.0.1:8192/"
+    assert opencode["model"] == "opencode/deepseek-v4-flash-free"
+    assert opencode["variant"] == "max"
+    assert opencode["resume_command"][0:4] == [
+        "opencode",
+        "run",
+        "--session",
+        "ses_runner",
+    ]
+    assert "challenge_report" in opencode["resume_prompt"]
+
+
+def test_v2_runner_resume_prompt_sees_assertion_failures(tmp_path: Path) -> None:
+    from examples.agent_challenges.models import InstructionProfile
+    from examples.agent_challenges.runner import run_v2_trial
+
+    challenge = load_challenge_manifest(_write_manifest(tmp_path / "challenge"))
+    bundle = ROOT / "examples/agent_challenges/instruction_bundles/workflow_cli.yaml"
+    stdout = (
+        '{"type":"step_start","sessionID":"ses_runner"}\n'
+        '{"type":"text","sessionID":"ses_runner","text":"run completed"}\n'
+    )
+
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: str,
+        text: bool,
+        capture_output: bool,
+        timeout: float | None,
+        check: bool,
+    ) -> object:
+        return type(
+            "Result",
+            (),
+            {"returncode": 0, "stdout": stdout, "stderr": ""},
+        )()
+
+    result = run_v2_trial(
+        challenge,
+        profile=InstructionProfile.NONE,
+        model="opencode/deepseek-v4-flash-free",
+        variant="max",
+        index=1,
+        results_dir=tmp_path / "results",
+        workspaces_dir=tmp_path / "workspaces",
+        instruction_bundle=bundle,
+        run_fn=fake_run,
+    )
+
+    opencode = result["opencode"]
+    assert result["task_outcome"] == "failed"
+    assert "assertion_failures" in result
+    assert "do not continue coding" in opencode["resume_prompt"].lower()
+
+
+def test_v2_runner_stores_null_session_when_stdout_has_no_session(
+    tmp_path: Path,
+) -> None:
+    from examples.agent_challenges.models import InstructionProfile
+    from examples.agent_challenges.runner import run_v2_trial
+
+    challenge = load_challenge_manifest(_write_manifest(tmp_path / "challenge"))
+    bundle = ROOT / "examples/agent_challenges/instruction_bundles/workflow_cli.yaml"
+
+    def fake_run(
+        command: list[str],
+        *,
+        cwd: str,
+        text: bool,
+        capture_output: bool,
+        timeout: float | None,
+        check: bool,
+    ) -> object:
+        return type(
+            "Result",
+            (),
+            {"returncode": 1, "stdout": "", "stderr": "boom"},
+        )()
+
+    result = run_v2_trial(
+        challenge,
+        profile=InstructionProfile.NONE,
+        model="opencode/deepseek-v4-flash-free",
+        variant="max",
+        index=1,
+        results_dir=tmp_path / "results",
+        workspaces_dir=tmp_path / "workspaces",
+        instruction_bundle=bundle,
+        run_fn=fake_run,
+    )
+
+    opencode = result["opencode"]
+    assert opencode["session_id"] is None
+    assert opencode["resume_command"] is None
