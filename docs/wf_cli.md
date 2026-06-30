@@ -630,6 +630,17 @@ wf run trace run_123 --from 0 --limit 25
 
 Trace output can be large. Always request a bounded range.
 
+### Interrupt Resume Schemas
+
+Interrupted runs may include `interrupt.request_schema` and
+`interrupt.resume_schema` in `wf run inspect` output. The request schema
+describes the payload shown to the operator. The resume schema describes the
+payload accepted by `wf run resume --payload` or `--payload-file`.
+
+Resume payload validation happens before workflow state mutation. If validation
+fails, inspect the schema and retry with a payload that matches the declared
+shape.
+
 ## Explain
 
 Explain stable diagnostic/error codes:

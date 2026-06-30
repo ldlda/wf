@@ -100,3 +100,10 @@ completed or failed runs. Use:
 - `wf run resume <run_id>` only for interrupted runs.
 
 Do not ask for unbounded traces.
+
+## Interrupt Resume Contracts
+
+An interrupted run can carry a self-describing resume contract. Treat
+`interrupt.resume_schema` from `wf run inspect` as the source of truth for the
+payload you pass to `wf run resume`. Do not read workflow source code just to
+guess approval fields when the schema is present.

@@ -125,6 +125,9 @@ top-level `compiled_plan` key from the CLI output.
 
 ## Rules
 
+- For interrupted runs, call `wf run inspect <run_id>` before resuming. If the
+  interrupt includes `resume_schema`, shape `wf run resume --payload` to that
+  schema instead of guessing field names.
 - Use explicit `--config <path>` for examples, challenge workspaces, and
   non-root configs. The default is `wf.config.json` in the current working
   directory.

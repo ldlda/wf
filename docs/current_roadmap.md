@@ -37,8 +37,8 @@ Design contracts:
 
 Implementation order:
 
-1. Add self-describing interrupt request/resume schemas to the core run/inspect
-   contract.
+1. Completed: self-describing interrupt request/resume schemas are carried
+   through core execution, persisted run inspection, and resume validation.
 2. Add a deterministic `examples/lda_report_workflow/` case study with local
    document, report, and issue-board sources.
 3. Add a top-level `web/` Astro/Effect app with loopback JSON-RPC connection and
