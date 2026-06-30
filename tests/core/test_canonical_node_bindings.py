@@ -330,6 +330,21 @@ def test_interrupt_node_accepts_explicit_request_and_resume_schemas():
     assert node.resume_schema["required"] == ["approved"]
 
 
+def test_interrupt_node_rejects_invalid_json_schema_contract():
+    with pytest.raises(ValidationError, match="invalid JSON Schema"):
+        InterruptNode.model_validate(
+            {
+                "id": "approval",
+                "type": "interrupt",
+                "kind": "approval",
+                "resume_schema": {
+                    "type": "object",
+                    "properties": {"approved": {"type": "not-a-json-schema-type"}},
+                },
+            }
+        )
+
+
 def test_foreach_node_serializes_over_path_as_canonical_string():
     node = ForeachNode.model_validate(
         {
