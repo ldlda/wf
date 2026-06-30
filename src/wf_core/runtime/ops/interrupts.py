@@ -114,6 +114,12 @@ def resume_interrupt(
             f"interrupt node {step.id!r} does not declare resume outcome {resume_outcome!r}"
         )
 
+    validate_payload_against_schema(
+        step.resume_schema,
+        resume_payload,
+        f"interrupt resume for {step.id}",
+    )
+
     patch = build_output_patch(
         workflow,
         step.resume,

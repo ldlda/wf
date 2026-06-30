@@ -7,6 +7,7 @@ import pytest
 from wf_core import (
     END,
     Edge,
+    EndNode,
     InterruptNode,
     NodeDef,
     NodeUse,
@@ -20,7 +21,7 @@ from wf_core import (
     resume_workflow_async,
     resume_workflow_result_async,
 )
-from wf_core.models.steps import InputValueBinding
+from wf_core.models.steps import InputValueBinding, OutputBinding
 
 
 async def explode(_payload: dict[str, Any], _context: RuntimeContext) -> dict[str, Any]:
@@ -156,3 +157,45 @@ async def test_interrupt_request_payload_validates_against_schema() -> None:
     assert run.interrupt is None
     assert run.error is not None
     assert "interrupt request for ask" in run.error
+
+
+async def test_interrupt_resume_payload_validates_before_state_mutation() -> None:
+    workflow = Workflow(
+        name="resume_validation",
+        input_schema=_schema(),
+        state_schema=StateSchema.from_field_map({}),
+        output_schema=_schema(),
+        outcomes=["submitted"],
+        start="ask",
+        nodes=[
+            InterruptNode(
+                id="ask",
+                type="interrupt",
+                kind="approval",
+                resume=[
+                    OutputBinding(source="approved", target="state.approved")  # type: ignore[arg-type]
+                ],
+                resume_schema={
+                    "type": "object",
+                    "properties": {"approved": {"type": "boolean"}},
+                    "required": ["approved"],
+                    "additionalProperties": False,
+                },
+            ),
+            EndNode(id="end", type="end", outcome="submitted"),
+        ],
+        edges=[Edge.model_validate({"from": "ask", "outcome": "submitted", "to": "end"})],
+    )
+    interrupted = await execute_workflow_async(workflow, {}, {})
+
+    resumed = await resume_workflow_result_async(
+        workflow,
+        interrupted,
+        {},
+        resume_payload={"approved": "yes"},
+    )
+
+    assert resumed.status == RunStatus.FAILED
+    assert resumed.state == {}
+    assert resumed.error is not None
+    assert "interrupt resume for ask" in resumed.error
