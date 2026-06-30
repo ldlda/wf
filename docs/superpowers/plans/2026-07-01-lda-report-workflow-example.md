@@ -1,0 +1,1656 @@
+# lda.chat Report Workflow Example Implementation Plan
+
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Add a deterministic `examples/lda_report_workflow/` case study that exercises document reading, report synthesis, a typed human approval interrupt, issue creation, resume, trace, and final output.
+
+**Architecture:** Implement three trusted Python sources in one example package: `local.lda_docs`, `local.lda_report`, and `local.issue_board`. Ship a raw workflow plan that uses the new self-describing interrupt contract, plus tests that run artifact, deployment, interrupt inspection, resume, issue creation, and final output through the product API.
+
+**Tech Stack:** Python 3.14, Pydantic models, static Python workflow sources, raw workflow plans, `wf_config`, `wf_server`, pytest.
+
+---
+
+## Scope
+
+This is the second implementation slice for the Workflow Console initiative.
+It creates a deterministic workflow the future web console can render and replay.
+
+Do not build the web app, presentation routes, or a model-backed demo agent in
+this plan. Do not connect to Google Drive, email, GitHub, or any external issue
+tracker. The issue board is a local JSON-backed demo source only.
+
+## File Structure
+
+Create:
+
+```text
+examples/lda_report_workflow/
+  .gitignore
+  README.md
+  documents/
+    architecture-notes.md
+    evaluation-findings.md
+    project-brief.md
+    risk-register.md
+    roadmap.md
+  document_source.py
+  report_source.py
+  issue_board_source.py
+  run-input.json
+  wf.config.json
+  workflow.plan.json
+```
+
+Create tests:
+
+```text
+tests/examples/test_lda_report_workflow_example.py
+```
+
+Modify docs:
+
+```text
+docs/current_roadmap.md
+docs/add/evidence-index.md
+docs/add/system-design-implementation.md
+```
+
+If either `docs/add/...` file no longer contains live thesis evidence sections,
+only update `docs/current_roadmap.md` and the new example README.
+
+## Workflow Shape
+
+The first implementation should be serial around the interrupt. Do not implement
+real `foreach` in the example plan yet. Use arrays inside node payloads for the
+document set and issue set so the demo is stable and easy to audit.
+
+Graph:
+
+```text
+list_documents -> read_documents -> analyze_documents -> build_report
+  -> review_issues interrupt
+  submitted -> create_selected_issues -> finalise_report -> end
+  cancelled -> record_revision_request -> end
+```
+
+The workflow still demonstrates typed interrupts and resume. A later slice can
+replace the serial document/issue aggregation with explicit `foreach` once the
+web graph renderer needs that visual complexity.
+
+## Data Contract
+
+Use these durable ids:
+
+- artifact id: `lda_report_case_study`
+- deployment id: `lda_report_case_study.default`
+- source ids: `local.lda_docs`, `local.lda_report`, `local.issue_board`
+
+Expected final report title:
+
+```text
+lda.chat Thesis And Project Readiness Report
+```
+
+The interrupt:
+
+- `kind`: `issue_review`
+- outcomes: `submitted`, `cancelled`
+- request payload contains rendered report markdown and proposed issues
+- resume payload contains `approved`, `selected_issue_ids`, and optional
+  `comment`
+- request/resume schemas are explicit JSON Schema objects in the raw plan
+
+---
+
+### Task 1: Create Deterministic Document Fixtures
+
+**Files:**
+- Create: `examples/lda_report_workflow/.gitignore`
+- Create: `examples/lda_report_workflow/documents/project-brief.md`
+- Create: `examples/lda_report_workflow/documents/architecture-notes.md`
+- Create: `examples/lda_report_workflow/documents/evaluation-findings.md`
+- Create: `examples/lda_report_workflow/documents/risk-register.md`
+- Create: `examples/lda_report_workflow/documents/roadmap.md`
+
+- [ ] **Step 1: Create `.gitignore`**
+
+Create `examples/lda_report_workflow/.gitignore`:
+
+```gitignore
+.wf_lda_report_store/
+issue-board.json
+```
+
+- [ ] **Step 2: Create project brief**
+
+Create `examples/lda_report_workflow/documents/project-brief.md`:
+
+```md
+# Project Brief
+
+lda.chat is a workflow substrate for AI-agent-facing workspace automation. The
+prototype separates external planning from deterministic workflow execution.
+
+Key achievements:
+
+- Typed Draft, Artifact, Deployment, Run, and Trace lifecycle records.
+- Source-provider boundary for platform, MCP, Python, and experimental OpenAPI
+  sources.
+- JSON-RPC and CLI surfaces usable by external agents and human operators.
+- Deterministic report and browser-click examples with audited agent challenge
+  runs.
+
+Current positioning:
+
+- The system is not a bundled autonomous planner.
+- External agents or humans operate the workflow lifecycle.
+- The next product-facing step is a local Workflow Console and defense demo.
+```
+
+- [ ] **Step 3: Create architecture notes**
+
+Create `examples/lda_report_workflow/documents/architecture-notes.md`:
+
+```md
+# Architecture Notes
+
+Lifecycle:
+
+- Drafts are mutable authoring workspaces with revisions.
+- Artifacts are immutable versioned workflow definitions.
+- Deployments bind logical source ids to configured concrete sources.
+- Runs persist stopped execution records and bounded traces.
+
+Runtime:
+
+- The core executes typed graph nodes and routes by declared outcomes.
+- State writes go through reducer-aware merge semantics.
+- Interrupt nodes pause at explicit human-in-the-loop boundaries.
+- Resume payloads are validated before state mutation.
+
+Source providers:
+
+- Python sources support trusted local demo capabilities.
+- MCP sources preserve upstream session state through a runtime pool.
+- OpenAPI source support exists as an experimental provider.
+```
+
+- [ ] **Step 4: Create evaluation findings**
+
+Create `examples/lda_report_workflow/documents/evaluation-findings.md`:
+
+```md
+# Evaluation Findings
+
+Evidence:
+
+- Automated tests cover core runtime, artifacts, deployments, CLI, JSON-RPC,
+  source providers, and examples.
+- A 36-trial audited agent challenge campaign evaluated the product-facing CLI
+  under bounded conditions.
+- Manual audit flags separate product-surface success from source-code or prior
+  answer reads.
+
+Limitations:
+
+- Agent challenge runs are operational evidence, not a controlled model study.
+- The campaign used small sample sizes and changing prototype snapshots.
+- The prototype does not claim production security, scheduling, RBAC, or a
+  general autonomous planning algorithm.
+```
+
+- [ ] **Step 5: Create risk register**
+
+Create `examples/lda_report_workflow/documents/risk-register.md`:
+
+```md
+# Risk Register
+
+Material risks:
+
+- Title and product framing can overstate the implemented autonomous-agent
+  layer if not explained carefully.
+- Evaluation evidence is stronger as systems evidence than as a controlled
+  empirical model comparison.
+- File-backed stores are useful for auditability but not a production
+  transaction boundary.
+- The Workflow Console needs a strict loopback-only first slice to avoid
+  becoming an arbitrary RPC proxy.
+
+Mitigations:
+
+- Keep the agent/substrate boundary explicit in the thesis and defense.
+- Present challenge data as bounded operational evidence.
+- Defer production storage, auth, and remote proxying to future work.
+```
+
+- [ ] **Step 6: Create roadmap document**
+
+Create `examples/lda_report_workflow/documents/roadmap.md`:
+
+```md
+# Roadmap
+
+Near-term:
+
+- Add self-describing interrupt request and resume contracts.
+- Build a deterministic lda.chat report workflow with typed issue approval.
+- Build a local Workflow Console over JSON-RPC.
+- Add live-demo replay support for the defense.
+
+Later:
+
+- Stabilize the experimental OpenAPI provider.
+- Add production secret stores and transactional persistence.
+- Add a surrounding agent interface and planner loop.
+- Explore scheduling, richer debugging, and visual workflow editing.
+```
+
+- [ ] **Step 7: Commit**
+
+```powershell
+git add examples/lda_report_workflow/.gitignore examples/lda_report_workflow/documents
+git commit -m "test: add lda report workflow fixtures"
+```
+
+---
+
+### Task 2: Implement Document Source
+
+**Files:**
+- Create: `examples/lda_report_workflow/document_source.py`
+- Test: `tests/examples/test_lda_report_workflow_example.py`
+
+- [ ] **Step 1: Write failing tests for document source**
+
+Create `tests/examples/test_lda_report_workflow_example.py`:
+
+```python
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from examples.lda_report_workflow.document_source import (
+    ListDocumentsInput,
+    ReadDocumentsInput,
+    _list_documents,
+    _read_documents,
+)
+
+EXAMPLE_DIR = Path(__file__).resolve().parents[2] / "examples" / "lda_report_workflow"
+
+
+def test_lda_docs_lists_known_documents() -> None:
+    result = _list_documents(ListDocumentsInput())
+
+    names = {document.name for document in result.documents}
+
+    assert "project-brief.md" in names
+    assert "architecture-notes.md" in names
+    assert len(result.documents) == 5
+
+
+def test_lda_docs_reads_selected_documents() -> None:
+    result = _read_documents(
+        ReadDocumentsInput(names=["project-brief.md", "roadmap.md"])
+    )
+
+    assert [document.name for document in result.documents] == [
+        "project-brief.md",
+        "roadmap.md",
+    ]
+    assert "workflow substrate" in result.documents[0].text
+
+
+def test_lda_docs_rejects_path_traversal() -> None:
+    with pytest.raises(ValueError, match="known document"):
+        _read_documents(ReadDocumentsInput(names=["../README.md"]))
+```
+
+- [ ] **Step 2: Run tests and verify red**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py::test_lda_docs_lists_known_documents -q -n0
+```
+
+Expected: import failure because `document_source.py` does not exist.
+
+- [ ] **Step 3: Implement document source**
+
+Create `examples/lda_report_workflow/document_source.py`:
+
+```python
+from __future__ import annotations
+
+from pathlib import Path
+
+from pydantic import BaseModel, Field
+
+from wf_authoring import node
+
+_EXAMPLE_DIR = Path(__file__).resolve().parent
+_DOCUMENT_DIR = _EXAMPLE_DIR / "documents"
+
+
+class ListDocumentsInput(BaseModel):
+    include_archived: bool = Field(
+        default=False,
+        description="Reserved for future filtering; current fixture has no archived docs.",
+    )
+
+
+class DocumentRef(BaseModel):
+    name: str
+    title: str
+
+
+class ListDocumentsOutput(BaseModel):
+    documents: list[DocumentRef]
+
+
+class ReadDocumentsInput(BaseModel):
+    names: list[str] = Field(description="Document names returned by list_documents.")
+
+
+class DocumentText(BaseModel):
+    name: str
+    title: str
+    text: str
+
+
+class ReadDocumentsOutput(BaseModel):
+    documents: list[DocumentText]
+
+
+@node(
+    name="list_documents",
+    description="List deterministic lda.chat project documents available to the demo.",
+)
+def list_documents(payload: ListDocumentsInput) -> ListDocumentsOutput:
+    return _list_documents(payload)
+
+
+@node(
+    name="read_documents",
+    description="Read selected lda.chat project documents by fixture name.",
+)
+def read_documents(payload: ReadDocumentsInput) -> ReadDocumentsOutput:
+    return _read_documents(payload)
+
+
+def _list_documents(_payload: ListDocumentsInput) -> ListDocumentsOutput:
+    documents = [
+        DocumentRef(name=path.name, title=_title_for(path))
+        for path in sorted(_DOCUMENT_DIR.glob("*.md"))
+    ]
+    return ListDocumentsOutput(documents=documents)
+
+
+def _read_documents(payload: ReadDocumentsInput) -> ReadDocumentsOutput:
+    allowed = {document.name for document in _list_documents(ListDocumentsInput()).documents}
+    selected: list[DocumentText] = []
+    for name in payload.names:
+        if name not in allowed:
+            raise ValueError(f"unknown or unsafe document name: {name!r}; use a known document")
+        path = _DOCUMENT_DIR / name
+        selected.append(
+            DocumentText(name=name, title=_title_for(path), text=path.read_text(encoding="utf-8"))
+        )
+    return ReadDocumentsOutput(documents=selected)
+
+
+def _title_for(path: Path) -> str:
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if line.startswith("# "):
+            return line.removeprefix("# ").strip()
+    return path.stem.replace("-", " ").title()
+
+
+registry = [list_documents, read_documents]
+```
+
+- [ ] **Step 4: Run document source tests**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py::test_lda_docs_lists_known_documents tests/examples/test_lda_report_workflow_example.py::test_lda_docs_reads_selected_documents tests/examples/test_lda_report_workflow_example.py::test_lda_docs_rejects_path_traversal -q -n0
+```
+
+Expected: pass.
+
+- [ ] **Step 5: Commit**
+
+```powershell
+git add examples/lda_report_workflow/document_source.py tests/examples/test_lda_report_workflow_example.py
+git commit -m "feat: add lda document source example"
+```
+
+---
+
+### Task 3: Implement Report Source
+
+**Files:**
+- Create: `examples/lda_report_workflow/report_source.py`
+- Modify: `tests/examples/test_lda_report_workflow_example.py`
+
+- [ ] **Step 1: Add failing report source tests**
+
+Append to `tests/examples/test_lda_report_workflow_example.py`:
+
+```python
+from examples.lda_report_workflow.report_source import (
+    AnalyzeDocumentsInput,
+    BuildReportInput,
+    CreateIssueDraftsInput,
+    FinaliseReportInput,
+    _analyze_documents,
+    _build_report,
+    _create_issue_drafts,
+    _finalise_report,
+    _record_revision_request,
+)
+
+
+def test_lda_report_source_builds_report_and_issue_drafts() -> None:
+    docs = _read_documents(
+        ReadDocumentsInput(names=["project-brief.md", "risk-register.md", "roadmap.md"])
+    )
+
+    analysis = _analyze_documents(AnalyzeDocumentsInput(documents=docs.documents))
+    report = _build_report(BuildReportInput(analysis=analysis.analysis))
+    issue_drafts = _create_issue_drafts(CreateIssueDraftsInput(report=report.report))
+
+    assert report.report.title == "lda.chat Thesis And Project Readiness Report"
+    assert "workflow substrate" in report.report.summary
+    assert issue_drafts.issues
+    assert issue_drafts.issues[0].id
+    assert issue_drafts.issues[0].title
+
+
+def test_lda_report_source_finalises_approved_report() -> None:
+    docs = _read_documents(ReadDocumentsInput(names=["project-brief.md", "roadmap.md"]))
+    analysis = _analyze_documents(AnalyzeDocumentsInput(documents=docs.documents))
+    report = _build_report(BuildReportInput(analysis=analysis.analysis))
+    issue_drafts = _create_issue_drafts(CreateIssueDraftsInput(report=report.report))
+
+    final = _finalise_report(
+        FinaliseReportInput(
+            report=report.report,
+            created_issues=[],
+            approved=True,
+            selected_issue_ids=[issue_drafts.issues[0].id],
+            comment="Looks good.",
+        )
+    )
+
+    assert final.approved is True
+    assert final.markdown.startswith("# lda.chat Thesis And Project Readiness Report")
+    assert "Looks good." in final.markdown
+
+
+def test_lda_report_source_records_revision_request() -> None:
+    result = _record_revision_request({"comment": "Needs revision"})
+
+    assert result["approved"] is False
+    assert "Needs revision" in result["markdown"]
+```
+
+- [ ] **Step 2: Run one test and verify red**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py::test_lda_report_source_builds_report_and_issue_drafts -q -n0
+```
+
+Expected: import failure because `report_source.py` does not exist.
+
+- [ ] **Step 3: Implement report source**
+
+Create `examples/lda_report_workflow/report_source.py`:
+
+```python
+from __future__ import annotations
+
+from pydantic import BaseModel, Field
+
+from wf_authoring import node
+
+from .document_source import DocumentText
+
+
+class AnalyzeDocumentsInput(BaseModel):
+    documents: list[DocumentText]
+
+
+class Finding(BaseModel):
+    source: str
+    summary: str
+    risks: list[str] = Field(default_factory=list)
+    actions: list[str] = Field(default_factory=list)
+
+
+class AnalyzeDocumentsOutput(BaseModel):
+    analysis: list[Finding]
+
+
+class BuildReportInput(BaseModel):
+    analysis: list[Finding]
+
+
+class ReadinessReport(BaseModel):
+    title: str
+    summary: str
+    achievements: list[str]
+    risks: list[str]
+    next_actions: list[str]
+
+
+class BuildReportOutput(BaseModel):
+    report: ReadinessReport
+    markdown: str
+
+
+class CreateIssueDraftsInput(BaseModel):
+    report: ReadinessReport
+
+
+class ProposedIssue(BaseModel):
+    id: str
+    title: str
+    body: str
+    severity: str = "medium"
+
+
+class CreateIssueDraftsOutput(BaseModel):
+    issues: list[ProposedIssue]
+
+
+class CreatedIssue(BaseModel):
+    id: str
+    title: str
+    url: str
+
+
+class FinaliseReportInput(BaseModel):
+    report: ReadinessReport
+    created_issues: list[CreatedIssue] = Field(default_factory=list)
+    approved: bool
+    selected_issue_ids: list[str] = Field(default_factory=list)
+    comment: str | None = None
+
+
+class FinalReportOutput(BaseModel):
+    approved: bool
+    markdown: str
+    created_issues: list[CreatedIssue]
+    selected_issue_ids: list[str]
+    comment: str | None = None
+
+
+@node(name="analyze_documents", description="Extract deterministic findings from lda.chat project documents.")
+def analyze_documents(payload: AnalyzeDocumentsInput) -> AnalyzeDocumentsOutput:
+    return _analyze_documents(payload)
+
+
+@node(name="build_report", description="Build a typed lda.chat readiness report from document findings.")
+def build_report(payload: BuildReportInput) -> BuildReportOutput:
+    return _build_report(payload)
+
+
+@node(name="create_issue_drafts", description="Create proposed local issue drafts from report risks and next actions.")
+def create_issue_drafts(payload: CreateIssueDraftsInput) -> CreateIssueDraftsOutput:
+    return _create_issue_drafts(payload)
+
+
+@node(name="finalise_report", description="Render the approved report and include created issue references.")
+def finalise_report(payload: FinaliseReportInput) -> FinalReportOutput:
+    return _finalise_report(payload)
+
+
+@node(name="record_revision_request", description="Return a cancelled report result when the human asks for revision.")
+def record_revision_request(payload: dict[str, str | None]) -> FinalReportOutput:
+    return _record_revision_request(payload)
+
+
+def _analyze_documents(payload: AnalyzeDocumentsInput) -> AnalyzeDocumentsOutput:
+    findings: list[Finding] = []
+    for document in payload.documents:
+        text = document.text.lower()
+        risks = _lines_after(document.text, "Material risks:")
+        actions = _lines_after(document.text, "Near-term:") or _lines_after(document.text, "Mitigations:")
+        if "workflow substrate" in text:
+            summary = "lda.chat is positioned as a workflow substrate for external agents."
+        elif "evaluation" in text:
+            summary = "Evaluation evidence is bounded and should be presented as operational evidence."
+        elif "risk" in text:
+            summary = "The current risk register emphasizes framing, evaluation, and storage limits."
+        elif "roadmap" in text:
+            summary = "Near-term roadmap focuses on typed interrupts, deterministic demos, and a console."
+        else:
+            summary = document.text.splitlines()[0].lstrip("# ").strip()
+        findings.append(
+            Finding(
+                source=document.name,
+                summary=summary,
+                risks=risks[:3],
+                actions=actions[:3],
+            )
+        )
+    return AnalyzeDocumentsOutput(analysis=findings)
+
+
+def _build_report(payload: BuildReportInput) -> BuildReportOutput:
+    achievements = [
+        finding.summary for finding in payload.analysis if "risk register" not in finding.summary
+    ]
+    risks = _unique(item for finding in payload.analysis for item in finding.risks)
+    next_actions = _unique(item for finding in payload.analysis for item in finding.actions)
+    report = ReadinessReport(
+        title="lda.chat Thesis And Project Readiness Report",
+        summary=(
+            "lda.chat is a typed workflow substrate with lifecycle records, "
+            "source-provider boundaries, and agent-operable CLI/RPC surfaces."
+        ),
+        achievements=achievements[:6],
+        risks=risks[:6],
+        next_actions=next_actions[:6],
+    )
+    return BuildReportOutput(report=report, markdown=_render_report(report))
+
+
+def _create_issue_drafts(payload: CreateIssueDraftsInput) -> CreateIssueDraftsOutput:
+    issues: list[ProposedIssue] = []
+    for index, risk in enumerate(payload.report.risks[:4], start=1):
+        issue_id = f"risk-{index}"
+        issues.append(
+            ProposedIssue(
+                id=issue_id,
+                title=risk.rstrip("."),
+                body=f"Track mitigation for: {risk}",
+                severity="high" if "title" in risk.lower() else "medium",
+            )
+        )
+    if not issues:
+        issues.append(
+            ProposedIssue(
+                id="follow-up-1",
+                title="Review thesis demo readiness",
+                body="Confirm the prepared workflow and replay are ready for defense.",
+                severity="medium",
+            )
+        )
+    return CreateIssueDraftsOutput(issues=issues)
+
+
+def _finalise_report(payload: FinaliseReportInput) -> FinalReportOutput:
+    markdown = _render_report(payload.report)
+    if payload.created_issues:
+        markdown += "\n\nCreated issues:\n"
+        markdown += "\n".join(
+            f"- {issue.id}: {issue.title} ({issue.url})" for issue in payload.created_issues
+        )
+    if payload.comment:
+        markdown += f"\n\nApproval comment: {payload.comment}"
+    return FinalReportOutput(
+        approved=payload.approved,
+        markdown=markdown,
+        created_issues=payload.created_issues,
+        selected_issue_ids=payload.selected_issue_ids,
+        comment=payload.comment,
+    )
+
+
+def _record_revision_request(payload: dict[str, str | None]) -> FinalReportOutput:
+    comment = payload.get("comment") or "Revision requested."
+    return FinalReportOutput(
+        approved=False,
+        markdown=f"# Revision Requested\n\n{comment}",
+        created_issues=[],
+        selected_issue_ids=[],
+        comment=comment,
+    )
+
+
+def _render_report(report: ReadinessReport) -> str:
+    lines = [f"# {report.title}", "", "Summary:", report.summary, ""]
+    lines.append("Achievements:")
+    lines.extend(f"- {item}" for item in report.achievements)
+    lines.extend(["", "Risks:"])
+    lines.extend(f"- {item}" for item in report.risks)
+    lines.extend(["", "Next actions:"])
+    lines.extend(f"- {item}" for item in report.next_actions)
+    return "\n".join(lines)
+
+
+def _lines_after(text: str, heading: str) -> list[str]:
+    lines: list[str] = []
+    active = False
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line == heading:
+            active = True
+            continue
+        if active and line.endswith(":"):
+            break
+        if active and line.startswith("- "):
+            lines.append(line.removeprefix("- ").strip())
+    return lines
+
+
+def _unique(items: object) -> list[str]:
+    seen: set[str] = set()
+    values: list[str] = []
+    for item in items:
+        if isinstance(item, str) and item and item not in seen:
+            seen.add(item)
+            values.append(item)
+    return values
+
+
+registry = [
+    analyze_documents,
+    build_report,
+    create_issue_drafts,
+    finalise_report,
+    record_revision_request,
+]
+```
+
+- [ ] **Step 4: Run report source tests**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py::test_lda_report_source_builds_report_and_issue_drafts tests/examples/test_lda_report_workflow_example.py::test_lda_report_source_finalises_approved_report tests/examples/test_lda_report_workflow_example.py::test_lda_report_source_records_revision_request -q -n0
+```
+
+Expected: pass.
+
+- [ ] **Step 5: Commit**
+
+```powershell
+git add examples/lda_report_workflow/report_source.py tests/examples/test_lda_report_workflow_example.py
+git commit -m "feat: add lda report source example"
+```
+
+---
+
+### Task 4: Implement Local Issue Board Source
+
+**Files:**
+- Create: `examples/lda_report_workflow/issue_board_source.py`
+- Modify: `tests/examples/test_lda_report_workflow_example.py`
+
+- [ ] **Step 1: Add failing issue board tests**
+
+Append to `tests/examples/test_lda_report_workflow_example.py`:
+
+```python
+from examples.lda_report_workflow.issue_board_source import (
+    CreateIssuesInput,
+    ResetIssueBoardInput,
+    _create_issues,
+    _reset_issue_board,
+)
+
+
+def test_issue_board_creates_selected_issues(tmp_path: Path) -> None:
+    board_path = tmp_path / "issue-board.json"
+    drafts = _create_issue_drafts(
+        CreateIssueDraftsInput(
+            report=ReadinessReport(
+                title="Test",
+                summary="Summary",
+                achievements=[],
+                risks=["Risk one", "Risk two"],
+                next_actions=[],
+            )
+        )
+    )
+
+    result = _create_issues(
+        CreateIssuesInput(
+            board_path=str(board_path),
+            issues=drafts.issues,
+            selected_issue_ids=[drafts.issues[0].id],
+        )
+    )
+
+    assert len(result.created_issues) == 1
+    assert result.created_issues[0].title == drafts.issues[0].title
+    assert board_path.exists()
+
+
+def test_issue_board_reset_removes_existing_file(tmp_path: Path) -> None:
+    board_path = tmp_path / "issue-board.json"
+    board_path.write_text("[]", encoding="utf-8")
+
+    result = _reset_issue_board(ResetIssueBoardInput(board_path=str(board_path)))
+
+    assert result.reset is True
+    assert not board_path.exists()
+```
+
+- [ ] **Step 2: Run test and verify red**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py::test_issue_board_creates_selected_issues -q -n0
+```
+
+Expected: import failure because `issue_board_source.py` does not exist.
+
+- [ ] **Step 3: Implement issue board source**
+
+Create `examples/lda_report_workflow/issue_board_source.py`:
+
+```python
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from pydantic import BaseModel, Field
+
+from wf_authoring import node
+
+from .report_source import CreatedIssue, ProposedIssue
+
+_EXAMPLE_DIR = Path(__file__).resolve().parent
+
+
+class ResetIssueBoardInput(BaseModel):
+    board_path: str = Field(default="issue-board.json")
+
+
+class ResetIssueBoardOutput(BaseModel):
+    reset: bool
+    board_path: str
+
+
+class CreateIssuesInput(BaseModel):
+    issues: list[ProposedIssue]
+    selected_issue_ids: list[str]
+    board_path: str = Field(default="issue-board.json")
+
+
+class CreateIssuesOutput(BaseModel):
+    created_issues: list[CreatedIssue]
+    board_path: str
+
+
+@node(name="reset_issue_board", description="Reset the local demo issue board file.")
+def reset_issue_board(payload: ResetIssueBoardInput) -> ResetIssueBoardOutput:
+    return _reset_issue_board(payload)
+
+
+@node(name="create_issues", description="Create selected issues in the local demo issue board.")
+def create_issues(payload: CreateIssuesInput) -> CreateIssuesOutput:
+    return _create_issues(payload)
+
+
+def _reset_issue_board(payload: ResetIssueBoardInput) -> ResetIssueBoardOutput:
+    path = _resolve_board_path(payload.board_path)
+    path.unlink(missing_ok=True)
+    return ResetIssueBoardOutput(reset=True, board_path=str(path))
+
+
+def _create_issues(payload: CreateIssuesInput) -> CreateIssuesOutput:
+    path = _resolve_board_path(payload.board_path)
+    selected = set(payload.selected_issue_ids)
+    existing = _read_board(path)
+    created: list[CreatedIssue] = []
+    next_number = len(existing) + 1
+    for issue in payload.issues:
+        if issue.id not in selected:
+            continue
+        issue_id = f"ISSUE-{next_number:03d}"
+        created_issue = CreatedIssue(
+            id=issue_id,
+            title=issue.title,
+            url=f"local://issue-board/{issue_id}",
+        )
+        existing.append(
+            {
+                "id": created_issue.id,
+                "title": created_issue.title,
+                "url": created_issue.url,
+                "body": issue.body,
+                "severity": issue.severity,
+            }
+        )
+        created.append(created_issue)
+        next_number += 1
+    _write_board(path, existing)
+    return CreateIssuesOutput(created_issues=created, board_path=str(path))
+
+
+def _resolve_board_path(path: str) -> Path:
+    candidate = Path(path)
+    if candidate.is_absolute():
+        resolved = candidate.resolve()
+    else:
+        resolved = (_EXAMPLE_DIR / candidate).resolve()
+    if not resolved.is_relative_to(_EXAMPLE_DIR) and not resolved.is_relative_to(Path.cwd()):
+        raise ValueError("issue board path must stay inside the example or current workspace")
+    return resolved
+
+
+def _read_board(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    value = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(value, list):
+        raise ValueError("issue board file must contain a JSON list")
+    return [item for item in value if isinstance(item, dict)]
+
+
+def _write_board(path: Path, value: list[dict[str, str]]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(path.suffix + ".tmp")
+    tmp.write_text(json.dumps(value, indent=2, sort_keys=True), encoding="utf-8")
+    tmp.replace(path)
+
+
+registry = [reset_issue_board, create_issues]
+```
+
+- [ ] **Step 4: Run issue board tests**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py::test_issue_board_creates_selected_issues tests/examples/test_lda_report_workflow_example.py::test_issue_board_reset_removes_existing_file -q -n0
+```
+
+Expected: pass.
+
+- [ ] **Step 5: Commit**
+
+```powershell
+git add examples/lda_report_workflow/issue_board_source.py tests/examples/test_lda_report_workflow_example.py
+git commit -m "feat: add local issue board source example"
+```
+
+---
+
+### Task 5: Add Config, Run Input, And Raw Workflow Plan
+
+**Files:**
+- Create: `examples/lda_report_workflow/wf.config.json`
+- Create: `examples/lda_report_workflow/run-input.json`
+- Create: `examples/lda_report_workflow/workflow.plan.json`
+- Modify: `tests/examples/test_lda_report_workflow_example.py`
+
+- [ ] **Step 1: Create workflow config**
+
+Create `examples/lda_report_workflow/wf.config.json`:
+
+```json
+{
+  "server": {
+    "store": {
+      "kind": "filesystem",
+      "root": ".wf_lda_report_store"
+    },
+    "transport": {
+      "kind": "rpc_http",
+      "host": "127.0.0.1",
+      "port": 8765,
+      "path": "/rpc"
+    },
+    "sources": [
+      {
+        "id": "local.lda_docs",
+        "kind": "python",
+        "path": ".",
+        "module": "document_source",
+        "registry": "registry"
+      },
+      {
+        "id": "local.lda_report",
+        "kind": "python",
+        "path": ".",
+        "module": "report_source",
+        "registry": "registry"
+      },
+      {
+        "id": "local.issue_board",
+        "kind": "python",
+        "path": ".",
+        "module": "issue_board_source",
+        "registry": "registry"
+      }
+    ]
+  }
+}
+```
+
+- [ ] **Step 2: Create run input**
+
+Create `examples/lda_report_workflow/run-input.json`:
+
+```json
+{
+  "selected_documents": [
+    "project-brief.md",
+    "architecture-notes.md",
+    "evaluation-findings.md",
+    "risk-register.md",
+    "roadmap.md"
+  ],
+  "board_path": "issue-board.json"
+}
+```
+
+- [ ] **Step 3: Add config loading test**
+
+Append to `tests/examples/test_lda_report_workflow_example.py`:
+
+```python
+from wf_config import load_workflow_config
+from wf_server.config import build_workflow_server_from_workflow_config
+
+
+@pytest.mark.asyncio
+async def test_lda_report_workflow_config_loads_sources(tmp_path: Path) -> None:
+    config = load_workflow_config(EXAMPLE_DIR / "wf.config.json")
+    config.server.store.root = tmp_path / "store"
+    server = build_workflow_server_from_workflow_config(config)
+
+    listed = await server.api.list_capabilities(source_id="local.lda_report")
+    names = {capability["name"] for capability in listed["capabilities"]}
+
+    assert "local.lda_report.build_report" in names
+    assert "local.lda_report.finalise_report" in names
+```
+
+- [ ] **Step 4: Run config test and verify green**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py::test_lda_report_workflow_config_loads_sources -q -n0
+```
+
+Expected: pass.
+
+- [ ] **Step 5: Create raw workflow plan**
+
+Create `examples/lda_report_workflow/workflow.plan.json` with this content:
+
+```json
+{
+  "name": "lda_report_case_study",
+  "input_schema": {
+    "type": "object",
+    "properties": {
+      "selected_documents": {
+        "type": "array",
+        "items": {"type": "string"}
+      },
+      "board_path": {"type": "string"}
+    },
+    "required": ["selected_documents", "board_path"]
+  },
+  "state_schema": {
+    "type": "object",
+    "properties": {
+      "documents": {"type": "array"},
+      "analysis": {"type": "array"},
+      "report": {"type": "object"},
+      "report_markdown": {"type": "string"},
+      "proposed_issues": {"type": "array"},
+      "selected_issue_ids": {"type": "array"},
+      "approval_comment": {"type": "string"},
+      "approved": {"type": "boolean"},
+      "created_issues": {"type": "array"},
+      "final_markdown": {"type": "string"}
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "properties": {
+      "approved": {"type": "boolean"},
+      "markdown": {"type": "string"},
+      "created_issues": {"type": "array"},
+      "selected_issue_ids": {"type": "array"}
+    }
+  },
+  "output": [
+    {"path": "state.approved", "target": "approved"},
+    {"path": "state.final_markdown", "target": "markdown"},
+    {"path": "state.created_issues", "target": "created_issues"},
+    {"path": "state.selected_issue_ids", "target": "selected_issue_ids"}
+  ],
+  "outcomes": ["completed", "cancelled"],
+  "start": "read_docs",
+  "nodes": [
+    {
+      "id": "read_docs",
+      "type": "node",
+      "node": "local.lda_docs.read_documents",
+      "input": [
+        {"path": "input.selected_documents", "target": "names"}
+      ],
+      "output": [
+        {"source": "documents", "target": "state.documents"}
+      ]
+    },
+    {
+      "id": "analyze",
+      "type": "node",
+      "node": "local.lda_report.analyze_documents",
+      "input": [
+        {"path": "state.documents", "target": "documents"}
+      ],
+      "output": [
+        {"source": "analysis", "target": "state.analysis"}
+      ]
+    },
+    {
+      "id": "build_report",
+      "type": "node",
+      "node": "local.lda_report.build_report",
+      "input": [
+        {"path": "state.analysis", "target": "analysis"}
+      ],
+      "output": [
+        {"source": "report", "target": "state.report"},
+        {"source": "markdown", "target": "state.report_markdown"}
+      ]
+    },
+    {
+      "id": "draft_issues",
+      "type": "node",
+      "node": "local.lda_report.create_issue_drafts",
+      "input": [
+        {"path": "state.report", "target": "report"}
+      ],
+      "output": [
+        {"source": "issues", "target": "state.proposed_issues"}
+      ]
+    },
+    {
+      "id": "review_issues",
+      "type": "interrupt",
+      "kind": "issue_review",
+      "request": [
+        {"path": "state.report_markdown", "target": "report_markdown"},
+        {"path": "state.proposed_issues", "target": "proposed_issues"}
+      ],
+      "resume": [
+        {"source": "approved", "target": "state.approved"},
+        {"source": "selected_issue_ids", "target": "state.selected_issue_ids"},
+        {"source": "comment", "target": "state.approval_comment"}
+      ],
+      "outcomes": ["submitted", "cancelled"],
+      "request_schema": {
+        "type": "object",
+        "properties": {
+          "report_markdown": {"type": "string"},
+          "proposed_issues": {"type": "array"}
+        },
+        "required": ["report_markdown", "proposed_issues"],
+        "additionalProperties": false
+      },
+      "resume_schema": {
+        "type": "object",
+        "properties": {
+          "approved": {"type": "boolean"},
+          "selected_issue_ids": {
+            "type": "array",
+            "items": {"type": "string"}
+          },
+          "comment": {"type": "string"}
+        },
+        "required": ["approved", "selected_issue_ids"],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "create_issues",
+      "type": "node",
+      "node": "local.issue_board.create_issues",
+      "input": [
+        {"path": "state.proposed_issues", "target": "issues"},
+        {"path": "state.selected_issue_ids", "target": "selected_issue_ids"},
+        {"path": "input.board_path", "target": "board_path"}
+      ],
+      "output": [
+        {"source": "created_issues", "target": "state.created_issues"}
+      ]
+    },
+    {
+      "id": "finalise",
+      "type": "node",
+      "node": "local.lda_report.finalise_report",
+      "input": [
+        {"path": "state.report", "target": "report"},
+        {"path": "state.created_issues", "target": "created_issues"},
+        {"path": "state.approved", "target": "approved"},
+        {"path": "state.selected_issue_ids", "target": "selected_issue_ids"},
+        {"path": "state.approval_comment", "target": "comment"}
+      ],
+      "output": [
+        {"source": "markdown", "target": "state.final_markdown"}
+      ]
+    },
+    {
+      "id": "revision_requested",
+      "type": "node",
+      "node": "local.lda_report.record_revision_request",
+      "input": [
+        {"path": "state.approval_comment", "target": "comment"}
+      ],
+      "output": [
+        {"source": "approved", "target": "state.approved"},
+        {"source": "markdown", "target": "state.final_markdown"},
+        {"source": "created_issues", "target": "state.created_issues"},
+        {"source": "selected_issue_ids", "target": "state.selected_issue_ids"}
+      ]
+    },
+    {"id": "end_completed", "type": "end", "outcome": "completed"},
+    {"id": "end_cancelled", "type": "end", "outcome": "cancelled"}
+  ],
+  "edges": [
+    {"from": "read_docs", "outcome": "ok", "to": "analyze"},
+    {"from": "analyze", "outcome": "ok", "to": "build_report"},
+    {"from": "build_report", "outcome": "ok", "to": "draft_issues"},
+    {"from": "draft_issues", "outcome": "ok", "to": "review_issues"},
+    {"from": "review_issues", "outcome": "submitted", "to": "create_issues"},
+    {"from": "review_issues", "outcome": "cancelled", "to": "revision_requested"},
+    {"from": "create_issues", "outcome": "ok", "to": "finalise"},
+    {"from": "finalise", "outcome": "ok", "to": "end_completed"},
+    {"from": "revision_requested", "outcome": "ok", "to": "end_cancelled"}
+  ]
+}
+```
+
+- [ ] **Step 6: Commit config and plan**
+
+```powershell
+git add examples/lda_report_workflow/wf.config.json examples/lda_report_workflow/run-input.json examples/lda_report_workflow/workflow.plan.json tests/examples/test_lda_report_workflow_example.py
+git commit -m "feat: add lda report workflow plan"
+```
+
+---
+
+### Task 6: Test Full Artifact, Interrupt, Resume Path
+
+**Files:**
+- Modify: `tests/examples/test_lda_report_workflow_example.py`
+
+- [ ] **Step 1: Add full lifecycle test**
+
+Append to `tests/examples/test_lda_report_workflow_example.py`:
+
+```python
+import json
+
+
+@pytest.mark.asyncio
+async def test_lda_report_workflow_artifact_interrupt_resume_path(tmp_path: Path) -> None:
+    config = load_workflow_config(EXAMPLE_DIR / "wf.config.json")
+    config.server.store.root = tmp_path / "store"
+    server = build_workflow_server_from_workflow_config(config)
+    plan = json.loads((EXAMPLE_DIR / "workflow.plan.json").read_text(encoding="utf-8"))
+
+    await server.api.create_artifact_from_plan(
+        artifact_id="lda_report_case_study",
+        version=1,
+        title="lda.chat Report Case Study",
+        plan=plan,
+        outcomes=["completed", "cancelled"],
+        source_bindings={
+            "local.lda_docs": "local.lda_docs",
+            "local.lda_report": "local.lda_report",
+            "local.issue_board": "local.issue_board",
+        },
+    )
+    await server.api.save_deployment(
+        {
+            "id": "lda_report_case_study.default",
+            "artifact_id": "lda_report_case_study",
+            "artifact_version": 1,
+            "bindings": {
+                "local.lda_docs": "local.lda_docs",
+                "local.lda_report": "local.lda_report",
+                "local.issue_board": "local.issue_board",
+            },
+        }
+    )
+    run_input = json.loads((EXAMPLE_DIR / "run-input.json").read_text(encoding="utf-8"))
+    run_input["board_path"] = str(tmp_path / "issue-board.json")
+    started = await server.api.run_deployment(
+        deployment_id="lda_report_case_study.default",
+        workflow_input=run_input,
+    )
+
+    assert started["status"] == "interrupted"
+    assert started["interrupt"]["kind"] == "issue_review"
+    assert started["interrupt"]["typed"] is True
+    assert started["interrupt"]["request_schema"]["required"] == [
+        "report_markdown",
+        "proposed_issues",
+    ]
+    assert started["interrupt"]["resume_schema"]["required"] == [
+        "approved",
+        "selected_issue_ids",
+    ]
+    proposed_ids = [
+        issue["id"] for issue in started["interrupt"]["payload"]["proposed_issues"]
+    ]
+    assert proposed_ids
+
+    resumed = await server.api.resume_run(
+        run_id=started["run_id"],
+        resume_payload={
+            "approved": True,
+            "selected_issue_ids": proposed_ids[:2],
+            "comment": "Create selected issues before the defense.",
+        },
+        resume_outcome="submitted",
+    )
+
+    assert resumed["status"] == "completed"
+    assert resumed["outcome"] == "completed"
+    assert resumed["output"]["approved"] is True
+    assert resumed["output"]["created_issues"]
+    assert resumed["output"]["markdown"].startswith(
+        "# lda.chat Thesis And Project Readiness Report"
+    )
+```
+
+- [ ] **Step 2: Run full lifecycle test**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py::test_lda_report_workflow_artifact_interrupt_resume_path -q -n0
+```
+
+Expected: pass. If validation fails because the raw plan schema is too loose,
+fix the plan rather than loosening the test.
+
+- [ ] **Step 3: Add cancellation path test**
+
+Append:
+
+```python
+@pytest.mark.asyncio
+async def test_lda_report_workflow_cancelled_resume_path(tmp_path: Path) -> None:
+    config = load_workflow_config(EXAMPLE_DIR / "wf.config.json")
+    config.server.store.root = tmp_path / "store"
+    server = build_workflow_server_from_workflow_config(config)
+    plan = json.loads((EXAMPLE_DIR / "workflow.plan.json").read_text(encoding="utf-8"))
+
+    await server.api.create_artifact_from_plan(
+        artifact_id="lda_report_cancel_case",
+        version=1,
+        title="lda.chat Report Cancel Case",
+        plan=plan,
+        outcomes=["completed", "cancelled"],
+        source_bindings={
+            "local.lda_docs": "local.lda_docs",
+            "local.lda_report": "local.lda_report",
+            "local.issue_board": "local.issue_board",
+        },
+    )
+    await server.api.save_deployment(
+        {
+            "id": "lda_report_cancel_case.default",
+            "artifact_id": "lda_report_cancel_case",
+            "artifact_version": 1,
+            "bindings": {
+                "local.lda_docs": "local.lda_docs",
+                "local.lda_report": "local.lda_report",
+                "local.issue_board": "local.issue_board",
+            },
+        }
+    )
+    run_input = json.loads((EXAMPLE_DIR / "run-input.json").read_text(encoding="utf-8"))
+    run_input["board_path"] = str(tmp_path / "issue-board.json")
+    started = await server.api.run_deployment(
+        deployment_id="lda_report_cancel_case.default",
+        workflow_input=run_input,
+    )
+
+    resumed = await server.api.resume_run(
+        run_id=started["run_id"],
+        resume_payload={
+            "approved": False,
+            "selected_issue_ids": [],
+            "comment": "Revise risk wording.",
+        },
+        resume_outcome="cancelled",
+    )
+
+    assert resumed["status"] == "completed"
+    assert resumed["outcome"] == "cancelled"
+    assert resumed["output"]["approved"] is False
+    assert "Revision Requested" in resumed["output"]["markdown"]
+```
+
+- [ ] **Step 4: Run all example tests**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py -q -n0
+```
+
+Expected: pass.
+
+- [ ] **Step 5: Commit lifecycle tests**
+
+```powershell
+git add tests/examples/test_lda_report_workflow_example.py
+git commit -m "test: prove lda report workflow lifecycle"
+```
+
+---
+
+### Task 7: Add README And Docs
+
+**Files:**
+- Create: `examples/lda_report_workflow/README.md`
+- Modify: `docs/current_roadmap.md`
+- Modify: `docs/add/evidence-index.md` if present and live
+- Modify: `docs/add/system-design-implementation.md` if present and live
+
+- [ ] **Step 1: Create README**
+
+Create `examples/lda_report_workflow/README.md`:
+
+```md
+# lda.chat Report Workflow
+
+This example is a deterministic case study for the Workflow Console and defense
+demo. It uses local fixture documents, trusted Python sources, a typed
+`issue_review` interrupt, and a local JSON-backed issue board.
+
+It does not call Google Drive, email, GitHub, or an LLM.
+
+## Sources
+
+- `local.lda_docs`: lists and reads deterministic project documents.
+- `local.lda_report`: analyses documents, builds the readiness report, creates
+  proposed issue drafts, and finalises the report.
+- `local.issue_board`: writes selected issues to a local JSON file.
+
+## Product Path
+
+From the repository root:
+
+```powershell
+uv run wf --config examples/lda_report_workflow/wf.config.json config validate
+uv run wf --config examples/lda_report_workflow/wf.config.json --local cap list --source local.lda_report
+uv run wf --config examples/lda_report_workflow/wf.config.json --local artifact create-from-plan examples/lda_report_workflow/workflow.plan.json --artifact lda_report_case_study --version 1 --title "lda.chat Report Case Study" --outcome completed --outcome cancelled --binding local.lda_docs=local.lda_docs --binding local.lda_report=local.lda_report --binding local.issue_board=local.issue_board
+uv run wf --config examples/lda_report_workflow/wf.config.json --local deploy save lda_report_case_study.default --artifact lda_report_case_study --version 1 --binding local.lda_docs=local.lda_docs --binding local.lda_report=local.lda_report --binding local.issue_board=local.issue_board
+uv run wf --config examples/lda_report_workflow/wf.config.json --local run start lda_report_case_study.default --input-file examples/lda_report_workflow/run-input.json
+```
+
+The run stops at an `issue_review` interrupt. Inspect it:
+
+```powershell
+uv run wf --config examples/lda_report_workflow/wf.config.json --local run inspect <run_id>
+```
+
+Resume with selected issues:
+
+```powershell
+uv run wf --config examples/lda_report_workflow/wf.config.json --local run resume <run_id> --payload '{"approved":true,"selected_issue_ids":["risk-1"],"comment":"Create selected issues."}'
+```
+
+## Cleanup
+
+The example writes `.wf_lda_report_store/` and `issue-board.json`, both ignored
+by git.
+```
+
+- [ ] **Step 2: Update roadmap**
+
+In `docs/current_roadmap.md`, under the Workflow Console initiative,
+change item 2 to completed after the example is tested:
+
+```md
+2. Completed: deterministic `examples/lda_report_workflow/` case study with
+   local document, report, issue-board sources, and typed issue-review
+   interrupt.
+```
+
+- [ ] **Step 3: Update evidence docs if live**
+
+If `docs/add/evidence-index.md` exists and still tracks live thesis evidence,
+add:
+
+```md
+- `examples/lda_report_workflow/` and
+  `tests/examples/test_lda_report_workflow_example.py`: deterministic report
+  workflow with typed issue-review interrupt and local issue-board source.
+```
+
+If `docs/add/system-design-implementation.md` exists and is still used as a
+source document, add one sentence to the examples/evidence section:
+
+```md
+The `lda_report_workflow` example extends the deterministic report case study
+with a typed human approval interrupt and local issue-board side effect for the
+Workflow Console demo.
+```
+
+- [ ] **Step 4: Run docs tests**
+
+Run:
+
+```powershell
+uv run pytest tests/docs -q -n0
+```
+
+Expected: pass.
+
+- [ ] **Step 5: Commit docs**
+
+```powershell
+git add examples/lda_report_workflow/README.md docs/current_roadmap.md docs/add/evidence-index.md docs/add/system-design-implementation.md
+git commit -m "docs: add lda report workflow runbook"
+```
+
+If either `docs/add/...` file was not changed, omit it from `git add`.
+
+---
+
+### Task 8: Final Verification And Archive Plan
+
+**Files:**
+- Move: `docs/superpowers/plans/2026-07-01-lda-report-workflow-example.md`
+  to `docs/historical/superpowers/plans/2026-07-01-lda-report-workflow-example.md`
+
+- [ ] **Step 1: Run focused verification**
+
+Run:
+
+```powershell
+uv run pytest tests/examples/test_lda_report_workflow_example.py tests/wf_sources_python/test_loader.py -q -n0
+uv run ruff check examples/lda_report_workflow tests/examples/test_lda_report_workflow_example.py
+uv run ruff format --check examples/lda_report_workflow tests/examples/test_lda_report_workflow_example.py
+uv run basedpyright --level error examples/lda_report_workflow tests/examples/test_lda_report_workflow_example.py
+```
+
+Expected: all pass. If `basedpyright` reports import-package issues for the
+example package, add `examples/lda_report_workflow/__init__.py` and rerun.
+
+- [ ] **Step 2: Smoke the CLI path**
+
+Run:
+
+```powershell
+uv run wf --config examples/lda_report_workflow/wf.config.json --local config validate
+uv run wf --config examples/lda_report_workflow/wf.config.json --local cap list --source local.lda_report --format ids
+```
+
+Expected:
+
+- config validation exits 0;
+- capability list includes `local.lda_report.build_report`.
+
+- [ ] **Step 3: Archive plan**
+
+```powershell
+git mv docs/superpowers/plans/2026-07-01-lda-report-workflow-example.md docs/historical/superpowers/plans/2026-07-01-lda-report-workflow-example.md
+```
+
+- [ ] **Step 4: Commit final archive/polish**
+
+```powershell
+git add docs/historical/superpowers/plans/2026-07-01-lda-report-workflow-example.md docs/current_roadmap.md
+git commit -m "docs: archive lda report workflow plan"
+```
+
+If no files changed after the archive move, commit only the move.
+
+---
+
+## Final Report Requirements
+
+The implementing agent must report:
+
+- files changed;
+- commands run and results;
+- whether the workflow interrupts with `kind="issue_review"`;
+- whether inspect exposes `request_schema`, `resume_schema`, `outcomes`, and
+  `typed`;
+- whether submitted resume creates issues and completes;
+- whether cancelled resume completes without creating issues;
+- any deviations from this plan.
+
+## Plan Self-Review
+
+Spec coverage:
+
+- deterministic documents: Task 1;
+- first-party document/report/issue-board sources: Tasks 2-4;
+- raw plan and config: Task 5;
+- typed issue-review interrupt and resume: Task 6;
+- product runbook and roadmap: Task 7;
+- final verification/archive: Task 8.
+
+Placeholder scan:
+
+- No red-flag placeholder tokens or unspecified implementation work remain.
+
+Type consistency:
+
+- Source ids are consistently `local.lda_docs`, `local.lda_report`, and
+  `local.issue_board`.
+- Artifact/deployment ids are consistently `lda_report_case_study` and
+  `lda_report_case_study.default`.
+- Interrupt kind is consistently `issue_review`.
