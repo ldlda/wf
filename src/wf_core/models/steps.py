@@ -3,7 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+
+from jsonschema import Draft202012Validator, SchemaError, validators
 
 from wf_core.models.conditions import Condition
 from wf_core.models.schemas import SchemaRef
@@ -332,6 +334,31 @@ class EndNode(BaseModel):
     outcome: str = Field(default="ok", min_length=1)
 
 
+def _object_schema() -> dict[str, object]:
+    """Default legacy interrupt contract: any JSON object payload is accepted."""
+    return {"type": "object", "additionalProperties": True}
+
+
+def _validate_json_schema(value: object, *, field_name: str) -> dict[str, object]:
+    """Validate one interrupt contract schema with jsonschema."""
+    if not isinstance(value, Mapping):
+        raise ValueError(f"{field_name} must be a JSON Schema object")
+    schema = dict(value)
+    validator_cls = (
+        validators.validator_for(schema)
+        if "$schema" in schema
+        else Draft202012Validator
+    )
+    try:
+        validator_cls.check_schema(schema)
+    except SchemaError as exc:
+        raise ValueError(f"invalid JSON Schema: {exc.message}") from exc
+    schema_type = schema.get("type")
+    if schema_type != "object":
+        raise ValueError(f"{field_name} must describe a JSON object")
+    return schema
+
+
 class InterruptNode(BaseModel):
     """Control-flow step that pauses a run and waits for resume input."""
 
@@ -351,6 +378,15 @@ class InterruptNode(BaseModel):
         ),
     )
     outcomes: list[str] = Field(default_factory=lambda: ["submitted"])
+    request_schema: dict[str, object] = Field(default_factory=_object_schema)
+    resume_schema: dict[str, object] = Field(default_factory=_object_schema)
+    has_explicit_contract: bool = Field(default=False, exclude=True)
+
+    @field_validator("request_schema", "resume_schema", mode="before")
+    @classmethod
+    def _validate_interrupt_schema(cls, value: object, info: object) -> object:
+        field_name = getattr(info, "field_name", "interrupt schema")
+        return _validate_json_schema(value, field_name=field_name)
 
     @model_validator(mode="before")
     @classmethod
@@ -388,6 +424,9 @@ class InterruptNode(BaseModel):
 
         normalized["request"] = request_bindings
         normalized["resume"] = resume_bindings
+        normalized["has_explicit_contract"] = (
+            "request_schema" in normalized or "resume_schema" in normalized
+        )
         return normalized
 
 

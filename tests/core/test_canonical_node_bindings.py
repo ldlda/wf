@@ -274,6 +274,62 @@ def test_interrupt_node_rejects_mixed_old_and_new_binding_styles():
         )
 
 
+def test_interrupt_node_defaults_to_untyped_object_contract():
+    node = InterruptNode.model_validate(
+        {
+            "id": "approval",
+            "type": "interrupt",
+            "kind": "approval",
+        }
+    )
+
+    assert node.request_schema == {
+        "type": "object",
+        "additionalProperties": True,
+    }
+    assert node.resume_schema == {
+        "type": "object",
+        "additionalProperties": True,
+    }
+    assert node.has_explicit_contract is False
+
+    dumped = node.model_dump(mode="json")
+    assert dumped["request_schema"] == {
+        "type": "object",
+        "additionalProperties": True,
+    }
+    assert dumped["resume_schema"] == {
+        "type": "object",
+        "additionalProperties": True,
+    }
+
+
+def test_interrupt_node_accepts_explicit_request_and_resume_schemas():
+    node = InterruptNode.model_validate(
+        {
+            "id": "approval",
+            "type": "interrupt",
+            "kind": "approval",
+            "request_schema": {
+                "type": "object",
+                "properties": {"message": {"type": "string"}},
+                "required": ["message"],
+                "additionalProperties": False,
+            },
+            "resume_schema": {
+                "type": "object",
+                "properties": {"approved": {"type": "boolean"}},
+                "required": ["approved"],
+                "additionalProperties": False,
+            },
+        }
+    )
+
+    assert node.has_explicit_contract is True
+    assert node.request_schema["required"] == ["message"]
+    assert node.resume_schema["required"] == ["approved"]
+
+
 def test_foreach_node_serializes_over_path_as_canonical_string():
     node = ForeachNode.model_validate(
         {
