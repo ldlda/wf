@@ -184,7 +184,9 @@ async def test_interrupt_resume_payload_validates_before_state_mutation() -> Non
             ),
             EndNode(id="end", type="end", outcome="submitted"),
         ],
-        edges=[Edge.model_validate({"from": "ask", "outcome": "submitted", "to": "end"})],
+        edges=[
+            Edge.model_validate({"from": "ask", "outcome": "submitted", "to": "end"})
+        ],
     )
     interrupted = await execute_workflow_async(workflow, {}, {})
 

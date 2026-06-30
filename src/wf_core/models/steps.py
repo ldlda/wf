@@ -3,9 +3,8 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Annotated, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
-
 from jsonschema import Draft202012Validator, SchemaError, validators
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from wf_core.models.conditions import Condition
 from wf_core.models.schemas import SchemaRef
