@@ -20,6 +20,7 @@ from wf_core.runtime.ops.flow import advance_frame, append_step_result_trace
 from wf_core.runtime.ops.index import WorkflowIndex
 from wf_core.runtime.ops.merges import ReducerDefinition
 from wf_core.runtime.ops.overlays import state_view_for_frame
+from wf_core.runtime.ops.schemas import validate_payload_against_schema
 from wf_core.runtime.ops.state import build_output_patch
 
 
@@ -53,6 +54,11 @@ def build_interrupt_request(
             set_local_value(payload, binding.target, value)
         except LocalPathError as exc:
             raise WorkflowExecutionError(str(exc)) from exc
+    validate_payload_against_schema(
+        node.request_schema,
+        payload,
+        f"interrupt request for {node.id}",
+    )
     return InterruptRequest(
         id=f"interrupt:{public_node_id or node.id}",
         frame_id=public_frame_id or frame_id,

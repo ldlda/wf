@@ -20,6 +20,7 @@ from wf_core import (
     resume_workflow_async,
     resume_workflow_result_async,
 )
+from wf_core.models.steps import InputValueBinding
 
 
 async def explode(_payload: dict[str, Any], _context: RuntimeContext) -> dict[str, Any]:
@@ -120,3 +121,38 @@ def _interrupt_then_fail_workflow() -> Workflow:
 
 def _schema() -> SchemaRef:
     return SchemaRef(type="object", properties={})
+
+
+async def test_interrupt_request_payload_validates_against_schema() -> None:
+    workflow = Workflow(
+        name="bad_interrupt_request",
+        input_schema=_schema(),
+        state_schema=StateSchema.from_field_map({}),
+        output_schema=_schema(),
+        outcomes=["ok"],
+        start="ask",
+        nodes=[
+            InterruptNode(
+                id="ask",
+                type="interrupt",
+                kind="approval",
+                request=[
+                    InputValueBinding(target="count", value="not a number")  # type: ignore[arg-type]
+                ],
+                request_schema={
+                    "type": "object",
+                    "properties": {"count": {"type": "number"}},
+                    "required": ["count"],
+                    "additionalProperties": False,
+                },
+            ),
+        ],
+        edges=[Edge.model_validate({"from": "ask", "outcome": "submitted", "to": END})],
+    )
+
+    run = await execute_workflow_result_async(workflow, {}, {})
+
+    assert run.status == RunStatus.FAILED
+    assert run.interrupt is None
+    assert run.error is not None
+    assert "interrupt request for ask" in run.error
