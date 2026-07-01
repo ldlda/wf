@@ -16,10 +16,13 @@ if (-not (Test-Path $file)) {
 $file = (Resolve-Path $file).Path
 $resourcePath = [System.IO.Path]::GetDirectoryName($file)
 
-$evaluationGenerator = Join-Path $PSScriptRoot "generate_agent_challenge_evaluation.py"
-& uv run python $evaluationGenerator
-if ($LASTEXITCODE -ne 0) {
-    throw "agent challenge evaluation generation failed with exit code $LASTEXITCODE"
+$needsAgentResults = Select-String -LiteralPath $file -SimpleMatch "include-agent-challenge-results" -Quiet
+if ($needsAgentResults) {
+    $evaluationGenerator = Join-Path $PSScriptRoot "generate_agent_challenge_evaluation.py"
+    & uv run python $evaluationGenerator
+    if ($LASTEXITCODE -ne 0) {
+        throw "agent challenge evaluation generation failed with exit code $LASTEXITCODE"
+    }
 }
 
 # name without extension

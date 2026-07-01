@@ -71,6 +71,11 @@ def build_workflow() -> Workflow:
         input=[{"path": "input.selected_documents", "target": "names"}],
         output=[{"source": "documents", "target": "state.documents"}],
     )
+    reset_board = builder.use_ref(
+        "local.issue_board.reset_issue_board",
+        id="reset_board",
+        input=[{"path": "input.board_path", "target": "board_path"}],
+    )
     analyze = builder.use_ref(
         "local.lda_report.analyze_documents",
         id="analyze",
@@ -164,7 +169,8 @@ def build_workflow() -> Workflow:
     end_completed = builder.end("completed", id="end_completed")
     end_cancelled = builder.end("cancelled", id="end_cancelled")
 
-    builder.set_entry_point(read_docs)
+    builder.set_entry_point(reset_board)
+    builder.connect(reset_board, "ok", read_docs)
     builder.connect(read_docs, "ok", analyze)
     builder.connect(analyze, "ok", build_report)
     builder.connect(build_report, "ok", draft_issues)

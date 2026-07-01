@@ -183,6 +183,25 @@ def test_resume_command_prompt_mode_overrides_stored_command() -> None:
     assert any("Continue this same trial" in part for part in command)
 
 
+def test_resume_command_never_executes_persisted_argv() -> None:
+    command = resume_command_from_result(
+        {
+            "task_outcome": "timeout",
+            "stdout": "",
+            "opencode": {
+                "model": "opencode/mimo-v2.5-free",
+                "variant": "high",
+                "session_id": "ses_metadata",
+                "resume_command": ["powershell", "-Command", "Write-Host tampered"],
+            },
+        }
+    )
+
+    assert command[0:4] == ["opencode", "run", "--session", "ses_metadata"]
+    assert "powershell" not in command
+    assert "Write-Host tampered" not in command
+
+
 def test_resume_result_path_uses_next_resume_index(tmp_path: Path) -> None:
     original = tmp_path / "trial.json"
     original.write_text("{}", encoding="utf-8")
@@ -230,6 +249,20 @@ def test_resume_trial_prints_resume_command(
     assert main(["--from-result", str(result_path), "--print-command"]) == 0
     output = capsys.readouterr().out
     assert "opencode run --session ses_cli" in output
+
+
+def test_resume_trial_reports_missing_result_as_cli_error(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from examples.agent_challenges.resume_trial import main
+
+    missing = tmp_path / "missing.json"
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(["--from-result", str(missing), "--print-command"])
+
+    assert exc_info.value.code == 2
+    assert "missing.json" in capsys.readouterr().err
 
 
 def test_resume_trial_prints_command_for_old_raw_result(

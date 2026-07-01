@@ -6,6 +6,7 @@ param(
     [object[]]$models = @( # object[] because ModelProfile is not known yet
         [ModelProfile]::new("opencode/deepseek-v4-flash-free", "max"),
         [ModelProfile]::new("opencode/mimo-v2.5-free", "high")
+        # Disabled after repeated provider timeouts and resource-exhausted failures.
         # [ModelProfile]::new("opencode/nemotron-3-ultra-free", "high")
     )
 )

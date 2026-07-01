@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import json
 from collections import Counter
+from dataclasses import replace
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
 COHORT_PATH = ROOT / "docs" / "thesis" / "agent-challenge-cohort.json"
@@ -58,6 +61,80 @@ def test_primary_cohort_snapshot_loads_without_local_report_files(
     cohort = load_evaluation_cohort(snapshot, repository_root=tmp_path)
 
     assert len(cohort.trials) == 36
+
+
+@pytest.mark.parametrize(
+    ("field", "value", "message"),
+    [
+        ("profile", "debug", "unsupported evaluation profile"),
+        ("task_outcome", "unknown", "unsupported task outcome"),
+        ("audit_notes", ["not", "text"], "audit_notes must be a string"),
+    ],
+)
+def test_evaluation_cohort_rejects_unknown_or_mistyped_run_values(
+    tmp_path: Path, field: str, value: object, message: str
+) -> None:
+    from examples.agent_challenges.evaluation import load_evaluation_cohort
+
+    manifest = json.loads(COHORT_PATH.read_text(encoding="utf-8"))
+    manifest["runs"][0][field] = value
+    snapshot = tmp_path / "agent-challenge-cohort.json"
+    snapshot.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
+        load_evaluation_cohort(snapshot, repository_root=tmp_path)
+
+
+def test_evaluation_figures_reject_unknown_direct_trial_values() -> None:
+    import matplotlib.pyplot as plt
+
+    from examples.agent_challenges.evaluation import load_evaluation_cohort
+    from examples.agent_challenges.evaluation_figures import (
+        _automatic_vs_manual,
+        _scatter_metric,
+    )
+
+    cohort = load_evaluation_cohort(COHORT_PATH, repository_root=ROOT)
+    figure, axis = plt.subplots()
+    try:
+        with pytest.raises(ValueError, match="unsupported evaluation model"):
+            _scatter_metric(
+                axis,
+                [replace(cohort.trials[0], model="unknown-model")],
+                metric="duration",
+            )
+        with pytest.raises(ValueError, match="unsupported evaluation profile"):
+            _scatter_metric(
+                axis,
+                [replace(cohort.trials[0], profile="unknown-profile")],
+                metric="duration",
+            )
+        invalid_cohort = replace(
+            cohort,
+            trials=(replace(cohort.trials[0], task_outcome="unknown"),),
+        )
+        with pytest.raises(ValueError, match="unsupported task outcomes"):
+            _automatic_vs_manual(invalid_cohort, plt)
+    finally:
+        plt.close(figure)
+
+
+def test_evaluation_generator_prints_paths_outside_repository(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    from docs.thesis import generate_agent_challenge_evaluation as generator
+
+    generated = tmp_path / "agent-challenge-results.md"
+    monkeypatch.setattr(
+        generator,
+        "generate",
+        lambda **_kwargs: (generated,),
+    )
+
+    assert generator.main(["--output-dir", str(tmp_path)]) == 0
+    assert capsys.readouterr().out.strip() == "agent-challenge-results.md"
 
 
 def test_evaluation_renderer_writes_stable_svg_and_pdf_names(tmp_path: Path) -> None:

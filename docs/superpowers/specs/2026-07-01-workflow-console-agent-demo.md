@@ -347,12 +347,12 @@ The UI selects all issues by default and allows individual deselection.
 
 ## Self-Describing Interrupt Dependency
 
-The current interrupt payload exposes `kind` and data but not a complete
-machine-readable response contract. The Workflow Console requires explicit
-request and resume schemas so it can render and validate arbitrary interrupts
-without reading workflow code.
+Interrupted run inspection now exposes `kind`, payload, outcomes,
+`request_schema`, `resume_schema`, and `typed`. Runtime validates request and
+resume payloads against those contracts. The Workflow Console can therefore
+render and validate arbitrary interrupts without reading workflow code.
 
-The prerequisite contract is defined in
+The implemented contract is defined in
 [Self-describing interrupt contracts](2026-07-01-self-describing-interrupt-contracts.md).
 
 ## Replay And Failure Handling

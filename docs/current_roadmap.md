@@ -134,7 +134,8 @@ clear operator feedback before adding more architecture.
   `ux_issues_found: []` so debug-profile reports do not fail by omission.
 - Completed: `wf draft bind` now reuses existing workflow input/state schema
   fields when binding to step-local inputs, avoiding redundant-schema failures
-  found by debug challenge runs.
+  found by debug challenge runs. Implementation:
+  [`idempotent draft bind inputs`](historical/superpowers/plans/2026-06-29-idempotent-draft-bind-inputs.md).
 - Keep status read-only; do not mutate registry, auth, config, or stores.
 
 ## Priority 2: Durable Run/Resume Hardening

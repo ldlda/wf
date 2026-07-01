@@ -1994,7 +1994,7 @@ product.
 
 Evidence:
 
-- `docs/thesis/thesis-outline.md`
+- `docs/historical/thesis/thesis-outline.md`
 - `docs/current_roadmap.md`
 - Absence of scheduler, visual-editor, and secret-manager production packages
   in the current source tree.

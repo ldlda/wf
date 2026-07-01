@@ -42,8 +42,11 @@ uv run wf --config examples/lda_report_workflow/wf.config.json --local run inspe
 
 Resume with selected issues:
 
+Copy one or more actual issue ids from the interrupt payload and replace the
+placeholder below.
+
 ```powershell
-uv run wf --config examples/lda_report_workflow/wf.config.json --local run resume <run_id> --payload '{"approved":true,"selected_issue_ids":["risk-1"],"comment":"Create selected issues."}'
+uv run wf --config examples/lda_report_workflow/wf.config.json --local run resume <run_id> --payload '{"approved":true,"selected_issue_ids":["<issue_id_from_interrupt>"],"comment":"Create selected issues."}'
 ```
 
 ## Cleanup

@@ -17,6 +17,8 @@ FIGURE_STEMS = (
     "agent-challenge-token-volume",
 )
 _MANUAL_OUTCOMES = frozenset({"pass", "invalid", "fail"})
+_TASK_OUTCOMES = frozenset({"success", "failed", "timeout", "runner_error"})
+_EVALUATION_PROFILES = frozenset({"none", "skills", "all"})
 _CHALLENGE_ORDER = {"browser": 0, "report": 1}
 _MODEL_ORDER = {"deepseek": 0, "mimo": 1}
 _PROFILE_ORDER = {"none": 0, "skills": 1, "all": 2}
@@ -105,6 +107,19 @@ def _load_trial(
         raise ValueError(
             f"unsupported manual outcome {manual_outcome!r}: {report_path}"
         )
+    profile = _string(run.get("profile"), field="runs[].profile")
+    if profile not in _EVALUATION_PROFILES:
+        raise ValueError(f"unsupported evaluation profile {profile!r}: {report_path}")
+    task_outcome = _string(run.get("task_outcome"), field="runs[].task_outcome")
+    if task_outcome not in _TASK_OUTCOMES:
+        raise ValueError(f"unsupported task outcome {task_outcome!r}: {report_path}")
+    raw_audit_notes = run.get("audit_notes")
+    if raw_audit_notes is None:
+        audit_notes = ""
+    elif isinstance(raw_audit_notes, str):
+        audit_notes = raw_audit_notes
+    else:
+        raise ValueError(f"runs[].audit_notes must be a string: {report_path}")
 
     duration = run.get("duration_seconds")
     if not isinstance(duration, int | float):
@@ -117,7 +132,7 @@ def _load_trial(
             _string(run.get("challenge"), field="runs[].challenge")
         ),
         model=short_model_name(_string(run.get("model"), field="runs[].model")),
-        profile=_string(run.get("profile"), field="runs[].profile"),
+        profile=profile,
         trial_index=_integer(run.get("trial_index"), field="runs[].trial_index"),
         repository_commit=_string(
             run.get("repository_commit"), field="runs[].repository_commit"
@@ -126,10 +141,10 @@ def _load_trial(
             run.get("base_prompt_hash"), field="runs[].base_prompt_hash"
         ),
         manual_outcome=manual_outcome,
-        task_outcome=_string(run.get("task_outcome"), field="runs[].task_outcome"),
+        task_outcome=task_outcome,
         duration_seconds=float(duration),
         tokens_total=_integer(run.get("tokens_total"), field="runs[].tokens_total"),
-        audit_notes=str(run.get("audit_notes") or ""),
+        audit_notes=audit_notes,
     )
 
 

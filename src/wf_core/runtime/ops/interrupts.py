@@ -115,7 +115,7 @@ def resume_interrupt(
         )
 
     validate_payload_against_schema(
-        step.resume_schema,
+        run.interrupt.resume_schema,
         resume_payload,
         f"interrupt resume for {step.id}",
     )

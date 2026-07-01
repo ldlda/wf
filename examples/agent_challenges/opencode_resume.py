@@ -97,20 +97,8 @@ def resume_command_from_result(
     variant: str | None = None,
     prompt_mode: PromptMode = "auto",
 ) -> list[str]:
-    """Build a resume command from new metadata or recover it from old raw results."""
+    """Rebuild a resume command from validated metadata or old raw results."""
     opencode = result.get("opencode")
-    if isinstance(opencode, dict):
-        command = opencode.get("resume_command")
-        has_override = (
-            any(value is not None for value in (session_id, attach_url, model, variant))
-            or prompt_mode != "auto"
-        )
-        if (
-            not has_override
-            and isinstance(command, list)
-            and all(isinstance(part, str) for part in command)
-        ):
-            return command
 
     stdout = result.get("stdout")
     stdout_text = stdout if isinstance(stdout, str) else ""

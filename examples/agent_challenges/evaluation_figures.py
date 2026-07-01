@@ -24,6 +24,7 @@ _MODEL_STYLES = {
 _PROFILE_ORDER = {"none": 0, "skills": 1, "all": 2}
 _CHALLENGE_ORDER = {"browser": 0, "report": 1}
 _MODEL_ORDER = {"deepseek": 0, "mimo": 1}
+_TASK_OUTCOME_ORDER = ("success", "failed", "timeout", "runner_error")
 
 
 def _configure_matplotlib() -> Any:
@@ -170,8 +171,17 @@ def _outcomes_by_cell(cohort: EvaluationCohort, plt: Any) -> Figure:
 def _automatic_vs_manual(cohort: EvaluationCohort, plt: Any) -> Figure:
     from matplotlib.colors import LinearSegmentedColormap
 
-    task_labels = ("success", "failed")
+    task_labels = tuple(
+        outcome
+        for outcome in _TASK_OUTCOME_ORDER
+        if any(trial.task_outcome == outcome for trial in cohort.trials)
+    )
     manual_labels = ("pass", "invalid", "fail")
+    unknown_task_outcomes = sorted(
+        {trial.task_outcome for trial in cohort.trials} - set(_TASK_OUTCOME_ORDER)
+    )
+    if unknown_task_outcomes:
+        raise ValueError(f"unsupported task outcomes: {unknown_task_outcomes}")
     matrix = [
         [
             sum(
@@ -211,7 +221,7 @@ def _automatic_vs_manual(cohort: EvaluationCohort, plt: Any) -> Figure:
     axis.set_ylabel("Automatic task outcome")
     axis.set_title("Automatic completion does not imply clean evaluation evidence")
     axis.set_xticks([value - 0.5 for value in range(1, len(manual_labels))], minor=True)
-    axis.set_yticks([0.5], minor=True)
+    axis.set_yticks([value - 0.5 for value in range(1, len(task_labels))], minor=True)
     axis.grid(which="minor", color="white", linewidth=2)
     axis.tick_params(which="minor", bottom=False, left=False)
     figure.colorbar(image, ax=axis, label="Trial count", shrink=0.82)
@@ -275,7 +285,11 @@ def _scatter_metric(
     profiles = ("none", "skills", "all")
     wave_offsets = {1: -0.055, 2: 0.0, 3: 0.055}
     for trial in sorted(trials, key=_trial_sort_key):
-        style = _MODEL_STYLES[trial.model]
+        style = _MODEL_STYLES.get(trial.model)
+        if style is None:
+            raise ValueError(f"unsupported evaluation model {trial.model!r}")
+        if trial.profile not in profiles:
+            raise ValueError(f"unsupported evaluation profile {trial.profile!r}")
         x = (
             profiles.index(trial.profile)
             + float(style["offset"])

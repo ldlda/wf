@@ -154,6 +154,7 @@ async def test_workflow_tools_have_human_metadata(tmp_path: Path) -> None:
         assert "Debug traces" in read_trace_schema.get("description", "")
 
 
+@pytest.mark.asyncio
 async def test_create_artifact_from_plan_exposes_plan_as_plain_object(
     tmp_path: Path,
 ) -> None:
@@ -173,6 +174,7 @@ async def test_create_artifact_from_plan_exposes_plan_as_plain_object(
         assert plan_schema.get("additionalProperties") is True
 
 
+@pytest.mark.asyncio
 async def test_draft_tools_expose_plain_object_and_patch_array_schemas(
     tmp_path: Path,
 ) -> None:
@@ -203,6 +205,7 @@ async def test_draft_tools_expose_plain_object_and_patch_array_schemas(
         assert "$defs" not in patch_patch_schema
 
 
+@pytest.mark.asyncio
 async def test_admin_tools_have_human_metadata(tmp_path: Path) -> None:
     config = BrokerConfig(
         store_root=tmp_path / "unified_admin_metadata_store",

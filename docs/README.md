@@ -10,8 +10,10 @@ implementation plans are kept for context, not as active instructions.
   and verification commands.
 - [`add/2026-06-workflow-platform-presentation.md`](add/2026-06-workflow-platform-presentation.md):
   concise presentation narrative for the current product shape and demo flow.
-- [`thesis/thesis-outline.md`](thesis/thesis-outline.md): thesis/report scaffold,
-  argument structure, evidence checklist, limitations, and future work.
+- [`thesis/system-design-implementation.md`](thesis/system-design-implementation.md):
+  maintained thesis/report document.
+- [`thesis/evidence-index.md`](thesis/evidence-index.md): claim-to-code and
+  claim-to-test evidence map for the thesis.
 - [`current_roadmap.md`](current_roadmap.md): active next-work list after the
   core type-shape cleanup.
 - [`wf_core_architecture.md`](wf_core_architecture.md): kernel package

@@ -616,3 +616,20 @@ def test_trial_report_renders_opencode_resume_metadata(tmp_path: Path) -> None:
     assert "## OpenCode Resume" in rendered
     assert "ses_report" in rendered
     assert "opencode run --session ses_report" in rendered
+
+
+def test_trial_report_skips_resume_section_without_session_id(tmp_path: Path) -> None:
+    from examples.agent_challenges.report_models import build_trial_report
+    from examples.agent_challenges.reports import render_trial_report_markdown
+
+    result = _raw_result(tmp_path)
+    result["opencode"] = {
+        "model": "opencode/deepseek-v4-flash-free",
+        "variant": "max",
+        "session_id": None,
+    }
+
+    report = build_trial_report(result, audit=None)
+    rendered = render_trial_report_markdown(report)
+
+    assert "## OpenCode Resume" not in rendered

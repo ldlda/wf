@@ -249,13 +249,10 @@ def render_trial_report_markdown(report: TrialReport) -> str:
             )
     lines.append("")
 
-    if report.opencode is not None:
+    if report.opencode is not None and report.opencode.session_id:
         lines.append("## OpenCode Resume")
         lines.append("")
-        if report.opencode.session_id:
-            lines.append(f"- Session: `{report.opencode.session_id}`")
-        else:
-            lines.append("- Session: not captured")
+        lines.append(f"- Session: `{report.opencode.session_id}`")
         if report.opencode.attach_url:
             lines.append(f"- Attach URL: `{report.opencode.attach_url}`")
         if report.opencode.resume_command:

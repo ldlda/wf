@@ -2,8 +2,7 @@
 
 Date: 2026-07-01
 
-Status: Approved direction. Needs an executable implementation plan before code
-changes.
+Status: Implemented. This document is the live interrupt contract.
 
 Related:
 
@@ -27,23 +26,18 @@ This is required for the Workflow Console and useful for CLI, JSON-RPC, MCP, and
 agent clients. It prevents every client from needing workflow-specific code just
 to render and answer an approval step.
 
-## Current Gap
+## Implemented Contract
 
-The current core interrupt model has useful mechanics but not a complete public
-contract.
+The core interrupt model now exposes a complete public pause/resume contract.
 
 - `InterruptNode` stores `kind`, request bindings, resume bindings, and resume
-  outcomes.
+  outcomes, plus `request_schema` and `resume_schema`.
 - Runtime builds an `InterruptRequest` with id, frame id, node id, kind,
-  payload, route, and resumability.
-- `workflow.runs.inspect` serializes the current runtime interrupt request.
-- Resume validates the selected outcome against `InterruptNode.outcomes` and
-  applies resume bindings.
-
-What is missing is a machine-readable schema for the request payload and resume
-payload. A client can see data, but it cannot know whether the response should
-be `{ "approved": true }`, `{ "selected_issue_ids": [...] }`, or something else
-without reading workflow code or challenge-specific docs.
+  payload, route, resumability, outcomes, request schema, resume schema, and a
+  `typed` marker.
+- `workflow.runs.inspect` serializes that persisted interrupt request.
+- Runtime validates request payloads before pausing and validates resume
+  payloads against the persisted pause-time schema before mutating state.
 
 This is close to the LangGraph-style `interrupt(value)` and `Command(resume=...)`
 pattern: flexible and simple, but the response contract is mostly app
@@ -51,7 +45,7 @@ convention. `wf` should keep the flexibility while making the contract explicit.
 
 ## Design Summary
 
-Add JSON Schema contracts to interrupt nodes and carry them through persisted run
+JSON Schema contracts are carried from interrupt nodes through persisted run
 inspection and resume validation.
 
 ```mermaid
@@ -73,7 +67,7 @@ sequenceDiagram
 
 ## Core Model
 
-Extend `InterruptNode` with two optional schema fields:
+`InterruptNode` carries two schema fields:
 
 ```python
 class InterruptNode(BaseModel):

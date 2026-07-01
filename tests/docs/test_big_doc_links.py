@@ -38,6 +38,18 @@ def test_project_map_links_big_doc() -> None:
     assert any(link.endswith("evidence-index.md") for link in links)
 
 
+def test_docs_index_points_to_live_thesis_and_archives_scaffolds() -> None:
+    docs = ROOT / "docs"
+    index = (docs / "README.md").read_text(encoding="utf-8")
+
+    assert "thesis/system-design-implementation.md" in index
+    assert "thesis/evidence-index.md" in index
+    assert not (docs / "thesis" / "thesis-outline.md").exists()
+    assert not (docs / "thesis" / "diagrams.md").exists()
+    assert (docs / "historical" / "thesis" / "thesis-outline.md").is_file()
+    assert (docs / "historical" / "thesis" / "diagrams.md").is_file()
+
+
 def test_big_doc_keeps_mcp_as_source_family() -> None:
     doc = (ROOT / "docs" / "thesis" / "system-design-implementation.md").read_text(
         encoding="utf-8"
@@ -92,6 +104,9 @@ def test_thesis_bundle_has_reproducible_agent_evaluation_assets() -> None:
         < generate_script.index("--filter=pandoc-crossref")
     )
     assert "generate_agent_challenge_evaluation.py" in combined_build_script
+    assert "Test-RenderNeedsAgentResults" in generate_script
+    assert "include-agent-challenge-results" in combined_build_script
+    assert "if ($needsAgentResults)" in combined_build_script
     assert "--resource-path" in combined_build_script
     for stem in figure_stems:
         assert f"figures/{stem}.svg" in results

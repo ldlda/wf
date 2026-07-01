@@ -181,6 +181,7 @@ def test_lda_report_workflow_builder_generates_committed_raw_plan() -> None:
 
     assert workflow.name == "lda_report_case_study"
     assert validated.name == "lda_report_case_study"
+    assert validated.start == "reset_board"
     assert any(node.id == "review_issues" for node in validated.nodes)
     assert payload == committed
 
@@ -219,7 +220,20 @@ async def test_lda_report_workflow_artifact_interrupt_resume_path(
         }
     )
     run_input = json.loads((EXAMPLE_DIR / "run-input.json").read_text(encoding="utf-8"))
-    run_input["board_path"] = str(tmp_path / "issue-board.json")
+    board_path = tmp_path / "issue-board.json"
+    board_path.write_text(
+        json.dumps(
+            [
+                {
+                    "id": "ISSUE-099",
+                    "title": "Stale demo issue",
+                    "url": "local://issue-board/ISSUE-099",
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    run_input["board_path"] = str(board_path)
     started = await server.api.run_deployment(
         deployment_id="lda_report_case_study.default",
         workflow_input=run_input,
@@ -228,14 +242,14 @@ async def test_lda_report_workflow_artifact_interrupt_resume_path(
     assert started["status"] == "interrupted"
     assert started["interrupt"]["kind"] == "issue_review"
     assert started["interrupt"]["typed"] is True
-    assert started["interrupt"]["request_schema"]["required"] == [
+    assert set(started["interrupt"]["request_schema"]["required"]) == {
         "report_markdown",
         "proposed_issues",
-    ]
-    assert started["interrupt"]["resume_schema"]["required"] == [
+    }
+    assert set(started["interrupt"]["resume_schema"]["required"]) == {
         "approved",
         "selected_issue_ids",
-    ]
+    }
     proposed_ids = [
         issue["id"] for issue in started["interrupt"]["payload"]["proposed_issues"]
     ]
@@ -255,6 +269,7 @@ async def test_lda_report_workflow_artifact_interrupt_resume_path(
     assert resumed["outcome"] == "completed"
     assert resumed["output"]["approved"] is True
     assert resumed["output"]["created_issues"]
+    assert resumed["output"]["created_issues"][0]["id"] == "ISSUE-001"
     assert resumed["output"]["markdown"].startswith(
         "# lda.chat Thesis And Project Readiness Report"
     )

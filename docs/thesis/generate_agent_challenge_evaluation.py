@@ -54,10 +54,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    for path in generate(
-        manifest_path=args.manifest.resolve(), output_dir=args.output_dir.resolve()
-    ):
-        print(path.relative_to(ROOT))
+    output_dir = args.output_dir.resolve()
+    for path in generate(manifest_path=args.manifest.resolve(), output_dir=output_dir):
+        resolved = path.resolve()
+        try:
+            display_path = resolved.relative_to(ROOT)
+        except ValueError:
+            try:
+                display_path = resolved.relative_to(output_dir)
+            except ValueError:
+                display_path = resolved
+        print(display_path)
     return 0
 
 

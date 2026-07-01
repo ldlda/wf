@@ -35,6 +35,29 @@ if (-not (Test-Path $pandoc_diagram)) {
     Write-Error "pandoc diagram wrapper not found at $pandoc_diagram. Make sure it exists, then rerun this command."
     exit 1
 }
+
+function Test-RenderNeedsAgentResults([string[]] $arguments) {
+    for ($index = 0; $index -lt $arguments.Count; $index++) {
+        $candidate = $null
+        if ($arguments[$index] -in @("-i", "--input")) {
+            if ($index + 1 -lt $arguments.Count) {
+                $candidate = $arguments[$index + 1]
+                $index++
+            }
+        }
+        elseif ($arguments[$index].EndsWith(".md")) {
+            $candidate = $arguments[$index]
+        }
+        if (
+            $candidate -and
+            (Test-Path -LiteralPath $candidate) -and
+            (Select-String -LiteralPath $candidate -SimpleMatch "include-agent-challenge-results" -Quiet)
+        ) {
+            return $true
+        }
+    }
+    return $false
+}
 . $pandoc_diagram
 
 $pandoc_crossref = Get-Command pandoc-crossref -ErrorAction SilentlyContinue
@@ -62,7 +85,7 @@ if (-not (Test-Path $include_markdown_filter)) {
 }
 
 $agent_results = Join-Path $PSScriptRoot "agent-challenge-results.md"
-if (-not (Test-Path $agent_results)) {
+if ((Test-RenderNeedsAgentResults $RemainingArgs) -and -not (Test-Path $agent_results)) {
     Write-Error "agent-challenge-results.md is missing. Run generate_agent_challenge_evaluation.py first."
     exit 1
 }

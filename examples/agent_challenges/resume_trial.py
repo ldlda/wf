@@ -154,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
             )
         else:
             print(_display_command(command))
-    except ValueError as exc:
+    except (OSError, ValueError) as exc:
         parser.error(str(exc))
     return 0
 

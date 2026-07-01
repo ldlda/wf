@@ -1,6 +1,11 @@
 {
   "edges": [
     {
+      "from": "reset_board",
+      "outcome": "ok",
+      "to": "read_docs"
+    },
+    {
       "from": "read_docs",
       "outcome": "ok",
       "to": "analyze"
@@ -82,6 +87,21 @@
           "target": "state.documents"
         }
       ],
+      "retry": null,
+      "timeout_seconds": null,
+      "type": "node"
+    },
+    {
+      "desc": null,
+      "id": "reset_board",
+      "input": [
+        {
+          "path": "input.board_path",
+          "target": "board_path"
+        }
+      ],
+      "node": "local.issue_board.reset_issue_board",
+      "output": [],
       "retry": null,
       "timeout_seconds": null,
       "type": "node"
@@ -368,7 +388,7 @@
     "required": [],
     "type": "object"
   },
-  "start": "read_docs",
+  "start": "reset_board",
   "state_schema": {
     "properties": {
       "analysis": {

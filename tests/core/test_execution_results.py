@@ -130,7 +130,7 @@ async def test_interrupt_request_payload_validates_against_schema() -> None:
         input_schema=_schema(),
         state_schema=StateSchema.from_field_map({}),
         output_schema=_schema(),
-        outcomes=["ok"],
+        outcomes=["submitted"],
         start="ask",
         nodes=[
             InterruptNode(
@@ -147,8 +147,11 @@ async def test_interrupt_request_payload_validates_against_schema() -> None:
                     "additionalProperties": False,
                 },
             ),
+            EndNode(id="end", type="end", outcome="submitted"),
         ],
-        edges=[Edge.model_validate({"from": "ask", "outcome": "submitted", "to": END})],
+        edges=[
+            Edge.model_validate({"from": "ask", "outcome": "submitted", "to": "end"})
+        ],
     )
 
     run = await execute_workflow_result_async(workflow, {}, {})
@@ -157,6 +160,55 @@ async def test_interrupt_request_payload_validates_against_schema() -> None:
     assert run.interrupt is None
     assert run.error is not None
     assert "interrupt request for ask" in run.error
+
+
+@pytest.mark.asyncio
+async def test_interrupt_resume_uses_persisted_pause_schema() -> None:
+    workflow = Workflow(
+        name="persisted_resume_contract",
+        input_schema=_schema(),
+        state_schema=StateSchema.from_field_map({}),
+        output_schema=_schema(),
+        outcomes=["submitted"],
+        start="ask",
+        nodes=[
+            InterruptNode(
+                id="ask",
+                type="interrupt",
+                kind="approval",
+                resume_schema={
+                    "type": "object",
+                    "properties": {"approved": {"type": "boolean"}},
+                    "required": ["approved"],
+                    "additionalProperties": False,
+                },
+            ),
+            EndNode(id="end", type="end", outcome="submitted"),
+        ],
+        edges=[
+            Edge.model_validate({"from": "ask", "outcome": "submitted", "to": "end"})
+        ],
+    )
+    interrupted = await execute_workflow_async(workflow, {}, {})
+    changed_workflow = workflow.model_copy(deep=True)
+    changed_step = changed_workflow.nodes[0]
+    assert isinstance(changed_step, InterruptNode)
+    changed_step.resume_schema = {
+        "type": "object",
+        "properties": {"approved": {"type": "string"}},
+        "required": ["approved"],
+        "additionalProperties": False,
+    }
+
+    resumed = await resume_workflow_result_async(
+        changed_workflow,
+        interrupted,
+        {},
+        resume_payload={"approved": True},
+    )
+
+    assert resumed.status == RunStatus.COMPLETED
+    assert resumed.outcome == "submitted"
 
 
 async def test_interrupt_resume_payload_validates_before_state_mutation() -> None:
