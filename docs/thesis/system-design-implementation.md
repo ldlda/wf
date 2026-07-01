@@ -2,6 +2,7 @@
 title: "Design and Implementation of lda.chat: An AI Agent for Automating and Creating Workspace Workflows"
 subtitle: ""
 author: "Lương Đức Anh"
+student-id: "23BI14021"
 date: "July 1, 2026"
 lang: "en-US"
 documentclass: report
