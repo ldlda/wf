@@ -1,0 +1,39 @@
+{
+  "server": {
+    "store": {
+      "kind": "filesystem",
+      "root": ".wf_lda_report_store"
+    },
+    "transports": [
+      {
+        "kind": "rpc_http",
+        "host": "127.0.0.1",
+        "port": 8765,
+        "path": "/rpc"
+      }
+    ],
+    "sources": [
+      {
+        "id": "local.lda_docs",
+        "kind": "python",
+        "path": ".",
+        "module": "document_source",
+        "registry": "registry"
+      },
+      {
+        "id": "local.lda_report",
+        "kind": "python",
+        "path": ".",
+        "module": "report_source",
+        "registry": "registry"
+      },
+      {
+        "id": "local.issue_board",
+        "kind": "python",
+        "path": ".",
+        "module": "issue_board_source",
+        "registry": "registry"
+      }
+    ]
+  }
+}

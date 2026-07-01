@@ -1,0 +1,10 @@
+{
+  "selected_documents": [
+    "project-brief.md",
+    "architecture-notes.md",
+    "evaluation-findings.md",
+    "risk-register.md",
+    "roadmap.md"
+  ],
+  "board_path": "issue-board.json"
+}

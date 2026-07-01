@@ -39,8 +39,9 @@ Implementation order:
 
 1. Completed: self-describing interrupt request/resume schemas are carried
    through core execution, persisted run inspection, and resume validation.
-2. Add a deterministic `examples/lda_report_workflow/` case study with local
-   document, report, and issue-board sources.
+2. Completed: deterministic `examples/lda_report_workflow/` case study with
+   local document, report, issue-board sources, and typed issue-review
+   interrupt.
 3. Add a top-level `web/` Astro/Effect app with loopback JSON-RPC connection and
    method registry.
 4. Add console read/inspect views for sources, drafts, artifacts, deployments,
