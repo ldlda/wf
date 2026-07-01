@@ -42,13 +42,15 @@ Implementation order:
 2. Completed: deterministic `examples/lda_report_workflow/` case study with
    local document, report, issue-board sources, and typed issue-review
    interrupt.
-3. Add a top-level `web/` Astro/Effect app with loopback JSON-RPC connection and
-   method registry.
+3. Add a top-level `web/` pnpm workspace with a React/Vite console, Hono local
+   server, Effect JSON-RPC boundary, loopback connection flow, and method
+   registry. Design:
+   [`workflow console foundation`](superpowers/specs/2026-07-01-workflow-console-foundation-design.md).
 4. Add console read/inspect views for sources, drafts, artifacts, deployments,
    runs, traces, and raw RPC drawers.
 5. Add lifecycle autoplay, typed approval, issue-board output, and replay.
 6. Add a constrained demo agent that invokes one prepared recipe macro.
-7. Add presentation and appendix routes for the 15-minute defense.
+7. Add an Astro presentation app and appendix routes for the 15-minute defense.
 
 Boundaries: this is not a production admin panel, generic visual workflow
 editor, scheduler, external Google Drive/mail integration, or benchmark evidence

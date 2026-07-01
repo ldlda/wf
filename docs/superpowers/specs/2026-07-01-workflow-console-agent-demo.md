@@ -10,11 +10,12 @@ Related:
 - [Workflow API architecture](../../wf_api_architecture.md)
 - [Persisted run/resume contract](2026-06-03-persisted-run-resume-contract.md)
 - [Self-describing interrupt contracts](2026-07-01-self-describing-interrupt-contracts.md)
+- [Workflow console foundation design](2026-07-01-workflow-console-foundation-design.md)
 - [Thesis system design](../../thesis/system-design-implementation.md)
 
 ## Purpose
 
-Build one local-first web application that serves three related needs:
+Build one local-first web workspace that serves three related needs:
 
 1. a reusable Workflow Console for inspecting a running `wf` JSON-RPC server;
 2. a reliable defense demonstration of the complete workflow lifecycle;
@@ -38,22 +39,14 @@ Create a top-level `web/` package rather than putting product code under
 ```text
 web/
   package.json
-  astro.config.mjs
-  src/
-    pages/
-      connect.astro
-      console/
-      demo/
-      replay/
-      presentation/
-      appendix/
-    components/
-      agent/
-      lifecycle/
-      rpc/
-      trace/
-      workflow-graph/
-      presentation/
+  pnpm-workspace.yaml
+  apps/
+    console/       # React + Vite
+    server/        # Hono + Effect boundary
+    presentation/  # Astro, added in the presentation slice
+  packages/
+    rpc/
+    ui/            # added only after shared components exist
 ```
 
 The first release is a local-development Workflow Console. It is not a
@@ -64,8 +57,8 @@ multi-user administration, or safe access to arbitrary remote servers.
 
 ```mermaid
 flowchart TB
-  Browser[Astro and React UI]
-  Routes[Astro server routes]
+  Browser[React + Vite UI]
+  Routes[Hono server routes]
   Agent[DemoAgent service]
   Recipe[Prepared ReportRecipe]
   Job[LifecycleJob service]
@@ -108,7 +101,7 @@ Use Effect for server-side orchestration and protocol handling:
 - timeouts and retries apply only where semantically safe.
 
 Do not spread Effect through every React component. React components consume
-ordinary view models and event streams. Astro route handlers are the
+ordinary view models and event streams. Hono route handlers are the
 `Effect.runPromise` boundary.
 
 Mutation calls such as artifact creation, deployment saving, run start, and
@@ -120,11 +113,11 @@ small bounded retry policy.
 The connection page accepts a JSON-RPC URL such as
 `http://127.0.0.1:8765/rpc`.
 
-1. The Astro server validates the URL.
+1. The Hono server validates the URL.
 2. The first slice accepts only loopback hosts.
 3. `workflow.health` verifies the endpoint.
 4. The connection is retained for the browser session.
-5. Astro proxies JSON-RPC calls server-side to avoid browser CORS coupling.
+5. Hono proxies JSON-RPC calls server-side to avoid browser CORS coupling.
 6. Every call records its raw request, raw response, interpreted result,
    duration, and equivalent CLI command.
 
@@ -188,8 +181,8 @@ The UI uses focus modes instead of showing every panel simultaneously:
 - **Output:** rendered readiness report and created issues.
 - **Raw:** collapsible JSON-RPC request and response drawer.
 
-Use an interactive graph component, expected to be `@xyflow/react`, inside an
-Astro React island. Static presentation diagrams remain Mermaid.
+Use an interactive graph component, expected to be `@xyflow/react`, inside the
+React console. Static presentation diagrams remain Mermaid.
 
 A small graph embedded in a lifecycle card can expand into the primary canvas.
 Selecting a node opens a side drawer with capability, source, bindings,
@@ -383,19 +376,21 @@ Routes:
 - `/replay`: recorded fallback;
 - `/appendix`: backup architecture, evaluation, and implementation slides.
 
-The presentation transitions directly into the demo and back. The exact slide
-library is selected in the presentation slice; the route and shared component
-boundaries are fixed by this design.
+The presentation transitions directly into the demo and back. Astro may be
+added as a separate static presentation app and served by the Hono process. The
+exact slide library is selected in the presentation slice; the route and shared
+component boundaries are fixed by this design.
 
 ## Implementation Order
 
 1. Self-describing interrupt request/resume contracts.
 2. Deterministic `lda.chat` report workflow and Python sources.
-3. `web/` Astro and Effect foundation, connection flow, and RPC registry.
+3. `web/` React/Vite, Hono, and Effect foundation, connection flow, and RPC
+   registry.
 4. Workflow Console read/inspect views, graph, trace, and raw drawers.
 5. Lifecycle job, autoplay, typed approval, issue board, and replay.
 6. Constrained demo agent and replaceable model gateway.
-7. Defense presentation and appendix routes.
+7. Astro defense presentation and appendix routes.
 
 Each slice gets its own executable implementation plan. Do not combine the
 Python contract change, web foundation, agent integration, and presentation
