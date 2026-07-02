@@ -55,3 +55,36 @@
   background: oklch(0.7 0.16 195);
   color: oklch(0.12 0.025 250);
 }
+
+.operation-block {
+  border: 1px solid oklch(0.36 0.04 250);
+  background: oklch(0.16 0.025 250);
+  padding: 1rem;
+  border-radius: 0.85rem;
+}
+
+.operation-block header,
+.operation-block footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  color: oklch(0.78 0.035 250);
+}
+
+.operation-block__command,
+.operation-block pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.operation-block__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+@media (max-width: 800px) {
+  .operation-block__grid {
+    grid-template-columns: 1fr;
+  }
+}
