@@ -117,3 +117,23 @@ pnpm --dir web dev
 Connect to `http://127.0.0.1:8765/rpc`. The smoke passes when artifact list,
 deployment list, run list, graph visualization, trace frames, and raw evidence
 are all visible.
+
+## lda Report Workflow Demo
+
+Start the prepared workflow RPC server from the repository root:
+
+```powershell
+uv run wf-rpc-server --config examples/lda_report_workflow/wf.config.json --host 127.0.0.1 --port 8765
+```
+
+Start the web console:
+
+```powershell
+pnpm --dir web dev
+```
+
+Open `http://127.0.0.1:5173/`, connect to
+`http://127.0.0.1:8765/rpc`, then use the `lda report workflow demo`
+panel. The panel expects `lda_report_case_study.default` to already exist
+in the connected store. If it is missing, the panel displays the exact
+product CLI setup commands.

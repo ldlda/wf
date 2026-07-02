@@ -10,6 +10,8 @@ import { ConnectionHeader } from "../components/ConnectionHeader.js";
 import { SourceInventory } from "../components/SourceInventory.js";
 import { LifecycleExplorer } from "../lifecycle/LifecycleExplorer.js";
 import { useLifecycleExplorer } from "../lifecycle/useLifecycleExplorer.js";
+import { LdaReportDemoPanel } from "../demo/LdaReportDemoPanel.js";
+import { useLdaReportDemo } from "../demo/useLdaReportDemo.js";
 
 const parseSources = (
   data: unknown,
@@ -54,6 +56,7 @@ export const App = () => {
   );
 
   const lifecycleController = useLifecycleExplorer(connectedTarget, recordEvidence);
+  const demoController = useLdaReportDemo(connectedTarget, recordEvidence);
 
   const loadSources = useCallback(
     async (target: string) => {
@@ -160,6 +163,7 @@ export const App = () => {
         onSubmit={onSubmit}
         onDraftChange={(value) => dispatch({ type: "draft_changed", value })}
       />
+      {connectedTarget && <LdaReportDemoPanel controller={demoController} />}
       <SourceInventory
         sources={state.sources}
         loading={state.sourcesLoading}

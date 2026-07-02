@@ -34,6 +34,8 @@ import {
   WorkflowDeploymentsValidatePayloadSchema,
   WorkflowRunsListPayloadSchema,
   WorkflowRunsInspectPayloadSchema,
+  WorkflowRunsStartPayloadSchema,
+  WorkflowRunsResumePayloadSchema,
   WorkflowRunsTracePayloadSchema,
 } from "./rpcs.js";
 import { normalizeLoopbackTarget } from "./target-policy.js";
@@ -51,6 +53,8 @@ export type OperationName =
   | "workflow.deployments.validate"
   | "workflow.runs.list"
   | "workflow.runs.inspect"
+  | "workflow.runs.start"
+  | "workflow.runs.resume"
   | "workflow.runs.trace";
 
 export interface WorkflowRpcOptions {
@@ -89,6 +93,8 @@ const isOperationName = (value: string): value is OperationName =>
   value === "workflow.deployments.validate" ||
   value === "workflow.runs.list" ||
   value === "workflow.runs.inspect" ||
+  value === "workflow.runs.start" ||
+  value === "workflow.runs.resume" ||
   value === "workflow.runs.trace";
 
 const toExchange = (evidence: EvidenceRecord | null): RpcExchangeEvidence => ({
@@ -337,6 +343,20 @@ const executeImpl =
               params,
             );
             return yield* client.workflow["runs.inspect"](payload);
+          }
+          case "workflow.runs.start": {
+            const payload = yield* decodeParams(
+              WorkflowRunsStartPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["runs.start"](payload);
+          }
+          case "workflow.runs.resume": {
+            const payload = yield* decodeParams(
+              WorkflowRunsResumePayloadSchema,
+              params,
+            );
+            return yield* client.workflow["runs.resume"](payload);
           }
           case "workflow.runs.trace": {
             const payload = yield* decodeParams(

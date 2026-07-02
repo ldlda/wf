@@ -16,6 +16,8 @@ import {
   WorkflowRunsListResultSchema,
   WorkflowRunsInspectPayloadSchema,
   WorkflowRunsInspectResultSchema,
+  WorkflowRunsStartPayloadSchema,
+  WorkflowRunsResumePayloadSchema,
   WorkflowRunsTracePayloadSchema,
   WorkflowRunsTraceResultSchema,
 } from "./rpcs.js";
@@ -24,7 +26,7 @@ export type OperationMeta = {
   readonly method: string;
   readonly label: string;
   readonly explanation: string;
-  readonly idempotency: "read";
+  readonly idempotency: "read" | "write";
   readonly equivalentCli: (params: unknown) => string;
   readonly interpret: (result: unknown) => unknown;
 };
@@ -66,6 +68,37 @@ const interpretNextActions = (nextActions: {
   reason: nextActions.reason,
   patchExamples: nextActions.patch_examples,
   warnings: nextActions.warnings,
+});
+
+/** Adapts a snake_case run detail from the server into camelCase for the browser. */
+const interpretRunDetail = (decoded: {
+  readonly run_id: string;
+  readonly deployment_id: string;
+  readonly artifact_id: string;
+  readonly artifact_version: number;
+  readonly status: string;
+  readonly resume_readiness: string;
+  readonly interrupt: unknown;
+  readonly outcome: string | null;
+  readonly error: string | null;
+  readonly output: Record<string, unknown> | null;
+  readonly diagnostics: ReadonlyArray<unknown>;
+  readonly trace_count: number;
+  readonly next_actions: Parameters<typeof interpretNextActions>[0];
+}) => ({
+  runId: decoded.run_id,
+  deploymentId: decoded.deployment_id,
+  artifactId: decoded.artifact_id,
+  artifactVersion: decoded.artifact_version,
+  status: decoded.status,
+  resumeReadiness: decoded.resume_readiness,
+  interrupt: decoded.interrupt,
+  outcome: decoded.outcome,
+  error: decoded.error,
+  output: decoded.output,
+  diagnostics: decoded.diagnostics,
+  traceCount: decoded.trace_count,
+  nextActions: interpretNextActions(decoded.next_actions),
 });
 
 const operationEntries: ReadonlyArray<OperationMeta> = [
@@ -322,6 +355,46 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         traceCount: decoded.trace_count,
         nextActions: interpretNextActions(decoded.next_actions),
       };
+    },
+  },
+  {
+    method: "workflow.runs.start",
+    label: "Start run",
+    explanation: "Start a workflow deployment run",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(WorkflowRunsStartPayloadSchema)(
+        params,
+        { onExcessProperty: "error" },
+      );
+      return `uv run wf run start ${p.deployment_id} --input '<json>'`;
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(WorkflowRunsInspectResultSchema)(
+        result,
+        { onExcessProperty: "ignore" },
+      );
+      return interpretRunDetail(decoded);
+    },
+  },
+  {
+    method: "workflow.runs.resume",
+    label: "Resume run",
+    explanation: "Resume an interrupted workflow run",
+    idempotency: "write",
+    equivalentCli: (params) => {
+      const p = Schema.decodeUnknownSync(WorkflowRunsResumePayloadSchema)(
+        params,
+        { onExcessProperty: "error" },
+      );
+      return `uv run wf run resume ${p.run_id} --payload '<json>'`;
+    },
+    interpret: (result) => {
+      const decoded = Schema.decodeUnknownSync(WorkflowRunsInspectResultSchema)(
+        result,
+        { onExcessProperty: "ignore" },
+      );
+      return interpretRunDetail(decoded);
     },
   },
   {

@@ -211,6 +211,115 @@ const lifecycleCases = [
     },
   },
   {
+    operation: "workflow.runs.start" as const,
+    params: {
+      deployment_id: "lda_report_case_study.default",
+      workflow_input: {
+        selected_documents: [
+          "project-brief.md",
+          "architecture-notes.md",
+          "evaluation-findings.md",
+          "risk-register.md",
+          "roadmap.md",
+        ],
+        board_path: "issue-board.json",
+      },
+      trace_range: { start: 0, limit: 50 },
+    },
+    result: {
+      run_id: "run_demo",
+      deployment_id: "lda_report_case_study.default",
+      artifact_id: "lda_report_case_study",
+      artifact_version: 1,
+      status: "interrupted",
+      resume_readiness: "ready",
+      interrupt: {
+        kind: "issue_review",
+        payload: {
+          report_markdown: "# lda.chat Thesis And Project Readiness Report",
+          proposed_issues: [
+            {
+              id: "demo-issue-1",
+              title: "Prepare demo script",
+              body: "Write the defense walkthrough.",
+              severity: "medium",
+            },
+          ],
+        },
+        outcomes: ["submitted", "cancelled"],
+        request_schema: {
+          type: "object",
+          required: ["report_markdown", "proposed_issues"],
+        },
+        resume_schema: {
+          type: "object",
+          required: ["approved", "selected_issue_ids"],
+        },
+        typed: true,
+      },
+      outcome: null,
+      error: null,
+      output: null,
+      diagnostics: [],
+      trace_count: 1,
+      next_actions: {
+        can_continue: true,
+        can_save_now: null,
+        recommended_next_tool: "wf.workflow.resume_run",
+        reason: "run is interrupted",
+        patch_examples: [],
+        warnings: [],
+      },
+    },
+  },
+  {
+    operation: "workflow.runs.resume" as const,
+    params: {
+      run_id: "run_demo",
+      resume_payload: {
+        approved: true,
+        selected_issue_ids: ["demo-issue-1"],
+        comment: "Create selected issues.",
+      },
+      resume_outcome: "submitted",
+      trace_range: { start: 0, limit: 50 },
+    },
+    result: {
+      run_id: "run_demo",
+      deployment_id: "lda_report_case_study.default",
+      artifact_id: "lda_report_case_study",
+      artifact_version: 1,
+      status: "completed",
+      resume_readiness: "not_applicable",
+      interrupt: null,
+      outcome: "completed",
+      error: null,
+      output: {
+        approved: true,
+        markdown: "# lda.chat Thesis And Project Readiness Report",
+        created_issues: [
+          {
+            id: "ISSUE-001",
+            title: "Prepare demo script",
+            url: "local://issues/ISSUE-001",
+          },
+        ],
+        selected_issue_ids: ["demo-issue-1"],
+        comment: "Create selected issues.",
+      },
+      diagnostics: [],
+      trace_count: 4,
+      next_actions: {
+        can_continue: false,
+        can_save_now: null,
+        recommended_next_tool: null,
+        reason: "Run completed.",
+        patch_examples: [],
+        warnings: [],
+      },
+    },
+  },
+  {
     operation: "workflow.runs.trace" as const,
     params: { run_id: "run_1", trace_range: { start: 0, limit: 50 } },
     result: {
@@ -471,5 +580,41 @@ describe("lifecycle operations", () => {
       traceTruncated: false,
     });
     expect(exchange.interpreted).not.toHaveProperty("trace");
+  });
+
+  it("interprets typed interrupt contracts from run start", async () => {
+    const startCase = lifecycleCases.find(
+      (testCase) => testCase.operation === "workflow.runs.start",
+    );
+    expect(startCase).toBeDefined();
+    if (!startCase) return;
+
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const request = await requestBody(input, init);
+      return jsonResponse({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: startCase.result,
+      });
+    };
+
+    const exchange = await runOperation(
+      { fetch },
+      startCase.operation as "workflow.health" | "workflow.sources.list",
+      startCase.params,
+    );
+
+    expect(exchange.interpreted).toMatchObject({
+      runId: "run_demo",
+      status: "interrupted",
+      interrupt: {
+        kind: "issue_review",
+        typed: true,
+        outcomes: ["submitted", "cancelled"],
+      },
+      nextActions: {
+        canContinue: true,
+      },
+    });
   });
 });

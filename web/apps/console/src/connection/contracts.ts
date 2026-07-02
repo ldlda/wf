@@ -49,6 +49,8 @@ const OperationNameSchema = v.union([
   v.literal("workflow.deployments.validate"),
   v.literal("workflow.runs.list"),
   v.literal("workflow.runs.inspect"),
+  v.literal("workflow.runs.start"),
+  v.literal("workflow.runs.resume"),
   v.literal("workflow.runs.trace"),
 ]);
 

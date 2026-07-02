@@ -21,6 +21,8 @@ export {
   WorkflowDeploymentsValidate,
   WorkflowRunsList,
   WorkflowRunsInspect,
+  WorkflowRunsStart,
+  WorkflowRunsResume,
   WorkflowRunsTrace,
   WorkflowRpcs,
   ArtifactRefSchema,

@@ -57,9 +57,12 @@ Implementation order:
    [`workflow console lifecycle explorer plan`](historical/superpowers/plans/2026-07-02-workflow-console-lifecycle-explorer.md).
    Draft workspace inspection reuses the same shell after the first vertical
    path.
-5. Add lifecycle autoplay, typed approval, issue-board output, and replay.
-6. Add a constrained demo agent that invokes one prepared recipe macro.
-7. Add an Astro presentation app and appendix routes for the 15-minute defense.
+5. Completed: the web console can operate the prepared
+   `examples/lda_report_workflow/` deployment through run start, typed
+   `issue_review` interrupt, resume, trace, and final output inspection.
+6. Add lifecycle autoplay, typed approval, issue-board output, and replay.
+7. Add a constrained demo agent that invokes one prepared recipe macro.
+8. Add an Astro presentation app and appendix routes for the 15-minute defense.
 
 Boundaries: this is not a production admin panel, generic visual workflow
 editor, scheduler, external Google Drive/mail integration, or benchmark evidence

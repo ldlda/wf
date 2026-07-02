@@ -74,6 +74,16 @@ afterEach(() => {
   cleanup();
 });
 
+const lifecycleOk: RpcResponse = {
+  ok: true,
+  operation: "workflow.artifacts.list",
+  label: "List artifacts",
+  interpreted: { items: [], total: 0, nextCursor: null },
+  exchange: { request: {}, response: {} },
+  equivalentCli: "uv run wf artifact list",
+  durationMs: 5,
+};
+
 describe("App", () => {
   it("shows source inventory errors from rejected source refreshes", async () => {
     mockedConnectToServer.mockResolvedValue(
@@ -130,14 +140,26 @@ describe("App", () => {
     mockedConnectToServer.mockResolvedValue(
       successfulConnection("http://127.0.0.1:8765/rpc"),
     );
-    mockedCallOperation.mockResolvedValue({
-      ok: true,
-      operation: "workflow.sources.list",
-      label: "List sources",
-      interpreted: { sources: [], total: 0, nextCursor: null },
-      exchange: { request: {}, response: {} },
-      equivalentCli: "uv run wf source list",
-      durationMs: 5,
+    mockedCallOperation.mockImplementation((op: string) => {
+      if (op === "workflow.sources.list") {
+        return Promise.resolve({
+          ok: true,
+          operation: "workflow.sources.list",
+          label: "List sources",
+          interpreted: { sources: [], total: 0, nextCursor: null },
+          exchange: { request: {}, response: {} },
+          equivalentCli: "uv run wf source list",
+          durationMs: 5,
+        });
+      }
+      if (op === "workflow.deployments.inspect") {
+        return Promise.resolve({
+          ok: false,
+          error: { code: "rpc_remote_error", message: "not found" },
+          exchange: { request: {}, response: {} },
+        });
+      }
+      return Promise.resolve(lifecycleOk);
     });
 
     render(<App />);
@@ -146,5 +168,6 @@ describe("App", () => {
     await waitFor(() => {
       expect(screen.getByTestId("lifecycle-explorer")).toBeInTheDocument();
     });
+    expect(screen.getByLabelText("lda report workflow demo")).toBeInTheDocument();
   });
 });

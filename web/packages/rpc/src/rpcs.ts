@@ -242,6 +242,9 @@ const RunInterruptSchema = Schema.Struct({
   kind: Schema.String,
   payload: JsonObjectSchema,
   outcomes: Schema.Array(Schema.String),
+  request_schema: Schema.optional(JsonObjectSchema),
+  resume_schema: Schema.optional(JsonObjectSchema),
+  typed: Schema.optional(Schema.Boolean),
 });
 
 const RunNextActionsSchema = Schema.Struct({
@@ -271,6 +274,31 @@ export const WorkflowRunsInspectResultSchema = Schema.Struct({
 
 export const WorkflowRunsInspect = Rpc.make("workflow.runs.inspect", {
   payload: WorkflowRunsInspectPayloadSchema,
+  success: WorkflowRunsInspectResultSchema,
+  error: Schema.Never,
+});
+
+export const WorkflowRunsStartPayloadSchema = Schema.Struct({
+  deployment_id: Schema.String,
+  workflow_input: JsonObjectSchema,
+  trace_range: Schema.optional(Schema.NullOr(TraceRangeSchema)),
+});
+
+export const WorkflowRunsResumePayloadSchema = Schema.Struct({
+  run_id: Schema.String,
+  resume_payload: JsonObjectSchema,
+  resume_outcome: Schema.optional(Schema.String),
+  trace_range: Schema.optional(Schema.NullOr(TraceRangeSchema)),
+});
+
+export const WorkflowRunsStart = Rpc.make("workflow.runs.start", {
+  payload: WorkflowRunsStartPayloadSchema,
+  success: WorkflowRunsInspectResultSchema,
+  error: Schema.Never,
+});
+
+export const WorkflowRunsResume = Rpc.make("workflow.runs.resume", {
+  payload: WorkflowRunsResumePayloadSchema,
   success: WorkflowRunsInspectResultSchema,
   error: Schema.Never,
 });
@@ -314,5 +342,7 @@ export const WorkflowRpcs = RpcGroup.make(
   WorkflowDeploymentsValidate,
   WorkflowRunsList,
   WorkflowRunsInspect,
+  WorkflowRunsStart,
+  WorkflowRunsResume,
   WorkflowRunsTrace,
 );
