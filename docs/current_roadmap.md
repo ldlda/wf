@@ -35,6 +35,7 @@ Design contracts:
 - [`workflow console, agent demo, and defense presentation`](superpowers/specs/2026-07-01-workflow-console-agent-demo.md)
 - [`self-describing interrupt contracts`](superpowers/specs/2026-07-01-self-describing-interrupt-contracts.md)
 - [`workflow console lifecycle explorer`](superpowers/specs/2026-07-02-workflow-console-lifecycle-explorer.md)
+- [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md)
 
 Implementation order:
 
@@ -61,6 +62,8 @@ Implementation order:
    `examples/lda_report_workflow/` deployment through run start, typed
    `issue_review` interrupt, resume, trace, and final output inspection.
 6. Add lifecycle autoplay, typed approval, issue-board output, and replay.
+   Design:
+   [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md).
 7. Add a constrained demo agent that invokes one prepared recipe macro.
 8. Add an Astro presentation app and appendix routes for the 15-minute defense.
 
