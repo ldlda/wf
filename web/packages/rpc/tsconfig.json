@@ -5,6 +5,8 @@
     "moduleResolution": "NodeNext",
     "composite": true,
     "declaration": true,
+    "lib": ["ES2023"],
+    "types": ["node"],
     "rootDir": "src",
     "outDir": "dist"
   },
