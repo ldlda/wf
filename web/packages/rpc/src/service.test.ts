@@ -94,7 +94,6 @@ const lifecycleCases = [
         },
       ],
       total: 1,
-      cursor: null,
       next_cursor: null,
       limit: 50,
     },
@@ -436,4 +435,41 @@ describe("lifecycle operations", () => {
       expect(exchange.interpreted).toBeDefined();
     });
   }
+
+  it("interprets run trace frames with the console lifecycle shape", async () => {
+    const traceCase = lifecycleCases.find(
+      (testCase) => testCase.operation === "workflow.runs.trace",
+    );
+    expect(traceCase).toBeDefined();
+    if (!traceCase) return;
+
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const request = await requestBody(input, init);
+      return jsonResponse({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: traceCase.result,
+      });
+    };
+
+    const exchange = await runOperation(
+      { fetch },
+      traceCase.operation as "workflow.health" | "workflow.sources.list",
+      traceCase.params,
+    );
+
+    expect(exchange.interpreted).toMatchObject({
+      frames: [
+        {
+          nodeId: "review",
+          stepType: "interrupt",
+          outcome: "submitted",
+        },
+      ],
+      traceStart: 0,
+      traceLimit: 50,
+      traceTruncated: false,
+    });
+    expect(exchange.interpreted).not.toHaveProperty("trace");
+  });
 });

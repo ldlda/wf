@@ -93,7 +93,7 @@ const ArtifactNodeSchema = Schema.Struct({
 export const WorkflowArtifactsListResultSchema = Schema.Struct({
   nodes: Schema.Array(ArtifactNodeSchema),
   total: NonNegativeIntegerSchema,
-  cursor: Schema.NullOr(Schema.String),
+  cursor: Schema.optional(Schema.NullOr(Schema.String)),
   next_cursor: Schema.NullOr(Schema.String),
   limit: Schema.optional(PositiveIntegerSchema),
 });

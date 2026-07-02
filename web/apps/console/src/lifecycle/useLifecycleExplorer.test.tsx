@@ -161,6 +161,119 @@ describe("useLifecycleExplorer", () => {
     });
   });
 
+  it("keeps deployment validation when a run selection happens before validation returns", async () => {
+    let releaseValidation: (() => void) | null = null;
+    const validationGate = new Promise<void>((resolve) => {
+      releaseValidation = resolve;
+    });
+
+    mockCallOperation.mockImplementation(async (operation: string) => {
+      if (operation === "workflow.deployments.validate") {
+        await validationGate;
+        return {
+          ok: true,
+          operation,
+          interpreted: {
+            deploymentId: "report.default",
+            artifactId: "report",
+            artifactVersion: 1,
+            status: "runnable",
+            diagnostics: [],
+            nextActions: {
+              canContinue: true,
+              canSaveNow: null,
+              recommendedNextTool: null,
+              reason: "deployment is runnable",
+              patchExamples: [],
+              warnings: [],
+            },
+          },
+          exchange: { request: {}, response: {} },
+          equivalentCli: "uv run wf deploy validate report.default",
+          durationMs: 5,
+        };
+      }
+      if (operation === "workflow.deployments.inspect") {
+        return {
+          ok: true,
+          operation,
+          interpreted: {
+            id: "report.default",
+            artifactId: "report",
+            artifactVersion: 1,
+            bindings: [],
+            driftPolicy: "block",
+          },
+          exchange: { request: {}, response: {} },
+          equivalentCli: "uv run wf deploy inspect report.default",
+          durationMs: 5,
+        };
+      }
+      if (operation === "workflow.runs.inspect") {
+        return {
+          ok: true,
+          operation,
+          interpreted: {
+            runId: "run_1",
+            deploymentId: "report.default",
+            artifactId: "report",
+            artifactVersion: 1,
+            status: "completed",
+            resumeReadiness: "not_applicable",
+            interrupt: null,
+            outcome: "ok",
+            error: null,
+            output: {},
+            diagnostics: [],
+            traceCount: 0,
+            nextActions: {
+              canContinue: false,
+              canSaveNow: null,
+              recommendedNextTool: null,
+              reason: "done",
+              patchExamples: [],
+              warnings: [],
+            },
+          },
+          exchange: { request: {}, response: {} },
+          equivalentCli: "uv run wf run inspect run_1",
+          durationMs: 5,
+        };
+      }
+      return {
+        ok: true,
+        operation,
+        interpreted:
+          operation === "workflow.deployments.list"
+            ? { items: [] }
+            : { items: [], total: 0, nextCursor: null },
+        exchange: { request: {}, response: {} },
+        equivalentCli: "",
+        durationMs: 5,
+      };
+    });
+
+    const recordEvidence = vi.fn();
+    const { result } = renderHook(() =>
+      useLifecycleExplorer("http://127.0.0.1:8000/rpc", recordEvidence),
+    );
+
+    await act(async () => {
+      result.current.selectDeployment("report.default");
+      result.current.selectRun("run_1");
+    });
+
+    await act(async () => {
+      releaseValidation?.();
+      await validationGate;
+    });
+
+    await waitFor(() => {
+      expect(result.current.state.runDetail?.runId).toBe("run_1");
+      expect(result.current.state.deploymentValidation?.status).toBe("runnable");
+    });
+  });
+
   it("ignores stale responses after target change", async () => {
     let callCount = 0;
     mockCallOperation.mockImplementation(async () => {

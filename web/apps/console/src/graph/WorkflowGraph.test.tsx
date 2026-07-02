@@ -85,6 +85,7 @@ describe("WorkflowGraph", () => {
     expect(findNodeById(container, "start")).not.toBeNull();
     expect(findNodeById(container, "review")).not.toBeNull();
     expect(findNodeById(container, "end")).not.toBeNull();
+    expect(container.querySelectorAll(".react-flow__handle")).toHaveLength(6);
   });
 
   it("calls onNodeSelect when node is clicked", () => {

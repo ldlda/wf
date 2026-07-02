@@ -3,7 +3,8 @@ import {
   ReactFlow,
   Background,
   Controls,
-  MiniMap,
+  Handle,
+  Position,
   type Node,
   type Edge,
   type NodeTypes,
@@ -47,10 +48,12 @@ const CustomNode = ({ data, selected }: { data: WorkflowGraphNodeData; selected:
       className={`graph-node graph-node--${data.kind} ${selected ? "graph-node--selected" : ""} ${isActive ? "graph-node--active" : ""}`}
       style={{ borderColor: nodeColor(data) }}
     >
+      <Handle type="target" position={Position.Top} />
       <div className="graph-node__label">{data.label}</div>
       {data.nodeRef && (
         <div className="graph-node__ref">{data.nodeRef}</div>
       )}
+      <Handle type="source" position={Position.Bottom} />
     </div>
   );
 };
@@ -113,7 +116,6 @@ export const WorkflowGraph = ({ model, activeNodeId = null, onNodeSelect }: Work
       >
         <Background />
         <Controls />
-        <MiniMap />
       </ReactFlow>
     </div>
   );

@@ -251,13 +251,90 @@ tbody tr:hover {
 /* Layout grid */
 .app-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.7fr);
+  grid-template-columns: minmax(24rem, 0.9fr) minmax(30rem, 1.1fr);
   gap: 1rem;
   align-items: start;
 }
 
 .app-layout > section[aria-label="Connection"] {
   grid-column: 1 / -1;
+}
+
+.graph-content,
+.workflow-graph {
+  height: 34rem;
+}
+
+.workflow-graph {
+  width: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  background: #fff;
+  overflow: hidden;
+}
+
+section[aria-label="Lifecycle Explorer"]:has(.graph-content) {
+  grid-column: 1 / -1;
+}
+
+.app-layout:has(.graph-content) > section[aria-label="Source Inventory"] {
+  display: none;
+}
+
+.workflow-graph .react-flow {
+  height: 100%;
+}
+
+.graph-node {
+  min-width: 13rem;
+  max-width: 16rem;
+  padding: 0.7rem 0.85rem;
+  border: 2px solid var(--color-border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--color-ink);
+  box-shadow: 0 3px 0 rgba(26, 26, 26, 0.12);
+}
+
+.graph-node__label {
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.graph-node__ref {
+  margin-top: 0.35rem;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  line-height: 1.25;
+  color: var(--color-slate);
+  overflow-wrap: anywhere;
+}
+
+.workflow-graph .react-flow__handle {
+  width: 0.55rem;
+  height: 0.55rem;
+  border: 2px solid #fff;
+  background: var(--color-ink);
+}
+
+.workflow-graph .react-flow__edge-path {
+  stroke: var(--color-slate);
+  stroke-width: 1.75;
+}
+
+.workflow-graph .react-flow__edge-text {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  fill: var(--color-ink);
+}
+
+.workflow-graph .react-flow__controls {
+  border: 1px solid var(--color-border);
+  box-shadow: none;
 }
 
 /* Motion */

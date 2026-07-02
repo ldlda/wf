@@ -52,6 +52,22 @@ export type WorkflowSourcesListInterpreted = {
   readonly total: number;
 };
 
+const interpretNextActions = (nextActions: {
+  readonly can_continue: boolean;
+  readonly can_save_now: boolean | null;
+  readonly recommended_next_tool: string | null;
+  readonly reason: string;
+  readonly patch_examples: ReadonlyArray<unknown>;
+  readonly warnings: ReadonlyArray<string>;
+}) => ({
+  canContinue: nextActions.can_continue,
+  canSaveNow: nextActions.can_save_now,
+  recommendedNextTool: nextActions.recommended_next_tool,
+  reason: nextActions.reason,
+  patchExamples: nextActions.patch_examples,
+  warnings: nextActions.warnings,
+});
+
 const operationEntries: ReadonlyArray<OperationMeta> = [
   {
     method: "workflow.health",
@@ -236,7 +252,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         artifactVersion: decoded.artifact_version,
         status: decoded.status,
         diagnostics: decoded.diagnostics,
-        nextActions: decoded.next_actions,
+        nextActions: interpretNextActions(decoded.next_actions),
       };
     },
   },
@@ -304,7 +320,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         output: decoded.output,
         diagnostics: decoded.diagnostics,
         traceCount: decoded.trace_count,
-        nextActions: decoded.next_actions,
+        nextActions: interpretNextActions(decoded.next_actions),
       };
     },
   },
@@ -333,7 +349,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
       return {
         runId: r.run_id,
         status: r.status,
-        trace,
+        frames: trace,
         traceStart: r.trace_start,
         traceLimit: r.trace_limit,
         traceTruncated: r.trace_truncated,

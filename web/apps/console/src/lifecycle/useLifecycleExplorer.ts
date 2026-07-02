@@ -38,7 +38,9 @@ export const useLifecycleExplorer = (
 ): LifecycleExplorerController => {
   const [state, dispatch] = useReducer(lifecycleReducer, initialLifecycleState);
   const generationRef = useRef(0);
-  const inspectGenerationRef = useRef(0);
+  const artifactGenerationRef = useRef(0);
+  const deploymentGenerationRef = useRef(0);
+  const runGenerationRef = useRef(0);
   const rawEvidenceRef = useRef<ReadonlyArray<EvidenceRecord>>([]);
   const evidenceSeqRef = useRef(0);
 
@@ -81,6 +83,19 @@ export const useLifecycleExplorer = (
             });
           }
         } else {
+          const seq = evidenceSeqRef.current++;
+          const record: EvidenceRecord = {
+            id: `${operation}-${seq}`,
+            operation,
+            label: `${operation} failed`,
+            equivalentCli: "unavailable: operation failed before CLI metadata",
+            request: result.exchange.request,
+            response: result.exchange.response,
+            durationMs: 0,
+          };
+          recordEvidence(record);
+          rawEvidenceRef.current = [...rawEvidenceRef.current, record];
+          dispatch({ type: "setRawEvidence", evidence: rawEvidenceRef.current });
           dispatch({
             type: "pushError",
             error: {
@@ -128,14 +143,14 @@ export const useLifecycleExplorer = (
     (artifactId: string | null) => {
       dispatch({ type: "selectArtifact", artifactId });
       if (!artifactId || !target) return;
-      inspectGenerationRef.current++;
-      const generation = inspectGenerationRef.current;
+      artifactGenerationRef.current++;
+      const generation = artifactGenerationRef.current;
       const [id, version] = artifactId.split("@");
       executeOperation(
         "workflow.artifacts.inspect",
         { artifact_id: id, version: Number(version) },
         generation,
-        inspectGenerationRef,
+        artifactGenerationRef,
         (interpreted) => {
           dispatch({ type: "setArtifactDetail", detail: decodeArtifactDetail(interpreted) });
         },
@@ -148,15 +163,15 @@ export const useLifecycleExplorer = (
     (deploymentId: string | null) => {
       dispatch({ type: "selectDeployment", deploymentId });
       if (!deploymentId || !target) return;
-      inspectGenerationRef.current++;
-      const generation = inspectGenerationRef.current;
+      deploymentGenerationRef.current++;
+      const generation = deploymentGenerationRef.current;
       // Deployment selection fans out to inspect + validate. Both describe the
       // same selected deployment, so they must share one generation token.
       executeOperation(
         "workflow.deployments.inspect",
         { deployment_id: deploymentId },
         generation,
-        inspectGenerationRef,
+        deploymentGenerationRef,
         (interpreted) => {
           dispatch({ type: "setDeploymentDetail", detail: decodeDeploymentDetail(interpreted) });
         },
@@ -165,7 +180,7 @@ export const useLifecycleExplorer = (
         "workflow.deployments.validate",
         { deployment_id: deploymentId },
         generation,
-        inspectGenerationRef,
+        deploymentGenerationRef,
         (interpreted) => {
           dispatch({ type: "setDeploymentValidation", validation: decodeDeploymentValidation(interpreted) });
         },
@@ -178,15 +193,27 @@ export const useLifecycleExplorer = (
     (runId: string | null) => {
       dispatch({ type: "selectRun", runId });
       if (!runId || !target) return;
-      inspectGenerationRef.current++;
-      const generation = inspectGenerationRef.current;
+      runGenerationRef.current++;
+      const generation = runGenerationRef.current;
       executeOperation(
         "workflow.runs.inspect",
         { run_id: runId },
         generation,
-        inspectGenerationRef,
+        runGenerationRef,
         (interpreted) => {
-          dispatch({ type: "setRunDetail", detail: decodeRunDetail(interpreted) });
+          const detail = decodeRunDetail(interpreted);
+          dispatch({ type: "setRunDetail", detail });
+          if (detail.traceCount > 0) {
+            executeOperation(
+              "workflow.runs.trace",
+              { run_id: runId, trace_range: { start: 0, limit: 50 } },
+              generation,
+              runGenerationRef,
+              (traceInterpreted) => {
+                dispatch({ type: "setTrace", trace: decodeTracePage(traceInterpreted) });
+              },
+            );
+          }
         },
       );
     },
@@ -243,13 +270,13 @@ export const useLifecycleExplorer = (
   const loadTrace = useCallback(
     (start: number, limit: number) => {
       if (!state.selectedRunId || !target) return;
-      inspectGenerationRef.current++;
-      const generation = inspectGenerationRef.current;
+      runGenerationRef.current++;
+      const generation = runGenerationRef.current;
       executeOperation(
         "workflow.runs.trace",
         { run_id: state.selectedRunId, trace_range: { start, limit } },
         generation,
-        inspectGenerationRef,
+        runGenerationRef,
         (interpreted) => {
           dispatch({ type: "setTrace", trace: decodeTracePage(interpreted) });
         },
