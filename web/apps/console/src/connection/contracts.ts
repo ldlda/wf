@@ -42,6 +42,14 @@ const ConnectionSuccessSchema = v.object({
 const OperationNameSchema = v.union([
   v.literal("workflow.health"),
   v.literal("workflow.sources.list"),
+  v.literal("workflow.artifacts.list"),
+  v.literal("workflow.artifacts.inspect"),
+  v.literal("workflow.deployments.list"),
+  v.literal("workflow.deployments.inspect"),
+  v.literal("workflow.deployments.validate"),
+  v.literal("workflow.runs.list"),
+  v.literal("workflow.runs.inspect"),
+  v.literal("workflow.runs.trace"),
 ]);
 
 const OperationSuccessSchema = v.object({

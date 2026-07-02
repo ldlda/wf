@@ -2,12 +2,14 @@ import { useReducer, useEffect, useCallback, useRef } from "react";
 import {
   connectionReducer,
   initialState,
+  type EvidenceRecord,
   type SourceRecord,
 } from "./state.js";
 import { connectToServer, callOperation } from "../connection/api.js";
 import { ConnectionHeader } from "../components/ConnectionHeader.js";
 import { SourceInventory } from "../components/SourceInventory.js";
-import { ProtocolEvidence } from "../components/ProtocolEvidence.js";
+import { LifecycleExplorer } from "../lifecycle/LifecycleExplorer.js";
+import { useLifecycleExplorer } from "../lifecycle/useLifecycleExplorer.js";
 
 const parseSources = (
   data: unknown,
@@ -43,6 +45,15 @@ export const App = () => {
   const [state, dispatch] = useReducer(connectionReducer, null, initialState);
   const connectGeneration = useRef(0);
   const sourcesGeneration = useRef(0);
+
+  const connectedTarget = state.phase === "connected" ? state.connectedTarget : null;
+
+  const recordEvidence = useCallback(
+    (record: EvidenceRecord) => dispatch({ type: "evidence_recorded", record }),
+    [],
+  );
+
+  const lifecycleController = useLifecycleExplorer(connectedTarget, recordEvidence);
 
   const loadSources = useCallback(
     async (target: string) => {
@@ -154,7 +165,9 @@ export const App = () => {
         loading={state.sourcesLoading}
         error={state.sourceError}
       />
-      <ProtocolEvidence evidence={state.evidence} />
+      <section aria-label="Lifecycle Explorer" data-testid="lifecycle-explorer">
+        <LifecycleExplorer controller={lifecycleController} />
+      </section>
     </div>
   );
 };

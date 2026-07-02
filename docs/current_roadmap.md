@@ -49,10 +49,12 @@ Implementation order:
    [`workflow console foundation`](superpowers/specs/2026-07-01-workflow-console-foundation-design.md).
    Implementation:
    [`workflow console foundation plan`](historical/superpowers/plans/2026-07-02-workflow-console-foundation.md).
-4. Add the generic console lifecycle explorer, exercised first through the
-   artifact -> deployment -> run -> trace path, with interactive graph and raw
+4. Completed: add the generic console lifecycle explorer, exercised first through
+   the artifact -> deployment -> run -> trace path, with interactive graph and raw
    RPC evidence. Design:
    [`workflow console lifecycle explorer`](superpowers/specs/2026-07-02-workflow-console-lifecycle-explorer.md).
+   Implementation:
+   [`workflow console lifecycle explorer plan`](historical/superpowers/plans/2026-07-02-workflow-console-lifecycle-explorer.md).
    Draft workspace inspection reuses the same shell after the first vertical
    path.
 5. Add lifecycle autoplay, typed approval, issue-board output, and replay.

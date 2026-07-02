@@ -73,6 +73,167 @@ const runEither = (
       .pipe(Effect.either);
   }).pipe(Effect.provide(makeWorkflowRpcLayer(options)), Effect.runPromise);
 
+const lifecycleCases = [
+  {
+    operation: "workflow.artifacts.list" as const,
+    params: { limit: 50 },
+    result: {
+      nodes: [
+        {
+          name: "workflow.report@1",
+          artifact_id: "report",
+          version: 1,
+          kind: "workflow",
+          display_name: "Report",
+          description: null,
+          outcomes: ["ok"],
+          input_schema: { type: "object" },
+          output_schema: { type: "object" },
+          required_sources: ["local.report"],
+          diagnostics: [],
+        },
+      ],
+      total: 1,
+      cursor: null,
+      next_cursor: null,
+      limit: 50,
+    },
+  },
+  {
+    operation: "workflow.artifacts.inspect" as const,
+    params: { artifact_id: "report", version: 1 },
+    result: {
+      id: "report",
+      version: 1,
+      title: "Report",
+      kind: "workflow",
+      description: null,
+      outcomes: ["ok"],
+      input_schema: { type: "object" },
+      output_schema: { type: "object" },
+      plan: { nodes: [], edges: [] },
+      required_capabilities: [],
+      workflow_dependencies: {},
+      created_from_catalog_version: null,
+    },
+  },
+  {
+    operation: "workflow.deployments.list" as const,
+    params: {},
+    result: {
+      deployments: [
+        {
+          id: "report.default",
+          artifact_id: "report",
+          artifact_version: 1,
+          binding_count: 1,
+          drift_policy: "block",
+        },
+      ],
+    },
+  },
+  {
+    operation: "workflow.deployments.inspect" as const,
+    params: { deployment_id: "report.default" },
+    result: {
+      id: "report.default",
+      artifact_id: "report",
+      artifact_version: 1,
+      bindings: [{ logical_source: "local.report", concrete_source: "report" }],
+      drift_policy: "block",
+    },
+  },
+  {
+    operation: "workflow.deployments.validate" as const,
+    params: { deployment_id: "report.default" },
+    result: {
+      deployment_id: "report.default",
+      artifact_id: "report",
+      artifact_version: 1,
+      status: "runnable",
+      diagnostics: [],
+      next_actions: {
+        can_continue: true,
+        can_save_now: null,
+        recommended_next_tool: null,
+        reason: "deployment is valid",
+        patch_examples: [],
+        warnings: [],
+      },
+    },
+  },
+  {
+    operation: "workflow.runs.list" as const,
+    params: { limit: 50 },
+    result: {
+      runs: [
+        {
+          run_id: "run_1",
+          deployment_id: "report.default",
+          artifact_id: "report",
+          artifact_version: 1,
+          status: "interrupted",
+          resume_readiness: "ready",
+          diagnostic_count: 0,
+          created_at: "2026-07-02T00:00:00Z",
+          updated_at: "2026-07-02T00:00:01Z",
+        },
+      ],
+      total: 1,
+      cursor: null,
+      next_cursor: null,
+      limit: 50,
+    },
+  },
+  {
+    operation: "workflow.runs.inspect" as const,
+    params: { run_id: "run_1" },
+    result: {
+      run_id: "run_1",
+      deployment_id: "report.default",
+      artifact_id: "report",
+      artifact_version: 1,
+      status: "interrupted",
+      resume_readiness: "ready",
+      interrupt: { kind: "review", payload: {}, outcomes: [] },
+      outcome: null,
+      error: null,
+      output: null,
+      diagnostics: [],
+      trace_count: 0,
+      next_actions: {
+        can_continue: false,
+        can_save_now: null,
+        recommended_next_tool: null,
+        reason: "run is interrupted",
+        patch_examples: [],
+        warnings: [],
+      },
+    },
+  },
+  {
+    operation: "workflow.runs.trace" as const,
+    params: { run_id: "run_1", trace_range: { start: 0, limit: 50 } },
+    result: {
+      run_id: "run_1",
+      status: "interrupted",
+      trace_start: 0,
+      trace_limit: 50,
+      trace_truncated: false,
+      trace: [
+        {
+          node_id: "review",
+          step_type: "interrupt",
+          resolved_input: { report: "..." },
+          outcome: "submitted",
+          output: {},
+          state_changes: {},
+        },
+      ],
+    },
+  },
+] as const;
+
 describe("WorkflowRpc", () => {
   it("uses @effect/rpc and returns exact raw request and response evidence", async () => {
     const fetch: typeof globalThis.fetch = async (input, init) => {
@@ -250,4 +411,29 @@ describe("WorkflowRpc", () => {
     if (Either.isRight(result)) return;
     expect(result.left).toBeInstanceOf(RpcProtocolError);
   });
+});
+
+describe("lifecycle operations", () => {
+  for (const testCase of lifecycleCases) {
+    it(`handles ${testCase.operation} successfully`, async () => {
+      const fetch: typeof globalThis.fetch = async (input, init) => {
+        const request = await requestBody(input, init);
+        expect(request.method).toBe(testCase.operation);
+        return jsonResponse({
+          jsonrpc: "2.0",
+          id: request.id,
+          result: testCase.result,
+        });
+      };
+
+      const exchange = await runOperation(
+        { fetch },
+        testCase.operation as "workflow.health" | "workflow.sources.list",
+        testCase.params,
+      );
+
+      expect(exchange.operation).toBe(testCase.operation);
+      expect(exchange.interpreted).toBeDefined();
+    });
+  }
 });

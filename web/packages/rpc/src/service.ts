@@ -27,13 +27,31 @@ import {
   WorkflowHealthPayloadSchema,
   WorkflowRpcs,
   WorkflowSourcesListPayloadSchema,
+  WorkflowArtifactsListPayloadSchema,
+  WorkflowArtifactsInspectPayloadSchema,
+  WorkflowDeploymentsListPayloadSchema,
+  WorkflowDeploymentsInspectPayloadSchema,
+  WorkflowDeploymentsValidatePayloadSchema,
+  WorkflowRunsListPayloadSchema,
+  WorkflowRunsInspectPayloadSchema,
+  WorkflowRunsTracePayloadSchema,
 } from "./rpcs.js";
 import { normalizeLoopbackTarget } from "./target-policy.js";
 
 const DEFAULT_TIMEOUT_MILLISECONDS = 5_000;
 const DEFAULT_MAX_RESPONSE_BYTES = 4 * 1024 * 1024;
 
-export type OperationName = "workflow.health" | "workflow.sources.list";
+export type OperationName =
+  | "workflow.health"
+  | "workflow.sources.list"
+  | "workflow.artifacts.list"
+  | "workflow.artifacts.inspect"
+  | "workflow.deployments.list"
+  | "workflow.deployments.inspect"
+  | "workflow.deployments.validate"
+  | "workflow.runs.list"
+  | "workflow.runs.inspect"
+  | "workflow.runs.trace";
 
 export interface WorkflowRpcOptions {
   readonly fetch?: typeof globalThis.fetch;
@@ -62,7 +80,16 @@ export type WorkflowRpcError =
   | RpcDecodeError;
 
 const isOperationName = (value: string): value is OperationName =>
-  value === "workflow.health" || value === "workflow.sources.list";
+  value === "workflow.health" ||
+  value === "workflow.sources.list" ||
+  value === "workflow.artifacts.list" ||
+  value === "workflow.artifacts.inspect" ||
+  value === "workflow.deployments.list" ||
+  value === "workflow.deployments.inspect" ||
+  value === "workflow.deployments.validate" ||
+  value === "workflow.runs.list" ||
+  value === "workflow.runs.inspect" ||
+  value === "workflow.runs.trace";
 
 const toExchange = (evidence: EvidenceRecord | null): RpcExchangeEvidence => ({
   request: evidence?.request.body ?? null,
@@ -261,6 +288,62 @@ const executeImpl =
               params,
             );
             return yield* client.workflow["sources.list"](payload);
+          }
+          case "workflow.artifacts.list": {
+            const payload = yield* decodeParams(
+              WorkflowArtifactsListPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["artifacts.list"](payload);
+          }
+          case "workflow.artifacts.inspect": {
+            const payload = yield* decodeParams(
+              WorkflowArtifactsInspectPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["artifacts.inspect"](payload);
+          }
+          case "workflow.deployments.list": {
+            const payload = yield* decodeParams(
+              WorkflowDeploymentsListPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["deployments.list"](payload);
+          }
+          case "workflow.deployments.inspect": {
+            const payload = yield* decodeParams(
+              WorkflowDeploymentsInspectPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["deployments.inspect"](payload);
+          }
+          case "workflow.deployments.validate": {
+            const payload = yield* decodeParams(
+              WorkflowDeploymentsValidatePayloadSchema,
+              params,
+            );
+            return yield* client.workflow["deployments.validate"](payload);
+          }
+          case "workflow.runs.list": {
+            const payload = yield* decodeParams(
+              WorkflowRunsListPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["runs.list"](payload);
+          }
+          case "workflow.runs.inspect": {
+            const payload = yield* decodeParams(
+              WorkflowRunsInspectPayloadSchema,
+              params,
+            );
+            return yield* client.workflow["runs.inspect"](payload);
+          }
+          case "workflow.runs.trace": {
+            const payload = yield* decodeParams(
+              WorkflowRunsTracePayloadSchema,
+              params,
+            );
+            return yield* client.workflow["runs.trace"](payload);
           }
         }
       }).pipe(

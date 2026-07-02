@@ -11,7 +11,21 @@ export {
 
 export { normalizeLoopbackTarget } from "./target-policy.js";
 
-export { WorkflowHealth, WorkflowSourcesList, WorkflowRpcs } from "./rpcs.js";
+export {
+  WorkflowHealth,
+  WorkflowSourcesList,
+  WorkflowArtifactsList,
+  WorkflowArtifactsInspect,
+  WorkflowDeploymentsList,
+  WorkflowDeploymentsInspect,
+  WorkflowDeploymentsValidate,
+  WorkflowRunsList,
+  WorkflowRunsInspect,
+  WorkflowRunsTrace,
+  WorkflowRpcs,
+  ArtifactRefSchema,
+  TraceRangeSchema,
+} from "./rpcs.js";
 
 export { WorkflowRpc, makeWorkflowRpcLayer } from "./service.js";
 export type { OperationExchange, WorkflowRpcError, OperationName } from "./service.js";

@@ -92,17 +92,28 @@ describe("App", () => {
   it("ignores stale source inventory responses after reconnect", async () => {
     const firstSources = deferred<RpcResponse>();
     const secondSources = deferred<RpcResponse>();
+    const lifecycleOk: RpcResponse = {
+      ok: true,
+      operation: "workflow.artifacts.list",
+      label: "List artifacts",
+      interpreted: { items: [], total: 0, nextCursor: null },
+      exchange: { request: {}, response: {} },
+      equivalentCli: "uv run wf artifact list",
+      durationMs: 5,
+    };
+    let latestSourcesDeferred = firstSources;
     mockedConnectToServer
       .mockResolvedValueOnce(successfulConnection("http://first.example/rpc"))
       .mockResolvedValueOnce(successfulConnection("http://second.example/rpc"));
-    mockedCallOperation
-      .mockReturnValueOnce(firstSources.promise)
-      .mockReturnValueOnce(secondSources.promise);
+    mockedCallOperation.mockImplementation((op: string) => {
+      if (op === "workflow.sources.list") return latestSourcesDeferred.promise;
+      return Promise.resolve(lifecycleOk);
+    });
 
     render(<App />);
     await userEvent.click(screen.getByRole("button", { name: "Connect" }));
-    await screen.findByTestId("sources-loading");
 
+    latestSourcesDeferred = secondSources;
     await userEvent.click(screen.getByRole("button", { name: "Reconnect" }));
     secondSources.resolve(successfulSources("local.second"));
     firstSources.resolve(successfulSources("local.first"));
@@ -112,6 +123,28 @@ describe("App", () => {
     );
     await waitFor(() => {
       expect(screen.queryByTestId("source-id-local.first")).toBeNull();
+    });
+  });
+
+  it("mounts lifecycle explorer after connect", async () => {
+    mockedConnectToServer.mockResolvedValue(
+      successfulConnection("http://127.0.0.1:8765/rpc"),
+    );
+    mockedCallOperation.mockResolvedValue({
+      ok: true,
+      operation: "workflow.sources.list",
+      label: "List sources",
+      interpreted: { sources: [], total: 0, nextCursor: null },
+      exchange: { request: {}, response: {} },
+      equivalentCli: "uv run wf source list",
+      durationMs: 5,
+    });
+
+    render(<App />);
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("lifecycle-explorer")).toBeInTheDocument();
     });
   });
 });
