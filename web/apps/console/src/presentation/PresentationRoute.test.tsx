@@ -9,6 +9,16 @@ describe("PresentationRoute", () => {
     render(<PresentationRoute />);
 
     expect(screen.getByRole("main", { name: /lda.chat presentation/i })).toBeInTheDocument();
-    expect(screen.getByText(/planner decisions/i)).toBeInTheDocument();
+    expect(screen.getByText(/External planners propose actions/i)).toBeInTheDocument();
+  });
+
+  it("starts from a hash beat and advances with keyboard", async () => {
+    window.location.hash = "#interrupt-approval";
+    render(<PresentationRoute />);
+
+    expect(screen.getByText(/Human approval is a typed workflow boundary/i)).toBeInTheDocument();
+
+    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+    expect(await screen.findByText(/Resuming commits the approved branch/i)).toBeInTheDocument();
   });
 });
