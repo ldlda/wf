@@ -34,6 +34,7 @@ Design contracts:
 
 - [`workflow console, agent demo, and defense presentation`](superpowers/specs/2026-07-01-workflow-console-agent-demo.md)
 - [`self-describing interrupt contracts`](superpowers/specs/2026-07-01-self-describing-interrupt-contracts.md)
+- [`workflow console lifecycle explorer`](superpowers/specs/2026-07-02-workflow-console-lifecycle-explorer.md)
 
 Implementation order:
 
@@ -48,8 +49,12 @@ Implementation order:
    [`workflow console foundation`](superpowers/specs/2026-07-01-workflow-console-foundation-design.md).
    Implementation:
    [`workflow console foundation plan`](historical/superpowers/plans/2026-07-02-workflow-console-foundation.md).
-4. Add console read/inspect views for sources, drafts, artifacts, deployments,
-   runs, traces, and raw RPC drawers.
+4. Add the generic console lifecycle explorer, exercised first through the
+   artifact -> deployment -> run -> trace path, with interactive graph and raw
+   RPC evidence. Design:
+   [`workflow console lifecycle explorer`](superpowers/specs/2026-07-02-workflow-console-lifecycle-explorer.md).
+   Draft workspace inspection reuses the same shell after the first vertical
+   path.
 5. Add lifecycle autoplay, typed approval, issue-board output, and replay.
 6. Add a constrained demo agent that invokes one prepared recipe macro.
 7. Add an Astro presentation app and appendix routes for the 15-minute defense.
