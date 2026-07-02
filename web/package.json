@@ -1,0 +1,17 @@
+{
+  "name": "@lda/web",
+  "private": true,
+  "packageManager": "pnpm@11.3.0",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names server,console --prefix-colors blue,green \"pnpm --filter @lda/web-server dev\" \"pnpm --filter @lda/console dev\"",
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "build": "pnpm --filter @lda/workflow-rpc build && pnpm --filter @lda/console build && pnpm --filter @lda/web-server build",
+    "start": "pnpm --filter @lda/web-server start"
+  },
+  "devDependencies": {
+    "concurrently": "10.0.3",
+    "typescript": "6.0.3"
+  }
+}
