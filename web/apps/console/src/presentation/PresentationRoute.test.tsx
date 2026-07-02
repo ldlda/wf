@@ -21,4 +21,12 @@ describe("PresentationRoute", () => {
     window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
     expect(await screen.findByText(/Resuming commits the approved branch/i)).toBeInTheDocument();
   });
+
+  it("renders replay-first chat, beat rail, and stage caption", () => {
+    render(<PresentationRoute />);
+
+    expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
+    expect(screen.getByLabelText(/presentation beat rail/i)).toBeInTheDocument();
+    expect(screen.getByText(/Replay/)).toBeInTheDocument();
+  });
 });

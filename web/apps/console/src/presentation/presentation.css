@@ -1,0 +1,57 @@
+.presentation-route {
+  min-height: 100vh;
+  background: oklch(0.12 0.025 250);
+  color: oklch(0.96 0.01 250);
+}
+
+.presentation-stage {
+  min-height: 100vh;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.presentation-stage__main {
+  display: grid;
+  align-content: center;
+  gap: 1rem;
+  max-width: 72rem;
+}
+
+.operator-chat {
+  max-width: 48rem;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.operator-chat[data-mode="rail"] {
+  max-width: 22rem;
+}
+
+.chat-message {
+  border: 1px solid oklch(0.34 0.035 250);
+  background: oklch(0.18 0.025 250);
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+}
+
+.beat-rail {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+}
+
+.beat-rail button {
+  min-width: 8rem;
+  text-align: left;
+  border: 1px solid oklch(0.36 0.04 250);
+  background: oklch(0.18 0.025 250);
+  color: inherit;
+  padding: 0.65rem 0.75rem;
+}
+
+.beat-rail button[data-active="true"] {
+  background: oklch(0.7 0.16 195);
+  color: oklch(0.12 0.025 250);
+}

@@ -1,9 +1,13 @@
-import { useEffect, useReducer } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
+import type { EvidenceRecord } from "../app/state.js";
+import { useDemoTimeline } from "../demo/useDemoTimeline.js";
 import { hashForBeat, presentationBeats } from "./beats.js";
+import { PresentationStage } from "./PresentationStage.js";
 import {
   initialPresentationState,
   presentationReducer,
 } from "./presentation-state.js";
+import "./presentation.css";
 
 export const PresentationRoute = () => {
   const [state, dispatch] = useReducer(
@@ -11,6 +15,12 @@ export const PresentationRoute = () => {
     initialPresentationState,
     (initial) => presentationReducer(initial, { type: "jump_hash", hash: window.location.hash }),
   );
+
+  const [_evidence, setEvidence] = useState<readonly EvidenceRecord[]>([]);
+  const recordEvidence = useCallback((record: EvidenceRecord) => {
+    setEvidence((records) => [...records, record]);
+  }, []);
+  const demo = useDemoTimeline(null, recordEvidence);
 
   useEffect(() => {
     const hash = hashForBeat(state.beat);
@@ -35,11 +45,13 @@ export const PresentationRoute = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
-  const beat = presentationBeats.find((candidate) => candidate.id === state.beat) ?? presentationBeats[0]!;
-
   return (
     <main className="presentation-route" aria-label="lda.chat presentation">
-      <p>{beat.caption}</p>
+      <PresentationStage
+        state={state}
+        demo={demo}
+        jump={(beatId) => dispatch({ type: "jump", beat: beatId })}
+      />
     </main>
   );
 };
