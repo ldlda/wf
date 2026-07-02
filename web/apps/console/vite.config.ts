@@ -5,6 +5,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
+      // Server must listen on this port (set via WEB_PORT env or default 8787)
       "/api": "http://127.0.0.1:8787",
     },
   },
