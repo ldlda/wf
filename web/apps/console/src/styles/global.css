@@ -453,3 +453,50 @@ tbody tr:nth-child(10) { animation-delay: 270ms; }
     flex-basis: auto;
   }
 }
+
+/* Demo timeline controls */
+.demo-timeline-controls,
+.demo-mode-switch {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.demo-replay-label {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.demo-replay-note {
+  font-style: italic;
+  opacity: 0.7;
+}
+
+/* Demo timeline list */
+.demo-timeline {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-timeline li {
+  padding: 0.6rem;
+  border: 1px solid var(--color-border);
+  background: #fff;
+}
+
+.demo-timeline li[data-status="current"] {
+  border-color: var(--color-signal-green);
+}
+
+.demo-timeline li[data-status="pending"] {
+  opacity: 0.55;
+}
+
+.demo-timeline small {
+  display: block;
+  color: var(--color-slate);
+}

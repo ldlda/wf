@@ -137,3 +137,14 @@ Open `http://127.0.0.1:5173/`, connect to
 panel. The panel expects `lda_report_case_study.default` to already exist
 in the connected store. If it is missing, the panel displays the exact
 product CLI setup commands.
+
+### Demo Timeline Modes
+
+- **Live** executes the prepared deployment through public JSON-RPC calls.
+- **Replay** uses the committed `lda-report-success-v1` recording and does not
+  contact the workflow server during playback.
+
+`Start presentation` begins autoplay. `Pause` stops before the next
+operation, and `Next` applies exactly one operation or recorded event.
+Playback always stops at `issue_review`; approval remains a human action in
+both modes. Replay is visibly labeled and does not create real issues.

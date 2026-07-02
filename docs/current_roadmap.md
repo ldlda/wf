@@ -61,9 +61,11 @@ Implementation order:
 5. Completed: the web console can operate the prepared
    `examples/lda_report_workflow/` deployment through run start, typed
    `issue_review` interrupt, resume, trace, and final output inspection.
-6. Add lifecycle autoplay, typed approval, issue-board output, and replay.
+6. Completed: lifecycle autoplay, typed approval, issue-board output, and replay.
    Design:
    [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md).
+   Implementation:
+   [`demo autoplay and replay plan`](historical/superpowers/plans/2026-07-03-demo-autoplay-replay.md).
 7. Add a constrained demo agent that invokes one prepared recipe macro.
 8. Add an Astro presentation app and appendix routes for the 15-minute defense.
 

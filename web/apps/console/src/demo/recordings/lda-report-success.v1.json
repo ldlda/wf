@@ -1,0 +1,320 @@
+{
+  "schemaVersion": 1,
+  "recordingId": "lda-report-success-v1",
+  "title": "lda.chat report workflow success",
+  "createdAt": "2026-07-03T00:00:00.000Z",
+  "deploymentId": "lda_report_case_study.default",
+  "source": "reviewed_live_capture",
+  "events": [
+    {
+      "id": "recorded-0-deployment-check",
+      "sequence": 0,
+      "stage": "deployment_check",
+      "operation": "workflow.deployments.inspect",
+      "reason": "Confirm the prepared report deployment exists.",
+      "equivalentCli": "uv run wf deploy inspect lda_report_case_study.default",
+      "params": { "deployment_id": "lda_report_case_study.default" },
+      "rawResponse": {
+        "result": {
+          "id": "lda_report_case_study.default",
+          "artifact_id": "lda_report_case_study",
+          "artifact_version": 1,
+          "bindings": {
+            "local.lda_docs": "local.lda_docs",
+            "local.lda_report": "local.lda_report",
+            "local.issue_board": "local.issue_board"
+          },
+          "drift_policy": "block"
+        }
+      },
+      "interpreted": {
+        "id": "lda_report_case_study.default",
+        "artifactId": "lda_report_case_study",
+        "artifactVersion": 1,
+        "bindings": [
+          ["local.lda_docs", "local.lda_docs"],
+          ["local.lda_report", "local.lda_report"],
+          ["local.issue_board", "local.issue_board"]
+        ],
+        "driftPolicy": "block"
+      },
+      "durationMs": 6,
+      "resultingIds": {
+        "deploymentId": "lda_report_case_study.default",
+        "runId": null
+      },
+      "recordedAt": "2026-07-03T00:00:00.000Z"
+    },
+    {
+      "id": "recorded-1-run-start",
+      "sequence": 1,
+      "stage": "run_start",
+      "operation": "workflow.runs.start",
+      "reason": "Start the prepared report workflow.",
+      "equivalentCli": "uv run wf run start lda_report_case_study.default --input '<json>'",
+      "params": {
+        "deployment_id": "lda_report_case_study.default",
+        "workflow_input": {
+          "selected_documents": [
+            "project-brief.md",
+            "architecture-notes.md",
+            "evaluation-findings.md",
+            "risk-register.md",
+            "roadmap.md"
+          ],
+          "board_path": "issue-board.json"
+        },
+        "trace_range": { "start": 0, "limit": 50 }
+      },
+      "rawResponse": { "result": { "run_id": "run_recorded_lda_report", "status": "interrupted" } },
+      "interpreted": {
+        "runId": "run_recorded_lda_report",
+        "deploymentId": "lda_report_case_study.default",
+        "artifactId": "lda_report_case_study",
+        "artifactVersion": 1,
+        "status": "interrupted",
+        "resumeReadiness": "ready",
+        "interrupt": {
+          "kind": "issue_review",
+          "payload": {
+            "report_markdown": "# lda.chat Thesis And Project Readiness Report\n\nThe workflow substrate is ready for the defense demo.",
+            "proposed_issues": [
+              {
+                "id": "risk-1",
+                "title": "Prepare the defense walkthrough",
+                "body": "Review the live and replay paths before the defense.",
+                "severity": "medium"
+              }
+            ]
+          },
+          "outcomes": ["submitted", "cancelled"],
+          "typed": true,
+          "request_schema": { "type": "object" },
+          "resume_schema": { "type": "object" }
+        },
+        "outcome": null,
+        "error": null,
+        "output": null,
+        "diagnostics": [],
+        "traceCount": 6,
+        "nextActions": {
+          "canContinue": true,
+          "canSaveNow": null,
+          "recommendedNextTool": "wf.workflow.resume_run",
+          "reason": "Run is interrupted for issue review.",
+          "patchExamples": [],
+          "warnings": []
+        }
+      },
+      "durationMs": 88,
+      "resultingIds": {
+        "deploymentId": "lda_report_case_study.default",
+        "runId": "run_recorded_lda_report"
+      },
+      "recordedAt": "2026-07-03T00:00:01.000Z"
+    },
+    {
+      "id": "recorded-2-interrupt",
+      "sequence": 2,
+      "stage": "interrupt",
+      "operation": null,
+      "reason": "Pause for typed issue review.",
+      "equivalentCli": null,
+      "params": {},
+      "rawResponse": null,
+      "interpreted": {
+        "payload": {
+          "report_markdown": "# lda.chat Thesis And Project Readiness Report\n\nThe workflow substrate is ready for the defense demo.",
+          "proposed_issues": [
+            {
+              "id": "risk-1",
+              "title": "Prepare the defense walkthrough",
+              "body": "Review the live and replay paths before the defense.",
+              "severity": "medium"
+            }
+          ]
+        },
+        "outcomes": ["submitted", "cancelled"]
+      },
+      "durationMs": 0,
+      "resultingIds": {
+        "deploymentId": "lda_report_case_study.default",
+        "runId": "run_recorded_lda_report"
+      },
+      "recordedAt": "2026-07-03T00:00:01.001Z"
+    },
+    {
+      "id": "recorded-3-run-resume",
+      "sequence": 3,
+      "stage": "run_resume",
+      "operation": "workflow.runs.resume",
+      "reason": "Resume the interrupted run.",
+      "equivalentCli": "uv run wf run resume run_recorded_lda_report --payload '<json>'",
+      "params": {
+        "run_id": "run_recorded_lda_report",
+        "resume_payload": {
+          "approved": true,
+          "selected_issue_ids": ["risk-1"],
+          "comment": "Create the selected issue."
+        },
+        "resume_outcome": "submitted",
+        "trace_range": { "start": 0, "limit": 50 }
+      },
+      "rawResponse": { "result": { "run_id": "run_recorded_lda_report", "status": "completed" } },
+      "interpreted": {
+        "runId": "run_recorded_lda_report",
+        "deploymentId": "lda_report_case_study.default",
+        "artifactId": "lda_report_case_study",
+        "artifactVersion": 1,
+        "status": "completed",
+        "resumeReadiness": "not_applicable",
+        "interrupt": null,
+        "outcome": "completed",
+        "error": null,
+        "output": {
+          "approved": true,
+          "markdown": "# lda.chat Thesis And Project Readiness Report\n\nThe workflow substrate is ready for the defense demo.",
+          "created_issues": [
+            {
+              "id": "ISSUE-001",
+              "title": "Prepare the defense walkthrough",
+              "url": "local://issue-board/ISSUE-001"
+            }
+          ],
+          "selected_issue_ids": ["risk-1"],
+          "comment": "Create the selected issue."
+        },
+        "diagnostics": [],
+        "traceCount": 10,
+        "nextActions": {
+          "canContinue": false,
+          "canSaveNow": null,
+          "recommendedNextTool": null,
+          "reason": "Run completed.",
+          "patchExamples": [],
+          "warnings": []
+        }
+      },
+      "durationMs": 63,
+      "resultingIds": {
+        "deploymentId": "lda_report_case_study.default",
+        "runId": "run_recorded_lda_report"
+      },
+      "recordedAt": "2026-07-03T00:00:02.000Z"
+    },
+    {
+      "id": "recorded-4-trace-read",
+      "sequence": 4,
+      "stage": "trace_read",
+      "operation": "workflow.runs.trace",
+      "reason": "Read the final run trace.",
+      "equivalentCli": "uv run wf run trace run_recorded_lda_report --from 0 --limit 50",
+      "params": {
+        "run_id": "run_recorded_lda_report",
+        "trace_range": { "start": 0, "limit": 50 }
+      },
+      "rawResponse": { "result": { "run_id": "run_recorded_lda_report", "trace_count": 3 } },
+      "interpreted": {
+        "runId": "run_recorded_lda_report",
+        "status": "completed",
+        "frames": [
+          {
+            "nodeId": "list_documents",
+            "stepType": "node",
+            "outcome": "ok",
+            "resolvedInput": {},
+            "output": {},
+            "stateChanges": {}
+          },
+          {
+            "nodeId": "review_issues",
+            "stepType": "interrupt",
+            "outcome": "submitted",
+            "resolvedInput": {},
+            "output": {},
+            "stateChanges": {}
+          },
+          {
+            "nodeId": "finalise_report",
+            "stepType": "node",
+            "outcome": "completed",
+            "resolvedInput": {},
+            "output": {},
+            "stateChanges": {}
+          }
+        ],
+        "traceStart": 0,
+        "traceLimit": 50,
+        "traceTruncated": false
+      },
+      "durationMs": 12,
+      "resultingIds": {
+        "deploymentId": "lda_report_case_study.default",
+        "runId": "run_recorded_lda_report"
+      },
+      "recordedAt": "2026-07-03T00:00:03.000Z"
+    },
+    {
+      "id": "recorded-5-completed",
+      "sequence": 5,
+      "stage": "completed",
+      "operation": null,
+      "reason": "The prepared report demo completed.",
+      "equivalentCli": null,
+      "params": {},
+      "rawResponse": null,
+      "interpreted": {
+        "output": {
+          "approved": true,
+          "markdown": "# lda.chat Thesis And Project Readiness Report\n\nThe workflow substrate is ready for the defense demo.",
+          "created_issues": [
+            {
+              "id": "ISSUE-001",
+              "title": "Prepare the defense walkthrough",
+              "url": "local://issue-board/ISSUE-001"
+            }
+          ],
+          "selected_issue_ids": ["risk-1"],
+          "comment": "Create the selected issue."
+        },
+        "trace": {
+          "frames": [
+            {
+              "nodeId": "list_documents",
+              "stepType": "node",
+              "outcome": "ok",
+              "resolvedInput": {},
+              "output": {},
+              "stateChanges": {}
+            },
+            {
+              "nodeId": "review_issues",
+              "stepType": "interrupt",
+              "outcome": "submitted",
+              "resolvedInput": {},
+              "output": {},
+              "stateChanges": {}
+            },
+            {
+              "nodeId": "finalise_report",
+              "stepType": "node",
+              "outcome": "completed",
+              "resolvedInput": {},
+              "output": {},
+              "stateChanges": {}
+            }
+          ],
+          "traceStart": 0,
+          "traceLimit": 50,
+          "traceTruncated": false
+        }
+      },
+      "durationMs": 0,
+      "resultingIds": {
+        "deploymentId": "lda_report_case_study.default",
+        "runId": "run_recorded_lda_report"
+      },
+      "recordedAt": "2026-07-03T00:00:03.001Z"
+    }
+  ]
+}

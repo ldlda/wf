@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
 import { callOperation, connectToServer } from "../connection/api.js";
-import type { ConnectResponse, RpcResponse } from "../connection/contracts.js";
+import type { RpcResponse } from "../connection/contracts.js";
 
 vi.mock("../connection/api.js", () => ({
   connectToServer: vi.fn(),
@@ -13,12 +13,12 @@ vi.mock("../connection/api.js", () => ({
 const mockedConnectToServer = vi.mocked(connectToServer);
 const mockedCallOperation = vi.mocked(callOperation);
 
-const successfulConnection = (target: string): ConnectResponse => ({
-  ok: true,
+const successfulConnection = (target: string) => ({
+  ok: true as const,
   connection: {
-    status: "connected",
+    status: "connected" as const,
     target,
-    serverStatus: "ok",
+    serverStatus: "ok" as const,
     storeRoot: "/tmp/store",
     durationMs: 11,
   },
@@ -74,9 +74,9 @@ afterEach(() => {
   cleanup();
 });
 
-const lifecycleOk: RpcResponse = {
-  ok: true,
-  operation: "workflow.artifacts.list",
+const lifecycleOk = {
+  ok: true as const,
+  operation: "workflow.artifacts.list" as const,
   label: "List artifacts",
   interpreted: { items: [], total: 0, nextCursor: null },
   exchange: { request: {}, response: {} },
@@ -102,15 +102,6 @@ describe("App", () => {
   it("ignores stale source inventory responses after reconnect", async () => {
     const firstSources = deferred<RpcResponse>();
     const secondSources = deferred<RpcResponse>();
-    const lifecycleOk: RpcResponse = {
-      ok: true,
-      operation: "workflow.artifacts.list",
-      label: "List artifacts",
-      interpreted: { items: [], total: 0, nextCursor: null },
-      exchange: { request: {}, response: {} },
-      equivalentCli: "uv run wf artifact list",
-      durationMs: 5,
-    };
     let latestSourcesDeferred = firstSources;
     mockedConnectToServer
       .mockResolvedValueOnce(successfulConnection("http://first.example/rpc"))
@@ -143,8 +134,8 @@ describe("App", () => {
     mockedCallOperation.mockImplementation((op: string) => {
       if (op === "workflow.sources.list") {
         return Promise.resolve({
-          ok: true,
-          operation: "workflow.sources.list",
+          ok: true as const,
+          operation: "workflow.sources.list" as const,
           label: "List sources",
           interpreted: { sources: [], total: 0, nextCursor: null },
           exchange: { request: {}, response: {} },
@@ -154,7 +145,7 @@ describe("App", () => {
       }
       if (op === "workflow.deployments.inspect") {
         return Promise.resolve({
-          ok: false,
+          ok: false as const,
           error: { code: "rpc_remote_error", message: "not found" },
           exchange: { request: {}, response: {} },
         });
@@ -169,5 +160,27 @@ describe("App", () => {
       expect(screen.getByTestId("lifecycle-explorer")).toBeInTheDocument();
     });
     expect(screen.getByLabelText("lda report workflow demo")).toBeInTheDocument();
+  });
+
+  it("always renders demo panel even without connection", async () => {
+    mockedConnectToServer.mockRejectedValue(new Error("connection refused"));
+
+    render(<App />);
+    await userEvent.click(screen.getByRole("button", { name: "Connect" }));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText("lda report workflow demo")).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /start presentation/i })).toBeDisabled();
+  });
+
+  it("shows replay mode button even without connection", async () => {
+    render(<App />);
+
+    expect(screen.getByRole("button", { name: "Replay" })).toBeVisible();
+    expect(screen.getByRole("button", { name: /start presentation/i })).toBeDisabled();
+
+    await userEvent.click(screen.getByRole("button", { name: "Replay" }));
+    expect(screen.getByRole("button", { name: /start presentation/i })).toBeEnabled();
   });
 });
