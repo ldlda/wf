@@ -45,11 +45,11 @@ describe("initialState", () => {
     expect(state.draftTarget).toBe("http://127.0.0.1:8765/rpc");
   });
 
-  it("restores target from localStorage when available", () => {
+  it("restores target from sessionStorage when available", () => {
     try {
-      localStorage.setItem(STORAGE_KEY, "http://custom:9999/rpc");
+      sessionStorage.setItem(STORAGE_KEY, "http://custom:9999/rpc");
     } catch {
-      return; // skip if localStorage unavailable
+      return; // skip if sessionStorage unavailable
     }
     const state = initialState();
     expect(state.draftTarget).toBe("http://custom:9999/rpc");
@@ -57,13 +57,23 @@ describe("initialState", () => {
 
   it("restored target does not trigger automatic connection", () => {
     try {
+      sessionStorage.setItem(STORAGE_KEY, "http://custom:9999/rpc");
+    } catch {
+      return; // skip if sessionStorage unavailable
+    }
+    const state = initialState();
+    expect(state.phase).toBe("not_configured");
+    expect(state.connectedTarget).toBeNull();
+  });
+
+  it("ignores localStorage so persistence is session-scoped", () => {
+    try {
       localStorage.setItem(STORAGE_KEY, "http://custom:9999/rpc");
     } catch {
       return; // skip if localStorage unavailable
     }
     const state = initialState();
-    expect(state.phase).toBe("not_configured");
-    expect(state.connectedTarget).toBeNull();
+    expect(state.draftTarget).toBe("http://127.0.0.1:8765/rpc");
   });
 });
 

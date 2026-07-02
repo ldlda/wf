@@ -1,3 +1,10 @@
+import { Schema } from "effect";
+import {
+  WorkflowHealthResultSchema,
+  WorkflowSourcesListPayloadSchema,
+  WorkflowSourcesListResultSchema,
+} from "./rpcs.js";
+
 export type OperationMeta = {
   readonly method: string;
   readonly label: string;
@@ -16,7 +23,10 @@ const registry: ReadonlyMap<string, OperationMeta> = new Map([
       explanation: "Check if the workflow server is running",
       idempotency: "read",
       equivalentCli: () => "uv run wf status",
-      interpret: (result) => result,
+      interpret: (result) => {
+        const decoded = Schema.decodeUnknownSync(WorkflowHealthResultSchema)(result);
+        return { status: decoded.status, storeRoot: decoded.store_root };
+      },
     },
   ],
   [
@@ -27,13 +37,37 @@ const registry: ReadonlyMap<string, OperationMeta> = new Map([
       explanation: "List registered data sources with pagination",
       idempotency: "read",
       equivalentCli: (params) => {
-        const p = params as { cursor?: string; limit?: number };
+        const p = Schema.decodeUnknownSync(WorkflowSourcesListPayloadSchema)(
+          params,
+          { onExcessProperty: "error" },
+        );
         const parts = ["uv run wf source list"];
         if (p.limit != null) parts.push(`--limit ${p.limit}`);
         if (p.cursor != null) parts.push(`--cursor ${p.cursor}`);
         return parts.join(" ");
       },
-      interpret: (result) => result,
+      interpret: (result) => {
+        const decoded = Schema.decodeUnknownSync(
+          WorkflowSourcesListResultSchema,
+        )(result);
+        return {
+          sources: decoded.sources.map((source) => ({
+            id: source.id,
+            kind: source.kind,
+            enabled: source.enabled,
+            description: source.description,
+            counts: {
+              tools: source.tool_count,
+              nodeSpecs: source.node_spec_count,
+              reducers: source.reducer_count,
+              prompts: source.prompt_count,
+              resources: source.resource_count,
+            },
+          })),
+          nextCursor: decoded.next_cursor,
+          total: decoded.total,
+        };
+      },
     },
   ],
 ]);

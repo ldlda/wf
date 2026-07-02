@@ -1,46 +1,79 @@
-export type ConnectionSuccess = {
-  readonly ok: true;
-  readonly connection: {
-    readonly status: "connected";
-    readonly target: string;
-    readonly serverStatus: "ok";
-    readonly storeRoot: string;
-    readonly durationMs: number;
-  };
-  readonly exchange: { readonly request: unknown; readonly response: unknown };
-  readonly equivalentCli: string;
+import * as v from "valibot";
+
+const BrowserErrorCodeSchema = v.union([
+  v.literal("invalid_target"),
+  v.literal("unknown_operation"),
+  v.literal("upstream_unreachable"),
+  v.literal("upstream_timeout"),
+  v.literal("rpc_remote_error"),
+  v.literal("rpc_protocol_error"),
+  v.literal("rpc_decode_error"),
+  v.literal("response_too_large"),
+]);
+
+const ExchangeSchema = v.object({
+  request: v.nullish(v.unknown(), null),
+  response: v.nullish(v.unknown(), null),
+});
+
+const ApiFailureSchema = v.object({
+  ok: v.literal(false),
+  error: v.object({
+    code: BrowserErrorCodeSchema,
+    message: v.string(),
+  }),
+  exchange: ExchangeSchema,
+});
+
+const ConnectionSuccessSchema = v.object({
+  ok: v.literal(true),
+  connection: v.object({
+    status: v.literal("connected"),
+    target: v.string(),
+    serverStatus: v.literal("ok"),
+    storeRoot: v.string(),
+    durationMs: v.number(),
+  }),
+  exchange: ExchangeSchema,
+  equivalentCli: v.string(),
+});
+
+const OperationNameSchema = v.union([
+  v.literal("workflow.health"),
+  v.literal("workflow.sources.list"),
+]);
+
+const OperationSuccessSchema = v.object({
+  ok: v.literal(true),
+  operation: OperationNameSchema,
+  label: v.string(),
+  interpreted: v.unknown(),
+  exchange: ExchangeSchema,
+  equivalentCli: v.string(),
+  durationMs: v.number(),
+});
+
+const ConnectResponseSchema = v.union([ConnectionSuccessSchema, ApiFailureSchema]);
+const RpcResponseSchema = v.union([OperationSuccessSchema, ApiFailureSchema]);
+
+export type ConnectionSuccess = v.InferOutput<typeof ConnectionSuccessSchema>;
+export type OperationSuccess = v.InferOutput<typeof OperationSuccessSchema>;
+export type BrowserErrorCode = v.InferOutput<typeof BrowserErrorCodeSchema>;
+export type ApiFailure = v.InferOutput<typeof ApiFailureSchema>;
+export type ConnectResponse = v.InferOutput<typeof ConnectResponseSchema>;
+export type RpcResponse = v.InferOutput<typeof RpcResponseSchema>;
+export type OperationName = v.InferOutput<typeof OperationNameSchema>;
+
+const parseDto = <T>(schema: v.GenericSchema<unknown, T>, data: unknown): T => {
+  try {
+    return v.parse(schema, data);
+  } catch {
+    throw new Error("malformed response from server");
+  }
 };
 
-export type OperationSuccess = {
-  readonly ok: true;
-  readonly operation: string;
-  readonly label: string;
-  readonly interpreted: unknown;
-  readonly exchange: { readonly request: unknown; readonly response: unknown };
-  readonly equivalentCli: string;
-  readonly durationMs: number;
-};
+export const parseConnectResponse = (data: unknown): ConnectResponse =>
+  parseDto(ConnectResponseSchema, data);
 
-export type BrowserErrorCode =
-  | "invalid_target"
-  | "unknown_operation"
-  | "upstream_unreachable"
-  | "upstream_timeout"
-  | "rpc_remote_error"
-  | "rpc_protocol_error"
-  | "rpc_decode_error"
-  | "response_too_large";
-
-export type ApiFailure = {
-  readonly ok: false;
-  readonly error: { readonly code: BrowserErrorCode; readonly message: string };
-  readonly exchange: {
-    readonly request: unknown | null;
-    readonly response: unknown | null;
-  };
-};
-
-export type ConnectResponse = ConnectionSuccess | ApiFailure;
-export type RpcResponse = OperationSuccess | ApiFailure;
-
-export type OperationName = "workflow.health" | "workflow.sources.list";
+export const parseRpcResponse = (data: unknown): RpcResponse =>
+  parseDto(RpcResponseSchema, data);

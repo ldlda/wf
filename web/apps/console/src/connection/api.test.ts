@@ -138,6 +138,14 @@ describe("error handling", () => {
     ).rejects.toThrow("empty response");
   });
 
+  it("throws for structurally malformed JSON response", async () => {
+    mockFetch.mockReturnValue(jsonResponse({ ok: true, connection: {} }));
+
+    await expect(
+      connectToServer("http://127.0.0.1:8000/rpc"),
+    ).rejects.toThrow("malformed response");
+  });
+
   it("throws on network failure", async () => {
     mockFetch.mockReturnValue(Promise.reject(new Error("network error")));
 

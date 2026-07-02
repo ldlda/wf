@@ -3,6 +3,7 @@ packages:
   - packages/*
 allowBuilds:
   esbuild: true
-  msgpackr-extract: set this to true or false
+  # Optional native acceleration is unnecessary for this local console.
+  msgpackr-extract: false
 minimumReleaseAgeExclude:
   - '@types/node@26.1.0'

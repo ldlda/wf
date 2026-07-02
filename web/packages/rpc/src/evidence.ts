@@ -1,5 +1,9 @@
-import { Context, Effect, Layer, Ref } from "effect";
+import { Context, Effect, Layer, Ref, Stream } from "effect";
 import { HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform";
+import {
+  RpcProtocolError,
+  UpstreamResponseTooLargeError,
+} from "./errors.js";
 
 export type EvidenceRecord = {
   readonly request: {
@@ -7,7 +11,10 @@ export type EvidenceRecord = {
     readonly method: string;
     readonly body: unknown;
   };
-  readonly response: { readonly status: number; readonly body: unknown };
+  readonly response: {
+    readonly status: number;
+    readonly body: unknown;
+  } | null;
 };
 
 export const EvidenceRef = Context.GenericTag<Ref.Ref<EvidenceRecord | null>>(
@@ -31,9 +38,89 @@ const readRequestBody = (
     }
   }
   if (body._tag === "Raw") {
-    return body.body;
+    if (typeof body.body !== "string") return body.body;
+    try {
+      return JSON.parse(body.body);
+    } catch {
+      return body.body;
+    }
   }
   return null;
+};
+
+const readBoundedText = (
+  response: HttpClientResponse.HttpClientResponse,
+  maxResponseBytes: number,
+): Effect.Effect<string, never> => {
+  const declaredLength = Number(response.headers["content-length"] ?? "0");
+  if (Number.isFinite(declaredLength) && declaredLength > maxResponseBytes) {
+    return Effect.die(
+      new UpstreamResponseTooLargeError({
+        message: `response exceeds ${maxResponseBytes} bytes`,
+      }),
+    );
+  }
+
+  return Stream.runFoldEffect(
+    response.stream,
+    { chunks: [] as Uint8Array[], size: 0 },
+    (accumulator, chunk) => {
+      const size = accumulator.size + chunk.byteLength;
+      if (size > maxResponseBytes) {
+        return Effect.die(
+          new UpstreamResponseTooLargeError({
+            message: `response exceeds ${maxResponseBytes} bytes`,
+          }),
+        );
+      }
+      accumulator.chunks.push(chunk);
+      return Effect.succeed({ chunks: accumulator.chunks, size });
+    },
+  ).pipe(
+    Effect.map(({ chunks, size }) => {
+      const bytes = new Uint8Array(size);
+      let offset = 0;
+      for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
+      return new TextDecoder().decode(bytes);
+    }),
+    Effect.orDie,
+  );
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const downstreamRpcBodyText = (responseBody: unknown, bodyText: string): string => {
+  if (!isRecord(responseBody) || Array.isArray(responseBody) || !("jsonrpc" in responseBody)) {
+    return bodyText;
+  }
+
+  const requestId = "id" in responseBody ? String(responseBody.id) : "";
+  if ("result" in responseBody) {
+    return JSON.stringify([
+      {
+        _tag: "Exit",
+        requestId,
+        exit: { _tag: "Success", value: responseBody.result },
+      },
+    ]);
+  }
+  if ("error" in responseBody) {
+    return JSON.stringify([
+      {
+        _tag: "Exit",
+        requestId,
+        exit: {
+          _tag: "Failure",
+          cause: { _tag: "Fail", error: responseBody.error },
+        },
+      },
+    ]);
+  }
+  return bodyText;
 };
 
 /**
@@ -45,17 +132,23 @@ const readRequestBody = (
 export const withEvidenceCapture = <E, R>(
   client: HttpClient.HttpClient.With<E, R>,
   ref: Ref.Ref<EvidenceRecord | null>,
+  maxResponseBytes: number,
 ): HttpClient.HttpClient.With<E, R> =>
   client.pipe(
+    HttpClient.tapRequest((request) =>
+      Ref.set(ref, {
+        request: {
+          url: request.url,
+          method: request.method,
+          body: readRequestBody(request),
+        },
+        response: null,
+      }),
+    ),
     HttpClient.transform((responseEffect, request) =>
       Effect.gen(function* () {
         const response = yield* responseEffect;
-
-        // Buffer the body text once so we can record it AND reconstruct the response
-        const bodyText = yield* Effect.catchAll(
-          response.text,
-          () => Effect.succeed(""),
-        );
+        const bodyText = yield* readBoundedText(response, maxResponseBytes);
 
         let responseBody: unknown;
         try {
@@ -73,15 +166,22 @@ export const withEvidenceCapture = <E, R>(
           response: { status: response.status, body: responseBody },
         });
 
-        // Reconstruct a fresh response from the buffered text so downstream
-        // consumers (RpcClient) can still read the body.
+        if (response.status >= 300 && response.status < 400) {
+          return yield* Effect.die(
+            new RpcProtocolError({
+              message: "upstream redirects are not allowed",
+            }),
+          );
+        }
+
+        // RpcClient's HTTP protocol expects Effect-RPC response messages, while
+        // the Python wf server returns standard JSON-RPC objects. Preserve the
+        // raw object for evidence and translate only the reconstructed body.
         return HttpClientResponse.fromWeb(
           request,
-          new Response(bodyText, {
+          new Response(downstreamRpcBodyText(responseBody, bodyText), {
             status: response.status,
-            headers: new Headers(
-              Object.entries(response.headers as Record<string, string>),
-            ),
+            headers: new Headers(response.headers),
           }),
         );
       }),

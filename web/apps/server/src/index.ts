@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect";
 import { serve } from "@hono/node-server";
+import { fileURLToPath } from "node:url";
 import {
   WorkflowRpc,
   makeWorkflowRpcLayer,
@@ -16,7 +17,8 @@ if (Number.isNaN(port) || port < 1 || port > 65535) {
 
 const hostname = process.env.WEB_HOST ?? "127.0.0.1";
 
-const liveLayer = makeWorkflowRpcLayer;
+const liveLayer = makeWorkflowRpcLayer();
+const consoleRoot = fileURLToPath(new URL("../../console/dist", import.meta.url));
 
 const runOperation: RunOperation = async (
   operation: OperationName,
@@ -28,7 +30,7 @@ const runOperation: RunOperation = async (
     return yield* execute(operation, target, params);
   }).pipe(Effect.provide(liveLayer), Effect.runPromise);
 
-const app = createApp({ runOperation });
+const app = createApp({ runOperation, consoleRoot });
 
 serve({
   fetch: app.fetch,

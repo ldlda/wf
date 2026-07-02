@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import type { OperationExchange, OperationName } from "@lda/workflow-rpc";
+import { addStaticRoutes, validateConsoleRoot } from "./static.js";
 
 export type RunOperation = (
   operation: OperationName,
@@ -51,8 +52,9 @@ const mapErrorToStatus = (
 
 export function createApp(dependencies: {
   readonly runOperation: RunOperation;
+  readonly consoleRoot?: string;
 }): Hono {
-  const { runOperation } = dependencies;
+  const { runOperation, consoleRoot } = dependencies;
   const app = new Hono();
 
   app.get("/api/health", (c) =>
@@ -94,10 +96,12 @@ export function createApp(dependencies: {
         ok: true,
         connection: {
           status: "connected",
-          target: body.target,
+          target: exchange.target,
           serverStatus: "ok",
           storeRoot: (
-            exchange.interpreted as { store_root?: string }
+            exchange.interpreted as { storeRoot?: string; store_root?: string }
+          ).storeRoot ?? (
+            exchange.interpreted as { storeRoot?: string; store_root?: string }
           ).store_root ?? "",
           durationMs: exchange.durationMs,
         },
@@ -115,7 +119,7 @@ export function createApp(dependencies: {
         {
           ok: false,
           error: { code, message: msg },
-          exchange: { request: null, response: null },
+          exchange: exchangeFromError(e),
         },
         status,
       );
@@ -193,12 +197,38 @@ export function createApp(dependencies: {
         {
           ok: false,
           error: { code, message: msg },
-          exchange: { request: null, response: null },
+          exchange: exchangeFromError(e),
         },
         status,
       );
     }
   });
 
+  if (consoleRoot) {
+    validateConsoleRoot(consoleRoot);
+    addStaticRoutes(app, { consoleRoot });
+  }
+
   return app;
 }
+
+const exchangeFromError = (
+  error: unknown,
+): { readonly request: unknown | null; readonly response: unknown | null } => {
+  if (error && typeof error === "object" && "exchange" in error) {
+    const exchange = (error as { readonly exchange?: unknown }).exchange;
+    if (exchange && typeof exchange === "object") {
+      return {
+        request:
+          "request" in exchange
+            ? (exchange as { readonly request?: unknown }).request ?? null
+            : null,
+        response:
+          "response" in exchange
+            ? (exchange as { readonly response?: unknown }).response ?? null
+            : null,
+      };
+    }
+  }
+  return { request: null, response: null };
+};

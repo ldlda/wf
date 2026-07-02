@@ -23,19 +23,8 @@ export function addStaticRoutes(
 ): void {
   const { consoleRoot } = options;
 
+  app.all("/api/*", (c) => c.json({ error: "not found" }, 404));
   app.use("/assets/*", serveStatic({ root: consoleRoot }));
-
-  app.get("*", (c) => {
-    if (c.req.path.startsWith("/api/")) {
-      return c.json({ error: "not found" }, 404);
-    }
-    return serveStatic({ root: consoleRoot, path: "index.html" })(c);
-  });
-
-  app.all("*", (c) => {
-    if (c.req.path.startsWith("/api/")) {
-      return c.json({ error: "not found" }, 404);
-    }
-    return c.json({ error: "not found" }, 404);
-  });
+  app.get("*", serveStatic({ root: consoleRoot, path: "index.html" }));
+  app.all("*", (c) => c.json({ error: "not found" }, 404));
 }

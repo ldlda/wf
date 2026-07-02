@@ -1,11 +1,15 @@
 import { describe, it, expect, vi } from "vitest";
 import { createApp, type RunOperation } from "./app.js";
 import type { OperationExchange } from "@lda/workflow-rpc";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 
 const makeExchange = (
   overrides: Partial<OperationExchange> = {},
 ): OperationExchange => ({
   operation: "workflow.health",
+  target: "http://127.0.0.1:8765/rpc",
   label: "Health check",
   interpreted: { status: "ok", store_root: "/tmp/store" },
   exchange: { request: {}, response: { status: "ok" } },
@@ -15,13 +19,16 @@ const makeExchange = (
 });
 
 const okRunner: RunOperation = vi.fn(async (operation) =>
-  makeExchange({ operation }),
+  makeExchange({ operation, target: "http://127.0.0.1:8765/rpc" }),
 );
 
 const failRunner =
   (code: string, message: string): RunOperation =>
   async () => {
-    throw Object.assign(new Error(message), { _tag: code });
+    throw Object.assign(new Error(message), {
+      _tag: code,
+      exchange: { request: { method: "x" }, response: { error: message } },
+    });
   };
 
 const app = createApp({ runOperation: okRunner });
@@ -46,7 +53,7 @@ describe("POST /api/connect", () => {
     const body = await res.json();
     expect(body.ok).toBe(true);
     expect(body.connection.status).toBe("connected");
-    expect(body.connection.target).toBe("http://127.0.0.1:8000/rpc");
+    expect(body.connection.target).toBe("http://127.0.0.1:8765/rpc");
     expect(body.connection.serverStatus).toBe("ok");
     expect(okRunner).toHaveBeenCalledWith(
       "workflow.health",
@@ -139,6 +146,10 @@ describe("error mapping", () => {
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.error.code).toBe("upstream_timeout");
+    expect(body.exchange).toEqual({
+      request: { method: "x" },
+      response: { error: "timed out" },
+    });
     expect(body.error.stack).toBeUndefined();
   });
 
@@ -235,6 +246,32 @@ describe("error mapping", () => {
       });
       const body = await res.json();
       expect(body.error?.stack).toBeUndefined();
+    }
+  });
+});
+
+describe("static console routes", () => {
+  it("serves the SPA and keeps unknown API paths as JSON 404", async () => {
+    const consoleRoot = fs.mkdtempSync(path.join(os.tmpdir(), "wf-console-"));
+    fs.mkdirSync(path.join(consoleRoot, "assets"));
+    fs.writeFileSync(path.join(consoleRoot, "index.html"), "<main>console</main>");
+    fs.writeFileSync(path.join(consoleRoot, "assets", "app.js"), "console.log('ok')");
+    try {
+      const staticApp = createApp({ runOperation: okRunner, consoleRoot });
+
+      const index = await staticApp.request("/workflows");
+      expect(index.status).toBe(200);
+      expect(await index.text()).toContain("console");
+
+      const asset = await staticApp.request("/assets/app.js");
+      expect(asset.status).toBe(200);
+      expect(await asset.text()).toContain("ok");
+
+      const unknownApi = await staticApp.request("/api/nope");
+      expect(unknownApi.status).toBe(404);
+      expect(await unknownApi.json()).toEqual({ error: "not found" });
+    } finally {
+      fs.rmSync(consoleRoot, { recursive: true, force: true });
     }
   });
 });

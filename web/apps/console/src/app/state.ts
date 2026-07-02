@@ -47,14 +47,6 @@ export type ConnectionState = {
 
 export const STORAGE_KEY = "lda.workflowConsole.target";
 
-const safeLocalStorage = (): Storage | null => {
-  try {
-    return typeof localStorage !== "undefined" ? localStorage : null;
-  } catch {
-    return null;
-  }
-};
-
 const safeSessionStorage = (): Storage | null => {
   try {
     return typeof sessionStorage !== "undefined" ? sessionStorage : null;
@@ -64,8 +56,8 @@ const safeSessionStorage = (): Storage | null => {
 };
 
 const getDefaultTarget = (): string => {
-  const ls = safeLocalStorage();
-  return ls?.getItem(STORAGE_KEY) ?? "http://127.0.0.1:8765/rpc";
+  const ss = safeSessionStorage();
+  return ss?.getItem(STORAGE_KEY) ?? "http://127.0.0.1:8765/rpc";
 };
 
 export const initialState = (): ConnectionState => ({

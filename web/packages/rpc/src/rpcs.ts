@@ -1,7 +1,7 @@
 import { Rpc, RpcGroup } from "@effect/rpc";
 import { Schema } from "effect";
 
-const SourceSummarySchema = Schema.Struct({
+export const SourceSummarySchema = Schema.Struct({
   id: Schema.String,
   kind: Schema.String,
   enabled: Schema.Boolean,
@@ -13,27 +13,33 @@ const SourceSummarySchema = Schema.Struct({
   resource_count: Schema.Number,
 });
 
+export const WorkflowHealthPayloadSchema = Schema.Struct({});
+export const WorkflowHealthResultSchema = Schema.Struct({
+  status: Schema.Literal("ok"),
+  store_root: Schema.String,
+});
+
 export const WorkflowHealth = Rpc.make("workflow.health", {
-  payload: Schema.Struct({}),
-  success: Schema.Struct({
-    status: Schema.Literal("ok"),
-    store_root: Schema.String,
-  }),
+  payload: WorkflowHealthPayloadSchema,
+  success: WorkflowHealthResultSchema,
   error: Schema.Never,
 });
 
+export const WorkflowSourcesListPayloadSchema = Schema.Struct({
+  cursor: Schema.optional(Schema.String),
+  limit: Schema.optional(
+    Schema.Number.pipe(Schema.int(), Schema.between(1, 100)),
+  ),
+});
+export const WorkflowSourcesListResultSchema = Schema.Struct({
+  sources: Schema.Array(SourceSummarySchema),
+  next_cursor: Schema.NullOr(Schema.String),
+  total: Schema.Number,
+});
+
 export const WorkflowSourcesList = Rpc.make("workflow.sources.list", {
-  payload: Schema.Struct({
-    cursor: Schema.optional(Schema.String),
-    limit: Schema.optional(
-      Schema.Number.pipe(Schema.greaterThan(0), Schema.lessThan(101)),
-    ),
-  }),
-  success: Schema.Struct({
-    sources: Schema.Array(SourceSummarySchema),
-    next_cursor: Schema.NullOr(Schema.String),
-    total: Schema.Number,
-  }),
+  payload: WorkflowSourcesListPayloadSchema,
+  success: WorkflowSourcesListResultSchema,
   error: Schema.Never,
 });
 
