@@ -66,8 +66,15 @@ Implementation order:
    [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md).
    Implementation:
    [`demo autoplay and replay plan`](historical/superpowers/plans/2026-07-03-demo-autoplay-replay.md).
-7. Add a constrained demo agent that invokes one prepared recipe macro.
-8. Add an Astro presentation app and appendix routes for the 15-minute defense.
+7. Add React presentation mode for the prepared workflow demo. Make the report
+   workflow story primary, demote lifecycle evidence to supporting panels, and
+   keep the layout usable on a 720p display. Decision:
+   [`React presentation mode before Astro`](adr/0003-react-presentation-mode-before-astro.md).
+   Design:
+   [`React presentation mode`](superpowers/specs/2026-07-03-react-presentation-mode-design.md).
+8. Add a constrained demo agent that invokes one prepared recipe macro.
+9. Add a static slide/appendix shell only after presentation mode is clear.
+   Astro remains an option, not the default next surface.
 
 Boundaries: this is not a production admin panel, generic visual workflow
 editor, scheduler, external Google Drive/mail integration, or benchmark evidence

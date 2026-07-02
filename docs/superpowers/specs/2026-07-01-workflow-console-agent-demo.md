@@ -19,7 +19,7 @@ Build one local-first web workspace that serves three related needs:
 
 1. a reusable Workflow Console for inspecting a running `wf` JSON-RPC server;
 2. a reliable defense demonstration of the complete workflow lifecycle;
-3. a compact thesis presentation with live-demo and recorded-replay routes.
+3. a compact thesis presentation mode with live-demo and recorded-replay routes.
 
 The application also demonstrates where an agent belongs in the product. A
 constrained agent translates a natural-language request into typed parameters
@@ -43,7 +43,7 @@ web/
   apps/
     console/       # React + Vite
     server/        # Hono + Effect boundary
-    presentation/  # Astro, added in the presentation slice
+    presentation/  # optional later static shell, if needed
   packages/
     rpc/
     ui/            # added only after shared components exist
@@ -376,10 +376,12 @@ Routes:
 - `/replay`: recorded fallback;
 - `/appendix`: backup architecture, evaluation, and implementation slides.
 
-The presentation transitions directly into the demo and back. Astro may be
-added as a separate static presentation app and served by the Hono process. The
-exact slide library is selected in the presentation slice; the route and shared
-component boundaries are fixed by this design.
+The presentation transitions directly into the demo and back. The next
+presentation slice should be a React presentation mode inside the existing
+console before adding a separate static shell. Astro may be added later for
+static appendix pages or route wrapping, but it is not the default next surface.
+See
+[`React presentation mode before Astro`](../../adr/0003-react-presentation-mode-before-astro.md).
 
 ## Implementation Order
 
@@ -389,8 +391,9 @@ component boundaries are fixed by this design.
    registry.
 4. Workflow Console read/inspect views, graph, trace, and raw drawers.
 5. Lifecycle job, autoplay, typed approval, issue board, and replay.
-6. Constrained demo agent and replaceable model gateway.
-7. Astro defense presentation and appendix routes.
+6. React presentation mode for the defense demo.
+7. Constrained demo agent and replaceable model gateway.
+8. Optional static slide or appendix shell after presentation mode is clear.
 
 Each slice gets its own executable implementation plan. Do not combine the
 Python contract change, web foundation, agent integration, and presentation
