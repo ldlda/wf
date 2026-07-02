@@ -34,4 +34,22 @@ describe("presentationReducer", () => {
     expect(closed.evidenceMode).toBe("hidden");
     expect(closed.beat).toBe("intro");
   });
+
+  it("closes node spotlight before evidence drawer", () => {
+    const withNode = presentationReducer(initialPresentationState, {
+      type: "select_node",
+      nodeId: "review_issues",
+    });
+    const withEvidence = presentationReducer(withNode, {
+      type: "set_evidence_mode",
+      mode: "open",
+    });
+
+    expect(withEvidence.selectedNodeId).toBe("review_issues");
+    expect(withEvidence.evidenceMode).toBe("open");
+
+    const afterEscape = presentationReducer(withEvidence, { type: "close_overlay" });
+    expect(afterEscape.selectedNodeId).toBeNull();
+    expect(afterEscape.evidenceMode).toBe("open");
+  });
 });

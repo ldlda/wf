@@ -38,4 +38,11 @@ describe("PresentationRoute", () => {
     expect(screen.getByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
     expect(screen.getByText("NodeUse")).toBeInTheDocument();
   });
+
+  it("can advance replay far enough to show a product operation block", async () => {
+    render(<PresentationRoute />);
+    await userEvent.click(screen.getByRole("button", { name: /product operation/i }));
+
+    expect(await screen.findByText(/workflow.runs.start/i)).toBeInTheDocument();
+  });
 });

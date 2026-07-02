@@ -1,6 +1,5 @@
 import type { DemoEvent } from "../demo/timeline/models.js";
-
-const formatJson = (value: unknown): string => JSON.stringify(value, null, 2);
+import { formatJson } from "./format.js";
 
 type OperationBlockProps = {
   readonly event: DemoEvent;

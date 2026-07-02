@@ -61,8 +61,8 @@ export const presentationReducer = (
     case "set_evidence_mode":
       return { ...state, evidenceMode: action.mode };
     case "close_overlay":
-      if (state.evidenceMode !== "hidden") return { ...state, evidenceMode: "hidden" };
       if (state.selectedNodeId !== null) return { ...state, selectedNodeId: null };
+      if (state.evidenceMode !== "hidden") return { ...state, evidenceMode: "hidden" };
       return state;
     case "set_playback_mode":
       return { ...state, playbackMode: action.mode };

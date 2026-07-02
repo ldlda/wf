@@ -19,8 +19,8 @@ export const NodeSpotlight = ({ nodeId, close }: NodeSpotlightProps) => {
   const node = presentationNodes.find((candidate) => candidate.id === nodeId);
   if (!node) return null;
 
-  return (
-    <aside className="node-spotlight" role="dialog" aria-label={node.label}>
+    return (
+      <aside className="node-spotlight" role="dialog" aria-modal="true" aria-label={node.label}>
       <button type="button" onClick={close}>Close</button>
       <p>NodeUse</p>
       <h2>{node.label}</h2>

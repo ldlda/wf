@@ -1,7 +1,6 @@
 import type { EvidenceRecord } from "../app/state.js";
+import { formatJson } from "./format.js";
 import type { PresentationState } from "./presentation-state.js";
-
-const formatJson = (value: unknown): string => JSON.stringify(value, null, 2);
 
 type EvidenceDrawerProps = {
   readonly records: readonly EvidenceRecord[];
