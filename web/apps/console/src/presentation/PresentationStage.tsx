@@ -1,5 +1,7 @@
+import type { EvidenceRecord } from "../app/state.js";
 import { presentationBeats, type BeatId } from "./beats.js";
 import { BeatRail } from "./BeatRail.js";
+import { EvidenceDrawer } from "./EvidenceDrawer.js";
 import { NodeSpotlight } from "./NodeSpotlight.js";
 import { OperationBlock } from "./OperationBlock.js";
 import { OperatorChat } from "./OperatorChat.js";
@@ -11,17 +13,23 @@ import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 type PresentationStageProps = {
   readonly state: PresentationState;
   readonly demo: DemoTimelineController;
+  readonly evidence: readonly EvidenceRecord[];
   readonly jump: (beat: BeatId) => void;
   readonly selectNode: (nodeId: string) => void;
   readonly clearNode: () => void;
+  readonly openEvidence: () => void;
+  readonly closeOverlay: () => void;
 };
 
 export const PresentationStage = ({
   state,
   demo,
+  evidence,
   jump,
   selectNode,
   clearNode,
+  openEvidence,
+  closeOverlay,
 }: PresentationStageProps) => {
   const beat = presentationBeats.find((candidate) => candidate.id === state.beat) ?? presentationBeats[0]!;
 
@@ -34,9 +42,12 @@ export const PresentationStage = ({
     <div className="presentation-stage" data-beat={state.beat}>
       <OperatorChat state={state} />
       <section className="presentation-stage__main">
-        <StageCaption eyebrow="lda.chat defense" title={beat.title}>
-          <p>{beat.caption}</p>
-        </StageCaption>
+        <header className="presentation-stage__header">
+          <StageCaption eyebrow="lda.chat defense" title={beat.title}>
+            <p>{beat.caption}</p>
+          </StageCaption>
+          <button type="button" onClick={openEvidence}>Evidence</button>
+        </header>
         {operationEvent && <OperationBlock event={operationEvent} />}
         <WorkflowGraphStage selectedNodeId={state.selectedNodeId} selectNode={selectNode} />
         {state.selectedNodeId && (
@@ -47,6 +58,7 @@ export const PresentationStage = ({
         </p>
       </section>
       <BeatRail activeBeat={state.beat} jump={jump} />
+      <EvidenceDrawer records={evidence} mode={state.evidenceMode} close={closeOverlay} />
     </div>
   );
 };

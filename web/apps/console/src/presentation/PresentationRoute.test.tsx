@@ -28,7 +28,7 @@ describe("PresentationRoute", () => {
 
     expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
     expect(screen.getByLabelText(/presentation beat rail/i)).toBeInTheDocument();
-    expect(screen.getByText(/Replay/)).toBeInTheDocument();
+    expect(screen.getByText("Replay · running")).toBeInTheDocument();
   });
 
   it("shows node spotlight when a graph node is selected", async () => {

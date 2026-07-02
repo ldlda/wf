@@ -126,3 +126,44 @@
   padding: 1rem;
   z-index: 20;
 }
+
+.evidence-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  width: min(36rem, 90vw);
+  padding: 1rem;
+  overflow: auto;
+  background: oklch(0.13 0.025 250);
+  border-left: 1px solid oklch(0.34 0.04 250);
+  z-index: 30;
+}
+
+.evidence-drawer pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-height: 760px) {
+  .presentation-stage {
+    padding: 0.75rem;
+    gap: 0.65rem;
+  }
+
+  .stage-caption h1 {
+    font-size: clamp(1.8rem, 4vw, 3rem);
+  }
+
+  .workflow-graph-stage {
+    min-height: 12rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presentation-route *,
+  .presentation-route *::before,
+  .presentation-route *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

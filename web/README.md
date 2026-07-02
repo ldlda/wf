@@ -148,3 +148,15 @@ product CLI setup commands.
 operation, and `Next` applies exactly one operation or recorded event.
 Playback always stops at `issue_review`; approval remains a human action in
 both modes. Replay is visibly labeled and does not create real issues.
+
+### Presentation Mode
+
+The console also exposes `/present`, a replay-first defense route for the
+prepared `lda_report_workflow` story. It uses the same demo timeline data as
+the console demo, but renders a 720p-friendly staged view with keyboard beat
+navigation, operation blocks, graph node spotlight, and evidence drawer.
+
+```powershell
+pnpm --dir web dev
+# open http://127.0.0.1:5173/present
+```

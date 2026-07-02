@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useReducer, useState } from "react";
 import type { EvidenceRecord } from "../app/state.js";
 import { useDemoTimeline } from "../demo/useDemoTimeline.js";
-import { hashForBeat, presentationBeats } from "./beats.js";
+import { hashForBeat } from "./beats.js";
 import { PresentationStage } from "./PresentationStage.js";
 import {
   initialPresentationState,
@@ -16,7 +16,7 @@ export const PresentationRoute = () => {
     (initial) => presentationReducer(initial, { type: "jump_hash", hash: window.location.hash }),
   );
 
-  const [_evidence, setEvidence] = useState<readonly EvidenceRecord[]>([]);
+  const [evidence, setEvidence] = useState<readonly EvidenceRecord[]>([]);
   const recordEvidence = useCallback((record: EvidenceRecord) => {
     setEvidence((records) => [...records, record]);
   }, []);
@@ -46,20 +46,28 @@ export const PresentationRoute = () => {
   }, []);
 
   useEffect(() => {
-    if (demo.state.phase === "ready") {
+    if (demo.state.phase === "ready" && demo.state.mode !== "replay") {
       demo.setMode("replay");
+    }
+  }, [demo.state.phase, demo.state.mode, demo.setMode]);
+
+  useEffect(() => {
+    if (demo.state.phase === "ready" && demo.state.mode === "replay") {
       demo.start();
     }
-  }, [demo]);
+  }, [demo.state.phase, demo.state.mode, demo.start]);
 
   return (
     <main className="presentation-route" aria-label="lda.chat presentation">
       <PresentationStage
         state={state}
         demo={demo}
+        evidence={evidence}
         jump={(beatId) => dispatch({ type: "jump", beat: beatId })}
         selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
         clearNode={() => dispatch({ type: "clear_node" })}
+        openEvidence={() => dispatch({ type: "set_evidence_mode", mode: "open" })}
+        closeOverlay={() => dispatch({ type: "close_overlay" })}
       />
     </main>
   );
