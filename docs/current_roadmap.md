@@ -42,10 +42,12 @@ Implementation order:
 2. Completed: deterministic `examples/lda_report_workflow/` case study with
    local document, report, issue-board sources, and typed issue-review
    interrupt.
-3. Add a top-level `web/` pnpm workspace with a React/Vite console, Hono local
-   server, Effect JSON-RPC boundary, loopback connection flow, and method
-   registry. Design:
+3. Completed: add a top-level `web/` pnpm workspace with a React/Vite console,
+   Hono local server, Effect JSON-RPC boundary, loopback connection flow,
+   source inventory, protocol evidence, and production static serving. Design:
    [`workflow console foundation`](superpowers/specs/2026-07-01-workflow-console-foundation-design.md).
+   Implementation:
+   [`workflow console foundation plan`](historical/superpowers/plans/2026-07-02-workflow-console-foundation.md).
 4. Add console read/inspect views for sources, drafts, artifacts, deployments,
    runs, traces, and raw RPC drawers.
 5. Add lifecycle autoplay, typed approval, issue-board output, and replay.

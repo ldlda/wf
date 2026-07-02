@@ -2,7 +2,7 @@
 
 Date: 2026-07-01
 
-Status: Approved design for the first web implementation slice.
+Status: Implemented. First web slice complete.
 
 Related:
 
