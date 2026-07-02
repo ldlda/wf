@@ -202,6 +202,12 @@ type DemoTimelineState = {
 };
 ```
 
+`cursor` is an internal playback-position example, not a persisted recording
+field or public UI contract. An implementation may instead keep the current
+event id, split pending/applied event arrays, or derive a stage-to-position map.
+Presentation meaning always comes from the ordered event and its `stage`, not
+from a magic numeric value.
+
 Invariants:
 
 - `cursor` is the index of the last applied event, or `-1` before playback.
@@ -362,4 +368,3 @@ The slice is complete when:
 7. live and replay use the same report, issue, trace, and evidence components;
 8. mode attribution prevents recorded behavior from appearing live;
 9. the complete sequence can be demonstrated in under three minutes.
-
