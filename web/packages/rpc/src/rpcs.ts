@@ -1,16 +1,21 @@
 import { Rpc, RpcGroup } from "@effect/rpc";
 import { Schema } from "effect";
 
+const NonNegativeIntegerSchema = Schema.Number.pipe(
+  Schema.int(),
+  Schema.between(0, Number.MAX_SAFE_INTEGER),
+);
+
 export const SourceSummarySchema = Schema.Struct({
   id: Schema.String,
   kind: Schema.String,
   enabled: Schema.Boolean,
   description: Schema.NullOr(Schema.String),
-  tool_count: Schema.Number,
-  node_spec_count: Schema.Number,
-  reducer_count: Schema.Number,
-  prompt_count: Schema.Number,
-  resource_count: Schema.Number,
+  tool_count: NonNegativeIntegerSchema,
+  node_spec_count: NonNegativeIntegerSchema,
+  reducer_count: NonNegativeIntegerSchema,
+  prompt_count: NonNegativeIntegerSchema,
+  resource_count: NonNegativeIntegerSchema,
 });
 
 export const WorkflowHealthPayloadSchema = Schema.Struct({});
@@ -34,7 +39,7 @@ export const WorkflowSourcesListPayloadSchema = Schema.Struct({
 export const WorkflowSourcesListResultSchema = Schema.Struct({
   sources: Schema.Array(SourceSummarySchema),
   next_cursor: Schema.NullOr(Schema.String),
-  total: Schema.Number,
+  total: NonNegativeIntegerSchema,
 });
 
 export const WorkflowSourcesList = Rpc.make("workflow.sources.list", {

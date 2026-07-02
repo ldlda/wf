@@ -1,5 +1,10 @@
 import { Context, Effect, Layer, Ref, Stream } from "effect";
-import { HttpClient, HttpClientRequest, HttpClientResponse } from "@effect/platform";
+import {
+  HttpBody,
+  HttpClient,
+  HttpClientRequest,
+  HttpClientResponse,
+} from "@effect/platform";
 import {
   RpcProtocolError,
   UpstreamResponseTooLargeError,
@@ -46,6 +51,44 @@ const readRequestBody = (
     }
   }
   return null;
+};
+
+const bodyText = (body: HttpBody.HttpBody): string | null => {
+  if (body._tag === "Uint8Array") {
+    return new TextDecoder().decode(body.body);
+  }
+  if (body._tag === "Raw" && typeof body.body === "string") {
+    return body.body;
+  }
+  return null;
+};
+
+const sanitizeJsonRpcRequest = (
+  request: HttpClientRequest.HttpClientRequest,
+): HttpClientRequest.HttpClientRequest => {
+  const text = bodyText(request.body);
+  if (text === null) return request;
+
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return request;
+  }
+  if (!isRecord(body) || Array.isArray(body) || body.jsonrpc !== "2.0") {
+    return request;
+  }
+
+  const sanitized = {
+    jsonrpc: "2.0",
+    method: body.method,
+    params: "params" in body ? body.params : undefined,
+    id: "id" in body ? body.id : undefined,
+  };
+
+  return HttpClientRequest.modify(request, {
+    body: HttpBody.text(JSON.stringify(sanitized), "application/json"),
+  });
 };
 
 const readBoundedText = (
@@ -135,6 +178,7 @@ export const withEvidenceCapture = <E, R>(
   maxResponseBytes: number,
 ): HttpClient.HttpClient.With<E, R> =>
   client.pipe(
+    HttpClient.mapRequest(sanitizeJsonRpcRequest),
     HttpClient.tapRequest((request) =>
       Ref.set(ref, {
         request: {
@@ -177,11 +221,17 @@ export const withEvidenceCapture = <E, R>(
         // RpcClient's HTTP protocol expects Effect-RPC response messages, while
         // the Python wf server returns standard JSON-RPC objects. Preserve the
         // raw object for evidence and translate only the reconstructed body.
+        const headers = new Headers(response.headers);
+        // The body is rewritten for Effect-RPC, so upstream body metadata no
+        // longer describes the reconstructed Response.
+        headers.delete("content-length");
+        headers.delete("content-encoding");
+        headers.delete("transfer-encoding");
         return HttpClientResponse.fromWeb(
           request,
           new Response(downstreamRpcBodyText(responseBody, bodyText), {
             status: response.status,
-            headers: new Headers(response.headers),
+            headers,
           }),
         );
       }),

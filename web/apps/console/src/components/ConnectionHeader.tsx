@@ -11,6 +11,8 @@ const phaseLabel = (phase: string): string => {
       return "Connected";
     case "invalid_target":
       return "Invalid target";
+    case "console_backend_unreachable":
+      return "Console backend unavailable";
     case "unreachable":
       return "Server unreachable";
     case "rpc_error":

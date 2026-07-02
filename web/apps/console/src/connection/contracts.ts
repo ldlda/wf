@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-const BrowserErrorCodeSchema = v.union([
+const KnownBrowserErrorCodeSchema = v.union([
   v.literal("invalid_target"),
   v.literal("unknown_operation"),
   v.literal("upstream_unreachable"),
@@ -10,6 +10,7 @@ const BrowserErrorCodeSchema = v.union([
   v.literal("rpc_decode_error"),
   v.literal("response_too_large"),
 ]);
+const BrowserErrorCodeSchema = v.union([KnownBrowserErrorCodeSchema, v.string()]);
 
 const ExchangeSchema = v.object({
   request: v.nullish(v.unknown(), null),
@@ -67,8 +68,9 @@ export type OperationName = v.InferOutput<typeof OperationNameSchema>;
 const parseDto = <T>(schema: v.GenericSchema<unknown, T>, data: unknown): T => {
   try {
     return v.parse(schema, data);
-  } catch {
-    throw new Error("malformed response from server");
+  } catch (error) {
+    const details = error instanceof Error ? `: ${error.message}` : "";
+    throw new Error(`malformed response from server${details}`);
   }
 };
 

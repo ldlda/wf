@@ -1,6 +1,7 @@
 import { Effect, Either } from "effect";
 import { describe, expect, it } from "vitest";
 import {
+  RpcDecodeError,
   RpcProtocolError,
   RpcRemoteError,
   UpstreamConnectionError,
@@ -136,6 +137,68 @@ describe("WorkflowRpc", () => {
     expect((result.left as RpcRemoteError).exchange?.response).toMatchObject({
       error: { code: -32602, message: "Invalid params" },
     });
+  });
+
+  it("maps malformed successful results to decode errors with evidence", async () => {
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const request = await requestBody(input, init);
+      return jsonResponse({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: { status: "wrong", store_root: "C:/store" },
+      });
+    };
+
+    const result = await runEither({ fetch });
+
+    expect(Either.isLeft(result)).toBe(true);
+    if (Either.isRight(result)) return;
+    expect(result.left).toBeInstanceOf(RpcDecodeError);
+    expect((result.left as RpcDecodeError).exchange?.response).toMatchObject({
+      result: { status: "wrong", store_root: "C:/store" },
+    });
+  });
+
+  it("rejects invalid source count shapes as decode errors", async () => {
+    const fetch: typeof globalThis.fetch = async (input, init) => {
+      const request = await requestBody(input, init);
+      return jsonResponse({
+        jsonrpc: "2.0",
+        id: request.id,
+        result: {
+          sources: [
+            {
+              id: "local.demo",
+              kind: "python",
+              enabled: true,
+              description: null,
+              tool_count: -1,
+              node_spec_count: 0,
+              reducer_count: 0,
+              prompt_count: 0,
+              resource_count: 0,
+            },
+          ],
+          next_cursor: null,
+          total: 1,
+        },
+      });
+    };
+
+    const result = await Effect.gen(function* () {
+      const rpc = yield* WorkflowRpc;
+      return yield* rpc
+        .execute(
+          "workflow.sources.list",
+          "http://127.0.0.1:8765/rpc",
+          {},
+        )
+        .pipe(Effect.either);
+    }).pipe(Effect.provide(makeWorkflowRpcLayer({ fetch })), Effect.runPromise);
+
+    expect(Either.isLeft(result)).toBe(true);
+    if (Either.isRight(result)) return;
+    expect(result.left).toBeInstanceOf(RpcDecodeError);
   });
 
   it("fails with a bounded timeout", async () => {

@@ -154,7 +154,13 @@ const mapCauseToError = (
   }
 
   const description = String(Cause.squash(cause));
-  if (description.toLowerCase().includes("parse") || description.includes("Schema")) {
+  const lowerDescription = description.toLowerCase();
+  if (
+    lowerDescription.includes("parse") ||
+    lowerDescription.includes("schema") ||
+    lowerDescription.includes("decode") ||
+    lowerDescription.includes("expected")
+  ) {
     return new RpcDecodeError({
       message: "workflow RPC result did not match the expected schema",
       exchange,
@@ -175,6 +181,27 @@ const decodeParams = <A, I>(
       () => new RpcDecodeError({ message: "invalid workflow RPC parameters" }),
     ),
   );
+
+const decodeOperationMetadata = (
+  metadata: NonNullable<ReturnType<typeof getOperationMeta>>,
+  result: unknown,
+  params: unknown,
+  evidence: EvidenceRecord | null,
+): Effect.Effect<
+  { readonly interpreted: unknown; readonly equivalentCli: string },
+  RpcDecodeError
+> =>
+  Effect.try({
+    try: () => ({
+      interpreted: metadata.interpret(result),
+      equivalentCli: metadata.equivalentCli(params),
+    }),
+    catch: () =>
+      new RpcDecodeError({
+        message: "workflow RPC result did not match the expected schema",
+        exchange: toExchange(evidence),
+      }),
+  });
 
 const executeImpl =
   (options: WorkflowRpcOptions) =>
@@ -261,14 +288,20 @@ const executeImpl =
           new UnknownOperationError({ message: `unknown operation: ${operation}` }),
         );
       }
+      const decodedMetadata = yield* decodeOperationMetadata(
+        metadata,
+        result,
+        params,
+        evidence,
+      );
       const finishedAt = yield* Clock.currentTimeMillis;
       return {
         operation,
         target: normalizedTarget,
         label: metadata.label,
-        interpreted: metadata.interpret(result),
+        interpreted: decodedMetadata.interpreted,
         exchange: toExchange(evidence),
-        equivalentCli: metadata.equivalentCli(params),
+        equivalentCli: decodedMetadata.equivalentCli,
         durationMs: finishedAt - startedAt,
       };
     });

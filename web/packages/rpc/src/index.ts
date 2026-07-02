@@ -20,7 +20,11 @@ export {
   getOperationMeta,
   listOperations,
 } from "./method-registry.js";
-export type { OperationMeta } from "./method-registry.js";
+export type {
+  OperationMeta,
+  WorkflowHealthInterpreted,
+  WorkflowSourcesListInterpreted,
+} from "./method-registry.js";
 
 export {
   EvidenceRef,

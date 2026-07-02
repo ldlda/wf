@@ -5,6 +5,7 @@ export type ConnectionPhase =
   | "connecting"
   | "connected"
   | "invalid_target"
+  | "console_backend_unreachable"
   | "unreachable"
   | "rpc_error"
   | "malformed_response";
@@ -183,10 +184,14 @@ const mapCodeToPhase = (code: string): ConnectionPhase => {
   switch (code) {
     case "invalid_target":
       return "invalid_target";
+    case "console_backend_unreachable":
+      return "console_backend_unreachable";
     case "upstream_unreachable":
     case "rpc_remote_error":
     case "rpc_protocol_error":
       return "unreachable";
+    case "malformed_response":
+      return "malformed_response";
     case "upstream_timeout":
     case "rpc_decode_error":
     case "response_too_large":

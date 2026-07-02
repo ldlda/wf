@@ -11,7 +11,7 @@ const makeExchange = (
   operation: "workflow.health",
   target: "http://127.0.0.1:8765/rpc",
   label: "Health check",
-  interpreted: { status: "ok", store_root: "/tmp/store" },
+  interpreted: { status: "ok", storeRoot: "/tmp/store" },
   exchange: { request: {}, response: { status: "ok" } },
   equivalentCli: "uv run wf status",
   durationMs: 12,
@@ -55,6 +55,7 @@ describe("POST /api/connect", () => {
     expect(body.connection.status).toBe("connected");
     expect(body.connection.target).toBe("http://127.0.0.1:8765/rpc");
     expect(body.connection.serverStatus).toBe("ok");
+    expect(body.connection.storeRoot).toBe("/tmp/store");
     expect(okRunner).toHaveBeenCalledWith(
       "workflow.health",
       "http://127.0.0.1:8000/rpc",
@@ -72,6 +73,21 @@ describe("POST /api/connect", () => {
     const body = await res.json();
     expect(body.ok).toBe(false);
     expect(body.error.code).toBe("invalid_target");
+  });
+
+  it("returns a decode error when health interpretation is malformed", async () => {
+    const malformedApp = createApp({
+      runOperation: async () => makeExchange({ interpreted: { status: "ok" } }),
+    });
+    const res = await malformedApp.request("/api/connect", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ target: "http://127.0.0.1:8000/rpc" }),
+    });
+    expect(res.status).toBe(502);
+    const body = await res.json();
+    expect(body.ok).toBe(false);
+    expect(body.error.code).toBe("rpc_decode_error");
   });
 });
 

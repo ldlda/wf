@@ -1,7 +1,12 @@
 import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import type { OperationExchange, OperationName } from "@lda/workflow-rpc";
+import {
+  listOperations,
+  type OperationExchange,
+  type OperationName,
+  type WorkflowHealthInterpreted,
+} from "@lda/workflow-rpc";
 import { addStaticRoutes, validateConsoleRoot } from "./static.js";
 
 export type RunOperation = (
@@ -20,10 +25,22 @@ type BrowserErrorCode =
   | "rpc_decode_error"
   | "response_too_large";
 
-const VALID_OPERATIONS: ReadonlySet<string> = new Set([
-  "workflow.health",
-  "workflow.sources.list",
-]);
+const VALID_OPERATIONS: ReadonlySet<string> = new Set(
+  listOperations().map((operation) => operation.method),
+);
+
+const isOperationName = (value: string): value is OperationName =>
+  VALID_OPERATIONS.has(value);
+
+const isHealthInterpreted = (
+  value: unknown,
+): value is WorkflowHealthInterpreted =>
+  typeof value === "object" &&
+  value !== null &&
+  "status" in value &&
+  value.status === "ok" &&
+  "storeRoot" in value &&
+  typeof value.storeRoot === "string";
 
 const mapErrorToStatus = (
   tag: string,
@@ -92,17 +109,26 @@ export function createApp(dependencies: {
         body.target,
         {},
       );
+      if (!isHealthInterpreted(exchange.interpreted)) {
+        return c.json(
+          {
+            ok: false,
+            error: {
+              code: "rpc_decode_error",
+              message: "workflow.health returned an unexpected shape",
+            },
+            exchange: exchange.exchange,
+          },
+          502,
+        );
+      }
       return c.json({
         ok: true,
         connection: {
           status: "connected",
           target: exchange.target,
           serverStatus: "ok",
-          storeRoot: (
-            exchange.interpreted as { storeRoot?: string; store_root?: string }
-          ).storeRoot ?? (
-            exchange.interpreted as { storeRoot?: string; store_root?: string }
-          ).store_root ?? "",
+          storeRoot: exchange.interpreted.storeRoot,
           durationMs: exchange.durationMs,
         },
         exchange: exchange.exchange,
@@ -145,7 +171,7 @@ export function createApp(dependencies: {
     if (
       !body.operation ||
       typeof body.operation !== "string" ||
-      !VALID_OPERATIONS.has(body.operation)
+      !isOperationName(body.operation)
     ) {
       return c.json(
         {
@@ -173,7 +199,7 @@ export function createApp(dependencies: {
 
     try {
       const exchange = await runOperation(
-        body.operation as OperationName,
+        body.operation,
         body.target,
         body.params ?? {},
       );

@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useCallback } from "react";
+import { useReducer, useEffect, useCallback, useRef } from "react";
 import {
   connectionReducer,
   initialState,
@@ -41,42 +41,55 @@ const parseSources = (
 
 export const App = () => {
   const [state, dispatch] = useReducer(connectionReducer, null, initialState);
+  const connectGeneration = useRef(0);
+  const sourcesGeneration = useRef(0);
 
   const loadSources = useCallback(
     async (target: string) => {
-      const result = await callOperation(
-        "workflow.sources.list",
-        target,
-        { limit: 50 },
-      );
-      if (result.ok) {
-        const sources = parseSources(result.interpreted);
-        dispatch({
-          type: "sources_loaded",
-          sources,
-          evidence: {
-            id: `sources-${Date.now()}`,
-            operation: "workflow.sources.list",
-            label: "Source inventory",
-            equivalentCli: result.equivalentCli,
-            request: result.exchange.request,
-            response: result.exchange.response,
-            durationMs: result.durationMs,
-          },
-        });
-      } else {
+      const generation = ++sourcesGeneration.current;
+      dispatch({ type: "sources_loading" });
+      try {
+        const result = await callOperation(
+          "workflow.sources.list",
+          target,
+          { limit: 50 },
+        );
+        if (sourcesGeneration.current !== generation) return;
+        if (result.ok) {
+          const sources = parseSources(result.interpreted);
+          dispatch({
+            type: "sources_loaded",
+            sources,
+            evidence: {
+              id: `sources-${Date.now()}`,
+              operation: "workflow.sources.list",
+              label: "Source inventory",
+              equivalentCli: result.equivalentCli,
+              request: result.exchange.request,
+              response: result.exchange.response,
+              durationMs: result.durationMs,
+            },
+          });
+        } else {
+          dispatch({
+            type: "sources_error",
+            message: result.error.message,
+            evidence: {
+              id: `sources-${Date.now()}`,
+              operation: "workflow.sources.list",
+              label: "Source inventory",
+              equivalentCli: "uv run wf source list --limit 50",
+              request: result.exchange.request,
+              response: result.exchange.response,
+              durationMs: 0,
+            },
+          });
+        }
+      } catch (e: unknown) {
+        if (sourcesGeneration.current !== generation) return;
         dispatch({
           type: "sources_error",
-          message: result.error.message,
-          evidence: {
-            id: `sources-${Date.now()}`,
-            operation: "workflow.sources.list",
-            label: "Source inventory",
-            equivalentCli: "uv run wf source list --limit 50",
-            request: result.exchange.request,
-            response: result.exchange.response,
-            durationMs: 0,
-          },
+          message: e instanceof Error ? e.message : "unknown error",
         });
       }
     },
@@ -90,9 +103,12 @@ export const App = () => {
   }, [state.phase, state.connectedTarget, loadSources]);
 
   const onSubmit = (target: string) => {
+    const generation = ++connectGeneration.current;
+    sourcesGeneration.current++;
     dispatch({ type: "submit", target });
     void connectToServer(target).then(
       (response) => {
+        if (connectGeneration.current !== generation) return;
         if (response.ok) {
           dispatch({ type: "success", data: response });
           dispatch({
@@ -116,9 +132,10 @@ export const App = () => {
         }
       },
       (e: unknown) => {
+        if (connectGeneration.current !== generation) return;
         dispatch({
           type: "failure",
-          code: "rpc_protocol_error",
+          code: errorCodeFromThrown(e),
           message: e instanceof Error ? e.message : "unknown error",
         });
       },
@@ -140,4 +157,11 @@ export const App = () => {
       <ProtocolEvidence evidence={state.evidence} />
     </div>
   );
+};
+
+const errorCodeFromThrown = (error: unknown): string => {
+  if (!(error instanceof Error)) return "rpc_protocol_error";
+  return error.message.toLowerCase().includes("malformed")
+    ? "malformed_response"
+    : "rpc_protocol_error";
 };

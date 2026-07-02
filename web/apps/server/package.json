@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "predev": "pnpm --filter @lda/workflow-rpc build",
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx src/index.ts",
     "prebuild": "pnpm --filter @lda/workflow-rpc build",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",

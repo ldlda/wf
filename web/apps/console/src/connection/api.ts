@@ -13,7 +13,9 @@ const fetchJson = async <T>(
   const res = await fetch(url, init);
   const text = await res.text();
   if (!text) {
-    throw new Error("empty response from server");
+    throw new Error(
+      `console backend returned an empty response (HTTP ${res.status})`,
+    );
   }
   let data: unknown;
   try {

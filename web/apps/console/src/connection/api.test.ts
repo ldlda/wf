@@ -64,6 +64,25 @@ describe("connectToServer", () => {
       expect(result.error.code).toBe("invalid_target");
     }
   });
+
+  it("accepts future server error codes without rejecting the response", async () => {
+    mockFetch.mockReturnValue(
+      jsonResponse(
+        {
+          ok: false,
+          error: { code: "new_server_code", message: "future failure" },
+          exchange: { request: null, response: null },
+        },
+        502,
+      ),
+    );
+
+    const result = await connectToServer("http://127.0.0.1:8000/rpc");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.error.code).toBe("new_server_code");
+    }
+  });
 });
 
 describe("callOperation", () => {
@@ -135,7 +154,7 @@ describe("error handling", () => {
 
     await expect(
       connectToServer("http://127.0.0.1:8000/rpc"),
-    ).rejects.toThrow("empty response");
+    ).rejects.toThrow("console backend returned an empty response (HTTP 200)");
   });
 
   it("throws for structurally malformed JSON response", async () => {
@@ -143,7 +162,7 @@ describe("error handling", () => {
 
     await expect(
       connectToServer("http://127.0.0.1:8000/rpc"),
-    ).rejects.toThrow("malformed response");
+    ).rejects.toThrow("malformed response from server:");
   });
 
   it("throws on network failure", async () => {

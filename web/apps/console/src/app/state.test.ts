@@ -2,6 +2,8 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   connectionReducer,
   initialState,
+  type EvidenceRecord,
+  type SourceRecord,
   type ConnectionState,
   type ConnectionAction,
   STORAGE_KEY,
@@ -20,6 +22,30 @@ const makeSuccess = (target = "http://127.0.0.1:8765/rpc") =>
     exchange: { request: {}, response: {} },
     equivalentCli: "uv run wf status",
   }) as const;
+
+const evidence: EvidenceRecord = {
+  id: "e1",
+  operation: "workflow.sources.list",
+  label: "Source inventory",
+  equivalentCli: "uv run wf source list",
+  request: {},
+  response: {},
+  durationMs: 12,
+};
+
+const sources: ReadonlyArray<SourceRecord> = [
+  {
+    id: "local.demo",
+    kind: "python",
+    enabled: true,
+    description: null,
+    toolCount: 1,
+    nodeSpecCount: 1,
+    reducerCount: 0,
+    promptCount: 0,
+    resourceCount: 0,
+  },
+];
 
 beforeEach(() => {
   try {
@@ -182,6 +208,39 @@ describe("failure", () => {
     expect(next.connectedTarget).toBe("http://old:8000/rpc");
     expect(next.phase).toBe("unreachable");
   });
+
+  it("maps malformed responses to the dedicated phase", () => {
+    const next = connectionReducer(initialState(), {
+      type: "failure",
+      code: "malformed_response",
+      message: "malformed response from server",
+    });
+    expect(next.phase).toBe("malformed_response");
+  });
+
+  it("distinguishes the console backend from the workflow server", () => {
+    const next = connectionReducer(initialState(), {
+      type: "failure",
+      code: "console_backend_unreachable",
+      message: "Console backend unavailable at 127.0.0.1:8787",
+    });
+    expect(next.phase).toBe("console_backend_unreachable");
+  });
+
+  it("maps decode and size failures to rpc_error", () => {
+    for (const code of [
+      "upstream_timeout",
+      "rpc_decode_error",
+      "response_too_large",
+    ]) {
+      const next = connectionReducer(initialState(), {
+        type: "failure",
+        code,
+        message: code,
+      });
+      expect(next.phase).toBe("rpc_error");
+    }
+  });
 });
 
 describe("reconnect replaces target only on success", () => {
@@ -216,5 +275,55 @@ describe("draft_changed", () => {
     });
     expect(next.draftTarget).toBe("http://typed:9999/rpc");
     expect(next.phase).toBe("not_configured");
+  });
+});
+
+describe("source inventory", () => {
+  it("sets loading state for source refreshes", () => {
+    const state: ConnectionState = {
+      ...initialState(),
+      sourceError: "old error",
+    };
+    const next = connectionReducer(state, { type: "sources_loading" });
+    expect(next.sourcesLoading).toBe(true);
+    expect(next.sourceError).toBeNull();
+  });
+
+  it("records loaded sources and evidence", () => {
+    const state = connectionReducer(initialState(), {
+      type: "sources_loading",
+    });
+    const next = connectionReducer(state, {
+      type: "sources_loaded",
+      sources,
+      evidence,
+    });
+    expect(next.sources).toBe(sources);
+    expect(next.sourcesLoading).toBe(false);
+    expect(next.sourceError).toBeNull();
+    expect(next.evidence).toEqual([evidence]);
+  });
+
+  it("records source errors and optional evidence", () => {
+    const state = connectionReducer(initialState(), {
+      type: "sources_loading",
+    });
+    const next = connectionReducer(state, {
+      type: "sources_error",
+      message: "source list failed",
+      evidence,
+    });
+    expect(next.sourcesLoading).toBe(false);
+    expect(next.sourceError).toBe("source list failed");
+    expect(next.evidence).toEqual([evidence]);
+  });
+
+  it("appends protocol evidence records", () => {
+    const state = initialState();
+    const next = connectionReducer(state, {
+      type: "evidence_recorded",
+      record: evidence,
+    });
+    expect(next.evidence).toEqual([evidence]);
   });
 });
