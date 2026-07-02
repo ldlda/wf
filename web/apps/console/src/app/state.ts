@@ -9,6 +9,28 @@ export type ConnectionPhase =
   | "rpc_error"
   | "malformed_response";
 
+export type EvidenceRecord = {
+  readonly id: string;
+  readonly operation: string;
+  readonly label: string;
+  readonly equivalentCli: string;
+  readonly request: unknown;
+  readonly response: unknown;
+  readonly durationMs: number;
+};
+
+export type SourceRecord = {
+  readonly id: string;
+  readonly kind: string;
+  readonly enabled: boolean;
+  readonly description: string | null;
+  readonly toolCount: number;
+  readonly nodeSpecCount: number;
+  readonly reducerCount: number;
+  readonly promptCount: number;
+  readonly resourceCount: number;
+};
+
 export type ConnectionState = {
   readonly phase: ConnectionPhase;
   readonly draftTarget: string;
@@ -17,6 +39,10 @@ export type ConnectionState = {
   readonly storeRoot: string | null;
   readonly durationMs: number | null;
   readonly message: string | null;
+  readonly evidence: ReadonlyArray<EvidenceRecord>;
+  readonly sources: ReadonlyArray<SourceRecord>;
+  readonly sourcesLoading: boolean;
+  readonly sourceError: string | null;
 };
 
 export const STORAGE_KEY = "lda.workflowConsole.target";
@@ -50,13 +76,29 @@ export const initialState = (): ConnectionState => ({
   storeRoot: null,
   durationMs: null,
   message: null,
+  evidence: [],
+  sources: [],
+  sourcesLoading: false,
+  sourceError: null,
 });
 
 export type ConnectionAction =
   | { readonly type: "submit"; readonly target: string }
   | { readonly type: "success"; readonly data: ConnectionSuccess }
   | { readonly type: "failure"; readonly code: string; readonly message: string }
-  | { readonly type: "draft_changed"; readonly value: string };
+  | { readonly type: "draft_changed"; readonly value: string }
+  | { readonly type: "sources_loading" }
+  | {
+      readonly type: "sources_loaded";
+      readonly sources: ReadonlyArray<SourceRecord>;
+      readonly evidence: EvidenceRecord;
+    }
+  | {
+      readonly type: "sources_error";
+      readonly message: string;
+      readonly evidence?: EvidenceRecord;
+    }
+  | { readonly type: "evidence_recorded"; readonly record: EvidenceRecord };
 
 export const connectionReducer = (
   state: ConnectionState,
@@ -69,6 +111,9 @@ export const connectionReducer = (
         phase: "connecting",
         draftTarget: action.target,
         message: null,
+        sources: [],
+        sourceError: null,
+        sourcesLoading: false,
       };
 
     case "success": {
@@ -84,6 +129,7 @@ export const connectionReducer = (
         storeRoot: action.data.connection.storeRoot,
         durationMs: action.data.connection.durationMs,
         message: null,
+        sourcesLoading: true,
       };
     }
 
@@ -101,8 +147,45 @@ export const connectionReducer = (
         ...state,
         draftTarget: action.value,
       };
+
+    case "sources_loading":
+      return {
+        ...state,
+        sourcesLoading: true,
+        sourceError: null,
+      };
+
+    case "sources_loaded":
+      return {
+        ...state,
+        sources: action.sources,
+        sourcesLoading: false,
+        sourceError: null,
+        evidence: appendEvidence(state.evidence, action.evidence),
+      };
+
+    case "sources_error":
+      return {
+        ...state,
+        sourcesLoading: false,
+        sourceError: action.message,
+        evidence: action.evidence
+          ? appendEvidence(state.evidence, action.evidence)
+          : state.evidence,
+      };
+
+    case "evidence_recorded":
+      return {
+        ...state,
+        evidence: appendEvidence(state.evidence, action.record),
+      };
   }
 };
+
+const appendEvidence = (
+  existing: ReadonlyArray<EvidenceRecord>,
+  record: EvidenceRecord,
+): ReadonlyArray<EvidenceRecord> => [...existing, record];
 
 const mapCodeToPhase = (code: string): ConnectionPhase => {
   switch (code) {

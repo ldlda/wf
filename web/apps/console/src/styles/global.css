@@ -1,0 +1,324 @@
+:root {
+  --color-paper: #faf8f5;
+  --color-ink: #1a1a1a;
+  --color-slate: #5a5a5a;
+  --color-signal-green: #2d8a4e;
+  --color-amber: #b8860b;
+  --color-red: #c0392b;
+  --color-border: #d4d0cb;
+  --color-surface: #f0ede8;
+  --font-heading: "Barlow Condensed", sans-serif;
+  --font-body: "Source Sans 3", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+  background-color: var(--color-paper);
+  line-height: 1.5;
+  background-image: linear-gradient(
+      rgba(0, 0, 0, 0.015) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(0, 0, 0, 0.015) 1px, transparent 1px);
+  background-size: 2rem 2rem;
+}
+
+body {
+  margin: 0;
+  padding: 1.5rem;
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+h1 {
+  font-size: 1.75rem;
+}
+
+h2 {
+  font-size: 1.25rem;
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 0.25rem;
+  margin-bottom: 0.75rem;
+}
+
+h3 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--color-slate);
+  margin-bottom: 0.25rem;
+}
+
+section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Connection form */
+form {
+  display: flex;
+  gap: 0.5rem;
+  align-items: end;
+  flex-wrap: wrap;
+}
+
+label {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-slate);
+  flex-basis: 100%;
+}
+
+input[type="text"] {
+  flex: 1 1 20rem;
+  padding: 0.5rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--color-ink);
+}
+
+input[type="text"]:focus {
+  outline: 2px solid var(--color-signal-green);
+  outline-offset: -1px;
+}
+
+button {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--color-ink);
+  border-radius: 3px;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+button:hover:not(:disabled) {
+  background: var(--color-slate);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Status bar */
+[role="status"] {
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-slate);
+}
+
+/* Source inventory table */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+thead th {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-slate);
+  text-align: left;
+  padding: 0.35rem 0.5rem;
+  border-bottom: 2px solid var(--color-border);
+}
+
+tbody td {
+  padding: 0.35rem 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+tbody tr:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+/* Evidence drawer */
+.evidence-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.evidence-list li {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.evidence-list li:last-child {
+  border-bottom: none;
+}
+
+.evidence-toggle {
+  width: 100%;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.5rem 0;
+  background: none;
+  border: none;
+  border-radius: 0;
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  text-transform: none;
+  letter-spacing: normal;
+  cursor: pointer;
+  text-align: left;
+}
+
+.evidence-toggle:hover {
+  background: rgba(0, 0, 0, 0.02);
+}
+
+.evidence-op {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  min-width: 12rem;
+}
+
+.evidence-label {
+  flex: 1;
+  color: var(--color-slate);
+}
+
+.evidence-duration {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  color: var(--color-slate);
+}
+
+.evidence-detail {
+  padding: 0.75rem;
+  background: var(--color-paper);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  margin-bottom: 0.5rem;
+  animation: fadeIn 0.15s ease;
+}
+
+.evidence-field {
+  margin-bottom: 0.75rem;
+}
+
+.evidence-field:last-child {
+  margin-bottom: 0;
+}
+
+.evidence-field pre {
+  margin: 0;
+  padding: 0.5rem;
+  background: var(--color-ink);
+  color: var(--color-paper);
+  border-radius: 3px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+/* Layout grid */
+.app-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(22rem, 0.7fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.app-layout > section[aria-label="Connection"] {
+  grid-column: 1 / -1;
+}
+
+/* Motion */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sourceReveal {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+tbody tr {
+  animation: sourceReveal 0.15s ease both;
+}
+
+tbody tr:nth-child(1) { animation-delay: 0ms; }
+tbody tr:nth-child(2) { animation-delay: 30ms; }
+tbody tr:nth-child(3) { animation-delay: 60ms; }
+tbody tr:nth-child(4) { animation-delay: 90ms; }
+tbody tr:nth-child(5) { animation-delay: 120ms; }
+tbody tr:nth-child(6) { animation-delay: 150ms; }
+tbody tr:nth-child(7) { animation-delay: 180ms; }
+tbody tr:nth-child(8) { animation-delay: 210ms; }
+tbody tr:nth-child(9) { animation-delay: 240ms; }
+tbody tr:nth-child(10) { animation-delay: 270ms; }
+
+@media (prefers-reduced-motion: reduce) {
+  .evidence-detail,
+  tbody tr {
+    animation: none;
+  }
+}
+
+/* Responsive */
+@media (max-width: 850px) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  form {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  input[type="text"] {
+    flex-basis: auto;
+  }
+}

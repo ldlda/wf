@@ -1,35 +1,5 @@
-import { useReducer, type FormEvent } from "react";
-import {
-  connectionReducer,
-  initialState,
-  type ConnectionAction,
-} from "../app/state.js";
-import { connectToServer } from "../connection/api.js";
-
-const handleSubmit = async (
-  dispatch: React.Dispatch<ConnectionAction>,
-  target: string,
-) => {
-  dispatch({ type: "submit", target });
-  try {
-    const response = await connectToServer(target);
-    if (response.ok) {
-      dispatch({ type: "success", data: response });
-    } else {
-      dispatch({
-        type: "failure",
-        code: response.error.code,
-        message: response.error.message,
-      });
-    }
-  } catch (e: unknown) {
-    dispatch({
-      type: "failure",
-      code: "rpc_protocol_error",
-      message: e instanceof Error ? e.message : "unknown error",
-    });
-  }
-};
+import type { FormEvent } from "react";
+import type { ConnectionState } from "../app/state.js";
 
 const phaseLabel = (phase: string): string => {
   switch (phase) {
@@ -52,25 +22,27 @@ const phaseLabel = (phase: string): string => {
   }
 };
 
-export const ConnectionHeader = () => {
-  const [state, dispatch] = useReducer(connectionReducer, null, initialState);
+type Props = {
+  readonly state: ConnectionState;
+  readonly onSubmit: (target: string) => void;
+  readonly onDraftChange: (value: string) => void;
+};
 
-  const onSubmit = (e: FormEvent) => {
+export const ConnectionHeader = ({ state, onSubmit, onDraftChange }: Props) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    void handleSubmit(dispatch, state.draftTarget);
+    onSubmit(state.draftTarget);
   };
 
   return (
     <section aria-label="Connection">
-      <form onSubmit={onSubmit}>
+      <form onSubmit={handleSubmit}>
         <label htmlFor="target-input">Workflow JSON-RPC URL</label>
         <input
           id="target-input"
           type="text"
           value={state.draftTarget}
-          onChange={(e) =>
-            dispatch({ type: "draft_changed", value: e.target.value })
-          }
+          onChange={(e) => onDraftChange(e.target.value)}
           disabled={state.phase === "connecting"}
         />
         <button type="submit" disabled={state.phase === "connecting"}>
