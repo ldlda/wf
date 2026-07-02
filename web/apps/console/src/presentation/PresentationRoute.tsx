@@ -45,12 +45,21 @@ export const PresentationRoute = () => {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (demo.state.phase === "ready") {
+      demo.setMode("replay");
+      demo.start();
+    }
+  }, [demo]);
+
   return (
     <main className="presentation-route" aria-label="lda.chat presentation">
       <PresentationStage
         state={state}
         demo={demo}
         jump={(beatId) => dispatch({ type: "jump", beat: beatId })}
+        selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
+        clearNode={() => dispatch({ type: "clear_node" })}
       />
     </main>
   );

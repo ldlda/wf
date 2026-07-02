@@ -88,3 +88,41 @@
     grid-template-columns: 1fr;
   }
 }
+
+.workflow-graph-stage {
+  position: relative;
+  min-height: 16rem;
+  border: 1px solid oklch(0.32 0.04 250);
+  background: oklch(0.14 0.025 250);
+  overflow: hidden;
+}
+
+.workflow-graph-stage__node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border: 1px solid oklch(0.44 0.055 250);
+  background: oklch(0.2 0.03 250);
+  color: inherit;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.8rem;
+}
+
+.workflow-graph-stage__node[data-kind="interrupt"] {
+  border-color: oklch(0.76 0.18 70);
+}
+
+.workflow-graph-stage__node[data-selected="true"] {
+  outline: 3px solid oklch(0.72 0.17 195);
+}
+
+.node-spotlight {
+  position: fixed;
+  right: 1.25rem;
+  top: 1.25rem;
+  width: min(28rem, calc(100vw - 2.5rem));
+  border: 1px solid oklch(0.42 0.05 250);
+  background: oklch(0.17 0.025 250);
+  color: inherit;
+  padding: 1rem;
+  z-index: 20;
+}

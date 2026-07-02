@@ -1,4 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { PresentationRoute } from "./PresentationRoute.js";
 
@@ -28,5 +29,13 @@ describe("PresentationRoute", () => {
     expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
     expect(screen.getByLabelText(/presentation beat rail/i)).toBeInTheDocument();
     expect(screen.getByText(/Replay/)).toBeInTheDocument();
+  });
+
+  it("shows node spotlight when a graph node is selected", async () => {
+    render(<PresentationRoute />);
+    await userEvent.click(screen.getByRole("button", { name: /issue review/i }));
+
+    expect(screen.getByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
+    expect(screen.getByText("NodeUse")).toBeInTheDocument();
   });
 });
