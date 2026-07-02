@@ -1,7 +1,9 @@
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App.js";
+import { AppRoutes } from "./AppRoutes.js";
 import { callOperation, connectToServer } from "../connection/api.js";
 import type { RpcResponse } from "../connection/contracts.js";
 
@@ -182,5 +184,16 @@ describe("App", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Replay" }));
     expect(screen.getByRole("button", { name: /start presentation/i })).toBeEnabled();
+  });
+
+  it("routes to presentation mode separately from the console", () => {
+    render(
+      <MemoryRouter initialEntries={["/present"]}>
+        <AppRoutes />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("main", { name: /lda.chat presentation/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText("Lifecycle Explorer")).toBeNull();
   });
 });

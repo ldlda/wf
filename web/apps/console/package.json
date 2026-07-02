@@ -15,8 +15,10 @@
     "@fontsource/barlow-condensed": "5.2.8",
     "@fontsource/ibm-plex-mono": "5.2.7",
     "@xyflow/react": "12.11.1",
+    "motion": "^12.42.2",
     "react": "19.2.7",
     "react-dom": "19.2.7",
+    "react-router-dom": "^7.18.1",
     "valibot": "1.4.2"
   },
   "devDependencies": {
