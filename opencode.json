@@ -13,14 +13,24 @@
   "mcp": {
     "serena": {
       "type": "local",
-      "command": ["serena", "start-mcp-server", "--project-from-cwd"],
+      "command": ["serena", "start-mcp-server", "--project-from-cwd"]
+      //   "enabled": false
+    },
+    "Astro docs": {
+      "type": "remote",
+      "url": "https://mcp.docs.astro.build/mcp",
+      "enabled": false
+    },
+    "context7": {
+      "type": "local",
+      "command": ["npx", "-y", "@upstash/context7-mcp"],
       "enabled": false
     }
   },
   "permission": {
     "skill": {
-        "wf-*": "allow",
-        "*": "deny"
+      "wf-*": "allow"
+      // "*": "deny"
     }
   }
 }

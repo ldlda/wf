@@ -49,6 +49,9 @@
     \end{minipage}%
   }
   \end{titlepage}
+  % The titlepage environment resets the page counter. Continue with physical
+  % page 2 so PDF page labels remain unique for viewers and print dialogs.
+  \setcounter{page}{2}
   \clearpage
   \thispagestyle{empty}
   \section*{Supervisor Certification}
