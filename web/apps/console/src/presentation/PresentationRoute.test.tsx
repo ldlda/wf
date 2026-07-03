@@ -45,4 +45,14 @@ describe("PresentationRoute", () => {
 
     expect(await screen.findByText(/workflow.runs.start/i)).toBeInTheDocument();
   });
+
+  it("shows resume and trace operation blocks for later beats", async () => {
+    render(<PresentationRoute />);
+
+    await userEvent.click(screen.getByRole("button", { name: /resume output/i }));
+    expect(await screen.findByText(/workflow.runs.resume/i)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: /trace evidence/i }));
+    expect(await screen.findByText(/workflow.runs.trace/i)).toBeInTheDocument();
+  });
 });

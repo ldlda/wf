@@ -73,7 +73,7 @@ Implementation order:
    Design:
    [`React presentation mode`](superpowers/specs/2026-07-03-react-presentation-mode-design.md).
    Implementation:
-   [`React presentation mode plan`](superpowers/plans/2026-07-03-react-presentation-mode.md).
+   [`React presentation mode plan`](historical/superpowers/plans/2026-07-03-react-presentation-mode.md).
 8. Add a constrained demo agent that invokes one prepared recipe macro.
 9. Add a static slide/appendix shell only after presentation mode is clear.
    Astro remains an option, not the default next surface.

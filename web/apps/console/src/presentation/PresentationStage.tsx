@@ -9,6 +9,7 @@ import { StageCaption } from "./StageCaption.js";
 import { WorkflowGraphStage } from "./WorkflowGraphStage.js";
 import type { PresentationState } from "./presentation-state.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
+import type { DemoEventStage } from "../demo/timeline/models.js";
 
 type PresentationStageProps = {
   readonly state: PresentationState;
@@ -19,6 +20,13 @@ type PresentationStageProps = {
   readonly clearNode: () => void;
   readonly openEvidence: () => void;
   readonly closeOverlay: () => void;
+};
+
+const operationStageByBeat: Partial<Record<BeatId, DemoEventStage>> = {
+  "tool-call-start": "run_start",
+  "interrupt-approval": "interrupt",
+  "resume-output": "run_resume",
+  "trace-evidence": "trace_read",
 };
 
 export const PresentationStage = ({
@@ -32,11 +40,11 @@ export const PresentationStage = ({
   closeOverlay,
 }: PresentationStageProps) => {
   const beat = presentationBeats.find((candidate) => candidate.id === state.beat) ?? presentationBeats[0]!;
+  const operationStage = operationStageByBeat[state.beat] ?? null;
 
-  const operationEvent =
-    demo.state.events.find((event) => event.stage === "run_start") ??
-    demo.state.events.find((event) => event.operation !== null) ??
-    null;
+  const operationEvent = operationStage
+    ? demo.state.events.find((event) => event.stage === operationStage) ?? null
+    : null;
 
   return (
     <div className="presentation-stage" data-beat={state.beat}>

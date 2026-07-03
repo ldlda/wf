@@ -64,6 +64,23 @@ The browser communicates with Hono at `/api/connect` and `/api/rpc`. Hono
 validates targets against loopback policy, executes typed JSON-RPC calls
 through Effect, and returns plain JSON DTOs to the browser.
 
+## Product And Design Context
+
+The console app carries two design-context files:
+
+- [`apps/console/PRODUCT.md`](apps/console/PRODUCT.md) captures the strategic
+  product contract: users, purpose, personality, anti-references, and design
+  principles.
+- [`apps/console/DESIGN.md`](apps/console/DESIGN.md) captures the current visual
+  system: tokens, typography, components, elevation, and do/don't rules.
+
+This structure comes from the local Impeccable design workflow. `PRODUCT.md`
+uses its product-register format, and `DESIGN.md` follows the DESIGN.md
+convention: YAML frontmatter for machine-readable tokens, followed by six fixed
+sections (`Overview`, `Colors`, `Typography`, `Elevation`, `Components`, and
+`Do's and Don'ts`). Future UI work should read these files before changing
+visual direction.
+
 ## Lifecycle Explorer
 
 After connecting, the console displays the lifecycle explorer with three
