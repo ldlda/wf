@@ -1,4 +1,5 @@
 import type { EvidenceRecord } from "../app/state.js";
+import type { AgentMessage } from "../demo/agent/events.js";
 import { presentationBeats, type BeatId } from "./beats.js";
 import { BeatRail } from "./BeatRail.js";
 import { EvidenceDrawer } from "./EvidenceDrawer.js";
@@ -15,6 +16,9 @@ type PresentationStageProps = {
   readonly state: PresentationState;
   readonly demo: DemoTimelineController;
   readonly evidence: readonly EvidenceRecord[];
+  readonly messages?: ReadonlyArray<AgentMessage>;
+  readonly onApprove?: (() => void) | undefined;
+  readonly onDeny?: (() => void) | undefined;
   readonly jump: (beat: BeatId) => void;
   readonly selectNode: (nodeId: string) => void;
   readonly clearNode: () => void;
@@ -33,6 +37,9 @@ export const PresentationStage = ({
   state,
   demo,
   evidence,
+  messages,
+  onApprove,
+  onDeny,
   jump,
   selectNode,
   clearNode,
@@ -48,7 +55,7 @@ export const PresentationStage = ({
 
   return (
     <div className="presentation-stage" data-beat={state.beat}>
-      <OperatorChat state={state} />
+      <OperatorChat state={state} messages={messages} onApprove={onApprove} onDeny={onDeny} />
       <section className="presentation-stage__main">
         <header className="presentation-stage__header">
           <StageCaption eyebrow="lda.chat defense" title={beat.title}>

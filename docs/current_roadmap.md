@@ -74,8 +74,13 @@ Implementation order:
    [`React presentation mode`](superpowers/specs/2026-07-03-react-presentation-mode-design.md).
    Implementation:
    [`React presentation mode plan`](historical/superpowers/plans/2026-07-03-react-presentation-mode.md).
-8. Add a constrained demo agent that invokes one prepared recipe macro. Design:
+8. Completed: constrained demo agent that invokes one prepared recipe macro.
+   Live mode is deferred to a future slice; the prepared driver is replay-only
+   for now.
+   Design:
    [`constrained demo agent`](superpowers/specs/2026-07-03-constrained-demo-agent-design.md).
+   Implementation:
+   [`constrained demo agent plan`](historical/superpowers/plans/2026-07-03-constrained-demo-agent.md).
 9. Add a static slide/appendix shell only after presentation mode is clear.
    Astro remains an option, not the default next surface.
 

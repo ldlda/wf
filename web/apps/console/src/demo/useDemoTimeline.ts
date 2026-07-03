@@ -57,6 +57,7 @@ const deriveMissingMessage = (mode: DemoMode, target: string | null): string | n
 export const useDemoTimeline = (
   target: string | null,
   recordEvidence: EvidenceRecorder,
+  recording?: import("./timeline/models.js").DemoRecording,
 ): DemoTimelineController => {
   const [state, dispatch] = useReducer(demoTimelineReducer, initialDemoTimelineState);
   const liveContextRef = useRef<LiveDemoContext>(initialLiveDemoContext);
@@ -66,7 +67,7 @@ export const useDemoTimeline = (
   const generationRef = useRef(0);
   const [inFlight, setInFlight] = useState(false);
   const approvalRef = useRef<DemoApproval | null>(null);
-  const activeRecording = useRef(loadCanonicalDemoRecording());
+  const activeRecording = useRef(recording ?? loadCanonicalDemoRecording());
 
   const [interruptPayload, setInterruptPayload] = useState<LdaReportInterruptPayload | null>(null);
   const [output, setOutput] = useState<LdaReportOutput | null>(null);

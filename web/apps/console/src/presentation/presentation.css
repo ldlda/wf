@@ -167,3 +167,28 @@
     scroll-behavior: auto !important;
   }
 }
+
+.chat-tool-part {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin-top: 0.35rem;
+  padding: 0.35rem 0.45rem;
+  border: 1px solid color-mix(in oklch, var(--presentation-line), transparent 25%);
+  border-radius: 0.45rem;
+  font-size: 0.78rem;
+}
+
+.chat-tool-part span {
+  color: var(--presentation-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.chat-tool-part--presentation {
+  border-color: color-mix(in oklch, var(--presentation-accent), transparent 25%);
+}
+
+.chat-error {
+  color: var(--presentation-red);
+}

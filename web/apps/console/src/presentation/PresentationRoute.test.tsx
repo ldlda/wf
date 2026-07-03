@@ -55,4 +55,14 @@ describe("PresentationRoute", () => {
     await userEvent.click(screen.getByRole("button", { name: /trace evidence/i }));
     expect(await screen.findByText(/workflow.runs.trace/i)).toBeInTheDocument();
   });
+
+  it("runs the prepared agent and applies the interrupt node action", async () => {
+    render(<PresentationRoute />);
+
+    await userEvent.click(screen.getByRole("button", { name: /run prepared agent/i }));
+
+    expect(await screen.findByText(/prepared workflow recipe/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/selectWorkflowNode/i).length).toBeGreaterThanOrEqual(2);
+    expect(await screen.findByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
+  });
 });

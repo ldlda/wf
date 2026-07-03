@@ -65,22 +65,23 @@ driver can feed the same standard chat/presentation UI.
 ```ts
 type AgentDriverKind = "prepared-recipe" | "ai-sdk";
 
-type AgentMessageEvent =
-  | AgentTextEvent
-  | AgentToolCallEvent
-  | AgentToolResultEvent
-  | AgentApprovalRequestEvent
-  | AgentFailureEvent;
+type AgentApproval = { readonly approved: boolean; readonly comment: string };
 
 type AgentDriver = {
   readonly kind: AgentDriverKind;
-  readonly start: (input: AgentRunInput) => AsyncIterable<AgentMessageEvent>;
+  readonly run: (
+    input: AgentRunInput,
+    signal: AbortSignal,
+    requestApproval: () => Promise<AgentApproval>,
+  ) => AsyncIterable<AgentMessage>;
 };
 ```
 
 The first implementation only ships the `prepared-recipe` driver. It produces
 events from a hard-coded recipe, calls the existing demo timeline execution
-path, and emits presentation actions through the same event stream.
+path, and emits presentation actions through the same event stream. The
+prepared driver ignores the `requestApproval` callback (deterministic, no
+approval needed).
 
 The `ai-sdk` kind is reserved for a future driver. The boundary should be shaped
 so a server-side Vercel AI SDK integration can map `streamText` parts into the
@@ -244,18 +245,20 @@ driver composition.
 PresentationRoute
   -> useDemoAgent(driver = preparedRecipe)
   -> PreparedRecipeDriver
-  -> WorkflowToolAdapter -> existing demo timeline live/replay operation path
   -> PresentationToolAdapter -> selected node / beat / evidence state
-  -> AgentMessageEvent[]
+  -> AgentMessage[]
   -> StandardChat / OperationBlock / EvidenceDrawer / DemoTimeline
 ```
 
-In replay mode, the driver reads from the reviewed recording and emits the
-matching agent events without a server.
+The prepared driver reads from the reviewed recording and emits agent events
+without a server. It passes operation evidence to the hook, which forwards it
+to the evidence drawer.
 
 In live mode, the driver calls the connected workflow server through the
-existing RPC operation path. Live mode remains explicit and disabled without a
-target.
+existing RPC operation path. Live mode is deferred to a future slice; the
+prepared driver is replay-only for now. The `AgentDriver` interface includes
+`requestApproval` for future live-mode approval, but the prepared driver
+currently ignores it.
 
 ## Future AI SDK Path
 
@@ -328,7 +331,6 @@ Unit tests should cover:
 - prepared driver cannot emit operations outside the recipe;
 - prepared driver cannot emit presentation actions outside the allowed tool set;
 - replay mode produces agent events without a target;
-- live mode delegates to the operation path in the expected order;
 - presentation tool events select the expected workflow node or evidence target;
 - approval event pauses until selected issues are submitted or cancelled;
 - reset/start clears stale messages, approvals, outputs, and in-flight work;
@@ -351,7 +353,7 @@ The slice is complete when:
 
 1. presentation chat is driven by agent events instead of fixed static copy;
 2. the prepared recipe can run fully in replay mode without a server;
-3. live mode uses the existing workflow operation path and remains explicit;
+3. live mode is deferred; the prepared driver is replay-only;
 4. tool-call events map to operation blocks and evidence records;
 5. presentation tool events can focus the graph/evidence stage;
 6. the code has a named driver seam for a future AI SDK implementation;
@@ -368,3 +370,5 @@ The slice is complete when:
 - Persisting agent sessions.
 - Re-styling the presentation.
 - Replacing the lifecycle explorer.
+- Live mode: the prepared driver is replay-only for now. Live mode uses the
+  existing workflow operation path and remains explicit.

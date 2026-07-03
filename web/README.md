@@ -177,3 +177,19 @@ navigation, operation blocks, graph node spotlight, and evidence drawer.
 pnpm --dir web dev
 # open http://127.0.0.1:5173/present
 ```
+
+### Constrained Demo Agent
+
+`/present` includes a prepared agent recipe for the thesis readiness report.
+The recipe is deterministic: it emits standard chat message parts, workflow tool
+calls, and presentation tool actions without requiring a model provider key.
+
+The current prepared recipe can:
+
+- identify the `lda_report_case_study.default` workflow deployment;
+- show tool calls for run start, resume, and trace read;
+- focus the `review_issues` interrupt node through a presentation tool action;
+- open evidence linked to the run trace.
+
+This is intentionally not a general autonomous planner. A future server-side
+Vercel AI SDK driver can feed the same message-part interface.
