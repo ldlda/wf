@@ -1,16 +1,24 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ldaReportSetupCommands } from "./ldaReportDemoConfig.js";
 import { DemoTimelineControls } from "./DemoTimelineControls.js";
 import { DemoTimeline } from "./DemoTimeline.js";
 import type { DemoTimelineController } from "./useDemoTimeline.js";
 
+const DEFAULT_REVIEW_COMMENT = "Create selected issues before the defense.";
+
 export const LdaReportDemoPanel = ({ controller }: { readonly controller: DemoTimelineController }) => {
   const { state } = controller;
   const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(new Set());
-  const [comment, setComment] = useState("Create selected issues before the defense.");
+  const [comment, setComment] = useState(DEFAULT_REVIEW_COMMENT);
 
   const proposedIssues = controller.interruptPayload?.proposed_issues ?? [];
   const selectedIssueIds = useMemo(() => [...selectedIds], [selectedIds]);
+
+  useEffect(() => {
+    setSelectedIds(new Set());
+    setComment(DEFAULT_REVIEW_COMMENT);
+  }, [state.mode, state.phase, controller.interruptPayload]);
+
   return (
     <section aria-label="lda report workflow demo" className="demo-panel">
       <div className="demo-panel__header">

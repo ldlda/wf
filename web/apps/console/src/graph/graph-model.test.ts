@@ -64,6 +64,24 @@ describe("buildWorkflowGraph", () => {
     expect(openNode?.data.nodeRef).toBe("local.browser_click.open_click_page");
   });
 
+  it("labels subgraph nodes from the workflow name", () => {
+    const model = buildWorkflowGraph({
+      nodes: [
+        {
+          id: "nested",
+          type: "subgraph",
+          workflow: "workflows.report.review",
+          input: [],
+          output: [],
+        },
+      ],
+      edges: [],
+    });
+
+    expect(model.nodes[0]?.data.kind).toBe("subgraph");
+    expect(model.nodes[0]?.data.label).toBe("review");
+  });
+
   it("creates edges from plan edges", () => {
     const model = buildWorkflowGraph(samplePlan);
     expect(model.edges.length).toBe(5);

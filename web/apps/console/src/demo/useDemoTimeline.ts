@@ -63,6 +63,7 @@ export const useDemoTimeline = (
   const recordEvidenceRef = useRef(recordEvidence);
   recordEvidenceRef.current = recordEvidence;
   const inFlightRef = useRef(false);
+  const generationRef = useRef(0);
   const [inFlight, setInFlight] = useState(false);
   const approvalRef = useRef<DemoApproval | null>(null);
   const activeRecording = useRef(loadCanonicalDemoRecording());
@@ -71,9 +72,25 @@ export const useDemoTimeline = (
   const [output, setOutput] = useState<LdaReportOutput | null>(null);
   const [trace, setTrace] = useState<TracePage | null>(null);
 
+  const resetRuntime = useCallback(() => {
+    generationRef.current++;
+    inFlightRef.current = false;
+    setInFlight(false);
+    liveContextRef.current = initialLiveDemoContext;
+    approvalRef.current = null;
+    setInterruptPayload(null);
+    setOutput(null);
+    setTrace(null);
+  }, []);
+
+  useEffect(() => {
+    resetRuntime();
+  }, [target, resetRuntime]);
+
   const step = useCallback(async () => {
     if (inFlightRef.current) return;
     if (state.appliedCount >= state.events.length && state.mode === "replay") return;
+    const generation = generationRef.current;
     inFlightRef.current = true;
     setInFlight(true);
     try {
@@ -102,6 +119,7 @@ export const useDemoTimeline = (
         const approval = approvalRef.current;
         approvalRef.current = null;
         const result = await executeLiveDemoStep(target, liveContextRef.current, approval ?? undefined);
+        if (generation !== generationRef.current) return;
         liveContextRef.current = result.context;
         for (const event of result.events) {
           dispatch({ type: "append_live_event", event });
@@ -162,8 +180,10 @@ export const useDemoTimeline = (
         dispatch({ type: "fail", message });
       }
     } finally {
-      inFlightRef.current = false;
-      setInFlight(false);
+      if (generation === generationRef.current) {
+        inFlightRef.current = false;
+        setInFlight(false);
+      }
     }
   }, [state.mode, state.appliedCount, state.events, target]);
 
@@ -177,25 +197,19 @@ export const useDemoTimeline = (
   }, [state.phase, state.autoplay, state.appliedCount, step]);
 
   const setMode = useCallback((mode: DemoMode) => {
+    resetRuntime();
     dispatch({ type: "set_mode", mode });
-    liveContextRef.current = initialLiveDemoContext;
-    setInterruptPayload(null);
-    setOutput(null);
-    setTrace(null);
-  }, []);
+  }, [resetRuntime]);
 
   const start = useCallback(() => {
+    resetRuntime();
     if (state.mode === "replay") {
       const recording = activeRecording.current;
       dispatch({ type: "start", mode: "replay", events: recording.events });
     } else {
-      liveContextRef.current = initialLiveDemoContext;
       dispatch({ type: "start", mode: "live", events: [] });
     }
-    setInterruptPayload(null);
-    setOutput(null);
-    setTrace(null);
-  }, [state.mode]);
+  }, [resetRuntime, state.mode]);
 
   const pause = useCallback(() => dispatch({ type: "pause" }), []);
   const play = useCallback(() => dispatch({ type: "play" }), []);
@@ -229,12 +243,9 @@ export const useDemoTimeline = (
   }, []);
 
   const restart = useCallback(() => {
+    resetRuntime();
     dispatch({ type: "restart" });
-    liveContextRef.current = initialLiveDemoContext;
-    setInterruptPayload(null);
-    setOutput(null);
-    setTrace(null);
-  }, []);
+  }, [resetRuntime]);
 
   return {
     state,

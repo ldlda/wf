@@ -51,6 +51,25 @@ export type LiveStepResult = {
   readonly events: ReadonlyArray<DemoEvent>;
 };
 
+const baseDemoEvent = (
+  context: LiveDemoContext,
+  stage: DemoEventStage,
+  runId: string | null,
+  sequenceOffset = 0,
+): Pick<DemoEvent, "id" | "sequence" | "stage" | "resultingIds" | "recordedAt"> => {
+  const sequence = context.nextSequence + sequenceOffset;
+  return {
+    id: `live-${sequence}-${stage}-${runId ?? "pending"}`,
+    sequence,
+    stage,
+    resultingIds: {
+      deploymentId: LDA_REPORT_DEPLOYMENT_ID,
+      runId,
+    },
+    recordedAt: new Date().toISOString(),
+  };
+};
+
 const eventFromResult = (
   context: LiveDemoContext,
   stage: DemoEventStage,
@@ -60,9 +79,7 @@ const eventFromResult = (
   result: RpcResponse,
   runId: string | null,
 ): DemoEvent => ({
-  id: `live-${context.nextSequence}-${stage}-${runId ?? "pending"}`,
-  sequence: context.nextSequence,
-  stage,
+  ...baseDemoEvent(context, stage, runId),
   operation,
   reason: result.ok ? reason : result.error.message,
   equivalentCli: result.ok ? result.equivalentCli : null,
@@ -70,11 +87,6 @@ const eventFromResult = (
   rawResponse: result.exchange.response,
   interpreted: result.ok ? result.interpreted : null,
   durationMs: result.ok ? result.durationMs : 0,
-  resultingIds: {
-    deploymentId: LDA_REPORT_DEPLOYMENT_ID,
-    runId,
-  },
-  recordedAt: new Date().toISOString(),
 });
 
 const syntheticEvent = (
@@ -85,9 +97,7 @@ const syntheticEvent = (
   runId: string | null,
   sequenceOffset = 0,
 ): DemoEvent => ({
-  id: `live-${context.nextSequence + sequenceOffset}-${stage}-${runId ?? "pending"}`,
-  sequence: context.nextSequence + sequenceOffset,
-  stage,
+  ...baseDemoEvent(context, stage, runId, sequenceOffset),
   operation: null,
   reason,
   equivalentCli: null,
@@ -95,8 +105,6 @@ const syntheticEvent = (
   rawResponse: null,
   interpreted,
   durationMs: 0,
-  resultingIds: { deploymentId: LDA_REPORT_DEPLOYMENT_ID, runId },
-  recordedAt: new Date().toISOString(),
 });
 
 const operationForStage = (stage: LiveDemoStage): string | null => {
@@ -118,9 +126,7 @@ export const failedLiveDemoEvent = (
   context: LiveDemoContext,
   reason: string,
 ): DemoEvent => ({
-  id: `live-${context.nextSequence}-failed-${context.runId ?? "pending"}`,
-  sequence: context.nextSequence,
-  stage: "failed",
+  ...baseDemoEvent(context, "failed", context.runId),
   operation: operationForStage(context.nextStage),
   reason,
   equivalentCli: null,
@@ -128,11 +134,6 @@ export const failedLiveDemoEvent = (
   rawResponse: null,
   interpreted: null,
   durationMs: 0,
-  resultingIds: {
-    deploymentId: LDA_REPORT_DEPLOYMENT_ID,
-    runId: context.runId,
-  },
-  recordedAt: new Date().toISOString(),
 });
 
 export const executeLiveDemoStep = async (
@@ -238,6 +239,19 @@ export const executeLiveDemoStep = async (
         };
       }
       const detail = decodeRunDetail(result.interpreted);
+      if (detail.status !== "completed") {
+        const failed = syntheticEvent(
+          context,
+          "failed",
+          `Demo resume returned ${detail.status} instead of completed.`,
+          result.interpreted,
+          detail.runId,
+        );
+        return {
+          events: [failed],
+          context: { ...context, nextStage: "done", runId: detail.runId, nextSequence: context.nextSequence + 1 },
+        };
+      }
       const output = parseLdaReportOutput(detail.output);
       return {
         events: [eventFromResult(context, "run_resume", "workflow.runs.resume", "Resume the interrupted run.", params, result, context.runId)],

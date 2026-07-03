@@ -12,6 +12,7 @@ export const BeatRail = ({ activeBeat, jump }: BeatRailProps) => (
         key={beat.id}
         type="button"
         data-active={beat.id === activeBeat}
+        aria-current={beat.id === activeBeat ? "step" : undefined}
         onClick={() => jump(beat.id)}
       >
         <span>{beat.lifecycleStep}</span>

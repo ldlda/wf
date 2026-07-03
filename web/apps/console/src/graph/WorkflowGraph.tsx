@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, type KeyboardEvent } from "react";
 import {
   ReactFlow,
   Background,
@@ -39,10 +39,16 @@ const nodeColor = (data: WorkflowGraphNodeData): string => {
 
 const CustomNode = ({ data, selected }: { data: WorkflowGraphNodeData; selected: boolean }) => {
   const isActive = (data as WorkflowGraphNodeData & { isActive?: boolean }).isActive;
+  const handleKeyDown = (event: KeyboardEvent) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    data.onSelect?.(data.nodeId);
+  };
   return (
     <div
       role="button"
       tabIndex={0}
+      onKeyDown={handleKeyDown}
       data-active={isActive}
       data-node-id={data.nodeId}
       className={`graph-node graph-node--${data.kind} ${selected ? "graph-node--selected" : ""} ${isActive ? "graph-node--active" : ""}`}
@@ -69,9 +75,9 @@ export const WorkflowGraph = ({ model, activeNodeId = null, onNodeSelect }: Work
         id: n.id,
         type: "custom",
         position: n.position,
-        data: { ...n.data, isActive: activeNodeId === n.id },
+        data: { ...n.data, isActive: activeNodeId === n.id, onSelect: onNodeSelect },
       })),
-    [model.nodes, activeNodeId],
+    [model.nodes, activeNodeId, onNodeSelect],
   );
 
   const edges: Edge[] = useMemo(

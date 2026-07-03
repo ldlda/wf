@@ -15,6 +15,7 @@ export type WorkflowGraphNodeData = {
   readonly label: string;
   readonly nodeRef: string | null;
   readonly raw: Readonly<Record<string, unknown>>;
+  readonly onSelect?: (nodeId: string) => void;
 };
 
 export type WorkflowGraphNode = {
@@ -66,6 +67,14 @@ const buildLabel = (node: Record<string, unknown>): string => {
   if (type === "interrupt") return (node.kind as string) ?? "Interrupt";
   if (type === "foreach") return "For Each";
   if (type === "join") return "Join";
+  if (type === "subgraph") {
+    const workflowRef = node.workflow as string | undefined;
+    if (workflowRef) {
+      const parts = workflowRef.split(".");
+      return parts[parts.length - 1] ?? workflowRef;
+    }
+    return "Subgraph";
+  }
   const nodeRef = node.node as string | undefined;
   if (nodeRef) {
     const parts = nodeRef.split(".");

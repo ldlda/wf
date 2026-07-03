@@ -265,6 +265,13 @@ tbody tr:hover {
   height: 34rem;
 }
 
+@media (max-height: 760px) {
+  .graph-content,
+  .workflow-graph {
+    height: 24rem;
+  }
+}
+
 .workflow-graph {
   width: 100%;
   border: 1px solid var(--color-border);
@@ -273,11 +280,11 @@ tbody tr:hover {
   overflow: hidden;
 }
 
-section[aria-label="Lifecycle Explorer"]:has(.graph-content) {
+[data-panel="lifecycle-explorer"]:has(.graph-content) {
   grid-column: 1 / -1;
 }
 
-.app-layout:has(.graph-content) > section[aria-label="Source Inventory"] {
+.app-layout:has(.graph-content) > [data-panel="source-inventory"] {
   display: none;
 }
 

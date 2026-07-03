@@ -6,6 +6,7 @@ import { buildWorkflowGraph } from "../graph/graph-model.js";
 import { WorkflowGraph } from "../graph/WorkflowGraph.js";
 import { buildTraceFrames } from "../execution/trace-model.js";
 import { ExecutionView } from "../execution/ExecutionView.js";
+import type { LoadState } from "./state.js";
 
 type LifecycleExplorerProps = {
   readonly controller: LifecycleExplorerController;
@@ -13,18 +14,24 @@ type LifecycleExplorerProps = {
 
 type FocusMode = "lifecycle" | "graph" | "execution" | "raw";
 
+const loadedItems = <T,>(
+  state: LoadState<{ readonly items: ReadonlyArray<T> }>,
+): ReadonlyArray<T> =>
+  state.phase === "loaded" ? state.value.items : state.phase === "loading" || state.phase === "error" ? state.previous?.items ?? [] : [];
+
+const listStatus = <T,>(label: string, state: LoadState<T>) => {
+  if (state.phase === "loading") return <p role="status">Loading {label}...</p>;
+  if (state.phase === "error") return <p role="alert">Could not load {label}: {state.message}</p>;
+  return null;
+};
+
 export const LifecycleExplorer = ({ controller }: LifecycleExplorerProps) => {
   const { state } = controller;
   const [focusMode, setFocusMode] = useState<FocusMode>("lifecycle");
 
-  const artifacts =
-    state.artifactList.phase === "loaded" ? state.artifactList.value.items : [];
-  const deployments =
-    state.deploymentList.phase === "loaded"
-      ? state.deploymentList.value.items
-      : [];
-  const runs =
-    state.runList.phase === "loaded" ? state.runList.value.items : [];
+  const artifacts = loadedItems(state.artifactList);
+  const deployments = loadedItems(state.deploymentList);
+  const runs = loadedItems(state.runList);
 
   const graphModel = useMemo(() => {
     if (!state.artifactDetail?.plan) return null;
@@ -74,6 +81,16 @@ export const LifecycleExplorer = ({ controller }: LifecycleExplorerProps) => {
 
       {focusMode === "lifecycle" && (
         <div className="lifecycle-content">
+          <div className="lifecycle-status">
+            {listStatus("artifacts", state.artifactList)}
+            {listStatus("deployments", state.deploymentList)}
+            {listStatus("runs", state.runList)}
+            {state.errors.map((error) => (
+              <p role="alert" key={`${error.operation}-${error.timestamp}`}>
+                {error.operation}: {error.message}
+              </p>
+            ))}
+          </div>
           <RecordColumns
             artifacts={artifacts}
             deployments={deployments}

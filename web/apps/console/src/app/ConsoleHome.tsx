@@ -169,7 +169,7 @@ export const ConsoleHome = () => {
         loading={state.sourcesLoading}
         error={state.sourceError}
       />
-      <section aria-label="Lifecycle Explorer" data-testid="lifecycle-explorer">
+      <section aria-label="Lifecycle Explorer" data-testid="lifecycle-explorer" data-panel="lifecycle-explorer">
         <LifecycleExplorer controller={lifecycleController} />
       </section>
     </div>

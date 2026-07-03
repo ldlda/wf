@@ -19,7 +19,7 @@ describe("PresentationRoute", () => {
 
     expect(screen.getByText(/Human approval is a typed workflow boundary/i)).toBeInTheDocument();
 
-    window.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowRight" }));
+    await userEvent.keyboard("{ArrowRight}");
     expect(await screen.findByText(/Resuming commits the approved branch/i)).toBeInTheDocument();
   });
 
@@ -36,7 +36,7 @@ describe("PresentationRoute", () => {
     await userEvent.click(screen.getByRole("button", { name: /issue review/i }));
 
     expect(screen.getByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
-    expect(screen.getByText("NodeUse")).toBeInTheDocument();
+    expect(screen.getByText("Workflow node")).toBeInTheDocument();
   });
 
   it("can advance replay far enough to show a product operation block", async () => {

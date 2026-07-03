@@ -34,7 +34,7 @@ const withDerivedModes = (state: PresentationState, beat: BeatId): PresentationS
   ...state,
   beat,
   chatMode: beat === "intro" || beat === "chat-request" ? "full" : "rail",
-  evidenceMode: beat === "trace-evidence" ? "peek" : state.evidenceMode,
+  evidenceMode: beat === "trace-evidence" ? "peek" : "hidden",
 });
 
 export const presentationReducer = (

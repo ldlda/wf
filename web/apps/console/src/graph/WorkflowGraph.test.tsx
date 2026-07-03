@@ -96,6 +96,18 @@ describe("WorkflowGraph", () => {
     expect(onSelect).toHaveBeenCalledWith("review");
   });
 
+  it("calls onNodeSelect when a focused node is activated by keyboard", () => {
+    const onSelect = vi.fn();
+    const { container } = render(<WorkflowGraph model={mockModel} onNodeSelect={onSelect} />);
+    const reviewNode = findNodeById(container, "review");
+
+    fireEvent.keyDown(reviewNode!, { key: "Enter" });
+    fireEvent.keyDown(reviewNode!, { key: " " });
+
+    expect(onSelect).toHaveBeenNthCalledWith(1, "review");
+    expect(onSelect).toHaveBeenNthCalledWith(2, "review");
+  });
+
   it("highlights active node when activeNodeId is provided", () => {
     const { container } = render(<WorkflowGraph model={mockModel} activeNodeId="review" />);
     const reviewNode = findNodeById(container, "review");

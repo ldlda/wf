@@ -25,8 +25,8 @@ export const OperationBlock = ({ event }: OperationBlockProps) => (
       </section>
     </div>
     <footer>
-      <span>{event.resultingIds.deploymentId}</span>
-      {event.resultingIds.runId && <span>{event.resultingIds.runId}</span>}
+      <span>Deployment: {event.resultingIds.deploymentId}</span>
+      {event.resultingIds.runId && <span>Run: {event.resultingIds.runId}</span>}
     </footer>
   </section>
 );

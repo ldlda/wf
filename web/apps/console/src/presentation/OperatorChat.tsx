@@ -16,7 +16,11 @@ export const OperatorChat = ({ state }: OperatorChatProps) => (
     </div>
     <div className="chat-message chat-message--system">
       <strong>lda.chat</strong>
-      <p>Replay mode is active. Live execution is available when connected.</p>
+      <p>
+        {state.playbackMode === "replay"
+          ? "Replay mode is active. Live execution is available when connected."
+          : "Live execution is active. Operations are being sent to the connected workflow server."}
+      </p>
     </div>
   </aside>
 );

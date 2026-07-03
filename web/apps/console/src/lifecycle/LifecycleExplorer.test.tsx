@@ -150,4 +150,55 @@ describe("LifecycleExplorer", () => {
     render(<LifecycleExplorer controller={controller} />);
     expect(screen.getAllByText(/no artifacts/i)[0]).toBeVisible();
   });
+
+  it("keeps previous records visible while showing loading and error status", () => {
+    const controller = createMockController({
+      artifactList: {
+        phase: "loading",
+        previous: {
+          items: [
+            {
+              key: "report@1",
+              artifactId: "report",
+              version: 1,
+              kind: "workflow",
+              displayName: "Report",
+              description: null,
+              outcomes: ["ok"],
+              requiredSources: ["local.report"],
+              diagnosticCount: 0,
+            },
+          ],
+          total: 1,
+          nextCursor: null,
+        },
+      },
+      runList: {
+        phase: "error",
+        message: "network down",
+        previous: {
+          items: [
+            {
+              runId: "run_1",
+              deploymentId: "report.default",
+              artifactId: "report",
+              artifactVersion: 1,
+              status: "completed",
+              resumeReadiness: "not_needed",
+              diagnosticCount: 0,
+            },
+          ],
+          total: 1,
+          nextCursor: null,
+        },
+      },
+    });
+
+    render(<LifecycleExplorer controller={controller} />);
+
+    expect(screen.getByText(/loading artifacts/i)).toBeVisible();
+    expect(screen.getByRole("alert")).toHaveTextContent(/could not load runs: network down/i);
+    expect(screen.getByRole("option", { name: /Report version 1/i })).toBeVisible();
+    expect(screen.getByRole("option", { name: /run_1 completed/i })).toBeVisible();
+  });
 });

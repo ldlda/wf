@@ -30,11 +30,23 @@ export const PresentationRoute = () => {
   }, [state.beat]);
 
   useEffect(() => {
+    const onHashChange = () => {
+      dispatch({ type: "jump_hash", hash: window.location.hash });
+    };
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      const isBodyEvent = target == null || target === window || target === document.body || target === document.documentElement;
       if (event.key === " " || event.key === "ArrowRight") {
+        if (!isBodyEvent) return;
         event.preventDefault();
         dispatch({ type: "next" });
       } else if (event.key === "ArrowLeft") {
+        if (!isBodyEvent) return;
         event.preventDefault();
         dispatch({ type: "previous" });
       } else if (event.key === "Escape") {
@@ -56,6 +68,10 @@ export const PresentationRoute = () => {
       demo.start();
     }
   }, [demo.state.phase, demo.state.mode, demo.start]);
+
+  useEffect(() => {
+    dispatch({ type: "set_playback_mode", mode: demo.state.mode });
+  }, [demo.state.mode]);
 
   return (
     <main className="presentation-route" aria-label="lda.chat presentation">

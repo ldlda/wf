@@ -1,4 +1,4 @@
-import { useReducer, useEffect, useRef, useCallback } from "react";
+import { useReducer, useEffect, useRef, useCallback, type MutableRefObject } from "react";
 import { callOperation } from "../connection/api.js";
 import type { OperationName } from "../connection/contracts.js";
 import {
@@ -26,15 +26,7 @@ export type LifecycleExplorerController = {
 
 export const useLifecycleExplorer = (
   target: string | null,
-  recordEvidence: (record: {
-    id: string;
-    operation: string;
-    label: string;
-    equivalentCli: string;
-    request: unknown;
-    response: unknown;
-    durationMs: number;
-  }) => void,
+  recordEvidence: (record: EvidenceRecord) => void,
 ): LifecycleExplorerController => {
   const [state, dispatch] = useReducer(lifecycleReducer, initialLifecycleState);
   const generationRef = useRef(0);
@@ -49,8 +41,9 @@ export const useLifecycleExplorer = (
       operation: OperationName,
       params: unknown,
       generation: number,
-      checkGenerationRef: React.MutableRefObject<number>,
+      checkGenerationRef: MutableRefObject<number>,
       onSuccess: (interpreted: unknown) => void,
+      onFailure?: (message: string) => void,
     ) => {
       if (!target) return;
       try {
@@ -83,6 +76,7 @@ export const useLifecycleExplorer = (
             });
           }
         } else {
+          onFailure?.(result.error.message);
           const seq = evidenceSeqRef.current++;
           const record: EvidenceRecord = {
             id: `${operation}-${seq}`,
@@ -106,11 +100,14 @@ export const useLifecycleExplorer = (
           });
         }
       } catch (rpcError) {
+        if (generation !== checkGenerationRef.current) return;
+        const message = rpcError instanceof Error ? rpcError.message : String(rpcError);
+        onFailure?.(message);
         dispatch({
           type: "pushError",
           error: {
             operation,
-            message: rpcError instanceof Error ? rpcError.message : String(rpcError),
+            message,
             timestamp: Date.now(),
           },
         });
@@ -122,20 +119,32 @@ export const useLifecycleExplorer = (
   useEffect(() => {
     if (!target) return;
     generationRef.current++;
+    artifactGenerationRef.current++;
+    deploymentGenerationRef.current++;
+    runGenerationRef.current++;
     const generation = generationRef.current;
     rawEvidenceRef.current = [];
     dispatch({ type: "targetChanged" });
+    dispatch({ type: "setArtifactListPhase", phase: "loading" });
+    dispatch({ type: "setDeploymentListPhase", phase: "loading" });
+    dispatch({ type: "setRunListPhase", phase: "loading" });
 
     executeOperation("workflow.artifacts.list", { limit: 50 }, generation, generationRef, (interpreted) => {
       dispatch({ type: "setArtifactListPhase", phase: "loaded", value: decodeArtifactList(interpreted) });
+    }, (message) => {
+      dispatch({ type: "setArtifactListPhase", phase: "error", message });
     });
 
     executeOperation("workflow.deployments.list", {}, generation, generationRef, (interpreted) => {
       dispatch({ type: "setDeploymentListPhase", phase: "loaded", value: decodeDeploymentList(interpreted) });
+    }, (message) => {
+      dispatch({ type: "setDeploymentListPhase", phase: "error", message });
     });
 
     executeOperation("workflow.runs.list", { limit: 50 }, generation, generationRef, (interpreted) => {
       dispatch({ type: "setRunListPhase", phase: "loaded", value: decodeRunList(interpreted) });
+    }, (message) => {
+      dispatch({ type: "setRunListPhase", phase: "error", message });
     });
   }, [target, executeOperation]);
 
@@ -223,28 +232,42 @@ export const useLifecycleExplorer = (
   const refresh = useCallback(() => {
     if (!target) return;
     generationRef.current++;
-    const generation = generationRef.current;
-    executeOperation("workflow.artifacts.list", { limit: 50 }, generation, generationRef, (interpreted) => {
+    artifactGenerationRef.current++;
+    deploymentGenerationRef.current++;
+    runGenerationRef.current++;
+    const artifactGeneration = artifactGenerationRef.current;
+    const deploymentGeneration = deploymentGenerationRef.current;
+    const runGeneration = runGenerationRef.current;
+    dispatch({ type: "setArtifactListPhase", phase: "loading" });
+    dispatch({ type: "setDeploymentListPhase", phase: "loading" });
+    dispatch({ type: "setRunListPhase", phase: "loading" });
+    executeOperation("workflow.artifacts.list", { limit: 50 }, artifactGeneration, artifactGenerationRef, (interpreted) => {
       dispatch({ type: "setArtifactListPhase", phase: "loaded", value: decodeArtifactList(interpreted) });
+    }, (message) => {
+      dispatch({ type: "setArtifactListPhase", phase: "error", message });
     });
-    executeOperation("workflow.deployments.list", {}, generation, generationRef, (interpreted) => {
+    executeOperation("workflow.deployments.list", {}, deploymentGeneration, deploymentGenerationRef, (interpreted) => {
       dispatch({ type: "setDeploymentListPhase", phase: "loaded", value: decodeDeploymentList(interpreted) });
+    }, (message) => {
+      dispatch({ type: "setDeploymentListPhase", phase: "error", message });
     });
-    executeOperation("workflow.runs.list", { limit: 50 }, generation, generationRef, (interpreted) => {
+    executeOperation("workflow.runs.list", { limit: 50 }, runGeneration, runGenerationRef, (interpreted) => {
       dispatch({ type: "setRunListPhase", phase: "loaded", value: decodeRunList(interpreted) });
+    }, (message) => {
+      dispatch({ type: "setRunListPhase", phase: "error", message });
     });
   }, [target, executeOperation]);
 
   const loadMoreArtifacts = useCallback(() => {
     const current = state.artifactList;
     if (current.phase !== "loaded" || !current.value.nextCursor || !target) return;
-    generationRef.current++;
-    const generation = generationRef.current;
+    artifactGenerationRef.current++;
+    const generation = artifactGenerationRef.current;
     executeOperation(
       "workflow.artifacts.list",
       { cursor: current.value.nextCursor, limit: 50 },
       generation,
-      generationRef,
+      artifactGenerationRef,
       (interpreted) => {
         dispatch({ type: "appendArtifactList", value: decodeArtifactList(interpreted) });
       },
@@ -254,13 +277,13 @@ export const useLifecycleExplorer = (
   const loadMoreRuns = useCallback(() => {
     const current = state.runList;
     if (current.phase !== "loaded" || !current.value.nextCursor || !target) return;
-    generationRef.current++;
-    const generation = generationRef.current;
+    runGenerationRef.current++;
+    const generation = runGenerationRef.current;
     executeOperation(
       "workflow.runs.list",
       { cursor: current.value.nextCursor, limit: 50 },
       generation,
-      generationRef,
+      runGenerationRef,
       (interpreted) => {
         dispatch({ type: "appendRunList", value: decodeRunList(interpreted) });
       },

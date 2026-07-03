@@ -28,6 +28,7 @@ export const WorkflowGraphStage = ({ selectedNodeId, selectNode }: WorkflowGraph
         className="workflow-graph-stage__node"
         data-kind={node.kind}
         data-selected={selectedNodeId === node.id}
+        aria-pressed={selectedNodeId === node.id}
         style={{ left: `${node.x}%`, top: `${node.y}%` }}
         onClick={() => selectNode(node.id)}
       >

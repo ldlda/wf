@@ -70,6 +70,11 @@ const interpretNextActions = (nextActions: {
   warnings: nextActions.warnings,
 });
 
+const shellArg = (value: string | number): string => {
+  const text = String(value);
+  return /^[A-Za-z0-9._/@:-]+$/.test(text) ? text : `'${text.replace(/'/g, "''")}'`;
+};
+
 /** Adapts a snake_case run detail from the server into camelCase for the browser. */
 const interpretRunDetail = (decoded: {
   readonly run_id: string;
@@ -125,7 +130,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
       );
       const parts = ["uv run wf source list"];
       if (p.limit != null) parts.push(`--limit ${p.limit}`);
-      if (p.cursor != null) parts.push(`--cursor ${p.cursor}`);
+      if (p.cursor != null) parts.push(`--cursor ${shellArg(p.cursor)}`);
       return parts.join(" ");
     },
     interpret: (result): WorkflowSourcesListInterpreted => {
@@ -162,6 +167,9 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         { onExcessProperty: "error" },
       );
       const parts = ["uv run wf artifact list"];
+      if (p.query != null) parts.push(`--query ${shellArg(p.query)}`);
+      if (p.kind != null) parts.push(`--kind ${shellArg(p.kind)}`);
+      if (p.cursor != null) parts.push(`--cursor ${shellArg(p.cursor)}`);
       if (p.limit != null) parts.push(`--limit ${p.limit}`);
       return parts.join(" ");
     },
@@ -196,7 +204,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         params,
         { onExcessProperty: "error" },
       );
-      return `uv run wf artifact inspect ${p.artifact_id} --version ${p.version}`;
+      return `uv run wf artifact inspect ${shellArg(p.artifact_id)} --version ${p.version}`;
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(
@@ -246,7 +254,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
       const p = Schema.decodeUnknownSync(
         WorkflowDeploymentsInspectPayloadSchema,
       )(params, { onExcessProperty: "error" });
-      return `uv run wf deploy inspect ${p.deployment_id}`;
+      return `uv run wf deploy inspect ${shellArg(p.deployment_id)}`;
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(
@@ -273,7 +281,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
       const p = Schema.decodeUnknownSync(
         WorkflowDeploymentsValidatePayloadSchema,
       )(params, { onExcessProperty: "error" });
-      return `uv run wf deploy validate ${p.deployment_id}`;
+      return `uv run wf deploy validate ${shellArg(p.deployment_id)}`;
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(
@@ -300,6 +308,8 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         { onExcessProperty: "error" },
       );
       const parts = ["uv run wf run list"];
+      if (p.status != null) parts.push(`--status ${shellArg(p.status)}`);
+      if (p.cursor != null) parts.push(`--cursor ${shellArg(p.cursor)}`);
       if (p.limit != null) parts.push(`--limit ${p.limit}`);
       return parts.join(" ");
     },
@@ -334,7 +344,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         params,
         { onExcessProperty: "error" },
       );
-      return `uv run wf run inspect ${p.run_id}`;
+      return `uv run wf run inspect ${shellArg(p.run_id)}`;
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(WorkflowRunsInspectResultSchema)(
@@ -367,7 +377,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         params,
         { onExcessProperty: "error" },
       );
-      return `uv run wf run start ${p.deployment_id} --input '<json>'`;
+      return `uv run wf run start ${shellArg(p.deployment_id)} --input '<json>'`;
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(WorkflowRunsInspectResultSchema)(
@@ -387,7 +397,7 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         params,
         { onExcessProperty: "error" },
       );
-      return `uv run wf run resume ${p.run_id} --payload '<json>'`;
+      return `uv run wf run resume ${shellArg(p.run_id)} --payload '<json>'`;
     },
     interpret: (result) => {
       const decoded = Schema.decodeUnknownSync(WorkflowRunsInspectResultSchema)(
@@ -407,11 +417,11 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         params,
         { onExcessProperty: "error" },
       );
-      return `uv run wf run trace ${p.run_id} --from ${p.trace_range.start} --limit ${p.trace_range.limit}`;
+      return `uv run wf run trace ${shellArg(p.run_id)} --from ${p.trace_range.start} --limit ${p.trace_range.limit}`;
     },
     interpret: (result) => {
-      const r = result as Record<string, unknown>;
-      const trace = (r.trace as ReadonlyArray<Record<string, unknown>> ?? []).map((entry) => ({
+      const decoded = Schema.decodeUnknownSync(WorkflowRunsTraceResultSchema)(result);
+      const trace = decoded.trace.map((entry) => ({
         nodeId: entry.node_id,
         stepType: entry.step_type,
         outcome: entry.outcome,
@@ -420,12 +430,12 @@ const operationEntries: ReadonlyArray<OperationMeta> = [
         stateChanges: entry.state_changes,
       }));
       return {
-        runId: r.run_id,
-        status: r.status,
+        runId: decoded.run_id,
+        status: decoded.status,
         frames: trace,
-        traceStart: r.trace_start,
-        traceLimit: r.trace_limit,
-        traceTruncated: r.trace_truncated,
+        traceStart: decoded.trace_start,
+        traceLimit: decoded.trace_limit,
+        traceTruncated: decoded.trace_truncated,
       };
     },
   },

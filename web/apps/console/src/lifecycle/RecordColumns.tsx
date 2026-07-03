@@ -1,9 +1,9 @@
 import type { ArtifactSummary, DeploymentSummary, RunSummary } from "./models.js";
 
 type RecordColumnsProps = {
-  readonly artifacts: ArtifactSummary[];
-  readonly deployments: DeploymentSummary[];
-  readonly runs: RunSummary[];
+  readonly artifacts: ReadonlyArray<ArtifactSummary>;
+  readonly deployments: ReadonlyArray<DeploymentSummary>;
+  readonly runs: ReadonlyArray<RunSummary>;
   readonly selectedArtifactId: string | null;
   readonly selectedDeploymentId: string | null;
   readonly selectedRunId: string | null;

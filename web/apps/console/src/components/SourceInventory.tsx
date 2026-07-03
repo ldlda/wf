@@ -8,7 +8,7 @@ type Props = {
 
 export const SourceInventory = ({ sources, loading, error }: Props) => {
   return (
-    <section aria-label="Source Inventory">
+    <section aria-label="Source Inventory" data-panel="source-inventory">
       <h2>Sources</h2>
       {loading && <p data-testid="sources-loading">Loading sources{"\u2026"}</p>}
       {error && (
