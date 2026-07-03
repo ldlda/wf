@@ -16,20 +16,23 @@ Current design contract for the next Workflow Console slice.
 
 The presentation route currently has replay and live workflow execution, but the
 operator chat is still mostly a fixed narrative. The next slice adds a
-constrained demo agent: a small recipe runner that can narrate and invoke one
-prepared workflow path without pretending to be a general autonomous planner.
+standard AI-app-shaped chat/event surface backed first by a constrained demo
+agent: a small prepared driver that can narrate, invoke one prepared workflow
+path, and control presentation focus without pretending to be a general
+autonomous planner.
 
 The goal is to make the defense story sharper:
 
 - the operator asks for the thesis readiness report;
 - the prepared agent selects the known report-workflow recipe;
 - the agent emits visible tool-call events for workflow operations;
+- the agent can emit presentation tool calls such as selecting a graph node;
 - each tool call maps to real replay/live evidence;
 - the graph, interrupt, output, trace, and evidence surfaces remain the main
   proof.
 
 This is not a free-form LLM agent. It is a deterministic macro with an
-agent-shaped event stream.
+AI-chat-compatible event stream.
 
 ## Product Boundary
 
@@ -57,7 +60,7 @@ proposal from the workflow substrate's execution and evidence records.
 ## Driver Boundary
 
 Introduce an explicit driver boundary so the prepared recipe and a future LLM
-driver can feed the same presentation UI.
+driver can feed the same standard chat/presentation UI.
 
 ```ts
 type AgentDriverKind = "prepared-recipe" | "ai-sdk";
@@ -76,8 +79,8 @@ type AgentDriver = {
 ```
 
 The first implementation only ships the `prepared-recipe` driver. It produces
-events from a hard-coded recipe and calls the existing demo timeline execution
-path.
+events from a hard-coded recipe, calls the existing demo timeline execution
+path, and emits presentation actions through the same event stream.
 
 The `ai-sdk` kind is reserved for a future driver. The boundary should be shaped
 so a server-side Vercel AI SDK integration can map `streamText` parts into the
@@ -92,6 +95,61 @@ same event union:
 Do not add the AI SDK dependency in this slice unless the implementation plan
 explicitly chooses to build the live LLM driver. The API-key boundary belongs on
 the web server, not in the browser.
+
+## Chat Surface
+
+The chat should look and behave like a standard modern AI application even when
+the underlying driver is deterministic. It should have a normal message list,
+assistant responses, compact tool-call parts, tool-result parts, failure parts,
+and a clear disabled composer or preset prompt affordance.
+
+The first slice should not invent a complex custom chatbot framework. It should
+define the minimum message/part model that can later map to Vercel AI SDK UI
+message parts:
+
+```ts
+type AgentMessagePart =
+  | { readonly type: "text"; readonly text: string }
+  | { readonly type: "tool-call"; readonly call: AgentToolCall }
+  | { readonly type: "tool-result"; readonly result: AgentToolResult }
+  | { readonly type: "presentation-action"; readonly action: PresentationToolAction }
+  | { readonly type: "error"; readonly message: string };
+```
+
+The UI must not care whether parts came from the prepared driver or a future AI
+SDK stream. In the prepared driver, messages may appear as complete messages
+with a short fade. No slow typewriter effect is required.
+
+## Tool Taxonomy
+
+Separate tools into two families.
+
+**Workflow tools** call or replay workflow substrate operations:
+
+- `inspectDeployment` -> `workflow.deployments.inspect`
+- `startPreparedReportRun` -> `workflow.runs.start`
+- `resumeIssueReview` -> `workflow.runs.resume`
+- `readRunTrace` -> `workflow.runs.trace`
+
+**Presentation tools** control the stage only:
+
+- `selectWorkflowNode({ nodeId })`
+- `focusOperation({ eventId })`
+- `openEvidence({ eventId })`
+- `showTraceFrame({ frameIndex })`
+- `setBeat({ beatId })`
+
+Presentation tools are important because they model the interaction the future
+agent should have with the visual product. For example, the user or scripted
+agent can say "let's zoom into the interrupt node", which becomes:
+
+```text
+tool: selectWorkflowNode
+input: { "nodeId": "review_issues" }
+```
+
+The tool result is not workflow evidence; it is stage state. The UI should label
+it accordingly so viewers do not confuse visual focus with workflow execution.
 
 ## Prepared Recipe
 
@@ -129,6 +187,7 @@ Add a focused demo-agent module under the console app:
 ```text
 web/apps/console/src/demo/agent/
   events.ts
+  tools.ts
   recipes.ts
   preparedRecipeDriver.ts
   useDemoAgent.ts
@@ -136,10 +195,13 @@ web/apps/console/src/demo/agent/
 
 Responsibilities:
 
-- `events.ts`: event union, ids, and small helpers.
+- `events.ts`: chat-compatible message and event union, ids, and small helpers.
+- `tools.ts`: workflow-tool and presentation-tool descriptors, including the
+  finite allowed tool names.
 - `recipes.ts`: declarative recipe metadata and copy.
 - `preparedRecipeDriver.ts`: deterministic async generator that advances the
-  recipe and delegates workflow work to the existing live/replay timeline path.
+  recipe, delegates workflow work to the existing live/replay timeline path, and
+  emits presentation actions.
 - `useDemoAgent.ts`: React hook that owns driver state, messages, current tool
   event, failure state, and reset/start controls.
 
@@ -149,15 +211,43 @@ events passed to it.
 Do not duplicate JSON-RPC calls. The driver should reuse the existing demo
 timeline execution seam or a small extracted operation adapter from it.
 
+Do not let workflow tools mutate presentation state directly. A workflow tool
+produces operation evidence. A presentation tool produces stage actions.
+
+## Effect Boundary
+
+The project already uses `effect` and `@effect/rpc` in `web/packages/rpc`.
+The console app currently uses React hooks plus Valibot decoders. This slice may
+introduce Effect for the demo-agent runtime, but it should do so at the driver
+boundary rather than inside render components.
+
+Recommended split:
+
+- pure recipe/event types stay ordinary TypeScript;
+- workflow and presentation tool execution can return `Effect` values;
+- the prepared driver can expose an `AsyncIterable<AgentMessageEvent>` adapter
+  for React while using Effect internally;
+- React hooks run the driver at the edge and translate emitted events into
+  component state.
+
+This keeps the future AI SDK path clean. A server-side AI SDK driver can use
+Effect for bounded tool execution, typed errors, cancellation, and evidence
+recording, while the React chat UI still consumes the same event stream.
+
+Do not add Effect ceremony to static render components. Use Effect where it
+buys typed tool execution, cancellation, dependency injection, or testable
+driver composition.
+
 ## Data Flow
 
 ```text
 PresentationRoute
   -> useDemoAgent(driver = preparedRecipe)
   -> PreparedRecipeDriver
-  -> existing demo timeline live/replay operation path
+  -> WorkflowToolAdapter -> existing demo timeline live/replay operation path
+  -> PresentationToolAdapter -> selected node / beat / evidence state
   -> AgentMessageEvent[]
-  -> OperatorChat / OperationBlock / EvidenceDrawer / DemoTimeline
+  -> StandardChat / OperationBlock / EvidenceDrawer / DemoTimeline
 ```
 
 In replay mode, the driver reads from the reviewed recording and emits the
@@ -184,6 +274,8 @@ bounded tool set:
 - `startPreparedReportRun`
 - `resumeIssueReview`
 - `readRunTrace`
+- `selectWorkflowNode`
+- `openEvidence`
 
 The UI should not need to know whether events came from the prepared driver or
 an AI SDK stream. Both produce `AgentMessageEvent`.
@@ -199,11 +291,13 @@ Rules for the future LLM driver:
 
 ## Presentation Behavior
 
-The operator chat becomes event-driven:
+The operator chat becomes a standard event-driven chat:
 
 - user message is rendered from the recipe input;
 - agent narration is rendered from `AgentTextEvent`;
-- tool calls are rendered compactly in chat and can expand to `OperationBlock`;
+- workflow tool calls are rendered compactly in chat and can expand to
+  `OperationBlock`;
+- presentation tool calls are rendered compactly in chat and update the stage;
 - tool results link to the graph, trace, and evidence drawer;
 - approval request focuses the existing typed review panel.
 
@@ -232,8 +326,10 @@ Unit tests should cover:
 
 - prepared recipe emits expected event order;
 - prepared driver cannot emit operations outside the recipe;
+- prepared driver cannot emit presentation actions outside the allowed tool set;
 - replay mode produces agent events without a target;
 - live mode delegates to the operation path in the expected order;
+- presentation tool events select the expected workflow node or evidence target;
 - approval event pauses until selected issues are submitted or cancelled;
 - reset/start clears stale messages, approvals, outputs, and in-flight work;
 - `OperatorChat` renders text, tool call, tool result, and failure events.
@@ -244,8 +340,10 @@ Browser or component smoke should cover:
 2. start prepared agent in replay mode;
 3. see recipe selection, run-start tool call, interrupt approval, resume, trace,
    and summary;
-4. open an operation block from a chat/tool event;
-5. switch to live mode without a target and see a disabled start state.
+4. trigger or replay `selectWorkflowNode({ nodeId: "review_issues" })` and see
+   the graph spotlight move to the interrupt node;
+5. open an operation block from a chat/tool event;
+6. switch to live mode without a target and see a disabled start state.
 
 ## Success Criteria
 
@@ -255,9 +353,10 @@ The slice is complete when:
 2. the prepared recipe can run fully in replay mode without a server;
 3. live mode uses the existing workflow operation path and remains explicit;
 4. tool-call events map to operation blocks and evidence records;
-5. the code has a named driver seam for a future AI SDK implementation;
-6. no AI provider key or model dependency is required for the prepared demo;
-7. copy clearly says this is a constrained recipe, not a general autonomous
+5. presentation tool events can focus the graph/evidence stage;
+6. the code has a named driver seam for a future AI SDK implementation;
+7. no AI provider key or model dependency is required for the prepared demo;
+8. copy clearly says this is a constrained recipe, not a general autonomous
    planner.
 
 ## Out Of Scope
