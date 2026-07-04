@@ -29,56 +29,70 @@ const NarrativeScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
   </>
 );
 
-const PositioningScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
-  <>
-    <StageCaption eyebrow={`Act I · ${scene.claimClass}`} title={scene.title}>
-      <p>{beat.caption}</p>
-    </StageCaption>
-    <div className="scene-body__positioning-grid">
-      <div className="scene-body__positioning-card">
-        <strong>Tool loops</strong>
-        <span>Direct action, no lifecycle</span>
+const PositioningScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
+  const highlightLda = beat.id === "lda-position";
+  return (
+    <>
+      <StageCaption eyebrow={`Act I · ${scene.claimClass}`} title={scene.title}>
+        <p>{beat.caption}</p>
+      </StageCaption>
+      <div className="scene-body__positioning-grid">
+        <div className="scene-body__positioning-card">
+          <strong>Tool loops</strong>
+          <span>Direct action, no lifecycle</span>
+        </div>
+        <div className="scene-body__positioning-card">
+          <strong>Scripts</strong>
+          <span>Simple, debuggable</span>
+        </div>
+        <div className={`scene-body__positioning-card${highlightLda ? " scene-body__positioning-card--active" : ""}`}>
+          <strong>lda.chat</strong>
+          <span>Typed lifecycle contracts</span>
+        </div>
+        <div className="scene-body__positioning-card">
+          <strong>Agent graphs</strong>
+          <span>Shared durability</span>
+        </div>
+        <div className="scene-body__positioning-card">
+          <strong>MCP</strong>
+          <span>Capability protocol</span>
+        </div>
       </div>
-      <div className="scene-body__positioning-card">
-        <strong>Scripts</strong>
-        <span>Simple, debuggable</span>
-      </div>
-      <div className="scene-body__positioning-card scene-body__positioning-card--active">
-        <strong>lda.chat</strong>
-        <span>Typed lifecycle contracts</span>
-      </div>
-      <div className="scene-body__positioning-card">
-        <strong>Agent graphs</strong>
-        <span>Shared durability</span>
-      </div>
-      <div className="scene-body__positioning-card">
-        <strong>MCP</strong>
-        <span>Capability protocol</span>
-      </div>
-    </div>
-    <p className="scene-body__evidence">{scene.evidencePointer}</p>
-  </>
-);
+      <p className="scene-body__evidence">{scene.evidencePointer}</p>
+    </>
+  );
+};
 
-const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
-  <>
-    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
-      <p>{beat.caption}</p>
-    </StageCaption>
-    <div className="scene-body__boundary">
-      <div className="scene-body__boundary-side">
-        <h3>Planner</h3>
-        <p>External LLM proposes and revises workflow structure.</p>
+const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
+  const showPlanner = beat.id === "planner" || beat.id === "boundary";
+  const showRuntime = beat.id === "runtime" || beat.id === "boundary";
+  return (
+    <>
+      <StageCaption eyebrow="Act II · implemented" title={scene.title}>
+        <p>{beat.caption}</p>
+      </StageCaption>
+      <div className="scene-body__boundary">
+        <div className={`scene-body__boundary-side${showPlanner ? "" : " scene-body__boundary-side--dim"}`}>
+          <h3>Planner</h3>
+          <p>External LLM proposes and revises workflow structure.</p>
+        </div>
+        <div className="scene-body__boundary-divider" />
+        <div className={`scene-body__boundary-side${showRuntime ? "" : " scene-body__boundary-side--dim"}`}>
+          <h3>Runtime</h3>
+          <p>Validates, executes, records, and resumes deterministically.</p>
+        </div>
       </div>
-      <div className="scene-body__boundary-divider" />
-      <div className="scene-body__boundary-side">
-        <h3>Runtime</h3>
-        <p>Validates, executes, records, and resumes deterministically.</p>
-      </div>
-    </div>
-    <p className="scene-body__evidence">{scene.evidencePointer}</p>
-  </>
-);
+      <p className="scene-body__evidence">{scene.evidencePointer}</p>
+    </>
+  );
+};
+
+const lifecycleStages = [
+  { id: "draft", label: "Draft" },
+  { id: "artifact", label: "Artifact" },
+  { id: "deployment", label: "Deployment" },
+  { id: "run", label: "Run" },
+];
 
 const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
   <>
@@ -86,17 +100,27 @@ const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
       <p>{beat.caption}</p>
     </StageCaption>
     <div className="scene-body__lifecycle">
-      {["Draft", "Artifact", "Deployment", "Run"].map((stage, i) => (
-        <div key={stage} className="scene-body__lifecycle-stage">
+      {lifecycleStages.map((stage, i) => (
+        <div
+          key={stage.id}
+          className={`scene-body__lifecycle-stage${beat.id === stage.id ? " scene-body__lifecycle-stage--active" : ""}`}
+        >
           <span className="scene-body__lifecycle-number">{i + 1}</span>
-          <strong>{stage}</strong>
-          {i < 3 && <span className="scene-body__lifecycle-arrow">→</span>}
+          <strong>{stage.label}</strong>
+          {i < lifecycleStages.length - 1 && <span className="scene-body__lifecycle-arrow">→</span>}
         </div>
       ))}
     </div>
     <p className="scene-body__evidence">{scene.evidencePointer}</p>
   </>
 );
+
+const architectureLayers = [
+  { id: "client", label: "Client operations" },
+  { id: "api", label: "Transport / JSON-RPC" },
+  { id: "runtime", label: "Runtime & providers" },
+  { id: "node-use", label: "NodeUse", isNode: true },
+];
 
 const ArchitectureScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
   <>
@@ -104,29 +128,14 @@ const ArchitectureScene = ({ scene, beat }: { scene: SceneDefinition; beat: Scen
       <p>{beat.caption}</p>
     </StageCaption>
     <div className="scene-body__architecture">
-      <div className="scene-body__architecture-layer">Client operations</div>
-      <div className="scene-body__architecture-arrow">↓</div>
-      <div className="scene-body__architecture-layer">Transport / JSON-RPC</div>
-      <div className="scene-body__architecture-arrow">↓</div>
-      <div className="scene-body__architecture-layer">Runtime & providers</div>
-      <div className="scene-body__architecture-arrow">↓</div>
-      <div className="scene-body__architecture-layer scene-body__architecture-layer--node">NodeUse</div>
-    </div>
-    <p className="scene-body__evidence">{scene.evidencePointer}</p>
-  </>
-);
-
-const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
-  <>
-    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
-      <p>{beat.caption}</p>
-    </StageCaption>
-    <div className="scene-body__authoring">
-      {["Discover", "Author", "Diagnose", "Repair"].map((step, i) => (
-        <div key={step} className="scene-body__authoring-step">
-          <span className="scene-body__authoring-number">{i + 1}</span>
-          <strong>{step}</strong>
-          {i < 3 && <span className="scene-body__authoring-arrow">→</span>}
+      {architectureLayers.map((layer, i) => (
+        <div key={layer.id}>
+          <div
+            className={`scene-body__architecture-layer${layer.isNode ? " scene-body__architecture-layer--node" : ""}${beat.id === layer.id ? " scene-body__architecture-layer--active" : ""}`}
+          >
+            {layer.label}
+          </div>
+          {i < architectureLayers.length - 1 && <div className="scene-body__architecture-arrow">↓</div>}
         </div>
       ))}
     </div>
@@ -134,24 +143,55 @@ const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
   </>
 );
 
+const authoringSteps = [
+  { id: "discover", label: "Discover" },
+  { id: "author", label: "Author" },
+  { id: "diagnose", label: "Diagnose" },
+  { id: "repair", label: "Repair" },
+];
+
+const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
+  <>
+    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
+      <p>{beat.caption}</p>
+    </StageCaption>
+    <div className="scene-body__authoring">
+      {authoringSteps.map((step, i) => (
+        <div
+          key={step.id}
+          className={`scene-body__authoring-step${beat.id === step.id ? " scene-body__authoring-step--active" : ""}`}
+        >
+          <span className="scene-body__authoring-number">{i + 1}</span>
+          <strong>{step.label}</strong>
+          {i < authoringSteps.length - 1 && <span className="scene-body__authoring-arrow">→</span>}
+        </div>
+      ))}
+    </div>
+    <p className="scene-body__evidence">{scene.evidencePointer}</p>
+  </>
+);
+
+const evaluationStats = [
+  { id: "cohort", value: "36", label: "trials" },
+  { id: "validity", value: "2", label: "challenges" },
+  { id: "findings", value: "3", label: "waves" },
+];
+
 const EvaluationScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
   <>
     <StageCaption eyebrow={`Act I · ${scene.claimClass}`} title={scene.title}>
       <p>{beat.caption}</p>
     </StageCaption>
     <div className="scene-body__evaluation">
-      <div className="scene-body__evaluation-stat">
-        <strong>36</strong>
-        <span>trials</span>
-      </div>
-      <div className="scene-body__evaluation-stat">
-        <strong>2</strong>
-        <span>challenges</span>
-      </div>
-      <div className="scene-body__evaluation-stat">
-        <strong>3</strong>
-        <span>waves</span>
-      </div>
+      {evaluationStats.map((stat) => (
+        <div
+          key={stat.id}
+          className={`scene-body__evaluation-stat${beat.id === stat.id ? " scene-body__evaluation-stat--active" : ""}`}
+        >
+          <strong>{stat.value}</strong>
+          <span>{stat.label}</span>
+        </div>
+      ))}
     </div>
     <p className="scene-body__evidence">{scene.evidencePointer}</p>
   </>

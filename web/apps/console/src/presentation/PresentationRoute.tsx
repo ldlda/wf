@@ -172,11 +172,15 @@ export const PresentationRoute = () => {
     dispatch({ type: "jump", location: { kind: "main", sceneId: state.location.sceneId, beatId: scene.beats[0]!.id } });
   }, [state.location]);
 
+  const handleToggleMotion = useCallback(() => {
+    dispatch({ type: "toggle_motion" });
+  }, []);
+
   const composition = compositionForState(state);
   const showChatDock = composition.chatMode === "dock" && state.location.kind !== "discussion";
 
   return (
-    <main className="presentation-route" aria-label="lda.chat presentation">
+    <main className="presentation-route" aria-label="lda.chat presentation" data-motion={state.motionDisabled ? "disabled" : "enabled"}>
       <PresentationStage
         state={state}
         demo={demo}
@@ -205,6 +209,7 @@ export const PresentationRoute = () => {
           forceReplay={handleForceReplay}
           resetOverrides={handleResetOverrides}
           resetScene={handleResetScene}
+          toggleMotion={handleToggleMotion}
         />
       )}
       <button

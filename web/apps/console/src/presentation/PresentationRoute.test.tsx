@@ -67,7 +67,7 @@ describe("PresentationRoute", () => {
     window.location.hash = "#scene/positioning/lda-position";
     render(<PresentationRoute />);
 
-    await userEvent.click(screen.getByRole("button", { name: /open discussion topics/i }));
+    await userEvent.click(screen.getByRole("button", { name: /discussion topics/i }));
     await userEvent.click(screen.getByRole("button", { name: /hosted automation/i }));
     expect(window.location.hash).toBe("#discuss/hosted-automation");
 

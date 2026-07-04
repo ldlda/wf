@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import type { ChatMode, ChatTheme, MainLocation, PresentationLocation, StageTheme } from "./storyboard.js";
@@ -15,6 +15,7 @@ type PresenterControlsProps = {
   readonly forceReplay: () => void;
   readonly resetOverrides: () => void;
   readonly resetScene: () => void;
+  readonly toggleMotion: () => void;
 };
 
 export const PresenterControls = ({
@@ -28,6 +29,7 @@ export const PresenterControls = ({
   forceReplay,
   resetOverrides,
   resetScene,
+  toggleMotion,
 }: PresenterControlsProps) => {
   const composition = compositionForState(state);
   const isMain = state.location.kind === "main";
@@ -40,6 +42,22 @@ export const PresenterControls = ({
   const sceneNumber = currentScene?.number ?? 0;
   const totalScenes = mainScenes.length;
 
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - state.startedAt) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [state.startedAt]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, "0")}`;
+  };
+
+  const plannedMinutes = 20;
+
   return (
     <div className="presenter-controls" role="dialog" aria-label="presenter controls">
       <div className="presenter-controls__nav">
@@ -49,6 +67,20 @@ export const PresenterControls = ({
       <div className="presenter-controls__info">
         <span>Scene {sceneNumber}/{totalScenes}: {currentScene?.title ?? "Discussion"}</span>
         {currentBeat && <span> · {beatIndex + 1}/{totalBeats} {currentBeat.title}</span>}
+      </div>
+      <div className="presenter-controls__timer">
+        <span>Elapsed: {formatTime(elapsed)}</span>
+        <span> / {plannedMinutes}:00 planned</span>
+      </div>
+      <div className="presenter-controls__notes">
+        <label>
+          Speaker notes
+          <textarea
+            defaultValue={currentBeat?.caption ?? ""}
+            rows={3}
+            placeholder="Add notes for this beat..."
+          />
+        </label>
       </div>
       <div className="presenter-controls__over">
         <label>
@@ -91,6 +123,9 @@ export const PresenterControls = ({
         <span>{state.playbackMode === "replay" ? "Replay" : "Live"}</span>
         <button type="button" onClick={forceReplay}>Force replay fallback</button>
         <button type="button" onClick={resetScene}>Reset scene</button>
+        <button type="button" onClick={toggleMotion}>
+          Motion: {state.motionDisabled ? "off" : "on"}
+        </button>
         <button type="button" onClick={resetOverrides}>Reset overrides</button>
       </div>
     </div>

@@ -9,7 +9,7 @@ import { OperatorChat } from "./OperatorChat.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
-import { discussionBranches, findScene, type PresentationLocation } from "./storyboard.js";
+import { findScene, type PresentationLocation } from "./storyboard.js";
 
 type PresentationStageProps = {
   readonly state: PresentationState;
@@ -45,10 +45,6 @@ export const PresentationStage = ({
   const composition = compositionForState(state);
 
   const isMainScene = state.location.kind === "main";
-  const currentScene = isMainScene ? findScene(state.location.sceneId) : null;
-  const hasBranches = currentScene
-    ? discussionBranches.some((b) => b.parentSceneId === currentScene.id)
-    : false;
 
   return (
     <div
@@ -56,6 +52,7 @@ export const PresentationStage = ({
       data-stage-theme={composition.stageTheme}
       data-chat-theme={composition.chatTheme}
       data-chat-mode={composition.chatMode}
+      data-evidence-mode={composition.evidenceMode}
     >
       <aside className="presentation-stage__chat" aria-label="agent chat region">
         <OperatorChat state={state} messages={messages} onApprove={onApprove} onDeny={onDeny} />
@@ -71,15 +68,13 @@ export const PresentationStage = ({
               selectedNodeId={state.selectedNodeId}
               selectNode={selectNode}
             />
-            {hasBranches && (
-              <button
-                type="button"
-                className="presentation-stage__discussion-toggle"
-                onClick={toggleDiscussionIndex}
-              >
-                Open discussion topics
-              </button>
-            )}
+            <button
+              type="button"
+              className="presentation-stage__discussion-toggle"
+              onClick={toggleDiscussionIndex}
+            >
+              Discussion topics
+            </button>
           </>
         )}
         {state.discussionIndexOpen && (

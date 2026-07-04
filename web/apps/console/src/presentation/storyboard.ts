@@ -281,7 +281,7 @@ export const discussionBranches = defineDiscussionBranches([
     parentSceneId: "positioning",
     title: "MCP and agent-facing scale",
     claimClass: "external-context",
-    evidencePointer: "Thesis: Model Context Protocol; Cloudflare Code Mode; Anthropic code execution with MCP",
+    evidencePointer: "Thesis: Model Context Protocol; Anthropic MCP documentation; Cloudflare Code Mode",
     summary: "MCP is a capability protocol; progressive discovery addresses large agent-facing surfaces.",
   },
   {
@@ -290,7 +290,7 @@ export const discussionBranches = defineDiscussionBranches([
     title: "Lifecycle state machine",
     claimClass: "implemented",
     evidencePointer: "Thesis Workflow Lifecycle; lifecycle state transitions",
-    summary: "Draft, artifact, deployment, and run form a linear lifecycle with typed transitions.",
+    summary: "Draft, artifact, deployment, and run form a typed lifecycle; raw plans can bypass the draft stage.",
   },
   {
     id: "raw-plan-import",
@@ -330,7 +330,7 @@ export const discussionBranches = defineDiscussionBranches([
     title: "Provider-neutral security",
     claimClass: "implemented",
     evidencePointer: "Thesis Architecture; provider-neutral capability resolution",
-    summary: "Provider-neutral capabilities avoid vendor lock-in while maintaining security boundaries.",
+    summary: "Provider-neutral capabilities reduce vendor lock-in; runtime enforces boundary contracts.",
   },
   {
     id: "evaluation-validity",

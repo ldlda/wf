@@ -19,6 +19,7 @@ describe("PresenterControls", () => {
     forceReplay: vi.fn(),
     resetOverrides: vi.fn(),
     resetScene: vi.fn(),
+    toggleMotion: vi.fn(),
   };
 
   it("changes stage and chat themes independently", async () => {

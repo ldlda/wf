@@ -28,6 +28,8 @@ export type PresentationState = {
   readonly chatModeOverride: ChatMode | null;
   readonly controlsOpen: boolean;
   readonly discussionIndexOpen: boolean;
+  readonly motionDisabled: boolean;
+  readonly startedAt: number;
 };
 
 export type PresentationAction =
@@ -46,7 +48,8 @@ export type PresentationAction =
   | { readonly type: "set_chat_theme"; readonly theme: ChatTheme | null }
   | { readonly type: "set_chat_mode"; readonly mode: ChatMode | null }
   | { readonly type: "toggle_controls" }
-  | { readonly type: "toggle_discussion_index" };
+  | { readonly type: "toggle_discussion_index" }
+  | { readonly type: "toggle_motion" };
 
 export const initialPresentationState: PresentationState = {
   location: defaultMainLocation,
@@ -59,6 +62,8 @@ export const initialPresentationState: PresentationState = {
   chatModeOverride: null,
   controlsOpen: false,
   discussionIndexOpen: false,
+  motionDisabled: false,
+  startedAt: Date.now(),
 };
 
 const compositionForLocation = (
@@ -199,5 +204,7 @@ export const presentationReducer = (
       return { ...state, controlsOpen: !state.controlsOpen };
     case "toggle_discussion_index":
       return { ...state, discussionIndexOpen: !state.discussionIndexOpen };
+    case "toggle_motion":
+      return { ...state, motionDisabled: !state.motionDisabled };
   }
 };
