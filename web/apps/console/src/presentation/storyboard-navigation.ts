@@ -22,8 +22,14 @@ export const locationFromHash = (hash: string): PresentationLocation => {
   const raw = hash.replace(/^#/, "");
   const sceneMatch = raw.match(/^scene\/([^/]+)\/(.+)$/);
   if (sceneMatch) {
-    const sceneId = decodeURIComponent(sceneMatch[1]!);
-    const beatId = decodeURIComponent(sceneMatch[2]!);
+    let sceneId: string;
+    let beatId: string;
+    try {
+      sceneId = decodeURIComponent(sceneMatch[1]!);
+      beatId = decodeURIComponent(sceneMatch[2]!);
+    } catch {
+      return defaultMainLocation;
+    }
     const scene = findScene(sceneId);
     if (scene && scene.beats.some((b) => b.id === beatId)) {
       return { kind: "main", sceneId: scene.id as MainLocation["sceneId"], beatId };
@@ -32,7 +38,12 @@ export const locationFromHash = (hash: string): PresentationLocation => {
   }
   const discussMatch = raw.match(/^discuss\/(.+)$/);
   if (discussMatch) {
-    const branchId = decodeURIComponent(discussMatch[1]!);
+    let branchId: string;
+    try {
+      branchId = decodeURIComponent(discussMatch[1]!);
+    } catch {
+      return defaultMainLocation;
+    }
     if (findDiscussionBranch(branchId)) {
       return { kind: "discussion", branchId: branchId as DiscussionLocation["branchId"] };
     }

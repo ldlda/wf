@@ -1,4 +1,3 @@
-import { useState } from "react";
 import type { EvidenceRecord } from "../app/state.js";
 import type { AgentMessage } from "../demo/agent/events.js";
 import { SceneBody } from "./SceneBody.js";
@@ -25,6 +24,7 @@ type PresentationStageProps = {
   readonly closeOverlay: () => void;
   readonly openDiscussion: (branchId: string) => void;
   readonly closeDiscussion: () => void;
+  readonly toggleDiscussionIndex: () => void;
 };
 
 export const PresentationStage = ({
@@ -40,9 +40,9 @@ export const PresentationStage = ({
   closeOverlay,
   openDiscussion,
   closeDiscussion,
+  toggleDiscussionIndex,
 }: PresentationStageProps) => {
   const composition = compositionForState(state);
-  const [indexOpen, setIndexOpen] = useState(false);
 
   const isMainScene = state.location.kind === "main";
   const currentScene = isMainScene ? findScene(state.location.sceneId) : null;
@@ -75,17 +75,17 @@ export const PresentationStage = ({
               <button
                 type="button"
                 className="presentation-stage__discussion-toggle"
-                onClick={() => setIndexOpen(true)}
+                onClick={toggleDiscussionIndex}
               >
                 Open discussion topics
               </button>
             )}
           </>
         )}
-        {indexOpen && (
+        {state.discussionIndexOpen && (
           <DiscussionIndex
             onSelect={(branchId) => {
-              setIndexOpen(false);
+              toggleDiscussionIndex();
               openDiscussion(branchId);
             }}
           />

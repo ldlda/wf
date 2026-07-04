@@ -13,8 +13,8 @@ type PresenterControlsProps = {
   readonly setChatTheme: (theme: ChatTheme | null) => void;
   readonly setChatMode: (mode: ChatMode | null) => void;
   readonly forceReplay: () => void;
-  readonly openDiscussionIndex: () => void;
   readonly resetOverrides: () => void;
+  readonly resetScene: () => void;
 };
 
 export const PresenterControls = ({
@@ -26,13 +26,19 @@ export const PresenterControls = ({
   setChatTheme,
   setChatMode,
   forceReplay,
-  openDiscussionIndex,
   resetOverrides,
+  resetScene,
 }: PresenterControlsProps) => {
   const composition = compositionForState(state);
   const isMain = state.location.kind === "main";
   const currentScene = isMain ? findScene(state.location.sceneId) : null;
   const currentBeat = currentScene?.beats.find((b) => b.id === (state.location as MainLocation).beatId);
+  const beatIndex = currentScene && isMain
+    ? currentScene.beats.findIndex((b) => b.id === (state.location as MainLocation).beatId)
+    : -1;
+  const totalBeats = currentScene?.beats.length ?? 0;
+  const sceneNumber = currentScene?.number ?? 0;
+  const totalScenes = mainScenes.length;
 
   return (
     <div className="presenter-controls" role="dialog" aria-label="presenter controls">
@@ -41,8 +47,8 @@ export const PresenterControls = ({
         <button type="button" onClick={next}>Next</button>
       </div>
       <div className="presenter-controls__info">
-        <span>{currentScene?.title ?? "Discussion"}</span>
-        {currentBeat && <span> · {currentBeat.title}</span>}
+        <span>Scene {sceneNumber}/{totalScenes}: {currentScene?.title ?? "Discussion"}</span>
+        {currentBeat && <span> · {beatIndex + 1}/{totalBeats} {currentBeat.title}</span>}
       </div>
       <div className="presenter-controls__over">
         <label>
@@ -84,7 +90,7 @@ export const PresenterControls = ({
       <div className="presenter-controls__actions">
         <span>{state.playbackMode === "replay" ? "Replay" : "Live"}</span>
         <button type="button" onClick={forceReplay}>Force replay fallback</button>
-        <button type="button" onClick={openDiscussionIndex}>Open discussion index</button>
+        <button type="button" onClick={resetScene}>Reset scene</button>
         <button type="button" onClick={resetOverrides}>Reset overrides</button>
       </div>
     </div>

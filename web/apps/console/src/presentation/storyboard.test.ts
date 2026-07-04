@@ -41,15 +41,21 @@ describe("defense storyboard catalog", () => {
     expect(findBeat("interrupt-evidence", "trace")?.chatMode).toBe("dock");
   });
 
-  it("defines the five positioning discussion branches", () => {
-    expect(discussionBranches.map((branch) => branch.id)).toEqual([
+  it("defines discussion branches across multiple scenes", () => {
+    expect(discussionBranches.length).toBeGreaterThanOrEqual(5);
+    const positioningBranches = discussionBranches.filter((b) => b.parentSceneId === "positioning");
+    expect(positioningBranches.map((b) => b.id)).toEqual([
       "direct-orchestration",
       "generated-scripts",
       "hosted-automation",
       "durable-agent-graphs",
       "mcp-agent-scale",
     ]);
-    expect(discussionBranches.every((branch) => branch.parentSceneId === "positioning")).toBe(true);
+    for (const branch of discussionBranches) {
+      expect(branch.title.length).toBeGreaterThan(0);
+      expect(branch.summary.length).toBeGreaterThan(0);
+      expect(branch.evidencePointer.length).toBeGreaterThan(0);
+    }
   });
 
   it("exposes a valid default location", () => {

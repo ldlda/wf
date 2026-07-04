@@ -23,6 +23,11 @@ describe("storyboard navigation", () => {
     expect(locationFromHash("#discuss/nope")).toEqual(defaultMainLocation);
   });
 
+  it("falls back for malformed percent-encoded hashes", () => {
+    expect(locationFromHash("#scene/%ZZ/%ZZ")).toEqual(defaultMainLocation);
+    expect(locationFromHash("#discuss/%ZZ")).toEqual(defaultMainLocation);
+  });
+
   it("advances within a scene before advancing to the next scene", () => {
     expect(nextMainLocation({ kind: "main", sceneId: "thesis", beatId: "title" })).toEqual({
       kind: "main",

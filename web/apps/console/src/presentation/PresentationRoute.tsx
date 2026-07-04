@@ -10,8 +10,10 @@ import { ChatDock } from "./ChatDock.js";
 import {
   initialPresentationState,
   presentationReducer,
+  compositionForState,
 } from "./presentation-state.js";
 import { hashForLocation } from "./storyboard-navigation.js";
+import { findScene } from "./storyboard.js";
 import type { PresentationLocation } from "./storyboard.js";
 import "./presentation.css";
 
@@ -154,7 +156,8 @@ export const PresentationRoute = () => {
 
   const handleForceReplay = useCallback(() => {
     demo.setMode("replay");
-  }, [demo]);
+    setEvidence(replayEvidence);
+  }, [demo, replayEvidence]);
 
   const handleResetOverrides = useCallback(() => {
     dispatch({ type: "set_stage_theme", theme: null });
@@ -162,7 +165,15 @@ export const PresentationRoute = () => {
     dispatch({ type: "set_chat_mode", mode: null });
   }, []);
 
-  const showChatDock = state.chatModeOverride === "dock" && state.location.kind !== "discussion";
+  const handleResetScene = useCallback(() => {
+    if (state.location.kind !== "main") return;
+    const scene = findScene(state.location.sceneId);
+    if (!scene || scene.beats.length === 0) return;
+    dispatch({ type: "jump", location: { kind: "main", sceneId: state.location.sceneId, beatId: scene.beats[0]!.id } });
+  }, [state.location]);
+
+  const composition = compositionForState(state);
+  const showChatDock = composition.chatMode === "dock" && state.location.kind !== "discussion";
 
   return (
     <main className="presentation-route" aria-label="lda.chat presentation">
@@ -179,6 +190,7 @@ export const PresentationRoute = () => {
         closeOverlay={() => dispatch({ type: "close_overlay" })}
         openDiscussion={handleOpenDiscussion}
         closeDiscussion={handleCloseDiscussion}
+        toggleDiscussionIndex={() => dispatch({ type: "toggle_discussion_index" })}
       />
       {showChatDock && <ChatDock openChat={() => dispatch({ type: "set_chat_mode", mode: "rail" })} />}
       {state.controlsOpen && (
@@ -191,8 +203,8 @@ export const PresentationRoute = () => {
           setChatTheme={(theme) => dispatch({ type: "set_chat_theme", theme })}
           setChatMode={(mode) => dispatch({ type: "set_chat_mode", mode })}
           forceReplay={handleForceReplay}
-          openDiscussionIndex={() => dispatch({ type: "toggle_controls" })}
           resetOverrides={handleResetOverrides}
+          resetScene={handleResetScene}
         />
       )}
       <button

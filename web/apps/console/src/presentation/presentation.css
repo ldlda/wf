@@ -3,11 +3,9 @@
   --evidence-width: 0rem;
 }
 
-html, body {
+body {
   margin: 0;
   padding: 0;
-  overflow: hidden;
-  height: 100%;
 }
 
 .presentation-route {
@@ -26,6 +24,92 @@ html, body {
     "chat primary evidence" minmax(0, 1fr)
     "rail rail rail" auto /
     var(--chat-width) minmax(0, 1fr) var(--evidence-width);
+}
+
+/* Stage themes */
+.presentation-stage[data-stage-theme="paper"] {
+  background: oklch(0.97 0.005 80);
+  color: oklch(0.15 0.01 80);
+}
+
+.presentation-stage[data-stage-theme="night"] {
+  background: oklch(0.12 0.025 250);
+  color: oklch(0.96 0.01 250);
+}
+
+/* Paper theme child-element overrides */
+.presentation-stage[data-stage-theme="paper"] .stage-caption__eyebrow {
+  color: oklch(0.45 0.04 80);
+}
+
+.presentation-stage[data-stage-theme="paper"] .scene-body__evidence {
+  color: oklch(0.5 0.03 80);
+}
+
+.presentation-stage[data-stage-theme="paper"] .scene-rail__scene {
+  border-color: oklch(0.75 0.04 80);
+  background: oklch(0.92 0.01 80);
+}
+
+.presentation-stage[data-stage-theme="paper"] .scene-rail__scene[data-active="true"] {
+  background: oklch(0.35 0.12 80);
+  color: oklch(0.97 0.005 80);
+}
+
+.presentation-stage[data-stage-theme="paper"] .scene-rail__beat {
+  background: oklch(0.7 0.04 80);
+}
+
+.presentation-stage[data-stage-theme="paper"] .scene-rail__beat--active {
+  background: oklch(0.3 0.08 80);
+}
+
+.presentation-stage[data-stage-theme="paper"] .presentation-stage__mode {
+  color: oklch(0.5 0.03 80);
+}
+
+.presentation-stage[data-stage-theme="paper"] .presentation-stage__discussion-toggle {
+  border-color: oklch(0.7 0.05 80);
+  background: oklch(0.9 0.01 80);
+  color: oklch(0.2 0.02 80);
+}
+
+/* Chat themes */
+.presentation-stage[data-chat-theme="light"] .presentation-stage__chat {
+  background: oklch(0.96 0.005 80);
+  color: oklch(0.18 0.01 80);
+}
+
+.presentation-stage[data-chat-theme="dark"] .presentation-stage__chat {
+  background: oklch(0.14 0.025 250);
+  color: oklch(0.92 0.01 250);
+}
+
+/* Chat modes */
+.presentation-stage[data-chat-mode="hidden"] {
+  grid-template:
+    "primary evidence" minmax(0, 1fr)
+    "rail rail" auto /
+    minmax(0, 1fr) var(--evidence-width);
+}
+
+.presentation-stage[data-chat-mode="hidden"] .presentation-stage__chat {
+  display: none;
+}
+
+.presentation-stage[data-chat-mode="rail"] {
+  --chat-width: 16rem;
+}
+
+.presentation-stage[data-chat-mode="dock"] {
+  grid-template:
+    "primary evidence" minmax(0, 1fr)
+    "rail rail" auto /
+    minmax(0, 1fr) var(--evidence-width);
+}
+
+.presentation-stage[data-chat-mode="dock"] .presentation-stage__chat {
+  display: none;
 }
 
 .presentation-stage__chat,
@@ -449,6 +533,168 @@ html, body {
 
 .chat-error {
   color: oklch(0.65 0.2 25);
+}
+
+/* Scene body visual treatments */
+.scene-body__positioning-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.scene-body__positioning-card {
+  padding: 0.65rem 0.75rem;
+  border: 1px solid oklch(0.36 0.04 250);
+  background: oklch(0.16 0.025 250);
+  border-radius: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.scene-body__positioning-card strong {
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.scene-body__positioning-card span {
+  color: oklch(0.72 0.03 250);
+  font-size: 0.75rem;
+}
+
+.scene-body__positioning-card--active {
+  border-color: oklch(0.7 0.16 195);
+  background: oklch(0.2 0.06 195);
+}
+
+.scene-body__boundary {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  align-items: stretch;
+}
+
+.scene-body__boundary-side {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid oklch(0.36 0.04 250);
+  background: oklch(0.16 0.025 250);
+  border-radius: 0.5rem;
+}
+
+.scene-body__boundary-side h3 {
+  margin: 0 0 0.35rem;
+  font-size: 0.95rem;
+}
+
+.scene-body__boundary-side p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: oklch(0.78 0.03 250);
+}
+
+.scene-body__boundary-divider {
+  width: 2px;
+  background: oklch(0.5 0.08 195);
+  border-radius: 1px;
+  align-self: stretch;
+}
+
+.scene-body__lifecycle,
+.scene-body__authoring {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.scene-body__lifecycle-stage,
+.scene-body__authoring-step {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid oklch(0.36 0.04 250);
+  background: oklch(0.16 0.025 250);
+  border-radius: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.scene-body__lifecycle-number,
+.scene-body__authoring-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: oklch(0.7 0.16 195);
+  color: oklch(0.12 0.025 250);
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.scene-body__lifecycle-arrow,
+.scene-body__authoring-arrow {
+  color: oklch(0.5 0.06 250);
+  font-size: 1.1rem;
+}
+
+.scene-body__architecture {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.75rem;
+}
+
+.scene-body__architecture-layer {
+  width: 100%;
+  max-width: 20rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid oklch(0.36 0.04 250);
+  background: oklch(0.16 0.025 250);
+  border-radius: 0.4rem;
+  text-align: center;
+  font-size: 0.85rem;
+}
+
+.scene-body__architecture-layer--node {
+  border-color: oklch(0.7 0.16 195);
+  background: oklch(0.2 0.06 195);
+}
+
+.scene-body__architecture-arrow {
+  color: oklch(0.5 0.06 250);
+  font-size: 0.9rem;
+}
+
+.scene-body__evaluation {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+}
+
+.scene-body__evaluation-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.65rem 1rem;
+  border: 1px solid oklch(0.36 0.04 250);
+  background: oklch(0.16 0.025 250);
+  border-radius: 0.5rem;
+}
+
+.scene-body__evaluation-stat strong {
+  font-size: 1.6rem;
+  color: oklch(0.7 0.16 195);
+}
+
+.scene-body__evaluation-stat span {
+  font-size: 0.75rem;
+  color: oklch(0.72 0.03 250);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 @media (max-height: 760px) {

@@ -27,6 +27,7 @@ export type PresentationState = {
   readonly chatThemeOverride: ChatTheme | null;
   readonly chatModeOverride: ChatMode | null;
   readonly controlsOpen: boolean;
+  readonly discussionIndexOpen: boolean;
 };
 
 export type PresentationAction =
@@ -44,7 +45,8 @@ export type PresentationAction =
   | { readonly type: "set_stage_theme"; readonly theme: StageTheme | null }
   | { readonly type: "set_chat_theme"; readonly theme: ChatTheme | null }
   | { readonly type: "set_chat_mode"; readonly mode: ChatMode | null }
-  | { readonly type: "toggle_controls" };
+  | { readonly type: "toggle_controls" }
+  | { readonly type: "toggle_discussion_index" };
 
 export const initialPresentationState: PresentationState = {
   location: defaultMainLocation,
@@ -56,6 +58,7 @@ export const initialPresentationState: PresentationState = {
   chatThemeOverride: null,
   chatModeOverride: null,
   controlsOpen: false,
+  discussionIndexOpen: false,
 };
 
 const compositionForLocation = (
@@ -173,6 +176,8 @@ export const presentationReducer = (
     case "close_overlay": {
       if (state.selectedNodeId !== null) return { ...state, selectedNodeId: null };
       if (state.evidenceModeOverride !== null) return { ...state, evidenceModeOverride: null };
+      if (state.discussionIndexOpen) return { ...state, discussionIndexOpen: false };
+      if (state.controlsOpen) return { ...state, controlsOpen: false };
       if (state.location.kind === "discussion") {
         return {
           ...state,
@@ -192,5 +197,7 @@ export const presentationReducer = (
       return { ...state, chatModeOverride: action.mode };
     case "toggle_controls":
       return { ...state, controlsOpen: !state.controlsOpen };
+    case "toggle_discussion_index":
+      return { ...state, discussionIndexOpen: !state.discussionIndexOpen };
   }
 };

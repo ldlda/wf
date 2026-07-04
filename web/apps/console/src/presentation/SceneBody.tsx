@@ -29,6 +29,134 @@ const NarrativeScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
   </>
 );
 
+const PositioningScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
+  <>
+    <StageCaption eyebrow={`Act I · ${scene.claimClass}`} title={scene.title}>
+      <p>{beat.caption}</p>
+    </StageCaption>
+    <div className="scene-body__positioning-grid">
+      <div className="scene-body__positioning-card">
+        <strong>Tool loops</strong>
+        <span>Direct action, no lifecycle</span>
+      </div>
+      <div className="scene-body__positioning-card">
+        <strong>Scripts</strong>
+        <span>Simple, debuggable</span>
+      </div>
+      <div className="scene-body__positioning-card scene-body__positioning-card--active">
+        <strong>lda.chat</strong>
+        <span>Typed lifecycle contracts</span>
+      </div>
+      <div className="scene-body__positioning-card">
+        <strong>Agent graphs</strong>
+        <span>Shared durability</span>
+      </div>
+      <div className="scene-body__positioning-card">
+        <strong>MCP</strong>
+        <span>Capability protocol</span>
+      </div>
+    </div>
+    <p className="scene-body__evidence">{scene.evidencePointer}</p>
+  </>
+);
+
+const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
+  <>
+    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
+      <p>{beat.caption}</p>
+    </StageCaption>
+    <div className="scene-body__boundary">
+      <div className="scene-body__boundary-side">
+        <h3>Planner</h3>
+        <p>External LLM proposes and revises workflow structure.</p>
+      </div>
+      <div className="scene-body__boundary-divider" />
+      <div className="scene-body__boundary-side">
+        <h3>Runtime</h3>
+        <p>Validates, executes, records, and resumes deterministically.</p>
+      </div>
+    </div>
+    <p className="scene-body__evidence">{scene.evidencePointer}</p>
+  </>
+);
+
+const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
+  <>
+    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
+      <p>{beat.caption}</p>
+    </StageCaption>
+    <div className="scene-body__lifecycle">
+      {["Draft", "Artifact", "Deployment", "Run"].map((stage, i) => (
+        <div key={stage} className="scene-body__lifecycle-stage">
+          <span className="scene-body__lifecycle-number">{i + 1}</span>
+          <strong>{stage}</strong>
+          {i < 3 && <span className="scene-body__lifecycle-arrow">→</span>}
+        </div>
+      ))}
+    </div>
+    <p className="scene-body__evidence">{scene.evidencePointer}</p>
+  </>
+);
+
+const ArchitectureScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
+  <>
+    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
+      <p>{beat.caption}</p>
+    </StageCaption>
+    <div className="scene-body__architecture">
+      <div className="scene-body__architecture-layer">Client operations</div>
+      <div className="scene-body__architecture-arrow">↓</div>
+      <div className="scene-body__architecture-layer">Transport / JSON-RPC</div>
+      <div className="scene-body__architecture-arrow">↓</div>
+      <div className="scene-body__architecture-layer">Runtime & providers</div>
+      <div className="scene-body__architecture-arrow">↓</div>
+      <div className="scene-body__architecture-layer scene-body__architecture-layer--node">NodeUse</div>
+    </div>
+    <p className="scene-body__evidence">{scene.evidencePointer}</p>
+  </>
+);
+
+const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
+  <>
+    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
+      <p>{beat.caption}</p>
+    </StageCaption>
+    <div className="scene-body__authoring">
+      {["Discover", "Author", "Diagnose", "Repair"].map((step, i) => (
+        <div key={step} className="scene-body__authoring-step">
+          <span className="scene-body__authoring-number">{i + 1}</span>
+          <strong>{step}</strong>
+          {i < 3 && <span className="scene-body__authoring-arrow">→</span>}
+        </div>
+      ))}
+    </div>
+    <p className="scene-body__evidence">{scene.evidencePointer}</p>
+  </>
+);
+
+const EvaluationScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
+  <>
+    <StageCaption eyebrow={`Act I · ${scene.claimClass}`} title={scene.title}>
+      <p>{beat.caption}</p>
+    </StageCaption>
+    <div className="scene-body__evaluation">
+      <div className="scene-body__evaluation-stat">
+        <strong>36</strong>
+        <span>trials</span>
+      </div>
+      <div className="scene-body__evaluation-stat">
+        <strong>2</strong>
+        <span>challenges</span>
+      </div>
+      <div className="scene-body__evaluation-stat">
+        <strong>3</strong>
+        <span>waves</span>
+      </div>
+    </div>
+    <p className="scene-body__evidence">{scene.evidencePointer}</p>
+  </>
+);
+
 const AgentHandoffScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
   <>
     <StageCaption eyebrow="Agent handoff" title={scene.title}>
@@ -80,14 +208,17 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode }: SceneB
 
   switch (scene.view) {
     case "narrative":
-    case "positioning":
-    case "boundary":
-    case "lifecycle":
-    case "architecture":
-    case "authoring":
-    case "evaluation":
-    case "conclusion":
       return <NarrativeScene scene={scene} beat={beat} />;
+    case "positioning":
+      return <PositioningScene scene={scene} beat={beat} />;
+    case "boundary":
+      return <BoundaryScene scene={scene} beat={beat} />;
+    case "lifecycle":
+      return <LifecycleScene scene={scene} beat={beat} />;
+    case "architecture":
+      return <ArchitectureScene scene={scene} beat={beat} />;
+    case "authoring":
+      return <AuthoringScene scene={scene} beat={beat} />;
     case "agent":
       return <AgentHandoffScene scene={scene} beat={beat} />;
     case "demo":
@@ -100,6 +231,10 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode }: SceneB
           selectNode={selectNode}
         />
       );
+    case "evaluation":
+      return <EvaluationScene scene={scene} beat={beat} />;
+    case "conclusion":
+      return <NarrativeScene scene={scene} beat={beat} />;
     default:
       return assertNever(scene.view);
   }
