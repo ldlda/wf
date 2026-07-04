@@ -81,4 +81,12 @@ describe("PresentationRoute", () => {
     await userEvent.click(screen.getByRole("button", { name: /return to positioning/i }));
     expect(window.location.hash).toBe("#scene/positioning/landscape");
   });
+
+  it("renders stable chat, primary, evidence, and navigation regions", () => {
+    render(<PresentationRoute />);
+    expect(screen.getByLabelText(/agent chat region/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/primary presentation region/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/evidence region/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/presentation scene rail/i)).toBeInTheDocument();
+  });
 });

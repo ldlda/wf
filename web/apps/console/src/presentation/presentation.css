@@ -1,86 +1,170 @@
+:root {
+  --chat-width: 18rem;
+  --evidence-width: 0rem;
+}
+
 .presentation-route {
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
   background: oklch(0.12 0.025 250);
   color: oklch(0.96 0.01 250);
 }
 
 .presentation-stage {
-  min-height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   display: grid;
-  grid-template-rows: 1fr auto;
-  gap: 1rem;
-  padding: 1.25rem;
+  grid-template:
+    "chat primary evidence" minmax(0, 1fr)
+    "rail rail rail" auto /
+    var(--chat-width) minmax(0, 1fr) var(--evidence-width);
 }
 
-.presentation-stage__main {
-  display: grid;
-  align-content: center;
-  gap: 1rem;
-  max-width: 72rem;
+.presentation-stage__chat,
+.presentation-stage__primary,
+.presentation-stage__evidence {
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.presentation-stage__primary {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  overflow: hidden;
+}
+
+.stage-caption {
+  flex-shrink: 0;
+}
+
+.stage-caption__eyebrow {
+  color: oklch(0.78 0.035 250);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.stage-caption h1 {
+  font-size: clamp(1.6rem, 3.5vw, 2.6rem);
+  margin: 0.25rem 0 0.5rem;
+}
+
+.scene-body__evidence {
+  font-size: 0.8rem;
+  color: oklch(0.72 0.03 250);
 }
 
 .operator-chat {
-  max-width: 48rem;
+  height: 100%;
+  overflow-y: auto;
   display: grid;
-  gap: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  align-content: start;
+}
+
+.operator-chat[data-mode="hidden"] {
+  display: none;
 }
 
 .operator-chat[data-mode="rail"] {
-  max-width: 22rem;
+  max-width: var(--chat-width);
 }
 
 .chat-message {
   border: 1px solid oklch(0.34 0.035 250);
   background: oklch(0.18 0.025 250);
-  padding: 0.85rem 1rem;
-  border-radius: 0.85rem;
+  padding: 0.65rem 0.75rem;
+  border-radius: 0.65rem;
+  font-size: 0.85rem;
 }
 
-.beat-rail {
+.scene-rail {
+  grid-area: rail;
   display: flex;
-  gap: 0.5rem;
+  gap: 0.25rem;
+  padding: 0.35rem 0.75rem;
   overflow-x: auto;
 }
 
-.beat-rail button {
-  min-width: 8rem;
-  text-align: left;
+.scene-rail__scene {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  min-width: 4.5rem;
+  text-align: center;
   border: 1px solid oklch(0.36 0.04 250);
-  background: oklch(0.18 0.025 250);
+  background: oklch(0.16 0.025 250);
   color: inherit;
-  padding: 0.65rem 0.75rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.4rem;
+  font-size: 0.7rem;
 }
 
-.beat-rail button[data-active="true"] {
+.scene-rail__scene[data-active="true"] {
   background: oklch(0.7 0.16 195);
   color: oklch(0.12 0.025 250);
+}
+
+.scene-rail__number {
+  font-weight: 600;
+}
+
+.scene-rail__title {
+  font-size: 0.6rem;
+  opacity: 0.8;
+}
+
+.scene-rail__progress {
+  display: flex;
+  gap: 2px;
+}
+
+.scene-rail__beat {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: oklch(0.5 0.04 250);
+}
+
+.scene-rail__beat--active {
+  background: oklch(0.9 0.06 250);
 }
 
 .operation-block {
   border: 1px solid oklch(0.36 0.04 250);
   background: oklch(0.16 0.025 250);
-  padding: 1rem;
-  border-radius: 0.85rem;
+  padding: 0.75rem;
+  border-radius: 0.65rem;
+  flex-shrink: 0;
 }
 
 .operation-block header,
 .operation-block footer {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 0.75rem;
   color: oklch(0.78 0.035 250);
+  font-size: 0.8rem;
 }
 
 .operation-block__command,
 .operation-block pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  font-size: 0.8rem;
 }
 
 .operation-block__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.75rem;
 }
 
 @media (max-width: 800px) {
@@ -91,7 +175,8 @@
 
 .workflow-graph-stage {
   position: relative;
-  min-height: 16rem;
+  min-height: 12rem;
+  flex: 1;
   border: 1px solid oklch(0.32 0.04 250);
   background: oklch(0.14 0.025 250);
   overflow: hidden;
@@ -103,8 +188,9 @@
   border: 1px solid oklch(0.44 0.055 250);
   background: oklch(0.2 0.03 250);
   color: inherit;
-  padding: 0.7rem 0.9rem;
-  border-radius: 0.8rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 0.6rem;
+  font-size: 0.8rem;
 }
 
 .workflow-graph-stage__node[data-kind="interrupt"] {
@@ -123,38 +209,257 @@
   border: 1px solid oklch(0.42 0.05 250);
   background: oklch(0.17 0.025 250);
   color: inherit;
-  padding: 1rem;
+  padding: 0.85rem;
   z-index: 20;
 }
 
 .evidence-drawer {
-  position: fixed;
-  inset: 0 0 0 auto;
-  width: min(36rem, 90vw);
-  padding: 1rem;
-  overflow: auto;
+  height: 100%;
+  overflow-y: auto;
+  padding: 0.75rem;
   background: oklch(0.13 0.025 250);
   border-left: 1px solid oklch(0.34 0.04 250);
-  z-index: 30;
 }
 
 .evidence-drawer pre {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+  font-size: 0.8rem;
+}
+
+.presentation-stage__mode {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: oklch(0.65 0.03 250);
+  margin: 0;
+}
+
+.presentation-stage__discussion-toggle {
+  flex-shrink: 0;
+  align-self: flex-start;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid oklch(0.4 0.05 250);
+  background: oklch(0.2 0.03 250);
+  color: inherit;
+  border-radius: 0.4rem;
+}
+
+.discussion-index,
+.discussion-panel {
+  padding: 1rem;
+  border: 1px solid oklch(0.36 0.04 250);
+  background: oklch(0.16 0.025 250);
+  border-radius: 0.65rem;
+}
+
+.discussion-index h2,
+.discussion-panel h2 {
+  font-size: 1.1rem;
+  margin: 0 0 0.5rem;
+}
+
+.discussion-index h3 {
+  font-size: 0.9rem;
+  margin: 0.5rem 0 0.25rem;
+  color: oklch(0.78 0.035 250);
+}
+
+.discussion-index ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.discussion-index button {
+  padding: 0.3rem 0.6rem;
+  border: 1px solid oklch(0.4 0.05 250);
+  background: oklch(0.2 0.03 250);
+  color: inherit;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.discussion-panel__badge {
+  display: inline-block;
+  padding: 0.15rem 0.4rem;
+  border-radius: 0.3rem;
+  background: oklch(0.25 0.04 250);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.discussion-panel__evidence {
+  font-size: 0.8rem;
+  color: oklch(0.72 0.03 250);
+}
+
+.discussion-panel__summary {
+  margin: 0.5rem 0;
+}
+
+.discussion-panel__detail {
+  font-size: 0.85rem;
+  color: oklch(0.85 0.02 250);
+  border-left: 2px solid oklch(0.4 0.05 250);
+  padding-left: 0.65rem;
+  margin: 0.5rem 0;
+}
+
+.discussion-panel__return {
+  margin-top: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  border: 1px solid oklch(0.7 0.16 195);
+  background: oklch(0.7 0.16 195);
+  color: oklch(0.12 0.025 250);
+  border-radius: 0.4rem;
+  font-weight: 600;
+}
+
+.presenter-controls {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  width: min(20rem, calc(100vw - 1.5rem));
+  padding: 0.75rem;
+  border: 1px solid oklch(0.4 0.05 250);
+  background: oklch(0.17 0.025 250);
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.presenter-controls__nav {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.presenter-controls__nav button {
+  flex: 1;
+  padding: 0.3rem 0.5rem;
+  border: 1px solid oklch(0.4 0.05 250);
+  background: oklch(0.2 0.03 250);
+  color: inherit;
+  border-radius: 0.3rem;
+}
+
+.presenter-controls__info {
+  color: oklch(0.78 0.035 250);
+}
+
+.presenter-controls__over label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-top: 0.25rem;
+}
+
+.presenter-controls__over select {
+  padding: 0.25rem;
+  border: 1px solid oklch(0.36 0.04 250);
+  background: oklch(0.18 0.025 250);
+  color: inherit;
+  border-radius: 0.3rem;
+}
+
+.presenter-controls__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.presenter-controls__actions button {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid oklch(0.4 0.05 250);
+  background: oklch(0.2 0.03 250);
+  color: inherit;
+  border-radius: 0.3rem;
+  font-size: 0.75rem;
+}
+
+.chat-dock {
+  position: fixed;
+  bottom: 2.5rem;
+  left: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid oklch(0.4 0.05 250);
+  background: oklch(0.2 0.03 250);
+  color: inherit;
+  border-radius: 0.5rem;
+  z-index: 25;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.chat-dock:hover,
+.chat-dock:focus-visible {
+  background: oklch(0.25 0.04 250);
+}
+
+.presentation-route__agent-button {
+  position: fixed;
+  bottom: 0.75rem;
+  right: 0.75rem;
+  padding: 0.45rem 0.75rem;
+  border: 1px solid oklch(0.4 0.05 250);
+  background: oklch(0.18 0.025 250);
+  color: inherit;
+  border-radius: 0.4rem;
+  font-size: 0.8rem;
+  z-index: 25;
+}
+
+.chat-tool-part {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid oklch(0.36 0.04 250);
+  border-radius: 0.35rem;
+  font-size: 0.75rem;
+}
+
+.chat-tool-part span {
+  color: oklch(0.72 0.03 250);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chat-tool-part--presentation {
+  border-color: oklch(0.7 0.16 195);
+}
+
+.chat-error {
+  color: oklch(0.65 0.2 25);
 }
 
 @media (max-height: 760px) {
-  .presentation-stage {
-    padding: 0.75rem;
-    gap: 0.65rem;
+  .scene-rail {
+    padding: 0.25rem 0.5rem;
+  }
+
+  .scene-rail__scene {
+    min-width: 3.5rem;
+    padding: 0.25rem 0.35rem;
   }
 
   .stage-caption h1 {
-    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-size: clamp(1.4rem, 3vw, 2.2rem);
   }
 
   .workflow-graph-stage {
-    min-height: 12rem;
+    min-height: 10rem;
   }
 }
 
@@ -166,29 +471,4 @@
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
   }
-}
-
-.chat-tool-part {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-top: 0.35rem;
-  padding: 0.35rem 0.45rem;
-  border: 1px solid color-mix(in oklch, var(--presentation-line), transparent 25%);
-  border-radius: 0.45rem;
-  font-size: 0.78rem;
-}
-
-.chat-tool-part span {
-  color: var(--presentation-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.chat-tool-part--presentation {
-  border-color: color-mix(in oklch, var(--presentation-accent), transparent 25%);
-}
-
-.chat-error {
-  color: var(--presentation-red);
 }
