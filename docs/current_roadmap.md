@@ -36,6 +36,7 @@ Design contracts:
 - [`self-describing interrupt contracts`](superpowers/specs/2026-07-01-self-describing-interrupt-contracts.md)
 - [`workflow console lifecycle explorer`](superpowers/specs/2026-07-02-workflow-console-lifecycle-explorer.md)
 - [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md)
+- [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md)
 
 Implementation order:
 
@@ -81,8 +82,12 @@ Implementation order:
    [`constrained demo agent`](superpowers/specs/2026-07-03-constrained-demo-agent-design.md).
    Implementation:
    [`constrained demo agent plan`](historical/superpowers/plans/2026-07-03-constrained-demo-agent.md).
-9. Add a static slide/appendix shell only after presentation mode is clear.
-   Astro remains an option, not the default next surface.
+9. Implement the approved 13-scene defense storyboard as a no-scroll 720p
+    compositor. Content and evidence freeze before chat replacement, visual
+    polish, or motion tuning. Design:
+    [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
+10. Add a static slide/appendix shell only after presentation mode is clear.
+    Astro remains an option, not the default next surface.
 
 Boundaries: this is not a production admin panel, generic visual workflow
 editor, scheduler, external Google Drive/mail integration, or benchmark evidence
