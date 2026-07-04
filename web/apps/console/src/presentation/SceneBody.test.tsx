@@ -1,9 +1,38 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
+import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { SceneBody } from "./SceneBody.js";
 import type { PresentationLocation } from "./storyboard.js";
 
 const noop = () => {};
+const noopAsync = async () => {};
+const recording = loadCanonicalDemoRecording();
+const demo: DemoTimelineController = {
+  state: {
+    mode: "replay",
+    phase: "review",
+    events: recording.events,
+    appliedCount: recording.events.length,
+    autoplay: false,
+    error: null,
+  },
+  inFlight: false,
+  interruptPayload: null,
+  output: null,
+  trace: null,
+  missingDeploymentMessage: null,
+  recordingId: recording.recordingId,
+  canStart: true,
+  setMode: noop,
+  start: noop,
+  pause: noop,
+  play: noop,
+  next: noopAsync,
+  submitSelectedIssues: noopAsync,
+  cancelReview: noopAsync,
+  restart: noop,
+};
 
 afterEach(() => cleanup());
 
@@ -13,9 +42,10 @@ describe("SceneBody", () => {
     render(
       <SceneBody
         location={location}
-        demo={null as never}
+        demo={demo}
         selectedNodeId={null}
         selectNode={noop}
+        openEvidence={noop}
       />,
     );
     expect(screen.getByRole("heading", { name: /Positioning and Related Systems/i })).toBeInTheDocument();
@@ -27,9 +57,10 @@ describe("SceneBody", () => {
     render(
       <SceneBody
         location={location}
-        demo={null as never}
+        demo={demo}
         selectedNodeId={null}
         selectNode={noop}
+        openEvidence={noop}
       />,
     );
     expect(screen.getByLabelText(/workflow graph/i)).toBeInTheDocument();

@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { DemoEvent } from "../demo/timeline/models.js";
 import { OperationBlock } from "./OperationBlock.js";
 
@@ -27,13 +28,42 @@ const event: DemoEvent = {
 };
 
 describe("OperationBlock", () => {
-  it("shows command, raw response, and interpreted result", () => {
-    render(<OperationBlock event={event} />);
+  it("shows command, interpreted summary, and evidence action in expanded mode", () => {
+    render(<OperationBlock event={event} variant="expanded" openEvidence={vi.fn()} />);
 
     expect(screen.getByText(/workflow.runs.start/i)).toBeInTheDocument();
     expect(screen.getByText(/uv run wf run start/i)).toBeInTheDocument();
-    expect(screen.getByText("Raw")).toBeInTheDocument();
-    expect(screen.getByText("Interpreted")).toBeInTheDocument();
+    expect(screen.getByText("Workflow operation")).toBeInTheDocument();
+    expect(screen.getAllByText(/interrupted/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/issue_review/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/run_demo/i).length).toBeGreaterThan(0);
+  });
+
+  it("shows compact receipt with operation, status, duration, and run id", () => {
+    render(<OperationBlock event={event} variant="receipt" openEvidence={vi.fn()} />);
+
+    expect(screen.getByText(/workflow.runs.start/i)).toBeInTheDocument();
+    expect(screen.getByText(/interrupted/i)).toBeInTheDocument();
+    expect(screen.getByText(/88 ms/i)).toBeInTheDocument();
     expect(screen.getByText(/run_demo/i)).toBeInTheDocument();
+    expect(screen.queryByText("Workflow operation")).not.toBeInTheDocument();
+  });
+
+  it("invokes onOpenEvidence when the evidence action is clicked", async () => {
+    const openEvidence = vi.fn();
+    render(<OperationBlock event={event} variant="expanded" openEvidence={openEvidence} />);
+
+    await userEvent.click(screen.getByText("View raw evidence"));
+    expect(openEvidence).toHaveBeenCalledOnce();
+  });
+
+  it("renders deployment and run ids as unavailable when missing", () => {
+    const eventWithoutIds: DemoEvent = {
+      ...event,
+      resultingIds: { deploymentId: null, runId: null },
+    };
+    render(<OperationBlock event={eventWithoutIds} variant="expanded" openEvidence={vi.fn()} />);
+
+    expect(screen.getAllByText(/unavailable/i).length).toBeGreaterThan(0);
   });
 });

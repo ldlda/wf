@@ -1,3 +1,4 @@
+import { m } from "motion/react";
 import { PREPARE_THESIS_REPORT_RECIPE } from "../demo/agent/recipes.js";
 import type { AgentMessage, AgentMessagePart } from "../demo/agent/events.js";
 import type { PresentationState } from "./presentation-state.js";
@@ -29,23 +30,36 @@ const fallbackMessages = (state: PresentationState): ReadonlyArray<AgentMessage>
 
 const renderPart = (
   part: AgentMessagePart,
-  index: number,
+  key: string,
   onApprove?: () => void,
   onDeny?: () => void,
 ) => {
   switch (part.type) {
     case "text":
-      return <p key={index}>{part.text}</p>;
+      return <p key={key}>{part.text}</p>;
     case "tool-call":
+      if (part.call.name === "startPreparedReportRun") {
+        return (
+          <m.div
+            key={key}
+            layout
+            layoutId="workflow-start-operation"
+            className="chat-tool-part chat-tool-part--handoff"
+          >
+            <span>Workflow operation</span>
+            <code>{part.call.name}</code>
+          </m.div>
+        );
+      }
       return (
-        <div key={index} className="chat-tool-part">
+        <div key={key} className="chat-tool-part">
           <span>Tool call</span>
           <code>{part.call.name}</code>
         </div>
       );
     case "tool-result":
       return (
-        <div key={index} className="chat-tool-part chat-tool-part--result">
+        <div key={key} className="chat-tool-part chat-tool-part--result">
           <span>Tool result</span>
           <code>{part.result.name}</code>
           <small>{part.result.status}</small>
@@ -53,14 +67,14 @@ const renderPart = (
       );
     case "presentation-action":
       return (
-        <div key={index} className="chat-tool-part chat-tool-part--presentation">
+        <div key={key} className="chat-tool-part chat-tool-part--presentation">
           <span>Presentation action</span>
           <code>{part.action.type}</code>
         </div>
       );
     case "approval-request":
       return (
-        <div key={index} className="chat-tool-part chat-tool-part--approval">
+        <div key={key} className="chat-tool-part chat-tool-part--approval">
           <span>Approval required</span>
           <code>{part.name}</code>
           <p>{part.prompt}</p>
@@ -71,9 +85,26 @@ const renderPart = (
         </div>
       );
     case "error":
-      return <p key={index} className="chat-error">{part.message}</p>;
+      return <p key={key} className="chat-error">{part.message}</p>;
     default:
       return null;
+  }
+};
+
+const partKey = (messageId: string, part: AgentMessagePart): string => {
+  switch (part.type) {
+    case "text":
+      return `${messageId}-text-${part.text}`;
+    case "tool-call":
+      return `${messageId}-call-${part.call.id}`;
+    case "tool-result":
+      return `${messageId}-result-${part.result.callId}`;
+    case "presentation-action":
+      return `${messageId}-action-${JSON.stringify(part.action)}`;
+    case "approval-request":
+      return `${messageId}-approval-${part.callId}`;
+    case "error":
+      return `${messageId}-error-${part.message}`;
   }
 };
 
@@ -81,11 +112,11 @@ export const OperatorChat = ({ state, messages, onApprove, onDeny }: OperatorCha
   const visibleMessages = messages && messages.length > 0 ? messages : fallbackMessages(state);
   const composition = compositionForState(state);
   return (
-    <aside className="operator-chat" data-mode={composition.chatMode} aria-label="scripted operator chat">
+    <aside className="operator-chat" data-mode={composition.chatMode} data-chat-theme={composition.chatTheme} aria-label="scripted operator chat">
       {visibleMessages.map((message) => (
         <div key={message.id} className={`chat-message chat-message--${message.role === "user" ? "operator" : "system"}`}>
           <strong>{message.role === "user" ? "Operator" : "lda.chat"}</strong>
-          {message.parts.map((part, index) => renderPart(part, index, onApprove, onDeny))}
+          {message.parts.map((part) => renderPart(part, partKey(message.id, part), onApprove, onDeny))}
         </div>
       ))}
     </aside>

@@ -1,6 +1,6 @@
 # Workflow Takes the Stage Visual Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Turn Scene 9 into a readable cinematic handoff from agent intent to workflow execution, then carry the same run and interrupt context into Scene 10.
 
@@ -35,7 +35,7 @@
 - Produces: `OperationPresentation`, `InterruptContractPresentation`, `GraphExecutionPresentation`, `projectOperationPresentation(event)`, `projectInterruptContract(event)`, and `graphExecutionForBeat(beatId)`.
 - Later tasks must consume these projections instead of reading `event.interpreted` directly.
 
-- [ ] **Step 1: Write failing projection tests**
+- [x] **Step 1: Write failing projection tests**
 
 Create table-driven tests using the canonical `run_start` shape and malformed or sparse events:
 
@@ -122,7 +122,7 @@ describe("demo workflow presentation model", () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests and verify the red state**
+- [x] **Step 2: Run the tests and verify the red state**
 
 Run:
 
@@ -132,7 +132,7 @@ pnpm --dir web --filter @lda/console exec vitest run src/presentation/demo-workf
 
 Expected: FAIL because `demo-workflow-model.ts` does not exist.
 
-- [ ] **Step 3: Implement schema-driven projections**
+- [x] **Step 3: Implement schema-driven projections**
 
 Use Valibot `safeParse` at the `unknown` interpreted boundary:
 
@@ -227,7 +227,7 @@ Keep the schemas local because they decode a presentation projection, not a new
 domain contract. Add a short comment explaining why malformed replay details
 degrade to bounded display values instead of failing the entire presentation.
 
-- [ ] **Step 4: Run focused tests and typecheck**
+- [x] **Step 4: Run focused tests and typecheck**
 
 Run:
 
@@ -238,7 +238,7 @@ pnpm --dir web --filter @lda/console typecheck
 
 Expected: projection tests PASS and typecheck exits zero.
 
-- [ ] **Step 5: Commit the projection boundary**
+- [x] **Step 5: Commit the projection boundary**
 
 ```powershell
 git add web/apps/console/src/presentation/demo-workflow-model.ts web/apps/console/src/presentation/demo-workflow-model.test.ts
@@ -260,7 +260,7 @@ git commit -m "feat: project workflow demo presentation state"
 - Produces: `OperationBlock` props `{ event, variant, openEvidence }`, where `variant` is `"expanded" | "receipt"`.
 - Produces: the shared Motion layout id `workflow-start-operation` on both the prepared start tool call and expanded operation.
 
-- [ ] **Step 1: Replace the old operation test with failing hierarchy tests**
+- [x] **Step 1: Replace the old operation test with failing hierarchy tests**
 
 Test expanded and receipt variants separately:
 
@@ -293,7 +293,7 @@ it("renders a compact execution receipt", () => {
 Extend `OperatorChat.test.tsx` with a prepared start tool-call message and assert
 that its rendered part has `data-layout-anchor="workflow-start-operation"`.
 
-- [ ] **Step 2: Run focused tests and verify failures**
+- [x] **Step 2: Run focused tests and verify failures**
 
 Run:
 
@@ -304,7 +304,7 @@ pnpm --dir web --filter @lda/console exec vitest run src/presentation/OperationB
 Expected: FAIL because the variant, callback, interpreted summary, and layout
 anchor do not exist.
 
-- [ ] **Step 3: Implement explicit operation variants**
+- [x] **Step 3: Implement explicit operation variants**
 
 Use Motion and semantic display fields, not serialized interpreted JSON:
 
@@ -367,7 +367,7 @@ In `OperatorChat`, render tool-call parts through `motion.div`. Assign
 `part.call.name === "startPreparedReportRun"`. Preserve every existing message
 part and approval behavior.
 
-- [ ] **Step 4: Run operation and chat tests**
+- [x] **Step 4: Run operation and chat tests**
 
 Run:
 
@@ -378,7 +378,7 @@ pnpm --dir web --filter @lda/console typecheck
 
 Expected: focused tests PASS and typecheck exits zero.
 
-- [ ] **Step 5: Commit the operation hierarchy**
+- [x] **Step 5: Commit the operation hierarchy**
 
 ```powershell
 git add web/apps/console/src/presentation/OperationBlock.tsx web/apps/console/src/presentation/OperationBlock.test.tsx web/apps/console/src/presentation/OperatorChat.tsx web/apps/console/src/presentation/OperatorChat.test.tsx
@@ -401,7 +401,7 @@ git commit -m "feat: stage interpreted workflow operations"
 - Produces: `InterruptContractPreview` props `{ contract }`.
 - Graph node DOM exposes `data-execution="completed|current|future"` and preserves `data-kind`.
 
-- [ ] **Step 1: Write failing graph-state and contract tests**
+- [x] **Step 1: Write failing graph-state and contract tests**
 
 Replace the graph test setup with explicit execution state:
 
@@ -447,7 +447,7 @@ it("shows the typed resume contract and persisted run", () => {
 });
 ```
 
-- [ ] **Step 2: Run focused tests and verify failures**
+- [x] **Step 2: Run focused tests and verify failures**
 
 Run:
 
@@ -458,7 +458,7 @@ pnpm --dir web --filter @lda/console exec vitest run src/presentation/WorkflowGr
 Expected: FAIL because the new props, connectors, execution states, and preview
 component do not exist.
 
-- [ ] **Step 3: Implement graph edges and semantic node state**
+- [x] **Step 3: Implement graph edges and semantic node state**
 
 Add a curated edge list beside `presentationNodes`:
 
@@ -494,7 +494,7 @@ const executionStateForNode = (
 Keep each graph node as a button and retain `aria-pressed` for the spotlight
 selection state.
 
-- [ ] **Step 4: Implement the contract preview**
+- [x] **Step 4: Implement the contract preview**
 
 Render a Motion `aside` with kind, outcomes, run id, and a bounded formatted
 resume schema. Reuse `formatJson` and cap the preview with CSS rather than
@@ -525,7 +525,7 @@ export const InterruptContractPreview = ({
 );
 ```
 
-- [ ] **Step 5: Run focused tests and typecheck**
+- [x] **Step 5: Run focused tests and typecheck**
 
 Run:
 
@@ -536,7 +536,7 @@ pnpm --dir web --filter @lda/console typecheck
 
 Expected: focused tests PASS and typecheck exits zero.
 
-- [ ] **Step 6: Commit graph and interrupt semantics**
+- [x] **Step 6: Commit graph and interrupt semantics**
 
 ```powershell
 git add web/apps/console/src/presentation/WorkflowGraphStage.tsx web/apps/console/src/presentation/WorkflowGraphStage.test.tsx web/apps/console/src/presentation/InterruptContractPreview.tsx web/apps/console/src/presentation/InterruptContractPreview.test.tsx
@@ -560,7 +560,7 @@ git commit -m "feat: stage workflow graph execution state"
 - Produces: `DemoWorkflowScene` props `{ scene, beat, demo, selectedNodeId, selectNode, openEvidence }`.
 - Extends `SceneBody` with `openEvidence: () => void`; `PresentationStage` passes its existing callback through without creating new state.
 
-- [ ] **Step 1: Write failing beat-composition tests**
+- [x] **Step 1: Write failing beat-composition tests**
 
 Build a deterministic `DemoTimelineController` fixture containing the canonical
 `run_start` event. Test the visible composition by beat:
@@ -646,7 +646,7 @@ Add a `SceneBody` test that clicks `View raw evidence` and verifies the supplied
 `openEvidence` callback. Update all existing `SceneBody` call sites in tests to
 pass a no-op callback.
 
-- [ ] **Step 2: Run focused tests and verify failures**
+- [x] **Step 2: Run focused tests and verify failures**
 
 Run:
 
@@ -656,7 +656,7 @@ pnpm --dir web --filter @lda/console exec vitest run src/presentation/DemoWorkfl
 
 Expected: FAIL because the extracted scene and callback path do not exist.
 
-- [ ] **Step 3: Extract and implement beat composition**
+- [x] **Step 3: Extract and implement beat composition**
 
 Move `DemoWorkflowScene` out of `SceneBody.tsx`. The component must always find
 the canonical `run_start` event for the run receipt and interrupt contract, then
@@ -706,7 +706,7 @@ while `output` retains the graph and run receipt. Preserve the existing event
 selection and evidence behavior. Do not remove any existing Scene 10 content
 as collateral damage.
 
-- [ ] **Step 4: Wire the existing evidence callback through the stage**
+- [x] **Step 4: Wire the existing evidence callback through the stage**
 
 Add `openEvidence` to `SceneBodyProps`, pass it from `PresentationStage`, and
 pass it to `DemoWorkflowScene`. This callback must continue dispatching only:
@@ -718,7 +718,7 @@ pass it to `DemoWorkflowScene`. This callback must continue dispatching only:
 Do not add event selection state in this slice. The bounded canonical replay
 evidence already satisfies the approved fallback.
 
-- [ ] **Step 5: Run focused and presentation tests**
+- [x] **Step 5: Run focused and presentation tests**
 
 Run:
 
@@ -729,7 +729,7 @@ pnpm --dir web --filter @lda/console typecheck
 
 Expected: focused tests PASS and typecheck exits zero.
 
-- [ ] **Step 6: Commit scene composition**
+- [x] **Step 6: Commit scene composition**
 
 ```powershell
 git add web/apps/console/src/presentation/DemoWorkflowScene.tsx web/apps/console/src/presentation/DemoWorkflowScene.test.tsx web/apps/console/src/presentation/SceneBody.tsx web/apps/console/src/presentation/SceneBody.test.tsx web/apps/console/src/presentation/PresentationStage.tsx web/apps/console/src/presentation/PresentationRoute.test.tsx
@@ -752,7 +752,7 @@ git commit -m "feat: choreograph workflow demo beats"
 - Produces: presentation-scoped color, surface, text, status, radius, and motion tokens.
 - Leaves `web/apps/console/src/styles/global.css` unchanged so `/console` remains stable.
 
-- [ ] **Step 1: Add presentation token definitions**
+- [x] **Step 1: Add presentation token definitions**
 
 Create a route-scoped token file. Use these roles consistently rather than
 copying literal colors into component selectors:
@@ -782,7 +782,7 @@ copying literal colors into component selectors:
 Update `DESIGN.md` with the same named presentation roles. Do not document
 every tonal literal; document the semantic token names and the one-accent rule.
 
-- [ ] **Step 2: Import styles in deterministic order**
+- [x] **Step 2: Import styles in deterministic order**
 
 Update `PresentationRoute.tsx` imports in this order:
 
@@ -795,7 +795,7 @@ import "./styles/demo-workflow.css";
 The route owns these imports. Do not import presentation CSS from `/console`
 components.
 
-- [ ] **Step 3: Stop global console section styles leaking into presentation**
+- [x] **Step 3: Stop global console section styles leaking into presentation**
 
 In `presentation.css`, explicitly reset the primary stage container:
 
@@ -815,7 +815,7 @@ Remove the old `.operation-block`, `.operation-block__grid`,
 in `demo-workflow.css`. Do not leave duplicate selector families with competing
 rules.
 
-- [ ] **Step 4: Style operation, graph, interrupt, and chat states**
+- [x] **Step 4: Style operation, graph, interrupt, and chat states**
 
 Implement the approved hierarchy in `demo-workflow.css`:
 
@@ -836,7 +836,7 @@ Implement the approved hierarchy in `demo-workflow.css`:
 Use the semantic tokens from Step 1. Keep body text at or above `0.9rem` in the
 center demo and labels at or above `0.75rem` for projector readability.
 
-- [ ] **Step 5: Implement motion and reduced-motion parity**
+- [x] **Step 5: Implement motion and reduced-motion parity**
 
 Use Motion component props for layout changes and CSS only for small state
 transitions. Configure graph node entry with a maximum 60 ms stagger and 350 ms
@@ -863,7 +863,7 @@ node transition. Ensure both existing motion-off mechanisms remain effective:
 Do not animate width, height, left, or top in CSS. Motion may perform FLIP
 layout animation through transforms.
 
-- [ ] **Step 6: Run tests, typecheck, and build**
+- [x] **Step 6: Run tests, typecheck, and build**
 
 Run:
 
@@ -875,7 +875,7 @@ pnpm --dir web --filter @lda/console build
 
 Expected: all console tests PASS, typecheck exits zero, and Vite build succeeds.
 
-- [ ] **Step 7: Commit the scoped visual system**
+- [x] **Step 7: Commit the scoped visual system**
 
 ```powershell
 git add web/apps/console/src/presentation/styles/presentation-tokens.css web/apps/console/src/presentation/styles/demo-workflow.css web/apps/console/src/presentation/presentation.css web/apps/console/src/presentation/PresentationRoute.tsx web/apps/console/DESIGN.md
@@ -895,7 +895,7 @@ git commit -m "style: establish cinematic workflow demo stage"
 - Consumes: completed presentation behavior from Tasks 1 through 5.
 - Produces: reproducible defense smoke instructions and a historical implementation record.
 
-- [ ] **Step 1: Run the complete web verification suite**
+- [x] **Step 1: Run the complete web verification suite**
 
 Run:
 
@@ -909,7 +909,7 @@ git diff --check
 Expected: all web tests PASS, all workspace typechecks exit zero, build
 succeeds, and `git diff --check` reports no whitespace errors.
 
-- [ ] **Step 2: Run focused `1280x720` browser smoke**
+- [x] **Step 2: Run focused `1280x720` browser smoke**
 
 With `pnpm --dir web dev` already running, open a named Playwright session:
 
@@ -942,7 +942,7 @@ Inspect each screenshot. Verify all of the following before continuing:
 - no primary action or graph node is clipped;
 - the page has no vertical scrollbar.
 
-- [ ] **Step 3: Verify keyboard, evidence, reduced motion, and `/console`**
+- [x] **Step 3: Verify keyboard, evidence, reduced motion, and `/console`**
 
 In the same browser session:
 
@@ -962,7 +962,7 @@ Close the named browser session:
 pnpx --package @playwright/cli playwright-cli -s=workflow-visual close
 ```
 
-- [ ] **Step 4: Update live documentation**
+- [x] **Step 4: Update live documentation**
 
 In `web/README.md`, document that presentation Scenes 8 through 10 use the
 canonical replay, interpreted operation surface, workflow graph execution
@@ -973,7 +973,7 @@ In `docs/current_roadmap.md`, record the completed Scene 9 cinematic slice and
 link both the live design spec and historical plan path. Keep broad remaining
 presentation polish as the next visual follow-up.
 
-- [ ] **Step 5: Archive the completed plan**
+- [x] **Step 5: Archive the completed plan**
 
 ```powershell
 git mv docs/superpowers/plans/2026-07-05-workflow-takes-stage-visual.md docs/historical/superpowers/plans/2026-07-05-workflow-takes-stage-visual.md
@@ -981,7 +981,7 @@ git mv docs/superpowers/plans/2026-07-05-workflow-takes-stage-visual.md docs/his
 
 Update any link added in `docs/current_roadmap.md` to the historical path.
 
-- [ ] **Step 6: Run final documentation and repository checks**
+- [x] **Step 6: Run final documentation and repository checks**
 
 Run:
 
@@ -995,7 +995,7 @@ Expected: the roadmap points to `historical/superpowers/plans`, no live file
 points to the old active plan path, and only intended implementation and
 documentation changes remain.
 
-- [ ] **Step 7: Commit documentation and plan archival**
+- [x] **Step 7: Commit documentation and plan archival**
 
 ```powershell
 git add web/README.md docs/current_roadmap.md

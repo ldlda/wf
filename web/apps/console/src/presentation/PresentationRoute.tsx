@@ -16,6 +16,7 @@ import { hashForLocation } from "./storyboard-navigation.js";
 import { findScene } from "./storyboard.js";
 import type { PresentationLocation } from "./storyboard.js";
 import "./presentation.css";
+import "./styles/demo-workflow.css";
 
 const projectRecordingToEvidence = (
   recording: import("../demo/timeline/models.js").DemoRecording,

@@ -88,11 +88,18 @@ Implementation order:
    [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
    Implementation:
    [`defense storyboard compositor plan`](historical/superpowers/plans/2026-07-04-defense-storyboard-compositor.md).
-10. Next: adopt source-owned AI Elements chat primitives against existing
+10. Completed: make the workflow execution handoff the visual center of Scenes
+    9 and 10. The canonical replay now drives an interpreted operation surface,
+    persistent execution graph, typed interrupt contract, and raw evidence
+    drawer. Design:
+    [`workflow takes the stage`](superpowers/specs/2026-07-05-workflow-takes-stage-visual-design.md).
+    Implementation:
+    [`workflow takes the stage plan`](historical/superpowers/plans/2026-07-05-workflow-takes-stage-visual.md).
+11. Next: adopt source-owned AI Elements chat primitives against existing
     `AgentMessagePart` / `AgentDriver` contracts.
-11. Future: implement final scene visuals, motion choreography, evidence assets,
+12. Future: implement final scene visuals, motion choreography, evidence assets,
     and rehearsal timing.
-12. Add a static slide/appendix shell only after presentation mode is clear.
+13. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Boundaries: this is not a production admin panel, generic visual workflow

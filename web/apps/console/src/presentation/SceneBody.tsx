@@ -1,23 +1,14 @@
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { findBeat, findScene, type PresentationLocation, type SceneDefinition, type SceneBeatDefinition } from "./storyboard.js";
-import { NodeSpotlight } from "./NodeSpotlight.js";
-import { OperationBlock } from "./OperationBlock.js";
+import { DemoWorkflowScene } from "./DemoWorkflowScene.js";
 import { StageCaption } from "./StageCaption.js";
-import { WorkflowGraphStage } from "./WorkflowGraphStage.js";
 
 type SceneBodyProps = {
   readonly location: PresentationLocation;
   readonly demo: DemoTimelineController;
   readonly selectedNodeId: string | null;
   readonly selectNode: (nodeId: string) => void;
-};
-
-const operationStageByBeat: Readonly<Record<string, string | undefined>> = {
-  operation: "run_start",
-  interrupt: "interrupt",
-  approval: "interrupt",
-  resume: "run_resume",
-  trace: "trace_read",
+  readonly openEvidence: () => void;
 };
 
 const NarrativeScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
@@ -206,41 +197,11 @@ const AgentHandoffScene = ({ scene, beat }: { scene: SceneDefinition; beat: Scen
   </>
 );
 
-const DemoWorkflowScene = ({
-  scene,
-  beat,
-  demo,
-  selectedNodeId,
-  selectNode,
-}: {
-  scene: SceneDefinition;
-  beat: SceneBeatDefinition;
-  demo: DemoTimelineController;
-  selectedNodeId: string | null;
-  selectNode: (nodeId: string) => void;
-}) => {
-  const operationStage = operationStageByBeat[beat.id] ?? null;
-  const operationEvent = operationStage
-    ? demo.state.events.find((event) => event.stage === operationStage) ?? null
-    : null;
-
-  return (
-    <>
-      <StageCaption eyebrow="Demo" title={scene.title}>
-        <p>{beat.caption}</p>
-      </StageCaption>
-      {operationEvent && <OperationBlock event={operationEvent} />}
-      <WorkflowGraphStage selectedNodeId={selectedNodeId} selectNode={selectNode} />
-      {selectedNodeId && <NodeSpotlight nodeId={selectedNodeId} close={() => selectNode("")} />}
-    </>
-  );
-};
-
 const assertNever = (value: never): never => {
   throw new Error(`Unexpected view: ${value}`);
 };
 
-export const SceneBody = ({ location, demo, selectedNodeId, selectNode }: SceneBodyProps) => {
+export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence }: SceneBodyProps) => {
   const sceneId = location.kind === "main" ? location.sceneId : "positioning";
   const beatId = location.kind === "main" ? location.beatId : "landscape";
   const scene = findScene(sceneId) ?? findScene("thesis")!;
@@ -269,6 +230,7 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode }: SceneB
           demo={demo}
           selectedNodeId={selectedNodeId}
           selectNode={selectNode}
+          openEvidence={openEvidence}
         />
       );
     case "evaluation":
