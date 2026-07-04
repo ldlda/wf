@@ -23,7 +23,7 @@ demo. It is a staged React compositor. Thesis claims, architecture diagrams,
 chat, workflow graphs, operations, interrupt approval, outputs, and evidence
 occupy the same stable stage and move between semantic scenes.
 
-The listed scene budgets total 8 minutes 54 seconds. Rehearsal should target a
+The listed scene budgets total 8 minutes 36 seconds. Rehearsal should target a
 10-to-11-minute main path after transitions, approval interaction, and natural
 pauses. This leaves margin in a 15-minute slot without forcing the presenter to
 rush.
@@ -84,6 +84,10 @@ The audience should learn the geography once.
 Narrative scenes hide chat. Demo scenes may show chat as `full`, `rail`, or
 `dock`. Evidence is collapsed unless the scene explicitly needs it.
 
+The dock remains visible in a corner when chat is otherwise hidden. Pointer
+hover may preview it, but opening chat requires a click, keyboard action, or
+presenter control so the interaction remains usable without a precise mouse.
+
 Vertical stacking is forbidden on the main path. At `1280x720`, the presenter
 must not scroll to discover the graph, approval control, output, or next action.
 
@@ -106,6 +110,14 @@ focus.
 A rehearsal toolbar may override scene defaults for stage theme, chat theme,
 motion, playback mode, and scene selection. It is hidden during the defense.
 
+Stage themes change by act, not by slide or individual reveal:
+
+- framing and positioning use the paper stage;
+- architecture and product demonstration use the night stage;
+- evaluation and conclusion return to the paper stage.
+
+The demo chat may retain its own light or dark theme across an act transition.
+
 ## Motion Contract
 
 Motion explains changing ownership of the stage:
@@ -122,15 +134,26 @@ typewriter simulation. Major transitions should normally complete within one
 second and never exceed two seconds. Reduced-motion mode replaces spatial
 movement with immediate visibility changes or short fades.
 
+## Scene Semantics
+
+A scene is larger than a slide. It is a semantic chapter composed from several
+visual states. Text, diagrams, operations, graphs, and evidence may enter,
+leave, expand, or collapse while the scene id remains stable.
+
+Advancing within a scene changes a **beat**. Advancing after the final beat
+changes the **scene**. Discussion branches can return to the exact scene and
+beat from which they were opened.
+
 ## Main Storyboard
 
 ### Scene 1: Thesis
 
 - **Time:** 0:20
 - **Claim class:** Implemented
-- **Spoken intent:** "I designed and implemented lda.chat as a workflow
-  substrate that external agents and human operators can use to create,
-  validate, run, and inspect reusable workspace automations."
+- **Spoken intent:** "I began with the goal of building an AI agent for creating
+  and automating workspace workflows. That exposed a more fundamental need: a
+  typed system for creating, validating, running, and inspecting the workflows
+  that an agent proposes. This thesis implements that substrate."
 - **Primary visual:** title and one-sentence thesis.
 - **Composition:** paper stage; chat hidden; no evidence panel.
 - **Evidence pointer:** thesis Abstract and Introduction.
@@ -141,26 +164,31 @@ movement with immediate visibility changes or short fades.
 - **Time:** 0:40
 - **Claim class:** Motivation
 - **Spoken intent:** direct agent tool calls can perform actions, but reusable
-  automation also needs lifecycle state, validation, bindings, persistence,
-  traceability, and recovery boundaries.
+  automation also needs typed contracts, lifecycle state, source bindings,
+  deterministic execution, persistence, traceability, and recovery boundaries.
 - **Primary visual:** an unstable sequence of direct tool calls contrasted with
-  a durable workflow record.
-- **Composition:** night stage; chat hidden.
-- **Evidence pointer:** thesis problem statement and research question.
-- **Transition:** scattered calls align into named system responsibilities.
+  a durable workflow record; the missing responsibilities appear around it.
+- **Composition:** paper stage; chat hidden.
+- **Evidence pointer:** thesis problem statement, requirements, and research
+  question.
+- **Transition:** the requirements arrange into a landscape of related systems.
 
-### Scene 3: The Missing Middle
+### Scene 3: Positioning and Related Systems
 
-- **Time:** 0:35
-- **Claim class:** Implemented
-- **Spoken intent:** "I moved contracts and durable execution concerns out of
-  the planner loop and into the platform."
-- **Primary visual:** five requirements: typed contracts, lifecycle, source
-  bindings, deterministic execution, and evidence.
-- **Composition:** paper stage; one requirement enters at a time.
-- **Evidence pointer:** thesis requirements and contribution summary.
-- **Transition:** the requirements become the boundary between planner and
-  runtime.
+- **Time:** 0:50
+- **Claim class:** Motivation
+- **Spoken intent:** direct tool loops maximize flexibility, generated scripts
+  maximize simplicity, hosted automation platforms provide mature triggers and
+  integrations, agent graph frameworks provide durable agent execution, and
+  MCP standardizes capability access. lda.chat explores a different center of
+  gravity: typed lifecycle contracts and provider-neutral sources intended for
+  external-agent operation.
+- **Primary visual:** related approaches progressively occupy distinct positions
+  around lda.chat; do not reproduce the thesis comparison table.
+- **Composition:** paper stage; each approach enters while the positioning axis
+  remains stable.
+- **Evidence pointer:** thesis Positioning and Related Systems chapter.
+- **Transition:** lda.chat's position resolves into the planner/runtime boundary.
 
 ### Scene 4: Planner and Runtime
 
@@ -183,7 +211,7 @@ movement with immediate visibility changes or short fades.
   records with different mutability and responsibility.
 - **Primary visual:** lifecycle records, including both draft-save and direct
   plan-import paths into an immutable artifact.
-- **Composition:** paper stage; center focus; evidence panel may show one compact
+- **Composition:** night stage; center focus; evidence panel may show one compact
   record at a time.
 - **Evidence pointer:** thesis lifecycle chapter and lifecycle explorer.
 - **Transition:** selecting a deployment zooms into the runtime architecture.
@@ -200,29 +228,9 @@ movement with immediate visibility changes or short fades.
   concrete package or operation names.
 - **Evidence pointer:** thesis architecture diagrams, `docs/project_map.md`, and
   `docs/source_architecture.md`.
-- **Transition:** the node contract narrows into progressive capability
-  discovery.
+- **Transition:** the semantic zoom backs out into the public authoring surface.
 
-### Scene 7: Scaling Agent Interfaces
-
-- **Time:** 0:45
-- **Claim class:** External context
-- **Spoken intent:** large flat tool catalogs create context pressure; industry
-  work increasingly uses progressive discovery and code or CLI surfaces.
-- **Primary visual:** two externally attributed measurements, followed by a
-  separate "lda.chat alignment" panel listing schema discovery, CLI operations,
-  workflow wrappers, artifacts, and replayable runs.
-- **Composition:** paper stage; external results use visibly distinct source
-  labels.
-- **Evidence pointer:** Cloudflare reports roughly 1,000 tokens for two Code
-  Mode tools versus 1.17 million for an equivalent flat MCP surface, and
-  Anthropic reports a worked example reducing tool context from 150,000 to
-  2,000 tokens. These are external examples, not lda.chat measurements:
-  [Cloudflare Code Mode](https://blog.cloudflare.com/code-mode-mcp/) and
-  [Anthropic code execution with MCP](https://www.anthropic.com/engineering/code-execution-with-mcp).
-- **Transition:** the alignment panel becomes lda.chat's authoring loop.
-
-### Scene 8: Author, Validate, Repair
+### Scene 7: Author, Validate, Repair
 
 - **Time:** 0:45
 - **Claim class:** Implemented
@@ -237,7 +245,7 @@ movement with immediate visibility changes or short fades.
   UX findings.
 - **Transition:** the operation block becomes the first card in the agent UI.
 
-### Scene 9: Agent Handoff
+### Scene 8: Agent Handoff
 
 - **Time:** 0:20
 - **Claim class:** Implemented
@@ -248,7 +256,7 @@ movement with immediate visibility changes or short fades.
 - **Evidence pointer:** constrained demo agent design and prepared replay recipe.
 - **Transition:** the operator request and first operation appear immediately.
 
-### Scene 10: Workflow Takes the Stage
+### Scene 9: Workflow Takes the Stage
 
 - **Time:** 0:45
 - **Claim class:** Implemented
@@ -263,7 +271,7 @@ movement with immediate visibility changes or short fades.
   `examples/lda_report_workflow/`.
 - **Transition:** execution stops at the typed `issue_review` interrupt.
 
-### Scene 11: Interrupt, Resume, Evidence
+### Scene 10: Interrupt, Resume, Evidence
 
 - **Time:** 1:30
 - **Claim class:** Implemented
@@ -280,7 +288,7 @@ movement with immediate visibility changes or short fades.
   explaining a new UI.
 - **Transition:** trace frames collapse into evaluation evidence.
 
-### Scene 12: Evaluation
+### Scene 11: Evaluation
 
 - **Time:** 1:25
 - **Claim class:** Evaluated
@@ -296,7 +304,7 @@ movement with immediate visibility changes or short fades.
 - **Transition:** limitations remain while the charts simplify into the final
   planner/runtime boundary.
 
-### Scene 13: Limits and Conclusion
+### Scene 12: Limits and Conclusion
 
 - **Time:** 1:00
 - **Claim class:** Future work
@@ -305,7 +313,7 @@ movement with immediate visibility changes or short fades.
   comparative studies; end on the planner/runtime separation.
 - **Primary visual:** implemented core in focus, future layers around it, then
   the one-sentence thesis.
-- **Composition:** night stage returning to paper; chat dock may remain as a
+- **Composition:** paper stage; chat dock may remain as a
   subtle reminder that the agent is a client of the substrate.
 - **Evidence pointer:** thesis limitations and future-work chapters.
 - **Transition:** none; hold a stable conclusion frame for questions.
@@ -325,11 +333,48 @@ The presenter needs a hidden or unobtrusive rehearsal surface with:
 - open Q&A index.
 
 The audience view must not expose these controls unless explicitly opened.
+The same semantic control actions may later be exposed to a phone or second
+device. This storyboard does not choose the remote-control transport, host, or
+deployment topology.
+
+## Discussion Branches
+
+Discussion branches are prepared scenes outside the main timer. They attach to
+the main story at semantically relevant points and return to the originating
+scene and beat.
+
+Scene 3 owns the first branch group:
+
+- **3A Direct orchestration:** dynamic adaptation versus durable reusable
+  procedure.
+- **3B Generated scripts:** simplicity and debuggability versus managed
+  lifecycle records.
+- **3C Hosted automation:** integrations, triggers, scheduling, and operational
+  maturity. A concrete future-work example may ask an agent to prepare a
+  recurring workflow that starts a headless coding agent with a prompt. The
+  exact command must be verified before presentation; scheduling remains
+  outside the implemented lda.chat scope.
+- **3D Durable agent graphs:** overlap with LangGraph-style persistence and
+  human-in-the-loop execution, and the distinct artifact/deployment/source
+  binding emphasis in this work.
+- **3E MCP and agent-facing scale:** MCP as a capability protocol rather than a
+  workflow lifecycle, plus progressive discovery, CLI surfaces, and Code Mode.
+  External measurements remain explicitly attributed: Cloudflare reports
+  roughly 1,000 tokens for two Code Mode tools versus 1.17 million for an
+  equivalent flat MCP surface, while Anthropic reports a worked example
+  reducing tool context from 150,000 to 2,000 tokens. These are external
+  examples, not lda.chat measurements:
+  [Cloudflare Code Mode](https://blog.cloudflare.com/code-mode-mcp/) and
+  [Anthropic code execution with MCP](https://www.anthropic.com/engineering/code-execution-with-mcp).
+
+Additional branch groups may attach to architecture, evaluation, and future
+work, but they must follow the same claim-class and evidence-pointer rules as
+the main path.
 
 ## Q&A Index
 
-Q&A material is not scene 14. It is a separate deep-link index that can open
-focused views without replaying the main story.
+Q&A material is not the next numbered main scene. It is a separate deep-link
+index that can open focused views without replaying the main story.
 
 Required entries:
 
@@ -380,7 +425,8 @@ still telling the wrong story.
 
 The storyboard implementation is acceptable when:
 
-1. all 13 scenes are directly addressable and navigable without page scroll;
+1. all 12 main scenes are directly addressable and navigable without page
+   scroll;
 2. the main path fits within 12 minutes in rehearsal;
 3. every factual scene has a claim class and evidence pointer;
 4. external measurements are visibly attributed and never presented as
@@ -391,7 +437,8 @@ The storyboard implementation is acceptable when:
    reset;
 8. the full main path is readable at `1280x720` with browser zoom at 100%;
 9. reduced-motion mode preserves all information and controls;
-10. the Q&A index opens focused evidence without replaying the presentation;
+10. discussion branches and the Q&A index open focused evidence and return to
+    the originating scene without replaying the presentation;
 11. the spoken script primarily uses personal defense voice while technical
     invariants remain precise;
 12. the existing `/console` product route remains independent from cinematic

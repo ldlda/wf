@@ -82,7 +82,7 @@ Implementation order:
    [`constrained demo agent`](superpowers/specs/2026-07-03-constrained-demo-agent-design.md).
    Implementation:
    [`constrained demo agent plan`](historical/superpowers/plans/2026-07-03-constrained-demo-agent.md).
-9. Implement the approved 13-scene defense storyboard as a no-scroll 720p
+9. Implement the approved 12-scene defense storyboard as a no-scroll 720p
     compositor. Content and evidence freeze before chat replacement, visual
     polish, or motion tuning. Design:
     [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
