@@ -56,7 +56,7 @@ export const PresenterControls = ({
     return `${m}:${s.toString().padStart(2, "0")}`;
   };
 
-  const plannedMinutes = 20;
+  const plannedMinutes = 15;
 
   return (
     <div className="presenter-controls" role="dialog" aria-label="presenter controls">
@@ -76,6 +76,7 @@ export const PresenterControls = ({
         <label>
           Speaker notes
           <textarea
+            key={currentBeat?.id ?? "none"}
             defaultValue={currentBeat?.caption ?? ""}
             rows={3}
             placeholder="Add notes for this beat..."

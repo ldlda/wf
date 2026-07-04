@@ -36,13 +36,16 @@ export const PresentationRoute = () => {
   const [state, dispatch] = useReducer(
     presentationReducer,
     initialPresentationState,
-    (initial) => presentationReducer(initial, { type: "jump_hash", hash: window.location.hash }),
+    (initial) => presentationReducer(
+      { ...initial, startedAt: Date.now() },
+      { type: "jump_hash", hash: window.location.hash },
+    ),
   );
 
   const recording = useMemo(() => loadCanonicalDemoRecording(), []);
   const replayEvidence = useMemo(() => projectRecordingToEvidence(recording), [recording]);
 
-  const [evidence, setEvidence] = useState<readonly EvidenceRecord[]>([]);
+  const [evidence, setEvidence] = useState<readonly EvidenceRecord[]>(replayEvidence);
   const recordEvidence = useCallback((record: EvidenceRecord) => {
     setEvidence((records) => [...records, record]);
   }, []);

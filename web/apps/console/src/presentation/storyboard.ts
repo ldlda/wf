@@ -281,7 +281,7 @@ export const discussionBranches = defineDiscussionBranches([
     parentSceneId: "positioning",
     title: "MCP and agent-facing scale",
     claimClass: "external-context",
-    evidencePointer: "Thesis: Model Context Protocol; Anthropic MCP documentation; Cloudflare Code Mode",
+    evidencePointer: "Thesis: Model Context Protocol; Anthropic MCP; Cloudflare Code Mode",
     summary: "MCP is a capability protocol; progressive discovery addresses large agent-facing surfaces.",
   },
   {

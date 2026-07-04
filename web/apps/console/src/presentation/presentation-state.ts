@@ -181,6 +181,13 @@ export const presentationReducer = (
     case "close_overlay": {
       if (state.selectedNodeId !== null) return { ...state, selectedNodeId: null };
       if (state.evidenceModeOverride !== null) return { ...state, evidenceModeOverride: null };
+      const derivedEvidenceMode = (() => {
+        if (state.location.kind === "discussion") return "hidden" as const;
+        const scene = findScene(state.location.sceneId);
+        const beat = scene?.beats.find((b) => b.id === (state.location as MainLocation).beatId);
+        return beat?.evidenceMode ?? "hidden";
+      })();
+      if (derivedEvidenceMode !== "hidden") return { ...state, evidenceModeOverride: "hidden" };
       if (state.discussionIndexOpen) return { ...state, discussionIndexOpen: false };
       if (state.controlsOpen) return { ...state, controlsOpen: false };
       if (state.location.kind === "discussion") {

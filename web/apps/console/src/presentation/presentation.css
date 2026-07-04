@@ -828,42 +828,77 @@ body {
 /* Beat-driven active states */
 .scene-body__boundary-side--dim {
   opacity: 0.4;
+  transform: scale(0.97);
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.scene-body__boundary-side {
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.scene-body__lifecycle-stage,
+.scene-body__authoring-step {
+  transition: opacity 0.3s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .scene-body__lifecycle-stage:not(.scene-body__lifecycle-stage--active) {
   opacity: 0.4;
+  transform: scale(0.96);
 }
 
 .scene-body__lifecycle-stage--active {
   border-color: oklch(0.7 0.16 195);
   background: oklch(0.2 0.06 195);
+  transform: scale(1.03);
+}
+
+.scene-body__architecture-layer {
+  transition: opacity 0.3s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .scene-body__architecture-layer:not(.scene-body__architecture-layer--active):not(.scene-body__architecture-layer--node) {
   opacity: 0.4;
+  transform: scale(0.97);
 }
 
 .scene-body__architecture-layer--active {
   border-color: oklch(0.7 0.16 195);
   background: oklch(0.2 0.06 195);
+  transform: scale(1.03);
 }
 
 .scene-body__authoring-step:not(.scene-body__authoring-step--active) {
   opacity: 0.4;
+  transform: scale(0.96);
 }
 
 .scene-body__authoring-step--active {
   border-color: oklch(0.7 0.16 195);
   background: oklch(0.2 0.06 195);
+  transform: scale(1.03);
+}
+
+.scene-body__evaluation-stat {
+  transition: opacity 0.3s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .scene-body__evaluation-stat:not(.scene-body__evaluation-stat--active) {
   opacity: 0.4;
+  transform: scale(0.96);
 }
 
 .scene-body__evaluation-stat--active {
   border-color: oklch(0.7 0.16 195);
   background: oklch(0.2 0.06 195);
+  transform: scale(1.05);
+}
+
+.scene-body__positioning-card {
+  transition: opacity 0.3s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.scene-body__positioning-card--active {
+  transform: scale(1.03);
 }
 
 @media (max-height: 760px) {
