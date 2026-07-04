@@ -82,11 +82,17 @@ Implementation order:
    [`constrained demo agent`](superpowers/specs/2026-07-03-constrained-demo-agent-design.md).
    Implementation:
    [`constrained demo agent plan`](historical/superpowers/plans/2026-07-03-constrained-demo-agent.md).
-9. Implement the approved 12-scene defense storyboard as a no-scroll 720p
-    compositor. Content and evidence freeze before chat replacement, visual
-    polish, or motion tuning. Design:
-    [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
-10. Add a static slide/appendix shell only after presentation mode is clear.
+9. Completed: implement the approved 12-scene defense storyboard as a no-scroll
+   720p compositor. Content and evidence freeze before chat replacement, visual
+   polish, or motion tuning. Design:
+   [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
+   Implementation:
+   [`defense storyboard compositor plan`](historical/superpowers/plans/2026-07-04-defense-storyboard-compositor.md).
+10. Next: adopt source-owned AI Elements chat primitives against existing
+    `AgentMessagePart` / `AgentDriver` contracts.
+11. Future: implement final scene visuals, motion choreography, evidence assets,
+    and rehearsal timing.
+12. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Boundaries: this is not a production admin panel, generic visual workflow

@@ -168,15 +168,61 @@ both modes. Replay is visibly labeled and does not create real issues.
 
 ### Presentation Mode
 
-The console also exposes `/present`, a replay-first defense route for the
-prepared `lda_report_workflow` story. It uses the same demo timeline data as
-the console demo, but renders a 720p-friendly staged view with keyboard beat
-navigation, operation blocks, graph node spotlight, and evidence drawer.
+The console exposes `/present`, a 720p no-scroll defense compositor for the
+prepared `lda_report_workflow` story. It renders a 12-scene, multi-beat
+storyboard with stable stage regions, discussion branches, act themes, a chat
+dock, and keyboard navigation.
 
 ```powershell
 pnpm --dir web dev
 # open http://127.0.0.1:5173/present
 ```
+
+#### Navigation
+
+- **ArrowRight / Space**: advance to the next beat within a scene, then to the
+  next scene
+- **ArrowLeft**: rewind to the previous beat or scene
+- **Escape**: close overlays in priority order (node spotlight, evidence, discussion)
+- **P**: toggle presenter controls
+
+#### Hash Format
+
+- Main scenes: `#scene/<scene-id>/<beat-id>`
+- Discussion branches: `#discuss/<branch-id>`
+
+Invalid hashes fall back to the first scene and beat.
+
+#### Chat Modes
+
+Chat is composed per-beat with four modes: `hidden`, `full`, `rail`, and `dock`.
+When `dock` is active, a floating button in the lower-left corner expands the
+chat to `rail`.
+
+#### Stage Themes
+
+Stage themes change by act: `paper` for scenes 1-3 and 11-12, `night` for
+scenes 4-10. Presenter controls allow overriding stage and chat themes
+independently during rehearsal.
+
+#### Discussion Branches
+
+Five discussion branches exist under the positioning scene. Opening a branch
+from the main scene saves the originating beat as the return location. Direct
+hash links to `#discuss/<branch-id>` return to the parent scene's first beat.
+
+#### Replay-First Startup
+
+Replay is the default mode. The demo timeline auto-starts in replay using the
+committed `lda-report-success-v1` recording. No RPC server is required.
+
+#### Constraints
+
+This plan deliberately defers:
+- AI Elements / Vercel AI chat primitives
+- Live LLM driver integration
+- Remote phone control
+- Final visual polish and motion choreography
 
 ### Constrained Demo Agent
 
