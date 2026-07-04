@@ -1,6 +1,7 @@
 import { PREPARE_THESIS_REPORT_RECIPE } from "../demo/agent/recipes.js";
 import type { AgentMessage, AgentMessagePart } from "../demo/agent/events.js";
 import type { PresentationState } from "./presentation-state.js";
+import { compositionForState } from "./presentation-state.js";
 
 type OperatorChatProps = {
   readonly state: PresentationState;
@@ -78,8 +79,9 @@ const renderPart = (
 
 export const OperatorChat = ({ state, messages, onApprove, onDeny }: OperatorChatProps) => {
   const visibleMessages = messages && messages.length > 0 ? messages : fallbackMessages(state);
+  const composition = compositionForState(state);
   return (
-    <aside className="operator-chat" data-mode={state.chatMode} aria-label="scripted operator chat">
+    <aside className="operator-chat" data-mode={composition.chatMode} aria-label="scripted operator chat">
       {visibleMessages.map((message) => (
         <div key={message.id} className={`chat-message chat-message--${message.role === "user" ? "operator" : "system"}`}>
           <strong>{message.role === "user" ? "Operator" : "lda.chat"}</strong>

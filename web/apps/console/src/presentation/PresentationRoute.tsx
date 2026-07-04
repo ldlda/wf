@@ -4,12 +4,13 @@ import { createPreparedRecipeDriver, assertNever } from "../demo/agent/preparedR
 import { useDemoAgent } from "../demo/agent/useDemoAgent.js";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import { useDemoTimeline } from "../demo/useDemoTimeline.js";
-import { hashForBeat } from "./beats.js";
 import { PresentationStage } from "./PresentationStage.js";
 import {
   initialPresentationState,
   presentationReducer,
 } from "./presentation-state.js";
+import { hashForLocation } from "./storyboard-navigation.js";
+import type { MainLocation, PresentationLocation } from "./storyboard.js";
 import "./presentation.css";
 
 const projectRecordingToEvidence = (
@@ -55,11 +56,11 @@ export const PresentationRoute = () => {
   }, [agent]);
 
   useEffect(() => {
-    const hash = hashForBeat(state.beat);
+    const hash = hashForLocation(state.location);
     if (window.location.hash !== hash) {
       window.history.replaceState(null, "", hash);
     }
-  }, [state.beat]);
+  }, [state.location]);
 
   useEffect(() => {
     const onHashChange = () => {
@@ -119,9 +120,11 @@ export const PresentationRoute = () => {
           dispatch({ type: "set_evidence_mode", mode: "open" });
           break;
         }
-        case "setBeat":
-          dispatch({ type: "jump_hash", hash: `#${action.beatId}` });
+        case "setBeat": {
+          const loc: MainLocation = { kind: "main", sceneId: "thesis", beatId: "title" };
+          dispatch({ type: "jump", location: loc });
           break;
+        }
         case "focusOperation":
         case "showTraceFrame":
           break;
@@ -134,6 +137,11 @@ export const PresentationRoute = () => {
     }
   }, [agent.pendingActions, agent.clearPendingActions, evidence.length, replayEvidence]);
 
+  const handleJump = useCallback(
+    (location: PresentationLocation) => dispatch({ type: "jump", location }),
+    [],
+  );
+
   return (
     <main className="presentation-route" aria-label="lda.chat presentation">
       <PresentationStage
@@ -143,7 +151,7 @@ export const PresentationRoute = () => {
         messages={agent.messages}
         onApprove={agent.phase === "awaiting-approval" ? handleApprove : undefined}
         onDeny={agent.phase === "awaiting-approval" ? handleDeny : undefined}
-        jump={(beatId) => dispatch({ type: "jump", beat: beatId })}
+        jump={handleJump}
         selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
         clearNode={() => dispatch({ type: "clear_node" })}
         openEvidence={() => dispatch({ type: "set_evidence_mode", mode: "open" })}

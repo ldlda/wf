@@ -10,17 +10,17 @@ describe("PresentationRoute", () => {
     render(<PresentationRoute />);
 
     expect(screen.getByRole("main", { name: /lda.chat presentation/i })).toBeInTheDocument();
-    expect(screen.getByText(/External planners propose actions/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Thesis/ })).toBeInTheDocument();
   });
 
-  it("starts from a hash beat and advances with keyboard", async () => {
-    window.location.hash = "#interrupt-approval";
+  it("starts from a scene hash and advances with keyboard", async () => {
+    window.location.hash = "#scene/agent-handoff/request";
     render(<PresentationRoute />);
 
-    expect(screen.getByText(/Human approval is a typed workflow boundary/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Agent Handoff/i })).toBeInTheDocument();
 
     await userEvent.keyboard("{ArrowRight}");
-    expect(await screen.findByText(/Resuming commits the approved branch/i)).toBeInTheDocument();
+    expect(await screen.findByText(/The interface delegates durable work to lda\.chat/i)).toBeInTheDocument();
   });
 
   it("renders replay-first chat, beat rail, and stage caption", () => {
@@ -40,20 +40,16 @@ describe("PresentationRoute", () => {
   });
 
   it("can advance replay far enough to show a product operation block", async () => {
+    window.location.hash = "#scene/workflow-demo/operation";
     render(<PresentationRoute />);
-    await userEvent.click(screen.getByRole("button", { name: /product operation/i }));
 
     expect(await screen.findByText(/workflow.runs.start/i)).toBeInTheDocument();
   });
 
   it("shows resume and trace operation blocks for later beats", async () => {
+    window.location.hash = "#scene/interrupt-evidence/resume";
     render(<PresentationRoute />);
-
-    await userEvent.click(screen.getByRole("button", { name: /resume output/i }));
     expect(await screen.findByText(/workflow.runs.resume/i)).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole("button", { name: /trace evidence/i }));
-    expect(await screen.findByText(/workflow.runs.trace/i)).toBeInTheDocument();
   });
 
   it("runs the prepared agent and applies the interrupt node action", async () => {

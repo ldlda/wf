@@ -1,41 +1,78 @@
 import { describe, expect, it } from "vitest";
 import {
+  compositionForState,
   initialPresentationState,
   presentationReducer,
 } from "./presentation-state.js";
+import type { MainLocation } from "./storyboard.js";
 
 describe("presentationReducer", () => {
-  it("advances and rewinds scripted beats without changing playback mode", () => {
+  it("advances within a scene before advancing to the next scene", () => {
     const advanced = presentationReducer(initialPresentationState, { type: "next" });
-    const rewound = presentationReducer(advanced, { type: "previous" });
+    expect(advanced.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "substrate" });
 
-    expect(advanced.beat).toBe("chat-request");
-    expect(advanced.playbackMode).toBe("replay");
-    expect(rewound.beat).toBe("intro");
+    const advancedAgain = presentationReducer(advanced, { type: "next" });
+    expect(advancedAgain.location).toEqual({ kind: "main", sceneId: "problem", beatId: "direct-actions" });
   });
 
-  it("opens node detail without changing the current beat", () => {
+  it("rewinds across scene boundaries", () => {
+    const state: MainLocation = { kind: "main", sceneId: "problem", beatId: "direct-actions" };
+    const rewound = presentationReducer(
+      { ...initialPresentationState, location: state },
+      { type: "previous" },
+    );
+    expect(rewound.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "substrate" });
+  });
+
+  it("jumps to a specific scene and beat", () => {
+    const jumped = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "workflow-demo", beatId: "graph" },
+    });
+    expect(jumped.location).toEqual({ kind: "main", sceneId: "workflow-demo", beatId: "graph" });
+  });
+
+  it("parses a scene hash", () => {
+    const state = presentationReducer(initialPresentationState, {
+      type: "jump_hash",
+      hash: "#scene/lifecycle/deployment",
+    });
+    expect(state.location).toEqual({ kind: "main", sceneId: "lifecycle", beatId: "deployment" });
+  });
+
+  it("falls back to default for invalid hash", () => {
+    const state = presentationReducer(initialPresentationState, {
+      type: "jump_hash",
+      hash: "#scene/nope/nope",
+    });
+    expect(state.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "title" });
+  });
+
+  it("opens a discussion branch and returns to the originating beat", () => {
+    const positioned = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "positioning", beatId: "lda-position" },
+    });
+    const opened = presentationReducer(positioned, {
+      type: "open_discussion",
+      branchId: "hosted-automation",
+    });
+    const closed = presentationReducer(opened, { type: "close_discussion" });
+
+    expect(opened.location).toEqual({ kind: "discussion", branchId: "hosted-automation" });
+    expect(closed.location).toEqual(positioned.location);
+  });
+
+  it("opens node detail without changing the current location", () => {
     const state = presentationReducer(initialPresentationState, {
       type: "select_node",
       nodeId: "review_issues",
     });
-
-    expect(state.beat).toBe("intro");
+    expect(state.location).toEqual(initialPresentationState.location);
     expect(state.selectedNodeId).toBe("review_issues");
   });
 
-  it("closes overlays before rewinding content", () => {
-    const opened = presentationReducer(initialPresentationState, {
-      type: "set_evidence_mode",
-      mode: "open",
-    });
-    const closed = presentationReducer(opened, { type: "close_overlay" });
-
-    expect(closed.evidenceMode).toBe("hidden");
-    expect(closed.beat).toBe("intro");
-  });
-
-  it("closes node spotlight before evidence drawer", () => {
+  it("closes overlays in priority order: node, evidence, discussion", () => {
     const withNode = presentationReducer(initialPresentationState, {
       type: "select_node",
       nodeId: "review_issues",
@@ -44,12 +81,55 @@ describe("presentationReducer", () => {
       type: "set_evidence_mode",
       mode: "open",
     });
+    const opened = presentationReducer(withEvidence, {
+      type: "open_discussion",
+      branchId: "hosted-automation",
+    });
 
-    expect(withEvidence.selectedNodeId).toBe("review_issues");
-    expect(withEvidence.evidenceMode).toBe("open");
+    const closed1 = presentationReducer(opened, { type: "close_overlay" });
+    expect(closed1.selectedNodeId).toBeNull();
+    expect(closed1.evidenceModeOverride).toBe("open");
+    expect(closed1.location.kind).toBe("discussion");
 
-    const afterEscape = presentationReducer(withEvidence, { type: "close_overlay" });
-    expect(afterEscape.selectedNodeId).toBeNull();
-    expect(afterEscape.evidenceMode).toBe("open");
+    const closed2 = presentationReducer(closed1, { type: "close_overlay" });
+    expect(closed2.evidenceModeOverride).toBeNull();
+
+    const closed3 = presentationReducer(closed2, { type: "close_overlay" });
+    expect(closed3.location.kind).toBe("main");
+  });
+
+  it("does nothing on next while a discussion branch is open", () => {
+    const positioned = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "thesis", beatId: "title" },
+    });
+    const opened = presentationReducer(positioned, {
+      type: "open_discussion",
+      branchId: "direct-orchestration",
+    });
+    const nexted = presentationReducer(opened, { type: "next" });
+    expect(nexted.location).toEqual(opened.location);
+  });
+
+  it("derives act and chat composition from the current beat", () => {
+    const state = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "workflow-demo", beatId: "graph" },
+    });
+    expect(compositionForState(state)).toMatchObject({
+      stageTheme: "night",
+      chatTheme: "light",
+      chatMode: "rail",
+    });
+  });
+
+  it("closes overlays before rewinding content", () => {
+    const opened = presentationReducer(initialPresentationState, {
+      type: "set_evidence_mode",
+      mode: "open",
+    });
+    const closed = presentationReducer(opened, { type: "close_overlay" });
+    expect(closed.evidenceModeOverride).toBeNull();
+    expect(closed.location).toEqual(initialPresentationState.location);
   });
 });
