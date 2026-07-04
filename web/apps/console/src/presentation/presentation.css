@@ -3,6 +3,13 @@
   --evidence-width: 0rem;
 }
 
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+}
+
 .presentation-route {
   height: 100dvh;
   min-height: 0;
