@@ -210,6 +210,9 @@ pyrightconfig.json
 # Local agent skill links
 .agent/
 
+# Local dependency source checkouts used for agent reference
+.repos/effect/
+
 
 # local config file
 /wf*.config.json
