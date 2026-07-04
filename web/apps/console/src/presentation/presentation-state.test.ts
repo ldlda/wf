@@ -92,7 +92,7 @@ describe("presentationReducer", () => {
     expect(closed1.location.kind).toBe("discussion");
 
     const closed2 = presentationReducer(closed1, { type: "close_overlay" });
-    expect(closed2.evidenceModeOverride).toBeNull();
+    expect(closed2.evidenceModeOverride).toBe("hidden");
 
     const closed3 = presentationReducer(closed2, { type: "close_overlay" });
     expect(closed3.location.kind).toBe("main");
@@ -129,7 +129,22 @@ describe("presentationReducer", () => {
       mode: "open",
     });
     const closed = presentationReducer(opened, { type: "close_overlay" });
-    expect(closed.evidenceModeOverride).toBeNull();
+    expect(closed.evidenceModeOverride).toBe("hidden");
     expect(closed.location).toEqual(initialPresentationState.location);
+  });
+
+  it("does not reopen evidence on repeated Escape after force-close", () => {
+    const stateAtTrace = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "interrupt-evidence", beatId: "trace" },
+    });
+    expect(stateAtTrace.evidenceModeOverride).toBeNull();
+
+    const closed = presentationReducer(stateAtTrace, { type: "close_overlay" });
+    expect(closed.evidenceModeOverride).toBe("hidden");
+
+    const secondEscape = presentationReducer(closed, { type: "close_overlay" });
+    expect(secondEscape.evidenceModeOverride).toBe("hidden");
+    expect(secondEscape.location.kind).toBe("main");
   });
 });

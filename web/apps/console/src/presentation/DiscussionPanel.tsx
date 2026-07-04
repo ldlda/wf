@@ -28,7 +28,7 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
       )}
       {branchId === "mcp-agent-scale" && (
         <p className="discussion-panel__detail">
-          <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener noreferrer">Model Context Protocol</a> ·{" "}
+          <a href="https://modelcontextprotocol.io/" target="_blank" rel="noopener noreferrer">Anthropic MCP</a> ·{" "}
           <a href="https://developers.cloudflare.com/workers-ai/configuration/code-mode/" target="_blank" rel="noopener noreferrer">Cloudflare Code Mode</a>
           {" "}— both are external context.
         </p>

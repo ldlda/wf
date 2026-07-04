@@ -180,14 +180,14 @@ export const presentationReducer = (
       return { ...state, evidenceModeOverride: action.mode };
     case "close_overlay": {
       if (state.selectedNodeId !== null) return { ...state, selectedNodeId: null };
-      if (state.evidenceModeOverride !== null) return { ...state, evidenceModeOverride: null };
-      const derivedEvidenceMode = (() => {
-        if (state.location.kind === "discussion") return "hidden" as const;
+      const isEvidenceVisible = (() => {
+        if (state.evidenceModeOverride !== null) return state.evidenceModeOverride !== "hidden";
+        if (state.location.kind === "discussion") return false;
         const scene = findScene(state.location.sceneId);
         const beat = scene?.beats.find((b) => b.id === (state.location as MainLocation).beatId);
-        return beat?.evidenceMode ?? "hidden";
+        return beat?.evidenceMode === "open" || beat?.evidenceMode === "peek";
       })();
-      if (derivedEvidenceMode !== "hidden") return { ...state, evidenceModeOverride: "hidden" };
+      if (isEvidenceVisible) return { ...state, evidenceModeOverride: "hidden" };
       if (state.discussionIndexOpen) return { ...state, discussionIndexOpen: false };
       if (state.controlsOpen) return { ...state, controlsOpen: false };
       if (state.location.kind === "discussion") {
