@@ -8,8 +8,7 @@ export type PresentationToolName =
   | "selectWorkflowNode"
   | "focusOperation"
   | "openEvidence"
-  | "showTraceFrame"
-  | "setBeat";
+  | "showTraceFrame";
 
 export type AgentToolName = WorkflowToolName | PresentationToolName;
 
@@ -59,11 +58,6 @@ export const AGENT_TOOLS = {
     name: "showTraceFrame",
     kind: "presentation",
     description: "Focus a trace frame in the presentation.",
-  },
-  setBeat: {
-    name: "setBeat",
-    kind: "presentation",
-    description: "Move the presentation to a named beat.",
   },
 } satisfies Record<AgentToolName, AgentToolDescriptor>;
 

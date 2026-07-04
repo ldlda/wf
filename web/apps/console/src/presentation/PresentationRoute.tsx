@@ -10,7 +10,7 @@ import {
   presentationReducer,
 } from "./presentation-state.js";
 import { hashForLocation } from "./storyboard-navigation.js";
-import type { MainLocation, PresentationLocation } from "./storyboard.js";
+import type { PresentationLocation } from "./storyboard.js";
 import "./presentation.css";
 
 const projectRecordingToEvidence = (
@@ -120,11 +120,6 @@ export const PresentationRoute = () => {
           dispatch({ type: "set_evidence_mode", mode: "open" });
           break;
         }
-        case "setBeat": {
-          const loc: MainLocation = { kind: "main", sceneId: "thesis", beatId: "title" };
-          dispatch({ type: "jump", location: loc });
-          break;
-        }
         case "focusOperation":
         case "showTraceFrame":
           break;
@@ -153,7 +148,6 @@ export const PresentationRoute = () => {
         onDeny={agent.phase === "awaiting-approval" ? handleDeny : undefined}
         jump={handleJump}
         selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
-        clearNode={() => dispatch({ type: "clear_node" })}
         openEvidence={() => dispatch({ type: "set_evidence_mode", mode: "open" })}
         closeOverlay={() => dispatch({ type: "close_overlay" })}
       />

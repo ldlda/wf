@@ -6,8 +6,7 @@ export type PresentationToolAction =
   | { readonly type: "selectWorkflowNode"; readonly nodeId: string }
   | { readonly type: "focusOperation"; readonly eventId: string }
   | { readonly type: "openEvidence"; readonly eventId: string }
-  | { readonly type: "showTraceFrame"; readonly frameIndex: number }
-  | { readonly type: "setBeat"; readonly beatId: string };
+  | { readonly type: "showTraceFrame"; readonly frameIndex: number };
 
 export type AgentToolCall = {
   readonly id: string;

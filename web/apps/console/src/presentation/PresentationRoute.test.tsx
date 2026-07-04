@@ -27,11 +27,12 @@ describe("PresentationRoute", () => {
     render(<PresentationRoute />);
 
     expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
-    expect(screen.getByLabelText(/presentation beat rail/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/presentation scene rail/i)).toBeInTheDocument();
     expect(screen.getByText("Replay · running")).toBeInTheDocument();
   });
 
   it("shows node spotlight when a graph node is selected", async () => {
+    window.location.hash = "#scene/workflow-demo/graph";
     render(<PresentationRoute />);
     await userEvent.click(screen.getByRole("button", { name: /issue review/i }));
 
