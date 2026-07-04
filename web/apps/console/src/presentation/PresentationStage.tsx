@@ -1,13 +1,16 @@
+import { useState } from "react";
 import type { EvidenceRecord } from "../app/state.js";
 import type { AgentMessage } from "../demo/agent/events.js";
 import { SceneBody } from "./SceneBody.js";
 import { SceneRail } from "./SceneRail.js";
+import { DiscussionIndex } from "./DiscussionIndex.js";
+import { DiscussionPanel } from "./DiscussionPanel.js";
 import { EvidenceDrawer } from "./EvidenceDrawer.js";
 import { OperatorChat } from "./OperatorChat.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
-import type { MainLocation, PresentationLocation } from "./storyboard.js";
+import { discussionBranches, findScene, type PresentationLocation } from "./storyboard.js";
 
 type PresentationStageProps = {
   readonly state: PresentationState;
@@ -20,6 +23,8 @@ type PresentationStageProps = {
   readonly selectNode: (nodeId: string) => void;
   readonly openEvidence: () => void;
   readonly closeOverlay: () => void;
+  readonly openDiscussion: (branchId: string) => void;
+  readonly closeDiscussion: () => void;
 };
 
 export const PresentationStage = ({
@@ -33,8 +38,17 @@ export const PresentationStage = ({
   selectNode,
   openEvidence,
   closeOverlay,
+  openDiscussion,
+  closeDiscussion,
 }: PresentationStageProps) => {
   const composition = compositionForState(state);
+  const [indexOpen, setIndexOpen] = useState(false);
+
+  const isMainScene = state.location.kind === "main";
+  const currentScene = isMainScene ? findScene(state.location.sceneId) : null;
+  const hasBranches = currentScene
+    ? discussionBranches.some((b) => b.parentSceneId === currentScene.id)
+    : false;
 
   return (
     <div
@@ -47,12 +61,35 @@ export const PresentationStage = ({
         <OperatorChat state={state} messages={messages} onApprove={onApprove} onDeny={onDeny} />
       </aside>
       <section className="presentation-stage__primary" aria-label="primary presentation region">
-        <SceneBody
-          location={state.location}
-          demo={demo}
-          selectedNodeId={state.selectedNodeId}
-          selectNode={selectNode}
-        />
+        {state.location.kind === "discussion" ? (
+          <DiscussionPanel branchId={state.location.branchId} onClose={closeDiscussion} />
+        ) : (
+          <>
+            <SceneBody
+              location={state.location}
+              demo={demo}
+              selectedNodeId={state.selectedNodeId}
+              selectNode={selectNode}
+            />
+            {hasBranches && (
+              <button
+                type="button"
+                className="presentation-stage__discussion-toggle"
+                onClick={() => setIndexOpen(true)}
+              >
+                Open discussion topics
+              </button>
+            )}
+          </>
+        )}
+        {indexOpen && (
+          <DiscussionIndex
+            onSelect={(branchId) => {
+              setIndexOpen(false);
+              openDiscussion(branchId);
+            }}
+          />
+        )}
         <p className="presentation-stage__mode">
           {demo.state.mode === "replay" ? "Replay" : "Live"} · {demo.state.phase}
         </p>

@@ -137,6 +137,16 @@ export const PresentationRoute = () => {
     [],
   );
 
+  const handleOpenDiscussion = useCallback(
+    (branchId: string) => dispatch({ type: "open_discussion", branchId }),
+    [],
+  );
+
+  const handleCloseDiscussion = useCallback(
+    () => dispatch({ type: "close_discussion" }),
+    [],
+  );
+
   return (
     <main className="presentation-route" aria-label="lda.chat presentation">
       <PresentationStage
@@ -150,6 +160,8 @@ export const PresentationRoute = () => {
         selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
         openEvidence={() => dispatch({ type: "set_evidence_mode", mode: "open" })}
         closeOverlay={() => dispatch({ type: "close_overlay" })}
+        openDiscussion={handleOpenDiscussion}
+        closeDiscussion={handleCloseDiscussion}
       />
       <button
         type="button"

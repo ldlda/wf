@@ -62,4 +62,23 @@ describe("PresentationRoute", () => {
     expect(screen.getAllByText(/selectWorkflowNode/i).length).toBeGreaterThanOrEqual(2);
     expect(await screen.findByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
   });
+
+  it("opens a positioning branch and returns to the exact originating beat", async () => {
+    window.location.hash = "#scene/positioning/lda-position";
+    render(<PresentationRoute />);
+
+    await userEvent.click(screen.getByRole("button", { name: /open discussion topics/i }));
+    await userEvent.click(screen.getByRole("button", { name: /hosted automation/i }));
+    expect(window.location.hash).toBe("#discuss/hosted-automation");
+
+    await userEvent.click(screen.getByRole("button", { name: /return to positioning/i }));
+    expect(window.location.hash).toBe("#scene/positioning/lda-position");
+  });
+
+  it("uses the parent scene as return location for a directly linked branch", async () => {
+    window.location.hash = "#discuss/mcp-agent-scale";
+    render(<PresentationRoute />);
+    await userEvent.click(screen.getByRole("button", { name: /return to positioning/i }));
+    expect(window.location.hash).toBe("#scene/positioning/landscape");
+  });
 });

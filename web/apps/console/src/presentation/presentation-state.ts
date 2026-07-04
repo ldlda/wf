@@ -136,9 +136,13 @@ export const presentationReducer = (
     case "jump_hash": {
       const parsed = locationFromHash(action.hash);
       if (parsed.kind === "main") {
-        return { ...state, location: clampMainLocation(parsed) };
+        return { ...state, location: clampMainLocation(parsed), discussionReturn: null };
       }
-      return { ...state, location: parsed };
+      const branch = findDiscussionBranch(parsed.branchId);
+      const returnLoc = branch
+        ? firstBeatOfScene(branch.parentSceneId) ?? defaultMainLocation
+        : defaultMainLocation;
+      return { ...state, location: parsed, discussionReturn: returnLoc };
     }
     case "open_discussion": {
       const branch = findDiscussionBranch(action.branchId);
