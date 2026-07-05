@@ -95,12 +95,12 @@ Implementation order:
     [`workflow takes the stage`](historical/superpowers/specs/2026-07-05-workflow-takes-stage-visual-design.md).
     Implementation:
     [`workflow takes the stage plan`](historical/superpowers/plans/2026-07-05-workflow-takes-stage-visual.md).
-11. Next: replace whole-stage theme switching with one scalable Editorial
+11. Completed: replace whole-stage theme switching with one scalable Editorial
     Canvas and prove the reusable recursive Interactive Figure through Scene 6.
     Design:
     [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
     Implementation:
-    [`editorial canvas and Interactive Figure plan`](superpowers/plans/2026-07-05-editorial-canvas-interactive-figure.md).
+    [`editorial canvas and Interactive Figure plan`](historical/superpowers/plans/2026-07-05-editorial-canvas-interactive-figure.md).
 12. Then: adopt source-owned AI Elements chat primitives against existing
     `AgentMessagePart` / `AgentDriver` contracts.
 13. Future: implement Schema Form Surface and synchronized Approval Session.

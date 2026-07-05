@@ -228,6 +228,25 @@ hash links to `#discuss/<branch-id>` return to the parent scene's first beat.
 Replay is the default mode. The demo timeline auto-starts in replay using the
 committed `lda-report-success-v1` recording. No RPC server is required.
 
+#### Editorial Canvas
+
+The presentation renders on a fixed 1280x720 editorial canvas that scales and
+letterboxes to fit any viewport without reflowing scene content. Scene 6 uses a
+recursive Interactive Figure with expand/collapse and breadcrumb navigation.
+
+Key Scene 6 deep links:
+
+- `/present#scene/architecture/client` — root architecture overview
+- `/present#scene/architecture/runtime/focus/runtime-providers` — one level deep
+- `/present#scene/architecture/runtime/focus/runtime-providers/configured-providers` — two levels deep
+
+#### Figure Controls
+
+- **Enter / click**: expand a child figure
+- **Escape**: pop one focus level
+- **Tab / arrows**: move focus between figure nodes without advancing the presentation
+- **Breadcrumbs**: jump to any ancestor focus level
+
 #### Constraints
 
 This plan deliberately defers:
