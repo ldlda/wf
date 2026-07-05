@@ -2,6 +2,7 @@ import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { findBeat, findScene, type PresentationLocation, type SceneDefinition, type SceneBeatDefinition } from "./storyboard.js";
 import { DemoWorkflowScene } from "./DemoWorkflowScene.js";
 import { StageCaption } from "./StageCaption.js";
+import { ArchitectureScene } from "./scenes/ArchitectureScene.js";
 
 type SceneBodyProps = {
   readonly location: PresentationLocation;
@@ -9,6 +10,8 @@ type SceneBodyProps = {
   readonly selectedNodeId: string | null;
   readonly selectNode: (nodeId: string) => void;
   readonly openEvidence: () => void;
+  readonly onFocusPathChange: (path: readonly string[]) => void;
+  readonly motionDisabled: boolean;
 };
 
 const NarrativeScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
@@ -106,34 +109,6 @@ const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
   </>
 );
 
-const architectureLayers = [
-  { id: "client", label: "Client operations" },
-  { id: "api", label: "Transport / JSON-RPC" },
-  { id: "runtime", label: "Runtime & providers" },
-  { id: "node-use", label: "NodeUse", isNode: true },
-];
-
-const ArchitectureScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
-  <>
-    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
-      <p>{beat.caption}</p>
-    </StageCaption>
-    <div className="scene-body__architecture">
-      {architectureLayers.map((layer, i) => (
-        <div key={layer.id}>
-          <div
-            className={`scene-body__architecture-layer${layer.isNode ? " scene-body__architecture-layer--node" : ""}${beat.id === layer.id ? " scene-body__architecture-layer--active" : ""}`}
-          >
-            {layer.label}
-          </div>
-          {i < architectureLayers.length - 1 && <div className="scene-body__architecture-arrow">↓</div>}
-        </div>
-      ))}
-    </div>
-    <p className="scene-body__evidence">{scene.evidencePointer}</p>
-  </>
-);
-
 const authoringSteps = [
   { id: "discover", label: "Discover" },
   { id: "author", label: "Author" },
@@ -201,7 +176,7 @@ const assertNever = (value: never): never => {
   throw new Error(`Unexpected view: ${value}`);
 };
 
-export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence }: SceneBodyProps) => {
+export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence, onFocusPathChange, motionDisabled }: SceneBodyProps) => {
   const sceneId = location.kind === "main" ? location.sceneId : "positioning";
   const beatId = location.kind === "main" ? location.beatId : "landscape";
   const scene = findScene(sceneId) ?? findScene("thesis")!;
@@ -217,7 +192,14 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
     case "lifecycle":
       return <LifecycleScene scene={scene} beat={beat} />;
     case "architecture":
-      return <ArchitectureScene scene={scene} beat={beat} />;
+      return (
+        <ArchitectureScene
+          focusPath={location.kind === "main" ? location.focusPath : []}
+          activeNodeId={beat.figure?.activeNodeId ?? null}
+          onFocusPathChange={onFocusPathChange}
+          motionDisabled={motionDisabled}
+        />
+      );
     case "authoring":
       return <AuthoringScene scene={scene} beat={beat} />;
     case "agent":

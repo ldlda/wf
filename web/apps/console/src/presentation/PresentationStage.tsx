@@ -75,6 +75,12 @@ export const PresentationStage = ({
                   selectedNodeId={state.selectedNodeId}
                   selectNode={selectNode}
                   openEvidence={openEvidence}
+                  onFocusPathChange={(path) => {
+                    if (state.location.kind === "main") {
+                      jump({ ...state.location, focusPath: path });
+                    }
+                  }}
+                  motionDisabled={false}
                 />
                 <button
                   type="button"

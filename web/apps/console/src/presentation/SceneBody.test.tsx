@@ -46,6 +46,8 @@ describe("SceneBody", () => {
         selectedNodeId={null}
         selectNode={noop}
         openEvidence={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
       />,
     );
     expect(screen.getByRole("heading", { name: /Positioning and Related Systems/i })).toBeInTheDocument();
@@ -61,6 +63,8 @@ describe("SceneBody", () => {
         selectedNodeId={null}
         selectNode={noop}
         openEvidence={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
       />,
     );
     expect(screen.getByLabelText(/workflow graph/i)).toBeInTheDocument();
