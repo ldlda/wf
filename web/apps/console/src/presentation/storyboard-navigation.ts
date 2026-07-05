@@ -35,11 +35,15 @@ export const locationFromHash = (hash: string): PresentationLocation => {
     let sceneId: string;
     let beatId: string;
     let focusPath: string[] = [];
+    const sceneSegment = sceneMatch[1];
+    const beatSegment = sceneMatch[2];
+    const focusSegment = sceneMatch[3];
+    if (!sceneSegment || !beatSegment) return defaultMainLocation;
     try {
-      sceneId = decodeURIComponent(sceneMatch[1]!);
-      beatId = decodeURIComponent(sceneMatch[2]!);
-      if (sceneMatch[3] !== undefined && sceneMatch[3] !== "") {
-        focusPath = sceneMatch[3]!.split("/").map(decodeURIComponent);
+      sceneId = decodeURIComponent(sceneSegment);
+      beatId = decodeURIComponent(beatSegment);
+      if (focusSegment !== undefined && focusSegment !== "") {
+        focusPath = focusSegment.split("/").map(decodeURIComponent);
       }
     } catch {
       return defaultMainLocation;
@@ -52,9 +56,11 @@ export const locationFromHash = (hash: string): PresentationLocation => {
   }
   const discussMatch = raw.match(/^discuss\/(.+)$/);
   if (discussMatch) {
+    const branchSegment = discussMatch[1];
+    if (!branchSegment) return defaultMainLocation;
     let branchId: string;
     try {
-      branchId = decodeURIComponent(discussMatch[1]!);
+      branchId = decodeURIComponent(branchSegment);
     } catch {
       return defaultMainLocation;
     }
@@ -72,7 +78,8 @@ export const nextMainLocation = (current: MainLocation): MainLocation => {
     (loc) => loc.sceneId === current.sceneId && loc.beatId === current.beatId,
   );
   if (index === -1 || index === locations.length - 1) return current;
-  return locations[index + 1]!;
+  const next = locations[index + 1];
+  return next ?? current;
 };
 
 export const previousMainLocation = (current: MainLocation): MainLocation => {
@@ -81,5 +88,6 @@ export const previousMainLocation = (current: MainLocation): MainLocation => {
     (loc) => loc.sceneId === current.sceneId && loc.beatId === current.beatId,
   );
   if (index <= 0) return current;
-  return locations[index - 1]!;
+  const prev = locations[index - 1];
+  return prev ?? current;
 };

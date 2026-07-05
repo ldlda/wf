@@ -1,4 +1,4 @@
-import type { FigureNodeDefinition } from "./model.js";
+import type { FigureNodeDefinition, FigureNodeKind } from "./model.js";
 
 type FigureNodeViewProps = {
   readonly node: FigureNodeDefinition;
@@ -9,7 +9,7 @@ type FigureNodeViewProps = {
   readonly onFocus: (nodeId: string) => void;
 };
 
-const kindLabel: Record<string, string> = {
+const kindLabel: Record<FigureNodeKind, string> = {
   actor: "Actor",
   operation: "Operation",
   artifact: "Artifact",
@@ -39,7 +39,6 @@ export const FigureNodeView = ({
       data-active={isActive}
       data-expandable={expandable}
       data-testid={`figure-node-${node.id}`}
-      role="button"
       aria-label={accessibleName}
       tabIndex={focusedNodeId === node.id ? 0 : -1}
       onClick={() => {

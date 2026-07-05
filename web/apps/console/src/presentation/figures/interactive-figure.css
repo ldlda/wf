@@ -2,31 +2,36 @@
   position: relative;
   width: 100%;
   height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .interactive-figure__canvas {
-  position: relative;
-  width: 100%;
-  height: calc(100% - 32px);
+  flex: 1;
+  min-height: 0;
 }
 
-.interactive-figure__edge {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  color: var(--color-editorial-muted, oklch(0.48 0.025 65));
+.interactive-figure .react-flow__node {
+  cursor: default;
 }
 
-.interactive-figure__edge-defs {
-  position: absolute;
-  width: 0;
-  height: 0;
+.interactive-figure .react-flow__edge path {
+  stroke: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  stroke-width: 1.5;
+}
+
+.interactive-figure .react-flow__edge text {
+  font-family: var(--font-interface, sans-serif);
+  font-size: 11px;
+  fill: var(--color-editorial-muted, oklch(0.48 0.025 65));
+}
+
+.interactive-figure .react-flow__controls,
+.interactive-figure .react-flow__attribution {
+  display: none;
 }
 
 .figure-node {
-  position: absolute;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -147,7 +152,7 @@
 }
 
 .figure-breadcrumbs__crumb + .figure-breadcrumbs__crumb::before {
-  content: "›";
+  content: "\203A";
   margin-right: 4px;
   color: var(--color-editorial-muted, oklch(0.48 0.025 65));
 }

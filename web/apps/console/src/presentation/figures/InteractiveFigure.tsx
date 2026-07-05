@@ -1,12 +1,13 @@
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import type { FigureCatalogDefinition } from "./model.js";
-import { layoutFigure, type PositionedFigure } from "./layout.js";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { ReactFlow, type Node, type Edge, type NodeTypes } from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+import type { FigureCatalogDefinition, FigureNodeKind } from "./model.js";
+import { layoutFigure, NODE_WIDTH, NODE_HEIGHT, type PositionedFigure } from "./layout.js";
 import { nextFigureNodeId, type FigureDirection } from "./navigation.js";
 import {
   popFigureFocus,
   pushFigureFocus,
   resolveFigureFocus,
-  type FigureFocus,
 } from "./focus.js";
 import { FigureBreadcrumbs } from "./FigureBreadcrumbs.js";
 import { FigureNodeView } from "./FigureNodeView.js";
@@ -18,6 +19,54 @@ type InteractiveFigureProps = {
   readonly activeNodeId: string | null;
   readonly onFocusPathChange: (path: readonly string[]) => void;
   readonly motionDisabled: boolean;
+};
+
+type FigureNodeData = {
+  readonly nodeId: string;
+  readonly label: string;
+  readonly summary: string;
+  readonly kind: FigureNodeKind;
+  readonly isActive: boolean;
+  readonly isExpandable: boolean;
+  readonly onActivate: (nodeId: string) => void;
+  readonly onExpand: (nodeId: string) => void;
+};
+
+const FigureFlowNode = ({ data }: { data: FigureNodeData }) => {
+  const expandable = data.isExpandable;
+  const accessibleName = expandable ? `${data.label}, expand` : data.label;
+
+  return (
+    <button
+      type="button"
+      className="figure-node"
+      data-figure-node-kind={data.kind}
+      data-active={data.isActive}
+      data-expandable={expandable}
+      data-testid={`figure-node-${data.nodeId}`}
+      aria-label={accessibleName}
+      onClick={() => {
+        data.onActivate(data.nodeId);
+        if (expandable) data.onExpand(data.nodeId);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" && expandable) {
+          event.preventDefault();
+          data.onExpand(data.nodeId);
+        }
+      }}
+    >
+      <span className="figure-node__kind">{data.kind}</span>
+      <strong className="figure-node__label">{data.label}</strong>
+      <span className="figure-node__summary">{data.summary}</span>
+      {expandable && <span className="figure-node__expand-affance" aria-hidden="true">&#9656;</span>}
+      {data.isActive && <span className="figure-node__current-marker">Current</span>}
+    </button>
+  );
+};
+
+const nodeTypes: NodeTypes = {
+  figure: FigureFlowNode,
 };
 
 export const InteractiveFigure = ({
@@ -32,11 +81,17 @@ export const InteractiveFigure = ({
   const [focusedNodeId, setFocusedNodeId] = useState<string>(
     activeNodeId ?? focus.figure.nodes[0]?.id ?? "",
   );
-  const groupRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const prevFigureIdRef = useState(focus.figure.id);
 
   useEffect(() => {
     if (activeNodeId) setFocusedNodeId(activeNodeId);
   }, [activeNodeId]);
+
+  useEffect(() => {
+    const firstNode = focus.figure.nodes[0];
+    if (firstNode) setFocusedNodeId(firstNode.id);
+  }, [focus.figure.id]);
 
   const handleExpand = useCallback(
     (nodeId: string) => {
@@ -81,13 +136,45 @@ export const InteractiveFigure = ({
         event.stopPropagation();
         const nextId = nextFigureNodeId(layout, focusedNodeId, direction);
         setFocusedNodeId(nextId);
-        const nextEl = groupRef.current?.querySelector(
+        const nextNode = containerRef.current?.querySelector(
           `[data-testid="figure-node-${nextId}"]`,
-        ) as HTMLElement | null;
-        nextEl?.focus();
+        );
+        if (nextNode instanceof HTMLElement) nextNode.focus();
       }
     },
     [catalog, focus, focusedNodeId, layout, onFocusPathChange],
+  );
+
+  const rfNodes: Node[] = useMemo(
+    () =>
+      layout.nodes.map((node) => ({
+        id: node.id,
+        type: "figure",
+        position: node.position,
+        data: {
+          nodeId: node.id,
+          label: node.label,
+          summary: node.summary,
+          kind: node.kind,
+          isActive: node.id === activeNodeId,
+          isExpandable: node.childFigureId !== undefined,
+          onActivate: setFocusedNodeId,
+          onExpand: handleExpand,
+        },
+      })),
+    [layout.nodes, activeNodeId, handleExpand],
+  );
+
+  const rfEdges: Edge[] = useMemo(
+    () =>
+      layout.edges.map((edge) => ({
+        id: edge.id,
+        source: edge.from,
+        target: edge.to,
+        label: edge.label,
+        type: "default",
+      })),
+    [layout.edges],
   );
 
   return (
@@ -96,64 +183,30 @@ export const InteractiveFigure = ({
       role="group"
       aria-label={focus.figure.title}
       data-motion={motionDisabled ? "disabled" : "enabled"}
+      data-figure-id={focus.figure.id}
       onKeyDown={handleKeyDown}
     >
       <FigureBreadcrumbs
         breadcrumbs={focus.breadcrumbs}
         onNavigate={handleBreadcrumbNavigate}
       />
-      <div className="interactive-figure__canvas" ref={groupRef}>
-        {layout.nodes.map((node) => (
-          <FigureNodeView
-            key={node.id}
-            node={node}
-            isActive={node.id === activeNodeId}
-            focusedNodeId={focusedNodeId}
-            onActivate={() => setFocusedNodeId(node.id)}
-            onExpand={handleExpand}
-            onFocus={setFocusedNodeId}
-          />
-        ))}
-        {layout.edges.map((edge) => (
-          <svg
-            key={edge.id}
-            className="interactive-figure__edge"
-            aria-hidden="true"
-          >
-            <line
-              x1={getNodeCenter(layout, edge.from)?.x ?? 0}
-              y1={getNodeCenter(layout, edge.from)?.y ?? 0}
-              x2={getNodeCenter(layout, edge.to)?.x ?? 0}
-              y2={getNodeCenter(layout, edge.to)?.y ?? 0}
-              stroke="currentColor"
-              strokeWidth={1.5}
-              markerEnd="url(#figure-arrow)"
-            />
-          </svg>
-        ))}
-        <svg className="interactive-figure__edge-defs" aria-hidden="true">
-          <defs>
-            <marker id="figure-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-              <polygon points="0 0, 8 3, 0 6" />
-            </marker>
-          </defs>
-        </svg>
+      <div className="interactive-figure__canvas" ref={containerRef}>
+        <ReactFlow
+          nodes={rfNodes}
+          edges={rfEdges}
+          nodeTypes={nodeTypes}
+          fitView
+          proOptions={{ hideAttribution: true }}
+          nodesDraggable={false}
+          nodesConnectable={false}
+          elementsSelectable={false}
+          panOnDrag={false}
+          zoomOnScroll={false}
+          zoomOnPinch={false}
+          zoomOnDoubleClick={false}
+          preventScrolling={false}
+        />
       </div>
     </div>
   );
-};
-
-const NODE_WIDTH = 196;
-const NODE_HEIGHT = 84;
-
-const getNodeCenter = (
-  layout: PositionedFigure,
-  nodeId: string,
-): { x: number; y: number } | undefined => {
-  const node = layout.nodes.find((n) => n.id === nodeId);
-  if (!node) return undefined;
-  return {
-    x: node.position.x + NODE_WIDTH / 2,
-    y: node.position.y + NODE_HEIGHT / 2,
-  };
 };
