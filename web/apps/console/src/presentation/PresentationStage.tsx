@@ -53,7 +53,7 @@ export const PresentationStage = ({
         <div
           className="presentation-stage"
           data-chat-mode={composition.chatMode}
-          data-evidence-mode={composition.evidenceMode}
+          data-evidence-presentation={composition.evidencePresentation}
           data-scene-view={activeSceneView}
         >
           <aside className="presentation-stage__chat" aria-label="agent chat region">
@@ -79,7 +79,7 @@ export const PresentationStage = ({
             )}
           </section>
           <aside className="presentation-stage__evidence" aria-label="evidence region">
-            <EvidenceDrawer records={evidence} mode={composition.evidenceMode} close={closeOverlay} />
+            <EvidenceDrawer records={evidence} mode={composition.evidencePresentation} close={closeOverlay} />
           </aside>
           {state.location.kind === "main" && (
             <SceneProgress location={state.location} />

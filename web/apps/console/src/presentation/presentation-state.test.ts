@@ -72,27 +72,27 @@ describe("presentationReducer", () => {
     expect(state.selectedNodeId).toBe("review_issues");
   });
 
-  it("closes overlays in priority order: node, evidence, discussion", () => {
+  it("closes overlays in priority order: inspector, node, discussion", () => {
     const withNode = presentationReducer(initialPresentationState, {
       type: "select_node",
       nodeId: "review_issues",
     });
-    const withEvidence = presentationReducer(withNode, {
-      type: "set_evidence_mode",
-      mode: "open",
+    const withInspector = presentationReducer(withNode, {
+      type: "set_evidence_presentation",
+      presentation: "inspector",
     });
-    const opened = presentationReducer(withEvidence, {
+    const opened = presentationReducer(withInspector, {
       type: "open_discussion",
       branchId: "hosted-automation",
     });
 
     const closed1 = presentationReducer(opened, { type: "close_overlay" });
-    expect(closed1.selectedNodeId).toBeNull();
-    expect(closed1.evidenceModeOverride).toBe("open");
+    expect(closed1.evidencePresentationOverride).toBe("hidden");
+    expect(closed1.selectedNodeId).toBe("review_issues");
     expect(closed1.location.kind).toBe("discussion");
 
     const closed2 = presentationReducer(closed1, { type: "close_overlay" });
-    expect(closed2.evidenceModeOverride).toBe("hidden");
+    expect(closed2.selectedNodeId).toBeNull();
 
     const closed3 = presentationReducer(closed2, { type: "close_overlay" });
     expect(closed3.location.kind).toBe("main");
@@ -123,11 +123,11 @@ describe("presentationReducer", () => {
 
   it("closes overlays before rewinding content", () => {
     const opened = presentationReducer(initialPresentationState, {
-      type: "set_evidence_mode",
-      mode: "open",
+      type: "set_evidence_presentation",
+      presentation: "inspector",
     });
     const closed = presentationReducer(opened, { type: "close_overlay" });
-    expect(closed.evidenceModeOverride).toBe("hidden");
+    expect(closed.evidencePresentationOverride).toBe("hidden");
     expect(closed.location).toEqual(initialPresentationState.location);
   });
 
@@ -136,13 +136,14 @@ describe("presentationReducer", () => {
       type: "jump",
       location: { kind: "main", sceneId: "interrupt-evidence", beatId: "trace", focusPath: [] },
     });
-    expect(stateAtTrace.evidenceModeOverride).toBeNull();
+    expect(stateAtTrace.evidencePresentationOverride).toBeNull();
 
     const closed = presentationReducer(stateAtTrace, { type: "close_overlay" });
-    expect(closed.evidenceModeOverride).toBe("hidden");
+    expect(closed.evidencePresentationOverride).toBeNull();
+    expect(closed.location.kind).toBe("main");
 
     const secondEscape = presentationReducer(closed, { type: "close_overlay" });
-    expect(secondEscape.evidenceModeOverride).toBe("hidden");
+    expect(secondEscape.evidencePresentationOverride).toBeNull();
     expect(secondEscape.location.kind).toBe("main");
   });
 
@@ -182,5 +183,52 @@ describe("presentationReducer", () => {
     });
     expect(presentationReducer(opened, { type: "close_discussion" }).location)
       .toEqual(deepRuntimeState.location);
+  });
+
+  it("derives a receipt from beat metadata without opening an inspector", () => {
+    const state = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "architecture", beatId: "node-use", focusPath: ["node-use"] },
+    });
+    expect(compositionForState(state).evidencePresentation).toBe("receipt");
+    expect(state.evidencePresentationOverride).toBeNull();
+  });
+
+  it("closes an explicit inspector before the node spotlight", () => {
+    const withNode = presentationReducer(initialPresentationState, {
+      type: "select_node",
+      nodeId: "review_issues",
+    });
+    const withInspector = presentationReducer(withNode, {
+      type: "set_evidence_presentation",
+      presentation: "inspector",
+    });
+    const firstEscape = presentationReducer(withInspector, { type: "close_overlay" });
+    expect(firstEscape.evidencePresentationOverride).toBe("hidden");
+    expect(firstEscape.selectedNodeId).toBe("review_issues");
+    const secondEscape = presentationReducer(firstEscape, { type: "close_overlay" });
+    expect(secondEscape.selectedNodeId).toBeNull();
+  });
+
+  it("closes the inspector and recomputes receipt state when the beat changes", () => {
+    const atReceiptBeat = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "architecture", beatId: "node-use", focusPath: ["node-use"] },
+    });
+    const opened = presentationReducer(atReceiptBeat, {
+      type: "set_evidence_presentation",
+      presentation: "inspector",
+    });
+    const advanced = presentationReducer(opened, { type: "next" });
+    expect(advanced.evidencePresentationOverride).toBeNull();
+    expect(compositionForState(advanced).evidencePresentation).not.toBe("inspector");
+  });
+
+  it("does not treat a receipt as an Escape-closeable overlay", () => {
+    const receipt = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "authoring", beatId: "diagnose", focusPath: [] },
+    });
+    expect(presentationReducer(receipt, { type: "close_overlay" })).toEqual(receipt);
   });
 });

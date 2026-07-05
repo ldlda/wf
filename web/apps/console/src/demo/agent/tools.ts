@@ -7,7 +7,6 @@ export type WorkflowToolName =
 export type PresentationToolName =
   | "selectWorkflowNode"
   | "focusOperation"
-  | "openEvidence"
   | "showTraceFrame";
 
 export type AgentToolName = WorkflowToolName | PresentationToolName;
@@ -48,11 +47,6 @@ export const AGENT_TOOLS = {
     name: "focusOperation",
     kind: "presentation",
     description: "Focus an operation event in the presentation.",
-  },
-  openEvidence: {
-    name: "openEvidence",
-    kind: "presentation",
-    description: "Open evidence for an operation event.",
   },
   showTraceFrame: {
     name: "showTraceFrame",

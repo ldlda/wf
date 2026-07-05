@@ -117,14 +117,6 @@ export const PresentationRoute = () => {
         case "selectWorkflowNode":
           dispatch({ type: "select_node", nodeId: action.nodeId });
           break;
-        case "openEvidence": {
-          const hasLiveEvidence = evidence.length > 0;
-          if (!hasLiveEvidence) {
-            setEvidence(replayEvidence);
-          }
-          dispatch({ type: "set_evidence_mode", mode: "open" });
-          break;
-        }
         case "focusOperation":
         case "showTraceFrame":
           break;
@@ -164,7 +156,7 @@ export const PresentationRoute = () => {
           onDeny={agent.phase === "awaiting-approval" ? handleDeny : undefined}
           jump={handleJump}
           selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
-          openEvidence={() => dispatch({ type: "set_evidence_mode", mode: "open" })}
+          openEvidence={() => dispatch({ type: "set_evidence_presentation", presentation: "inspector" })}
           closeOverlay={() => dispatch({ type: "close_overlay" })}
           openDiscussion={handleOpenDiscussion}
           closeDiscussion={handleCloseDiscussion}

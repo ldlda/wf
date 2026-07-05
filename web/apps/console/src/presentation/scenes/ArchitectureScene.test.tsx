@@ -48,7 +48,7 @@ const mockBeat = {
   caption: "Human and agent clients use the same public lifecycle surface.",
   chatMode: "rail" as const,
   chatTheme: "light" as const,
-  evidenceMode: "hidden" as const,
+  evidencePresentation: "hidden" as const,
   figure: { catalogId: "system-architecture", focusPath: [] as readonly string[], activeNodeId: "client-operations" },
 };
 

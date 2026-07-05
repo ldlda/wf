@@ -1,10 +1,10 @@
 import type { EvidenceRecord } from "../app/state.js";
 import { formatJson } from "./format.js";
-import type { EvidenceMode } from "./storyboard.js";
+import type { EvidencePresentation } from "./storyboard.js";
 
 type EvidenceDrawerProps = {
   readonly records: readonly EvidenceRecord[];
-  readonly mode: EvidenceMode;
+  readonly mode: EvidencePresentation;
   readonly close: () => void;
 };
 

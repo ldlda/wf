@@ -2,9 +2,10 @@ import {
   defaultMainLocation,
   findDiscussionBranch,
   findScene,
+  type BeatEvidencePresentation,
   type ChatMode,
   type DiscussionBranchId,
-  type EvidenceMode,
+  type EvidencePresentation,
   type MainLocation,
   type PresentationLocation,
 } from "./storyboard.js";
@@ -19,7 +20,7 @@ export type PresentationState = {
   readonly location: PresentationLocation;
   readonly discussionReturn: MainLocation | null;
   readonly selectedNodeId: string | null;
-  readonly evidenceModeOverride: EvidenceMode | null;
+  readonly evidencePresentationOverride: EvidencePresentation | null;
   readonly playbackMode: "replay" | "live";
   readonly motionDisabled: boolean;
   readonly startedAt: number;
@@ -34,7 +35,7 @@ export type PresentationAction =
   | { readonly type: "close_discussion" }
   | { readonly type: "select_node"; readonly nodeId: string }
   | { readonly type: "clear_node" }
-  | { readonly type: "set_evidence_mode"; readonly mode: EvidenceMode }
+  | { readonly type: "set_evidence_presentation"; readonly presentation: EvidencePresentation }
   | { readonly type: "close_overlay" }
   | { readonly type: "set_playback_mode"; readonly mode: PresentationState["playbackMode"] }
   | { readonly type: "set_focus_path"; readonly path: readonly string[] }
@@ -44,7 +45,7 @@ export const initialPresentationState: PresentationState = {
   location: defaultMainLocation,
   discussionReturn: null,
   selectedNodeId: null,
-  evidenceModeOverride: null,
+  evidencePresentationOverride: null,
   playbackMode: "replay",
   motionDisabled: false,
   startedAt: Date.now(),
@@ -52,29 +53,29 @@ export const initialPresentationState: PresentationState = {
 
 const compositionForLocation = (
   location: PresentationLocation,
-  evidenceOverride: EvidenceMode | null,
+  evidenceOverride: EvidencePresentation | null,
 ): {
   readonly chatMode: ChatMode;
-  readonly evidenceMode: EvidenceMode;
+  readonly evidencePresentation: EvidencePresentation;
 } => {
   if (location.kind === "discussion") {
     return {
       chatMode: "hidden",
-      evidenceMode: evidenceOverride ?? "hidden",
+      evidencePresentation: evidenceOverride ?? "hidden",
     };
   }
   const scene = findScene(location.sceneId);
   const beat = scene?.beats.find((b) => b.id === location.beatId);
   return {
     chatMode: beat?.chatMode ?? "hidden",
-    evidenceMode: evidenceOverride ?? beat?.evidenceMode ?? "hidden",
+    evidencePresentation: evidenceOverride ?? beat?.evidencePresentation ?? "hidden",
   };
 };
 
 export const compositionForState = (state: PresentationState) =>
   compositionForLocation(
     state.location,
-    state.evidenceModeOverride,
+    state.evidencePresentationOverride,
   );
 
 const isValidMainLocation = (location: PresentationLocation): location is MainLocation =>
@@ -93,6 +94,14 @@ const clampMainLocation = (location: MainLocation): MainLocation => {
   return defaultMainLocation;
 };
 
+const moveToLocation = (
+  state: PresentationState,
+  location: PresentationLocation,
+): PresentationState => ({
+  ...state,
+  location,
+});
+
 export const presentationReducer = (
   state: PresentationState,
   action: PresentationAction,
@@ -101,27 +110,27 @@ export const presentationReducer = (
     case "next": {
       if (!isValidMainLocation(state.location)) return state;
       const next = nextMainLocation(state.location);
-      return { ...state, location: next };
+      return { ...moveToLocation(state, next), evidencePresentationOverride: null };
     }
     case "previous": {
       if (!isValidMainLocation(state.location)) return state;
       const prev = previousMainLocation(state.location);
-      return { ...state, location: prev };
+      return { ...moveToLocation(state, prev), evidencePresentationOverride: null };
     }
     case "jump": {
       if (state.location.kind === "discussion") return state;
-      return { ...state, location: action.location };
+      return { ...moveToLocation(state, action.location), evidencePresentationOverride: null };
     }
     case "jump_hash": {
       const parsed = locationFromHash(action.hash);
       if (parsed.kind === "main") {
-        return { ...state, location: clampMainLocation(parsed), discussionReturn: null };
+        return { ...moveToLocation(state, clampMainLocation(parsed)), discussionReturn: null, evidencePresentationOverride: null };
       }
       const branch = findDiscussionBranch(parsed.branchId);
       const returnLoc = branch
         ? firstBeatOfScene(branch.parentSceneId) ?? defaultMainLocation
         : defaultMainLocation;
-      return { ...state, location: parsed, discussionReturn: returnLoc };
+      return { ...moveToLocation(state, parsed), discussionReturn: returnLoc };
     }
     case "open_discussion": {
       const branch = findDiscussionBranch(action.branchId);
@@ -138,8 +147,7 @@ export const presentationReducer = (
     case "close_discussion": {
       if (state.location.kind !== "discussion") return state;
       return {
-        ...state,
-        location: state.discussionReturn ?? defaultMainLocation,
+        ...moveToLocation(state, state.discussionReturn ?? defaultMainLocation),
         discussionReturn: null,
       };
     }
@@ -147,18 +155,11 @@ export const presentationReducer = (
       return { ...state, selectedNodeId: action.nodeId };
     case "clear_node":
       return { ...state, selectedNodeId: null };
-    case "set_evidence_mode":
-      return { ...state, evidenceModeOverride: action.mode };
+    case "set_evidence_presentation":
+      return { ...state, evidencePresentationOverride: action.presentation };
     case "close_overlay": {
+      if (state.evidencePresentationOverride === "inspector") return { ...state, evidencePresentationOverride: "hidden" };
       if (state.selectedNodeId !== null) return { ...state, selectedNodeId: null };
-      const isEvidenceVisible = (() => {
-        if (state.evidenceModeOverride !== null) return state.evidenceModeOverride !== "hidden";
-        if (state.location.kind === "discussion") return false;
-        const scene = findScene(state.location.sceneId);
-        const beat = scene?.beats.find((b) => b.id === (state.location as MainLocation).beatId);
-        return beat?.evidenceMode === "open" || beat?.evidenceMode === "peek";
-      })();
-      if (isEvidenceVisible) return { ...state, evidenceModeOverride: "hidden" };
       if (state.location.kind === "discussion") {
         return {
           ...state,

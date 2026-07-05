@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { loadCanonicalDemoRecording } from "../timeline/replay.js";
 import { runPreparedRecipeReplay } from "./preparedRecipeDriver.js";
+import { isAllowedAgentToolName } from "./tools.js";
 
 const collect = async <T>(events: AsyncIterable<T>): Promise<ReadonlyArray<T>> => {
   const collected: T[] = [];
@@ -38,8 +39,9 @@ describe("prepared recipe driver", () => {
       "selectWorkflowNode",
       "resumeIssueReview",
       "readRunTrace",
-      "openEvidence",
     ]);
+
+    expect(isAllowedAgentToolName("openEvidence")).toBe(false);
   });
 
   it("emits approval-request at resumeIssueReview and waits for decision", async () => {

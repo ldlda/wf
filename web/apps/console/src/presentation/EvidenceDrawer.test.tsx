@@ -18,7 +18,7 @@ const record: EvidenceRecord = {
 describe("EvidenceDrawer", () => {
   it("renders current evidence records and can close", () => {
     const close = vi.fn();
-    render(<EvidenceDrawer records={[record]} mode="open" close={close} />);
+    render(<EvidenceDrawer records={[record]} mode="receipt" close={close} />);
 
     expect(screen.getByRole("complementary", { name: /presentation evidence/i })).toBeInTheDocument();
     expect(screen.getByText(/workflow.runs.start/i)).toBeInTheDocument();

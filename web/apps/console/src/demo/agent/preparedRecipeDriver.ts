@@ -112,17 +112,6 @@ export async function* runPreparedRecipeReplay(
           eventId: trace?.id ?? null,
         });
         break;
-      case "openEvidence":
-        yield {
-          id: step.id,
-          role: "assistant",
-          parts: [
-            agentToolCallPart(`${step.id}-call`, step.toolName, { eventId: trace?.id ?? "trace" }),
-            presentationActionPart({ type: "openEvidence", eventId: trace?.id ?? "trace" }),
-            agentToolResultPart(`${step.id}-call`, step.toolName, "success", { eventId: trace?.id ?? "trace" }),
-          ],
-        };
-        break;
       default:
         assertNever(step.toolName);
     }

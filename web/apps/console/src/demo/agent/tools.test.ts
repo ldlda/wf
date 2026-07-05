@@ -8,7 +8,6 @@ describe("agent tools", () => {
     expect(AGENT_TOOLS.resumeIssueReview.kind).toBe("workflow");
     expect(AGENT_TOOLS.readRunTrace.kind).toBe("workflow");
     expect(AGENT_TOOLS.selectWorkflowNode.kind).toBe("presentation");
-    expect(AGENT_TOOLS.openEvidence.kind).toBe("presentation");
   });
 
   it("rejects unknown tool names", () => {

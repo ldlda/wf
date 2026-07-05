@@ -2,7 +2,8 @@ export type ClaimClass = "motivation" | "implemented" | "evaluated" | "external-
 export type StageTheme = "paper" | "night";
 export type ChatTheme = "light" | "dark";
 export type ChatMode = "hidden" | "full" | "rail" | "dock";
-export type EvidenceMode = "hidden" | "peek" | "open";
+export type EvidencePresentation = "hidden" | "receipt" | "inspector";
+export type BeatEvidencePresentation = Exclude<EvidencePresentation, "inspector">;
 export type SceneView =
   | "narrative"
   | "positioning"
@@ -27,7 +28,7 @@ export type SceneBeatDefinition = {
   readonly caption: string;
   readonly chatMode: ChatMode;
   readonly chatTheme: ChatTheme;
-  readonly evidenceMode: EvidenceMode;
+  readonly evidencePresentation: BeatEvidencePresentation;
   readonly figure: FigureBeatDefinition | null;
 };
 
@@ -48,14 +49,14 @@ const sceneBeat = (
   id: string,
   title: string,
   caption: string,
-  options: Partial<Pick<SceneBeatDefinition, "chatMode" | "chatTheme" | "evidenceMode" | "figure">> = {},
+  options: Partial<Pick<SceneBeatDefinition, "chatMode" | "chatTheme" | "evidencePresentation" | "figure">> = {},
 ): SceneBeatDefinition => ({
   id,
   title,
   caption,
   chatMode: options.chatMode ?? "hidden",
   chatTheme: options.chatTheme ?? "dark",
-  evidenceMode: options.evidenceMode ?? "hidden",
+  evidencePresentation: options.evidencePresentation ?? "hidden",
   figure: options.figure ?? null,
 });
 
@@ -140,7 +141,7 @@ export const mainScenes = defineScenes([
       sceneBeat("client", "Client operations", "Human and agent clients use the same public lifecycle surface.", { figure: { catalogId: "system-architecture", focusPath: [], activeNodeId: "client-operations" } }),
       sceneBeat("api", "Transport and API", "JSON-RPC reaches WorkflowApi without owning domain behavior.", { figure: { catalogId: "system-architecture", focusPath: [], activeNodeId: "application-lifecycle" } }),
       sceneBeat("runtime", "Runtime and providers", "The runtime resolves provider-neutral capabilities and stores lifecycle records.", { figure: { catalogId: "system-architecture", focusPath: ["runtime-providers"], activeNodeId: "configured-providers" } }),
-      sceneBeat("node-use", "NodeUse", "One callable node validates input, invokes a capability, and reduces output into state.", { evidenceMode: "peek", figure: { catalogId: "system-architecture", focusPath: ["node-use"], activeNodeId: "invoke-handler" } }),
+      sceneBeat("node-use", "NodeUse", "One callable node validates input, invokes a capability, and reduces output into state.", { evidencePresentation: "receipt", figure: { catalogId: "system-architecture", focusPath: ["node-use"], activeNodeId: "invoke-handler" } }),
     ],
   },
   {
@@ -154,7 +155,7 @@ export const mainScenes = defineScenes([
     beats: [
       sceneBeat("discover", "Discover", "Inspect capabilities and schemas before authoring."),
       sceneBeat("author", "Author", "Focused operations build and connect the draft."),
-      sceneBeat("diagnose", "Diagnose", "Structured diagnostics identify invalid state.", { evidenceMode: "peek" }),
+      sceneBeat("diagnose", "Diagnose", "Structured diagnostics identify invalid state.", { evidencePresentation: "receipt" }),
       sceneBeat("repair", "Repair", "Repair hints lead to a valid compiled workflow."),
     ],
   },
@@ -197,7 +198,7 @@ export const mainScenes = defineScenes([
       sceneBeat("approval", "Approval", "The operator reviews a schema-backed resume request.", { chatMode: "rail", chatTheme: "light" }),
       sceneBeat("resume", "Resume", "The approved payload resumes the same persisted run.", { chatMode: "rail", chatTheme: "light" }),
       sceneBeat("output", "Output", "The workflow produces the report and issue-board changes.", { chatMode: "dock", chatTheme: "light" }),
-      sceneBeat("trace", "Evidence", "Trace frames and protocol evidence remain inspectable.", { chatMode: "dock", chatTheme: "light", evidenceMode: "open" }),
+      sceneBeat("trace", "Evidence", "Trace frames and protocol evidence remain inspectable.", { chatMode: "dock", chatTheme: "light", evidencePresentation: "receipt" }),
     ],
   },
   {

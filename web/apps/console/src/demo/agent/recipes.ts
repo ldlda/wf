@@ -5,8 +5,7 @@ export type RecipeTool =
   | "startPreparedReportRun"
   | "selectWorkflowNode"
   | "resumeIssueReview"
-  | "readRunTrace"
-  | "openEvidence";
+  | "readRunTrace";
 
 export type PreparedRecipeStep = {
   readonly id: string;
@@ -57,11 +56,6 @@ export const PREPARE_THESIS_REPORT_RECIPE: PreparedRecipe = {
       id: "trace",
       narration: "I will read the run trace as evidence.",
       toolName: "readRunTrace",
-    },
-    {
-      id: "open-evidence",
-      narration: "I will open the evidence linked to the trace call.",
-      toolName: "openEvidence",
     },
   ],
 };
