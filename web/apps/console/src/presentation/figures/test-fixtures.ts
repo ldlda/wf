@@ -217,10 +217,10 @@ export const navigationLayout: FigureDefinition = {
   layout: {
     kind: "explicit",
     positions: {
-      left: { x: 0, y: 100 },
-      right: { x: 400, y: 100 },
-      top: { x: 200, y: 0 },
-      bottom: { x: 200, y: 200 },
+      left: { x: 0, y: 0 },
+      right: { x: 200, y: 0 },
+      top: { x: 0, y: 300 },
+      bottom: { x: 0, y: 500 },
     },
   },
   nodes: [
