@@ -203,6 +203,13 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
           evidencePointer: "src/wf_core/runtime/ops/state.py",
         },
         {
+          id: "route-outcome",
+          label: "Route outcome",
+          summary: "Success or failure path",
+          kind: "operation",
+          evidencePointer: "src/wf_core/runtime/step.py",
+        },
+        {
           id: "record-trace",
           label: "Record trace",
           summary: "Inspection evidence",
@@ -214,7 +221,8 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
         { id: "e-resolve-invoke", from: "resolve-bindings", to: "invoke-handler", label: "feeds" },
         { id: "e-invoke-normalize", from: "invoke-handler", to: "normalize-result", label: "produces" },
         { id: "e-normalize-reducers", from: "normalize-result", to: "apply-reducers", label: "reduces" },
-        { id: "e-reducers-trace", from: "apply-reducers", to: "record-trace", label: "records" },
+        { id: "e-reducers-outcome", from: "apply-reducers", to: "route-outcome", label: "routes" },
+        { id: "e-outcome-trace", from: "route-outcome", to: "record-trace", label: "records" },
       ],
     },
   ],
