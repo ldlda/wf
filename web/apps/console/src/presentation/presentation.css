@@ -417,19 +417,6 @@
   font-weight: 600;
 }
 
-.presentation-route__agent-button {
-  position: fixed;
-  bottom: 0.75rem;
-  right: 0.75rem;
-  padding: 0.45rem 0.75rem;
-  border: 1px solid oklch(0.4 0.05 250);
-  background: oklch(0.18 0.025 250);
-  color: inherit;
-  border-radius: 0.4rem;
-  font-size: 0.8rem;
-  z-index: 25;
-}
-
 .chat-tool-part {
   display: flex;
   align-items: center;

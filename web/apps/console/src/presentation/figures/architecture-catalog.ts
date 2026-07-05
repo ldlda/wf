@@ -91,7 +91,7 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
           label: "WorkflowServer",
           summary: "wf_server composition",
           kind: "runtime",
-          evidencePointer: "src/wf_server/server.py",
+          evidencePointer: "src/wf_server/context.py",
         },
         {
           id: "workflow-api",

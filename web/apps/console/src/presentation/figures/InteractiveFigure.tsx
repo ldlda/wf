@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ReactFlow, type Node, type Edge, type NodeTypes } from "@xyflow/react";
+import { ReactFlow, ReactFlowProvider, useReactFlow, type Node, type Edge, type NodeTypes } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FigureCatalogDefinition, FigureNodeKind } from "./model.js";
 import { layoutFigure, NODE_WIDTH, NODE_HEIGHT, type PositionedFigure } from "./layout.js";
@@ -45,6 +45,7 @@ const FigureFlowNode = ({ data }: { data: FigureNodeData }) => {
       data-expandable={expandable}
       data-testid={`figure-node-${data.nodeId}`}
       aria-label={accessibleName}
+      tabIndex={-1}
       onClick={() => {
         data.onActivate(data.nodeId);
         if (expandable) data.onExpand(data.nodeId);
@@ -69,7 +70,15 @@ const nodeTypes: NodeTypes = {
   figure: FigureFlowNode,
 };
 
-export const InteractiveFigure = ({
+const FitViewOnLayoutChange = ({ layoutVersion }: { layoutVersion: number }) => {
+  const { fitView } = useReactFlow();
+  useEffect(() => {
+    void fitView({ padding: 0.15, duration: 0 });
+  }, [fitView, layoutVersion]);
+  return null;
+};
+
+const InteractiveFigureInner = ({
   catalog,
   focusPath,
   activeNodeId,
@@ -82,7 +91,7 @@ export const InteractiveFigure = ({
     activeNodeId ?? focus.figure.nodes[0]?.id ?? "",
   );
   const containerRef = useRef<HTMLDivElement>(null);
-  const prevFigureIdRef = useState(focus.figure.id);
+  const [layoutVersion, setLayoutVersion] = useState(0);
 
   useEffect(() => {
     if (activeNodeId) setFocusedNodeId(activeNodeId);
@@ -91,6 +100,7 @@ export const InteractiveFigure = ({
   useEffect(() => {
     const firstNode = focus.figure.nodes[0];
     if (firstNode) setFocusedNodeId(firstNode.id);
+    setLayoutVersion((v) => v + 1);
   }, [focus.figure.id]);
 
   const handleExpand = useCallback(
@@ -177,6 +187,15 @@ export const InteractiveFigure = ({
     [layout.edges],
   );
 
+  const handleNodeClick = useCallback(
+    (_event: React.MouseEvent, node: Node) => {
+      const data = node.data as FigureNodeData;
+      setFocusedNodeId(data.nodeId);
+      if (data.isExpandable) handleExpand(data.nodeId);
+    },
+    [handleExpand],
+  );
+
   return (
     <div
       className="interactive-figure"
@@ -205,8 +224,17 @@ export const InteractiveFigure = ({
           zoomOnPinch={false}
           zoomOnDoubleClick={false}
           preventScrolling={false}
-        />
+          onNodeClick={handleNodeClick}
+        >
+          <FitViewOnLayoutChange layoutVersion={layoutVersion} />
+        </ReactFlow>
       </div>
     </div>
   );
 };
+
+export const InteractiveFigure = (props: InteractiveFigureProps) => (
+  <ReactFlowProvider>
+    <InteractiveFigureInner {...props} />
+  </ReactFlowProvider>
+);

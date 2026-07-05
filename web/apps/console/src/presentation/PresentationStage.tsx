@@ -74,7 +74,7 @@ export const PresentationStage = ({
                     jump({ ...state.location, focusPath: path });
                   }
                 }}
-                motionDisabled={false}
+                motionDisabled={state.motionDisabled}
               />
             )}
           </section>

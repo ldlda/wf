@@ -11,6 +11,10 @@
   min-height: 0;
 }
 
+.interactive-figure .react-flow__pane {
+  pointer-events: none;
+}
+
 .interactive-figure .react-flow__node {
   cursor: default;
 }

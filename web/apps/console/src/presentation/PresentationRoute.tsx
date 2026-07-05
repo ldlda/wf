@@ -11,7 +11,6 @@ import {
   presentationReducer,
 } from "./presentation-state.js";
 import { hashForLocation } from "./storyboard-navigation.js";
-import { findScene } from "./storyboard.js";
 import type { PresentationLocation } from "./storyboard.js";
 import "./presentation.css";
 import "./styles/demo-workflow.css";
@@ -153,22 +152,6 @@ export const PresentationRoute = () => {
     [],
   );
 
-  const handleForceReplay = useCallback(() => {
-    demo.setMode("replay");
-    setEvidence(replayEvidence);
-  }, [demo, replayEvidence]);
-
-  const handleResetScene = useCallback(() => {
-    if (state.location.kind !== "main") return;
-    const scene = findScene(state.location.sceneId);
-    if (!scene || scene.beats.length === 0) return;
-    dispatch({ type: "jump", location: { kind: "main", sceneId: state.location.sceneId, beatId: scene.beats[0]!.id, focusPath: scene.beats[0]!.figure?.focusPath ?? [] } });
-  }, [state.location]);
-
-  const handleToggleMotion = useCallback(() => {
-    dispatch({ type: "toggle_motion" });
-  }, []);
-
   return (
     <main className="presentation-route" aria-label="lda.chat presentation" data-motion={state.motionDisabled ? "disabled" : "enabled"}>
       <PresentationCanvas>
@@ -187,14 +170,6 @@ export const PresentationRoute = () => {
           closeDiscussion={handleCloseDiscussion}
         />
       </PresentationCanvas>
-      <button
-        type="button"
-        onClick={() => agent.startPreparedReplay()}
-        disabled={agent.phase === "running" || agent.phase === "awaiting-approval"}
-        className="presentation-route__agent-button"
-      >
-        Run prepared agent
-      </button>
     </main>
   );
 };

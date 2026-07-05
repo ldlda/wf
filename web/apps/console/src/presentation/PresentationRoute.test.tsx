@@ -53,16 +53,6 @@ describe("PresentationRoute", () => {
     expect(await screen.findByText(/workflow.runs.resume/i)).toBeInTheDocument();
   });
 
-  it("runs the prepared agent and applies the interrupt node action", async () => {
-    render(<PresentationRoute />);
-
-    await userEvent.click(screen.getByRole("button", { name: /run prepared agent/i }));
-
-    expect(await screen.findByText(/prepared workflow recipe/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/selectWorkflowNode/i).length).toBeGreaterThanOrEqual(2);
-    expect(await screen.findByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
-  });
-
   it("opens a positioning branch via hash and returns to the parent scene first beat", async () => {
     window.location.hash = "#discuss/hosted-automation";
     render(<PresentationRoute />);
