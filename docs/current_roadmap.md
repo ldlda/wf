@@ -106,6 +106,8 @@ Implementation order:
     `16:9` and replace the resizing evidence drawer with a progress-row receipt
     and centered inspector. Design:
     [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md).
+    Implementation:
+    [`adaptive presentation canvas plan`](superpowers/plans/2026-07-06-adaptive-presentation-canvas.md).
 13. Then: adopt source-owned AI Elements chat primitives against existing
     `AgentMessagePart` / `AgentDriver` contracts.
 14. Future: implement Schema Form Surface and synchronized Approval Session.
