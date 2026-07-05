@@ -23,12 +23,12 @@ describe("PresentationRoute", () => {
     expect(await screen.findByText(/The interface delegates durable work to lda\.chat/i)).toBeInTheDocument();
   });
 
-  it("renders replay-first chat, beat rail, and stage caption", () => {
+  it("renders audience progress chrome without rail or mode label", () => {
     render(<PresentationRoute />);
 
     expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
-    expect(screen.getByLabelText(/presentation scene rail/i)).toBeInTheDocument();
-    expect(screen.getByText("Replay · running")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/presentation scene rail/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("scene position")).toBeInTheDocument();
   });
 
   it("shows node spotlight when a graph node is selected", async () => {
@@ -63,16 +63,13 @@ describe("PresentationRoute", () => {
     expect(await screen.findByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
   });
 
-  it("opens a positioning branch and returns to the exact originating beat", async () => {
-    window.location.hash = "#scene/positioning/lda-position";
+  it("opens a positioning branch via hash and returns to the parent scene first beat", async () => {
+    window.location.hash = "#discuss/hosted-automation";
     render(<PresentationRoute />);
 
-    await userEvent.click(screen.getByRole("button", { name: /discussion topics/i }));
-    await userEvent.click(screen.getByRole("button", { name: /hosted automation/i }));
-    expect(window.location.hash).toBe("#discuss/hosted-automation");
-
+    expect(await screen.findByRole("button", { name: /return to positioning/i })).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /return to positioning/i }));
-    expect(window.location.hash).toBe("#scene/positioning/lda-position");
+    expect(window.location.hash).toBe("#scene/positioning/landscape");
   });
 
   it("uses the parent scene as return location for a directly linked branch", async () => {
@@ -82,11 +79,11 @@ describe("PresentationRoute", () => {
     expect(window.location.hash).toBe("#scene/positioning/landscape");
   });
 
-  it("renders stable chat, primary, evidence, and navigation regions", () => {
+  it("renders stable chat, primary, evidence, and progress regions", () => {
     render(<PresentationRoute />);
     expect(screen.getByLabelText(/agent chat region/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/primary presentation region/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/evidence region/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/presentation scene rail/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("scene position")).toBeInTheDocument();
   });
 });

@@ -3,12 +3,10 @@ import {
   findDiscussionBranch,
   findScene,
   type ChatMode,
-  type ChatTheme,
   type DiscussionBranchId,
   type EvidenceMode,
   type MainLocation,
   type PresentationLocation,
-  type StageTheme,
 } from "./storyboard.js";
 import {
   hashForLocation,
@@ -23,11 +21,6 @@ export type PresentationState = {
   readonly selectedNodeId: string | null;
   readonly evidenceModeOverride: EvidenceMode | null;
   readonly playbackMode: "replay" | "live";
-  readonly stageThemeOverride: StageTheme | null;
-  readonly chatThemeOverride: ChatTheme | null;
-  readonly chatModeOverride: ChatMode | null;
-  readonly controlsOpen: boolean;
-  readonly discussionIndexOpen: boolean;
   readonly motionDisabled: boolean;
   readonly startedAt: number;
 };
@@ -44,12 +37,7 @@ export type PresentationAction =
   | { readonly type: "set_evidence_mode"; readonly mode: EvidenceMode }
   | { readonly type: "close_overlay" }
   | { readonly type: "set_playback_mode"; readonly mode: PresentationState["playbackMode"] }
-  | { readonly type: "set_stage_theme"; readonly theme: StageTheme | null }
-  | { readonly type: "set_chat_theme"; readonly theme: ChatTheme | null }
-  | { readonly type: "set_chat_mode"; readonly mode: ChatMode | null }
   | { readonly type: "set_focus_path"; readonly path: readonly string[] }
-  | { readonly type: "toggle_controls" }
-  | { readonly type: "toggle_discussion_index" }
   | { readonly type: "toggle_motion" };
 
 export const initialPresentationState: PresentationState = {
@@ -58,11 +46,6 @@ export const initialPresentationState: PresentationState = {
   selectedNodeId: null,
   evidenceModeOverride: null,
   playbackMode: "replay",
-  stageThemeOverride: null,
-  chatThemeOverride: null,
-  chatModeOverride: null,
-  controlsOpen: false,
-  discussionIndexOpen: false,
   motionDisabled: false,
   startedAt: Date.now(),
 };
@@ -70,31 +53,20 @@ export const initialPresentationState: PresentationState = {
 const compositionForLocation = (
   location: PresentationLocation,
   evidenceOverride: EvidenceMode | null,
-  stageThemeOverride: StageTheme | null,
-  chatThemeOverride: ChatTheme | null,
-  chatModeOverride: ChatMode | null,
 ): {
-  readonly stageTheme: StageTheme;
-  readonly chatTheme: ChatTheme;
   readonly chatMode: ChatMode;
   readonly evidenceMode: EvidenceMode;
 } => {
   if (location.kind === "discussion") {
-    const branch = findDiscussionBranch(location.branchId);
-    const parentScene = branch ? findScene(branch.parentSceneId) : findScene("positioning");
     return {
-      stageTheme: stageThemeOverride ?? parentScene?.stageTheme ?? "paper",
-      chatTheme: chatThemeOverride ?? "dark",
-      chatMode: chatModeOverride ?? "hidden",
+      chatMode: "hidden",
       evidenceMode: evidenceOverride ?? "hidden",
     };
   }
   const scene = findScene(location.sceneId);
   const beat = scene?.beats.find((b) => b.id === location.beatId);
   return {
-    stageTheme: stageThemeOverride ?? scene?.stageTheme ?? "paper",
-    chatTheme: chatThemeOverride ?? beat?.chatTheme ?? "dark",
-    chatMode: chatModeOverride ?? beat?.chatMode ?? "hidden",
+    chatMode: beat?.chatMode ?? "hidden",
     evidenceMode: evidenceOverride ?? beat?.evidenceMode ?? "hidden",
   };
 };
@@ -103,9 +75,6 @@ export const compositionForState = (state: PresentationState) =>
   compositionForLocation(
     state.location,
     state.evidenceModeOverride,
-    state.stageThemeOverride,
-    state.chatThemeOverride,
-    state.chatModeOverride,
   );
 
 const isValidMainLocation = (location: PresentationLocation): location is MainLocation =>
@@ -190,8 +159,6 @@ export const presentationReducer = (
         return beat?.evidenceMode === "open" || beat?.evidenceMode === "peek";
       })();
       if (isEvidenceVisible) return { ...state, evidenceModeOverride: "hidden" };
-      if (state.discussionIndexOpen) return { ...state, discussionIndexOpen: false };
-      if (state.controlsOpen) return { ...state, controlsOpen: false };
       if (state.location.kind === "discussion") {
         return {
           ...state,
@@ -203,22 +170,12 @@ export const presentationReducer = (
     }
     case "set_playback_mode":
       return { ...state, playbackMode: action.mode };
-    case "set_stage_theme":
-      return { ...state, stageThemeOverride: action.theme };
-    case "set_chat_theme":
-      return { ...state, chatThemeOverride: action.theme };
-    case "set_chat_mode":
-      return { ...state, chatModeOverride: action.mode };
     case "set_focus_path":
       if (state.location.kind !== "main") return state;
       return {
         ...state,
         location: { ...state.location, focusPath: action.path },
       };
-    case "toggle_controls":
-      return { ...state, controlsOpen: !state.controlsOpen };
-    case "toggle_discussion_index":
-      return { ...state, discussionIndexOpen: !state.discussionIndexOpen };
     case "toggle_motion":
       return { ...state, motionDisabled: !state.motionDisabled };
   }

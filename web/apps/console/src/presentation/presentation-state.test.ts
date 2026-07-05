@@ -111,14 +111,12 @@ describe("presentationReducer", () => {
     expect(nexted.location).toEqual(opened.location);
   });
 
-  it("derives act and chat composition from the current beat", () => {
+  it("derives chatMode from the current beat", () => {
     const state = presentationReducer(initialPresentationState, {
       type: "jump",
       location: { kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] },
     });
     expect(compositionForState(state)).toMatchObject({
-      stageTheme: "night",
-      chatTheme: "light",
       chatMode: "rail",
     });
   });

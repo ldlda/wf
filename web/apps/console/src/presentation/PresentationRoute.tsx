@@ -6,12 +6,9 @@ import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import { useDemoTimeline } from "../demo/useDemoTimeline.js";
 import { PresentationCanvas } from "./PresentationCanvas.js";
 import { PresentationStage } from "./PresentationStage.js";
-import { PresenterControls } from "./PresenterControls.js";
-import { ChatDock } from "./ChatDock.js";
 import {
   initialPresentationState,
   presentationReducer,
-  compositionForState,
 } from "./presentation-state.js";
 import { hashForLocation } from "./storyboard-navigation.js";
 import { findScene } from "./storyboard.js";
@@ -93,9 +90,6 @@ export const PresentationRoute = () => {
         dispatch({ type: "previous" });
       } else if (event.key === "Escape") {
         dispatch({ type: "close_overlay" });
-      } else if (event.key === "p" || event.key === "P") {
-        if (!isBodyEvent) return;
-        dispatch({ type: "toggle_controls" });
       }
     };
     window.addEventListener("keydown", onKeyDown);
@@ -164,12 +158,6 @@ export const PresentationRoute = () => {
     setEvidence(replayEvidence);
   }, [demo, replayEvidence]);
 
-  const handleResetOverrides = useCallback(() => {
-    dispatch({ type: "set_stage_theme", theme: null });
-    dispatch({ type: "set_chat_theme", theme: null });
-    dispatch({ type: "set_chat_mode", mode: null });
-  }, []);
-
   const handleResetScene = useCallback(() => {
     if (state.location.kind !== "main") return;
     const scene = findScene(state.location.sceneId);
@@ -180,9 +168,6 @@ export const PresentationRoute = () => {
   const handleToggleMotion = useCallback(() => {
     dispatch({ type: "toggle_motion" });
   }, []);
-
-  const composition = compositionForState(state);
-  const showChatDock = composition.chatMode === "dock" && state.location.kind !== "discussion";
 
   return (
     <main className="presentation-route" aria-label="lda.chat presentation" data-motion={state.motionDisabled ? "disabled" : "enabled"}>
@@ -200,25 +185,8 @@ export const PresentationRoute = () => {
           closeOverlay={() => dispatch({ type: "close_overlay" })}
           openDiscussion={handleOpenDiscussion}
           closeDiscussion={handleCloseDiscussion}
-          toggleDiscussionIndex={() => dispatch({ type: "toggle_discussion_index" })}
         />
       </PresentationCanvas>
-      {showChatDock && <ChatDock openChat={() => dispatch({ type: "set_chat_mode", mode: "rail" })} />}
-      {state.controlsOpen && (
-        <PresenterControls
-          state={state}
-          next={() => dispatch({ type: "next" })}
-          previous={() => dispatch({ type: "previous" })}
-          jump={handleJump}
-          setStageTheme={(theme) => dispatch({ type: "set_stage_theme", theme })}
-          setChatTheme={(theme) => dispatch({ type: "set_chat_theme", theme })}
-          setChatMode={(mode) => dispatch({ type: "set_chat_mode", mode })}
-          forceReplay={handleForceReplay}
-          resetOverrides={handleResetOverrides}
-          resetScene={handleResetScene}
-          toggleMotion={handleToggleMotion}
-        />
-      )}
       <button
         type="button"
         onClick={() => agent.startPreparedReplay()}

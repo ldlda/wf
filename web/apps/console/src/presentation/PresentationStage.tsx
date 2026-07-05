@@ -2,15 +2,14 @@ import { domAnimation, LayoutGroup, LazyMotion } from "motion/react";
 import type { EvidenceRecord } from "../app/state.js";
 import type { AgentMessage } from "../demo/agent/events.js";
 import { SceneBody } from "./SceneBody.js";
-import { SceneRail } from "./SceneRail.js";
-import { DiscussionIndex } from "./DiscussionIndex.js";
 import { DiscussionPanel } from "./DiscussionPanel.js";
 import { EvidenceDrawer } from "./EvidenceDrawer.js";
 import { OperatorChat } from "./OperatorChat.js";
+import { SceneProgress } from "./SceneProgress.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
-import { findScene, type PresentationLocation } from "./storyboard.js";
+import { findScene, type MainLocation, type PresentationLocation } from "./storyboard.js";
 
 type PresentationStageProps = {
   readonly state: PresentationState;
@@ -25,7 +24,6 @@ type PresentationStageProps = {
   readonly closeOverlay: () => void;
   readonly openDiscussion: (branchId: string) => void;
   readonly closeDiscussion: () => void;
-  readonly toggleDiscussionIndex: () => void;
 };
 
 export const PresentationStage = ({
@@ -41,7 +39,6 @@ export const PresentationStage = ({
   closeOverlay,
   openDiscussion,
   closeDiscussion,
-  toggleDiscussionIndex,
 }: PresentationStageProps) => {
   const composition = compositionForState(state);
 
@@ -55,8 +52,6 @@ export const PresentationStage = ({
       <LayoutGroup id="presentation-stage">
         <div
           className="presentation-stage"
-          data-stage-theme={composition.stageTheme}
-          data-chat-theme={composition.chatTheme}
           data-chat-mode={composition.chatMode}
           data-evidence-mode={composition.evidenceMode}
           data-scene-view={activeSceneView}
@@ -68,45 +63,27 @@ export const PresentationStage = ({
             {state.location.kind === "discussion" ? (
               <DiscussionPanel branchId={state.location.branchId} onClose={closeDiscussion} />
             ) : (
-              <>
-                <SceneBody
-                  location={state.location}
-                  demo={demo}
-                  selectedNodeId={state.selectedNodeId}
-                  selectNode={selectNode}
-                  openEvidence={openEvidence}
-                  onFocusPathChange={(path) => {
-                    if (state.location.kind === "main") {
-                      jump({ ...state.location, focusPath: path });
-                    }
-                  }}
-                  motionDisabled={false}
-                />
-                <button
-                  type="button"
-                  className="presentation-stage__discussion-toggle"
-                  onClick={toggleDiscussionIndex}
-                >
-                  Discussion topics
-                </button>
-              </>
-            )}
-            {state.discussionIndexOpen && (
-              <DiscussionIndex
-                onSelect={(branchId) => {
-                  toggleDiscussionIndex();
-                  openDiscussion(branchId);
+              <SceneBody
+                location={state.location}
+                demo={demo}
+                selectedNodeId={state.selectedNodeId}
+                selectNode={selectNode}
+                openEvidence={openEvidence}
+                onFocusPathChange={(path) => {
+                  if (state.location.kind === "main") {
+                    jump({ ...state.location, focusPath: path });
+                  }
                 }}
+                motionDisabled={false}
               />
             )}
-            <p className="presentation-stage__mode">
-              {demo.state.mode === "replay" ? "Replay" : "Live"} · {demo.state.phase}
-            </p>
           </section>
           <aside className="presentation-stage__evidence" aria-label="evidence region">
             <EvidenceDrawer records={evidence} mode={composition.evidenceMode} close={closeOverlay} />
           </aside>
-          <SceneRail location={state.location} jump={jump} />
+          {state.location.kind === "main" && (
+            <SceneProgress location={state.location} />
+          )}
         </div>
       </LayoutGroup>
     </LazyMotion>
