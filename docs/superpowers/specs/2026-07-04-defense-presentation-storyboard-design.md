@@ -64,6 +64,19 @@ transition language, but it may not introduce a new factual claim.
 
 ## Stable Stage Geography
 
+The presentation uses three canonical layers:
+
+- **Editorial Canvas:** the persistent warm, light visual identity used for the
+  spoken argument, figures, and transitions.
+- **Product Surface:** a real application or evidence surface that expands from
+  an inline trigger when the story requires product proof.
+- **Presentation Frame:** the thin remainder of the Editorial Canvas that stays
+  visible around an expanded Product Surface.
+
+The presentation is therefore an editorial thesis deck that temporarily
+transforms into the product. It is not a dashboard or chat application used as
+a decorative container for every scene.
+
 The stage has three stable regions:
 
 ```text
@@ -74,7 +87,10 @@ The stage has three stable regions:
 ```
 
 The regions may expand, collapse, or overlap, but they do not swap meanings.
-The audience should learn the geography once.
+The audience should learn the geography once. A Product Surface may occupy
+roughly 80 percent of the stage, but it does not erase the Presentation Frame;
+the audience must still read it as evidence inside the argument rather than an
+accidental application switch.
 
 - **Left:** agent conversation and operation intent.
 - **Center:** the primary explanation, workflow graph, output, or evaluation
@@ -91,48 +107,249 @@ presenter control so the interaction remains usable without a precise mouse.
 Vertical stacking is forbidden on the main path. At `1280x720`, the presenter
 must not scroll to discover the graph, approval control, output, or next action.
 
-## Independent Presentation State
+The audience route renders a deterministic `1280x720` canvas and scales it
+proportionally to the available viewport, adding letterboxing when aspect
+ratios differ. Scenes do not reflow like a responsive website; presenter and
+audience views must preserve the same composition and Focus Path.
 
-The stage and chat are independently themed and positioned:
+## Unified Presentation Identity
+
+The Editorial Canvas keeps one warm, light identity from introduction through
+conclusion. Product surfaces may use their native light or dark appearance,
+but entering a product surface does not switch the theme of the entire deck.
+Chat remains independently positioned because it is a product element, not the
+presentation's visual identity:
+
+See [ADR 0005](../../adr/0005-editorial-canvas-around-shared-product-surfaces.md).
+
+Major claims use an editorial display serif, provisionally Newsreader. Source
+Sans 3 remains the explanatory and interface face, while IBM Plex Mono is
+reserved for commands, identifiers, schemas, and evidence. Condensed all-caps
+type is an accent rather than the default title treatment.
 
 ```ts
 type PresentationAppearance = {
-  readonly stageTheme: "paper" | "night";
-  readonly chatTheme: "light" | "dark";
   readonly chatMode: "hidden" | "full" | "rail" | "dock";
+  readonly productExpansion: "inline" | "expanded";
 };
 ```
 
-The themes are not required to match. A professional light chat may enter over
-a dark cinematic stage, then collapse into a narrow rail while the graph takes
-focus.
+A rehearsal toolbar may override chat position, product expansion, motion,
+playback mode, and scene selection. It is hidden during the defense.
 
-A rehearsal toolbar may override scene defaults for stage theme, chat theme,
-motion, playback mode, and scene selection. It is hidden during the defense.
+Remote or phone control is not required for the redesign. Presentation actions
+remain input-agnostic so a later remote can dispatch them, but keyboard and
+pointer operation are the supported defense controls.
 
-Stage themes change by act, not by slide or individual reveal:
+## Defense Chrome
 
-- framing and positioning use the paper stage;
-- architecture and product demonstration use the night stage;
-- evaluation and conclusion return to the paper stage.
+The audience-facing route persistently shows only a quiet scene number or
+progress marker. The full scene rail, replay status, discussion index,
+presenter controls, and prepared-agent trigger are hidden until explicitly
+summoned.
 
-The demo chat may retain its own light or dark theme across an act transition.
+On first visit, a dismissible presenter onboarding overlay explains navigation
+and rehearsal controls. Afterwards, `?` opens a presenter-only command and
+shortcut palette. Presenter controls are therefore discoverable without
+becoming persistent audience chrome; the existing secret `P` shortcut is not a
+sufficient interface.
+
+A separate `/presenter` companion route shows the current and next beat,
+speaker notes, timer, Discussion Library, and presentation controls without
+exposing them on the projected `/present` route. A temporary notes overlay on
+`/present` remains the single-screen fallback.
+
+Audience and presenter routes communicate through a typed **Presentation
+Transport** that carries reducer actions. The first adapter uses
+`BroadcastChannel` for same-browser windows. A future authenticated WebSocket
+relay may connect different machines or networks using the same event contract;
+that relay does not execute workflows or own presentation semantics.
+
+The presenter palette includes a searchable **Discussion Library** instead of
+an audience-facing discussion button. Opening a prepared question stores the
+exact scene, beat, and Focus Path. Closing the discussion restores that return
+location.
+
+The prepared workflow starts from the chat surface, provisionally through a
+button or slash command, rather than through a detached corner action. This
+entry point is part of the product story and may later be replaced by a fuller
+chat framework without changing the presentation contract.
+
+A **Guided Run** is the prepared agent sequence used during the defense. The
+presentation timeline owns its pacing. After emitting the content permitted by
+the current beat, the driver waits at a **Beat Gate** until the presenter
+advances. Advancing releases at most the next audience-relevant operation;
+internal or repetitive actions remain hidden.
+
+The chat starts a Guided Run through a visible **Prompt Macro**, provisionally
+`/demo report`. Invoking it expands into the full natural-language request, and
+the transcript displays that expanded request rather than a raw slash command.
+Expandable provenance may identify the originating macro.
+
+The audience sees a quiet execution provenance label, `Prepared replay` or
+`Live server`, but no mode controls. Live and replay drivers must produce the
+same Guided Run and Beat Gate structure. If live setup fails, replay replaces
+it without changing the presentation narrative or interaction sequence.
+
+Only one audience-relevant operation may cross a Beat Gate at a time. If a live
+operation is still running, further advance input does not launch another
+operation or skip the gate. The beat shows a restrained working state, and a
+presenter-only action may replace that operation with its prepared replay.
+
+If a live operation fails, its failed Chat Tool Receipt remains visible. The
+presenter may explicitly choose `Continue with prepared replay`; the
+continuation changes the provenance label and never rewrites the failed live
+evidence.
+
+An audience-relevant operation has two independent projections from the same
+canonical event:
+
+- **Chat Tool Receipt:** a subtle collapsed chat row, expandable on demand into
+  a bounded, scrollable terminal-style detail. A future chat framework should
+  own its interaction and accessibility.
+- **Stage Projection:** a curated operation view rendered only when the current
+  argument needs that operation as evidence.
+
+The Chat Tool Receipt does not physically morph into the Stage Projection.
+Their continuity is semantic and timeline-driven, which avoids coupling chat
+layout to presentation choreography.
+
+A pending typed interrupt creates one **Approval Session** with synchronized
+chat and Product Surface projections. Chat presents a compact approval card and
+selection summary; the Product Surface presents the full schema-backed list or
+form. Edits from either projection update the same draft response. Submission
+from either resolves the interrupt exactly once, then both projections become
+read-only with the same result.
+
+Both projections consume a reusable **Schema Form Surface** rather than
+hand-built interrupt fields. It accepts JSON Schema, a draft value, validation
+state, read-only state, and custom widget registrations. Typed interrupts are
+the first consumer; deployment inputs, run inputs, and future configuration
+surfaces may reuse the same boundary. Domain-specific interactions such as
+issue selection are custom widgets over the generic form contract.
+
+The Schema Form Surface lives in a small shared web package. Console and
+presentation surfaces import that package, while app-specific widgets and
+Approval Session orchestration remain in their owning applications.
+
+Chat rendering uses source-owned, established AI-chat primitives rather than
+project-specific message and tool-call components. The adopted surface must
+cover conversation, message, collapsed tool receipt, bounded terminal detail,
+and prompt input. It owns rendering and accessibility only;
+`AgentMessagePart`, `AgentDriver`, Guided Run, and Beat Gate semantics remain
+project contracts.
+
+Tailwind and shadcn-compatible styling may be introduced additively for these
+source-owned primitives and new presentation components. Existing console CSS
+is not subject to a wholesale rewrite; it migrates only when a component is
+replaced. See [ADR 0004](../../adr/0004-adopt-tailwind-additively-for-source-owned-ui.md).
 
 ## Motion Contract
 
-Motion explains changing ownership of the stage:
+Motion uses only three primitives:
 
-- chat enters as a complete application surface;
-- an operation card expands from chat into the center stage;
-- the workflow graph takes over while chat moves to a rail;
-- a selected node expands into a spotlight without navigating away;
-- evidence peeks from the right and opens only when needed;
-- chat collapses to a dock after the workflow completes.
+- **Reveal:** a fast opacity transition introduces genuinely new explanatory
+  content.
+- **Expand:** an existing object grows into a Product Surface while preserving
+  its identity.
+- **Reframe:** existing content moves aside to retain context while another
+  surface takes focus.
 
-Messages appear as complete blocks with a short fade. There is no slow
-typewriter simulation. Major transitions should normally complete within one
-second and never exceed two seconds. Reduced-motion mode replaces spatial
-movement with immediate visibility changes or short fades.
+Unchanged objects do not remount or replay entrance animation between beats.
+Blur, bounce, generic stagger, and decorative typewriter effects are forbidden.
+Reduced-motion mode replaces Expand and Reframe with immediate layout changes
+and keeps Reveal brief.
+
+## Interactive Figures
+
+Architecture, authoring, workflow, and evidence diagrams use a shared
+**Interactive Figure** model rather than scene-specific card layouts. An
+Interactive Figure contains addressable **Figure Nodes** and relationships.
+Graph-shaped figures may use the existing React Flow and Dagre dependencies;
+linear figures may use lighter SVG or HTML renderers over the same interaction
+contract.
+
+A Figure Node may reference a child figure. Activating it pushes the node onto
+a single **Focus Path** and reframes the canvas around that child figure.
+Ancestors remain available through a compact breadcrumb, and `Escape` pops one
+focus level. A child figure may contain further expandable nodes, but only one
+Focus Path is active; the interface never stacks nested modals or sidebars.
+
+Normal figures are authored as declarative TypeScript definitions containing
+nodes, relationships, semantic types, child-figure references, and canonical
+Focus Paths. The shared renderer owns layout, focus, keyboard behavior, and
+motion. A custom React renderer is an explicit escape hatch for exceptional
+figures rather than the default scene-authoring mechanism.
+
+Factual architecture and evaluation nodes carry evidence pointers in their
+definitions. Those pointers remain hidden during the normal path and become
+available through focused inspection, Q&A, or the evidence surface.
+Motivational nodes may omit evidence pointers.
+
+Main-path Figure Node labels use system concepts such as “Runtime” or “Source
+providers.” Focused detail may reveal concrete packages, public operations,
+tests, or symbols such as `wf_core` and `wf_api`.
+
+Initial figure layout supports only layered, flow, and explicit-position modes.
+Dagre may calculate spacing inside the first two. A new reusable layout mode is
+added only after at least two concrete figures require it; the presentation is
+not a general diagram-layout engine.
+
+Interactive Figures expose keyboard navigation: `Tab` reaches Figure Nodes,
+arrow keys move spatially between related nodes, `Enter` expands the focused
+node, and `Escape` pops one Focus Path level. Breadcrumbs remain pointer and
+keyboard accessible. The presenter `?` palette lists these controls when figure
+focus is active.
+
+While a Figure Node owns focus, arrow keys belong to the figure. `Escape`
+returns focus to the presentation stage, after which arrows navigate beats.
+`Space` remains a global advance shortcut except while focus is inside chat,
+forms, terminal detail, or another text-entry control.
+
+Each beat may declare a canonical Focus Path for deterministic playback.
+Presenter interaction may temporarily replace it for explanation or Q&A.
+Advancing to another beat applies that beat's canonical Focus Path, preventing
+manual exploration from making later scenes nondeterministic.
+
+Canonical deep links encode scene, beat, and optional Focus Path so an
+interactive figure state can be reproduced directly. Ephemeral UI state such
+as chat scroll, expanded Chat Tool Receipts, and presenter-palette visibility
+does not enter the URL.
+
+Editorial figures use restrained semantic color:
+
+- blue identifies planner or client intent;
+- green identifies deterministic runtime execution;
+- orange identifies human boundaries or intervention.
+
+The warm canvas and black typography remain dominant. Labels, connector styles,
+and node shapes must carry the same distinction when color is unavailable.
+
+The renderer exposes a small **Figure Vocabulary** rather than one universal
+rounded node: actors, operations, artifacts, runtime systems, human boundaries,
+and evidence. Scenes compose those primitives differently so they share
+interaction behavior without looking mechanically generated from one template.
+
+Visual personality primarily comes from expressive scale, asymmetry, direct
+figure manipulation, memorable scene transformations, and occasional
+purpose-built illustration or iconography. Decorative gradients, badges, and
+background effects are permitted only when they support a specific scene; they
+are not the default source of visual interest.
+
+The workflow graph in the product demonstration is not reconstructed through
+the Figure Vocabulary. It embeds the real console graph component, driven by
+the canonical workflow and run state, inside an expanded Product Surface.
+Editorial annotations may explain it without replacing the product evidence.
+
+Product Surfaces use the console's shared components and design tokens rather
+than a presentation-only skin. Improving graph, form, receipt, or evidence
+styling therefore improves both `/console` and `/present`; presentation code
+controls only framing, scale, and when a surface is shown.
+
+The main defense path uses the console's light product theme to remain coherent
+with the warm Editorial Canvas. Dark mode remains available in the console but
+is not part of the main defense sequence. Terminal and code insets may remain
+dark when that treatment communicates their actual content type.
 
 ## Scene Semantics
 
@@ -144,7 +361,34 @@ Advancing within a scene changes a **beat**. Advancing after the final beat
 changes the **scene**. Discussion branches can return to the exact scene and
 beat from which they were opened.
 
+Each beat definition carries its short visible claim, speaker notes, timing
+budget, evidence pointer, visual or figure id, canonical Focus Path, and
+optional Beat Gate. Components render that definition; they do not own the
+spoken script or duplicate scene-specific content.
+
+At `1280x720`, each beat presents one primary visual, one short claim, and at
+most three supporting labels. A command, schema, or evidence view may replace
+the primary visual but does not compete beside another primary visual. Speaker
+notes carry details that do not fit this composition budget.
+
 ## Main Storyboard
+
+The sequence below preserves the current argument and evidence order, but its
+exact scene boundaries and beat counts are not frozen. Visual redesign may
+merge, split, or re-time scenes when the claim order, evidence coverage,
+discussion returns, and overall defense budget remain intact.
+
+Visual review uses a Playwright-generated gallery of selected beats at
+`1280x720` plus manual traversal in the browser. Automated checks cover state,
+keyboard behavior, accessibility, overflow, and interaction contracts. The
+gallery supports human approval and is not initially enforced through brittle
+pixel-diff thresholds.
+
+The redesign preserves public navigation, canonical replay evidence, and
+useful reducer actions. It removes obsolete internal contracts cleanly,
+including whole-stage theme switching, one-off diagram components, persistent
+audience chrome, and presentation-only product skins. Unused UI APIs do not
+receive compatibility wrappers.
 
 ### Scene 1: Thesis
 
@@ -155,7 +399,7 @@ beat from which they were opened.
   typed system for creating, validating, running, and inspecting the workflows
   that an agent proposes. This thesis implements that substrate."
 - **Primary visual:** title and one-sentence thesis.
-- **Composition:** paper stage; chat hidden; no evidence panel.
+- **Composition:** warm Editorial Canvas; chat hidden; no evidence panel.
 - **Evidence pointer:** thesis Abstract and Introduction.
 - **Transition:** the title contracts into a small persistent lda.chat mark.
 
@@ -168,7 +412,7 @@ beat from which they were opened.
   deterministic execution, persistence, traceability, and recovery boundaries.
 - **Primary visual:** an unstable sequence of direct tool calls contrasted with
   a durable workflow record; the missing responsibilities appear around it.
-- **Composition:** paper stage; chat hidden.
+- **Composition:** warm Editorial Canvas; chat hidden.
 - **Evidence pointer:** thesis problem statement, requirements, and research
   question.
 - **Transition:** the requirements arrange into a landscape of related systems.
@@ -185,7 +429,7 @@ beat from which they were opened.
   external-agent operation.
 - **Primary visual:** related approaches progressively occupy distinct positions
   around lda.chat; do not reproduce the thesis comparison table.
-- **Composition:** paper stage; each approach enters while the positioning axis
+- **Composition:** warm Editorial Canvas; each approach enters while the positioning axis
   remains stable.
 - **Evidence pointer:** thesis Positioning and Related Systems chapter.
 - **Transition:** lda.chat's position resolves into the planner/runtime boundary.
@@ -199,7 +443,8 @@ beat from which they were opened.
   resumes it.
 - **Primary visual:** a two-sided planner/runtime boundary with explicit
   operations crossing it.
-- **Composition:** night stage; chat hidden.
+- **Composition:** warm Editorial Canvas; chat hidden; the planner/runtime
+  boundary carries its own semantic color and shape treatment.
 - **Evidence pointer:** thesis architecture overview and workflow API boundary.
 - **Transition:** the runtime side expands into the lifecycle.
 
@@ -211,8 +456,8 @@ beat from which they were opened.
   records with different mutability and responsibility.
 - **Primary visual:** lifecycle records, including both draft-save and direct
   plan-import paths into an immutable artifact.
-- **Composition:** night stage; center focus; evidence panel may show one compact
-  record at a time.
+- **Composition:** warm Editorial Canvas; center focus; evidence panel may show
+  one compact record at a time.
 - **Evidence pointer:** thesis lifecycle chapter and lifecycle explorer.
 - **Transition:** selecting a deployment zooms into the runtime architecture.
 
@@ -224,8 +469,8 @@ beat from which they were opened.
   providers and stores, then into the graph runner and one `NodeUse` execution.
 - **Primary visual:** semantic zoom through four levels rather than four
   unrelated diagrams.
-- **Composition:** night stage; chat hidden; right evidence panel peeks for
-  concrete package or operation names.
+- **Composition:** warm Editorial Canvas; chat hidden; right evidence panel
+  peeks for concrete package or operation names.
 - **Evidence pointer:** thesis architecture diagrams, `docs/project_map.md`, and
   `docs/source_architecture.md`.
 - **Transition:** the semantic zoom backs out into the public authoring surface.
@@ -239,8 +484,8 @@ beat from which they were opened.
   loop.
 - **Primary visual:** an operation sequence with one structured diagnostic and
   its repair action.
-- **Composition:** night stage; chat hidden; operation block in center; evidence
-  peeks right.
+- **Composition:** warm Editorial Canvas; chat hidden; a locally dark operation
+  or terminal block may occupy center while evidence peeks right.
 - **Evidence pointer:** CLI documentation, draft authoring API, and challenge
   UX findings.
 - **Transition:** the operation block becomes the first card in the agent UI.
@@ -252,7 +497,8 @@ beat from which they were opened.
 - **Spoken intent:** "The submitted contribution is the substrate. This prepared
   agent interaction shows how a thin external interface can operate it."
 - **Primary visual:** a standard AI application surface enters full-screen.
-- **Composition:** light chat full-screen over a night stage; evidence hidden.
+- **Composition:** source-owned light chat surface expands within the warm
+  Editorial Canvas; evidence hidden.
 - **Evidence pointer:** constrained demo agent design and prepared replay recipe.
 - **Transition:** the operator request and first operation appear immediately.
 
@@ -297,8 +543,8 @@ beat from which they were opened.
   estimate.
 - **Primary visual:** cohort structure, audited validity, failure classes, and
   selected product improvements discovered through trials.
-- **Composition:** paper stage; chat hidden; one chart at a time; evidence panel
-  links to the audit/run records.
+- **Composition:** warm Editorial Canvas; chat hidden; one chart at a time;
+  evidence panel links to the audit/run records.
 - **Evidence pointer:** thesis evaluation chapter, Appendix C, generated cohort
   figures, and challenge reports.
 - **Transition:** limitations remain while the charts simplify into the final
@@ -313,7 +559,7 @@ beat from which they were opened.
   comparative studies; end on the planner/runtime separation.
 - **Primary visual:** implemented core in focus, future layers around it, then
   the one-sentence thesis.
-- **Composition:** paper stage; chat dock may remain as a
+- **Composition:** warm Editorial Canvas; chat dock may remain as a
   subtle reminder that the agent is a client of the substrate.
 - **Evidence pointer:** thesis limitations and future-work chapters.
 - **Transition:** none; hold a stable conclusion frame for questions.
@@ -326,7 +572,7 @@ The presenter needs a hidden or unobtrusive rehearsal surface with:
 - direct scene jump by number or hash;
 - current and next speaker note;
 - elapsed and planned time;
-- stage-theme and chat-theme overrides;
+- audience progress and current Focus Path;
 - motion reduction toggle;
 - replay/live indicator and forced replay fallback;
 - reset to the start of the current scene;
