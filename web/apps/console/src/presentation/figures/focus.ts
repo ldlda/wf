@@ -42,7 +42,8 @@ const buildBreadcrumbs = (
     if (!node?.childFigureId) break;
     const childFigure = findFigure(catalog, node.childFigureId);
     if (!childFigure) break;
-    crumbs.push({ label: node.label, path: [...crumbs[crumbs.length - 1]!.path, segment] });
+    const prevCrumb = crumbs[crumbs.length - 1];
+    crumbs.push({ label: node.label, path: [...(prevCrumb?.path ?? []), segment] });
     currentFigure = childFigure;
   }
 

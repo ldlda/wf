@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import type { FigureDefinition, FigureNodeDefinition } from "./model.js";
 import { layoutFigure, type PositionedFigure } from "./layout.js";
 
-const position = (layout: PositionedFigure, nodeId: string) =>
-  layout.nodes.find((n) => n.id === nodeId)!.position;
+const position = (layout: PositionedFigure, nodeId: string) => {
+  const node = layout.nodes.find((n) => n.id === nodeId);
+  if (!node) throw new Error(`node ${nodeId} not found in layout`);
+  return node.position;
+};
 
 describe("layoutFigure", () => {
   it("places layered edges from top to bottom", () => {

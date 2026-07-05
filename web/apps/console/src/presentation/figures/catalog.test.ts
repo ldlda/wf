@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { defineFigureCatalog } from "./catalog.js";
 import {
   cyclicCatalog,
+  disconnectedCyclicCatalog,
   duplicateFigureCatalog,
   duplicateNodeCatalog,
   unknownChildCatalog,
@@ -22,6 +23,7 @@ describe("defineFigureCatalog", () => {
     ["unknown edge endpoint", unknownEdgeCatalog, "unknown_edge_endpoint"],
     ["unknown child figure", unknownChildCatalog, "unknown_child_figure"],
     ["recursive child cycle", cyclicCatalog, "child_cycle"],
+    ["disconnected child cycle", disconnectedCyclicCatalog, "child_cycle"],
   ])("rejects %s", (_label, catalog, code) => {
     expect(() => defineFigureCatalog(catalog)).toThrow(code);
   });

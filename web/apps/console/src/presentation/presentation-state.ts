@@ -47,6 +47,7 @@ export type PresentationAction =
   | { readonly type: "set_stage_theme"; readonly theme: StageTheme | null }
   | { readonly type: "set_chat_theme"; readonly theme: ChatTheme | null }
   | { readonly type: "set_chat_mode"; readonly mode: ChatMode | null }
+  | { readonly type: "set_focus_path"; readonly path: readonly string[] }
   | { readonly type: "toggle_controls" }
   | { readonly type: "toggle_discussion_index" }
   | { readonly type: "toggle_motion" };
@@ -113,7 +114,8 @@ const isValidMainLocation = (location: PresentationLocation): location is MainLo
 const firstBeatOfScene = (sceneId: string): MainLocation | null => {
   const scene = findScene(sceneId);
   if (!scene || scene.beats.length === 0) return null;
-  return { kind: "main", sceneId: scene.id as MainLocation["sceneId"], beatId: scene.beats[0]!.id };
+  const beat = scene.beats[0]!;
+  return { kind: "main", sceneId: scene.id as MainLocation["sceneId"], beatId: beat.id, focusPath: beat.figure?.focusPath ?? [] };
 };
 
 const clampMainLocation = (location: MainLocation): MainLocation => {
@@ -207,6 +209,12 @@ export const presentationReducer = (
       return { ...state, chatThemeOverride: action.theme };
     case "set_chat_mode":
       return { ...state, chatModeOverride: action.mode };
+    case "set_focus_path":
+      if (state.location.kind !== "main") return state;
+      return {
+        ...state,
+        location: { ...state.location, focusPath: action.path },
+      };
     case "toggle_controls":
       return { ...state, controlsOpen: !state.controlsOpen };
     case "toggle_discussion_index":

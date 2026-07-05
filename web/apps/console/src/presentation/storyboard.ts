@@ -15,6 +15,12 @@ export type SceneView =
   | "evaluation"
   | "conclusion";
 
+export type FigureBeatDefinition = {
+  readonly catalogId: string;
+  readonly focusPath: readonly string[];
+  readonly activeNodeId: string | null;
+};
+
 export type SceneBeatDefinition = {
   readonly id: string;
   readonly title: string;
@@ -22,6 +28,7 @@ export type SceneBeatDefinition = {
   readonly chatMode: ChatMode;
   readonly chatTheme: ChatTheme;
   readonly evidenceMode: EvidenceMode;
+  readonly figure: FigureBeatDefinition | null;
 };
 
 export type SceneDefinition = {
@@ -41,7 +48,7 @@ const sceneBeat = (
   id: string,
   title: string,
   caption: string,
-  options: Partial<Pick<SceneBeatDefinition, "chatMode" | "chatTheme" | "evidenceMode">> = {},
+  options: Partial<Pick<SceneBeatDefinition, "chatMode" | "chatTheme" | "evidenceMode" | "figure">> = {},
 ): SceneBeatDefinition => ({
   id,
   title,
@@ -49,6 +56,7 @@ const sceneBeat = (
   chatMode: options.chatMode ?? "hidden",
   chatTheme: options.chatTheme ?? "dark",
   evidenceMode: options.evidenceMode ?? "hidden",
+  figure: options.figure ?? null,
 });
 
 export const mainScenes = defineScenes([
@@ -228,6 +236,7 @@ export type MainLocation = {
   readonly kind: "main";
   readonly sceneId: MainSceneId;
   readonly beatId: string;
+  readonly focusPath: readonly string[];
 };
 
 export type DiscussionBranchDefinition = {
@@ -368,12 +377,12 @@ export const findBeat = (sceneId: string, beatId: string): SceneBeatDefinition |
 export const findDiscussionBranch = (branchId: string): DiscussionBranchDefinition | undefined =>
   discussionBranches.find((branch) => branch.id === branchId);
 
-export const defaultMainLocation: MainLocation = { kind: "main", sceneId: "thesis", beatId: "title" };
+export const defaultMainLocation: MainLocation = { kind: "main", sceneId: "thesis", beatId: "title", focusPath: [] };
 
 export const mainLocation = (sceneId: string, beatId: string): MainLocation | null => {
   const scene = findScene(sceneId);
   if (!scene) return null;
   const beat = scene.beats.find((b) => b.id === beatId);
   if (!beat) return null;
-  return { kind: "main", sceneId: scene.id as MainSceneId, beatId: beat.id };
+  return { kind: "main", sceneId: scene.id as MainSceneId, beatId: beat.id, focusPath: beat.figure?.focusPath ?? [] };
 };

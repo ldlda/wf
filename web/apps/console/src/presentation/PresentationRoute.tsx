@@ -174,7 +174,7 @@ export const PresentationRoute = () => {
     if (state.location.kind !== "main") return;
     const scene = findScene(state.location.sceneId);
     if (!scene || scene.beats.length === 0) return;
-    dispatch({ type: "jump", location: { kind: "main", sceneId: state.location.sceneId, beatId: scene.beats[0]!.id } });
+    dispatch({ type: "jump", location: { kind: "main", sceneId: state.location.sceneId, beatId: scene.beats[0]!.id, focusPath: scene.beats[0]!.figure?.focusPath ?? [] } });
   }, [state.location]);
 
   const handleToggleMotion = useCallback(() => {

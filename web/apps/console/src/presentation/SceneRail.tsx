@@ -19,7 +19,7 @@ export const SceneRail = ({ location, jump }: SceneRailProps) => {
             type="button"
             data-active={isActive}
             aria-current={isActive ? "step" : undefined}
-            onClick={() => jump({ kind: "main", sceneId: scene.id as MainLocation["sceneId"], beatId: scene.beats[0]!.id })}
+            onClick={() => jump({ kind: "main", sceneId: scene.id as MainLocation["sceneId"], beatId: scene.beats[0]!.id, focusPath: scene.beats[0]!.figure?.focusPath ?? [] })}
             className="scene-rail__scene"
           >
             <span className="scene-rail__number">{scene.number}</span>

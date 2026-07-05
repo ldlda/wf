@@ -38,7 +38,7 @@ afterEach(() => cleanup());
 
 describe("SceneBody", () => {
   it("renders narrative metadata without mounting the demo graph", () => {
-    const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape" };
+    const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };
     render(
       <SceneBody
         location={location}
@@ -53,7 +53,7 @@ describe("SceneBody", () => {
   });
 
   it("renders the real workflow graph for demo scenes", () => {
-    const location: PresentationLocation = { kind: "main", sceneId: "workflow-demo", beatId: "graph" };
+    const location: PresentationLocation = { kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] };
     render(
       <SceneBody
         location={location}

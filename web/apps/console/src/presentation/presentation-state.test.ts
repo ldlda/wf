@@ -9,27 +9,27 @@ import type { MainLocation } from "./storyboard.js";
 describe("presentationReducer", () => {
   it("advances within a scene before advancing to the next scene", () => {
     const advanced = presentationReducer(initialPresentationState, { type: "next" });
-    expect(advanced.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "substrate" });
+    expect(advanced.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "substrate", focusPath: [] });
 
     const advancedAgain = presentationReducer(advanced, { type: "next" });
-    expect(advancedAgain.location).toEqual({ kind: "main", sceneId: "problem", beatId: "direct-actions" });
+    expect(advancedAgain.location).toEqual({ kind: "main", sceneId: "problem", beatId: "direct-actions", focusPath: [] });
   });
 
   it("rewinds across scene boundaries", () => {
-    const state: MainLocation = { kind: "main", sceneId: "problem", beatId: "direct-actions" };
+    const state: MainLocation = { kind: "main", sceneId: "problem", beatId: "direct-actions", focusPath: [] };
     const rewound = presentationReducer(
       { ...initialPresentationState, location: state },
       { type: "previous" },
     );
-    expect(rewound.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "substrate" });
+    expect(rewound.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "substrate", focusPath: [] });
   });
 
   it("jumps to a specific scene and beat", () => {
     const jumped = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "workflow-demo", beatId: "graph" },
+      location: { kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] },
     });
-    expect(jumped.location).toEqual({ kind: "main", sceneId: "workflow-demo", beatId: "graph" });
+    expect(jumped.location).toEqual({ kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] });
   });
 
   it("parses a scene hash", () => {
@@ -37,7 +37,7 @@ describe("presentationReducer", () => {
       type: "jump_hash",
       hash: "#scene/lifecycle/deployment",
     });
-    expect(state.location).toEqual({ kind: "main", sceneId: "lifecycle", beatId: "deployment" });
+    expect(state.location).toEqual({ kind: "main", sceneId: "lifecycle", beatId: "deployment", focusPath: [] });
   });
 
   it("falls back to default for invalid hash", () => {
@@ -45,13 +45,13 @@ describe("presentationReducer", () => {
       type: "jump_hash",
       hash: "#scene/nope/nope",
     });
-    expect(state.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "title" });
+    expect(state.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "title", focusPath: [] });
   });
 
   it("opens a discussion branch and returns to the originating beat", () => {
     const positioned = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "positioning", beatId: "lda-position" },
+      location: { kind: "main", sceneId: "positioning", beatId: "lda-position", focusPath: [] },
     });
     const opened = presentationReducer(positioned, {
       type: "open_discussion",
@@ -101,7 +101,7 @@ describe("presentationReducer", () => {
   it("does nothing on next while a discussion branch is open", () => {
     const positioned = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "thesis", beatId: "title" },
+      location: { kind: "main", sceneId: "thesis", beatId: "title", focusPath: [] },
     });
     const opened = presentationReducer(positioned, {
       type: "open_discussion",
@@ -114,7 +114,7 @@ describe("presentationReducer", () => {
   it("derives act and chat composition from the current beat", () => {
     const state = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "workflow-demo", beatId: "graph" },
+      location: { kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] },
     });
     expect(compositionForState(state)).toMatchObject({
       stageTheme: "night",
@@ -136,7 +136,7 @@ describe("presentationReducer", () => {
   it("does not reopen evidence on repeated Escape after force-close", () => {
     const stateAtTrace = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "interrupt-evidence", beatId: "trace" },
+      location: { kind: "main", sceneId: "interrupt-evidence", beatId: "trace", focusPath: [] },
     });
     expect(stateAtTrace.evidenceModeOverride).toBeNull();
 
@@ -146,5 +146,43 @@ describe("presentationReducer", () => {
     const secondEscape = presentationReducer(closed, { type: "close_overlay" });
     expect(secondEscape.evidenceModeOverride).toBe("hidden");
     expect(secondEscape.location.kind).toBe("main");
+  });
+
+  it("sets focus without changing scene or beat", () => {
+    const focused = presentationReducer(initialPresentationState, {
+      type: "set_focus_path",
+      path: ["runtime-providers"],
+    });
+    expect(focused.location).toEqual({
+      ...initialPresentationState.location,
+      focusPath: ["runtime-providers"],
+    });
+  });
+
+  it("next applies the destination beat canonical Focus Path", () => {
+    const manuallyFocused = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "thesis", beatId: "title", focusPath: ["manual-explore"] },
+    });
+    const next = presentationReducer(manuallyFocused, { type: "next" });
+    expect(next.location).toEqual({
+      kind: "main",
+      sceneId: "thesis",
+      beatId: "substrate",
+      focusPath: [],
+    });
+  });
+
+  it("discussion return restores the exact Focus Path", () => {
+    const deepRuntimeState = {
+      ...initialPresentationState,
+      location: { kind: "main" as const, sceneId: "architecture" as const, beatId: "runtime", focusPath: ["runtime-providers"] },
+    };
+    const opened = presentationReducer(deepRuntimeState, {
+      type: "open_discussion",
+      branchId: "provider-security",
+    });
+    expect(presentationReducer(opened, { type: "close_discussion" }).location)
+      .toEqual(deepRuntimeState.location);
   });
 });

@@ -10,29 +10,43 @@ import {
 
 const flattenMainLocations = (): readonly MainLocation[] =>
   mainScenes.flatMap((scene) =>
-    scene.beats.map((beat) => ({ kind: "main" as const, sceneId: scene.id, beatId: beat.id })),
+    scene.beats.map((beat) => ({
+      kind: "main" as const,
+      sceneId: scene.id,
+      beatId: beat.id,
+      focusPath: beat.figure?.focusPath ?? [],
+    })),
   );
 
-export const hashForLocation = (location: PresentationLocation): string =>
-  location.kind === "main"
-    ? `#scene/${encodeURIComponent(location.sceneId)}/${encodeURIComponent(location.beatId)}`
-    : `#discuss/${encodeURIComponent(location.branchId)}`;
+export const hashForLocation = (location: PresentationLocation): string => {
+  if (location.kind === "discussion") {
+    return `#discuss/${encodeURIComponent(location.branchId)}`;
+  }
+  const base = `#scene/${encodeURIComponent(location.sceneId)}/${encodeURIComponent(location.beatId)}`;
+  if (location.focusPath.length === 0) return base;
+  const segments = location.focusPath.map(encodeURIComponent).join("/");
+  return `${base}/focus/${segments}`;
+};
 
 export const locationFromHash = (hash: string): PresentationLocation => {
   const raw = hash.replace(/^#/, "");
-  const sceneMatch = raw.match(/^scene\/([^/]+)\/(.+)$/);
+  const sceneMatch = raw.match(/^scene\/([^/]+)\/([^/]+)(?:\/focus\/(.*))?$/);
   if (sceneMatch) {
     let sceneId: string;
     let beatId: string;
+    let focusPath: string[] = [];
     try {
       sceneId = decodeURIComponent(sceneMatch[1]!);
       beatId = decodeURIComponent(sceneMatch[2]!);
+      if (sceneMatch[3] !== undefined && sceneMatch[3] !== "") {
+        focusPath = sceneMatch[3]!.split("/").map(decodeURIComponent);
+      }
     } catch {
       return defaultMainLocation;
     }
     const scene = findScene(sceneId);
     if (scene && scene.beats.some((b) => b.id === beatId)) {
-      return { kind: "main", sceneId: scene.id as MainLocation["sceneId"], beatId };
+      return { kind: "main", sceneId: scene.id as MainLocation["sceneId"], beatId, focusPath };
     }
     return defaultMainLocation;
   }

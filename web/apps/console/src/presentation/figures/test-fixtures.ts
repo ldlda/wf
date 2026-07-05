@@ -98,7 +98,7 @@ export const duplicateNodeCatalog: FigureCatalogDefinition = {
       ...overviewFigure,
       nodes: [
         ...overviewFigure.nodes,
-        { id: "client", label: "Dup", summary: "Dup", kind: "actor" as const },
+        { id: "client", label: "Dup", summary: "Dup", kind: "actor" },
       ],
     },
     runtimeDetailFigure,
@@ -158,8 +158,33 @@ export const cyclicCatalog: FigureCatalogDefinition = {
   ],
 };
 
-const edgeA: FigureEdgeDefinition = { id: "e1", from: "a", to: "b" };
-const edgeB: FigureEdgeDefinition = { id: "e2", from: "b", to: "c" };
+export const disconnectedCyclicCatalog: FigureCatalogDefinition = {
+  rootFigureId: "architecture-overview",
+  figures: [
+    overviewFigure,
+    {
+      id: "disconnected",
+      title: "Disconnected",
+      layout: { kind: "layered" as const },
+      nodes: [
+        { id: "x", label: "X", summary: "x", kind: "actor" as const, childFigureId: "disconnected-2" },
+      ],
+      edges: [],
+    },
+    {
+      id: "disconnected-2",
+      title: "Disconnected 2",
+      layout: { kind: "layered" as const },
+      nodes: [
+        { id: "y", label: "Y", summary: "y", kind: "actor" as const, childFigureId: "disconnected" },
+      ],
+      edges: [],
+    },
+  ],
+};
+
+const edgeA: FigureEdgeDefinition = { id: "e1", from: "client", to: "runtime" };
+const edgeB: FigureEdgeDefinition = { id: "e2", from: "discover", to: "repair" };
 
 export const layeredFigure: FigureDefinition = {
   id: "layered",

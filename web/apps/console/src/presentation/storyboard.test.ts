@@ -59,7 +59,7 @@ describe("defense storyboard catalog", () => {
   });
 
   it("exposes a valid default location", () => {
-    expect(defaultMainLocation).toEqual({ kind: "main", sceneId: "thesis", beatId: "title" });
+    expect(defaultMainLocation).toEqual({ kind: "main", sceneId: "thesis", beatId: "title", focusPath: [] });
     expect(findScene(defaultMainLocation.sceneId)?.number).toBe(1);
   });
 });
