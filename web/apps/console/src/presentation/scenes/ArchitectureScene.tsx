@@ -1,8 +1,11 @@
 import { StageCaption } from "../StageCaption.js";
 import { InteractiveFigure } from "../figures/InteractiveFigure.js";
 import { architectureCatalog } from "../figures/architecture-catalog.js";
+import type { SceneDefinition, SceneBeatDefinition } from "../storyboard.js";
 
 type ArchitectureSceneProps = {
+  readonly scene: SceneDefinition;
+  readonly beat: SceneBeatDefinition;
   readonly focusPath: readonly string[];
   readonly activeNodeId: string | null;
   readonly onFocusPathChange: (path: readonly string[]) => void;
@@ -10,14 +13,16 @@ type ArchitectureSceneProps = {
 };
 
 export const ArchitectureScene = ({
+  scene,
+  beat,
   focusPath,
   activeNodeId,
   onFocusPathChange,
   motionDisabled,
 }: ArchitectureSceneProps) => (
   <>
-    <StageCaption eyebrow="Act II · implemented" title="Architecture Zoom">
-      <p>The system exposes one public lifecycle surface across all client types.</p>
+    <StageCaption eyebrow={`Act II · ${scene.claimClass}`} title={scene.title}>
+      <p>{beat.caption}</p>
     </StageCaption>
     <InteractiveFigure
       catalog={architectureCatalog}

@@ -140,7 +140,7 @@ export const mainScenes = defineScenes([
       sceneBeat("client", "Client operations", "Human and agent clients use the same public lifecycle surface.", { figure: { catalogId: "system-architecture", focusPath: [], activeNodeId: "client-operations" } }),
       sceneBeat("api", "Transport and API", "JSON-RPC reaches WorkflowApi without owning domain behavior.", { figure: { catalogId: "system-architecture", focusPath: [], activeNodeId: "application-lifecycle" } }),
       sceneBeat("runtime", "Runtime and providers", "The runtime resolves provider-neutral capabilities and stores lifecycle records.", { figure: { catalogId: "system-architecture", focusPath: ["runtime-providers"], activeNodeId: "configured-providers" } }),
-      sceneBeat("node-use", "NodeUse", "One callable node validates input, invokes a capability, and reduces output into state.", { evidenceMode: "peek", figure: { catalogId: "system-architecture", focusPath: ["node-use"], activeNodeId: "node-use" } }),
+      sceneBeat("node-use", "NodeUse", "One callable node validates input, invokes a capability, and reduces output into state.", { evidenceMode: "peek", figure: { catalogId: "system-architecture", focusPath: ["node-use"], activeNodeId: "invoke-handler" } }),
     ],
   },
   {

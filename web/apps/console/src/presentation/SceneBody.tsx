@@ -194,6 +194,8 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
     case "architecture":
       return (
         <ArchitectureScene
+          scene={scene}
+          beat={beat}
           focusPath={location.kind === "main" ? location.focusPath : []}
           activeNodeId={beat.figure?.activeNodeId ?? null}
           onFocusPathChange={onFocusPathChange}

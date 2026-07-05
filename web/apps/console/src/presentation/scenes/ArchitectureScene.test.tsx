@@ -31,12 +31,35 @@ afterAll(() => {
   delete (globalThis as Record<string, unknown>).DOMRect;
 });
 
+const mockScene = {
+  id: "architecture",
+  number: 6,
+  title: "Architecture Zoom",
+  claimClass: "implemented" as const,
+  evidencePointer: "Thesis System Architecture",
+  stageTheme: "night" as const,
+  view: "architecture" as const,
+  beats: [],
+};
+
+const mockBeat = {
+  id: "client",
+  title: "Client operations",
+  caption: "Human and agent clients use the same public lifecycle surface.",
+  chatMode: "rail" as const,
+  chatTheme: "light" as const,
+  evidenceMode: "hidden" as const,
+  figure: { catalogId: "system-architecture", focusPath: [] as readonly string[], activeNodeId: "client-operations" },
+};
+
 const renderArchitecture = (overrides: Partial<React.ComponentProps<typeof ArchitectureScene>> = {}) => {
   const onFocusPathChange = overrides.onFocusPathChange ?? vi.fn();
   return {
     onFocusPathChange,
     ...render(
       <ArchitectureScene
+        scene={overrides.scene ?? mockScene}
+        beat={overrides.beat ?? mockBeat}
         focusPath={overrides.focusPath ?? []}
         activeNodeId={overrides.activeNodeId ?? null}
         onFocusPathChange={onFocusPathChange}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
-import { ReactFlow, ReactFlowProvider, useReactFlow, type Node, type Edge, type NodeTypes } from "@xyflow/react";
+import { ReactFlow, ReactFlowProvider, Handle, Position, useReactFlow, type Node, type Edge, type NodeTypes } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FigureCatalogDefinition, FigureNodeKind } from "./model.js";
 import { layoutFigure, NODE_WIDTH, NODE_HEIGHT, type PositionedFigure } from "./layout.js";
@@ -37,32 +37,36 @@ const FigureFlowNode = ({ data }: { data: FigureNodeData }) => {
   const accessibleName = expandable ? `${data.label}, expand` : data.label;
 
   return (
-    <button
-      type="button"
-      className="figure-node"
-      data-figure-node-kind={data.kind}
-      data-active={data.isActive}
-      data-expandable={expandable}
-      data-testid={`figure-node-${data.nodeId}`}
-      aria-label={accessibleName}
-      tabIndex={-1}
-      onClick={() => {
-        data.onActivate(data.nodeId);
-        if (expandable) data.onExpand(data.nodeId);
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" && expandable) {
-          event.preventDefault();
-          data.onExpand(data.nodeId);
-        }
-      }}
-    >
-      <span className="figure-node__kind">{data.kind}</span>
-      <strong className="figure-node__label">{data.label}</strong>
-      <span className="figure-node__summary">{data.summary}</span>
-      {expandable && <span className="figure-node__expand-affance" aria-hidden="true">&#9656;</span>}
-      {data.isActive && <span className="figure-node__current-marker">Current</span>}
-    </button>
+    <>
+      <Handle type="target" position={Position.Top} id="target" />
+      <button
+        type="button"
+        className="figure-node"
+        data-figure-node-kind={data.kind}
+        data-active={data.isActive}
+        data-expandable={expandable}
+        data-testid={`figure-node-${data.nodeId}`}
+        aria-label={accessibleName}
+        tabIndex={data.isActive ? 0 : -1}
+        onClick={() => {
+          data.onActivate(data.nodeId);
+          if (expandable) data.onExpand(data.nodeId);
+        }}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" && expandable) {
+            event.preventDefault();
+            data.onExpand(data.nodeId);
+          }
+        }}
+      >
+        <span className="figure-node__kind">{data.kind}</span>
+        <strong className="figure-node__label">{data.label}</strong>
+        <span className="figure-node__summary">{data.summary}</span>
+        {expandable && <span className="figure-node__expand-affance" aria-hidden="true">&#9656;</span>}
+        {data.isActive && <span className="figure-node__current-marker">Current</span>}
+      </button>
+      <Handle type="source" position={Position.Bottom} id="source" />
+    </>
   );
 };
 

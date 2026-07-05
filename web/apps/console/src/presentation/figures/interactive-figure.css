@@ -35,6 +35,16 @@
   display: none;
 }
 
+.interactive-figure .react-flow__handle {
+  width: 6px;
+  height: 6px;
+  min-width: 6px;
+  min-height: 6px;
+  background: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  border: none;
+  opacity: 0.6;
+}
+
 .figure-node {
   display: flex;
   flex-direction: column;
