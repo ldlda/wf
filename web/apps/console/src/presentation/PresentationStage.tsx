@@ -3,9 +3,9 @@ import type { EvidenceRecord } from "../app/state.js";
 import type { AgentMessage } from "../demo/agent/events.js";
 import { SceneBody } from "./SceneBody.js";
 import { DiscussionPanel } from "./DiscussionPanel.js";
-import { EvidenceDrawer } from "./EvidenceDrawer.js";
+import { EvidenceInspector } from "./evidence/EvidenceInspector.js";
 import { OperatorChat } from "./OperatorChat.js";
-import { SceneProgress } from "./SceneProgress.js";
+import { PresentationFooter } from "./PresentationFooter.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
@@ -78,12 +78,19 @@ export const PresentationStage = ({
               />
             )}
           </section>
-          <aside className="presentation-stage__evidence" aria-label="evidence region">
-            <EvidenceDrawer records={evidence} mode={composition.evidencePresentation} close={closeOverlay} />
-          </aside>
           {state.location.kind === "main" && (
-            <SceneProgress location={state.location} />
+            <PresentationFooter
+              location={state.location}
+              evidence={evidence}
+              showEvidenceReceipt={composition.evidencePresentation !== "hidden"}
+              inspectEvidence={openEvidence}
+            />
           )}
+          <EvidenceInspector
+            records={evidence}
+            open={composition.evidencePresentation === "inspector"}
+            onClose={closeOverlay}
+          />
         </div>
       </LayoutGroup>
     </LazyMotion>

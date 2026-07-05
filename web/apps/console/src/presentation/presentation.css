@@ -17,23 +17,28 @@
   --success: oklch(0.7 0.16 145);
   --failure: oklch(0.65 0.2 25);
   --chat-width: 18rem;
-  --evidence-width: 0rem;
 }
 
 .presentation-stage {
-  height: 100dvh;
+  --presentation-footer-height: 2.5rem;
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-width: 0;
   min-height: 0;
   display: grid;
   grid-template:
-    "chat primary evidence" minmax(0, 1fr) /
-    var(--chat-width) minmax(0, 1fr) var(--evidence-width);
+    "chat primary" minmax(0, 1fr)
+    "footer footer" auto /
+    var(--chat-width) minmax(0, 1fr);
 }
 
 /* Chat modes */
 .presentation-stage[data-chat-mode="hidden"] {
   grid-template:
-    "primary evidence" minmax(0, 1fr) /
-    minmax(0, 1fr) var(--evidence-width);
+    "primary" minmax(0, 1fr)
+    "footer" auto /
+    minmax(0, 1fr);
 }
 
 .presentation-stage[data-chat-mode="hidden"] .presentation-stage__chat {
@@ -44,18 +49,8 @@
   --chat-width: 16rem;
 }
 
-/* Evidence modes */
-.presentation-stage[data-evidence-mode="peek"] {
-  --evidence-width: 20rem;
-}
-
-.presentation-stage[data-evidence-mode="open"] {
-  --evidence-width: 24rem;
-}
-
 .presentation-stage__chat,
-.presentation-stage__primary,
-.presentation-stage__evidence {
+.presentation-stage__primary {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -337,18 +332,19 @@
   z-index: 20;
 }
 
-.evidence-drawer {
-  height: 100%;
-  overflow-y: auto;
-  padding: 0.75rem;
-  background: oklch(0.13 0.025 250);
-  border-left: 1px solid oklch(0.34 0.04 250);
-}
+.presentation-stage__chat { grid-area: chat; }
+.presentation-stage__primary { grid-area: primary; }
 
-.evidence-drawer pre {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 0.8rem;
+.presentation-footer {
+  grid-area: footer;
+  min-height: var(--presentation-footer-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.35rem 1rem;
+  border-top: 1px solid var(--stage-line);
+  overflow: hidden;
 }
 
 .scene-progress {
@@ -366,6 +362,100 @@
 
 .scene-progress__beat {
   opacity: 0.8;
+}
+
+.presentation-footer .scene-progress {
+  flex: 0 0 auto;
+  padding: 0;
+}
+
+.evidence-receipt {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 600 0.72rem/1.2 var(--font-evidence, monospace);
+  cursor: pointer;
+}
+
+.evidence-receipt > :first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.evidence-receipt:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.evidence-receipt:focus-visible,
+.evidence-inspector button:focus-visible,
+.evidence-inspector select:focus-visible {
+  outline: 2px solid var(--accent-cyan);
+  outline-offset: 2px;
+}
+
+.evidence-inspector-layer {
+  box-sizing: border-box;
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 2.5rem 5%;
+  background: oklch(0.08 0.02 250 / 0.68);
+}
+
+.evidence-inspector {
+  box-sizing: border-box;
+  width: min(70cqi, 56rem);
+  max-width: calc(100% - 2rem);
+  max-height: calc(100% - var(--presentation-footer-height));
+  min-height: 0;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--stage-line);
+  background: var(--stage-surface);
+  color: var(--text-primary);
+}
+
+.evidence-inspector__body {
+  min-height: 0;
+  overflow: auto;
+  padding: 1rem;
+}
+
+.evidence-inspector pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@container presentation-canvas (max-width: 1080px) {
+  .presentation-stage {
+    grid-template:
+      "primary" minmax(0, 1fr)
+      "footer" auto /
+      minmax(0, 1fr);
+  }
+
+  .presentation-stage__chat {
+    position: absolute;
+    inset: 0 auto var(--presentation-footer-height, 2.5rem) 0;
+    width: min(18rem, 44%);
+    z-index: 20;
+  }
+
+  .presentation-stage[data-evidence-presentation="inspector"] .presentation-stage__chat {
+    visibility: hidden;
+    pointer-events: none;
+  }
 }
 
 .discussion-panel {

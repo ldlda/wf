@@ -28,4 +28,6 @@
   background: var(--color-editorial-paper);
   color: var(--color-editorial-ink);
   font-family: var(--font-interface);
+  container-name: presentation-canvas;
+  container-type: inline-size;
 }
