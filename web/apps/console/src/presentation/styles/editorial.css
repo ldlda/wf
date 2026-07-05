@@ -1,0 +1,31 @@
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+@theme {
+  --font-editorial: "Newsreader Variable", Georgia, serif;
+  --font-interface: "Source Sans 3", sans-serif;
+  --font-evidence: "IBM Plex Mono", monospace;
+  --color-editorial-paper: oklch(0.975 0.012 82);
+  --color-editorial-ink: oklch(0.19 0.015 65);
+  --color-editorial-muted: oklch(0.48 0.025 65);
+  --color-intent: oklch(0.53 0.17 250);
+  --color-runtime: oklch(0.55 0.14 150);
+  --color-human: oklch(0.68 0.17 55);
+}
+
+.presentation-viewport {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: oklch(0.13 0.01 65);
+}
+
+.presentation-canvas {
+  position: absolute;
+  transform-origin: top left;
+  overflow: hidden;
+  background: var(--color-editorial-paper);
+  color: var(--color-editorial-ink);
+  font-family: var(--font-interface);
+}

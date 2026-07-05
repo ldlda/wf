@@ -4,6 +4,7 @@ import { createPreparedRecipeDriver, assertNever } from "../demo/agent/preparedR
 import { useDemoAgent } from "../demo/agent/useDemoAgent.js";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import { useDemoTimeline } from "../demo/useDemoTimeline.js";
+import { PresentationCanvas } from "./PresentationCanvas.js";
 import { PresentationStage } from "./PresentationStage.js";
 import { PresenterControls } from "./PresenterControls.js";
 import { ChatDock } from "./ChatDock.js";
@@ -185,21 +186,23 @@ export const PresentationRoute = () => {
 
   return (
     <main className="presentation-route" aria-label="lda.chat presentation" data-motion={state.motionDisabled ? "disabled" : "enabled"}>
-      <PresentationStage
-        state={state}
-        demo={demo}
-        evidence={evidence}
-        messages={agent.messages}
-        onApprove={agent.phase === "awaiting-approval" ? handleApprove : undefined}
-        onDeny={agent.phase === "awaiting-approval" ? handleDeny : undefined}
-        jump={handleJump}
-        selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
-        openEvidence={() => dispatch({ type: "set_evidence_mode", mode: "open" })}
-        closeOverlay={() => dispatch({ type: "close_overlay" })}
-        openDiscussion={handleOpenDiscussion}
-        closeDiscussion={handleCloseDiscussion}
-        toggleDiscussionIndex={() => dispatch({ type: "toggle_discussion_index" })}
-      />
+      <PresentationCanvas>
+        <PresentationStage
+          state={state}
+          demo={demo}
+          evidence={evidence}
+          messages={agent.messages}
+          onApprove={agent.phase === "awaiting-approval" ? handleApprove : undefined}
+          onDeny={agent.phase === "awaiting-approval" ? handleDeny : undefined}
+          jump={handleJump}
+          selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
+          openEvidence={() => dispatch({ type: "set_evidence_mode", mode: "open" })}
+          closeOverlay={() => dispatch({ type: "close_overlay" })}
+          openDiscussion={handleOpenDiscussion}
+          closeDiscussion={handleCloseDiscussion}
+          toggleDiscussionIndex={() => dispatch({ type: "toggle_discussion_index" })}
+        />
+      </PresentationCanvas>
       {showChatDock && <ChatDock openChat={() => dispatch({ type: "set_chat_mode", mode: "rail" })} />}
       {state.controlsOpen && (
         <PresenterControls
