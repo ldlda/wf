@@ -111,7 +111,7 @@ With the Python server running, verify in the browser:
 1. The initial page makes no upstream request
 2. Connect succeeds against `http://127.0.0.1:8765/rpc`
 3. Source rows appear after connection
-4. Raw health and source-list exchanges are selectable in the evidence drawer
+4. Raw health and source-list exchanges are selectable in the evidence inspector
 5. Equivalent CLI text is visible
 6. `http://example.com:8765/rpc` is rejected without upstream fetch
 7. Stopping the Python server produces the unreachable state while preserving
@@ -170,13 +170,14 @@ both modes. Replay is visibly labeled and does not create real issues.
 
 The console exposes `/present`, a 720p no-scroll defense compositor for the
 prepared `lda_report_workflow` story. It renders a 12-scene, multi-beat
-storyboard with stable stage regions, discussion branches, act themes, a chat
-dock, and keyboard navigation.
+storyboard with an adaptive aspect-ratio canvas, stable stage regions, discussion
+branches, act themes, a chat dock, and keyboard navigation.
 
 Scenes 8 through 10 use the canonical replay as their only execution evidence.
 The handoff expands an interpreted run operation into the center stage, then
 keeps one workflow graph mounted while execution reaches the typed interrupt
-and approval boundary. Raw protocol payloads remain in the evidence drawer.
+and approval boundary. Raw protocol payloads are available through the evidence
+receipt and inspector.
 
 The key defense states are directly addressable:
 
@@ -230,9 +231,16 @@ committed `lda-report-success-v1` recording. No RPC server is required.
 
 #### Editorial Canvas
 
-The presentation renders on a fixed 1280x720 editorial canvas that scales and
-letterboxes to fit any viewport without reflowing scene content. Scene 6 uses a
-recursive Interactive Figure with expand/collapse and breadcrumb navigation.
+The presentation renders on an adaptive editorial canvas that derives its aspect
+ratio from the browser viewport. The canvas preserves a fixed logical height of
+720px and clamps the logical width between 960px (4:3) and 1280px (16:9),
+scaling the result to fit the viewport with letterboxing. Viewports wider than
+~1.78:1 fill the maximum 1280x720 logical region; narrower viewports receive a
+proportionally narrower canvas without reflowing scene content. No URL query
+parameters or local-storage settings control the ratio.
+
+Scene 6 uses a recursive Interactive Figure with expand/collapse and breadcrumb
+navigation.
 
 Key Scene 6 deep links:
 
@@ -246,6 +254,19 @@ Key Scene 6 deep links:
 - **Escape**: pop one focus level
 - **Tab / arrows**: move focus between figure nodes without advancing the presentation
 - **Breadcrumbs**: jump to any ancestor focus level
+
+#### Evidence Presentation
+
+Evidence availability never resizes the primary presentation region. Each beat
+may request an evidence presentation state (`hidden`, `receipt`, or `inspector`),
+and a global override can be set through the presentation tool. The state is
+cleared on scene navigation (next, previous, jump) but preserved through
+discussion transitions.
+
+- **Receipt**: a compact bottom-row button showing the count and label of
+  available evidence records. Clicking opens the inspector.
+- **Inspector**: a centered modal dialog with `Interpreted` and `Raw` tabs, a
+  record selector, and focus trapping. `Escape` closes the inspector.
 
 #### Constraints
 

@@ -28,6 +28,63 @@ beforeAll(() => {
 afterEach(() => cleanup());
 
 describe("PresentationRoute", () => {
+  it("renders the presentation stage entry point", async () => {
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+    expect(screen.getByRole("main", { name: /lda.chat presentation/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Thesis/ })).toBeInTheDocument();
+  });
+
+  it("starts from a scene hash and advances with keyboard", async () => {
+    window.location.hash = "#scene/agent-handoff/request";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+    expect(screen.getByRole("heading", { name: /Agent Handoff/i })).toBeInTheDocument();
+    await userEvent.keyboard("{ArrowRight}");
+    expect(await screen.findByText(/The interface delegates durable work to lda\.chat/i)).toBeInTheDocument();
+  });
+
+  it("renders audience progress chrome without rail or mode label", async () => {
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+    expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
+    expect(screen.queryByLabelText(/presentation scene rail/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("scene position")).toBeInTheDocument();
+  });
+
+  it("shows node spotlight when a graph node is selected", async () => {
+    window.location.hash = "#scene/workflow-demo/graph";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+    await userEvent.click(screen.getByRole("button", { name: /issue review/i }));
+    expect(screen.getByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
+    expect(screen.getByText("Workflow node")).toBeInTheDocument();
+  });
+
+  it("can advance replay far enough to show a product operation block", async () => {
+    window.location.hash = "#scene/workflow-demo/operation";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+    expect(await screen.findByText(/workflow.runs.start/i)).toBeInTheDocument();
+  });
+
+  it("opens a positioning branch via hash and returns to the parent scene first beat", async () => {
+    window.location.hash = "#discuss/hosted-automation";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+    expect(await screen.findByRole("button", { name: /return to positioning/i })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /return to positioning/i }));
+    expect(window.location.hash).toBe("#scene/positioning/landscape");
+  });
+
+  it("uses the parent scene as return location for a directly linked branch", async () => {
+    window.location.hash = "#discuss/mcp-agent-scale";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+    await userEvent.click(screen.getByRole("button", { name: /return to positioning/i }));
+    expect(window.location.hash).toBe("#scene/positioning/landscape");
+  });
+
   it("renders stable chat, primary, progress, and transient evidence surfaces", async () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);

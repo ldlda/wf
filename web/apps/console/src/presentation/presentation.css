@@ -409,6 +409,8 @@
   place-items: center;
   padding: 2.5rem 5%;
   background: oklch(0.08 0.02 250 / 0.68);
+  opacity: 1;
+  transition: opacity 150ms ease-in-out;
 }
 
 .evidence-inspector {
