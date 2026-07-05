@@ -263,7 +263,7 @@ Replay timing is presentation timing, not the original network timing:
 - completion: immediate after the final event;
 - Pause and Next use the same reducer actions as live mode.
 
-The UI displays a persistent `Recorded replay` label. Raw evidence drawers may
+The UI displays a persistent `Recorded replay` label. The evidence inspector may
 show the recording's stored request and response, but must also identify the
 recording id.
 

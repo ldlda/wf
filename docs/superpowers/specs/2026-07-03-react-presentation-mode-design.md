@@ -86,7 +86,7 @@ Primary controls:
 
 - `Space` / `ArrowRight`: next beat.
 - `ArrowLeft`: previous scripted beat.
-- `Esc`: close the current overlay or evidence drawer.
+- `Esc`: close the current overlay or evidence inspector.
 - Mouse/touch: inspect node, open evidence, submit approval, or jump timeline.
 
 Backward navigation only rewinds visual/script state. It must not undo live
@@ -206,7 +206,7 @@ Resume outcomes: submitted | cancelled
 
 The block can appear compact inside chat and expand into a terminal-like panel.
 The interpreted side may highlight graph nodes or stage elements. Raw evidence
-remains available through the global evidence drawer.
+remains available through the global evidence inspector.
 
 ## Graph
 
@@ -253,7 +253,9 @@ SaaS/chat clone.
 
 ## 720p Constraint
 
-Design for `1280x720` as a first-class target.
+Design for a `720px` logical height and adaptive logical widths from `960px`
+through `1280px`. See the
+[adaptive presentation canvas design](2026-07-05-adaptive-presentation-canvas-design.md).
 
 Rules:
 
@@ -281,9 +283,9 @@ Browser smoke should cover:
 2. verify replay is the default;
 3. advance through all beats with keyboard;
 4. open node spotlight;
-5. open evidence drawer;
+5. open the evidence inspector;
 6. jump to `#interrupt-approval`;
-7. complete the replay path on a `1280x720` viewport;
+7. complete the replay path on `1024x768` and `1280x720` viewports;
 8. verify the normal console route still works.
 
 ## Success Criteria
@@ -296,6 +298,6 @@ The slice is complete when:
 4. hash links jump to important beats;
 5. operation blocks make product calls visible and interpretable;
 6. graph, interrupt, output, trace, and evidence are available without clutter;
-7. the route is readable at `1280x720`;
+7. the route is readable from `4:3` through `16:9` supported ratios;
 8. the normal console remains product-like and is not forced into cinematic
    layout choices.

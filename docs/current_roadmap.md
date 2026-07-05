@@ -37,6 +37,7 @@ Design contracts:
 - [`workflow console lifecycle explorer`](superpowers/specs/2026-07-02-workflow-console-lifecycle-explorer.md)
 - [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md)
 - [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md)
+- [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md)
 
 Implementation order:
 
@@ -101,12 +102,16 @@ Implementation order:
     [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
     Implementation:
     [`editorial canvas and Interactive Figure plan`](historical/superpowers/plans/2026-07-05-editorial-canvas-interactive-figure.md).
-12. Then: adopt source-owned AI Elements chat primitives against existing
+12. Then: adapt the logical presentation canvas continuously from `4:3` to
+    `16:9` and replace the resizing evidence drawer with a progress-row receipt
+    and centered inspector. Design:
+    [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md).
+13. Then: adopt source-owned AI Elements chat primitives against existing
     `AgentMessagePart` / `AgentDriver` contracts.
-13. Future: implement Schema Form Surface and synchronized Approval Session.
-14. Future: implement Guided Run Beat Gates, presenter companion, Scene 10
+14. Future: implement Schema Form Surface and synchronized Approval Session.
+15. Future: implement Guided Run Beat Gates, presenter companion, Scene 10
     product graph, final scene visuals, evidence assets, and rehearsal timing.
-15. Add a static slide/appendix shell only after presentation mode is clear.
+16. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Boundaries: this is not a production admin panel, generic visual workflow

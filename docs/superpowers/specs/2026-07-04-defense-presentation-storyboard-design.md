@@ -77,13 +77,15 @@ The presentation is therefore an editorial thesis deck that temporarily
 transforms into the product. It is not a dashboard or chat application used as
 a decorative container for every scene.
 
-The stage has three stable regions:
+The stage has two stable content regions and one transient inspection layer:
 
 ```text
-+----------------+--------------------------------+----------------+
-| agent / chat   | primary graph, model, output   | evidence       |
-| optional       | always owns visual focus       | optional       |
-+----------------+--------------------------------+----------------+
++----------------+--------------------------------+
+| agent / chat   | primary graph, model, output   |
+| optional       | always owns visual focus       |
++----------------+--------------------------------+
+| progress and compact evidence receipt           |
++-------------------------------------------------+
 ```
 
 The regions may expand, collapse, or overlap, but they do not swap meanings.
@@ -95,22 +97,26 @@ accidental application switch.
 - **Left:** agent conversation and operation intent.
 - **Center:** the primary explanation, workflow graph, output, or evaluation
   result.
-- **Right:** raw and interpreted evidence, trace, schemas, or source details.
+- **Overlay:** raw and interpreted evidence, trace, schemas, or source details.
 
 Narrative scenes hide chat. Demo scenes may show chat as `full`, `rail`, or
-`dock`. Evidence is collapsed unless the scene explicitly needs it.
+`dock`. Evidence appears as a compact progress-row receipt unless the presenter
+explicitly opens the centered inspector.
 
 The dock remains visible in a corner when chat is otherwise hidden. Pointer
 hover may preview it, but opening chat requires a click, keyboard action, or
 presenter control so the interaction remains usable without a precise mouse.
 
-Vertical stacking is forbidden on the main path. At `1280x720`, the presenter
-must not scroll to discover the graph, approval control, output, or next action.
+Vertical stacking is forbidden on the main path. Across supported logical
+canvases from `960x720` through `1280x720`, the presenter must not scroll to
+discover the graph, approval control, output, or next action.
 
-The audience route renders a deterministic `1280x720` canvas and scales it
-proportionally to the available viewport, adding letterboxing when aspect
-ratios differ. Scenes do not reflow like a responsive website; presenter and
-audience views must preserve the same composition and Focus Path.
+The audience route keeps a deterministic `720px` logical height and adapts its
+logical width continuously from `960px` to `1280px`, covering `4:3` through
+`16:9`. Container queries adapt placement without omitting information.
+Unsupported extreme ratios letterbox. Presenter and audience views preserve
+the same semantic content and Focus Path. See the
+[adaptive presentation canvas design](2026-07-05-adaptive-presentation-canvas-design.md).
 
 ## Unified Presentation Identity
 
@@ -456,8 +462,8 @@ receive compatibility wrappers.
   records with different mutability and responsibility.
 - **Primary visual:** lifecycle records, including both draft-save and direct
   plan-import paths into an immutable artifact.
-- **Composition:** warm Editorial Canvas; center focus; evidence panel may show
-  one compact record at a time.
+- **Composition:** warm Editorial Canvas; center focus; the progress row may
+  show one compact evidence receipt.
 - **Evidence pointer:** thesis lifecycle chapter and lifecycle explorer.
 - **Transition:** selecting a deployment zooms into the runtime architecture.
 
@@ -469,8 +475,8 @@ receive compatibility wrappers.
   providers and stores, then into the graph runner and one `NodeUse` execution.
 - **Primary visual:** semantic zoom through four levels rather than four
   unrelated diagrams.
-- **Composition:** warm Editorial Canvas; chat hidden; right evidence panel
-  peeks for concrete package or operation names.
+- **Composition:** warm Editorial Canvas; chat hidden; the evidence receipt
+  exposes concrete package or operation names without resizing the figure.
 - **Evidence pointer:** thesis architecture diagrams, `docs/project_map.md`, and
   `docs/source_architecture.md`.
 - **Transition:** the semantic zoom backs out into the public authoring surface.
@@ -485,7 +491,7 @@ receive compatibility wrappers.
 - **Primary visual:** an operation sequence with one structured diagnostic and
   its repair action.
 - **Composition:** warm Editorial Canvas; chat hidden; a locally dark operation
-  or terminal block may occupy center while evidence peeks right.
+  or terminal block may occupy center while the evidence receipt updates below.
 - **Evidence pointer:** CLI documentation, draft authoring API, and challenge
   UX findings.
 - **Transition:** the operation block becomes the first card in the agent UI.
@@ -526,7 +532,8 @@ receive compatibility wrappers.
   writes, trace frames, and raw/interpreted evidence.
 - **Primary visual:** interrupt approval followed by output and trace projection.
 - **Composition:** chat rail during approval, then dock; center alternates
-  between interrupt, output, and trace; right evidence panel opens once.
+  between interrupt, output, and trace; the centered evidence inspector opens
+  once through an explicit action.
 - **Evidence pointer:** deterministic replay recording, typed interrupt schemas,
   run inspect result, and trace events.
 - **Failure fallback:** if the live server or operation fails, switch to the
@@ -543,8 +550,8 @@ receive compatibility wrappers.
   estimate.
 - **Primary visual:** cohort structure, audited validity, failure classes, and
   selected product improvements discovered through trials.
-- **Composition:** warm Editorial Canvas; chat hidden; one chart at a time;
-  evidence panel links to the audit/run records.
+- **Composition:** warm Editorial Canvas; chat hidden; one chart at a time; the
+  evidence receipt links to the audit/run records.
 - **Evidence pointer:** thesis evaluation chapter, Appendix C, generated cohort
   figures, and challenge reports.
 - **Transition:** limitations remain while the charts simplify into the final
@@ -681,7 +688,8 @@ The storyboard implementation is acceptable when:
 6. stage and chat themes can be controlled independently;
 7. live failure can fall back to the matching replay event without layout
    reset;
-8. the full main path is readable at `1280x720` with browser zoom at 100%;
+8. the full main path is readable from `960x720` through `1280x720` logical
+   canvases with browser zoom at 100%;
 9. reduced-motion mode preserves all information and controls;
 10. discussion branches and the Q&A index open focused evidence and return to
     the originating scene without replaying the presentation;

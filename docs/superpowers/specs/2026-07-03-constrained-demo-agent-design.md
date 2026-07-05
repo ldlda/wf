@@ -179,7 +179,7 @@ Recipe stages:
    evidence.
 
 Each stage produces an agent event, and operation stages must carry the same
-operation metadata already used by `OperationBlock` and the evidence drawer.
+operation metadata already used by `OperationBlock` and the evidence surface.
 
 ## Architecture
 
@@ -252,7 +252,7 @@ PresentationRoute
 
 The prepared driver reads from the reviewed recording and emits agent events
 without a server. It passes operation evidence to the hook, which forwards it
-to the evidence drawer.
+to the evidence surface.
 
 In live mode, the driver calls the connected workflow server through the
 existing RPC operation path. Live mode is deferred to a future slice; the
@@ -301,7 +301,7 @@ The operator chat becomes a standard event-driven chat:
 - workflow tool calls are rendered compactly in chat and can expand to
   `OperationBlock`;
 - presentation tool calls are rendered compactly in chat and update the stage;
-- tool results link to the graph, trace, and evidence drawer;
+- tool results link to the graph, trace, and evidence inspector;
 - approval request focuses the existing typed review panel.
 
 The existing hard-coded chat copy should be replaced only where the agent event
