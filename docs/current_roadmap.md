@@ -121,6 +121,30 @@ Implementation order:
 17. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
+Presentation wishlist / defense readiness:
+
+- Visual pass for Scenes 6, 7, and 10: fix spacing, graph scale, captions,
+  evidence receipt placement, and remove remaining generic AI-slide styling.
+- Presenter runbook:
+  [`defense presentation runbook`](runbooks/defense-presentation.md) covers
+  exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
+  timing, and short speaker notes for what to say if the live demo fails.
+- Defense Q&A branch set: add prepared branches for "Where is the AI agent?",
+  evaluation validity, security boundaries, and demo reliability.
+- Chat surface replacement: use source-owned AI/chat primitives so tool calls,
+  approval requests, and scripted macro output look like a standard modern AI
+  product instead of custom slide chrome.
+- Schema form approval surface: render typed interrupt request/resume schemas as
+  reusable form UI shared by chat, Scene 10, and future console approval flows.
+- Guided run beat gates: make the prepared agent/demo sequence explicitly wait
+  for presentation beats, approval decisions, and evidence reveals instead of
+  relying on loose timing.
+- Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
+  expected run states, and a timed walkthrough checklist for a 15-minute defense.
+- Presenter companion feasibility: decide whether phone/laptop control is local
+  only, same-network, or out-of-network; defer implementation until the core
+  presentation is stable.
+
 Boundaries: this is not a production admin panel, generic visual workflow
 editor, scheduler, external Google Drive/mail integration, or benchmark evidence
 for free-form autonomous planning.
