@@ -81,6 +81,22 @@
   margin: 0.25rem 0 0.5rem;
 }
 
+.architecture-scene {
+  min-height: 0;
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.65rem;
+}
+
+.architecture-scene .stage-caption h1 {
+  margin-bottom: 0.25rem;
+}
+
+.architecture-scene .stage-caption p {
+  margin: 0;
+}
+
 .scene-body__evidence {
   font-size: 0.8rem;
   color: oklch(0.72 0.03 250);

@@ -15,8 +15,8 @@ export type PositionedFigure = {
   readonly edges: readonly FigureEdgeDefinition[];
 };
 
-export const NODE_WIDTH = 196;
-export const NODE_HEIGHT = 84;
+export const NODE_WIDTH = 236;
+export const NODE_HEIGHT = 102;
 const NODESEP = 56;
 const RANKSEP = 88;
 

@@ -91,10 +91,10 @@ export const EvidenceInspector = ({
           </label>
         )}
         <div role="tablist" aria-label="Evidence view">
-          <button role="tab" aria-selected={view === "interpreted"} onClick={() => setView("interpreted")}>
+          <button type="button" role="tab" aria-selected={view === "interpreted"} onClick={() => setView("interpreted")}>
             Interpreted
           </button>
-          <button role="tab" aria-selected={view === "raw"} onClick={() => setView("raw")}>
+          <button type="button" role="tab" aria-selected={view === "raw"} onClick={() => setView("raw")}>
             Raw
           </button>
         </div>

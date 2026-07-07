@@ -9,7 +9,7 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
     {
       id: "architecture-overview",
       title: "Architecture",
-      layout: { kind: "layered" },
+      layout: { kind: "flow" },
       nodes: [
         {
           id: "client-operations",
@@ -84,7 +84,7 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
     {
       id: "runtime-provider-detail",
       title: "Runtime and providers",
-      layout: { kind: "layered" },
+      layout: { kind: "flow" },
       nodes: [
         {
           id: "workflow-server",
@@ -133,7 +133,7 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
     {
       id: "configured-provider-detail",
       title: "Configured providers",
-      layout: { kind: "layered" },
+      layout: { kind: "flow" },
       nodes: [
         {
           id: "builtin-sources",
@@ -172,7 +172,7 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
     {
       id: "node-use-detail",
       title: "NodeUse execution",
-      layout: { kind: "layered" },
+      layout: { kind: "flow" },
       nodes: [
         {
           id: "resolve-bindings",

@@ -81,6 +81,12 @@ describe("ArchitectureScene", () => {
     expect(onFocusPathChange).toHaveBeenCalledWith(["runtime-providers"]);
   });
 
+  it("uses the wide figure presentation for the defense architecture scene", () => {
+    renderArchitecture({ focusPath: [] });
+    expect(screen.getByRole("group", { name: /architecture/i })).toHaveAttribute("data-figure-size", "wide");
+    expect(screen.getByTestId("architecture-scene")).toBeInTheDocument();
+  });
+
   it("renders a directly linked nested provider view", () => {
     renderArchitecture({
       focusPath: ["runtime-providers", "configured-providers"],

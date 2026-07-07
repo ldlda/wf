@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent } from "react";
 import { ReactFlow, ReactFlowProvider, Handle, Position, useReactFlow, type Node, type Edge, type NodeTypes } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FigureCatalogDefinition, FigureNodeKind } from "./model.js";
@@ -19,6 +19,7 @@ type InteractiveFigureProps = {
   readonly activeNodeId: string | null;
   readonly onFocusPathChange: (path: readonly string[]) => void;
   readonly motionDisabled: boolean;
+  readonly size?: "standard" | "wide";
 };
 
 type FigureNodeData = {
@@ -26,6 +27,7 @@ type FigureNodeData = {
   readonly label: string;
   readonly summary: string;
   readonly kind: FigureNodeKind;
+  readonly orientation: "horizontal" | "vertical";
   readonly isActive: boolean;
   readonly isExpandable: boolean;
   readonly onActivate: (nodeId: string) => void;
@@ -35,10 +37,12 @@ type FigureNodeData = {
 const FigureFlowNode = ({ data }: { data: FigureNodeData }) => {
   const expandable = data.isExpandable;
   const accessibleName = expandable ? `${data.label}, expand` : data.label;
+  const targetPosition = data.orientation === "horizontal" ? Position.Left : Position.Top;
+  const sourcePosition = data.orientation === "horizontal" ? Position.Right : Position.Bottom;
 
   return (
     <>
-      <Handle type="target" position={Position.Top} id="target" />
+      <Handle type="target" position={targetPosition} id="target" />
       <button
         type="button"
         className="figure-node"
@@ -65,7 +69,7 @@ const FigureFlowNode = ({ data }: { data: FigureNodeData }) => {
         {expandable && <span className="figure-node__expand-affance" aria-hidden="true">&#9656;</span>}
         {data.isActive && <span className="figure-node__current-marker">Current</span>}
       </button>
-      <Handle type="source" position={Position.Bottom} id="source" />
+      <Handle type="source" position={sourcePosition} id="source" />
     </>
   );
 };
@@ -74,11 +78,11 @@ const nodeTypes: NodeTypes = {
   figure: FigureFlowNode,
 };
 
-const FitViewOnLayoutChange = ({ layoutVersion }: { layoutVersion: number }) => {
+const FitViewOnLayoutChange = ({ layoutKey }: { layoutKey: string }) => {
   const { fitView } = useReactFlow();
   useEffect(() => {
     void fitView({ padding: 0.15, duration: 0 });
-  }, [fitView, layoutVersion]);
+  }, [fitView, layoutKey]);
   return null;
 };
 
@@ -88,24 +92,20 @@ const InteractiveFigureInner = ({
   activeNodeId,
   onFocusPathChange,
   motionDisabled,
+  size = "standard",
 }: InteractiveFigureProps) => {
-  const focus = resolveFigureFocus(catalog, focusPath);
-  const layout = layoutFigure(focus.figure);
-  const [focusedNodeId, setFocusedNodeId] = useState<string>(
-    activeNodeId ?? focus.figure.nodes[0]?.id ?? "",
+  const focus = useMemo(
+    () => resolveFigureFocus(catalog, focusPath),
+    [catalog, focusPath],
   );
+  const layout = useMemo(() => layoutFigure(focus.figure), [focus.figure]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [layoutVersion, setLayoutVersion] = useState(0);
+  const focusedNodeIdRef = useRef(activeNodeId ?? focus.figure.nodes[0]?.id ?? "");
 
-  useEffect(() => {
-    if (activeNodeId) setFocusedNodeId(activeNodeId);
-  }, [activeNodeId]);
-
-  useEffect(() => {
-    const firstNode = focus.figure.nodes[0];
-    if (firstNode) setFocusedNodeId(firstNode.id);
-    setLayoutVersion((v) => v + 1);
-  }, [focus.figure.id]);
+  const fallbackFocusedNodeId = activeNodeId ?? focus.figure.nodes[0]?.id ?? "";
+  if (activeNodeId || !layout.nodes.some((node) => node.id === focusedNodeIdRef.current)) {
+    focusedNodeIdRef.current = fallbackFocusedNodeId;
+  }
 
   const handleExpand = useCallback(
     (nodeId: string) => {
@@ -148,16 +148,20 @@ const InteractiveFigureInner = ({
       if (direction) {
         event.preventDefault();
         event.stopPropagation();
-        const nextId = nextFigureNodeId(layout, focusedNodeId, direction);
-        setFocusedNodeId(nextId);
+        const nextId = nextFigureNodeId(layout, focusedNodeIdRef.current, direction);
+        focusedNodeIdRef.current = nextId;
         const nextNode = containerRef.current?.querySelector(
           `[data-testid="figure-node-${nextId}"]`,
         );
         if (nextNode instanceof HTMLElement) nextNode.focus();
       }
     },
-    [catalog, focus, focusedNodeId, layout, onFocusPathChange],
+    [catalog, focus, layout, onFocusPathChange],
   );
+
+  const handleActivateNode = useCallback((nodeId: string) => {
+    focusedNodeIdRef.current = nodeId;
+  }, []);
 
   const rfNodes: Node[] = useMemo(
     () =>
@@ -170,13 +174,14 @@ const InteractiveFigureInner = ({
           label: node.label,
           summary: node.summary,
           kind: node.kind,
+          orientation: layout.definition.layout.kind === "flow" ? "horizontal" : "vertical",
           isActive: node.id === activeNodeId,
           isExpandable: node.childFigureId !== undefined,
-          onActivate: setFocusedNodeId,
+          onActivate: handleActivateNode,
           onExpand: handleExpand,
         },
       })),
-    [layout.nodes, activeNodeId, handleExpand],
+    [layout.definition.layout.kind, layout.nodes, activeNodeId, handleActivateNode, handleExpand],
   );
 
   const rfEdges: Edge[] = useMemo(
@@ -194,7 +199,7 @@ const InteractiveFigureInner = ({
   const handleNodeClick = useCallback(
     (_event: React.MouseEvent, node: Node) => {
       const data = node.data as FigureNodeData;
-      setFocusedNodeId(data.nodeId);
+      focusedNodeIdRef.current = data.nodeId;
       if (data.isExpandable) handleExpand(data.nodeId);
     },
     [handleExpand],
@@ -207,6 +212,7 @@ const InteractiveFigureInner = ({
       aria-label={focus.figure.title}
       data-motion={motionDisabled ? "disabled" : "enabled"}
       data-figure-id={focus.figure.id}
+      data-figure-size={size}
       onKeyDown={handleKeyDown}
     >
       <FigureBreadcrumbs
@@ -232,7 +238,7 @@ const InteractiveFigureInner = ({
           preventScrolling={false}
           onNodeClick={handleNodeClick}
         >
-          <FitViewOnLayoutChange layoutVersion={layoutVersion} />
+          <FitViewOnLayoutChange layoutKey={focus.figure.id} />
         </ReactFlow>
       </div>
     </div>

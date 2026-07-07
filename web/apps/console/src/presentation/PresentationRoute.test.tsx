@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -112,7 +112,7 @@ describe("PresentationRoute", () => {
     expect(screen.getByRole("dialog", { name: /evidence inspector/i })).toBeInTheDocument();
   });
 
-  it("closes the inspector when navigation moves to another beat", async () => {
+  it("closes the inspector from the explicit close action", async () => {
     const user = userEvent.setup();
     window.location.hash = "#scene/workflow-demo/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
@@ -121,5 +121,17 @@ describe("PresentationRoute", () => {
     expect(screen.getByRole("dialog", { name: /evidence inspector/i })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: /close evidence/i }));
     expect(screen.queryByRole("dialog", { name: /evidence inspector/i })).not.toBeInTheDocument();
+  });
+
+  it("returns to the receipt after closing the inspector on a receipt beat", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#scene/interrupt-evidence/trace";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+    await user.click(await screen.findByRole("button", { name: /inspect evidence/i }));
+    expect(screen.getByRole("dialog", { name: /evidence inspector/i })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: /close evidence/i }));
+    expect(screen.queryByRole("dialog", { name: /evidence inspector/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /inspect evidence/i })).toBeInTheDocument();
   });
 });

@@ -142,6 +142,7 @@ export const presentationReducer = (
         ...state,
         location: { kind: "discussion", branchId: action.branchId as DiscussionBranchId },
         discussionReturn: returnLocation,
+        evidencePresentationOverride: null,
       };
     }
     case "close_discussion": {
@@ -158,7 +159,9 @@ export const presentationReducer = (
     case "set_evidence_presentation":
       return { ...state, evidencePresentationOverride: action.presentation };
     case "close_overlay": {
-      if (state.evidencePresentationOverride === "inspector") return { ...state, evidencePresentationOverride: "hidden" };
+      // The inspector is transient. Closing it should reveal the current beat's
+      // default evidence presentation again, which may be a receipt.
+      if (state.evidencePresentationOverride === "inspector") return { ...state, evidencePresentationOverride: null };
       if (state.selectedNodeId !== null) return { ...state, selectedNodeId: null };
       if (state.location.kind === "discussion") {
         return {

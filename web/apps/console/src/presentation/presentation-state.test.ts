@@ -86,16 +86,16 @@ describe("presentationReducer", () => {
       branchId: "hosted-automation",
     });
 
+    expect(opened.evidencePresentationOverride).toBeNull();
+    expect(opened.selectedNodeId).toBe("review_issues");
+    expect(opened.location.kind).toBe("discussion");
+
     const closed1 = presentationReducer(opened, { type: "close_overlay" });
-    expect(closed1.evidencePresentationOverride).toBe("hidden");
-    expect(closed1.selectedNodeId).toBe("review_issues");
+    expect(closed1.selectedNodeId).toBeNull();
     expect(closed1.location.kind).toBe("discussion");
 
     const closed2 = presentationReducer(closed1, { type: "close_overlay" });
-    expect(closed2.selectedNodeId).toBeNull();
-
-    const closed3 = presentationReducer(closed2, { type: "close_overlay" });
-    expect(closed3.location.kind).toBe("main");
+    expect(closed2.location.kind).toBe("main");
   });
 
   it("does nothing on next while a discussion branch is open", () => {
@@ -127,7 +127,7 @@ describe("presentationReducer", () => {
       presentation: "inspector",
     });
     const closed = presentationReducer(opened, { type: "close_overlay" });
-    expect(closed.evidencePresentationOverride).toBe("hidden");
+    expect(closed.evidencePresentationOverride).toBeNull();
     expect(closed.location).toEqual(initialPresentationState.location);
   });
 
@@ -204,10 +204,27 @@ describe("presentationReducer", () => {
       presentation: "inspector",
     });
     const firstEscape = presentationReducer(withInspector, { type: "close_overlay" });
-    expect(firstEscape.evidencePresentationOverride).toBe("hidden");
+    expect(firstEscape.evidencePresentationOverride).toBeNull();
     expect(firstEscape.selectedNodeId).toBe("review_issues");
     const secondEscape = presentationReducer(firstEscape, { type: "close_overlay" });
     expect(secondEscape.selectedNodeId).toBeNull();
+  });
+
+  it("returns to the beat receipt after closing an explicit inspector", () => {
+    const atReceiptBeat = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "interrupt-evidence", beatId: "trace", focusPath: [] },
+    });
+    expect(compositionForState(atReceiptBeat).evidencePresentation).toBe("receipt");
+    const opened = presentationReducer(atReceiptBeat, {
+      type: "set_evidence_presentation",
+      presentation: "inspector",
+    });
+    expect(compositionForState(opened).evidencePresentation).toBe("inspector");
+
+    const closed = presentationReducer(opened, { type: "close_overlay" });
+    expect(closed.evidencePresentationOverride).toBeNull();
+    expect(compositionForState(closed).evidencePresentation).toBe("receipt");
   });
 
   it("closes the inspector and recomputes receipt state when the beat changes", () => {

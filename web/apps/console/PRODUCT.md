@@ -32,8 +32,8 @@ the resulting runs remain auditable through traces and evidence records.
 
 Chat is a framing device, not the core product. It may introduce or narrate a
 prepared workflow, but the main surfaces are the workflow graph, operation
-blocks, evidence drawer, lifecycle explorer, typed interrupt/resume panel, and
-run trace.
+blocks, presentation evidence receipt/inspector, lifecycle explorer, typed
+interrupt/resume panel, and run trace.
 
 Success means a viewer can answer three questions quickly:
 

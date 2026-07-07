@@ -78,7 +78,7 @@ const renderFigure = (overrides: Partial<React.ComponentProps<typeof Interactive
     onFocusPathChange,
     ...render(
       <InteractiveFigure
-        catalog={validCatalog}
+        catalog={restOverrides.catalog ?? validCatalog}
         focusPath={restOverrides.focusPath ?? []}
         activeNodeId={restOverrides.activeNodeId ?? null}
         onFocusPathChange={onFocusPathChange}
@@ -99,10 +99,26 @@ describe("InteractiveFigure", () => {
   });
 
   it("renders within a React Flow container for edge support", () => {
-    renderFigure({ focusPath: [] });
+    const { container } = renderFigure({ focusPath: [] });
     const rfWrapper = screen.getByTestId("rf__wrapper");
     expect(rfWrapper).toBeInTheDocument();
     expect(rfWrapper.querySelector("[class*='react-flow']")).toBeInTheDocument();
+    expect(container.querySelector(".react-flow__handle-top")).toBeInTheDocument();
+    expect(container.querySelector(".react-flow__handle-bottom")).toBeInTheDocument();
+  });
+
+  it("uses left and right handles for flow figures", () => {
+    const flowCatalog: FigureCatalogDefinition = {
+      ...validCatalog,
+      figures: validCatalog.figures.map((figure) =>
+        figure.id === validCatalog.rootFigureId
+          ? { ...figure, layout: { kind: "flow" as const } }
+          : figure,
+      ),
+    };
+    const { container } = renderFigure({ catalog: flowCatalog });
+    expect(container.querySelector(".react-flow__handle-left")).toBeInTheDocument();
+    expect(container.querySelector(".react-flow__handle-right")).toBeInTheDocument();
   });
 
   it("expands a child figure by click and Enter", async () => {

@@ -20,7 +20,7 @@ export const ArchitectureScene = ({
   onFocusPathChange,
   motionDisabled,
 }: ArchitectureSceneProps) => (
-  <>
+  <section className="architecture-scene" data-testid="architecture-scene">
     <StageCaption eyebrow={`Act II · ${scene.claimClass}`} title={scene.title}>
       <p>{beat.caption}</p>
     </StageCaption>
@@ -30,6 +30,7 @@ export const ArchitectureScene = ({
       activeNodeId={activeNodeId}
       onFocusPathChange={onFocusPathChange}
       motionDisabled={motionDisabled}
+      size="wide"
     />
-  </>
+  </section>
 );

@@ -245,8 +245,9 @@ legible without hiding raw evidence.
 
 ### Do:
 
-- **Do** make the workflow graph, operation block, evidence drawer, lifecycle
-  explorer, typed interrupt/resume panel, and trace the main visual surfaces.
+- **Do** make the workflow graph, operation block, presentation evidence
+  receipt/inspector, lifecycle explorer, typed interrupt/resume panel, and trace
+  the main visual surfaces.
 - **Do** keep `/console` familiar and product-like: readable tables, standard
   buttons, clear labels, predictable focus states.
 - **Do** let `/present` be cinematic with staged panels, larger text, and graph
