@@ -3,6 +3,8 @@
 This runbook is for rehearsing and presenting the lda.chat thesis defense with
 the React presentation route. It is intentionally operational: what to run,
 what to open, what to say when something fails, and how the story should flow.
+For a longer list of likely examiner questions, see
+[`defense-qna.md`](defense-qna.md).
 
 ## One-Line Framing
 

@@ -129,8 +129,11 @@ Presentation wishlist / defense readiness:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
   timing, and short speaker notes for what to say if the live demo fails.
-- Defense Q&A branch set: add prepared branches for "Where is the AI agent?",
-  evaluation validity, security boundaries, and demo reliability.
+- Defense Q&A branch set:
+  [`defense Q&A runbook`](runbooks/defense-qna.md) collects answers for
+  "Where is the AI agent?", evaluation validity, security boundaries, demo
+  reliability, and other likely examiner questions. Later work can project the
+  strongest entries into `/present` discussion branches.
 - Chat surface replacement: use source-owned AI/chat primitives so tool calls,
   approval requests, and scripted macro output look like a standard modern AI
   product instead of custom slide chrome.
