@@ -9,7 +9,7 @@ import { PresentationFooter } from "./PresentationFooter.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
-import { findScene, type MainLocation, type PresentationLocation } from "./storyboard.js";
+import { findScene, type MainLocation } from "./storyboard.js";
 
 type PresentationStageProps = {
   readonly state: PresentationState;
@@ -18,8 +18,8 @@ type PresentationStageProps = {
   readonly messages?: ReadonlyArray<AgentMessage>;
   readonly onApprove?: (() => void) | undefined;
   readonly onDeny?: (() => void) | undefined;
-  readonly jump: (location: PresentationLocation) => void;
-  readonly selectNode: (nodeId: string) => void;
+  readonly jump: (location: MainLocation) => void;
+  readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
   readonly closeOverlay: () => void;
   readonly openDiscussion: (branchId: string) => void;
@@ -69,6 +69,7 @@ export const PresentationStage = ({
                 selectedNodeId={state.selectedNodeId}
                 selectNode={selectNode}
                 openEvidence={openEvidence}
+                openDiscussion={openDiscussion}
                 onFocusPathChange={(path) => {
                   if (state.location.kind === "main") {
                     jump({ ...state.location, focusPath: path });

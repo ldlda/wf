@@ -72,7 +72,7 @@ type AgentDriver = {
   readonly run: (
     input: AgentRunInput,
     signal: AbortSignal,
-    requestApproval: () => Promise<AgentApproval>,
+    requestApproval: (signal: AbortSignal) => Promise<AgentApproval>,
   ) => AsyncIterable<AgentMessage>;
 };
 ```
@@ -80,8 +80,9 @@ type AgentDriver = {
 The first implementation only ships the `prepared-recipe` driver. It produces
 events from a hard-coded recipe, calls the existing demo timeline execution
 path, and emits presentation actions through the same event stream. The
-prepared driver ignores the `requestApproval` callback (deterministic, no
-approval needed).
+prepared driver uses `requestApproval` at the recipe's typed review step, pauses
+until the operator approves or cancels the resume, then continues or exits the
+recipe.
 
 The `ai-sdk` kind is reserved for a future driver. The boundary should be shaped
 so a server-side Vercel AI SDK integration can map `streamText` parts into the
@@ -247,7 +248,7 @@ PresentationRoute
   -> PreparedRecipeDriver
   -> PresentationToolAdapter -> selected node / beat / evidence state
   -> AgentMessage[]
-  -> StandardChat / OperationBlock / EvidenceDrawer / DemoTimeline
+  -> StandardChat / OperationBlock / EvidenceInspector / DemoTimeline
 ```
 
 The prepared driver reads from the reviewed recording and emits agent events
@@ -256,9 +257,9 @@ to the evidence surface.
 
 In live mode, the driver calls the connected workflow server through the
 existing RPC operation path. Live mode is deferred to a future slice; the
-prepared driver is replay-only for now. The `AgentDriver` interface includes
-`requestApproval` for future live-mode approval, but the prepared driver
-currently ignores it.
+`AgentDriver` interface includes `requestApproval` so both the prepared driver
+and a future live driver can pause at operator-controlled workflow resume
+boundaries.
 
 ## Future AI SDK Path
 

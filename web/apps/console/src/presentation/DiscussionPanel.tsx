@@ -1,3 +1,4 @@
+import { useEffect, useRef, type KeyboardEvent } from "react";
 import { findDiscussionBranch, findScene } from "./storyboard.js";
 
 type DiscussionPanelProps = {
@@ -7,33 +8,72 @@ type DiscussionPanelProps = {
 
 export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => {
   const branch = findDiscussionBranch(branchId);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const returnButtonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (!branch) return;
+    const previouslyFocused = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    returnButtonRef.current?.focus();
+    return () => previouslyFocused?.focus();
+  }, [branch]);
+
   if (!branch) return null;
 
   const parentScene = findScene(branch.parentSceneId);
 
+  const trapKeyboardWithinDialog = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      onClose();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusable = [...(dialogRef.current?.querySelectorAll<HTMLElement>(
+      "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])",
+    ) ?? [])].filter((element) => !element.hasAttribute("disabled"));
+    const first = focusable.at(0);
+    const last = focusable.at(-1);
+    if (!first || !last) return;
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
-    <div className="discussion-panel" role="dialog" aria-label={branch.title}>
+    <div
+      ref={dialogRef}
+      className="discussion-panel"
+      role="dialog"
+      aria-modal="true"
+      aria-label={branch.title}
+      onKeyDown={trapKeyboardWithinDialog}
+    >
       <header>
         <h2>{branch.title}</h2>
         <span className="discussion-panel__badge">{branch.claimClass}</span>
       </header>
       <p className="discussion-panel__evidence">{branch.evidencePointer}</p>
       <p className="discussion-panel__summary">{branch.summary}</p>
-      {branchId === "hosted-automation" && (
+      {branch.detail && (
         <p className="discussion-panel__detail">
-          A future scheduler could trigger a workflow that launches a verified headless
-          coding-agent command with a stored prompt. lda.chat does not implement that
-          trigger or scheduler in the submitted scope.
+          {branch.detail.links?.map((link, index) => (
+            <span key={link.href}>
+              {index > 0 && " · "}
+              <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
+            </span>
+          ))}
+          {branch.detail.links && branch.detail.links.length > 0 ? " — " : ""}
+          {branch.detail.text}
         </p>
       )}
-      {branchId === "mcp-agent-scale" && (
-        <p className="discussion-panel__detail">
-          <a href="https://www.anthropic.com/engineering/code-execution-with-mcp" target="_blank" rel="noopener noreferrer">Anthropic MCP</a> ·{" "}
-          <a href="https://blog.cloudflare.com/code-mode-mcp/" target="_blank" rel="noopener noreferrer">Cloudflare Code Mode</a>
-          {" "}— both are external context.
-        </p>
-      )}
-      <button type="button" onClick={onClose} className="discussion-panel__return">
+      <button ref={returnButtonRef} type="button" onClick={onClose} className="discussion-panel__return">
         Return to {parentScene?.title ?? "scene"}
       </button>
     </div>

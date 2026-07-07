@@ -29,11 +29,11 @@ export type PresentationState = {
 export type PresentationAction =
   | { readonly type: "next" }
   | { readonly type: "previous" }
-  | { readonly type: "jump"; readonly location: PresentationLocation }
+  | { readonly type: "jump"; readonly location: MainLocation }
   | { readonly type: "jump_hash"; readonly hash: string }
   | { readonly type: "open_discussion"; readonly branchId: string }
   | { readonly type: "close_discussion" }
-  | { readonly type: "select_node"; readonly nodeId: string }
+  | { readonly type: "select_node"; readonly nodeId: string | null }
   | { readonly type: "clear_node" }
   | { readonly type: "set_evidence_presentation"; readonly presentation: EvidencePresentation }
   | { readonly type: "close_overlay" }
@@ -41,15 +41,17 @@ export type PresentationAction =
   | { readonly type: "set_focus_path"; readonly path: readonly string[] }
   | { readonly type: "toggle_motion" };
 
-export const initialPresentationState: PresentationState = {
+export const createInitialPresentationState = (startedAt = Date.now()): PresentationState => ({
   location: defaultMainLocation,
   discussionReturn: null,
   selectedNodeId: null,
   evidencePresentationOverride: null,
   playbackMode: "replay",
   motionDisabled: false,
-  startedAt: Date.now(),
-};
+  startedAt,
+});
+
+export const initialPresentationState: PresentationState = createInitialPresentationState();
 
 const compositionForLocation = (
   location: PresentationLocation,
@@ -130,7 +132,11 @@ export const presentationReducer = (
       const returnLoc = branch
         ? firstBeatOfScene(branch.parentSceneId) ?? defaultMainLocation
         : defaultMainLocation;
-      return { ...moveToLocation(state, parsed), discussionReturn: returnLoc };
+      return {
+        ...moveToLocation(state, parsed),
+        discussionReturn: returnLoc,
+        evidencePresentationOverride: null,
+      };
     }
     case "open_discussion": {
       const branch = findDiscussionBranch(action.branchId);

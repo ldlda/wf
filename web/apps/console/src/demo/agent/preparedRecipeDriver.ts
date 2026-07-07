@@ -65,9 +65,9 @@ export async function* runPreparedRecipeReplay(
           id: step.id,
           role: "assistant",
           parts: [
-            agentToolCallPart(`${step.id}-call`, step.toolName, { nodeId: "review_issues" }),
-            presentationActionPart({ type: "selectWorkflowNode", nodeId: "review_issues" }),
-            agentToolResultPart(`${step.id}-call`, step.toolName, "success", { nodeId: "review_issues" }),
+            agentToolCallPart(`${step.id}-call`, step.toolName, { nodeId: step.toolInput.nodeId }),
+            presentationActionPart({ type: "selectWorkflowNode", nodeId: step.toolInput.nodeId }),
+            agentToolResultPart(`${step.id}-call`, step.toolName, "success", { nodeId: step.toolInput.nodeId }),
           ],
         };
         break;

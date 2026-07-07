@@ -108,12 +108,17 @@ Implementation order:
     [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md).
     Implementation:
     [`adaptive presentation canvas plan`](historical/superpowers/plans/2026-07-06-adaptive-presentation-canvas.md).
-13. Then: adopt source-owned AI Elements chat primitives against existing
+13. Completed: address the presentation CodeRabbit review pass covering
+    reducer state semantics, agent approval cleanup, discussion modal
+    accessibility, figure validation, keyboard roving focus, and stale demo
+    agent spec wording. Implementation:
+    [`presentation CodeRabbit fixes`](historical/superpowers/plans/2026-07-08-presentation-coderabbit-fixes.md).
+14. Then: adopt source-owned AI Elements chat primitives against existing
     `AgentMessagePart` / `AgentDriver` contracts.
-14. Future: implement Schema Form Surface and synchronized Approval Session.
-15. Future: implement Guided Run Beat Gates, presenter companion, Scene 10
+15. Future: implement Schema Form Surface and synchronized Approval Session.
+16. Future: implement Guided Run Beat Gates, presenter companion, Scene 10
     product graph, final scene visuals, evidence assets, and rehearsal timing.
-16. Add a static slide/appendix shell only after presentation mode is clear.
+17. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Boundaries: this is not a production admin panel, generic visual workflow

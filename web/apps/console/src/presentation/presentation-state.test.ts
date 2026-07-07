@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   compositionForState,
+  createInitialPresentationState,
   initialPresentationState,
   presentationReducer,
 } from "./presentation-state.js";
@@ -48,6 +49,28 @@ describe("presentationReducer", () => {
     expect(state.location).toEqual({ kind: "main", sceneId: "thesis", beatId: "title", focusPath: [] });
   });
 
+  it("clears evidence overrides when deep-linking into a discussion branch", () => {
+    const state = presentationReducer(
+      {
+        ...initialPresentationState,
+        evidencePresentationOverride: "inspector",
+      },
+      {
+        type: "jump_hash",
+        hash: "#discuss/hosted-automation",
+      },
+    );
+
+    expect(state.location).toEqual({ kind: "discussion", branchId: "hosted-automation" });
+    expect(state.evidencePresentationOverride).toBeNull();
+    expect(state.discussionReturn).toEqual({ kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] });
+  });
+
+  it("creates fresh startedAt values per reducer session", () => {
+    expect(createInitialPresentationState(100).startedAt).toBe(100);
+    expect(createInitialPresentationState(250).startedAt).toBe(250);
+  });
+
   it("opens a discussion branch and returns to the originating beat", () => {
     const positioned = presentationReducer(initialPresentationState, {
       type: "jump",
@@ -70,6 +93,18 @@ describe("presentationReducer", () => {
     });
     expect(state.location).toEqual(initialPresentationState.location);
     expect(state.selectedNodeId).toBe("review_issues");
+  });
+
+  it("clears node detail through nullable selection", () => {
+    const withNode = presentationReducer(initialPresentationState, {
+      type: "select_node",
+      nodeId: "review_issues",
+    });
+    const cleared = presentationReducer(withNode, {
+      type: "select_node",
+      nodeId: null,
+    });
+    expect(cleared.selectedNodeId).toBeNull();
   });
 
   it("closes overlays in priority order: inspector, node, discussion", () => {

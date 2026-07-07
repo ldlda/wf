@@ -247,6 +247,13 @@ export type DiscussionBranchDefinition = {
   readonly claimClass: ClaimClass;
   readonly evidencePointer: string;
   readonly summary: string;
+  readonly detail?: {
+    readonly text: string;
+    readonly links?: ReadonlyArray<{
+      readonly label: string;
+      readonly href: string;
+    }>;
+  };
 };
 
 const defineDiscussionBranches = <const Branches extends readonly DiscussionBranchDefinition[]>(
@@ -277,6 +284,9 @@ export const discussionBranches = defineDiscussionBranches([
     claimClass: "future-work",
     evidencePointer: "Thesis: Workflow Automation Platforms and Future Work",
     summary: "Hosted triggers and scheduling are mature elsewhere and remain future work here.",
+    detail: {
+      text: "A future scheduler could trigger a workflow that launches a verified headless coding-agent command with a stored prompt. lda.chat does not implement that trigger or scheduler in the submitted scope.",
+    },
   },
   {
     id: "durable-agent-graphs",
@@ -293,6 +303,19 @@ export const discussionBranches = defineDiscussionBranches([
     claimClass: "external-context",
     evidencePointer: "Thesis: Model Context Protocol; Anthropic MCP; Cloudflare Code Mode",
     summary: "MCP is a capability protocol; progressive discovery addresses large agent-facing surfaces.",
+    detail: {
+      text: "Both are external context.",
+      links: [
+        {
+          label: "Anthropic MCP",
+          href: "https://www.anthropic.com/engineering/code-execution-with-mcp",
+        },
+        {
+          label: "Cloudflare Code Mode",
+          href: "https://blog.cloudflare.com/code-mode-mcp/",
+        },
+      ],
+    },
   },
   {
     id: "lifecycle-states",

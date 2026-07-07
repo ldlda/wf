@@ -1,4 +1,5 @@
 import { m } from "motion/react";
+import { useId } from "react";
 import type { GraphExecutionPresentation } from "./demo-workflow-model.js";
 
 export type PresentationNode = {
@@ -54,8 +55,13 @@ export const WorkflowGraphStage = ({
   execution,
   selectedNodeId,
   selectNode,
-}: WorkflowGraphStageProps) => (
-  <div className="workflow-graph-stage" role="group" aria-label="workflow graph">
+}: WorkflowGraphStageProps) => {
+  const markerPrefix = useId().replaceAll(":", "");
+  const arrowMarkerId = `${markerPrefix}-workflow-arrow`;
+  const activeArrowMarkerId = `${markerPrefix}-workflow-arrow-active`;
+
+  return (
+    <div className="workflow-graph-stage" role="group" aria-label="workflow graph">
     <div className="workflow-graph-stage__legend" aria-hidden="true">
       <span><i data-state="completed" />Completed</span>
       <span><i data-state="current" />Current</span>
@@ -64,10 +70,10 @@ export const WorkflowGraphStage = ({
 
     <svg className="workflow-graph-stage__connectors" aria-hidden="true">
       <defs>
-        <marker id="workflow-arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <marker className="workflow-graph-stage__arrow-marker" id={arrowMarkerId} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
           <polygon points="0 0, 8 3, 0 6" />
         </marker>
-        <marker id="workflow-arrow-active" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+        <marker className="workflow-graph-stage__arrow-marker--active" id={activeArrowMarkerId} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
           <polygon points="0 0, 8 3, 0 6" />
         </marker>
       </defs>
@@ -84,7 +90,7 @@ export const WorkflowGraphStage = ({
             y1={`${from.y}%`}
             x2={`${to.x}%`}
             y2={`${to.y}%`}
-            markerEnd={active ? "url(#workflow-arrow-active)" : "url(#workflow-arrow)"}
+            markerEnd={active ? `url(#${activeArrowMarkerId})` : `url(#${arrowMarkerId})`}
           />
         );
       })}
@@ -127,5 +133,6 @@ export const WorkflowGraphStage = ({
         </m.div>
       );
     })}
-  </div>
-);
+    </div>
+  );
+};

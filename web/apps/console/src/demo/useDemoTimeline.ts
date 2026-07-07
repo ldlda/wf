@@ -13,6 +13,7 @@ import {
   type DemoMode,
   type DemoTimelineState,
 } from "./timeline/reducer.js";
+import type { DemoRecording } from "./timeline/models.js";
 import {
   executeLiveDemoStep,
   failedLiveDemoEvent,
@@ -57,7 +58,7 @@ const deriveMissingMessage = (mode: DemoMode, target: string | null): string | n
 export const useDemoTimeline = (
   target: string | null,
   recordEvidence: EvidenceRecorder,
-  recording?: import("./timeline/models.js").DemoRecording,
+  recording?: DemoRecording,
 ): DemoTimelineController => {
   const [state, dispatch] = useReducer(demoTimelineReducer, initialDemoTimelineState);
   const liveContextRef = useRef<LiveDemoContext>(initialLiveDemoContext);
@@ -67,7 +68,10 @@ export const useDemoTimeline = (
   const generationRef = useRef(0);
   const [inFlight, setInFlight] = useState(false);
   const approvalRef = useRef<DemoApproval | null>(null);
-  const activeRecording = useRef(recording ?? loadCanonicalDemoRecording());
+  const activeRecording = useRef<DemoRecording | null>(recording ?? null);
+  if (activeRecording.current === null) {
+    activeRecording.current = loadCanonicalDemoRecording();
+  }
 
   const [interruptPayload, setInterruptPayload] = useState<LdaReportInterruptPayload | null>(null);
   const [output, setOutput] = useState<LdaReportOutput | null>(null);
@@ -206,6 +210,7 @@ export const useDemoTimeline = (
     resetRuntime();
     if (state.mode === "replay") {
       const recording = activeRecording.current;
+      if (!recording) return;
       dispatch({ type: "start", mode: "replay", events: recording.events });
     } else {
       dispatch({ type: "start", mode: "live", events: [] });

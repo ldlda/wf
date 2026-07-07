@@ -1,17 +1,24 @@
 import { LDA_REPORT_DEPLOYMENT_ID } from "../ldaReportDemoConfig.js";
+import type { PresentationToolName, WorkflowToolName } from "./tools.js";
 
 export type RecipeTool =
-  | "inspectDeployment"
-  | "startPreparedReportRun"
-  | "selectWorkflowNode"
-  | "resumeIssueReview"
-  | "readRunTrace";
+  | Extract<WorkflowToolName, "inspectDeployment" | "startPreparedReportRun" | "resumeIssueReview" | "readRunTrace">
+  | Extract<PresentationToolName, "selectWorkflowNode">;
 
-export type PreparedRecipeStep = {
+type SelectWorkflowNodeStep = {
   readonly id: string;
   readonly narration: string;
-  readonly toolName: RecipeTool | null;
+  readonly toolName: "selectWorkflowNode";
+  readonly toolInput: { readonly nodeId: string };
 };
+
+type OtherPreparedRecipeStep = {
+  readonly id: string;
+  readonly narration: string;
+  readonly toolName: Exclude<RecipeTool, "selectWorkflowNode"> | null;
+};
+
+export type PreparedRecipeStep = SelectWorkflowNodeStep | OtherPreparedRecipeStep;
 
 export type PreparedRecipe = {
   readonly id: "prepare-thesis-report";
@@ -46,6 +53,7 @@ export const PREPARE_THESIS_REPORT_RECIPE: PreparedRecipe = {
       id: "focus-interrupt",
       narration: "Let's zoom into the typed issue-review interrupt.",
       toolName: "selectWorkflowNode",
+      toolInput: { nodeId: "review_issues" },
     },
     {
       id: "resume",

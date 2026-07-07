@@ -16,7 +16,7 @@ type DemoWorkflowSceneProps = {
   readonly beat: SceneBeatDefinition;
   readonly demo: DemoTimelineController;
   readonly selectedNodeId: string | null;
-  readonly selectNode: (nodeId: string) => void;
+  readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
 };
 
@@ -98,7 +98,7 @@ export const DemoWorkflowScene = ({
       </div>
 
       {selectedNodeId && (
-        <NodeSpotlight nodeId={selectedNodeId} close={() => selectNode("")} />
+        <NodeSpotlight nodeId={selectedNodeId} close={() => selectNode(null)} />
       )}
     </>
   );

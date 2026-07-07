@@ -1,7 +1,11 @@
 import { StageCaption } from "../StageCaption.js";
 import { InteractiveFigure } from "../figures/InteractiveFigure.js";
-import { architectureCatalog } from "../figures/architecture-catalog.js";
+import { ARCHITECTURE_CATALOG_ID, architectureCatalog } from "../figures/architecture-catalog.js";
 import type { SceneDefinition, SceneBeatDefinition } from "../storyboard.js";
+
+const architectureCatalogs = {
+  [ARCHITECTURE_CATALOG_ID]: architectureCatalog,
+} as const;
 
 type ArchitectureSceneProps = {
   readonly scene: SceneDefinition;
@@ -19,18 +23,26 @@ export const ArchitectureScene = ({
   activeNodeId,
   onFocusPathChange,
   motionDisabled,
-}: ArchitectureSceneProps) => (
-  <section className="architecture-scene" data-testid="architecture-scene">
-    <StageCaption eyebrow={`Act II · ${scene.claimClass}`} title={scene.title}>
-      <p>{beat.caption}</p>
-    </StageCaption>
-    <InteractiveFigure
-      catalog={architectureCatalog}
-      focusPath={focusPath}
-      activeNodeId={activeNodeId}
-      onFocusPathChange={onFocusPathChange}
-      motionDisabled={motionDisabled}
-      size="wide"
-    />
-  </section>
-);
+}: ArchitectureSceneProps) => {
+  // Only one catalog ships today, but resolving through the authored catalog id
+  // keeps beat metadata honest and makes the next catalog addition localized.
+  const catalog = beat.figure
+    ? architectureCatalogs[beat.figure.catalogId as keyof typeof architectureCatalogs] ?? architectureCatalog
+    : architectureCatalog;
+
+  return (
+    <section className="architecture-scene" data-testid="architecture-scene">
+      <StageCaption eyebrow={`Act II · ${scene.claimClass}`} title={scene.title}>
+        <p>{beat.caption}</p>
+      </StageCaption>
+      <InteractiveFigure
+        catalog={catalog}
+        focusPath={focusPath}
+        activeNodeId={activeNodeId}
+        onFocusPathChange={onFocusPathChange}
+        motionDisabled={motionDisabled}
+        size="wide"
+      />
+    </section>
+  );
+};

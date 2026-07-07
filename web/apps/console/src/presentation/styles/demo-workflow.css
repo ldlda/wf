@@ -385,11 +385,11 @@
   stroke-dasharray: none;
 }
 
-#workflow-arrow polygon {
+.workflow-graph-stage__arrow-marker polygon {
   fill: oklch(0.48 0.035 250);
 }
 
-#workflow-arrow-active polygon {
+.workflow-graph-stage__arrow-marker--active polygon {
   fill: var(--accent-cyan);
 }
 

@@ -9,6 +9,7 @@ export type FigureCatalogIssue =
   | { readonly code: "unknown_root_figure"; readonly figureId: string }
   | { readonly code: "unknown_edge_endpoint"; readonly figureId: string; readonly endpointId: string }
   | { readonly code: "unknown_child_figure"; readonly figureId: string; readonly childFigureId: string }
+  | { readonly code: "missing_explicit_position"; readonly figureId: string; readonly nodeId: string }
   | { readonly code: "child_cycle"; readonly fromFigureId: string; readonly toFigureId: string };
 
 const issueToCode = (issue: FigureCatalogIssue): string => {
@@ -23,6 +24,8 @@ const issueToCode = (issue: FigureCatalogIssue): string => {
       return `unknown_edge_endpoint:${issue.figureId}:${issue.endpointId}`;
     case "unknown_child_figure":
       return `unknown_child_figure:${issue.figureId}:${issue.childFigureId}`;
+    case "missing_explicit_position":
+      return `missing_explicit_position:${issue.figureId}:${issue.nodeId}`;
     case "child_cycle":
       return `child_cycle:${issue.fromFigureId}:${issue.toFigureId}`;
   }
@@ -83,6 +86,15 @@ export const defineFigureCatalog = (
         if (!figureById.has(node.childFigureId)) {
           issues.push({ code: "unknown_child_figure", figureId: figure.id, childFigureId: node.childFigureId });
         }
+      }
+    }
+  }
+
+  for (const figure of catalog.figures) {
+    if (figure.layout.kind !== "explicit") continue;
+    for (const node of figure.nodes) {
+      if (figure.layout.positions[node.id] === undefined) {
+        issues.push({ code: "missing_explicit_position", figureId: figure.id, nodeId: node.id });
       }
     }
   }

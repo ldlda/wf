@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, type KeyboardEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
 import { ReactFlow, ReactFlowProvider, Handle, Position, useReactFlow, type Node, type Edge, type NodeTypes } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FigureCatalogDefinition, FigureNodeKind } from "./model.js";
@@ -29,6 +29,7 @@ type FigureNodeData = {
   readonly kind: FigureNodeKind;
   readonly orientation: "horizontal" | "vertical";
   readonly isActive: boolean;
+  readonly isFocused: boolean;
   readonly isExpandable: boolean;
   readonly onActivate: (nodeId: string) => void;
   readonly onExpand: (nodeId: string) => void;
@@ -51,7 +52,7 @@ const FigureFlowNode = ({ data }: { data: FigureNodeData }) => {
         data-expandable={expandable}
         data-testid={`figure-node-${data.nodeId}`}
         aria-label={accessibleName}
-        tabIndex={data.isActive ? 0 : -1}
+        tabIndex={data.isFocused ? 0 : -1}
         onClick={() => {
           data.onActivate(data.nodeId);
           if (expandable) data.onExpand(data.nodeId);
@@ -66,7 +67,7 @@ const FigureFlowNode = ({ data }: { data: FigureNodeData }) => {
         <span className="figure-node__kind">{data.kind}</span>
         <strong className="figure-node__label">{data.label}</strong>
         <span className="figure-node__summary">{data.summary}</span>
-        {expandable && <span className="figure-node__expand-affance" aria-hidden="true">&#9656;</span>}
+        {expandable && <span className="figure-node__expand-affordance" aria-hidden="true">&#9656;</span>}
         {data.isActive && <span className="figure-node__current-marker">Current</span>}
       </button>
       <Handle type="source" position={sourcePosition} id="source" />
@@ -100,12 +101,18 @@ const InteractiveFigureInner = ({
   );
   const layout = useMemo(() => layoutFigure(focus.figure), [focus.figure]);
   const containerRef = useRef<HTMLDivElement>(null);
-  const focusedNodeIdRef = useRef(activeNodeId ?? focus.figure.nodes[0]?.id ?? "");
+  const initialFocusedNodeId = activeNodeId ?? focus.figure.nodes[0]?.id ?? "";
+  const [focusedNodeId, setFocusedNodeId] = useState(initialFocusedNodeId);
+  const focusedNodeIdRef = useRef(initialFocusedNodeId);
 
   const fallbackFocusedNodeId = activeNodeId ?? focus.figure.nodes[0]?.id ?? "";
-  if (activeNodeId || !layout.nodes.some((node) => node.id === focusedNodeIdRef.current)) {
-    focusedNodeIdRef.current = fallbackFocusedNodeId;
-  }
+  useEffect(() => {
+    if (!fallbackFocusedNodeId) return;
+    if (activeNodeId || !layout.nodes.some((node) => node.id === focusedNodeIdRef.current)) {
+      focusedNodeIdRef.current = fallbackFocusedNodeId;
+      setFocusedNodeId(fallbackFocusedNodeId);
+    }
+  }, [activeNodeId, fallbackFocusedNodeId, layout.nodes]);
 
   const handleExpand = useCallback(
     (nodeId: string) => {
@@ -150,6 +157,7 @@ const InteractiveFigureInner = ({
         event.stopPropagation();
         const nextId = nextFigureNodeId(layout, focusedNodeIdRef.current, direction);
         focusedNodeIdRef.current = nextId;
+        setFocusedNodeId(nextId);
         const nextNode = containerRef.current?.querySelector(
           `[data-testid="figure-node-${nextId}"]`,
         );
@@ -161,6 +169,7 @@ const InteractiveFigureInner = ({
 
   const handleActivateNode = useCallback((nodeId: string) => {
     focusedNodeIdRef.current = nodeId;
+    setFocusedNodeId(nodeId);
   }, []);
 
   const rfNodes: Node[] = useMemo(
@@ -176,12 +185,13 @@ const InteractiveFigureInner = ({
           kind: node.kind,
           orientation: layout.definition.layout.kind === "flow" ? "horizontal" : "vertical",
           isActive: node.id === activeNodeId,
+          isFocused: node.id === focusedNodeId,
           isExpandable: node.childFigureId !== undefined,
           onActivate: handleActivateNode,
           onExpand: handleExpand,
         },
       })),
-    [layout.definition.layout.kind, layout.nodes, activeNodeId, handleActivateNode, handleExpand],
+    [layout.definition.layout.kind, layout.nodes, activeNodeId, focusedNodeId, handleActivateNode, handleExpand],
   );
 
   const rfEdges: Edge[] = useMemo(

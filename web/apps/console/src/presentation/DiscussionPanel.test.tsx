@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DiscussionPanel } from "./DiscussionPanel.js";
 
 afterEach(() => cleanup());
@@ -8,9 +8,14 @@ afterEach(() => cleanup());
 describe("DiscussionPanel", () => {
   const onClose = vi.fn();
 
+  beforeEach(() => {
+    onClose.mockClear();
+  });
+
   it("renders the branch title and claim class", () => {
     render(<DiscussionPanel branchId="hosted-automation" onClose={onClose} />);
     expect(screen.getByRole("dialog")).toHaveAttribute("aria-label", "Hosted automation");
+    expect(screen.getByRole("dialog")).toHaveAttribute("aria-modal", "true");
     expect(screen.getByText("Hosted automation")).toBeDefined();
     expect(screen.getByText("future-work")).toBeDefined();
   });
@@ -26,6 +31,30 @@ describe("DiscussionPanel", () => {
     render(<DiscussionPanel branchId="hosted-automation" onClose={onClose} />);
     await userEvent.click(screen.getByRole("button", { name: /return/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("focuses the return button and closes on Escape", async () => {
+    render(<DiscussionPanel branchId="hosted-automation" onClose={onClose} />);
+
+    const returnButton = screen.getByRole("button", { name: /return/i });
+    expect(document.activeElement).toBe(returnButton);
+
+    await userEvent.keyboard("{Escape}");
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("traps tab focus inside the dialog", async () => {
+    render(<DiscussionPanel branchId="mcp-agent-scale" onClose={onClose} />);
+
+    const firstLink = screen.getByRole("link", { name: "Anthropic MCP" });
+    const returnButton = screen.getByRole("button", { name: /return/i });
+    returnButton.focus();
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(firstLink);
+
+    await userEvent.tab({ shift: true });
+    expect(document.activeElement).toBe(returnButton);
   });
 
   it("shows hosted-automation detail paragraph", () => {

@@ -107,6 +107,14 @@ describe("InteractiveFigure", () => {
     expect(container.querySelector(".react-flow__handle-bottom")).toBeInTheDocument();
   });
 
+  it("keeps one node tabbable when no node is marked current", () => {
+    renderFigure({ focusPath: [], activeNodeId: null });
+
+    expect(figureNode("client")).toHaveAttribute("tabindex", "0");
+    expect(figureNode("runtime")).toHaveAttribute("tabindex", "-1");
+    expect(figureNode("leaf")).toHaveAttribute("tabindex", "-1");
+  });
+
   it("uses left and right handles for flow figures", () => {
     const flowCatalog: FigureCatalogDefinition = {
       ...validCatalog,

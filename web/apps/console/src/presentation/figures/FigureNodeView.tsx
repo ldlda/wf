@@ -56,7 +56,7 @@ export const FigureNodeView = ({
       <span className="figure-node__kind">{kindLabel[node.kind] ?? node.kind}</span>
       <strong className="figure-node__label">{node.label}</strong>
       <span className="figure-node__summary">{node.summary}</span>
-      {expandable && <span className="figure-node__expand-affance" aria-hidden="true">▸</span>}
+      {expandable && <span className="figure-node__expand-affordance" aria-hidden="true">▸</span>}
       {isActive && <span className="figure-node__current-marker">Current</span>}
     </button>
   );

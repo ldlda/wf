@@ -5,6 +5,7 @@ import {
   disconnectedCyclicCatalog,
   duplicateFigureCatalog,
   duplicateNodeCatalog,
+  explicitFigureMissingPosition,
   unknownChildCatalog,
   unknownEdgeCatalog,
   unknownRootCatalog,
@@ -26,5 +27,12 @@ describe("defineFigureCatalog", () => {
     ["disconnected child cycle", disconnectedCyclicCatalog, "child_cycle"],
   ])("rejects %s", (_label, catalog, code) => {
     expect(() => defineFigureCatalog(catalog)).toThrow(code);
+  });
+
+  it("rejects explicit layouts missing a node position", () => {
+    expect(() => defineFigureCatalog({
+      rootFigureId: explicitFigureMissingPosition.id,
+      figures: [explicitFigureMissingPosition],
+    })).toThrow("missing_explicit_position:explicit-missing:runtime");
   });
 });

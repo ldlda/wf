@@ -123,6 +123,32 @@ describe("useDemoAgent", () => {
     expect(result.current.pendingActions).toEqual([]);
   });
 
+  it("aborts a pending approval when the hook unmounts", async () => {
+    let observedSignal: AbortSignal | null = null;
+    const driver: AgentDriver = {
+      kind: "prepared-recipe",
+      run: async function* (_input, signal, requestApproval) {
+        observedSignal = signal;
+        yield {
+          id: "approval-msg",
+          role: "assistant",
+          parts: [{ type: "approval-request", callId: "call-1", name: "resumeIssueReview", prompt: "Approve?" }],
+        };
+        await requestApproval(signal);
+      },
+    };
+    const { result, unmount } = renderHook(() => useDemoAgent(driver));
+    act(() => result.current.startPreparedReplay());
+
+    await waitFor(() => {
+      expect(result.current.phase).toBe("awaiting-approval");
+    });
+
+    unmount();
+
+    expect((observedSignal as AbortSignal | null)?.aborted).toBe(true);
+  });
+
   it("denial halts the driver and clears awaiting-approval", async () => {
     const driver = createFakeApprovalDriver(async () => ({ approved: false, comment: "nope" }));
     const { result } = renderHook(() => useDemoAgent(driver));

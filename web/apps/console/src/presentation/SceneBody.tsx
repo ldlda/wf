@@ -1,5 +1,12 @@
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
-import { findBeat, findScene, type PresentationLocation, type SceneDefinition, type SceneBeatDefinition } from "./storyboard.js";
+import {
+  discussionBranches,
+  findBeat,
+  findScene,
+  type PresentationLocation,
+  type SceneDefinition,
+  type SceneBeatDefinition,
+} from "./storyboard.js";
 import { DemoWorkflowScene } from "./DemoWorkflowScene.js";
 import { StageCaption } from "./StageCaption.js";
 import { ArchitectureScene } from "./scenes/ArchitectureScene.js";
@@ -8,10 +15,35 @@ type SceneBodyProps = {
   readonly location: PresentationLocation;
   readonly demo: DemoTimelineController;
   readonly selectedNodeId: string | null;
-  readonly selectNode: (nodeId: string) => void;
+  readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
+  readonly openDiscussion: (branchId: string) => void;
   readonly onFocusPathChange: (path: readonly string[]) => void;
   readonly motionDisabled: boolean;
+};
+
+const DiscussionLinks = ({
+  sceneId,
+  openDiscussion,
+}: {
+  readonly sceneId: string;
+  readonly openDiscussion: (branchId: string) => void;
+}) => {
+  const branches = discussionBranches.filter((branch) => branch.parentSceneId === sceneId);
+  if (branches.length === 0) return null;
+  return (
+    <div className="scene-body__discussion-links" aria-label="discussion topics">
+      {branches.map((branch) => (
+        <button
+          key={branch.id}
+          type="button"
+          onClick={() => openDiscussion(branch.id)}
+        >
+          {branch.title}
+        </button>
+      ))}
+    </div>
+  );
 };
 
 const NarrativeScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
@@ -176,12 +208,14 @@ const assertNever = (value: never): never => {
   throw new Error(`Unexpected view: ${value}`);
 };
 
-export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence, onFocusPathChange, motionDisabled }: SceneBodyProps) => {
+export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled }: SceneBodyProps) => {
   const sceneId = location.kind === "main" ? location.sceneId : "positioning";
   const beatId = location.kind === "main" ? location.beatId : "landscape";
   const scene = findScene(sceneId) ?? findScene("thesis")!;
   const beat = findBeat(sceneId, beatId) ?? scene.beats[0]!;
 
+  const discussionLinks = <DiscussionLinks sceneId={scene.id} openDiscussion={openDiscussion} />;
+  const content = (() => {
   switch (scene.view) {
     case "narrative":
       return <NarrativeScene scene={scene} beat={beat} />;
@@ -224,4 +258,12 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
     default:
       return assertNever(scene.view);
   }
+  })();
+
+  return (
+    <>
+      {content}
+      {discussionLinks}
+    </>
+  );
 };

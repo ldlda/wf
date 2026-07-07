@@ -7,11 +7,11 @@ import { useDemoTimeline } from "../demo/useDemoTimeline.js";
 import { PresentationCanvas } from "./PresentationCanvas.js";
 import { PresentationStage } from "./PresentationStage.js";
 import {
-  initialPresentationState,
+  createInitialPresentationState,
   presentationReducer,
 } from "./presentation-state.js";
 import { hashForLocation } from "./storyboard-navigation.js";
-import type { PresentationLocation } from "./storyboard.js";
+import type { MainLocation } from "./storyboard.js";
 import "./presentation.css";
 import "./styles/demo-workflow.css";
 
@@ -33,10 +33,10 @@ const projectRecordingToEvidence = (
 export const PresentationRoute = () => {
   const [state, dispatch] = useReducer(
     presentationReducer,
-    initialPresentationState,
-    (initial) => presentationReducer(
-      { ...initial, startedAt: Date.now() },
-      { type: "jump_hash", hash: window.location.hash },
+    window.location.hash,
+    (initialHash) => presentationReducer(
+      createInitialPresentationState(),
+      { type: "jump_hash", hash: initialHash },
     ),
   );
 
@@ -127,10 +127,10 @@ export const PresentationRoute = () => {
     if (agent.pendingActions.length > 0) {
       agent.clearPendingActions();
     }
-  }, [agent.pendingActions, agent.clearPendingActions, evidence.length, replayEvidence]);
+  }, [agent.pendingActions, agent.clearPendingActions]);
 
   const handleJump = useCallback(
-    (location: PresentationLocation) => dispatch({ type: "jump", location }),
+    (location: MainLocation) => dispatch({ type: "jump", location }),
     [],
   );
 
