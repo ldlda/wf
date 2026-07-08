@@ -168,6 +168,63 @@ describe("SceneBody", () => {
     expect(withinBoundary.getByText(/JSON-RPC/)).toBeInTheDocument();
   });
 
+  it("renders Scene 5 as a full workflow lifecycle rail", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "lifecycle", beatId: "deployment", focusPath: [] };
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    const rail = screen.getByLabelText("workflow lifecycle rail");
+    expect(rail).toHaveAttribute("data-lifecycle-active-stage", "deployment");
+    const withinRail = within(rail);
+    expect(withinRail.getByText("Draft")).toBeInTheDocument();
+    expect(withinRail.getByText("Artifact")).toBeInTheDocument();
+    expect(withinRail.getByText("Deployment")).toBeInTheDocument();
+    expect(withinRail.getByText("Run")).toBeInTheDocument();
+    expect(withinRail.getByText("Source binding")).toBeInTheDocument();
+  });
+
+  it("updates the lifecycle explanation with the active beat", () => {
+    const { rerender } = render(
+      <SceneBody
+        location={{ kind: "main", sceneId: "lifecycle", beatId: "draft", focusPath: [] }}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    expect(screen.getByLabelText("current lifecycle state")).toHaveTextContent("Mutable authoring state");
+
+    rerender(
+      <SceneBody
+        location={{ kind: "main", sceneId: "lifecycle", beatId: "run", focusPath: [] }}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    expect(screen.getByLabelText("current lifecycle state")).toHaveTextContent("Execution record and trace");
+  });
+
   it("marks the planner side active on the planner beat", () => {
     const location: PresentationLocation = { kind: "main", sceneId: "planner-runtime", beatId: "planner", focusPath: [] };
     render(

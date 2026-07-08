@@ -166,32 +166,44 @@ const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBea
 };
 
 const lifecycleStages = [
-  { id: "draft", label: "Draft" },
-  { id: "artifact", label: "Artifact" },
-  { id: "deployment", label: "Deployment" },
-  { id: "run", label: "Run" },
-];
+  { id: "draft", label: "Draft", role: "Mutable authoring state", detail: "Iterate before freezing a workflow definition." },
+  { id: "artifact", label: "Artifact", role: "Immutable workflow definition", detail: "Save a versioned plan that can be deployed." },
+  { id: "deployment", label: "Deployment", role: "Source binding", detail: "Bind workflow requirements to configured runtime sources." },
+  { id: "run", label: "Run", role: "Execution record and trace", detail: "Persist status, outputs, interrupts, and trace evidence." },
+] as const;
 
-const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
-  <>
-    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
-      <p>{beat.caption}</p>
-    </StageCaption>
-    <div className="scene-body__lifecycle">
-      {lifecycleStages.map((stage, i) => (
-        <div
-          key={stage.id}
-          className={`scene-body__lifecycle-stage${beat.id === stage.id ? " scene-body__lifecycle-stage--active" : ""}`}
-        >
-          <span className="scene-body__lifecycle-number">{i + 1}</span>
-          <strong>{stage.label}</strong>
-          {i < lifecycleStages.length - 1 && <span className="scene-body__lifecycle-arrow">→</span>}
-        </div>
-      ))}
-    </div>
-    <p className="scene-body__evidence">{scene.evidencePointer}</p>
-  </>
-);
+const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
+  const activeIndex = Math.max(0, lifecycleStages.findIndex((stage) => stage.id === beat.id));
+  const activeStage = lifecycleStages[activeIndex] ?? lifecycleStages[0];
+  return (
+    <>
+      <StageCaption eyebrow="Act II · implemented" title={scene.title}>
+        <p>{beat.caption}</p>
+      </StageCaption>
+      <div className="scene-body__lifecycle" aria-label="workflow lifecycle rail" data-lifecycle-active-stage={activeStage.id}>
+        {lifecycleStages.map((stage, i) => (
+          <article
+            key={stage.id}
+            className="scene-body__lifecycle-stage"
+            data-lifecycle-active={i === activeIndex ? "true" : "false"}
+            data-lifecycle-complete={i < activeIndex ? "true" : "false"}
+          >
+            <span className="scene-body__lifecycle-number">{i + 1}</span>
+            <strong>{stage.label}</strong>
+            <small>{stage.role}</small>
+            {i < lifecycleStages.length - 1 && <span className="scene-body__lifecycle-arrow">→</span>}
+          </article>
+        ))}
+      </div>
+      <aside className="scene-body__lifecycle-current" aria-label="current lifecycle state">
+        <span>{activeStage.label}</span>
+        <strong>{activeStage.role}</strong>
+        <p>{activeStage.detail}</p>
+      </aside>
+      <p className="scene-body__evidence">{scene.evidencePointer}</p>
+    </>
+  );
+};
 
 const authoringSteps = [
   { id: "discover", label: "Discover capability", detail: "wf schema / cap inspect" },
