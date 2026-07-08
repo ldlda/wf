@@ -667,6 +667,19 @@
   }
 }
 
+/* The operation receipt is absolute at the top of graph beats. Outcome panels
+   need the same top clearance or their headings clip under the receipt row. */
+.demo-workflow-stage:has(.demo-outcome-panel) .demo-outcome-panel {
+  margin-top: 3.15rem;
+  min-height: 0;
+}
+
+.demo-workflow-stage[data-demo-layout="approval"] .demo-outcome-panel,
+.demo-workflow-stage[data-demo-layout="evidence"] .demo-outcome-panel {
+  align-self: stretch;
+  overflow: hidden;
+}
+
 .demo-workflow-stage:has(.demo-outcome-panel) {
   grid-template-columns: minmax(0, 1fr) minmax(15rem, 23%);
   gap: 0.85rem;

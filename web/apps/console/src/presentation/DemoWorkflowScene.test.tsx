@@ -142,6 +142,14 @@ describe("DemoWorkflowScene", () => {
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC evidence");
   });
 
+  it("marks outcome-panel layouts so CSS can clear the receipt row", () => {
+    renderBeat("approval", "interrupt-evidence");
+
+    expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "approval");
+    expect(screen.getByLabelText("demo outcome proof")).toBeInTheDocument();
+    expect(screen.getByLabelText("workflow.runs.start execution receipt")).toBeInTheDocument();
+  });
+
   it("shows the continuity rail across Scene 9 operation, graph, and interrupt beats", () => {
     const { unmount } = renderBeat("operation");
     expect(screen.getByLabelText("demo continuity")).toHaveTextContent("workflow.runs.start");
