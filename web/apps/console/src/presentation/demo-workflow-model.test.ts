@@ -33,7 +33,10 @@ describe("demo workflow presentation model", () => {
     expect(projectInterruptContract(requireEvent("run_start"))).toEqual({
       kind: "issue_review",
       outcomes: ["submitted", "cancelled"],
+      requestSchema: { type: "object" },
       resumeSchema: { type: "object" },
+      resumePayloadPreview: null,
+      resumeOutcome: null,
       runId: "run_recorded_lda_report",
     });
   });
