@@ -400,6 +400,34 @@
   transform: translate(-50%, -50%);
 }
 
+.workflow-graph-stage[data-graph-variant="compact"] {
+  min-height: 0;
+}
+
+.workflow-graph-stage[data-graph-variant="compact"] .workflow-graph-stage__legend {
+  right: 0.6rem;
+  gap: 0.55rem;
+  font-size: 0.5rem;
+}
+
+.workflow-graph-stage[data-graph-variant="compact"] .workflow-graph-stage__node {
+  width: clamp(6rem, 8.5vw, 7.4rem);
+  min-height: 3.55rem;
+  padding: 0.48rem 0.55rem;
+}
+
+.workflow-graph-stage[data-graph-variant="compact"] .workflow-graph-stage__node strong {
+  font-size: 0.72rem;
+}
+
+.workflow-graph-stage[data-graph-variant="compact"] .workflow-graph-stage__node small {
+  font-size: 0.58rem;
+}
+
+.workflow-graph-stage[data-graph-variant="compact"] .workflow-graph-stage__node-state {
+  font-size: 0.48rem;
+}
+
 .workflow-graph-stage__proof {
   position: absolute;
   z-index: 4;
@@ -524,11 +552,16 @@
     oklch(0.135 0.025 250);
 }
 
-.demo-workflow-stage[data-demo-layout="approval"] .demo-workflow-stage__graph,
 .demo-workflow-stage[data-demo-layout="interrupt"] .demo-workflow-stage__graph {
-  grid-template-columns: minmax(18rem, 0.78fr) minmax(26rem, 1.22fr);
+  grid-template-columns: minmax(20rem, 0.95fr) minmax(24rem, 1.05fr);
   align-items: stretch;
   gap: 1rem;
+}
+
+.demo-workflow-stage[data-demo-layout="approval"] .demo-workflow-stage__graph {
+  grid-template-columns: minmax(20rem, 1fr);
+  align-items: stretch;
+  gap: 0;
 }
 
 .demo-workflow-stage[data-demo-layout="approval"] .interrupt-contract-preview,
@@ -539,11 +572,19 @@
   color: var(--text-primary);
 }
 
-.demo-workflow-stage[data-demo-layout="approval"] .workflow-graph-stage,
 .demo-workflow-stage[data-demo-layout="interrupt"] .workflow-graph-stage {
   grid-column: 2;
   grid-row: 1;
   min-height: 18rem;
+}
+
+/* Approval is contract-first. The graph becomes a context strip below the
+   contract instead of a narrow competing column. */
+.demo-workflow-stage[data-demo-layout="approval"] .workflow-graph-stage {
+  grid-column: 1;
+  grid-row: 2;
+  min-height: 7.8rem;
+  margin-top: 0.75rem;
 }
 
 .interrupt-contract-preview[data-hero="true"] {
@@ -558,7 +599,6 @@
 }
 
 @media (max-width: 1050px) {
-  .demo-workflow-stage[data-demo-layout="approval"] .demo-workflow-stage__graph,
   .demo-workflow-stage[data-demo-layout="interrupt"] .demo-workflow-stage__graph {
     grid-template-columns: minmax(17rem, 40%) minmax(0, 1fr);
   }
@@ -690,11 +730,7 @@
 }
 
 .demo-workflow-stage[data-demo-layout="approval"] {
-  grid-template-columns: minmax(0, 1.2fr) minmax(17rem, 0.55fr);
-}
-
-.demo-workflow-stage[data-demo-layout="approval"] .demo-workflow-stage__graph {
-  grid-template-columns: minmax(0, 1fr) minmax(17rem, 32%);
+  grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
 }
 
 .demo-workflow-stage[data-demo-layout="evidence"] {

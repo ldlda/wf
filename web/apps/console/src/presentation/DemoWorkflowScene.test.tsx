@@ -182,6 +182,14 @@ describe("DemoWorkflowScene", () => {
     expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "full");
   });
 
+  it("keeps approval beat contract, compact graph, and outcome proof present", () => {
+    renderBeat("approval", "interrupt-evidence");
+
+    expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
+    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "compact");
+    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("schema-backed");
+  });
+
   it("adds outcome proof to approval, resume, output, and trace beats", () => {
     const approval = renderBeat("approval", "interrupt-evidence");
     expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("schema-backed");
