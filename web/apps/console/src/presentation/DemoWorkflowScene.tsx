@@ -1,9 +1,13 @@
 import type { DemoEvent } from "../demo/timeline/models.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import {
+  demoBeatLensForBeat,
   graphExecutionForBeat,
   projectInterruptContract,
+  projectOperationPresentation,
 } from "./demo-workflow-model.js";
+import { DemoContinuityRail } from "./DemoContinuityRail.js";
+import { DemoOutcomePanel } from "./DemoOutcomePanel.js";
 import { InterruptContractPreview } from "./InterruptContractPreview.js";
 import { NodeSpotlight } from "./NodeSpotlight.js";
 import { OperationBlock } from "./OperationBlock.js";
@@ -56,6 +60,10 @@ export const DemoWorkflowScene = ({
   const execution = graphExecutionForBeat(beat.id);
   const layout = layoutForBeat(beat.id);
 
+  const lens = demoBeatLensForBeat(beat.id);
+  const currentOperation = currentEvent ? projectOperationPresentation(currentEvent) : null;
+  const showOutcomePanel = beat.id === "approval" || beat.id === "resume" || beat.id === "output" || beat.id === "trace";
+
   const showExpandedOperation = beat.id === "operation" || beat.id === "resume" || beat.id === "trace";
   const showGraph = beat.id === "graph" || beat.id === "interrupt" || beat.id === "approval" || beat.id === "output";
   const showReceipt = showGraph;
@@ -70,6 +78,8 @@ export const DemoWorkflowScene = ({
       <StageCaption eyebrow="Live system walkthrough" title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
+
+      <DemoContinuityRail lens={lens} />
 
       <div className="demo-workflow-stage" data-beat={beat.id} data-demo-layout={layout} aria-label="demo workflow stage">
           {showExpandedOperation && currentEvent && (
@@ -103,6 +113,15 @@ export const DemoWorkflowScene = ({
                 />
               )}
             </div>
+          )}
+
+          {showOutcomePanel && (
+            <DemoOutcomePanel
+              beatId={beat.id}
+              lens={lens}
+              operation={currentOperation}
+              contract={contract}
+            />
           )}
 
           {showExpandedOperation && !currentEvent && (

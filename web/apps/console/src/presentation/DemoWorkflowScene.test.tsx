@@ -131,4 +131,35 @@ describe("DemoWorkflowScene", () => {
     renderBeat("trace", "interrupt-evidence");
     expect(screen.getByLabelText("workflow.runs.trace operation")).toBeInTheDocument();
   });
+
+  it("shows the continuity rail across Scene 9 operation, graph, and interrupt beats", () => {
+    const { unmount } = renderBeat("operation");
+    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("Request becomes a workflow run");
+    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("workflow.runs.start");
+    unmount();
+
+    const graph = renderBeat("graph");
+    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("The product owns the reusable workflow shape");
+    graph.unmount();
+
+    renderBeat("interrupt");
+    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("Execution stops at a declared human boundary");
+  });
+
+  it("adds outcome proof to approval, resume, output, and trace beats", () => {
+    const approval = renderBeat("approval", "interrupt-evidence");
+    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("schema-backed");
+    approval.unmount();
+
+    const resume = renderBeat("resume", "interrupt-evidence");
+    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("Same persisted run");
+    resume.unmount();
+
+    const output = renderBeat("output", "interrupt-evidence");
+    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("Report markdown");
+    output.unmount();
+
+    renderBeat("trace", "interrupt-evidence");
+    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("Trace frames");
+  });
 });
