@@ -736,6 +736,74 @@
   font: 600 0.6rem/1.1 var(--font-mono, monospace);
 }
 
+.demo-outcome-panel {
+  display: grid;
+  gap: 0.65rem;
+  align-content: start;
+  border: 1px solid oklch(0.76 0.18 70 / 0.38);
+  border-radius: 0.85rem;
+  padding: 0.85rem;
+  background:
+    linear-gradient(145deg, oklch(0.76 0.18 70 / 0.08), transparent 55%),
+    oklch(0.13 0.025 250 / 0.9);
+  color: var(--text-primary);
+}
+
+.demo-outcome-panel > span {
+  color: var(--accent-amber);
+  font: 700 0.62rem/1 var(--font-mono, monospace);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.demo-outcome-panel > strong {
+  font-size: 1rem;
+  line-height: 1.18;
+}
+
+.demo-outcome-panel dl {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.demo-outcome-panel dt {
+  color: var(--text-muted);
+  font: 700 0.58rem/1 var(--font-mono, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.demo-outcome-panel dd {
+  margin: 0.2rem 0 0;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.demo-outcome-panel ul {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-outcome-panel li {
+  border: 1px solid var(--stage-line);
+  border-radius: 0.65rem;
+  padding: 0.6rem;
+  background: oklch(0.11 0.022 250 / 0.72);
+}
+
+.demo-outcome-panel b {
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.demo-outcome-panel small {
+  color: var(--text-secondary);
+}
+
 @container presentation-canvas (max-width: 1050px) {
   .demo-continuity-rail {
     grid-template-columns: minmax(0, 1fr);
