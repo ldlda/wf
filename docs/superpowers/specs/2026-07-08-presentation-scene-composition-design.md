@@ -224,7 +224,7 @@ Required screenshot smoke:
 - `/present#scene/planner-runtime/boundary`
 - `/present#scene/lifecycle/draft`
 - `/present#scene/lifecycle/run`
-- `/present#scene/workflow-demo/approval`
+- `/present#scene/interrupt-evidence/approval`
 
 Save screenshots under `web/apps/console/.visual-smoke/`, which is ignored.
 
