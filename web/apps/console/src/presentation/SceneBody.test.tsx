@@ -71,7 +71,7 @@ describe("SceneBody", () => {
         motionDisabled={false}
       />,
     );
-    expect(screen.getByLabelText(/workflow graph/i)).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "workflow graph" })).toBeInTheDocument();
   });
 
   it("opens thesis Q&A branches from the thesis scene", async () => {

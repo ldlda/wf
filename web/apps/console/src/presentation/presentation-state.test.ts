@@ -152,7 +152,7 @@ describe("presentationReducer", () => {
       location: { kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] },
     });
     expect(compositionForState(state)).toMatchObject({
-      chatMode: "rail",
+      chatMode: "hidden",
     });
   });
 

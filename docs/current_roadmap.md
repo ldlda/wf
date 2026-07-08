@@ -148,9 +148,13 @@ Presentation wishlist / defense readiness:
       continuous product demonstration from agent handoff, to persisted run, to
       typed interrupt, to resume/output/evidence. Implementation:
       [`demo climax craft pass`](historical/superpowers/plans/2026-07-08-demo-climax-craft-pass.md).
-   6. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
+   6. Completed: demo product proof layout pass hid chat during graph-heavy
+      beats, kept workflow graph nodes in frame, added run-proof labels inside
+      the graph, and cleared outcome panels below the receipt row. Implementation:
+      [`demo product proof layout`](historical/superpowers/plans/2026-07-09-demo-product-proof-layout.md).
+   7. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
       hierarchy, evidence receipt placement, and remaining generic-slide styling
-      after the demo climax is stable.
+      after the demo proof layout is stable.
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
