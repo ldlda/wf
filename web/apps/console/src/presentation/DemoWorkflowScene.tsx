@@ -20,6 +20,16 @@ type DemoWorkflowSceneProps = {
   readonly openEvidence: () => void;
 };
 
+type DemoWorkflowLayout = "operation" | "graph" | "interrupt" | "approval" | "evidence";
+
+const layoutForBeat = (beatId: string): DemoWorkflowLayout => {
+  if (beatId === "operation" || beatId === "resume") return "operation";
+  if (beatId === "interrupt") return "interrupt";
+  if (beatId === "approval") return "approval";
+  if (beatId === "trace" || beatId === "output") return "evidence";
+  return "graph";
+};
+
 const operationStageByBeat: Readonly<Record<string, DemoEvent["stage"] | undefined>> = {
   operation: "run_start",
   resume: "run_resume",
@@ -44,6 +54,7 @@ export const DemoWorkflowScene = ({
   const currentEvent = currentStage ? findEvent(demo, currentStage) : null;
   const contract = runStart ? projectInterruptContract(runStart) : null;
   const execution = graphExecutionForBeat(beat.id);
+  const layout = layoutForBeat(beat.id);
 
   const showExpandedOperation = beat.id === "operation" || beat.id === "resume" || beat.id === "trace";
   const showGraph = beat.id === "graph" || beat.id === "interrupt" || beat.id === "approval" || beat.id === "output";
@@ -60,7 +71,7 @@ export const DemoWorkflowScene = ({
         <p>{beat.caption}</p>
       </StageCaption>
 
-      <div className="demo-workflow-stage" data-beat={beat.id}>
+      <div className="demo-workflow-stage" data-beat={beat.id} data-demo-layout={layout} aria-label="demo workflow stage">
           {showExpandedOperation && currentEvent && (
             <OperationBlock
               event={currentEvent}
@@ -85,7 +96,11 @@ export const DemoWorkflowScene = ({
                 selectNode={selectNode}
               />
               {contractMode && contract && (
-                <InterruptContractPreview contract={contract} mode={contractMode} />
+                <InterruptContractPreview
+                  contract={contract}
+                  mode={contractMode}
+                  hero={layout === "approval"}
+                />
               )}
             </div>
           )}

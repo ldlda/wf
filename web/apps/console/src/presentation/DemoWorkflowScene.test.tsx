@@ -105,6 +105,22 @@ describe("DemoWorkflowScene", () => {
     );
   });
 
+  it("makes the Scene 10 approval contract the primary visual", () => {
+    renderBeat("approval", "interrupt-evidence");
+
+    const stage = screen.getByLabelText("demo workflow stage");
+    expect(stage).toHaveAttribute("data-demo-layout", "approval");
+    expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
+    expect(screen.getByLabelText("workflow graph")).toBeInTheDocument();
+  });
+
+  it("marks trace beat as evidence layout", () => {
+    renderBeat("trace", "interrupt-evidence");
+
+    expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "evidence");
+    expect(screen.getByLabelText("workflow.runs.trace operation")).toBeInTheDocument();
+  });
+
   it("renders resume and trace operations as expanded evidence summaries", () => {
     const { unmount } = renderBeat("resume", "interrupt-evidence");
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();

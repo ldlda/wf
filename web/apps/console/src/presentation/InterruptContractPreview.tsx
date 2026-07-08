@@ -5,15 +5,18 @@ import { formatJson } from "./format.js";
 type InterruptContractPreviewProps = {
   readonly contract: InterruptContractPresentation;
   readonly mode: "preview" | "approval";
+  readonly hero?: boolean;
 };
 
 export const InterruptContractPreview = ({
   contract,
   mode,
+  hero = false,
 }: InterruptContractPreviewProps) => (
   <m.aside
     className="interrupt-contract-preview"
     data-mode={mode}
+    data-hero={hero ? "true" : "false"}
     initial={{ opacity: 0, x: 10 }}
     animate={{ opacity: 1, x: 0 }}
     transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
