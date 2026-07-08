@@ -117,7 +117,6 @@ export const OperatorChat = ({ state, messages, onApprove, onDeny }: OperatorCha
       className="operator-chat"
       data-mode={composition.chatMode}
       data-chat-theme={composition.chatTheme}
-      data-readable-surface={composition.chatTheme === "light" ? "light" : "dark"}
       data-presentation-surface={presentationSurface}
       aria-label="scripted operator chat"
     >

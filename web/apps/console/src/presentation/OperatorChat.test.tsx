@@ -30,12 +30,12 @@ describe("OperatorChat", () => {
     expect(chat).toHaveAttribute("data-presentation-surface", "night");
   });
 
-  it("exposes chat theme and readable surface attributes", () => {
+  it("exposes semantic chat surface attributes", () => {
     render(<OperatorChat state={initialPresentationState} />);
 
     const chat = screen.getByLabelText("scripted operator chat");
     expect(chat).toHaveAttribute("data-chat-theme");
-    expect(chat).toHaveAttribute("data-readable-surface");
+    expect(chat).not.toHaveAttribute("data-readable-surface");
   });
 
   it("renders standard agent message parts", () => {
