@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
@@ -117,6 +117,51 @@ describe("SceneBody", () => {
     await user.click(screen.getByRole("button", { name: /hosted automation/i }));
 
     expect(openDiscussion).toHaveBeenCalledWith("hosted-automation");
+  });
+
+  it("renders Scene 3 as a full positioning map", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    const map = screen.getByLabelText("positioning map");
+    expect(map).toHaveAttribute("data-positioning-active-region", "landscape");
+    const withinMap = within(map);
+    expect(withinMap.getByText("Tool loops")).toBeInTheDocument();
+    expect(withinMap.getByText("Generated scripts")).toBeInTheDocument();
+    expect(withinMap.getByText("lda.chat")).toBeInTheDocument();
+    expect(withinMap.getByText("Agent graphs")).toBeInTheDocument();
+    expect(withinMap.getByText("MCP")).toBeInTheDocument();
+  });
+
+  it("emphasizes lda.chat in the positioning beat", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "lda-position", focusPath: [] };
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    const substrate = screen.getByText("lda.chat").closest("[data-positioning-role='substrate']");
+    expect(substrate).toHaveAttribute("data-positioning-active", "true");
+    expect(screen.getByLabelText("positioning map")).toHaveAttribute("data-positioning-active-region", "lda");
   });
 
   it("renders Scene 7 as an agent authoring loop with beat-specific emphasis", () => {

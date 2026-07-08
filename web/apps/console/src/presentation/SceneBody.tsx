@@ -62,27 +62,51 @@ const PositioningScene = ({ scene, beat }: { scene: SceneDefinition; beat: Scene
       <StageCaption eyebrow={`Act I · ${scene.claimClass}`} title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
-      <div className="scene-body__positioning-grid">
-        <div className="scene-body__positioning-card">
-          <strong>Tool loops</strong>
-          <span>Direct action, no lifecycle</span>
-        </div>
-        <div className="scene-body__positioning-card">
-          <strong>Scripts</strong>
-          <span>Simple, debuggable</span>
-        </div>
-        <div className={`scene-body__positioning-card${highlightLda ? " scene-body__positioning-card--active" : ""}`}>
+      <div
+        className="scene-body__positioning-map"
+        aria-label="positioning map"
+        data-positioning-active-region={highlightLda ? "lda" : "landscape"}
+      >
+        <section className="scene-body__positioning-column" aria-label="direct action patterns">
+          <p className="scene-body__positioning-label">Direct action</p>
+          <article className="scene-body__positioning-tile">
+            <strong>Tool loops</strong>
+            <span>Fast action, no durable lifecycle</span>
+          </article>
+          <article className="scene-body__positioning-tile">
+            <strong>Generated scripts</strong>
+            <span>Inspectable code, weak deployment records</span>
+          </article>
+        </section>
+        <article
+          className="scene-body__positioning-substrate"
+          data-positioning-role="substrate"
+          data-positioning-active={highlightLda ? "true" : "false"}
+        >
+          <span className="scene-body__positioning-label">This thesis</span>
           <strong>lda.chat</strong>
-          <span>Typed lifecycle contracts</span>
-        </div>
-        <div className="scene-body__positioning-card">
-          <strong>Agent graphs</strong>
-          <span>Shared durability</span>
-        </div>
-        <div className="scene-body__positioning-card">
-          <strong>MCP</strong>
-          <span>Capability protocol</span>
-        </div>
+          <p>Typed workflow substrate for external agents and human operators.</p>
+          <ul>
+            <li>Lifecycle</li>
+            <li>Validation</li>
+            <li>Persisted records</li>
+          </ul>
+        </article>
+        <section className="scene-body__positioning-column" aria-label="adjacent systems">
+          <p className="scene-body__positioning-label">Adjacent systems</p>
+          <article className="scene-body__positioning-tile">
+            <strong>Hosted automation</strong>
+            <span>Managed triggers and app integrations</span>
+          </article>
+          <article className="scene-body__positioning-tile">
+            <strong>Agent graphs</strong>
+            <span>Durable planner loops</span>
+          </article>
+          <article className="scene-body__positioning-tile">
+            <strong>MCP</strong>
+            <span>Capability protocol boundary</span>
+          </article>
+        </section>
       </div>
       <p className="scene-body__evidence">{scene.evidencePointer}</p>
     </>
