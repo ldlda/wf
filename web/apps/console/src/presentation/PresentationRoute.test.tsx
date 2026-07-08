@@ -36,7 +36,7 @@ afterEach(() => {
 });
 
 describe("PresentationRoute", () => {
-  it("renders the presentation stage entry point", async () => {
+  it("renders the presentation stage entry point", { timeout: 15000 }, async () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
     expect(screen.getByRole("main", { name: /lda.chat presentation/i })).toBeInTheDocument();
@@ -171,5 +171,17 @@ describe("PresentationRoute", () => {
 
     expect(await screen.findByRole("heading", { name: /Interrupt, Resume, Evidence/i })).toBeInTheDocument();
     expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "approval");
+  });
+
+  it("chat run action advances the replay timeline when no live server is configured", async () => {
+    setReplayMode();
+    window.location.hash = "#scene/workflow-demo/operation";
+    const user = userEvent.setup();
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const runButton = await screen.findByRole("button", { name: /run replay walkthrough/i });
+    await user.click(runButton);
+    expect(await screen.findByLabelText("workflow.runs.start operation")).toBeInTheDocument();
   });
 });

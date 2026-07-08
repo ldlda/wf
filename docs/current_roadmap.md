@@ -120,10 +120,11 @@ Implementation order:
     approval UI instead of raw `{ "type": "object" }` as the primary product
     proof. Implementation:
     [`schema approval surface`](historical/superpowers/plans/2026-07-09-schema-approval-surface.md).
-16. Next: bridge presentation chat to the prepared workflow timeline so chat
-    can start the live/replay demo and submit/cancel the schema approval through
-    the existing `useDemoTimeline` execution path. Active implementation plan:
-    [`presentation chat timeline bridge`](superpowers/plans/2026-07-09-presentation-chat-timeline-bridge.md).
+16. Completed: presentation chat now drives the prepared workflow timeline.
+    The chat run action, schema approval submit/cancel, graph, evidence, and
+    live/replay execution all share `useDemoTimeline`; AI SDK remains a later
+    driver for the same seam. Implementation:
+    [`presentation chat timeline bridge`](historical/superpowers/plans/2026-07-09-presentation-chat-timeline-bridge.md).
 17. Future: implement Guided Run Beat Gates, presenter companion, Scene 10
     product graph, final scene visuals, evidence assets, and rehearsal timing.
 18. Add a static slide/appendix shell only after presentation mode is clear.
