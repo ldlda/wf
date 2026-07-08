@@ -25,6 +25,9 @@ logs/
 coverage/
 .nyc_output/
 
+# Local presentation screenshots
+web/apps/console/.visual-smoke/
+
 # IDE/Editor Specific
 .vscode/
 .idea/

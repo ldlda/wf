@@ -127,6 +127,17 @@ Presentation wishlist / defense readiness:
   scale, authoring-loop clarity, interrupt/evidence emphasis, and presenter-note
   treatment. Implementation:
   [`defense presentation visual pass`](historical/superpowers/plans/2026-07-08-defense-presentation-visual-pass.md).
+- Next presentation visual slices:
+  1. Completed: contrast and readability fix pass repaired dark-on-dark text in
+     the Scene 7 authoring loop and the Scene 10 chat rail, and ignored local
+     `.visual-smoke/` screenshots. Implementation:
+     [`presentation contrast readability`](historical/superpowers/plans/2026-07-08-presentation-contrast-readability.md).
+  2. Scene composition pass: make Scene 6's default architecture view show the
+     full top-level path at `1280x720`, rebalance Scene 7 spacing after the
+     contrast fix, and tune Scene 10's graph-vs-contract proportions.
+  3. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
+     hierarchy, evidence receipt placement, and remaining generic-slide styling
+     after the compositions are stable.
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
