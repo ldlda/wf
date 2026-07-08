@@ -210,4 +210,21 @@ describe("InteractiveFigure", () => {
     expect(secondFigureId).not.toBe(firstFigureId);
     expect(figureNode("providers")).toBeInTheDocument();
   });
+
+  it("schedules a settled fitView pass for stage figures", () => {
+    const requestAnimationFrameSpy = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback: FrameRequestCallback) => {
+        callback(0);
+        return 1;
+      });
+    const cancelAnimationFrameSpy = vi.spyOn(window, "cancelAnimationFrame").mockImplementation(() => {});
+
+    renderFigure({ focusPath: [], size: "stage" });
+
+    expect(requestAnimationFrameSpy).toHaveBeenCalled();
+
+    requestAnimationFrameSpy.mockRestore();
+    cancelAnimationFrameSpy.mockRestore();
+  });
 });

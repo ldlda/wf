@@ -83,6 +83,10 @@ const FitViewOnLayoutChange = ({ layoutKey }: { layoutKey: string }) => {
   const { fitView } = useReactFlow();
   useEffect(() => {
     void fitView({ padding: 0.15, duration: 0 });
+    const frame = window.requestAnimationFrame(() => {
+      void fitView({ padding: 0.15, duration: 0 });
+    });
+    return () => window.cancelAnimationFrame(frame);
   }, [fitView, layoutKey]);
   return null;
 };
