@@ -13,8 +13,14 @@ describe("interactive-figure CSS", () => {
     expect(css).toContain("data-figure-node-kind");
   });
 
-  it("does not use uniform rounded cards or gradients", () => {
+  it("avoids pill-shaped cards outside the stage variant", () => {
     expect(css).not.toContain("border-radius: 9999px");
-    expect(css).not.toContain("linear-gradient");
+    // Base and wide figures must stay gradient-free. Stage variant uses a
+    // linear-gradient background to give the React Flow area visual weight.
+    const baseGradients = css.match(/\.interactive-figure(?:\s|\{)[^}]*gradient/g);
+    const stageGradients = css.match(/\[data-figure-size="stage"\][^}]*gradient/g);
+    const totalGradientSelectors = (baseGradients ?? []).length + (stageGradients ?? []).length;
+    // Only the stage variant should have gradients.
+    expect(totalGradientSelectors).toBe(stageGradients?.length ?? 0);
   });
 });
