@@ -134,6 +134,15 @@ describe("DiscussionPanel", () => {
     expect(screen.queryByLabelText("defense question")).not.toBeInTheDocument();
   });
 
+  it("marks the modal shell with the active layout for styling", () => {
+    const { rerender } = render(<DiscussionPanel branchId="where-is-ai-agent" onClose={onClose} />);
+    expect(screen.getByLabelText("discussion shell")).toHaveClass("discussion-panel__shell");
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-discussion-layout", "qna");
+
+    rerender(<DiscussionPanel branchId="hosted-automation" onClose={onClose} />);
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-discussion-layout", "context");
+  });
+
   it("shows mcp-agent-scale links to Anthropic and Cloudflare", () => {
     render(<DiscussionPanel branchId="mcp-agent-scale" onClose={onClose} />);
     const anthropic = screen.getByText("Anthropic MCP");
