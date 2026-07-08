@@ -135,10 +135,13 @@ describe("SceneBody", () => {
     );
 
     const loop = screen.getByLabelText("agent authoring loop");
+    expect(loop).toHaveAttribute("data-readable-surface", "dark");
     expect(loop).toHaveAttribute("data-active-stage", "diagnose");
     expect(screen.getByText("Discover capability")).toBeInTheDocument();
     expect(screen.getByText("Author draft")).toBeInTheDocument();
     expect(screen.getByText("Validate and diagnose").closest("[data-authoring-active]")).toHaveAttribute("data-authoring-active", "true");
+    expect(screen.getByText("Validate and diagnose").closest(".scene-body__authoring-node"))
+      .toHaveAttribute("data-readable-surface", "dark");
     expect(screen.getByText("Repair")).toBeInTheDocument();
     expect(screen.getByText("Compile or save")).toBeInTheDocument();
   });

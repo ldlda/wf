@@ -154,7 +154,12 @@ const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
     <StageCaption eyebrow="Act II · implemented" title={scene.title}>
       <p>{beat.caption}</p>
     </StageCaption>
-    <div className="scene-body__authoring-loop" aria-label="agent authoring loop" data-active-stage={beat.id}>
+    <div
+      className="scene-body__authoring-loop"
+      aria-label="agent authoring loop"
+      data-active-stage={beat.id}
+      data-readable-surface="dark"
+    >
       <div className="scene-body__authoring-loop-rail" aria-hidden="true" />
       {authoringSteps.map((step, i) => {
         const isActive = beat.id === step.id;
@@ -165,6 +170,7 @@ const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
             className="scene-body__authoring-node"
             data-authoring-active={isActive}
             data-authoring-past={isPast}
+            data-readable-surface="dark"
           >
             <span className="scene-body__authoring-number">{i + 1}</span>
             <strong>{step.label}</strong>

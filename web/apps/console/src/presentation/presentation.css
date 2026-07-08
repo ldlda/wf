@@ -739,7 +739,12 @@
   border-radius: 0.75rem;
   padding: 0.75rem;
   background: color-mix(in oklch, var(--stage-surface) 88%, transparent);
+  color: var(--text-primary);
   transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.scene-body__authoring-node strong {
+  color: var(--text-primary);
 }
 
 .scene-body__authoring-node[data-authoring-active="true"] {
@@ -753,7 +758,7 @@
 }
 
 .scene-body__authoring-node small {
-  color: var(--text-muted);
+  color: color-mix(in oklch, var(--text-primary) 72%, var(--text-muted));
   font: 0.72rem/1.35 var(--font-interface);
 }
 
