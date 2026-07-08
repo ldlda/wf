@@ -290,4 +290,26 @@ describe("SceneBody", () => {
     expect(screen.getByText("Repair")).toBeInTheDocument();
     expect(screen.getByText("Compile or save")).toBeInTheDocument();
   });
+
+  it("renders evidence before discussion links so the chip lane cannot cover evidence text", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };
+    const { container } = render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    const evidence = container.querySelector(".scene-body__evidence");
+    const links = container.querySelector(".scene-body__discussion-links");
+    expect(evidence).toBeInTheDocument();
+    expect(links).toBeInTheDocument();
+    expect(evidence?.compareDocumentPosition(links!)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
 });

@@ -134,4 +134,13 @@ describe("PresentationRoute", () => {
     expect(screen.queryByRole("dialog", { name: /evidence inspector/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /inspect evidence/i })).toBeInTheDocument();
   });
+
+  it("opens Scene 10 approval from the canonical hash", async () => {
+    window.location.hash = "#scene/interrupt-evidence/approval";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("heading", { name: /Interrupt, Resume, Evidence/i })).toBeInTheDocument();
+    expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "approval");
+  });
 });
