@@ -144,6 +144,49 @@ describe("SceneBody", () => {
     expect(withinMap.getByText("MCP")).toBeInTheDocument();
   });
 
+  it("renders Scene 4 as a planner runtime boundary", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "planner-runtime", beatId: "boundary", focusPath: [] };
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    const boundary = screen.getByLabelText("planner runtime boundary");
+    expect(boundary).toHaveAttribute("data-boundary-active", "boundary");
+    const withinBoundary = within(boundary);
+    expect(withinBoundary.getByText("Planner")).toBeInTheDocument();
+    expect(withinBoundary.getByText("Runtime")).toBeInTheDocument();
+    expect(withinBoundary.getByText(/CLI/)).toBeInTheDocument();
+    expect(withinBoundary.getByText(/JSON-RPC/)).toBeInTheDocument();
+  });
+
+  it("marks the planner side active on the planner beat", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "planner-runtime", beatId: "planner", focusPath: [] };
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    expect(screen.getByLabelText("planner runtime boundary")).toHaveAttribute("data-boundary-active", "planner");
+    expect(screen.getByText("Planner").closest("[data-boundary-side='planner']")).toHaveAttribute("data-boundary-emphasis", "active");
+  });
+
   it("emphasizes lda.chat in the positioning beat", () => {
     const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "lda-position", focusPath: [] };
     render(

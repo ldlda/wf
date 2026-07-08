@@ -758,36 +758,72 @@
 }
 
 .scene-body__boundary {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 0.26fr) minmax(0, 1fr);
   gap: 1rem;
-  margin-top: 0.75rem;
   align-items: stretch;
+  margin-top: 1.2rem;
+  min-height: 20rem;
 }
 
-.scene-body__boundary-side {
-  flex: 1;
-  padding: 0.75rem;
-  border: 1px solid oklch(0.36 0.04 250);
-  background: oklch(0.16 0.025 250);
-  border-radius: 0.5rem;
+.scene-body__boundary-pane {
+  display: grid;
+  align-content: center;
+  gap: 0.85rem;
+  border: 1px solid color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 32%, transparent);
+  border-radius: 1rem;
+  padding: 1.1rem;
+  background: color-mix(in oklch, var(--color-editorial-paper, oklch(0.975 0.012 82)) 82%, white);
+  color: var(--color-editorial-ink, oklch(0.19 0.015 65));
 }
 
-.scene-body__boundary-side h3 {
-  margin: 0 0 0.35rem;
-  font-size: 0.95rem;
+.scene-body__boundary-pane[data-boundary-emphasis="reduced"] {
+  opacity: 0.58;
 }
 
-.scene-body__boundary-side p {
+.scene-body__boundary-pane h3 {
   margin: 0;
-  font-size: 0.8rem;
-  color: oklch(0.78 0.03 250);
+  color: var(--color-editorial-ink, oklch(0.19 0.015 65));
+  font-size: 1.8rem;
+  line-height: 1;
 }
 
-.scene-body__boundary-divider {
-  width: 2px;
-  background: oklch(0.5 0.08 195);
-  border-radius: 1px;
-  align-self: stretch;
+.scene-body__boundary-pane > span {
+  color: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  font: 700 0.68rem/1 var(--font-mono, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scene-body__boundary-pane ul {
+  display: grid;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 1rem;
+  color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 78%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
+}
+
+.scene-body__boundary-seam {
+  display: grid;
+  place-content: center;
+  gap: 0.35rem;
+  border-inline: 2px solid color-mix(in oklch, var(--accent-cyan, oklch(0.7 0.16 195)) 58%, transparent);
+  color: var(--color-editorial-ink, oklch(0.19 0.015 65));
+  text-align: center;
+}
+
+.scene-body__boundary-seam strong {
+  font-size: 0.85rem;
+}
+
+.scene-body__boundary-seam span {
+  color: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+.scene-body__boundary[data-boundary-active="boundary"] .scene-body__boundary-seam {
+  background: color-mix(in oklch, var(--accent-cyan, oklch(0.7 0.16 195)) 7%, transparent);
 }
 
 .scene-body__lifecycle {
@@ -949,16 +985,6 @@
 }
 
 /* Beat-driven active states */
-.scene-body__boundary-side--dim {
-  opacity: 0.4;
-  transform: scale(0.97);
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-.scene-body__boundary-side {
-  transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
 .scene-body__lifecycle-stage {
   transition: opacity 0.3s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease;
 }

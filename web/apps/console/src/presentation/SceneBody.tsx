@@ -113,24 +113,52 @@ const PositioningScene = ({ scene, beat }: { scene: SceneDefinition; beat: Scene
   );
 };
 
+const boundaryActiveForBeat = (beatId: string): "planner" | "runtime" | "boundary" => {
+  if (beatId === "runtime") return "runtime";
+  if (beatId === "boundary") return "boundary";
+  return "planner";
+};
+
 const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
-  const showPlanner = beat.id === "planner" || beat.id === "boundary";
-  const showRuntime = beat.id === "runtime" || beat.id === "boundary";
+  const active = boundaryActiveForBeat(beat.id);
+  const plannerActive = active === "planner" || active === "boundary";
+  const runtimeActive = active === "runtime" || active === "boundary";
   return (
     <>
       <StageCaption eyebrow="Act II · implemented" title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
-      <div className="scene-body__boundary">
-        <div className={`scene-body__boundary-side${showPlanner ? "" : " scene-body__boundary-side--dim"}`}>
+      <div className="scene-body__boundary" aria-label="planner runtime boundary" data-boundary-active={active}>
+        <section
+          className="scene-body__boundary-pane"
+          data-boundary-side="planner"
+          data-boundary-emphasis={plannerActive ? "active" : "reduced"}
+        >
+          <span>External operator</span>
           <h3>Planner</h3>
-          <p>External LLM proposes and revises workflow structure.</p>
+          <ul>
+            <li>Proposes workflow structure</li>
+            <li>Revises steps and bindings</li>
+            <li>Chooses public operations</li>
+          </ul>
+        </section>
+        <div className="scene-body__boundary-seam" aria-label="workflow operation boundary">
+          <strong>CLI / JSON-RPC</strong>
+          <span>typed workflow operations</span>
         </div>
-        <div className="scene-body__boundary-divider" />
-        <div className={`scene-body__boundary-side${showRuntime ? "" : " scene-body__boundary-side--dim"}`}>
+        <section
+          className="scene-body__boundary-pane"
+          data-boundary-side="runtime"
+          data-boundary-emphasis={runtimeActive ? "active" : "reduced"}
+        >
+          <span>lda.chat substrate</span>
           <h3>Runtime</h3>
-          <p>Validates, executes, records, and resumes deterministically.</p>
-        </div>
+          <ul>
+            <li>Validates schemas and routes</li>
+            <li>Executes deterministic nodes</li>
+            <li>Records traces and resume state</li>
+          </ul>
+        </section>
       </div>
       <p className="scene-body__evidence">{scene.evidencePointer}</p>
     </>
