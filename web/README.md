@@ -291,3 +291,11 @@ The current prepared recipe can:
 
 This is intentionally not a general autonomous planner. A future server-side
 Vercel AI SDK driver can feed the same message-part interface.
+
+### Demo Climax (Scenes 9–10)
+
+Scenes 9 and 10 are the demo climax. They keep a continuity rail visible while
+the prepared replay moves from agent handoff, to persisted workflow run, to
+typed human interrupt, to resume/output/evidence. The rail and outcome panel are
+presentation-only projections over the committed replay; they do not add live
+backend dependencies.

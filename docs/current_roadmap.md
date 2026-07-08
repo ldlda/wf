@@ -144,9 +144,13 @@ Presentation wishlist / defense readiness:
       settled React Flow fitting, Scene 3 chip/evidence collision, narrow
       chat rail behavior, and Scene 10 smoke route. Implementation:
       [`presentation alignment and layout polish`](historical/superpowers/plans/2026-07-08-presentation-alignment-layout-polish.md).
-   5. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
+   5. Completed: demo climax craft pass made Scenes 9 and 10 read as one
+      continuous product demonstration from agent handoff, to persisted run, to
+      typed interrupt, to resume/output/evidence. Implementation:
+      [`demo climax craft pass`](historical/superpowers/plans/2026-07-08-demo-climax-craft-pass.md).
+   6. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
       hierarchy, evidence receipt placement, and remaining generic-slide styling
-      after the compositions are stable.
+      after the demo climax is stable.
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
