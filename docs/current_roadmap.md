@@ -136,9 +136,10 @@ Presentation wishlist / defense readiness:
      modals, and Q&A branches use the same editorial presentation surface.
      Implementation:
      [`presentation surface theme normalization`](historical/superpowers/plans/2026-07-08-presentation-surface-theme-normalization.md).
-  3. Scene composition pass: make Scene 6's default architecture view show the
-     full top-level path at `1280x720`, rebalance Scene 7 spacing after the
-     contrast fix, and tune Scene 10's graph-vs-contract proportions.
+  3. Completed: scene composition pass expanded the positioning map,
+     planner/runtime boundary, lifecycle rail, and Scene 10 demo
+     graph/contract readability. Implementation:
+     [`presentation scene composition`](historical/superpowers/plans/2026-07-08-presentation-scene-composition.md).
   4. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
      hierarchy, evidence receipt placement, and remaining generic-slide styling
      after the compositions are stable.
