@@ -83,6 +83,9 @@ const FitViewOnLayoutChange = ({ layoutKey }: { layoutKey: string }) => {
   const { fitView } = useReactFlow();
   useEffect(() => {
     void fitView({ padding: 0.15, duration: 0 });
+    // React Flow can measure before the scaled presentation canvas and
+    // breadcrumb row settle. Fit again on the next frame to align edges with
+    // the final node boxes without adding a larger measurement framework.
     const frame = window.requestAnimationFrame(() => {
       void fitView({ padding: 0.15, duration: 0 });
     });
