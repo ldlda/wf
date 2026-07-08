@@ -182,8 +182,8 @@ export const mainScenes = defineScenes([
     view: "demo",
     beats: [
       sceneBeat("operation", "Start operation", "Raw and interpreted operation evidence enters from chat.", { chatMode: "full", chatTheme: "light" }),
-      sceneBeat("graph", "Reusable graph", "The graph becomes primary while chat moves to a rail.", { chatMode: "rail", chatTheme: "light" }),
-      sceneBeat("interrupt", "Typed interrupt", "Execution reaches the issue-review boundary.", { chatMode: "rail", chatTheme: "light" }),
+      sceneBeat("graph", "Reusable graph", "The graph becomes primary while chat moves out of the way.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("interrupt", "Typed interrupt", "Execution reaches the issue-review boundary.", { chatMode: "hidden", chatTheme: "light" }),
     ],
   },
   {
@@ -195,9 +195,9 @@ export const mainScenes = defineScenes([
     stageTheme: "night",
     view: "demo",
     beats: [
-      sceneBeat("approval", "Approval", "The operator reviews a schema-backed resume request.", { chatMode: "rail", chatTheme: "light" }),
-      sceneBeat("resume", "Resume", "The approved payload resumes the same persisted run.", { chatMode: "rail", chatTheme: "light" }),
-      sceneBeat("output", "Output", "The workflow produces the report and issue-board changes.", { chatMode: "dock", chatTheme: "light" }),
+      sceneBeat("approval", "Approval", "The operator reviews a schema-backed resume request.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("resume", "Resume", "The approved payload resumes the same persisted run.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("output", "Output", "The workflow produces the report and issue-board changes.", { chatMode: "hidden", chatTheme: "light" }),
       sceneBeat("trace", "Evidence", "Trace frames and protocol evidence remain inspectable.", { chatMode: "dock", chatTheme: "light", evidencePresentation: "receipt" }),
     ],
   },

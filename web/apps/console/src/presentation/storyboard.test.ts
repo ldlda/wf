@@ -38,7 +38,16 @@ describe("defense storyboard catalog", () => {
     expect(mainScenes.slice(3, 10).every((scene) => scene.stageTheme === "night")).toBe(true);
     expect(mainScenes.slice(10).every((scene) => scene.stageTheme === "paper")).toBe(true);
     expect(findBeat("agent-handoff", "request")?.chatMode).toBe("full");
-    expect(findBeat("workflow-demo", "graph")?.chatMode).toBe("rail");
+    expect(findBeat("interrupt-evidence", "trace")?.chatMode).toBe("dock");
+  });
+
+  it("keeps chat out of the way during proof-heavy demo beats", () => {
+    expect(findBeat("workflow-demo", "operation")?.chatMode).toBe("full");
+    expect(findBeat("workflow-demo", "graph")?.chatMode).toBe("hidden");
+    expect(findBeat("workflow-demo", "interrupt")?.chatMode).toBe("hidden");
+    expect(findBeat("interrupt-evidence", "approval")?.chatMode).toBe("hidden");
+    expect(findBeat("interrupt-evidence", "resume")?.chatMode).toBe("hidden");
+    expect(findBeat("interrupt-evidence", "output")?.chatMode).toBe("hidden");
     expect(findBeat("interrupt-evidence", "trace")?.chatMode).toBe("dock");
   });
 
