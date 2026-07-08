@@ -655,3 +655,89 @@
     max-height: 8rem;
   }
 }
+
+.demo-continuity-rail {
+  display: grid;
+  grid-template-columns: minmax(16rem, 0.72fr) minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: stretch;
+  flex: 0 0 auto;
+  margin-bottom: 0.65rem;
+}
+
+.demo-continuity-rail__proof {
+  display: grid;
+  gap: 0.2rem;
+  border: 1px solid oklch(0.72 0.17 195 / 0.34);
+  border-radius: 0.75rem;
+  padding: 0.65rem 0.8rem;
+  background: oklch(0.12 0.022 250 / 0.82);
+}
+
+.demo-continuity-rail__proof span {
+  color: var(--accent-cyan);
+  font: 700 0.62rem/1 var(--font-mono, monospace);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.demo-continuity-rail__proof strong {
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  line-height: 1.15;
+}
+
+.demo-continuity-rail__proof code {
+  color: var(--text-secondary);
+  font: 600 0.68rem/1.2 var(--font-mono, monospace);
+}
+
+.demo-continuity-rail__steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.demo-continuity-rail__steps li {
+  display: grid;
+  align-content: center;
+  gap: 0.18rem;
+  min-width: 0;
+  border: 1px solid var(--stage-line);
+  border-radius: 0.65rem;
+  padding: 0.55rem 0.65rem;
+  background: oklch(0.135 0.022 250 / 0.72);
+  color: var(--text-muted);
+}
+
+.demo-continuity-rail__steps li[data-completed="true"] {
+  border-color: oklch(0.72 0.17 195 / 0.36);
+  color: var(--text-secondary);
+}
+
+.demo-continuity-rail__steps li[data-active="true"] {
+  border-color: var(--accent-cyan);
+  background: oklch(0.18 0.052 210 / 0.92);
+  color: var(--text-primary);
+}
+
+.demo-continuity-rail__steps span {
+  overflow: hidden;
+  font: 700 0.74rem/1.1 var(--font-interface, sans-serif);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demo-continuity-rail__steps small {
+  color: color-mix(in oklch, currentColor 70%, transparent);
+  font: 600 0.6rem/1.1 var(--font-mono, monospace);
+}
+
+@container presentation-canvas (max-width: 1050px) {
+  .demo-continuity-rail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
