@@ -113,6 +113,27 @@ describe("DiscussionPanel", () => {
     expect(screen.getByLabelText("answer provenance")).toHaveTextContent(/Workflow Automation Platforms/i);
   });
 
+  it("renders Q&A discussion as shell, body, support, and actions regions", () => {
+    render(<DiscussionPanel branchId="where-is-ai-agent" onClose={onClose} />);
+
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-discussion-layout", "qna");
+    expect(screen.getByLabelText("discussion shell")).toBeInTheDocument();
+    expect(screen.getByLabelText("discussion body")).toHaveTextContent("Where is the AI agent in this thesis?");
+    expect(screen.getByLabelText("discussion support")).toHaveTextContent("Evidence");
+    expect(screen.getByLabelText("discussion actions")).toContainElement(
+      screen.getByRole("button", { name: /return to thesis/i }),
+    );
+  });
+
+  it("renders context-only discussion with a compact support column", () => {
+    render(<DiscussionPanel branchId="hosted-automation" onClose={onClose} />);
+
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-discussion-layout", "context");
+    expect(screen.getByLabelText("discussion body")).toHaveTextContent(/Hosted triggers/i);
+    expect(screen.getByLabelText("discussion support")).toHaveTextContent(/Workflow Automation Platforms/i);
+    expect(screen.queryByLabelText("defense question")).not.toBeInTheDocument();
+  });
+
   it("shows mcp-agent-scale links to Anthropic and Cloudflare", () => {
     render(<DiscussionPanel branchId="mcp-agent-scale" onClose={onClose} />);
     const anthropic = screen.getByText("Anthropic MCP");

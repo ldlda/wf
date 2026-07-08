@@ -59,55 +59,72 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
       aria-label={branch.title}
       onKeyDown={trapKeyboardWithinDialog}
     >
-      <header>
-        <h2>{branch.title}</h2>
-        <span className="discussion-panel__badge">{branch.claimClass}</span>
-      </header>
-      <section className="discussion-panel__provenance" aria-label="answer provenance">
-        <span>Evidence</span>
-        <p>{branch.evidencePointer}</p>
-      </section>
-      <p className="discussion-panel__summary">{branch.summary}</p>
-      {hasQuestion && (
-        <section className="discussion-panel__qna" aria-label="defense question">
-          <p className="discussion-panel__question">{branch.question}</p>
-          {branch.shortAnswer && (
-            <article className="discussion-panel__answer-card" aria-label="short defense answer">
-              <span>Short answer</span>
-              <p>{branch.shortAnswer}</p>
-            </article>
+      <div className="discussion-panel__shell" aria-label="discussion shell">
+        <header className="discussion-panel__header">
+          <div>
+            <span className="discussion-panel__badge">{branch.claimClass}</span>
+            <h2>{branch.title}</h2>
+          </div>
+          <p>{branch.summary}</p>
+        </header>
+
+        <main className="discussion-panel__body" aria-label="discussion body">
+          {hasQuestion ? (
+            <section className="discussion-panel__qna" aria-label="defense question">
+              <p className="discussion-panel__question">{branch.question}</p>
+              {branch.shortAnswer && (
+                <article className="discussion-panel__answer-card" aria-label="short defense answer">
+                  <span>Short answer</span>
+                  <p>{branch.shortAnswer}</p>
+                </article>
+              )}
+              {branch.expandedAnswer && (
+                <article className="discussion-panel__answer-card discussion-panel__answer-card--expanded" aria-label="answer expansion">
+                  <span>Expanded answer</span>
+                  <p>{branch.expandedAnswer}</p>
+                </article>
+              )}
+            </section>
+          ) : (
+            <section className="discussion-panel__context" aria-label="discussion context">
+              <p>{branch.summary}</p>
+              {branch.detail && (
+                <div className="discussion-panel__detail" aria-label="additional context">
+                  <p>
+                    {branch.detail.links?.map((link, index) => (
+                      <span key={link.href}>
+                        {index > 0 && " · "}
+                        <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
+                      </span>
+                    ))}
+                    {branch.detail.links && branch.detail.links.length > 0 ? " — " : ""}
+                    {branch.detail.text}
+                  </p>
+                </div>
+              )}
+            </section>
           )}
-          {branch.expandedAnswer && (
-            <article className="discussion-panel__answer-card discussion-panel__answer-card--expanded" aria-label="answer expansion">
-              <span>Expanded answer</span>
-              <p>{branch.expandedAnswer}</p>
-            </article>
-          )}
+        </main>
+
+        <aside className="discussion-panel__aside" aria-label="discussion support">
+          <section className="discussion-panel__provenance" aria-label="answer provenance">
+            <span>Evidence</span>
+            <p>{branch.evidencePointer}</p>
+          </section>
           {branch.speakerHint && (
             <aside className="discussion-panel__presenter-note" aria-label="presenter note">
               <span>Presenter note</span>
               <p>{branch.speakerHint}</p>
             </aside>
           )}
-        </section>
-      )}
-      {branch.detail && (
-        <section className="discussion-panel__detail" aria-label="additional context">
-          <p>
-            {branch.detail.links?.map((link, index) => (
-              <span key={link.href}>
-                {index > 0 && " · "}
-                <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
-              </span>
-            ))}
-            {branch.detail.links && branch.detail.links.length > 0 ? " — " : ""}
-            {branch.detail.text}
-          </p>
-        </section>
-      )}
-      <button ref={returnButtonRef} type="button" onClick={onClose} className="discussion-panel__return">
-        Return to {parentScene?.title ?? "scene"}
-      </button>
+        </aside>
+
+        <footer className="discussion-panel__actions" aria-label="discussion actions">
+          <button ref={returnButtonRef} type="button" onClick={onClose} className="discussion-panel__return">
+            Return to {parentScene?.title ?? "scene"}
+          </button>
+        </footer>
+      </div>
     </div>
   );
 };
