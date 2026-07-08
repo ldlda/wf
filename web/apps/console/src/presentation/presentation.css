@@ -168,13 +168,13 @@
   color: inherit;
 }
 
-.operator-chat[data-readable-surface="light"] .chat-message {
-  border-color: color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 35%, transparent);
-  background: color-mix(in oklch, var(--color-editorial-paper, oklch(0.975 0.012 82)) 92%, white);
+.operator-chat[data-presentation-surface="editorial"] .chat-message {
+  border-color: color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 34%, transparent);
+  background: color-mix(in oklch, var(--color-editorial-paper, oklch(0.975 0.012 82)) 82%, var(--color-editorial-muted, oklch(0.48 0.025 65)) 18%);
   color: var(--color-editorial-ink, oklch(0.19 0.015 65));
 }
 
-.operator-chat[data-readable-surface="light"] .chat-message strong {
+.operator-chat[data-presentation-surface="editorial"] .chat-message strong {
   color: var(--color-editorial-ink, oklch(0.19 0.015 65));
 }
 
@@ -636,7 +636,9 @@
   color: var(--text-primary);
 }
 
-.operator-chat[data-readable-surface="light"] .chat-tool-part {
+.operator-chat[data-presentation-surface="editorial"] .chat-tool-part {
+  border-color: color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 40%, transparent);
+  background: color-mix(in oklch, var(--color-editorial-paper, oklch(0.975 0.012 82)) 70%, transparent);
   color: var(--color-editorial-ink, oklch(0.19 0.015 65));
 }
 

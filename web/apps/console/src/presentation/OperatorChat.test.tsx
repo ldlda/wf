@@ -19,6 +19,8 @@ describe("OperatorChat", () => {
     const chat = screen.getByLabelText("scripted operator chat");
     expect(chat).toHaveAttribute("data-chat-theme", "light");
     expect(chat).toHaveAttribute("data-presentation-surface", "editorial");
+    expect(screen.getAllByText(/Found prepared workflow recipe/)[0]?.closest(".chat-message"))
+      .toHaveClass("chat-message");
   });
 
   it("maps dark chat theme to the night presentation surface", () => {
