@@ -54,9 +54,10 @@ export const DemoWorkflowScene = ({
   openEvidence,
 }: DemoWorkflowSceneProps) => {
   const runStart = findEvent(demo, "run_start");
+  const runResume = findEvent(demo, "run_resume");
   const currentStage = operationStageByBeat[beat.id];
   const currentEvent = currentStage ? findEvent(demo, currentStage) : null;
-  const contract = runStart ? projectInterruptContract(runStart) : null;
+  const contract = runStart ? projectInterruptContract(runStart, runResume) : null;
   const execution = graphExecutionForBeat(beat.id);
   const layout = layoutForBeat(beat.id);
 

@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
@@ -188,6 +188,26 @@ describe("DemoWorkflowScene", () => {
     expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
     expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "compact");
     expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("schema-backed");
+  });
+
+  it("shows a schema approval surface for the approval beat instead of raw schema as the primary visual", () => {
+    renderBeat("approval", "interrupt-evidence");
+
+    const approval = screen.getByRole("group", { name: /issue_review resume/i });
+    expect(within(approval).getByText("Schema-backed decision")).toBeInTheDocument();
+    expect(within(approval).getByText("selected_issue_ids")).toBeInTheDocument();
+    expect(within(approval).getByText("[\"risk-1\"]")).toBeInTheDocument();
+    expect(within(approval).getByRole("button", { name: /submit/i })).toBeDisabled();
+    expect(within(approval).getByRole("button", { name: /cancel/i })).toBeDisabled();
+  });
+
+  it("keeps raw resume schema visible only in interrupt preview mode", () => {
+    renderBeat("interrupt");
+    expect(screen.getByText("Resume schema")).toBeInTheDocument();
+    cleanup();
+
+    renderBeat("approval", "interrupt-evidence");
+    expect(screen.queryByText("Resume schema")).not.toBeInTheDocument();
   });
 
   it("adds outcome proof to approval, resume, output, and trace beats", () => {

@@ -4,7 +4,13 @@ import type { DemoEvent } from "../demo/timeline/models.js";
 const InterruptProjectionSchema = v.looseObject({
   kind: v.string(),
   outcomes: v.optional(v.array(v.string())),
+  request_schema: v.optional(v.unknown()),
   resume_schema: v.optional(v.unknown()),
+});
+
+const ResumeParamsSchema = v.looseObject({
+  resume_payload: v.optional(v.unknown()),
+  resume_outcome: v.optional(v.string()),
 });
 
 const RunInterpretationSchema = v.looseObject({
@@ -31,7 +37,10 @@ export type OperationPresentation = {
 export type InterruptContractPresentation = {
   readonly kind: string;
   readonly outcomes: ReadonlyArray<string>;
+  readonly requestSchema: unknown;
   readonly resumeSchema: unknown;
+  readonly resumePayloadPreview: unknown;
+  readonly resumeOutcome: string | null;
   readonly runId: string | null;
 };
 
@@ -148,13 +157,19 @@ export const projectOperationPresentation = (
 
 export const projectInterruptContract = (
   event: DemoEvent,
+  resumeEvent?: DemoEvent | null,
 ): InterruptContractPresentation | null => {
   const interrupt = decodeInterpretation(event)?.interrupt;
   if (!interrupt || !interrupt.outcomes || interrupt.resume_schema === undefined) return null;
+  const decodedResumeParams = v.safeParse(ResumeParamsSchema, resumeEvent?.params);
+  const resumeParams = decodedResumeParams.success ? decodedResumeParams.output : null;
   return {
     kind: interrupt.kind,
     outcomes: interrupt.outcomes,
+    requestSchema: interrupt.request_schema ?? null,
     resumeSchema: interrupt.resume_schema,
+    resumePayloadPreview: resumeParams?.resume_payload ?? null,
+    resumeOutcome: resumeParams?.resume_outcome ?? null,
     runId: event.resultingIds.runId,
   };
 };

@@ -1,5 +1,6 @@
 import { m } from "motion/react";
 import type { InterruptContractPresentation } from "./demo-workflow-model.js";
+import { SchemaApprovalSurface } from "./approval/SchemaApprovalSurface.js";
 import { formatJson } from "./format.js";
 
 type InterruptContractPreviewProps = {
@@ -36,9 +37,19 @@ export const InterruptContractPreview = ({
         <dd>{contract.outcomes.join(" / ")}</dd>
       </div>
     </dl>
-    <div className="interrupt-contract-preview__schema">
-      <span>Resume schema</span>
-      <pre><code>{formatJson(contract.resumeSchema)}</code></pre>
-    </div>
+    {mode === "approval" ? (
+      <SchemaApprovalSurface
+        title={`${contract.kind} resume`}
+        schema={contract.resumeSchema}
+        payload={contract.resumePayloadPreview}
+        outcomes={contract.outcomes}
+        runId={contract.runId}
+      />
+    ) : (
+      <div className="interrupt-contract-preview__schema">
+        <span>Resume schema</span>
+        <pre><code>{formatJson(contract.resumeSchema)}</code></pre>
+      </div>
+    )}
   </m.aside>
 );
