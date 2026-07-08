@@ -115,7 +115,9 @@ Implementation order:
     [`presentation CodeRabbit fixes`](historical/superpowers/plans/2026-07-08-presentation-coderabbit-fixes.md).
 14. Then: adopt source-owned AI Elements chat primitives against existing
     `AgentMessagePart` / `AgentDriver` contracts.
-15. Future: implement Schema Form Surface and synchronized Approval Session.
+15. Next: implement Schema Form Surface and synchronized Approval Session.
+    Active implementation plan:
+    [`schema approval surface`](superpowers/plans/2026-07-09-schema-approval-surface.md).
 16. Future: implement Guided Run Beat Gates, presenter companion, Scene 10
     product graph, final scene visuals, evidence assets, and rehearsal timing.
 17. Add a static slide/appendix shell only after presentation mode is clear.
