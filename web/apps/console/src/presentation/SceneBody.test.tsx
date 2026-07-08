@@ -5,6 +5,7 @@ import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { SceneBody } from "./SceneBody.js";
 import type { PresentationLocation } from "./storyboard.js";
+import { findBeat, findScene } from "./storyboard.js";
 
 const noop = () => {};
 const noopAsync = async () => {};
@@ -116,5 +117,29 @@ describe("SceneBody", () => {
     await user.click(screen.getByRole("button", { name: /hosted automation/i }));
 
     expect(openDiscussion).toHaveBeenCalledWith("hosted-automation");
+  });
+
+  it("renders Scene 7 as an agent authoring loop with beat-specific emphasis", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "authoring", beatId: "diagnose", focusPath: [] };
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    const loop = screen.getByLabelText("agent authoring loop");
+    expect(loop).toHaveAttribute("data-active-stage", "diagnose");
+    expect(screen.getByText("Discover capability")).toBeInTheDocument();
+    expect(screen.getByText("Author draft")).toBeInTheDocument();
+    expect(screen.getByText("Validate and diagnose").closest("[data-authoring-active]")).toHaveAttribute("data-authoring-active", "true");
+    expect(screen.getByText("Repair")).toBeInTheDocument();
+    expect(screen.getByText("Compile or save")).toBeInTheDocument();
   });
 });

@@ -688,8 +688,7 @@
   align-self: stretch;
 }
 
-.scene-body__lifecycle,
-.scene-body__authoring {
+.scene-body__lifecycle {
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -697,8 +696,7 @@
   flex-wrap: wrap;
 }
 
-.scene-body__lifecycle-stage,
-.scene-body__authoring-step {
+.scene-body__lifecycle-stage {
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -707,6 +705,64 @@
   background: oklch(0.16 0.025 250);
   border-radius: 0.5rem;
   font-size: 0.85rem;
+}
+
+.scene-body__authoring-loop {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 1rem;
+  padding: 1rem 0 0.2rem;
+}
+
+.scene-body__authoring-loop-rail {
+  position: absolute;
+  z-index: 0;
+  top: 2.15rem;
+  left: 8%;
+  right: 8%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-cyan), color-mix(in oklch, var(--accent-cyan) 20%, transparent));
+}
+
+.scene-body__authoring-node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: start;
+  gap: 0.35rem;
+  min-height: 8.6rem;
+  border: 1px solid color-mix(in oklch, var(--stage-line) 72%, transparent);
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  background: color-mix(in oklch, var(--stage-surface) 88%, transparent);
+  transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.scene-body__authoring-node[data-authoring-active="true"] {
+  transform: translateY(-0.35rem);
+  border-color: var(--accent-cyan);
+  background: color-mix(in oklch, var(--accent-cyan) 13%, var(--stage-surface));
+}
+
+.scene-body__authoring-node[data-authoring-past="true"] {
+  opacity: 0.76;
+}
+
+.scene-body__authoring-node small {
+  color: var(--text-muted);
+  font: 0.72rem/1.35 var(--font-interface);
+}
+
+@media (max-width: 1050px) {
+  .scene-body__authoring-loop {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .scene-body__authoring-loop-rail {
+    display: none;
+  }
 }
 
 .scene-body__lifecycle-number,
@@ -723,8 +779,7 @@
   font-weight: 600;
 }
 
-.scene-body__lifecycle-arrow,
-.scene-body__authoring-arrow {
+.scene-body__lifecycle-arrow {
   color: oklch(0.5 0.06 250);
   font-size: 1.1rem;
 }
@@ -797,8 +852,7 @@
   transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
-.scene-body__lifecycle-stage,
-.scene-body__authoring-step {
+.scene-body__lifecycle-stage {
   transition: opacity 0.3s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
@@ -823,17 +877,6 @@
 }
 
 .scene-body__architecture-layer--active {
-  border-color: oklch(0.7 0.16 195);
-  background: oklch(0.2 0.06 195);
-  transform: scale(1.03);
-}
-
-.scene-body__authoring-step:not(.scene-body__authoring-step--active) {
-  opacity: 0.4;
-  transform: scale(0.96);
-}
-
-.scene-body__authoring-step--active {
   border-color: oklch(0.7 0.16 195);
   background: oklch(0.2 0.06 195);
   transform: scale(1.03);

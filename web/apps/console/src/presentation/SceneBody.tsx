@@ -142,28 +142,36 @@ const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
 );
 
 const authoringSteps = [
-  { id: "discover", label: "Discover" },
-  { id: "author", label: "Author" },
-  { id: "diagnose", label: "Diagnose" },
-  { id: "repair", label: "Repair" },
-];
+  { id: "discover", label: "Discover capability", detail: "wf schema / cap inspect" },
+  { id: "author", label: "Author draft", detail: "wf draft create / add-step / bind" },
+  { id: "diagnose", label: "Validate and diagnose", detail: "structured diagnostics + repair hints" },
+  { id: "repair", label: "Repair", detail: "focused edit, no full rewrite" },
+  { id: "compile", label: "Compile or save", detail: "artifact / deployment / run" },
+] as const;
 
 const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
   <>
     <StageCaption eyebrow="Act II · implemented" title={scene.title}>
       <p>{beat.caption}</p>
     </StageCaption>
-    <div className="scene-body__authoring">
-      {authoringSteps.map((step, i) => (
-        <div
-          key={step.id}
-          className={`scene-body__authoring-step${beat.id === step.id ? " scene-body__authoring-step--active" : ""}`}
-        >
-          <span className="scene-body__authoring-number">{i + 1}</span>
-          <strong>{step.label}</strong>
-          {i < authoringSteps.length - 1 && <span className="scene-body__authoring-arrow">→</span>}
-        </div>
-      ))}
+    <div className="scene-body__authoring-loop" aria-label="agent authoring loop" data-active-stage={beat.id}>
+      <div className="scene-body__authoring-loop-rail" aria-hidden="true" />
+      {authoringSteps.map((step, i) => {
+        const isActive = beat.id === step.id;
+        const isPast = authoringSteps.findIndex((candidate) => candidate.id === beat.id) > i;
+        return (
+          <div
+            key={step.id}
+            className="scene-body__authoring-node"
+            data-authoring-active={isActive}
+            data-authoring-past={isPast}
+          >
+            <span className="scene-body__authoring-number">{i + 1}</span>
+            <strong>{step.label}</strong>
+            <small>{step.detail}</small>
+          </div>
+        );
+      })}
     </div>
     <p className="scene-body__evidence">{scene.evidencePointer}</p>
   </>
