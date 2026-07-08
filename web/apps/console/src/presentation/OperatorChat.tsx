@@ -111,12 +111,14 @@ const partKey = (messageId: string, part: AgentMessagePart): string => {
 export const OperatorChat = ({ state, messages, onApprove, onDeny }: OperatorChatProps) => {
   const visibleMessages = messages && messages.length > 0 ? messages : fallbackMessages(state);
   const composition = compositionForState(state);
+  const presentationSurface = composition.chatTheme === "light" ? "editorial" : "night";
   return (
     <aside
       className="operator-chat"
       data-mode={composition.chatMode}
       data-chat-theme={composition.chatTheme}
       data-readable-surface={composition.chatTheme === "light" ? "light" : "dark"}
+      data-presentation-surface={presentationSurface}
       aria-label="scripted operator chat"
     >
       {visibleMessages.map((message) => (

@@ -50,6 +50,7 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
     <div
       ref={dialogRef}
       className="discussion-panel"
+      data-presentation-surface="editorial"
       role="dialog"
       aria-modal="true"
       aria-label={branch.title}

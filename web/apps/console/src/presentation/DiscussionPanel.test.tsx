@@ -12,6 +12,18 @@ describe("DiscussionPanel", () => {
     onClose.mockClear();
   });
 
+  it("renders Q&A branches on the editorial presentation surface", () => {
+    render(<DiscussionPanel branchId="where-is-ai-agent" onClose={onClose} />);
+
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-presentation-surface", "editorial");
+  });
+
+  it("renders legacy discussion branches on the same editorial surface", () => {
+    render(<DiscussionPanel branchId="hosted-automation" onClose={onClose} />);
+
+    expect(screen.getByRole("dialog")).toHaveAttribute("data-presentation-surface", "editorial");
+  });
+
   it("renders the branch title and claim class", () => {
     render(<DiscussionPanel branchId="hosted-automation" onClose={onClose} />);
     expect(screen.getByRole("dialog")).toHaveAttribute("aria-label", "Hosted automation");

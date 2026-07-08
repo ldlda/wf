@@ -8,6 +8,26 @@ import type { AgentMessage } from "../demo/agent/events.js";
 afterEach(() => cleanup());
 
 describe("OperatorChat", () => {
+  it("maps light chat theme to the editorial presentation surface", () => {
+    const state = {
+      ...initialPresentationState,
+      location: { kind: "main" as const, sceneId: "workflow-demo" as const, beatId: "graph", focusPath: [] },
+    };
+
+    render(<OperatorChat state={state} />);
+
+    const chat = screen.getByLabelText("scripted operator chat");
+    expect(chat).toHaveAttribute("data-chat-theme", "light");
+    expect(chat).toHaveAttribute("data-presentation-surface", "editorial");
+  });
+
+  it("maps dark chat theme to the night presentation surface", () => {
+    render(<OperatorChat state={initialPresentationState} />);
+
+    const chat = screen.getByLabelText("scripted operator chat");
+    expect(chat).toHaveAttribute("data-presentation-surface", "night");
+  });
+
   it("exposes chat theme and readable surface attributes", () => {
     render(<OperatorChat state={initialPresentationState} />);
 
