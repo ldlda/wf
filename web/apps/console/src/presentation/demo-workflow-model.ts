@@ -40,6 +40,82 @@ export type GraphExecutionPresentation = {
   readonly currentNodeId: string | null;
 };
 
+export type DemoClimaxPhase = "agent" | "run" | "interrupt" | "resume" | "evidence";
+
+export type DemoBeatLens = {
+  readonly phase: DemoClimaxPhase;
+  readonly eyebrow: string;
+  readonly headline: string;
+  readonly proofLabel: string;
+  readonly speakerLine: string;
+};
+
+const demoBeatLensByBeat: Readonly<Record<string, DemoBeatLens>> = {
+  operation: {
+    phase: "agent",
+    eyebrow: "Agent handoff",
+    headline: "Request becomes a workflow run",
+    proofLabel: "workflow.runs.start",
+    speakerLine: "The AI-facing layer does not own execution; it asks lda.chat to start a durable workflow run.",
+  },
+  graph: {
+    phase: "run",
+    eyebrow: "Durable graph",
+    headline: "The product owns the reusable workflow shape",
+    proofLabel: "typed graph",
+    speakerLine: "The graph is the reusable automation boundary, not a one-off transcript of tool calls.",
+  },
+  interrupt: {
+    phase: "interrupt",
+    eyebrow: "Typed pause",
+    headline: "Execution stops at a declared human boundary",
+    proofLabel: "issue_review",
+    speakerLine: "The runtime exposes what decision is needed before any mutation continues.",
+  },
+  approval: {
+    phase: "interrupt",
+    eyebrow: "Typed human boundary",
+    headline: "The run waits for an explicit resume decision",
+    proofLabel: "issue_review",
+    speakerLine: "The operator answers a schema-backed request; the run remains persisted while waiting.",
+  },
+  resume: {
+    phase: "resume",
+    eyebrow: "Same run resumes",
+    headline: "The approved payload continues the persisted run",
+    proofLabel: "workflow.runs.resume",
+    speakerLine: "Resume is not a restart; it continues the stopped run with a validated payload.",
+  },
+  output: {
+    phase: "evidence",
+    eyebrow: "Workflow output",
+    headline: "The workflow produces artifacts outside the chat",
+    proofLabel: "report + issues",
+    speakerLine: "The result is inspectable product state: a report and issue-board changes.",
+  },
+  trace: {
+    phase: "evidence",
+    eyebrow: "Evidence remains",
+    headline: "The result can still be inspected after the demo",
+    proofLabel: "trace frames",
+    speakerLine: "Trace and protocol evidence keep the demo auditable after the live moment is over.",
+  },
+};
+
+/**
+ * Presentation-only copy for the demo climax. This intentionally stays separate
+ * from replay evidence parsing so changing speaker framing cannot mutate the
+ * canonical run recording.
+ */
+export const demoBeatLensForBeat = (beatId: string): DemoBeatLens =>
+  demoBeatLensByBeat[beatId] ?? {
+    phase: "run",
+    eyebrow: "Workflow",
+    headline: "Workflow state",
+    proofLabel: beatId,
+    speakerLine: "This beat is not part of the prepared demo climax.",
+  };
+
 const decodeInterpretation = (event: DemoEvent) => {
   const decoded = v.safeParse(RunInterpretationSchema, event.interpreted);
   return decoded.success ? decoded.output : null;
