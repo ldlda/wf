@@ -149,10 +149,33 @@
 
 .chat-message {
   border: 1px solid oklch(0.34 0.035 250);
-  background: oklch(0.18 0.025 250);
-  padding: 0.65rem 0.75rem;
   border-radius: 0.65rem;
+  padding: 0.65rem 0.75rem;
+  background: oklch(0.18 0.025 250);
+  color: var(--text-primary);
   font-size: 0.85rem;
+}
+
+.chat-message strong {
+  display: block;
+  margin-bottom: 0.35rem;
+  color: var(--text-primary);
+}
+
+.chat-message p,
+.chat-message span,
+.chat-message code {
+  color: inherit;
+}
+
+.operator-chat[data-readable-surface="light"] .chat-message {
+  border-color: color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 35%, transparent);
+  background: color-mix(in oklch, var(--color-editorial-paper, oklch(0.975 0.012 82)) 92%, white);
+  color: var(--color-editorial-ink, oklch(0.19 0.015 65));
+}
+
+.operator-chat[data-readable-surface="light"] .chat-message strong {
+  color: var(--color-editorial-ink, oklch(0.19 0.015 65));
 }
 
 .operation-block {
@@ -610,6 +633,11 @@
   border: 1px solid oklch(0.36 0.04 250);
   border-radius: 0.35rem;
   font-size: 0.75rem;
+  color: var(--text-primary);
+}
+
+.operator-chat[data-readable-surface="light"] .chat-tool-part {
+  color: var(--color-editorial-ink, oklch(0.19 0.015 65));
 }
 
 .chat-tool-part span {

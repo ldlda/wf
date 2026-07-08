@@ -112,7 +112,13 @@ export const OperatorChat = ({ state, messages, onApprove, onDeny }: OperatorCha
   const visibleMessages = messages && messages.length > 0 ? messages : fallbackMessages(state);
   const composition = compositionForState(state);
   return (
-    <aside className="operator-chat" data-mode={composition.chatMode} aria-label="scripted operator chat">
+    <aside
+      className="operator-chat"
+      data-mode={composition.chatMode}
+      data-chat-theme={composition.chatTheme}
+      data-readable-surface={composition.chatTheme === "light" ? "light" : "dark"}
+      aria-label="scripted operator chat"
+    >
       {visibleMessages.map((message) => (
         <div key={message.id} className={`chat-message chat-message--${message.role === "user" ? "operator" : "system"}`}>
           <strong>{message.role === "user" ? "Operator" : "lda.chat"}</strong>

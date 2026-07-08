@@ -8,6 +8,14 @@ import type { AgentMessage } from "../demo/agent/events.js";
 afterEach(() => cleanup());
 
 describe("OperatorChat", () => {
+  it("exposes chat theme and readable surface attributes", () => {
+    render(<OperatorChat state={initialPresentationState} />);
+
+    const chat = screen.getByLabelText("scripted operator chat");
+    expect(chat).toHaveAttribute("data-chat-theme");
+    expect(chat).toHaveAttribute("data-readable-surface");
+  });
+
   it("renders standard agent message parts", () => {
     const messages: ReadonlyArray<AgentMessage> = [
       { id: "u1", role: "user", parts: [{ type: "text", text: "Prepare the report." }] },

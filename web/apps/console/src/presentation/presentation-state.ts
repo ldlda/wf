@@ -4,6 +4,7 @@ import {
   findScene,
   type BeatEvidencePresentation,
   type ChatMode,
+  type ChatTheme,
   type DiscussionBranchId,
   type EvidencePresentation,
   type MainLocation,
@@ -58,11 +59,13 @@ const compositionForLocation = (
   evidenceOverride: EvidencePresentation | null,
 ): {
   readonly chatMode: ChatMode;
+  readonly chatTheme: ChatTheme;
   readonly evidencePresentation: EvidencePresentation;
 } => {
   if (location.kind === "discussion") {
     return {
       chatMode: "hidden",
+      chatTheme: "dark",
       evidencePresentation: evidenceOverride ?? "hidden",
     };
   }
@@ -70,6 +73,7 @@ const compositionForLocation = (
   const beat = scene?.beats.find((b) => b.id === location.beatId);
   return {
     chatMode: beat?.chatMode ?? "hidden",
+    chatTheme: beat?.chatTheme ?? "dark",
     evidencePresentation: evidenceOverride ?? beat?.evidencePresentation ?? "hidden",
   };
 };
