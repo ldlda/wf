@@ -65,7 +65,7 @@ describe("PresentationRoute", () => {
     window.location.hash = "#scene/workflow-demo/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
-    expect(await screen.findByText(/workflow.runs.start/i)).toBeInTheDocument();
+    expect(await screen.findByLabelText("workflow.runs.start operation")).toBeInTheDocument();
   });
 
   it("opens a positioning branch via hash and returns to the parent scene first beat", async () => {
