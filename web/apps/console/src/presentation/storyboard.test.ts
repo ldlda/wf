@@ -83,9 +83,11 @@ describe("defense storyboard catalog", () => {
     expect(qnaBranches.length).toBeGreaterThanOrEqual(10);
     for (const branch of qnaBranches) {
       expect(branch.question).toMatch(/\?$/);
-      expect(branch.shortAnswer?.length).toBeGreaterThan(40);
-      expect(branch.shortAnswer?.length).toBeLessThan(360);
-      expect(branch.expandedAnswer?.length).toBeGreaterThan(80);
+      expect(branch.shortAnswer).toBeDefined();
+      expect(branch.shortAnswer!.length).toBeGreaterThan(40);
+      expect(branch.shortAnswer!.length).toBeLessThan(360);
+      expect(branch.expandedAnswer).toBeDefined();
+      expect(branch.expandedAnswer!.length).toBeGreaterThan(80);
       expect(branch.evidencePointer.length).toBeGreaterThan(0);
     }
   });
