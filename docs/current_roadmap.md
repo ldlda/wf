@@ -123,8 +123,10 @@ Implementation order:
 
 Presentation wishlist / defense readiness:
 
-- Visual pass for Scenes 6, 7, and 10: fix spacing, graph scale, captions,
-  evidence receipt placement, and remove remaining generic AI-slide styling.
+- Completed: visual pass for Scenes 6, 7, and 10 fixed architecture figure
+  scale, authoring-loop clarity, interrupt/evidence emphasis, and presenter-note
+  treatment. Implementation:
+  [`defense presentation visual pass`](historical/superpowers/plans/2026-07-08-defense-presentation-visual-pass.md).
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
