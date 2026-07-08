@@ -81,6 +81,7 @@ describe("DiscussionPanel", () => {
     expect(screen.getByText(/workflow substrate that external agents operate/i)).toBeDefined();
     expect(screen.getByText(/not a new planning algorithm/i)).toBeDefined();
     expect(screen.getByText(/Answer directly first/i)).toBeDefined();
+    expect(screen.getByLabelText("defense question")).toBeInTheDocument();
   });
 
   it("renders speaker hints as presenter notes instead of answer content", () => {
@@ -89,6 +90,7 @@ describe("DiscussionPanel", () => {
     const note = screen.getByLabelText("presenter note");
     expect(note).toHaveTextContent(/Answer directly first/i);
     expect(note).toHaveTextContent(/Presenter note/i);
+    expect(note).toHaveClass("discussion-panel__presenter-note");
   });
 
   it("shows mcp-agent-scale links to Anthropic and Cloudflare", () => {
