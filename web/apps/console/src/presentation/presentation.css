@@ -751,6 +751,11 @@
   opacity: 0.58;
 }
 
+.scene-body__positioning-tile,
+.scene-body__positioning-substrate {
+  transition: opacity 0.25s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
 .scene-body__positioning-substrate[data-positioning-active="true"] {
   transform: translateY(-0.25rem);
   border-color: color-mix(in oklch, var(--accent-cyan, oklch(0.7 0.16 195)) 68%, transparent);
@@ -779,6 +784,10 @@
 
 .scene-body__boundary-pane[data-boundary-emphasis="reduced"] {
   opacity: 0.58;
+}
+
+.scene-body__boundary-pane {
+  transition: opacity 0.25s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .scene-body__boundary-pane h3 {
@@ -849,6 +858,10 @@
 
 .scene-body__lifecycle-stage[data-lifecycle-active="false"] {
   opacity: 0.68;
+}
+
+.scene-body__lifecycle-stage {
+  transition: opacity 0.25s ease, transform 0.25s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
 .scene-body__lifecycle-stage[data-lifecycle-active="true"] {

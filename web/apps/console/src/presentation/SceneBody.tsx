@@ -85,7 +85,7 @@ const PositioningScene = ({ scene, beat }: { scene: SceneDefinition; beat: Scene
         >
           <span className="scene-body__positioning-label">This thesis</span>
           <strong>lda.chat</strong>
-          <p>Typed workflow substrate for external agents and human operators.</p>
+          <p>Typed lifecycle substrate for external agents and human operators.</p>
           <ul>
             <li>Lifecycle</li>
             <li>Validation</li>
@@ -139,7 +139,7 @@ const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBea
           <ul>
             <li>Proposes workflow structure</li>
             <li>Revises steps and bindings</li>
-            <li>Chooses public operations</li>
+            <li>Chooses tools</li>
           </ul>
         </section>
         <div className="scene-body__boundary-seam" aria-label="workflow operation boundary">
@@ -156,7 +156,8 @@ const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBea
           <ul>
             <li>Validates schemas and routes</li>
             <li>Executes deterministic nodes</li>
-            <li>Records traces and resume state</li>
+            <li>Records traces and run output</li>
+            <li>Resumes from persisted state</li>
           </ul>
         </section>
       </div>
@@ -174,7 +175,7 @@ const lifecycleStages = [
 
 const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
   const activeIndex = Math.max(0, lifecycleStages.findIndex((stage) => stage.id === beat.id));
-  const activeStage = lifecycleStages[activeIndex] ?? lifecycleStages[0];
+  const activeStage = lifecycleStages[activeIndex]!;
   return (
     <>
       <StageCaption eyebrow="Act II · implemented" title={scene.title}>
