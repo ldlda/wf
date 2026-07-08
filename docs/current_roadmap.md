@@ -136,13 +136,17 @@ Presentation wishlist / defense readiness:
      modals, and Q&A branches use the same editorial presentation surface.
      Implementation:
      [`presentation surface theme normalization`](historical/superpowers/plans/2026-07-08-presentation-surface-theme-normalization.md).
-  3. Completed: scene composition pass expanded the positioning map,
-     planner/runtime boundary, lifecycle rail, and Scene 10 demo
-     graph/contract readability. Implementation:
-     [`presentation scene composition`](historical/superpowers/plans/2026-07-08-presentation-scene-composition.md).
-  4. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
-     hierarchy, evidence receipt placement, and remaining generic-slide styling
-     after the compositions are stable.
+   3. Completed: scene composition pass expanded the positioning map,
+      planner/runtime boundary, lifecycle rail, and Scene 10 demo
+      graph/contract readability. Implementation:
+      [`presentation scene composition`](historical/superpowers/plans/2026-07-08-presentation-scene-composition.md).
+   4. Completed: alignment/layout polish fixed Scene 6 figure dimensions,
+      settled React Flow fitting, Scene 3 chip/evidence collision, narrow
+      chat rail behavior, and Scene 10 smoke route. Implementation:
+      [`presentation alignment and layout polish`](historical/superpowers/plans/2026-07-08-presentation-alignment-layout-polish.md).
+   5. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
+      hierarchy, evidence receipt placement, and remaining generic-slide styling
+      after the compositions are stable.
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
