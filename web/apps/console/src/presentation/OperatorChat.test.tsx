@@ -157,7 +157,76 @@ describe("OperatorChat", () => {
     expect(screen.getByText("provider failed")).toBeInTheDocument();
   });
 
-  it("renders prepared run tool calls as workflow handoffs", () => {
+  it("shows a chat-owned run prepared workflow action", async () => {
+  const user = userEvent.setup();
+  const runPreparedWorkflow = vi.fn(async () => {});
+
+  render(
+    <OperatorChat
+      state={initialPresentationState}
+      timelineAgent={{
+        messages: [],
+        canRun: true,
+        runLabel: "Run prepared workflow",
+        runPreparedWorkflow,
+        submitSelectedIssues: vi.fn(async () => {}),
+        cancelReview: vi.fn(async () => {}),
+      }}
+    />,
+  );
+
+  await user.click(screen.getByRole("button", { name: /run prepared workflow/i }));
+  expect(runPreparedWorkflow).toHaveBeenCalledTimes(1);
+});
+
+it("routes schema approval submit and cancel through the timeline agent when present", async () => {
+  const user = userEvent.setup();
+  const submitSelectedIssues = vi.fn(async () => {});
+  const cancelReview = vi.fn(async () => {});
+  const messages: ReadonlyArray<AgentMessage> = [
+    {
+      id: "approval",
+      role: "assistant",
+      parts: [
+        {
+          type: "approval-request",
+          callId: "call-1",
+          name: "resumeIssueReview",
+          prompt: "Submit resume request?",
+          contract: {
+            kind: "issue_review",
+            outcomes: ["submitted", "cancelled"],
+            resumeSchema: { type: "object" },
+            resumePayloadPreview: { selected_issue_ids: ["risk-1"] },
+            runId: "run_recorded_lda_report",
+          },
+        },
+      ],
+    },
+  ];
+
+  render(
+    <OperatorChat
+      state={initialPresentationState}
+      messages={messages}
+      timelineAgent={{
+        messages: [],
+        canRun: false,
+        runLabel: "Run prepared workflow",
+        runPreparedWorkflow: vi.fn(async () => {}),
+        submitSelectedIssues,
+        cancelReview,
+      }}
+    />,
+  );
+
+  await user.click(screen.getByRole("button", { name: /submit/i }));
+  await user.click(screen.getByRole("button", { name: /cancel/i }));
+  expect(submitSelectedIssues).toHaveBeenCalledTimes(1);
+  expect(cancelReview).toHaveBeenCalledTimes(1);
+});
+
+it("renders prepared run tool calls as workflow handoffs", () => {
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "start",

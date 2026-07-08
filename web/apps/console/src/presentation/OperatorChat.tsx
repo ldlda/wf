@@ -1,6 +1,7 @@
 import { m } from "motion/react";
 import { PREPARE_THESIS_REPORT_RECIPE } from "../demo/agent/recipes.js";
 import type { AgentMessage, AgentMessagePart } from "../demo/agent/events.js";
+import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import { SchemaApprovalSurface } from "./approval/SchemaApprovalSurface.js";
@@ -8,6 +9,7 @@ import { SchemaApprovalSurface } from "./approval/SchemaApprovalSurface.js";
 type OperatorChatProps = {
   readonly state: PresentationState;
   readonly messages?: ReadonlyArray<AgentMessage> | undefined;
+  readonly timelineAgent?: TimelineAgentController | undefined;
   readonly onApprove?: (() => void) | undefined;
   readonly onDeny?: (() => void) | undefined;
 };
@@ -121,8 +123,14 @@ const partKey = (messageId: string, part: AgentMessagePart): string => {
   }
 };
 
-export const OperatorChat = ({ state, messages, onApprove, onDeny }: OperatorChatProps) => {
-  const visibleMessages = messages && messages.length > 0 ? messages : fallbackMessages(state);
+export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onDeny }: OperatorChatProps) => {
+  const visibleMessages = messages && messages.length > 0
+    ? messages
+    : timelineAgent && timelineAgent.messages.length > 0
+      ? timelineAgent.messages
+      : fallbackMessages(state);
+  const submit = timelineAgent?.submitSelectedIssues ?? onApprove;
+  const cancel = timelineAgent?.cancelReview ?? onDeny;
   const composition = compositionForState(state);
   const presentationSurface = composition.chatTheme === "light" ? "editorial" : "night";
   return (
@@ -133,10 +141,21 @@ export const OperatorChat = ({ state, messages, onApprove, onDeny }: OperatorCha
       data-presentation-surface={presentationSurface}
       aria-label="scripted operator chat"
     >
+      {timelineAgent ? (
+        <div className="operator-chat__action">
+          <button
+            type="button"
+            onClick={() => void timelineAgent.runPreparedWorkflow()}
+            disabled={!timelineAgent.canRun}
+          >
+            {timelineAgent.runLabel}
+          </button>
+        </div>
+      ) : null}
       {visibleMessages.map((message) => (
         <div key={message.id} className={`chat-message chat-message--${message.role === "user" ? "operator" : "system"}`}>
           <strong>{message.role === "user" ? "Operator" : "lda.chat"}</strong>
-          {message.parts.map((part) => renderPart(part, partKey(message.id, part), onApprove, onDeny))}
+          {message.parts.map((part) => renderPart(part, partKey(message.id, part), submit, cancel))}
         </div>
       ))}
     </aside>
