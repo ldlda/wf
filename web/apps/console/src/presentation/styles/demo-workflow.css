@@ -925,3 +925,97 @@
 .demo-outcome-panel small {
   color: var(--text-secondary);
 }
+
+/* --- schema approval surface --- */
+
+.schema-approval-surface {
+  display: grid;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.85rem;
+  border: 1px solid color-mix(in oklch, var(--accent-amber) 48%, var(--stage-line));
+  border-radius: 0.85rem;
+  background:
+    linear-gradient(135deg, color-mix(in oklch, var(--accent-amber) 16%, transparent), transparent 48%),
+    var(--stage-surface);
+  color: var(--text-primary);
+}
+
+.schema-approval-surface__header,
+.schema-approval-surface__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.schema-approval-surface__header span,
+.schema-approval-surface__actions span,
+.schema-approval-surface__field small {
+  color: var(--text-muted);
+  font: 700 0.68rem/1 var(--font-mono);
+}
+
+.schema-approval-surface__header strong {
+  font: 700 1rem/1.1 var(--font-display);
+}
+
+.schema-approval-surface__header code,
+.schema-approval-surface__field code,
+.schema-approval-surface__loose code {
+  font: 600 0.72rem/1.35 var(--font-mono);
+  color: var(--accent-cyan);
+}
+
+.schema-approval-surface__fields,
+.schema-approval-surface__loose dl {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.schema-approval-surface__field,
+.schema-approval-surface__loose dl > div {
+  display: grid;
+  grid-template-columns: minmax(8rem, 0.55fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 0.55rem;
+  border: 1px solid color-mix(in oklch, var(--stage-line) 70%, transparent);
+  border-radius: 0.6rem;
+  background: color-mix(in oklch, var(--stage-inset) 82%, transparent);
+}
+
+.schema-approval-surface__field dt {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+}
+
+.schema-approval-surface__field dd,
+.schema-approval-surface__loose dd {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+}
+
+.schema-approval-surface__field p,
+.schema-approval-surface__loose p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+.schema-approval-surface__actions button {
+  border: 1px solid var(--stage-line);
+  border-radius: 0.55rem;
+  padding: 0.48rem 0.7rem;
+  background: color-mix(in oklch, var(--stage-surface) 78%, var(--accent-cyan));
+  color: var(--text-primary);
+  font: 700 0.78rem/1 var(--font-mono);
+}
+
+.schema-approval-surface__actions button:disabled {
+  opacity: 0.55;
+}
