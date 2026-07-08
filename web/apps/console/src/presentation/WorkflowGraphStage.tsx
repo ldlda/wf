@@ -41,6 +41,7 @@ type WorkflowGraphStageProps = {
   readonly selectedNodeId: string | null;
   readonly selectNode: (nodeId: string) => void;
   readonly proof?: WorkflowGraphProof;
+  readonly variant?: "full" | "compact";
 };
 
 const executionStateForNode = (
@@ -63,20 +64,23 @@ export const WorkflowGraphStage = ({
   selectedNodeId,
   selectNode,
   proof,
+  variant = "full",
 }: WorkflowGraphStageProps) => {
   const markerPrefix = useId().replaceAll(":", "");
   const arrowMarkerId = `${markerPrefix}-workflow-arrow`;
   const activeArrowMarkerId = `${markerPrefix}-workflow-arrow-active`;
 
   return (
-    <div className="workflow-graph-stage" role="group" aria-label="workflow graph">
+    <div className="workflow-graph-stage" role="group" aria-label="workflow graph" data-graph-variant={variant}>
     <div className="workflow-graph-stage__legend" aria-hidden="true">
       <span><i data-state="completed" />Completed</span>
       <span><i data-state="current" />Current</span>
       <span><i data-state="interrupt" />Human boundary</span>
     </div>
 
-    {proof && (
+    {/* Compact mode is used beside interrupt contracts; proof chips would
+        compete with the contract and outcome panel in that narrow layout. */}
+    {variant === "full" && proof && (
       <div className="workflow-graph-stage__proof" aria-label="workflow graph proof">
         <span><b>Run</b><code>{proof.runId ?? "run unavailable"}</code></span>
         <span><b>Trace</b>{proof.traceLabel}</span>

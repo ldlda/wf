@@ -83,6 +83,33 @@ describe("WorkflowGraphStage", () => {
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC captured");
   });
 
+  it("marks compact graph mode and suppresses proof chips", () => {
+    render(
+      <WorkflowGraphStage
+        execution={{ completedNodeIds: ["read_docs", "build_report"], currentNodeId: "review_issues" }}
+        selectedNodeId={null}
+        selectNode={vi.fn()}
+        variant="compact"
+        proof={{ runId: "run_recorded_lda_report", traceLabel: "5 workflow nodes", evidenceLabel: "JSON-RPC evidence" }}
+      />,
+    );
+
+    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "compact");
+    expect(screen.queryByLabelText("workflow graph proof")).not.toBeInTheDocument();
+  });
+
+  it("keeps full graph mode as the default", () => {
+    render(
+      <WorkflowGraphStage
+        execution={{ completedNodeIds: ["read_docs"], currentNodeId: "build_report" }}
+        selectedNodeId={null}
+        selectNode={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "full");
+  });
+
   it("shows unavailable runId fallback when proof runId is null", () => {
     render(
       <WorkflowGraphStage
