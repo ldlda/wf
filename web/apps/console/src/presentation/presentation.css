@@ -62,7 +62,18 @@
   flex-direction: column;
   gap: 0.75rem;
   padding: 1rem;
-  overflow: hidden;
+  /*
+    Browser zoom can make otherwise valid slide compositions taller than the
+    stage. Keep the presentation chrome clean, but allow the presenter to scroll
+    hidden overflow instead of losing content.
+  */
+  overflow: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: none;
+}
+
+.presentation-stage__primary::-webkit-scrollbar {
+  display: none;
 }
 
 .stage-caption {

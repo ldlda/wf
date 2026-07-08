@@ -232,12 +232,12 @@ committed `lda-report-success-v1` recording. No RPC server is required.
 #### Editorial Canvas
 
 The presentation renders on an adaptive editorial canvas that derives its aspect
-ratio from the browser viewport. The canvas preserves a fixed logical height of
-720px and clamps the logical width between 960px (4:3) and 1280px (16:9),
-scaling the result to fit the viewport with letterboxing. Viewports wider than
-~1.78:1 fill the maximum 1280x720 logical region; narrower viewports receive a
-proportionally narrower canvas without reflowing scene content. No URL query
-parameters or local-storage settings control the ratio.
+ratio from the browser viewport. The canvas fills the available viewport while
+clamping its aspect ratio between 4:3 and 16:9. It intentionally avoids
+`transform: scale(...)`: React Flow figures, popovers, and floating UI measure
+DOM geometry, so the stage must expose real element positions instead of scaled
+coordinates. No URL query parameters or local-storage settings control the
+ratio.
 
 Scene 6 uses a recursive Interactive Figure with expand/collapse and breadcrumb
 navigation.

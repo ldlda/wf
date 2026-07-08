@@ -83,9 +83,8 @@ const FitViewOnLayoutChange = ({ layoutKey }: { layoutKey: string }) => {
   const { fitView } = useReactFlow();
   useEffect(() => {
     void fitView({ padding: 0.15, duration: 0 });
-    // React Flow can measure before the scaled presentation canvas and
-    // breadcrumb row settle. Fit again on the next frame to align edges with
-    // the final node boxes without adding a larger measurement framework.
+    // React Flow can measure before the breadcrumb row and stage grid settle.
+    // Fit again on the next frame to align edges with the final node boxes.
     const frame = window.requestAnimationFrame(() => {
       void fitView({ padding: 0.15, duration: 0 });
     });
@@ -111,6 +110,7 @@ const InteractiveFigureInner = ({
   const initialFocusedNodeId = activeNodeId ?? focus.figure.nodes[0]?.id ?? "";
   const [focusedNodeId, setFocusedNodeId] = useState(initialFocusedNodeId);
   const focusedNodeIdRef = useRef(initialFocusedNodeId);
+  const graphInspectionEnabled = size === "stage" && focus.path.length > 0;
 
   const fallbackFocusedNodeId = activeNodeId ?? focus.figure.nodes[0]?.id ?? "";
   useEffect(() => {
@@ -230,6 +230,7 @@ const InteractiveFigureInner = ({
       data-motion={motionDisabled ? "disabled" : "enabled"}
       data-figure-id={focus.figure.id}
       data-figure-size={size}
+      data-pan-zoom={graphInspectionEnabled ? "enabled" : "disabled"}
       onKeyDown={handleKeyDown}
     >
       <FigureBreadcrumbs
@@ -248,11 +249,13 @@ const InteractiveFigureInner = ({
           nodesFocusable={false}
           edgesFocusable={false}
           elementsSelectable={false}
-          panOnDrag={false}
-          zoomOnScroll={false}
-          zoomOnPinch={false}
-          zoomOnDoubleClick={false}
-          preventScrolling={false}
+          minZoom={0.35}
+          maxZoom={2.2}
+          panOnDrag={graphInspectionEnabled}
+          zoomOnScroll={graphInspectionEnabled}
+          zoomOnPinch={graphInspectionEnabled}
+          zoomOnDoubleClick={graphInspectionEnabled}
+          preventScrolling={graphInspectionEnabled}
           onNodeClick={handleNodeClick}
         >
           <FitViewOnLayoutChange layoutKey={focus.figure.id} />

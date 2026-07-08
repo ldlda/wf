@@ -186,6 +186,24 @@ describe("InteractiveFigure", () => {
     expect(figure.querySelector(".interactive-figure__canvas")).toBeInTheDocument();
   });
 
+  it("keeps root stage figures in presentation mode", () => {
+    renderFigure({ focusPath: [], size: "stage" });
+
+    expect(screen.getByRole("group", { name: /architecture/i })).toHaveAttribute(
+      "data-pan-zoom",
+      "disabled",
+    );
+  });
+
+  it("enables pan and zoom inspection for focused stage figures", () => {
+    renderFigure({ focusPath: ["runtime"], size: "stage" });
+
+    expect(screen.getByRole("group", { name: /runtime detail/i })).toHaveAttribute(
+      "data-pan-zoom",
+      "enabled",
+    );
+  });
+
   it("resets roving focus when focusPath changes", () => {
     const { rerender } = render(
       <InteractiveFigure

@@ -32,8 +32,21 @@
   background: color-mix(in oklch, var(--color-editorial-surface, oklch(0.96 0.012 82)) 92%, white);
 }
 
-.interactive-figure .react-flow__pane {
+/*
+  Presentation overview figures should not steal normal slide navigation
+  gestures. Focused stage figures opt into React Flow inspection, where the pane
+  needs pointer events for drag-pan and wheel zoom.
+*/
+.interactive-figure[data-pan-zoom="disabled"] .react-flow__pane {
   pointer-events: none;
+}
+
+.interactive-figure[data-pan-zoom="enabled"] .react-flow__pane {
+  cursor: grab;
+}
+
+.interactive-figure[data-pan-zoom="enabled"] .react-flow__pane:active {
+  cursor: grabbing;
 }
 
 .interactive-figure .react-flow__node {
@@ -133,8 +146,10 @@
 }
 
 .interactive-figure[data-figure-size="stage"] .interactive-figure__canvas {
-  min-width: 1440px;
-  min-height: 470px;
+  position: relative;
+  min-width: 100%;
+  min-height: 0;
+  height: 100%;
 }
 
 .interactive-figure[data-figure-size="stage"] .react-flow {

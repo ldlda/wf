@@ -18,12 +18,21 @@
   position: fixed;
   inset: 0;
   overflow: hidden;
+  display: grid;
+  place-items: center;
   background: oklch(0.13 0.01 65);
 }
 
 .presentation-canvas {
-  position: absolute;
-  transform-origin: top left;
+  /*
+    The stage fills the viewport while clamping its aspect ratio to the reviewed
+    12:9-16:9 range. Avoid transform-based scaling here: React Flow, popovers,
+    and floating chat need real DOM geometry, not scaled getBoundingClientRect()
+    values.
+  */
+  position: relative;
+  width: min(100dvw, calc(100dvh * 16 / 9));
+  height: min(100dvh, calc(100dvw * 9 / 12));
   overflow: hidden;
   background: var(--color-editorial-paper);
   color: var(--color-editorial-ink);

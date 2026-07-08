@@ -23,4 +23,16 @@ describe("interactive-figure CSS", () => {
     // Only the stage variant should have gradients.
     expect(totalGradientSelectors).toBe(stageGradients?.length ?? 0);
   });
+
+  it("does not force stage figures wider than the visible canvas", () => {
+    expect(css).not.toContain("min-width: 1440px");
+    expect(css).toContain('data-figure-size="stage"] .interactive-figure__canvas');
+    expect(css).toContain("min-width: 100%");
+  });
+
+  it("lets stage figures shrink to the available scene height", () => {
+    expect(css).not.toContain("min-height: 470px");
+    expect(css).toContain("min-height: 0");
+    expect(css).toContain("height: 100%");
+  });
 });
