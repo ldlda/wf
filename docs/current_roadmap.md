@@ -132,8 +132,9 @@ Presentation wishlist / defense readiness:
 - Defense Q&A branch set:
   [`defense Q&A runbook`](runbooks/defense-qna.md) collects answers for
   "Where is the AI agent?", evaluation validity, security boundaries, demo
-  reliability, and other likely examiner questions. Later work can project the
-  strongest entries into `/present` discussion branches.
+  reliability, and other likely examiner questions. Completed projection into
+  `/present` discussion branches:
+  [`defense Q&A branch projection`](historical/superpowers/plans/2026-07-08-defense-qna-branch-projection.md).
 - Chat surface replacement: use source-owned AI/chat primitives so tool calls,
   approval requests, and scripted macro output look like a standard modern AI
   product instead of custom slide chrome.
