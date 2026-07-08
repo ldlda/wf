@@ -240,20 +240,31 @@ export type MainLocation = {
   readonly focusPath: readonly string[];
 };
 
-export type DiscussionBranchDefinition = {
+type DiscussionLink = {
+  readonly label: string;
+  readonly href: string;
+};
+
+type DiscussionBranchDetail = {
+  readonly text: string;
+  readonly links?: readonly DiscussionLink[];
+};
+
+type QuestionAnswerBranchFields = {
+  readonly question?: string;
+  readonly shortAnswer?: string;
+  readonly expandedAnswer?: string;
+  readonly speakerHint?: string;
+};
+
+export type DiscussionBranchDefinition = QuestionAnswerBranchFields & {
   readonly id: string;
   readonly parentSceneId: MainSceneId;
   readonly title: string;
   readonly claimClass: ClaimClass;
   readonly evidencePointer: string;
   readonly summary: string;
-  readonly detail?: {
-    readonly text: string;
-    readonly links?: ReadonlyArray<{
-      readonly label: string;
-      readonly href: string;
-    }>;
-  };
+  readonly detail?: DiscussionBranchDetail;
 };
 
 const defineDiscussionBranches = <const Branches extends readonly DiscussionBranchDefinition[]>(
@@ -261,6 +272,30 @@ const defineDiscussionBranches = <const Branches extends readonly DiscussionBran
 ): Branches => branches;
 
 export const discussionBranches = defineDiscussionBranches([
+  {
+    id: "where-is-ai-agent",
+    parentSceneId: "thesis",
+    title: "Where is the AI agent?",
+    claimClass: "implemented",
+    evidencePointer: "Abstract; Chapter 1 framing; presentation Scene 1",
+    summary: "The implementation is the agent-operable workflow substrate, not a bundled autonomous planner.",
+    question: "Where is the AI agent in this thesis?",
+    shortAnswer: "The submitted implementation is the lower-level workflow substrate that external agents operate. It exposes typed lifecycle, validation, execution, trace, and inspection surfaces; the autonomous planner layer is intentionally outside the core contribution.",
+    expandedAnswer: "The forced product framing uses AI-agent language, but the engineering contribution is not a new planning algorithm. The system gives external LLM operators and human users a reliable workflow lifecycle: drafts, artifacts, deployments, runs, source bindings, diagnostics, traces, and bounded resume. A thin chat or agent graph interface could sit above it, but this thesis evaluates the substrate that makes such an interface useful.",
+    speakerHint: "Answer directly first; do not sound defensive. Say substrate, then lifecycle evidence.",
+  },
+  {
+    id: "title-ai-agent-wording",
+    parentSceneId: "thesis",
+    title: "Title wording boundary",
+    claimClass: "implemented",
+    evidencePointer: "Abstract; Introduction; Future Work",
+    summary: "The title is defended as product direction while the body narrows the implemented contribution.",
+    question: "Does the title overclaim by saying AI Agent?",
+    shortAnswer: "It is a risky title if read as a claim that the thesis implements a complete autonomous agent brain. The body narrows that claim: this work implements the workflow substrate for agent-operated automation.",
+    expandedAnswer: "The safest defense is to distinguish product ambition from the submitted technical artifact. The artifact owns schemas, validation, source projection, lifecycle state, deployment binding, run records, traces, and typed interrupts. A future agent wrapper can use those operations as tools, but that wrapper is not the thesis contribution.",
+    speakerHint: "Do not argue that the platform is secretly a full agent. Reframe to agent-operable substrate.",
+  },
   {
     id: "direct-orchestration",
     parentSceneId: "positioning",
@@ -318,6 +353,28 @@ export const discussionBranches = defineDiscussionBranches([
     },
   },
   {
+    id: "not-just-scripts",
+    parentSceneId: "positioning",
+    title: "Why not scripts?",
+    claimClass: "motivation",
+    evidencePointer: "Chapter 3 positioning; Draft-Artifact-Deployment-Run model",
+    summary: "Scripts are simple, but they do not naturally provide lifecycle state, deployment binding, validation, traces, or reusable inspection records.",
+    question: "Why not generate Python scripts instead?",
+    shortAnswer: "Generated scripts can solve one task, but reusable workspace automation needs lifecycle state, validation, deployment binding, traces, and recovery boundaries that should not be left inside generated code.",
+    expandedAnswer: "The thesis does not claim scripts are bad. It claims that as soon as external agents are expected to author reusable automations, the platform should own the durable parts: schema contracts, source inventory, validation, immutable artifacts, deployment bindings, run records, and inspection. Generated scripts can still be one capability source behind that boundary.",
+  },
+  {
+    id: "not-just-cli",
+    parentSceneId: "planner-runtime",
+    title: "Not just a CLI",
+    claimClass: "implemented",
+    evidencePointer: "wf_api surface; JSON-RPC transport; web console",
+    summary: "The CLI is one front door over the same workflow API and runtime lifecycle.",
+    question: "Is this just a CLI wrapper?",
+    shortAnswer: "No. The CLI is only one client. The same operations are exposed through the workflow API and JSON-RPC server, and the web console uses that protocol boundary to inspect lifecycle records and execute the prepared demo.",
+    expandedAnswer: "A CLI-only project would stop at command parsing. This system has typed workflow models, source providers, transport-neutral API surfaces, persisted artifacts/deployments/runs, trace inspection, validation diagnostics, and a React console that consumes JSON-RPC. The CLI remains useful because agents and humans can operate it, but it is not the architecture boundary.",
+  },
+  {
     id: "lifecycle-states",
     parentSceneId: "lifecycle",
     title: "Lifecycle state machine",
@@ -342,6 +399,17 @@ export const discussionBranches = defineDiscussionBranches([
     summary: "Structured diagnostics identify invalid state and suggest repair hints.",
   },
   {
+    id: "why-schemas",
+    parentSceneId: "authoring",
+    title: "Why schemas matter",
+    claimClass: "implemented",
+    evidencePointer: "wf schema command; draft validation diagnostics; typed interrupt contracts",
+    summary: "Schemas move correctness checks out of agent guesses and into the platform.",
+    question: "Why put so much emphasis on schemas?",
+    shortAnswer: "Schemas are how the platform turns agent-authored workflow guesses into checkable contracts. They let the system validate bindings, project capability inputs/outputs, describe interrupts, and explain repair paths before runtime execution.",
+    expandedAnswer: "Without schemas, the planner must infer every shape and failure appears late. With schemas, the runtime can detect invalid source paths, undeclared destinations, missing outcomes, incompatible resume payloads, and source drift. That does not make agents perfect, but it gives them a public surface to discover and repair against.",
+  },
+  {
     id: "typed-interrupts",
     parentSceneId: "interrupt-evidence",
     title: "Typed interrupt contracts",
@@ -364,6 +432,20 @@ export const discussionBranches = defineDiscussionBranches([
     claimClass: "implemented",
     evidencePointer: "Thesis Architecture; provider-neutral capability resolution",
     summary: "Provider-neutral capabilities reduce vendor lock-in; runtime enforces boundary contracts.",
+    question: "Do source providers solve security?",
+    shortAnswer: "No. Source providers create a clearer boundary for capability projection and deployment binding, but they are not a complete security model.",
+    expandedAnswer: "The provider boundary helps separate source inventory, schemas, and runtime calls from the workflow graph. It gives the platform a place to inspect and validate capabilities. Production security still needs credentials, sandboxing, RBAC, policy enforcement, and operational audit beyond this prototype.",
+  },
+  {
+    id: "security-production-boundary",
+    parentSceneId: "architecture",
+    title: "Security and production boundary",
+    claimClass: "implemented",
+    evidencePointer: "Limitations; source-provider boundary; loopback console policy",
+    summary: "The prototype defines boundaries but does not claim production hardening.",
+    question: "Is this secure enough for production?",
+    shortAnswer: "No. The thesis is explicit that this is a prototype. It demonstrates source/provider boundaries, local-first transport, and typed validation, but not production-grade authentication, authorization, sandboxing, secret handling, or tenant isolation.",
+    expandedAnswer: "The implemented boundary is still useful: sources are projected through a provider-neutral surface, deployments bind requirements explicitly, and runs are inspectable. But production security would require a separate hardening track: credentials, RBAC, audit policy, sandboxed tool execution, untrusted workflow review, network policy, and operational monitoring.",
   },
   {
     id: "evaluation-validity",
@@ -372,6 +454,10 @@ export const discussionBranches = defineDiscussionBranches([
     claimClass: "evaluated",
     evidencePointer: "Thesis Evaluation; bounded validity",
     summary: "Manual audit separates task completion from valid product-surface evidence.",
+    question: "How valid is the 36-trial external-agent evaluation?",
+    shortAnswer: "It is useful engineering evidence, but not a controlled model comparison. The thesis treats it as bounded longitudinal evidence about agent-operability and UX failure modes.",
+    expandedAnswer: "The cohort has N=3 per cell, two challenges, two hosted models, and three instruction profiles, but it spans product and prompt evolution. Manual audit is authoritative for validity. That supports feasibility and failure analysis, not broad claims about model generalization, token savings, or superiority over other workflow systems.",
+    speakerHint: "Emphasize honesty: useful evidence, deliberately bounded claim.",
   },
   {
     id: "replay-provenance",
@@ -380,6 +466,39 @@ export const discussionBranches = defineDiscussionBranches([
     claimClass: "implemented",
     evidencePointer: "Thesis Prepared Replay; replay evidence chain",
     summary: "Replay evidence is projected from the canonical recording for deterministic demonstration.",
+  },
+  {
+    id: "demo-reliability",
+    parentSceneId: "workflow-demo",
+    title: "Live demo reliability",
+    claimClass: "implemented",
+    evidencePointer: "Prepared lda_report_workflow; replay recording; defense presentation runbook",
+    summary: "The demo is designed with live and replay paths so the defense can explain the system even if local services fail.",
+    question: "What if the live demo fails?",
+    shortAnswer: "The defense has a replay path with the same recorded operation sequence and evidence. If live RPC fails, the point is still demonstrable: the workflow lifecycle, typed interrupt, resume result, trace, and output records are shown from the prepared recording.",
+    expandedAnswer: "The replay is not presented as fresh empirical evidence. It is a presentation fallback for an already-tested deterministic example. The live path demonstrates current server behavior when available; the replay path preserves the explanation if Wi-Fi, local ports, or process state fail during the defense.",
+  },
+  {
+    id: "prepared-replay-boundary",
+    parentSceneId: "workflow-demo",
+    title: "Prepared replay boundary",
+    claimClass: "evaluated",
+    evidencePointer: "Demo recording fixture; replay provenance branch; runbook fallback wording",
+    summary: "Prepared replay is a communication artifact, not a benchmark result.",
+    question: "Is the replay cheating?",
+    shortAnswer: "It would be cheating if presented as a new live result. Here it is a controlled presentation artifact that shows a previously verified operation path, with provenance separated from the external-agent evaluation.",
+    expandedAnswer: "The thesis separates implementation evidence, automated tests, external-agent trials, and presentation replay. Replay exists so the audience can see the lifecycle without relying on a fragile live environment. It should be described as recorded evidence of a deterministic path, not as a live autonomous-agent success.",
+  },
+  {
+    id: "production-readiness",
+    parentSceneId: "conclusion",
+    title: "Production readiness",
+    claimClass: "future-work",
+    evidencePointer: "Limitations; Future Work; roadmap",
+    summary: "The system is submission-ready as a prototype, not production-ready as a hosted automation service.",
+    question: "What is missing before this becomes a production product?",
+    shortAnswer: "The major missing pieces are security hardening, real credential management, better hosted operations, stronger UI flows, controlled evaluation, scheduler semantics, and a real external-agent interface.",
+    expandedAnswer: "The thesis contribution is the substrate: typed lifecycle, validation, source binding, artifacts, deployments, runs, traces, and interrupt contracts. A production product would need authentication, RBAC, secret stores, sandboxing, migration policy, operational dashboards, scaling, billing or tenant boundaries, and a validated planner/chat layer on top.",
   },
 ]);
 

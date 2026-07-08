@@ -5,6 +5,7 @@ import {
   findBeat,
   findScene,
   mainScenes,
+  type DiscussionBranchDefinition,
 } from "./storyboard.js";
 
 describe("defense storyboard catalog", () => {
@@ -50,10 +51,41 @@ describe("defense storyboard catalog", () => {
       "hosted-automation",
       "durable-agent-graphs",
       "mcp-agent-scale",
+      "not-just-scripts",
     ]);
     for (const branch of discussionBranches) {
       expect(branch.title.length).toBeGreaterThan(0);
       expect(branch.summary.length).toBeGreaterThan(0);
+      expect(branch.evidencePointer.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("defines core defense Q&A branches for expected examiner questions", () => {
+    expect(discussionBranches.map((branch) => branch.id)).toEqual(
+      expect.arrayContaining([
+        "where-is-ai-agent",
+        "title-ai-agent-wording",
+        "not-just-cli",
+        "not-just-scripts",
+        "evaluation-validity",
+        "security-production-boundary",
+        "demo-reliability",
+        "prepared-replay-boundary",
+        "why-schemas",
+        "production-readiness",
+      ]),
+    );
+  });
+
+  it("keeps defense Q&A branches speaker-ready", () => {
+    const branches: readonly DiscussionBranchDefinition[] = discussionBranches;
+    const qnaBranches = branches.filter((branch) => branch.question);
+    expect(qnaBranches.length).toBeGreaterThanOrEqual(10);
+    for (const branch of qnaBranches) {
+      expect(branch.question).toMatch(/\?$/);
+      expect(branch.shortAnswer?.length).toBeGreaterThan(40);
+      expect(branch.shortAnswer?.length).toBeLessThan(360);
+      expect(branch.expandedAnswer?.length).toBeGreaterThan(80);
       expect(branch.evidencePointer.length).toBeGreaterThan(0);
     }
   });
