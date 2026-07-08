@@ -32,17 +32,21 @@ const DiscussionLinks = ({
   const branches = discussionBranches.filter((branch) => branch.parentSceneId === sceneId);
   if (branches.length === 0) return null;
   return (
-    <div className="scene-body__discussion-links" aria-label="discussion topics">
-      {branches.map((branch) => (
-        <button
-          key={branch.id}
-          type="button"
-          onClick={() => openDiscussion(branch.id)}
-        >
-          {branch.title}
-        </button>
-      ))}
-    </div>
+    <aside className="scene-body__discussion-links" aria-label="defense discussion topics" data-discussion-rail="true">
+      <span className="scene-body__discussion-label">Defense questions</span>
+      <ul className="scene-body__discussion-list">
+        {branches.map((branch) => (
+          <li key={branch.id}>
+            <button
+              type="button"
+              onClick={() => openDiscussion(branch.id)}
+            >
+              <span>{branch.title}</span> <small>{branch.claimClass}</small>
+            </button>
+          </li>
+        ))}
+      </ul>
+    </aside>
   );
 };
 

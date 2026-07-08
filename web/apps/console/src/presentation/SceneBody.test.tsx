@@ -291,6 +291,50 @@ describe("SceneBody", () => {
     expect(screen.getByText("Compile or save")).toBeInTheDocument();
   });
 
+  it("renders discussion branches as a labelled presenter rail", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    const rail = screen.getByLabelText("defense discussion topics");
+    expect(rail).toHaveAttribute("data-discussion-rail", "true");
+    expect(within(rail).getByText("Defense questions")).toBeInTheDocument();
+    expect(within(rail).getByRole("list")).toBeInTheDocument();
+    expect(within(rail).getByRole("button", { name: /Hosted automation future-work/i })).toBeInTheDocument();
+  });
+
+  it("keeps discussion rail actions wired to branch ids", async () => {
+    const user = userEvent.setup();
+    const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };
+    const openDiscussion = vi.fn();
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={openDiscussion}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /Hosted automation future-work/i }));
+
+    expect(openDiscussion).toHaveBeenCalledWith("hosted-automation");
+  });
+
   it("renders evidence before discussion links so the chip lane cannot cover evidence text", () => {
     const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };
     const { container } = render(
