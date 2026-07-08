@@ -213,6 +213,9 @@ pyrightconfig.json
 # Local agent skill links
 .agent/
 
+# Local Superpowers/subagent progress ledgers
+.superpowers/
+
 # Local dependency source checkouts used for agent reference
 .repos/effect/
 
