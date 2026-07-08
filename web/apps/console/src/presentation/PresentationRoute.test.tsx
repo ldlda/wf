@@ -25,7 +25,15 @@ beforeAll(() => {
   } as unknown as typeof DOMRect;
 });
 
-afterEach(() => cleanup());
+const setReplayMode = () => {
+  window.sessionStorage.setItem("lda.workflowConsole.target", "file:///invalid");
+};
+
+afterEach(() => {
+  cleanup();
+  window.sessionStorage.clear();
+  window.location.hash = "";
+});
 
 describe("PresentationRoute", () => {
   it("renders the presentation stage entry point", async () => {
@@ -45,9 +53,10 @@ describe("PresentationRoute", () => {
   });
 
   it("renders audience progress chrome without rail or mode label", async () => {
+    setReplayMode();
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
-    expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
+    expect(screen.getByText(/replay fallback is active/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/presentation scene rail/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText("scene position")).toBeInTheDocument();
   });
@@ -62,6 +71,7 @@ describe("PresentationRoute", () => {
   });
 
   it("can advance replay far enough to show a product operation block", async () => {
+    setReplayMode();
     window.location.hash = "#scene/workflow-demo/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -104,6 +114,7 @@ describe("PresentationRoute", () => {
   });
 
   it("opens the inspector from an explicit operation action", async () => {
+    setReplayMode();
     const user = userEvent.setup();
     window.location.hash = "#scene/workflow-demo/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
@@ -113,6 +124,7 @@ describe("PresentationRoute", () => {
   });
 
   it("closes the inspector from the explicit close action", async () => {
+    setReplayMode();
     const user = userEvent.setup();
     window.location.hash = "#scene/workflow-demo/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
@@ -124,6 +136,7 @@ describe("PresentationRoute", () => {
   });
 
   it("returns to the receipt after closing the inspector on a receipt beat", async () => {
+    setReplayMode();
     const user = userEvent.setup();
     window.location.hash = "#scene/interrupt-evidence/trace";
     const { PresentationRoute } = await import("./PresentationRoute.js");
@@ -133,6 +146,22 @@ describe("PresentationRoute", () => {
     await user.click(screen.getByRole("button", { name: /close evidence/i }));
     expect(screen.queryByRole("dialog", { name: /evidence inspector/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /inspect evidence/i })).toBeInTheDocument();
+  });
+
+  it("renders a chat run action on the presentation route", async () => {
+    window.location.hash = "#scene/agent-handoff/request";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("button", { name: /run prepared workflow|run replay walkthrough/i })).toBeInTheDocument();
+  });
+
+  it("uses stored target for live presentation mode", async () => {
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("button", { name: /run prepared workflow/i })).toBeInTheDocument();
   });
 
   it("opens Scene 10 approval from the canonical hash", async () => {

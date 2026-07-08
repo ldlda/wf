@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import type { EvidenceRecord } from "../app/state.js";
-import { createPreparedRecipeDriver, assertNever } from "../demo/agent/preparedRecipeDriver.js";
-import { useDemoAgent } from "../demo/agent/useDemoAgent.js";
+import { resolvePresentationTarget } from "./live-target.js";
+import { useTimelineAgent } from "../demo/agent/timelineAgent.js";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import { useDemoTimeline } from "../demo/useDemoTimeline.js";
 import { PresentationCanvas } from "./PresentationCanvas.js";
@@ -47,18 +47,13 @@ export const PresentationRoute = () => {
   const recordEvidence = useCallback((record: EvidenceRecord) => {
     setEvidence((records) => [...records, record]);
   }, []);
-  const demo = useDemoTimeline(null, recordEvidence, recording);
 
-  const agentDriver = useMemo(() => createPreparedRecipeDriver(recording), [recording]);
-  const agent = useDemoAgent(agentDriver);
-
-  const handleApprove = useCallback(() => {
-    agent.submitApproval({ approved: true, comment: "Approved by operator." });
-  }, [agent]);
-
-  const handleDeny = useCallback(() => {
-    agent.submitApproval({ approved: false, comment: "Denied by operator." });
-  }, [agent]);
+  const presentationTarget = useMemo(() => resolvePresentationTarget(), []);
+  const demo = useDemoTimeline(presentationTarget.target, recordEvidence, recording);
+  const timelineAgent = useTimelineAgent(
+    demo,
+    presentationTarget.mode === "live" ? "live" : "replay",
+  );
 
   useEffect(() => {
     const hash = hashForLocation(state.location);
@@ -96,38 +91,23 @@ export const PresentationRoute = () => {
   }, []);
 
   useEffect(() => {
-    if (demo.state.phase === "ready" && demo.state.mode !== "replay") {
+    if (demo.state.phase === "ready" && presentationTarget.mode === "replay" && demo.state.mode !== "replay") {
       demo.setMode("replay");
     }
-  }, [demo.state.phase, demo.state.mode, demo.setMode]);
+    if (demo.state.phase === "ready" && presentationTarget.mode === "live" && demo.state.mode !== "live") {
+      demo.setMode("live");
+    }
+  }, [demo.state.phase, demo.state.mode, demo.setMode, presentationTarget.mode]);
 
   useEffect(() => {
-    if (demo.state.phase === "ready" && demo.state.mode === "replay") {
+    if (presentationTarget.mode === "replay" && demo.state.phase === "ready" && demo.state.mode === "replay") {
       demo.start();
     }
-  }, [demo.state.phase, demo.state.mode, demo.start]);
+  }, [demo.state.phase, demo.state.mode, demo.start, presentationTarget.mode]);
 
   useEffect(() => {
     dispatch({ type: "set_playback_mode", mode: demo.state.mode });
   }, [demo.state.mode]);
-
-  useEffect(() => {
-    for (const action of agent.pendingActions) {
-      switch (action.type) {
-        case "selectWorkflowNode":
-          dispatch({ type: "select_node", nodeId: action.nodeId });
-          break;
-        case "focusOperation":
-        case "showTraceFrame":
-          break;
-        default:
-          assertNever(action);
-      }
-    }
-    if (agent.pendingActions.length > 0) {
-      agent.clearPendingActions();
-    }
-  }, [agent.pendingActions, agent.clearPendingActions]);
 
   const handleJump = useCallback(
     (location: MainLocation) => dispatch({ type: "jump", location }),
@@ -151,9 +131,7 @@ export const PresentationRoute = () => {
           state={state}
           demo={demo}
           evidence={evidence}
-          messages={agent.messages}
-          onApprove={agent.phase === "awaiting-approval" ? handleApprove : undefined}
-          onDeny={agent.phase === "awaiting-approval" ? handleDeny : undefined}
+          timelineAgent={timelineAgent}
           jump={handleJump}
           selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
           openEvidence={() => dispatch({ type: "set_evidence_presentation", presentation: "inspector" })}
@@ -165,3 +143,4 @@ export const PresentationRoute = () => {
     </main>
   );
 };
+

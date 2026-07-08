@@ -1,6 +1,7 @@
 import { domAnimation, LayoutGroup, LazyMotion } from "motion/react";
 import type { EvidenceRecord } from "../app/state.js";
 import type { AgentMessage } from "../demo/agent/events.js";
+import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
 import { SceneBody } from "./SceneBody.js";
 import { DiscussionPanel } from "./DiscussionPanel.js";
 import { EvidenceInspector } from "./evidence/EvidenceInspector.js";
@@ -16,6 +17,7 @@ type PresentationStageProps = {
   readonly demo: DemoTimelineController;
   readonly evidence: readonly EvidenceRecord[];
   readonly messages?: ReadonlyArray<AgentMessage>;
+  readonly timelineAgent?: TimelineAgentController | undefined;
   readonly onApprove?: (() => void) | undefined;
   readonly onDeny?: (() => void) | undefined;
   readonly jump: (location: MainLocation) => void;
@@ -31,6 +33,7 @@ export const PresentationStage = ({
   demo,
   evidence,
   messages,
+  timelineAgent,
   onApprove,
   onDeny,
   jump,
@@ -57,7 +60,7 @@ export const PresentationStage = ({
           data-scene-view={activeSceneView}
         >
           <aside className="presentation-stage__chat" aria-label="agent chat region">
-            <OperatorChat state={state} messages={messages} onApprove={onApprove} onDeny={onDeny} />
+            <OperatorChat state={state} messages={messages} timelineAgent={timelineAgent} onApprove={onApprove} onDeny={onDeny} />
           </aside>
           <section className="presentation-stage__primary" aria-label="primary presentation region">
             {state.location.kind === "discussion" ? (
