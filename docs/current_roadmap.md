@@ -152,9 +152,13 @@ Presentation wishlist / defense readiness:
       beats, kept workflow graph nodes in frame, added run-proof labels inside
       the graph, and cleared outcome panels below the receipt row. Implementation:
       [`demo product proof layout`](historical/superpowers/plans/2026-07-09-demo-product-proof-layout.md).
-   7. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
+   7. Completed: demo interrupt layout focus pass made approval/interrupt beats
+      contract-first, reduced the graph to compact context where appropriate,
+      and removed the remaining three-column crowding. Implementation:
+      [`demo interrupt layout focus`](historical/superpowers/plans/2026-07-09-demo-interrupt-layout-focus.md).
+   8. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
       hierarchy, evidence receipt placement, and remaining generic-slide styling
-      after the demo proof layout is stable.
+      after the interrupt layout is stable.
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
