@@ -160,7 +160,11 @@ Presentation wishlist / defense readiness:
        presenter question rail and rebuilt Q&A modals around answer,
        provenance, and presenter-note hierarchy. Implementation:
        [`presentation discussion craft`](historical/superpowers/plans/2026-07-09-presentation-discussion-craft.md).
-    9. Presentation craft pass: tune remaining motion, evidence receipt
+   9. Completed: discussion modal composition pass made Q&A and context-only
+      routes stage-aware, with body/support/action regions instead of plain
+      document cards. Implementation:
+      [`presentation discussion modal composition`](historical/superpowers/plans/2026-07-09-presentation-discussion-modal-composition.md).
+   10. Presentation craft pass: tune remaining motion, evidence receipt
        placement, route-level caption contrast, and graph visual language after
        the discussion layer is stable.
 - Presenter runbook:
@@ -173,14 +177,21 @@ Presentation wishlist / defense readiness:
   reliability, and other likely examiner questions. Completed projection into
   `/present` discussion branches:
   [`defense Q&A branch projection`](historical/superpowers/plans/2026-07-08-defense-qna-branch-projection.md).
-- Chat surface replacement: use source-owned AI/chat primitives so tool calls,
-  approval requests, and scripted macro output look like a standard modern AI
-  product instead of custom slide chrome.
+- Chat surface replacement: make the prepared demo agent feel operable from a
+  real chat surface, not from custom slide chrome. The chat should own the
+  "run prepared agent" affordance, render tool calls/results with a standard
+  modern AI-app vocabulary, and expose approval requests as normal chat events
+  that can also drive presentation actions.
 - Schema form approval surface: render typed interrupt request/resume schemas as
   reusable form UI shared by chat, Scene 10, and future console approval flows.
+  The current `{ "type": "object" }` proof is enough for architecture evidence,
+  but the product demo needs a real schema-derived approval form with submitted
+  and cancelled outcomes.
 - Guided run beat gates: make the prepared agent/demo sequence explicitly wait
   for presentation beats, approval decisions, and evidence reveals instead of
-  relying on loose timing.
+  relying on loose timing. This should connect the chat run, schema approval
+  form, graph focus, and evidence inspector into one deterministic presenter
+  sequence.
 - Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
   expected run states, and a timed walkthrough checklist for a 15-minute defense.
 - Presenter companion feasibility: decide whether phone/laptop control is local
