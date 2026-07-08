@@ -156,9 +156,13 @@ Presentation wishlist / defense readiness:
       contract-first, reduced the graph to compact context where appropriate,
       and removed the remaining three-column crowding. Implementation:
       [`demo interrupt layout focus`](historical/superpowers/plans/2026-07-09-demo-interrupt-layout-focus.md).
-   8. Presentation craft pass: tune motion, discussion-chip placement, Q&A modal
-      hierarchy, evidence receipt placement, and remaining generic-slide styling
-      after the interrupt layout is stable.
+    8. Completed: discussion craft pass replaced detached branch chips with a
+       presenter question rail and rebuilt Q&A modals around answer,
+       provenance, and presenter-note hierarchy. Implementation:
+       [`presentation discussion craft`](historical/superpowers/plans/2026-07-09-presentation-discussion-craft.md).
+    9. Presentation craft pass: tune remaining motion, evidence receipt
+       placement, route-level caption contrast, and graph visual language after
+       the discussion layer is stable.
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
