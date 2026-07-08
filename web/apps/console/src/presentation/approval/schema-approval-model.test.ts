@@ -59,6 +59,7 @@ describe("buildSchemaApprovalModel", () => {
     const model = buildSchemaApprovalModel({
       schema: { type: "object" },
       payload: {
+        approved: true,
         selected_issue_ids: ["risk-1"],
         comment: "Create the selected issue.",
       },

@@ -196,7 +196,7 @@ export const mainScenes = defineScenes([
     view: "demo",
     beats: [
       sceneBeat("approval", "Approval", "The operator reviews a schema-backed resume request.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("resume", "Resume", "The approved payload resumes the same persisted run.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("resume", "Resume", "The submitted payload resumes the same persisted run.", { chatMode: "hidden", chatTheme: "light" }),
       sceneBeat("output", "Output", "The workflow produces the report and issue-board changes.", { chatMode: "hidden", chatTheme: "light" }),
       sceneBeat("trace", "Evidence", "Trace frames and protocol evidence remain inspectable.", { chatMode: "dock", chatTheme: "light", evidencePresentation: "receipt" }),
     ],

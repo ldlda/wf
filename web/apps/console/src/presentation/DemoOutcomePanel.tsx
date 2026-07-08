@@ -55,7 +55,7 @@ export const DemoOutcomePanel = ({
         <strong>Product state, not chat-only text</strong>
         <ul>
           <li><b>Report markdown</b><small>Generated from selected documents.</small></li>
-          <li><b>Issue board changes</b><small>Created only after approval.</small></li>
+          <li><b>Issue board changes</b><small>Created only after resume submission.</small></li>
         </ul>
       </aside>
     );

@@ -73,7 +73,7 @@ export const DemoWorkflowScene = ({
 
   const lens = demoBeatLensForBeat(beat.id);
   const currentOperation = currentEvent ? projectOperationPresentation(currentEvent) : null;
-  const showOutcomePanel = beat.id === "approval" || beat.id === "resume" || beat.id === "output" || beat.id === "trace";
+  const showOutcomePanel = beat.id === "resume" || beat.id === "output" || beat.id === "trace";
 
   const showExpandedOperation = beat.id === "operation" || beat.id === "resume" || beat.id === "trace";
   const showGraph = beat.id === "graph" || beat.id === "interrupt" || beat.id === "approval" || beat.id === "output";

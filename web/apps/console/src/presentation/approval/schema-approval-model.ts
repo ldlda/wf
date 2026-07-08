@@ -51,10 +51,16 @@ const labelFor = (name: string): string => name.replaceAll("_", " ");
 
 const payloadEntries = (payload: unknown): ReadonlyArray<{ readonly key: string; readonly value: string }> => {
   if (!isObject(payload)) return [];
-  return Object.entries(payload).map(([key, value]) => ({
-    key,
-    value: formatValue(value) ?? "undefined",
-  }));
+  return Object.entries(payload)
+    // Loose resume schemas often carry implementation flags such as
+    // `approved: true`; the product surface should show the workflow outcome
+    // (`submitted/cancelled`) and the operator payload, not duplicate flag
+    // vocabulary that reads like a second outcome system.
+    .filter(([key]) => key !== "approved")
+    .map(([key, value]) => ({
+      key,
+      value: formatValue(value) ?? "undefined",
+    }));
 };
 
 export const buildSchemaApprovalModel = ({

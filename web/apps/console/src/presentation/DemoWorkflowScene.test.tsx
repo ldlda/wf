@@ -112,7 +112,7 @@ describe("DemoWorkflowScene", () => {
     expect(stage).toHaveAttribute("data-demo-layout", "approval");
     expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
     expect(screen.getByLabelText("typed interrupt contract")).toHaveTextContent("Operator decision");
-    expect(screen.getByLabelText("typed interrupt contract")).toHaveTextContent("Resume outcomes");
+    expect(screen.getByRole("group", { name: /issue review resume/i })).toHaveTextContent("submitted / cancelled");
     expect(screen.getByLabelText("workflow graph")).toBeInTheDocument();
   });
 
@@ -143,11 +143,11 @@ describe("DemoWorkflowScene", () => {
   });
 
   it("marks outcome-panel layouts so CSS can clear the receipt row", () => {
-    renderBeat("approval", "interrupt-evidence");
+    renderBeat("resume", "interrupt-evidence");
 
-    expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "approval");
+    expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "operation");
     expect(screen.getByLabelText("demo outcome proof")).toBeInTheDocument();
-    expect(screen.getByLabelText("workflow.runs.start execution receipt")).toBeInTheDocument();
+    expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
   });
 
   it("shows the continuity rail across Scene 9 operation, graph, and interrupt beats", () => {
@@ -187,16 +187,17 @@ describe("DemoWorkflowScene", () => {
 
     expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
     expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "compact");
-    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("schema-backed");
+    expect(screen.queryByLabelText("demo outcome proof")).not.toBeInTheDocument();
   });
 
   it("shows a schema approval surface for the approval beat instead of raw schema as the primary visual", () => {
     renderBeat("approval", "interrupt-evidence");
 
-    const approval = screen.getByRole("group", { name: /issue_review resume/i });
+    const approval = screen.getByRole("group", { name: /issue review resume/i });
     expect(within(approval).getByText("Schema-backed decision")).toBeInTheDocument();
     expect(within(approval).getByText("selected_issue_ids")).toBeInTheDocument();
     expect(within(approval).getByText("[\"risk-1\"]")).toBeInTheDocument();
+    expect(within(approval).queryByText("approved")).not.toBeInTheDocument();
     expect(within(approval).getByRole("button", { name: /submit/i })).toBeDisabled();
     expect(within(approval).getByRole("button", { name: /cancel/i })).toBeDisabled();
   });
@@ -210,11 +211,7 @@ describe("DemoWorkflowScene", () => {
     expect(screen.queryByText("Resume schema")).not.toBeInTheDocument();
   });
 
-  it("adds outcome proof to approval, resume, output, and trace beats", () => {
-    const approval = renderBeat("approval", "interrupt-evidence");
-    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("schema-backed");
-    approval.unmount();
-
+  it("adds outcome proof to resume, output, and trace beats", () => {
     const resume = renderBeat("resume", "interrupt-evidence");
     expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("Same persisted run");
     resume.unmount();

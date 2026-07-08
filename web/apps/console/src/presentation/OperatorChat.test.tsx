@@ -87,7 +87,7 @@ describe("OperatorChat", () => {
             type: "approval-request",
             callId: "call-1",
             name: "resumeIssueReview",
-            prompt: "Approve resuming?",
+            prompt: "Submit resume request?",
             contract: {
               kind: "issue_review",
               outcomes: ["submitted", "cancelled"],
@@ -102,7 +102,7 @@ describe("OperatorChat", () => {
 
     render(<OperatorChat state={initialPresentationState} messages={messages} onApprove={onApprove} onDeny={onDeny} />);
 
-    expect(screen.getByRole("group", { name: /issue_review resume/i })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /issue review resume/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /submit/i }));
     await user.click(screen.getByRole("button", { name: /cancel/i }));
@@ -123,7 +123,7 @@ describe("OperatorChat", () => {
             type: "approval-request",
             callId: "call-1",
             name: "resumeIssueReview",
-            prompt: "Approve resuming?",
+            prompt: "Submit resume request?",
           },
         ],
       },
@@ -131,7 +131,7 @@ describe("OperatorChat", () => {
 
     render(<OperatorChat state={initialPresentationState} messages={messages} onApprove={onApprove} onDeny={onDeny} />);
 
-    expect(screen.queryByRole("group", { name: /issue_review resume/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /issue review resume/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await user.click(screen.getByRole("button", { name: "Deny" }));
     expect(onApprove).toHaveBeenCalledTimes(1);

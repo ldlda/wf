@@ -51,7 +51,7 @@ describe("SchemaApprovalSurface", () => {
       />,
     );
 
-    expect(screen.getByText("No additional resume fields are declared by this schema.")).toBeInTheDocument();
+    expect(screen.getByText("Recorded resume payload for this decision.")).toBeInTheDocument();
     expect(screen.getByText("selected_issue_ids")).toBeInTheDocument();
     expect(screen.getByText("[\"risk-1\"]")).toBeInTheDocument();
   });

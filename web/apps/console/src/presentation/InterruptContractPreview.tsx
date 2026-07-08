@@ -9,6 +9,8 @@ type InterruptContractPreviewProps = {
   readonly hero?: boolean;
 };
 
+const titleForKind = (kind: string): string => `${kind.replaceAll("_", " ")} resume`;
+
 export const InterruptContractPreview = ({
   contract,
   mode,
@@ -27,19 +29,21 @@ export const InterruptContractPreview = ({
       <span>{mode === "approval" ? "Operator decision" : "Execution paused"}</span>
       <strong>{contract.kind}</strong>
     </header>
-    <dl>
-      <div>
-        <dt>Persisted run</dt>
-        <dd><code>{contract.runId ?? "unavailable"}</code></dd>
-      </div>
-      <div>
-        <dt>Resume outcomes</dt>
-        <dd>{contract.outcomes.join(" / ")}</dd>
-      </div>
-    </dl>
+    {mode === "preview" ? (
+      <dl>
+        <div>
+          <dt>Persisted run</dt>
+          <dd><code>{contract.runId ?? "unavailable"}</code></dd>
+        </div>
+        <div>
+          <dt>Resume outcomes</dt>
+          <dd>{contract.outcomes.join(" / ")}</dd>
+        </div>
+      </dl>
+    ) : null}
     {mode === "approval" ? (
       <SchemaApprovalSurface
-        title={`${contract.kind} resume`}
+        title={titleForKind(contract.kind)}
         schema={contract.resumeSchema}
         payload={contract.resumePayloadPreview}
         outcomes={contract.outcomes}

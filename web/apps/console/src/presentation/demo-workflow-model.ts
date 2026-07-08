@@ -91,7 +91,7 @@ const demoBeatLensByBeat: Readonly<Record<string, DemoBeatLens>> = {
   resume: {
     phase: "resume",
     eyebrow: "Same run resumes",
-    headline: "The approved payload continues the persisted run",
+    headline: "The submitted payload continues the persisted run",
     proofLabel: "workflow.runs.resume",
     speakerLine: "Resume is not a restart; it continues the stopped run with a validated payload.",
   },

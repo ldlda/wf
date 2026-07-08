@@ -81,7 +81,7 @@ const renderPart = (
           <p>{part.prompt}</p>
           {part.contract ? (
             <SchemaApprovalSurface
-              title={`${part.contract.kind} resume`}
+              title={`${part.contract.kind.replaceAll("_", " ")} resume`}
               schema={part.contract.resumeSchema}
               payload={part.contract.resumePayloadPreview}
               outcomes={part.contract.outcomes}

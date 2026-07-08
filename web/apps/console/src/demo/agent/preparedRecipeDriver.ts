@@ -95,7 +95,7 @@ export async function* runPreparedRecipeReplay(
           : undefined;
         const approvalParts: AgentMessagePart[] = [
           agentToolCallPart(callId, step.toolName, { runId }),
-          approvalRequestPart(callId, step.toolName, "Approve resuming the workflow run with the selected issues?", approvalContract),
+          approvalRequestPart(callId, step.toolName, "Submit the resume request with the selected issues?", approvalContract),
         ];
         yield { id: step.id, role: "assistant", parts: approvalParts };
         const decision = await requestApproval(signal);

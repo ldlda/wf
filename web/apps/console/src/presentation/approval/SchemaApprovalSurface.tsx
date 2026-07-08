@@ -50,7 +50,7 @@ export const SchemaApprovalSurface = ({
           </dl>
         ) : (
           <div className="schema-approval-surface__loose">
-            <p>No additional resume fields are declared by this schema.</p>
+            <p>Recorded resume payload for this decision.</p>
             <dl>
               {model.payloadPreview.map((entry) => (
                 <div key={entry.key}>
