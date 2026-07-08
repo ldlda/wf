@@ -1,16 +1,20 @@
 import type { DemoRecording } from "../timeline/models.js";
 import {
+  approvalRequestPart,
   agentTextMessage,
   agentToolCallPart,
   agentToolResultPart,
-  approvalRequestPart,
   presentationActionPart,
   type AgentApproval,
+  type AgentApprovalContract,
   type AgentDriver,
   type AgentMessage,
   type AgentMessagePart,
 } from "./events.js";
 import { PREPARE_THESIS_REPORT_RECIPE, type RecipeTool } from "./recipes.js";
+
+const isObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
 
 export const assertNever = (value: never): never => {
   throw new Error(`Unhandled case: ${String(value)}`);
@@ -73,9 +77,25 @@ export async function* runPreparedRecipeReplay(
         break;
       case "resumeIssueReview": {
         const callId = `${step.id}-call`;
+        const interrupt = runStart?.interpreted && typeof runStart.interpreted === "object"
+          && "interrupt" in runStart.interpreted
+          ? runStart.interpreted.interrupt
+          : null;
+        const resumePayload = resume?.params && typeof resume.params === "object" && "resume_payload" in resume.params
+          ? resume.params.resume_payload
+          : null;
+        const approvalContract: AgentApprovalContract | undefined = isObject(interrupt) && Array.isArray(interrupt.outcomes)
+          ? {
+            kind: typeof interrupt.kind === "string" ? interrupt.kind : "issue_review",
+            outcomes: interrupt.outcomes.filter((entry): entry is string => typeof entry === "string"),
+            resumeSchema: "resume_schema" in interrupt ? interrupt.resume_schema : { type: "object" },
+            resumePayloadPreview: resumePayload,
+            runId,
+          }
+          : undefined;
         const approvalParts: AgentMessagePart[] = [
           agentToolCallPart(callId, step.toolName, { runId }),
-          approvalRequestPart(callId, step.toolName, "Approve resuming the workflow run with the selected issues?"),
+          approvalRequestPart(callId, step.toolName, "Approve resuming the workflow run with the selected issues?", approvalContract),
         ];
         yield { id: step.id, role: "assistant", parts: approvalParts };
         const decision = await requestApproval(signal);

@@ -74,7 +74,43 @@ describe("OperatorChat", () => {
     expect(screen.getByText(/Found prepared workflow recipe/)).toBeInTheDocument();
   });
 
-  it("renders approval controls and wires decisions", async () => {
+  it("renders schema approval surface inside chat approval request", async () => {
+    const user = userEvent.setup();
+    const onApprove = vi.fn();
+    const onDeny = vi.fn();
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "approval",
+        role: "assistant",
+        parts: [
+          {
+            type: "approval-request",
+            callId: "call-1",
+            name: "resumeIssueReview",
+            prompt: "Approve resuming?",
+            contract: {
+              kind: "issue_review",
+              outcomes: ["submitted", "cancelled"],
+              resumeSchema: { type: "object", properties: { comment: { type: "string" } } },
+              resumePayloadPreview: { comment: "Looks good." },
+              runId: "run_recorded_lda_report",
+            },
+          },
+        ],
+      },
+    ];
+
+    render(<OperatorChat state={initialPresentationState} messages={messages} onApprove={onApprove} onDeny={onDeny} />);
+
+    expect(screen.getByRole("group", { name: /issue_review resume/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /submit/i }));
+    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    expect(onApprove).toHaveBeenCalledTimes(1);
+    expect(onDeny).toHaveBeenCalledTimes(1);
+  });
+
+  it("falls back to plain approve/deny buttons when approval request has no contract", async () => {
     const user = userEvent.setup();
     const onApprove = vi.fn();
     const onDeny = vi.fn();
@@ -95,6 +131,7 @@ describe("OperatorChat", () => {
 
     render(<OperatorChat state={initialPresentationState} messages={messages} onApprove={onApprove} onDeny={onDeny} />);
 
+    expect(screen.queryByRole("group", { name: /issue_review resume/i })).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await user.click(screen.getByRole("button", { name: "Deny" }));
     expect(onApprove).toHaveBeenCalledTimes(1);

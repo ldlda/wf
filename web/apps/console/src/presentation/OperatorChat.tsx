@@ -3,6 +3,7 @@ import { PREPARE_THESIS_REPORT_RECIPE } from "../demo/agent/recipes.js";
 import type { AgentMessage, AgentMessagePart } from "../demo/agent/events.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
+import { SchemaApprovalSurface } from "./approval/SchemaApprovalSurface.js";
 
 type OperatorChatProps = {
   readonly state: PresentationState;
@@ -78,10 +79,22 @@ const renderPart = (
           <span>Approval required</span>
           <code>{part.name}</code>
           <p>{part.prompt}</p>
-          <div className="chat-approval-actions">
-            <button type="button" onClick={onApprove} disabled={!onApprove}>Approve</button>
-            <button type="button" onClick={onDeny} disabled={!onDeny}>Deny</button>
-          </div>
+          {part.contract ? (
+            <SchemaApprovalSurface
+              title={`${part.contract.kind} resume`}
+              schema={part.contract.resumeSchema}
+              payload={part.contract.resumePayloadPreview}
+              outcomes={part.contract.outcomes}
+              runId={part.contract.runId}
+              onSubmit={onApprove}
+              onCancel={onDeny}
+            />
+          ) : (
+            <div className="chat-approval-actions">
+              <button type="button" onClick={onApprove} disabled={!onApprove}>Approve</button>
+              <button type="button" onClick={onDeny} disabled={!onDeny}>Deny</button>
+            </div>
+          )}
         </div>
       );
     case "error":

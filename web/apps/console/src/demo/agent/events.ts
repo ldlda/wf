@@ -20,12 +20,26 @@ export type AgentToolResult = {
   readonly output: unknown;
 };
 
+export type AgentApprovalContract = {
+  readonly kind: string;
+  readonly outcomes: ReadonlyArray<string>;
+  readonly resumeSchema: unknown;
+  readonly resumePayloadPreview: unknown;
+  readonly runId: string | null;
+};
+
 export type AgentMessagePart =
   | { readonly type: "text"; readonly text: string }
   | { readonly type: "tool-call"; readonly call: AgentToolCall }
   | { readonly type: "tool-result"; readonly result: AgentToolResult }
   | { readonly type: "presentation-action"; readonly action: PresentationToolAction }
-  | { readonly type: "approval-request"; readonly callId: string; readonly name: AgentToolName; readonly prompt: string }
+  | {
+      readonly type: "approval-request";
+      readonly callId: string;
+      readonly name: AgentToolName;
+      readonly prompt: string;
+      readonly contract?: AgentApprovalContract | undefined;
+    }
   | { readonly type: "error"; readonly message: string };
 
 export type AgentMessage = {
@@ -68,11 +82,13 @@ export const approvalRequestPart = (
   callId: string,
   name: AgentToolName,
   prompt: string,
+  contract?: AgentApprovalContract,
 ): AgentMessagePart => ({
   type: "approval-request",
   callId,
   name,
   prompt,
+  contract,
 });
 
 export type AgentApproval = {

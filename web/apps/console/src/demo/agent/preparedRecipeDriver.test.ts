@@ -66,6 +66,17 @@ describe("prepared recipe driver", () => {
     expect(messages.some((m) =>
       m.parts.some((p) => p.type === "tool-call" && p.call.name === "readRunTrace"),
     )).toBe(true);
+
+    const approvalPart = messages
+      .flatMap((message) => message.parts)
+      .find((part) => part.type === "approval-request");
+    expect(approvalPart).toMatchObject({
+      type: "approval-request",
+      contract: {
+        kind: "issue_review",
+        runId: "run_recorded_lda_report",
+      },
+    });
   });
 
   it("stops after denial and does not emit resume result, trace, or evidence", async () => {

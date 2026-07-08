@@ -49,4 +49,27 @@ describe("agent events", () => {
       prompt: "Approve the typed issue review?",
     });
   });
+
+  it("creates approval request parts with optional contract data", () => {
+    const part = approvalRequestPart(
+      "call-1",
+      "resumeIssueReview",
+      "Approve?",
+      {
+        kind: "issue_review",
+        outcomes: ["submitted", "cancelled"],
+        resumeSchema: { type: "object" },
+        resumePayloadPreview: { selected_issue_ids: ["risk-1"] },
+        runId: "run_recorded_lda_report",
+      },
+    );
+
+    expect(part).toMatchObject({
+      type: "approval-request",
+      contract: {
+        kind: "issue_review",
+        runId: "run_recorded_lda_report",
+      },
+    });
+  });
 });
