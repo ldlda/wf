@@ -10,6 +10,9 @@ type RailStep = {
   readonly detail: string;
 };
 
+/* The rail shows 4 visual steps while the phase model has 5 — "resume" is
+   an invisible in-between state that maps to the same rail step as "interrupt"
+   for completed-index calculation but must not be marked active. */
 const railSteps: ReadonlyArray<RailStep> = [
   { phase: "agent", label: "Agent request", detail: "thin interface" },
   { phase: "run", label: "Workflow run", detail: "typed runtime" },

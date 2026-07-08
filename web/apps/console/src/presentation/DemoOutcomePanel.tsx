@@ -50,7 +50,7 @@ export const DemoOutcomePanel = ({
 
   if (beatId === "output") {
     return (
-      <aside className="demo-outcome-panel demo-outcome-panel--split" aria-label="demo outcome proof">
+      <aside className="demo-outcome-panel" aria-label="demo outcome proof">
         <span>{lens.eyebrow}</span>
         <strong>Product state, not chat-only text</strong>
         <ul>
@@ -62,7 +62,7 @@ export const DemoOutcomePanel = ({
   }
 
   return (
-    <aside className="demo-outcome-panel demo-outcome-panel--split" aria-label="demo outcome proof">
+    <aside className="demo-outcome-panel" aria-label="demo outcome proof">
       <span>{lens.eyebrow}</span>
       <strong>Auditable after the moment passes</strong>
       <ul>
