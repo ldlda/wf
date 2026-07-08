@@ -73,6 +73,29 @@ describe("SceneBody", () => {
     expect(screen.getByLabelText(/workflow graph/i)).toBeInTheDocument();
   });
 
+  it("opens thesis Q&A branches from the thesis scene", async () => {
+    const user = userEvent.setup();
+    const location: PresentationLocation = { kind: "main", sceneId: "thesis", beatId: "title", focusPath: [] };
+    const openDiscussion = vi.fn();
+
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={openDiscussion}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: /where is the ai agent/i }));
+
+    expect(openDiscussion).toHaveBeenCalledWith("where-is-ai-agent");
+  });
+
   it("opens a scene discussion branch from the scene body", async () => {
     const user = userEvent.setup();
     const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };

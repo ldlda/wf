@@ -15,6 +15,12 @@ describe("storyboard navigation", () => {
       kind: "discussion",
       branchId: "hosted-automation",
     });
+    expect(locationFromHash("#discuss/where-is-ai-agent")).toEqual({
+      kind: "discussion",
+      branchId: "where-is-ai-agent",
+    });
+    expect(hashForLocation({ kind: "discussion", branchId: "where-is-ai-agent" }))
+      .toBe("#discuss/where-is-ai-agent");
   });
 
   it("falls back for unknown scene, beat, and branch hashes", () => {
