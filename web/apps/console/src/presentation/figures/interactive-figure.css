@@ -109,8 +109,7 @@
 
 .figure-node__kind {
   font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
   color: var(--color-editorial-muted, oklch(0.48 0.025 65));
 }
 
@@ -184,8 +183,7 @@
 .figure-node__current-marker {
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
 }
 
 /* Semantic kind colors */

@@ -61,7 +61,7 @@
   align-self: end;
   border-left: 1px solid oklch(0.72 0.17 195 / 0.45);
   padding-left: 1rem;
-  color: var(--text-secondary);
+  color: color-mix(in oklch, var(--text-primary) 88%, var(--text-secondary));
   font-size: 0.86rem;
   line-height: 1.45;
 }
@@ -103,7 +103,7 @@
   background:
     linear-gradient(90deg, oklch(0.72 0.17 195 / 0.07), transparent 42%),
     oklch(0.145 0.025 250 / 0.92);
-  box-shadow: 0 1.5rem 4rem oklch(0.04 0.02 250 / 0.35);
+  box-shadow: inset 0 0 0 1px oklch(0.72 0.17 195 / 0.08);
 }
 
 .presentation-route .operation-block--expanded::before {
@@ -269,9 +269,8 @@
   border: 1px solid var(--stage-line);
   border-radius: 0.55rem;
   padding: 0.4rem 0.7rem;
-  background: oklch(0.12 0.022 250 / 0.9);
-  backdrop-filter: blur(12px);
-  color: var(--text-secondary);
+  background: oklch(0.11 0.022 250 / 0.98);
+  color: color-mix(in oklch, var(--text-primary) 86%, var(--text-secondary));
   font-family: var(--font-mono, monospace);
   font-size: 0.7rem;
 }
@@ -339,7 +338,7 @@
   right: 0.8rem;
   display: flex;
   gap: 0.9rem;
-  color: var(--text-muted);
+  color: color-mix(in oklch, var(--text-primary) 76%, var(--text-muted));
   font: 600 0.58rem/1 var(--font-mono, monospace);
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -478,7 +477,7 @@
   background: oklch(0.15 0.025 250 / 0.96);
   color: var(--text-primary);
   text-align: left;
-  box-shadow: 0 0.65rem 1.5rem oklch(0.04 0.02 250 / 0.3);
+  box-shadow: 0 0.35rem 0.75rem oklch(0.04 0.02 250 / 0.22);
   cursor: pointer;
 }
 
@@ -490,7 +489,7 @@
 
 .workflow-graph-stage__node small,
 .workflow-graph-stage__node-state {
-  color: color-mix(in oklch, var(--text-primary) 76%, var(--text-muted));
+  color: color-mix(in oklch, var(--text-primary) 88%, var(--text-muted));
 }
 
 .workflow-graph-stage__node small {
@@ -511,7 +510,7 @@
 .workflow-graph-stage__node[data-execution-state="current"] {
   border-color: var(--accent-cyan);
   background: oklch(0.19 0.055 210 / 0.98);
-  box-shadow: 0 0 0 3px oklch(0.72 0.17 195 / 0.14), 0 1rem 2.5rem oklch(0.06 0.03 230 / 0.5);
+  box-shadow: 0 0 0 3px oklch(0.72 0.17 195 / 0.16), 0 0.45rem 0.85rem oklch(0.06 0.03 230 / 0.36);
 }
 
 .workflow-graph-stage__node[data-execution-state="current"] .workflow-graph-stage__node-state {
@@ -521,7 +520,7 @@
 .workflow-graph-stage__node[data-current-interrupt="true"] {
   border-color: var(--accent-amber);
   background: oklch(0.19 0.045 70 / 0.95);
-  box-shadow: 0 0 0 3px oklch(0.76 0.18 70 / 0.14), 0 1rem 2.5rem oklch(0.06 0.03 230 / 0.5);
+  box-shadow: 0 0 0 3px oklch(0.76 0.18 70 / 0.16), 0 0.45rem 0.85rem oklch(0.06 0.03 230 / 0.36);
 }
 
 .workflow-graph-stage__node[data-current-interrupt="true"] .workflow-graph-stage__node-state {
@@ -529,7 +528,7 @@
 }
 
 .workflow-graph-stage__node[data-execution-state="future"] {
-  opacity: 0.72;
+  opacity: 0.88;
   box-shadow: none;
 }
 
