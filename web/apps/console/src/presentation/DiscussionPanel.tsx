@@ -71,8 +71,8 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
             <p className="discussion-panel__expanded-answer">{branch.expandedAnswer}</p>
           )}
           {branch.speakerHint && (
-            <p className="discussion-panel__speaker-hint">
-              <span>Speaker hint</span>
+            <p className="discussion-panel__presenter-note" aria-label="presenter note">
+              <span>Presenter note</span>
               {branch.speakerHint}
             </p>
           )}

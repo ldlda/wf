@@ -71,6 +71,14 @@ describe("DiscussionPanel", () => {
     expect(screen.getByText(/Answer directly first/i)).toBeDefined();
   });
 
+  it("renders speaker hints as presenter notes instead of answer content", () => {
+    render(<DiscussionPanel branchId="where-is-ai-agent" onClose={onClose} />);
+
+    const note = screen.getByLabelText("presenter note");
+    expect(note).toHaveTextContent(/Answer directly first/i);
+    expect(note).toHaveTextContent(/Presenter note/i);
+  });
+
   it("shows mcp-agent-scale links to Anthropic and Cloudflare", () => {
     render(<DiscussionPanel branchId="mcp-agent-scale" onClose={onClose} />);
     const anthropic = screen.getByText("Anthropic MCP");

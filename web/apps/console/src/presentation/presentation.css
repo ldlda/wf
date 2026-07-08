@@ -563,20 +563,22 @@
   color: var(--text-primary);
 }
 
-.discussion-panel__speaker-hint {
+.discussion-panel__presenter-note {
   margin: 0;
-  padding-top: 0.5rem;
-  border-top: 1px solid color-mix(in srgb, var(--stage-line) 70%, transparent);
+  padding: 0.55rem 0.65rem;
+  border: 1px dashed color-mix(in oklch, var(--stage-line) 70%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in oklch, var(--stage-surface) 72%, transparent);
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
-.discussion-panel__speaker-hint span {
+.discussion-panel__presenter-note span {
   display: block;
   margin-bottom: 0.2rem;
-  color: var(--accent-cyan);
-  font-size: 0.72rem;
-  font-weight: 800;
+  color: var(--accent-amber);
+  font: 750 0.64rem/1 var(--font-mono, monospace);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
