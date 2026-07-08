@@ -134,16 +134,16 @@ describe("DemoWorkflowScene", () => {
 
   it("shows the continuity rail across Scene 9 operation, graph, and interrupt beats", () => {
     const { unmount } = renderBeat("operation");
-    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("Request becomes a workflow run");
     expect(screen.getByLabelText("demo continuity")).toHaveTextContent("workflow.runs.start");
+    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("Agent request");
     unmount();
 
     const graph = renderBeat("graph");
-    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("The product owns the reusable workflow shape");
+    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("typed graph");
     graph.unmount();
 
     renderBeat("interrupt");
-    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("Execution stops at a declared human boundary");
+    expect(screen.getByLabelText("demo continuity")).toHaveTextContent("issue_review");
   });
 
   it("adds outcome proof to approval, resume, output, and trace beats", () => {
