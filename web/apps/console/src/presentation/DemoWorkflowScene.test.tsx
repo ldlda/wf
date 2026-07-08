@@ -78,7 +78,7 @@ describe("DemoWorkflowScene", () => {
     renderBeat("graph");
 
     expect(screen.getByLabelText("workflow.runs.start execution receipt")).toBeInTheDocument();
-    expect(screen.getByText("run_recorded_lda_report")).toBeInTheDocument();
+    expect(screen.getAllByText("run_recorded_lda_report").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByLabelText("workflow graph")).toBeInTheDocument();
   });
 
@@ -130,6 +130,16 @@ describe("DemoWorkflowScene", () => {
 
     renderBeat("trace", "interrupt-evidence");
     expect(screen.getByLabelText("workflow.runs.trace operation")).toBeInTheDocument();
+  });
+
+  it("passes run proof into graph-heavy beats", () => {
+    const { unmount } = renderBeat("graph");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run_recorded_lda_report");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("5 workflow nodes");
+    unmount();
+
+    renderBeat("approval", "interrupt-evidence");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC evidence");
   });
 
   it("shows the continuity rail across Scene 9 operation, graph, and interrupt beats", () => {

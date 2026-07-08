@@ -60,6 +60,14 @@ export const DemoWorkflowScene = ({
   const execution = graphExecutionForBeat(beat.id);
   const layout = layoutForBeat(beat.id);
 
+  // Presentation-only proof labels keep the graph tied to the recorded run
+  // without changing the canonical replay event payload.
+  const runProof = {
+    runId: runStart?.resultingIds.runId ?? null,
+    traceLabel: "5 workflow nodes",
+    evidenceLabel: "JSON-RPC evidence",
+  };
+
   const lens = demoBeatLensForBeat(beat.id);
   const currentOperation = currentEvent ? projectOperationPresentation(currentEvent) : null;
   const showOutcomePanel = beat.id === "approval" || beat.id === "resume" || beat.id === "output" || beat.id === "trace";
@@ -104,6 +112,7 @@ export const DemoWorkflowScene = ({
                 execution={execution}
                 selectedNodeId={selectedNodeId}
                 selectNode={selectNode}
+                proof={runProof}
               />
               {contractMode && contract && (
                 <InterruptContractPreview
