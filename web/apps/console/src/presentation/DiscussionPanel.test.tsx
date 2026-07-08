@@ -93,6 +93,26 @@ describe("DiscussionPanel", () => {
     expect(note).toHaveClass("discussion-panel__presenter-note");
   });
 
+  it("separates Q&A answer, provenance, and presenter note regions", () => {
+    render(<DiscussionPanel branchId="where-is-ai-agent" onClose={onClose} />);
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("data-discussion-layout", "qna");
+    expect(screen.getByLabelText("short defense answer")).toHaveTextContent(/workflow substrate/i);
+    expect(screen.getByLabelText("answer expansion")).toHaveTextContent(/planning algorithm/i);
+    expect(screen.getByLabelText("answer provenance")).toHaveTextContent(/Abstract/i);
+    expect(screen.getByLabelText("presenter note")).toHaveTextContent(/Answer directly first/i);
+  });
+
+  it("uses context layout for non-Q&A discussion branches", () => {
+    render(<DiscussionPanel branchId="hosted-automation" onClose={onClose} />);
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveAttribute("data-discussion-layout", "context");
+    expect(screen.queryByLabelText("short defense answer")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("answer provenance")).toHaveTextContent(/Workflow Automation Platforms/i);
+  });
+
   it("shows mcp-agent-scale links to Anthropic and Cloudflare", () => {
     render(<DiscussionPanel branchId="mcp-agent-scale" onClose={onClose} />);
     const anthropic = screen.getByText("Anthropic MCP");

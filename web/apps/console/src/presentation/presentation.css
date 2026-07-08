@@ -593,9 +593,26 @@
   letter-spacing: 0.05em;
 }
 
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__evidence {
-  font-size: 0.8rem;
-  color: var(--color-editorial-muted, oklch(0.48 0.025 65));
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__provenance {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.55rem 0 0;
+  border: 1px solid color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 24%, transparent);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.6rem;
+  background: color-mix(in oklch, var(--color-editorial-paper, oklch(0.975 0.012 82)) 82%, white);
+}
+
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__provenance span,
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__answer-card span {
+  color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 68%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
+  font: 700 0.68rem/1 var(--font-interface);
+}
+
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__provenance p {
+  margin: 0;
+  color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 84%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
+  font-size: 0.82rem;
 }
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__summary {
@@ -605,58 +622,79 @@
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__qna {
   display: grid;
-  gap: 0.6rem;
-  margin: 0.75rem 0;
-  padding: 0.85rem;
-  border: 1px solid color-mix(in oklch, var(--color-intent, oklch(0.53 0.17 250)) 28%, transparent);
-  border-radius: 1rem;
-  background: color-mix(in oklch, var(--color-editorial-paper, oklch(0.975 0.012 82)) 74%, white);
+  grid-template-columns: minmax(0, 1.1fr) minmax(14rem, 0.9fr);
+  gap: 0.7rem;
+  margin: 0.85rem 0;
 }
 
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__question,
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__short-answer {
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__question {
+  grid-column: 1 / -1;
   margin: 0;
-  font-size: 1.02rem;
-  font-weight: 750;
   color: var(--color-editorial-ink, oklch(0.19 0.015 65));
+  font-size: 1.15rem;
+  font-weight: 760;
+  line-height: 1.15;
 }
 
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__short-answer {
-  font-weight: 400;
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__answer-card {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid color-mix(in oklch, var(--color-intent, oklch(0.53 0.17 250)) 26%, transparent);
+  border-radius: 0.75rem;
+  padding: 0.7rem;
+  background: color-mix(in oklch, var(--color-intent, oklch(0.53 0.17 250)) 6%, var(--color-editorial-paper, oklch(0.975 0.012 82)));
 }
 
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__expanded-answer {
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__answer-card--expanded {
+  border-color: color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 28%, transparent);
+  background: color-mix(in oklch, var(--color-editorial-paper, oklch(0.975 0.012 82)) 90%, white);
+}
+
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__answer-card p {
   margin: 0;
-  color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 82%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
-  line-height: 1.45;
+  color: var(--color-editorial-ink, oklch(0.19 0.015 65));
+  line-height: 1.42;
 }
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__presenter-note {
+  display: grid;
+  gap: 0.3rem;
   margin: 0;
-  padding: 0.55rem 0.65rem;
-  border: 1px dashed color-mix(in oklch, var(--color-human, oklch(0.68 0.17 55)) 38%, transparent);
-  border-radius: 0.55rem;
-  background: color-mix(in oklch, var(--color-human, oklch(0.68 0.17 55)) 10%, var(--color-editorial-paper, oklch(0.975 0.012 82)));
-  color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 76%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
-  font-size: 0.82rem;
-  line-height: 1.35;
+  border: 1px dashed color-mix(in oklch, var(--color-human, oklch(0.68 0.17 55)) 42%, transparent);
+  border-radius: 0.75rem;
+  padding: 0.7rem;
+  background: color-mix(in oklch, var(--color-human, oklch(0.68 0.17 55)) 9%, var(--color-editorial-paper, oklch(0.975 0.012 82)));
 }
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__presenter-note span {
-  display: block;
-  margin-bottom: 0.2rem;
   color: color-mix(in oklch, var(--color-human, oklch(0.68 0.17 55)) 70%, var(--color-editorial-ink, oklch(0.19 0.015 65)));
-  font: 750 0.64rem/1 var(--font-mono, monospace);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font: 700 0.68rem/1 var(--font-interface);
+}
+
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__presenter-note p {
+  margin: 0;
+  color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 84%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
+  font-size: 0.84rem;
+  line-height: 1.35;
 }
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__detail {
-  font-size: 0.85rem;
+  margin: 0.65rem 0 0;
+  border: 1px solid color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 24%, transparent);
+  border-radius: 0.65rem;
+  padding: 0.6rem;
   color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 82%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
-  border-left: 2px solid color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 42%, transparent);
-  padding-left: 0.65rem;
-  margin: 0.5rem 0;
+  font-size: 0.85rem;
+}
+
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__detail p {
+  margin: 0;
+}
+
+@media (max-height: 760px) {
+  .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__qna {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__return {

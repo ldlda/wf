@@ -22,6 +22,8 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
 
   if (!branch) return null;
 
+  const hasQuestion = branch.question !== undefined;
+
   const parentScene = findScene(branch.parentSceneId);
 
   const trapKeyboardWithinDialog = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -51,6 +53,7 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
       ref={dialogRef}
       className="discussion-panel"
       data-presentation-surface="editorial"
+      data-discussion-layout={hasQuestion ? "qna" : "context"}
       role="dialog"
       aria-modal="true"
       aria-label={branch.title}
@@ -60,36 +63,47 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
         <h2>{branch.title}</h2>
         <span className="discussion-panel__badge">{branch.claimClass}</span>
       </header>
-      <p className="discussion-panel__evidence">{branch.evidencePointer}</p>
+      <section className="discussion-panel__provenance" aria-label="answer provenance">
+        <span>Evidence</span>
+        <p>{branch.evidencePointer}</p>
+      </section>
       <p className="discussion-panel__summary">{branch.summary}</p>
-      {branch.question && (
+      {hasQuestion && (
         <section className="discussion-panel__qna" aria-label="defense question">
           <p className="discussion-panel__question">{branch.question}</p>
           {branch.shortAnswer && (
-            <p className="discussion-panel__short-answer">{branch.shortAnswer}</p>
+            <article className="discussion-panel__answer-card" aria-label="short defense answer">
+              <span>Short answer</span>
+              <p>{branch.shortAnswer}</p>
+            </article>
           )}
           {branch.expandedAnswer && (
-            <p className="discussion-panel__expanded-answer">{branch.expandedAnswer}</p>
+            <article className="discussion-panel__answer-card discussion-panel__answer-card--expanded" aria-label="answer expansion">
+              <span>Expanded answer</span>
+              <p>{branch.expandedAnswer}</p>
+            </article>
           )}
           {branch.speakerHint && (
-            <p className="discussion-panel__presenter-note" aria-label="presenter note">
+            <aside className="discussion-panel__presenter-note" aria-label="presenter note">
               <span>Presenter note</span>
-              {branch.speakerHint}
-            </p>
+              <p>{branch.speakerHint}</p>
+            </aside>
           )}
         </section>
       )}
       {branch.detail && (
-        <p className="discussion-panel__detail">
-          {branch.detail.links?.map((link, index) => (
-            <span key={link.href}>
-              {index > 0 && " · "}
-              <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
-            </span>
-          ))}
-          {branch.detail.links && branch.detail.links.length > 0 ? " — " : ""}
-          {branch.detail.text}
-        </p>
+        <section className="discussion-panel__detail" aria-label="additional context">
+          <p>
+            {branch.detail.links?.map((link, index) => (
+              <span key={link.href}>
+                {index > 0 && " · "}
+                <a href={link.href} target="_blank" rel="noopener noreferrer">{link.label}</a>
+              </span>
+            ))}
+            {branch.detail.links && branch.detail.links.length > 0 ? " — " : ""}
+            {branch.detail.text}
+          </p>
+        </section>
       )}
       <button ref={returnButtonRef} type="button" onClick={onClose} className="discussion-panel__return">
         Return to {parentScene?.title ?? "scene"}
