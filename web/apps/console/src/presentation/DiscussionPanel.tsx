@@ -61,6 +61,23 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
       </header>
       <p className="discussion-panel__evidence">{branch.evidencePointer}</p>
       <p className="discussion-panel__summary">{branch.summary}</p>
+      {branch.question && (
+        <section className="discussion-panel__qna" aria-label="defense question">
+          <p className="discussion-panel__question">{branch.question}</p>
+          {branch.shortAnswer && (
+            <p className="discussion-panel__short-answer">{branch.shortAnswer}</p>
+          )}
+          {branch.expandedAnswer && (
+            <p className="discussion-panel__expanded-answer">{branch.expandedAnswer}</p>
+          )}
+          {branch.speakerHint && (
+            <p className="discussion-panel__speaker-hint">
+              <span>Speaker hint</span>
+              {branch.speakerHint}
+            </p>
+          )}
+        </section>
+      )}
       {branch.detail && (
         <p className="discussion-panel__detail">
           {branch.detail.links?.map((link, index) => (

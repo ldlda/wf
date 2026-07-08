@@ -62,6 +62,15 @@ describe("DiscussionPanel", () => {
     expect(screen.getByText(/future scheduler/)).toBeDefined();
   });
 
+  it("renders defense Q&A fields when present", () => {
+    render(<DiscussionPanel branchId="where-is-ai-agent" onClose={onClose} />);
+
+    expect(screen.getByText("Where is the AI agent in this thesis?")).toBeDefined();
+    expect(screen.getByText(/workflow substrate that external agents operate/i)).toBeDefined();
+    expect(screen.getByText(/not a new planning algorithm/i)).toBeDefined();
+    expect(screen.getByText(/Answer directly first/i)).toBeDefined();
+  });
+
   it("shows mcp-agent-scale links to Anthropic and Cloudflare", () => {
     render(<DiscussionPanel branchId="mcp-agent-scale" onClose={onClose} />);
     const anthropic = screen.getByText("Anthropic MCP");
