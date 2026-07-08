@@ -120,9 +120,13 @@ Implementation order:
     approval UI instead of raw `{ "type": "object" }` as the primary product
     proof. Implementation:
     [`schema approval surface`](historical/superpowers/plans/2026-07-09-schema-approval-surface.md).
-16. Next: implement Guided Run Beat Gates, presenter companion, Scene 10
+16. Next: bridge presentation chat to the prepared workflow timeline so chat
+    can start the live/replay demo and submit/cancel the schema approval through
+    the existing `useDemoTimeline` execution path. Active implementation plan:
+    [`presentation chat timeline bridge`](superpowers/plans/2026-07-09-presentation-chat-timeline-bridge.md).
+17. Future: implement Guided Run Beat Gates, presenter companion, Scene 10
     product graph, final scene visuals, evidence assets, and rehearsal timing.
-17. Add a static slide/appendix shell only after presentation mode is clear.
+18. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Presentation wishlist / defense readiness:
