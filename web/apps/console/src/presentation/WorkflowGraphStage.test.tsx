@@ -82,4 +82,19 @@ describe("WorkflowGraphStage", () => {
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("5 nodes");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC captured");
   });
+
+  it("shows unavailable runId fallback when proof runId is null", () => {
+    render(
+      <WorkflowGraphStage
+        execution={{ completedNodeIds: [], currentNodeId: null }}
+        selectedNodeId={null}
+        selectNode={vi.fn()}
+        proof={{ runId: null, traceLabel: "trace label", evidenceLabel: "evidence label" }}
+      />,
+    );
+
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run unavailable");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("trace label");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("evidence label");
+  });
 });
