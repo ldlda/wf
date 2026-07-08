@@ -12,11 +12,11 @@ export type PresentationNode = {
 };
 
 export const presentationNodes: ReadonlyArray<PresentationNode> = [
-  { id: "read_docs", label: "Read documents", detail: "5 selected", kind: "node", x: 9, y: 57 },
-  { id: "build_report", label: "Build report", detail: "Markdown", kind: "node", x: 30, y: 35 },
-  { id: "review_issues", label: "Issue review", detail: "Typed interrupt", kind: "interrupt", x: 52, y: 57 },
-  { id: "create_issues", label: "Create issues", detail: "Selected only", kind: "node", x: 74, y: 35 },
-  { id: "end_completed", label: "Completed", detail: "Persisted run", kind: "end", x: 92, y: 57 },
+  { id: "read_docs", label: "Read documents", detail: "5 selected", kind: "node", x: 14, y: 58 },
+  { id: "build_report", label: "Build report", detail: "Markdown", kind: "node", x: 34, y: 36 },
+  { id: "review_issues", label: "Issue review", detail: "Typed interrupt", kind: "interrupt", x: 52, y: 58 },
+  { id: "create_issues", label: "Create issues", detail: "Selected only", kind: "node", x: 70, y: 36 },
+  { id: "end_completed", label: "Completed", detail: "Persisted run", kind: "end", x: 86, y: 58 },
 ];
 
 type PresentationEdge = readonly [from: string, to: string];
@@ -30,10 +30,17 @@ const presentationEdges: ReadonlyArray<PresentationEdge> = [
 
 type NodeExecutionState = "completed" | "current" | "future";
 
+export type WorkflowGraphProof = {
+  readonly runId: string | null;
+  readonly traceLabel: string;
+  readonly evidenceLabel: string;
+};
+
 type WorkflowGraphStageProps = {
   readonly execution: GraphExecutionPresentation;
   readonly selectedNodeId: string | null;
   readonly selectNode: (nodeId: string) => void;
+  readonly proof?: WorkflowGraphProof;
 };
 
 const executionStateForNode = (
@@ -55,6 +62,7 @@ export const WorkflowGraphStage = ({
   execution,
   selectedNodeId,
   selectNode,
+  proof,
 }: WorkflowGraphStageProps) => {
   const markerPrefix = useId().replaceAll(":", "");
   const arrowMarkerId = `${markerPrefix}-workflow-arrow`;
@@ -67,6 +75,14 @@ export const WorkflowGraphStage = ({
       <span><i data-state="current" />Current</span>
       <span><i data-state="interrupt" />Human boundary</span>
     </div>
+
+    {proof && (
+      <div className="workflow-graph-stage__proof" aria-label="workflow graph proof">
+        <span><b>Run</b><code>{proof.runId ?? "run unavailable"}</code></span>
+        <span><b>Trace</b>{proof.traceLabel}</span>
+        <span><b>Evidence</b>{proof.evidenceLabel}</span>
+      </div>
+    )}
 
     <svg className="workflow-graph-stage__connectors" aria-hidden="true">
       <defs>

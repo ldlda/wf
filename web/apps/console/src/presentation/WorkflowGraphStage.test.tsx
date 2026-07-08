@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { WorkflowGraphStage } from "./WorkflowGraphStage.js";
+import { presentationNodes, WorkflowGraphStage } from "./WorkflowGraphStage.js";
 
 afterEach(() => cleanup());
 
@@ -57,5 +57,29 @@ describe("WorkflowGraphStage", () => {
     const connectors = screen.getAllByTestId("workflow-connector");
     expect(connectors).toHaveLength(4);
     expect(connectors.filter((connector) => connector.dataset.active === "true")).toHaveLength(1);
+  });
+
+  it("keeps all graph nodes inside the visible percentage frame", () => {
+    for (const node of presentationNodes) {
+      expect(node.x).toBeGreaterThanOrEqual(14);
+      expect(node.x).toBeLessThanOrEqual(86);
+      expect(node.y).toBeGreaterThanOrEqual(28);
+      expect(node.y).toBeLessThanOrEqual(72);
+    }
+  });
+
+  it("renders compact run proof inside the graph", () => {
+    render(
+      <WorkflowGraphStage
+        execution={{ completedNodeIds: ["read_docs"], currentNodeId: "build_report" }}
+        selectedNodeId={null}
+        selectNode={vi.fn()}
+        proof={{ runId: "run_recorded_lda_report", traceLabel: "5 nodes", evidenceLabel: "JSON-RPC captured" }}
+      />,
+    );
+
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run_recorded_lda_report");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("5 nodes");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC captured");
   });
 });

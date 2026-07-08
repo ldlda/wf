@@ -400,16 +400,53 @@
   transform: translate(-50%, -50%);
 }
 
+.workflow-graph-stage__proof {
+  position: absolute;
+  z-index: 4;
+  left: 0.8rem;
+  bottom: 0.7rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+  max-width: calc(100% - 1.6rem);
+  color: var(--text-secondary);
+  font: 600 0.58rem/1.2 var(--font-mono, monospace);
+}
+
+.workflow-graph-stage__proof span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid oklch(0.36 0.04 250 / 0.7);
+  border-radius: 999px;
+  padding: 0.18rem 0.45rem;
+  background: oklch(0.09 0.018 250 / 0.78);
+}
+
+.workflow-graph-stage__proof b {
+  color: var(--accent-cyan);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.workflow-graph-stage__proof code {
+  max-width: 14rem;
+  overflow: hidden;
+  color: var(--text-primary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .presentation-route .workflow-graph-stage__node {
   position: relative;
   display: grid;
   gap: 0.25rem;
-  width: clamp(7.2rem, 11vw, 9.5rem);
-  min-height: 4.35rem;
+  width: clamp(7rem, 10vw, 8.75rem);
+  min-height: 4.15rem;
   transform: none;
   border: 1px solid var(--stage-line);
   border-radius: 0.7rem;
-  padding: 0.65rem 0.75rem;
+  padding: 0.58rem 0.68rem;
   background: oklch(0.15 0.025 250 / 0.96);
   color: var(--text-primary);
   text-align: left;
