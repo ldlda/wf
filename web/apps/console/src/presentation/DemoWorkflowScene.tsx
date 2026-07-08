@@ -62,6 +62,8 @@ export const DemoWorkflowScene = ({
 
   // Presentation-only proof labels keep the graph tied to the recorded run
   // without changing the canonical replay event payload.
+  const graphVariant = beat.id === "interrupt" || beat.id === "approval" ? "compact" : "full";
+
   const runProof = {
     runId: runStart?.resultingIds.runId ?? null,
     traceLabel: "5 workflow nodes",
@@ -113,6 +115,7 @@ export const DemoWorkflowScene = ({
                 selectedNodeId={selectedNodeId}
                 selectNode={selectNode}
                 proof={runProof}
+                variant={graphVariant}
               />
               {contractMode && contract && (
                 <InterruptContractPreview

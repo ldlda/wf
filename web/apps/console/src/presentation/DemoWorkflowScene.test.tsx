@@ -132,13 +132,13 @@ describe("DemoWorkflowScene", () => {
     expect(screen.getByLabelText("workflow.runs.trace operation")).toBeInTheDocument();
   });
 
-  it("passes run proof into graph-heavy beats", () => {
+  it("passes run proof into full graph beats", () => {
     const { unmount } = renderBeat("graph");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run_recorded_lda_report");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("5 workflow nodes");
     unmount();
 
-    renderBeat("approval", "interrupt-evidence");
+    renderBeat("output", "interrupt-evidence");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC evidence");
   });
 
@@ -162,6 +162,24 @@ describe("DemoWorkflowScene", () => {
 
     renderBeat("interrupt");
     expect(screen.getByLabelText("demo continuity")).toHaveTextContent("issue_review");
+  });
+
+  it("uses compact graph context for interrupt-focused beats", () => {
+    const interrupt = renderBeat("interrupt");
+    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "compact");
+    interrupt.unmount();
+
+    renderBeat("approval", "interrupt-evidence");
+    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "compact");
+  });
+
+  it("keeps full graph mode for graph and output beats", () => {
+    const graph = renderBeat("graph");
+    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "full");
+    graph.unmount();
+
+    renderBeat("output", "interrupt-evidence");
+    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "full");
   });
 
   it("adds outcome proof to approval, resume, output, and trace beats", () => {
