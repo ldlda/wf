@@ -19,7 +19,7 @@ type InteractiveFigureProps = {
   readonly activeNodeId: string | null;
   readonly onFocusPathChange: (path: readonly string[]) => void;
   readonly motionDisabled: boolean;
-  readonly size?: "standard" | "wide";
+  readonly size?: "standard" | "wide" | "stage";
 };
 
 type FigureNodeData = {

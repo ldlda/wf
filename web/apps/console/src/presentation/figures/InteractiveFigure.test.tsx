@@ -83,6 +83,7 @@ const renderFigure = (overrides: Partial<React.ComponentProps<typeof Interactive
         activeNodeId={restOverrides.activeNodeId ?? null}
         onFocusPathChange={onFocusPathChange}
         motionDisabled={restOverrides.motionDisabled ?? false}
+        size={restOverrides.size ?? "standard"}
       />,
     ),
   };
@@ -176,6 +177,13 @@ describe("InteractiveFigure", () => {
     renderFigure({ focusPath: ["runtime"], motionDisabled: true });
     expect(screen.getByRole("group", { name: /runtime detail/i })).toHaveAttribute("data-motion", "disabled");
     expect(screen.getAllByRole("button").length).toBeGreaterThan(1);
+  });
+
+  it("marks stage figures as horizontally navigable presentation maps", () => {
+    renderFigure({ focusPath: [], size: "stage" });
+    const figure = screen.getByRole("group", { name: /architecture/i });
+    expect(figure).toHaveAttribute("data-figure-size", "stage");
+    expect(figure.querySelector(".interactive-figure__canvas")).toBeInTheDocument();
   });
 
   it("resets roving focus when focusPath changes", () => {
