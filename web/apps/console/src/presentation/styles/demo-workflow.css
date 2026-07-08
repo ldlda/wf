@@ -419,15 +419,19 @@
 .workflow-graph-stage__node strong {
   font-size: 0.82rem;
   line-height: 1.05;
+  color: var(--text-primary);
+}
+
+.workflow-graph-stage__node small,
+.workflow-graph-stage__node-state {
+  color: color-mix(in oklch, var(--text-primary) 76%, var(--text-muted));
 }
 
 .workflow-graph-stage__node small {
-  color: var(--text-muted);
   font-size: 0.67rem;
 }
 
 .workflow-graph-stage__node-state {
-  color: var(--text-muted);
   font: 650 0.55rem/1 var(--font-mono, monospace);
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -459,7 +463,7 @@
 }
 
 .workflow-graph-stage__node[data-execution-state="future"] {
-  opacity: 0.48;
+  opacity: 0.72;
   box-shadow: none;
 }
 
@@ -484,7 +488,8 @@
 
 .demo-workflow-stage[data-demo-layout="approval"] .demo-workflow-stage__graph,
 .demo-workflow-stage[data-demo-layout="interrupt"] .demo-workflow-stage__graph {
-  grid-template-columns: minmax(19rem, 34%) minmax(0, 1fr);
+  grid-template-columns: minmax(18rem, 0.78fr) minmax(26rem, 1.22fr);
+  align-items: stretch;
   gap: 1rem;
 }
 
@@ -492,12 +497,15 @@
 .demo-workflow-stage[data-demo-layout="interrupt"] .interrupt-contract-preview {
   grid-column: 1;
   grid-row: 1;
+  min-width: 0;
+  color: var(--text-primary);
 }
 
 .demo-workflow-stage[data-demo-layout="approval"] .workflow-graph-stage,
 .demo-workflow-stage[data-demo-layout="interrupt"] .workflow-graph-stage {
   grid-column: 2;
   grid-row: 1;
+  min-height: 18rem;
 }
 
 .interrupt-contract-preview[data-hero="true"] {
@@ -602,10 +610,10 @@
 }
 
 .interrupt-contract-preview__schema pre {
-  max-height: 11rem;
+  max-height: 7.5rem;
   margin: 0.45rem 0 0;
   overflow: auto;
-  color: oklch(0.85 0.04 195);
+  color: color-mix(in oklch, var(--text-primary) 82%, var(--text-muted));
   font: 0.63rem/1.45 var(--font-mono, monospace);
   white-space: pre-wrap;
 }

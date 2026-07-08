@@ -111,6 +111,8 @@ describe("DemoWorkflowScene", () => {
     const stage = screen.getByLabelText("demo workflow stage");
     expect(stage).toHaveAttribute("data-demo-layout", "approval");
     expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
+    expect(screen.getByLabelText("typed interrupt contract")).toHaveTextContent("Operator decision");
+    expect(screen.getByLabelText("typed interrupt contract")).toHaveTextContent("Resume outcomes");
     expect(screen.getByLabelText("workflow graph")).toBeInTheDocument();
   });
 
