@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { FigureDefinition, FigureNodeDefinition } from "./model.js";
-import { layoutFigure, type PositionedFigure } from "./layout.js";
+import {
+  FIGURE_NODE_DIMENSIONS,
+  layoutFigure,
+  type PositionedFigure,
+} from "./layout.js";
 
 const position = (layout: PositionedFigure, nodeId: string) => {
   const node = layout.nodes.find((n) => n.id === nodeId);
@@ -32,6 +36,19 @@ describe("layoutFigure", () => {
     const before = structuredClone(layeredFigure);
     expect(layoutFigure(layeredFigure)).toEqual(layoutFigure(layeredFigure));
     expect(layeredFigure).toEqual(before);
+  });
+
+  it("uses stage node dimensions when laying out stage figures", () => {
+    const standard = layoutFigure(flowFigure, "standard");
+    const stage = layoutFigure(flowFigure, "stage");
+
+    const standardDelta = position(standard, "repair").x - position(standard, "discover").x;
+    const stageDelta = position(stage, "repair").x - position(stage, "discover").x;
+
+    expect(FIGURE_NODE_DIMENSIONS.stage).toEqual({ width: 256, height: 112 });
+    expect(stageDelta - standardDelta).toBe(
+      FIGURE_NODE_DIMENSIONS.stage.width - FIGURE_NODE_DIMENSIONS.standard.width,
+    );
   });
 });
 

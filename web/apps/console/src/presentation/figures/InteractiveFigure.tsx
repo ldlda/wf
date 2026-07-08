@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import { ReactFlow, ReactFlowProvider, Handle, Position, useReactFlow, type Node, type Edge, type NodeTypes } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import type { FigureCatalogDefinition, FigureNodeKind } from "./model.js";
-import { layoutFigure, NODE_WIDTH, NODE_HEIGHT, type PositionedFigure } from "./layout.js";
+import { layoutFigure, type FigureLayoutSize, type PositionedFigure } from "./layout.js";
 import { nextFigureNodeId, type FigureDirection } from "./navigation.js";
 import {
   popFigureFocus,
@@ -99,7 +99,7 @@ const InteractiveFigureInner = ({
     () => resolveFigureFocus(catalog, focusPath),
     [catalog, focusPath],
   );
-  const layout = useMemo(() => layoutFigure(focus.figure), [focus.figure]);
+  const layout = useMemo(() => layoutFigure(focus.figure, size), [focus.figure, size]);
   const containerRef = useRef<HTMLDivElement>(null);
   const initialFocusedNodeId = activeNodeId ?? focus.figure.nodes[0]?.id ?? "";
   const [focusedNodeId, setFocusedNodeId] = useState(initialFocusedNodeId);
