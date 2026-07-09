@@ -12,26 +12,39 @@ export type PresentationNode = {
 };
 
 export const presentationNodes: ReadonlyArray<PresentationNode> = [
-  { id: "read_docs", label: "Read documents", detail: "5 selected", kind: "node", x: 14, y: 58 },
-  { id: "build_report", label: "Build report", detail: "Markdown", kind: "node", x: 34, y: 36 },
-  { id: "review_issues", label: "Issue review", detail: "Typed interrupt", kind: "interrupt", x: 52, y: 58 },
-  { id: "create_issues", label: "Create issues", detail: "Selected only", kind: "node", x: 70, y: 36 },
-  { id: "end_completed", label: "Completed", detail: "Persisted run", kind: "end", x: 86, y: 58 },
+  { id: "read_docs", label: "Read docs", detail: "document source", kind: "node", x: 8, y: 54 },
+  { id: "reset_board", label: "Reset board", detail: "issue board", kind: "node", x: 20, y: 34 },
+  { id: "analyze", label: "Analyze", detail: "report source", kind: "node", x: 32, y: 54 },
+  { id: "build_report", label: "Build report", detail: "markdown", kind: "node", x: 44, y: 34 },
+  { id: "draft_issues", label: "Draft issues", detail: "proposals", kind: "node", x: 56, y: 54 },
+  { id: "review_issues", label: "Issue review", detail: "typed interrupt", kind: "interrupt", x: 68, y: 34 },
+  { id: "create_issues", label: "Create issues", detail: "selected only", kind: "node", x: 80, y: 54 },
+  { id: "finalise", label: "Finalise", detail: "state output", kind: "node", x: 92, y: 34 },
+  { id: "revision_requested", label: "Revision requested", detail: "operator branch", kind: "end", x: 68, y: 78 },
+  { id: "end_completed", label: "Completed", detail: "persisted run", kind: "end", x: 92, y: 72 },
+  { id: "end_cancelled", label: "Cancelled", detail: "no submitted output", kind: "end", x: 80, y: 78 },
 ];
 
 type PresentationEdge = readonly [from: string, to: string];
 
 const presentationEdges: ReadonlyArray<PresentationEdge> = [
-  ["read_docs", "build_report"],
-  ["build_report", "review_issues"],
+  ["read_docs", "reset_board"],
+  ["reset_board", "analyze"],
+  ["analyze", "build_report"],
+  ["build_report", "draft_issues"],
+  ["draft_issues", "review_issues"],
   ["review_issues", "create_issues"],
-  ["create_issues", "end_completed"],
+  ["review_issues", "revision_requested"],
+  ["review_issues", "end_cancelled"],
+  ["create_issues", "finalise"],
+  ["finalise", "end_completed"],
 ];
 
 type NodeExecutionState = "completed" | "current" | "future";
 
 export type WorkflowGraphProof = {
   readonly runId: string | null;
+  readonly planLabel: string;
   readonly traceLabel: string;
   readonly evidenceLabel: string;
 };
@@ -83,6 +96,7 @@ export const WorkflowGraphStage = ({
     {variant === "full" && proof && (
       <div className="workflow-graph-stage__proof" aria-label="workflow graph proof">
         <span><b>Run</b><code>{proof.runId ?? "run unavailable"}</code></span>
+        <span><b>Plan</b>{proof.planLabel}</span>
         <span><b>Trace</b>{proof.traceLabel}</span>
         <span><b>Evidence</b>{proof.evidenceLabel}</span>
       </div>

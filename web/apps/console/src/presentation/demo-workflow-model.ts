@@ -181,22 +181,22 @@ export const graphExecutionForBeat = (
     case "operation":
       return { completedNodeIds: [], currentNodeId: "read_docs" };
     case "graph":
-      return { completedNodeIds: ["read_docs"], currentNodeId: "build_report" };
+      return { completedNodeIds: ["read_docs", "reset_board"], currentNodeId: "analyze" };
     case "interrupt":
     case "approval":
       return {
-        completedNodeIds: ["read_docs", "build_report"],
+        completedNodeIds: ["read_docs", "reset_board", "analyze", "build_report", "draft_issues"],
         currentNodeId: "review_issues",
       };
     case "resume":
       return {
-        completedNodeIds: ["read_docs", "build_report", "review_issues"],
+        completedNodeIds: ["read_docs", "reset_board", "analyze", "build_report", "draft_issues", "review_issues"],
         currentNodeId: "create_issues",
       };
     case "output":
     case "trace":
       return {
-        completedNodeIds: ["read_docs", "build_report", "review_issues", "create_issues"],
+        completedNodeIds: ["read_docs", "reset_board", "analyze", "build_report", "draft_issues", "review_issues", "create_issues", "finalise"],
         currentNodeId: "end_completed",
       };
     default:

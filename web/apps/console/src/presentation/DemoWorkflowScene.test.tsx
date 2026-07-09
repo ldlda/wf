@@ -132,7 +132,8 @@ describe("DemoWorkflowScene", () => {
   it("passes run proof into full graph beats", () => {
     const { unmount } = renderBeat("graph");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run_recorded_lda_report");
-    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("9 workflow nodes");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("11 plan nodes");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("3 trace frames");
     unmount();
 
     renderBeat("output", "resume-output-evidence");
