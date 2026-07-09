@@ -137,11 +137,12 @@ Implementation order:
     [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
     Implementation:
     [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
-19. Active: distinguish reviewed replay evidence, live target readiness, live
-    active run state, and replay fallback in presentation mode. Design:
+19. Completed: presentation live/replay truth surface distinguishes reviewed
+    replay evidence, live target readiness, live active run state, and replay
+    fallback. Design:
     [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md).
-    Plan:
-    [`presentation live/replay truth plan`](superpowers/plans/2026-07-09-presentation-live-replay-truth.md).
+    Implementation:
+    [`presentation live/replay truth plan`](historical/superpowers/plans/2026-07-09-presentation-live-replay-truth.md).
 20. Future: presenter companion, Scene 10 product graph, final scene visuals,
     evidence assets, and rehearsal timing.
 21. Add a static slide/appendix shell only after presentation mode is clear.
