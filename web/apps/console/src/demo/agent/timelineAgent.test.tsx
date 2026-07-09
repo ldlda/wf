@@ -23,6 +23,7 @@ const demoController = (
   submitSelectedIssues: vi.fn(async () => {}),
   cancelReview: vi.fn(async () => {}),
   restart: vi.fn(),
+  primeReplayToStage: vi.fn(),
   ...overrides,
 });
 

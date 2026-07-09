@@ -37,6 +37,7 @@ const demo: DemoTimelineController = {
   submitSelectedIssues: noopAsync,
   cancelReview: noopAsync,
   restart: noop,
+  primeReplayToStage: noop,
 };
 
 const requireSceneBeat = (sceneId: string, beatId: string) => {
@@ -98,16 +99,12 @@ describe("DemoWorkflowScene", () => {
     expect(contract).toHaveTextContent("run_recorded_lda_report");
   });
 
-  it("carries the same graph and contract into Scene 10 approval", () => {
+  it("carries the contract into Scene 10 approval via guided product moment", () => {
     renderBeat("approval", "interrupt-evidence");
 
-    expect(screen.getByLabelText("workflow graph")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "approval");
     expect(screen.getByLabelText("typed interrupt contract")).toHaveTextContent(
       "run_recorded_lda_report",
-    );
-    expect(screen.getByRole("button", { name: /issue review/i })).toHaveAttribute(
-      "data-execution-state",
-      "current",
     );
   });
 
@@ -119,23 +116,22 @@ describe("DemoWorkflowScene", () => {
     expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
     expect(screen.getByLabelText("typed interrupt contract")).toHaveTextContent("Operator decision");
     expect(screen.getByRole("group", { name: /issue review resume/i })).toHaveTextContent("submitted / cancelled");
-    expect(screen.getByLabelText("workflow graph")).toBeInTheDocument();
   });
 
-  it("marks trace beat as evidence layout", () => {
+  it("marks trace beat as evidence layout via guided product moment", () => {
     renderBeat("trace", "interrupt-evidence");
 
     expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "evidence");
-    expect(screen.getByLabelText("workflow.runs.trace operation")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "trace");
   });
 
-  it("renders resume and trace operations as expanded evidence summaries", () => {
+  it("renders resume and trace via guided product moment", () => {
     const { unmount } = renderBeat("resume", "interrupt-evidence");
-    expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "resume");
     unmount();
 
     renderBeat("trace", "interrupt-evidence");
-    expect(screen.getByLabelText("workflow.runs.trace operation")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "trace");
   });
 
   it("passes run proof into full graph beats", () => {
@@ -145,15 +141,14 @@ describe("DemoWorkflowScene", () => {
     unmount();
 
     renderBeat("output", "interrupt-evidence");
-    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC evidence");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "output");
   });
 
-  it("marks outcome-panel layouts so CSS can clear the receipt row", () => {
+  it("marks outcome-panel layouts via guided product moment", () => {
     renderBeat("resume", "interrupt-evidence");
 
     expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "operation");
-    expect(screen.getByLabelText("demo outcome proof")).toBeInTheDocument();
-    expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "resume");
   });
 
   it("shows the continuity rail across Scene 9 operation, graph, and interrupt beats", () => {
@@ -176,24 +171,23 @@ describe("DemoWorkflowScene", () => {
     interrupt.unmount();
 
     renderBeat("approval", "interrupt-evidence");
-    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "compact");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "approval");
   });
 
-  it("keeps full graph mode for graph and output beats", () => {
+  it("keeps full graph mode for graph beats and guided product moment for output", () => {
     const graph = renderBeat("graph");
     expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "full");
     graph.unmount();
 
     renderBeat("output", "interrupt-evidence");
-    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "full");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "output");
   });
 
-  it("keeps approval beat contract, compact graph, and outcome proof present", () => {
+  it("keeps approval beat contract via guided product moment", () => {
     renderBeat("approval", "interrupt-evidence");
 
     expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
-    expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "compact");
-    expect(screen.queryByLabelText("demo outcome proof")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "approval");
   });
 
   it("wires approval actions into the Scene 10 schema approval surface", () => {
@@ -232,16 +226,16 @@ describe("DemoWorkflowScene", () => {
     expect(screen.queryByText("Resume schema")).not.toBeInTheDocument();
   });
 
-  it("adds outcome proof to resume, output, and trace beats", () => {
+  it("adds guided product moment for resume, output, and trace beats", () => {
     const resume = renderBeat("resume", "interrupt-evidence");
-    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("Same persisted run");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "resume");
     resume.unmount();
 
     const output = renderBeat("output", "interrupt-evidence");
-    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("Report markdown");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "output");
     output.unmount();
 
     renderBeat("trace", "interrupt-evidence");
-    expect(screen.getByLabelText("demo outcome proof")).toHaveTextContent("Trace frames");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "trace");
   });
 });

@@ -9,6 +9,7 @@ import {
 import type { DemoApprovalActions } from "./demo-approval-actions.js";
 import { DemoContinuityRail } from "./DemoContinuityRail.js";
 import { DemoOutcomePanel } from "./DemoOutcomePanel.js";
+import { GuidedProductMoment } from "./GuidedProductMoment.js";
 import { InterruptContractPreview } from "./InterruptContractPreview.js";
 import { NodeSpotlight } from "./NodeSpotlight.js";
 import { OperationBlock } from "./OperationBlock.js";
@@ -87,6 +88,8 @@ export const DemoWorkflowScene = ({
       ? "preview"
       : null;
 
+  const isGuidedScene10 = scene.id === "interrupt-evidence";
+
   return (
     <>
       <StageCaption eyebrow="Live system walkthrough" title={scene.title}>
@@ -96,55 +99,68 @@ export const DemoWorkflowScene = ({
       <DemoContinuityRail lens={lens} />
 
       <div className="demo-workflow-stage" data-beat={beat.id} data-demo-layout={layout} aria-label="demo workflow stage">
-          {showExpandedOperation && currentEvent && (
-            <OperationBlock
-              event={currentEvent}
-              variant="expanded"
+          {isGuidedScene10 ? (
+            <GuidedProductMoment
+              beat={beat}
+              demo={demo}
+              contract={contract}
+              operation={currentOperation}
+              approvalActions={approvalActions}
               openEvidence={openEvidence}
             />
-          )}
-
-          {showReceipt && runStart && (
-            <OperationBlock
-              event={runStart}
-              variant="receipt"
-              openEvidence={openEvidence}
-            />
-          )}
-
-          {showGraph && (
-            <div className="demo-workflow-stage__graph">
-              <WorkflowGraphStage
-                execution={execution}
-                selectedNodeId={selectedNodeId}
-                selectNode={selectNode}
-                proof={runProof}
-                variant={graphVariant}
-              />
-              {contractMode && contract && (
-                <InterruptContractPreview
-                  contract={contract}
-                  mode={contractMode}
-                  hero={layout === "approval"}
-                  approvalActions={approvalActions}
+          ) : (
+            <>
+              {showExpandedOperation && currentEvent && (
+                <OperationBlock
+                  event={currentEvent}
+                  variant="expanded"
+                  openEvidence={openEvidence}
                 />
               )}
-            </div>
-          )}
 
-          {showOutcomePanel && (
-            <DemoOutcomePanel
-              beatId={beat.id}
-              lens={lens}
-              operation={currentOperation}
-              contract={contract}
-            />
-          )}
+              {showReceipt && runStart && (
+                <OperationBlock
+                  event={runStart}
+                  variant="receipt"
+                  openEvidence={openEvidence}
+                />
+              )}
 
-          {showExpandedOperation && !currentEvent && (
-            <div className="demo-workflow-stage__pending" role="status">
-              Replay operation is not available yet.
-            </div>
+              {showGraph && (
+                <div className="demo-workflow-stage__graph">
+                  <WorkflowGraphStage
+                    execution={execution}
+                    selectedNodeId={selectedNodeId}
+                    selectNode={selectNode}
+                    proof={runProof}
+                    variant={graphVariant}
+                  />
+                  {contractMode && contract && (
+                    <InterruptContractPreview
+                      contract={contract}
+                      mode={contractMode}
+                      hero={layout === "approval"}
+                      approvalActions={approvalActions}
+                    />
+                  )}
+                </div>
+              )}
+
+              {showOutcomePanel && (
+                <DemoOutcomePanel
+                  beatId={beat.id}
+                  lens={lens}
+                  operation={currentOperation}
+                  contract={contract}
+                />
+              )}
+
+              {showExpandedOperation && !currentEvent && (
+                <div className="demo-workflow-stage__pending" role="status">
+                  Replay operation is not available yet.
+                </div>
+              )}
+            </>
           )}
       </div>
 
