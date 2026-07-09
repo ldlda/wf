@@ -153,13 +153,13 @@ Implementation order:
     Cancel is terminal in presentation mode and does not advance into submitted
     evidence. Implementation:
     [`Scene 10 factual run state`](historical/superpowers/plans/2026-07-09-scene-10-factual-run-state.md).
-21. Next: presentation lifecycle story expansion splits the current crowded run
-    proof into prepared lifecycle, run start, typed human boundary, and
-    resume/output/evidence scenes. Draft -> Artifact -> Deployment -> Run must
-    be visible before the run inspector details. Design:
+21. Completed: presentation lifecycle story expansion splits the demo climax
+    into prepared lifecycle, run start, typed human boundary, and
+    resume/output/evidence scenes so Draft -> Artifact -> Deployment -> Run is
+    visible before the run inspector details. Design:
     [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
-    Plan:
-    [`presentation lifecycle story expansion plan`](superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
+    Implementation:
+    [`presentation lifecycle story expansion plan`](historical/superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
 22. Future: presenter companion, final scene visuals, evidence assets, and
     rehearsal timing.
 23. Add a static slide/appendix shell only after presentation mode is clear.
@@ -242,12 +242,12 @@ Presentation wishlist / defense readiness:
   [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
   Implementation:
   [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
-- Next: presentation lifecycle story expansion makes the demo climax less
+- Completed: presentation lifecycle story expansion makes the demo climax less
   run-only by adding explicit prepared lifecycle scenes before the run,
   interrupt, output, and trace proof. Design:
   [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
-  Plan:
-  [`presentation lifecycle story expansion plan`](superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
+  Implementation:
+  [`presentation lifecycle story expansion plan`](historical/superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
 - Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
   expected run states, and a timed walkthrough checklist for a 15-minute defense.
 - Presenter companion feasibility: decide whether phone/laptop control is local
