@@ -53,8 +53,10 @@ const introForStatus = (status: PresentationTargetHealth): string => {
       return "Live run is active. Operations are being sent to the workflow server.";
     case "failed":
       return "Replay fallback is active because the live target is unavailable.";
-    default:
+    case "replay":
       return "Replay evidence is active. I can walk through the reviewed recording.";
+    case "checking":
+      return "Live target configured, checking reachability.";
   }
 };
 
@@ -110,6 +112,8 @@ export const useTimelineAgent = (
 
   const cancelReview = useCallback(async () => {
     await demo.cancelReview("Cancelled by operator.");
+    // In replay the canonical recording only contains the submitted branch.
+    // Do not call next() or the UI would falsely advance into submitted evidence.
     if (demo.state.mode === "live") {
       await demo.next();
     }
