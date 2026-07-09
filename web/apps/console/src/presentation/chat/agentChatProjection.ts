@@ -29,6 +29,8 @@ export type ProjectedChatMessage = {
 const toolStateFromResult = (status: AgentMessagePart & { readonly type: "tool-result" }): ToolState =>
   status.result.status === "failure" ? "error" : "success";
 
+const WORKFLOW_START_TOOL = "startPreparedReportRun";
+
 const projectPart = (part: AgentMessagePart): ProjectedChatPart | null => {
   switch (part.type) {
     case "text":
@@ -36,10 +38,10 @@ const projectPart = (part: AgentMessagePart): ProjectedChatPart | null => {
     case "tool-call":
       return {
         kind: "tool",
-        label: part.call.name === "startPreparedReportRun" ? "Workflow operation" : "Tool call",
+        label: part.call.name === WORKFLOW_START_TOOL ? "Workflow operation" : "Tool call",
         name: part.call.name,
         state: "pending",
-        defaultOpen: part.call.name === "startPreparedReportRun",
+        defaultOpen: part.call.name === WORKFLOW_START_TOOL,
         input: part.call.input,
       };
     case "tool-result":

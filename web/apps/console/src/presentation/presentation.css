@@ -1296,9 +1296,6 @@
   opacity: 0.55;
 }
 
-/* Source-owned AI Elements-style primitives. These classes intentionally mirror
-   conversation/message/tool concepts so a future AI SDK driver can reuse the
-   same surface without changing the demo timeline state model. */
 .operator-chat .ai-chat-conversation {
   display: flex;
   min-height: 0;
