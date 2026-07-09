@@ -8,15 +8,16 @@ const problemScene = findScene("problem")!;
 afterEach(() => cleanup());
 
 describe("ProblemLoopScene", () => {
-  it("renders the action sequence as useful but insufficient", () => {
+  it("shows direct action as a vertical chat and tool transcript", () => {
     render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "direct-actions")!} />);
 
-    const action = screen.getByRole("group", { name: "Action sequence" });
-    expect(within(action).getByText("think")).toBeInTheDocument();
-    expect(within(action).getAllByText("tool")).toHaveLength(2);
-    expect(within(action).getByText("observe")).toBeInTheDocument();
-    expect(within(action).getByText("done")).toBeInTheDocument();
-    expect(screen.getByText(/useful once/i)).toBeInTheDocument();
+    const transcript = screen.getByRole("list", { name: /one-off tool loop transcript/i });
+    expect(within(transcript).getByText("User prompt")).toBeInTheDocument();
+    expect(within(transcript).getByText("Agent reasoning")).toBeInTheDocument();
+    expect(within(transcript).getByText("Tool call")).toBeInTheDocument();
+    expect(within(transcript).getByText("Observation")).toBeInTheDocument();
+    expect(within(transcript).getByText("Final answer")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /^Action sequence$/i })).not.toBeInTheDocument();
   });
 
   it("renders reusable automation with simple verbs only", () => {
@@ -29,5 +30,20 @@ describe("ProblemLoopScene", () => {
     for (const formalName of ["Draft", "Artifact", "Deployment", "Trace"]) {
       expect(screen.queryByText(formalName)).not.toBeInTheDocument();
     }
+  });
+
+  it("keeps reusable automation as the durable counterpart without formal lifecycle words", () => {
+    render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "missing-contracts")!} />);
+
+    expect(screen.getByRole("group", { name: /reusable automation/i })).toBeInTheDocument();
+    expect(screen.getByText("design")).toBeInTheDocument();
+    expect(screen.getByText("save")).toBeInTheDocument();
+    expect(screen.getByText("connect")).toBeInTheDocument();
+    expect(screen.getByText("run")).toBeInTheDocument();
+    expect(screen.getByText("inspect")).toBeInTheDocument();
+    expect(screen.queryByText("Draft")).not.toBeInTheDocument();
+    expect(screen.queryByText("Artifact")).not.toBeInTheDocument();
+    expect(screen.queryByText("Deployment")).not.toBeInTheDocument();
+    expect(screen.queryByText("Trace")).not.toBeInTheDocument();
   });
 });
