@@ -6,6 +6,7 @@ import {
   projectInterruptContract,
   projectOperationPresentation,
 } from "./demo-workflow-model.js";
+import type { DemoApprovalActions } from "./demo-approval-actions.js";
 import { DemoContinuityRail } from "./DemoContinuityRail.js";
 import { DemoOutcomePanel } from "./DemoOutcomePanel.js";
 import { InterruptContractPreview } from "./InterruptContractPreview.js";
@@ -22,6 +23,7 @@ type DemoWorkflowSceneProps = {
   readonly selectedNodeId: string | null;
   readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
+  readonly approvalActions?: DemoApprovalActions | undefined;
 };
 
 type DemoWorkflowLayout = "operation" | "graph" | "interrupt" | "approval" | "evidence";
@@ -52,6 +54,7 @@ export const DemoWorkflowScene = ({
   selectedNodeId,
   selectNode,
   openEvidence,
+  approvalActions,
 }: DemoWorkflowSceneProps) => {
   const runStart = findEvent(demo, "run_start");
   const runResume = findEvent(demo, "run_resume");
@@ -123,6 +126,7 @@ export const DemoWorkflowScene = ({
                   contract={contract}
                   mode={contractMode}
                   hero={layout === "approval"}
+                  approvalActions={approvalActions}
                 />
               )}
             </div>

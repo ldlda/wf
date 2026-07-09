@@ -1,5 +1,6 @@
 import { m } from "motion/react";
 import type { InterruptContractPresentation } from "./demo-workflow-model.js";
+import type { DemoApprovalActions } from "./demo-approval-actions.js";
 import { SchemaApprovalSurface } from "./approval/SchemaApprovalSurface.js";
 import { formatJson } from "./format.js";
 
@@ -7,6 +8,7 @@ type InterruptContractPreviewProps = {
   readonly contract: InterruptContractPresentation;
   readonly mode: "preview" | "approval";
   readonly hero?: boolean;
+  readonly approvalActions?: DemoApprovalActions | undefined;
 };
 
 const titleForKind = (kind: string): string => `${kind.replaceAll("_", " ")} resume`;
@@ -15,6 +17,7 @@ export const InterruptContractPreview = ({
   contract,
   mode,
   hero = false,
+  approvalActions,
 }: InterruptContractPreviewProps) => (
   <m.aside
     className="interrupt-contract-preview"
@@ -48,6 +51,9 @@ export const InterruptContractPreview = ({
         payload={contract.resumePayloadPreview}
         outcomes={contract.outcomes}
         runId={contract.runId}
+        state={approvalActions?.state ?? "ready"}
+        onSubmit={approvalActions?.canSubmit ? () => void approvalActions.submit() : undefined}
+        onCancel={approvalActions?.canCancel ? () => void approvalActions.cancel() : undefined}
       />
     ) : (
       <div className="interrupt-contract-preview__schema">

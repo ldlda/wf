@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
+import type { DemoApprovalActions } from "./demo-approval-actions.js";
 import { DemoWorkflowScene } from "./DemoWorkflowScene.js";
 import { findBeat, findScene } from "./storyboard.js";
 
@@ -48,8 +49,12 @@ const requireSceneBeat = (sceneId: string, beatId: string) => {
 const renderBeat = (
   beatId: string,
   sceneId = "workflow-demo",
-  openEvidence = vi.fn(),
+  options: {
+    readonly openEvidence?: () => void;
+    readonly approvalActions?: DemoApprovalActions;
+  } = {},
 ) => {
+  const openEvidence = options.openEvidence ?? vi.fn();
   const { scene, beat } = requireSceneBeat(sceneId, beatId);
   const rendered = render(
     <DemoWorkflowScene
@@ -59,6 +64,7 @@ const renderBeat = (
       selectedNodeId={null}
       selectNode={noop}
       openEvidence={openEvidence}
+      approvalActions={options.approvalActions}
     />,
   );
   return { ...rendered, openEvidence };
@@ -188,6 +194,21 @@ describe("DemoWorkflowScene", () => {
     expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
     expect(screen.getByLabelText("workflow graph")).toHaveAttribute("data-graph-variant", "compact");
     expect(screen.queryByLabelText("demo outcome proof")).not.toBeInTheDocument();
+  });
+
+  it("wires approval actions into the Scene 10 schema approval surface", () => {
+    renderBeat("approval", "interrupt-evidence", {
+      approvalActions: {
+        state: "ready",
+        canSubmit: true,
+        canCancel: true,
+        submit: vi.fn(async () => {}),
+        cancel: vi.fn(async () => {}),
+      },
+    });
+
+    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
   });
 
   it("shows a schema approval surface for the approval beat instead of raw schema as the primary visual", () => {

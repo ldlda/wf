@@ -2,6 +2,7 @@ import { domAnimation, LayoutGroup, LazyMotion } from "motion/react";
 import type { EvidenceRecord } from "../app/state.js";
 import type { AgentMessage } from "../demo/agent/events.js";
 import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
+import type { DemoApprovalActions } from "./demo-approval-actions.js";
 import { SceneBody } from "./SceneBody.js";
 import { DiscussionPanel } from "./DiscussionPanel.js";
 import { EvidenceInspector } from "./evidence/EvidenceInspector.js";
@@ -18,6 +19,7 @@ type PresentationStageProps = {
   readonly evidence: readonly EvidenceRecord[];
   readonly messages?: ReadonlyArray<AgentMessage>;
   readonly timelineAgent?: TimelineAgentController | undefined;
+  readonly approvalActions?: DemoApprovalActions | undefined;
   readonly onApprove?: (() => void) | undefined;
   readonly onDeny?: (() => void) | undefined;
   readonly jump: (location: MainLocation) => void;
@@ -34,6 +36,7 @@ export const PresentationStage = ({
   evidence,
   messages,
   timelineAgent,
+  approvalActions,
   onApprove,
   onDeny,
   jump,
@@ -79,6 +82,7 @@ export const PresentationStage = ({
                   }
                 }}
                 motionDisabled={state.motionDisabled}
+                approvalActions={approvalActions}
               />
             )}
           </section>
