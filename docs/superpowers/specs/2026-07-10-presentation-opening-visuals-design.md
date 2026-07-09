@@ -28,10 +28,11 @@ Planner -> Tool Surface -> Workflow Platform
 
 Known products should appear only where they clarify the model:
 
-- `Codex`, `Claude`, and `ChatGPT` sit under `Planner`.
+- `Codex`, `Claude`, and `OpenCode` sit under `Planner`.
 - `CLI`, `MCP`, and `APIs` sit under `Tool Surface`.
-- `lda.chat` is highlighted as the submitted workflow-platform/substrate
-  implementation.
+- The submitted work is highlighted under `Workflow Platform` as the local
+  workflow substrate implementation. The decomposition should not rely on the
+  project name alone to explain the category.
 
 Do not introduce `wf` CLI branding in the opening. The CLI appears later as one
 implementation surface.
@@ -65,12 +66,12 @@ Primary visual:
 
 ```text
 Planner             Tool Surface           Workflow Platform
-Codex / Claude      CLI / MCP / APIs        lda.chat
-ChatGPT                                   Typed · Durable · Inspectable
+Codex / Claude      CLI / MCP / APIs        submitted substrate
+OpenCode                                  Typed · Durable · Inspectable
 ```
 
-The workflow-platform block should become dominant. `lda.chat` is branding here;
-it is not replaced by `wf`.
+The workflow-platform block should become dominant. Avoid `wf` branding here;
+the CLI is an implementation surface introduced later.
 
 Required behavior:
 
@@ -84,9 +85,9 @@ Required behavior:
 Speaker-script intent:
 
 ```text
-By AI agent, I do not mean I built a new Codex or Claude. Existing agents can
-already plan and call tools. I focused on the workflow platform layer: the part
-that makes their work typed, durable, inspectable, and reusable.
+By AI agent, I do not mean I built a new Codex, Claude, or OpenCode. Existing
+agents can already plan and call tools. I focused on the workflow platform
+layer: the part that makes their work typed, durable, inspectable, and reusable.
 ```
 
 ## Scene 2: From Action Sequence To Automation
@@ -170,15 +171,20 @@ Suggested component split:
 - `ProblemLoopScene`: action sequence vs reusable automation.
 - Optional shared `ConceptIcon` if icons stay inline/SVG.
 
-The visuals can be hand-authored SVG/CSS. Do not add a new icon package unless
-the implementation plan justifies it.
+Prefer source-owned reusable presentation primitives for chips, icon plaques,
+timeline steps, and placeholder surfaces. If a component library is introduced
+later for chat or product surfaces, the opening visuals should be able to reuse
+that visual language instead of growing a separate ad-hoc illustration style.
+Hand-authored SVG/CSS is acceptable for a small number of stable concept icons,
+but do not add a new icon package unless the implementation plan justifies it.
 
 ## Tests
 
 Add tests that pin behavior without overfitting animation details:
 
 - Scene 1 renders `Planner`, `Tool Surface`, `Workflow Platform`, known agent
-  names, `lda.chat`, and `Typed · Durable · Inspectable`.
+  names, the submitted substrate/platform block, and
+  `Typed · Durable · Inspectable`.
 - Scene 1 exposes a `Where is the AI agent?` discussion action.
 - Scene 2 renders `Action sequence` and `Reusable automation`.
 - Scene 2 uses simple verbs: `design`, `save`, `connect`, `run`, `inspect`.
