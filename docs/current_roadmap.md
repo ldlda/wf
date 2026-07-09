@@ -38,6 +38,7 @@ Design contracts:
 - [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md)
 - [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md)
 - [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md)
+- [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md)
 
 Implementation order:
 
@@ -129,9 +130,15 @@ Implementation order:
     approval, graph focus, and evidence transitions into one deterministic
     presenter sequence. Implementation:
     [`guided run beat gates`](historical/superpowers/plans/2026-07-09-guided-run-beat-gates.md).
-18. Future: presenter companion, Scene 10 product graph, final scene visuals,
+18. Active: make Scene 10 a guided product moment with direct-link replay
+    readiness and one dominant proof surface per approval/resume/output/trace
+    beat. Design:
+    [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
+    Plan:
+    [`Scene 10 guided product moment plan`](superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
+19. Future: presenter companion, Scene 10 product graph, final scene visuals,
     evidence assets, and rehearsal timing.
-19. Add a static slide/appendix shell only after presentation mode is clear.
+20. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Presentation wishlist / defense readiness:
@@ -177,9 +184,15 @@ Presentation wishlist / defense readiness:
       routes stage-aware, with body/support/action regions instead of plain
       document cards. Implementation:
       [`presentation discussion modal composition`](historical/superpowers/plans/2026-07-09-presentation-discussion-modal-composition.md).
-   10. Presentation craft pass: tune remaining motion, evidence receipt
+   10. Active: Scene 10 guided product moment primes replay state for direct
+       hashes and stages approval, resume, output, and trace as one readable
+       product flow. Design:
+       [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
+       Plan:
+       [`Scene 10 guided product moment plan`](superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
+   11. Future: presentation craft pass for remaining motion, evidence receipt
        placement, route-level caption contrast, and graph visual language after
-       the discussion layer is stable.
+       Scene 10 is stable.
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
@@ -195,15 +208,16 @@ Presentation wishlist / defense readiness:
   "run prepared agent" affordance, render tool calls/results with a standard
   modern AI-app vocabulary, and expose approval requests as normal chat events
   that can also drive presentation actions.
-- Schema form approval surface: render typed interrupt request/resume schemas as
-  reusable form UI shared by chat, Scene 10, and future console approval flows.
-  The current `{ "type": "object" }` proof is enough for architecture evidence,
-  but the product demo needs a real schema-derived approval form with submitted
-  and cancelled outcomes.
 - Completed: guided run beat gates connect Scene 10 schema approval, chat
   approval, graph focus, and evidence transitions into one deterministic
   presenter sequence. Implementation:
   [`guided run beat gates`](historical/superpowers/plans/2026-07-09-guided-run-beat-gates.md).
+- Active: Scene 10 guided product moment removes delayed direct-link readiness
+  and gives approval, resume, output, and trace one dominant proof surface each.
+  Design:
+  [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
+  Plan:
+  [`Scene 10 guided product moment plan`](superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
 - Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
   expected run states, and a timed walkthrough checklist for a 15-minute defense.
 - Presenter companion feasibility: decide whether phone/laptop control is local
