@@ -1019,3 +1019,57 @@
 .schema-approval-surface__actions button:disabled {
   opacity: 0.55;
 }
+
+/* --- guided product moment (Scene 10) --- */
+
+.guided-product-moment {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  min-height: 0;
+}
+
+.guided-product-moment__header {
+  display: grid;
+  grid-template-columns: minmax(0, 0.55fr) minmax(0, 1fr);
+  gap: 0.35rem 1rem;
+  align-items: end;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--stage-line);
+  border-radius: 0.75rem;
+  background: color-mix(in oklch, var(--stage-surface) 86%, transparent);
+}
+
+.guided-product-moment__header span {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.guided-product-moment__header strong {
+  color: var(--text-primary);
+  font-size: 1.2rem;
+  line-height: 1.05;
+}
+
+.guided-product-moment__header p {
+  grid-column: 2;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.guided-product-moment__primary {
+  min-height: 0;
+  display: grid;
+  align-items: stretch;
+}
+
+.guided-product-moment[data-moment="approval"] .interrupt-contract-preview {
+  max-width: min(58rem, 100%);
+  justify-self: center;
+}
+
+.guided-product-moment[data-moment="resume"] .operation-block {
+  max-width: min(62rem, 100%);
+  justify-self: center;
+}
