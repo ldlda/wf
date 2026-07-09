@@ -295,4 +295,31 @@ describe("PresentationRoute", () => {
 
     expect(await screen.findByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
   });
+
+  it("direct approval route primes interrupt payload but not output", async () => {
+    window.location.hash = "#scene/typed-human-boundary/approval";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("region", { name: /interrupt report markdown/i })).toBeInTheDocument();
+    expect(screen.queryByText("Output not created yet")).not.toBeInTheDocument();
+  });
+
+  it("direct resume route primes resume and output proof", async () => {
+    window.location.hash = "#scene/resume-output-evidence/resume";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: /workflow markdown output/i })).toBeInTheDocument();
+  });
+
+  it("direct trace route primes trace frames", async () => {
+    window.location.hash = "#scene/resume-output-evidence/trace";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("region", { name: /workflow trace frames/i })).toBeInTheDocument();
+    expect(screen.queryByText("No trace frames captured.")).not.toBeInTheDocument();
+  });
 });
