@@ -160,11 +160,11 @@ Implementation order:
     [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
     Implementation:
     [`presentation lifecycle story expansion plan`](historical/superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
-22. Next: presentation demo proof composition makes scenes 9-12 factual and
-    readable: the workflow graph reflects the prepared plan, approval shows
-    input/interruption/decision only, and resume/output/trace expose
-    scroll-contained proof panes. Implementation plan:
-    [`presentation demo proof composition`](superpowers/plans/2026-07-09-presentation-demo-proof-composition.md).
+22. Completed: presentation demo proof composition makes scenes 9-12 factual
+    and readable: the workflow graph reflects the prepared plan, approval
+    shows input/interruption/decision only, and resume/output/trace expose
+    scroll-contained proof panes. Implementation:
+    [`presentation demo proof composition`](historical/superpowers/plans/2026-07-09-presentation-demo-proof-composition.md).
 23. Future: presenter companion, final scene visuals, evidence assets, and
     rehearsal timing.
 24. Add a static slide/appendix shell only after presentation mode is clear.
@@ -219,14 +219,14 @@ Presentation wishlist / defense readiness:
         [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
         Implementation:
         [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
-   11. Next: presentation demo proof composition fixes the current factual demo
-       proof debt across scenes 9-12: truthful plan graph, large scrollable
-       interrupt/output/trace panes, no future-proof leakage on approval, and
-       direct-hash replay tests. Implementation plan:
-       [`presentation demo proof composition`](superpowers/plans/2026-07-09-presentation-demo-proof-composition.md).
-   12. Future: presentation craft pass for remaining motion, evidence receipt
-       placement, route-level caption contrast, and graph visual language after
-       Scene 10 is stable.
+11. Completed: presentation demo proof composition makes scenes 9-12 factual
+        and readable: the workflow graph reflects the prepared plan, approval
+        shows input/interruption/decision only, and resume/output/trace expose
+        scroll-contained proof panes. Implementation:
+        [`presentation demo proof composition`](historical/superpowers/plans/2026-07-09-presentation-demo-proof-composition.md).
+    12. Future: presentation craft pass for remaining motion, evidence receipt
+        placement, route-level caption contrast, and graph visual language after
+        Scene 10 is stable.
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
