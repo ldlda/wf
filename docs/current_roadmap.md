@@ -125,9 +125,12 @@ Implementation order:
     live/replay execution all share `useDemoTimeline`; AI SDK remains a later
     driver for the same seam. Implementation:
     [`presentation chat timeline bridge`](historical/superpowers/plans/2026-07-09-presentation-chat-timeline-bridge.md).
-17. Future: implement Guided Run Beat Gates, presenter companion, Scene 10
-    product graph, final scene visuals, evidence assets, and rehearsal timing.
-18. Add a static slide/appendix shell only after presentation mode is clear.
+17. Active: implement Guided Run Beat Gates so Scene 10 approval buttons and
+    chat approval requests drive the same deterministic demo timeline. Plan:
+    [`guided run beat gates`](superpowers/plans/2026-07-09-guided-run-beat-gates.md).
+18. Future: presenter companion, Scene 10 product graph, final scene visuals,
+    evidence assets, and rehearsal timing.
+19. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Presentation wishlist / defense readiness:
@@ -196,11 +199,11 @@ Presentation wishlist / defense readiness:
   The current `{ "type": "object" }` proof is enough for architecture evidence,
   but the product demo needs a real schema-derived approval form with submitted
   and cancelled outcomes.
-- Guided run beat gates: make the prepared agent/demo sequence explicitly wait
-  for presentation beats, approval decisions, and evidence reveals instead of
-  relying on loose timing. This should connect the chat run, schema approval
-  form, graph focus, and evidence inspector into one deterministic presenter
-  sequence.
+- Active: Guided run beat gates make the prepared agent/demo sequence explicitly
+  wait for approval decisions and evidence reveals instead of relying on loose
+  timing. This connects the chat run, schema approval form, graph focus, and
+  evidence inspector into one deterministic presenter sequence. Plan:
+  [`guided run beat gates`](superpowers/plans/2026-07-09-guided-run-beat-gates.md).
 - Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
   expected run states, and a timed walkthrough checklist for a 15-minute defense.
 - Presenter companion feasibility: decide whether phone/laptop control is local
