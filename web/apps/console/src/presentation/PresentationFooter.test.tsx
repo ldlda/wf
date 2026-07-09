@@ -1,6 +1,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EvidenceRecord } from "../app/state.js";
+import type { PresentationTargetHealth } from "./presentation-target-status.js";
 import { PresentationFooter } from "./PresentationFooter.js";
 
 afterEach(() => cleanup());
@@ -16,6 +17,11 @@ describe("PresentationFooter", () => {
       response: { result: { status: "completed" } },
       durationMs: 34,
     };
+    const replayHealth: PresentationTargetHealth = {
+      kind: "replay",
+      label: "Replay evidence",
+      detail: "reviewed recording",
+    };
     render(
       <PresentationFooter
         location={{
@@ -25,6 +31,7 @@ describe("PresentationFooter", () => {
           focusPath: [],
         }}
         evidence={[evidence]}
+        targetStatus={replayHealth}
         showEvidenceReceipt
         inspectEvidence={vi.fn()}
       />,

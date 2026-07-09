@@ -10,6 +10,7 @@ import { OperatorChat } from "./OperatorChat.js";
 import { PresentationFooter } from "./PresentationFooter.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
+import type { PresentationTargetHealth } from "./presentation-target-status.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { findScene, type MainLocation } from "./storyboard.js";
 
@@ -22,6 +23,7 @@ type PresentationStageProps = {
   readonly approvalActions?: DemoApprovalActions | undefined;
   readonly onApprove?: (() => void) | undefined;
   readonly onDeny?: (() => void) | undefined;
+  readonly targetStatus: PresentationTargetHealth;
   readonly jump: (location: MainLocation) => void;
   readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
@@ -39,6 +41,7 @@ export const PresentationStage = ({
   approvalActions,
   onApprove,
   onDeny,
+  targetStatus,
   jump,
   selectNode,
   openEvidence,
@@ -90,6 +93,7 @@ export const PresentationStage = ({
             <PresentationFooter
               location={state.location}
               evidence={evidence}
+              targetStatus={targetStatus}
               showEvidenceReceipt={composition.evidencePresentation !== "hidden"}
               inspectEvidence={openEvidence}
             />

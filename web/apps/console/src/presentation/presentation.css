@@ -494,6 +494,36 @@
   opacity: 0.65;
 }
 
+.presentation-truth-badge {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  min-width: 0;
+  padding: 0.3rem 0.55rem;
+  border: 1px solid var(--stage-line);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--stage-surface) 88%, transparent);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+}
+
+.presentation-truth-badge span {
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.presentation-truth-badge[data-status="failed"] {
+  border-color: color-mix(in oklch, var(--accent-amber) 70%, var(--stage-line));
+}
+
+.presentation-truth-badge[data-status="active"],
+.presentation-truth-badge[data-status="ready"] {
+  border-color: color-mix(in oklch, var(--accent-cyan) 65%, var(--stage-line));
+}
+
 .evidence-receipt:focus-visible,
 .evidence-inspector button:focus-visible,
 .evidence-inspector select:focus-visible {

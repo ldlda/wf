@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import type { EvidenceRecord } from "../app/state.js";
 import { resolvePresentationTarget } from "./live-target.js";
+import { usePresentationTargetStatus } from "./usePresentationTargetStatus.js";
 import { useTimelineAgent } from "../demo/agent/timelineAgent.js";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import { useDemoTimeline } from "../demo/useDemoTimeline.js";
@@ -52,6 +53,7 @@ export const PresentationRoute = () => {
 
   const presentationTarget = useMemo(() => resolvePresentationTarget(), []);
   const demo = useDemoTimeline(presentationTarget.target, recordEvidence, recording);
+  const targetStatus = usePresentationTargetStatus(presentationTarget, demo.state);
   const timelineAgent = useTimelineAgent(
     demo,
     presentationTarget.mode === "live" ? "live" : "replay",
@@ -197,6 +199,7 @@ export const PresentationRoute = () => {
           evidence={evidence}
           timelineAgent={timelineAgent}
           approvalActions={approvalActions}
+          targetStatus={targetStatus}
           jump={handleJump}
           selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
           openEvidence={() => dispatch({ type: "set_evidence_presentation", presentation: "inspector" })}
