@@ -1,6 +1,18 @@
 import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+
+vi.mock("../connection/api.js", () => ({
+  callOperation: vi.fn().mockResolvedValue({
+    ok: true,
+    operation: "workflow.health",
+    label: "Health",
+    interpreted: { status: "ok" },
+    exchange: { request: {}, response: {} },
+    equivalentCli: "uv run wf status",
+    durationMs: 2,
+  }),
+}));
 
 class MockResizeObserver {
   observe() {}
@@ -56,7 +68,7 @@ describe("PresentationRoute", () => {
     setReplayMode();
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
-    expect(screen.getByText(/replay fallback is active/i)).toBeInTheDocument();
+    expect(screen.getByText(/replay evidence is active/i)).toBeInTheDocument();
     expect(screen.queryByLabelText(/presentation scene rail/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText("scene position")).toBeInTheDocument();
   });

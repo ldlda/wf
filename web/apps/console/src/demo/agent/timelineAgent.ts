@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import type { DemoTimelineController } from "../useDemoTimeline.js";
+import type { PresentationTargetHealth } from "../../presentation/presentation-target-status.js";
 import {
   agentTextMessage,
   agentToolCallPart,
@@ -9,6 +10,11 @@ import {
 import type { AgentToolName } from "./tools.js";
 
 export type TimelineAgentMode = "live" | "replay";
+
+export type TimelineAgentOptions = {
+  readonly mode: TimelineAgentMode;
+  readonly status: PresentationTargetHealth;
+};
 
 export type TimelineAgentController = {
   readonly messages: ReadonlyArray<AgentMessage>;
@@ -39,17 +45,33 @@ const appendToolMessage = (
   },
 ];
 
+const introForStatus = (status: PresentationTargetHealth): string => {
+  switch (status.kind) {
+    case "ready":
+      return "Live target is ready. Direct slides still show replay evidence until I start the live run.";
+    case "active":
+      return "Live run is active. Operations are being sent to the workflow server.";
+    case "failed":
+      return "Replay fallback is active because the live target is unavailable.";
+    default:
+      return "Replay evidence is active. I can walk through the reviewed recording.";
+  }
+};
+
 export const useTimelineAgent = (
   demo: DemoTimelineController,
-  modeLabel: TimelineAgentMode,
+  options: TimelineAgentOptions,
 ): TimelineAgentController => {
+  const modeLabel: TimelineAgentMode =
+    options.status.kind === "ready" || options.status.kind === "active"
+      ? options.mode
+      : "replay";
+
   const [messages, setMessages] = useState<ReadonlyArray<AgentMessage>>([
     agentTextMessage(
       "timeline-agent-intro",
       "assistant",
-      modeLabel === "live"
-        ? "Live workflow target is configured. I can run the prepared workflow now."
-        : "Replay fallback is active. I can still walk through the prepared workflow evidence.",
+      introForStatus(options.status),
     ),
   ]);
 
@@ -88,8 +110,6 @@ export const useTimelineAgent = (
 
   const cancelReview = useCallback(async () => {
     await demo.cancelReview("Cancelled by operator.");
-    // In replay the canonical recording only contains the submitted branch.
-    // Do not call next() or the UI would falsely advance into submitted evidence.
     if (demo.state.mode === "live") {
       await demo.next();
     }

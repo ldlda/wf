@@ -54,10 +54,10 @@ export const PresentationRoute = () => {
   const presentationTarget = useMemo(() => resolvePresentationTarget(), []);
   const demo = useDemoTimeline(presentationTarget.target, recordEvidence, recording);
   const targetStatus = usePresentationTargetStatus(presentationTarget, demo.state);
-  const timelineAgent = useTimelineAgent(
-    demo,
-    presentationTarget.mode === "live" ? "live" : "replay",
-  );
+  const timelineAgent = useTimelineAgent(demo, {
+    mode: presentationTarget.mode === "live" ? "live" : "replay",
+    status: targetStatus,
+  });
 
   useEffect(() => {
     const hash = hashForLocation(state.location);
