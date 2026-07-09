@@ -204,7 +204,12 @@ Recommended next visual slices:
    marked demo beats with primary/support surface metadata so Scenes 8-12 can
    keep one dominant product proof at a time. Implementation:
    [`presentation coherence pass`](historical/superpowers/plans/2026-07-10-presentation-coherence-pass.md).
-3. Evidence and closing visuals: make Scenes 13 and 14 readable as a defense
+3. Completed: Scene 2 visual craft pass made the one-off side read as a
+   chat/tool transcript and the reusable side read as a durable workflow
+   blueprint, while preserving simple vocabulary and 720p readability.
+   Implementation:
+   [`Scene 2 tool-loop visual craft`](historical/superpowers/plans/2026-07-10-scene-2-tool-loop-visual-craft.md).
+4. Evidence and closing visuals: make Scenes 13 and 14 readable as a defense
    artifact: evaluation board, claim boundaries, and future-work map.
 
 Presentation wishlist / defense readiness:
