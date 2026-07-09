@@ -62,6 +62,30 @@ describe("SceneBody", () => {
     expect(screen.getByRole("button", { name: /where is the ai agent/i })).toBeInTheDocument();
   });
 
+  it("renders Scene 2 as action sequence versus reusable automation", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "problem", beatId: "missing-contracts", focusPath: [] };
+
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    expect(screen.getByLabelText("action sequence versus reusable automation")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Action sequence" })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Reusable automation" })).toBeInTheDocument();
+    expect(screen.queryByText("Draft")).not.toBeInTheDocument();
+    expect(screen.queryByText("Artifact")).not.toBeInTheDocument();
+    expect(screen.queryByText("Deployment")).not.toBeInTheDocument();
+  });
+
   it("renders narrative metadata without mounting the demo graph", () => {
     const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };
     render(

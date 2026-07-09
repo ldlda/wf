@@ -1401,6 +1401,74 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* Problem loop scene */
+.problem-loop-scene {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+}
+
+.problem-loop-scene__side {
+  display: grid;
+  gap: 0.8rem;
+  min-width: 0;
+  border: 1px solid color-mix(in oklch, var(--stage-line) 60%, transparent);
+  border-radius: 1rem;
+  background: var(--stage-inset);
+  padding: 1rem;
+}
+
+.problem-loop-scene__side[data-problem-active="false"] {
+  opacity: 0.62;
+}
+
+.problem-loop-scene__side h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font: 800 clamp(1.5rem, 3vw, 2.4rem)/0.95 var(--font-editorial);
+}
+
+.problem-loop-scene__side p {
+  margin: 0;
+  color: var(--text-secondary);
+  font: 0.95rem/1.35 var(--font-interface);
+}
+
+.problem-loop-scene .concept-rail {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.problem-loop-scene .concept-node {
+  grid-template-columns: 1fr;
+  justify-items: center;
+  text-align: center;
+  padding: 0.7rem 0.45rem;
+}
+
+.problem-loop-scene .concept-node__copy span,
+.problem-loop-scene .concept-node__meta {
+  display: none;
+}
+
+.problem-loop-scene__bridge {
+  color: var(--accent-cyan);
+  font: 800 2rem/1 var(--font-interface);
+}
+
+@container presentation-canvas (max-width: 1050px) {
+  .problem-loop-scene {
+    grid-template-columns: 1fr;
+  }
+
+  .problem-loop-scene__bridge {
+    display: none;
+  }
+}
+
 /* Demo workflow scene */
 .demo-workflow-scene__graph-area {
   flex: 1;
