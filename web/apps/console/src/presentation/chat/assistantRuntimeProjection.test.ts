@@ -36,7 +36,7 @@ describe("assistantRuntimeProjection", () => {
     ]);
   });
 
-  it("projects tool results as tool-role messages", () => {
+  it("projects tool results as text summary", () => {
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "tool-result-message",
@@ -59,15 +59,9 @@ describe("assistantRuntimeProjection", () => {
 
     expect(projected[0]).toMatchObject({
       id: "tool-result-message",
-      role: "tool",
+      role: "assistant",
       content: [
-        {
-          type: "tool-result",
-          toolCallId: "call-1",
-          toolName: "readRunTrace",
-          result: { frames: 3 },
-          isError: false,
-        },
+        { type: "text", text: "Result for readRunTrace: success" },
       ],
     });
   });

@@ -8,27 +8,22 @@ export type AssistantToolRenderPayload = {
   readonly isError?: boolean;
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSON-serializable args for assistant-ui compatibility
+type JsonArgs = Record<string, any>;
+
 type AssistantContentPart =
   | { readonly type: "text"; readonly text: string }
   | {
       readonly type: "tool-call";
-      readonly toolCallId: string;
+      readonly toolCallId?: string;
       readonly toolName: string;
-      readonly args: unknown;
-    }
-  | {
-      readonly type: "tool-result";
-      readonly toolCallId: string;
-      readonly toolName: string;
-      readonly result: unknown;
-      readonly isError: boolean;
+      readonly args?: JsonArgs;
     };
 
 export type AssistantProjectedMessage = {
   readonly id: string;
-  readonly role: "user" | "assistant" | "tool";
+  readonly role: "user" | "assistant";
   readonly content: ReadonlyArray<AssistantContentPart>;
-  readonly metadata?: { readonly unstable_state?: string | undefined };
 };
 
 const projectPart = (part: AgentMessagePart): AssistantContentPart[] => {
@@ -40,22 +35,19 @@ const projectPart = (part: AgentMessagePart): AssistantContentPart[] => {
         type: "tool-call",
         toolCallId: part.call.id,
         toolName: part.call.name,
-        args: part.call.input,
+        args: part.call.input as JsonArgs,
       }];
     case "tool-result":
       return [{
-        type: "tool-result",
-        toolCallId: part.result.callId,
-        toolName: part.result.name,
-        result: part.result.output,
-        isError: part.result.status === "failure",
+        type: "text",
+        text: `Result for ${part.result.name}: ${part.result.status === "failure" ? "error" : "success"}`,
       }];
     case "presentation-action":
       return [{
         type: "tool-call",
         toolCallId: `presentation-${part.action.type}`,
         toolName: `presentation.${part.action.type}`,
-        args: part.action,
+        args: part.action as JsonArgs,
       }];
     case "approval-request":
       return [
@@ -67,7 +59,7 @@ const projectPart = (part: AgentMessagePart): AssistantContentPart[] => {
           args: {
             prompt: part.prompt,
             contract: part.contract,
-          },
+          } as JsonArgs,
         },
       ];
     case "error":
@@ -76,9 +68,6 @@ const projectPart = (part: AgentMessagePart): AssistantContentPart[] => {
 };
 
 const messageRoleFor = (message: AgentMessage): AssistantProjectedMessage["role"] => {
-  const onlyToolResults = message.parts.length > 0
-    && message.parts.every((part) => part.type === "tool-result");
-  if (onlyToolResults) return "tool";
   return message.role === "user" ? "user" : "assistant";
 };
 

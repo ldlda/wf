@@ -28,3 +28,7 @@ if (!globalThis.DOMRect) {
     }),
   } as unknown as typeof DOMRect;
 }
+
+if (!HTMLDivElement.prototype.scrollTo) {
+  HTMLDivElement.prototype.scrollTo = () => {};
+}
