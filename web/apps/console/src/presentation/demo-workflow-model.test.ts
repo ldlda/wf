@@ -61,15 +61,15 @@ describe("demo workflow presentation model", () => {
 
   it("maps storyboard beats to one continuous execution", () => {
     expect(graphExecutionForBeat("graph")).toEqual({
-      completedNodeIds: ["read_docs"],
-      currentNodeId: "build_report",
+      completedNodeIds: ["read_docs", "reset_board"],
+      currentNodeId: "analyze",
     });
     expect(graphExecutionForBeat("interrupt")).toEqual({
-      completedNodeIds: ["read_docs", "build_report"],
+      completedNodeIds: ["read_docs", "reset_board", "analyze", "build_report", "draft_issues"],
       currentNodeId: "review_issues",
     });
     expect(graphExecutionForBeat("approval")).toEqual({
-      completedNodeIds: ["read_docs", "build_report"],
+      completedNodeIds: ["read_docs", "reset_board", "analyze", "build_report", "draft_issues"],
       currentNodeId: "review_issues",
     });
   });
@@ -111,7 +111,7 @@ describe("demo beat lens", () => {
   it("keeps graph execution continuity across the interrupt and resume beats", () => {
     expect(graphExecutionForBeat("approval")).toEqual(graphExecutionForBeat("interrupt"));
     expect(graphExecutionForBeat("resume")).toMatchObject({
-      completedNodeIds: ["read_docs", "build_report", "review_issues"],
+      completedNodeIds: ["read_docs", "reset_board", "analyze", "build_report", "draft_issues", "review_issues"],
       currentNodeId: "create_issues",
     });
     expect(graphExecutionForBeat("trace")).toMatchObject({
