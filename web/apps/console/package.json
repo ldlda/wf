@@ -10,16 +10,23 @@
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@assistant-ui/react": "^0.14.26",
     "@dagrejs/dagre": "3.0.0",
     "@fontsource-variable/newsreader": "5.2.10",
     "@fontsource-variable/source-sans-3": "5.2.9",
     "@fontsource/barlow-condensed": "5.2.8",
     "@fontsource/ibm-plex-mono": "5.2.7",
     "@xyflow/react": "12.11.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.23.0",
     "motion": "^12.42.2",
+    "radix-ui": "^1.6.2",
     "react": "19.2.7",
     "react-dom": "19.2.7",
     "react-router-dom": "^7.18.1",
+    "tailwind-merge": "^3.6.0",
+    "tw-shimmer": "^0.4.11",
     "valibot": "1.4.2"
   },
   "devDependencies": {
