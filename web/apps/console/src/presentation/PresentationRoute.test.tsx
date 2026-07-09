@@ -212,4 +212,23 @@ describe("PresentationRoute", () => {
     expect(window.location.hash).toBe("#scene/interrupt-evidence/resume");
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
   });
+
+  it("cancels Scene 10 approval in replay without applying submitted evidence", async () => {
+    const user = userEvent.setup();
+    setReplayMode();
+    window.location.hash = "#scene/interrupt-evidence/approval";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const cancelButton = await screen.findByRole("button", { name: "Cancel" });
+    await waitFor(() => expect(cancelButton).toBeEnabled(), { timeout: 10000 });
+
+    await act(async () => {
+      await user.click(cancelButton);
+    });
+
+    expect(screen.getByText(/Outcome: cancelled/i)).toBeInTheDocument();
+    expect(window.location.hash).toBe("#scene/interrupt-evidence/approval");
+    expect(screen.queryByLabelText("workflow.runs.resume operation")).not.toBeInTheDocument();
+  });
 });

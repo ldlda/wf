@@ -89,4 +89,25 @@ describe("useTimelineAgent", () => {
     const { result } = renderHook(() => useTimelineAgent(demo, "live"));
     expect(result.current.canRun).toBe(false);
   });
+
+  it("does not advance replay cancellation into the submitted recording branch", async () => {
+    const cancelReview = vi.fn(async () => {});
+    const next = vi.fn(async () => {});
+    const demo = demoController({
+      state: { ...initialDemoTimelineState, mode: "replay", phase: "review" },
+      cancelReview,
+      next,
+    });
+
+    const { result } = renderHook(() => useTimelineAgent(demo, "replay"));
+    await act(async () => result.current.cancelReview());
+
+    expect(cancelReview).toHaveBeenCalledWith("Cancelled by operator.");
+    expect(next).not.toHaveBeenCalled();
+    expect(result.current.messages.at(-1)?.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ type: "tool-result" }),
+      ]),
+    );
+  });
 });

@@ -135,8 +135,17 @@ export const PresentationRoute = () => {
   }, [demo]);
 
   const handleCancelApproval = useCallback(async () => {
+    if (demo.state.phase !== "review") return;
+
     setApprovalState("cancelled");
-  }, []);
+    await demo.cancelReview("Cancelled by operator.");
+
+    // The canonical replay only records the submitted branch. Do not call
+    // next() in replay, or the UI would falsely show submitted run evidence.
+    if (demo.state.mode === "live") {
+      await demo.next();
+    }
+  }, [demo]);
 
   const approvalActions = useMemo<DemoApprovalActions>(() => ({
     state: approvalState,
@@ -147,10 +156,10 @@ export const PresentationRoute = () => {
   }), [approvalState, demo.state.phase, demo.interruptPayload, handleSubmitApproval, handleCancelApproval]);
 
   useEffect(() => {
-    if (demo.state.phase === "ready" || demo.state.phase === "running") {
+    if ((demo.state.phase === "ready" || demo.state.phase === "running") && approvalState === "ready") {
       setApprovalState("ready");
     }
-  }, [demo.state.phase]);
+  }, [demo.state.phase, approvalState]);
 
   const handleJump = useCallback(
     (location: MainLocation) => dispatch({ type: "jump", location }),
