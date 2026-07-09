@@ -3,19 +3,7 @@ import type { AgentMessage } from "../demo/agent/events.js";
 import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
-import { SchemaApprovalSurface } from "./approval/SchemaApprovalSurface.js";
-import {
-  Conversation,
-  ConversationContent,
-  Message,
-  MessageContent,
-  MessageResponse,
-  PromptAction,
-  Tool,
-  ToolInput,
-  ToolOutput,
-} from "./chat/ChatPrimitives.js";
-import { projectAgentMessage, type ProjectedChatPart } from "./chat/agentChatProjection.js";
+import { AssistantOperatorThread } from "./chat/AssistantOperatorThread.js";
 
 type OperatorChatProps = {
   readonly state: PresentationState;
@@ -42,49 +30,6 @@ const fallbackMessages = (state: PresentationState): ReadonlyArray<AgentMessage>
   },
 ];
 
-const renderProjectedPart = (
-  part: ProjectedChatPart,
-  key: string,
-  submit?: () => void,
-  cancel?: () => void,
-) => {
-  switch (part.kind) {
-    case "text":
-      return <MessageResponse key={key}>{part.text}</MessageResponse>;
-    case "tool":
-      return (
-        <Tool key={key} label={part.label} name={part.name} state={part.state} defaultOpen={part.defaultOpen}>
-          {"input" in part ? <ToolInput input={part.input} /> : null}
-          {"output" in part ? <ToolOutput status={part.state} output={part.output} /> : null}
-        </Tool>
-      );
-    case "approval":
-      return (
-        <Tool key={key} label="Approval required" name={part.name} state="pending" defaultOpen>
-          <MessageResponse>{part.prompt}</MessageResponse>
-          {part.contract ? (
-            <SchemaApprovalSurface
-              title={`${part.contract.kind.replaceAll("_", " ")} resume`}
-              schema={part.contract.resumeSchema}
-              payload={part.contract.resumePayloadPreview}
-              outcomes={part.contract.outcomes}
-              runId={part.contract.runId}
-              onSubmit={submit}
-              onCancel={cancel}
-            />
-          ) : (
-            <div className="chat-approval-actions">
-              <button type="button" onClick={submit} disabled={!submit}>Approve</button>
-              <button type="button" onClick={cancel} disabled={!cancel}>Deny</button>
-            </div>
-          )}
-        </Tool>
-      );
-    case "error":
-      return <MessageResponse key={key}>{part.message}</MessageResponse>;
-  }
-};
-
 export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onDeny }: OperatorChatProps) => {
   const visibleMessages = messages && messages.length > 0
     ? messages
@@ -103,24 +48,17 @@ export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onDeny
       data-presentation-surface={presentationSurface}
       aria-label="scripted operator chat"
     >
-      {timelineAgent ? (
-        <PromptAction
-          label={timelineAgent.runLabel}
-          disabled={!timelineAgent.canRun}
-          onClick={() => void timelineAgent.runPreparedWorkflow()}
-        />
-      ) : null}
-      <Conversation mode={composition.chatMode}>
-        <ConversationContent>
-          {visibleMessages.map(projectAgentMessage).map((message) => (
-            <Message key={message.id} from={message.from}>
-              <MessageContent>
-                {message.parts.map((part, index) => renderProjectedPart(part, `${message.id}-${index}`, submit, cancel))}
-              </MessageContent>
-            </Message>
-          ))}
-        </ConversationContent>
-      </Conversation>
+      <AssistantOperatorThread
+        mode={composition.chatMode}
+        messages={visibleMessages}
+        runAction={timelineAgent ? {
+          label: timelineAgent.runLabel,
+          disabled: !timelineAgent.canRun,
+          run: () => void timelineAgent.runPreparedWorkflow(),
+        } : undefined}
+        submitApproval={submit}
+        cancelApproval={cancel}
+      />
     </aside>
   );
 };

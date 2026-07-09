@@ -19,8 +19,6 @@ describe("OperatorChat", () => {
     const chat = screen.getByLabelText("scripted operator chat");
     expect(chat).toHaveAttribute("data-chat-theme", "light");
     expect(chat).toHaveAttribute("data-presentation-surface", "editorial");
-    expect(screen.getAllByText(/Found prepared workflow recipe/)[0]?.closest(".ai-chat-message"))
-      .toHaveClass("ai-chat-message");
   });
 
   it("maps dark chat theme to the night presentation surface", () => {
@@ -38,11 +36,18 @@ describe("OperatorChat", () => {
     expect(chat).not.toHaveAttribute("data-readable-surface");
   });
 
-  it("renders messages through the AI chat conversation surface", () => {
+  it("renders through the assistant-ui operator thread", () => {
     render(<OperatorChat state={initialPresentationState} />);
 
-    expect(screen.getByRole("log", { name: "operator conversation" })).toBeInTheDocument();
+    expect(screen.getByRole("log", { name: /operator conversation/i }))
+      .toHaveClass("assistant-operator-thread");
+  });
+
+  it("renders fallback messages when no agent messages are present", () => {
+    render(<OperatorChat state={initialPresentationState} />);
+
     expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
+    expect(screen.getByText(/Found prepared workflow recipe/)).toBeInTheDocument();
   });
 
   it("renders standard agent message parts", () => {
@@ -69,12 +74,10 @@ describe("OperatorChat", () => {
 
     expect(screen.getByText("Prepare the report.")).toBeInTheDocument();
     expect(screen.getByText("I will use the prepared recipe.")).toBeInTheDocument();
-    expect(screen.getByText(/tool call/i)).toBeInTheDocument();
-    expect(screen.getAllByText(/selectWorkflowNode/i).length).toBe(2);
-    expect(screen.getByText(/tool result/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /selectWorkflowNode/i })).toBeInTheDocument();
   });
 
-  it("renders tool calls as collapsed AI tool blocks", async () => {
+  it("renders tool calls as collapsed tool cards", async () => {
     const user = userEvent.setup();
     const messages: ReadonlyArray<AgentMessage> = [
       {
@@ -88,17 +91,10 @@ describe("OperatorChat", () => {
 
     render(<OperatorChat state={initialPresentationState} messages={messages} />);
 
-    const tool = screen.getByRole("button", { name: /tool call.*readRunTrace/i });
-    expect(screen.queryByText(/run_id/)).not.toBeInTheDocument();
+    const tool = screen.getByRole("button", { name: /readRunTrace/i });
+    expect(screen.queryByText(/run_1/)).not.toBeInTheDocument();
     await user.click(tool);
-    expect(screen.getByText(/run_id/)).toBeInTheDocument();
-  });
-
-  it("renders fallback messages when no agent messages are present", () => {
-    render(<OperatorChat state={initialPresentationState} />);
-
-    expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
-    expect(screen.getByText(/Found prepared workflow recipe/)).toBeInTheDocument();
+    expect(screen.getByText(/run_1/)).toBeInTheDocument();
   });
 
   it("renders schema approval surface inside chat approval request", async () => {
@@ -137,10 +133,8 @@ describe("OperatorChat", () => {
     expect(onDeny).toHaveBeenCalledTimes(1);
   });
 
-  it("falls back to plain approve/deny buttons when approval request has no contract", async () => {
+  it("falls back to tool card display when approval request has no contract", async () => {
     const user = userEvent.setup();
-    const onApprove = vi.fn();
-    const onDeny = vi.fn();
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "approval",
@@ -156,13 +150,15 @@ describe("OperatorChat", () => {
       },
     ];
 
-    render(<OperatorChat state={initialPresentationState} messages={messages} onApprove={onApprove} onDeny={onDeny} />);
+    render(<OperatorChat state={initialPresentationState} messages={messages} />);
 
     expect(screen.queryByRole("group", { name: /issue review resume/i })).not.toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "Approve" }));
-    await user.click(screen.getByRole("button", { name: "Deny" }));
-    expect(onApprove).toHaveBeenCalledTimes(1);
-    expect(onDeny).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Submit resume request?")).toBeInTheDocument();
+    const tool = screen.getByRole("button", { name: /resumeIssueReview/i });
+    expect(screen.queryByRole("button", { name: /Approve/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Deny/i })).not.toBeInTheDocument();
+    await user.click(tool);
+    expect(screen.getByLabelText("tool input")).toBeInTheDocument();
   });
 
   it("renders error and presentation action parts", () => {
@@ -179,9 +175,8 @@ describe("OperatorChat", () => {
 
     render(<OperatorChat state={initialPresentationState} messages={messages} />);
 
-    expect(screen.getByText("Presentation action")).toBeInTheDocument();
-    expect(screen.getByText("selectWorkflowNode")).toBeInTheDocument();
     expect(screen.getByText("provider failed")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /presentation.selectWorkflowNode/i })).toBeInTheDocument();
   });
 
   it("shows a chat-owned run prepared workflow action", async () => {
@@ -269,8 +264,7 @@ describe("OperatorChat", () => {
 
     render(<OperatorChat state={initialPresentationState} messages={messages} />);
 
-    expect(screen.getByText("Workflow operation")).toBeInTheDocument();
-    expect(screen.getByText("startPreparedReportRun")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /startPreparedReportRun/i })).toBeInTheDocument();
   });
 
   it("disables schema approval buttons when approval actions are unavailable", () => {
