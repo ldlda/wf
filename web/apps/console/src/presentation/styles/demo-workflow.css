@@ -844,6 +844,41 @@
   }
 }
 
+.run-facts-card {
+  min-height: 0;
+}
+
+.run-facts-scroll-region {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.run-facts-scroll-region::-webkit-scrollbar {
+  display: none;
+}
+
+.run-facts-scroll-region--report,
+.run-facts-scroll-region--markdown {
+  max-height: 100%;
+}
+
+.run-facts-card[data-output-priority="report"] {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.run-facts-card[data-output-priority="report"] .run-facts-scroll-region--markdown {
+  min-height: 14rem;
+}
+
+.run-facts-card--interrupt {
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+}
+
+.run-facts-card--resume {
+  align-content: start;
+}
+
 .demo-continuity-rail {
   display: flex;
   align-items: center;
