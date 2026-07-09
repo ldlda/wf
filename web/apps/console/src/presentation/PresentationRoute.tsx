@@ -120,7 +120,7 @@ export const PresentationRoute = () => {
   }, [demo.state.mode, demo.primeReplayToStage, state.location]);
 
   const isApprovalBeat = state.location.kind === "main"
-    && state.location.sceneId === "interrupt-evidence"
+    && state.location.sceneId === "typed-human-boundary"
     && state.location.beatId === "approval";
 
   useEffect(() => {
@@ -148,7 +148,7 @@ export const PresentationRoute = () => {
       type: "jump",
       location: {
         kind: "main",
-        sceneId: "interrupt-evidence",
+        sceneId: "resume-output-evidence",
         beatId: "resume",
         focusPath: [],
       },

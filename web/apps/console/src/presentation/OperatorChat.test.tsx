@@ -11,7 +11,7 @@ describe("OperatorChat", () => {
   it("maps light chat theme to the editorial presentation surface", () => {
     const state = {
       ...initialPresentationState,
-      location: { kind: "main" as const, sceneId: "workflow-demo" as const, beatId: "graph", focusPath: [] },
+      location: { kind: "main" as const, sceneId: "run-from-deployment" as const, beatId: "graph", focusPath: [] },
     };
 
     render(<OperatorChat state={state} />);

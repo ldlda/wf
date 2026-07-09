@@ -3,13 +3,19 @@ import { requirementForDemoBeat } from "./demo-beat-requirements.js";
 
 describe("requirementForDemoBeat", () => {
   it.each([
-    ["workflow-demo", "operation", "run_start"],
-    ["workflow-demo", "graph", "run_start"],
-    ["workflow-demo", "interrupt", "interrupt"],
-    ["interrupt-evidence", "approval", "interrupt"],
-    ["interrupt-evidence", "resume", "run_resume"],
-    ["interrupt-evidence", "output", "run_resume"],
-    ["interrupt-evidence", "trace", "trace_read"],
+    ["prepared-lifecycle", "draft", "deployment_check"],
+    ["prepared-lifecycle", "artifact", "deployment_check"],
+    ["prepared-lifecycle", "deployment", "deployment_check"],
+    ["prepared-lifecycle", "ready-run", "run_start"],
+    ["run-from-deployment", "input", "run_start"],
+    ["run-from-deployment", "operation", "run_start"],
+    ["run-from-deployment", "graph", "run_start"],
+    ["typed-human-boundary", "interrupt", "interrupt"],
+    ["typed-human-boundary", "approval", "interrupt"],
+    ["typed-human-boundary", "cancel", "interrupt"],
+    ["resume-output-evidence", "resume", "run_resume"],
+    ["resume-output-evidence", "output", "run_resume"],
+    ["resume-output-evidence", "trace", "trace_read"],
   ] as const)("maps %s/%s to %s", (sceneId, beatId, stage) => {
     expect(requirementForDemoBeat(sceneId, beatId).requiredStage).toBe(stage);
   });

@@ -59,7 +59,7 @@ describe("SceneBody", () => {
   });
 
   it("renders the real workflow graph for demo scenes", () => {
-    const location: PresentationLocation = { kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] };
+    const location: PresentationLocation = { kind: "main", sceneId: "run-from-deployment", beatId: "graph", focusPath: [] };
     render(
       <SceneBody
         location={location}

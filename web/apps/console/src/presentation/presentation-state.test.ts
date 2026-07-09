@@ -28,9 +28,9 @@ describe("presentationReducer", () => {
   it("jumps to a specific scene and beat", () => {
     const jumped = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] },
+      location: { kind: "main", sceneId: "run-from-deployment", beatId: "graph", focusPath: [] },
     });
-    expect(jumped.location).toEqual({ kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] });
+    expect(jumped.location).toEqual({ kind: "main", sceneId: "run-from-deployment", beatId: "graph", focusPath: [] });
   });
 
   it("parses a scene hash", () => {
@@ -149,7 +149,7 @@ describe("presentationReducer", () => {
   it("derives chatMode from the current beat", () => {
     const state = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "workflow-demo", beatId: "graph", focusPath: [] },
+      location: { kind: "main", sceneId: "run-from-deployment", beatId: "graph", focusPath: [] },
     });
     expect(compositionForState(state)).toMatchObject({
       chatMode: "hidden",
@@ -169,7 +169,7 @@ describe("presentationReducer", () => {
   it("does not reopen evidence on repeated Escape after force-close", () => {
     const stateAtTrace = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "interrupt-evidence", beatId: "trace", focusPath: [] },
+      location: { kind: "main", sceneId: "resume-output-evidence", beatId: "trace", focusPath: [] },
     });
     expect(stateAtTrace.evidencePresentationOverride).toBeNull();
 
@@ -248,7 +248,7 @@ describe("presentationReducer", () => {
   it("returns to the beat receipt after closing an explicit inspector", () => {
     const atReceiptBeat = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "interrupt-evidence", beatId: "trace", focusPath: [] },
+      location: { kind: "main", sceneId: "resume-output-evidence", beatId: "trace", focusPath: [] },
     });
     expect(compositionForState(atReceiptBeat).evidencePresentation).toBe("receipt");
     const opened = presentationReducer(atReceiptBeat, {

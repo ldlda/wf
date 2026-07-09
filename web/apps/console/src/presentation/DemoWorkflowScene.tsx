@@ -14,6 +14,7 @@ import { GuidedProductMoment } from "./GuidedProductMoment.js";
 import { InterruptContractPreview } from "./InterruptContractPreview.js";
 import { NodeSpotlight } from "./NodeSpotlight.js";
 import { OperationBlock } from "./OperationBlock.js";
+import { RunInputFacts } from "./RunFactsPanel.js";
 import { StageCaption } from "./StageCaption.js";
 import type { SceneBeatDefinition, SceneDefinition } from "./storyboard.js";
 import { WorkflowGraphStage } from "./WorkflowGraphStage.js";
@@ -33,7 +34,7 @@ type DemoWorkflowLayout = "operation" | "graph" | "interrupt" | "approval" | "ev
 const layoutForBeat = (beatId: string): DemoWorkflowLayout => {
   if (beatId === "operation" || beatId === "resume") return "operation";
   if (beatId === "interrupt") return "interrupt";
-  if (beatId === "approval") return "approval";
+  if (beatId === "approval" || beatId === "cancel") return "approval";
   if (beatId === "trace" || beatId === "output") return "evidence";
   return "graph";
 };
@@ -90,7 +91,8 @@ export const DemoWorkflowScene = ({
       ? "preview"
       : null;
 
-  const isGuidedScene10 = scene.id === "interrupt-evidence";
+  const isGuidedDemoMoment = scene.id === "typed-human-boundary"
+    || scene.id === "resume-output-evidence";
 
   return (
     <>
@@ -101,7 +103,7 @@ export const DemoWorkflowScene = ({
       <DemoContinuityRail lens={lens} />
 
       <div className="demo-workflow-stage" data-beat={beat.id} data-demo-layout={layout} aria-label="demo workflow stage">
-          {isGuidedScene10 ? (
+          {isGuidedDemoMoment ? (
             <GuidedProductMoment
               beat={beat}
               demo={demo}
@@ -126,6 +128,12 @@ export const DemoWorkflowScene = ({
                   variant="receipt"
                   openEvidence={openEvidence}
                 />
+              )}
+
+              {beat.id === "input" && (
+                <div className="demo-workflow-stage__input-facts">
+                  <RunInputFacts facts={facts} />
+                </div>
               )}
 
               {showGraph && (

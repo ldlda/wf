@@ -16,22 +16,22 @@ describe("SceneProgress", () => {
 
     render(<SceneProgress location={location} />);
 
-    expect(screen.getByText("6 / 12")).toBeInTheDocument();
+    expect(screen.getByText("6 / 14")).toBeInTheDocument();
     expect(screen.getByText("3 / 4")).toBeInTheDocument();
   });
 
-  it("shows scene position for workflow-demo/graph", () => {
+  it("shows scene position for run-from-deployment/graph", () => {
     const location: MainLocation = {
       kind: "main",
-      sceneId: "workflow-demo",
+      sceneId: "run-from-deployment",
       beatId: "graph",
       focusPath: [],
     };
 
     render(<SceneProgress location={location} />);
 
-    expect(screen.getByText("9 / 12")).toBeInTheDocument();
-    expect(screen.getByText("2 / 3")).toBeInTheDocument();
+    expect(screen.getByText("10 / 14")).toBeInTheDocument();
+    expect(screen.getByText("3 / 3")).toBeInTheDocument();
   });
 
   it("has an accessible label", () => {

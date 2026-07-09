@@ -37,7 +37,7 @@ describe("PresentationFooter", () => {
       />,
     );
     const footer = screen.getByRole("contentinfo", { name: /presentation footer/i });
-    expect(within(footer).getByText("6 / 12")).toBeInTheDocument();
+    expect(within(footer).getByText("6 / 14")).toBeInTheDocument();
     expect(within(footer).getByText("3 / 4")).toBeInTheDocument();
     expect(within(footer).getByText(/workflow\.runs\.trace/)).toBeInTheDocument();
   });

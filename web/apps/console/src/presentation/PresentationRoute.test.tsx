@@ -74,7 +74,7 @@ describe("PresentationRoute", () => {
   });
 
   it("shows node spotlight when a graph node is selected", async () => {
-    window.location.hash = "#scene/workflow-demo/graph";
+    window.location.hash = "#scene/run-from-deployment/graph";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
     await userEvent.click(screen.getByRole("button", { name: /issue review/i }));
@@ -84,7 +84,7 @@ describe("PresentationRoute", () => {
 
   it("can advance replay far enough to show a product operation block", async () => {
     setReplayMode();
-    window.location.hash = "#scene/workflow-demo/operation";
+    window.location.hash = "#scene/run-from-deployment/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
     expect(await screen.findByLabelText("workflow.runs.start operation")).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe("PresentationRoute", () => {
   });
 
   it("shows a receipt without auto-opening evidence on an evidence beat", async () => {
-    window.location.hash = "#scene/interrupt-evidence/trace";
+    window.location.hash = "#scene/resume-output-evidence/trace";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
     expect(await screen.findByRole("button", { name: /inspect evidence/i })).toBeInTheDocument();
@@ -128,7 +128,7 @@ describe("PresentationRoute", () => {
   it("opens the inspector from an explicit operation action", async () => {
     setReplayMode();
     const user = userEvent.setup();
-    window.location.hash = "#scene/workflow-demo/operation";
+    window.location.hash = "#scene/run-from-deployment/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
     await user.click(await screen.findByRole("button", { name: /view raw evidence/i }));
@@ -138,7 +138,7 @@ describe("PresentationRoute", () => {
   it("closes the inspector from the explicit close action", async () => {
     setReplayMode();
     const user = userEvent.setup();
-    window.location.hash = "#scene/workflow-demo/operation";
+    window.location.hash = "#scene/run-from-deployment/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
     await user.click(await screen.findByRole("button", { name: /view raw evidence/i }));
@@ -150,7 +150,7 @@ describe("PresentationRoute", () => {
   it("returns to the receipt after closing the inspector on a receipt beat", async () => {
     setReplayMode();
     const user = userEvent.setup();
-    window.location.hash = "#scene/interrupt-evidence/trace";
+    window.location.hash = "#scene/resume-output-evidence/trace";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
     await user.click(await screen.findByRole("button", { name: /inspect evidence/i }));
@@ -188,16 +188,16 @@ describe("PresentationRoute", () => {
   });
 
   it("opens Scene 10 approval from the canonical hash", async () => {
-    window.location.hash = "#scene/interrupt-evidence/approval";
+    window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByRole("heading", { name: /Interrupt, Resume, Evidence/i })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Typed Human Boundary/i })).toBeInTheDocument();
     expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "approval");
   });
 
   it("renders replay-backed approval evidence on a direct approval hash", async () => {
-    window.location.hash = "#scene/interrupt-evidence/approval";
+    window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
@@ -210,7 +210,7 @@ describe("PresentationRoute", () => {
 
   it("chat run action advances the replay timeline when no live server is configured", async () => {
     setReplayMode();
-    window.location.hash = "#scene/workflow-demo/operation";
+    window.location.hash = "#scene/run-from-deployment/operation";
     const user = userEvent.setup();
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -223,7 +223,7 @@ describe("PresentationRoute", () => {
   it("submits Scene 10 approval and advances to the resume beat", async () => {
     const user = userEvent.setup();
     setReplayMode();
-    window.location.hash = "#scene/interrupt-evidence/approval";
+    window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
@@ -234,14 +234,14 @@ describe("PresentationRoute", () => {
       await user.click(submitButton);
     });
 
-    expect(window.location.hash).toBe("#scene/interrupt-evidence/resume");
+    expect(window.location.hash).toBe("#scene/resume-output-evidence/resume");
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
   });
 
   it("reopens approval controls after returning from submitted resume", async () => {
     const user = userEvent.setup();
     setReplayMode();
-    window.location.hash = "#scene/interrupt-evidence/approval";
+    window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
@@ -250,9 +250,9 @@ describe("PresentationRoute", () => {
     await act(async () => {
       await user.click(submitButton);
     });
-    expect(window.location.hash).toBe("#scene/interrupt-evidence/resume");
+    expect(window.location.hash).toBe("#scene/resume-output-evidence/resume");
 
-    window.location.hash = "#scene/interrupt-evidence/approval";
+    window.location.hash = "#scene/typed-human-boundary/approval";
     window.dispatchEvent(new HashChangeEvent("hashchange"));
 
     expect(await screen.findByRole("button", { name: "Submit" })).toBeEnabled();
@@ -262,7 +262,7 @@ describe("PresentationRoute", () => {
   it("cancels Scene 10 approval in replay without applying submitted evidence", async () => {
     const user = userEvent.setup();
     setReplayMode();
-    window.location.hash = "#scene/interrupt-evidence/approval";
+    window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
@@ -275,12 +275,12 @@ describe("PresentationRoute", () => {
 
     expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
-    expect(window.location.hash).toBe("#scene/interrupt-evidence/approval");
+    expect(window.location.hash).toBe("#scene/typed-human-boundary/approval");
     expect(screen.queryByLabelText("workflow.runs.resume operation")).not.toBeInTheDocument();
   });
 
   it("opens approval with enabled approval controls immediately after priming", async () => {
-    window.location.hash = "#scene/interrupt-evidence/approval";
+    window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
@@ -289,7 +289,7 @@ describe("PresentationRoute", () => {
   });
 
   it("opens resume with resume operation proof immediately after priming", async () => {
-    window.location.hash = "#scene/interrupt-evidence/resume";
+    window.location.hash = "#scene/resume-output-evidence/resume";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
