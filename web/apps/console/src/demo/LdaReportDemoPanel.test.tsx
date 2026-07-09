@@ -29,6 +29,7 @@ const baseController = {
   submitSelectedIssues: vi.fn(),
   cancelReview: vi.fn(),
   restart: vi.fn(),
+  primeReplayToStage: vi.fn(),
 };
 
 describe("LdaReportDemoPanel", () => {

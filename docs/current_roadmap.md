@@ -130,12 +130,12 @@ Implementation order:
     approval, graph focus, and evidence transitions into one deterministic
     presenter sequence. Implementation:
     [`guided run beat gates`](historical/superpowers/plans/2026-07-09-guided-run-beat-gates.md).
-18. Active: make Scene 10 a guided product moment with direct-link replay
-    readiness and one dominant proof surface per approval/resume/output/trace
-    beat. Design:
+18. Completed: Scene 10 guided product moment primes replay state for direct
+    hashes and stages approval, resume, output, and trace as one readable
+    product flow. Design:
     [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
-    Plan:
-    [`Scene 10 guided product moment plan`](superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
+    Implementation:
+    [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
 19. Future: presenter companion, Scene 10 product graph, final scene visuals,
     evidence assets, and rehearsal timing.
 20. Add a static slide/appendix shell only after presentation mode is clear.
@@ -184,12 +184,12 @@ Presentation wishlist / defense readiness:
       routes stage-aware, with body/support/action regions instead of plain
       document cards. Implementation:
       [`presentation discussion modal composition`](historical/superpowers/plans/2026-07-09-presentation-discussion-modal-composition.md).
-   10. Active: Scene 10 guided product moment primes replay state for direct
-       hashes and stages approval, resume, output, and trace as one readable
-       product flow. Design:
-       [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
-       Plan:
-       [`Scene 10 guided product moment plan`](superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
+   10. Completed: Scene 10 guided product moment primes replay state for direct
+        hashes and stages approval, resume, output, and trace as one readable
+        product flow. Design:
+        [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
+        Implementation:
+        [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
    11. Future: presentation craft pass for remaining motion, evidence receipt
        placement, route-level caption contrast, and graph visual language after
        Scene 10 is stable.
@@ -212,12 +212,12 @@ Presentation wishlist / defense readiness:
   approval, graph focus, and evidence transitions into one deterministic
   presenter sequence. Implementation:
   [`guided run beat gates`](historical/superpowers/plans/2026-07-09-guided-run-beat-gates.md).
-- Active: Scene 10 guided product moment removes delayed direct-link readiness
+- Completed: Scene 10 guided product moment removes delayed direct-link readiness
   and gives approval, resume, output, and trace one dominant proof surface each.
   Design:
   [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
-  Plan:
-  [`Scene 10 guided product moment plan`](superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
+  Implementation:
+  [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
 - Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
   expected run states, and a timed walkthrough checklist for a 15-minute defense.
 - Presenter companion feasibility: decide whether phone/laptop control is local

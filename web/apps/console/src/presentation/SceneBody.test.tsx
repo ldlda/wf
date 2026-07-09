@@ -34,6 +34,7 @@ const demo: DemoTimelineController = {
   submitSelectedIssues: noopAsync,
   cancelReview: noopAsync,
   restart: noop,
+  primeReplayToStage: noop,
 };
 
 afterEach(() => cleanup());
