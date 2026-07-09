@@ -1,5 +1,5 @@
 import { useEffect, useRef, type KeyboardEvent } from "react";
-import { presentationNodes } from "./WorkflowGraphStage.js";
+import { presentationNodes } from "./workflow-graph-data.js";
 
 type NodeSpotlightProps = {
   readonly nodeId: string;

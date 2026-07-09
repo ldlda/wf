@@ -1,9 +1,16 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { presentationNodes, WorkflowGraphStage } from "./WorkflowGraphStage.js";
+import { WorkflowGraphStage } from "./WorkflowGraphStage.js";
+import { presentationEdges, presentationNodes } from "./workflow-graph-data.js";
 
 afterEach(() => cleanup());
+
+const graphNodeByLabel = (label: RegExp): HTMLElement => {
+  const nodes = Array.from(document.querySelectorAll<HTMLElement>(".workflow-graph-stage__node"));
+  const node = nodes.find((candidate) => label.test(candidate.getAttribute("aria-label") ?? ""));
+  if (!node) throw new Error(`Could not find workflow graph node matching ${label}`);
+  return node;
+};
 
 describe("WorkflowGraphStage", () => {
   it("renders curated workflow nodes and allows node selection", async () => {
@@ -16,7 +23,7 @@ describe("WorkflowGraphStage", () => {
       />,
     );
 
-    await userEvent.click(screen.getByRole("button", { name: /issue review/i }));
+    fireEvent.click(graphNodeByLabel(/issue review/i));
     expect(selectNode).toHaveBeenCalledWith("review_issues");
   });
 
@@ -40,8 +47,8 @@ describe("WorkflowGraphStage", () => {
     expect(graph).toHaveTextContent("Finalise");
     expect(graph).toHaveTextContent("Revision requested");
     expect(graph).toHaveTextContent("Completed");
-    expect(graph).toHaveTextContent("Cancelled");
-    expect(screen.getAllByRole("button", { name: /queued|current|completed|interrupt/i })).toHaveLength(11);
+    expect(graph).not.toHaveTextContent("Cancelled");
+    expect(document.querySelectorAll(".workflow-graph-stage__node")).toHaveLength(10);
   });
 
   it("labels graph proof as plan nodes and trace frames separately", () => {
@@ -52,7 +59,7 @@ describe("WorkflowGraphStage", () => {
         selectNode={vi.fn()}
         proof={{
           runId: "run_recorded_lda_report",
-          planLabel: "11 plan nodes",
+          planLabel: "10 plan nodes",
           traceLabel: "3 trace frames",
           evidenceLabel: "JSON-RPC evidence",
         }}
@@ -60,7 +67,7 @@ describe("WorkflowGraphStage", () => {
     );
 
     const proof = screen.getByLabelText("workflow graph proof");
-    expect(proof).toHaveTextContent("11 plan nodes");
+    expect(proof).toHaveTextContent("10 plan nodes");
     expect(proof).toHaveTextContent("3 trace frames");
   });
 
@@ -76,9 +83,9 @@ describe("WorkflowGraphStage", () => {
       />,
     );
 
-    const readDocs = screen.getByRole("button", { name: /read docs/i });
-    const reviewIssues = screen.getByRole("button", { name: /issue review/i });
-    const revisionReq = screen.getByRole("button", { name: /revision requested/i });
+    const readDocs = graphNodeByLabel(/read docs/i);
+    const reviewIssues = graphNodeByLabel(/issue review/i);
+    const revisionReq = graphNodeByLabel(/revision requested/i);
 
     expect(readDocs).toHaveAttribute("data-execution-state", "completed");
     expect(reviewIssues).toHaveAttribute("data-execution-state", "current");
@@ -88,6 +95,22 @@ describe("WorkflowGraphStage", () => {
   });
 
   it("renders connectors between nodes", () => {
+    expect(presentationEdges).toHaveLength(9);
+    expect(presentationEdges).toContainEqual({
+      from: "read_docs",
+      to: "reset_board",
+      fromHandle: "right",
+      toHandle: "left",
+    });
+    expect(presentationEdges).toContainEqual({
+      from: "review_issues",
+      to: "revision_requested",
+      fromHandle: "bottom",
+      toHandle: "top",
+    });
+  });
+
+  it("uses flow coordinates rather than viewport percentages", () => {
     render(
       <WorkflowGraphStage
         execution={{ completedNodeIds: ["read_docs"], currentNodeId: "reset_board" }}
@@ -96,17 +119,9 @@ describe("WorkflowGraphStage", () => {
       />,
     );
 
-    const connectors = screen.getAllByTestId("workflow-connector");
-    expect(connectors).toHaveLength(10);
-    expect(connectors.filter((connector) => connector.dataset.active === "true")).toHaveLength(1);
-  });
-
-  it("keeps all graph nodes inside the visible percentage frame", () => {
     for (const node of presentationNodes) {
-      expect(node.x).toBeGreaterThanOrEqual(8);
-      expect(node.x).toBeLessThanOrEqual(92);
-      expect(node.y).toBeGreaterThanOrEqual(34);
-      expect(node.y).toBeLessThanOrEqual(78);
+      expect(Number.isFinite(node.x)).toBe(true);
+      expect(Number.isFinite(node.y)).toBe(true);
     }
   });
 
@@ -116,12 +131,12 @@ describe("WorkflowGraphStage", () => {
         execution={{ completedNodeIds: ["read_docs"], currentNodeId: "reset_board" }}
         selectedNodeId={null}
         selectNode={vi.fn()}
-        proof={{ runId: "run_recorded_lda_report", planLabel: "11 plan nodes", traceLabel: "3 trace frames", evidenceLabel: "JSON-RPC captured" }}
+        proof={{ runId: "run_recorded_lda_report", planLabel: "10 plan nodes", traceLabel: "3 trace frames", evidenceLabel: "JSON-RPC captured" }}
       />,
     );
 
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run_recorded_lda_report");
-    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("11 plan nodes");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("10 plan nodes");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("3 trace frames");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC captured");
   });
@@ -133,7 +148,7 @@ describe("WorkflowGraphStage", () => {
         selectedNodeId={null}
         selectNode={vi.fn()}
         variant="compact"
-        proof={{ runId: "run_recorded_lda_report", planLabel: "11 plan nodes", traceLabel: "3 trace frames", evidenceLabel: "JSON-RPC evidence" }}
+        proof={{ runId: "run_recorded_lda_report", planLabel: "10 plan nodes", traceLabel: "3 trace frames", evidenceLabel: "JSON-RPC evidence" }}
       />,
     );
 
@@ -159,7 +174,7 @@ describe("WorkflowGraphStage", () => {
         execution={{ completedNodeIds: [], currentNodeId: null }}
         selectedNodeId={null}
         selectNode={vi.fn()}
-        proof={{ runId: null, planLabel: "11 plan nodes", traceLabel: "trace label", evidenceLabel: "evidence label" }}
+        proof={{ runId: null, planLabel: "10 plan nodes", traceLabel: "trace label", evidenceLabel: "evidence label" }}
       />,
     );
 

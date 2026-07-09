@@ -1,4 +1,4 @@
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 
@@ -41,6 +41,13 @@ const setReplayMode = () => {
   window.sessionStorage.setItem("lda.workflowConsole.target", "file:///invalid");
 };
 
+const graphNodeByLabel = (label: RegExp): HTMLElement => {
+  const nodes = Array.from(document.querySelectorAll<HTMLElement>(".workflow-graph-stage__node"));
+  const node = nodes.find((candidate) => label.test(candidate.getAttribute("aria-label") ?? ""));
+  if (!node) throw new Error(`Could not find workflow graph node matching ${label}`);
+  return node;
+};
+
 afterEach(() => {
   cleanup();
   window.sessionStorage.clear();
@@ -77,7 +84,7 @@ describe("PresentationRoute", () => {
     window.location.hash = "#scene/run-from-deployment/graph";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
-    await userEvent.click(screen.getByRole("button", { name: /issue review/i }));
+    fireEvent.click(graphNodeByLabel(/issue review/i));
     expect(screen.getByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
     expect(screen.getByText("Workflow node")).toBeInTheDocument();
   });

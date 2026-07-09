@@ -1,46 +1,29 @@
-import { m } from "motion/react";
-import { useId } from "react";
+import { useCallback, useMemo, type MouseEvent } from "react";
+import {
+  Background,
+  Controls,
+  Handle,
+  Position,
+  ReactFlow,
+  ReactFlowProvider,
+  type Edge,
+  type Node,
+  type NodeProps,
+  type NodeTypes,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
 import type { GraphExecutionPresentation } from "./demo-workflow-model.js";
-
-export type PresentationNode = {
-  readonly id: string;
-  readonly label: string;
-  readonly detail: string;
-  readonly kind: "node" | "interrupt" | "end";
-  readonly x: number;
-  readonly y: number;
-};
-
-export const presentationNodes: ReadonlyArray<PresentationNode> = [
-  { id: "read_docs", label: "Read docs", detail: "document source", kind: "node", x: 8, y: 54 },
-  { id: "reset_board", label: "Reset board", detail: "issue board", kind: "node", x: 20, y: 34 },
-  { id: "analyze", label: "Analyze", detail: "report source", kind: "node", x: 32, y: 54 },
-  { id: "build_report", label: "Build report", detail: "markdown", kind: "node", x: 44, y: 34 },
-  { id: "draft_issues", label: "Draft issues", detail: "proposals", kind: "node", x: 56, y: 54 },
-  { id: "review_issues", label: "Issue review", detail: "typed interrupt", kind: "interrupt", x: 68, y: 34 },
-  { id: "create_issues", label: "Create issues", detail: "selected only", kind: "node", x: 80, y: 54 },
-  { id: "finalise", label: "Finalise", detail: "state output", kind: "node", x: 92, y: 34 },
-  { id: "revision_requested", label: "Revision requested", detail: "operator branch", kind: "end", x: 68, y: 78 },
-  { id: "end_completed", label: "Completed", detail: "persisted run", kind: "end", x: 92, y: 72 },
-  { id: "end_cancelled", label: "Cancelled", detail: "no submitted output", kind: "end", x: 80, y: 78 },
-];
-
-type PresentationEdge = readonly [from: string, to: string];
-
-const presentationEdges: ReadonlyArray<PresentationEdge> = [
-  ["read_docs", "reset_board"],
-  ["reset_board", "analyze"],
-  ["analyze", "build_report"],
-  ["build_report", "draft_issues"],
-  ["draft_issues", "review_issues"],
-  ["review_issues", "create_issues"],
-  ["review_issues", "revision_requested"],
-  ["review_issues", "end_cancelled"],
-  ["create_issues", "finalise"],
-  ["finalise", "end_completed"],
-];
+import { presentationEdges, presentationNodes, type PresentationHandle, type PresentationNode } from "./workflow-graph-data.js";
 
 type NodeExecutionState = "completed" | "current" | "future";
+
+type PresentationNodeData = {
+  readonly node: PresentationNode;
+  readonly executionState: NodeExecutionState;
+  readonly currentInterrupt: boolean;
+  readonly selected: boolean;
+  readonly selectNode: (nodeId: string) => void;
+};
 
 export type WorkflowGraphProof = {
   readonly runId: string | null;
@@ -72,101 +55,170 @@ const requireNode = (nodeId: string): PresentationNode => {
   return node;
 };
 
-export const WorkflowGraphStage = ({
+const stateLabelFor = (
+  executionState: NodeExecutionState,
+  currentInterrupt: boolean,
+): string => {
+  if (currentInterrupt) return "Current interrupt";
+  if (executionState === "current") return "Current";
+  if (executionState === "completed") return "Completed";
+  return "Queued";
+};
+
+const edgeActive = (
+  fromId: string,
+  toId: string,
+  execution: GraphExecutionPresentation,
+): boolean =>
+  execution.completedNodeIds.includes(fromId)
+  && (execution.completedNodeIds.includes(toId) || execution.currentNodeId === toId);
+
+const handlePositionFor = (handle: PresentationHandle): Position => {
+  if (handle === "left") return Position.Left;
+  if (handle === "right") return Position.Right;
+  if (handle === "top") return Position.Top;
+  return Position.Bottom;
+};
+
+const PresentationFlowNode = ({ data }: NodeProps<Node<PresentationNodeData>>) => {
+  const { node, executionState, currentInterrupt, selected, selectNode } = data;
+  const stateLabel = stateLabelFor(executionState, currentInterrupt);
+  return (
+    <>
+      {(["left", "top"] as const).map((handle) => (
+        <Handle key={`target-${handle}`} id={handle} type="target" position={handlePositionFor(handle)} />
+      ))}
+      <button
+        type="button"
+        className="workflow-graph-stage__node"
+        data-kind={node.kind}
+        data-execution-state={executionState}
+        data-current-interrupt={currentInterrupt}
+        data-selected={selected}
+        aria-pressed={selected}
+        aria-label={`${node.label}, ${stateLabel}`}
+        onClick={(event) => {
+          event.stopPropagation();
+          selectNode(node.id);
+        }}
+      >
+        <span className="workflow-graph-stage__node-state">{stateLabel}</span>
+        <strong>{node.label}</strong>
+        <small>{node.detail}</small>
+      </button>
+      {(["right", "bottom"] as const).map((handle) => (
+        <Handle key={`source-${handle}`} id={handle} type="source" position={handlePositionFor(handle)} />
+      ))}
+    </>
+  );
+};
+
+const nodeTypes: NodeTypes = {
+  presentation: PresentationFlowNode,
+};
+
+const WorkflowGraphStageInner = ({
   execution,
   selectedNodeId,
   selectNode,
   proof,
   variant = "full",
 }: WorkflowGraphStageProps) => {
-  const markerPrefix = useId().replaceAll(":", "");
-  const arrowMarkerId = `${markerPrefix}-workflow-arrow`;
-  const activeArrowMarkerId = `${markerPrefix}-workflow-arrow-active`;
+  const nodes: Node<PresentationNodeData>[] = useMemo(
+    () =>
+      presentationNodes.map((node) => {
+        const executionState = executionStateForNode(node.id, execution);
+        const currentInterrupt = executionState === "current" && node.kind === "interrupt";
+        return {
+          id: node.id,
+          type: "presentation",
+          position: { x: node.x, y: node.y },
+          draggable: false,
+          selectable: false,
+          data: {
+            node,
+            executionState,
+            currentInterrupt,
+            selected: selectedNodeId === node.id,
+            selectNode,
+          },
+        };
+      }),
+    [execution, selectedNodeId, selectNode],
+  );
+
+  const edges: Edge[] = useMemo(
+    () =>
+      presentationEdges.map((transition, index) => {
+        requireNode(transition.from);
+        requireNode(transition.to);
+        const active = edgeActive(transition.from, transition.to, execution);
+        return {
+          id: `presentation-edge-${index}-${transition.from}-${transition.to}`,
+          source: transition.from,
+          target: transition.to,
+          sourceHandle: transition.fromHandle ?? "right",
+          targetHandle: transition.toHandle ?? "left",
+          type: "smoothstep",
+          animated: active,
+          focusable: false,
+          selectable: false,
+          data: { active },
+          className: active
+            ? "workflow-graph-stage__edge workflow-graph-stage__edge--active"
+            : "workflow-graph-stage__edge",
+        };
+      }),
+    [execution],
+  );
+
+  const handleNodeClick = useCallback((_: MouseEvent, node: Node) => selectNode(node.id), [selectNode]);
 
   return (
     <div className="workflow-graph-stage" role="group" aria-label="workflow graph" data-graph-variant={variant}>
-    <div className="workflow-graph-stage__legend" aria-hidden="true">
-      <span><i data-state="completed" />Completed</span>
-      <span><i data-state="current" />Current</span>
-      <span><i data-state="interrupt" />Human boundary</span>
-    </div>
-
-    {/* Compact mode is used beside interrupt contracts; proof chips would
-        compete with the contract and outcome panel in that narrow layout. */}
-    {variant === "full" && proof && (
-      <div className="workflow-graph-stage__proof" aria-label="workflow graph proof">
-        <span><b>Run</b><code>{proof.runId ?? "run unavailable"}</code></span>
-        <span><b>Plan</b>{proof.planLabel}</span>
-        <span><b>Trace</b>{proof.traceLabel}</span>
-        <span><b>Evidence</b>{proof.evidenceLabel}</span>
+      <div className="workflow-graph-stage__legend" aria-hidden="true">
+        <span><i data-state="completed" />Completed</span>
+        <span><i data-state="current" />Current</span>
+        <span><i data-state="interrupt" />Human boundary</span>
       </div>
-    )}
 
-    <svg className="workflow-graph-stage__connectors" aria-hidden="true">
-      <defs>
-        <marker className="workflow-graph-stage__arrow-marker" id={arrowMarkerId} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" />
-        </marker>
-        <marker className="workflow-graph-stage__arrow-marker--active" id={activeArrowMarkerId} markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-          <polygon points="0 0, 8 3, 0 6" />
-        </marker>
-      </defs>
-      {presentationEdges.map(([fromId, toId]) => {
-        const from = requireNode(fromId);
-        const to = requireNode(toId);
-        const active = execution.completedNodeIds.includes(from.id);
-        return (
-          <line
-            key={`${fromId}-${toId}`}
-            data-testid="workflow-connector"
-            data-active={active}
-            x1={`${from.x}%`}
-            y1={`${from.y}%`}
-            x2={`${to.x}%`}
-            y2={`${to.y}%`}
-            markerEnd={active ? `url(#${activeArrowMarkerId})` : `url(#${arrowMarkerId})`}
-          />
-        );
-      })}
-    </svg>
-
-    {presentationNodes.map((node, index) => {
-      const executionState = executionStateForNode(node.id, execution);
-      const currentInterrupt = executionState === "current" && node.kind === "interrupt";
-      const stateLabel = currentInterrupt
-        ? "Current interrupt"
-        : executionState === "current"
-          ? "Current"
-          : executionState === "completed"
-            ? "Completed"
-            : "Queued";
-      return (
-        <m.div
-          key={node.id}
-          className="workflow-graph-stage__node-slot"
-          style={{ left: `${node.x}%`, top: `${node.y}%` }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.2, delay: index * 0.025 }}
-        >
-          <button
-            type="button"
-            className="workflow-graph-stage__node"
-            data-kind={node.kind}
-            data-execution-state={executionState}
-            data-current-interrupt={currentInterrupt}
-            data-selected={selectedNodeId === node.id}
-            aria-pressed={selectedNodeId === node.id}
-            aria-label={`${node.label}, ${stateLabel}`}
-            onClick={() => selectNode(node.id)}
-          >
-            <span className="workflow-graph-stage__node-state">{stateLabel}</span>
-            <strong>{node.label}</strong>
-            <small>{node.detail}</small>
-          </button>
-        </m.div>
-      );
-    })}
+      {/* Compact mode is used beside interrupt contracts; proof chips would
+          compete with the contract and outcome panel in that narrow layout. */}
+      {variant === "full" && proof && (
+        <div className="workflow-graph-stage__proof" aria-label="workflow graph proof">
+          <span><b>Run</b><code>{proof.runId ?? "run unavailable"}</code></span>
+          <span><b>Plan</b>{proof.planLabel}</span>
+          <span><b>Trace</b>{proof.traceLabel}</span>
+          <span><b>Evidence</b>{proof.evidenceLabel}</span>
+        </div>
+      )}
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        onNodeClick={handleNodeClick}
+        fitView
+        fitViewOptions={{ padding: variant === "compact" ? 0.04 : 0.08 }}
+        minZoom={0.25}
+        maxZoom={1.5}
+        nodesDraggable={false}
+        nodesConnectable={false}
+        elementsSelectable={false}
+        edgesFocusable={false}
+        panOnDrag
+        zoomOnScroll
+        zoomOnPinch
+        proOptions={{ hideAttribution: true }}
+      >
+        <Background gap={28} color="oklch(0.35 0.03 250 / 0.22)" />
+        <Controls showInteractive={false} />
+      </ReactFlow>
     </div>
   );
 };
+
+export const WorkflowGraphStage = (props: WorkflowGraphStageProps) => (
+  <ReactFlowProvider>
+    <WorkflowGraphStageInner {...props} />
+  </ReactFlowProvider>
+);

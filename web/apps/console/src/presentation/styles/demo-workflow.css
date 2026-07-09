@@ -331,6 +331,74 @@
   background-size: 1.75rem 1.75rem, 1.75rem 1.75rem, auto, auto;
 }
 
+.workflow-graph-stage .react-flow {
+  position: absolute;
+  inset: 0;
+}
+
+.workflow-graph-stage .react-flow__pane {
+  cursor: grab;
+}
+
+.workflow-graph-stage .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+.workflow-graph-stage .react-flow__node {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.workflow-graph-stage .react-flow__handle {
+  width: 0;
+  height: 0;
+  min-width: 0;
+  min-height: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.workflow-graph-stage .react-flow__edge-path {
+  stroke: oklch(0.52 0.045 250 / 0.68);
+  stroke-width: 2;
+  stroke-dasharray: 5 7;
+}
+
+.workflow-graph-stage__edge--active .react-flow__edge-path {
+  stroke: var(--accent-cyan);
+  stroke-width: 2.6;
+  stroke-dasharray: none;
+}
+
+.workflow-graph-stage .react-flow__edge.animated path {
+  animation-duration: 1.2s;
+}
+
+.workflow-graph-stage .react-flow__controls {
+  right: 0.85rem;
+  bottom: 3.2rem;
+  left: auto;
+  border: 1px solid var(--stage-line);
+  border-radius: 0.55rem;
+  overflow: hidden;
+  background: oklch(0.09 0.018 250 / 0.92);
+  box-shadow: none;
+}
+
+.workflow-graph-stage .react-flow__controls-button {
+  width: 1.8rem;
+  height: 1.65rem;
+  border-bottom: 1px solid var(--stage-line);
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.workflow-graph-stage .react-flow__controls-button svg {
+  fill: currentColor;
+}
+
 .workflow-graph-stage__legend {
   position: absolute;
   z-index: 4;
@@ -363,40 +431,6 @@
 
 .workflow-graph-stage__legend i[data-state="interrupt"] {
   background: var(--accent-amber);
-}
-
-.workflow-graph-stage__connectors {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.workflow-graph-stage__connectors line {
-  stroke: oklch(0.48 0.035 250 / 0.55);
-  stroke-width: 1.4;
-  stroke-dasharray: 4 6;
-}
-
-.workflow-graph-stage__connectors line[data-active="true"] {
-  stroke: var(--accent-cyan);
-  stroke-width: 2;
-  stroke-dasharray: none;
-}
-
-.workflow-graph-stage__arrow-marker polygon {
-  fill: oklch(0.48 0.035 250);
-}
-
-.workflow-graph-stage__arrow-marker--active polygon {
-  fill: var(--accent-cyan);
-}
-
-.workflow-graph-stage__node-slot {
-  position: absolute;
-  z-index: 2;
-  transform: translate(-50%, -50%);
 }
 
 .workflow-graph-stage[data-graph-variant="compact"] {
@@ -468,7 +502,7 @@
   position: relative;
   display: grid;
   gap: 0.25rem;
-  width: clamp(7rem, 10vw, 8.75rem);
+  width: 9.2rem;
   min-height: 4.15rem;
   transform: none;
   border: 1px solid var(--stage-line);
@@ -481,8 +515,15 @@
   cursor: pointer;
 }
 
+.presentation-route .workflow-graph-stage__node[data-kind="end"] {
+  min-height: 3.65rem;
+  border-radius: 999px;
+  place-content: center;
+  text-align: center;
+}
+
 .workflow-graph-stage__node strong {
-  font-size: 0.82rem;
+  font-size: 0.84rem;
   line-height: 1.05;
   color: var(--text-primary);
 }
@@ -493,11 +534,11 @@
 }
 
 .workflow-graph-stage__node small {
-  font-size: 0.67rem;
+  font-size: 0.62rem;
 }
 
 .workflow-graph-stage__node-state {
-  font: 650 0.55rem/1 var(--font-mono, monospace);
+  font: 650 0.56rem/1 var(--font-mono, monospace);
   letter-spacing: 0.09em;
   text-transform: uppercase;
 }
@@ -528,8 +569,13 @@
 }
 
 .workflow-graph-stage__node[data-execution-state="future"] {
-  opacity: 0.88;
+  opacity: 0.72;
   box-shadow: none;
+}
+
+.workflow-graph-stage__node[data-kind="end"][data-execution-state="future"] {
+  border-style: dashed;
+  background: oklch(0.12 0.02 250 / 0.86);
 }
 
 .workflow-graph-stage__node[data-selected="true"] {
