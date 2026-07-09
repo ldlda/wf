@@ -19,8 +19,8 @@ describe("OperatorChat", () => {
     const chat = screen.getByLabelText("scripted operator chat");
     expect(chat).toHaveAttribute("data-chat-theme", "light");
     expect(chat).toHaveAttribute("data-presentation-surface", "editorial");
-    expect(screen.getAllByText(/Found prepared workflow recipe/)[0]?.closest(".chat-message"))
-      .toHaveClass("chat-message");
+    expect(screen.getAllByText(/Found prepared workflow recipe/)[0]?.closest(".ai-chat-message"))
+      .toHaveClass("ai-chat-message");
   });
 
   it("maps dark chat theme to the night presentation surface", () => {
@@ -36,6 +36,13 @@ describe("OperatorChat", () => {
     const chat = screen.getByLabelText("scripted operator chat");
     expect(chat).toHaveAttribute("data-chat-theme");
     expect(chat).not.toHaveAttribute("data-readable-surface");
+  });
+
+  it("renders messages through the AI chat conversation surface", () => {
+    render(<OperatorChat state={initialPresentationState} />);
+
+    expect(screen.getByRole("log", { name: "operator conversation" })).toBeInTheDocument();
+    expect(screen.getByText("Prepare the thesis readiness report.")).toBeInTheDocument();
   });
 
   it("renders standard agent message parts", () => {
@@ -65,6 +72,26 @@ describe("OperatorChat", () => {
     expect(screen.getByText(/tool call/i)).toBeInTheDocument();
     expect(screen.getAllByText(/selectWorkflowNode/i).length).toBe(2);
     expect(screen.getByText(/tool result/i)).toBeInTheDocument();
+  });
+
+  it("renders tool calls as collapsed AI tool blocks", async () => {
+    const user = userEvent.setup();
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "start",
+        role: "assistant",
+        parts: [
+          { type: "tool-call", call: { id: "call-1", name: "readRunTrace", input: { run_id: "run_1" } } },
+        ],
+      },
+    ];
+
+    render(<OperatorChat state={initialPresentationState} messages={messages} />);
+
+    const tool = screen.getByRole("button", { name: /tool call.*readRunTrace/i });
+    expect(screen.queryByText(/run_id/)).not.toBeInTheDocument();
+    await user.click(tool);
+    expect(screen.getByText(/run_id/)).toBeInTheDocument();
   });
 
   it("renders fallback messages when no agent messages are present", () => {
@@ -226,7 +253,7 @@ describe("OperatorChat", () => {
     expect(cancelReview).toHaveBeenCalledTimes(1);
   });
 
-it("renders prepared run tool calls as workflow handoffs", () => {
+  it("renders prepared run tool calls as workflow handoffs", () => {
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "start",

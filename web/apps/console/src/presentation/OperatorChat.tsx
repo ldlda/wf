@@ -1,10 +1,21 @@
-import { m } from "motion/react";
 import { PREPARE_THESIS_REPORT_RECIPE } from "../demo/agent/recipes.js";
-import type { AgentMessage, AgentMessagePart } from "../demo/agent/events.js";
+import type { AgentMessage } from "../demo/agent/events.js";
 import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import { SchemaApprovalSurface } from "./approval/SchemaApprovalSurface.js";
+import {
+  Conversation,
+  ConversationContent,
+  Message,
+  MessageContent,
+  MessageResponse,
+  PromptAction,
+  Tool,
+  ToolInput,
+  ToolOutput,
+} from "./chat/ChatPrimitives.js";
+import { projectAgentMessage, type ProjectedChatPart } from "./chat/agentChatProjection.js";
 
 type OperatorChatProps = {
   readonly state: PresentationState;
@@ -31,56 +42,26 @@ const fallbackMessages = (state: PresentationState): ReadonlyArray<AgentMessage>
   },
 ];
 
-const renderPart = (
-  part: AgentMessagePart,
+const renderProjectedPart = (
+  part: ProjectedChatPart,
   key: string,
-  onApprove?: () => void,
-  onDeny?: () => void,
+  submit?: () => void,
+  cancel?: () => void,
 ) => {
-  switch (part.type) {
+  switch (part.kind) {
     case "text":
-      return <p key={key}>{part.text}</p>;
-    case "tool-call":
-      if (part.call.name === "startPreparedReportRun") {
-        return (
-          <m.div
-            key={key}
-            layout
-            layoutId="workflow-start-operation"
-            className="chat-tool-part chat-tool-part--handoff"
-          >
-            <span>Workflow operation</span>
-            <code>{part.call.name}</code>
-          </m.div>
-        );
-      }
+      return <MessageResponse key={key}>{part.text}</MessageResponse>;
+    case "tool":
       return (
-        <div key={key} className="chat-tool-part">
-          <span>Tool call</span>
-          <code>{part.call.name}</code>
-        </div>
+        <Tool key={key} label={part.label} name={part.name} state={part.state} defaultOpen={part.defaultOpen}>
+          {"input" in part ? <ToolInput input={part.input} /> : null}
+          {"output" in part ? <ToolOutput status={part.state} output={part.output} /> : null}
+        </Tool>
       );
-    case "tool-result":
+    case "approval":
       return (
-        <div key={key} className="chat-tool-part chat-tool-part--result">
-          <span>Tool result</span>
-          <code>{part.result.name}</code>
-          <small>{part.result.status}</small>
-        </div>
-      );
-    case "presentation-action":
-      return (
-        <div key={key} className="chat-tool-part chat-tool-part--presentation">
-          <span>Presentation action</span>
-          <code>{part.action.type}</code>
-        </div>
-      );
-    case "approval-request":
-      return (
-        <div key={key} className="chat-tool-part chat-tool-part--approval">
-          <span>Approval required</span>
-          <code>{part.name}</code>
-          <p>{part.prompt}</p>
+        <Tool key={key} label="Approval required" name={part.name} state="pending" defaultOpen>
+          <MessageResponse>{part.prompt}</MessageResponse>
           {part.contract ? (
             <SchemaApprovalSurface
               title={`${part.contract.kind.replaceAll("_", " ")} resume`}
@@ -88,38 +69,19 @@ const renderPart = (
               payload={part.contract.resumePayloadPreview}
               outcomes={part.contract.outcomes}
               runId={part.contract.runId}
-              onSubmit={onApprove}
-              onCancel={onDeny}
+              onSubmit={submit}
+              onCancel={cancel}
             />
           ) : (
             <div className="chat-approval-actions">
-              <button type="button" onClick={onApprove} disabled={!onApprove}>Approve</button>
-              <button type="button" onClick={onDeny} disabled={!onDeny}>Deny</button>
+              <button type="button" onClick={submit} disabled={!submit}>Approve</button>
+              <button type="button" onClick={cancel} disabled={!cancel}>Deny</button>
             </div>
           )}
-        </div>
+        </Tool>
       );
     case "error":
-      return <p key={key} className="chat-error">{part.message}</p>;
-    default:
-      return null;
-  }
-};
-
-const partKey = (messageId: string, part: AgentMessagePart): string => {
-  switch (part.type) {
-    case "text":
-      return `${messageId}-text-${part.text}`;
-    case "tool-call":
-      return `${messageId}-call-${part.call.id}`;
-    case "tool-result":
-      return `${messageId}-result-${part.result.callId}`;
-    case "presentation-action":
-      return `${messageId}-action-${JSON.stringify(part.action)}`;
-    case "approval-request":
-      return `${messageId}-approval-${part.callId}`;
-    case "error":
-      return `${messageId}-error-${part.message}`;
+      return <MessageResponse key={key}>{part.message}</MessageResponse>;
   }
 };
 
@@ -142,22 +104,23 @@ export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onDeny
       aria-label="scripted operator chat"
     >
       {timelineAgent ? (
-        <div className="operator-chat__action">
-          <button
-            type="button"
-            onClick={() => void timelineAgent.runPreparedWorkflow()}
-            disabled={!timelineAgent.canRun}
-          >
-            {timelineAgent.runLabel}
-          </button>
-        </div>
+        <PromptAction
+          label={timelineAgent.runLabel}
+          disabled={!timelineAgent.canRun}
+          onClick={() => void timelineAgent.runPreparedWorkflow()}
+        />
       ) : null}
-      {visibleMessages.map((message) => (
-        <div key={message.id} className={`chat-message chat-message--${message.role === "user" ? "operator" : "system"}`}>
-          <strong>{message.role === "user" ? "Operator" : "lda.chat"}</strong>
-          {message.parts.map((part) => renderPart(part, partKey(message.id, part), submit, cancel))}
-        </div>
-      ))}
+      <Conversation mode={composition.chatMode}>
+        <ConversationContent>
+          {visibleMessages.map(projectAgentMessage).map((message) => (
+            <Message key={message.id} from={message.from}>
+              <MessageContent>
+                {message.parts.map((part, index) => renderProjectedPart(part, `${message.id}-${index}`, submit, cancel))}
+              </MessageContent>
+            </Message>
+          ))}
+        </ConversationContent>
+      </Conversation>
     </aside>
   );
 };
