@@ -9,8 +9,8 @@ import {
 } from "./storyboard.js";
 
 describe("defense storyboard catalog", () => {
-  it("defines twelve ordered main scenes with unique scene and beat ids", () => {
-    expect(mainScenes).toHaveLength(12);
+  it("defines fourteen ordered main scenes with unique scene and beat ids", () => {
+    expect(mainScenes).toHaveLength(14);
     expect(mainScenes.map((scene) => scene.id)).toEqual([
       "thesis",
       "problem",
@@ -20,8 +20,10 @@ describe("defense storyboard catalog", () => {
       "architecture",
       "authoring",
       "agent-handoff",
-      "workflow-demo",
-      "interrupt-evidence",
+      "prepared-lifecycle",
+      "run-from-deployment",
+      "typed-human-boundary",
+      "resume-output-evidence",
       "evaluation",
       "conclusion",
     ]);
@@ -35,20 +37,49 @@ describe("defense storyboard catalog", () => {
 
   it("uses act-level stage themes and independent chat composition", () => {
     expect(mainScenes.slice(0, 3).every((scene) => scene.stageTheme === "paper")).toBe(true);
-    expect(mainScenes.slice(3, 10).every((scene) => scene.stageTheme === "night")).toBe(true);
-    expect(mainScenes.slice(10).every((scene) => scene.stageTheme === "paper")).toBe(true);
+    expect(mainScenes.slice(3, 12).every((scene) => scene.stageTheme === "night")).toBe(true);
+    expect(mainScenes.slice(12).every((scene) => scene.stageTheme === "paper")).toBe(true);
     expect(findBeat("agent-handoff", "request")?.chatMode).toBe("full");
-    expect(findBeat("interrupt-evidence", "trace")?.chatMode).toBe("dock");
+    expect(findBeat("resume-output-evidence", "trace")?.chatMode).toBe("dock");
   });
 
   it("keeps chat out of the way during proof-heavy demo beats", () => {
-    expect(findBeat("workflow-demo", "operation")?.chatMode).toBe("full");
-    expect(findBeat("workflow-demo", "graph")?.chatMode).toBe("hidden");
-    expect(findBeat("workflow-demo", "interrupt")?.chatMode).toBe("hidden");
-    expect(findBeat("interrupt-evidence", "approval")?.chatMode).toBe("hidden");
-    expect(findBeat("interrupt-evidence", "resume")?.chatMode).toBe("hidden");
-    expect(findBeat("interrupt-evidence", "output")?.chatMode).toBe("hidden");
-    expect(findBeat("interrupt-evidence", "trace")?.chatMode).toBe("dock");
+    expect(findBeat("prepared-lifecycle", "draft")?.chatMode).toBe("hidden");
+    expect(findBeat("prepared-lifecycle", "deployment")?.chatMode).toBe("hidden");
+    expect(findBeat("run-from-deployment", "input")?.chatMode).toBe("hidden");
+    expect(findBeat("run-from-deployment", "graph")?.chatMode).toBe("hidden");
+    expect(findBeat("typed-human-boundary", "approval")?.chatMode).toBe("hidden");
+    expect(findBeat("typed-human-boundary", "cancel")?.chatMode).toBe("hidden");
+    expect(findBeat("resume-output-evidence", "resume")?.chatMode).toBe("hidden");
+    expect(findBeat("resume-output-evidence", "trace")?.chatMode).toBe("dock");
+  });
+
+  it("splits the demo climax into lifecycle, run, interrupt, and evidence scenes", () => {
+    expect(findScene("prepared-lifecycle")?.number).toBe(9);
+    expect(findScene("run-from-deployment")?.number).toBe(10);
+    expect(findScene("typed-human-boundary")?.number).toBe(11);
+    expect(findScene("resume-output-evidence")?.number).toBe(12);
+    expect(findScene("evaluation")?.number).toBe(13);
+    expect(findScene("conclusion")?.number).toBe(14);
+  });
+
+  it("defines the lifecycle story beats before run evidence", () => {
+    expect(findBeat("prepared-lifecycle", "draft")?.caption).toMatch(/prepared authoring/i);
+    expect(findBeat("prepared-lifecycle", "artifact")?.caption).toMatch(/artifact/i);
+    expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/source/i);
+    expect(findBeat("prepared-lifecycle", "ready-run")?.caption).toMatch(/ready/i);
+  });
+
+  it("defines focused run, interrupt, and evidence beats", () => {
+    expect(findBeat("run-from-deployment", "input")).toBeDefined();
+    expect(findBeat("run-from-deployment", "operation")).toBeDefined();
+    expect(findBeat("run-from-deployment", "graph")).toBeDefined();
+    expect(findBeat("typed-human-boundary", "interrupt")).toBeDefined();
+    expect(findBeat("typed-human-boundary", "approval")).toBeDefined();
+    expect(findBeat("typed-human-boundary", "cancel")).toBeDefined();
+    expect(findBeat("resume-output-evidence", "resume")).toBeDefined();
+    expect(findBeat("resume-output-evidence", "output")).toBeDefined();
+    expect(findBeat("resume-output-evidence", "trace")).toBeDefined();
   });
 
   it("defines discussion branches across multiple scenes", () => {

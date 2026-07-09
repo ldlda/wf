@@ -13,6 +13,7 @@ export type SceneView =
   | "authoring"
   | "agent"
   | "demo"
+  | "demo-lifecycle"
   | "evaluation"
   | "conclusion";
 
@@ -173,37 +174,65 @@ export const mainScenes = defineScenes([
     ],
   },
   {
-    id: "workflow-demo",
+    id: "prepared-lifecycle",
     number: 9,
-    title: "Workflow Takes the Stage",
+    title: "Prepared Workflow Lifecycle",
     claimClass: "implemented",
-    evidencePointer: "Prepared replay and examples/lda_report_workflow",
+    evidencePointer: "examples/lda_report_workflow; deployment inspect replay evidence",
     stageTheme: "night",
-    view: "demo",
+    view: "demo-lifecycle",
     beats: [
-      sceneBeat("operation", "Start operation", "Raw and interpreted operation evidence enters from chat.", { chatMode: "full", chatTheme: "light" }),
-      sceneBeat("graph", "Reusable graph", "The graph becomes primary while chat moves out of the way.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("interrupt", "Typed interrupt", "Execution reaches the issue-review boundary.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("draft", "Prepared draft", "Prepared authoring context creates a reusable report workflow.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("artifact", "Saved artifact", "The workflow is preserved as a versioned artifact.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("deployment", "Deployment bindings", "Deployment binds workflow requirements to configured local sources.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("ready-run", "Ready to run", "The deployment is ready to start a persisted run from workflow input.", { chatMode: "hidden", chatTheme: "light" }),
     ],
   },
   {
-    id: "interrupt-evidence",
+    id: "run-from-deployment",
     number: 10,
-    title: "Interrupt, Resume, Evidence",
+    title: "Run From Deployment",
     claimClass: "implemented",
-    evidencePointer: "Typed interrupt schemas, run inspection, and trace events",
+    evidencePointer: "workflow.runs.start replay evidence",
     stageTheme: "night",
     view: "demo",
     beats: [
+      sceneBeat("input", "Workflow input", "The run starts from selected documents and an issue board path.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("operation", "Start operation", "A public operation starts a durable workflow run.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("graph", "Reusable graph", "The run follows a reusable workflow graph, not a chat transcript.", { chatMode: "hidden", chatTheme: "light" }),
+    ],
+  },
+  {
+    id: "typed-human-boundary",
+    number: 11,
+    title: "Typed Human Boundary",
+    claimClass: "implemented",
+    evidencePointer: "typed interrupt payload and resume contract",
+    stageTheme: "night",
+    view: "demo",
+    beats: [
+      sceneBeat("interrupt", "Interrupt payload", "Execution reaches a declared issue-review boundary.", { chatMode: "hidden", chatTheme: "light" }),
       sceneBeat("approval", "Approval", "The operator reviews a schema-backed resume request.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("cancel", "Cancel path", "Replay cancellation stays honest and does not show submitted evidence.", { chatMode: "hidden", chatTheme: "light" }),
+    ],
+  },
+  {
+    id: "resume-output-evidence",
+    number: 12,
+    title: "Resume, Output, Evidence",
+    claimClass: "implemented",
+    evidencePointer: "workflow.runs.resume, workflow output, and trace replay evidence",
+    stageTheme: "night",
+    view: "demo",
+    beats: [
       sceneBeat("resume", "Resume", "The submitted payload resumes the same persisted run.", { chatMode: "hidden", chatTheme: "light" }),
       sceneBeat("output", "Output", "The workflow produces the report and issue-board changes.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("trace", "Evidence", "Trace frames and protocol evidence remain inspectable.", { chatMode: "dock", chatTheme: "light", evidencePresentation: "receipt" }),
+      sceneBeat("trace", "Trace evidence", "Trace frames and protocol evidence remain inspectable.", { chatMode: "dock", chatTheme: "light", evidencePresentation: "receipt" }),
     ],
   },
   {
     id: "evaluation",
-    number: 11,
+    number: 13,
     title: "Evaluation",
     claimClass: "evaluated",
     evidencePointer: "Thesis Evaluation and Appendix C",
@@ -217,7 +246,7 @@ export const mainScenes = defineScenes([
   },
   {
     id: "conclusion",
-    number: 12,
+    number: 14,
     title: "Limits and Conclusion",
     claimClass: "future-work",
     evidencePointer: "Thesis Limitations, Future Work, and Conclusion",
@@ -411,7 +440,7 @@ export const discussionBranches = defineDiscussionBranches([
   },
   {
     id: "typed-interrupts",
-    parentSceneId: "interrupt-evidence",
+    parentSceneId: "typed-human-boundary",
     title: "Typed interrupt contracts",
     claimClass: "implemented",
     evidencePointer: "Thesis Typed Interrupts; interrupt schemas",
@@ -461,7 +490,7 @@ export const discussionBranches = defineDiscussionBranches([
   },
   {
     id: "replay-provenance",
-    parentSceneId: "workflow-demo",
+    parentSceneId: "run-from-deployment",
     title: "Replay provenance",
     claimClass: "implemented",
     evidencePointer: "Thesis Prepared Replay; replay evidence chain",
@@ -469,7 +498,7 @@ export const discussionBranches = defineDiscussionBranches([
   },
   {
     id: "demo-reliability",
-    parentSceneId: "workflow-demo",
+    parentSceneId: "run-from-deployment",
     title: "Live demo reliability",
     claimClass: "implemented",
     evidencePointer: "Prepared lda_report_workflow; replay recording; defense presentation runbook",
@@ -480,7 +509,7 @@ export const discussionBranches = defineDiscussionBranches([
   },
   {
     id: "prepared-replay-boundary",
-    parentSceneId: "workflow-demo",
+    parentSceneId: "run-from-deployment",
     title: "Prepared replay boundary",
     claimClass: "evaluated",
     evidencePointer: "Demo recording fixture; replay provenance branch; runbook fallback wording",
