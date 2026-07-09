@@ -40,6 +40,7 @@ Design contracts:
 - [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md)
 - [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md)
 - [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md)
+- [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md)
 
 Implementation order:
 
@@ -152,9 +153,16 @@ Implementation order:
     Cancel is terminal in presentation mode and does not advance into submitted
     evidence. Implementation:
     [`Scene 10 factual run state`](historical/superpowers/plans/2026-07-09-scene-10-factual-run-state.md).
-21. Future: presenter companion, Scene 10 product graph, final scene visuals,
-    evidence assets, and rehearsal timing.
-22. Add a static slide/appendix shell only after presentation mode is clear.
+21. Next: presentation lifecycle story expansion splits the current crowded run
+    proof into prepared lifecycle, run start, typed human boundary, and
+    resume/output/evidence scenes. Draft -> Artifact -> Deployment -> Run must
+    be visible before the run inspector details. Design:
+    [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
+    Plan:
+    [`presentation lifecycle story expansion plan`](superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
+22. Future: presenter companion, final scene visuals, evidence assets, and
+    rehearsal timing.
+23. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Presentation wishlist / defense readiness:
@@ -234,12 +242,12 @@ Presentation wishlist / defense readiness:
   [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
   Implementation:
   [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
-- Active: presentation live/replay truth distinguishes reviewed replay evidence,
-  live target readiness, live active run state, and replay fallback so the demo
-  can look credible without implying fake live execution. Design:
-  [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md).
+- Next: presentation lifecycle story expansion makes the demo climax less
+  run-only by adding explicit prepared lifecycle scenes before the run,
+  interrupt, output, and trace proof. Design:
+  [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
   Plan:
-  [`presentation live/replay truth plan`](superpowers/plans/2026-07-09-presentation-live-replay-truth.md).
+  [`presentation lifecycle story expansion plan`](superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
 - Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
   expected run states, and a timed walkthrough checklist for a 15-minute defense.
 - Presenter companion feasibility: decide whether phone/laptop control is local
