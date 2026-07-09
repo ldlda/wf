@@ -44,7 +44,7 @@ const renderBeat = (beatId: "draft" | "artifact" | "deployment" | "ready-run") =
 describe("DemoLifecycleScene", () => {
   it("renders prepared draft context honestly", () => {
     renderBeat("draft");
-    expect(screen.getByRole("region", { name: /demo lifecycle detail/i })).toHaveAttribute("data-active-lifecycle", "draft");
+    expect(screen.getByRole("region", { name: "prepared workflow lifecycle" })).toHaveAttribute("data-active-lifecycle", "draft");
     expect(screen.getByText("prepared context")).toBeInTheDocument();
     expect(screen.getByText("examples/lda_report_workflow")).toBeInTheDocument();
   });

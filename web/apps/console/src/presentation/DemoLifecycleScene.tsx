@@ -26,7 +26,7 @@ export const DemoLifecycleScene = ({ scene, beat, demo }: DemoLifecycleSceneProp
       </StageCaption>
       <section
         className="demo-lifecycle-scene"
-        aria-label="demo lifecycle detail"
+        aria-label="prepared workflow lifecycle"
         data-active-lifecycle={beat.id}
       >
         <ol className="demo-lifecycle-scene__rail">
