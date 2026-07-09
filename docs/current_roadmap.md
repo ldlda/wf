@@ -193,10 +193,12 @@ Presentation visual audit, July 10:
 
 Recommended next visual slices:
 
-1. Opening visuals: rebuild Scenes 1 and 2 around concrete diagrams for
-   "AI-agent pursuit -> workflow substrate" and "direct actions are not reusable
-   automation". Design:
+1. Completed: Opening visuals rebuilt Scenes 1 and 2 around concrete diagrams
+   for "AI-agent pursuit -> workflow substrate" and "direct actions are not
+   reusable automation". Design:
    [`presentation opening visuals`](superpowers/specs/2026-07-10-presentation-opening-visuals-design.md).
+   Implementation:
+   [`presentation opening visuals plan`](historical/superpowers/plans/2026-07-10-presentation-opening-visuals.md).
 2. Demo surface cleanup: normalize Scenes 8-12 into a single product-flow
    language with factual panes, graph context, and fewer competing panels.
 3. Evidence and closing visuals: make Scenes 13 and 14 readable as a defense
