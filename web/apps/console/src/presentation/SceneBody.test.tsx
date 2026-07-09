@@ -79,7 +79,7 @@ describe("SceneBody", () => {
     );
 
     expect(screen.getByLabelText("action sequence versus reusable automation")).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Action sequence" })).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: /one-off tool loop transcript/i })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Reusable automation" })).toBeInTheDocument();
     expect(screen.queryByText("Draft")).not.toBeInTheDocument();
     expect(screen.queryByText("Artifact")).not.toBeInTheDocument();
