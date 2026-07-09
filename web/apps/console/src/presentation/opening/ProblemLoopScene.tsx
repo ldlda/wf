@@ -1,34 +1,33 @@
+import type { AgentMessage } from "../../demo/agent/events.js";
+import type { AgentToolName } from "../../demo/agent/tools.js";
+import { AssistantOperatorThread } from "../chat/AssistantOperatorThread.js";
 import { StageCaption } from "../StageCaption.js";
 import type { SceneBeatDefinition, SceneDefinition } from "../storyboard.js";
 import { ConceptNode, ConceptRail } from "./ConceptPrimitives.js";
 
-const toolLoopTurns = [
+const oneOffToolLoopMessages: ReadonlyArray<AgentMessage> = [
   {
-    kind: "user",
-    label: "User",
-    detail: "Can you finish this workspace task?",
+    id: "scene-2-user",
+    role: "user",
+    parts: [{ type: "text", text: "Can you finish this workspace task?" }],
   },
   {
-    kind: "assistant",
-    label: "Assistant",
-    detail: "Plans the next direct action.",
+    id: "scene-2-assistant",
+    role: "assistant",
+    parts: [
+      { type: "text", text: "I can solve the immediate request." },
+      {
+        type: "tool-call",
+        call: {
+          id: "scene-2-tool",
+          name: "workspace.run_once" as AgentToolName,
+          input: { persistence: "ephemeral", reusable_workflow: false },
+        },
+      },
+      { type: "text", text: "Reports success, but leaves no reusable workflow behind." },
+    ],
   },
-  {
-    kind: "tool",
-    label: "Tool call",
-    detail: "Runs one operation against the workspace.",
-  },
-  {
-    kind: "observation",
-    label: "Observation",
-    detail: "Reads the result and decides what to do next.",
-  },
-  {
-    kind: "answer",
-    label: "Answer",
-    detail: "Reports success, but leaves no reusable workflow behind.",
-  },
-] as const;
+];
 
 const automationProof = ["schemas", "bindings", "records"] as const;
 
@@ -55,14 +54,9 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
             <h2>Chat + tool loop</h2>
             <p>Good at getting through one request.</p>
           </header>
-          <ol className="problem-chat-transcript" aria-label="one-off chat and tool transcript">
-            {toolLoopTurns.map((turn) => (
-              <li key={turn.kind} className="problem-chat-turn" data-turn-kind={turn.kind}>
-                <span className="problem-chat-turn__label">{turn.label}</span>
-                <p>{turn.detail}</p>
-              </li>
-            ))}
-          </ol>
+          <div aria-label="one-off assistant transcript" role="group">
+            <AssistantOperatorThread mode="dock" messages={oneOffToolLoopMessages} ariaLabel="one-off assistant transcript" />
+          </div>
           <p className="problem-artifact-note">The useful work lives in the conversation history.</p>
         </article>
 

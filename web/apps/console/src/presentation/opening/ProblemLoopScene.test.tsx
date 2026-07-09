@@ -1,4 +1,5 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import { findBeat, findScene } from "../storyboard.js";
 import { ProblemLoopScene } from "./ProblemLoopScene.js";
@@ -8,22 +9,18 @@ const problemScene = findScene("problem")!;
 afterEach(() => cleanup());
 
 describe("ProblemLoopScene", () => {
-  it("renders the direct-action side as a chat-style tool transcript", () => {
+  it("uses the assistant transcript surface for the direct-action side", async () => {
+    const user = userEvent.setup();
     render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "direct-actions")!} />);
 
-    const transcript = screen.getByRole("list", { name: /one-off chat and tool transcript/i });
-    const turns = within(transcript).getAllByRole("listitem");
+    const transcript = screen.getByRole("log", { name: /one-off assistant transcript/i });
+    expect(transcript).toHaveClass("assistant-operator-thread");
+    expect(within(transcript).getByText("Can you finish this workspace task?")).toBeInTheDocument();
+    expect(within(transcript).getByRole("button", { name: /workspace.run_once/i })).toBeInTheDocument();
+    expect(within(transcript).getByText("Reports success, but leaves no reusable workflow behind.")).toBeInTheDocument();
 
-    expect(turns).toHaveLength(5);
-    expect(turns[0]).toHaveAttribute("data-turn-kind", "user");
-    expect(turns[1]).toHaveAttribute("data-turn-kind", "assistant");
-    expect(turns[2]).toHaveAttribute("data-turn-kind", "tool");
-    expect(turns[3]).toHaveAttribute("data-turn-kind", "observation");
-    expect(turns[4]).toHaveAttribute("data-turn-kind", "answer");
-    expect(within(transcript).getByText("User")).toBeInTheDocument();
-    expect(within(transcript).getByText("Tool call")).toBeInTheDocument();
-    expect(within(transcript).getByText("Observation")).toBeInTheDocument();
-    expect(screen.queryByRole("group", { name: /^Action sequence$/i })).not.toBeInTheDocument();
+    await user.click(within(transcript).getByRole("button", { name: /workspace.run_once/i }));
+    expect(within(transcript).getByText(/ephemeral/i)).toBeInTheDocument();
   });
 
   it("renders reusable automation as a durable workflow blueprint", () => {
