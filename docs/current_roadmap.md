@@ -170,6 +170,36 @@ Implementation order:
 24. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
+Presentation visual audit, July 10:
+
+- Baseline-good: Scenes 3, 4, and 5 are good enough for now. Do not churn them
+  unless a later rehearsal exposes a concrete problem.
+- Needs primary visual treatment: Scenes 1 and 2 still carry too much thesis
+  framing as text. They need a clear opening artifact: product title boundary,
+  problem shape, and "tool loop vs durable workflow" contrast.
+- Needs cleanup, not reinvention: Scene 6 has the right interactive figure
+  foundation but still needs figure-specific polish where focus paths crowd or
+  hide labels.
+- Needs visual strengthening: Scene 7 explains authoring but should show more
+  product evidence and less generic process language.
+- Needs product-flow cohesion: Scenes 8-12 now have the right factual spine,
+  but the demo surfaces still need stronger hierarchy between chat, operation,
+  lifecycle, graph, interrupt, output, and evidence.
+- Needs non-text evaluation visuals: Scene 13 should become a compact evidence
+  board or chart-like summary instead of prose-heavy results.
+- Needs closing visual: Scene 14 should land the boundary/future-work message
+  with one memorable diagram, not just limits text.
+
+Recommended next visual slices:
+
+1. Opening visuals: rebuild Scenes 1 and 2 around concrete diagrams for
+   "AI-agent pursuit -> workflow substrate" and "direct actions are not reusable
+   automation".
+2. Demo surface cleanup: normalize Scenes 8-12 into a single product-flow
+   language with factual panes, graph context, and fewer competing panels.
+3. Evidence and closing visuals: make Scenes 13 and 14 readable as a defense
+   artifact: evaluation board, claim boundaries, and future-work map.
+
 Presentation wishlist / defense readiness:
 
 - Completed: visual pass for Scenes 6, 7, and 10 fixed architecture figure
