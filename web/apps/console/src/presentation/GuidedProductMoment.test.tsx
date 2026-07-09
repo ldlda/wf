@@ -43,6 +43,15 @@ const demo = {
   primeReplayToStage: vi.fn(),
 } as unknown as DemoTimelineController;
 
+const demoWithAppliedCount = (appliedCount: number): DemoTimelineController => ({
+  ...demo,
+  state: {
+    ...demo.state,
+    appliedCount,
+    phase: "completed",
+  },
+});
+
 describe("GuidedProductMoment", () => {
   it("makes approval the primary product decision with factual panels", () => {
     render(
@@ -107,7 +116,7 @@ describe("GuidedProductMoment", () => {
     expect(screen.getByText("Workflow input")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
     expect(screen.queryByText("Output not created yet")).not.toBeInTheDocument();
-    expect(screen.getByText(/lda.chat Thesis And Project Readiness Report/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/lda.chat Thesis And Project Readiness Report/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("marks the primary surface for visual hierarchy", () => {
@@ -130,5 +139,83 @@ describe("GuidedProductMoment", () => {
 
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveClass("guided-product-moment");
     expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+  });
+
+  it("approval shows input, interrupt payload, and decision but no output or trace", () => {
+    render(
+      <GuidedProductMoment
+        beat={findBeat("typed-human-boundary", "approval")!}
+        demo={demo}
+        contract={contract}
+        operation={null}
+        approvalActions={{
+          state: "ready",
+          canSubmit: true,
+          canCancel: true,
+          submit: vi.fn(async () => {}),
+          cancel: vi.fn(async () => {}),
+        }}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Workflow input")).toBeInTheDocument();
+    expect(screen.getByText("Interrupt payload")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /interrupt report markdown/i })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(screen.queryByText("Output")).not.toBeInTheDocument();
+    expect(screen.queryByText("Trace frames")).not.toBeInTheDocument();
+  });
+
+  it("resume shows operation, resume payload, and large output report", () => {
+    const resumedDemo = demoWithAppliedCount(6);
+
+    render(
+      <GuidedProductMoment
+        beat={findBeat("resume-output-evidence", "resume")!}
+        demo={resumedDemo}
+        contract={contract}
+        operation={resumeOperation}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
+    expect(screen.getByText("Resume decision")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /workflow markdown output/i })).toBeInTheDocument();
+  });
+
+  it("output beat makes the report and created issues primary", () => {
+    const resumedDemo = demoWithAppliedCount(6);
+
+    render(
+      <GuidedProductMoment
+        beat={findBeat("resume-output-evidence", "output")!}
+        demo={resumedDemo}
+        contract={contract}
+        operation={null}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("region", { name: /workflow markdown output/i })).toHaveClass("run-facts-scroll-region");
+    expect(screen.getByText("ISSUE-001")).toBeInTheDocument();
+  });
+
+  it("trace beat shows trace frames instead of the empty fallback after trace is primed", () => {
+    const tracedDemo = demoWithAppliedCount(5);
+
+    render(
+      <GuidedProductMoment
+        beat={findBeat("resume-output-evidence", "trace")!}
+        demo={tracedDemo}
+        contract={contract}
+        operation={null}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.queryByText("No trace frames captured.")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /workflow trace frames/i })).toBeInTheDocument();
   });
 });

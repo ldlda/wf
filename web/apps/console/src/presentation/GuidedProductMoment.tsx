@@ -8,7 +8,13 @@ import type {
 import { demoBeatLensForBeat } from "./demo-workflow-model.js";
 import { InterruptDecisionForm } from "./InterruptDecisionForm.js";
 import { OperationBlock } from "./OperationBlock.js";
-import { RunInputFacts, RunOutputFacts, RunTraceFacts } from "./RunFactsPanel.js";
+import {
+  InterruptPayloadFacts,
+  RunInputFacts,
+  RunOutputFacts,
+  RunResumeFacts,
+  RunTraceFacts,
+} from "./RunFactsPanel.js";
 import type { SceneBeatDefinition } from "./storyboard.js";
 
 export type GuidedProductMomentProps = {
@@ -60,6 +66,7 @@ export const GuidedProductMoment = ({
         {moment === "approval" && contract ? (
           <div className="guided-product-moment__approval-grid">
             <RunInputFacts facts={facts} />
+            <InterruptPayloadFacts facts={facts} />
             <InterruptDecisionForm
               interrupt={facts.interrupt}
               runId={demo.state.events.find((e) => e.stage === "run_start")?.resultingIds.runId ?? "unknown"}
@@ -77,14 +84,20 @@ export const GuidedProductMoment = ({
               variant="expanded"
               openEvidence={openEvidence}
             />
-            <RunOutputFacts facts={facts} />
+            <RunResumeFacts facts={facts} />
+            <RunOutputFacts facts={facts} priority="report" />
           </div>
         ) : null}
         {moment === "output" ? (
-          <RunOutputFacts facts={facts} />
+          <div className="guided-product-moment__output-grid">
+            <RunOutputFacts facts={facts} priority="report" />
+          </div>
         ) : null}
         {moment === "trace" ? (
-          <RunTraceFacts facts={facts} />
+          <div className="guided-product-moment__trace-grid">
+            <RunTraceFacts facts={facts} />
+            <RunOutputFacts facts={facts} priority="summary" />
+          </div>
         ) : null}
       </div>
     </section>

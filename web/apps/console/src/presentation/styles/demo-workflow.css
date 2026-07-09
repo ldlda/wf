@@ -1200,3 +1200,38 @@
   max-width: min(62rem, 100%);
   justify-self: center;
 }
+
+.guided-product-moment__approval-grid {
+  display: grid;
+  grid-template-columns: minmax(13rem, 0.55fr) minmax(0, 1.2fr) minmax(18rem, 0.75fr);
+  gap: 0.85rem;
+  min-height: 0;
+}
+
+.guided-product-moment__resume-grid {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.85fr) minmax(14rem, 0.45fr) minmax(0, 1fr);
+  gap: 0.85rem;
+  min-height: 0;
+}
+
+.guided-product-moment__output-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  min-height: 0;
+}
+
+.guided-product-moment__trace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(17rem, 0.45fr);
+  gap: 0.85rem;
+  min-height: 0;
+}
+
+@container presentation-canvas (max-width: 1050px) {
+  .guided-product-moment__approval-grid,
+  .guided-product-moment__resume-grid,
+  .guided-product-moment__trace-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
