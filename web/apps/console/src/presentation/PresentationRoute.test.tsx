@@ -59,7 +59,7 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
     expect(screen.getByRole("main", { name: /lda.chat presentation/i })).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /Thesis/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Design and Implementation of lda\.chat/i })).toBeInTheDocument();
   });
 
   it("starts from a scene hash and advances with keyboard", async () => {
