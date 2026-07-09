@@ -24,6 +24,7 @@ export const OperationBlock = ({
         layoutId="workflow-start-operation"
         transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
         className="operation-receipt"
+        data-operation-variant={variant}
         aria-label={`${operation.operation} execution receipt`}
       >
         <div className="operation-receipt__identity">
@@ -45,6 +46,7 @@ export const OperationBlock = ({
       layoutId="workflow-start-operation"
       transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
       className="operation-block operation-block--expanded"
+      data-operation-variant={variant}
       aria-label={`${operation.operation} operation`}
     >
       <header className="operation-block__header">

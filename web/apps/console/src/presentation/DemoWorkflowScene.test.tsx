@@ -231,4 +231,28 @@ describe("DemoWorkflowScene", () => {
     renderBeat("trace", "resume-output-evidence");
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "trace");
   });
+
+  it("marks graph beats with one primary workflow graph and one run receipt support surface", () => {
+    renderBeat("graph");
+
+    const stage = screen.getByLabelText(/demo workflow stage/i);
+    expect(stage).toHaveAttribute("data-primary-surface", "workflow-graph");
+    expect(stage).toHaveAttribute("data-support-surface", "run-receipt");
+  });
+
+  it("marks approval beats as interrupt approval with facts-only support", () => {
+    renderBeat("approval", "typed-human-boundary");
+
+    const stage = screen.getByLabelText(/demo workflow stage/i);
+    expect(stage).toHaveAttribute("data-primary-surface", "interrupt-approval");
+    expect(stage).toHaveAttribute("data-support-surface", "facts-only");
+  });
+
+  it("marks trace beats as trace evidence with output summary support", () => {
+    renderBeat("trace", "resume-output-evidence");
+
+    const stage = screen.getByLabelText(/demo workflow stage/i);
+    expect(stage).toHaveAttribute("data-primary-surface", "trace-evidence");
+    expect(stage).toHaveAttribute("data-support-surface", "output-summary");
+  });
 });

@@ -8,6 +8,7 @@ import {
 } from "./demo-workflow-model.js";
 import { projectDemoRunFacts } from "./demo-run-facts.js";
 import type { DemoApprovalActions } from "./demo-approval-actions.js";
+import { demoSurfaceForBeat } from "./presentation-coherence.js";
 import { DemoContinuityRail } from "./DemoContinuityRail.js";
 import { DemoOutcomePanel } from "./DemoOutcomePanel.js";
 import { GuidedProductMoment } from "./GuidedProductMoment.js";
@@ -81,6 +82,7 @@ export const DemoWorkflowScene = ({
   const lens = demoBeatLensForBeat(beat.id);
   const currentOperation = currentEvent ? projectOperationPresentation(currentEvent) : null;
   const facts = projectDemoRunFacts(demo);
+  const surface = demoSurfaceForBeat(scene.id, beat.id);
   const showOutcomePanel = beat.id === "resume" || beat.id === "output" || beat.id === "trace";
 
   const showExpandedOperation = beat.id === "operation" || beat.id === "resume" || beat.id === "trace";
@@ -103,7 +105,14 @@ export const DemoWorkflowScene = ({
 
       <DemoContinuityRail lens={lens} />
 
-      <div className="demo-workflow-stage" data-beat={beat.id} data-demo-layout={layout} aria-label="demo workflow stage">
+      <div
+        className="demo-workflow-stage"
+        data-beat={beat.id}
+        data-demo-layout={layout}
+        data-primary-surface={surface.primarySurface}
+        data-support-surface={surface.supportSurface}
+        aria-label="demo workflow stage"
+      >
           {isGuidedDemoMoment ? (
             <GuidedProductMoment
               beat={beat}
