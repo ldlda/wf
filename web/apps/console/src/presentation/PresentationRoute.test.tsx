@@ -205,7 +205,7 @@ describe("PresentationRoute", () => {
     expect(screen.getByText("project-brief.md")).toBeInTheDocument();
     expect(screen.getByText("issue-board.json")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
-    expect(screen.getByText("Output not created yet")).toBeInTheDocument();
+    expect(screen.queryByText("Output not created yet")).not.toBeInTheDocument();
   });
 
   it("chat run action advances the replay timeline when no live server is configured", async () => {
@@ -236,6 +236,27 @@ describe("PresentationRoute", () => {
 
     expect(window.location.hash).toBe("#scene/interrupt-evidence/resume");
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
+  });
+
+  it("reopens approval controls after returning from submitted resume", async () => {
+    const user = userEvent.setup();
+    setReplayMode();
+    window.location.hash = "#scene/interrupt-evidence/approval";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const submitButton = await screen.findByRole("button", { name: "Submit" });
+    await waitFor(() => expect(submitButton).toBeEnabled(), { timeout: 10000 });
+    await act(async () => {
+      await user.click(submitButton);
+    });
+    expect(window.location.hash).toBe("#scene/interrupt-evidence/resume");
+
+    window.location.hash = "#scene/interrupt-evidence/approval";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+    expect(await screen.findByRole("button", { name: "Submit" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
   });
 
   it("cancels Scene 10 approval in replay without applying submitted evidence", async () => {

@@ -90,15 +90,21 @@ const readInterruptFacts = (
   const runStart = findEvent(events, "run_start") as
     | {
         interpreted: {
-          interrupt?: { kind?: string; typed?: boolean; outcomes?: unknown };
+          interrupt?: {
+            kind?: string;
+            typed?: boolean;
+            outcomes?: unknown;
+            payload?: DemoTimelineController["interruptPayload"];
+          };
         };
       }
     | undefined;
   const interruptEvent = findEvent(events, "interrupt") as
-    | { interpreted: { outcomes?: unknown } }
+    | { interpreted: { outcomes?: unknown; payload?: DemoTimelineController["interruptPayload"] } }
     | undefined;
 
   const ri = runStart?.interpreted?.interrupt;
+  const payload = interruptPayload ?? interruptEvent?.interpreted?.payload ?? ri?.payload ?? null;
   const outcomes = Array.isArray(interruptEvent?.interpreted?.outcomes)
     ? (interruptEvent!.interpreted.outcomes as ReadonlyArray<string>)
     : Array.isArray(ri?.outcomes)
@@ -109,8 +115,8 @@ const readInterruptFacts = (
     kind: typeof ri?.kind === "string" ? ri.kind : "unknown",
     typed: ri?.typed === true,
     outcomes,
-    proposedIssues: interruptPayload?.proposed_issues ?? [],
-    reportMarkdownPreview: interruptPayload?.report_markdown ?? "",
+    proposedIssues: payload?.proposed_issues ?? [],
+    reportMarkdownPreview: payload?.report_markdown ?? "",
   };
 };
 

@@ -68,7 +68,6 @@ export const GuidedProductMoment = ({
               terminalOutcome={approvalActions?.state === "submitted" ? "submitted" :
                 approvalActions?.state === "cancelled" ? "cancelled" : undefined}
             />
-            <RunOutputFacts facts={facts} />
           </div>
         ) : null}
         {moment === "resume" && runResume ? (

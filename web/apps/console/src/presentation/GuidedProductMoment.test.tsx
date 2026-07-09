@@ -68,7 +68,7 @@ describe("GuidedProductMoment", () => {
     expect(screen.getByText("project-brief.md")).toBeInTheDocument();
     expect(screen.getByText("issue-board.json")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
-    expect(screen.getByText("Output not created yet")).toBeInTheDocument();
+    expect(screen.queryByText("Output not created yet")).not.toBeInTheDocument();
   });
 
   it("makes resume operation proof primary on resume beat", () => {

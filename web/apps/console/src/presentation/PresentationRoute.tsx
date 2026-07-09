@@ -119,6 +119,10 @@ export const PresentationRoute = () => {
     demo.primeReplayToStage(requirement.requiredStage);
   }, [demo.state.mode, demo.primeReplayToStage, state.location]);
 
+  const isApprovalBeat = state.location.kind === "main"
+    && state.location.sceneId === "interrupt-evidence"
+    && state.location.beatId === "approval";
+
   useEffect(() => {
     dispatch({ type: "set_playback_mode", mode: demo.state.mode });
   }, [demo.state.mode]);
@@ -173,10 +177,13 @@ export const PresentationRoute = () => {
   }), [approvalState, demo.state.phase, demo.interruptPayload, handleSubmitApproval, handleCancelApproval]);
 
   useEffect(() => {
-    if ((demo.state.phase === "ready" || demo.state.phase === "running") && approvalState === "ready") {
-      setApprovalState("ready");
-    }
-  }, [demo.state.phase, approvalState]);
+    if (!isApprovalBeat || demo.state.phase !== "review") return;
+
+    // The approval form is route-scoped presentation state. A presenter can
+    // submit, revisit the approval beat, and should see the decision form
+    // again because the replay is re-primed to the interrupt stage.
+    setApprovalState("ready");
+  }, [demo.state.phase, isApprovalBeat]);
 
   const handleJump = useCallback(
     (location: MainLocation) => dispatch({ type: "jump", location }),

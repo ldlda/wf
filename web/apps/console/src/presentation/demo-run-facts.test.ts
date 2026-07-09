@@ -73,6 +73,16 @@ describe("demo-run-facts", () => {
     expect(facts.interrupt.reportMarkdownPreview).toContain("workflow substrate is ready");
   });
 
+  it("projects interrupt payload from recorded events when transient state is absent", () => {
+    const facts = projectDemoRunFacts(controller({ interruptPayload: null }));
+
+    expect(facts.interrupt.proposedIssues[0]).toMatchObject({
+      id: "risk-1",
+      title: "Prepare the defense walkthrough",
+    });
+    expect(facts.interrupt.reportMarkdownPreview).toContain("workflow substrate is ready");
+  });
+
   it("projects resume payload and output after resume", () => {
     const recording = loadCanonicalDemoRecording();
     const facts = projectDemoRunFacts(controller({

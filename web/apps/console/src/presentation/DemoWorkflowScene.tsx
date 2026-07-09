@@ -6,6 +6,7 @@ import {
   projectInterruptContract,
   projectOperationPresentation,
 } from "./demo-workflow-model.js";
+import { projectDemoRunFacts } from "./demo-run-facts.js";
 import type { DemoApprovalActions } from "./demo-approval-actions.js";
 import { DemoContinuityRail } from "./DemoContinuityRail.js";
 import { DemoOutcomePanel } from "./DemoOutcomePanel.js";
@@ -71,12 +72,13 @@ export const DemoWorkflowScene = ({
 
   const runProof = {
     runId: runStart?.resultingIds.runId ?? null,
-    traceLabel: "5 workflow nodes",
+    traceLabel: "9 workflow nodes",
     evidenceLabel: "JSON-RPC evidence",
   };
 
   const lens = demoBeatLensForBeat(beat.id);
   const currentOperation = currentEvent ? projectOperationPresentation(currentEvent) : null;
+  const facts = projectDemoRunFacts(demo);
   const showOutcomePanel = beat.id === "resume" || beat.id === "output" || beat.id === "trace";
 
   const showExpandedOperation = beat.id === "operation" || beat.id === "resume" || beat.id === "trace";
@@ -141,6 +143,7 @@ export const DemoWorkflowScene = ({
                       mode={contractMode}
                       hero={layout === "approval"}
                       approvalActions={approvalActions}
+                      interrupt={facts.interrupt}
                     />
                   )}
                 </div>

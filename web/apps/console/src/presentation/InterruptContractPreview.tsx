@@ -1,6 +1,7 @@
 import { m } from "motion/react";
 import type { InterruptContractPresentation } from "./demo-workflow-model.js";
 import type { DemoApprovalActions } from "./demo-approval-actions.js";
+import type { RunFactsInterrupt } from "./demo-run-facts.js";
 import { SchemaApprovalSurface } from "./approval/SchemaApprovalSurface.js";
 import { formatJson } from "./format.js";
 
@@ -9,6 +10,7 @@ type InterruptContractPreviewProps = {
   readonly mode: "preview" | "approval";
   readonly hero?: boolean;
   readonly approvalActions?: DemoApprovalActions | undefined;
+  readonly interrupt?: RunFactsInterrupt | undefined;
 };
 
 const titleForKind = (kind: string): string => `${kind.replaceAll("_", " ")} resume`;
@@ -18,6 +20,7 @@ export const InterruptContractPreview = ({
   mode,
   hero = false,
   approvalActions,
+  interrupt,
 }: InterruptContractPreviewProps) => (
   <m.aside
     className="interrupt-contract-preview"
@@ -56,9 +59,30 @@ export const InterruptContractPreview = ({
         onCancel={approvalActions?.canCancel ? () => void approvalActions.cancel() : undefined}
       />
     ) : (
-      <div className="interrupt-contract-preview__schema">
-        <span>Resume schema</span>
-        <pre><code>{formatJson(contract.resumeSchema)}</code></pre>
+      <div className="interrupt-contract-preview__details">
+        {interrupt?.reportMarkdownPreview ? (
+          <section className="interrupt-contract-preview__payload">
+            <span>Interrupt payload</span>
+            <pre><code>{interrupt.reportMarkdownPreview}</code></pre>
+          </section>
+        ) : null}
+        {interrupt && interrupt.proposedIssues.length > 0 ? (
+          <section className="interrupt-contract-preview__issues">
+            <span>Proposed issues</span>
+            <ul>
+              {interrupt.proposedIssues.map((issue) => (
+                <li key={issue.id}>
+                  <strong>{issue.title}</strong>
+                  <small>{issue.severity}</small>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ) : null}
+        <section className="interrupt-contract-preview__schema">
+          <span>Resume schema</span>
+          <pre><code>{formatJson(contract.resumeSchema)}</code></pre>
+        </section>
       </div>
     )}
   </m.aside>

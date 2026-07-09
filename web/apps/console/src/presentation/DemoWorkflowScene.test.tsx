@@ -95,6 +95,8 @@ describe("DemoWorkflowScene", () => {
     const contract = screen.getByLabelText("typed interrupt contract");
     expect(contract).toHaveTextContent("issue_review");
     expect(contract).toHaveTextContent("submitted / cancelled");
+    expect(contract).toHaveTextContent("lda.chat Thesis And Project Readiness Report");
+    expect(contract).toHaveTextContent("Prepare the defense walkthrough");
     expect(contract).toHaveTextContent('"type": "object"');
     expect(contract).toHaveTextContent("run_recorded_lda_report");
   });
@@ -133,7 +135,7 @@ describe("DemoWorkflowScene", () => {
   it("passes run proof into full graph beats", () => {
     const { unmount } = renderBeat("graph");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run_recorded_lda_report");
-    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("5 workflow nodes");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("9 workflow nodes");
     unmount();
 
     renderBeat("output", "interrupt-evidence");
