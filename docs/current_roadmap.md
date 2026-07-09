@@ -199,8 +199,11 @@ Recommended next visual slices:
    [`presentation opening visuals`](superpowers/specs/2026-07-10-presentation-opening-visuals-design.md).
    Implementation:
    [`presentation opening visuals plan`](historical/superpowers/plans/2026-07-10-presentation-opening-visuals.md).
-2. Demo surface cleanup: normalize Scenes 8-12 into a single product-flow
-   language with factual panes, graph context, and fewer competing panels.
+2. Completed: Presentation coherence pass added a 14-scene visual matrix,
+   corrected Scene 2's direct-action metaphor into a chat/tool transcript, and
+   marked demo beats with primary/support surface metadata so Scenes 8-12 can
+   keep one dominant product proof at a time. Implementation:
+   [`presentation coherence pass`](historical/superpowers/plans/2026-07-10-presentation-coherence-pass.md).
 3. Evidence and closing visuals: make Scenes 13 and 14 readable as a defense
    artifact: evaluation board, claim boundaries, and future-work map.
 
