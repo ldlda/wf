@@ -173,6 +173,16 @@ describe("PresentationRoute", () => {
     expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-demo-layout", "approval");
   });
 
+  it("renders replay-backed approval evidence on a direct approval hash", async () => {
+    window.location.hash = "#scene/interrupt-evidence/approval";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByLabelText("typed interrupt contract")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /issue review resume/i })).toBeInTheDocument();
+    expect(screen.getByText(/Recorded resume payload for this decision/i)).toBeInTheDocument();
+  });
+
   it("chat run action advances the replay timeline when no live server is configured", async () => {
     setReplayMode();
     window.location.hash = "#scene/workflow-demo/operation";

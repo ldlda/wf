@@ -40,7 +40,7 @@ export const DemoTimelineControls = ({
       </div>
       <div className="demo-playback-controls">
         {state.phase === "ready" && (
-          <button onClick={start} disabled={!canStart || inFlight}>Start presentation</button>
+          <button onClick={() => start()} disabled={!canStart || inFlight}>Start presentation</button>
         )}
         {inRunning && (
           <button onClick={pause} disabled={inFlight}>Pause</button>

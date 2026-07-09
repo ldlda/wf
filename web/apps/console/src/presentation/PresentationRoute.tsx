@@ -91,19 +91,18 @@ export const PresentationRoute = () => {
   }, []);
 
   useEffect(() => {
-    if (demo.state.phase === "ready" && presentationTarget.mode === "replay" && demo.state.mode !== "replay") {
+    // Scene deep-links need the recorded demo state before the operator starts a live run.
+    // The chat action can still switch the shared timeline to live via start("live").
+    if (demo.state.phase === "ready" && demo.state.mode !== "replay") {
       demo.setMode("replay");
     }
-    if (demo.state.phase === "ready" && presentationTarget.mode === "live" && demo.state.mode !== "live") {
-      demo.setMode("live");
-    }
-  }, [demo.state.phase, demo.state.mode, demo.setMode, presentationTarget.mode]);
+  }, [demo.state.phase, demo.state.mode, demo.setMode]);
 
   useEffect(() => {
-    if (presentationTarget.mode === "replay" && demo.state.phase === "ready" && demo.state.mode === "replay") {
-      demo.start();
+    if (demo.state.phase === "ready" && demo.state.mode === "replay") {
+      demo.start("replay");
     }
-  }, [demo.state.phase, demo.state.mode, demo.start, presentationTarget.mode]);
+  }, [demo.state.phase, demo.state.mode, demo.start]);
 
   useEffect(() => {
     dispatch({ type: "set_playback_mode", mode: demo.state.mode });
@@ -143,4 +142,3 @@ export const PresentationRoute = () => {
     </main>
   );
 };
-

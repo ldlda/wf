@@ -35,7 +35,7 @@ export type DemoTimelineController = {
   readonly recordingId: string | null;
   readonly canStart: boolean;
   readonly setMode: (mode: DemoMode) => void;
-  readonly start: () => void;
+  readonly start: (mode?: DemoMode) => void;
   readonly pause: () => void;
   readonly play: () => void;
   readonly next: () => Promise<void>;
@@ -206,9 +206,10 @@ export const useDemoTimeline = (
     dispatch({ type: "set_mode", mode });
   }, [resetRuntime]);
 
-  const start = useCallback(() => {
+  const start = useCallback((modeOverride?: DemoMode) => {
     resetRuntime();
-    if (state.mode === "replay") {
+    const mode = modeOverride ?? state.mode;
+    if (mode === "replay") {
       const recording = activeRecording.current;
       if (!recording) return;
       dispatch({ type: "start", mode: "replay", events: recording.events });

@@ -34,12 +34,22 @@ describe("useTimelineAgent", () => {
     const { result } = renderHook(() => useTimelineAgent(demo, "live"));
     await act(async () => result.current.runPreparedWorkflow());
 
-    expect(start).toHaveBeenCalledTimes(1);
+    expect(start).toHaveBeenCalledWith("live");
     expect(result.current.messages.at(-1)?.parts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ type: "tool-result" }),
       ]),
     );
+  });
+
+  it("starts the replay walkthrough explicitly when replay is active", async () => {
+    const start = vi.fn();
+    const demo = demoController({ start });
+
+    const { result } = renderHook(() => useTimelineAgent(demo, "replay"));
+    await act(async () => result.current.runPreparedWorkflow());
+
+    expect(start).toHaveBeenCalledWith("replay");
   });
 
   it("submits selected issues from the current interrupt payload", async () => {

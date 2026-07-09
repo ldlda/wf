@@ -35,6 +35,29 @@ describe("useDemoTimeline", () => {
     expect(result.current.state.appliedCount).toBeGreaterThan(0);
   });
 
+  it("can force replay start without first switching timeline mode", async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useDemoTimeline("http://127.0.0.1:8765/rpc", vi.fn()));
+
+    act(() => result.current.start("replay"));
+    await act(async () => vi.advanceTimersByTimeAsync(900));
+
+    expect(result.current.state.mode).toBe("replay");
+    expect(mockedCallOperation).not.toHaveBeenCalled();
+    expect(result.current.state.appliedCount).toBeGreaterThan(0);
+  });
+
+  it("can force live start from replay mode without stale state", () => {
+    const { result } = renderHook(() => useDemoTimeline("http://127.0.0.1:8765/rpc", vi.fn()));
+
+    act(() => result.current.setMode("replay"));
+    act(() => result.current.start("live"));
+
+    expect(result.current.state.mode).toBe("live");
+    expect(result.current.state.events).toEqual([]);
+    expect(result.current.state.phase).toBe("running");
+  });
+
   it("live Next executes exactly one operation", async () => {
     mockedCallOperation.mockResolvedValueOnce({
       ok: true,

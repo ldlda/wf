@@ -48,7 +48,7 @@ export const useTimelineAgent = (
       "timeline-agent-intro",
       "assistant",
       modeLabel === "live"
-        ? "Live workflow server is available. I can run the prepared workflow now."
+        ? "Live workflow target is configured. I can run the prepared workflow now."
         : "Replay fallback is active. I can still walk through the prepared workflow evidence.",
     ),
   ]);
@@ -58,8 +58,7 @@ export const useTimelineAgent = (
 
   const runPreparedWorkflow = useCallback(async () => {
     if (!demo.canStart || demo.inFlight) return;
-    demo.restart();
-    demo.start();
+    demo.start(modeLabel);
     setMessages((current) => appendToolMessage(
       current,
       "timeline-agent-start",
