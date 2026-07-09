@@ -231,4 +231,21 @@ describe("PresentationRoute", () => {
     expect(window.location.hash).toBe("#scene/interrupt-evidence/approval");
     expect(screen.queryByLabelText("workflow.runs.resume operation")).not.toBeInTheDocument();
   });
+
+  it("opens approval with enabled approval controls immediately after priming", async () => {
+    window.location.hash = "#scene/interrupt-evidence/approval";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("button", { name: "Submit" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
+  });
+
+  it("opens resume with resume operation proof immediately after priming", async () => {
+    window.location.hash = "#scene/interrupt-evidence/resume";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
+  });
 });

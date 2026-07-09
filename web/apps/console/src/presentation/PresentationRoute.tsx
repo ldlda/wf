@@ -6,6 +6,7 @@ import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import { useDemoTimeline } from "../demo/useDemoTimeline.js";
 import { PresentationCanvas } from "./PresentationCanvas.js";
 import { PresentationStage } from "./PresentationStage.js";
+import { requirementForDemoBeat } from "./demo-beat-requirements.js";
 import {
   createInitialPresentationState,
   presentationReducer,
@@ -104,6 +105,17 @@ export const PresentationRoute = () => {
       demo.start("replay");
     }
   }, [demo.state.phase, demo.state.mode, demo.start]);
+
+  useEffect(() => {
+    if (state.location.kind !== "main") return;
+    if (demo.state.mode !== "replay") return;
+
+    const requirement = requirementForDemoBeat(
+      state.location.sceneId,
+      state.location.beatId,
+    );
+    demo.primeReplayToStage(requirement.requiredStage);
+  }, [demo.state.mode, demo.primeReplayToStage, state.location]);
 
   useEffect(() => {
     dispatch({ type: "set_playback_mode", mode: demo.state.mode });
