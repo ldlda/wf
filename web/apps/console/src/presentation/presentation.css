@@ -1358,3 +1358,121 @@
   cursor: not-allowed;
   opacity: 0.55;
 }
+
+/* Source-owned AI Elements-style primitives. These classes intentionally mirror
+   conversation/message/tool concepts so a future AI SDK driver can reuse the
+   same surface without changing the demo timeline state model. */
+.operator-chat .ai-chat-conversation {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  color: var(--text-primary);
+}
+
+.operator-chat .ai-chat-conversation__content {
+  display: grid;
+  gap: 0.75rem;
+  overflow: auto;
+  scrollbar-width: thin;
+}
+
+.operator-chat .ai-chat-message {
+  display: grid;
+  grid-template-columns: 1.8rem minmax(0, 1fr);
+  gap: 0.65rem;
+  align-items: start;
+}
+
+.operator-chat .ai-chat-message__avatar {
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan), transparent 55%);
+  border-radius: 999px;
+  color: var(--accent-cyan);
+  font: 700 0.72rem/1 var(--font-mono);
+}
+
+.operator-chat .ai-chat-message__body {
+  min-width: 0;
+}
+
+.operator-chat .ai-chat-message__content {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.operator-chat .ai-chat-message__response {
+  padding: 0.72rem 0.82rem;
+  border: 1px solid color-mix(in srgb, var(--stage-line), transparent 18%);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--stage-surface), transparent 12%);
+  color: var(--text-primary);
+}
+
+.operator-chat .ai-chat-tool {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--stage-line), transparent 20%);
+  border-radius: 0.85rem;
+  background: color-mix(in srgb, var(--stage-inset), transparent 10%);
+}
+
+.operator-chat .ai-chat-tool__header {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+  padding: 0.6rem 0.7rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.operator-chat .ai-chat-tool__header code {
+  overflow: hidden;
+  color: var(--text-muted);
+  font: 500 0.72rem/1.2 var(--font-mono);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operator-chat .ai-chat-tool__label {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.operator-chat .ai-chat-tool__header small {
+  color: var(--accent-cyan);
+  font: 700 0.66rem/1 var(--font-mono);
+}
+
+.operator-chat .ai-chat-tool__content {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0 0.7rem 0.7rem;
+}
+
+.operator-chat .ai-chat-tool__io {
+  max-height: 8rem;
+  margin: 0;
+  overflow: auto;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, black, transparent 18%);
+  color: color-mix(in srgb, var(--text-primary), white 8%);
+  font: 0.68rem/1.45 var(--font-mono);
+}
+
+.operator-chat .ai-chat-prompt-action button {
+  width: 100%;
+  padding: 0.72rem 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--accent-cyan), transparent 30%);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent-cyan), transparent 84%);
+  color: var(--text-primary);
+  font-weight: 800;
+}
