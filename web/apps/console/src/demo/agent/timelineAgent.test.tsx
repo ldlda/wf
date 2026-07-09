@@ -25,6 +25,13 @@ const failedStatus: PresentationTargetHealth = {
   detail: "connection refused",
 };
 
+const checkingStatus: PresentationTargetHealth = {
+  kind: "checking",
+  target: "http://127.0.0.1:8765/rpc",
+  label: "Live target configured",
+  detail: "checking",
+};
+
 const demoController = (
   overrides: Partial<DemoTimelineController> = {},
 ): DemoTimelineController => ({
@@ -49,6 +56,34 @@ const demoController = (
 });
 
 describe("useTimelineAgent", () => {
+  it("updates the intro message when target health changes", () => {
+    const demo = demoController();
+    const initialProps: { readonly status: PresentationTargetHealth } = {
+      status: checkingStatus,
+    };
+    const { result, rerender } = renderHook(
+      ({ status }: { readonly status: PresentationTargetHealth }) =>
+        useTimelineAgent(demo, { mode: "live", status }),
+      { initialProps },
+    );
+
+    expect(result.current.messages[0]?.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ text: "Live target configured, checking reachability." }),
+      ]),
+    );
+
+    rerender({ status: readyStatus });
+
+    expect(result.current.messages[0]?.parts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          text: "Live target is ready. Direct slides still show replay evidence until I start the live run.",
+        }),
+      ]),
+    );
+  });
+
   it("starts the prepared workflow through the timeline", async () => {
     const start = vi.fn();
     const demo = demoController({ start });

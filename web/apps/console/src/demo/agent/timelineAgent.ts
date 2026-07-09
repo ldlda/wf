@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DemoTimelineController } from "../useDemoTimeline.js";
 import type { PresentationTargetHealth } from "../../presentation/presentation-target-status.js";
 import {
@@ -45,6 +45,13 @@ const appendToolMessage = (
   },
 ];
 
+const introMessage = (text: string): AgentMessage =>
+  agentTextMessage(
+    "timeline-agent-intro",
+    "assistant",
+    text,
+  );
+
 const introForStatus = (status: PresentationTargetHealth): string => {
   switch (status.kind) {
     case "ready":
@@ -68,14 +75,17 @@ export const useTimelineAgent = (
     options.status.kind === "ready" || options.status.kind === "active"
       ? options.mode
       : "replay";
+  const introText = introForStatus(options.status);
 
   const [messages, setMessages] = useState<ReadonlyArray<AgentMessage>>([
-    agentTextMessage(
-      "timeline-agent-intro",
-      "assistant",
-      introForStatus(options.status),
-    ),
+    introMessage(introText),
   ]);
+
+  useEffect(() => {
+    setMessages((current) => current.map((message) =>
+      message.id === "timeline-agent-intro" ? introMessage(introText) : message,
+    ));
+  }, [introText]);
 
   const runLabel = modeLabel === "live" ? "Run prepared workflow" : "Run replay walkthrough";
   const canRun = demo.canStart && !demo.inFlight && demo.state.phase !== "running";

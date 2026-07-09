@@ -176,6 +176,16 @@ describe("PresentationRoute", () => {
     expect(await screen.findByRole("button", { name: /run prepared workflow/i })).toBeInTheDocument();
   });
 
+  it("updates the chat intro after the live health probe succeeds", async () => {
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByText(/Live target is ready/i)).toBeInTheDocument();
+    expect(screen.getByLabelText("presentation evidence mode")).toHaveAttribute("data-status", "ready");
+    expect(screen.queryByText(/checking reachability/i)).not.toBeInTheDocument();
+  });
+
   it("opens Scene 10 approval from the canonical hash", async () => {
     window.location.hash = "#scene/interrupt-evidence/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
