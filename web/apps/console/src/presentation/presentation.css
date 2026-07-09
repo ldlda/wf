@@ -1406,88 +1406,145 @@
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: minmax(24rem, 0.95fr) auto minmax(26rem, 1.05fr);
+  align-items: stretch;
   gap: 1rem;
 }
 
-.problem-loop-scene__side {
-  display: grid;
-  gap: 0.8rem;
+.problem-chat-card,
+.problem-blueprint {
   min-width: 0;
-  border: 1px solid color-mix(in oklch, var(--stage-line) 60%, transparent);
-  border-radius: 1rem;
-  background: var(--stage-inset);
-  padding: 1rem;
+  border: 1px solid color-mix(in oklch, var(--stage-line) 62%, transparent);
+  border-radius: 0.95rem;
+  padding: 0.85rem;
 }
 
-.problem-loop-scene__side[data-problem-active="false"] {
+.problem-chat-card {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  background:
+    linear-gradient(180deg, color-mix(in oklch, var(--stage-inset) 94%, black), var(--stage-inset));
+}
+
+.problem-blueprint {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  background:
+    radial-gradient(circle at 12% 16%, color-mix(in oklch, var(--accent-cyan) 13%, transparent), transparent 30%),
+    color-mix(in oklch, var(--stage-surface) 88%, black);
+}
+
+.problem-chat-card[data-problem-active="false"],
+.problem-blueprint[data-blueprint-active="false"] {
   opacity: 0.62;
 }
 
-.problem-loop-scene__side h2 {
+.problem-artifact-header {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.problem-artifact-header span {
+  color: var(--accent-cyan);
+  font: 700 0.68rem/1 var(--font-evidence);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.problem-artifact-header h2 {
   margin: 0;
   color: var(--text-primary);
-  font: 800 clamp(1.5rem, 3vw, 2.4rem)/0.95 var(--font-editorial);
+  font: 800 1.45rem/0.98 var(--font-interface);
 }
 
-.problem-loop-scene__side p {
+.problem-artifact-header p,
+.problem-artifact-note {
   margin: 0;
   color: var(--text-secondary);
-  font: 0.95rem/1.35 var(--font-interface);
+  font: 0.86rem/1.3 var(--font-interface);
 }
 
-.problem-loop-scene__side--transcript {
-  align-self: stretch;
-}
-
-.problem-loop-transcript {
+.problem-chat-transcript {
   display: grid;
+  align-content: start;
   gap: 0.45rem;
+  min-height: 0;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.problem-loop-transcript__turn {
+.problem-chat-turn {
   display: grid;
-  grid-template-columns: 7.5rem minmax(0, 1fr);
+  grid-template-columns: 5.8rem minmax(0, 1fr);
   gap: 0.65rem;
   align-items: start;
-  border: 1px solid color-mix(in oklch, var(--stage-line) 66%, transparent);
-  border-radius: 0.65rem;
-  background: color-mix(in oklch, var(--stage-surface) 88%, transparent);
-  padding: 0.5rem 0.6rem;
+  border: 1px solid color-mix(in oklch, var(--stage-line) 62%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in oklch, var(--stage-canvas) 72%, transparent);
+  padding: 0.46rem 0.55rem;
 }
 
-.problem-loop-transcript__turn span {
+.problem-chat-turn[data-turn-kind="tool"] {
+  border-color: color-mix(in oklch, var(--accent-cyan) 44%, var(--stage-line));
+  background: color-mix(in oklch, var(--accent-cyan) 9%, var(--stage-canvas));
+}
+
+.problem-chat-turn[data-turn-kind="observation"] {
+  border-style: dashed;
+}
+
+.problem-chat-turn__label {
   color: var(--accent-cyan);
-  font: 700 0.72rem/1.15 var(--font-evidence);
+  font: 700 0.68rem/1.1 var(--font-evidence);
 }
 
-.problem-loop-transcript__turn p {
+.problem-chat-turn p {
+  margin: 0;
   color: var(--text-primary);
-  font: 0.8rem/1.25 var(--font-interface);
+  font: 0.79rem/1.25 var(--font-interface);
 }
 
-.problem-loop-scene .concept-rail {
+.problem-blueprint .concept-rail {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
+  align-items: stretch;
 }
 
-.problem-loop-scene .concept-node {
+.problem-blueprint .concept-node {
   grid-template-columns: 1fr;
   justify-items: center;
   text-align: center;
-  padding: 0.7rem 0.45rem;
+  padding: 0.72rem 0.45rem;
 }
 
-.problem-loop-scene .concept-node__copy span,
-.problem-loop-scene .concept-node__meta {
+.problem-blueprint .concept-node__copy span,
+.problem-blueprint .concept-node__meta {
   display: none;
 }
 
+.problem-blueprint__proof {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.problem-blueprint__proof li {
+  border: 1px solid color-mix(in oklch, var(--accent-cyan) 36%, var(--stage-line));
+  border-radius: 999px;
+  color: var(--text-primary);
+  background: color-mix(in oklch, var(--accent-cyan) 9%, transparent);
+  padding: 0.25rem 0.55rem;
+  font: 700 0.72rem/1 var(--font-evidence);
+}
+
 .problem-loop-scene__bridge {
+  align-self: center;
   color: var(--accent-cyan);
   font: 800 2rem/1 var(--font-interface);
 }

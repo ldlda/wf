@@ -62,7 +62,7 @@ describe("SceneBody", () => {
     expect(screen.getByRole("button", { name: /where is the ai agent/i })).toBeInTheDocument();
   });
 
-  it("renders Scene 2 as action sequence versus reusable automation", () => {
+  it("renders Scene 2 as chat tool loop versus reusable automation", () => {
     const location: PresentationLocation = { kind: "main", sceneId: "problem", beatId: "missing-contracts", focusPath: [] };
 
     render(
@@ -78,9 +78,9 @@ describe("SceneBody", () => {
       />,
     );
 
-    expect(screen.getByLabelText("action sequence versus reusable automation")).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: /one-off tool loop transcript/i })).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: "Reusable automation" })).toBeInTheDocument();
+    expect(screen.getByLabelText("chat tool loop versus reusable automation")).toBeInTheDocument();
+    expect(screen.getByRole("list", { name: /one-off chat and tool transcript/i })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /durable workflow blueprint/i })).toBeInTheDocument();
     expect(screen.queryByText("Draft")).not.toBeInTheDocument();
     expect(screen.queryByText("Artifact")).not.toBeInTheDocument();
     expect(screen.queryByText("Deployment")).not.toBeInTheDocument();
