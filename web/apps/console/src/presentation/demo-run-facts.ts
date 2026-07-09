@@ -1,6 +1,12 @@
+import * as v from "valibot";
+import {
+  LdaReportInterruptPayloadSchema,
+  LdaReportOutputSchema,
+  type LdaReportInterruptPayload,
+  type LdaReportOutput,
+} from "../demo/ldaReportDemoModels.js";
+import type { DemoEvent, DemoEventStage } from "../demo/timeline/models.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
-import type { LdaReportOutput } from "../demo/ldaReportDemoModels.js";
-import type { TraceFrame } from "../lifecycle/models.js";
 
 export type RunFactsInput = {
   readonly selectedDocuments: ReadonlyArray<string>;
@@ -56,6 +62,47 @@ export type DemoRunFacts = {
 
 const EMPTY_OBJECT_LABEL = "captured as empty object";
 
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const recordField = (
+  record: Record<string, unknown> | undefined,
+  field: string,
+): Record<string, unknown> | undefined => {
+  const value = record?.[field];
+  return isRecord(value) ? value : undefined;
+};
+
+const stringField = (record: Record<string, unknown> | undefined, field: string): string | undefined => {
+  const value = record?.[field];
+  return typeof value === "string" ? value : undefined;
+};
+
+const booleanField = (record: Record<string, unknown> | undefined, field: string): boolean | undefined => {
+  const value = record?.[field];
+  return typeof value === "boolean" ? value : undefined;
+};
+
+const stringArrayField = (
+  record: Record<string, unknown> | undefined,
+  field: string,
+): ReadonlyArray<string> => {
+  const value = record?.[field];
+  return Array.isArray(value) && value.every((item) => typeof item === "string")
+    ? value
+    : [];
+};
+
+const parseInterruptPayload = (value: unknown): LdaReportInterruptPayload | null => {
+  const decoded = v.safeParse(LdaReportInterruptPayloadSchema, value);
+  return decoded.success ? decoded.output : null;
+};
+
+const parseReportOutput = (value: unknown): LdaReportOutput | null => {
+  const decoded = v.safeParse(LdaReportOutputSchema, value);
+  return decoded.success ? decoded.output : null;
+};
+
 export const formatFactValue = (value: unknown, absentLabel: string): string => {
   if (value === undefined || value === null) return absentLabel;
   if (typeof value === "object" && Object.keys(value).length === 0) return EMPTY_OBJECT_LABEL;
@@ -63,57 +110,55 @@ export const formatFactValue = (value: unknown, absentLabel: string): string => 
 };
 
 const findEvent = (
-  events: ReadonlyArray<{ readonly stage: string }>,
-  stage: string,
-): typeof events[number] | undefined =>
+  events: ReadonlyArray<DemoEvent>,
+  stage: DemoEventStage,
+): DemoEvent | undefined =>
   events.find((event) => event.stage === stage);
 
+const eventParams = (
+  events: ReadonlyArray<DemoEvent>,
+  stage: DemoEventStage,
+): Record<string, unknown> | undefined => {
+  const params = findEvent(events, stage)?.params;
+  return isRecord(params) ? params : undefined;
+};
+
+const eventInterpreted = (
+  events: ReadonlyArray<DemoEvent>,
+  stage: DemoEventStage,
+): Record<string, unknown> | undefined => {
+  const interpreted = findEvent(events, stage)?.interpreted;
+  return isRecord(interpreted) ? interpreted : undefined;
+};
+
 const readWorkflowInput = (
-  events: ReadonlyArray<{ readonly stage: string; readonly params: unknown }>,
+  events: ReadonlyArray<DemoEvent>,
 ): RunFactsInput => {
-  const runStart = findEvent(events, "run_start") as
-    | { params: { workflow_input?: { selected_documents?: unknown; board_path?: unknown } } }
-    | undefined;
-  const wi = runStart?.params?.workflow_input;
+  const wi = recordField(eventParams(events, "run_start"), "workflow_input");
   return {
-    selectedDocuments: Array.isArray(wi?.selected_documents)
-      ? (wi.selected_documents as ReadonlyArray<string>)
-      : [],
-    boardPath: typeof wi?.board_path === "string" ? wi.board_path : "",
+    selectedDocuments: stringArrayField(wi, "selected_documents"),
+    boardPath: stringField(wi, "board_path") ?? "",
   };
 };
 
 const readInterruptFacts = (
-  events: ReadonlyArray<{ readonly stage: string; readonly params: unknown; readonly interpreted: unknown }>,
+  events: ReadonlyArray<DemoEvent>,
   interruptPayload: DemoTimelineController["interruptPayload"],
 ): RunFactsInterrupt => {
-  const runStart = findEvent(events, "run_start") as
-    | {
-        interpreted: {
-          interrupt?: {
-            kind?: string;
-            typed?: boolean;
-            outcomes?: unknown;
-            payload?: DemoTimelineController["interruptPayload"];
-          };
-        };
-      }
-    | undefined;
-  const interruptEvent = findEvent(events, "interrupt") as
-    | { interpreted: { outcomes?: unknown; payload?: DemoTimelineController["interruptPayload"] } }
-    | undefined;
-
-  const ri = runStart?.interpreted?.interrupt;
-  const payload = interruptPayload ?? interruptEvent?.interpreted?.payload ?? ri?.payload ?? null;
-  const outcomes = Array.isArray(interruptEvent?.interpreted?.outcomes)
-    ? (interruptEvent!.interpreted.outcomes as ReadonlyArray<string>)
-    : Array.isArray(ri?.outcomes)
-      ? (ri.outcomes as ReadonlyArray<string>)
-      : [];
+  const runStartInterpreted = eventInterpreted(events, "run_start");
+  const interruptInterpreted = eventInterpreted(events, "interrupt");
+  const ri = recordField(runStartInterpreted, "interrupt");
+  const payload =
+    interruptPayload ??
+    parseInterruptPayload(interruptInterpreted?.["payload"]) ??
+    parseInterruptPayload(ri?.["payload"]);
+  const outcomes = stringArrayField(interruptInterpreted, "outcomes").length > 0
+    ? stringArrayField(interruptInterpreted, "outcomes")
+    : stringArrayField(ri, "outcomes");
 
   return {
-    kind: typeof ri?.kind === "string" ? ri.kind : "unknown",
-    typed: ri?.typed === true,
+    kind: stringField(ri, "kind") ?? "unknown",
+    typed: booleanField(ri, "typed") === true,
     outcomes,
     proposedIssues: payload?.proposed_issues ?? [],
     reportMarkdownPreview: payload?.report_markdown ?? "",
@@ -121,41 +166,33 @@ const readInterruptFacts = (
 };
 
 const readResumeFacts = (
-  events: ReadonlyArray<{ readonly stage: string; readonly params: unknown }>,
+  events: ReadonlyArray<DemoEvent>,
 ): RunFactsResume => {
-  const runResume = findEvent(events, "run_resume") as
-    | { params: { resume_payload?: unknown; resume_outcome?: string } }
-    | undefined;
-  if (!runResume) return { outcome: null, payload: null };
+  const params = eventParams(events, "run_resume");
+  if (!params) return { outcome: null, payload: null };
   const outcome =
-    runResume.params.resume_outcome === "submitted" ||
-    runResume.params.resume_outcome === "cancelled"
-      ? runResume.params.resume_outcome
+    params.resume_outcome === "submitted" ||
+    params.resume_outcome === "cancelled"
+      ? params.resume_outcome
       : null;
   const payload =
-    typeof runResume.params.resume_payload === "object" &&
-    runResume.params.resume_payload !== null
-      ? (runResume.params.resume_payload as Record<string, unknown>)
+    isRecord(params.resume_payload)
+      ? params.resume_payload
       : null;
   if (outcome === null) return { outcome: null, payload: null };
-  return { outcome, payload } as RunFactsResume;
+  return { outcome, payload: payload ?? {} };
 };
 
 const readOutputFacts = (
-  events: ReadonlyArray<{ readonly stage: string; readonly interpreted: unknown }>,
+  events: ReadonlyArray<DemoEvent>,
 ): RunFactsOutput => {
-  const resumeEvent = findEvent(events, "run_resume") as
-    | { interpreted: { output?: unknown } }
-    | undefined;
-  const completedEvent = findEvent(events, "completed") as
-    | { interpreted: { output?: unknown } }
-    | undefined;
+  const resumeInterpreted = eventInterpreted(events, "run_resume");
+  const completedInterpreted = eventInterpreted(events, "completed");
 
-  const raw = resumeEvent?.interpreted?.output ?? completedEvent?.interpreted?.output;
-  if (!raw || typeof raw !== "object") {
+  const output = parseReportOutput(resumeInterpreted?.["output"] ?? completedInterpreted?.["output"]);
+  if (!output) {
     return { state: "not-created", message: "Output not created yet" };
   }
-  const output = raw as LdaReportOutput;
   return {
     state: "created",
     output,
@@ -168,30 +205,33 @@ const formatRecord = (record: Record<string, unknown>, absentLabel: string): str
   formatFactValue(record, absentLabel);
 
 const readTraceFacts = (
-  events: ReadonlyArray<{ readonly stage: string; readonly interpreted: unknown }>,
+  events: ReadonlyArray<DemoEvent>,
 ): RunFactsTrace => {
-  const traceEvent = findEvent(events, "trace_read") as
-    | { interpreted: { frames?: unknown } }
-    | undefined;
-  const completedEvent = findEvent(events, "completed") as
-    | { interpreted: { trace?: { frames?: unknown } } }
-    | undefined;
+  const traceInterpreted = eventInterpreted(events, "trace_read");
+  const completedInterpreted = eventInterpreted(events, "completed");
+  const completedTrace = recordField(completedInterpreted, "trace");
 
   const rawFrames =
-    traceEvent?.interpreted?.frames ??
-    completedEvent?.interpreted?.trace?.frames;
+    traceInterpreted?.["frames"] ??
+    completedTrace?.["frames"];
 
   if (!Array.isArray(rawFrames)) return { frames: [] };
 
   return {
-    frames: rawFrames.map((frame: TraceFrame) => ({
-      nodeId: frame.nodeId,
-      stepType: frame.stepType,
-      outcome: frame.outcome,
-      resolvedInputLabel: formatRecord(frame.resolvedInput, "not captured in this recording"),
-      outputLabel: formatRecord(frame.output, "not captured in this recording"),
-      stateChangesLabel: formatRecord(frame.stateChanges, "not captured in this recording"),
-    })),
+    frames: rawFrames.flatMap((frame) => {
+      if (!isRecord(frame)) return [];
+      return [{
+        nodeId: stringField(frame, "nodeId") ?? "unknown",
+        stepType: stringField(frame, "stepType") ?? "unknown",
+        outcome: stringField(frame, "outcome") ?? "unknown",
+        resolvedInputLabel: formatRecord(
+          recordField(frame, "resolvedInput") ?? {},
+          "not captured in this recording",
+        ),
+        outputLabel: formatRecord(recordField(frame, "output") ?? {}, "not captured in this recording"),
+        stateChangesLabel: formatRecord(recordField(frame, "stateChanges") ?? {}, "not captured in this recording"),
+      }];
+    }),
   };
 };
 

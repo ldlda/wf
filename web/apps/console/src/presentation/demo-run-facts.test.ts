@@ -116,6 +116,53 @@ describe("demo-run-facts", () => {
     }
   });
 
+  it("falls back honestly before any replay events have been applied", () => {
+    const facts = projectDemoRunFacts(controller({
+      state: {
+        ...initialDemoTimelineState,
+        mode: "replay",
+        phase: "ready",
+        events: [],
+        appliedCount: 0,
+        autoplay: false,
+      },
+      interruptPayload: null,
+    }));
+
+    expect(facts.input).toEqual({ selectedDocuments: [], boardPath: "" });
+    expect(facts.interrupt).toMatchObject({
+      kind: "unknown",
+      typed: false,
+      outcomes: [],
+      proposedIssues: [],
+      reportMarkdownPreview: "",
+    });
+    expect(facts.resume).toEqual({ outcome: null, payload: null });
+    expect(facts.output.state).toBe("not-created");
+    expect(facts.trace.frames).toEqual([]);
+  });
+
+  it("ignores malformed output evidence instead of displaying partial data", () => {
+    const recording = loadCanonicalDemoRecording();
+    const malformedEvents = recording.events.map((event) =>
+      event.stage === "run_resume"
+        ? { ...event, interpreted: { output: { markdown: 42 } } }
+        : event,
+    );
+    const facts = projectDemoRunFacts(controller({
+      state: {
+        ...initialDemoTimelineState,
+        mode: "replay",
+        phase: "completed",
+        events: malformedEvents,
+        appliedCount: malformedEvents.length,
+        autoplay: false,
+      },
+    }));
+
+    expect(facts.output.state).toBe("not-created");
+  });
+
   it("projects trace frames and empty object state accurately", () => {
     const recording = loadCanonicalDemoRecording();
     const facts = projectDemoRunFacts(controller({

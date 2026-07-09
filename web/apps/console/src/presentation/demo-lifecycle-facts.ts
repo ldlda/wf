@@ -1,4 +1,5 @@
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
+import type { DemoEvent } from "../demo/timeline/models.js";
 
 export type DemoLifecycleFacts = {
   readonly draft: {
@@ -21,11 +22,24 @@ export type DemoLifecycleFacts = {
   };
 };
 
-const deploymentInspect = (demo: DemoTimelineController) =>
+const deploymentInspect = (demo: DemoTimelineController): DemoEvent | undefined =>
   demo.state.events.find((event) => event.stage === "deployment_check");
 
-const runStart = (demo: DemoTimelineController) =>
+const runStart = (demo: DemoTimelineController): DemoEvent | undefined =>
   demo.state.events.find((event) => event.stage === "run_start");
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const stringField = (record: Record<string, unknown> | undefined, field: string): string | undefined => {
+  const value = record?.[field];
+  return typeof value === "string" ? value : undefined;
+};
+
+const numberField = (record: Record<string, unknown> | undefined, field: string): number | undefined => {
+  const value = record?.[field];
+  return typeof value === "number" ? value : undefined;
+};
 
 const readBindings = (value: unknown): ReadonlyArray<readonly [string, string]> => {
   if (!Array.isArray(value)) return [];
@@ -42,19 +56,9 @@ const readBindings = (value: unknown): ReadonlyArray<readonly [string, string]> 
  */
 export const projectDemoLifecycleFacts = (demo: DemoTimelineController): DemoLifecycleFacts => {
   const deployment = deploymentInspect(demo);
-  const deploymentInterpreted = deployment?.interpreted as
-    | {
-        id?: string;
-        artifactId?: string;
-        artifactVersion?: number;
-        driftPolicy?: string;
-        bindings?: unknown;
-      }
-    | undefined;
+  const deploymentInterpreted = isRecord(deployment?.interpreted) ? deployment.interpreted : undefined;
   const run = runStart(demo);
-  const runInterpreted = run?.interpreted as
-    | { runId?: string; status?: string }
-    | undefined;
+  const runInterpreted = isRecord(run?.interpreted) ? run.interpreted : undefined;
 
   return {
     draft: {
@@ -63,19 +67,17 @@ export const projectDemoLifecycleFacts = (demo: DemoTimelineController): DemoLif
       status: "prepared context",
     },
     artifact: {
-      id: deploymentInterpreted?.artifactId ?? "unavailable",
-      version: typeof deploymentInterpreted?.artifactVersion === "number"
-        ? deploymentInterpreted.artifactVersion
-        : null,
+      id: stringField(deploymentInterpreted, "artifactId") ?? "unavailable",
+      version: numberField(deploymentInterpreted, "artifactVersion") ?? null,
     },
     deployment: {
-      id: deploymentInterpreted?.id ?? "unavailable",
-      driftPolicy: deploymentInterpreted?.driftPolicy ?? "unavailable",
-      bindings: readBindings(deploymentInterpreted?.bindings),
+      id: stringField(deploymentInterpreted, "id") ?? "unavailable",
+      driftPolicy: stringField(deploymentInterpreted, "driftPolicy") ?? "unavailable",
+      bindings: readBindings(deploymentInterpreted?.["bindings"]),
     },
     run: {
-      id: runInterpreted?.runId ?? run?.resultingIds.runId ?? null,
-      status: runInterpreted?.status ?? "not started",
+      id: stringField(runInterpreted, "runId") ?? run?.resultingIds.runId ?? null,
+      status: stringField(runInterpreted, "status") ?? "not started",
     },
   };
 };

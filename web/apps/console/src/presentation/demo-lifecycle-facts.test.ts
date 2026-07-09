@@ -4,15 +4,15 @@ import { initialDemoTimelineState } from "../demo/timeline/reducer.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { projectDemoLifecycleFacts } from "./demo-lifecycle-facts.js";
 
-const controller = (): DemoTimelineController => {
+const controller = (eventMode: "recorded" | "empty" = "recorded"): DemoTimelineController => {
   const recording = loadCanonicalDemoRecording();
   return {
     state: {
       ...initialDemoTimelineState,
       mode: "replay",
       phase: "paused",
-      events: recording.events,
-      appliedCount: recording.events.length,
+      events: eventMode === "recorded" ? recording.events : [],
+      appliedCount: eventMode === "recorded" ? recording.events.length : 0,
       autoplay: false,
     },
     inFlight: false,
@@ -54,5 +54,17 @@ describe("projectDemoLifecycleFacts", () => {
     const facts = projectDemoLifecycleFacts(controller());
     expect(facts.run.id).toBe("run_recorded_lda_report");
     expect(facts.run.status).toBe("interrupted");
+  });
+
+  it("falls back honestly when replay evidence has not loaded yet", () => {
+    const facts = projectDemoLifecycleFacts(controller("empty"));
+
+    expect(facts.artifact).toEqual({ id: "unavailable", version: null });
+    expect(facts.deployment).toEqual({
+      id: "unavailable",
+      driftPolicy: "unavailable",
+      bindings: [],
+    });
+    expect(facts.run).toEqual({ id: null, status: "not started" });
   });
 });

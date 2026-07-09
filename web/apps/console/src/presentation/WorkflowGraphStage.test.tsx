@@ -90,7 +90,7 @@ describe("WorkflowGraphStage", () => {
         selectedNodeId={null}
         selectNode={vi.fn()}
         variant="compact"
-        proof={{ runId: "run_recorded_lda_report", traceLabel: "5 workflow nodes", evidenceLabel: "JSON-RPC evidence" }}
+        proof={{ runId: "run_recorded_lda_report", traceLabel: "9 workflow nodes", evidenceLabel: "JSON-RPC evidence" }}
       />,
     );
 
