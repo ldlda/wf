@@ -12,6 +12,7 @@ import {
 } from "./presentation-state.js";
 import { hashForLocation } from "./storyboard-navigation.js";
 import type { MainLocation } from "./storyboard.js";
+import type { DemoApprovalActions, DemoApprovalUiState } from "./demo-approval-actions.js";
 import "./presentation.css";
 import "./styles/demo-workflow.css";
 
@@ -108,6 +109,49 @@ export const PresentationRoute = () => {
     dispatch({ type: "set_playback_mode", mode: demo.state.mode });
   }, [demo.state.mode]);
 
+  const selectedIssueIdsForDemo = (
+    payload: typeof demo.interruptPayload,
+  ): readonly string[] =>
+    payload?.proposed_issues.map((issue) => issue.id) ?? [];
+
+  const [approvalState, setApprovalState] = useState<DemoApprovalUiState>("ready");
+
+  const handleSubmitApproval = useCallback(async () => {
+    const selectedIssueIds = selectedIssueIdsForDemo(demo.interruptPayload);
+    if (demo.state.phase !== "review" || selectedIssueIds.length === 0) return;
+
+    setApprovalState("submitted");
+    await demo.submitSelectedIssues(selectedIssueIds, "Create the selected issue.");
+    await demo.next();
+    dispatch({
+      type: "jump",
+      location: {
+        kind: "main",
+        sceneId: "interrupt-evidence",
+        beatId: "resume",
+        focusPath: [],
+      },
+    });
+  }, [demo]);
+
+  const handleCancelApproval = useCallback(async () => {
+    setApprovalState("cancelled");
+  }, []);
+
+  const approvalActions = useMemo<DemoApprovalActions>(() => ({
+    state: approvalState,
+    canSubmit: demo.state.phase === "review" && selectedIssueIdsForDemo(demo.interruptPayload).length > 0,
+    canCancel: demo.state.phase === "review",
+    submit: handleSubmitApproval,
+    cancel: handleCancelApproval,
+  }), [approvalState, demo.state.phase, demo.interruptPayload, handleSubmitApproval, handleCancelApproval]);
+
+  useEffect(() => {
+    if (demo.state.phase === "ready" || demo.state.phase === "running") {
+      setApprovalState("ready");
+    }
+  }, [demo.state.phase]);
+
   const handleJump = useCallback(
     (location: MainLocation) => dispatch({ type: "jump", location }),
     [],
@@ -131,6 +175,7 @@ export const PresentationRoute = () => {
           demo={demo}
           evidence={evidence}
           timelineAgent={timelineAgent}
+          approvalActions={approvalActions}
           jump={handleJump}
           selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
           openEvidence={() => dispatch({ type: "set_evidence_presentation", presentation: "inspector" })}

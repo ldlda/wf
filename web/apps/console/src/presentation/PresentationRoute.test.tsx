@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 
@@ -193,5 +193,23 @@ describe("PresentationRoute", () => {
     const runButton = await screen.findByRole("button", { name: /run replay walkthrough/i });
     await user.click(runButton);
     expect(await screen.findByLabelText("workflow.runs.start operation")).toBeInTheDocument();
+  });
+
+  it("submits Scene 10 approval and advances to the resume beat", async () => {
+    const user = userEvent.setup();
+    setReplayMode();
+    window.location.hash = "#scene/interrupt-evidence/approval";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const submitButton = await screen.findByRole("button", { name: "Submit" });
+    await waitFor(() => expect(submitButton).toBeEnabled(), { timeout: 10000 });
+
+    await act(async () => {
+      await user.click(submitButton);
+    });
+
+    expect(window.location.hash).toBe("#scene/interrupt-evidence/resume");
+    expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
   });
 });
