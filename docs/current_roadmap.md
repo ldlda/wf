@@ -39,6 +39,7 @@ Design contracts:
 - [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md)
 - [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md)
 - [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md)
+- [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md)
 
 Implementation order:
 
@@ -136,9 +137,14 @@ Implementation order:
     [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
     Implementation:
     [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
-19. Future: presenter companion, Scene 10 product graph, final scene visuals,
+19. Active: distinguish reviewed replay evidence, live target readiness, live
+    active run state, and replay fallback in presentation mode. Design:
+    [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md).
+    Plan:
+    [`presentation live/replay truth plan`](superpowers/plans/2026-07-09-presentation-live-replay-truth.md).
+20. Future: presenter companion, Scene 10 product graph, final scene visuals,
     evidence assets, and rehearsal timing.
-20. Add a static slide/appendix shell only after presentation mode is clear.
+21. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Presentation wishlist / defense readiness:
@@ -218,6 +224,12 @@ Presentation wishlist / defense readiness:
   [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md).
   Implementation:
   [`Scene 10 guided product moment plan`](historical/superpowers/plans/2026-07-09-scene-10-guided-product-moment.md).
+- Active: presentation live/replay truth distinguishes reviewed replay evidence,
+  live target readiness, live active run state, and replay fallback so the demo
+  can look credible without implying fake live execution. Design:
+  [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md).
+  Plan:
+  [`presentation live/replay truth plan`](superpowers/plans/2026-07-09-presentation-live-replay-truth.md).
 - Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
   expected run states, and a timed walkthrough checklist for a 15-minute defense.
 - Presenter companion feasibility: decide whether phone/laptop control is local
