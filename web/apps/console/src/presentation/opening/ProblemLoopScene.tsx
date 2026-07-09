@@ -3,12 +3,34 @@ import type { SceneBeatDefinition, SceneDefinition } from "../storyboard.js";
 import { ConceptNode, ConceptRail } from "./ConceptPrimitives.js";
 
 const toolLoopTurns = [
-  { role: "User prompt", detail: "Do this workspace task once." },
-  { role: "Agent reasoning", detail: "Decides the next action." },
-  { role: "Tool call", detail: "Runs an operation directly." },
-  { role: "Observation", detail: "Reads the result." },
-  { role: "Final answer", detail: "Reports success, but keeps no reusable lifecycle." },
+  {
+    kind: "user",
+    label: "User",
+    detail: "Can you finish this workspace task?",
+  },
+  {
+    kind: "assistant",
+    label: "Assistant",
+    detail: "Plans the next direct action.",
+  },
+  {
+    kind: "tool",
+    label: "Tool call",
+    detail: "Runs one operation against the workspace.",
+  },
+  {
+    kind: "observation",
+    label: "Observation",
+    detail: "Reads the result and decides what to do next.",
+  },
+  {
+    kind: "answer",
+    label: "Answer",
+    detail: "Reports success, but leaves no reusable workflow behind.",
+  },
 ] as const;
+
+const automationProof = ["schemas", "bindings", "records"] as const;
 
 type ProblemLoopSceneProps = {
   readonly scene: SceneDefinition;
@@ -22,27 +44,41 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
       <StageCaption eyebrow="Problem shape" title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
-      <section className="problem-loop-scene" aria-label="action sequence versus reusable automation">
-        <div
-          className="problem-loop-scene__side problem-loop-scene__side--transcript"
+      <section className="problem-loop-scene" aria-label="chat tool loop versus reusable automation">
+        <article
+          className="problem-chat-card"
           data-problem-active={automationBeat ? "false" : "true"}
+          aria-label="one-off chat and tool loop"
         >
-          <h2>One-off tool loop</h2>
-          <ol className="problem-loop-transcript" aria-label="one-off tool loop transcript">
+          <header className="problem-artifact-header">
+            <span>One-off</span>
+            <h2>Chat + tool loop</h2>
+            <p>Good at getting through one request.</p>
+          </header>
+          <ol className="problem-chat-transcript" aria-label="one-off chat and tool transcript">
             {toolLoopTurns.map((turn) => (
-              <li key={turn.role} className="problem-loop-transcript__turn">
-                <span>{turn.role}</span>
+              <li key={turn.kind} className="problem-chat-turn" data-turn-kind={turn.kind}>
+                <span className="problem-chat-turn__label">{turn.label}</span>
                 <p>{turn.detail}</p>
               </li>
             ))}
           </ol>
-          <p>Useful once. Hard to reuse.</p>
-        </div>
+          <p className="problem-artifact-note">The useful work lives in the conversation history.</p>
+        </article>
 
         <div className="problem-loop-scene__bridge" aria-hidden="true">→</div>
 
-        <div className="problem-loop-scene__side" data-problem-active={automationBeat ? "true" : "false"}>
-          <h2>Reusable automation</h2>
+        <article
+          className="problem-blueprint"
+          role="group"
+          aria-label="durable workflow blueprint"
+          data-blueprint-active={automationBeat ? "true" : "false"}
+        >
+          <header className="problem-artifact-header">
+            <span>Reusable</span>
+            <h2>Workflow blueprint</h2>
+            <p>Good at preserving how the work should run again.</p>
+          </header>
           <ConceptRail label="Reusable automation">
             <ConceptNode title="design" icon="design" emphasis={automationBeat ? "primary" : "normal"} />
             <ConceptNode title="save" icon="save" emphasis={automationBeat ? "primary" : "normal"} />
@@ -50,8 +86,12 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
             <ConceptNode title="run" icon="run" emphasis={automationBeat ? "primary" : "normal"} />
             <ConceptNode title="inspect" icon="inspect" emphasis={automationBeat ? "primary" : "normal"} />
           </ConceptRail>
-          <p>The platform makes work reusable.</p>
-        </div>
+          <ul className="problem-blueprint__proof" aria-label="reusable automation proof points">
+            {automationProof.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
+          </ul>
+        </article>
       </section>
       <p className="scene-body__evidence">{scene.evidencePointer}</p>
     </>
