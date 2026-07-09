@@ -13,7 +13,7 @@ import {
   type DemoMode,
   type DemoTimelineState,
 } from "./timeline/reducer.js";
-import type { DemoRecording } from "./timeline/models.js";
+import type { DemoEvent, DemoRecording } from "./timeline/models.js";
 import {
   executeLiveDemoStep,
   failedLiveDemoEvent,
@@ -45,6 +45,7 @@ export type DemoTimelineController = {
   ) => Promise<void>;
   readonly cancelReview: (comment: string) => Promise<void>;
   readonly restart: () => void;
+  readonly primeReplayToStage: (stage: DemoEvent["stage"] | null) => void;
 };
 
 const deriveRecordingId = (state: DemoTimelineState): string | null =>
@@ -53,6 +54,23 @@ const deriveRecordingId = (state: DemoTimelineState): string | null =>
 const deriveMissingMessage = (mode: DemoMode, target: string | null): string | null => {
   if (mode !== "live" || target !== null) return null;
   return "Not connected. Select Live and connect to a workflow server, or switch to Replay.";
+};
+
+const phaseForPrimedStage = (
+  stage: DemoEvent["stage"] | null,
+): DemoTimelineState["phase"] => {
+  if (stage === "interrupt") return "review";
+  if (stage === "completed") return "completed";
+  if (stage === "failed") return "failed";
+  return "paused";
+};
+
+const appliedCountForStage = (
+  events: ReadonlyArray<DemoEvent>,
+  stage: DemoEvent["stage"],
+): number => {
+  const index = events.findIndex((event) => event.stage === stage);
+  return index === -1 ? 0 : index + 1;
 };
 
 export const useDemoTimeline = (
@@ -86,6 +104,31 @@ export const useDemoTimeline = (
     setInterruptPayload(null);
     setOutput(null);
     setTrace(null);
+  }, []);
+
+  const projectTransientState = useCallback((events: ReadonlyArray<DemoEvent>, appliedCount: number) => {
+    const appliedEvents = events.slice(0, appliedCount);
+    const interruptEvent = appliedEvents.find((event) => event.stage === "interrupt");
+    const resumeEvent = appliedEvents.find((event) => event.stage === "run_resume");
+    const traceEvent = appliedEvents.find((event) => event.stage === "trace_read");
+    const completedEvent = appliedEvents.find((event) => event.stage === "completed");
+
+    if (interruptEvent?.interpreted) {
+      const interpreted = interruptEvent.interpreted as { payload: LdaReportInterruptPayload };
+      setInterruptPayload(parseLdaReportInterruptPayload(interpreted.payload));
+    }
+    if (resumeEvent?.interpreted) {
+      const interpreted = resumeEvent.interpreted as { output: LdaReportOutput };
+      setOutput(parseLdaReportOutput(interpreted.output));
+    }
+    if (traceEvent?.interpreted) {
+      setTrace(decodeTracePage(traceEvent.interpreted));
+    }
+    if (completedEvent?.interpreted) {
+      const interpreted = completedEvent.interpreted as { output: LdaReportOutput; trace: TracePage };
+      setOutput(parseLdaReportOutput(interpreted.output));
+      setTrace(decodeTracePage(interpreted.trace));
+    }
   }, []);
 
   useEffect(() => {
@@ -254,6 +297,25 @@ export const useDemoTimeline = (
     dispatch({ type: "restart" });
   }, [resetRuntime]);
 
+  const primeReplayToStage = useCallback((stage: DemoEvent["stage"] | null) => {
+    if (stage === null || state.mode !== "replay") return;
+    const recording = activeRecording.current;
+    if (!recording) return;
+    const appliedCount = appliedCountForStage(recording.events, stage);
+    if (appliedCount === 0) return;
+
+    // Presentation priming projects the reviewed recording to the current beat.
+    // It is not runtime execution and must never run while the live timeline is active.
+    resetRuntime();
+    projectTransientState(recording.events, appliedCount);
+    dispatch({
+      type: "prime_replay",
+      events: recording.events,
+      appliedCount,
+      phase: phaseForPrimedStage(stage),
+    });
+  }, [projectTransientState, resetRuntime, state.mode]);
+
   return {
     state,
     inFlight,
@@ -271,5 +333,6 @@ export const useDemoTimeline = (
     submitSelectedIssues,
     cancelReview,
     restart,
+    primeReplayToStage,
   };
 };

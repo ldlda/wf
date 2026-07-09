@@ -36,7 +36,13 @@ export type DemoTimelineAction =
   | { readonly type: "play" }
   | { readonly type: "continue_review" }
   | { readonly type: "fail"; readonly message: string; readonly event?: DemoEvent }
-  | { readonly type: "restart" };
+  | { readonly type: "restart" }
+  | {
+      readonly type: "prime_replay";
+      readonly events: ReadonlyArray<DemoEvent>;
+      readonly appliedCount: number;
+      readonly phase: DemoTimelinePhase;
+    };
 
 const phaseAfterEvent = (event: DemoEvent): DemoTimelinePhase => {
   if (event.stage === "interrupt") return "review";
@@ -106,6 +112,15 @@ export const demoTimelineReducer = (
       };
     case "restart":
       return { ...initialDemoTimelineState, mode: state.mode };
+    case "prime_replay":
+      return {
+        mode: "replay",
+        phase: action.phase,
+        events: action.events,
+        appliedCount: action.appliedCount,
+        autoplay: false,
+        error: null,
+      };
     default:
       return state;
   }

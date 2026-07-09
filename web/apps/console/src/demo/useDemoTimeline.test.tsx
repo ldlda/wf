@@ -399,4 +399,39 @@ describe("useDemoTimeline", () => {
     const { result } = renderHook(() => useDemoTimeline(null, vi.fn()));
     expect(result.current.missingDeploymentMessage).toContain("Not connected");
   });
+
+  it("primes replay to the interrupt stage immediately", () => {
+    const { result } = renderHook(() => useDemoTimeline("http://127.0.0.1:8765/rpc", vi.fn()));
+
+    act(() => result.current.start("replay"));
+    act(() => result.current.primeReplayToStage("interrupt"));
+
+    expect(result.current.state.mode).toBe("replay");
+    expect(result.current.state.phase).toBe("review");
+    expect(result.current.interruptPayload).not.toBeNull();
+    expect(result.current.state.events[result.current.state.appliedCount - 1]?.stage).toBe("interrupt");
+  });
+
+  it("primes replay to the resume stage with output projection", () => {
+    const { result } = renderHook(() => useDemoTimeline("http://127.0.0.1:8765/rpc", vi.fn()));
+
+    act(() => result.current.start("replay"));
+    act(() => result.current.primeReplayToStage("run_resume"));
+
+    expect(result.current.state.mode).toBe("replay");
+    expect(result.current.state.phase).toBe("paused");
+    expect(result.current.output?.created_issues).toHaveLength(1);
+    expect(result.current.state.events[result.current.state.appliedCount - 1]?.stage).toBe("run_resume");
+  });
+
+  it("does not prime live timelines", () => {
+    const { result } = renderHook(() => useDemoTimeline("http://127.0.0.1:8765/rpc", vi.fn()));
+
+    act(() => result.current.start("live"));
+    act(() => result.current.primeReplayToStage("interrupt"));
+
+    expect(result.current.state.mode).toBe("live");
+    expect(result.current.state.events).toEqual([]);
+    expect(result.current.interruptPayload).toBeNull();
+  });
 });
