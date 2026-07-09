@@ -115,8 +115,12 @@ Implementation order:
     accessibility, figure validation, keyboard roving focus, and stale demo
     agent spec wording. Implementation:
     [`presentation CodeRabbit fixes`](historical/superpowers/plans/2026-07-08-presentation-coderabbit-fixes.md).
-14. Then: adopt source-owned AI Elements chat primitives against existing
-    `AgentMessagePart` / `AgentDriver` contracts.
+14. Completed: presentation chat uses source-owned AI Elements-style
+    conversation, message, tool, and prompt-action primitives against existing
+    `AgentMessagePart` / `TimelineAgent` contracts. Live AI SDK driver remains
+    deferred; the current chat runs the deterministic timeline agent.
+    Implementation:
+    [`presentation AI chat surface`](historical/superpowers/plans/2026-07-09-presentation-ai-chat-surface.md).
 15. Completed: schema approval surface for typed interrupt/resume decisions.
     Scene 10 and prepared-agent approval requests now render schema/payload
     approval UI instead of raw `{ "type": "object" }` as the primary product

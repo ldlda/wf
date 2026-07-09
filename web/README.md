@@ -179,6 +179,12 @@ keeps one workflow graph mounted while execution reaches the typed interrupt
 and approval boundary. Raw protocol payloads are available through the evidence
 receipt and inspector.
 
+The presentation chat surface is source-owned and follows the AI Elements
+conversation/message/tool/prompt-action model. It currently renders the
+prepared timeline agent and approval flow; a future AI SDK driver should target
+`AgentMessagePart` / `TimelineAgent`-compatible events instead of replacing the
+presentation timeline.
+
 The key defense states are directly addressable:
 
 - `/present#scene/workflow-demo/operation`
