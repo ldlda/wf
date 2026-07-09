@@ -1,6 +1,6 @@
 import { useId, useState, type ReactNode } from "react";
 
-export type ConversationMode = "hidden" | "rail" | "dock";
+export type ConversationMode = "hidden" | "full" | "rail" | "dock";
 export type MessageFrom = "user" | "assistant" | "system";
 export type ToolState = "pending" | "success" | "error";
 
