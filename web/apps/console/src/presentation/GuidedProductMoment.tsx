@@ -1,14 +1,15 @@
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import type { DemoApprovalActions } from "./demo-approval-actions.js";
+import { projectDemoRunFacts } from "./demo-run-facts.js";
 import type {
   InterruptContractPresentation,
   OperationPresentation,
 } from "./demo-workflow-model.js";
-import { DemoOutcomePanel } from "./DemoOutcomePanel.js";
-import { InterruptContractPreview } from "./InterruptContractPreview.js";
-import { OperationBlock } from "./OperationBlock.js";
-import type { SceneBeatDefinition } from "./storyboard.js";
 import { demoBeatLensForBeat } from "./demo-workflow-model.js";
+import { InterruptDecisionForm } from "./InterruptDecisionForm.js";
+import { OperationBlock } from "./OperationBlock.js";
+import { RunInputFacts, RunOutputFacts, RunTraceFacts } from "./RunFactsPanel.js";
+import type { SceneBeatDefinition } from "./storyboard.js";
 
 export type GuidedProductMomentProps = {
   readonly beat: SceneBeatDefinition;
@@ -44,6 +45,7 @@ export const GuidedProductMoment = ({
 }: GuidedProductMomentProps) => {
   const moment = momentForBeat(beat.id);
   const lens = demoBeatLensForBeat(beat.id);
+  const facts = projectDemoRunFacts(demo);
   const runResume = demo.state.events.find((event) => event.stage === "run_resume");
 
   return (
@@ -56,27 +58,34 @@ export const GuidedProductMoment = ({
 
       <div className="guided-product-moment__primary">
         {moment === "approval" && contract ? (
-          <InterruptContractPreview
-            contract={contract}
-            mode="approval"
-            hero
-            approvalActions={approvalActions}
-          />
+          <div className="guided-product-moment__approval-grid">
+            <RunInputFacts facts={facts} />
+            <InterruptDecisionForm
+              interrupt={facts.interrupt}
+              runId={demo.state.events.find((e) => e.stage === "run_start")?.resultingIds.runId ?? "unknown"}
+              onSubmit={(ids, comment) => approvalActions?.submit(ids, comment)}
+              onCancel={() => approvalActions?.cancel()}
+              terminalOutcome={approvalActions?.state === "submitted" ? "submitted" :
+                approvalActions?.state === "cancelled" ? "cancelled" : undefined}
+            />
+            <RunOutputFacts facts={facts} />
+          </div>
         ) : null}
         {moment === "resume" && runResume ? (
-          <OperationBlock
-            event={runResume}
-            variant="expanded"
-            openEvidence={openEvidence}
-          />
+          <div className="guided-product-moment__resume-grid">
+            <OperationBlock
+              event={runResume}
+              variant="expanded"
+              openEvidence={openEvidence}
+            />
+            <RunOutputFacts facts={facts} />
+          </div>
         ) : null}
-        {(moment === "output" || moment === "trace") ? (
-          <DemoOutcomePanel
-            beatId={beat.id}
-            lens={lens}
-            operation={operation}
-            contract={contract}
-          />
+        {moment === "output" ? (
+          <RunOutputFacts facts={facts} />
+        ) : null}
+        {moment === "trace" ? (
+          <RunTraceFacts facts={facts} />
         ) : null}
       </div>
     </section>

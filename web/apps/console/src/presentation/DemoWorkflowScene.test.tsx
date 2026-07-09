@@ -103,9 +103,7 @@ describe("DemoWorkflowScene", () => {
     renderBeat("approval", "interrupt-evidence");
 
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "approval");
-    expect(screen.getByLabelText("typed interrupt contract")).toHaveTextContent(
-      "run_recorded_lda_report",
-    );
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
   });
 
   it("makes the Scene 10 approval contract the primary visual", () => {
@@ -113,9 +111,7 @@ describe("DemoWorkflowScene", () => {
 
     const stage = screen.getByLabelText("demo workflow stage");
     expect(stage).toHaveAttribute("data-demo-layout", "approval");
-    expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
-    expect(screen.getByLabelText("typed interrupt contract")).toHaveTextContent("Operator decision");
-    expect(screen.getByRole("group", { name: /issue review resume/i })).toHaveTextContent("submitted / cancelled");
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
   });
 
   it("marks trace beat as evidence layout via guided product moment", () => {
@@ -186,8 +182,8 @@ describe("DemoWorkflowScene", () => {
   it("keeps approval beat contract via guided product moment", () => {
     renderBeat("approval", "interrupt-evidence");
 
-    expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "approval");
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
   });
 
   it("wires approval actions into the Scene 10 schema approval surface", () => {
@@ -205,16 +201,11 @@ describe("DemoWorkflowScene", () => {
     expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
   });
 
-  it("shows a schema approval surface for the approval beat instead of raw schema as the primary visual", () => {
+  it("shows a factual decision form for the approval beat instead of raw schema as the primary visual", () => {
     renderBeat("approval", "interrupt-evidence");
 
-    const approval = screen.getByRole("group", { name: /issue review resume/i });
-    expect(within(approval).getByText("Schema-backed decision")).toBeInTheDocument();
-    expect(within(approval).getByText("selected_issue_ids")).toBeInTheDocument();
-    expect(within(approval).getByText("[\"risk-1\"]")).toBeInTheDocument();
-    expect(within(approval).queryByText("approved")).not.toBeInTheDocument();
-    expect(within(approval).getByRole("button", { name: /submit/i })).toBeDisabled();
-    expect(within(approval).getByRole("button", { name: /cancel/i })).toBeDisabled();
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(screen.getByText("Workflow input")).toBeInTheDocument();
   });
 
   it("keeps raw resume schema visible only in interrupt preview mode", () => {

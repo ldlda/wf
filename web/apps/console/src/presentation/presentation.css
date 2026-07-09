@@ -1668,3 +1668,25 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Factual Scene 10 layout grids */
+.guided-product-moment__approval-grid {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+.guided-product-moment__resume-grid {
+  display: grid;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 1rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .guided-product-moment__approval-grid,
+  .guided-product-moment__resume-grid {
+    grid-template-columns: 1fr;
+  }
+}

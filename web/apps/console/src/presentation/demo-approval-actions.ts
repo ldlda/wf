@@ -4,6 +4,9 @@ export type DemoApprovalActions = {
   readonly state: DemoApprovalUiState;
   readonly canSubmit: boolean;
   readonly canCancel: boolean;
-  readonly submit: () => Promise<void>;
+  readonly submit: (
+    selectedIssueIds?: ReadonlyArray<string>,
+    comment?: string,
+  ) => Promise<void>;
   readonly cancel: () => Promise<void>;
 };

@@ -201,9 +201,11 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByLabelText("typed interrupt contract")).toBeInTheDocument();
-    expect(screen.getByRole("group", { name: /issue review resume/i })).toBeInTheDocument();
-    expect(screen.getByText(/Recorded resume payload for this decision/i)).toBeInTheDocument();
+    expect(await screen.findByText("Workflow input")).toBeInTheDocument();
+    expect(screen.getByText("project-brief.md")).toBeInTheDocument();
+    expect(screen.getByText("issue-board.json")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(screen.getByText("Output not created yet")).toBeInTheDocument();
   });
 
   it("chat run action advances the replay timeline when no live server is configured", async () => {
@@ -250,7 +252,8 @@ describe("PresentationRoute", () => {
       await user.click(cancelButton);
     });
 
-    expect(screen.getByText(/Outcome: cancelled/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
     expect(window.location.hash).toBe("#scene/interrupt-evidence/approval");
     expect(screen.queryByLabelText("workflow.runs.resume operation")).not.toBeInTheDocument();
   });

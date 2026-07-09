@@ -16,7 +16,17 @@ const resumeOperation = projectOperationPresentation(runResume);
 const demo = {
   state: { mode: "replay", phase: "review", events: recording.events, appliedCount: 3, autoplay: false, error: null },
   inFlight: false,
-  interruptPayload: null,
+  interruptPayload: {
+    report_markdown: "# lda.chat Thesis And Project Readiness Report\n\nThe workflow substrate is ready for the defense demo.",
+    proposed_issues: [
+      {
+        id: "risk-1",
+        title: "Prepare the defense walkthrough",
+        body: "Review the live and replay paths before the defense.",
+        severity: "medium",
+      },
+    ],
+  },
   output: null,
   trace: null,
   missingDeploymentMessage: null,
@@ -34,7 +44,7 @@ const demo = {
 } as unknown as DemoTimelineController;
 
 describe("GuidedProductMoment", () => {
-  it("makes approval the primary product decision", () => {
+  it("makes approval the primary product decision with factual panels", () => {
     render(
       <GuidedProductMoment
         beat={findBeat("interrupt-evidence", "approval")!}
@@ -54,7 +64,11 @@ describe("GuidedProductMoment", () => {
 
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "approval");
     expect(screen.getByText(/Run is paused/i)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+    expect(screen.getByText("Workflow input")).toBeInTheDocument();
+    expect(screen.getByText("project-brief.md")).toBeInTheDocument();
+    expect(screen.getByText("issue-board.json")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(screen.getByText("Output not created yet")).toBeInTheDocument();
   });
 
   it("makes resume operation proof primary on resume beat", () => {
@@ -91,6 +105,6 @@ describe("GuidedProductMoment", () => {
     );
 
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveClass("guided-product-moment");
-    expect(screen.getByLabelText("typed interrupt contract")).toHaveAttribute("data-hero", "true");
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
   });
 });
