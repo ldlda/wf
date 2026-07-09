@@ -1295,6 +1295,70 @@
   scroll-behavior: auto !important;
 }
 
+/* Opening concept primitives */
+.concept-rail {
+  display: flex;
+  align-items: stretch;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.concept-node {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+  border: 1px solid color-mix(in oklch, var(--stage-line) 72%, transparent);
+  border-radius: 0.85rem;
+  background: color-mix(in oklch, var(--stage-surface) 86%, transparent);
+  padding: 0.72rem 0.82rem;
+  color: var(--text-primary);
+}
+
+.concept-node[data-concept-emphasis="primary"] {
+  border-color: var(--accent-cyan);
+  background: color-mix(in oklch, var(--accent-cyan) 12%, var(--stage-surface));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--accent-cyan) 18%, transparent);
+}
+
+.concept-node[data-concept-emphasis="muted"] {
+  opacity: 0.62;
+}
+
+.concept-icon {
+  width: 2rem;
+  height: 2rem;
+  color: var(--accent-cyan);
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.concept-node__copy {
+  display: grid;
+  gap: 0.12rem;
+  min-width: 0;
+}
+
+.concept-node__copy strong {
+  color: var(--text-primary);
+  font: 750 0.96rem/1.05 var(--font-interface);
+}
+
+.concept-node__copy span {
+  color: var(--text-secondary);
+  font: 0.78rem/1.25 var(--font-interface);
+}
+
+.concept-node__meta {
+  color: var(--accent-cyan);
+  font: 700 0.72rem/1.2 var(--font-evidence);
+}
+
 /* Demo workflow scene */
 .demo-workflow-scene__graph-area {
   flex: 1;
