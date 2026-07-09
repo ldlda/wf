@@ -106,6 +106,9 @@ export const useDemoTimeline = (
     setTrace(null);
   }, []);
 
+  // Presentation-only projection: derive transient state (interrupt payload,
+  // output, trace) from the canonical recording without executing live runtime
+  // steps. This is a display projection over recorded data, not live evidence.
   const projectTransientState = useCallback((events: ReadonlyArray<DemoEvent>, appliedCount: number) => {
     const appliedEvents = events.slice(0, appliedCount);
     const interruptEvent = appliedEvents.find((event) => event.stage === "interrupt");
