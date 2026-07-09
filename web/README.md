@@ -192,6 +192,11 @@ The key defense states are directly addressable:
 - `/present#scene/workflow-demo/interrupt`
 - `/present#scene/interrupt-evidence/approval`
 
+Scene 10 is factual by design. It projects the reviewed/live run into visible
+workflow input, interrupt payload, resume decision, output, and trace facts.
+Empty trace frame objects are shown as captured empty objects; absent fields are
+called out as not captured rather than replaced by generic placeholders.
+
 ```powershell
 pnpm --dir web dev
 # open http://127.0.0.1:5173/present

@@ -147,9 +147,14 @@ Implementation order:
     [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md).
     Implementation:
     [`presentation live/replay truth plan`](historical/superpowers/plans/2026-07-09-presentation-live-replay-truth.md).
-20. Future: presenter companion, Scene 10 product graph, final scene visuals,
+20. Completed: Scene 10 now presents factual run state: workflow input,
+    interrupt payload, operator resume decision, output, and trace frame facts.
+    Cancel is terminal in presentation mode and does not advance into submitted
+    evidence. Implementation:
+    [`Scene 10 factual run state`](historical/superpowers/plans/2026-07-09-scene-10-factual-run-state.md).
+21. Future: presenter companion, Scene 10 product graph, final scene visuals,
     evidence assets, and rehearsal timing.
-21. Add a static slide/appendix shell only after presentation mode is clear.
+22. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 
 Presentation wishlist / defense readiness:
