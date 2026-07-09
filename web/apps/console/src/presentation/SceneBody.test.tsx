@@ -79,7 +79,7 @@ describe("SceneBody", () => {
     );
 
     expect(screen.getByLabelText("chat tool loop versus reusable automation")).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: /one-off chat and tool transcript/i })).toBeInTheDocument();
+    expect(screen.getByRole("log", { name: /one-off assistant transcript/i })).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /durable workflow blueprint/i })).toBeInTheDocument();
     expect(screen.queryByText("Draft")).not.toBeInTheDocument();
     expect(screen.queryByText("Artifact")).not.toBeInTheDocument();
