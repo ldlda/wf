@@ -12,6 +12,7 @@ import { DemoLifecycleScene } from "./DemoLifecycleScene.js";
 import { DemoWorkflowScene } from "./DemoWorkflowScene.js";
 import { StageCaption } from "./StageCaption.js";
 import { ArchitectureScene } from "./scenes/ArchitectureScene.js";
+import { OpeningThesisScene } from "./opening/OpeningThesisScene.js";
 
 type SceneBodyProps = {
   readonly location: PresentationLocation;
@@ -304,6 +305,7 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
   const content = (() => {
   switch (scene.view) {
     case "narrative":
+      if (scene.id === "thesis") return <OpeningThesisScene scene={scene} beat={beat} />;
       return <NarrativeScene scene={scene} beat={beat} />;
     case "positioning":
       return <PositioningScene scene={scene} beat={beat} />;

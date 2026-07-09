@@ -40,6 +40,28 @@ const demo: DemoTimelineController = {
 afterEach(() => cleanup());
 
 describe("SceneBody", () => {
+  it("renders Scene 1 as an opening decomposition visual", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "thesis", beatId: "substrate", focusPath: [] };
+
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    expect(screen.getByLabelText("AI agent decomposition")).toBeInTheDocument();
+    expect(screen.getByText("submitted substrate")).toBeInTheDocument();
+    expect(screen.getByText("Typed · Durable · Inspectable")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /where is the ai agent/i })).toBeInTheDocument();
+  });
+
   it("renders narrative metadata without mounting the demo graph", () => {
     const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };
     render(

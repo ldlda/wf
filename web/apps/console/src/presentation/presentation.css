@@ -1359,6 +1359,48 @@
   font: 700 0.72rem/1.2 var(--font-evidence);
 }
 
+/* Opening thesis scene */
+.opening-thesis {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: minmax(8rem, 0.85fr) auto;
+  gap: 1rem;
+  align-items: center;
+}
+
+.opening-thesis__title-card {
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  min-height: 10rem;
+  border: 1px solid color-mix(in oklch, var(--stage-line) 54%, transparent);
+  border-radius: 1rem;
+  background:
+    radial-gradient(circle at 30% 30%, color-mix(in oklch, var(--accent-cyan) 12%, transparent), transparent 34%),
+    var(--stage-inset);
+  text-align: center;
+}
+
+.opening-thesis__title-card span {
+  color: var(--text-secondary);
+  font: 700 0.85rem/1 var(--font-evidence);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.opening-thesis__title-card strong {
+  max-width: 14ch;
+  color: var(--text-primary);
+  font: 800 clamp(2rem, 7vw, 4.8rem)/0.92 var(--font-editorial);
+  text-wrap: balance;
+}
+
+.opening-thesis .concept-rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 /* Demo workflow scene */
 .demo-workflow-scene__graph-area {
   flex: 1;
