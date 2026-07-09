@@ -245,4 +245,82 @@ it("renders prepared run tool calls as workflow handoffs", () => {
     expect(screen.getByText("Workflow operation")).toBeInTheDocument();
     expect(screen.getByText("startPreparedReportRun")).toBeInTheDocument();
   });
+
+  it("disables schema approval buttons when approval actions are unavailable", () => {
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "approval",
+        role: "assistant",
+        parts: [
+          {
+            type: "approval-request",
+            callId: "call-1",
+            name: "resumeIssueReview",
+            prompt: "Submit resume request?",
+            contract: {
+              kind: "issue_review",
+              outcomes: ["submitted", "cancelled"],
+              resumeSchema: { type: "object" },
+              resumePayloadPreview: { selected_issue_ids: ["risk-1"] },
+              runId: "run_recorded_lda_report",
+            },
+          },
+        ],
+      },
+    ];
+
+    render(
+      <OperatorChat
+        state={initialPresentationState}
+        messages={messages}
+        onApprove={undefined}
+        onDeny={undefined}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+  });
+
+  it("routes approval requests through provided approval callbacks", async () => {
+    const user = userEvent.setup();
+    const approve = vi.fn();
+    const deny = vi.fn();
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "approval",
+        role: "assistant",
+        parts: [
+          {
+            type: "approval-request",
+            callId: "call-1",
+            name: "resumeIssueReview",
+            prompt: "Submit resume request?",
+            contract: {
+              kind: "issue_review",
+              outcomes: ["submitted", "cancelled"],
+              resumeSchema: { type: "object" },
+              resumePayloadPreview: { selected_issue_ids: ["risk-1"] },
+              runId: "run_recorded_lda_report",
+            },
+          },
+        ],
+      },
+    ];
+
+    render(
+      <OperatorChat
+        state={initialPresentationState}
+        messages={messages}
+        onApprove={approve}
+        onDeny={deny}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Submit" }));
+    expect(approve).toHaveBeenCalledOnce();
+
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(deny).toHaveBeenCalledOnce();
+  });
 });
