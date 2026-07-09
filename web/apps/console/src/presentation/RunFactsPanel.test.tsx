@@ -68,6 +68,7 @@ describe("RunOutputFacts", () => {
     expect(screen.getByText("ISSUE-001")).toBeDefined();
     expect(screen.getByText("local://issue-board/ISSUE-001")).toBeDefined();
     expect(screen.getByText("Create the selected issue.")).toBeDefined();
+    expect(screen.getByRole("region", { name: /workflow markdown output/i })).toBeInTheDocument();
   });
 });
 

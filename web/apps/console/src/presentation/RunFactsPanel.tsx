@@ -51,7 +51,9 @@ export const RunOutputFacts = ({ facts }: RunOutputFactsProps) => (
         <dd>{facts.output.output.comment ?? "none"}</dd>
         <dt>Markdown preview</dt>
         <dd>
-          <pre className="run-facts-markdown-preview">{facts.output.markdownPreview}</pre>
+          <div className="run-facts-markdown-region" role="region" aria-label="workflow markdown output">
+            <pre className="run-facts-markdown-preview">{facts.output.markdownPreview}</pre>
+          </div>
         </dd>
       </dl>
     )}

@@ -47,7 +47,7 @@ describe("GuidedProductMoment", () => {
   it("makes approval the primary product decision with factual panels", () => {
     render(
       <GuidedProductMoment
-        beat={findBeat("interrupt-evidence", "approval")!}
+        beat={findBeat("typed-human-boundary", "approval")!}
         demo={demo}
         contract={contract}
         operation={null}
@@ -74,7 +74,7 @@ describe("GuidedProductMoment", () => {
   it("makes resume operation proof primary on resume beat", () => {
     render(
       <GuidedProductMoment
-        beat={findBeat("interrupt-evidence", "resume")!}
+        beat={findBeat("resume-output-evidence", "resume")!}
         demo={demo}
         contract={contract}
         operation={resumeOperation}
@@ -86,10 +86,34 @@ describe("GuidedProductMoment", () => {
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
   });
 
+  it("keeps approval focused on input and decision without pre-resume output", () => {
+    render(
+      <GuidedProductMoment
+        beat={findBeat("typed-human-boundary", "approval")!}
+        demo={demo}
+        contract={contract}
+        operation={null}
+        approvalActions={{
+          state: "ready",
+          canSubmit: true,
+          canCancel: true,
+          submit: vi.fn(async () => {}),
+          cancel: vi.fn(async () => {}),
+        }}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText("Workflow input")).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(screen.queryByText("Output not created yet")).not.toBeInTheDocument();
+    expect(screen.getByText(/lda.chat Thesis And Project Readiness Report/i)).toBeInTheDocument();
+  });
+
   it("marks the primary surface for visual hierarchy", () => {
     render(
       <GuidedProductMoment
-        beat={findBeat("interrupt-evidence", "approval")!}
+        beat={findBeat("typed-human-boundary", "approval")!}
         demo={demo}
         contract={contract}
         operation={null}

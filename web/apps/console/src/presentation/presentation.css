@@ -1916,6 +1916,16 @@
   display: none;
 }
 
+.run-facts-markdown-region {
+  min-height: 0;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.run-facts-markdown-region::-webkit-scrollbar {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .guided-product-moment__approval-grid,
   .guided-product-moment__resume-grid {
