@@ -181,6 +181,7 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
+    expect(await screen.findByRole("log", { name: "operator conversation" })).toBeInTheDocument();
     expect(await screen.findByText(/Live target is ready/i)).toBeInTheDocument();
     expect(screen.getByLabelText("presentation evidence mode")).toHaveAttribute("data-status", "ready");
     expect(screen.queryByText(/checking reachability/i)).not.toBeInTheDocument();
