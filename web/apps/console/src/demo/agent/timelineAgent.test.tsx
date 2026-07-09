@@ -168,6 +168,22 @@ describe("useTimelineAgent", () => {
     );
   });
 
+  it("live cancel does not call next", async () => {
+    const cancelReview = vi.fn(async () => {});
+    const next = vi.fn(async () => {});
+    const demo = demoController({
+      state: { ...initialDemoTimelineState, mode: "live", phase: "review" },
+      cancelReview,
+      next,
+    });
+
+    const { result } = renderHook(() => useTimelineAgent(demo, { mode: "live", status: readyStatus }));
+    await act(async () => result.current.cancelReview());
+
+    expect(cancelReview).toHaveBeenCalledWith("Cancelled by operator.");
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it("uses replay label when live target failed", () => {
     const demo = demoController();
     const { result } = renderHook(() =>

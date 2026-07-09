@@ -451,4 +451,82 @@ describe("useDemoTimeline", () => {
     expect(result.current.state.events).toEqual([]);
     expect(result.current.interruptPayload).toBeNull();
   });
+
+  it("live cancellation is terminal and does not advance", async () => {
+    vi.useFakeTimers();
+    mockedCallOperation
+      .mockResolvedValueOnce({
+        ok: true,
+        operation: "workflow.deployments.inspect" as const,
+        label: "Inspect deployment",
+        interpreted: {
+          id: "lda_report_case_study.default",
+          artifactId: "lda_report_case_study",
+          artifactVersion: 1,
+          bindings: [],
+          driftPolicy: "block",
+        },
+        exchange: { request: {}, response: {} },
+        equivalentCli: "uv run wf deploy inspect lda_report_case_study.default",
+        durationMs: 4,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        operation: "workflow.runs.start" as const,
+        label: "Start run",
+        interpreted: {
+          runId: "run_demo",
+          deploymentId: "lda_report_case_study.default",
+          artifactId: "lda_report_case_study",
+          artifactVersion: 1,
+          status: "interrupted",
+          resumeReadiness: "ready",
+          interrupt: {
+            kind: "issue_review",
+            payload: {
+              report_markdown: "# Report",
+              proposed_issues: [
+                { id: "risk-1", title: "Defense", body: "Review paths.", severity: "medium" },
+              ],
+            },
+            outcomes: ["submitted", "cancelled"],
+            typed: true,
+            request_schema: { type: "object" },
+            resume_schema: { type: "object" },
+          },
+          outcome: null,
+          error: null,
+          output: null,
+          diagnostics: [],
+          traceCount: 6,
+          nextActions: {
+            canContinue: true,
+            canSaveNow: null,
+            recommendedNextTool: "wf.workflow.resume_run",
+            reason: "Run is interrupted for issue review.",
+            patchExamples: [],
+            warnings: [],
+          },
+        },
+        exchange: { request: {}, response: {} },
+        equivalentCli: "uv run wf run start lda_report_case_study.default --input '<json>'",
+        durationMs: 88,
+      });
+
+    const { result } = renderHook(() =>
+      useDemoTimeline("http://127.0.0.1:8765/rpc", vi.fn()),
+    );
+    act(() => result.current.start());
+    await act(async () => vi.advanceTimersByTimeAsync(900));
+    await act(async () => vi.advanceTimersByTimeAsync(900));
+    expect(result.current.state.phase).toBe("review");
+
+    await act(async () => result.current.cancelReview("Cancelled."));
+    await act(async () => vi.advanceTimersByTimeAsync(1800));
+
+    expect(result.current.state.phase).toBe("cancelled");
+    expect(result.current.output).toBeNull();
+    expect(result.current.trace).toBeNull();
+    expect(mockedCallOperation).toHaveBeenCalledTimes(2);
+  });
 });

@@ -292,8 +292,8 @@ export const useDemoTimeline = (
       comment,
       outcome: "cancelled",
     };
-    dispatch({ type: state.mode === "live" ? "continue_review" : "cancel_review" });
-  }, [state.mode]);
+    dispatch({ type: "cancel_review" });
+  }, []);
 
   const restart = useCallback(() => {
     resetRuntime();

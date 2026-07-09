@@ -122,11 +122,8 @@ export const useTimelineAgent = (
 
   const cancelReview = useCallback(async () => {
     await demo.cancelReview("Cancelled by operator.");
-    // In replay the canonical recording only contains the submitted branch.
-    // Do not call next() or the UI would falsely advance into submitted evidence.
-    if (demo.state.mode === "live") {
-      await demo.next();
-    }
+    // Cancellation is terminal in presentation mode. Do not call next() or the UI
+    // would falsely advance into submitted/resume evidence.
     setMessages((current) => appendToolMessage(
       current,
       "timeline-agent-cancel",
