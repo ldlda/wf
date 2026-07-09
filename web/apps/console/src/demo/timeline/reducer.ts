@@ -6,6 +6,7 @@ export type DemoTimelinePhase =
   | "running"
   | "paused"
   | "review"
+  | "cancelled"
   | "completed"
   | "failed";
 
@@ -35,6 +36,7 @@ export type DemoTimelineAction =
   | { readonly type: "pause" }
   | { readonly type: "play" }
   | { readonly type: "continue_review" }
+  | { readonly type: "cancel_review" }
   | { readonly type: "fail"; readonly message: string; readonly event?: DemoEvent }
   | { readonly type: "restart" }
   | {
@@ -101,6 +103,10 @@ export const demoTimelineReducer = (
     case "continue_review":
       return state.phase === "review"
         ? { ...state, phase: "running", autoplay: true }
+        : state;
+    case "cancel_review":
+      return state.phase === "review"
+        ? { ...state, phase: "cancelled", autoplay: false }
         : state;
     case "fail":
       return {

@@ -395,6 +395,23 @@ describe("useDemoTimeline", () => {
     expect(result.current.trace?.frames.length).toBeGreaterThan(0);
   });
 
+  it("replay cancellation stops without consuming submitted branch", async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useDemoTimeline(null, vi.fn()));
+    act(() => result.current.setMode("replay"));
+    act(() => result.current.start());
+    for (let i = 0; i < 3; i++) {
+      await act(async () => vi.advanceTimersByTimeAsync(900));
+    }
+
+    await act(async () => result.current.cancelReview("Cancelled."));
+    await act(async () => vi.advanceTimersByTimeAsync(1800));
+
+    expect(result.current.state.phase).toBe("cancelled");
+    expect(result.current.state.events[result.current.state.appliedCount - 1]?.stage).toBe("interrupt");
+    expect(result.current.output).toBeNull();
+  });
+
   it("missingDeploymentMessage shows when live mode with null target", () => {
     const { result } = renderHook(() => useDemoTimeline(null, vi.fn()));
     expect(result.current.missingDeploymentMessage).toContain("Not connected");
