@@ -8,42 +8,44 @@ const problemScene = findScene("problem")!;
 afterEach(() => cleanup());
 
 describe("ProblemLoopScene", () => {
-  it("shows direct action as a vertical chat and tool transcript", () => {
+  it("renders the direct-action side as a chat-style tool transcript", () => {
     render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "direct-actions")!} />);
 
-    const transcript = screen.getByRole("list", { name: /one-off tool loop transcript/i });
-    expect(within(transcript).getByText("User prompt")).toBeInTheDocument();
-    expect(within(transcript).getByText("Agent reasoning")).toBeInTheDocument();
+    const transcript = screen.getByRole("list", { name: /one-off chat and tool transcript/i });
+    const turns = within(transcript).getAllByRole("listitem");
+
+    expect(turns).toHaveLength(5);
+    expect(turns[0]).toHaveAttribute("data-turn-kind", "user");
+    expect(turns[1]).toHaveAttribute("data-turn-kind", "assistant");
+    expect(turns[2]).toHaveAttribute("data-turn-kind", "tool");
+    expect(turns[3]).toHaveAttribute("data-turn-kind", "observation");
+    expect(turns[4]).toHaveAttribute("data-turn-kind", "answer");
+    expect(within(transcript).getByText("User")).toBeInTheDocument();
     expect(within(transcript).getByText("Tool call")).toBeInTheDocument();
     expect(within(transcript).getByText("Observation")).toBeInTheDocument();
-    expect(within(transcript).getByText("Final answer")).toBeInTheDocument();
     expect(screen.queryByRole("group", { name: /^Action sequence$/i })).not.toBeInTheDocument();
   });
 
-  it("renders reusable automation with simple verbs only", () => {
+  it("renders reusable automation as a durable workflow blueprint", () => {
     render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "missing-contracts")!} />);
 
-    const automation = screen.getByRole("group", { name: "Reusable automation" });
+    const blueprint = screen.getByRole("group", { name: /durable workflow blueprint/i });
+    expect(blueprint).toHaveAttribute("data-blueprint-active", "true");
+
     for (const label of ["design", "save", "connect", "run", "inspect"]) {
-      expect(within(automation).getByText(label)).toBeInTheDocument();
+      expect(within(blueprint).getByText(label)).toBeInTheDocument();
     }
+
+    expect(within(blueprint).getByText("schemas")).toBeInTheDocument();
+    expect(within(blueprint).getByText("bindings")).toBeInTheDocument();
+    expect(within(blueprint).getByText("records")).toBeInTheDocument();
+  });
+
+  it("keeps Scene 2 body out of formal lifecycle vocabulary", () => {
+    render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "missing-contracts")!} />);
+
     for (const formalName of ["Draft", "Artifact", "Deployment", "Trace"]) {
       expect(screen.queryByText(formalName)).not.toBeInTheDocument();
     }
-  });
-
-  it("keeps reusable automation as the durable counterpart without formal lifecycle words", () => {
-    render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "missing-contracts")!} />);
-
-    expect(screen.getByRole("group", { name: /reusable automation/i })).toBeInTheDocument();
-    expect(screen.getByText("design")).toBeInTheDocument();
-    expect(screen.getByText("save")).toBeInTheDocument();
-    expect(screen.getByText("connect")).toBeInTheDocument();
-    expect(screen.getByText("run")).toBeInTheDocument();
-    expect(screen.getByText("inspect")).toBeInTheDocument();
-    expect(screen.queryByText("Draft")).not.toBeInTheDocument();
-    expect(screen.queryByText("Artifact")).not.toBeInTheDocument();
-    expect(screen.queryByText("Deployment")).not.toBeInTheDocument();
-    expect(screen.queryByText("Trace")).not.toBeInTheDocument();
   });
 });
