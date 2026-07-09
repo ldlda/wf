@@ -1,5 +1,3 @@
-import { mainScenes } from "./storyboard.js";
-
 export type PrimaryArtifact =
   | "opening-decomposition"
   | "tool-loop-transcript"

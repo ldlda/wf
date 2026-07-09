@@ -855,7 +855,7 @@
   grid-template-columns: minmax(0, 1fr) minmax(16rem, 24%);
 }
 
-.demo-workflow-stage[data-support-surface="run-receipt"] .operation-block[data-operation-variant="receipt"],
+.demo-workflow-stage[data-support-surface="run-receipt"] .operation-receipt[data-operation-variant="receipt"],
 .demo-workflow-stage[data-support-surface="output-summary"] .run-facts-card[data-output-priority="summary"] {
   opacity: 0.86;
 }
