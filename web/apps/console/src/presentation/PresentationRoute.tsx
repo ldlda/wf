@@ -130,12 +130,15 @@ export const PresentationRoute = () => {
 
   const [approvalState, setApprovalState] = useState<DemoApprovalUiState>("ready");
 
-  const handleSubmitApproval = useCallback(async () => {
-    const selectedIssueIds = selectedIssueIdsForDemo(demo.interruptPayload);
-    if (demo.state.phase !== "review" || selectedIssueIds.length === 0) return;
+  const handleSubmitApproval = useCallback(async (
+    selectedIssueIds?: ReadonlyArray<string>,
+    comment?: string,
+  ) => {
+    const ids = selectedIssueIds ?? selectedIssueIdsForDemo(demo.interruptPayload);
+    if (demo.state.phase !== "review" || ids.length === 0) return;
 
     setApprovalState("submitted");
-    await demo.submitSelectedIssues(selectedIssueIds, "Create the selected issue.");
+    await demo.submitSelectedIssues(ids, comment ?? "Create the selected issue.");
     await demo.next();
     dispatch({
       type: "jump",
