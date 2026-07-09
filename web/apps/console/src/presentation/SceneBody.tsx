@@ -8,6 +8,7 @@ import {
   type SceneDefinition,
   type SceneBeatDefinition,
 } from "./storyboard.js";
+import { DemoLifecycleScene } from "./DemoLifecycleScene.js";
 import { DemoWorkflowScene } from "./DemoWorkflowScene.js";
 import { StageCaption } from "./StageCaption.js";
 import { ArchitectureScene } from "./scenes/ArchitectureScene.js";
@@ -325,7 +326,9 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
       return <AuthoringScene scene={scene} beat={beat} />;
     case "agent":
       return <AgentHandoffScene scene={scene} beat={beat} />;
-      case "demo":
+      case "demo-lifecycle":
+      return <DemoLifecycleScene scene={scene} beat={beat} demo={demo} />;
+    case "demo":
       return (
         <DemoWorkflowScene
           scene={scene}
