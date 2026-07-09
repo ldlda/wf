@@ -41,6 +41,7 @@ Design contracts:
 - [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md)
 - [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md)
 - [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md)
+- [`presentation opening visuals`](superpowers/specs/2026-07-10-presentation-opening-visuals-design.md)
 
 Implementation order:
 
@@ -194,7 +195,8 @@ Recommended next visual slices:
 
 1. Opening visuals: rebuild Scenes 1 and 2 around concrete diagrams for
    "AI-agent pursuit -> workflow substrate" and "direct actions are not reusable
-   automation".
+   automation". Design:
+   [`presentation opening visuals`](superpowers/specs/2026-07-10-presentation-opening-visuals-design.md).
 2. Demo surface cleanup: normalize Scenes 8-12 into a single product-flow
    language with factual panes, graph context, and fewer competing panels.
 3. Evidence and closing visuals: make Scenes 13 and 14 readable as a defense
