@@ -141,6 +141,30 @@ describe("GuidedProductMoment", () => {
     expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
   });
 
+  it("approval uses a compact input rail and a dominant interrupt report", () => {
+    render(
+      <GuidedProductMoment
+        beat={findBeat("typed-human-boundary", "approval")!}
+        demo={demo}
+        contract={contract}
+        operation={null}
+        approvalActions={{
+          state: "ready",
+          canSubmit: true,
+          canCancel: true,
+          submit: vi.fn(async () => {}),
+          cancel: vi.fn(async () => {}),
+        }}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("region", { name: /workflow input summary/i })).toHaveAttribute("data-density", "compact");
+    expect(screen.getByRole("region", { name: /interrupt report and proposed issues/i })).toHaveAttribute("data-priority", "primary");
+    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(screen.queryByText("Output")).not.toBeInTheDocument();
+  });
+
   it("approval shows input, interrupt payload, and decision but no output or trace", () => {
     render(
       <GuidedProductMoment

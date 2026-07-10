@@ -65,8 +65,10 @@ export const GuidedProductMoment = ({
       <div className="guided-product-moment__primary">
         {moment === "approval" && contract ? (
           <div className="guided-product-moment__approval-grid">
-            <RunInputFacts facts={facts} />
-            <InterruptPayloadFacts facts={facts} />
+            <aside className="guided-product-moment__input-rail" aria-label="workflow input context">
+              <RunInputFacts facts={facts} density="compact" />
+            </aside>
+            <InterruptPayloadFacts facts={facts} priority="primary" />
             <InterruptDecisionForm
               interrupt={facts.interrupt}
               runId={demo.state.events.find((e) => e.stage === "run_start")?.resultingIds.runId ?? "unknown"}

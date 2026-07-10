@@ -3,10 +3,15 @@ import type { DemoRunFacts } from "./demo-run-facts.js";
 
 type RunInputFactsProps = {
   readonly facts: DemoRunFacts;
+  readonly density?: "normal" | "compact";
 };
 
-export const RunInputFacts = ({ facts }: RunInputFactsProps) => (
-  <div className="run-facts-card">
+type InterruptPayloadFactsProps = RunInputFactsProps & {
+  readonly priority?: "normal" | "primary";
+};
+
+export const RunInputFacts = ({ facts, density = "normal" }: RunInputFactsProps) => (
+  <div className="run-facts-card" role="region" aria-label="workflow input summary" data-density={density}>
     <h3>Workflow input</h3>
     <dl className="run-facts-dl">
       <dt>Selected documents</dt>
@@ -32,8 +37,13 @@ const displayPayloadValue = (value: unknown): string => {
   return String(value);
 };
 
-export const InterruptPayloadFacts = ({ facts }: RunInputFactsProps) => (
-  <div className="run-facts-card run-facts-card--interrupt">
+export const InterruptPayloadFacts = ({ facts, priority = "normal" }: InterruptPayloadFactsProps) => (
+  <div
+    className="run-facts-card run-facts-card--interrupt"
+    role="region"
+    aria-label="interrupt report and proposed issues"
+    data-priority={priority}
+  >
     <h3>Interrupt payload</h3>
     <dl className="run-facts-dl run-facts-dl--inline">
       <dt>Kind</dt><dd>{facts.interrupt.kind}</dd>
