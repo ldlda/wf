@@ -367,4 +367,49 @@ describe("PresentationRoute", () => {
     expect(await screen.findByRole("region", { name: /workflow trace frames/i })).toBeInTheDocument();
     expect(screen.queryByText("No trace frames captured.")).not.toBeInTheDocument();
   });
+
+  it("navigates to Scene 8 request beat via hash", async () => {
+    window.location.hash = "#scene/agent-handoff/request";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("heading", { name: "Agent Handoff" })).toBeInTheDocument();
+    expect(screen.getByText(/A thin agent interface receives the report request/)).toBeInTheDocument();
+  });
+
+  it("navigates to Scene 8 handoff beat via hash", async () => {
+    window.location.hash = "#scene/agent-handoff/handoff";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("heading", { name: "Agent Handoff" })).toBeInTheDocument();
+    expect(screen.getByText(/The interface delegates durable work to lda\.chat/)).toBeInTheDocument();
+  });
+
+  it.each([
+    "#scene/prepared-lifecycle/discover",
+    "#scene/prepared-lifecycle/draft",
+    "#scene/prepared-lifecycle/validate",
+    "#scene/prepared-lifecycle/artifact",
+    "#scene/prepared-lifecycle/deployment",
+  ])("navigates to Scene 9 beat %s", async (hash) => {
+    window.location.hash = hash;
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByLabelText("authoring phase rail")).toBeInTheDocument();
+  });
+
+  it("navigating Scene 9 beats does not call workflow authoring RPC operations", async () => {
+    const { callOperation } = await import("../connection/api.js");
+    const mockCallOp = vi.mocked(callOperation);
+    mockCallOp.mockClear();
+    window.location.hash = "#scene/prepared-lifecycle/draft";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByLabelText("authoring phase rail")).toBeInTheDocument();
+    const authoringCalls = mockCallOp.mock.calls.filter((c) => c[0] !== "workflow.health");
+    expect(authoringCalls).toHaveLength(0);
+  });
 });

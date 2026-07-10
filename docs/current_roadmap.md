@@ -171,6 +171,12 @@ Implementation order:
     rehearsal timing.
 24. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
+25. Completed: presentation agent authoring story creates a canonical prepared
+    authoring recording, Scene 8 as an authentic full-screen conversation,
+    Scene 9 as a 5-phase lifecycle with trace panel, and route-level coverage
+    that never calls workflow authoring RPC operations during Scene 9
+    navigation. Implementation:
+    [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
 
 Presentation visual audit, July 10:
 
@@ -190,44 +196,12 @@ Presentation visual audit, July 10:
 - Completed: Scenes 13 and 14 now close with a bounded evaluation board,
   contribution boundary/future-work map, and canonical defense-question index.
 
-## Planned: Presentation Recomposition And Authoring Story
+## Completed: Presentation Recomposition And Authoring Story
 
-The presentation needs a deck-wide compositional pass, not more isolated
-opacity tweaks. A scene should establish an overview, then give one object the
-stage while supporting evidence moves aside, exits, or enters as needed. A
-focused object may expand into an inspectable graph, command/result surface, or
-discussion point before the next object takes focus. Comparisons remain visible
-when comparison is the point; unrelated support does not remain on stage by
-default.
-
-- Establish a reusable overview -> focus -> transition grammar across the
-  presentation. Motion should communicate spatial ownership, not merely dim
-  inactive elements. Reserve cyan workflow evidence for the demo range; use
-  editorial ink, paper, and amber outside it.
-- Recompose Scenes 1 through 7 around that grammar. Scene 2 should sequence
-  one-off chat/tool actions before durable automation. Scene 3 should stage
-  the left and right positioning panes before the substrate resolves between
-  them. Scene 6 should let architecture blocks expand into child figures.
-  Scene 7 should begin with the five-stage authoring overview, then focus each
-  stage with concrete command, result, diagnostic, or graph evidence.
-- Make Scene 8 a full-screen assistant-ui `Thread` that establishes the
-  external planner interface with no workflow chrome competing for attention.
-- Make Scene 9 the deterministic authoring proof. It uses a collapsible
-  assistant-ui `AssistantModal` opened by an `Agent trace` trigger over the
-  workflow canvas. Each authoring phase contains multiple literal `wf` tool
-  calls, then updates the main lifecycle/graph projection:
-  1. discover sources, capabilities, and schemas;
-  2. create the draft, steps, and outcome routes;
-  3. bind, validate, diagnose, and repair;
-  4. compile and inspect the immutable artifact;
-  5. create and validate the deployment.
-  Scene 10 begins only after that prepared deployment is legible.
-- Treat broken trace-frame display as a blocking product defect before the
-  run/evidence arc is redesigned around trace proof. Diagnose it separately
-  with a regression test and use factual run/trace data from the console path.
-- Recut crowded multi-beat scenes, including Scenes 13 and 14, so their beats
-  use distinct dominant artifacts instead of permanently rendering a complete
-  board or map with only minor emphasis shifts.
+Scenes 8 and 9 are now implemented as authentic external-agent handoff and
+factual prepared-authoring proof. The canonical recording, full-screen Scene 8,
+Scene 9 lifecycle with trace panel, and route coverage are all in place. Plan:
+[`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
 
 Recommended next visual slices:
 
@@ -252,11 +226,15 @@ Recommended next visual slices:
    space. Implementation:
    [`guided proof scene composition cleanup`](historical/superpowers/plans/2026-07-10-guided-proof-scene-composition-cleanup.md).
 5. Completed: Evidence and closing visuals make Scenes 13 and 14 readable as a
-   defense artifact: bounded evaluation board, claim boundaries, future-work
-   map, and canonical examiner-question index. Design:
-   [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md).
-   Implementation:
-   [`presentation evaluation and closing plan`](historical/superpowers/plans/2026-07-10-presentation-evaluation-closing.md).
+    defense artifact: bounded evaluation board, claim boundaries, future-work
+    map, and canonical examiner-question index. Design:
+    [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md).
+    Implementation:
+    [`presentation evaluation and closing plan`](historical/superpowers/plans/2026-07-10-presentation-evaluation-closing.md).
+6. Completed: Presentation agent authoring story rebuilds Scenes 8 and 9 as
+    authentic external-agent handoff and factual prepared-authoring proof.
+    Implementation:
+    [`presentation agent authoring story plan`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
 
 Presentation wishlist / defense readiness:
 

@@ -177,11 +177,14 @@ The final presentation beats frame the evaluation as bounded evidence, make
 claim boundaries and future work explicit, and end on the canonical defense
 discussion index rather than a benchmark or generic conclusion.
 
-Scenes 8 through 12 use the canonical replay as their only execution evidence.
-The handoff expands an interpreted run operation into the center stage, then
-keeps one workflow graph mounted while execution reaches the typed interrupt
-and approval boundary. Raw protocol payloads are available through the evidence
-receipt and inspector.
+Scenes 8 and 9 use the canonical prepared-authoring recording as their only
+execution evidence. Scene 8 is a full-screen conversation that establishes the
+external agent handoff; Scene 9 breaks the prepared authoring into five phases
+with an overlay trace panel. Neither scene calls workflow authoring RPC
+operations — they consume deterministic prepared data. Scenes 10 through 12 use
+the canonical replay to show run, interrupt, approval, resume, output, and
+trace. Raw protocol payloads are available through the evidence receipt and
+inspector.
 
 The presentation chat surface is source-owned and follows the AI Elements
 conversation/message/tool/prompt-action model. It currently renders the
@@ -195,6 +198,11 @@ The key defense states are directly addressable:
 - `/present#scene/workflow-demo/graph`
 - `/present#scene/workflow-demo/interrupt`
 - `/present#scene/interrupt-evidence/approval`
+- `/present#scene/agent-handoff/request` — Scene 8, prepared handoff request
+- `/present#scene/agent-handoff/handoff` — Scene 8, agent accepts
+- `/present#scene/prepared-lifecycle/discover` — Scene 9, discover phase
+- `/present#scene/prepared-lifecycle/draft` — Scene 9, draft phase
+- `/present#scene/prepared-lifecycle/deployment` — Scene 9, deployment phase
 
 Scene 12 is factual by design. It projects the reviewed/live run into visible
 workflow input, interrupt payload, resume decision, output, and trace facts.
@@ -307,10 +315,30 @@ The current prepared recipe can:
 This is intentionally not a general autonomous planner. A future server-side
 Vercel AI SDK driver can feed the same message-part interface.
 
-### Demo Climax (Scenes 9–12)
+### Authoring Story (Scenes 8 and 9)
 
-Scenes 9 through 12 are the demo climax. They keep a continuity rail visible while
-the prepared replay moves from agent handoff, to persisted workflow run, to
-typed human interrupt, to resume/output/evidence. The rail and outcome panel are
+Scenes 8 and 9 are the prepared authoring story. They use deterministic data
+from the committed `projectPreparedAuthoring()` recording and never call
+workflow authoring RPC operations.
+
+- **Scene 8 (Agent Handoff)**: a full-screen prepared conversation that
+  establishes the external agent interface. The `request` beat shows the
+  operator requesting a report workflow; the `handoff` beat reveals the full
+  completed conversation across all authoring phases.
+- **Scene 9 (Prepared Workflow Lifecycle)**: a five-phase lifecycle
+  (discover, draft, validate, artifact, deployment) with a compact phase rail
+  and one dominant command/result projection per beat. An overlay
+  `AuthoringTracePanel` surfaces the full agent trace for the active phase
+  without competing with the lifecycle projection.
+
+The authoring scenes consume deterministic prepared data and never call
+workflow authoring RPCs — only `workflow.health` infrastructure pings are
+permitted.
+
+### Demo Climax (Scenes 10–12)
+
+Scenes 10 through 12 are the demo climax. They keep a continuity rail visible
+while the prepared replay moves from persisted workflow run, to typed human
+interrupt, to resume/output/evidence. The rail and outcome panel are
 presentation-only projections over the committed replay; they do not add live
 backend dependencies.
