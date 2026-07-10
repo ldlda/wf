@@ -114,6 +114,32 @@ describe("AssistantOperatorThread", () => {
     expect(run).toHaveBeenCalledOnce();
   });
 
+  it("labels and opens the synchronized authoring phase group", () => {
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "authoring-validate-tools",
+        role: "assistant",
+        parts: [
+          { type: "tool-call", call: { id: "authoring-validate-command-0", name: "runWorkflowCommand", input: {} } },
+          { type: "tool-result", result: { callId: "authoring-validate-command-0", name: "runWorkflowCommand", status: "success", output: {} } },
+        ],
+      },
+    ];
+
+    render(
+      <AssistantOperatorThread
+        mode="dock"
+        surface="dock"
+        messages={messages}
+        activeToolGroupId="authoring-validate"
+      />,
+    );
+
+    expect(screen.getByRole("log")).toHaveAttribute("data-surface", "dock");
+    expect(screen.getByRole("button", { name: /validate.*1 tool call/i }))
+      .toHaveAttribute("aria-expanded", "true");
+  });
+
   it("renders structured tool results through the generated fallback result slot", () => {
     const messages: ReadonlyArray<AgentMessage> = [
       {

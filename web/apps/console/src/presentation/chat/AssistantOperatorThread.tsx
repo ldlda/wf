@@ -1,4 +1,4 @@
-import { useCallback, useMemo, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import type { ToolCallMessagePartStatus } from "@assistant-ui/react";
 import {
   ToolFallbackArgs,
@@ -27,6 +27,8 @@ type AssistantOperatorThreadProps = {
   readonly submitApproval?: (() => void) | undefined;
   readonly cancelApproval?: (() => void) | undefined;
   readonly ariaLabel?: string | undefined;
+  readonly surface?: "stage" | "dock" | undefined;
+  readonly activeToolGroupId?: string | undefined;
 };
 
 const formatJson = (value: unknown): string => {
@@ -87,16 +89,18 @@ const renderContentPart = (
   submitApproval?: (() => void) | undefined,
   cancelApproval?: (() => void) | undefined,
   defaultOpen?: boolean,
+  pairedResult?: Extract<ToolRenderPart, { readonly type: "tool-result" }>,
 ): ReactNode => {
   if (part.type === "text") {
     return <p style={{ whiteSpace: "pre-line" }}>{part.text}</p>;
   }
-  const status = statusForToolPart(part);
+  const resultPart = pairedResult ?? (part.type === "tool-result" ? part : undefined);
+  const status = resultPart ? statusForToolPart(resultPart) : undefined;
   const toolName = part.toolName;
   const args = part.type === "tool-call" ? part.args : undefined;
   const contract = part.type === "tool-call" ? approvalContractFromArgs(args) : undefined;
   const argsText = args !== undefined ? formatJson(args) : undefined;
-  const result = resultForToolPart(part);
+  const result = resultPart ? resultForToolPart(resultPart) : undefined;
 
   if (toolName === "resumeIssueReview" && contract) {
     return (
@@ -132,11 +136,17 @@ const renderContentPart = (
 };
 
 const AssistantMessageBody = ({
+  messageId,
   parts,
+  openToolGroups,
+  setToolGroupOpen,
   submitApproval,
   cancelApproval,
 }: {
+  readonly messageId: string;
   readonly parts: readonly AssistantContentPart[];
+  readonly openToolGroups: ReadonlySet<string>;
+  readonly setToolGroupOpen: (groupId: string, open: boolean) => void;
   readonly submitApproval?: (() => void) | undefined;
   readonly cancelApproval?: (() => void) | undefined;
 }) => {
@@ -160,24 +170,49 @@ const AssistantMessageBody = ({
       index += 1;
     }
 
-    if (toolRun.length === 1) {
+    const calls = toolRun.filter((tool): tool is Extract<ToolRenderPart, { readonly type: "tool-call" }> =>
+      tool.type === "tool-call");
+    const logicalTools = calls.length > 0 ? calls : toolRun;
+
+    if (logicalTools.length === 1 && !messageId.startsWith("authoring-")) {
       rendered.push(
         <div key={`tool-${toolRunStart}`}>
-          {renderContentPart(toolRun[0]!, submitApproval, cancelApproval)}
+          {renderContentPart(logicalTools[0]!, submitApproval, cancelApproval)}
         </div>,
       );
       continue;
     }
 
+    const groupId = messageId.endsWith("-tools") ? messageId.slice(0, -"-tools".length) : messageId;
+    const phase = groupId.startsWith("authoring-") ? groupId.slice("authoring-".length) : null;
+    const phaseLabel = phase ? `${phase[0]!.toUpperCase()}${phase.slice(1)}` : null;
+    const count = logicalTools.length;
     rendered.push(
-      <ToolGroupRoot key={`tool-group-${toolRunStart}`} defaultOpen>
-        <ToolGroupTrigger count={toolRun.length} />
+      <ToolGroupRoot
+        key={`tool-group-${toolRunStart}`}
+        {...(phaseLabel
+          ? {
+              open: openToolGroups.has(groupId),
+              onOpenChange: (open: boolean) => setToolGroupOpen(groupId, open),
+            }
+          : { defaultOpen: true })}
+      >
+        <ToolGroupTrigger
+          count={count}
+          {...(phaseLabel ? { label: `${phaseLabel} · ${count} tool ${count === 1 ? "call" : "calls"}` } : {})}
+        />
         <ToolGroupContent>
-          {toolRun.map((tool, toolIndex) => (
+          {logicalTools.map((tool, toolIndex) => {
+            const pairedResult = tool.type === "tool-call"
+              ? toolRun.find((candidate): candidate is Extract<ToolRenderPart, { readonly type: "tool-result" }> =>
+                  candidate.type === "tool-result" && candidate.toolCallId === tool.toolCallId)
+              : undefined;
+            return (
             <div key={`${tool.type}-${tool.toolName}-${tool.toolCallId ?? "no-id"}-${toolIndex}`}>
-              {renderContentPart(tool, submitApproval, cancelApproval, false)}
+              {renderContentPart(tool, submitApproval, cancelApproval, false, pairedResult)}
             </div>
-          ))}
+            );
+          })}
         </ToolGroupContent>
       </ToolGroupRoot>,
     );
@@ -213,8 +248,26 @@ export const AssistantOperatorThread = ({
   submitApproval,
   cancelApproval,
   ariaLabel = "operator conversation",
+  surface,
+  activeToolGroupId,
 }: AssistantOperatorThreadProps) => {
   const projected = useMemo(() => projectAgentMessagesForAssistant(messages), [messages]);
+  const [openToolGroups, setOpenToolGroups] = useState<ReadonlySet<string>>(
+    () => new Set(activeToolGroupId ? [activeToolGroupId] : []),
+  );
+
+  useEffect(() => {
+    if (activeToolGroupId) setOpenToolGroups(new Set([activeToolGroupId]));
+  }, [activeToolGroupId]);
+
+  const setToolGroupOpen = useCallback((groupId: string, open: boolean) => {
+    setOpenToolGroups((current) => {
+      const next = new Set(current);
+      if (open) next.add(groupId);
+      else next.delete(groupId);
+      return next;
+    });
+  }, []);
 
   const handleRun = useCallback(() => {
     if (!runAction || runAction.disabled) return;
@@ -222,7 +275,13 @@ export const AssistantOperatorThread = ({
   }, [runAction]);
 
   return (
-    <section className="assistant-operator-thread" data-mode={mode} role="log" aria-label={ariaLabel}>
+    <section
+      className="assistant-operator-thread"
+      data-mode={mode}
+      data-surface={surface ?? mode}
+      role="log"
+      aria-label={ariaLabel}
+    >
       <div className="assistant-thread">
         <div className="assistant-thread__viewport">
           {projected.map((message) => {
@@ -239,7 +298,10 @@ export const AssistantOperatorThread = ({
             return (
               <MessageBubble key={message.id} role="assistant">
                 <AssistantMessageBody
+                  messageId={message.id}
                   parts={message.content}
+                  openToolGroups={openToolGroups}
+                  setToolGroupOpen={setToolGroupOpen}
                   submitApproval={submitApproval}
                   cancelApproval={cancelApproval}
                 />
