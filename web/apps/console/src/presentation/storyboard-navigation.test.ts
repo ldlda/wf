@@ -23,6 +23,15 @@ describe("storyboard navigation", () => {
       .toBe("#discuss/where-is-ai-agent");
   });
 
+  it("parses the Questions beat location", () => {
+    expect(locationFromHash("#scene/conclusion/questions")).toEqual({
+      kind: "main",
+      sceneId: "conclusion",
+      beatId: "questions",
+      focusPath: [],
+    });
+  });
+
   it("falls back for unknown scene, beat, and branch hashes", () => {
     expect(locationFromHash("#scene/missing/nope")).toEqual(defaultMainLocation);
     expect(locationFromHash("#scene/lifecycle/nope")).toEqual(defaultMainLocation);

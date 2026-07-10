@@ -35,6 +35,13 @@ describe("defense storyboard catalog", () => {
     }
   });
 
+  it("adds a hidden-chat questions beat after the conclusion beats", () => {
+    expect(findBeat("conclusion", "questions")).toBeDefined();
+    expect(findBeat("evaluation", "cohort")?.chatMode).toBe("hidden");
+    expect(findBeat("conclusion", "conclusion")?.chatMode).toBe("hidden");
+    expect(findBeat("conclusion", "questions")?.chatMode).toBe("hidden");
+  });
+
   it("uses act-level stage themes and independent chat composition", () => {
     expect(mainScenes.slice(0, 3).every((scene) => scene.stageTheme === "paper")).toBe(true);
     expect(mainScenes.slice(3, 12).every((scene) => scene.stageTheme === "night")).toBe(true);

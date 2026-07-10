@@ -239,9 +239,9 @@ export const mainScenes = defineScenes([
     stageTheme: "paper",
     view: "evaluation",
     beats: [
-      sceneBeat("cohort", "36-trial cohort", "Two challenges, two hosted models, three profiles, and three waves."),
-      sceneBeat("validity", "Bounded validity", "Manual audit separates task completion from valid product-surface evidence."),
-      sceneBeat("findings", "Longitudinal findings", "Trials exposed concrete authoring and diagnostic UX gaps."),
+      sceneBeat("cohort", "36-trial cohort", "Two challenges, two hosted models, three profiles, and three waves.", { chatMode: "hidden" }),
+      sceneBeat("validity", "Bounded validity", "Manual audit separates task completion from valid product-surface evidence.", { chatMode: "hidden" }),
+      sceneBeat("findings", "Longitudinal findings", "Trials exposed concrete authoring and diagnostic UX gaps.", { chatMode: "hidden" }),
     ],
   },
   {
@@ -253,9 +253,10 @@ export const mainScenes = defineScenes([
     stageTheme: "paper",
     view: "conclusion",
     beats: [
-      sceneBeat("limits", "Implemented boundary", "The prototype is not a production sandbox, scheduler, or broad agent benchmark."),
-      sceneBeat("future", "Surrounding layers", "A live LLM interface, scheduling, and broader evaluation remain future work."),
-      sceneBeat("conclusion", "Planner proposes; runtime executes", "The typed substrate makes reusable agent-operated automation inspectable.", { chatMode: "dock", chatTheme: "light" }),
+      sceneBeat("limits", "Implemented boundary", "The prototype is not a production sandbox, scheduler, or broad agent benchmark.", { chatMode: "hidden" }),
+      sceneBeat("future", "Surrounding layers", "A live LLM interface, scheduling, and broader evaluation remain future work.", { chatMode: "hidden" }),
+      sceneBeat("conclusion", "Planner proposes; runtime executes", "The typed substrate makes reusable agent-operated automation inspectable.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("questions", "Questions", "Discussion topics gathered for examiner questions.", { chatMode: "hidden", chatTheme: "light" }),
     ],
   },
 ]);
