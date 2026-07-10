@@ -16,7 +16,7 @@ export const RunInputFacts = ({ facts, density = "normal" }: RunInputFactsProps)
     <dl className="run-facts-dl">
       <dt>Selected documents</dt>
       <dd>
-        <ul className="run-facts-list">
+        <ul className="run-facts-list" aria-label="selected documents">
           {facts.input.selectedDocuments.map((doc) => (
             <li key={doc}>{doc}</li>
           ))}
@@ -107,9 +107,14 @@ export const RunOutputFacts = ({ facts, priority = "summary" }: RunOutputFactsPr
             <ul className="run-facts-list">
               {facts.output.createdIssues.map((issue) => (
                 <li key={issue.id}>
-                  <strong>{issue.id}</strong> — {issue.title}
-                  <br />
-                  <span className="run-facts-url">{issue.url}</span>
+                  <strong>{issue.id}</strong>
+                  {priority === "report" ? <> — {issue.title}</> : null}
+                  {priority === "report" ? (
+                    <>
+                      <br />
+                      <span className="run-facts-url">{issue.url}</span>
+                    </>
+                  ) : null}
                 </li>
               ))}
             </ul>
@@ -119,9 +124,11 @@ export const RunOutputFacts = ({ facts, priority = "summary" }: RunOutputFactsPr
           <dt>Comment</dt>
           <dd>{facts.output.output.comment ?? "none"}</dd>
         </dl>
-        <div className="run-facts-scroll-region run-facts-scroll-region--markdown" role="region" aria-label="workflow markdown output">
-          <pre className="run-facts-markdown-preview">{facts.output.markdownPreview}</pre>
-        </div>
+        {priority === "report" ? (
+          <div className="run-facts-scroll-region run-facts-scroll-region--markdown" role="region" aria-label="workflow markdown output">
+            <pre className="run-facts-markdown-preview">{facts.output.markdownPreview}</pre>
+          </div>
+        ) : null}
       </>
     )}
   </div>

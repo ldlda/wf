@@ -72,6 +72,12 @@ describe("RunInputFacts", () => {
     render(<RunInputFacts facts={baseFacts} density="compact" />);
     expect(screen.getByRole("region", { name: /workflow input summary/i })).toHaveAttribute("data-density", "compact");
   });
+
+  it("labels the selected document list for compact approval rails", () => {
+    render(<RunInputFacts facts={baseFacts} density="compact" />);
+
+    expect(screen.getByRole("list", { name: /selected documents/i })).toHaveTextContent("architecture-notes.md");
+  });
 });
 
 describe("InterruptPayloadFacts", () => {
@@ -156,7 +162,7 @@ describe("RunOutputFacts", () => {
       },
     };
 
-    render(<RunOutputFacts facts={createdFacts} />);
+    render(<RunOutputFacts facts={createdFacts} priority="report" />);
 
     expect(screen.getByText("ISSUE-001")).toBeDefined();
     expect(screen.getByText("local://issue-board/ISSUE-001")).toBeDefined();
@@ -171,6 +177,16 @@ describe("RunOutputFacts", () => {
 
     expect(screen.getByRole("region", { name: /workflow markdown output/i })).toHaveClass("run-facts-scroll-region");
     expect(screen.getByText("ISSUE-001")).toBeInTheDocument();
+  });
+
+  it("keeps summary output compact by omitting report markdown", () => {
+    const createdFacts = makeCreatedFacts("# Report\n\nLong body");
+
+    render(<RunOutputFacts facts={createdFacts} priority="summary" />);
+
+    expect(screen.queryByRole("region", { name: /workflow markdown output/i })).not.toBeInTheDocument();
+    expect(screen.getByText("ISSUE-001")).toBeInTheDocument();
+    expect(screen.queryByText(/Prepare defense/)).not.toBeInTheDocument();
   });
 });
 
