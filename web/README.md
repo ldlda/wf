@@ -169,7 +169,7 @@ both modes. Replay is visibly labeled and does not create real issues.
 ### Presentation Mode
 
 The console exposes `/present`, a 720p no-scroll defense compositor for the
-prepared `lda_report_workflow` story. It renders a 12-scene, multi-beat
+prepared `lda_report_workflow` story. It renders a 14-scene, multi-beat
 storyboard with an adaptive aspect-ratio canvas, stable stage regions, discussion
 branches, act themes, a chat dock, and keyboard navigation.
 
