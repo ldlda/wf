@@ -36,8 +36,12 @@ export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onDeny
     : timelineAgent && timelineAgent.messages.length > 0
       ? timelineAgent.messages
       : fallbackMessages(state);
-  const submit = timelineAgent?.submitSelectedIssues ?? onApprove;
-  const cancel = timelineAgent?.cancelReview ?? onDeny;
+  const submit = timelineAgent
+    ? () => { timelineAgent.submitSelectedIssues().catch(console.error); }
+    : onApprove;
+  const cancel = timelineAgent
+    ? () => { timelineAgent.cancelReview().catch(console.error); }
+    : onDeny;
   const composition = compositionForState(state);
   const presentationSurface = composition.chatTheme === "light" ? "editorial" : "night";
   return (

@@ -177,7 +177,7 @@ The final presentation beats frame the evaluation as bounded evidence, make
 claim boundaries and future work explicit, and end on the canonical defense
 discussion index rather than a benchmark or generic conclusion.
 
-Scenes 8 through 10 use the canonical replay as their only execution evidence.
+Scenes 8 through 12 use the canonical replay as their only execution evidence.
 The handoff expands an interpreted run operation into the center stage, then
 keeps one workflow graph mounted while execution reaches the typed interrupt
 and approval boundary. Raw protocol payloads are available through the evidence
@@ -196,7 +196,7 @@ The key defense states are directly addressable:
 - `/present#scene/workflow-demo/interrupt`
 - `/present#scene/interrupt-evidence/approval`
 
-Scene 10 is factual by design. It projects the reviewed/live run into visible
+Scene 12 is factual by design. It projects the reviewed/live run into visible
 workflow input, interrupt payload, resume decision, output, and trace facts.
 Empty trace frame objects are shown as captured empty objects; absent fields are
 called out as not captured rather than replaced by generic placeholders.
@@ -229,8 +229,8 @@ chat to `rail`.
 
 #### Stage Themes
 
-Stage themes change by act: `paper` for scenes 1-3 and 11-12, `night` for
-scenes 4-10. Presenter controls allow overriding stage and chat themes
+Stage themes change by act: `paper` for scenes 1-3 and 13-14, `night` for
+scenes 4-12. Presenter controls allow overriding stage and chat themes
 independently during rehearsal.
 
 #### Discussion Branches
@@ -307,9 +307,9 @@ The current prepared recipe can:
 This is intentionally not a general autonomous planner. A future server-side
 Vercel AI SDK driver can feed the same message-part interface.
 
-### Demo Climax (Scenes 9–10)
+### Demo Climax (Scenes 9–12)
 
-Scenes 9 and 10 are the demo climax. They keep a continuity rail visible while
+Scenes 9 through 12 are the demo climax. They keep a continuity rail visible while
 the prepared replay moves from agent handoff, to persisted workflow run, to
 typed human interrupt, to resume/output/evidence. The rail and outcome panel are
 presentation-only projections over the committed replay; they do not add live

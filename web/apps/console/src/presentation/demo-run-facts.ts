@@ -201,7 +201,7 @@ const readOutputFacts = (
   };
 };
 
-const formatRecord = (record: Record<string, unknown>, absentLabel: string): string =>
+const formatRecord = (record: Record<string, unknown> | undefined, absentLabel: string): string =>
   formatFactValue(record, absentLabel);
 
 const readTraceFacts = (
@@ -225,11 +225,11 @@ const readTraceFacts = (
         stepType: stringField(frame, "stepType") ?? "unknown",
         outcome: stringField(frame, "outcome") ?? "unknown",
         resolvedInputLabel: formatRecord(
-          recordField(frame, "resolvedInput") ?? {},
+          recordField(frame, "resolvedInput"),
           "not captured in this recording",
         ),
-        outputLabel: formatRecord(recordField(frame, "output") ?? {}, "not captured in this recording"),
-        stateChangesLabel: formatRecord(recordField(frame, "stateChanges") ?? {}, "not captured in this recording"),
+        outputLabel: formatRecord(recordField(frame, "output"), "not captured in this recording"),
+        stateChangesLabel: formatRecord(recordField(frame, "stateChanges"), "not captured in this recording"),
       }];
     }),
   };

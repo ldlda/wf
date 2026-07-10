@@ -91,7 +91,7 @@ export const useTimelineAgent = (
   const canRun = demo.canStart && !demo.inFlight && demo.state.phase !== "running";
 
   const runPreparedWorkflow = useCallback(async () => {
-    if (!demo.canStart || demo.inFlight) return;
+    if (!demo.canStart || demo.inFlight || demo.state.phase === "running") return;
     demo.start(modeLabel);
     setMessages((current) => appendToolMessage(
       current,

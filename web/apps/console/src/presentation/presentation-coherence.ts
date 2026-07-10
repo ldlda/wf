@@ -163,7 +163,8 @@ export const demoSurfaceForBeat = (
   if (sceneId === "resume-output-evidence") {
     if (beatId === "resume") return { primarySurface: "resume-decision", supportSurface: "output-summary" };
     if (beatId === "output") return { primarySurface: "workflow-output", supportSurface: "none" };
-    return { primarySurface: "trace-evidence", supportSurface: "output-summary" };
+    if (beatId === "trace") return { primarySurface: "trace-evidence", supportSurface: "output-summary" };
+    throw new Error(`Unknown beat ${beatId} for scene resume-output-evidence`);
   }
   return { primarySurface: "none", supportSurface: "none" };
 };

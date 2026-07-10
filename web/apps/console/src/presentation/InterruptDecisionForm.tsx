@@ -4,8 +4,8 @@ import type { RunFactsInterrupt } from "./demo-run-facts.js";
 type InterruptDecisionFormProps = {
   readonly interrupt: RunFactsInterrupt;
   readonly runId: string;
-  readonly onSubmit: (selectedIssueIds: ReadonlyArray<string>, comment: string) => void;
-  readonly onCancel: () => void;
+  readonly onSubmit?: ((selectedIssueIds: ReadonlyArray<string>, comment: string) => void) | undefined;
+  readonly onCancel?: (() => void) | undefined;
   readonly terminalOutcome?: "submitted" | "cancelled" | undefined;
 };
 
@@ -33,7 +33,7 @@ export const InterruptDecisionForm = ({
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      onSubmit([...selectedIds], comment);
+      onSubmit?.([...selectedIds], comment);
     },
     [selectedIds, comment, onSubmit],
   );
@@ -103,13 +103,14 @@ export const InterruptDecisionForm = ({
       </label>
 
       <div className="interrupt-decision-form__actions">
-        <button type="submit" className="interrupt-decision-form__submit">
+        <button type="submit" className="interrupt-decision-form__submit" disabled={!onSubmit}>
           Submit
         </button>
         <button
           type="button"
           className="interrupt-decision-form__cancel"
-          onClick={onCancel}
+          onClick={() => onCancel?.()}
+          disabled={!onCancel}
         >
           Cancel
         </button>

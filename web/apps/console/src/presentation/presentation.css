@@ -2417,17 +2417,7 @@
   letter-spacing: 0.04em;
 }
 
-/* Factual Scene 10 layout grids */
-.guided-product-moment__approval-grid {
-  display: grid;
-  grid-template-columns: minmax(13rem, 0.56fr) minmax(0, 1.44fr);
-  gap: 0.75rem;
-  align-items: stretch;
-  min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
-}
-
+/* Child min-height for all fact grids */
 .guided-product-moment__approval-grid > *,
 .guided-product-moment__resume-grid > *,
 .guided-product-moment[data-moment="output"] > .guided-product-moment__primary > * {
@@ -2557,16 +2547,6 @@
   font-size: 0.78rem;
 }
 
-.guided-product-moment__resume-grid {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
-  gap: 1rem;
-  align-items: stretch;
-  min-height: 0;
-  max-height: 100%;
-  overflow: hidden;
-}
-
 .guided-product-moment[data-moment="resume"] .run-facts-card,
 .guided-product-moment[data-moment="output"] .run-facts-card {
   max-height: 100%;
@@ -2595,9 +2575,4 @@
   display: none;
 }
 
-@media (max-width: 900px) {
-  .guided-product-moment__approval-grid,
-  .guided-product-moment__resume-grid {
-    grid-template-columns: 1fr;
-  }
-}
+/* Responsive grid behavior lives in demo-workflow.css container query */

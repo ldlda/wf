@@ -8,8 +8,12 @@ export type PresentationTargetHealth =
 export type TargetProbeState = "none" | "checking" | "ready" | "failed";
 
 const shortTarget = (target: string): string => {
-  const url = new URL(target);
-  return `${url.hostname}:${url.port || (url.protocol === "https:" ? "443" : "80")}`;
+  try {
+    const url = new URL(target);
+    return `${url.hostname}:${url.port || (url.protocol === "https:" ? "443" : "80")}`;
+  } catch {
+    return target;
+  }
 };
 
 export const presentationTargetHealth = ({

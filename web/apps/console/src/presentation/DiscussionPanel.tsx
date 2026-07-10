@@ -65,7 +65,6 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
             <span className="discussion-panel__badge">{branch.claimClass}</span>
             <h2>{branch.title}</h2>
           </div>
-          <p>{branch.summary}</p>
         </header>
 
         <main className="discussion-panel__body" aria-label="discussion body">

@@ -72,8 +72,8 @@ export const GuidedProductMoment = ({
             <InterruptDecisionForm
               interrupt={facts.interrupt}
               runId={demo.state.events.find((e) => e.stage === "run_start")?.resultingIds.runId ?? "unknown"}
-              onSubmit={(ids, comment) => approvalActions?.submit(ids, comment)}
-              onCancel={() => approvalActions?.cancel()}
+              onSubmit={approvalActions?.canSubmit ? (ids, comment) => approvalActions.submit(ids, comment) : undefined}
+              onCancel={approvalActions?.canCancel ? () => approvalActions.cancel() : undefined}
               terminalOutcome={approvalActions?.state === "submitted" ? "submitted" :
                 approvalActions?.state === "cancelled" ? "cancelled" : undefined}
             />

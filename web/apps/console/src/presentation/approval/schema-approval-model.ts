@@ -34,7 +34,7 @@ const formatValue = (value: unknown): string | null => {
   if (value === undefined) return null;
   if (typeof value === "string") return value;
   if (typeof value === "number" || typeof value === "boolean" || value === null) return String(value);
-  return JSON.stringify(value);
+  return JSON.stringify(value) ?? null;
 };
 
 const fieldKind = (propertySchema: unknown): SchemaApprovalFieldKind => {

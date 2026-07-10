@@ -41,6 +41,7 @@ export const DemoOutcomePanel = ({
         <span>{lens.eyebrow}</span>
         <strong>Same persisted run</strong>
         <dl>
+          <div><dt>Run</dt><dd><code>{runId}</code></dd></div>
           <div><dt>Operation</dt><dd><code>{operation?.operation ?? lens.proofLabel}</code></dd></div>
           <div><dt>Status</dt><dd>{operation?.status ?? "completed"}</dd></div>
         </dl>

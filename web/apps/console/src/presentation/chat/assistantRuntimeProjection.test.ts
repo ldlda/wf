@@ -130,7 +130,7 @@ describe("assistantRuntimeProjection", () => {
     expect(projected[0]?.content).toEqual([
       {
         type: "tool-call",
-        toolCallId: "presentation-selectWorkflowNode",
+        toolCallId: "presentation-mixed-0-selectWorkflowNode",
         toolName: "presentation.selectWorkflowNode",
         args: { type: "selectWorkflowNode", nodeId: "review_issues" },
       },

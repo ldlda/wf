@@ -89,7 +89,10 @@ const renderFigure = (overrides: Partial<React.ComponentProps<typeof Interactive
   };
 };
 
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("InteractiveFigure", () => {
   it("renders conceptual labels and hides evidence pointers by default", () => {
@@ -241,8 +244,5 @@ describe("InteractiveFigure", () => {
     renderFigure({ focusPath: [], size: "stage" });
 
     expect(requestAnimationFrameSpy).toHaveBeenCalled();
-
-    requestAnimationFrameSpy.mockRestore();
-    cancelAnimationFrameSpy.mockRestore();
   });
 });

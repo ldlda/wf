@@ -30,7 +30,7 @@ export type AssistantProjectedMessage = {
   readonly content: ReadonlyArray<AssistantContentPart>;
 };
 
-const projectPart = (part: AgentMessagePart): AssistantContentPart[] => {
+const projectPart = (part: AgentMessagePart, messageId: string, partIndex: number): AssistantContentPart[] => {
   switch (part.type) {
     case "text":
       return [{ type: "text", text: part.text }];
@@ -52,7 +52,7 @@ const projectPart = (part: AgentMessagePart): AssistantContentPart[] => {
     case "presentation-action":
       return [{
         type: "tool-call",
-        toolCallId: `presentation-${part.action.type}`,
+        toolCallId: `presentation-${messageId}-${partIndex}-${part.action.type}`,
         toolName: `presentation.${part.action.type}`,
         args: part.action,
       }];
@@ -82,7 +82,7 @@ export const projectAgentMessagesForAssistant = (
   messages: ReadonlyArray<AgentMessage>,
 ): AssistantProjectedMessage[] =>
   messages.map((message) => {
-    const content = message.parts.flatMap(projectPart);
+    const content = message.parts.flatMap((part, index) => projectPart(part, message.id, index));
     return {
       id: message.id,
       role: messageRoleFor(message),
