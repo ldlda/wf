@@ -209,10 +209,10 @@ Recommended next visual slices:
    blueprint, while preserving simple vocabulary and 720p readability.
    Implementation:
    [`Scene 2 tool-loop visual craft`](historical/superpowers/plans/2026-07-10-scene-2-tool-loop-visual-craft.md).
-4. Active plan: guided proof scene composition cleanup will make approval,
-   resume, output, and trace beats read as product evidence without chat
-   competing for space. Implementation plan:
-   [`guided proof scene composition cleanup`](superpowers/plans/2026-07-10-guided-proof-scene-composition-cleanup.md).
+4. Completed: guided proof scene composition cleanup made approval, resume,
+   output, and trace beats read as product evidence without chat competing for
+   space. Implementation:
+   [`guided proof scene composition cleanup`](historical/superpowers/plans/2026-07-10-guided-proof-scene-composition-cleanup.md).
 5. Evidence and closing visuals: make Scenes 13 and 14 readable as a defense
    artifact: evaluation board, claim boundaries, and future-work map.
 
