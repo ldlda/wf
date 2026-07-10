@@ -65,7 +65,10 @@ References:
 ### Scene 8: Agent Handoff
 
 Scene 8 is a full-screen conversation with no graph, lifecycle rail, evidence
-receipt, or console chrome competing for attention. It has two beats:
+receipt, or console chrome competing for attention. It must read as a real
+chat transcript: visibly separated user and assistant turns, normal message
+spacing, and no orphaned tool block presented as the whole conversation. It
+has two beats:
 
 1. `request`: the operator asks for a reusable thesis-readiness workflow from
    selected documents and an issue board.
@@ -75,7 +78,9 @@ receipt, or console chrome competing for attention. It has two beats:
 
 The assistant's final handoff response contains a concise factual summary of
 the five prepared authoring phases. It must say these are prepared operations,
-not hidden reasoning or autonomous live execution.
+not hidden reasoning or autonomous live execution. The request and handoff
+beats use the same conversation source, revealing additional already-recorded
+turns rather than synthesizing new text at render time.
 
 ### Transition: Conversation Receipt
 
