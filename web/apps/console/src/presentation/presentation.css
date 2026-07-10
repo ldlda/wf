@@ -2576,3 +2576,21 @@
 }
 
 /* Responsive grid behavior lives in demo-workflow.css container query */
+
+/*
+  Scene 8 — Agent handoff full-screen transcript.
+  Centers the conversation within the primary region with readable spacing.
+  Only the stage wrapper may fade/translate; Thread internals are not morphed.
+*/
+.presentation-stage[data-scene-view="agent"] .presentation-stage__primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.presentation-stage[data-scene-view="agent"] .assistant-operator-thread {
+  width: min(100%, 44rem);
+  max-height: 100%;
+} 
