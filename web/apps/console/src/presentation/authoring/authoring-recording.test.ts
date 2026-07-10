@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   authoringPhaseForBeat,
+  authoringToolGroupId,
   projectPreparedAuthoring,
+  projectPreparedAuthoringThread,
   type AuthoringPhaseId,
 } from "./authoring-recording.js";
 
@@ -69,14 +71,57 @@ describe("projectPreparedAuthoring", () => {
     const phases = projectPreparedAuthoring();
     for (const phase of phases) {
       for (const cmd of phase.commands) {
-        expect(cmd.command.startsWith("wf") || cmd.command.startsWith("uv run wf")).toBe(true);
+        expect(cmd.command).toMatch(/^(uv run )?wf(\s|$)/);
       }
     }
+  });
+
+  it("uses the public CLI command families for each authoring phase", () => {
+    const commands = projectPreparedAuthoring()
+      .flatMap((phase) => phase.commands)
+      .map((command) => command.command);
+
+    expect(commands.some((command) => command === "wf source list")).toBe(true);
+    expect(commands.some((command) => command === "wf cap list --source local.lda_report --format ids")).toBe(true);
+    expect(commands.some((command) => command === "wf cap inspect local.lda_report.analyze_documents")).toBe(true);
+    expect(commands.some((command) => command === "wf schema")).toBe(true);
+    expect(commands.some((command) => command.startsWith("wf draft add-step lda_report_workflow"))).toBe(true);
+    expect(commands.some((command) => command === "wf draft validate lda_report_workflow")).toBe(true);
+    expect(commands.some((command) => command === "wf draft compile lda_report_workflow")).toBe(true);
+    expect(commands.some((command) => command === "wf artifact inspect lda_report_case_study --version 1")).toBe(true);
+    expect(commands.some((command) => command.startsWith("wf deploy save lda_report_case_study.default"))).toBe(true);
+    expect(commands.some((command) => command === "wf deploy validate lda_report_case_study.default")).toBe(true);
   });
 
   it("has unique beat IDs for each phase", () => {
     const phases = projectPreparedAuthoring();
     const ids = phases.map((p) => p.beatId);
     expect(new Set(ids).size).toBe(ids.length);
+  });
+});
+
+describe("projectPreparedAuthoringThread", () => {
+  it("keeps stable message ids while revealing later phases", () => {
+    const draft = projectPreparedAuthoringThread("draft");
+    const deployment = projectPreparedAuthoringThread("deployment");
+
+    expect(draft.map(({ id }) => id)).toEqual(
+      deployment.slice(0, draft.length).map(({ id }) => id),
+    );
+  });
+
+  it("projects literal commands as paired workflow tool calls and results", () => {
+    const messages = projectPreparedAuthoringThread("discover");
+    const parts = messages.flatMap(({ parts }) => parts);
+    const calls = parts.filter((part) => part.type === "tool-call");
+    const results = parts.filter((part) => part.type === "tool-result");
+
+    expect(calls).toHaveLength(projectPreparedAuthoring()[0]!.commands.length);
+    expect(results).toHaveLength(calls.length);
+    expect(calls.every((part) => part.call.name === "runWorkflowCommand")).toBe(true);
+  });
+
+  it("uses a stable phase tool-group id", () => {
+    expect(authoringToolGroupId("validate")).toBe("authoring-validate");
   });
 });

@@ -2,7 +2,8 @@ export type WorkflowToolName =
   | "inspectDeployment"
   | "startRun"
   | "resumeIssueReview"
-  | "readRunTrace";
+  | "readRunTrace"
+  | "runWorkflowCommand";
 
 export type PresentationToolName =
   | "selectWorkflowNode"
@@ -40,6 +41,11 @@ export const AGENT_TOOLS = {
     name: "readRunTrace",
     kind: "workflow",
     description: "Read trace frames for the completed report run.",
+  },
+  runWorkflowCommand: {
+    name: "runWorkflowCommand",
+    kind: "workflow",
+    description: "Run one public wf CLI operation in the prepared authoring trace.",
   },
   selectWorkflowNode: {
     name: "selectWorkflowNode",
