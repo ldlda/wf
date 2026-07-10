@@ -6,9 +6,10 @@
 - `web/apps/console/src/presentation/evaluation/evaluation-evidence.test.ts`
 - `web/apps/console/src/presentation/evaluation/EvaluationEvidenceScene.tsx`
 - `web/apps/console/src/presentation/evaluation/EvaluationEvidenceScene.test.tsx`
+- `web/apps/console/src/presentation/presentation-css.test.ts`
 - `web/apps/console/src/presentation/presentation.css`
 
-The scene is intentionally delivered as the requested standalone presentation component. No storyboard or scene-router files were changed; the task brief restricted production changes to the listed files.
+The scene is intentionally delivered as the requested standalone presentation component. No storyboard or scene-router files were changed; the task brief restricted production changes to the listed files. The CSS contract test is the necessary regression-test file added outside the brief's listed files because the 1080px audit-row stacking requirement is a stylesheet contract that cannot be verified by the component tests alone.
 
 ## TDD Evidence
 
@@ -44,7 +45,8 @@ Test Files 1 passed; Tests 5 passed
 
 ## Verification
 
-- Combined Task 1 tests: `2` files passed, `8` tests passed.
+- Component/model tests: `2` files passed, `8` tests passed.
+- CSS contract tests: `1` file passed, `2` tests passed.
 - Console typecheck: `pnpm --dir web --filter @lda/console typecheck` passed.
 - Presentation CSS test: `1` file passed, `1` test passed.
 - Production build: `pnpm --dir web --filter @lda/console build` succeeded; 730 modules transformed.
