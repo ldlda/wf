@@ -79,14 +79,15 @@ describe("ConclusionScene", () => {
 
   it("attaches evidence vertically beneath the typed substrate rather than extending the contribution line", () => {
     render(<ConclusionScene scene={scene} beat={beat("future")} />);
-    const executionNodes = [...screen.getByLabelText("contribution flow").children]
-      .filter((node) => node.getAttribute("data-evidence-attachment") !== "vertical");
-    expect(executionNodes.map((node) => node.getAttribute("data-node-id"))).toEqual([
+    const flow = screen.getByLabelText("contribution flow");
+    expect([...flow.children].map((unit) => unit.getAttribute("data-flow-unit"))).toEqual([
       "planner",
-      "substrate",
+      "substrate-stack",
       "runtime",
     ]);
-    expect(screen.getByText("Persisted, inspectable evidence").closest("[data-node-id='evidence']"))
+    expect(flow.querySelector('[data-flow-unit="substrate-stack"] [data-node-id="substrate"]'))
+      .toHaveTextContent("Typed workflow substrate");
+    expect(flow.querySelector('[data-flow-unit="substrate-stack"] [data-node-id="evidence"]'))
       .toHaveAttribute("data-evidence-attachment", "vertical");
   });
 

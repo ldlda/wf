@@ -35,25 +35,44 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
       </StageCaption>
       <section className="conclusion-map" aria-label="thesis contribution boundary" data-conclusion-beat={beatId}>
         <div className="conclusion-map__flow" aria-label="contribution flow">
-          {contributionNodes.map((node, index) => (
+          <div className="conclusion-map__flow-unit conclusion-map__flow-unit--planner" data-flow-unit="planner">
             <div
-              className={`conclusion-map__node conclusion-map__node--${node.id}`}
-              data-node-id={node.id}
-              data-emphasis={node.id === "substrate" ? "substrate" : "neutral"}
-              key={node.id}
+              className="conclusion-map__node conclusion-map__node--planner"
+              data-node-id={contributionNodes[0].id}
+              data-emphasis="neutral"
             >
-              <span className="conclusion-map__node-index">0{index + 1}</span>
-              <strong>{node.label}</strong>
+              <span className="conclusion-map__node-index">01</span>
+              <strong>{contributionNodes[0].label}</strong>
             </div>
-          ))}
-          <div
-            className={`conclusion-map__node conclusion-map__node--${evidenceNode.id}`}
-            data-evidence-attachment="vertical"
-            data-node-id={evidenceNode.id}
-          >
-            <span className="conclusion-map__node-index">04</span>
-            <strong>{evidenceNode.label}</strong>
-            <small>saved traces and receipts</small>
+          </div>
+          <div className="conclusion-map__flow-unit conclusion-map__flow-unit--substrate-stack" data-flow-unit="substrate-stack">
+            <div
+              className="conclusion-map__node conclusion-map__node--substrate"
+              data-node-id={contributionNodes[1].id}
+              data-emphasis="substrate"
+            >
+              <span className="conclusion-map__node-index">02</span>
+              <strong>{contributionNodes[1].label}</strong>
+            </div>
+            <div
+              className={`conclusion-map__node conclusion-map__node--${evidenceNode.id}`}
+              data-evidence-attachment="vertical"
+              data-node-id={evidenceNode.id}
+            >
+              <span className="conclusion-map__node-index">04</span>
+              <strong>{evidenceNode.label}</strong>
+              <small>saved traces and receipts</small>
+            </div>
+          </div>
+          <div className="conclusion-map__flow-unit conclusion-map__flow-unit--runtime" data-flow-unit="runtime">
+            <div
+              className="conclusion-map__node conclusion-map__node--runtime"
+              data-node-id={contributionNodes[2].id}
+              data-emphasis="neutral"
+            >
+              <span className="conclusion-map__node-index">03</span>
+              <strong>{contributionNodes[2].label}</strong>
+            </div>
           </div>
         </div>
 

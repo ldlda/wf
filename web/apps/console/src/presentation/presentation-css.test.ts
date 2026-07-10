@@ -31,12 +31,10 @@ describe("presentation.css", () => {
     expect(boardBlock).toContain("flex-shrink: 0");
   });
 
-  it("keeps evidence vertically attached beneath substrate from wide desktop through the 1080px breakpoint", () => {
-    expect(css).toMatch(/\.conclusion-map__flow\s*\{\s*display: grid;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);\s*grid-template-rows: auto auto;/);
-    expect(css).toMatch(/\.conclusion-map__node--planner\s*\{\s*grid-column: 1;\s*grid-row: 1;/);
-    expect(css).toMatch(/\.conclusion-map__node--substrate\s*\{\s*grid-column: 2;\s*grid-row: 1;/);
-    expect(css).toMatch(/\.conclusion-map__node--runtime\s*\{\s*grid-column: 3;\s*grid-row: 1;/);
-    expect(css).toMatch(/\.conclusion-map__node--evidence\s*\{\s*grid-column: 2;\s*grid-row: 2;/);
+  it("keeps evidence inside a substrate stack from wide desktop through the 1080px breakpoint", () => {
+    expect(css).toMatch(/\.conclusion-map__flow\s*\{\s*display: grid;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
+    expect(css).toMatch(/\.conclusion-map__flow-unit--substrate-stack\s*\{[\s\S]*?grid-template-rows: auto auto;/);
+    expect(css).toMatch(/\.conclusion-map__flow-unit--planner::after,\s*\.conclusion-map__flow-unit--substrate-stack::after/);
     expect(css).not.toMatch(/\.conclusion-map__node--runtime::after/);
     expect(css).toMatch(/\.conclusion-map__node--evidence::before\s*\{[\s\S]*?content: "↓";/);
   });
@@ -52,10 +50,11 @@ describe("presentation.css", () => {
     expect(css).not.toMatch(/\.conclusion-map__future svg\s*\{[^}]*color: var\(--accent-cyan\);/s);
   });
 
-  it("resets conclusion node placement and keeps connectors node-specific on narrow screens", () => {
+  it("stacks the same three flow units on narrow screens while keeping the evidence connector internal", () => {
     expect(css).toMatch(
-      /@media \(max-width: 640px\) \{[\s\S]*?\.conclusion-map__node--planner,\s*\.conclusion-map__node--substrate,\s*\.conclusion-map__node--runtime,\s*\.conclusion-map__node--evidence\s*\{\s*grid-column: auto;\s*grid-row: auto;/,
+      /@media \(max-width: 640px\) \{[\s\S]*?\.conclusion-map__flow\s*\{\s*grid-template-columns: 1fr;[\s\S]*?\.conclusion-map__flow-unit--planner::after,\s*\.conclusion-map__flow-unit--substrate-stack::after\s*\{[\s\S]*?content: "↓";/,
     );
+    expect(css).toMatch(/@media \(max-width: 640px\) \{[\s\S]*?\.conclusion-map__node--evidence::before\s*\{[\s\S]*?content: "↓";/);
     expect(css).not.toContain(".conclusion-map__node:not(:last-child)::after");
   });
 });
