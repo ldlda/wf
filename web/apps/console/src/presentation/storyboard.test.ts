@@ -40,7 +40,7 @@ describe("defense storyboard catalog", () => {
     expect(mainScenes.slice(3, 12).every((scene) => scene.stageTheme === "night")).toBe(true);
     expect(mainScenes.slice(12).every((scene) => scene.stageTheme === "paper")).toBe(true);
     expect(findBeat("agent-handoff", "request")?.chatMode).toBe("full");
-    expect(findBeat("resume-output-evidence", "trace")?.chatMode).toBe("dock");
+    expect(findBeat("resume-output-evidence", "trace")?.chatMode).toBe("hidden");
   });
 
   it("keeps chat out of the way during proof-heavy demo beats", () => {
@@ -51,7 +51,8 @@ describe("defense storyboard catalog", () => {
     expect(findBeat("typed-human-boundary", "approval")?.chatMode).toBe("hidden");
     expect(findBeat("typed-human-boundary", "cancel")?.chatMode).toBe("hidden");
     expect(findBeat("resume-output-evidence", "resume")?.chatMode).toBe("hidden");
-    expect(findBeat("resume-output-evidence", "trace")?.chatMode).toBe("dock");
+    expect(findBeat("resume-output-evidence", "output")?.chatMode).toBe("hidden");
+    expect(findBeat("resume-output-evidence", "trace")?.chatMode).toBe("hidden");
   });
 
   it("splits the demo climax into lifecycle, run, interrupt, and evidence scenes", () => {

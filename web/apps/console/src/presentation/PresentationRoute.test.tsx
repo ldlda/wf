@@ -321,6 +321,20 @@ describe("PresentationRoute", () => {
     expect(await screen.findByRole("region", { name: /workflow markdown output/i })).toBeInTheDocument();
   });
 
+  it.each([
+    ["#scene/typed-human-boundary/approval", /Typed human boundary/i],
+    ["#scene/resume-output-evidence/resume", /Resume, output, evidence/i],
+    ["#scene/resume-output-evidence/trace", /Resume, output, evidence/i],
+  ])("renders current demo hash %s without falling back to title", async (hash, heading) => {
+    window.location.hash = hash;
+
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: /Design and Implementation of lda\.chat/i })).not.toBeInTheDocument();
+  });
+
   it("direct trace route primes trace frames", async () => {
     window.location.hash = "#scene/resume-output-evidence/trace";
     const { PresentationRoute } = await import("./PresentationRoute.js");

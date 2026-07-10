@@ -227,7 +227,7 @@ export const mainScenes = defineScenes([
     beats: [
       sceneBeat("resume", "Resume", "The submitted payload resumes the same persisted run.", { chatMode: "hidden", chatTheme: "light" }),
       sceneBeat("output", "Output", "The workflow produces the report and issue-board changes.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("trace", "Trace evidence", "Trace frames and protocol evidence remain inspectable.", { chatMode: "dock", chatTheme: "light", evidencePresentation: "receipt" }),
+      sceneBeat("trace", "Trace evidence", "Trace frames and protocol evidence remain inspectable.", { chatMode: "hidden", chatTheme: "light", evidencePresentation: "receipt" }),
     ],
   },
   {
