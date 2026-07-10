@@ -7,7 +7,10 @@ export type WorkflowToolName =
 export type PresentationToolName =
   | "selectWorkflowNode"
   | "focusOperation"
-  | "showTraceFrame";
+  | "showTraceFrame"
+  | "fetchData"
+  | "transformPayload"
+  | "writeOutput";
 
 export type AgentToolName = WorkflowToolName | PresentationToolName;
 
@@ -52,6 +55,21 @@ export const AGENT_TOOLS = {
     name: "showTraceFrame",
     kind: "presentation",
     description: "Focus a trace frame in the presentation.",
+  },
+  fetchData: {
+    name: "fetchData",
+    kind: "presentation",
+    description: "Presentation-only placeholder for fetching data in a one-off tool loop.",
+  },
+  transformPayload: {
+    name: "transformPayload",
+    kind: "presentation",
+    description: "Presentation-only placeholder for transforming data in a one-off tool loop.",
+  },
+  writeOutput: {
+    name: "writeOutput",
+    kind: "presentation",
+    description: "Presentation-only placeholder for writing output in a one-off tool loop.",
   },
 } satisfies Record<AgentToolName, AgentToolDescriptor>;
 

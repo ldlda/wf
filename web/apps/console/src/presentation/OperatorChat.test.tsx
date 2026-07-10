@@ -74,7 +74,7 @@ describe("OperatorChat", () => {
 
     expect(screen.getByText("Prepare the report.")).toBeInTheDocument();
     expect(screen.getByText("I will use the prepared recipe.")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /selectWorkflowNode/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /selectWorkflowNode/i }).length).toBeGreaterThan(0);
   });
 
   it("renders tool calls as open tool cards", async () => {
@@ -151,16 +151,16 @@ describe("OperatorChat", () => {
       },
     ];
 
-    render(<OperatorChat state={initialPresentationState} messages={messages} />);
+    const { container } = render(<OperatorChat state={initialPresentationState} messages={messages} />);
 
     expect(screen.queryByRole("group", { name: /issue review resume/i })).not.toBeInTheDocument();
     expect(screen.getByText("Submit resume request?")).toBeInTheDocument();
     const tool = screen.getByRole("button", { name: /resumeIssueReview/i });
     expect(screen.queryByRole("button", { name: /Approve/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Deny/i })).not.toBeInTheDocument();
-    expect(screen.getByLabelText("tool input")).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="tool-fallback-args"]')).toBeInTheDocument();
     await user.click(tool);
-    expect(screen.queryByLabelText("tool input")).not.toBeInTheDocument();
+    expect(container.querySelector('[data-slot="tool-fallback-args"]')).not.toBeInTheDocument();
   });
 
   it("renders error and presentation action parts", () => {

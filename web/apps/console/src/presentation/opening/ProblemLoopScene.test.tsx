@@ -15,7 +15,7 @@ describe("ProblemLoopScene", () => {
     const transcript = screen.getByRole("log", { name: /one-off assistant transcript/i });
     expect(transcript).toHaveClass("assistant-operator-thread");
     expect(within(transcript).getByText("Can you finish this workspace task?")).toBeInTheDocument();
-    const toolButtons = within(transcript).getAllByRole("button", { name: /workflow.run_once/i });
+    const toolButtons = within(transcript).getAllByRole("button", { name: /fetchData|transformPayload|writeOutput/i });
     expect(toolButtons).toHaveLength(3);
     expect(within(transcript).getByText("Done. But none of this is recorded in a durable workflow.")).toBeInTheDocument();
   });

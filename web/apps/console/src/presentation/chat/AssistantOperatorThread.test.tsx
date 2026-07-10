@@ -24,9 +24,10 @@ describe("AssistantOperatorThread", () => {
       },
     ];
 
-    render(<AssistantOperatorThread mode="dock" messages={messages} />);
+    const { container } = render(<AssistantOperatorThread mode="dock" messages={messages} />);
 
     expect(screen.getByRole("log", { name: /operator conversation/i })).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="tool-fallback-root"]')).toBeInTheDocument();
     expect(screen.getByText("I will inspect the run.")).toBeInTheDocument();
     expect(screen.getByText("The trace is inspectable.")).toBeInTheDocument();
     const tool = screen.getByRole("button", { name: /readRunTrace/i });
@@ -48,9 +49,10 @@ describe("AssistantOperatorThread", () => {
       },
     ];
 
-    render(<AssistantOperatorThread mode="dock" messages={messages} />);
+    const { container } = render(<AssistantOperatorThread mode="dock" messages={messages} />);
 
-    expect(screen.getByText(/2 tools/i)).toBeInTheDocument();
+    expect(container.querySelector('[data-slot="tool-group-root"]')).toBeInTheDocument();
+    expect(screen.getByText(/2 tool calls/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /readRunTrace/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /inspectDeployment/i })).toBeInTheDocument();
   });
@@ -110,5 +112,30 @@ describe("AssistantOperatorThread", () => {
 
     await user.click(screen.getByRole("button", { name: /run prepared workflow/i }));
     expect(run).toHaveBeenCalledOnce();
+  });
+
+  it("renders structured tool results through the generated fallback result slot", () => {
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "assistant-result",
+        role: "assistant",
+        parts: [
+          {
+            type: "tool-result",
+            result: {
+              callId: "call-1",
+              name: "readRunTrace",
+              status: "success",
+              output: { frames: 3 },
+            },
+          },
+        ],
+      },
+    ];
+
+    const { container } = render(<AssistantOperatorThread mode="dock" messages={messages} />);
+
+    expect(container.querySelector('[data-slot="tool-fallback-result"]')).toBeInTheDocument();
+    expect(screen.getByText(/"frames": 3/)).toBeInTheDocument();
   });
 });

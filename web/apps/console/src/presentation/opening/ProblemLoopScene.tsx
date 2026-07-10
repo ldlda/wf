@@ -1,5 +1,4 @@
 import type { AgentMessage } from "../../demo/agent/events.js";
-import type { AgentToolName } from "../../demo/agent/tools.js";
 import { AssistantOperatorThread } from "../chat/AssistantOperatorThread.js";
 import { StageCaption } from "../StageCaption.js";
 import type { SceneBeatDefinition, SceneDefinition } from "../storyboard.js";
@@ -20,7 +19,7 @@ const oneOffToolLoopMessages: ReadonlyArray<AgentMessage> = [
         type: "tool-call",
         call: {
           id: "scene-2-tool-1",
-          name: "workflow.run_once" as AgentToolName,
+          name: "fetchData",
           input: { source: "api", endpoint: "/tasks" },
         },
       },
@@ -28,7 +27,7 @@ const oneOffToolLoopMessages: ReadonlyArray<AgentMessage> = [
         type: "tool-call",
         call: {
           id: "scene-2-tool-2",
-          name: "workflow.run_once" as AgentToolName,
+          name: "transformPayload",
           input: { format: "json", validate: true },
         },
       },
@@ -36,7 +35,7 @@ const oneOffToolLoopMessages: ReadonlyArray<AgentMessage> = [
         type: "tool-call",
         call: {
           id: "scene-2-tool-3",
-          name: "workflow.run_once" as AgentToolName,
+          name: "writeOutput",
           input: { destination: "file", path: "/tmp/result.json" },
         },
       },
@@ -70,7 +69,7 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
             <h2>Chat + tool loop</h2>
             <p>Good at getting through one request.</p>
           </header>
-          <div aria-label="one-off assistant transcript" role="group">
+          <div className="problem-chat-card__transcript" aria-label="one-off assistant transcript" role="group">
             <AssistantOperatorThread mode="dock" messages={oneOffToolLoopMessages} ariaLabel="one-off assistant transcript" />
           </div>
           <p className="problem-artifact-note">The useful work lives in the conversation history.</p>

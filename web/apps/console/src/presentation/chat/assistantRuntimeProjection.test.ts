@@ -36,7 +36,7 @@ describe("assistantRuntimeProjection", () => {
     ]);
   });
 
-  it("projects tool results as text summary", () => {
+  it("projects tool results as structured result parts", () => {
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "tool-result-message",
@@ -57,13 +57,15 @@ describe("assistantRuntimeProjection", () => {
 
     const projected = projectAgentMessagesForAssistant(messages);
 
-    expect(projected[0]).toMatchObject({
-      id: "tool-result-message",
-      role: "assistant",
-      content: [
-        { type: "text", text: "Result for readRunTrace: success" },
-      ],
-    });
+    expect(projected[0]?.content).toEqual([
+      {
+        type: "tool-result",
+        toolCallId: "call-1",
+        toolName: "readRunTrace",
+        status: "success",
+        result: { frames: 3 },
+      },
+    ]);
   });
 
   it("projects approval requests as human tool calls with contract metadata", () => {

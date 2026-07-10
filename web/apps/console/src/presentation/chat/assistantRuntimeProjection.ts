@@ -8,16 +8,20 @@ export type AssistantToolRenderPayload = {
   readonly isError?: boolean;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- JSON-serializable args for assistant-ui compatibility
-type JsonArgs = Record<string, any>;
-
-type AssistantContentPart =
+export type AssistantContentPart =
   | { readonly type: "text"; readonly text: string }
   | {
       readonly type: "tool-call";
       readonly toolCallId?: string;
       readonly toolName: string;
-      readonly args?: JsonArgs;
+      readonly args?: unknown;
+    }
+  | {
+      readonly type: "tool-result";
+      readonly toolCallId: string;
+      readonly toolName: string;
+      readonly status: "success" | "failure";
+      readonly result: unknown;
     };
 
 export type AssistantProjectedMessage = {
@@ -35,19 +39,22 @@ const projectPart = (part: AgentMessagePart): AssistantContentPart[] => {
         type: "tool-call",
         toolCallId: part.call.id,
         toolName: part.call.name,
-        args: part.call.input as JsonArgs,
+        args: part.call.input,
       }];
     case "tool-result":
       return [{
-        type: "text",
-        text: `Result for ${part.result.name}: ${part.result.status === "failure" ? "error" : "success"}`,
+        type: "tool-result",
+        toolCallId: part.result.callId,
+        toolName: part.result.name,
+        status: part.result.status,
+        result: part.result.output,
       }];
     case "presentation-action":
       return [{
         type: "tool-call",
         toolCallId: `presentation-${part.action.type}`,
         toolName: `presentation.${part.action.type}`,
-        args: part.action as JsonArgs,
+        args: part.action,
       }];
     case "approval-request":
       return [
@@ -59,7 +66,7 @@ const projectPart = (part: AgentMessagePart): AssistantContentPart[] => {
           args: {
             prompt: part.prompt,
             contract: part.contract,
-          } as JsonArgs,
+          },
         },
       ];
     case "error":

@@ -1,7 +1,24 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
+import type { ToolCallMessagePartStatus } from "@assistant-ui/react";
+import {
+  ToolFallbackArgs,
+  ToolFallbackContent,
+  ToolFallbackError,
+  ToolFallbackResult,
+  ToolFallbackRoot,
+  ToolFallbackTrigger,
+} from "../../components/assistant-ui/tool-fallback.js";
+import {
+  ToolGroupContent,
+  ToolGroupRoot,
+  ToolGroupTrigger,
+} from "../../components/assistant-ui/tool-group.js";
 import type { AgentMessage } from "../../demo/agent/events.js";
 import { SchemaApprovalSurface } from "../approval/SchemaApprovalSurface.js";
-import { projectAgentMessagesForAssistant, type AssistantProjectedMessage } from "./assistantRuntimeProjection.js";
+import {
+  projectAgentMessagesForAssistant,
+  type AssistantContentPart,
+} from "./assistantRuntimeProjection.js";
 
 type AssistantOperatorThreadProps = {
   readonly mode: "hidden" | "full" | "rail" | "dock";
@@ -21,102 +38,97 @@ const formatJson = (value: unknown): string => {
   }
 };
 
-const ToolCard = ({
-  toolName,
-  args,
-  defaultOpen = true,
-}: {
-  readonly toolName: string;
-  readonly args?: unknown;
-  readonly defaultOpen?: boolean;
-}) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="assistant-tool-card" data-open={open ? "true" : "false"}>
-      <button
-        type="button"
-        className="assistant-tool-card__trigger"
-        aria-expanded={open}
-        onClick={() => setOpen((c) => !c)}
-      >
-        <span className="assistant-tool-card__label">{toolName}</span>
-      </button>
-      {open ? (
-        <div className="assistant-tool-card__body">
-          {args !== undefined ? (
-            <pre className="assistant-tool-card__io" aria-label="tool input">{formatJson(args)}</pre>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  );
+type ToolRenderPart = Extract<AssistantContentPart, { readonly type: "tool-call" | "tool-result" }>;
+
+type ApprovalContract = {
+  readonly kind: string;
+  readonly outcomes: readonly string[];
+  readonly resumeSchema: unknown;
+  readonly resumePayloadPreview: unknown;
+  readonly runId: string | null;
 };
 
-const ToolGroupCard = ({
-  toolCount,
-  defaultOpen = true,
-  children,
-}: {
-  readonly toolCount: number;
-  readonly defaultOpen?: boolean;
-  readonly children: React.ReactNode;
-}) => {
-  const [open, setOpen] = useState(defaultOpen);
-  return (
-    <div className="assistant-tool-group" data-open={open ? "true" : "false"}>
-      <button
-        type="button"
-        className="assistant-tool-group__trigger"
-        aria-expanded={open}
-        onClick={() => setOpen((c) => !c)}
-      >
-        <span>{toolCount} tools</span>
-      </button>
-      {open ? <div className="assistant-tool-group__body">{children}</div> : null}
-    </div>
-  );
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null;
+
+const approvalContractFromArgs = (args: unknown): ApprovalContract | undefined => {
+  if (!isRecord(args) || !isRecord(args.contract)) return undefined;
+  const contract = args.contract;
+  if (
+    typeof contract.kind !== "string" ||
+    !Array.isArray(contract.outcomes) ||
+    !contract.outcomes.every((outcome) => typeof outcome === "string") ||
+    !("resumeSchema" in contract) ||
+    !("resumePayloadPreview" in contract) ||
+    !(typeof contract.runId === "string" || contract.runId === null)
+  ) {
+    return undefined;
+  }
+  return {
+    kind: contract.kind,
+    outcomes: contract.outcomes,
+    resumeSchema: contract.resumeSchema,
+    resumePayloadPreview: contract.resumePayloadPreview,
+    runId: contract.runId,
+  };
 };
 
-type ContentPart =
-  | { readonly type: "text"; readonly text: string }
-  | { readonly type: "tool-call"; readonly toolName: string; readonly args?: unknown; readonly result?: unknown; readonly isError?: boolean };
+const statusForToolPart = (part: ToolRenderPart): ToolCallMessagePartStatus | undefined => {
+  if (part.type !== "tool-result") return undefined;
+  if (part.status === "success") return { type: "complete" };
+  return { type: "incomplete", reason: "error", error: part.result };
+};
+
+const resultForToolPart = (part: ToolRenderPart): unknown =>
+  part.type === "tool-result" ? part.result : undefined;
 
 const renderContentPart = (
-  part: ContentPart,
+  part: AssistantContentPart,
   submitApproval?: (() => void) | undefined,
   cancelApproval?: (() => void) | undefined,
   defaultOpen?: boolean,
-): React.ReactNode => {
+): ReactNode => {
   if (part.type === "text") {
     return <p style={{ whiteSpace: "pre-line" }}>{part.text}</p>;
   }
+  const status = statusForToolPart(part);
   const toolName = part.toolName;
-  const args = part.args as Record<string, unknown> | undefined;
-  const contract = args?.contract as
-    | {
-        readonly kind: string;
-        readonly outcomes: readonly string[];
-        readonly resumeSchema: unknown;
-        readonly resumePayloadPreview: unknown;
-        readonly runId: string;
-      }
-    | undefined;
+  const args = part.type === "tool-call" ? part.args : undefined;
+  const contract = part.type === "tool-call" ? approvalContractFromArgs(args) : undefined;
+  const argsText = args !== undefined ? formatJson(args) : undefined;
+  const result = resultForToolPart(part);
+
   if (toolName === "resumeIssueReview" && contract) {
     return (
-      <div className="assistant-tool-approval">
-        <SchemaApprovalSurface
-          title={`${contract.kind.replaceAll("_", " ")} resume`}
-          schema={contract.resumeSchema}
-          payload={contract.resumePayloadPreview}
-          outcomes={contract.outcomes}
-          runId={contract.runId}
-          onSubmit={submitApproval}
-          onCancel={cancelApproval}
-        />
-      </div>
+      <ToolFallbackRoot defaultOpen={defaultOpen ?? true}>
+        <ToolFallbackTrigger toolName={toolName} status={{ type: "requires-action", reason: "interrupt" }} />
+        <ToolFallbackContent>
+          {argsText !== undefined ? <ToolFallbackArgs argsText={argsText} /> : null}
+          <div className="assistant-tool-approval">
+            <SchemaApprovalSurface
+              title={`${contract.kind.replaceAll("_", " ")} resume`}
+              schema={contract.resumeSchema}
+              payload={contract.resumePayloadPreview}
+              outcomes={contract.outcomes}
+              runId={contract.runId}
+              onSubmit={submitApproval}
+              onCancel={cancelApproval}
+            />
+          </div>
+        </ToolFallbackContent>
+      </ToolFallbackRoot>
     );
   }
-  return <ToolCard toolName={toolName} args={part.args} {...(defaultOpen !== undefined ? { defaultOpen } : {})} />;
+  return (
+    <ToolFallbackRoot defaultOpen={defaultOpen ?? true}>
+      <ToolFallbackTrigger toolName={toolName} {...(status !== undefined ? { status } : {})} />
+      <ToolFallbackContent>
+        <ToolFallbackError {...(status !== undefined ? { status } : {})} />
+        {argsText !== undefined ? <ToolFallbackArgs argsText={argsText} /> : null}
+        <ToolFallbackResult result={result} />
+      </ToolFallbackContent>
+    </ToolFallbackRoot>
+  );
 };
 
 const AssistantMessageBody = ({
@@ -124,51 +136,56 @@ const AssistantMessageBody = ({
   submitApproval,
   cancelApproval,
 }: {
-  readonly parts: readonly ContentPart[];
+  readonly parts: readonly AssistantContentPart[];
   readonly submitApproval?: (() => void) | undefined;
   readonly cancelApproval?: (() => void) | undefined;
 }) => {
-  const toolParts = parts.filter((p) => p.type === "tool-call");
+  const rendered: ReactNode[] = [];
+  let index = 0;
 
-  if (toolParts.length === 0) {
-    return (
-      <>
-        {parts.filter((p) => p.type === "text").map((p, i) => (
-          <p key={`text-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>
-        ))}
-      </>
+  while (index < parts.length) {
+    const part = parts[index]!;
+    if (part.type === "text") {
+      rendered.push(
+        <p key={`text-${index}`} style={{ whiteSpace: "pre-line" }}>{part.text}</p>,
+      );
+      index += 1;
+      continue;
+    }
+
+    const toolRunStart = index;
+    const toolRun: ToolRenderPart[] = [];
+    while (index < parts.length && parts[index]!.type !== "text") {
+      toolRun.push(parts[index]! as ToolRenderPart);
+      index += 1;
+    }
+
+    if (toolRun.length === 1) {
+      rendered.push(
+        <div key={`tool-${toolRunStart}`}>
+          {renderContentPart(toolRun[0]!, submitApproval, cancelApproval)}
+        </div>,
+      );
+      continue;
+    }
+
+    rendered.push(
+      <ToolGroupRoot key={`tool-group-${toolRunStart}`} defaultOpen>
+        <ToolGroupTrigger count={toolRun.length} />
+        <ToolGroupContent>
+          {toolRun.map((tool, toolIndex) => (
+            <div key={`${tool.type}-${tool.toolName}-${tool.toolCallId ?? "no-id"}-${toolIndex}`}>
+              {renderContentPart(tool, submitApproval, cancelApproval, false)}
+            </div>
+          ))}
+        </ToolGroupContent>
+      </ToolGroupRoot>,
     );
   }
 
-  if (toolParts.length === 1) {
-    const firstToolIndex = parts.findIndex((p) => p.type === "tool-call");
-    const beforeText = parts.slice(0, firstToolIndex).filter((p) => p.type === "text");
-    const afterText = parts.slice(firstToolIndex + 1).filter((p) => p.type === "text");
-    const tool = toolParts[0]!;
-    return (
-      <>
-        {beforeText.map((p, i) => <p key={`before-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>)}
-        {renderContentPart(tool, submitApproval, cancelApproval)}
-        {afterText.map((p, i) => <p key={`after-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>)}
-      </>
-    );
-  }
-
-  const firstToolIndex = parts.findIndex((p) => p.type === "tool-call");
-  const lastToolIndex = parts.findLastIndex((p) => p.type === "tool-call");
-  const beforeText = parts.slice(0, firstToolIndex).filter((p) => p.type === "text");
-  const afterText = parts.slice(lastToolIndex + 1).filter((p) => p.type === "text");
   return (
     <>
-      {beforeText.map((p, i) => <p key={`before-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>)}
-      <ToolGroupCard toolCount={toolParts.length}>
-        {toolParts.map((tool, i) => (
-          <div key={i}>
-            {renderContentPart(tool, submitApproval, cancelApproval, false)}
-          </div>
-        ))}
-      </ToolGroupCard>
-      {afterText.map((p, i) => <p key={`after-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>)}
+      {rendered}
     </>
   );
 };
@@ -178,7 +195,7 @@ const MessageBubble = ({
   children,
 }: {
   readonly role: "user" | "assistant";
-  readonly children: React.ReactNode;
+  readonly children: ReactNode;
 }) => (
   <div className="assistant-message" data-role={role}>
     {role === "user" ? (
@@ -209,17 +226,10 @@ export const AssistantOperatorThread = ({
       <div className="assistant-thread">
         <div className="assistant-thread__viewport">
           {projected.map((message) => {
-            const content = (message as unknown as { content?: unknown }).content;
-            const parts: ContentPart[] = Array.isArray(content)
-              ? (content as ContentPart[])
-              : typeof content === "string"
-                ? [{ type: "text" as const, text: content }]
-                : [];
-
             if (message.role === "user") {
               return (
                 <MessageBubble key={message.id} role="user">
-                  {parts.filter((p) => p.type === "text").map((p, i) => (
+                  {message.content.filter((p) => p.type === "text").map((p, i) => (
                     <p key={`text-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>
                   ))}
                 </MessageBubble>
@@ -229,7 +239,7 @@ export const AssistantOperatorThread = ({
             return (
               <MessageBubble key={message.id} role="assistant">
                 <AssistantMessageBody
-                  parts={parts}
+                  parts={message.content}
                   submitApproval={submitApproval}
                   cancelApproval={cancelApproval}
                 />

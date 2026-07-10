@@ -1406,9 +1406,10 @@
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(24rem, 0.95fr) auto minmax(26rem, 1.05fr);
+  grid-template-columns: minmax(24rem, 0.92fr) auto minmax(26rem, 1.08fr);
   align-items: stretch;
   gap: 1rem;
+  overflow: hidden;
 }
 
 .problem-chat-card,
@@ -1416,13 +1417,14 @@
   min-width: 0;
   border: 1px solid color-mix(in oklch, var(--stage-line) 62%, transparent);
   border-radius: 0.95rem;
-  padding: 0.85rem;
+  padding: 0.75rem;
+  overflow: hidden;
 }
 
 .problem-chat-card {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  gap: 0.65rem;
+  gap: 0.45rem;
   background:
     linear-gradient(180deg, color-mix(in oklch, var(--stage-inset) 94%, black), var(--stage-inset));
 }
@@ -1456,14 +1458,23 @@
 .problem-artifact-header h2 {
   margin: 0;
   color: var(--text-primary);
-  font: 800 1.45rem/0.98 var(--font-interface);
+  font: 800 1.32rem/0.98 var(--font-interface);
 }
 
 .problem-artifact-header p,
 .problem-artifact-note {
   margin: 0;
   color: var(--text-secondary);
-  font: 0.86rem/1.3 var(--font-interface);
+  font: 0.8rem/1.25 var(--font-interface);
+}
+
+.problem-chat-card .problem-artifact-note {
+  display: none;
+}
+
+.problem-chat-card__transcript {
+  min-height: 0;
+  overflow: hidden;
 }
 
 .problem-blueprint .concept-rail {
@@ -1476,7 +1487,7 @@
   grid-template-columns: 1fr;
   justify-items: center;
   text-align: center;
-  padding: 0.72rem 0.45rem;
+  padding: 0.55rem 0.4rem;
 }
 
 .problem-blueprint .concept-node__copy span,
@@ -1599,9 +1610,15 @@
 
 .assistant-operator-thread {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 0.55rem;
   min-height: 0;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
 }
 
 .assistant-operator-thread[data-mode="hidden"] {
@@ -1624,9 +1641,17 @@
   height: 100%;
 }
 
+.assistant-thread {
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--stage-line) 70%, transparent);
+  border-radius: 0.72rem;
+  background: color-mix(in oklch, var(--stage-inset) 86%, black);
+}
+
 .assistant-thread__viewport {
   overflow: auto;
   scrollbar-width: none;
+  padding: 0.7rem;
 }
 
 .assistant-thread__viewport::-webkit-scrollbar {
@@ -1635,8 +1660,8 @@
 
 .assistant-message {
   display: grid;
-  gap: 0.45rem;
-  margin-bottom: 0.65rem;
+  gap: 0.36rem;
+  margin-bottom: 0.5rem;
 }
 
 .assistant-message[data-role="user"] {
@@ -1644,96 +1669,101 @@
 }
 
 .assistant-message__user-bubble {
-  background: color-mix(in oklch, var(--accent-cyan) 14%, var(--stage-surface));
-  border: 1px solid color-mix(in oklch, var(--accent-cyan) 30%, var(--stage-line));
-  border-radius: 0.65rem;
-  padding: 0.55rem 0.75rem;
-  max-width: 80%;
+  background: color-mix(in oklch, var(--accent-cyan) 24%, var(--stage-inset));
+  border: 1px solid color-mix(in oklch, var(--accent-cyan) 44%, var(--stage-line));
+  border-radius: 0.55rem;
+  padding: 0.48rem 0.65rem;
+  max-width: 76%;
   color: var(--text-primary);
-  font: 0.82rem/1.5 var(--font-interface);
+  font: 0.76rem/1.35 var(--font-interface);
 }
 
 .assistant-message[data-role="assistant"] {
   justify-items: start;
+  color: var(--text-primary);
 }
 
-.assistant-tool-card {
-  border: 1px solid var(--stage-line);
-  border-radius: 0.65rem;
-  background: var(--stage-inset);
+/*
+  assistant-ui ships utility-class components. Bridge their stable data-slot
+  hooks into the presentation tokens instead of editing generated files.
+*/
+.assistant-operator-thread [data-slot="tool-group-root"],
+.assistant-operator-thread [data-slot="tool-fallback-root"] {
+  width: min(100%, 30rem);
+  border: 1px solid color-mix(in oklch, var(--stage-line) 72%, transparent);
+  border-radius: 0.55rem;
+  background: color-mix(in oklch, var(--stage-surface) 58%, var(--stage-inset));
+  color: var(--text-primary);
   overflow: hidden;
 }
 
-.assistant-tool-card__trigger {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
+.assistant-operator-thread [data-slot="tool-group-root"] {
+  padding-block: 0;
+}
+
+.assistant-operator-thread [data-slot="tool-group-trigger"],
+.assistant-operator-thread [data-slot="tool-fallback-trigger"] {
   width: 100%;
-  padding: 0.45rem 0.65rem;
-  background: none;
-  border: none;
+  min-height: 0;
+  gap: 0.32rem;
+  padding: 0.3rem 0.48rem;
+  border: 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font: 700 0.61rem/1 var(--font-evidence);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.assistant-operator-thread [data-slot="tool-group-trigger"]:hover,
+.assistant-operator-thread [data-slot="tool-fallback-trigger"]:hover {
+  background: color-mix(in oklch, var(--accent-cyan) 9%, transparent);
   color: var(--text-primary);
-  font: 600 0.78rem/1 var(--font-interface);
-  cursor: pointer;
-  text-align: left;
 }
 
-.assistant-tool-card__trigger:hover {
-  background: color-mix(in oklch, var(--accent-cyan) 8%, transparent);
+.assistant-operator-thread [data-slot="tool-fallback-trigger-icon"],
+.assistant-operator-thread [data-slot="tool-fallback-trigger-chevron"],
+.assistant-operator-thread [data-slot="tool-group-trigger-chevron"] {
+  width: 0.68rem;
+  height: 0.68rem;
+  color: var(--accent-cyan);
 }
 
-.assistant-tool-card__body {
-  padding: 0 0.65rem 0.55rem;
+.assistant-operator-thread [data-slot="tool-group-content"] > div,
+.assistant-operator-thread [data-slot="tool-fallback-content"] > div {
+  gap: 0.22rem;
+  padding: 0.3rem 0.48rem 0.42rem;
+  border-top: 1px solid color-mix(in oklch, var(--stage-line) 55%, transparent);
 }
 
-.assistant-tool-card__io {
-  background: var(--stage-surface);
-  border: 1px solid var(--stage-line);
-  border-radius: 0.5rem;
+.assistant-operator-thread [data-slot="tool-group-content"] [data-slot="tool-fallback-root"] {
+  width: fit-content;
+  max-width: 100%;
+  background: color-mix(in oklch, var(--stage-inset) 86%, black);
+  border-color: color-mix(in oklch, var(--stage-line) 60%, transparent);
+}
+
+.assistant-operator-thread [data-slot="tool-fallback-args-value"],
+.assistant-operator-thread [data-slot="tool-fallback-result-content"] {
+  max-height: 6.5rem;
+  overflow: auto;
+  border: 1px solid color-mix(in oklch, var(--stage-line) 55%, transparent);
+  border-radius: 0.45rem;
+  background: color-mix(in oklch, var(--stage-inset) 72%, black);
+  color: var(--text-secondary);
   padding: 0.45rem 0.55rem;
-  font: 0.72rem/1.45 var(--font-mono);
-  color: var(--text-secondary);
+  font: 0.68rem/1.38 var(--font-mono);
   white-space: pre-wrap;
-  word-break: break-all;
-  overflow-x: auto;
+  overflow-wrap: anywhere;
 }
 
-.assistant-tool-group {
-  border: 1px solid var(--stage-line);
-  border-radius: 0.65rem;
-  background: var(--stage-inset);
-  overflow: hidden;
-}
-
-.assistant-tool-group__trigger {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: 100%;
-  padding: 0.45rem 0.65rem;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  font: 600 0.78rem/1 var(--font-interface);
-  cursor: pointer;
-}
-
-.assistant-tool-group__trigger:hover {
-  background: color-mix(in oklch, var(--accent-cyan) 8%, transparent);
-  color: var(--text-primary);
-}
-
-.assistant-tool-group__body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
-  padding: 0 0.65rem 0.55rem;
-  max-height: 14rem;
-  overflow: hidden;
-}
-
-.assistant-tool-group__body .assistant-tool-card {
-  border-color: var(--stage-line);
+.assistant-operator-thread [data-slot="tool-fallback-result-header"],
+.assistant-operator-thread [data-slot="tool-fallback-error-header"] {
+  margin: 0;
+  color: var(--text-muted);
+  font: 700 0.66rem/1 var(--font-evidence);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .assistant-tool-approval {

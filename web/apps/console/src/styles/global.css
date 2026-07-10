@@ -1,3 +1,5 @@
+@import "tw-shimmer";
+
 :root {
   --color-paper: #faf8f5;
   --color-ink: #1a1a1a;
