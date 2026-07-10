@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import type { EvidenceRecord } from "../app/state.js";
 import { resolvePresentationTarget } from "./live-target.js";
 import { usePresentationTargetStatus } from "./usePresentationTargetStatus.js";
@@ -118,6 +118,30 @@ export const PresentationRoute = () => {
     );
     demo.primeReplayToStage(requirement.requiredStage);
   }, [demo.state.mode, demo.primeReplayToStage, state.location]);
+
+  const traceReadForResumeRef = useRef<string | null>(null);
+  const isTraceBeat = state.location.kind === "main"
+    && state.location.sceneId === "resume-output-evidence"
+    && state.location.beatId === "trace";
+  const liveResume = demo.state.events.find((event) => event.stage === "run_resume") ?? null;
+  const hasLiveTrace = demo.state.events.some((event) => event.stage === "trace_read");
+
+  useEffect(() => {
+    if (liveResume === null) {
+      traceReadForResumeRef.current = null;
+    }
+  }, [liveResume]);
+
+  useEffect(() => {
+    if (!isTraceBeat || demo.state.mode !== "live" || demo.state.phase !== "paused") return;
+    if (demo.inFlight || liveResume === null || hasLiveTrace) return;
+    if (traceReadForResumeRef.current === liveResume.id) return;
+
+    traceReadForResumeRef.current = liveResume.id;
+    // Trace is a read-only proof step. Reaching its presentation beat completes
+    // the live run's evidence without advancing a cancelled or unrelated run.
+    void demo.next();
+  }, [demo, hasLiveTrace, isTraceBeat, liveResume]);
 
   const isApprovalBeat = state.location.kind === "main"
     && state.location.sceneId === "typed-human-boundary"
