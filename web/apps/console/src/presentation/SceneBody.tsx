@@ -11,6 +11,9 @@ import {
 import { DemoLifecycleScene } from "./DemoLifecycleScene.js";
 import { DemoWorkflowScene } from "./DemoWorkflowScene.js";
 import { StageCaption } from "./StageCaption.js";
+import { ConclusionScene } from "./conclusion/ConclusionScene.js";
+import { DefenseDiscussionIndex } from "./discussion/DefenseDiscussionIndex.js";
+import { EvaluationEvidenceScene } from "./evaluation/EvaluationEvidenceScene.js";
 import { ArchitectureScene } from "./scenes/ArchitectureScene.js";
 import { OpeningThesisScene } from "./opening/OpeningThesisScene.js";
 import { ProblemLoopScene } from "./opening/ProblemLoopScene.js";
@@ -257,32 +260,6 @@ const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
   </>
 );
 
-const evaluationStats = [
-  { id: "cohort", value: "36", label: "trials" },
-  { id: "validity", value: "2", label: "challenges" },
-  { id: "findings", value: "3", label: "waves" },
-];
-
-const EvaluationScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
-  <>
-    <StageCaption eyebrow={`Act I · ${scene.claimClass}`} title={scene.title}>
-      <p>{beat.caption}</p>
-    </StageCaption>
-    <div className="scene-body__evaluation">
-      {evaluationStats.map((stat) => (
-        <div
-          key={stat.id}
-          className={`scene-body__evaluation-stat${beat.id === stat.id ? " scene-body__evaluation-stat--active" : ""}`}
-        >
-          <strong>{stat.value}</strong>
-          <span>{stat.label}</span>
-        </div>
-      ))}
-    </div>
-    <p className="scene-body__evidence">{scene.evidencePointer}</p>
-  </>
-);
-
 const AgentHandoffScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
   <>
     <StageCaption eyebrow="Agent handoff" title={scene.title}>
@@ -302,7 +279,10 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
   const scene = findScene(sceneId) ?? findScene("thesis")!;
   const beat = findBeat(sceneId, beatId) ?? scene.beats[0]!;
 
-  const discussionLinks = <DiscussionLinks sceneId={scene.id} openDiscussion={openDiscussion} />;
+  // The questions beat renders its own grouped discussion index. Suppress the
+  // generic per-scene rail there so the same actions do not appear twice.
+  const showDiscussionRail = !(scene.id === "conclusion" && beat.id === "questions");
+  const discussionLinks = showDiscussionRail ? <DiscussionLinks sceneId={scene.id} openDiscussion={openDiscussion} /> : null;
   const content = (() => {
   switch (scene.view) {
     case "narrative":
@@ -345,9 +325,11 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
         />
       );
     case "evaluation":
-      return <EvaluationScene scene={scene} beat={beat} />;
+      return <EvaluationEvidenceScene scene={scene} beat={beat} />;
     case "conclusion":
-      return <NarrativeScene scene={scene} beat={beat} />;
+      return beat.id === "questions"
+        ? <DefenseDiscussionIndex openDiscussion={openDiscussion} />
+        : <ConclusionScene scene={scene} beat={beat} />;
     default:
       return assertNever(scene.view);
   }

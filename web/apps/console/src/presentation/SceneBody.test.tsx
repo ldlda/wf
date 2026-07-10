@@ -39,6 +39,19 @@ const demo: DemoTimelineController = {
 
 afterEach(() => cleanup());
 
+const renderSceneBodyAtMainLocation = (sceneId: PresentationLocation["sceneId"], beatId: string, openDiscussion = noop) => render(
+  <SceneBody
+    location={{ kind: "main", sceneId, beatId, focusPath: [] }}
+    demo={demo}
+    selectedNodeId={null}
+    selectNode={noop}
+    openEvidence={noop}
+    openDiscussion={openDiscussion}
+    onFocusPathChange={noop}
+    motionDisabled={false}
+  />,
+);
+
 describe("SceneBody", () => {
   it("renders Scene 1 as an opening decomposition visual", () => {
     const location: PresentationLocation = { kind: "main", sceneId: "thesis", beatId: "substrate", focusPath: [] };
@@ -380,6 +393,31 @@ describe("SceneBody", () => {
     await user.click(screen.getByRole("button", { name: /Hosted automation future-work/i }));
 
     expect(openDiscussion).toHaveBeenCalledWith("hosted-automation");
+  });
+
+  it("routes the evaluation scene through the dedicated evidence board", () => {
+    renderSceneBodyAtMainLocation("evaluation", "cohort");
+
+    expect(screen.getByRole("group", { name: /evaluation evidence board/i })).toBeInTheDocument();
+  });
+
+  it("routes conclusion beats through the dedicated conclusion scene", () => {
+    renderSceneBodyAtMainLocation("conclusion", "conclusion");
+
+    expect(screen.getByRole("region", { name: /thesis contribution boundary/i })).toBeInTheDocument();
+  });
+
+  it("renders the defense discussion index on the questions beat and opens its branches", async () => {
+    const user = userEvent.setup();
+    const openDiscussion = vi.fn();
+    renderSceneBodyAtMainLocation("conclusion", "questions", openDiscussion);
+
+    expect(screen.getByRole("navigation", { name: /defense discussion index/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText("defense discussion topics")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /where is the ai agent/i }));
+
+    expect(openDiscussion).toHaveBeenCalledWith("where-is-ai-agent");
   });
 
   it("renders evidence before discussion links so the chip lane cannot cover evidence text", () => {

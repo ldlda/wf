@@ -220,6 +220,20 @@ describe("presentationReducer", () => {
       .toEqual(deepRuntimeState.location);
   });
 
+  it("preserves the questions beat as the discussion return location", () => {
+    const atQuestions = presentationReducer(initialPresentationState, {
+      type: "jump",
+      location: { kind: "main", sceneId: "conclusion", beatId: "questions", focusPath: [] },
+    });
+    const opened = presentationReducer(atQuestions, {
+      type: "open_discussion",
+      branchId: "where-is-ai-agent",
+    });
+
+    expect(opened.discussionReturn).toEqual(atQuestions.location);
+    expect(presentationReducer(opened, { type: "close_discussion" }).location).toEqual(atQuestions.location);
+  });
+
   it("derives a receipt from beat metadata without opening an inspector", () => {
     const state = presentationReducer(initialPresentationState, {
       type: "jump",

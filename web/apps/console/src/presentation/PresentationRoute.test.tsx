@@ -114,6 +114,30 @@ describe("PresentationRoute", () => {
     expect(window.location.hash).toBe("#scene/positioning/landscape");
   });
 
+  it("returns to the questions beat after closing a discussion opened from the index", async () => {
+    const user = userEvent.setup();
+    window.location.hash = "#scene/conclusion/questions";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    await user.click(screen.getByRole("button", { name: /where is the ai agent/i }));
+    expect(window.location.hash).toBe("#discuss/where-is-ai-agent");
+
+    await user.click(screen.getByRole("button", { name: /return to thesis/i }));
+    expect(window.location.hash).toBe("#scene/conclusion/questions");
+  });
+
+  it("advances from the conclusion beat to the questions beat", async () => {
+    window.location.hash = "#scene/conclusion/conclusion";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    await userEvent.keyboard("{ArrowRight}");
+
+    expect(window.location.hash).toBe("#scene/conclusion/questions");
+    expect(await screen.findByRole("navigation", { name: /defense discussion index/i })).toBeInTheDocument();
+  });
+
   it("renders stable chat, primary, progress, and transient evidence surfaces", async () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
