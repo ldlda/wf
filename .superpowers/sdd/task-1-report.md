@@ -48,7 +48,7 @@ Test Files 1 passed; Tests 5 passed
 - Component/model tests: `2` files passed, `8` tests passed.
 - CSS contract tests: `1` file passed, `2` tests passed.
 - Console typecheck: `pnpm --dir web --filter @lda/console typecheck` passed.
-- Presentation CSS test: `1` file passed, `1` test passed.
+- Presentation CSS test: `1` file passed, `2` tests passed.
 - Production build: `pnpm --dir web --filter @lda/console build` succeeded; 730 modules transformed.
 - `git diff --check` passed with no whitespace errors.
 - The scene tests verify all three beat attributes, exact counts, audit rows, exact validity boundary, all six labels, and six decorative SVG icons.
