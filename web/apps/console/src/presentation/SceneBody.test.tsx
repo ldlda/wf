@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { SceneBody } from "./SceneBody.js";
-import type { PresentationLocation } from "./storyboard.js";
+import type { MainLocation, PresentationLocation } from "./storyboard.js";
 import { findBeat, findScene } from "./storyboard.js";
 
 const noop = () => {};
@@ -39,7 +39,7 @@ const demo: DemoTimelineController = {
 
 afterEach(() => cleanup());
 
-const renderSceneBodyAtMainLocation = (sceneId: PresentationLocation["sceneId"], beatId: string, openDiscussion = noop) => render(
+const renderSceneBodyAtMainLocation = (sceneId: MainLocation["sceneId"], beatId: string, openDiscussion = noop) => render(
   <SceneBody
     location={{ kind: "main", sceneId, beatId, focusPath: [] }}
     demo={demo}

@@ -173,6 +173,10 @@ prepared `lda_report_workflow` story. It renders a 12-scene, multi-beat
 storyboard with an adaptive aspect-ratio canvas, stable stage regions, discussion
 branches, act themes, a chat dock, and keyboard navigation.
 
+The final presentation beats frame the evaluation as bounded evidence, make
+claim boundaries and future work explicit, and end on the canonical defense
+discussion index rather than a benchmark or generic conclusion.
+
 Scenes 8 through 10 use the canonical replay as their only execution evidence.
 The handoff expands an interpreted run operation into the center stage, then
 keeps one workflow graph mounted while execution reaches the typed interrupt

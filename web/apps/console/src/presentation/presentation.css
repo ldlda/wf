@@ -88,6 +88,8 @@
   grid-template-columns: minmax(14rem, 0.8fr) minmax(20rem, 1.2fr);
   gap: 0;
   margin: 0.25rem 0 0.5rem;
+  /* Let the primary stage scroll at 4:3 instead of clipping board rows. */
+  flex-shrink: 0;
   overflow: hidden;
   border: 1px solid var(--evaluation-rule);
   border-radius: 0.35rem;
@@ -217,10 +219,10 @@
 }
 
 @media (max-width: 1080px) {
-  .evaluation-board { grid-template-columns: 1fr; }
-  .evaluation-board__cohort { border-right: 0; }
+  .evaluation-board { grid-template-columns: minmax(12rem, 0.7fr) minmax(20rem, 1.3fr); }
+  .evaluation-board__cohort { border-right: 1px solid var(--evaluation-rule); }
   .evaluation-board__outcomes,
-  .evaluation-board__findings { grid-column: auto; }
+  .evaluation-board__findings { grid-column: 2; }
   .evaluation-board__audit-row { grid-template-columns: 1fr; }
 }
 
@@ -268,6 +270,7 @@
   border: 1px solid var(--stage-line);
   border-radius: 0.45rem;
   background: linear-gradient(135deg, oklch(0.17 0.03 250), oklch(0.13 0.025 250));
+  color: oklch(0.93 0.015 250);
 }
 
 .conclusion-map__flow {

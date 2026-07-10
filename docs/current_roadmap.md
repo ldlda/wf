@@ -42,6 +42,7 @@ Design contracts:
 - [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md)
 - [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md)
 - [`presentation opening visuals`](superpowers/specs/2026-07-10-presentation-opening-visuals-design.md)
+- [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md)
 
 Implementation order:
 
@@ -186,10 +187,8 @@ Presentation visual audit, July 10:
 - Needs product-flow cohesion: Scenes 8-12 now have the right factual spine,
   but the demo surfaces still need stronger hierarchy between chat, operation,
   lifecycle, graph, interrupt, output, and evidence.
-- Needs non-text evaluation visuals: Scene 13 should become a compact evidence
-  board or chart-like summary instead of prose-heavy results.
-- Needs closing visual: Scene 14 should land the boundary/future-work message
-  with one memorable diagram, not just limits text.
+- Completed: Scenes 13 and 14 now close with a bounded evaluation board,
+  contribution boundary/future-work map, and canonical defense-question index.
 
 Recommended next visual slices:
 
@@ -213,8 +212,12 @@ Recommended next visual slices:
    output, and trace beats read as product evidence without chat competing for
    space. Implementation:
    [`guided proof scene composition cleanup`](historical/superpowers/plans/2026-07-10-guided-proof-scene-composition-cleanup.md).
-5. Evidence and closing visuals: make Scenes 13 and 14 readable as a defense
-   artifact: evaluation board, claim boundaries, and future-work map.
+5. Completed: Evidence and closing visuals make Scenes 13 and 14 readable as a
+   defense artifact: bounded evaluation board, claim boundaries, future-work
+   map, and canonical examiner-question index. Design:
+   [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md).
+   Implementation:
+   [`presentation evaluation and closing plan`](historical/superpowers/plans/2026-07-10-presentation-evaluation-closing.md).
 
 Presentation wishlist / defense readiness:
 

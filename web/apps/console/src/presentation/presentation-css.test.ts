@@ -19,7 +19,16 @@ describe("presentation.css", () => {
   it("stacks evaluation audit rows at the 1080px container breakpoint", () => {
     const breakpointBlock = css.match(/@media \(max-width: 1080px\) \{(?<body>[\s\S]*?)\n\}/)?.groups?.body;
 
+    expect(breakpointBlock).toMatch(
+      /\.evaluation-board\s*\{\s*grid-template-columns: minmax\(12rem, 0\.7fr\) minmax\(20rem, 1\.3fr\);/,
+    );
     expect(breakpointBlock).toMatch(/\.evaluation-board__audit-row\s*\{\s*grid-template-columns: 1fr;/);
+  });
+
+  it("keeps the full evaluation board available to the scrollable stage", () => {
+    const boardBlock = css.match(/\.evaluation-board\s*\{(?<body>[\s\S]*?)\n\}/)?.groups?.body;
+
+    expect(boardBlock).toContain("flex-shrink: 0");
   });
 
   it("places the conclusion evidence beneath substrate at the 1080px breakpoint", () => {
@@ -28,6 +37,12 @@ describe("presentation.css", () => {
     expect(css).toMatch(/\.conclusion-map__node--runtime\s*\{\s*grid-column: 3;\s*grid-row: 1;/);
     expect(css).toMatch(/\.conclusion-map__node--evidence\s*\{\s*grid-column: 2;\s*grid-row: 2;/);
     expect(css).not.toMatch(/\.conclusion-map__node--runtime::after/);
+  });
+
+  it("uses a light foreground against the dark conclusion map", () => {
+    const mapBlock = css.match(/\.conclusion-map\s*\{(?<body>[\s\S]*?)\n\}/)?.groups?.body;
+
+    expect(mapBlock).toContain("color: oklch(0.93 0.015 250)");
   });
 
   it("keeps future-work icons neutral by default", () => {
