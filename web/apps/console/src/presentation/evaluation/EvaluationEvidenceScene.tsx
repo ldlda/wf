@@ -19,6 +19,7 @@ const findingIcons: Record<EvaluationFindingIcon, FC<LucideProps>> = {
 };
 
 export const EvaluationEvidenceScene: FC<EvaluationEvidenceSceneProps> = ({ scene, beat }) => {
+  // Unknown beat ids keep the evidence board visible rather than dropping the scene.
   const beatId = isEvaluationBeatId(beat.id) ? beat.id : "cohort";
 
   return (

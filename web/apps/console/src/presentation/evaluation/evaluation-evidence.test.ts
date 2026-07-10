@@ -3,6 +3,12 @@ import { evaluationEvidence, isEvaluationBeatId } from "./evaluation-evidence.js
 
 describe("evaluationEvidence", () => {
   it("preserves the exact audited trial projection", () => {
+    expect(evaluationEvidence.cohortFactors).toEqual([
+      { value: "2", label: "challenges" },
+      { value: "2", label: "hosted models" },
+      { value: "3", label: "profiles" },
+      { value: "3", label: "waves" },
+    ]);
     expect(evaluationEvidence.totalTrials).toBe(36);
     expect(evaluationEvidence.outcomes).toEqual([
       { value: 27, label: "clean product-path passes", kind: "pass" },

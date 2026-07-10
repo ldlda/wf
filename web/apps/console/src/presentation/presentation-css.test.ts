@@ -15,4 +15,10 @@ describe("presentation.css", () => {
     expect(css).toContain(".presentation-stage__primary::-webkit-scrollbar");
     expect(css).toContain("display: none");
   });
+
+  it("stacks evaluation audit rows at the 1080px container breakpoint", () => {
+    const breakpointBlock = css.match(/@media \(max-width: 1080px\) \{(?<body>[\s\S]*?)\n\}/)?.groups?.body;
+
+    expect(breakpointBlock).toMatch(/\.evaluation-board__audit-row\s*\{\s*grid-template-columns: 1fr;/);
+  });
 });

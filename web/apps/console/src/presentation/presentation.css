@@ -101,7 +101,7 @@
 .evaluation-board__audit,
 .evaluation-board__findings,
 .evaluation-board__boundary {
-  transition: opacity 180ms ease, transform 180ms ease;
+  transition: transform 180ms ease;
 }
 
 .evaluation-board[data-evaluation-beat="cohort"] .evaluation-board__cohort,
@@ -221,7 +221,7 @@
   .evaluation-board__cohort { border-right: 0; }
   .evaluation-board__outcomes,
   .evaluation-board__findings { grid-column: auto; }
-  .evaluation-board__audit-row { grid-template-columns: 1fr auto 1fr; }
+  .evaluation-board__audit-row { grid-template-columns: 1fr; }
 }
 
 .stage-caption__eyebrow {
