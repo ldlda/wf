@@ -124,3 +124,51 @@ $ tsc -b --pretty false
 git diff --check
 passed
 ```
+
+## Final Responsive Fix
+
+### RED
+
+Command:
+
+```text
+pnpm --dir web --filter @lda/console test -- src/presentation/presentation-css.test.ts
+```
+
+Result:
+
+```text
+Test Files  1 failed (1)
+Tests       1 failed, 4 passed (5)
+```
+
+The failure was the missing 640px explicit placement reset and stale generic connector selector.
+
+### GREEN
+
+Command:
+
+```text
+pnpm --dir web --filter @lda/console test -- src/presentation/presentation-css.test.ts
+```
+
+Result:
+
+```text
+Test Files  1 passed (1)
+Tests       5 passed (5)
+```
+
+### Final Verification
+
+```text
+pnpm --dir web --filter @lda/console test -- src/presentation/conclusion/conclusion-model.test.ts src/presentation/conclusion/ConclusionScene.test.tsx
+Test Files  2 passed (2)
+Tests       12 passed (12)
+
+pnpm --dir web --filter @lda/console typecheck
+$ tsc -b --pretty false
+
+git diff --check
+passed
+```

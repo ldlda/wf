@@ -392,7 +392,16 @@
 
 @media (max-width: 640px) {
   .conclusion-map__flow { grid-template-columns: 1fr; gap: 0.85rem; }
-  .conclusion-map__node:not(:last-child)::after {
+  .conclusion-map__node--planner,
+  .conclusion-map__node--substrate,
+  .conclusion-map__node--runtime,
+  .conclusion-map__node--evidence {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .conclusion-map__node--planner::after,
+  .conclusion-map__node--substrate::after {
     top: auto;
     right: 50%;
     bottom: -0.85rem;

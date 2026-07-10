@@ -34,4 +34,11 @@ describe("presentation.css", () => {
     expect(css).toMatch(/\.conclusion-map__future svg\s*\{[^}]*color: var\(--text-secondary\);/s);
     expect(css).not.toMatch(/\.conclusion-map__future svg\s*\{[^}]*color: var\(--accent-cyan\);/s);
   });
+
+  it("resets conclusion node placement and keeps connectors node-specific on narrow screens", () => {
+    expect(css).toMatch(
+      /@media \(max-width: 640px\) \{[\s\S]*?\.conclusion-map__node--planner,\s*\.conclusion-map__node--substrate,\s*\.conclusion-map__node--runtime,\s*\.conclusion-map__node--evidence\s*\{\s*grid-column: auto;\s*grid-row: auto;/,
+    );
+    expect(css).not.toContain(".conclusion-map__node:not(:last-child)::after");
+  });
 });
