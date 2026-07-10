@@ -67,6 +67,11 @@ describe("RunInputFacts", () => {
     expect(screen.getByText("architecture-notes.md")).toBeDefined();
     expect(screen.getByText("issue-board.json")).toBeDefined();
   });
+
+  it("renders with compact density", () => {
+    render(<RunInputFacts facts={baseFacts} density="compact" />);
+    expect(screen.getByRole("region", { name: /workflow input summary/i })).toHaveAttribute("data-density", "compact");
+  });
 });
 
 describe("InterruptPayloadFacts", () => {
@@ -88,6 +93,11 @@ describe("InterruptPayloadFacts", () => {
     expect(screen.getByText("risk-1")).toBeInTheDocument();
     expect(screen.getByText(/submitted/)).toBeInTheDocument();
     expect(screen.getByText(/cancelled/)).toBeInTheDocument();
+  });
+
+  it("renders with primary priority", () => {
+    render(<InterruptPayloadFacts facts={baseFacts} priority="primary" />);
+    expect(screen.getByRole("region", { name: /interrupt report and proposed issues/i })).toHaveAttribute("data-priority", "primary");
   });
 });
 
@@ -118,6 +128,11 @@ describe("RunOutputFacts", () => {
     render(<RunOutputFacts facts={baseFacts} />);
 
     expect(screen.getByText("Output not created yet")).toBeDefined();
+  });
+
+  it("uses summary aria-label for default priority", () => {
+    render(<RunOutputFacts facts={baseFacts} />);
+    expect(screen.getByRole("region", { name: /workflow output summary/i })).toBeInTheDocument();
   });
 
   it("renders created output facts with issue details", () => {
