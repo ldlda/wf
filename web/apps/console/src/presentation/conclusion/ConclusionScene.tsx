@@ -61,7 +61,7 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
             const Icon = futureWorkIcons[branch.icon];
             return (
               <li key={branch.id} data-future-work-id={branch.id}>
-                <Icon aria-hidden="true" />
+                <Icon aria-hidden="true" data-emphasis="neutral" />
                 <span>
                   <strong>{branch.label}</strong>
                   <small>{branch.example}</small>

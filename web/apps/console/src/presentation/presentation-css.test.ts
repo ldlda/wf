@@ -21,4 +21,17 @@ describe("presentation.css", () => {
 
     expect(breakpointBlock).toMatch(/\.evaluation-board__audit-row\s*\{\s*grid-template-columns: 1fr;/);
   });
+
+  it("places the conclusion evidence beneath substrate at the 1080px breakpoint", () => {
+    expect(css).toMatch(/\.conclusion-map__node--planner\s*\{\s*grid-column: 1;\s*grid-row: 1;/);
+    expect(css).toMatch(/\.conclusion-map__node--substrate\s*\{\s*grid-column: 2;\s*grid-row: 1;/);
+    expect(css).toMatch(/\.conclusion-map__node--runtime\s*\{\s*grid-column: 3;\s*grid-row: 1;/);
+    expect(css).toMatch(/\.conclusion-map__node--evidence\s*\{\s*grid-column: 2;\s*grid-row: 2;/);
+    expect(css).not.toMatch(/\.conclusion-map__node--runtime::after/);
+  });
+
+  it("keeps future-work icons neutral by default", () => {
+    expect(css).toMatch(/\.conclusion-map__future svg\s*\{[^}]*color: var\(--text-secondary\);/s);
+    expect(css).not.toMatch(/\.conclusion-map__future svg\s*\{[^}]*color: var\(--accent-cyan\);/s);
+  });
 });

@@ -76,4 +76,24 @@ describe("ConclusionScene", () => {
     expect(screen.getByText("Planner proposes; runtime executes.")).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "future work layers" })).toHaveAttribute("data-state", "receded");
   });
+
+  it("keeps evidence as a separately identified node after the runtime", () => {
+    render(<ConclusionScene scene={scene} beat={beat("future")} />);
+    const nodes = [...screen.getByLabelText("contribution flow").children];
+    expect(nodes.map((node) => node.getAttribute("data-node-id"))).toEqual([
+      "planner",
+      "substrate",
+      "runtime",
+      "evidence",
+    ]);
+    expect(nodes[2]).toHaveAttribute("data-node-id", "runtime");
+    expect(nodes[3]).toHaveAttribute("data-node-id", "evidence");
+  });
+
+  it("marks every future-work icon neutral while substrate stays the sole emphasis", () => {
+    render(<ConclusionScene scene={scene} beat={beat("future")} />);
+    const map = screen.getByRole("region", { name: "thesis contribution boundary" });
+    expect(map.querySelector('[data-node-id="substrate"]')).toHaveAttribute("data-emphasis", "substrate");
+    expect([...map.querySelectorAll(".conclusion-map__future svg")].every((icon) => icon.getAttribute("data-emphasis") === "neutral")).toBe(true);
+  });
 });

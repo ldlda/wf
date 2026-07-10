@@ -58,3 +58,69 @@ The model test passed with 3 tests. The component test passed with 7 tests. The 
 - Confirmed the limits beat marks non-claims, and the conclusion beat marks future work as `receded`.
 - Confirmed the diagram uses semantic HTML and CSS connectors rather than React Flow, with responsive wrapping and a single cyan substrate emphasis.
 - Confirmed no factual production, scheduler, or broad benchmark claim was added.
+
+## Review Fixes
+
+### RED
+
+Command:
+
+```text
+pnpm --dir web --filter @lda/console test -- src/presentation/conclusion/ConclusionScene.test.tsx src/presentation/presentation-css.test.ts
+```
+
+Result: `3 failed, 10 passed` across 2 files. The failures were the missing explicit 1080px node placements, the cyan future-work SVG rule, and missing neutral icon attributes.
+
+### GREEN
+
+Command:
+
+```text
+pnpm --dir web --filter @lda/console test -- src/presentation/conclusion/ConclusionScene.test.tsx src/presentation/presentation-css.test.ts
+```
+
+Result: `2 passed`, `13 passed`.
+
+### Requested Verification
+
+Command:
+
+```text
+pnpm --dir web --filter @lda/console test -- src/presentation/conclusion/conclusion-model.test.ts src/presentation/conclusion/ConclusionScene.test.tsx
+```
+
+Result: `2 passed`, `12 passed`.
+
+Command:
+
+```text
+pnpm --dir web --filter @lda/console test -- src/presentation/presentation-css.test.ts
+```
+
+Result: `1 passed`, `4 passed`.
+
+Command:
+
+```text
+pnpm --dir web --filter @lda/console typecheck
+```
+
+Result: `tsc -b --pretty false` passed.
+
+### Final Rerun After Connector Contract
+
+```text
+pnpm --dir web --filter @lda/console test -- src/presentation/conclusion/conclusion-model.test.ts src/presentation/conclusion/ConclusionScene.test.tsx
+Test Files  2 passed (2)
+Tests       12 passed (12)
+
+pnpm --dir web --filter @lda/console test -- src/presentation/presentation-css.test.ts
+Test Files  1 passed (1)
+Tests       4 passed (4)
+
+pnpm --dir web --filter @lda/console typecheck
+$ tsc -b --pretty false
+
+git diff --check
+passed
+```
