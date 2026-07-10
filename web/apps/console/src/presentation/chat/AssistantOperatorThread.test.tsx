@@ -7,7 +7,7 @@ import { AssistantOperatorThread } from "./AssistantOperatorThread.js";
 afterEach(() => cleanup());
 
 describe("AssistantOperatorThread", () => {
-  it("renders text interleaved with a collapsed tool call", async () => {
+  it("renders text interleaved with an open tool call", async () => {
     const user = userEvent.setup();
     const messages: ReadonlyArray<AgentMessage> = [
       {
@@ -30,9 +30,10 @@ describe("AssistantOperatorThread", () => {
     expect(screen.getByText("I will inspect the run.")).toBeInTheDocument();
     expect(screen.getByText("The trace is inspectable.")).toBeInTheDocument();
     const tool = screen.getByRole("button", { name: /readRunTrace/i });
-    expect(screen.queryByText(/run_1/)).not.toBeInTheDocument();
-    await user.click(tool);
+    expect(tool).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/run_1/)).toBeInTheDocument();
+    await user.click(tool);
+    expect(screen.queryByText(/run_1/)).not.toBeInTheDocument();
   });
 
   it("renders grouped consecutive tool calls", () => {

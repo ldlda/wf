@@ -58,7 +58,7 @@ export async function* runPreparedRecipeReplay(
       case "inspectDeployment":
         yield emitToolStep(step.id, step.toolName, { deploymentId }, { deploymentId });
         break;
-      case "startPreparedReportRun":
+      case "startRun":
         yield emitToolStep(step.id, step.toolName, { deploymentId }, {
           runId,
           eventId: runStart?.id ?? null,

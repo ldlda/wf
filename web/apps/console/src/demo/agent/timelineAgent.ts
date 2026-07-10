@@ -96,7 +96,7 @@ export const useTimelineAgent = (
     setMessages((current) => appendToolMessage(
       current,
       "timeline-agent-start",
-      "startPreparedReportRun",
+      "startRun",
       { mode: modeLabel },
       { phase: "started" },
     ));

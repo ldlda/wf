@@ -10,17 +10,14 @@ afterEach(() => cleanup());
 
 describe("ProblemLoopScene", () => {
   it("uses the assistant transcript surface for the direct-action side", async () => {
-    const user = userEvent.setup();
     render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "direct-actions")!} />);
 
     const transcript = screen.getByRole("log", { name: /one-off assistant transcript/i });
     expect(transcript).toHaveClass("assistant-operator-thread");
     expect(within(transcript).getByText("Can you finish this workspace task?")).toBeInTheDocument();
-    expect(within(transcript).getByRole("button", { name: /workspace.run_once/i })).toBeInTheDocument();
-    expect(within(transcript).getByText("Reports success, but leaves no reusable workflow behind.")).toBeInTheDocument();
-
-    await user.click(within(transcript).getByRole("button", { name: /workspace.run_once/i }));
-    expect(within(transcript).getByText(/ephemeral/i)).toBeInTheDocument();
+    const toolButtons = within(transcript).getAllByRole("button", { name: /workflow.run_once/i });
+    expect(toolButtons).toHaveLength(3);
+    expect(within(transcript).getByText("Done. But none of this is recorded in a durable workflow.")).toBeInTheDocument();
   });
 
   it("renders reusable automation as a durable workflow blueprint", () => {

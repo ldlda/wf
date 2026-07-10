@@ -2,7 +2,7 @@ import { LDA_REPORT_DEPLOYMENT_ID } from "../ldaReportDemoConfig.js";
 import type { PresentationToolName, WorkflowToolName } from "./tools.js";
 
 export type RecipeTool =
-  | Extract<WorkflowToolName, "inspectDeployment" | "startPreparedReportRun" | "resumeIssueReview" | "readRunTrace">
+  | Extract<WorkflowToolName, "inspectDeployment" | "startRun" | "resumeIssueReview" | "readRunTrace">
   | Extract<PresentationToolName, "selectWorkflowNode">;
 
 type SelectWorkflowNodeStep = {
@@ -47,7 +47,7 @@ export const PREPARE_THESIS_REPORT_RECIPE: PreparedRecipe = {
     {
       id: "start-run",
       narration: "I will start the prepared workflow run.",
-      toolName: "startPreparedReportRun",
+      toolName: "startRun",
     },
     {
       id: "focus-interrupt",

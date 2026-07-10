@@ -1,6 +1,6 @@
 export type WorkflowToolName =
   | "inspectDeployment"
-  | "startPreparedReportRun"
+  | "startRun"
   | "resumeIssueReview"
   | "readRunTrace";
 
@@ -23,8 +23,8 @@ export const AGENT_TOOLS = {
     kind: "workflow",
     description: "Inspect the prepared report deployment.",
   },
-  startPreparedReportRun: {
-    name: "startPreparedReportRun",
+  startRun: {
+    name: "startRun",
     kind: "workflow",
     description: "Start the prepared report workflow run.",
   },

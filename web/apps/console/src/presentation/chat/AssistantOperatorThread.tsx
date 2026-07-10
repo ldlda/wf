@@ -1,11 +1,4 @@
 import { useCallback, useMemo, useState } from "react";
-import {
-  AssistantRuntimeProvider,
-  MessagePrimitive,
-  ThreadPrimitive,
-  useExternalStoreRuntime,
-  type AppendMessage,
-} from "@assistant-ui/react";
 import type { AgentMessage } from "../../demo/agent/events.js";
 import { SchemaApprovalSurface } from "../approval/SchemaApprovalSurface.js";
 import { projectAgentMessagesForAssistant, type AssistantProjectedMessage } from "./assistantRuntimeProjection.js";
@@ -31,15 +24,13 @@ const formatJson = (value: unknown): string => {
 const ToolCard = ({
   toolName,
   args,
-  result,
-  isError,
+  defaultOpen = true,
 }: {
   readonly toolName: string;
   readonly args?: unknown;
-  readonly result?: unknown;
-  readonly isError?: boolean;
+  readonly defaultOpen?: boolean;
 }) => {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   return (
     <div className="assistant-tool-card" data-open={open ? "true" : "false"}>
       <button
@@ -48,18 +39,12 @@ const ToolCard = ({
         aria-expanded={open}
         onClick={() => setOpen((c) => !c)}
       >
-        <span className="assistant-tool-card__label">Used tool: <b>{toolName}</b></span>
+        <span className="assistant-tool-card__label">{toolName}</span>
       </button>
       {open ? (
         <div className="assistant-tool-card__body">
           {args !== undefined ? (
             <pre className="assistant-tool-card__io" aria-label="tool input">{formatJson(args)}</pre>
-          ) : null}
-          {result !== undefined ? (
-            <div className="assistant-tool-card__result" data-error={isError ? "true" : undefined}>
-              <span>{isError ? "error" : "success"}</span>
-              <pre className="assistant-tool-card__io" aria-label="tool output">{formatJson(result)}</pre>
-            </div>
           ) : null}
         </div>
       ) : null}
@@ -100,9 +85,10 @@ const renderContentPart = (
   part: ContentPart,
   submitApproval?: (() => void) | undefined,
   cancelApproval?: (() => void) | undefined,
+  defaultOpen?: boolean,
 ): React.ReactNode => {
   if (part.type === "text") {
-    return <MessagePrimitive.Content />;
+    return <p style={{ whiteSpace: "pre-line" }}>{part.text}</p>;
   }
   const toolName = part.toolName;
   const args = part.args as Record<string, unknown> | undefined;
@@ -130,7 +116,7 @@ const renderContentPart = (
       </div>
     );
   }
-  return <ToolCard toolName={toolName} args={part.args} result={part.result} isError={part.isError ?? false} />;
+  return <ToolCard toolName={toolName} args={part.args} {...(defaultOpen !== undefined ? { defaultOpen } : {})} />;
 };
 
 const AssistantMessageBody = ({
@@ -142,11 +128,16 @@ const AssistantMessageBody = ({
   readonly submitApproval?: (() => void) | undefined;
   readonly cancelApproval?: (() => void) | undefined;
 }) => {
-  const textParts = parts.filter((p) => p.type === "text");
   const toolParts = parts.filter((p) => p.type === "tool-call");
 
   if (toolParts.length === 0) {
-    return <MessagePrimitive.Content />;
+    return (
+      <>
+        {parts.filter((p) => p.type === "text").map((p, i) => (
+          <p key={`text-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>
+        ))}
+      </>
+    );
   }
 
   if (toolParts.length === 1) {
@@ -164,54 +155,38 @@ const AssistantMessageBody = ({
   }
 
   const firstToolIndex = parts.findIndex((p) => p.type === "tool-call");
+  const lastToolIndex = parts.findLastIndex((p) => p.type === "tool-call");
   const beforeText = parts.slice(0, firstToolIndex).filter((p) => p.type === "text");
+  const afterText = parts.slice(lastToolIndex + 1).filter((p) => p.type === "text");
   return (
     <>
       {beforeText.map((p, i) => <p key={`before-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>)}
       <ToolGroupCard toolCount={toolParts.length}>
         {toolParts.map((tool, i) => (
           <div key={i}>
-            {renderContentPart(tool, submitApproval, cancelApproval)}
+            {renderContentPart(tool, submitApproval, cancelApproval, false)}
           </div>
         ))}
       </ToolGroupCard>
+      {afterText.map((p, i) => <p key={`after-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>)}
     </>
   );
 };
 
-const ThreadBody = ({
-  submitApproval,
-  cancelApproval,
+const MessageBubble = ({
+  role,
+  children,
 }: {
-  readonly submitApproval?: (() => void) | undefined;
-  readonly cancelApproval?: (() => void) | undefined;
+  readonly role: "user" | "assistant";
+  readonly children: React.ReactNode;
 }) => (
-  <ThreadPrimitive.Root className="assistant-thread">
-    <ThreadPrimitive.Viewport className="assistant-thread__viewport">
-      <ThreadPrimitive.Messages>
-        {({ message }) => {
-          const content = (message as unknown as { content?: unknown }).content;
-          const parts: ContentPart[] = Array.isArray(content)
-            ? (content as ContentPart[])
-            : typeof content === "string"
-              ? [{ type: "text" as const, text: content }]
-              : [];
-          return (
-            <MessagePrimitive.Root
-              className="assistant-message"
-              data-role={message.role}
-            >
-              <AssistantMessageBody
-                parts={parts}
-                submitApproval={submitApproval}
-                cancelApproval={cancelApproval}
-              />
-            </MessagePrimitive.Root>
-          );
-        }}
-      </ThreadPrimitive.Messages>
-    </ThreadPrimitive.Viewport>
-  </ThreadPrimitive.Root>
+  <div className="assistant-message" data-role={role}>
+    {role === "user" ? (
+      <div className="assistant-message__user-bubble">{children}</div>
+    ) : (
+      children
+    )}
+  </div>
 );
 
 export const AssistantOperatorThread = ({
@@ -223,41 +198,53 @@ export const AssistantOperatorThread = ({
   ariaLabel = "operator conversation",
 }: AssistantOperatorThreadProps) => {
   const projected = useMemo(() => projectAgentMessagesForAssistant(messages), [messages]);
-  const [localMessages, setLocalMessages] = useState<AssistantProjectedMessage[]>([]);
-  const runtimeMessages = projected.length > 0 ? projected : localMessages;
 
-  const onNew = useCallback(async (message: AppendMessage) => {
-    const text = message.content.find((part) => part.type === "text")?.text ?? "";
-    setLocalMessages((current) => [
-      ...current,
-      {
-        id: `local-${current.length + 1}`,
-        role: "user" as const,
-        content: [{ type: "text" as const, text }],
-      },
-    ]);
-  }, []);
-
-  const runtime = useExternalStoreRuntime({
-    messages: runtimeMessages,
-    setMessages: (msgs) => setLocalMessages([...msgs]),
-    onNew,
-    convertMessage: (message) => message,
-    isRunning: false,
-  });
+  const handleRun = useCallback(() => {
+    if (!runAction || runAction.disabled) return;
+    runAction.run();
+  }, [runAction]);
 
   return (
     <section className="assistant-operator-thread" data-mode={mode} role="log" aria-label={ariaLabel}>
+      <div className="assistant-thread">
+        <div className="assistant-thread__viewport">
+          {projected.map((message) => {
+            const content = (message as unknown as { content?: unknown }).content;
+            const parts: ContentPart[] = Array.isArray(content)
+              ? (content as ContentPart[])
+              : typeof content === "string"
+                ? [{ type: "text" as const, text: content }]
+                : [];
+
+            if (message.role === "user") {
+              return (
+                <MessageBubble key={message.id} role="user">
+                  {parts.filter((p) => p.type === "text").map((p, i) => (
+                    <p key={`text-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>
+                  ))}
+                </MessageBubble>
+              );
+            }
+
+            return (
+              <MessageBubble key={message.id} role="assistant">
+                <AssistantMessageBody
+                  parts={parts}
+                  submitApproval={submitApproval}
+                  cancelApproval={cancelApproval}
+                />
+              </MessageBubble>
+            );
+          })}
+        </div>
+      </div>
       {runAction ? (
         <div className="assistant-operator-thread__action">
-          <button type="button" disabled={runAction.disabled} onClick={runAction.run}>
+          <button type="button" disabled={runAction.disabled} onClick={handleRun}>
             {runAction.label}
           </button>
         </div>
       ) : null}
-      <AssistantRuntimeProvider runtime={runtime}>
-        <ThreadBody submitApproval={submitApproval} cancelApproval={cancelApproval} />
-      </AssistantRuntimeProvider>
     </section>
   );
 };

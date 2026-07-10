@@ -19,12 +19,28 @@ const oneOffToolLoopMessages: ReadonlyArray<AgentMessage> = [
       {
         type: "tool-call",
         call: {
-          id: "scene-2-tool",
-          name: "workspace.run_once" as AgentToolName,
-          input: { persistence: "ephemeral", reusable_workflow: false },
+          id: "scene-2-tool-1",
+          name: "workflow.run_once" as AgentToolName,
+          input: { source: "api", endpoint: "/tasks" },
         },
       },
-      { type: "text", text: "Reports success, but leaves no reusable workflow behind." },
+      {
+        type: "tool-call",
+        call: {
+          id: "scene-2-tool-2",
+          name: "workflow.run_once" as AgentToolName,
+          input: { format: "json", validate: true },
+        },
+      },
+      {
+        type: "tool-call",
+        call: {
+          id: "scene-2-tool-3",
+          name: "workflow.run_once" as AgentToolName,
+          input: { destination: "file", path: "/tmp/result.json" },
+        },
+      },
+      { type: "text", text: "Done. But none of this is recorded in a durable workflow." },
     ],
   },
 ];

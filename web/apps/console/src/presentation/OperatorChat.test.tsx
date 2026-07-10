@@ -77,7 +77,7 @@ describe("OperatorChat", () => {
     expect(screen.getByRole("button", { name: /selectWorkflowNode/i })).toBeInTheDocument();
   });
 
-  it("renders tool calls as collapsed tool cards", async () => {
+  it("renders tool calls as open tool cards", async () => {
     const user = userEvent.setup();
     const messages: ReadonlyArray<AgentMessage> = [
       {
@@ -92,9 +92,10 @@ describe("OperatorChat", () => {
     render(<OperatorChat state={initialPresentationState} messages={messages} />);
 
     const tool = screen.getByRole("button", { name: /readRunTrace/i });
-    expect(screen.queryByText(/run_1/)).not.toBeInTheDocument();
-    await user.click(tool);
+    expect(tool).toHaveAttribute("aria-expanded", "true");
     expect(screen.getByText(/run_1/)).toBeInTheDocument();
+    await user.click(tool);
+    expect(screen.queryByText(/run_1/)).not.toBeInTheDocument();
   });
 
   it("renders schema approval surface inside chat approval request", async () => {
@@ -157,8 +158,9 @@ describe("OperatorChat", () => {
     const tool = screen.getByRole("button", { name: /resumeIssueReview/i });
     expect(screen.queryByRole("button", { name: /Approve/i })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Deny/i })).not.toBeInTheDocument();
-    await user.click(tool);
     expect(screen.getByLabelText("tool input")).toBeInTheDocument();
+    await user.click(tool);
+    expect(screen.queryByLabelText("tool input")).not.toBeInTheDocument();
   });
 
   it("renders error and presentation action parts", () => {
@@ -256,7 +258,7 @@ describe("OperatorChat", () => {
         parts: [
           {
             type: "tool-call",
-            call: { id: "call-1", name: "startPreparedReportRun", input: { deploymentId: "demo" } },
+            call: { id: "call-1", name: "startRun", input: { deploymentId: "demo" } },
           },
         ],
       },
@@ -264,7 +266,7 @@ describe("OperatorChat", () => {
 
     render(<OperatorChat state={initialPresentationState} messages={messages} />);
 
-    expect(screen.getByRole("button", { name: /startPreparedReportRun/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /startRun/i })).toBeInTheDocument();
   });
 
   it("disables schema approval buttons when approval actions are unavailable", () => {

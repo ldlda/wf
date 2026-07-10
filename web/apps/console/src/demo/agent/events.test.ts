@@ -18,19 +18,19 @@ describe("agent events", () => {
   });
 
   it("creates tool call, tool result, and presentation action parts", () => {
-    expect(agentToolCallPart("c1", "startPreparedReportRun", { deploymentId: "lda_report_case_study.default" })).toEqual({
+    expect(agentToolCallPart("c1", "startRun", { deploymentId: "lda_report_case_study.default" })).toEqual({
       type: "tool-call",
       call: {
         id: "c1",
-        name: "startPreparedReportRun",
+        name: "startRun",
         input: { deploymentId: "lda_report_case_study.default" },
       },
     });
-    expect(agentToolResultPart("c1", "startPreparedReportRun", "success", { runId: "run_1" })).toEqual({
+    expect(agentToolResultPart("c1", "startRun", "success", { runId: "run_1" })).toEqual({
       type: "tool-result",
       result: {
         callId: "c1",
-        name: "startPreparedReportRun",
+        name: "startRun",
         status: "success",
         output: { runId: "run_1" },
       },

@@ -16,7 +16,7 @@ describe("prepared recipe driver", () => {
     const messages = await collect(runPreparedRecipeReplay(recording, signal, async () => ({ approved: true, comment: "test" })));
     expect(messages[0]?.role).toBe("user");
     expect(messages.some((message) =>
-      message.parts.some((part) => part.type === "tool-call" && part.call.name === "startPreparedReportRun"),
+      message.parts.some((part) => part.type === "tool-call" && part.call.name === "startRun"),
     )).toBe(true);
     expect(messages.some((message) =>
       message.parts.some((part) => part.type === "presentation-action" && part.action.type === "selectWorkflowNode"),
@@ -35,7 +35,7 @@ describe("prepared recipe driver", () => {
     );
     expect(toolNames).toEqual([
       "inspectDeployment",
-      "startPreparedReportRun",
+      "startRun",
       "selectWorkflowNode",
       "resumeIssueReview",
       "readRunTrace",
@@ -92,7 +92,7 @@ describe("prepared recipe driver", () => {
     );
     expect(toolCalls).toEqual([
       "inspectDeployment",
-      "startPreparedReportRun",
+      "startRun",
       "selectWorkflowNode",
       "resumeIssueReview",
     ]);

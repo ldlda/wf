@@ -4,7 +4,7 @@ import { AGENT_TOOLS, isAllowedAgentToolName } from "./tools.js";
 describe("agent tools", () => {
   it("separates workflow tools from presentation tools", () => {
     expect(AGENT_TOOLS.inspectDeployment.kind).toBe("workflow");
-    expect(AGENT_TOOLS.startPreparedReportRun.kind).toBe("workflow");
+    expect(AGENT_TOOLS.startRun.kind).toBe("workflow");
     expect(AGENT_TOOLS.resumeIssueReview.kind).toBe("workflow");
     expect(AGENT_TOOLS.readRunTrace.kind).toBe("workflow");
     expect(AGENT_TOOLS.selectWorkflowNode.kind).toBe("presentation");
