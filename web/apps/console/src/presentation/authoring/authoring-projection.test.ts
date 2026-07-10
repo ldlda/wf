@@ -8,6 +8,7 @@ describe("projectPreparedAuthoringPhase", () => {
     expect(phase.label).toBe("Discover");
     expect(phase.commands.length).toBeGreaterThanOrEqual(2);
     expect(phase.summary).toMatch(/sources|capabilities|schema/i);
+    expect(phase.visual).toMatchObject({ kind: "inventory" });
   });
 
   it("projects the draft phase with graph and routes", () => {
@@ -15,6 +16,7 @@ describe("projectPreparedAuthoringPhase", () => {
     expect(phase.label).toBe("Draft");
     expect(phase.commands.length).toBeGreaterThanOrEqual(2);
     expect(phase.summary).toMatch(/graph|routes/i);
+    expect(phase.visual).toMatchObject({ kind: "graph" });
   });
 
   it("projects the validate phase with diagnosis and repair", () => {
@@ -22,13 +24,16 @@ describe("projectPreparedAuthoringPhase", () => {
     expect(phase.label).toBe("Validate");
     expect(phase.commands.length).toBeGreaterThanOrEqual(2);
     expect(phase.summary).toMatch(/diagnos|repair/i);
+    expect(phase.visual).toMatchObject({ kind: "repair" });
   });
 
   it("projects the artifact phase with immutable ID and version", () => {
     const phase = projectPreparedAuthoringPhase("artifact");
     expect(phase.label).toBe("Artifact");
     expect(phase.commands.length).toBeGreaterThanOrEqual(2);
-    expect(phase.summary).toMatch(/id|version/i);
+    expect(phase.summary).toMatch(/id/i);
+    expect(phase.summary).toMatch(/version/i);
+    expect(phase.visual).toMatchObject({ kind: "artifact" });
   });
 
   it("projects the deployment phase with bindings and validation", () => {
@@ -36,15 +41,16 @@ describe("projectPreparedAuthoringPhase", () => {
     expect(phase.label).toBe("Deployment");
     expect(phase.commands.length).toBeGreaterThanOrEqual(2);
     expect(phase.summary).toMatch(/bind|validat/i);
+    expect(phase.visual).toMatchObject({ kind: "bindings" });
   });
 
-  it("validates phase diagnostic status is 'repaired'", () => {
+  it("keeps the validation diagnostic and repair command distinct", () => {
     const phase = projectPreparedAuthoringPhase("validate");
     const diagnosticCmd = phase.commands.find(
-      (cmd) => cmd.result === "diagnostic" && cmd.detail?.includes("repaired"),
+      (cmd) => cmd.result === "diagnostic" && cmd.detail?.includes("no state projection"),
     );
     expect(diagnosticCmd).toBeDefined();
-    expect(diagnosticCmd!.detail).toContain("repaired");
+    expect(phase.commands.some((cmd) => cmd.command.includes("draft set-output"))).toBe(true);
   });
 
   it("uses real public command syntax from the recording", () => {
