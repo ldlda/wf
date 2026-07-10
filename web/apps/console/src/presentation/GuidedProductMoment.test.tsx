@@ -244,6 +244,24 @@ describe("GuidedProductMoment", () => {
     expect(screen.getByText("ISSUE-001")).toBeInTheDocument();
   });
 
+  it("trace makes trace frames primary with compact output support", () => {
+    const tracedDemo = demoWithAppliedCount(5);
+
+    render(
+      <GuidedProductMoment
+        beat={findBeat("resume-output-evidence", "trace")!}
+        demo={tracedDemo}
+        contract={contract}
+        operation={null}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("region", { name: /workflow trace proof/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /workflow output summary/i })).toHaveAttribute("data-output-priority", "summary");
+    expect(screen.queryByText("No trace frames captured.")).not.toBeInTheDocument();
+  });
+
   it("trace beat shows trace frames instead of the empty fallback after trace is primed", () => {
     const tracedDemo = demoWithAppliedCount(5);
 

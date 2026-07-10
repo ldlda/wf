@@ -132,7 +132,7 @@ type RunTraceFactsProps = {
 };
 
 export const RunTraceFacts = ({ facts }: RunTraceFactsProps) => (
-  <div className="run-facts-card run-trace-facts">
+  <div className="run-facts-card run-trace-facts" role="region" aria-label="workflow trace proof">
     <h3>Trace frames</h3>
     {facts.trace.frames.length === 0 ? (
       <p>No trace frames captured.</p>
