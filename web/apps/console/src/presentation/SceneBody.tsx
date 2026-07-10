@@ -328,7 +328,7 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
       return <EvaluationEvidenceScene scene={scene} beat={beat} />;
     case "conclusion":
       return beat.id === "questions"
-        ? <DefenseDiscussionIndex openDiscussion={openDiscussion} />
+        ? <DefenseDiscussionIndex discussionBranches={discussionBranches} openDiscussion={openDiscussion} />
         : <ConclusionScene scene={scene} beat={beat} />;
     default:
       return assertNever(scene.view);

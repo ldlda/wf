@@ -5,8 +5,10 @@ export const contributionNodes = [
   { id: "planner", label: "External planner" },
   { id: "substrate", label: "Typed workflow substrate" },
   { id: "runtime", label: "Deterministic runtime" },
-  { id: "evidence", label: "Persisted, inspectable evidence" },
 ] as const;
+
+// Evidence is attached to the substrate, not another step in the execution line.
+export const evidenceNode = { id: "evidence", label: "Persisted, inspectable evidence" } as const;
 
 export const nonClaims = ["Not a production sandbox", "Not a scheduler", "Not a broad agent benchmark"] as const;
 

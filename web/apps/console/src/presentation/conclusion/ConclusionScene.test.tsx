@@ -77,17 +77,17 @@ describe("ConclusionScene", () => {
     expect(screen.getByRole("list", { name: "future work layers" })).toHaveAttribute("data-state", "receded");
   });
 
-  it("keeps evidence as a separately identified node after the runtime", () => {
+  it("attaches evidence vertically beneath the typed substrate rather than extending the contribution line", () => {
     render(<ConclusionScene scene={scene} beat={beat("future")} />);
-    const nodes = [...screen.getByLabelText("contribution flow").children];
-    expect(nodes.map((node) => node.getAttribute("data-node-id"))).toEqual([
+    const executionNodes = [...screen.getByLabelText("contribution flow").children]
+      .filter((node) => node.getAttribute("data-evidence-attachment") !== "vertical");
+    expect(executionNodes.map((node) => node.getAttribute("data-node-id"))).toEqual([
       "planner",
       "substrate",
       "runtime",
-      "evidence",
     ]);
-    expect(nodes[2]).toHaveAttribute("data-node-id", "runtime");
-    expect(nodes[3]).toHaveAttribute("data-node-id", "evidence");
+    expect(screen.getByText("Persisted, inspectable evidence").closest("[data-node-id='evidence']"))
+      .toHaveAttribute("data-evidence-attachment", "vertical");
   });
 
   it("marks every future-work icon neutral while substrate stays the sole emphasis", () => {

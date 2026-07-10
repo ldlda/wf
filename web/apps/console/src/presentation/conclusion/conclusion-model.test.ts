@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { contributionNodes, futureWorkBranches, isConclusionBeatId, nonClaims } from "./conclusion-model.js";
+import { contributionNodes, evidenceNode, futureWorkBranches, isConclusionBeatId, nonClaims } from "./conclusion-model.js";
 
 describe("conclusion model", () => {
   it("defines the stable contribution boundary", () => {
@@ -7,8 +7,8 @@ describe("conclusion model", () => {
       { id: "planner", label: "External planner" },
       { id: "substrate", label: "Typed workflow substrate" },
       { id: "runtime", label: "Deterministic runtime" },
-      { id: "evidence", label: "Persisted, inspectable evidence" },
     ]);
+    expect(evidenceNode).toEqual({ id: "evidence", label: "Persisted, inspectable evidence" });
   });
 
   it("keeps the closing claims bounded", () => {

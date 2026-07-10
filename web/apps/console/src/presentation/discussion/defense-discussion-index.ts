@@ -15,6 +15,10 @@ export type DefenseDiscussionGroup = {
   readonly branches: readonly DiscussionBranchDefinition[];
 };
 
+export type CanonicalDiscussionBranchDefinition = DiscussionBranchDefinition & {
+  readonly id: DiscussionBranchId;
+};
+
 // This explicit record is intentionally exhaustive: adding a Q&A branch must
 // also place it in the end-of-defense index instead of silently hiding it.
 export const discussionTopicByBranchId: Record<DiscussionBranchId, DefenseDiscussionTopicId> = {
@@ -43,16 +47,19 @@ export const discussionTopicByBranchId: Record<DiscussionBranchId, DefenseDiscus
 };
 
 const discussionTopicGroups = [
-  { id: "contribution", label: "Contribution" },
-  { id: "positioning", label: "Positioning" },
-  { id: "runtime", label: "Runtime" },
-  { id: "authoring", label: "Authoring" },
-  { id: "demo", label: "Demo" },
+  { id: "contribution", label: "Thesis contribution" },
+  { id: "positioning", label: "Positioning and related systems" },
+  { id: "runtime", label: "Runtime and lifecycle" },
+  { id: "authoring", label: "Authoring and validation" },
+  { id: "demo", label: "Demo integrity" },
   { id: "evaluation", label: "Evaluation" },
-  { id: "production", label: "Production" },
+  { id: "production", label: "Production readiness and future work" },
 ] as const satisfies readonly { id: DefenseDiscussionTopicId; label: string }[];
 
-export const defenseDiscussionGroups: readonly DefenseDiscussionGroup[] = discussionTopicGroups.map((topic) => ({
+/** Projects canonical branches without copying their titles or answer content. */
+export const projectDefenseDiscussionGroups = (branches: readonly CanonicalDiscussionBranchDefinition[]): readonly DefenseDiscussionGroup[] => discussionTopicGroups.map((topic) => ({
   ...topic,
-  branches: discussionBranches.filter((branch) => discussionTopicByBranchId[branch.id] === topic.id),
+  branches: branches.filter((branch) => discussionTopicByBranchId[branch.id] === topic.id),
 }));
+
+export const defenseDiscussionGroups = projectDefenseDiscussionGroups(discussionBranches);

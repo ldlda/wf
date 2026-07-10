@@ -4,6 +4,7 @@ import { StageCaption } from "../StageCaption.js";
 import type { SceneBeatDefinition, SceneDefinition } from "../storyboard.js";
 import {
   contributionNodes,
+  evidenceNode,
   futureWorkBranches,
   isConclusionBeatId,
   nonClaims,
@@ -43,9 +44,17 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
             >
               <span className="conclusion-map__node-index">0{index + 1}</span>
               <strong>{node.label}</strong>
-              {node.id === "evidence" && <small>saved traces and receipts</small>}
             </div>
           ))}
+          <div
+            className={`conclusion-map__node conclusion-map__node--${evidenceNode.id}`}
+            data-evidence-attachment="vertical"
+            data-node-id={evidenceNode.id}
+          >
+            <span className="conclusion-map__node-index">04</span>
+            <strong>{evidenceNode.label}</strong>
+            <small>saved traces and receipts</small>
+          </div>
         </div>
 
         <ul

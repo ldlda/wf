@@ -31,12 +31,14 @@ describe("presentation.css", () => {
     expect(boardBlock).toContain("flex-shrink: 0");
   });
 
-  it("places the conclusion evidence beneath substrate at the 1080px breakpoint", () => {
+  it("keeps evidence vertically attached beneath substrate from wide desktop through the 1080px breakpoint", () => {
+    expect(css).toMatch(/\.conclusion-map__flow\s*\{\s*display: grid;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);\s*grid-template-rows: auto auto;/);
     expect(css).toMatch(/\.conclusion-map__node--planner\s*\{\s*grid-column: 1;\s*grid-row: 1;/);
     expect(css).toMatch(/\.conclusion-map__node--substrate\s*\{\s*grid-column: 2;\s*grid-row: 1;/);
     expect(css).toMatch(/\.conclusion-map__node--runtime\s*\{\s*grid-column: 3;\s*grid-row: 1;/);
     expect(css).toMatch(/\.conclusion-map__node--evidence\s*\{\s*grid-column: 2;\s*grid-row: 2;/);
     expect(css).not.toMatch(/\.conclusion-map__node--runtime::after/);
+    expect(css).toMatch(/\.conclusion-map__node--evidence::before\s*\{[\s\S]*?content: "↓";/);
   });
 
   it("uses a light foreground against the dark conclusion map", () => {
