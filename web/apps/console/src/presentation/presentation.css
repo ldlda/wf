@@ -2738,4 +2738,101 @@
   white-space: pre-wrap;
   overflow-x: auto;
   color: var(--text-secondary);
+}
+
+/*
+  Scene 9 — Prepared Workflow Authoring Lifecycle.
+  Compact orientation rail plus dominant phase projection.
+*/
+.prepared-lifecycle-scene {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.prepared-lifecycle-scene__rail {
+  display: flex;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0;
+  padding: 0.45rem 0.55rem;
+  background: color-mix(in oklch, var(--stage-inset) 55%, transparent);
+  border-radius: 0.45rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.prepared-lifecycle-scene__rail li {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.45rem;
+  border-radius: 0.3rem;
+  font: 600 0.65rem/1 var(--font-interface);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.prepared-lifecycle-scene__rail li[data-active="true"] {
+  background: color-mix(in oklch, var(--accent-cyan) 14%, transparent);
+  color: var(--accent-cyan);
+}
+
+.prepared-lifecycle-scene__projection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  padding: 0.55rem 0.65rem;
+  background: color-mix(in oklch, var(--stage-surface) 60%, var(--stage-inset));
+  border: 1px solid var(--stage-line);
+  border-radius: 0.45rem;
+}
+
+.prepared-lifecycle-scene__summary p {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--text-primary);
+}
+
+.prepared-lifecycle-scene__commands {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.prepared-lifecycle-scene__command {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.3rem 0.45rem;
+  background: color-mix(in oklch, var(--stage-inset) 65%, transparent);
+  border-radius: 0.3rem;
+}
+
+.prepared-lifecycle-scene__command code {
+  font-family: var(--font-evidence);
+  font-size: 0.65rem;
+  color: var(--accent-cyan);
+}
+
+.prepared-lifecycle-scene__command-result {
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.prepared-lifecycle-scene__command-result[data-result="success"] {
+  color: var(--accent-green);
+}
+
+.prepared-lifecycle-scene__command-result[data-result="diagnostic"] {
+  color: var(--accent-yellow);
+}
+
+.prepared-lifecycle-scene__receipt {
+  display: flex;
+  justify-content: center;
+  padding: 0.35rem 0;
 } 

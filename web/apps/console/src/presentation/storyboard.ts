@@ -182,10 +182,11 @@ export const mainScenes = defineScenes([
     stageTheme: "night",
     view: "demo-lifecycle",
     beats: [
-      sceneBeat("draft", "Prepared draft", "Prepared authoring context creates a reusable report workflow.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("artifact", "Saved artifact", "The workflow is preserved as a versioned artifact.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("deployment", "Deployment bindings", "Deployment binds workflow requirements to configured local sources.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("ready-run", "Ready to run", "The deployment is ready to start a persisted run from workflow input.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("discover", "Discover capabilities", "Inspect available sources, capabilities, and schemas before authoring.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("draft", "Author draft", "Create a workflow draft with report generation steps and routes.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("validate", "Validate and repair", "Bind sources and validate the draft; diagnose and repair issues.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("artifact", "Compile artifact", "Compile the validated draft into an immutable artifact.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("deployment", "Deploy and validate", "Save deployment bindings and validate readiness.", { chatMode: "hidden", chatTheme: "light" }),
     ],
   },
   {

@@ -420,6 +420,18 @@ describe("SceneBody", () => {
     expect(openDiscussion).toHaveBeenCalledWith("where-is-ai-agent");
   });
 
+  it("renders Scene 9 discover beat with prepared authoring phases", () => {
+    renderSceneBodyAtMainLocation("prepared-lifecycle", "discover");
+    expect(screen.getByLabelText("authoring phase rail")).toBeInTheDocument();
+    expect(screen.getByText("Discover")).toBeInTheDocument();
+  });
+
+  it("renders Scene 9 artifact beat with compiled artifact evidence", () => {
+    renderSceneBodyAtMainLocation("prepared-lifecycle", "artifact");
+    expect(screen.getByText("Artifact")).toBeInTheDocument();
+    expect(screen.getByText(/art_x9y8z7/i)).toBeInTheDocument();
+  });
+
   it("renders evidence before discussion links so the chip lane cannot cover evidence text", () => {
     const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };
     const { container } = render(

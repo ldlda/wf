@@ -51,7 +51,10 @@ describe("defense storyboard catalog", () => {
   });
 
   it("keeps chat out of the way during proof-heavy demo beats", () => {
+    expect(findBeat("prepared-lifecycle", "discover")?.chatMode).toBe("hidden");
     expect(findBeat("prepared-lifecycle", "draft")?.chatMode).toBe("hidden");
+    expect(findBeat("prepared-lifecycle", "validate")?.chatMode).toBe("hidden");
+    expect(findBeat("prepared-lifecycle", "artifact")?.chatMode).toBe("hidden");
     expect(findBeat("prepared-lifecycle", "deployment")?.chatMode).toBe("hidden");
     expect(findBeat("run-from-deployment", "input")?.chatMode).toBe("hidden");
     expect(findBeat("run-from-deployment", "graph")?.chatMode).toBe("hidden");
@@ -72,10 +75,11 @@ describe("defense storyboard catalog", () => {
   });
 
   it("defines the lifecycle story beats before run evidence", () => {
-    expect(findBeat("prepared-lifecycle", "draft")?.caption).toMatch(/prepared authoring/i);
-    expect(findBeat("prepared-lifecycle", "artifact")?.caption).toMatch(/artifact/i);
-    expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/source/i);
-    expect(findBeat("prepared-lifecycle", "ready-run")?.caption).toMatch(/ready/i);
+    expect(findBeat("prepared-lifecycle", "discover")?.caption).toMatch(/sources|capabilities|schemas/i);
+    expect(findBeat("prepared-lifecycle", "draft")?.caption).toMatch(/draft/i);
+    expect(findBeat("prepared-lifecycle", "validate")?.caption).toMatch(/diagnose|repair/i);
+    expect(findBeat("prepared-lifecycle", "artifact")?.caption).toMatch(/compile|artifact/i);
+    expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/deploy|bindings/i);
   });
 
   it("defines focused run, interrupt, and evidence beats", () => {
