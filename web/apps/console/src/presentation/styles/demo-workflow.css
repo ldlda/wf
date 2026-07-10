@@ -920,11 +920,14 @@
 }
 
 .run-facts-card[data-output-priority="report"] {
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
 }
 
 .run-facts-card[data-output-priority="report"] .run-facts-scroll-region--markdown {
-  min-height: 14rem;
+  min-height: 0;
+  max-height: none;
 }
 
 .run-facts-card--interrupt {
@@ -1316,9 +1319,26 @@
 
 .guided-product-moment__resume-grid {
   display: grid;
-  grid-template-columns: minmax(18rem, 0.85fr) minmax(14rem, 0.45fr) minmax(0, 1fr);
+  grid-template-columns: minmax(18rem, 0.62fr) minmax(0, 1.38fr);
   gap: 0.85rem;
   min-height: 0;
+}
+
+.guided-product-moment__resume-support {
+  display: grid;
+  grid-template-rows: minmax(0, 0.75fr) auto;
+  gap: 0.75rem;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.guided-product-moment__resume-support .operation-block--expanded {
+  padding: 1rem;
+}
+
+.guided-product-moment__resume-support .operation-command {
+  margin: 0.65rem 0;
 }
 
 .guided-product-moment__output-grid {

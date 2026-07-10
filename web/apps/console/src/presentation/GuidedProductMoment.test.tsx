@@ -191,6 +191,24 @@ describe("GuidedProductMoment", () => {
     expect(screen.queryByText("Trace frames")).not.toBeInTheDocument();
   });
 
+  it("resume makes output primary and operation/resume payload supporting", () => {
+    const resumedDemo = demoWithAppliedCount(6);
+
+    render(
+      <GuidedProductMoment
+        beat={findBeat("resume-output-evidence", "resume")!}
+        demo={resumedDemo}
+        contract={contract}
+        operation={resumeOperation}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByRole("region", { name: /resume proof support/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /workflow output report/i })).toHaveAttribute("data-output-priority", "report");
+    expect(screen.getByRole("region", { name: /workflow markdown output/i })).toBeInTheDocument();
+  });
+
   it("resume shows operation, resume payload, and large output report", () => {
     const resumedDemo = demoWithAppliedCount(6);
 

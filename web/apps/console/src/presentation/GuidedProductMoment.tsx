@@ -81,12 +81,14 @@ export const GuidedProductMoment = ({
         ) : null}
         {moment === "resume" && runResume ? (
           <div className="guided-product-moment__resume-grid">
-            <OperationBlock
-              event={runResume}
-              variant="expanded"
-              openEvidence={openEvidence}
-            />
-            <RunResumeFacts facts={facts} />
+            <aside className="guided-product-moment__resume-support" role="region" aria-label="resume proof support">
+              <OperationBlock
+                event={runResume}
+                variant="expanded"
+                openEvidence={openEvidence}
+              />
+              <RunResumeFacts facts={facts} />
+            </aside>
             <RunOutputFacts facts={facts} priority="report" />
           </div>
         ) : null}

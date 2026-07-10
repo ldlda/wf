@@ -90,7 +90,12 @@ type RunOutputFactsProps = {
 };
 
 export const RunOutputFacts = ({ facts, priority = "summary" }: RunOutputFactsProps) => (
-  <div className="run-facts-card" data-output-priority={priority}>
+  <div
+    className="run-facts-card"
+    role="region"
+    aria-label={priority === "report" ? "workflow output report" : "workflow output summary"}
+    data-output-priority={priority}
+  >
     <h3>Output</h3>
     {facts.output.state === "not-created" ? (
       <p>{facts.output.message}</p>
