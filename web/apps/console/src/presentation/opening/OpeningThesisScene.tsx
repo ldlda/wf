@@ -49,8 +49,8 @@ export const OpeningThesisScene = ({ scene, beat }: OpeningThesisSceneProps) => 
             >
               {contributionBeat ? (
                 <>
-                  <span>Implemented contribution</span>
-                  <span>Lifecycle, validation, records, traces, and interrupt/resume</span>
+                  <span className="opening-thesis__contribution-label">Implemented contribution</span>
+                  <span className="opening-thesis__contribution-scope">Lifecycle, validation, records, traces, and interrupt/resume</span>
                 </>
               ) : null}
             </ConceptNode>

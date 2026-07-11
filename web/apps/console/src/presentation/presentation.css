@@ -1912,74 +1912,171 @@
   font: 700 0.72rem/1.2 var(--font-evidence);
 }
 
-/* Opening thesis scene */
-.opening-thesis {
+/* Scene 1 is a connected system, not a row of product cards. */
+.opening-thesis-scene {
+  --opening-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
+  --opening-muted: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  --opening-rule: color-mix(in oklch, var(--opening-muted) 38%, transparent);
+  display: grid;
   flex: 1 1 auto;
   min-height: 0;
+  grid-template-rows: 8rem minmax(0, 1fr);
+  gap: 0.9rem;
+}
+
+.opening-thesis-scene > .stage-caption {
+  min-height: 0;
+  padding: 0.8rem 1rem;
+}
+
+.opening-thesis-scene > .stage-caption h1 {
+  font-size: 1.85rem;
+}
+
+.opening-thesis-scene > .stage-caption > div > p {
+  margin: 0;
+}
+
+.opening-thesis {
   display: grid;
-  grid-template-rows: minmax(8rem, 0.85fr) auto;
+  min-height: 0;
+  grid-template-rows: minmax(0, 1fr) auto;
   gap: 1rem;
-  align-items: center;
+  padding: 0.5rem 1rem 0;
 }
 
-.opening-thesis[data-opening-focus="title"] {
-  grid-template-rows: minmax(11rem, 1fr) auto;
-}
-
-.opening-thesis[data-opening-focus="substrate"] {
-  grid-template-rows: auto minmax(11rem, 1fr);
-}
-
-.opening-thesis__title-card {
+.opening-thesis__statement {
   display: grid;
-  place-items: center;
-  gap: 0.5rem;
-  min-height: 10rem;
-  border: 1px solid color-mix(in oklch, var(--stage-line) 54%, transparent);
-  border-radius: 1rem;
-  background:
-    radial-gradient(circle at 30% 30%, color-mix(in oklch, var(--accent-cyan) 12%, transparent), transparent 34%),
-    var(--stage-inset);
-  text-align: center;
-  transition: min-height 220ms ease-out, opacity 180ms ease-out, transform 220ms ease-out;
+  gap: 0.45rem;
+  max-width: 48rem;
+  min-height: 0;
+  align-content: end;
 }
 
-.opening-thesis[data-opening-focus="title"] .opening-thesis__title-card {
-  min-height: 15rem;
-}
-
-.opening-thesis[data-opening-focus="substrate"] .opening-thesis__title-card {
-  min-height: 5rem;
-  transform: translateY(-0.15rem);
-}
-
-.opening-thesis__title-card span {
-  color: var(--text-secondary);
-  font: 700 0.85rem/1 var(--font-evidence);
+.opening-thesis__statement > p {
+  margin: 0;
+  color: var(--opening-muted);
+  font: 700 0.77rem/1 var(--font-evidence);
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
-.opening-thesis__title-card strong {
-  max-width: 14ch;
-  color: var(--text-primary);
-  font: 800 clamp(2rem, 7vw, 4.8rem)/0.92 var(--font-editorial);
+.opening-thesis__statement h2 {
+  margin: 0;
+  color: var(--opening-ink);
+  font: 800 clamp(2.6rem, 5vw, 3.85rem) / 0.95 var(--font-editorial);
+  letter-spacing: -0.03em;
   text-wrap: balance;
 }
 
-.opening-thesis .concept-rail {
+.opening-thesis__agent-system {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  transition: opacity 180ms ease-out, transform 220ms ease-out;
+  gap: 0;
+  align-items: stretch;
 }
 
-.opening-thesis[data-opening-focus="title"] .opening-thesis__decomposition {
+.opening-thesis__agent-system .concept-node {
+  min-height: 6.5rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.75rem 1.15rem;
+  color: var(--opening-ink);
+}
+
+.opening-thesis__agent-system .concept-node:not(:last-child)::after {
+  position: absolute;
+  top: 2.05rem;
+  right: -0.8rem;
+  z-index: 1;
+  width: 1.6rem;
+  border-top: 1px solid var(--opening-rule);
+  content: "";
+}
+
+.opening-thesis__agent-system .concept-node:not(:last-child)::before {
+  position: absolute;
+  top: calc(2.05rem - 0.2rem);
+  right: -0.8rem;
+  z-index: 1;
+  width: 0.4rem;
+  height: 0.4rem;
+  border-top: 1px solid var(--opening-rule);
+  border-right: 1px solid var(--opening-rule);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.opening-thesis__agent-system .concept-node__copy {
+  gap: 0.22rem;
+}
+
+.opening-thesis__agent-system .concept-node__copy strong {
+  color: var(--opening-ink);
+  font: 750 1.2rem/1 var(--font-interface);
+}
+
+.opening-thesis__agent-system .concept-node__copy > span {
+  max-width: 18ch;
+  color: var(--opening-muted);
+}
+
+.opening-thesis__agent-system .concept-node__meta {
+  display: grid;
+  gap: 0.32rem;
+  margin-top: 0.2rem;
+}
+
+.opening-thesis-scene[data-opening-focus="contribution"] .opening-thesis__agent-system {
+  grid-template-columns: 0.72fr 0.72fr minmax(0, 1.56fr);
+}
+
+.opening-thesis-scene[data-opening-focus="contribution"] .opening-thesis__agent-system .concept-node:not(:last-child) {
   opacity: 0.72;
-  transform: translateY(0.3rem);
 }
 
-.opening-thesis[data-opening-focus="substrate"] .opening-thesis__decomposition {
-  transform: translateY(0);
+.opening-thesis-scene[data-opening-focus="contribution"] .opening-thesis__agent-system .concept-node:last-child {
+  min-height: 9rem;
+  border: 1px solid var(--opening-ink);
+  border-radius: 0.65rem;
+  background: transparent;
+  box-shadow: inset 0 -0.22rem 0 var(--accent-cyan);
+  padding: 1rem 1.25rem;
+}
+
+.opening-thesis-scene[data-opening-focus="contribution"] .opening-thesis__agent-system .concept-node:last-child .concept-node__copy strong {
+  color: var(--opening-ink);
+}
+
+.opening-thesis-scene[data-opening-focus="contribution"] .opening-thesis__agent-system .concept-node:last-child .concept-node__copy > span {
+  color: var(--opening-muted);
+}
+
+.opening-thesis__contribution-label {
+  color: var(--opening-ink);
+  font: 700 0.75rem/1.2 var(--font-evidence);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.opening-thesis__contribution-scope {
+  color: var(--opening-muted);
+  font: 0.82rem/1.35 var(--font-interface);
+}
+
+@media (max-width: 1050px) {
+  .opening-thesis {
+    gap: 1.25rem;
+  }
+
+  .opening-thesis__agent-system .concept-node {
+    padding-inline: 0.7rem;
+  }
+
+  .opening-thesis__agent-system .concept-node__copy strong {
+    font-size: 1rem;
+  }
 }
 
 /* Problem loop scene */
