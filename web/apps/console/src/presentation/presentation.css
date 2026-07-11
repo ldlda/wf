@@ -3082,6 +3082,51 @@
   padding: 1rem 1.2rem;
 }
 
+.agent-handoff-scene__composer {
+  display: grid;
+  gap: 0.75rem;
+  width: min(100%, 52rem);
+  margin-inline: auto;
+  padding: clamp(1.5rem, 4vw, 3.75rem) clamp(1rem, 5vw, 4.5rem);
+  border: 1px solid var(--authoring-rule, var(--stage-line));
+  border-radius: 0.35rem;
+  background: color-mix(in oklch, var(--stage-canvas) 92%, white);
+  box-shadow: 0 1.25rem 3rem color-mix(in oklch, var(--stage-ink) 10%, transparent);
+}
+
+.agent-handoff-scene__composer-label {
+  color: var(--authoring-muted, var(--text-secondary));
+  font: 700 0.68rem/1 var(--font-evidence);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agent-handoff-scene__composer textarea {
+  min-height: 7.5rem;
+  resize: vertical;
+  border-color: var(--authoring-rule, var(--stage-line));
+  border-radius: 0.2rem;
+  background: color-mix(in oklch, var(--stage-canvas) 82%, white);
+  color: var(--authoring-ink, var(--text-primary));
+  font: 1.05rem/1.45 var(--font-interface);
+}
+
+.agent-handoff-scene__composer textarea:focus-visible {
+  border-color: var(--authoring-accent, var(--accent-cyan));
+  box-shadow: 0 0 0 3px color-mix(in oklch, var(--authoring-accent, var(--accent-cyan)) 18%, transparent);
+}
+
+.agent-handoff-scene__composer-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.agent-handoff-scene__composer-actions button {
+  border-radius: 0.2rem;
+  background: var(--authoring-accent, var(--accent-cyan));
+  color: var(--authoring-paper, var(--stage-canvas));
+}
+
 /* Scene 8 keeps the prepared thread intact but gives it an editorial reading surface. */
 .agent-handoff-scene[data-presentation-surface="editorial"] {
   --authoring-paper: var(--color-editorial-paper, oklch(0.975 0.012 82));
