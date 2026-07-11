@@ -34,6 +34,8 @@ describe("AgentHandoffScene", () => {
       "data-surface",
       "stage",
     );
+    expect(screen.getByText(/We need to author a report workflow/i)).toBeInTheDocument();
+    expect(screen.getByText(/Let me inspect the available sources/i)).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "prepared handoff phases" })).toBeInTheDocument();
     expect(screen.getAllByText(/workflow\.sources\.list/i).length).toBeGreaterThan(0);
   });

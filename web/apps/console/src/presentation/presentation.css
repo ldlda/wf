@@ -3081,6 +3081,75 @@
   padding: 1rem 1.2rem;
 }
 
+/* Scene 8 keeps the prepared thread intact but gives it an editorial reading surface. */
+.agent-handoff-scene[data-presentation-surface="editorial"] {
+  --authoring-paper: var(--color-editorial-paper, oklch(0.975 0.012 82));
+  --authoring-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
+  --authoring-muted: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  --authoring-rule: color-mix(in oklch, var(--authoring-muted) 32%, transparent);
+  background: var(--authoring-paper);
+  color: var(--authoring-ink);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__header span,
+.agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__rail li[data-active="true"] span {
+  color: var(--accent-cyan);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__header strong,
+.agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__rail li[data-active="true"] {
+  color: var(--authoring-ink);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__header p,
+.agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__rail li {
+  color: var(--authoring-muted);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__rail li {
+  border-color: var(--authoring-rule);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread[data-surface="stage"] {
+  color: var(--authoring-ink);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread[data-surface="stage"] .assistant-thread {
+  border: 1px solid var(--authoring-rule);
+  border-radius: 0.2rem;
+  background: color-mix(in oklch, var(--authoring-paper) 94%, var(--authoring-muted));
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-message__user-bubble {
+  border: 1px solid var(--authoring-rule);
+  border-radius: 0.2rem;
+  background: color-mix(in oklch, var(--authoring-paper) 86%, var(--accent-cyan));
+  color: var(--authoring-ink);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-message[data-role="assistant"] {
+  color: var(--authoring-ink);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-root"],
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-root"] {
+  border-color: var(--authoring-rule);
+  border-radius: 0.2rem;
+  background: transparent;
+  color: var(--authoring-ink);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-content"] [data-slot="tool-fallback-root"] {
+  background: color-mix(in oklch, var(--authoring-paper) 88%, var(--authoring-muted));
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread__action button {
+  border-color: var(--accent-cyan);
+  border-radius: 0.2rem;
+  background: color-mix(in oklch, var(--authoring-paper) 82%, var(--accent-cyan));
+  color: var(--authoring-ink);
+}
+
 /*
   Scene 9 — Prepared Workflow Authoring Lifecycle.
   Compact orientation rail plus dominant phase projection.
