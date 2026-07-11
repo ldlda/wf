@@ -62,16 +62,42 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(screen.getByRole("region", { name: label })).toBeInTheDocument();
   });
 
-  it("keeps the same conversation as a synchronized bottom dock", () => {
+  it("keeps the assistant and dominant phase visual visible as stable siblings", () => {
     renderBeat("draft");
+
+    const workspace = screen.getByRole("region", { name: "prepared workflow authoring lifecycle" });
+    const assistant = screen.getByRole("complementary", { name: /prepared authoring assistant/i });
+    const visual = screen.getByRole("region", { name: "draft graph evidence" });
+
+    expect(workspace).toContainElement(assistant);
+    expect(workspace).toContainElement(visual);
+    expect(assistant).toHaveAttribute("data-phase", "draft");
+    expect(assistant).toHaveAttribute("data-surface", "prepared-replay");
+    expect(assistant.querySelector('[data-surface="stage"]')).toBeInTheDocument();
+    expect(workspace.querySelector(".prepared-lifecycle-scene__dock")).not.toBeInTheDocument();
+    expect(workspace.querySelector("[role='dialog']")).not.toBeInTheDocument();
+    expect(workspace.querySelector("[aria-label='authoring phase rail']"))
+      .toBeInTheDocument();
+    expect(visual).toHaveAttribute("data-presentation-surface", "editorial");
+  });
+
+  it("synchronizes the assistant phase, active group, rail, and visual", () => {
+    renderBeat("validate");
+
+    expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i }))
+      .toHaveAttribute("data-phase", "validate");
+    expect(screen.getByRole("button", { name: /validate.*2 tool calls/i }))
+      .toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("button", { name: /draft.*3 tool calls/i }))
+      .toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByLabelText("authoring phase rail").querySelector("[data-active='true']"))
+      .toHaveTextContent("Validate");
     const chat = screen.getByRole("log", { name: "prepared authoring conversation" });
-    expect(chat).toHaveAttribute("data-surface", "dock");
-    expect(screen.getByRole("region", { name: "draft graph evidence" })).toHaveAttribute(
+    expect(chat).toHaveAttribute("data-surface", "stage");
+    expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
       "data-presentation-surface",
       "editorial",
     );
-    expect(screen.getByRole("button", { name: /draft.*3 tool calls/i }))
-      .toHaveAttribute("aria-expanded", "true");
   });
 
   it("does not render the obsolete trace modal or receipt", () => {

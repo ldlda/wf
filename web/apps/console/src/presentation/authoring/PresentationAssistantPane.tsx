@@ -38,7 +38,7 @@ export const PresentationAssistantPane = ({ phase }: PresentationAssistantPanePr
       <AuthoringConversation
         throughPhase={phase}
         activePhase={phase}
-        surface="dock"
+        surface="stage"
       />
     </div>
   </aside>

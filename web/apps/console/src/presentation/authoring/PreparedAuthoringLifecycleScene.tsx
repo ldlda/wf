@@ -1,6 +1,6 @@
 import { projectPreparedAuthoringPhase } from "./authoring-projection.js";
-import { AuthoringConversation } from "./AuthoringConversation.js";
 import { AuthoringPhaseVisual } from "./AuthoringPhaseVisual.js";
+import { PresentationAssistantPane } from "./PresentationAssistantPane.js";
 import type { AuthoringPhaseId } from "./authoring-recording.js";
 import type { SceneBeatDefinition, SceneDefinition } from "../storyboard.js";
 import { StageCaption } from "../StageCaption.js";
@@ -21,9 +21,8 @@ const phases: readonly { readonly id: AuthoringPhaseId; readonly label: string }
 /**
  * Scene 9 — Prepared workflow authoring lifecycle.
  *
- * Each beat shows a compact orientation rail and one dominant phase projection
- * sourced from the prepared authoring recording. The same Scene 8 conversation
- * remains below the canvas as a beat-synchronized assistant dock.
+ * Each beat shows a persistent prepared assistant beside one dominant phase
+ * projection sourced from the prepared authoring recording.
  */
 export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthoringLifecycleSceneProps) => {
   // Storyboard beats normally match these IDs. Discovery is a safe projection
@@ -44,23 +43,19 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthori
         data-support-surface="prepared-chat"
         data-presentation-surface="editorial"
       >
-        <ol className="prepared-lifecycle-scene__rail" aria-label="authoring phase rail">
-          {phases.map((phase) => (
-            <li key={phase.id} data-active={phase.id === beatId ? "true" : "false"}>
-              <strong>{phase.label}</strong>
-            </li>
-          ))}
-        </ol>
+        <PresentationAssistantPane phase={beatId} />
+        <div className="prepared-lifecycle-scene__presentation">
+          <ol className="prepared-lifecycle-scene__rail" aria-label="authoring phase rail">
+            {phases.map((phase) => (
+              <li key={phase.id} data-active={phase.id === beatId ? "true" : "false"}>
+                <strong>{phase.label}</strong>
+              </li>
+            ))}
+          </ol>
 
-        <article className="prepared-lifecycle-scene__projection" key={beatId}>
-          <AuthoringPhaseVisual projection={projection} />
-        </article>
-        <div className="prepared-lifecycle-scene__dock">
-          <AuthoringConversation
-            throughPhase={beatId}
-            activePhase={beatId}
-            surface="dock"
-          />
+          <article className="prepared-lifecycle-scene__projection" key={beatId}>
+            <AuthoringPhaseVisual projection={projection} />
+          </article>
         </div>
       </section>
     </>

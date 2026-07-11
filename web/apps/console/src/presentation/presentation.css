@@ -3186,16 +3186,21 @@
   color: var(--authoring-paper);
 }
 
-/*
-  Scene 9 — Prepared Workflow Authoring Lifecycle.
-  Compact orientation rail plus dominant phase projection.
-*/
+/* Scene 9 — persistent assistant beside the dominant phase projection. */
 .prepared-lifecycle-scene {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) 8.5rem;
+  grid-template-columns: minmax(15rem, 0.35fr) minmax(0, 1.65fr);
   gap: 0.55rem;
   min-height: 0;
   height: 100%;
+  overflow: hidden;
+}
+
+.prepared-lifecycle-scene__presentation {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -3249,11 +3254,6 @@
 
 .stage-caption:has(+ .prepared-lifecycle-scene) p {
   margin: 0;
-}
-
-.prepared-lifecycle-scene__dock {
-  min-height: 0;
-  overflow: hidden;
 }
 
 .presentation-assistant-pane {
@@ -3313,8 +3313,8 @@
   --authoring-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
   --authoring-muted: var(--color-editorial-muted, oklch(0.48 0.025 65));
   --authoring-rule: color-mix(in oklch, var(--authoring-muted) 32%, transparent);
-  grid-template-rows: auto minmax(0, 1fr) minmax(9rem, 34%);
-  gap: 0;
+  grid-template-columns: minmax(15rem, 0.35fr) minmax(0, 1.65fr);
+  gap: 0.8rem;
   background: var(--authoring-paper);
   color: var(--authoring-ink);
 }
@@ -3349,49 +3349,48 @@
   overflow: auto;
 }
 
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__dock {
-  padding-top: 0.55rem;
-  background: var(--authoring-paper);
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane {
+  background: color-mix(in oklch, var(--authoring-paper) 92%, var(--authoring-muted));
+  border-color: var(--authoring-rule);
 }
 
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread[data-surface="dock"] {
-  border-top: 0;
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-operator-thread {
   color: var(--authoring-ink);
 }
 
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread[data-surface="dock"] .assistant-thread {
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-thread {
   border: 0;
   border-radius: 0;
-  background: var(--authoring-paper);
+  background: transparent;
 }
 
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-message__user-bubble {
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-message__user-bubble {
   border: 1px solid var(--authoring-rule);
   border-radius: 0.2rem;
   background: color-mix(in oklch, var(--authoring-paper) 86%, var(--accent-cyan));
   color: var(--authoring-ink);
 }
 
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-message[data-role="assistant"] {
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-message[data-role="assistant"] {
   color: var(--authoring-ink);
 }
 
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-root"],
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-root"] {
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-operator-thread [data-slot="tool-group-root"],
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-operator-thread [data-slot="tool-fallback-root"] {
   border-color: var(--authoring-rule);
   border-radius: 0.2rem;
   background: transparent;
   color: var(--authoring-ink);
 }
 
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger"],
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger"] {
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-operator-thread [data-slot="tool-group-trigger"],
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-operator-thread [data-slot="tool-fallback-trigger"] {
   color: var(--authoring-muted);
 }
 
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger-icon"],
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger-chevron"],
-.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger-chevron"] {
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-operator-thread [data-slot="tool-fallback-trigger-icon"],
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-operator-thread [data-slot="tool-fallback-trigger-chevron"],
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-operator-thread [data-slot="tool-group-trigger-chevron"] {
   color: var(--authoring-accent);
 }
 

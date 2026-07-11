@@ -31,6 +31,20 @@ describe("presentation.css", () => {
     expect(boardBlock).toContain("flex-shrink: 0");
   });
 
+  it("keeps Scene 9 as a bounded adaptive split without a lower dock row", () => {
+    const sceneBlock = css.match(
+      /^\.prepared-lifecycle-scene\s*\{(?<body>[\s\S]*?)\n\}/m,
+    )?.groups?.body;
+
+    expect(sceneBlock).toContain("grid-template-columns:");
+    expect(sceneBlock).toMatch(/minmax\(15rem, 0\.35fr\).*minmax\(0, 1\.65fr\)/);
+    expect(sceneBlock).toContain("min-height: 0");
+    expect(sceneBlock).toContain("overflow: hidden");
+    expect(sceneBlock).not.toContain("grid-template-rows:");
+    expect(css).not.toContain(".prepared-lifecycle-scene__dock");
+    expect(css).not.toMatch(/prepared-lifecycle-scene__dock[\s\S]*position:\s*(absolute|fixed)/);
+  });
+
   it("keeps evidence inside a substrate stack from wide desktop through the 1080px breakpoint", () => {
     expect(css).toMatch(/\.conclusion-map__flow\s*\{\s*display: grid;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
     expect(css).toMatch(/\.conclusion-map__flow-unit--substrate-stack\s*\{[\s\S]*?grid-template-rows: auto auto;/);
