@@ -35,6 +35,7 @@ describe("storyboard navigation", () => {
   it("falls back for unknown scene, beat, and branch hashes", () => {
     expect(locationFromHash("#scene/missing/nope")).toEqual(defaultMainLocation);
     expect(locationFromHash("#scene/lifecycle/nope")).toEqual(defaultMainLocation);
+    expect(locationFromHash("#scene/agent-handoff/handoff")).toEqual(defaultMainLocation);
     expect(locationFromHash("#discuss/nope")).toEqual(defaultMainLocation);
   });
 

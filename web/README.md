@@ -180,12 +180,12 @@ claim boundaries and future work explicit, and end on the canonical defense
 discussion index rather than a benchmark or generic conclusion.
 
 Scenes 8 and 9 use the canonical prepared-authoring recording as their only
-execution evidence. Scene 8 is a full-screen chat entry: its prefilled request
-is submitted locally, then reveals the first deterministic user, assistant, and
-Discover tool group. It is deterministic replay, not a live LLM chat, and does
-not start a workflow run. The handoff beat reveals the full prepared conversation;
-Scene 9 breaks the prepared authoring into five phases
-with the same conversation contracted into a synchronized bottom dock. Each
+execution evidence. Scene 8 is a single full-screen chat-entry beat: its
+prefilled request is submitted locally, then reveals the first deterministic
+user, assistant, and Discover tool group. It is deterministic replay, not a live
+LLM chat, and does not start a workflow run. Scene 9 breaks the prepared
+authoring into five phases with the same conversation contracted into a
+synchronized bottom dock. Each
 phase opens its matching prepared tool group beneath a factual source, graph,
 repair, artifact, or deployment view. Neither scene calls workflow authoring
 RPC operations — they consume deterministic prepared data. Scenes 10 through
@@ -203,8 +203,7 @@ presentation timeline.
 
 The key deep-link-addressable defense states include:
 
-- `/present#scene/agent-handoff/request` — Scene 8, prepared handoff request
-- `/present#scene/agent-handoff/handoff` — Scene 8, agent accepts
+- `/present#scene/agent-handoff/request` — Scene 8, prepared authoring request
 - `/present#scene/prepared-lifecycle/discover` — Scene 9, discover phase
 - `/present#scene/prepared-lifecycle/draft` — Scene 9, draft phase
 - `/present#scene/prepared-lifecycle/deployment` — Scene 9, deployment phase
@@ -333,11 +332,10 @@ Scenes 8 and 9 are the prepared authoring story. They use deterministic data
 from the committed `projectPreparedAuthoring()` recording and never call
 workflow authoring RPC operations.
 
-- **Scene 8 (Agent Handoff)**: a full-screen deterministic chat entry that
+- **Scene 8 (Agent Request)**: a single full-screen deterministic chat entry that
   pre-fills the report-authoring request. Send is local presentation state and
-  reveals the first prepared Discover tool group; the `handoff` beat reveals
-  the full completed conversation with prepared `wf` tool groups across all
-  authoring phases. This is not a live LLM chat or workflow run.
+  reveals the first prepared Discover tool group. This is not a live LLM chat
+  or workflow run.
 - **Scene 9 (Prepared Workflow Lifecycle)**: a five-phase lifecycle
   (discover, draft, validate, artifact, deployment) with a compact phase rail
   and one dominant factual product projection per beat. The Scene 8 thread

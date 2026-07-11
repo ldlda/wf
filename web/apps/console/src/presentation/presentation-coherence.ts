@@ -157,7 +157,6 @@ const beatContracts = {
   "authoring/diagnose": { mode: "evidence", primarySurface: "authoring-diagnostic", supportSurface: "authoring-loop" },
   "authoring/repair": { mode: "evidence", primarySurface: "authoring-repair", supportSurface: "authoring-loop" },
   "agent-handoff/request": { mode: "conversation", primarySurface: "prepared-conversation", supportSurface: "none" },
-  "agent-handoff/handoff": { mode: "conversation", primarySurface: "prepared-conversation", supportSurface: "none" },
   "evaluation/cohort": { mode: "evidence", primarySurface: "evaluation-cohort", supportSurface: "none" },
   "evaluation/validity": { mode: "evidence", primarySurface: "evaluation-validity", supportSurface: "audit-reconciliation" },
   "evaluation/findings": { mode: "evidence", primarySurface: "evaluation-findings", supportSurface: "validity-boundary" },

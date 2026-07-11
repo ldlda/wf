@@ -154,15 +154,12 @@ export const mainScenes = defineScenes([
   {
     id: "agent-handoff",
     number: 8,
-    title: "Agent Handoff",
+    title: "Agent Request",
     claimClass: "implemented",
     evidencePointer: "Constrained demo agent and prepared replay recipe",
     view: "agent",
     beats: [
-      // Scene 8 renders its own full-screen prepared transcript in the primary
-      // region, so the persistent stage chat rail must stay out of the way.
       sceneBeat("request", "Operator request", "A thin agent interface receives the report request.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("handoff", "Prepared operation", "The interface delegates durable work to lda.chat.", { chatMode: "hidden", chatTheme: "light" }),
     ],
   },
   {

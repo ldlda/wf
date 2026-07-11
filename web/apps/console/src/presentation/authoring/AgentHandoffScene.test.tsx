@@ -5,10 +5,10 @@ import { findBeat, findScene } from "../storyboard.js";
 import { AgentHandoffScene } from "./AgentHandoffScene.js";
 import { SCENE8_REQUEST } from "./scene8-entry-state.js";
 
-const renderBeat = (beatId: "request" | "handoff") => {
+const renderRequestBeat = () => {
   const scene = findScene("agent-handoff");
-  const beat = findBeat("agent-handoff", beatId);
-  if (!scene || !beat) throw new Error(`missing agent-handoff/${beatId}`);
+  const beat = findBeat("agent-handoff", "request");
+  if (!scene || !beat) throw new Error("missing agent-handoff/request");
   return render(<AgentHandoffScene scene={scene} beat={beat} />);
 };
 
@@ -23,11 +23,11 @@ describe("AgentHandoffScene", () => {
       />,
     );
 
-    expect(screen.getByRole("region", { name: "prepared agent handoff" })).toHaveAttribute(
+    expect(screen.getByRole("region", { name: "prepared agent request" })).toHaveAttribute(
       "data-handoff-phase",
       "discover",
     );
-    expect(screen.getByRole("region", { name: "prepared agent handoff" })).toHaveAttribute(
+    expect(screen.getByRole("region", { name: "prepared agent request" })).toHaveAttribute(
       "data-presentation-surface",
       "editorial",
     );
@@ -37,46 +37,17 @@ describe("AgentHandoffScene", () => {
     expect(screen.queryByRole("button", { name: /run prepared workflow/i })).not.toBeInTheDocument();
   });
 
-  it("advances the same conversation to deployment evidence", () => {
-    render(
-      <AgentHandoffScene
-        scene={findScene("agent-handoff")!}
-        beat={findBeat("agent-handoff", "handoff")!}
-      />,
-    );
-
-    expect(screen.getByRole("region", { name: "prepared agent handoff" })).toHaveAttribute(
-      "data-handoff-phase",
-      "deployment",
-    );
-    expect(screen.getAllByText(/workflow\.deployments\.save/i).length).toBeGreaterThan(0);
-  });
-
   it("reveals separated user and assistant turns after local submission", async () => {
-    renderBeat("request");
+    renderRequestBeat();
     await userEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(screen.getAllByText(/report|workflow|prepare/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/inspect|capabilities|sources|schemas|let me/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByRole("button", { name: /discover.*4 tool calls/i })).toBeInTheDocument();
   });
 
-  it("interleaves prepared workflow tool groups with the handoff conversation", () => {
-    renderBeat("handoff");
-    expect(screen.getAllByText(/workflow\.deployments\.save/i).length).toBeGreaterThan(0);
-    expect(screen.getByRole("button", { name: /deployment.*2 tool calls/i }))
-      .toHaveAttribute("aria-expanded", "true");
-  });
-
   it("does not render prepared workflow lifecycle content", () => {
-    renderBeat("request");
+    renderRequestBeat();
     expect(screen.queryByText("prepared workflow lifecycle")).not.toBeInTheDocument();
-    cleanup();
-    renderBeat("handoff");
-    expect(screen.queryByText("prepared workflow lifecycle")).not.toBeInTheDocument();
-  });
-
-  it("does not expose a workflow run action", () => {
-    renderBeat("handoff");
     expect(screen.queryByRole("button", { name: /run prepared workflow/i })).not.toBeInTheDocument();
   });
 });

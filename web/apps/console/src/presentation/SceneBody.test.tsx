@@ -439,11 +439,11 @@ describe("SceneBody", () => {
     expect(screen.getAllByText(/lda_report_case_study/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("routes Scene 8 through the prepared authoring conversation", () => {
-    renderSceneBodyAtMainLocation("agent-handoff", "handoff");
+  it("renders Scene 8 as the request entry beat", () => {
+    renderSceneBodyAtMainLocation("agent-handoff", "request");
 
-    expect(screen.getByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /deployment.*2 tool calls/i })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /authoring request/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /deployment.*2 tool calls/i })).not.toBeInTheDocument();
   });
 
   it("renders evidence before discussion links so the chip lane cannot cover evidence text", () => {

@@ -97,8 +97,8 @@ When Send is activated with non-empty text:
 The send action must not call `workflow.runs.start`, `workflow.runs.resume`, or
 any other workflow RPC. It is a scripted presentation entry event.
 
-If the presenter advances with `ArrowRight`, the existing storyboard location
-changes to `#scene/agent-handoff/handoff`, and the full prepared authoring
+Scene 8 has no second handoff beat. Advancing with `ArrowRight` moves directly
+to Scene 9's first lifecycle beat, where the full prepared authoring
 conversation becomes visible through the existing phase projection.
 
 If the composer is empty or contains only whitespace, Send is disabled and no
@@ -176,8 +176,6 @@ encoded in the URL hash.
 - Whitespace-only draft: treated as blank.
 - Send while already submitted: disabled or ignored; it must not duplicate the
   prepared conversation.
-- Direct navigation to the handoff beat: render the full prepared conversation
-  without requiring the request-beat send transition.
 - Missing recording data: preserve the existing bounded presentation fallback
   and render an explicit unavailable state rather than inventing a live result.
 
@@ -191,13 +189,11 @@ Add or update tests for:
 3. sending reveals the prepared request/assistant/Discover content and does not
    call workflow RPC operations;
 4. sending twice does not duplicate the first conversation;
-5. direct navigation to the handoff beat still renders the full prepared
-   conversation;
-6. Scene 8 no longer renders the standalone `Run prepared workflow` button or
+5. Scene 8 no longer renders the standalone `Run prepared workflow` button or
    the old phase rail;
-7. 1280x720 and 1024x768 browser smoke captures show the composer without
+6. 1280x720 and 1024x768 browser smoke captures show the composer without
    clipping or horizontal overflow;
-8. reduced-motion mode does not hide the submitted conversation.
+7. reduced-motion mode does not hide the submitted conversation.
 
 ## Out Of Scope
 
@@ -214,6 +210,6 @@ Add or update tests for:
 
 The slice is complete when the presenter can open
 `#scene/agent-handoff/request`, see a credible full-screen chat entry, press
-Send, see the first prepared authoring turn, advance to the handoff beat, and
-continue into Scene 9 without a standalone run button or a second chat state
-runtime. The behavior is covered by focused tests and 16:9/4:3 browser smoke.
+Send, see the first prepared authoring turn, and continue directly into Scene 9
+without a standalone run button or a second chat state runtime. The behavior is
+covered by focused tests and 16:9/4:3 browser smoke.

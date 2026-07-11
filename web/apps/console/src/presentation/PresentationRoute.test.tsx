@@ -86,7 +86,7 @@ describe("PresentationRoute", () => {
     render(<PresentationRoute />);
     expect(screen.getByRole("textbox", { name: /authoring request/i })).toBeInTheDocument();
     await userEvent.keyboard("{ArrowRight}");
-    expect(await screen.findByRole("button", { name: /deployment.*2 tool calls/i })).toBeInTheDocument();
+    expect(await screen.findByLabelText("authoring phase rail")).toBeInTheDocument();
   });
 
   it("renders audience progress chrome without rail or mode label", async () => {
@@ -465,15 +465,6 @@ describe("PresentationRoute", () => {
     await userEvent.click(send);
     expect(await screen.findByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /discover.*4 tool calls/i })).toBeInTheDocument();
-  });
-
-  it("navigates to Scene 8 handoff beat via hash", async () => {
-    window.location.hash = "#scene/agent-handoff/handoff";
-    const { PresentationRoute } = await import("./PresentationRoute.js");
-    render(<PresentationRoute />);
-
-    expect(await screen.findByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /deployment.*2 tool calls/i })).toBeInTheDocument();
   });
 
   it.each([

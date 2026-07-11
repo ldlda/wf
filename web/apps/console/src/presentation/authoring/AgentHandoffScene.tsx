@@ -1,5 +1,4 @@
 import { useReducer } from "react";
-import { AuthoringConversation } from "./AuthoringConversation.js";
 import { Scene8ChatEntry } from "./Scene8ChatEntry.js";
 import {
   initialScene8EntryState,
@@ -12,32 +11,17 @@ type AgentHandoffSceneProps = {
   readonly beat: SceneBeatDefinition;
 };
 
-/**
- * Scene 8 request and handoff beats share one local deterministic entry state.
- */
 export const AgentHandoffScene = ({ beat }: AgentHandoffSceneProps) => {
   const [entryState, dispatch] = useReducer(scene8EntryReducer, initialScene8EntryState);
-  const phase = beat.id === "handoff" ? "deployment" : "discover";
 
   return (
     <section
       className="agent-handoff-scene"
-      aria-label="prepared agent handoff"
-      data-handoff-phase={phase}
+      aria-label="prepared agent request"
+      data-handoff-phase="discover"
       data-presentation-surface="editorial"
     >
-      {beat.id === "request" ? (
-        <Scene8ChatEntry state={entryState} dispatch={dispatch} />
-      ) : (
-        <div className="agent-handoff-scene__handoff">
-          <AuthoringConversation
-            throughPhase="deployment"
-            activePhase="deployment"
-            surface="stage"
-            {...(entryState.phase === "submitted" ? { requestOverride: entryState.request } : {})}
-          />
-        </div>
-      )}
+      {beat.id === "request" && <Scene8ChatEntry state={entryState} dispatch={dispatch} />}
     </section>
   );
 };

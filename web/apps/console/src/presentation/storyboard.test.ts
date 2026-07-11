@@ -43,6 +43,7 @@ describe("defense storyboard catalog", () => {
   });
 
   it("uses one editorial canvas theme and independent chat composition", () => {
+    expect(findScene("agent-handoff")?.beats).toHaveLength(1);
     expect(findBeat("agent-handoff", "request")?.chatMode).toBe("hidden");
     expect(findBeat("resume-output-evidence", "trace")?.chatMode).toBe("hidden");
   });

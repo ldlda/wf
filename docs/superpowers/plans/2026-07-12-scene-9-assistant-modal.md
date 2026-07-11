@@ -22,12 +22,12 @@
 
 ## Task 1: Remove The Redundant Scene 8 Handoff Beat
 
-- [ ] Write failing storyboard/navigation and Scene 8 tests before changing the catalog. Cover the single-beat count, valid request hash, invalid/removed handoff hash fallback, and footer progress.
-- [ ] Modify `web/apps/console/src/presentation/storyboard.ts` so `agent-handoff` contains only the `request` beat. Update its caption/title wording if needed so it describes the request-to-first-turn interaction rather than a separate durable-work handoff.
-- [ ] Simplify `AgentHandoffScene.tsx` and its tests: remove the `handoff` branch, deployment projection, and any comments claiming Scene 8 renders the full authoring transcript. Keep the local empty/submitted reducer and `Scene8ChatEntry` behavior.
-- [ ] Remove stale `/handoff` references from `PresentationRoute.test.tsx`, `SceneBody.test.tsx`, `web/README.md`, and nearby docs. Do not add a compatibility alias for a route that has no real persisted/external contract; invalid hashes should use the existing fail-closed default.
-- [ ] Confirm the full authoring conversation remains available through Scene 9 and is not deleted with the route cleanup.
-- [ ] Run focused storyboard, route, and Scene 8 tests plus typecheck. Commit as `refactor: make scene 8 a single chat entry beat`.
+- [x] Write failing storyboard/navigation and Scene 8 tests before changing the catalog. Cover the single-beat count, valid request hash, invalid/removed handoff hash fallback, and footer progress.
+- [x] Modify `web/apps/console/src/presentation/storyboard.ts` so `agent-handoff` contains only the `request` beat. Update its caption/title wording if needed so it describes the request-to-first-turn interaction rather than a separate durable-work handoff.
+- [x] Simplify `AgentHandoffScene.tsx` and its tests: remove the `handoff` branch, deployment projection, and any comments claiming Scene 8 renders the full authoring transcript. Keep the local empty/submitted reducer and `Scene8ChatEntry` behavior.
+- [x] Remove stale `/handoff` references from `PresentationRoute.test.tsx`, `SceneBody.test.tsx`, `web/README.md`, and nearby docs. Do not add a compatibility alias for a route that has no real persisted/external contract; invalid hashes should use the existing fail-closed default.
+- [x] Confirm the full authoring conversation remains available through Scene 9 and is not deleted with the route cleanup.
+- [x] Run focused storyboard, route, and Scene 8 tests plus typecheck. Commit as `refactor: make scene 8 a single chat entry beat`.
 
 ## Task 2: Vendor And Validate The Assistant Thread Surface
 
