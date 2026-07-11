@@ -52,6 +52,8 @@ export type RunFactsTrace = {
   readonly frames: ReadonlyArray<RunFactsTraceFrame>;
 };
 
+export type FactValueKind = "value" | "empty-object" | "missing";
+
 export type DemoRunFacts = {
   readonly input: RunFactsInput;
   readonly interrupt: RunFactsInterrupt;
@@ -107,6 +109,12 @@ export const formatFactValue = (value: unknown, absentLabel: string): string => 
   if (value === undefined || value === null) return absentLabel;
   if (typeof value === "object" && Object.keys(value).length === 0) return EMPTY_OBJECT_LABEL;
   return JSON.stringify(value);
+};
+
+export const factValueKind = (value: string): FactValueKind => {
+  if (value === EMPTY_OBJECT_LABEL) return "empty-object";
+  if (value === "not captured in this recording") return "missing";
+  return "value";
 };
 
 const findEvent = (

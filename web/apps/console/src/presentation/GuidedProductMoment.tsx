@@ -75,6 +75,8 @@ export const GuidedProductMoment = ({
       data-moment={moment}
       data-primary-surface={hierarchy.primary}
       data-support-surface={hierarchy.support}
+      data-approval-focus={moment === "approval" ? "decision" : undefined}
+      data-continuation-focus={moment === "resume" ? "output" : moment === "trace" ? "trace" : undefined}
     >
       <header className="guided-product-moment__header">
         <span>{lens.eyebrow}</span>
@@ -89,14 +91,17 @@ export const GuidedProductMoment = ({
               <RunInputFacts facts={facts} density="compact" />
             </aside>
             <InterruptPayloadFacts facts={facts} priority="primary" />
-            <InterruptDecisionForm
-              interrupt={facts.interrupt}
-              runId={demo.state.events.find((e) => e.stage === "run_start")?.resultingIds.runId ?? "unknown"}
-              onSubmit={approvalActions?.canSubmit ? (ids, comment) => approvalActions.submit(ids, comment) : undefined}
-              onCancel={approvalActions?.canCancel ? () => approvalActions.cancel() : undefined}
-              terminalOutcome={approvalActions?.state === "submitted" ? "submitted" :
-                approvalActions?.state === "cancelled" ? "cancelled" : undefined}
-            />
+            <div className="guided-product-moment__decision-column" role="region" aria-label="operator resume decision">
+              <InterruptDecisionForm
+                interrupt={facts.interrupt}
+                runId={demo.state.events.find((e) => e.stage === "run_start")?.resultingIds.runId ?? "unknown"}
+                onSubmit={approvalActions?.canSubmit ? (ids, comment) => approvalActions.submit(ids, comment) : undefined}
+                onCancel={approvalActions?.canCancel ? () => approvalActions.cancel() : undefined}
+                terminalOutcome={approvalActions?.state === "submitted" ? "submitted" :
+                  approvalActions?.state === "cancelled" ? "cancelled" : undefined}
+                showReportPreview={false}
+              />
+            </div>
           </div>
         ) : null}
         {moment === "resume" && runResume ? (

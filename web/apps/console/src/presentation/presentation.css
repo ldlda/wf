@@ -2514,6 +2514,7 @@
   display: flex;
   gap: 0.8rem;
   align-items: baseline;
+  min-width: 0;
   margin-bottom: 0.8rem;
 }
 
@@ -2526,6 +2527,10 @@
 }
 
 .interrupt-decision-form__run-id {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font: 0.82rem/1.4 var(--font-mono);
   color: color-mix(in srgb, var(--text-primary), white 20%);
 }
@@ -2733,7 +2738,7 @@
 }
 
 .guided-product-moment[data-moment="approval"] .interrupt-decision-form__meta {
-  grid-template-columns: auto minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr);
   gap: 0.15rem 0.45rem;
   margin-bottom: 0.45rem;
   font-size: 0.74rem;

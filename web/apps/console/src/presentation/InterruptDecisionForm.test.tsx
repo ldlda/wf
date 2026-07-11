@@ -127,6 +127,21 @@ describe("InterruptDecisionForm", () => {
     expect(screen.queryByRole("button", { name: /cancel/i })).toBeFalsy();
   });
 
+  it("can leave report evidence to the surrounding interrupt panel", () => {
+    render(
+      <InterruptDecisionForm
+        interrupt={interrupt}
+        runId="run_recorded_lda_report"
+        onSubmit={vi.fn()}
+        onCancel={vi.fn()}
+        showReportPreview={false}
+      />,
+    );
+
+    expect(screen.queryByText(/The workflow substrate is ready/i)).not.toBeInTheDocument();
+    expect(screen.getAllByRole("checkbox")).toHaveLength(2);
+  });
+
   it("shows terminal outcome label when state is cancelled", () => {
     render(
       <InterruptDecisionForm

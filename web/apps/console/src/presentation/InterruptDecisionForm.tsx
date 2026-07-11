@@ -7,6 +7,7 @@ type InterruptDecisionFormProps = {
   readonly onSubmit?: ((selectedIssueIds: ReadonlyArray<string>, comment: string) => void) | undefined;
   readonly onCancel?: (() => void) | undefined;
   readonly terminalOutcome?: "submitted" | "cancelled" | undefined;
+  readonly showReportPreview?: boolean;
 };
 
 export const InterruptDecisionForm = ({
@@ -15,6 +16,7 @@ export const InterruptDecisionForm = ({
   onSubmit,
   onCancel,
   terminalOutcome,
+  showReportPreview = true,
 }: InterruptDecisionFormProps) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() =>
     new Set(interrupt.proposedIssues.map((issue) => issue.id)),
@@ -71,7 +73,7 @@ export const InterruptDecisionForm = ({
         <dd>{interrupt.outcomes.join(", ")}</dd>
       </dl>
 
-      {interrupt.reportMarkdownPreview && (
+      {showReportPreview && interrupt.reportMarkdownPreview && (
         <pre className="interrupt-decision-form__report-preview">
           {interrupt.reportMarkdownPreview}
         </pre>

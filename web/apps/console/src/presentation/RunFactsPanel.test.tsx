@@ -234,6 +234,11 @@ describe("RunTraceFacts", () => {
     expect(screen.getByText("review_issues")).toBeDefined();
     expect(screen.getByText("2 captured")).toBeInTheDocument();
     expect(screen.getAllByText("captured as empty object").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("Resolved input").length).toBe(2);
+    expect(screen.getAllByText("captured as empty object")[0]!.closest(".run-trace-frame__fact")).toHaveAttribute(
+      "data-value-kind",
+      "empty-object",
+    );
   });
 
   it("renders trace frames inside a scrollable list", () => {
@@ -243,5 +248,19 @@ describe("RunTraceFacts", () => {
 
     expect(screen.getByRole("region", { name: /workflow trace frames/i })).toHaveClass("run-facts-scroll-region");
     expect(screen.getByText("node-7")).toBeInTheDocument();
+  });
+
+  it("keeps repeated node IDs as separate trace frames", () => {
+    const traceFacts = makeTraceFacts(2).trace;
+    const repeatedTraceFacts: DemoRunFacts = {
+      ...baseFacts,
+      trace: {
+        frames: traceFacts.frames.map((frame) => ({ ...frame, nodeId: "review_issues" })),
+      },
+    };
+
+    render(<RunTraceFacts facts={repeatedTraceFacts} />);
+
+    expect(document.querySelectorAll(".run-trace-frame")).toHaveLength(2);
   });
 });

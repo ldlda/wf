@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import type { DemoRunFacts } from "./demo-run-facts.js";
+import { factValueKind, type DemoRunFacts } from "./demo-run-facts.js";
 
 type RunInputFactsProps = {
   readonly facts: DemoRunFacts;
@@ -138,6 +138,13 @@ type RunTraceFactsProps = {
   readonly facts: DemoRunFacts;
 };
 
+const TraceFact = ({ label, value }: { readonly label: string; readonly value: string }) => (
+  <div className="run-trace-frame__fact" data-value-kind={factValueKind(value)}>
+    <dt>{label}</dt>
+    <dd><code>{value}</code></dd>
+  </div>
+);
+
 export const RunTraceFacts = ({ facts }: RunTraceFactsProps) => (
   <div className="run-facts-card run-trace-facts" role="region" aria-label="workflow trace proof">
     <h3>
@@ -148,18 +155,17 @@ export const RunTraceFacts = ({ facts }: RunTraceFactsProps) => (
     ) : (
       <div className="run-facts-scroll-region run-facts-scroll-region--trace" role="region" aria-label="workflow trace frames">
         <ul className="run-facts-list">
-          {facts.trace.frames.map((frame) => (
-            <li key={frame.nodeId} className="run-trace-frame">
-              <strong>{frame.nodeId}</strong>
-              <span className="run-trace-step-type">{frame.stepType}</span>
-              <span className="run-trace-outcome">{frame.outcome}</span>
-              <dl className="run-facts-dl">
-                <dt>Resolved input</dt>
-                <dd>{frame.resolvedInputLabel}</dd>
-                <dt>Output</dt>
-                <dd>{frame.outputLabel}</dd>
-                <dt>State changes</dt>
-                <dd>{frame.stateChangesLabel}</dd>
+          {facts.trace.frames.map((frame, index) => (
+            <li key={`${frame.nodeId}-${index}`} className="run-trace-frame" data-trace-node={frame.nodeId}>
+              <header className="run-trace-frame__header">
+                <strong>{frame.nodeId}</strong>
+                <span className="run-trace-step-type">{frame.stepType}</span>
+                <span className="run-trace-outcome">{frame.outcome}</span>
+              </header>
+              <dl className="run-trace-frame__facts">
+                <TraceFact label="Resolved input" value={frame.resolvedInputLabel} />
+                <TraceFact label="Output" value={frame.outputLabel} />
+                <TraceFact label="State changes" value={frame.stateChangesLabel} />
               </dl>
             </li>
           ))}

@@ -1,6 +1,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import { callOperation } from "../connection/api.js";
 
 vi.mock("../connection/api.js", () => ({
   callOperation: vi.fn().mockResolvedValue({
@@ -19,6 +20,21 @@ class MockResizeObserver {
   unobserve() {}
   disconnect() {}
 }
+
+const mockedCallOperation = vi.mocked(callOperation);
+const healthyResponse = {
+  ok: true as const,
+  operation: "workflow.health" as const,
+  label: "Health",
+  interpreted: { status: "ok" },
+  exchange: { request: {}, response: {} },
+  equivalentCli: "uv run wf status",
+  durationMs: 2,
+};
+
+beforeAll(() => {
+  mockedCallOperation.mockResolvedValue(healthyResponse);
+});
 
 beforeAll(() => {
   globalThis.ResizeObserver = MockResizeObserver as unknown as typeof ResizeObserver;
@@ -50,6 +66,8 @@ const graphNodeByLabel = (label: RegExp): HTMLElement => {
 
 afterEach(() => {
   cleanup();
+  mockedCallOperation.mockReset();
+  mockedCallOperation.mockResolvedValue(healthyResponse);
   window.sessionStorage.clear();
   window.location.hash = "";
 });
@@ -216,6 +234,21 @@ describe("PresentationRoute", () => {
     expect(await screen.findByText(/Live target is ready/i)).toBeInTheDocument();
     expect(screen.queryByText("Workflow input")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+  });
+
+  it("switches to replay evidence when a configured target fails health", async () => {
+    mockedCallOperation.mockResolvedValue({
+      ok: false as const,
+      error: { code: "upstream_unreachable", message: "connection refused" },
+      exchange: { request: {}, response: {} },
+    });
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8766/rpc");
+    window.location.hash = "#scene/resume-output-evidence/resume";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByText(/Replay fallback/i)).toBeInTheDocument();
+    expect(await screen.findByRole("region", { name: /workflow output report/i })).toBeInTheDocument();
   });
 
   it("updates the chat intro after the live health probe succeeds", async () => {

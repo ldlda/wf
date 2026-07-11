@@ -97,9 +97,12 @@ export const PresentationRoute = () => {
   useEffect(() => {
     if (demo.state.phase !== "ready") return;
     // The resolved target owns the initial mode: a healthy loopback target must
-    // remain live, while an invalid target starts from the offline recording.
-    if (demo.state.mode !== presentationTarget.mode) demo.setMode(presentationTarget.mode);
-  }, [demo.setMode, demo.state.mode, demo.state.phase, presentationTarget.mode]);
+    // remain live, while an invalid or unreachable target starts from the
+    // offline recording. The health hook is the point where an HTTP target
+    // becomes known to be unreachable; URL shape alone is not enough.
+    const desiredMode = targetStatus.kind === "failed" ? "replay" : presentationTarget.mode;
+    if (demo.state.mode !== desiredMode) demo.setMode(desiredMode);
+  }, [demo.setMode, demo.state.mode, demo.state.phase, presentationTarget.mode, targetStatus.kind]);
 
   useEffect(() => {
     if (demo.state.phase === "ready" && demo.state.mode === "replay") {

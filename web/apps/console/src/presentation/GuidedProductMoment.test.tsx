@@ -73,6 +73,7 @@ describe("GuidedProductMoment", () => {
 
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "approval");
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-primary-surface", "interrupt-approval");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-approval-focus", "decision");
     expect(screen.getByText(/Run is paused/i)).toBeInTheDocument();
     expect(screen.getByText("Workflow input")).toBeInTheDocument();
     expect(screen.getByText("project-brief.md")).toBeInTheDocument();
@@ -94,6 +95,7 @@ describe("GuidedProductMoment", () => {
 
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "resume");
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-primary-surface", "resume-output");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-continuation-focus", "output");
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
   });
 
@@ -117,6 +119,7 @@ describe("GuidedProductMoment", () => {
 
     expect(screen.getByText("Workflow input")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /operator resume decision/i })).toBeInTheDocument();
     expect(screen.queryByText("Output not created yet")).not.toBeInTheDocument();
     expect(screen.getAllByText(/lda.chat Thesis And Project Readiness Report/i).length).toBeGreaterThanOrEqual(1);
   });
@@ -191,6 +194,7 @@ describe("GuidedProductMoment", () => {
     expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
     expect(screen.queryByText("Output")).not.toBeInTheDocument();
     expect(screen.queryByText("Trace frames")).not.toBeInTheDocument();
+    expect(document.querySelector(".interrupt-decision-form__report-preview")).toBeNull();
   });
 
   it("resume makes output primary and operation/resume payload supporting", () => {
@@ -260,9 +264,11 @@ describe("GuidedProductMoment", () => {
     );
 
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-support-surface", "output-summary");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-continuation-focus", "trace");
     expect(screen.getByRole("region", { name: /workflow trace proof/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /workflow output summary/i })).toHaveAttribute("data-output-priority", "summary");
     expect(screen.queryByText("No trace frames captured.")).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".run-trace-frame")).toHaveLength(3);
   });
 
   it("trace beat shows trace frames instead of the empty fallback after trace is primed", () => {

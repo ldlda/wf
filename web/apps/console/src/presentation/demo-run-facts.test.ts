@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { initialDemoTimelineState } from "../demo/timeline/reducer.js";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
-import { formatFactValue, projectDemoRunFacts } from "./demo-run-facts.js";
+import { factValueKind, formatFactValue, projectDemoRunFacts } from "./demo-run-facts.js";
 
 const controller = (overrides: Partial<DemoTimelineController> = {}): DemoTimelineController => {
   const recording = loadCanonicalDemoRecording();
@@ -188,5 +188,11 @@ describe("demo-run-facts", () => {
   it("formats absent and empty values differently", () => {
     expect(formatFactValue({}, "not captured in this recording")).toBe("captured as empty object");
     expect(formatFactValue(undefined, "not captured in this recording")).toBe("not captured in this recording");
+  });
+
+  it("classifies captured values for compact trace rendering", () => {
+    expect(factValueKind("captured as empty object")).toBe("empty-object");
+    expect(factValueKind("not captured in this recording")).toBe("missing");
+    expect(factValueKind('{"documents":3}')).toBe("value");
   });
 });
