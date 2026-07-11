@@ -84,7 +84,7 @@ describe("PresentationRoute", () => {
     window.location.hash = "#scene/agent-handoff/request";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
-    expect(screen.getByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /authoring request/i })).toBeInTheDocument();
     await userEvent.keyboard("{ArrowRight}");
     expect(await screen.findByRole("button", { name: /deployment.*2 tool calls/i })).toBeInTheDocument();
   });
@@ -209,18 +209,13 @@ describe("PresentationRoute", () => {
     expect(screen.getByRole("button", { name: /inspect evidence/i })).toBeInTheDocument();
   });
 
-  it("renders a chat run action on the presentation route", async () => {
+  it("renders the Scene 8 composer without a workflow run action", async () => {
     window.location.hash = "#scene/agent-handoff/request";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    const actions = await screen.findAllByRole("button", {
-      name: /run prepared workflow|run replay walkthrough/i,
-    });
-    expect(actions.length).toBeGreaterThanOrEqual(1);
-    expect(
-      document.querySelector(".agent-handoff-scene .assistant-operator-thread__action button"),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole("textbox", { name: /authoring request/i })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Run prepared workflow" })).not.toBeInTheDocument();
   });
 
   it("uses stored target for live presentation mode", async () => {
@@ -268,16 +263,15 @@ describe("PresentationRoute", () => {
     expect(screen.queryByText(/checking reachability/i)).not.toBeInTheDocument();
   });
 
-  it("shows the live prepared-workflow action after a healthy target probe", async () => {
+  it("keeps Scene 8 local after a healthy target probe", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
     window.location.hash = "#scene/agent-handoff/request";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
     expect(await screen.findByText(/Live target ready/i)).toBeInTheDocument();
-    const runActions = screen.getAllByRole("button", { name: "Run prepared workflow" });
-    expect(runActions.length).toBeGreaterThanOrEqual(1);
-    expect(runActions.every((action) => !action.hasAttribute("disabled"))).toBe(true);
+    expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
+    expect(screen.queryByRole("button", { name: "Run prepared workflow" })).not.toBeInTheDocument();
   });
 
   it("opens Scene 10 approval from the canonical hash", async () => {
@@ -465,6 +459,8 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
+    const send = await screen.findByRole("button", { name: "Send" });
+    await userEvent.click(send);
     expect(await screen.findByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /discover.*4 tool calls/i })).toBeInTheDocument();
   });

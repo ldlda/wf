@@ -340,7 +340,7 @@ export const SceneBody = ({ location, demo, timelineAgent, selectedNodeId, selec
     case "authoring":
       return <AuthoringScene scene={scene} beat={beat} />;
     case "agent":
-      return <AgentHandoffScene scene={scene} beat={beat} timelineAgent={timelineAgent} />;
+      return <AgentHandoffScene scene={scene} beat={beat} />;
       case "demo-lifecycle":
       return <PreparedAuthoringLifecycleScene scene={scene} beat={beat} />;
     case "demo":

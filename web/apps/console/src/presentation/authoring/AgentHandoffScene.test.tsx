@@ -1,8 +1,9 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
-import type { TimelineAgentController } from "../../demo/agent/timelineAgent.js";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
 import { findBeat, findScene } from "../storyboard.js";
 import { AgentHandoffScene } from "./AgentHandoffScene.js";
+import { SCENE8_REQUEST } from "./scene8-entry-state.js";
 
 const renderBeat = (beatId: "request" | "handoff") => {
   const scene = findScene("agent-handoff");
@@ -14,7 +15,7 @@ const renderBeat = (beatId: "request" | "handoff") => {
 afterEach(cleanup);
 
 describe("AgentHandoffScene", () => {
-  it("renders one prepared conversation with a phase orientation rail", () => {
+  it("renders the empty request beat as a chat composer", () => {
     render(
       <AgentHandoffScene
         scene={findScene("agent-handoff")!}
@@ -30,14 +31,10 @@ describe("AgentHandoffScene", () => {
       "data-presentation-surface",
       "editorial",
     );
-    expect(screen.getByRole("log", { name: "prepared authoring conversation" })).toHaveAttribute(
-      "data-surface",
-      "stage",
-    );
-    expect(screen.getByText(/We need to author a report workflow/i)).toBeInTheDocument();
-    expect(screen.getByText(/Let me inspect the available sources/i)).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "prepared handoff phases" })).toBeInTheDocument();
-    expect(screen.getAllByText(/workflow\.sources\.list/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: /what should the workflow author prepare/i })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: /authoring request/i })).toHaveValue(SCENE8_REQUEST);
+    expect(screen.queryByRole("list", { name: "prepared handoff phases" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /run prepared workflow/i })).not.toBeInTheDocument();
   });
 
   it("advances the same conversation to deployment evidence", () => {
@@ -55,10 +52,12 @@ describe("AgentHandoffScene", () => {
     expect(screen.getAllByText(/workflow\.deployments\.save/i).length).toBeGreaterThan(0);
   });
 
-  it("renders separated user and assistant turns on the request beat", () => {
+  it("reveals separated user and assistant turns after local submission", async () => {
     renderBeat("request");
+    await userEvent.click(screen.getByRole("button", { name: "Send" }));
     expect(screen.getAllByText(/report|workflow|prepare/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/inspect|capabilities|sources|schemas|let me/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByRole("button", { name: /discover.*4 tool calls/i })).toBeInTheDocument();
   });
 
   it("interleaves prepared workflow tool groups with the handoff conversation", () => {
@@ -76,28 +75,8 @@ describe("AgentHandoffScene", () => {
     expect(screen.queryByText("prepared workflow lifecycle")).not.toBeInTheDocument();
   });
 
-  it("exposes the live prepared-workflow action inside the visible conversation", () => {
-    const runPreparedWorkflow = vi.fn();
-    const timelineAgent = {
-      messages: [],
-      canRun: true,
-      runLabel: "Run prepared workflow",
-      runPreparedWorkflow,
-      submitSelectedIssues: vi.fn(async () => {}),
-      requestRevision: vi.fn(async () => {}),
-    } as unknown as TimelineAgentController;
-
-    render(
-      <AgentHandoffScene
-        scene={findScene("agent-handoff")!}
-        beat={findBeat("agent-handoff", "request")!}
-        timelineAgent={timelineAgent}
-      />,
-    );
-
-    const action = screen.getByRole("button", { name: "Run prepared workflow" });
-    expect(action).toBeEnabled();
-    action.click();
-    expect(runPreparedWorkflow).toHaveBeenCalledOnce();
+  it("does not expose a workflow run action", () => {
+    renderBeat("handoff");
+    expect(screen.queryByRole("button", { name: /run prepared workflow/i })).not.toBeInTheDocument();
   });
 });

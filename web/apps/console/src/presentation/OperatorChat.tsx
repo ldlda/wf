@@ -43,6 +43,7 @@ export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onRequ
     ? () => { timelineAgent.requestRevision().catch(console.error); }
     : onRequestRevision;
   const composition = compositionForState(state);
+  const isScene8 = state.location.kind === "main" && state.location.sceneId === "agent-handoff";
   const presentationSurface = composition.chatTheme === "light" ? "editorial" : "night";
   return (
     <aside
@@ -55,7 +56,7 @@ export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onRequ
       <AssistantOperatorThread
         mode={composition.chatMode}
         messages={visibleMessages}
-        runAction={timelineAgent ? {
+        runAction={timelineAgent && !isScene8 ? {
           label: timelineAgent.runLabel,
           disabled: !timelineAgent.canRun,
           run: () => void timelineAgent.runPreparedWorkflow(),
