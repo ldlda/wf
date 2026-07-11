@@ -27,7 +27,8 @@
 /* Presentation roots own their visual surfaces; do not inherit console cards. */
 .presentation-stage__primary > .architecture-scene,
 .presentation-stage__primary > .scene-body__authoring-composition,
-.presentation-stage__primary > .prepared-lifecycle-scene {
+.presentation-stage__primary > .prepared-lifecycle-scene,
+.presentation-stage__primary > .opening-thesis-scene {
   margin: 0;
   border: 0;
   border-radius: 0;
