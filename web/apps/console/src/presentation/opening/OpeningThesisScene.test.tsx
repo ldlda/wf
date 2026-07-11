@@ -8,9 +8,12 @@ const thesisScene = findScene("thesis")!;
 afterEach(() => cleanup());
 
 describe("OpeningThesisScene", () => {
-  it("renders the title reveal with latent component icons", () => {
+  it("makes the title boundary the opening focal artifact", () => {
     render(<OpeningThesisScene scene={thesisScene} beat={findBeat("thesis", "title")!} />);
 
+    const opening = screen.getByRole("region", { name: /thesis opening/i });
+    expect(opening).toHaveAttribute("data-opening-focus", "title");
+    expect(opening).toHaveAttribute("data-support-state", "receded");
     expect(screen.getByRole("heading", { name: /Design and Implementation of lda\.chat/i })).toBeInTheDocument();
     expect(screen.getByText("Planner")).toBeInTheDocument();
     expect(screen.getByText("Tool Surface")).toBeInTheDocument();
@@ -23,6 +26,9 @@ describe("OpeningThesisScene", () => {
   it("renders contribution focus without relying on lda.chat as category label", () => {
     render(<OpeningThesisScene scene={thesisScene} beat={findBeat("thesis", "substrate")!} />);
 
+    const opening = screen.getByRole("region", { name: /thesis opening/i });
+    expect(opening).toHaveAttribute("data-opening-focus", "substrate");
+    expect(opening).toHaveAttribute("data-support-state", "revealed");
     expect(screen.getByText("Codex / Claude / OpenCode")).toBeInTheDocument();
     expect(screen.getByText("CLI / MCP / APIs")).toBeInTheDocument();
     expect(screen.getByText("submitted substrate")).toBeInTheDocument();

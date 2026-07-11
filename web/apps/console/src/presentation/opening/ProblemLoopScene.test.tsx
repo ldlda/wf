@@ -12,6 +12,9 @@ describe("ProblemLoopScene", () => {
   it("uses the assistant transcript surface for the direct-action side", async () => {
     render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "direct-actions")!} />);
 
+    const scene = screen.getByRole("region", { name: /chat tool loop versus reusable automation/i });
+    expect(scene).toHaveAttribute("data-problem-focus", "tool-loop");
+    expect(scene).toHaveAttribute("data-support-state", "quiet");
     const transcript = screen.getByRole("log", { name: /one-off assistant transcript/i });
     expect(transcript).toHaveClass("assistant-operator-thread");
     expect(within(transcript).getByText("Can you finish this workspace task?")).toBeInTheDocument();
@@ -23,6 +26,9 @@ describe("ProblemLoopScene", () => {
   it("renders reusable automation as a durable workflow blueprint", () => {
     render(<ProblemLoopScene scene={problemScene} beat={findBeat("problem", "missing-contracts")!} />);
 
+    const scene = screen.getByRole("region", { name: /chat tool loop versus reusable automation/i });
+    expect(scene).toHaveAttribute("data-problem-focus", "workflow-blueprint");
+    expect(scene).toHaveAttribute("data-support-state", "receded");
     const blueprint = screen.getByRole("group", { name: /durable workflow blueprint/i });
     expect(blueprint).toHaveAttribute("data-blueprint-active", "true");
 

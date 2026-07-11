@@ -1754,6 +1754,14 @@
   align-items: center;
 }
 
+.opening-thesis[data-opening-focus="title"] {
+  grid-template-rows: minmax(11rem, 1fr) auto;
+}
+
+.opening-thesis[data-opening-focus="substrate"] {
+  grid-template-rows: auto minmax(11rem, 1fr);
+}
+
 .opening-thesis__title-card {
   display: grid;
   place-items: center;
@@ -1765,6 +1773,16 @@
     radial-gradient(circle at 30% 30%, color-mix(in oklch, var(--accent-cyan) 12%, transparent), transparent 34%),
     var(--stage-inset);
   text-align: center;
+  transition: min-height 220ms ease-out, opacity 180ms ease-out, transform 220ms ease-out;
+}
+
+.opening-thesis[data-opening-focus="title"] .opening-thesis__title-card {
+  min-height: 15rem;
+}
+
+.opening-thesis[data-opening-focus="substrate"] .opening-thesis__title-card {
+  min-height: 5rem;
+  transform: translateY(-0.15rem);
 }
 
 .opening-thesis__title-card span {
@@ -1784,6 +1802,16 @@
 .opening-thesis .concept-rail {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  transition: opacity 180ms ease-out, transform 220ms ease-out;
+}
+
+.opening-thesis[data-opening-focus="title"] .opening-thesis__decomposition {
+  opacity: 0.72;
+  transform: translateY(0.3rem);
+}
+
+.opening-thesis[data-opening-focus="substrate"] .opening-thesis__decomposition {
+  transform: translateY(0);
 }
 
 /* Problem loop scene */
@@ -1804,6 +1832,7 @@
   border-radius: 0.95rem;
   padding: 0.75rem;
   overflow: hidden;
+  transition: opacity 220ms ease-out, transform 240ms ease-out, border-color 220ms ease-out;
 }
 
 .problem-chat-card {
@@ -1825,7 +1854,13 @@
 
 .problem-chat-card[data-problem-active="false"],
 .problem-blueprint[data-blueprint-active="false"] {
-  opacity: 0.62;
+  opacity: 0.52;
+  transform: scale(0.97);
+}
+
+.problem-loop-scene[data-problem-focus="tool-loop"] .problem-chat-card,
+.problem-loop-scene[data-problem-focus="workflow-blueprint"] .problem-blueprint {
+  border-color: color-mix(in oklch, var(--accent-cyan) 72%, var(--stage-line));
 }
 
 .problem-artifact-header {
@@ -1900,8 +1935,11 @@
 
 .problem-loop-scene__bridge {
   align-self: center;
-  color: var(--accent-cyan);
-  font: 800 2rem/1 var(--font-interface);
+  max-width: 7rem;
+  color: var(--text-secondary);
+  font: 700 0.64rem/1.25 var(--font-evidence);
+  text-align: center;
+  text-transform: uppercase;
 }
 
 @container presentation-canvas (max-width: 1050px) {
@@ -1911,6 +1949,15 @@
 
   .problem-loop-scene__bridge {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opening-thesis__title-card,
+  .opening-thesis .concept-rail,
+  .problem-chat-card,
+  .problem-blueprint {
+    transition: none;
   }
 }
 
@@ -2701,6 +2748,14 @@
 .prepared-lifecycle-scene__dock {
   min-height: 0;
   overflow: hidden;
+}
+
+.problem-loop-scene[data-problem-focus="tool-loop"] {
+  grid-template-columns: minmax(0, 1.35fr) auto minmax(17rem, 0.65fr);
+}
+
+.problem-loop-scene[data-problem-focus="workflow-blueprint"] {
+  grid-template-columns: minmax(17rem, 0.65fr) auto minmax(0, 1.35fr);
 }
 
 @keyframes authoring-canvas-enter {

@@ -69,7 +69,10 @@ describe("SceneBody", () => {
       />,
     );
 
-    expect(screen.getByLabelText("AI agent decomposition")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "thesis opening" })).toHaveAttribute(
+      "data-opening-focus",
+      "substrate",
+    );
     expect(screen.getByText("submitted substrate")).toBeInTheDocument();
     expect(screen.getByText("Typed · Durable · Inspectable")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /where is the ai agent/i })).toBeInTheDocument();

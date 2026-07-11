@@ -58,10 +58,16 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
       <StageCaption eyebrow="Problem shape" title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
-      <section className="problem-loop-scene" aria-label="chat tool loop versus reusable automation">
+      <section
+        className="problem-loop-scene"
+        aria-label="chat tool loop versus reusable automation"
+        data-problem-focus={automationBeat ? "workflow-blueprint" : "tool-loop"}
+        data-support-state={automationBeat ? "receded" : "quiet"}
+      >
         <article
           className="problem-chat-card"
           data-problem-active={automationBeat ? "false" : "true"}
+          data-problem-role="tool-loop"
           aria-label="one-off chat and tool loop"
         >
           <header className="problem-artifact-header">
@@ -75,13 +81,14 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
           <p className="problem-artifact-note">The useful work lives in the conversation history.</p>
         </article>
 
-        <div className="problem-loop-scene__bridge" aria-hidden="true">→</div>
+        <div className="problem-loop-scene__bridge" aria-hidden="true">one request → durable definition</div>
 
         <article
           className="problem-blueprint"
           role="group"
           aria-label="durable workflow blueprint"
           data-blueprint-active={automationBeat ? "true" : "false"}
+          data-problem-role="workflow-blueprint"
         >
           <header className="problem-artifact-header">
             <span>Reusable</span>
