@@ -248,10 +248,14 @@ Recommended next visual slices:
    as the implemented contribution. Scene 2 remains responsible for the
    automation problem. Implementation:
    [`presentation opening title`](historical/superpowers/plans/2026-07-11-presentation-opening-title.md).
-8. Next: harden the live/replay defense rehearsal path, including submitted and
-   revision-requested same-run resumes, replay fallback, exact deep links, and
-   reset instructions. Design:
-   [`defense presentation rehearsal`](superpowers/specs/2026-07-11-defense-presentation-rehearsal-design.md).
+8. Completed: harden the live/replay defense rehearsal path with visible live
+   start readiness, submitted and revision-requested same-run evidence,
+   deterministic replay fallback, current deep links, and reset instructions.
+   Implementation:
+   [`defense presentation rehearsal`](historical/superpowers/plans/2026-07-12-defense-presentation-rehearsal.md).
+9. Next: enlarge and simplify the focal proof in Scenes 7-9: authoring/repair,
+   agent handoff, and prepared lifecycle. Keep one dominant artifact per beat,
+   use the editorial surface, and avoid dark-blue panels outside run evidence.
 
 Presentation wishlist / defense readiness:
 

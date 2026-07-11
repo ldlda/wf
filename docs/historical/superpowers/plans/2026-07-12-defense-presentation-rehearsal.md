@@ -40,7 +40,7 @@ configuration, `wf-rpc-server`, committed replay recording, Markdown runbook.
 - Produces: route-level tests that protect the defense path without mocking a
   separate agent runtime.
 
-- [ ] **Step 1: Write the failing live-start affordance test**
+- [x] **Step 1: Write the failing live-start affordance test**
 
 Add a test that configures the normal loopback target and navigates to Scene 8:
 
@@ -56,7 +56,7 @@ it("shows the live prepared-workflow action after a healthy target probe", async
 });
 ```
 
-- [ ] **Step 2: Run the route test and verify it fails**
+- [x] **Step 2: Run the route test and verify it fails**
 
 Run:
 
@@ -67,7 +67,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/PresentationRoute.
 Expected: FAIL because the route test does not yet pin the visible Scene 8
 action after a healthy target probe.
 
-- [ ] **Step 3: Write the failing revision-trace continuity test**
+- [x] **Step 3: Write the failing revision-trace continuity test**
 
 Extend the existing replay revision test with a direct trace transition:
 
@@ -77,10 +77,10 @@ window.dispatchEvent(new HashChangeEvent("hashchange"));
 
 expect(await screen.findByText("revision_requested")).toBeInTheDocument();
 expect(screen.getByText("end_cancelled")).toBeInTheDocument();
-expect(screen.getByText(/Revision Requested/i)).toBeInTheDocument();
+expect(screen.getByRole("region", { name: "workflow output summary" })).toBeInTheDocument();
 ```
 
-- [ ] **Step 4: Run the route test and verify it fails**
+- [x] **Step 4: Run the route test and verify it fails**
 
 Run:
 
@@ -91,7 +91,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/PresentationRoute.
 Expected: FAIL if a route transition re-primes the canonical submitted recording
 or drops the revision trace/output branch.
 
-- [ ] **Step 5: Make only the minimal test or production correction**
+- [x] **Step 5: Make only the minimal test or production correction**
 
 If the test exposes a real branch-loss bug, preserve the currently active
 revision replay recording when navigating from revision output to trace. Keep
@@ -99,7 +99,7 @@ the correction inside `useDemoTimeline` or `PresentationRoute`; do not add a
 second replay store. If it passes, retain the test and make no production-code
 change.
 
-- [ ] **Step 6: Run focused route verification**
+- [x] **Step 6: Run focused route verification**
 
 Run:
 
@@ -112,7 +112,7 @@ Expected: PASS. The tests demonstrate a healthy live affordance, submitted
 resume proof, revision-requested output/trace, and a failed-health replay
 fallback.
 
-- [ ] **Step 7: Commit the rehearsal behavior coverage**
+- [x] **Step 7: Commit the rehearsal behavior coverage**
 
 ```powershell
 git add web/apps/console/src/presentation/PresentationRoute.test.tsx web/apps/console/src/demo/useDemoTimeline.ts web/apps/console/src/demo/useDemoTimeline.test.tsx
@@ -132,7 +132,7 @@ Only include `useDemoTimeline` files if Step 5 required a correction.
 - Produces: a self-contained local operator procedure for live, replay,
   submitted, and revision-requested demonstrations.
 
-- [ ] **Step 1: Replace the demo deep-link list**
+- [x] **Step 1: Replace the demo deep-link list**
 
 Replace legacy demo links with this current route list:
 
@@ -146,7 +146,7 @@ Replace legacy demo links with this current route list:
 - Trace proof: `http://127.0.0.1:5173/present#scene/resume-output-evidence/trace`
 ```
 
-- [ ] **Step 2: Add a target-mode and reset section**
+- [x] **Step 2: Add a target-mode and reset section**
 
 After Local Startup, add these exact operator commands for browser DevTools:
 
@@ -163,7 +163,7 @@ location.reload();
 State that the footer badge must read `Replay evidence` or `Replay fallback`
 before a replay rehearsal, and `Live target ready` before a live rehearsal.
 
-- [ ] **Step 3: Add an explicit branch table**
+- [x] **Step 3: Add an explicit branch table**
 
 Add a `## Rehearsal Paths` table with these rows:
 
@@ -173,7 +173,7 @@ Add a `## Rehearsal Paths` table with these rows:
 | Revision requested | Enter a revision comment, choose `Request revision` | same run ID, UI wording `Revision requested`, protocol `cancelled`, `Revision Requested` markdown, no issues, `revision_requested` then `end_cancelled` trace frames |
 | Replay fallback | Stop the server or force replay before loading | replay badge and canonical operation/output/trace evidence; no port debugging |
 
-- [ ] **Step 4: Replace generic checklist items with a timed operator checklist**
+- [x] **Step 4: Replace generic checklist items with a timed operator checklist**
 
 Add these ordered steps to Pre-Defense Checklist:
 
@@ -187,7 +187,7 @@ Add these ordered steps to Pre-Defense Checklist:
    hashes still render.
 5. Restore the normal loopback target only if the live path will be shown.
 
-- [ ] **Step 5: Verify the Markdown and link vocabulary**
+- [x] **Step 5: Verify the Markdown and link vocabulary**
 
 Run:
 
@@ -198,7 +198,7 @@ git diff --check
 
 Expected: no stale legacy route IDs or terminal-cancellation wording remain.
 
-- [ ] **Step 6: Commit the runbook**
+- [x] **Step 6: Commit the runbook**
 
 ```powershell
 git add docs/runbooks/defense-presentation.md
@@ -216,7 +216,7 @@ git commit -m "docs: harden defense presentation rehearsal"
 - Produces: a completed rehearsal slice with the next visual pass retained as
   future work.
 
-- [ ] **Step 1: Perform browser smoke for both readiness states**
+- [x] **Step 1: Perform browser smoke for both readiness states**
 
 Run:
 
@@ -234,7 +234,7 @@ action. For replay, force replay via Task 2’s session-storage command, reload,
 and confirm the footer badge plus approval/trace evidence. Do not start a real
 run just for this smoke; Task 1 verifies the branch logic deterministically.
 
-- [ ] **Step 2: Update the roadmap**
+- [x] **Step 2: Update the roadmap**
 
 Replace roadmap item 8 with:
 
@@ -254,7 +254,7 @@ Add the next visual slice immediately below it:
    use the editorial surface, and avoid dark-blue panels outside run evidence.
 ```
 
-- [ ] **Step 3: Run full verification**
+- [x] **Step 3: Run full verification**
 
 Run:
 
@@ -267,7 +267,7 @@ git diff --check
 
 Expected: all workspaces pass. The existing Vite chunk-size warning may remain.
 
-- [ ] **Step 4: Archive the plan and commit completion**
+- [x] **Step 4: Archive the plan and commit completion**
 
 ```powershell
 Move-Item docs/superpowers/plans/2026-07-12-defense-presentation-rehearsal.md docs/historical/superpowers/plans/2026-07-12-defense-presentation-rehearsal.md
