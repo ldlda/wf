@@ -280,13 +280,21 @@ export const authoringToolGroupId = (phase: AuthoringPhaseId): string =>
  */
 export const projectPreparedAuthoringThread = (
   throughPhase: AuthoringPhaseId = "deployment",
+  requestOverride?: string,
 ): readonly AgentMessage[] => {
   const finalPhaseIndex = recording.findIndex(({ phase }) => phase === throughPhase);
   if (finalPhaseIndex < 0) throw new Error(`unknown phase: ${throughPhase}`);
 
+  let requestReplaced = false;
   return recording.slice(0, finalPhaseIndex + 1).flatMap((phase) => {
     const conversation = phase.conversation.map((turn, index) =>
-      agentTextMessage(`authoring-${phase.phase}-message-${index}`, turn.role, turn.text),
+      agentTextMessage(
+        `authoring-${phase.phase}-message-${index}`,
+        turn.role,
+        requestOverride !== undefined && !requestReplaced && turn.role === "user"
+          ? (requestReplaced = true, requestOverride)
+          : turn.text,
+      ),
     );
     const groupId = authoringToolGroupId(phase.phase);
     const toolParts = phase.commands.flatMap((command, index) => {

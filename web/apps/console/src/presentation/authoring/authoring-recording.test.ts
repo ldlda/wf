@@ -152,4 +152,25 @@ describe("projectPreparedAuthoringThread", () => {
   it("uses a stable phase tool-group id", () => {
     expect(authoringToolGroupId("validate")).toBe("authoring-validate");
   });
+
+  it("keeps the canonical projection unchanged without a request override", () => {
+    expect(projectPreparedAuthoringThread("discover")).toEqual(
+      projectPreparedAuthoringThread("discover"),
+    );
+  });
+
+  it("overrides only the first user request and preserves Discover tool data", () => {
+    const canonical = projectPreparedAuthoringThread("discover");
+    const overridden = projectPreparedAuthoringThread("discover", "A custom request");
+    const canonicalUser = canonical.find((message) => message.role === "user");
+    const overriddenUser = overridden.find((message) => message.role === "user");
+    const canonicalTools = canonical.find((message) => message.id === "authoring-discover-tools");
+    const overriddenTools = overridden.find((message) => message.id === "authoring-discover-tools");
+
+    expect(canonicalUser?.parts).not.toEqual(overriddenUser?.parts);
+    expect(overriddenUser?.parts).toEqual([
+      { type: "text", text: "A custom request" },
+    ]);
+    expect(overriddenTools).toEqual(canonicalTools);
+  });
 });

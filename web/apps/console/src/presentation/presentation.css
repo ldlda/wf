@@ -3094,6 +3094,56 @@
   box-shadow: 0 1.25rem 3rem color-mix(in oklch, var(--stage-ink) 10%, transparent);
 }
 
+.agent-handoff-scene__entry {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  gap: 1rem;
+  min-height: 0;
+  height: 100%;
+}
+
+.agent-handoff-scene__intro {
+  width: min(100%, 52rem);
+  margin-inline: auto;
+}
+
+.agent-handoff-scene__intro span {
+  color: var(--authoring-accent, var(--accent-cyan));
+  font: 700 0.68rem/1 var(--font-evidence);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.agent-handoff-scene__intro h1 {
+  margin: 0.45rem 0 0;
+  color: var(--authoring-ink, var(--text-primary));
+  font: 700 clamp(1.45rem, 3vw, 2.25rem)/1.05 var(--font-interface);
+}
+
+.agent-handoff-scene__intro p {
+  max-width: 42rem;
+  margin: 0.55rem 0 0;
+  color: var(--authoring-muted, var(--text-secondary));
+  font: 0.9rem/1.4 var(--font-interface);
+}
+
+.agent-handoff-scene__composer-help {
+  margin: 0;
+  color: var(--authoring-muted, var(--text-secondary));
+  font: 0.68rem/1.35 var(--font-interface);
+}
+
+.agent-handoff-scene__entry-thread {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.agent-handoff-scene__entry-thread .assistant-operator-thread {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+}
+
 .agent-handoff-scene__composer-label {
   color: var(--authoring-muted, var(--text-secondary));
   font: 700 0.68rem/1 var(--font-evidence);
