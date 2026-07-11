@@ -1,4 +1,6 @@
-import type { AgentToolName } from "./tools.js";
+import type { AgentToolName, PreparedAuthoringToolName } from "./tools.js";
+
+export type AgentMessageToolName = AgentToolName | PreparedAuthoringToolName;
 
 export type AgentRole = "user" | "assistant";
 
@@ -9,13 +11,13 @@ export type PresentationToolAction =
 
 export type AgentToolCall = {
   readonly id: string;
-  readonly name: AgentToolName;
+  readonly name: AgentMessageToolName;
   readonly input: unknown;
 };
 
 export type AgentToolResult = {
   readonly callId: string;
-  readonly name: AgentToolName;
+  readonly name: AgentMessageToolName;
   readonly status: "success" | "failure";
   readonly output: unknown;
 };
@@ -56,7 +58,7 @@ export const agentTextMessage = (id: string, role: AgentRole, text: string): Age
 
 export const agentToolCallPart = (
   id: string,
-  name: AgentToolName,
+  name: AgentMessageToolName,
   input: unknown,
 ): AgentMessagePart => ({
   type: "tool-call",
@@ -65,7 +67,7 @@ export const agentToolCallPart = (
 
 export const agentToolResultPart = (
   callId: string,
-  name: AgentToolName,
+  name: AgentMessageToolName,
   status: "success" | "failure",
   output: unknown,
 ): AgentMessagePart => ({

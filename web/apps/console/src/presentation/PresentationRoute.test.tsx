@@ -66,9 +66,9 @@ describe("PresentationRoute", () => {
     window.location.hash = "#scene/agent-handoff/request";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
-    expect(screen.getByRole("heading", { name: /Agent Handoff/i })).toBeInTheDocument();
+    expect(screen.getByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
     await userEvent.keyboard("{ArrowRight}");
-    expect(await screen.findByText(/The interface delegates durable work to lda\.chat/i)).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /deployment.*2 tool calls/i })).toBeInTheDocument();
   });
 
   it("renders audience progress chrome without rail or mode label", async () => {
@@ -373,8 +373,8 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByRole("heading", { name: "Agent Handoff" })).toBeInTheDocument();
-    expect(screen.getByText(/A thin agent interface receives the report request/)).toBeInTheDocument();
+    expect(await screen.findByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /discover.*4 tool calls/i })).toBeInTheDocument();
   });
 
   it("navigates to Scene 8 handoff beat via hash", async () => {
@@ -382,8 +382,8 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByRole("heading", { name: "Agent Handoff" })).toBeInTheDocument();
-    expect(screen.getByText(/The interface delegates durable work to lda\.chat/)).toBeInTheDocument();
+    expect(await screen.findByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /deployment.*2 tool calls/i })).toBeInTheDocument();
   });
 
   it.each([

@@ -5,6 +5,23 @@ export type WorkflowToolName =
   | "readRunTrace"
   | "runWorkflowCommand";
 
+/** Names emitted by the prepared authoring recording for its operation trace. */
+export type PreparedAuthoringToolName =
+  | "workflow.sources.list"
+  | "workflow.capabilities.list"
+  | "workflow.capabilities.inspect"
+  | "wf schema"
+  | "workflow.draft_workspaces.create_from_capability"
+  | "workflow.draft_workspaces.add_step_from_capability"
+  | "workflow.draft_workspaces.get"
+  | "workflow.draft_workspaces.validate"
+  | "workflow.draft_workspaces.set_step_output_map"
+  | "workflow.draft_workspaces.compile"
+  | "workflow.draft_workspaces.create_artifact"
+  | "workflow.artifacts.inspect"
+  | "workflow.deployments.save"
+  | "workflow.deployments.validate";
+
 export type PresentationToolName =
   | "selectWorkflowNode"
   | "focusOperation"

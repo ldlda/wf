@@ -67,6 +67,29 @@ describe("projectPreparedAuthoring", () => {
     }
   });
 
+  it("labels each prepared command with its actual operation name", () => {
+    const titles = projectPreparedAuthoring()
+      .flatMap((phase) => phase.commands)
+      .map((command) => command.title);
+
+    expect(titles).toEqual([
+      "workflow.sources.list",
+      "workflow.capabilities.list",
+      "workflow.capabilities.inspect",
+      "wf schema",
+      "workflow.draft_workspaces.create_from_capability",
+      "workflow.draft_workspaces.add_step_from_capability",
+      "workflow.draft_workspaces.get",
+      "workflow.draft_workspaces.validate",
+      "workflow.draft_workspaces.set_step_output_map",
+      "workflow.draft_workspaces.compile",
+      "workflow.draft_workspaces.create_artifact",
+      "workflow.artifacts.inspect",
+      "workflow.deployments.save",
+      "workflow.deployments.validate",
+    ]);
+  });
+
   it("starts every command with wf or uv run wf", () => {
     const phases = projectPreparedAuthoring();
     for (const phase of phases) {
@@ -118,7 +141,12 @@ describe("projectPreparedAuthoringThread", () => {
 
     expect(calls).toHaveLength(projectPreparedAuthoring()[0]!.commands.length);
     expect(results).toHaveLength(calls.length);
-    expect(calls.every((part) => part.call.name === "runWorkflowCommand")).toBe(true);
+    expect(calls.map((part) => part.call.name)).toEqual([
+      "workflow.sources.list",
+      "workflow.capabilities.list",
+      "workflow.capabilities.inspect",
+      "wf schema",
+    ]);
   });
 
   it("uses a stable phase tool-group id", () => {

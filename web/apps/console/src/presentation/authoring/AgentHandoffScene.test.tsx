@@ -36,7 +36,7 @@ describe("AgentHandoffScene", () => {
 
   it("interleaves prepared workflow tool groups with the handoff conversation", () => {
     renderBeat("handoff");
-    expect(screen.getAllByText(/runWorkflowCommand/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/workflow\.deployments\.save/i).length).toBeGreaterThan(0);
     expect(screen.getByRole("button", { name: /deployment.*2 tool calls/i }))
       .toHaveAttribute("aria-expanded", "true");
   });

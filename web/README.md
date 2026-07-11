@@ -170,8 +170,10 @@ both modes. Replay is visibly labeled and does not create real issues.
 
 The console exposes `/present`, a 720p no-scroll defense compositor for the
 prepared `lda_report_workflow` story. It renders a 14-scene, multi-beat
-storyboard with an adaptive aspect-ratio canvas, stable stage regions, discussion
-branches, act themes, a chat dock, and keyboard navigation.
+storyboard (expanded from the original 12-scene defense plan; items 13 and 14
+now cover evaluation and closing) with an adaptive aspect-ratio canvas, stable
+stage regions, discussion branches, act themes, a chat dock, and keyboard
+navigation.
 
 The final presentation beats frame the evaluation as bounded evidence, make
 claim boundaries and future work explicit, and end on the canonical defense
@@ -180,8 +182,11 @@ discussion index rather than a benchmark or generic conclusion.
 Scenes 8 and 9 use the canonical prepared-authoring recording as their only
 execution evidence. Scene 8 is a full-screen conversation that establishes the
 external agent handoff; Scene 9 breaks the prepared authoring into five phases
-with an overlay trace panel. Neither scene calls workflow authoring RPC
-operations — they consume deterministic prepared data. Scenes 10 through 12 use
+with the same conversation contracted into a synchronized bottom dock. Each
+phase opens its matching prepared tool group beneath a factual source, graph,
+repair, artifact, or deployment view. Neither scene calls workflow authoring
+RPC operations — they consume deterministic prepared data. Scenes 10 through
+12 use
 the canonical replay to show run, interrupt, approval, resume, output, and
 trace. Raw protocol payloads are available through the evidence receipt and
 inspector.
@@ -192,17 +197,20 @@ prepared timeline agent and approval flow; a future AI SDK driver should target
 `AgentMessagePart` / `TimelineAgent`-compatible events instead of replacing the
 presentation timeline.
 
-The key defense states are directly addressable:
+The key deep-link-addressable defense states include:
 
-- `/present#scene/workflow-demo/operation`
-- `/present#scene/workflow-demo/graph`
-- `/present#scene/workflow-demo/interrupt`
-- `/present#scene/interrupt-evidence/approval`
 - `/present#scene/agent-handoff/request` — Scene 8, prepared handoff request
 - `/present#scene/agent-handoff/handoff` — Scene 8, agent accepts
 - `/present#scene/prepared-lifecycle/discover` — Scene 9, discover phase
 - `/present#scene/prepared-lifecycle/draft` — Scene 9, draft phase
 - `/present#scene/prepared-lifecycle/deployment` — Scene 9, deployment phase
+- `/present#scene/run-from-deployment/operation` — Scene 10, run operation
+- `/present#scene/run-from-deployment/graph` — Scene 10, workflow graph
+- `/present#scene/typed-human-boundary/approval` — Scene 11, typed approval
+- `/present#scene/resume-output-evidence/resume` — Scene 12, resume proof
+
+Legacy aliases from the earlier 12-scene plan (such as `workflow-demo` and
+`interrupt-evidence`) are replaced by the IDs above and no longer resolve.
 
 Scene 12 is factual by design. It projects the reviewed/live run into visible
 workflow input, interrupt payload, resume decision, output, and trace facts.
@@ -324,12 +332,13 @@ workflow authoring RPC operations.
 - **Scene 8 (Agent Handoff)**: a full-screen prepared conversation that
   establishes the external agent interface. The `request` beat shows the
   operator requesting a report workflow; the `handoff` beat reveals the full
-  completed conversation across all authoring phases.
+  completed conversation with prepared `wf` tool groups across all authoring
+  phases.
 - **Scene 9 (Prepared Workflow Lifecycle)**: a five-phase lifecycle
   (discover, draft, validate, artifact, deployment) with a compact phase rail
-  and one dominant command/result projection per beat. An overlay
-  `AuthoringTracePanel` surfaces the full agent trace for the active phase
-  without competing with the lifecycle projection.
+  and one dominant factual product projection per beat. The Scene 8 thread
+  remains visible as a compact bottom dock; its active tool group follows the
+  current beat. There is no detached trace modal or second transcript.
 
 The authoring scenes consume deterministic prepared data and never call
 workflow authoring RPCs — only `workflow.health` infrastructure pings are

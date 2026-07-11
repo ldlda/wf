@@ -16,7 +16,7 @@ describe("AuthoringConversation", () => {
 
     expect(screen.getByRole("log", { name: "prepared authoring conversation" }))
       .toHaveAttribute("data-surface", "stage");
-    expect(screen.getAllByText(/runWorkflowCommand/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/workflow\.deployments\.save/i).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/deployment/i).length).toBeGreaterThan(0);
   });
 

@@ -137,4 +137,34 @@ describe("assistantRuntimeProjection", () => {
       { type: "text", text: "provider failed" },
     ]);
   });
+
+  it("assigns sequential indexes for same-type presentation actions", () => {
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "dual",
+        role: "assistant",
+        parts: [
+          { type: "presentation-action", action: { type: "selectWorkflowNode", nodeId: "review_issues" } },
+          { type: "presentation-action", action: { type: "selectWorkflowNode", nodeId: "start_step" } },
+        ],
+      },
+    ];
+
+    const projected = projectAgentMessagesForAssistant(messages);
+
+    expect(projected[0]?.content).toEqual([
+      {
+        type: "tool-call",
+        toolCallId: "presentation-dual-0-selectWorkflowNode",
+        toolName: "presentation.selectWorkflowNode",
+        args: { type: "selectWorkflowNode", nodeId: "review_issues" },
+      },
+      {
+        type: "tool-call",
+        toolCallId: "presentation-dual-1-selectWorkflowNode",
+        toolName: "presentation.selectWorkflowNode",
+        args: { type: "selectWorkflowNode", nodeId: "start_step" },
+      },
+    ]);
+  });
 });

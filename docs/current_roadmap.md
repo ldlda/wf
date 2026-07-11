@@ -173,7 +173,7 @@ Implementation order:
     Astro remains an option, not the default next surface.
 25. Completed: presentation agent authoring story creates a canonical prepared
     authoring recording, Scene 8 as an authentic full-screen conversation,
-    Scene 9 as a 5-phase lifecycle with trace panel, and route-level coverage
+    Scene 9 as a 5-phase lifecycle with synchronized chat dock, and route-level coverage
     that never calls workflow authoring RPC operations during Scene 9
     navigation. Implementation:
     [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
@@ -200,8 +200,12 @@ Presentation visual audit, July 10:
 
 Scenes 8 and 9 are now implemented as authentic external-agent handoff and
 factual prepared-authoring proof. The canonical recording, full-screen Scene 8,
-Scene 9 lifecycle with trace panel, and route coverage are all in place. Plan:
-[`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
+Scene 9 lifecycle with a synchronized chat dock, five factual phase visuals,
+and route coverage are all in place. The obsolete receipt/trace modal was
+removed. Plans:
+[`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md)
+and
+[`continuous authoring workspace`](historical/superpowers/plans/2026-07-11-continuous-authoring-workspace.md).
 
 Recommended next visual slices:
 

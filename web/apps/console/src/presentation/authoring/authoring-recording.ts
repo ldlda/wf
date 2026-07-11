@@ -13,6 +13,7 @@ import {
   agentToolResultPart,
   type AgentMessage,
 } from "../../demo/agent/events.js";
+import type { PreparedAuthoringToolName } from "../../demo/agent/tools.js";
 
 export type AuthoringPhaseId =
   | "discover"
@@ -24,6 +25,8 @@ export type AuthoringPhaseId =
 export type CommandResult = "success" | "diagnostic";
 
 export type PreparedAuthoringCommand = {
+  /** JSON-RPC method, or the explicit local CLI label for non-RPC commands. */
+  readonly title: PreparedAuthoringToolName;
   readonly command: string;
   readonly summary: string;
   readonly result: CommandResult;
@@ -70,24 +73,28 @@ const recording: readonly PreparedAuthoringPhase[] = [
     label: "Discover",
     commands: [
       {
+        title: "workflow.sources.list",
         command: "wf source list",
         summary: "List available capability sources",
         result: "success",
         detail: "6 sources: local.lda_docs, local.lda_report, local.issue_board, and platform helpers.",
       },
       {
+        title: "workflow.capabilities.list",
         command: "wf cap list --source local.lda_report --format ids",
         summary: "List report workflow capabilities",
         result: "success",
         detail: "5 capabilities: analyze_documents, build_report, create_issue_drafts, finalise_report, record_revision_request.",
       },
       {
+        title: "workflow.capabilities.inspect",
         command: "wf cap inspect local.lda_report.analyze_documents",
         summary: "Inspect the report-analysis contract",
         result: "success",
         detail: "Input: documents. Output: analysis. Declared outcome: ok.",
       },
       {
+        title: "wf schema",
         command: "wf schema",
         summary: "List registered workflow schemas",
         result: "success",
@@ -116,17 +123,20 @@ const recording: readonly PreparedAuthoringPhase[] = [
     label: "Draft",
     commands: [
       {
+        title: "workflow.draft_workspaces.create_from_capability",
         command: "wf draft create lda_report_workflow --capability local.lda_docs.read_documents",
         summary: "Create a new workflow draft",
         result: "success",
         detail: "Draft 'lda_report_workflow' created with ID draft_a1b2c3",
       },
       {
+        title: "workflow.draft_workspaces.add_step_from_capability",
         command: "wf draft add-step lda_report_workflow --revision 1 --step analyze --capability local.lda_report.analyze_documents --from-step read_documents --from-outcome ok --route ok=__end__ --input state.documents=documents",
         summary: "Add the report-analysis step with a declared route",
         result: "success",
       },
       {
+        title: "workflow.draft_workspaces.get",
         command: "wf draft inspect lda_report_workflow --include-draft",
         summary: "Inspect the prepared draft graph",
         result: "success",
@@ -151,12 +161,14 @@ const recording: readonly PreparedAuthoringPhase[] = [
     label: "Validate",
     commands: [
       {
+        title: "workflow.draft_workspaces.validate",
         command: "wf draft validate lda_report_workflow",
         summary: "Validate the workflow draft",
         result: "diagnostic",
         detail: "Diagnostic: analyze output 'analysis' has no state projection.",
       },
       {
+        title: "workflow.draft_workspaces.set_step_output_map",
         command: "wf draft set-output lda_report_workflow --revision 2 --step analyze --map analysis=state.analysis",
         summary: "Repair the missing output binding",
         result: "success",
@@ -185,18 +197,21 @@ const recording: readonly PreparedAuthoringPhase[] = [
     label: "Artifact",
     commands: [
       {
+        title: "workflow.draft_workspaces.compile",
         command: "wf draft compile lda_report_workflow",
         summary: "Compile the validated draft without mutating it",
         result: "success",
         detail: "Compiled raw plan requires local.lda_docs, local.lda_report, and local.issue_board.",
       },
       {
+        title: "workflow.draft_workspaces.create_artifact",
         command: "wf draft save lda_report_workflow --artifact lda_report_case_study --version 1 --title \"lda.chat Report Case Study\" --outcome completed --outcome cancelled --binding local.lda_docs=local.lda_docs --binding local.lda_report=local.lda_report --binding local.issue_board=local.issue_board",
         summary: "Save immutable artifact version 1",
         result: "success",
         detail: "Artifact lda_report_case_study v1 saved with report-workflow source requirements.",
       },
       {
+        title: "workflow.artifacts.inspect",
         command: "wf artifact inspect lda_report_case_study --version 1",
         summary: "Inspect the compiled artifact",
         result: "success",
@@ -221,12 +236,14 @@ const recording: readonly PreparedAuthoringPhase[] = [
     label: "Deployment",
     commands: [
       {
+        title: "workflow.deployments.save",
         command: "wf deploy save lda_report_case_study.default --artifact lda_report_case_study --version 1 --binding local.lda_docs=local.lda_docs --binding local.lda_report=local.lda_report --binding local.issue_board=local.issue_board",
         summary: "Save deployment with source bindings",
         result: "success",
         detail: "Deployment lda_report_case_study.default saved with all three local source bindings.",
       },
       {
+        title: "workflow.deployments.validate",
         command: "wf deploy validate lda_report_case_study.default",
         summary: "Validate deployment bindings",
         result: "success",
@@ -275,12 +292,12 @@ export const projectPreparedAuthoringThread = (
     const toolParts = phase.commands.flatMap((command, index) => {
       const callId = `${groupId}-command-${index}`;
       return [
-        agentToolCallPart(callId, "runWorkflowCommand", {
+        agentToolCallPart(callId, command.title, {
           phase: phase.phase,
           command: command.command,
           summary: command.summary,
         }),
-        agentToolResultPart(callId, "runWorkflowCommand", "success", {
+        agentToolResultPart(callId, command.title, "success", {
           status: command.result,
           detail: command.detail ?? null,
         }),
@@ -298,27 +315,5 @@ export const projectPreparedAuthoringThread = (
   });
 };
 
-const handoffConversation: readonly AuthoringConversationTurn[] = [
-  {
-    role: "user",
-    text: "We need to prepare a report workflow for the lda_report scenario. What sources and capabilities are available?",
-  },
-  {
-    role: "assistant",
-    text: "I found the local document, report, and issue-board capabilities. I can author the reusable workflow through the public wf CLI.",
-  },
-  {
-    role: "user",
-    text: "Keep the workflow inspectable and validate the source bindings before it runs.",
-  },
-  {
-    role: "assistant",
-    text: "The prepared workflow is ready for deployment: I will create the draft, repair validation diagnostics, save artifact lda_report_case_study v1, then validate its deployment bindings.",
-  },
-];
-
 /** Returns the full prepared authoring recording. */
 export const projectPreparedAuthoring = (): readonly PreparedAuthoringPhase[] => recording;
-
-/** Returns the compact Scene 8 handoff derived from the prepared authoring evidence. */
-export const projectPreparedAuthoringHandoff = (): readonly AuthoringConversationTurn[] => handoffConversation;

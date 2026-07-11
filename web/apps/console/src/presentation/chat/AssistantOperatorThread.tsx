@@ -157,13 +157,12 @@ const AssistantMessageBody = ({
     const part = parts[index]!;
     if (part.type === "text") {
       rendered.push(
-        <p key={`text-${index}`} style={{ whiteSpace: "pre-line" }}>{part.text}</p>,
+        <p key={`text-${part.text}`} style={{ whiteSpace: "pre-line" }}>{part.text}</p>,
       );
       index += 1;
       continue;
     }
 
-    const toolRunStart = index;
     const toolRun: ToolRenderPart[] = [];
     while (index < parts.length && parts[index]!.type !== "text") {
       toolRun.push(parts[index]! as ToolRenderPart);
@@ -176,7 +175,7 @@ const AssistantMessageBody = ({
 
     if (logicalTools.length === 1 && !messageId.startsWith("authoring-")) {
       rendered.push(
-        <div key={`tool-${toolRunStart}`}>
+        <div key={`tool-${logicalTools[0]!.toolCallId ?? logicalTools[0]!.toolName}`}>
           {renderContentPart(logicalTools[0]!, submitApproval, cancelApproval)}
         </div>,
       );
@@ -189,7 +188,7 @@ const AssistantMessageBody = ({
     const count = logicalTools.length;
     rendered.push(
       <ToolGroupRoot
-        key={`tool-group-${toolRunStart}`}
+        key={`tool-group-${groupId}`}
         data-tool-group-id={groupId}
         {...(phaseLabel
           ? {
@@ -203,13 +202,13 @@ const AssistantMessageBody = ({
           {...(phaseLabel ? { label: `${phaseLabel} · ${count} tool ${count === 1 ? "call" : "calls"}` } : {})}
         />
         <ToolGroupContent>
-          {logicalTools.map((tool, toolIndex) => {
+          {logicalTools.map((tool) => {
             const pairedResult = tool.type === "tool-call"
               ? toolRun.find((candidate): candidate is Extract<ToolRenderPart, { readonly type: "tool-result" }> =>
                   candidate.type === "tool-result" && candidate.toolCallId === tool.toolCallId)
               : undefined;
             return (
-            <div key={`${tool.type}-${tool.toolName}-${tool.toolCallId ?? "no-id"}-${toolIndex}`}>
+            <div key={`${tool.type}-${tool.toolName}-${tool.toolCallId ?? "no-id"}`}>
               {renderContentPart(tool, submitApproval, cancelApproval, false, pairedResult)}
             </div>
             );
@@ -254,13 +253,19 @@ export const AssistantOperatorThread = ({
 }: AssistantOperatorThreadProps) => {
   const projected = useMemo(() => projectAgentMessagesForAssistant(messages), [messages]);
   const viewportRef = useRef<HTMLDivElement>(null);
-  const [openToolGroups, setOpenToolGroups] = useState<ReadonlySet<string>>(
-    () => new Set(activeToolGroupId ? [activeToolGroupId] : []),
+  const [toolGroupOverrides, setToolGroupOverrides] = useState<ReadonlyMap<string, boolean>>(
+    () => new Map(),
   );
-
-  useEffect(() => {
-    if (activeToolGroupId) setOpenToolGroups(new Set([activeToolGroupId]));
-  }, [activeToolGroupId]);
+  const openToolGroups = useMemo(() => {
+    const open = new Set<string>();
+    if (activeToolGroupId && toolGroupOverrides.get(activeToolGroupId) !== false) {
+      open.add(activeToolGroupId);
+    }
+    for (const [groupId, isOpen] of toolGroupOverrides) {
+      if (isOpen) open.add(groupId);
+    }
+    return open;
+  }, [activeToolGroupId, toolGroupOverrides]);
 
   useEffect(() => {
     if (!activeToolGroupId) return;
@@ -278,10 +283,9 @@ export const AssistantOperatorThread = ({
   }, [activeToolGroupId, projected]);
 
   const setToolGroupOpen = useCallback((groupId: string, open: boolean) => {
-    setOpenToolGroups((current) => {
-      const next = new Set(current);
-      if (open) next.add(groupId);
-      else next.delete(groupId);
+    setToolGroupOverrides((current) => {
+      const next = new Map(current);
+      next.set(groupId, open);
       return next;
     });
   }, []);
@@ -305,8 +309,8 @@ export const AssistantOperatorThread = ({
             if (message.role === "user") {
               return (
                 <MessageBubble key={message.id} role="user">
-                  {message.content.filter((p) => p.type === "text").map((p, i) => (
-                    <p key={`text-${i}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>
+                  {message.content.filter((p) => p.type === "text").map((p) => (
+                    <p key={`text-${p.text}`} style={{ whiteSpace: "pre-line" }}>{p.text}</p>
                   ))}
                 </MessageBubble>
               );
