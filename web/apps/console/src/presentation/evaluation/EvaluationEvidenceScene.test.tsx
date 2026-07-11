@@ -32,6 +32,10 @@ describe("EvaluationEvidenceScene", () => {
       "data-evaluation-beat",
       beatId,
     );
+    expect(screen.getByRole("group", { name: /evaluation evidence board/i })).toHaveAttribute(
+      "data-evaluation-focus",
+      beatId,
+    );
     expect(screen.getByText("36")).toBeInTheDocument();
     expect(screen.getByText("27")).toBeInTheDocument();
     expect(screen.getByText("8")).toBeInTheDocument();

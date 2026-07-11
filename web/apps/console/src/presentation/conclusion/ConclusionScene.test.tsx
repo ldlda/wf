@@ -48,6 +48,7 @@ describe("ConclusionScene", () => {
     expect(nonClaims).toHaveTextContent("Not a scheduler");
     expect(nonClaims).toHaveTextContent("Not a broad agent benchmark");
     expect(nonClaims).toHaveAttribute("data-emphasis", "limits");
+    expect(nonClaims).toHaveAttribute("data-conclusion-support", "primary");
   });
 
   it("exposes five labelled future-work icon branches", () => {
@@ -69,12 +70,14 @@ describe("ConclusionScene", () => {
     ]) {
       expect(future).toHaveTextContent(text);
     }
+    expect(future).toHaveAttribute("data-conclusion-support", "primary");
   });
 
   it("states the closing boundary and recedes future branches", () => {
     render(<ConclusionScene scene={scene} beat={beat("conclusion")} />);
     expect(screen.getByText("Planner proposes; runtime executes.")).toBeInTheDocument();
     expect(screen.getByRole("list", { name: "future work layers" })).toHaveAttribute("data-state", "receded");
+    expect(screen.getByText("Planner proposes; runtime executes.")).toHaveAttribute("data-conclusion-support", "primary");
   });
 
   it("attaches evidence vertically beneath the typed substrate rather than extending the contribution line", () => {

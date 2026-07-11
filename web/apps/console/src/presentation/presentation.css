@@ -103,7 +103,48 @@
 .evaluation-board__audit,
 .evaluation-board__findings,
 .evaluation-board__boundary {
+  min-width: 0;
   transition: transform 180ms ease;
+}
+
+.evaluation-board[data-evaluation-focus="cohort"] {
+  grid-template-columns: 1fr;
+  grid-template-areas: "cohort" "outcomes" "boundary";
+}
+
+.evaluation-board[data-evaluation-focus="validity"] {
+  grid-template-areas: "cohort outcomes" "audit audit" "boundary boundary";
+}
+
+.evaluation-board[data-evaluation-focus="findings"] {
+  grid-template-columns: 1fr;
+  grid-template-areas: "findings" "boundary";
+}
+
+.evaluation-board__cohort { grid-area: cohort; }
+.evaluation-board__outcomes { grid-area: outcomes; }
+.evaluation-board__audit { grid-area: audit; }
+.evaluation-board__findings { grid-area: findings; }
+.evaluation-board__boundary { grid-area: boundary; }
+
+.evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__audit,
+.evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__findings,
+.evaluation-board[data-evaluation-focus="validity"] .evaluation-board__findings,
+.evaluation-board[data-evaluation-focus="findings"] .evaluation-board__cohort,
+.evaluation-board[data-evaluation-focus="findings"] .evaluation-board__outcomes,
+.evaluation-board[data-evaluation-focus="findings"] .evaluation-board__audit {
+  display: none;
+}
+
+.evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__cohort {
+  border-right: 0;
+  padding-block: 1.35rem 0.8rem;
+}
+
+.evaluation-board[data-evaluation-focus="findings"] .evaluation-board__findings {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 0;
+  padding-block: 1.35rem;
 }
 
 .evaluation-board[data-evaluation-beat="cohort"] .evaluation-board__cohort,
@@ -144,7 +185,6 @@
 
 .evaluation-board__outcomes {
   display: flex;
-  grid-column: 2;
   gap: 0.5rem;
   margin: 0;
   padding: 1rem 1.15rem 0.8rem;
@@ -197,7 +237,6 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.45rem 0.8rem;
-  grid-column: 2;
 }
 
 .evaluation-board__finding {
@@ -221,9 +260,11 @@
 @media (max-width: 1080px) {
   .evaluation-board { grid-template-columns: minmax(12rem, 0.7fr) minmax(20rem, 1.3fr); }
   .evaluation-board__cohort { border-right: 1px solid var(--evaluation-rule); }
-  .evaluation-board__outcomes,
-  .evaluation-board__findings { grid-column: 2; }
   .evaluation-board__audit-row { grid-template-columns: 1fr; }
+  .evaluation-board[data-evaluation-focus="cohort"],
+  .evaluation-board[data-evaluation-focus="findings"] {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stage-caption__eyebrow {
@@ -382,6 +423,32 @@
   padding: 0.65rem;
   border-top: 1px solid var(--stage-line);
   transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.conclusion-map[data-conclusion-beat="limits"] .conclusion-map__future,
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__future,
+.conclusion-map[data-conclusion-beat="future"] .conclusion-map__non-claims,
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__non-claims {
+  display: none;
+}
+
+.conclusion-map[data-conclusion-beat="limits"] .conclusion-map__flow,
+.conclusion-map[data-conclusion-beat="future"] .conclusion-map__flow {
+  opacity: 0.76;
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__flow {
+  margin-bottom: 0.2rem;
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__statement {
+  padding-block: 1.1rem 0.45rem;
+  border-top-color: var(--accent-cyan);
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  font-style: normal;
+  font-weight: 650;
+  text-align: center;
 }
 
 .conclusion-map__future svg {

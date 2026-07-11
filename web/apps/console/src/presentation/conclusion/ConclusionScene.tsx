@@ -80,11 +80,17 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
           className="conclusion-map__non-claims"
           aria-label="explicit non-claims"
           data-emphasis={beatId === "limits" ? "limits" : "neutral"}
+          data-conclusion-support={beatId === "limits" ? "primary" : "receded"}
         >
           {nonClaims.map((claim) => <li key={claim}>{claim}</li>)}
         </ul>
 
-        <ul className="conclusion-map__future" aria-label="future work layers" data-state={futureState}>
+        <ul
+          className="conclusion-map__future"
+          aria-label="future work layers"
+          data-state={futureState}
+          data-conclusion-support={beatId === "future" ? "primary" : "receded"}
+        >
           {futureWorkBranches.map((branch) => {
             const Icon = futureWorkIcons[branch.icon];
             return (
@@ -99,7 +105,7 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
           })}
         </ul>
 
-        <p className="conclusion-map__statement">Planner proposes; runtime executes.</p>
+        <p className="conclusion-map__statement" data-conclusion-support={beatId === "conclusion" ? "primary" : "receded"}>Planner proposes; runtime executes.</p>
       </section>
       <p className="scene-body__evidence">{scene.evidencePointer}</p>
     </>
