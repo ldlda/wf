@@ -267,9 +267,11 @@ The next presentation work is intentionally split into five implementation
 slices followed by a rehearsal gate. The broader story-flow review remains a
 separate activity after these surfaces are stable.
 
-1. **Scene 8 chat entry:** replace the standalone run button with a full-screen
-   assistant-style chat entry. The composer/send action starts the first
-   prepared authoring conversation; it does not start the workflow run.
+1. **Completed: Scene 8 chat entry:** replaced the standalone run button with
+   a full-screen assistant-style chat entry. The local composer/send action
+   reveals the first prepared authoring conversation without starting a
+   workflow run. Implementation:
+   [`Scene 8 chat entry`](historical/superpowers/plans/2026-07-12-scene-8-chat-entry.md).
 2. **Scene 9 assistant modal:** remove the lower chat dock, give the prepared
    lifecycle canvas the available stage, and expose the synchronized authoring
    conversation through an assistant-ui modal anchored on the left.

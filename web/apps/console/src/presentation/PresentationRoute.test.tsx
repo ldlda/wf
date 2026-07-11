@@ -263,15 +263,17 @@ describe("PresentationRoute", () => {
     expect(screen.queryByText(/checking reachability/i)).not.toBeInTheDocument();
   });
 
-  it("keeps Scene 8 local after a healthy target probe", async () => {
+  it("keeps Scene 8 local with a configured target", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
     window.location.hash = "#scene/agent-handoff/request";
+    mockedCallOperation.mockClear();
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByText(/Live target ready/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Replay evidence is active/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Run prepared workflow" })).not.toBeInTheDocument();
+    expect(mockedCallOperation).not.toHaveBeenCalled();
   });
 
   it("opens Scene 10 approval from the canonical hash", async () => {

@@ -3030,7 +3030,7 @@
   padding: clamp(1.5rem, 4vw, 3.75rem) clamp(1rem, 5vw, 4.5rem);
   border: 1px solid var(--authoring-rule, var(--stage-line));
   border-radius: 0.35rem;
-  background: color-mix(in oklch, var(--stage-canvas) 92%, white);
+  background: var(--authoring-paper, var(--stage-canvas));
   box-shadow: 0 1.25rem 3rem color-mix(in oklch, var(--stage-ink) 10%, transparent);
 }
 
@@ -3096,7 +3096,7 @@
   resize: vertical;
   border-color: var(--authoring-rule, var(--stage-line));
   border-radius: 0.2rem;
-  background: color-mix(in oklch, var(--stage-canvas) 82%, white);
+  background: color-mix(in oklch, var(--authoring-paper, var(--stage-canvas)) 88%, var(--authoring-muted, var(--text-secondary)));
   color: var(--authoring-ink, var(--text-primary));
   font: 1.05rem/1.45 var(--font-interface);
 }

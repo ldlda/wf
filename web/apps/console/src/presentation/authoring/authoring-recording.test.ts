@@ -154,9 +154,14 @@ describe("projectPreparedAuthoringThread", () => {
   });
 
   it("keeps the canonical projection unchanged without a request override", () => {
-    expect(projectPreparedAuthoringThread("discover")).toEqual(
-      projectPreparedAuthoringThread("discover"),
-    );
+    const firstUser = projectPreparedAuthoringThread("discover")
+      .find((message) => message.role === "user");
+    expect(firstUser?.parts).toEqual([
+      {
+        type: "text",
+        text: "We need to author a report workflow for the lda_report scenario. What sources and capabilities are available?",
+      },
+    ]);
   });
 
   it("overrides only the first user request and preserves Discover tool data", () => {

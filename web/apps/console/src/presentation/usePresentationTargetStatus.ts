@@ -14,6 +14,7 @@ const liveActive = (state: DemoTimelineState): boolean =>
 export const usePresentationTargetStatus = (
   targetState: PresentationTargetState,
   demoState: DemoTimelineState,
+  probeEnabled = true,
 ): PresentationTargetHealth => {
   const [probe, setProbe] = useState<TargetProbeState>(
     targetState.mode === "live" ? "checking" : "none",
@@ -25,6 +26,11 @@ export const usePresentationTargetStatus = (
     if (targetState.mode !== "live") {
       setProbe("none");
       setFailureReason(targetState.reason);
+      return;
+    }
+    if (!probeEnabled) {
+      setProbe("none");
+      setFailureReason("deterministic Scene 8 replay");
       return;
     }
 
@@ -50,7 +56,17 @@ export const usePresentationTargetStatus = (
     return () => {
       cancelled = true;
     };
-  }, [targetState]);
+  }, [probeEnabled, targetState]);
+
+  if (!probeEnabled) {
+    return presentationTargetHealth({
+      target: null,
+      probe: "none",
+      liveActive: false,
+      replayActive: true,
+      failureReason: "deterministic Scene 8 replay",
+    });
+  }
 
   return presentationTargetHealth({
     target: targetState.mode === "live" ? targetState.target : null,

@@ -1,5 +1,8 @@
 # Scene 8 Chat Entry Implementation Plan
 
+> Historical: completed on 2026-07-12. Task commits and final verification are
+> recorded in repository history.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox syntax for tracking.
 
 **Goal:** Replace Scene 8's phase-rail transcript and standalone run button with a full-screen assistant-style chat entry whose Send action reveals the first deterministic authoring turn without starting a workflow run.

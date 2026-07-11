@@ -287,15 +287,15 @@ export const projectPreparedAuthoringThread = (
 
   let requestReplaced = false;
   return recording.slice(0, finalPhaseIndex + 1).flatMap((phase) => {
-    const conversation = phase.conversation.map((turn, index) =>
-      agentTextMessage(
+    const conversation = phase.conversation.map((turn, index) => {
+      const shouldReplaceRequest = requestOverride !== undefined && !requestReplaced && turn.role === "user";
+      if (shouldReplaceRequest) requestReplaced = true;
+      return agentTextMessage(
         `authoring-${phase.phase}-message-${index}`,
         turn.role,
-        requestOverride !== undefined && !requestReplaced && turn.role === "user"
-          ? (requestReplaced = true, requestOverride)
-          : turn.text,
-      ),
-    );
+        shouldReplaceRequest ? requestOverride : turn.text,
+      );
+    });
     const groupId = authoringToolGroupId(phase.phase);
     const toolParts = phase.commands.flatMap((command, index) => {
       const callId = `${groupId}-command-${index}`;
