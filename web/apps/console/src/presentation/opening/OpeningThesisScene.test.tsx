@@ -8,31 +8,38 @@ const thesisScene = findScene("thesis")!;
 afterEach(() => cleanup());
 
 describe("OpeningThesisScene", () => {
-  it("makes the title boundary the opening focal artifact", () => {
+  it("introduces the agent-shaped product goal", () => {
     render(<OpeningThesisScene scene={thesisScene} beat={findBeat("thesis", "title")!} />);
 
     const opening = screen.getByRole("region", { name: /thesis opening/i });
     expect(opening).toHaveAttribute("data-opening-focus", "title");
-    expect(opening).toHaveAttribute("data-support-state", "receded");
     expect(screen.getByRole("heading", { name: /Design and Implementation of lda\.chat/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "An AI Agent for Workspace Workflows" })).toBeInTheDocument();
+    const roles = screen.getByRole("group", { name: "AI agent roles" });
+    expect(roles).toHaveClass("opening-thesis__agent-system");
+    expect(roles.querySelectorAll("[data-concept-emphasis]")).toHaveLength(3);
     expect(screen.getByText("Planner")).toBeInTheDocument();
-    expect(screen.getByText("Tool Surface")).toBeInTheDocument();
-    expect(screen.getByText("Workflow Platform")).toBeInTheDocument();
+    expect(screen.getByText("Tool surface")).toBeInTheDocument();
+    expect(screen.getByText("Runner / platform")).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Thesis" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Decomposed")).not.toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Planner icon/i })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /Tool Surface icon/i })).toBeInTheDocument();
-    expect(screen.getByRole("img", { name: /Workflow Platform icon/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Tool surface icon/i })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Runner \/ platform icon/i })).toBeInTheDocument();
   });
 
-  it("renders contribution focus without relying on lda.chat as category label", () => {
+  it("identifies runner and platform as the implemented contribution", () => {
     render(<OpeningThesisScene scene={thesisScene} beat={findBeat("thesis", "substrate")!} />);
 
     const opening = screen.getByRole("region", { name: /thesis opening/i });
-    expect(opening).toHaveAttribute("data-opening-focus", "substrate");
-    expect(opening).toHaveAttribute("data-support-state", "revealed");
-    expect(screen.getByText("Codex / Claude / OpenCode")).toBeInTheDocument();
-    expect(screen.getByText("CLI / MCP / APIs")).toBeInTheDocument();
-    expect(screen.getByText("submitted substrate")).toBeInTheDocument();
-    expect(screen.getByText("Typed · Durable · Inspectable")).toBeInTheDocument();
+    expect(opening).toHaveAttribute("data-opening-focus", "contribution");
+    expect(screen.getByText("Codex, Claude, OpenCode")).toBeInTheDocument();
+    expect(screen.getByText("CLI, MCP, JSON-RPC")).toBeInTheDocument();
+    expect(screen.getByText("Implemented contribution")).toBeInTheDocument();
+    expect(screen.getByText("Lifecycle, validation, records, traces, and interrupt/resume")).toBeInTheDocument();
+    expect(screen.getByText("Planner")).toBeInTheDocument();
+    expect(screen.getByText("Tool surface")).toBeInTheDocument();
+    expect(screen.getByText("Runner / platform")).toBeInTheDocument();
     expect(screen.queryByText("wf")).not.toBeInTheDocument();
   });
 });

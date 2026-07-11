@@ -13,41 +13,46 @@ export const OpeningThesisScene = ({ scene, beat }: OpeningThesisSceneProps) => 
   const contributionBeat = beat.id === "substrate";
   return (
     <>
-      <StageCaption eyebrow="Origin story" title={title}>
-        <p>{beat.caption}</p>
-      </StageCaption>
       <section
-        className="opening-thesis"
+        className="opening-thesis-scene"
         aria-label="thesis opening"
-        data-opening-beat={beat.id}
-        data-opening-focus={contributionBeat ? "substrate" : "title"}
-        data-support-state={contributionBeat ? "revealed" : "receded"}
+        data-opening-focus={contributionBeat ? "contribution" : "title"}
       >
-        <div className="opening-thesis__title-card" data-opening-role="title">
-          <span>AI agent for workspace workflows</span>
-          <strong>{contributionBeat ? "Decomposed" : scene.title}</strong>
-        </div>
-        <div className="opening-thesis__decomposition">
-          <ConceptRail label="AI agent components">
+        <StageCaption eyebrow="Title" title={title}>
+          <p>{beat.caption}</p>
+        </StageCaption>
+        <div
+          className="opening-thesis"
+          data-opening-beat={beat.id}
+          data-opening-focus={contributionBeat ? "contribution" : "title"}
+        >
+          <header className="opening-thesis__statement">
+            <p>Product goal</p>
+            <h2>An AI Agent for Workspace Workflows</h2>
+          </header>
+          <ConceptRail label="AI agent roles" className="opening-thesis__agent-system">
             <ConceptNode
               title="Planner"
-              subtitle="Codex / Claude / OpenCode"
+              subtitle="Codex, Claude, OpenCode"
               icon="planner"
-              emphasis={contributionBeat ? "muted" : "normal"}
             />
             <ConceptNode
-              title="Tool Surface"
-              subtitle="CLI / MCP / APIs"
+              title="Tool surface"
+              subtitle="CLI, MCP, JSON-RPC"
               icon="tool"
-              emphasis={contributionBeat ? "muted" : "normal"}
             />
             <ConceptNode
-              title="Workflow Platform"
-              subtitle="submitted substrate"
+              title="Runner / platform"
+              subtitle="Workflow lifecycle and deterministic execution"
               icon="platform"
-              emphasis="primary"
+              emphasis={contributionBeat ? "primary" : "normal"}
             >
-              <span>Typed · Durable · Inspectable</span>
+              {contributionBeat ? (
+                <>
+                  <span>Implemented contribution</span>
+                  <span>Lifecycle, validation, records, traces, and interrupt/resume</span>
+                </>
+              ) : null}
             </ConceptNode>
           </ConceptRail>
         </div>

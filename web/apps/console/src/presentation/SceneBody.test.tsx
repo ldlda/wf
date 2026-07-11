@@ -53,7 +53,7 @@ const renderSceneBodyAtMainLocation = (sceneId: MainLocation["sceneId"], beatId:
 );
 
 describe("SceneBody", () => {
-  it("renders Scene 1 as an opening decomposition visual", () => {
+  it("renders Scene 1 as an agent-shaped contribution visual", () => {
     const location: PresentationLocation = { kind: "main", sceneId: "thesis", beatId: "substrate", focusPath: [] };
 
     render(
@@ -71,10 +71,10 @@ describe("SceneBody", () => {
 
     expect(screen.getByRole("region", { name: "thesis opening" })).toHaveAttribute(
       "data-opening-focus",
-      "substrate",
+      "contribution",
     );
-    expect(screen.getByText("submitted substrate")).toBeInTheDocument();
-    expect(screen.getByText("Typed · Durable · Inspectable")).toBeInTheDocument();
+    expect(screen.getByText("Runner / platform")).toBeInTheDocument();
+    expect(screen.getByText("Implemented contribution")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /where is the ai agent/i })).toBeInTheDocument();
   });
 

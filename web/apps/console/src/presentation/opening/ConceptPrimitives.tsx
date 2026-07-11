@@ -68,10 +68,11 @@ export const ConceptNode = ({
 type ConceptRailProps = {
   readonly label: string;
   readonly children: ReactNode;
+  readonly className?: string | undefined;
 };
 
-export const ConceptRail = ({ label, children }: ConceptRailProps) => (
-  <div className="concept-rail" role="group" aria-label={label}>
+export const ConceptRail = ({ label, children, className }: ConceptRailProps) => (
+  <div className={["concept-rail", className].filter(Boolean).join(" ")} role="group" aria-label={label}>
     {children}
   </div>
 );

@@ -34,4 +34,15 @@ describe("ConceptPrimitives", () => {
     expect(screen.getByText("Design")).toBeInTheDocument();
     expect(screen.getByText("Run")).toBeInTheDocument();
   });
+
+  it("keeps an optional scene-specific class on a concept rail", () => {
+    render(
+      <ConceptRail label="Agent roles" className="opening-thesis__agent-system">
+        <ConceptNode title="Planner" icon="planner" />
+      </ConceptRail>,
+    );
+
+    expect(screen.getByRole("group", { name: "Agent roles" }))
+      .toHaveClass("opening-thesis__agent-system");
+  });
 });
