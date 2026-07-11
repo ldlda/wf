@@ -268,6 +268,18 @@ describe("PresentationRoute", () => {
     expect(screen.queryByText(/checking reachability/i)).not.toBeInTheDocument();
   });
 
+  it("shows the live prepared-workflow action after a healthy target probe", async () => {
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    window.location.hash = "#scene/agent-handoff/request";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByText(/Live target ready/i)).toBeInTheDocument();
+    const runActions = screen.getAllByRole("button", { name: "Run prepared workflow" });
+    expect(runActions.length).toBeGreaterThanOrEqual(1);
+    expect(runActions.every((action) => !action.hasAttribute("disabled"))).toBe(true);
+  });
+
   it("opens Scene 10 approval from the canonical hash", async () => {
     window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
@@ -359,6 +371,13 @@ describe("PresentationRoute", () => {
     expect(window.location.hash).toBe("#scene/resume-output-evidence/resume");
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
     expect(screen.getByText(/Revision Requested/i)).toBeInTheDocument();
+
+    window.location.hash = "#scene/resume-output-evidence/trace";
+    window.dispatchEvent(new HashChangeEvent("hashchange"));
+
+    expect(await screen.findByText("revision_requested")).toBeInTheDocument();
+    expect(screen.getByText("end_cancelled")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "workflow output summary" })).toBeInTheDocument();
   });
 
   it("opens approval with enabled approval controls immediately after priming", async () => {

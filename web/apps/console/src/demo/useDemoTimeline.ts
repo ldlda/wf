@@ -321,16 +321,18 @@ export const useDemoTimeline = (
 
   const primeReplayToStage = useCallback((stage: DemoEvent["stage"] | null) => {
     if (stage === null || state.mode !== "replay") return;
-    const isRevisionBranch = state.events.some((event) => event.id === "revision-3-run-resume");
-    if (isRevisionBranch) return;
     const recording = activeRecording.current;
     if (!recording) return;
+    // The revision request updates the active recording before its reducer
+    // action is visible. Read this ref so a direct hash change cannot re-prime
+    // the canonical submitted branch during that render gap.
     const appliedCount = appliedCountForStage(recording.events, stage);
     if (appliedCount === 0) return;
 
     // Presentation priming projects the reviewed recording to the current beat.
     // It is not runtime execution and must never run while the live timeline is active.
     resetRuntime();
+    activeRecording.current = recording;
     projectTransientState(recording.events, appliedCount);
     dispatch({
       type: "prime_replay",
