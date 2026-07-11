@@ -16,6 +16,9 @@ import { ConclusionScene } from "./conclusion/ConclusionScene.js";
 import { DefenseDiscussionIndex } from "./discussion/DefenseDiscussionIndex.js";
 import { EvaluationEvidenceScene } from "./evaluation/EvaluationEvidenceScene.js";
 import { ArchitectureScene } from "./scenes/ArchitectureScene.js";
+import { AuthoringPhaseVisual } from "./authoring/AuthoringPhaseVisual.js";
+import { projectPreparedAuthoringPhase } from "./authoring/authoring-projection.js";
+import type { AuthoringPhaseId } from "./authoring/authoring-recording.js";
 import { OpeningThesisScene } from "./opening/OpeningThesisScene.js";
 import { ProblemLoopScene } from "./opening/ProblemLoopScene.js";
 
@@ -227,39 +230,65 @@ const authoringSteps = [
   { id: "compile", label: "Compile or save", detail: "artifact / deployment / run" },
 ] as const;
 
-const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
-  <>
-    <StageCaption eyebrow="Act II · implemented" title={scene.title}>
-      <p>{beat.caption}</p>
-    </StageCaption>
-    <div
-      className="scene-body__authoring-loop"
-      aria-label="agent authoring loop"
-      data-active-stage={beat.id}
-      data-readable-surface="dark"
-    >
-      <div className="scene-body__authoring-loop-rail" aria-hidden="true" />
-      {authoringSteps.map((step, i) => {
-        const isActive = beat.id === step.id;
-        const isPast = authoringSteps.findIndex((candidate) => candidate.id === beat.id) > i;
-        return (
-          <div
-            key={step.id}
-            className="scene-body__authoring-node"
-            data-authoring-active={isActive}
-            data-authoring-past={isPast}
-            data-readable-surface="dark"
-          >
-            <span className="scene-body__authoring-number">{i + 1}</span>
-            <strong>{step.label}</strong>
-            <small>{step.detail}</small>
-          </div>
-        );
-      })}
-    </div>
-    <p className="scene-body__evidence">{scene.evidencePointer}</p>
-  </>
-);
+// Scene 7 uses speaker-friendly beat names; the prepared recording keeps the
+// underlying product phases (`draft` and `validate`) as its canonical IDs.
+const authoringPhaseForBeat = (beatId: string): AuthoringPhaseId => {
+  if (beatId === "author") return "draft";
+  if (beatId === "diagnose" || beatId === "repair") return "validate";
+  return beatId as AuthoringPhaseId;
+};
+
+const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
+  const projection = projectPreparedAuthoringPhase(authoringPhaseForBeat(beat.id));
+  const primaryCommand = projection.commands[0];
+
+  return (
+    <>
+      <StageCaption eyebrow="Act II · implemented" title={scene.title}>
+        <p>{beat.caption}</p>
+      </StageCaption>
+      <section
+        className="scene-body__authoring-composition"
+        aria-label="agent authoring loop"
+        data-active-stage={beat.id}
+      >
+        <article className="scene-body__authoring-evidence" aria-label={`${projection.label} product evidence`}>
+          <header>
+            <span>Public operation</span>
+            <strong>{primaryCommand.title}</strong>
+            <p>{projection.summary}</p>
+          </header>
+          <AuthoringPhaseVisual projection={projection} />
+        </article>
+        <div
+          className="scene-body__authoring-loop"
+          aria-label="authoring phase loop"
+          data-readable-surface="dark"
+        >
+          <div className="scene-body__authoring-loop-rail" aria-hidden="true" />
+          {authoringSteps.map((step, i) => {
+            const isActive = beat.id === step.id;
+            const isPast = authoringSteps.findIndex((candidate) => candidate.id === beat.id) > i;
+            return (
+              <div
+                key={step.id}
+                className="scene-body__authoring-node"
+                data-authoring-active={isActive}
+                data-authoring-past={isPast}
+                data-readable-surface="dark"
+              >
+                <span className="scene-body__authoring-number">{i + 1}</span>
+                <strong>{step.label}</strong>
+                <small>{step.detail}</small>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+      <p className="scene-body__evidence">{scene.evidencePointer}</p>
+    </>
+  );
+};
 
 const assertNever = (value: never): never => {
   throw new Error(`Unexpected view: ${value}`);

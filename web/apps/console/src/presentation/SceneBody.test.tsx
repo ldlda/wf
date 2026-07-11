@@ -342,16 +342,19 @@ describe("SceneBody", () => {
       />,
     );
 
-    const loop = screen.getByLabelText("agent authoring loop");
-    expect(loop).toHaveAttribute("data-readable-surface", "dark");
-    expect(loop).toHaveAttribute("data-active-stage", "diagnose");
+    const composition = screen.getByLabelText("agent authoring loop");
+    expect(composition).toHaveAttribute("data-active-stage", "diagnose");
+    expect(screen.getByRole("article", { name: /validate product evidence/i })).toBeInTheDocument();
+    expect(screen.getByText("workflow.draft_workspaces.validate")).toBeInTheDocument();
+    const loop = screen.getByLabelText("authoring phase loop");
+    expect(loop.querySelector("[data-readable-surface='dark']")).toBeInTheDocument();
     expect(screen.getByText("Discover capability")).toBeInTheDocument();
     expect(screen.getByText("Author draft")).toBeInTheDocument();
     expect(screen.getByText("Validate and diagnose").closest("[data-authoring-active]")).toHaveAttribute("data-authoring-active", "true");
     expect(screen.getByText("Validate and diagnose").closest(".scene-body__authoring-node"))
       .toHaveAttribute("data-readable-surface", "dark");
-    expect(screen.getByText("Repair")).toBeInTheDocument();
-    expect(screen.getByText("Compile or save")).toBeInTheDocument();
+    expect(within(loop).getByText("Repair")).toBeInTheDocument();
+    expect(within(loop).getByText("Compile or save")).toBeInTheDocument();
   });
 
   it("renders discussion branches as a labelled presenter rail", () => {
