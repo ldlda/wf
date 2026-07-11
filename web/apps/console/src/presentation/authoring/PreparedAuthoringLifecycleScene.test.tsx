@@ -31,6 +31,10 @@ describe("PreparedAuthoringLifecycleScene", () => {
 
   it("validate shows diagnosis and repair", () => {
     renderBeat("validate");
+    expect(screen.getByRole("region", { name: "prepared workflow authoring lifecycle" })).toHaveAttribute(
+      "data-presentation-surface",
+      "editorial",
+    );
     expect(screen.getByText("Validate")).toBeInTheDocument();
     expect(screen.getAllByText(/diagnos|repair/i).length).toBeGreaterThanOrEqual(1);
   });
@@ -62,6 +66,10 @@ describe("PreparedAuthoringLifecycleScene", () => {
     renderBeat("draft");
     const chat = screen.getByRole("log", { name: "prepared authoring conversation" });
     expect(chat).toHaveAttribute("data-surface", "dock");
+    expect(screen.getByRole("region", { name: "draft graph evidence" })).toHaveAttribute(
+      "data-presentation-surface",
+      "editorial",
+    );
     expect(screen.getByRole("button", { name: /draft.*3 tool calls/i }))
       .toHaveAttribute("aria-expanded", "true");
   });
