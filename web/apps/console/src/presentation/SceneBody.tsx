@@ -262,6 +262,7 @@ const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
         className="scene-body__authoring-composition"
         aria-label="agent authoring loop"
         data-active-stage={beat.id}
+        data-presentation-surface="editorial"
       >
         <article className="scene-body__authoring-evidence" aria-label={`${projection.label} product evidence`}>
           <header>
@@ -274,7 +275,6 @@ const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
         <div
           className="scene-body__authoring-loop"
           aria-label="authoring phase loop"
-          data-readable-surface="dark"
         >
           <div className="scene-body__authoring-loop-rail" aria-hidden="true" />
           {authoringSteps.map((step, i) => {
@@ -286,7 +286,6 @@ const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
                 className="scene-body__authoring-node"
                 data-authoring-active={isActive}
                 data-authoring-past={isPast}
-                data-readable-surface="dark"
               >
                 <span className="scene-body__authoring-number">{i + 1}</span>
                 <strong>{step.label}</strong>

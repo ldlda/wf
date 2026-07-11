@@ -344,15 +344,16 @@ describe("SceneBody", () => {
 
     const composition = screen.getByLabelText("agent authoring loop");
     expect(composition).toHaveAttribute("data-active-stage", "diagnose");
+    expect(composition).toHaveAttribute("data-presentation-surface", "editorial");
     expect(screen.getByRole("article", { name: /validate product evidence/i })).toBeInTheDocument();
     expect(screen.getByText("workflow.draft_workspaces.validate")).toBeInTheDocument();
     const loop = screen.getByLabelText("authoring phase loop");
-    expect(loop.querySelector("[data-readable-surface='dark']")).toBeInTheDocument();
+    expect(loop).not.toHaveAttribute("data-readable-surface", "dark");
     expect(screen.getByText("Discover capability")).toBeInTheDocument();
     expect(screen.getByText("Author draft")).toBeInTheDocument();
     expect(screen.getByText("Validate and diagnose").closest("[data-authoring-active]")).toHaveAttribute("data-authoring-active", "true");
     expect(screen.getByText("Validate and diagnose").closest(".scene-body__authoring-node"))
-      .toHaveAttribute("data-readable-surface", "dark");
+      .not.toHaveAttribute("data-readable-surface", "dark");
     expect(within(loop).getByText("Repair")).toBeInTheDocument();
     expect(within(loop).getByText("Compile or save")).toBeInTheDocument();
   });

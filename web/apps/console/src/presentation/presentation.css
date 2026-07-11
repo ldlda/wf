@@ -38,6 +38,7 @@
 
 .agent-handoff-scene[data-presentation-surface="editorial"],
 .prepared-lifecycle-scene[data-presentation-surface="editorial"],
+.scene-body__authoring-composition[data-presentation-surface="editorial"],
 .authoring-visual[data-presentation-surface="editorial"] {
   --authoring-paper: var(--color-editorial-paper, oklch(0.975 0.012 82));
   --authoring-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
@@ -1472,7 +1473,7 @@
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.75rem;
   margin-top: 1rem;
-  padding: 1rem 0 0.2rem;
+  padding: 0.55rem 0 0.2rem;
 }
 
 .scene-body__authoring-loop-rail {
@@ -1491,23 +1492,23 @@
   display: grid;
   align-content: start;
   gap: 0.35rem;
-  min-height: 8.6rem;
-  border: 1px solid color-mix(in oklch, var(--stage-line) 72%, transparent);
-  border-radius: 0.75rem;
+  min-height: 5.8rem;
+  border: 1px solid var(--authoring-rule, color-mix(in oklch, var(--authoring-muted) 32%, transparent));
+  border-radius: 0.2rem;
   padding: 0.75rem;
-  background: color-mix(in oklch, var(--stage-surface) 88%, transparent);
-  color: var(--text-primary);
-  transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  background: transparent;
+  color: var(--authoring-ink, var(--text-primary));
+  transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease;
 }
 
 .scene-body__authoring-node strong {
-  color: var(--text-primary);
+  color: var(--authoring-ink, var(--text-primary));
 }
 
 .scene-body__authoring-node[data-authoring-active="true"] {
   transform: translateY(-0.35rem);
   border-color: var(--accent-cyan);
-  background: color-mix(in oklch, var(--accent-cyan) 13%, var(--stage-surface));
+  background: color-mix(in oklch, var(--accent-cyan) 8%, var(--authoring-paper, white));
 }
 
 .scene-body__authoring-node[data-authoring-past="true"] {
@@ -1515,7 +1516,7 @@
 }
 
 .scene-body__authoring-node small {
-  color: color-mix(in oklch, var(--text-primary) 72%, var(--text-muted));
+  color: var(--authoring-muted, var(--text-muted));
   font: 0.72rem/1.35 var(--font-interface);
 }
 
@@ -1535,6 +1536,8 @@
   gap: 0.7rem;
   flex: 1 1 auto;
   min-height: 0;
+  background: var(--authoring-paper, var(--color-editorial-paper, oklch(0.975 0.012 82)));
+  color: var(--authoring-ink, var(--color-editorial-ink, oklch(0.19 0.015 65)));
 }
 
 .scene-body__authoring-evidence {
@@ -1542,10 +1545,10 @@
   grid-template-rows: auto minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
-  border: 1px solid color-mix(in oklch, var(--accent-cyan) 42%, var(--stage-line));
-  border-radius: 0.75rem;
+  border: 1px solid var(--authoring-rule, color-mix(in oklch, var(--authoring-muted) 32%, transparent));
+  border-radius: 0.2rem;
   padding: 0.8rem 1rem;
-  background: color-mix(in oklch, var(--stage-surface) 82%, var(--stage-inset));
+  background: var(--authoring-paper, var(--color-editorial-paper, oklch(0.975 0.012 82)));
 }
 
 .scene-body__authoring-evidence > header {
@@ -1556,7 +1559,7 @@
 }
 
 .scene-body__authoring-evidence > header span {
-  color: var(--accent-cyan);
+  color: var(--authoring-muted, var(--accent-cyan));
   font: 700 0.65rem/1 var(--font-evidence);
   letter-spacing: 0.05em;
   text-transform: uppercase;
@@ -1565,7 +1568,7 @@
 .scene-body__authoring-evidence > header strong {
   min-width: 0;
   overflow: hidden;
-  color: var(--text-primary);
+  color: var(--authoring-ink, var(--text-primary));
   font: 700 0.82rem/1.2 var(--font-evidence);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1574,7 +1577,7 @@
 .scene-body__authoring-evidence > header p {
   grid-column: 1 / -1;
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--authoring-muted, var(--text-secondary));
   font: 0.82rem/1.3 var(--font-interface);
 }
 
@@ -1604,6 +1607,20 @@
 .scene-body__authoring-composition .scene-body__authoring-node {
   min-height: 5.8rem;
   padding: 0.55rem;
+}
+
+.scene-body__authoring-evidence,
+.scene-body__authoring-node,
+.authoring-visual {
+  transition: opacity 180ms ease, transform 180ms ease, border-color 180ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene-body__authoring-evidence,
+  .scene-body__authoring-node,
+  .authoring-visual {
+    transition: none;
+  }
 }
 
 @media (max-width: 1050px) {
@@ -2986,7 +3003,7 @@
   margin-inline: auto;
   border-radius: 0.35rem;
   background: var(--stage-canvas);
-  color: var(--text-primary);
+  color: var(--authoring-ink, var(--text-primary));
 }
 
 .agent-handoff-scene__header {
@@ -3201,7 +3218,7 @@
   justify-content: center;
   min-height: 11rem;
   padding: 1.4rem;
-  background: var(--stage-inset);
+  background: color-mix(in oklch, var(--authoring-paper, white) 88%, var(--authoring-muted, black));
   border-radius: 0.65rem;
 }
 
@@ -3229,9 +3246,10 @@
   gap: 0.55rem;
   min-width: 10.5rem;
   min-height: 7rem;
-  border: 2px solid var(--stage-line);
+  border: 1px solid var(--authoring-rule, var(--stage-line));
   border-radius: 0.7rem;
-  background: var(--stage-inset);
+  background: color-mix(in oklch, var(--authoring-paper, white) 88%, var(--authoring-muted, black));
+  color: var(--authoring-ink, var(--text-primary));
 }
 
 .authoring-graph__edge,
@@ -3269,7 +3287,7 @@
   align-content: center;
   min-height: 9rem;
   padding: 1.2rem;
-  border: 1px solid var(--stage-line);
+  border: 1px solid var(--authoring-rule, var(--stage-line));
   border-radius: 0.65rem;
 }
 
@@ -3303,7 +3321,8 @@
   width: min(100%, 52rem);
   margin-inline: auto;
   padding: 1.6rem 1.8rem;
-  border-block: 2px solid var(--stage-line);
+  border-block: 1px solid var(--authoring-rule, var(--stage-line));
+  color: var(--authoring-ink, var(--text-primary));
 }
 
 .authoring-visual--artifact > svg {
@@ -3354,7 +3373,7 @@
   align-items: center;
   gap: 0.8rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--stage-line);
+  border-bottom: 1px solid var(--authoring-rule, var(--stage-line));
 }
 
 .authoring-visual--bindings header div {
@@ -3381,7 +3400,8 @@
   gap: 0.8rem;
   min-height: 2.25rem;
   padding: 0.35rem 0.8rem;
-  background: var(--stage-inset);
+  background: color-mix(in oklch, var(--authoring-paper, white) 88%, var(--authoring-muted, black));
+  color: var(--authoring-ink, var(--text-primary));
 }
 
 .authoring-bindings__rows code:last-child {
