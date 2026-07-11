@@ -29,6 +29,23 @@
   color: var(--color-editorial-ink, oklch(0.19 0.015 65));
 }
 
+/* The console's global section rule must not turn night-mode slide roots white. */
+.presentation-canvas[data-stage-theme="night"] .presentation-stage__primary > .stage-caption,
+.presentation-canvas[data-stage-theme="night"] .architecture-scene > .stage-caption,
+.presentation-canvas[data-stage-theme="night"] .presentation-stage__primary > .architecture-scene,
+.presentation-canvas[data-stage-theme="night"] .presentation-stage__primary > .scene-body__authoring-composition {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--stage-line);
+}
+
+.presentation-canvas[data-stage-theme="night"] .presentation-stage__primary > .prepared-lifecycle-scene {
+  background: var(--stage-canvas);
+  color: var(--text-primary);
+  border-color: var(--stage-line);
+  margin-bottom: 0;
+}
+
 .presentation-stage {
   --presentation-footer-height: 2.5rem;
   position: relative;

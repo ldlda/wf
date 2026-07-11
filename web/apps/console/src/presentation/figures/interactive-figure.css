@@ -245,6 +245,14 @@
   font-weight: 600;
 }
 
+.presentation-canvas[data-stage-theme="night"] .figure-breadcrumbs {
+  color: var(--text-secondary, oklch(0.78 0.035 250));
+}
+
+.presentation-canvas[data-stage-theme="night"] .figure-breadcrumbs__crumb[aria-current="page"] {
+  color: var(--text-primary, oklch(0.96 0.01 250));
+}
+
 .figure-breadcrumbs__crumb + .figure-breadcrumbs__crumb::before {
   content: "\203A";
   margin-right: 4px;
