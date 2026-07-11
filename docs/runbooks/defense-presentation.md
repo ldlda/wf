@@ -106,6 +106,34 @@ Open the presentation:
 http://127.0.0.1:5173/present
 ```
 
+### Select Live Or Replay
+
+The presentation defaults to the loopback live target when an HTTP target is
+configured. The footer badge reports the current evidence mode:
+
+- `Live target ready`: the health probe succeeded and the prepared live action
+  is available.
+- `Replay evidence`: deterministic replay is selected explicitly.
+- `Replay fallback`: the configured live target failed its health probe, so the
+  presentation is continuing from the committed recording.
+
+To force deterministic replay before opening `/present`, run this in the
+browser DevTools console:
+
+```js
+// Force deterministic replay before opening /present.
+sessionStorage.setItem("lda.workflowConsole.target", "file:///presentation-replay");
+location.reload();
+```
+
+To restore the normal loopback live target:
+
+```js
+// Restore the normal loopback live target.
+sessionStorage.removeItem("lda.workflowConsole.target");
+location.reload();
+```
+
 ## Useful Deep Links
 
 - Title: `http://127.0.0.1:5173/present#scene/thesis/title`
@@ -115,16 +143,20 @@ http://127.0.0.1:5173/present
   `http://127.0.0.1:5173/present#scene/architecture/runtime/focus/runtime-providers`
 - NodeUse:
   `http://127.0.0.1:5173/present#scene/architecture/node-use/focus/node-use`
-- Demo operation:
-  `http://127.0.0.1:5173/present#scene/workflow-demo/operation`
-- Demo graph:
-  `http://127.0.0.1:5173/present#scene/workflow-demo/graph`
-- Interrupt preview:
-  `http://127.0.0.1:5173/present#scene/workflow-demo/interrupt`
-- Approval:
-  `http://127.0.0.1:5173/present#scene/interrupt-evidence/approval`
-- Trace/evidence:
-  `http://127.0.0.1:5173/present#scene/interrupt-evidence/trace`
+- Agent handoff:
+  `http://127.0.0.1:5173/present#scene/agent-handoff/request`
+- Prepared lifecycle:
+  `http://127.0.0.1:5173/present#scene/prepared-lifecycle/discover`
+- Run operation:
+  `http://127.0.0.1:5173/present#scene/run-from-deployment/operation`
+- Typed approval:
+  `http://127.0.0.1:5173/present#scene/typed-human-boundary/approval`
+- Resume proof:
+  `http://127.0.0.1:5173/present#scene/resume-output-evidence/resume`
+- Output proof:
+  `http://127.0.0.1:5173/present#scene/resume-output-evidence/output`
+- Trace proof:
+  `http://127.0.0.1:5173/present#scene/resume-output-evidence/trace`
 - Evaluation:
   `http://127.0.0.1:5173/present#scene/evaluation/cohort`
 
@@ -172,6 +204,18 @@ Say:
 > lets me continue the same narrative without rewriting the result.
 
 Then switch back to replay/deep-linked states.
+
+## Rehearsal Paths
+
+| Path | Operator action | Expected evidence |
+|---|---|---|
+| Submitted | Select issue rows, enter a comment, choose `Submit`. | The same run ID reaches `submitted`, report Markdown, created issues, and a completed trace. |
+| Revision requested | Enter a revision comment, choose `Request revision`. | The same run ID shows `Revision requested` in the UI, protocol evidence remains `cancelled`, the report says `Revision Requested`, no issues are created, and the trace contains `revision_requested` followed by `end_cancelled`. |
+| Replay fallback | Stop the server or force replay before loading the presentation. | The replay badge and canonical operation, output, and trace evidence remain available without port debugging. |
+
+`Request revision` is an intentional negative branch, not a terminal UI stop
+action. It resumes the same persisted run with an explicit negative decision
+and demonstrates the workflow's negative outcome.
 
 ### If asked why the demo is prepared
 
@@ -242,10 +286,16 @@ Answer:
 
 ## Pre-Defense Checklist
 
-- Start `/present` once and walk through all main beats.
-- Open Scene 6 root, runtime providers, and NodeUse deep links.
-- Open Scene 9/10 demo deep links and verify evidence receipt/inspector.
-- Confirm `Escape` closes overlays.
-- Confirm the browser is at the intended zoom level and projector resolution.
-- Keep the PDF available as a fallback.
-- Keep the commands in this runbook available in a terminal or notes file.
+1. Start `/present` with the intended target and verify the Scene 8 `Run
+   prepared workflow` action is enabled when the live badge is ready.
+2. Complete one submitted branch and confirm the same run reaches output and
+   trace.
+3. Reload, complete one revision-requested branch, and confirm no issues plus
+   the `revision_requested` and `end_cancelled` trace frames.
+4. Force replay, reload, and confirm the replay badge plus the direct approval
+   and trace hashes still render.
+5. Restore the normal loopback target only if the live path will be shown.
+6. Walk through Scene 6 root, runtime providers, and NodeUse deep links.
+7. Confirm `Escape` closes overlays and the browser is at the intended zoom
+   level and projector resolution.
+8. Keep the PDF and this runbook available as fallbacks.
