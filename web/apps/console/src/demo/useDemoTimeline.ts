@@ -21,7 +21,7 @@ import {
   type DemoApproval,
   type LiveDemoContext,
 } from "./timeline/live.js";
-import { loadCanonicalDemoRecording } from "./timeline/replay.js";
+import { loadCanonicalDemoRecording, revisionReplayRecording } from "./timeline/replay.js";
 
 type EvidenceRecorder = (record: EvidenceRecord) => void;
 
@@ -43,7 +43,7 @@ export type DemoTimelineController = {
     selectedIssueIds: ReadonlyArray<string>,
     comment: string,
   ) => Promise<void>;
-  readonly cancelReview: (comment: string) => Promise<void>;
+  readonly requestRevision: (comment: string) => Promise<void>;
   readonly restart: () => void;
   readonly primeReplayToStage: (stage: DemoEvent["stage"] | null) => void;
 };
@@ -86,10 +86,11 @@ export const useDemoTimeline = (
   const generationRef = useRef(0);
   const [inFlight, setInFlight] = useState(false);
   const approvalRef = useRef<DemoApproval | null>(null);
-  const activeRecording = useRef<DemoRecording | null>(recording ?? null);
-  if (activeRecording.current === null) {
-    activeRecording.current = loadCanonicalDemoRecording();
+  const canonicalRecording = useRef<DemoRecording | null>(recording ?? null);
+  if (canonicalRecording.current === null) {
+    canonicalRecording.current = loadCanonicalDemoRecording();
   }
+  const activeRecording = useRef<DemoRecording | null>(canonicalRecording.current);
 
   const [interruptPayload, setInterruptPayload] = useState<LdaReportInterruptPayload | null>(null);
   const [output, setOutput] = useState<LdaReportOutput | null>(null);
@@ -101,6 +102,7 @@ export const useDemoTimeline = (
     setInFlight(false);
     liveContextRef.current = initialLiveDemoContext;
     approvalRef.current = null;
+    activeRecording.current = canonicalRecording.current;
     setInterruptPayload(null);
     setOutput(null);
     setTrace(null);
@@ -285,15 +287,32 @@ export const useDemoTimeline = (
     dispatch({ type: "continue_review" });
   }, []);
 
-  const cancelReview = useCallback(async (comment: string) => {
+  const requestRevision = useCallback(async (comment: string) => {
     approvalRef.current = {
       approved: false,
       selectedIssueIds: [],
       comment,
       outcome: "cancelled",
     };
-    dispatch({ type: "cancel_review" });
-  }, []);
+    if (target === null) {
+      const recording = activeRecording.current;
+      if (recording) {
+        const revisionRecording = revisionReplayRecording(recording);
+        const appliedCount = appliedCountForStage(revisionRecording.events, "run_resume");
+        resetRuntime();
+        activeRecording.current = revisionRecording;
+        projectTransientState(revisionRecording.events, appliedCount);
+        dispatch({
+          type: "prime_replay",
+          events: revisionRecording.events,
+          appliedCount,
+          phase: "paused",
+        });
+      }
+      return;
+    }
+    dispatch({ type: "continue_review" });
+  }, [projectTransientState, resetRuntime, target]);
 
   const restart = useCallback(() => {
     resetRuntime();
@@ -302,6 +321,8 @@ export const useDemoTimeline = (
 
   const primeReplayToStage = useCallback((stage: DemoEvent["stage"] | null) => {
     if (stage === null || state.mode !== "replay") return;
+    const isRevisionBranch = state.events.some((event) => event.id === "revision-3-run-resume");
+    if (isRevisionBranch) return;
     const recording = activeRecording.current;
     if (!recording) return;
     const appliedCount = appliedCountForStage(recording.events, stage);
@@ -334,7 +355,7 @@ export const useDemoTimeline = (
     play,
     next,
     submitSelectedIssues,
-    cancelReview,
+    requestRevision,
     restart,
     primeReplayToStage,
   };

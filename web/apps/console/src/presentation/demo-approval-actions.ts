@@ -1,12 +1,12 @@
-export type DemoApprovalUiState = "ready" | "submitted" | "cancelled";
+export type DemoApprovalUiState = "ready" | "submitted" | "revision_requested";
 
 export type DemoApprovalActions = {
   readonly state: DemoApprovalUiState;
   readonly canSubmit: boolean;
-  readonly canCancel: boolean;
+  readonly canRequestRevision: boolean;
   readonly submit: (
     selectedIssueIds?: ReadonlyArray<string>,
     comment?: string,
   ) => Promise<void>;
-  readonly cancel: () => Promise<void>;
+  readonly requestRevision: () => Promise<void>;
 };

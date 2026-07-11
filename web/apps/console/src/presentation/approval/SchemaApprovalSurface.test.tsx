@@ -7,7 +7,7 @@ afterEach(() => cleanup());
 describe("SchemaApprovalSurface", () => {
   it("renders explicit schema fields and outcome actions", () => {
     const onSubmit = vi.fn();
-    const onCancel = vi.fn();
+    const onRequestRevision = vi.fn();
 
     render(
       <SchemaApprovalSurface
@@ -24,7 +24,7 @@ describe("SchemaApprovalSurface", () => {
         outcomes={["submitted", "cancelled"]}
         runId="run_recorded_lda_report"
         onSubmit={onSubmit}
-        onCancel={onCancel}
+        onRequestRevision={onRequestRevision}
       />,
     );
 
@@ -35,9 +35,9 @@ describe("SchemaApprovalSurface", () => {
     expect(within(surface).getByText("run_recorded_lda_report")).toBeInTheDocument();
 
     fireEvent.click(within(surface).getByRole("button", { name: /submit/i }));
-    fireEvent.click(within(surface).getByRole("button", { name: /cancel/i }));
+    fireEvent.click(within(surface).getByRole("button", { name: /request revision/i }));
     expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(onCancel).toHaveBeenCalledTimes(1);
+    expect(onRequestRevision).toHaveBeenCalledTimes(1);
   });
 
   it("renders payload preview for loose object schemas", () => {
@@ -56,7 +56,7 @@ describe("SchemaApprovalSurface", () => {
     expect(screen.getByText("[\"risk-1\"]")).toBeInTheDocument();
   });
 
-  it("shows submitted and cancelled states without active actions", () => {
+  it("shows submitted and revision-requested states without active actions", () => {
     const { rerender } = render(
       <SchemaApprovalSurface
         title="Issue review resume"
@@ -77,10 +77,10 @@ describe("SchemaApprovalSurface", () => {
         payload={{}}
         outcomes={["submitted", "cancelled"]}
         runId={null}
-        state="cancelled"
+        state="revision_requested"
       />,
     );
 
-    expect(screen.getByText("Outcome: cancelled")).toBeInTheDocument();
+    expect(screen.getByText("Outcome: revision requested")).toBeInTheDocument();
   });
 });

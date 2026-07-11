@@ -78,7 +78,7 @@ describe("AgentHandoffScene", () => {
       runLabel: "Run prepared workflow",
       runPreparedWorkflow,
       submitSelectedIssues: vi.fn(async () => {}),
-      cancelReview: vi.fn(async () => {}),
+      requestRevision: vi.fn(async () => {}),
     } as unknown as TimelineAgentController;
 
     render(

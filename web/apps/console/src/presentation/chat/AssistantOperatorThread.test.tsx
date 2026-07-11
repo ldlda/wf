@@ -60,7 +60,7 @@ describe("AssistantOperatorThread", () => {
   it("renders schema approval through the existing approval surface", async () => {
     const user = userEvent.setup();
     const submit = vi.fn();
-    const cancel = vi.fn();
+    const requestRevision = vi.fn();
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "approval",
@@ -88,15 +88,15 @@ describe("AssistantOperatorThread", () => {
         mode="dock"
         messages={messages}
         submitApproval={submit}
-        cancelApproval={cancel}
+        requestRevision={requestRevision}
       />,
     );
 
     expect(screen.getByRole("group", { name: /issue review resume/i })).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Submit" }));
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await user.click(screen.getByRole("button", { name: "Request revision" }));
     expect(submit).toHaveBeenCalledOnce();
-    expect(cancel).toHaveBeenCalledOnce();
+    expect(requestRevision).toHaveBeenCalledOnce();
   });
 
   it("renders a chat-owned run action", async () => {

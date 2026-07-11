@@ -49,7 +49,7 @@ const demoController = (
   play: vi.fn(),
   next: vi.fn(async () => {}),
   submitSelectedIssues: vi.fn(async () => {}),
-  cancelReview: vi.fn(async () => {}),
+  requestRevision: vi.fn(async () => {}),
   restart: vi.fn(),
   primeReplayToStage: vi.fn(),
   ...overrides,
@@ -128,17 +128,17 @@ describe("useTimelineAgent", () => {
     expect(submitSelectedIssues).toHaveBeenCalledWith(["risk-1"], "Create the selected issue.");
   });
 
-  it("cancels review through the timeline", async () => {
-    const cancelReview = vi.fn(async () => {});
+  it("requests revision through the timeline", async () => {
+    const requestRevision = vi.fn(async () => {});
     const demo = demoController({
       state: { ...initialDemoTimelineState, phase: "review" },
-      cancelReview,
+      requestRevision,
     });
 
     const { result } = renderHook(() => useTimelineAgent(demo, { mode: "live", status: readyStatus }));
-    await act(async () => result.current.cancelReview());
+    await act(async () => result.current.requestRevision());
 
-    expect(cancelReview).toHaveBeenCalledWith("Cancelled by operator.");
+    expect(requestRevision).toHaveBeenCalledWith("Request revisions before creating issues.");
   });
 
   it("disables run when the timeline cannot start", () => {
@@ -147,19 +147,19 @@ describe("useTimelineAgent", () => {
     expect(result.current.canRun).toBe(false);
   });
 
-  it("does not advance replay cancellation into the submitted recording branch", async () => {
-    const cancelReview = vi.fn(async () => {});
+  it("advances replay revision requests through the negative branch", async () => {
+    const requestRevision = vi.fn(async () => {});
     const next = vi.fn(async () => {});
     const demo = demoController({
       state: { ...initialDemoTimelineState, mode: "replay", phase: "review" },
-      cancelReview,
+      requestRevision,
       next,
     });
 
     const { result } = renderHook(() => useTimelineAgent(demo, { mode: "replay", status: replayStatus }));
-    await act(async () => result.current.cancelReview());
+    await act(async () => result.current.requestRevision());
 
-    expect(cancelReview).toHaveBeenCalledWith("Cancelled by operator.");
+    expect(requestRevision).toHaveBeenCalledWith("Request revisions before creating issues.");
     expect(next).not.toHaveBeenCalled();
     expect(result.current.messages.at(-1)?.parts).toEqual(
       expect.arrayContaining([
@@ -168,20 +168,20 @@ describe("useTimelineAgent", () => {
     );
   });
 
-  it("live cancel does not call next", async () => {
-    const cancelReview = vi.fn(async () => {});
+  it("live revision request advances the timeline", async () => {
+    const requestRevision = vi.fn(async () => {});
     const next = vi.fn(async () => {});
     const demo = demoController({
       state: { ...initialDemoTimelineState, mode: "live", phase: "review" },
-      cancelReview,
+      requestRevision,
       next,
     });
 
     const { result } = renderHook(() => useTimelineAgent(demo, { mode: "live", status: readyStatus }));
-    await act(async () => result.current.cancelReview());
+    await act(async () => result.current.requestRevision());
 
-    expect(cancelReview).toHaveBeenCalledWith("Cancelled by operator.");
-    expect(next).not.toHaveBeenCalled();
+    expect(requestRevision).toHaveBeenCalledWith("Request revisions before creating issues.");
+    expect(next).toHaveBeenCalledOnce();
   });
 
   it("uses replay label when live target failed", () => {

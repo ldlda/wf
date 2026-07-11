@@ -27,7 +27,7 @@ const baseController = {
   play: vi.fn(),
   next: vi.fn(),
   submitSelectedIssues: vi.fn(),
-  cancelReview: vi.fn(),
+  requestRevision: vi.fn(),
   restart: vi.fn(),
   primeReplayToStage: vi.fn(),
 };

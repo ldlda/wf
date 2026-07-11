@@ -32,7 +32,7 @@ const demo: DemoTimelineController = {
   play: noop,
   next: noopAsync,
   submitSelectedIssues: noopAsync,
-  cancelReview: noopAsync,
+  requestRevision: noopAsync,
   restart: noop,
   primeReplayToStage: noop,
 };

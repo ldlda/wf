@@ -35,8 +35,8 @@ const statusCopy = (
 ): string => {
   if (moment !== "approval") return "Same persisted run; inspect the proof below.";
   if (approvalActions?.state === "submitted") return "Submitted. Same run resumed.";
-  if (approvalActions?.state === "cancelled") {
-    return "Cancelled in presentation replay. No resume evidence is shown.";
+  if (approvalActions?.state === "revision_requested") {
+    return "Revision requested. The same run resumed through its negative outcome branch.";
   }
   return "Run is paused. Submit resumes this same run.";
 };
@@ -67,6 +67,9 @@ export const GuidedProductMoment = ({
   const lens = demoBeatLensForBeat(beat.id);
   const facts = projectDemoRunFacts(demo);
   const runResume = demo.state.events.find((event) => event.stage === "run_resume");
+  const headline = moment === "resume" && approvalActions?.state === "revision_requested"
+    ? "The revision request continues the persisted run"
+    : lens.headline;
 
   return (
     <section
@@ -80,7 +83,7 @@ export const GuidedProductMoment = ({
     >
       <header className="guided-product-moment__header">
         <span>{lens.eyebrow}</span>
-        <strong>{lens.headline}</strong>
+        <strong>{headline}</strong>
         <p>{statusCopy(moment, approvalActions)}</p>
       </header>
 
@@ -96,9 +99,9 @@ export const GuidedProductMoment = ({
                 interrupt={facts.interrupt}
                 runId={demo.state.events.find((e) => e.stage === "run_start")?.resultingIds.runId ?? "unknown"}
                 onSubmit={approvalActions?.canSubmit ? (ids, comment) => approvalActions.submit(ids, comment) : undefined}
-                onCancel={approvalActions?.canCancel ? () => approvalActions.cancel() : undefined}
+                onRequestRevision={approvalActions?.canRequestRevision ? () => approvalActions.requestRevision() : undefined}
                 terminalOutcome={approvalActions?.state === "submitted" ? "submitted" :
-                  approvalActions?.state === "cancelled" ? "cancelled" : undefined}
+                  approvalActions?.state === "revision_requested" ? "revision requested" : undefined}
                 showReportPreview={false}
               />
             </div>

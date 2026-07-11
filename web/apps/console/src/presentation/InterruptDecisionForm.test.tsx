@@ -34,7 +34,7 @@ describe("InterruptDecisionForm", () => {
         interrupt={interrupt}
         runId="run_recorded_lda_report"
         onSubmit={vi.fn()}
-        onCancel={vi.fn()}
+        onRequestRevision={vi.fn()}
       />,
     );
 
@@ -52,7 +52,7 @@ describe("InterruptDecisionForm", () => {
         interrupt={interrupt}
         runId="run_recorded_lda_report"
         onSubmit={vi.fn()}
-        onCancel={vi.fn()}
+        onRequestRevision={vi.fn()}
       />,
     );
 
@@ -69,7 +69,7 @@ describe("InterruptDecisionForm", () => {
         interrupt={interrupt}
         runId="run_recorded_lda_report"
         onSubmit={onSubmit}
-        onCancel={vi.fn()}
+        onRequestRevision={vi.fn()}
       />,
     );
 
@@ -91,8 +91,8 @@ describe("InterruptDecisionForm", () => {
     );
   });
 
-  it("calls cancel callback without submit", async () => {
-    const onCancel = vi.fn();
+  it("requests revision without submit", async () => {
+    const onRequestRevision = vi.fn();
     const onSubmit = vi.fn();
     const user = userEvent.setup();
 
@@ -101,13 +101,13 @@ describe("InterruptDecisionForm", () => {
         interrupt={interrupt}
         runId="run_recorded_lda_report"
         onSubmit={onSubmit}
-        onCancel={onCancel}
+        onRequestRevision={onRequestRevision}
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    await user.click(screen.getByRole("button", { name: /request revision/i }));
 
-    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onRequestRevision).toHaveBeenCalledOnce();
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
@@ -117,14 +117,14 @@ describe("InterruptDecisionForm", () => {
         interrupt={interrupt}
         runId="run_recorded_lda_report"
         onSubmit={vi.fn()}
-        onCancel={vi.fn()}
+        onRequestRevision={vi.fn()}
         terminalOutcome="submitted"
       />,
     );
 
     expect(screen.getByText(/submitted/i)).toBeDefined();
     expect(screen.queryByRole("button", { name: /submit/i })).toBeFalsy();
-    expect(screen.queryByRole("button", { name: /cancel/i })).toBeFalsy();
+    expect(screen.queryByRole("button", { name: /request revision/i })).toBeFalsy();
   });
 
   it("can leave report evidence to the surrounding interrupt panel", () => {
@@ -133,7 +133,7 @@ describe("InterruptDecisionForm", () => {
         interrupt={interrupt}
         runId="run_recorded_lda_report"
         onSubmit={vi.fn()}
-        onCancel={vi.fn()}
+        onRequestRevision={vi.fn()}
         showReportPreview={false}
       />,
     );
@@ -142,19 +142,19 @@ describe("InterruptDecisionForm", () => {
     expect(screen.getAllByRole("checkbox")).toHaveLength(2);
   });
 
-  it("shows terminal outcome label when state is cancelled", () => {
+  it("shows terminal outcome label when revision is requested", () => {
     render(
       <InterruptDecisionForm
         interrupt={interrupt}
         runId="run_recorded_lda_report"
         onSubmit={vi.fn()}
-        onCancel={vi.fn()}
-        terminalOutcome="cancelled"
+        onRequestRevision={vi.fn()}
+        terminalOutcome="revision requested"
       />,
     );
 
-    expect(screen.getByText(/cancelled/i)).toBeDefined();
+    expect(screen.getByText(/revision requested/i)).toBeDefined();
     expect(screen.queryByRole("button", { name: /submit/i })).toBeFalsy();
-    expect(screen.queryByRole("button", { name: /cancel/i })).toBeFalsy();
+    expect(screen.queryByRole("button", { name: /request revision/i })).toBeFalsy();
   });
 });

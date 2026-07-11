@@ -10,7 +10,7 @@ type OperatorChatProps = {
   readonly messages?: ReadonlyArray<AgentMessage> | undefined;
   readonly timelineAgent?: TimelineAgentController | undefined;
   readonly onApprove?: (() => void) | undefined;
-  readonly onDeny?: (() => void) | undefined;
+  readonly onRequestRevision?: (() => void) | undefined;
 };
 
 const fallbackMessages = (state: PresentationState): ReadonlyArray<AgentMessage> => [
@@ -30,7 +30,7 @@ const fallbackMessages = (state: PresentationState): ReadonlyArray<AgentMessage>
   },
 ];
 
-export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onDeny }: OperatorChatProps) => {
+export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onRequestRevision }: OperatorChatProps) => {
   const visibleMessages = messages && messages.length > 0
     ? messages
     : timelineAgent && timelineAgent.messages.length > 0
@@ -39,9 +39,9 @@ export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onDeny
   const submit = timelineAgent
     ? () => { timelineAgent.submitSelectedIssues().catch(console.error); }
     : onApprove;
-  const cancel = timelineAgent
-    ? () => { timelineAgent.cancelReview().catch(console.error); }
-    : onDeny;
+  const requestRevision = timelineAgent
+    ? () => { timelineAgent.requestRevision().catch(console.error); }
+    : onRequestRevision;
   const composition = compositionForState(state);
   const presentationSurface = composition.chatTheme === "light" ? "editorial" : "night";
   return (
@@ -61,7 +61,7 @@ export const OperatorChat = ({ state, messages, timelineAgent, onApprove, onDeny
           run: () => void timelineAgent.runPreparedWorkflow(),
         } : undefined}
         submitApproval={submit}
-        cancelApproval={cancel}
+        requestRevision={requestRevision}
       />
     </aside>
   );

@@ -38,7 +38,7 @@ const controller = (overrides: Partial<DemoTimelineController> = {}): DemoTimeli
     play: vi.fn(),
     next: vi.fn(async () => {}),
     submitSelectedIssues: vi.fn(async () => {}),
-    cancelReview: vi.fn(async () => {}),
+    requestRevision: vi.fn(async () => {}),
     restart: vi.fn(),
     primeReplayToStage: vi.fn(),
     ...overrides,

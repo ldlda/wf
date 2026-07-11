@@ -130,7 +130,7 @@ Implementation order:
     proof. Implementation:
     [`schema approval surface`](historical/superpowers/plans/2026-07-09-schema-approval-surface.md).
 16. Completed: presentation chat now drives the prepared workflow timeline.
-    The chat run action, schema approval submit/cancel, graph, evidence, and
+    The chat run action, schema approval submit/revision, graph, evidence, and
     live/replay execution all share `useDemoTimeline`; AI SDK remains a later
     driver for the same seam. Implementation:
     [`presentation chat timeline bridge`](historical/superpowers/plans/2026-07-09-presentation-chat-timeline-bridge.md).
@@ -152,8 +152,8 @@ Implementation order:
     [`presentation live/replay truth plan`](historical/superpowers/plans/2026-07-09-presentation-live-replay-truth.md).
 20. Completed: Scene 10 now presents factual run state: workflow input,
     interrupt payload, operator resume decision, output, and trace frame facts.
-    Cancel is terminal in presentation mode and does not advance into submitted
-    evidence. Implementation:
+    Request revision resumes the same run through the negative outcome branch;
+    it does not create issues. Implementation:
     [`Scene 10 factual run state`](historical/superpowers/plans/2026-07-09-scene-10-factual-run-state.md).
 21. Completed: presentation lifecycle story expansion splits the demo climax
     into prepared lifecycle, run start, typed human boundary, and

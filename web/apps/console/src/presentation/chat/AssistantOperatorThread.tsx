@@ -25,7 +25,7 @@ type AssistantOperatorThreadProps = {
   readonly messages: ReadonlyArray<AgentMessage>;
   readonly runAction?: { readonly label: string; readonly disabled: boolean; readonly run: () => void } | undefined;
   readonly submitApproval?: (() => void) | undefined;
-  readonly cancelApproval?: (() => void) | undefined;
+  readonly requestRevision?: (() => void) | undefined;
   readonly ariaLabel?: string | undefined;
   readonly surface?: "stage" | "dock" | undefined;
   readonly activeToolGroupId?: string | undefined;
@@ -87,7 +87,7 @@ const resultForToolPart = (part: ToolRenderPart): unknown =>
 const renderContentPart = (
   part: AssistantContentPart,
   submitApproval?: (() => void) | undefined,
-  cancelApproval?: (() => void) | undefined,
+  requestRevision?: (() => void) | undefined,
   defaultOpen?: boolean,
   pairedResult?: Extract<ToolRenderPart, { readonly type: "tool-result" }>,
 ): ReactNode => {
@@ -116,7 +116,7 @@ const renderContentPart = (
               outcomes={contract.outcomes}
               runId={contract.runId}
               onSubmit={submitApproval}
-              onCancel={cancelApproval}
+              onRequestRevision={requestRevision}
             />
           </div>
         </ToolFallbackContent>
@@ -141,14 +141,14 @@ const AssistantMessageBody = ({
   openToolGroups,
   setToolGroupOpen,
   submitApproval,
-  cancelApproval,
+  requestRevision,
 }: {
   readonly messageId: string;
   readonly parts: readonly AssistantContentPart[];
   readonly openToolGroups: ReadonlySet<string>;
   readonly setToolGroupOpen: (groupId: string, open: boolean) => void;
   readonly submitApproval?: (() => void) | undefined;
-  readonly cancelApproval?: (() => void) | undefined;
+  readonly requestRevision?: (() => void) | undefined;
 }) => {
   const rendered: ReactNode[] = [];
   let index = 0;
@@ -176,7 +176,7 @@ const AssistantMessageBody = ({
     if (logicalTools.length === 1 && !messageId.startsWith("authoring-")) {
       rendered.push(
         <div key={`tool-${logicalTools[0]!.toolCallId ?? logicalTools[0]!.toolName}`}>
-          {renderContentPart(logicalTools[0]!, submitApproval, cancelApproval)}
+          {renderContentPart(logicalTools[0]!, submitApproval, requestRevision)}
         </div>,
       );
       continue;
@@ -209,7 +209,7 @@ const AssistantMessageBody = ({
               : undefined;
             return (
             <div key={`${tool.type}-${tool.toolName}-${tool.toolCallId ?? "no-id"}`}>
-              {renderContentPart(tool, submitApproval, cancelApproval, false, pairedResult)}
+              {renderContentPart(tool, submitApproval, requestRevision, false, pairedResult)}
             </div>
             );
           })}
@@ -246,7 +246,7 @@ export const AssistantOperatorThread = ({
   messages,
   runAction,
   submitApproval,
-  cancelApproval,
+  requestRevision,
   ariaLabel = "operator conversation",
   surface,
   activeToolGroupId,
@@ -324,7 +324,7 @@ export const AssistantOperatorThread = ({
                   openToolGroups={openToolGroups}
                   setToolGroupOpen={setToolGroupOpen}
                   submitApproval={submitApproval}
-                  cancelApproval={cancelApproval}
+                  requestRevision={requestRevision}
                 />
               </MessageBubble>
             );

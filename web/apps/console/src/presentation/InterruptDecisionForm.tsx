@@ -5,8 +5,8 @@ type InterruptDecisionFormProps = {
   readonly interrupt: RunFactsInterrupt;
   readonly runId: string;
   readonly onSubmit?: ((selectedIssueIds: ReadonlyArray<string>, comment: string) => void) | undefined;
-  readonly onCancel?: (() => void) | undefined;
-  readonly terminalOutcome?: "submitted" | "cancelled" | undefined;
+  readonly onRequestRevision?: (() => void) | undefined;
+  readonly terminalOutcome?: "submitted" | "revision requested" | undefined;
   readonly showReportPreview?: boolean;
 };
 
@@ -14,7 +14,7 @@ export const InterruptDecisionForm = ({
   interrupt,
   runId,
   onSubmit,
-  onCancel,
+  onRequestRevision,
   terminalOutcome,
   showReportPreview = true,
 }: InterruptDecisionFormProps) => {
@@ -111,10 +111,10 @@ export const InterruptDecisionForm = ({
         <button
           type="button"
           className="interrupt-decision-form__cancel"
-          onClick={() => onCancel?.()}
-          disabled={!onCancel}
+          onClick={() => onRequestRevision?.()}
+          disabled={!onRequestRevision}
         >
-          Cancel
+          Request revision
         </button>
       </div>
     </form>

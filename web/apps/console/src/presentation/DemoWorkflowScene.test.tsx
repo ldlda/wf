@@ -35,7 +35,7 @@ const demo: DemoTimelineController = {
   play: noop,
   next: noopAsync,
   submitSelectedIssues: noopAsync,
-  cancelReview: noopAsync,
+  requestRevision: noopAsync,
   restart: noop,
   primeReplayToStage: noop,
 };
@@ -192,14 +192,14 @@ describe("DemoWorkflowScene", () => {
       approvalActions: {
         state: "ready",
         canSubmit: true,
-        canCancel: true,
+        canRequestRevision: true,
         submit: vi.fn(async () => {}),
-        cancel: vi.fn(async () => {}),
+        requestRevision: vi.fn(async () => {}),
       },
     });
 
     expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Request revision" })).toBeEnabled();
   });
 
   it("shows a factual decision form for the approval beat instead of raw schema as the primary visual", () => {

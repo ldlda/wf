@@ -115,8 +115,8 @@ export const LdaReportDemoPanel = ({ controller }: { readonly controller: DemoTi
                 Resume and create selected issues
               </button>
             )}
-            <button onClick={() => void controller.cancelReview(comment)}>
-              Cancel review
+            <button onClick={() => void controller.requestRevision(comment)}>
+              Request revision
             </button>
           </div>
           {state.mode === "replay" && (

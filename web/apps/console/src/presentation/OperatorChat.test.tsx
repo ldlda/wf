@@ -101,7 +101,7 @@ describe("OperatorChat", () => {
   it("renders schema approval surface inside chat approval request", async () => {
     const user = userEvent.setup();
     const onApprove = vi.fn();
-    const onDeny = vi.fn();
+    const onRequestRevision = vi.fn();
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "approval",
@@ -124,14 +124,14 @@ describe("OperatorChat", () => {
       },
     ];
 
-    render(<OperatorChat state={initialPresentationState} messages={messages} onApprove={onApprove} onDeny={onDeny} />);
+    render(<OperatorChat state={initialPresentationState} messages={messages} onApprove={onApprove} onRequestRevision={onRequestRevision} />);
 
     expect(screen.getByRole("group", { name: /issue review resume/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /submit/i }));
-    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    await user.click(screen.getByRole("button", { name: /request revision/i }));
     expect(onApprove).toHaveBeenCalledTimes(1);
-    expect(onDeny).toHaveBeenCalledTimes(1);
+    expect(onRequestRevision).toHaveBeenCalledTimes(1);
   });
 
   it("falls back to tool card display when approval request has no contract", async () => {
@@ -194,7 +194,7 @@ describe("OperatorChat", () => {
           runLabel: "Run prepared workflow",
           runPreparedWorkflow,
           submitSelectedIssues: vi.fn(async () => {}),
-          cancelReview: vi.fn(async () => {}),
+          requestRevision: vi.fn(async () => {}),
         }}
       />,
     );
@@ -203,10 +203,10 @@ describe("OperatorChat", () => {
     expect(runPreparedWorkflow).toHaveBeenCalledTimes(1);
   });
 
-  it("routes schema approval submit and cancel through the timeline agent when present", async () => {
+  it("routes schema approval submit and revision request through the timeline agent when present", async () => {
     const user = userEvent.setup();
     const submitSelectedIssues = vi.fn(async () => {});
-    const cancelReview = vi.fn(async () => {});
+    const requestRevision = vi.fn(async () => {});
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "approval",
@@ -239,15 +239,15 @@ describe("OperatorChat", () => {
           runLabel: "Run prepared workflow",
           runPreparedWorkflow: vi.fn(async () => {}),
           submitSelectedIssues,
-          cancelReview,
+          requestRevision,
         }}
       />,
     );
 
     await user.click(screen.getByRole("button", { name: /submit/i }));
-    await user.click(screen.getByRole("button", { name: /cancel/i }));
+    await user.click(screen.getByRole("button", { name: /request revision/i }));
     expect(submitSelectedIssues).toHaveBeenCalledTimes(1);
-    expect(cancelReview).toHaveBeenCalledTimes(1);
+    expect(requestRevision).toHaveBeenCalledTimes(1);
   });
 
   it("renders prepared run tool calls as workflow handoffs", () => {
@@ -297,18 +297,18 @@ describe("OperatorChat", () => {
         state={initialPresentationState}
         messages={messages}
         onApprove={undefined}
-        onDeny={undefined}
+        onRequestRevision={undefined}
       />,
     );
 
     expect(screen.getByRole("button", { name: "Submit" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Request revision" })).toBeDisabled();
   });
 
   it("routes approval requests through provided approval callbacks", async () => {
     const user = userEvent.setup();
     const approve = vi.fn();
-    const deny = vi.fn();
+    const requestRevision = vi.fn();
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "approval",
@@ -336,14 +336,14 @@ describe("OperatorChat", () => {
         state={initialPresentationState}
         messages={messages}
         onApprove={approve}
-        onDeny={deny}
+        onRequestRevision={requestRevision}
       />,
     );
 
     await user.click(screen.getByRole("button", { name: "Submit" }));
     expect(approve).toHaveBeenCalledOnce();
 
-    await user.click(screen.getByRole("button", { name: "Cancel" }));
-    expect(deny).toHaveBeenCalledOnce();
+    await user.click(screen.getByRole("button", { name: "Request revision" }));
+    expect(requestRevision).toHaveBeenCalledOnce();
   });
 });

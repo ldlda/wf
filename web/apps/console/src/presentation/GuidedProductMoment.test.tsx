@@ -38,7 +38,7 @@ const demo = {
   play: vi.fn(),
   next: vi.fn(),
   submitSelectedIssues: vi.fn(),
-  cancelReview: vi.fn(),
+  requestRevision: vi.fn(),
   restart: vi.fn(),
   primeReplayToStage: vi.fn(),
 } as unknown as DemoTimelineController;
@@ -63,9 +63,9 @@ describe("GuidedProductMoment", () => {
         approvalActions={{
           state: "ready",
           canSubmit: true,
-          canCancel: true,
+          canRequestRevision: true,
           submit: vi.fn(async () => {}),
-          cancel: vi.fn(async () => {}),
+          requestRevision: vi.fn(async () => {}),
         }}
         openEvidence={vi.fn()}
       />,
@@ -109,9 +109,9 @@ describe("GuidedProductMoment", () => {
         approvalActions={{
           state: "ready",
           canSubmit: true,
-          canCancel: true,
+          canRequestRevision: true,
           submit: vi.fn(async () => {}),
-          cancel: vi.fn(async () => {}),
+          requestRevision: vi.fn(async () => {}),
         }}
         openEvidence={vi.fn()}
       />,
@@ -134,9 +134,9 @@ describe("GuidedProductMoment", () => {
         approvalActions={{
           state: "ready",
           canSubmit: true,
-          canCancel: true,
+          canRequestRevision: true,
           submit: vi.fn(async () => {}),
-          cancel: vi.fn(async () => {}),
+          requestRevision: vi.fn(async () => {}),
         }}
         openEvidence={vi.fn()}
       />,
@@ -156,9 +156,9 @@ describe("GuidedProductMoment", () => {
         approvalActions={{
           state: "ready",
           canSubmit: true,
-          canCancel: true,
+          canRequestRevision: true,
           submit: vi.fn(async () => {}),
-          cancel: vi.fn(async () => {}),
+          requestRevision: vi.fn(async () => {}),
         }}
         openEvidence={vi.fn()}
       />,
@@ -180,9 +180,9 @@ describe("GuidedProductMoment", () => {
         approvalActions={{
           state: "ready",
           canSubmit: true,
-          canCancel: true,
+          canRequestRevision: true,
           submit: vi.fn(async () => {}),
-          cancel: vi.fn(async () => {}),
+          requestRevision: vi.fn(async () => {}),
         }}
         openEvidence={vi.fn()}
       />,

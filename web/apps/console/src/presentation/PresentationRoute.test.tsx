@@ -338,27 +338,26 @@ describe("PresentationRoute", () => {
     window.dispatchEvent(new HashChangeEvent("hashchange"));
 
     expect(await screen.findByRole("button", { name: "Submit" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Request revision" })).toBeEnabled();
   });
 
-  it("cancels Scene 10 approval in replay without applying submitted evidence", async () => {
+  it("requests revision and resumes Scene 10 through the negative branch", async () => {
     const user = userEvent.setup();
     setReplayMode();
     window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    const cancelButton = await screen.findByRole("button", { name: "Cancel" });
-    await waitFor(() => expect(cancelButton).toBeEnabled(), { timeout: 10000 });
+    const revisionButton = await screen.findByRole("button", { name: "Request revision" });
+    await waitFor(() => expect(revisionButton).toBeEnabled(), { timeout: 10000 });
 
     await act(async () => {
-      await user.click(cancelButton);
+      await user.click(revisionButton);
     });
 
-    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Cancel" })).not.toBeInTheDocument();
-    expect(window.location.hash).toBe("#scene/typed-human-boundary/approval");
-    expect(screen.queryByLabelText("workflow.runs.resume operation")).not.toBeInTheDocument();
+    expect(window.location.hash).toBe("#scene/resume-output-evidence/resume");
+    expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
+    expect(screen.getByText(/Revision Requested/i)).toBeInTheDocument();
   });
 
   it("opens approval with enabled approval controls immediately after priming", async () => {
@@ -368,7 +367,7 @@ describe("PresentationRoute", () => {
     render(<PresentationRoute />);
 
     expect(await screen.findByRole("button", { name: "Submit" })).toBeEnabled();
-    expect(screen.getByRole("button", { name: "Cancel" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Request revision" })).toBeEnabled();
   });
 
   it("opens resume with resume operation proof immediately after priming", async () => {

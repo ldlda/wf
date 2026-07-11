@@ -181,26 +181,30 @@ export const PresentationRoute = () => {
     });
   }, [demo]);
 
-  const handleCancelApproval = useCallback(async () => {
+  const handleRequestRevision = useCallback(async () => {
     if (demo.state.phase !== "review") return;
 
-    setApprovalState("cancelled");
-    await demo.cancelReview("Cancelled by operator.");
-
-    // The canonical replay only records the submitted branch. Do not call
-    // next() in replay, or the UI would falsely show submitted run evidence.
-    if (demo.state.mode === "live") {
-      await demo.next();
-    }
+    setApprovalState("revision_requested");
+    await demo.requestRevision("Request revisions before creating issues.");
+    if (presentationTarget.mode === "live") await demo.next();
+    dispatch({
+      type: "jump",
+      location: {
+        kind: "main",
+        sceneId: "resume-output-evidence",
+        beatId: "resume",
+        focusPath: [],
+      },
+    });
   }, [demo]);
 
   const approvalActions = useMemo<DemoApprovalActions>(() => ({
     state: approvalState,
     canSubmit: demo.state.phase === "review" && selectedIssueIdsForDemo(demo.interruptPayload).length > 0,
-    canCancel: demo.state.phase === "review",
+    canRequestRevision: demo.state.phase === "review",
     submit: handleSubmitApproval,
-    cancel: handleCancelApproval,
-  }), [approvalState, demo.state.phase, demo.interruptPayload, handleSubmitApproval, handleCancelApproval]);
+    requestRevision: handleRequestRevision,
+  }), [approvalState, demo.state.phase, demo.interruptPayload, handleSubmitApproval, handleRequestRevision]);
 
   useEffect(() => {
     if (!isApprovalBeat || demo.state.phase !== "review") return;

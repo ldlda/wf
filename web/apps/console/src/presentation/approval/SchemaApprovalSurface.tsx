@@ -6,9 +6,9 @@ export type SchemaApprovalSurfaceProps = {
   readonly payload: unknown;
   readonly outcomes: ReadonlyArray<string>;
   readonly runId: string | null;
-  readonly state?: "ready" | "submitted" | "cancelled";
+  readonly state?: "ready" | "submitted" | "revision_requested";
   readonly onSubmit?: (() => void) | undefined;
-  readonly onCancel?: (() => void) | undefined;
+  readonly onRequestRevision?: (() => void) | undefined;
 };
 
 export const SchemaApprovalSurface = ({
@@ -19,10 +19,11 @@ export const SchemaApprovalSurface = ({
   runId,
   state = "ready",
   onSubmit,
-  onCancel,
+  onRequestRevision,
 }: SchemaApprovalSurfaceProps) => {
   const model = buildSchemaApprovalModel({ schema, payload, outcomes });
   const isResolved = state !== "ready";
+  const stateLabel = state === "revision_requested" ? "revision requested" : state;
 
   return (
     <section className="schema-approval-surface" role="group" aria-label={title} data-state={state}>
@@ -65,14 +66,14 @@ export const SchemaApprovalSurface = ({
 
       <footer className="schema-approval-surface__actions">
         {isResolved ? (
-          <strong>Outcome: {state}</strong>
+          <strong>Outcome: {stateLabel}</strong>
         ) : (
           <>
             <button type="button" onClick={onSubmit} disabled={!onSubmit}>
               Submit
             </button>
-            <button type="button" onClick={onCancel} disabled={!onCancel}>
-              Cancel
+            <button type="button" onClick={onRequestRevision} disabled={!onRequestRevision}>
+              Request revision
             </button>
           </>
         )}

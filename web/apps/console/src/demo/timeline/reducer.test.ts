@@ -110,7 +110,7 @@ describe("demoTimelineReducer", () => {
     expect(restarted.appliedCount).toBe(0);
   });
 
-  it("cancels review as a terminal non-autoplay phase", () => {
+  it("resumes review autoplay", () => {
     const reviewing = {
       ...initialDemoTimelineState,
       mode: "replay" as const,
@@ -119,10 +119,10 @@ describe("demoTimelineReducer", () => {
       appliedCount: 1,
       autoplay: false,
     };
-    const cancelled = demoTimelineReducer(reviewing, { type: "cancel_review" });
+    const continued = demoTimelineReducer(reviewing, { type: "continue_review" });
 
-    expect(cancelled.phase).toBe("cancelled");
-    expect(cancelled.autoplay).toBe(false);
-    expect(cancelled.appliedCount).toBe(1);
+    expect(continued.phase).toBe("running");
+    expect(continued.autoplay).toBe(true);
+    expect(continued.appliedCount).toBe(1);
   });
 });

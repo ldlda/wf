@@ -22,7 +22,7 @@ type PresentationStageProps = {
   readonly timelineAgent?: TimelineAgentController | undefined;
   readonly approvalActions?: DemoApprovalActions | undefined;
   readonly onApprove?: (() => void) | undefined;
-  readonly onDeny?: (() => void) | undefined;
+  readonly onRequestRevision?: (() => void) | undefined;
   readonly targetStatus: PresentationTargetHealth;
   readonly jump: (location: MainLocation) => void;
   readonly selectNode: (nodeId: string | null) => void;
@@ -40,7 +40,7 @@ export const PresentationStage = ({
   timelineAgent,
   approvalActions,
   onApprove,
-  onDeny,
+  onRequestRevision,
   targetStatus,
   jump,
   selectNode,
@@ -66,7 +66,7 @@ export const PresentationStage = ({
           data-scene-view={activeSceneView}
         >
           <aside className="presentation-stage__chat" aria-label="agent chat region">
-            <OperatorChat state={state} messages={messages} timelineAgent={timelineAgent} onApprove={onApprove} onDeny={onDeny} />
+            <OperatorChat state={state} messages={messages} timelineAgent={timelineAgent} onApprove={onApprove} onRequestRevision={onRequestRevision} />
           </aside>
           <section className="presentation-stage__primary" aria-label="primary presentation region">
             {state.location.kind === "discussion" ? (

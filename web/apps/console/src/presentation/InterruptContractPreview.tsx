@@ -56,7 +56,7 @@ export const InterruptContractPreview = ({
         runId={contract.runId}
         state={approvalActions?.state ?? "ready"}
         onSubmit={approvalActions?.canSubmit ? () => void approvalActions.submit() : undefined}
-        onCancel={approvalActions?.canCancel ? () => void approvalActions.cancel() : undefined}
+        onRequestRevision={approvalActions?.canRequestRevision ? () => void approvalActions.requestRevision() : undefined}
       />
     ) : (
       <div className="interrupt-contract-preview__details">

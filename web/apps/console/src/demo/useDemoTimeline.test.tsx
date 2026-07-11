@@ -403,7 +403,7 @@ describe("useDemoTimeline", () => {
     expect(result.current.trace?.frames.length).toBeGreaterThan(0);
   });
 
-  it("replay cancellation stops without consuming submitted branch", async () => {
+  it("replay revision request resumes through the negative branch", async () => {
     vi.useFakeTimers();
     const { result } = renderHook(() => useDemoTimeline(null, vi.fn()));
     act(() => result.current.setMode("replay"));
@@ -412,12 +412,13 @@ describe("useDemoTimeline", () => {
       await act(async () => vi.advanceTimersByTimeAsync(900));
     }
 
-    await act(async () => result.current.cancelReview("Cancelled."));
-    await act(async () => vi.advanceTimersByTimeAsync(1800));
+    await act(async () => result.current.requestRevision("Request revisions."));
 
-    expect(result.current.state.phase).toBe("cancelled");
-    expect(result.current.state.events[result.current.state.appliedCount - 1]?.stage).toBe("interrupt");
-    expect(result.current.output).toBeNull();
+    expect(result.current.state.phase).toBe("paused");
+    expect(result.current.state.events[result.current.state.appliedCount - 1]?.stage).toBe("run_resume");
+    expect(result.current.output?.approved).toBe(false);
+    expect(result.current.output?.created_issues).toHaveLength(0);
+    expect(result.current.trace).toBeNull();
   });
 
   it("missingDeploymentMessage shows when live mode with null target", () => {
@@ -474,7 +475,7 @@ describe("useDemoTimeline", () => {
     expect(result.current.interruptPayload).toBeNull();
   });
 
-  it("live cancellation is terminal and does not advance", async () => {
+  it("live revision request resumes through the negative branch", async () => {
     vi.useFakeTimers();
     mockedCallOperation
       .mockResolvedValueOnce({
@@ -533,6 +534,41 @@ describe("useDemoTimeline", () => {
         exchange: { request: {}, response: {} },
         equivalentCli: "uv run wf run start lda_report_case_study.default --input '<json>'",
         durationMs: 88,
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        operation: "workflow.runs.resume" as const,
+        label: "Resume run",
+        interpreted: {
+          runId: "run_demo",
+          deploymentId: "lda_report_case_study.default",
+          artifactId: "lda_report_case_study",
+          artifactVersion: 1,
+          status: "completed",
+          resumeReadiness: "not_applicable",
+          interrupt: null,
+          outcome: "cancelled",
+          error: null,
+          output: {
+            approved: false,
+            markdown: "# Revision Requested",
+            created_issues: [],
+            selected_issue_ids: [],
+          },
+          diagnostics: [],
+          traceCount: 9,
+          nextActions: {
+            canContinue: false,
+            canSaveNow: null,
+            recommendedNextTool: null,
+            reason: "Run completed after revision was requested.",
+            patchExamples: [],
+            warnings: [],
+          },
+        },
+        exchange: { request: {}, response: {} },
+        equivalentCli: "uv run wf run resume run_demo --payload '<json>'",
+        durationMs: 88,
       });
 
     const { result } = renderHook(() =>
@@ -543,12 +579,12 @@ describe("useDemoTimeline", () => {
     await act(async () => vi.advanceTimersByTimeAsync(900));
     expect(result.current.state.phase).toBe("review");
 
-    await act(async () => result.current.cancelReview("Cancelled."));
-    await act(async () => vi.advanceTimersByTimeAsync(1800));
+    await act(async () => result.current.requestRevision("Request revisions."));
+    await act(async () => result.current.next());
 
-    expect(result.current.state.phase).toBe("cancelled");
-    expect(result.current.output).toBeNull();
-    expect(result.current.trace).toBeNull();
-    expect(mockedCallOperation).toHaveBeenCalledTimes(2);
+    expect(result.current.state.phase).toBe("paused");
+    expect(result.current.output?.approved).toBe(false);
+    expect(result.current.output?.created_issues).toHaveLength(0);
+    expect(mockedCallOperation).toHaveBeenCalledTimes(3);
   });
 });

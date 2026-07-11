@@ -22,7 +22,7 @@ export type TimelineAgentController = {
   readonly runLabel: string;
   readonly runPreparedWorkflow: () => Promise<void>;
   readonly submitSelectedIssues: () => Promise<void>;
-  readonly cancelReview: () => Promise<void>;
+  readonly requestRevision: () => Promise<void>;
 };
 
 const DEFAULT_COMMENT = "Create the selected issue.";
@@ -120,16 +120,15 @@ export const useTimelineAgent = (
     ));
   }, [demo, selectedIssueIds]);
 
-  const cancelReview = useCallback(async () => {
-    await demo.cancelReview("Cancelled by operator.");
-    // Cancellation is terminal in presentation mode. Do not call next() or the UI
-    // would falsely advance into submitted/resume evidence.
+  const requestRevision = useCallback(async () => {
+    await demo.requestRevision("Request revisions before creating issues.");
+    if (modeLabel === "live") await demo.next();
     setMessages((current) => appendToolMessage(
       current,
-      "timeline-agent-cancel",
+      "timeline-agent-revision",
       "resumeIssueReview",
-      {},
-      { outcome: "cancelled" },
+      { approved: false, outcome: "cancelled" },
+      { outcome: "cancelled", label: "revision requested" },
     ));
   }, [demo]);
 
@@ -139,6 +138,6 @@ export const useTimelineAgent = (
     runLabel,
     runPreparedWorkflow,
     submitSelectedIssues,
-    cancelReview,
+    requestRevision,
   };
 };
