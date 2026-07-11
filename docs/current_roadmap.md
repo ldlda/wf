@@ -256,6 +256,8 @@ Recommended next visual slices:
 9. Next: enlarge and simplify the focal proof in Scenes 7-9: authoring/repair,
    agent handoff, and prepared lifecycle. Keep one dominant artifact per beat,
    use the editorial surface, and avoid dark-blue panels outside run evidence.
+   Implementation plan:
+   [`Scenes 7-9 editorial focal proof`](superpowers/plans/2026-07-12-scenes-7-9-editorial-focal-proof.md).
 
 Presentation wishlist / defense readiness:
 
