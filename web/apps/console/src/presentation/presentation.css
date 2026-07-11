@@ -43,6 +43,7 @@
   --authoring-paper: var(--color-editorial-paper, oklch(0.975 0.012 82));
   --authoring-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
   --authoring-muted: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  --authoring-accent: var(--authoring-ink);
   --authoring-rule: color-mix(in oklch, var(--authoring-muted) 32%, transparent);
   background: var(--authoring-paper);
   color: var(--authoring-ink);
@@ -3093,7 +3094,7 @@
 
 .agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__header span,
 .agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__rail li[data-active="true"] span {
-  color: var(--accent-cyan);
+  color: var(--authoring-accent);
 }
 
 .agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__header strong,
@@ -3108,6 +3109,10 @@
 
 .agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__rail li {
   border-color: var(--authoring-rule);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .agent-handoff-scene__rail li[data-active="true"] {
+  border-color: var(--authoring-accent);
 }
 
 .agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread[data-surface="stage"] {
@@ -3143,11 +3148,22 @@
   background: color-mix(in oklch, var(--authoring-paper) 88%, var(--authoring-muted));
 }
 
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger"],
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger"] {
+  color: var(--authoring-muted);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger-icon"],
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger-chevron"],
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger-chevron"] {
+  color: var(--authoring-accent);
+}
+
 .agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread__action button {
-  border-color: var(--accent-cyan);
+  border-color: var(--authoring-accent);
   border-radius: 0.2rem;
-  background: color-mix(in oklch, var(--authoring-paper) 82%, var(--accent-cyan));
-  color: var(--authoring-ink);
+  background: var(--authoring-accent);
+  color: var(--authoring-paper);
 }
 
 /*
@@ -3245,7 +3261,7 @@
 }
 
 .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__rail li[data-active="true"] {
-  border-color: var(--accent-cyan);
+  border-color: var(--authoring-accent);
   background: transparent;
   color: var(--authoring-ink);
 }
@@ -3294,6 +3310,17 @@
   border-radius: 0.2rem;
   background: transparent;
   color: var(--authoring-ink);
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger"],
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger"] {
+  color: var(--authoring-muted);
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger-icon"],
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger-chevron"],
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger-chevron"] {
+  color: var(--authoring-accent);
 }
 
 .agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger"],
