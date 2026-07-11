@@ -172,7 +172,7 @@ export const beatVisualContractFor = (
   beatId: string,
 ): SceneBeatVisualContract => {
   const key = `${sceneId}/${beatId}`;
-  const contract = beatContracts[key];
+  const contract = beatContracts[key as keyof typeof beatContracts];
   if (!contract) throw new Error(`No visual contract for ${key}`);
   return { sceneId, beatId, ...contract };
 };

@@ -241,6 +241,8 @@ const authoringPhaseForBeat = (beatId: string): AuthoringPhaseId => {
 const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
   const projection = projectPreparedAuthoringPhase(authoringPhaseForBeat(beat.id));
   const primaryCommand = projection.commands[0];
+  // The prepared recording is the factual source for this public-operation label.
+  if (!primaryCommand) throw new Error(`Authoring phase ${projection.phase} has no public operation`);
 
   return (
     <>
