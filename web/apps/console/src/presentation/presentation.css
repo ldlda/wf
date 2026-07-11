@@ -3189,7 +3189,7 @@
 /* Scene 9 — persistent assistant beside the dominant phase projection. */
 .prepared-lifecycle-scene {
   display: grid;
-  grid-template-columns: minmax(15rem, 0.35fr) minmax(0, 1.65fr);
+  grid-template-columns: minmax(15rem, 0.35fr) minmax(0, 0.65fr);
   gap: 0.55rem;
   min-height: 0;
   height: 100%;

@@ -37,7 +37,7 @@ describe("presentation.css", () => {
     )?.groups?.body;
 
     expect(sceneBlock).toContain("grid-template-columns:");
-    expect(sceneBlock).toMatch(/minmax\(15rem, 0\.35fr\).*minmax\(0, 1\.65fr\)/);
+    expect(sceneBlock).toMatch(/minmax\(15rem, 0\.35fr\).*minmax\(0, 0\.65fr\)/);
     expect(sceneBlock).toContain("min-height: 0");
     expect(sceneBlock).toContain("overflow: hidden");
     expect(sceneBlock).not.toContain("grid-template-rows:");
