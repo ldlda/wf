@@ -24,7 +24,11 @@ export const Scene8ChatEntry = ({ state, dispatch }: Scene8ChatEntryProps) => {
   };
 
   return (
-    <section className="agent-handoff-scene__entry" aria-label="authoring chat entry">
+    <section
+      className="agent-handoff-scene__entry"
+      aria-label="authoring chat entry"
+      data-entry-phase={state.phase}
+    >
       <div className="agent-handoff-scene__intro">
         <span>Scene 8 · agent handoff</span>
         <h1>What should the workflow author prepare?</h1>
@@ -62,6 +66,7 @@ export const Scene8ChatEntry = ({ state, dispatch }: Scene8ChatEntryProps) => {
             throughPhase="discover"
             activePhase="discover"
             surface="stage"
+            scrollMode="start"
             requestOverride={state.request}
           />
         </div>

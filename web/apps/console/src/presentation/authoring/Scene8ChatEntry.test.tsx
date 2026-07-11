@@ -45,6 +45,10 @@ describe("Scene8ChatEntry", () => {
     await user.click(screen.getByRole("button", { name: "Send" }));
     expect(screen.getByText(/let me inspect the available sources/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /discover.*4 tool calls/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "authoring chat entry" })).toHaveAttribute(
+      "data-entry-phase",
+      "submitted",
+    );
     expect(screen.queryByRole("button", { name: /run prepared workflow/i })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeDisabled();
   });

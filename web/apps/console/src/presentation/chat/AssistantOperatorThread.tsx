@@ -24,6 +24,7 @@ type AssistantOperatorThreadProps = {
   readonly mode: "hidden" | "full" | "rail" | "dock";
   readonly messages: ReadonlyArray<AgentMessage>;
   readonly runAction?: { readonly label: string; readonly disabled: boolean; readonly run: () => void } | undefined;
+  readonly scrollMode?: "active" | "start" | undefined;
   readonly submitApproval?: (() => void) | undefined;
   readonly requestRevision?: (() => void) | undefined;
   readonly ariaLabel?: string | undefined;
@@ -250,6 +251,7 @@ export const AssistantOperatorThread = ({
   mode,
   messages,
   runAction,
+  scrollMode = "active",
   submitApproval,
   requestRevision,
   ariaLabel = "operator conversation",
@@ -282,13 +284,17 @@ export const AssistantOperatorThread = ({
     if (!viewport || !activeGroup) return;
     const bottomAlignedTop = activeGroup.offsetTop + activeGroup.offsetHeight - viewport.clientHeight;
     const dockCenteredTop = activeGroup.offsetTop - (viewport.clientHeight - activeGroup.offsetHeight) / 2;
-    const requestedTop = surface === "dock" ? dockCenteredTop : bottomAlignedTop;
+    const requestedTop = scrollMode === "start"
+      ? 0
+      : surface === "dock"
+        ? dockCenteredTop
+        : bottomAlignedTop;
     const top = Math.min(
       Math.max(0, requestedTop),
       Math.max(0, viewport.scrollHeight - viewport.clientHeight),
     );
     viewport.scrollTop = top;
-  }, [activeToolGroupId, projected, surface]);
+  }, [activeToolGroupId, projected, scrollMode, surface]);
 
   const setToolGroupOpen = useCallback((groupId: string, open: boolean) => {
     setToolGroupOverrides((current) => {

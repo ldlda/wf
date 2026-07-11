@@ -3042,6 +3042,30 @@
   height: 100%;
 }
 
+.agent-handoff-scene__entry[data-entry-phase="submitted"] {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.agent-handoff-scene__entry[data-entry-phase="submitted"] .agent-handoff-scene__entry-thread {
+  grid-row: 2;
+}
+
+.agent-handoff-scene__entry[data-entry-phase="submitted"] .agent-handoff-scene__composer {
+  grid-row: 3;
+  gap: 0.4rem;
+  padding: 0.65rem 1rem;
+  box-shadow: none;
+}
+
+.agent-handoff-scene__entry[data-entry-phase="submitted"] .agent-handoff-scene__composer textarea {
+  min-height: 3.25rem;
+  max-height: 4.5rem;
+}
+
+.agent-handoff-scene__entry[data-entry-phase="submitted"] .agent-handoff-scene__composer-help {
+  display: none;
+}
+
 .agent-handoff-scene__intro {
   width: min(100%, 52rem);
   margin-inline: auto;

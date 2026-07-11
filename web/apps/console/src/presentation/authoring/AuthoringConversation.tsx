@@ -10,6 +10,7 @@ type AuthoringConversationProps = {
   readonly activePhase: AuthoringPhaseId;
   readonly surface: "stage" | "dock";
   readonly requestOverride?: string | undefined;
+  readonly scrollMode?: "active" | "start" | undefined;
   readonly runAction?: { readonly label: string; readonly disabled: boolean; readonly run: () => void } | undefined;
 };
 
@@ -19,6 +20,7 @@ export const AuthoringConversation = ({
   activePhase,
   surface,
   requestOverride,
+  scrollMode,
   runAction,
 }: AuthoringConversationProps) => (
   <AssistantOperatorThread
@@ -26,6 +28,7 @@ export const AuthoringConversation = ({
     surface={surface}
     messages={projectPreparedAuthoringThread(throughPhase, requestOverride)}
     activeToolGroupId={authoringToolGroupId(activePhase)}
+    scrollMode={scrollMode}
     ariaLabel="prepared authoring conversation"
     runAction={runAction}
   />

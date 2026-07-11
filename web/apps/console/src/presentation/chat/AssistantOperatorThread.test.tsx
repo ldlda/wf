@@ -179,6 +179,53 @@ describe("AssistantOperatorThread", () => {
     }
   });
 
+  it("can keep a first-stage group anchored at the start of the transcript", async () => {
+    const setScrollTop = vi.fn();
+    const originalDescriptor = Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "scrollTop");
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "assistant-start-scroll-text",
+        role: "assistant",
+        parts: [
+          { type: "text", text: "The first authoring turn is visible." },
+        ],
+      },
+      {
+        id: "authoring-discover-tools",
+        role: "assistant",
+        parts: [
+          { type: "tool-call", call: { id: "authoring-discover-command-0", name: "workflow.sources.list", input: { phase: "discover" } } },
+          { type: "tool-result", result: { callId: "authoring-discover-command-0", name: "workflow.sources.list", status: "success", output: {} } },
+        ],
+      },
+    ];
+
+    try {
+      Object.defineProperty(HTMLDivElement.prototype, "scrollTop", {
+        configurable: true,
+        get: () => 0,
+        set: setScrollTop,
+      });
+      render(
+        <AssistantOperatorThread
+          mode="full"
+          surface="stage"
+          messages={messages}
+          activeToolGroupId="authoring-discover"
+          scrollMode="start"
+        />,
+      );
+
+      await waitFor(() => expect(setScrollTop).toHaveBeenCalledWith(0));
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(HTMLDivElement.prototype, "scrollTop", originalDescriptor);
+      } else {
+        delete (HTMLDivElement.prototype as { scrollTop?: number }).scrollTop;
+      }
+    }
+  });
+
   it("pairs a lone tool call with its result", () => {
     const messages: ReadonlyArray<AgentMessage> = [
       {
