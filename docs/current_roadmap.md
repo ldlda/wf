@@ -186,11 +186,12 @@ Presentation visual audit, July 11:
 
 - Baseline-good: Scenes 3, 4, and 5 are good enough for now. Do not churn them
   unless a later rehearsal exposes a concrete problem.
-- Partially complete: Scenes 2, 6, and 7 have concrete focal artifacts, and
-  Scenes 8-10 share a prepared authoring/run spine. Scene 1 still needs a
-  title-composition repair so it introduces the agent-shaped product goal
-  before Scene 2 explains the automation problem. Design:
-  [`presentation opening title`](superpowers/specs/2026-07-11-presentation-opening-title-design.md).
+- Completed: Scene 1 introduces the agent-shaped product goal through
+  `Planner -> Tool surface -> Runner / platform`, then identifies the last
+  role as the implemented contribution. Scene 2 remains responsible for the
+  automation problem. Scenes 2, 6, and 7 retain their concrete focal artifacts,
+  and Scenes 8-10 share a prepared authoring/run spine. Implementation:
+  [`presentation opening title`](historical/superpowers/plans/2026-07-11-presentation-opening-title.md).
 - Completed: Scenes 11-12 now use decision-led approval, continuation-led
   resume/output, and compact factual trace rows so approval, resume, output,
   and trace remain factual without competing panels or repeated low-signal
@@ -242,11 +243,11 @@ Recommended next visual slices:
     authentic external-agent handoff and factual prepared-authoring proof.
     Implementation:
     [`presentation agent authoring story plan`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
-7. Next: rebuild Scene 1 as an agent-shaped title composition: `Planner ->
-   Tool surface -> Runner / platform`, with the last role labelled
-   `Implemented contribution`. Keep Scene 2 responsible for the automation
-   problem. Design:
-   [`presentation opening title`](superpowers/specs/2026-07-11-presentation-opening-title-design.md).
+7. Completed: Scene 1 now introduces the agent-shaped product goal through
+   `Planner -> Tool surface -> Runner / platform`, then identifies the last role
+   as the implemented contribution. Scene 2 remains responsible for the
+   automation problem. Implementation:
+   [`presentation opening title`](historical/superpowers/plans/2026-07-11-presentation-opening-title.md).
 8. Next: harden the live/replay defense rehearsal path, including submitted and
    revision-requested same-run resumes, replay fallback, exact deep links, and
    reset instructions. Design:

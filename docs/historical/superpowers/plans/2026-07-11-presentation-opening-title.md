@@ -41,7 +41,7 @@ presentation CSS and concept SVG primitives.
 - Produces: `OpeningThesisScene` markup with `data-opening-focus="title" |
   "contribution"`, a main heading, and an agent-role group.
 
-- [ ] **Step 1: Write failing title-beat assertions**
+- [x] **Step 1: Write failing title-beat assertions**
 
 ```tsx
 const opening = screen.getByRole("region", { name: /thesis opening/i });
@@ -52,7 +52,7 @@ expect(screen.queryByRole("heading", { name: "Thesis" })).not.toBeInTheDocument(
 expect(screen.queryByText("Decomposed")).not.toBeInTheDocument();
 ```
 
-- [ ] **Step 2: Run the title-beat test and verify it fails**
+- [x] **Step 2: Run the title-beat test and verify it fails**
 
 Run:
 
@@ -63,7 +63,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/opening/OpeningThe
 Expected: FAIL because the main heading is currently `Thesis` and the agent
 roles retain the old `AI agent components` label.
 
-- [ ] **Step 3: Write failing contribution-beat assertions**
+- [x] **Step 3: Write failing contribution-beat assertions**
 
 ```tsx
 render(<OpeningThesisScene scene={thesisScene} beat={findBeat("thesis", "substrate")!} />);
@@ -77,7 +77,7 @@ expect(screen.getByText("Planner")).toBeInTheDocument();
 expect(screen.getByText("Tool surface")).toBeInTheDocument();
 ```
 
-- [ ] **Step 4: Run the contribution-beat test and verify it fails**
+- [x] **Step 4: Run the contribution-beat test and verify it fails**
 
 Run:
 
@@ -88,7 +88,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/opening/OpeningThe
 Expected: FAIL because the current label is `Workflow Platform` and no
 `Implemented contribution` scope exists.
 
-- [ ] **Step 5: Implement the semantic opening composition**
+- [x] **Step 5: Implement the semantic opening composition**
 
 Replace the old title-card strings and decomposition labels with this structure:
 
@@ -134,7 +134,7 @@ Keep `scene.evidencePointer` after the section. If `ConceptNode` needs to
 accept multi-line metadata, change its `children` wrapper to retain nested
 content without changing its behavior in Scene 2.
 
-- [ ] **Step 6: Run the focused tests and verify they pass**
+- [x] **Step 6: Run the focused tests and verify they pass**
 
 Run:
 
@@ -145,7 +145,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/opening/OpeningThe
 Expected: PASS. Scene 1 tests enforce the new title and contribution wording;
 Scene 2 integration assertions remain unchanged.
 
-- [ ] **Step 7: Commit the semantic composition**
+- [x] **Step 7: Commit the semantic composition**
 
 ```powershell
 git add web/apps/console/src/presentation/opening/OpeningThesisScene.tsx web/apps/console/src/presentation/opening/OpeningThesisScene.test.tsx
@@ -164,7 +164,7 @@ git commit -m "feat: reframe presentation opening as agent roles"
 - Produces: distinct title and contribution layouts controlled solely by
   `data-opening-focus`.
 
-- [ ] **Step 1: Add a failing structural assertion for the connected system**
+- [x] **Step 1: Add a failing structural assertion for the connected system**
 
 ```tsx
 const roles = screen.getByRole("group", { name: "AI agent roles" });
@@ -172,7 +172,7 @@ expect(roles).toHaveClass("opening-thesis__agent-system");
 expect(roles.querySelectorAll("[data-concept-emphasis]")).toHaveLength(3);
 ```
 
-- [ ] **Step 2: Run the test and verify it fails**
+- [x] **Step 2: Run the test and verify it fails**
 
 Run:
 
@@ -183,7 +183,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/opening/OpeningThe
 Expected: FAIL because Scene 1 currently uses the generic concept rail class
 without a Scene 1 system hook.
 
-- [ ] **Step 3: Implement Scene 1-specific layout rules**
+- [x] **Step 3: Implement Scene 1-specific layout rules**
 
 Add `className="opening-thesis__agent-system"` to the Scene 1 `ConceptRail`.
 Replace the existing `.opening-thesis` and `.opening-thesis__title-card` block
@@ -247,7 +247,7 @@ role. It may use cyan text and a solid stage-surface background, but the planner
 and tool roles remain connected context rather than dimmed generic cards. Add a
 `prefers-reduced-motion` override matching the existing presentation rules.
 
-- [ ] **Step 4: Run the focused tests and typecheck**
+- [x] **Step 4: Run the focused tests and typecheck**
 
 Run:
 
@@ -258,7 +258,7 @@ pnpm --dir web --filter @lda/console typecheck
 
 Expected: PASS with no TypeScript errors.
 
-- [ ] **Step 5: Capture both 720p opening beats and inspect them**
+- [x] **Step 5: Capture both 720p opening beats and inspect them**
 
 Run:
 
@@ -273,7 +273,7 @@ Expected: the first screenshot has `An AI Agent for Workspace Workflows` as its
 largest text; the second makes `Runner / platform` clearly dominant without
 clipping the formal title, footer, or role labels.
 
-- [ ] **Step 6: Commit the visual system**
+- [x] **Step 6: Commit the visual system**
 
 ```powershell
 git add web/apps/console/src/presentation/opening/OpeningThesisScene.tsx web/apps/console/src/presentation/opening/OpeningThesisScene.test.tsx web/apps/console/src/presentation/presentation.css
@@ -292,7 +292,7 @@ git commit -m "style: connect presentation opening agent roles"
 - Produces: a roadmap that accurately marks the Scene 1 title slice complete
   and retains the separate rehearsal slice as next work.
 
-- [ ] **Step 1: Update the roadmap entry**
+- [x] **Step 1: Update the roadmap entry**
 
 Replace the current Scene 1 next-slice wording with:
 
@@ -304,7 +304,7 @@ Replace the current Scene 1 next-slice wording with:
    [`presentation opening title`](historical/superpowers/plans/2026-07-11-presentation-opening-title.md).
 ```
 
-- [ ] **Step 2: Run the full web verification suite**
+- [x] **Step 2: Run the full web verification suite**
 
 Run:
 
@@ -318,7 +318,7 @@ git diff --check
 Expected: all workspace tests, typechecks, and builds pass. The existing Vite
 chunk-size warning may remain; do not change bundle configuration in this slice.
 
-- [ ] **Step 3: Archive the completed plan and commit documentation**
+- [x] **Step 3: Archive the completed plan and commit documentation**
 
 ```powershell
 Move-Item docs/superpowers/plans/2026-07-11-presentation-opening-title.md docs/historical/superpowers/plans/2026-07-11-presentation-opening-title.md
