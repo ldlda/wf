@@ -95,12 +95,11 @@ export const PresentationRoute = () => {
   }, []);
 
   useEffect(() => {
-    // Scene deep-links need the recorded demo state before the operator starts a live run.
-    // The chat action can still switch the shared timeline to live via start("live").
-    if (demo.state.phase === "ready" && demo.state.mode !== "replay") {
-      demo.setMode("replay");
-    }
-  }, [demo.state.phase, demo.state.mode, demo.setMode]);
+    if (demo.state.phase !== "ready") return;
+    // The resolved target owns the initial mode: a healthy loopback target must
+    // remain live, while an invalid target starts from the offline recording.
+    if (demo.state.mode !== presentationTarget.mode) demo.setMode(presentationTarget.mode);
+  }, [demo.setMode, demo.state.mode, demo.state.phase, presentationTarget.mode]);
 
   useEffect(() => {
     if (demo.state.phase === "ready" && demo.state.mode === "replay") {

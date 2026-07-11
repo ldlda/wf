@@ -207,6 +207,17 @@ describe("PresentationRoute", () => {
     expect(await screen.findByRole("button", { name: /run prepared workflow/i })).toBeInTheDocument();
   });
 
+  it("does not prime replay evidence on a live direct hash", async () => {
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    window.location.hash = "#scene/typed-human-boundary/approval";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByText(/Live target is ready/i)).toBeInTheDocument();
+    expect(screen.queryByText("Workflow input")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+  });
+
   it("updates the chat intro after the live health probe succeeds", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
     const { PresentationRoute } = await import("./PresentationRoute.js");
@@ -228,6 +239,7 @@ describe("PresentationRoute", () => {
   });
 
   it("renders replay-backed approval evidence on a direct approval hash", async () => {
+    setReplayMode();
     window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -311,6 +323,7 @@ describe("PresentationRoute", () => {
   });
 
   it("opens approval with enabled approval controls immediately after priming", async () => {
+    setReplayMode();
     window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -320,6 +333,7 @@ describe("PresentationRoute", () => {
   });
 
   it("opens resume with resume operation proof immediately after priming", async () => {
+    setReplayMode();
     window.location.hash = "#scene/resume-output-evidence/resume";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -328,6 +342,7 @@ describe("PresentationRoute", () => {
   });
 
   it("direct approval route primes interrupt payload but not output", async () => {
+    setReplayMode();
     window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -337,6 +352,7 @@ describe("PresentationRoute", () => {
   });
 
   it("direct resume route primes resume and output proof", async () => {
+    setReplayMode();
     window.location.hash = "#scene/resume-output-evidence/resume";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -360,6 +376,7 @@ describe("PresentationRoute", () => {
   });
 
   it("direct trace route primes trace frames", async () => {
+    setReplayMode();
     window.location.hash = "#scene/resume-output-evidence/trace";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -372,6 +389,7 @@ describe("PresentationRoute", () => {
   });
 
   it("keeps trace frames when navigating from output to trace", async () => {
+    setReplayMode();
     window.location.hash = "#scene/resume-output-evidence/output";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
