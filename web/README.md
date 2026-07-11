@@ -172,7 +172,7 @@ The console exposes `/present`, a 720p no-scroll defense compositor for the
 prepared `lda_report_workflow` story. It renders a 14-scene, multi-beat
 storyboard (expanded from the original 12-scene defense plan; items 13 and 14
 now cover evaluation and closing) with an adaptive aspect-ratio canvas, stable
-stage regions, discussion branches, act themes, a chat dock, and keyboard
+stage regions, discussion branches, one editorial canvas, a chat dock, and keyboard
 navigation.
 
 The final presentation beats frame the evaluation as bounded evidence, make
@@ -186,10 +186,11 @@ with the same conversation contracted into a synchronized bottom dock. Each
 phase opens its matching prepared tool group beneath a factual source, graph,
 repair, artifact, or deployment view. Neither scene calls workflow authoring
 RPC operations — they consume deterministic prepared data. Scenes 10 through
-12 use
-the canonical replay to show run, interrupt, approval, resume, output, and
-trace. Raw protocol payloads are available through the evidence receipt and
-inspector.
+12 use the canonical replay by default when no live target is available. When
+the resolved target is healthy, the same prepared run flow can execute through
+the public JSON-RPC operations and record live evidence using the same
+DemoRunFacts projection. Raw protocol payloads are available through the
+evidence receipt and inspector.
 
 The presentation chat surface is source-owned and follows the AI Elements
 conversation/message/tool/prompt-action model. It currently renders the

@@ -177,22 +177,22 @@ Implementation order:
     that never calls workflow authoring RPC operations during Scene 9
     navigation. Implementation:
     [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
+26. Active: compress Scene 11 typed approval and Scene 12 resume/output/trace
+    evidence into a decision-led, continuation-led presentation, and restore
+    live prepared-run activation against the configured JSON-RPC target.
+    Implementation plan:
+    [`Scene 11-12 evidence and live activation`](superpowers/plans/2026-07-11-scene-11-12-live-evidence.md).
 
-Presentation visual audit, July 10:
+Presentation visual audit, July 11:
 
 - Baseline-good: Scenes 3, 4, and 5 are good enough for now. Do not churn them
   unless a later rehearsal exposes a concrete problem.
-- Needs primary visual treatment: Scenes 1 and 2 still carry too much thesis
-  framing as text. They need a clear opening artifact: product title boundary,
-  problem shape, and "tool loop vs durable workflow" contrast.
-- Needs cleanup, not reinvention: Scene 6 has the right interactive figure
-  foundation but still needs figure-specific polish where focus paths crowd or
-  hide labels.
-- Needs visual strengthening: Scene 7 explains authoring but should show more
-  product evidence and less generic process language.
-- Needs product-flow cohesion: Scenes 8-12 now have the right factual spine,
-  but the demo surfaces still need stronger hierarchy between chat, operation,
-  lifecycle, graph, interrupt, output, and evidence.
+- Completed: Scenes 1, 2, 6, and 7 now have concrete focal artifacts, and
+  Scenes 8-10 share a prepared authoring/run spine.
+- Active: Scenes 11-12 need evidence compression so approval, resume, output,
+  and trace remain factual without competing panels or repeated low-signal
+  values. The prepared live target must also remain live instead of being reset
+  to replay during route initialization.
 - Completed: Scenes 13 and 14 now close with a bounded evaluation board,
   contribution boundary/future-work map, and canonical defense-question index.
 
