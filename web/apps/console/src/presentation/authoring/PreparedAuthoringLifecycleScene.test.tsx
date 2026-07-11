@@ -83,4 +83,16 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(active).toBeInTheDocument();
     expect(active).toHaveTextContent("Deployment");
   });
+
+  it("falls back to discovery for an unexpected storyboard beat", () => {
+    const scene = findScene("prepared-lifecycle")!;
+    const knownBeat = findBeat("prepared-lifecycle", "discover")!;
+    const unexpectedBeat = { ...knownBeat, id: "unexpected" };
+
+    render(<PreparedAuthoringLifecycleScene scene={scene} beat={unexpectedBeat} />);
+
+    expect(screen.getByRole("region", { name: "discovery evidence" })).toBeInTheDocument();
+    expect(screen.getByLabelText("authoring phase rail").querySelector("[data-active='true']"))
+      .toHaveTextContent("Discover");
+  });
 });

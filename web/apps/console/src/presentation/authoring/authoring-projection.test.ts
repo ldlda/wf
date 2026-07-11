@@ -49,8 +49,10 @@ describe("projectPreparedAuthoringPhase", () => {
     const diagnosticCmd = phase.commands.find(
       (cmd) => cmd.result === "diagnostic" && cmd.detail?.includes("no state projection"),
     );
+    const repairCmd = phase.commands.find((cmd) => cmd.command.includes("draft set-output"));
     expect(diagnosticCmd).toBeDefined();
-    expect(phase.commands.some((cmd) => cmd.command.includes("draft set-output"))).toBe(true);
+    expect(repairCmd).toBeDefined();
+    expect(diagnosticCmd).not.toBe(repairCmd);
   });
 
   it("uses real public command syntax from the recording", () => {

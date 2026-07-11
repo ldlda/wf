@@ -405,7 +405,9 @@ describe("useDemoTimeline", () => {
 
   it("replay revision request resumes through the negative branch", async () => {
     vi.useFakeTimers();
-    const { result } = renderHook(() => useDemoTimeline(null, vi.fn()));
+    const { result } = renderHook(() =>
+      useDemoTimeline("http://127.0.0.1:8765/rpc", vi.fn()),
+    );
     act(() => result.current.setMode("replay"));
     act(() => result.current.start());
     for (let i = 0; i < 3; i++) {

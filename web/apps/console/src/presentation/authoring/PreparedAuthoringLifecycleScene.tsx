@@ -26,7 +26,9 @@ const phases: readonly { readonly id: AuthoringPhaseId; readonly label: string }
  * remains below the canvas as a beat-synchronized assistant dock.
  */
 export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthoringLifecycleSceneProps) => {
-  const beatId = beat.id as AuthoringPhaseId;
+  // Storyboard beats normally match these IDs. Discovery is a safe projection
+  // if a future beat reaches this scene before its authoring mapping is added.
+  const beatId = phases.find((phase) => phase.id === beat.id)?.id ?? "discover";
   const projection = projectPreparedAuthoringPhase(beatId);
 
   return (

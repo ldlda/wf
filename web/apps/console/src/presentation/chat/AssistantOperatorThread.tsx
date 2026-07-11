@@ -157,7 +157,7 @@ const AssistantMessageBody = ({
     const part = parts[index]!;
     if (part.type === "text") {
       rendered.push(
-        <p key={`text-${part.text}`} style={{ whiteSpace: "pre-line" }}>{part.text}</p>,
+        <p key={`text-${index}`} style={{ whiteSpace: "pre-line" }}>{part.text}</p>,
       );
       index += 1;
       continue;
@@ -174,9 +174,14 @@ const AssistantMessageBody = ({
     const logicalTools = calls.length > 0 ? calls : toolRun;
 
     if (logicalTools.length === 1 && !messageId.startsWith("authoring-")) {
+      const tool = logicalTools[0]!;
+      const pairedResult = tool.type === "tool-call"
+        ? toolRun.find((candidate): candidate is Extract<ToolRenderPart, { readonly type: "tool-result" }> =>
+            candidate.type === "tool-result" && candidate.toolCallId === tool.toolCallId)
+        : undefined;
       rendered.push(
-        <div key={`tool-${logicalTools[0]!.toolCallId ?? logicalTools[0]!.toolName}`}>
-          {renderContentPart(logicalTools[0]!, submitApproval, requestRevision)}
+        <div key={`tool-${tool.toolCallId ?? tool.toolName}`}>
+          {renderContentPart(tool, submitApproval, requestRevision, undefined, pairedResult)}
         </div>,
       );
       continue;

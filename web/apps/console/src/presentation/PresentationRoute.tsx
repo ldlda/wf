@@ -186,7 +186,7 @@ export const PresentationRoute = () => {
 
     setApprovalState("revision_requested");
     await demo.requestRevision("Request revisions before creating issues.");
-    if (presentationTarget.mode === "live") await demo.next();
+    if (demo.state.mode === "live") await demo.next();
     dispatch({
       type: "jump",
       location: {

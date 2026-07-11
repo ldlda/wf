@@ -294,7 +294,7 @@ export const useDemoTimeline = (
       comment,
       outcome: "cancelled",
     };
-    if (target === null) {
+    if (state.mode === "replay") {
       const recording = activeRecording.current;
       if (recording) {
         const revisionRecording = revisionReplayRecording(recording);
@@ -312,7 +312,7 @@ export const useDemoTimeline = (
       return;
     }
     dispatch({ type: "continue_review" });
-  }, [projectTransientState, resetRuntime, target]);
+  }, [projectTransientState, resetRuntime, state.mode]);
 
   const restart = useCallback(() => {
     resetRuntime();

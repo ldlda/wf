@@ -341,9 +341,10 @@ describe("PresentationRoute", () => {
     expect(screen.getByRole("button", { name: "Request revision" })).toBeEnabled();
   });
 
-  it("requests revision and resumes Scene 10 through the negative branch", async () => {
+  it("keeps a replay fallback on the revision-requested branch despite a configured live target", async () => {
     const user = userEvent.setup();
-    setReplayMode();
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    mockedCallOperation.mockRejectedValue(new Error("target unavailable"));
     window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);

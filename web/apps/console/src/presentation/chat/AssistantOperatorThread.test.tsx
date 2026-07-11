@@ -142,11 +142,7 @@ describe("AssistantOperatorThread", () => {
 
   it("scrolls the active authoring group into the dock viewport", async () => {
     const setScrollTop = vi.fn();
-    Object.defineProperty(HTMLDivElement.prototype, "scrollTop", {
-      configurable: true,
-      get: () => 0,
-      set: setScrollTop,
-    });
+    const originalDescriptor = Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "scrollTop");
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "authoring-draft-tools",
@@ -158,16 +154,47 @@ describe("AssistantOperatorThread", () => {
       },
     ];
 
-    render(
-      <AssistantOperatorThread
-        mode="dock"
-        surface="dock"
-        messages={messages}
-        activeToolGroupId="authoring-draft"
-      />,
-    );
+    try {
+      Object.defineProperty(HTMLDivElement.prototype, "scrollTop", {
+        configurable: true,
+        get: () => 0,
+        set: setScrollTop,
+      });
+      render(
+        <AssistantOperatorThread
+          mode="dock"
+          surface="dock"
+          messages={messages}
+          activeToolGroupId="authoring-draft"
+        />,
+      );
 
-    await waitFor(() => expect(setScrollTop).toHaveBeenCalledWith(0));
+      await waitFor(() => expect(setScrollTop).toHaveBeenCalledWith(0));
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(HTMLDivElement.prototype, "scrollTop", originalDescriptor);
+      } else {
+        delete (HTMLDivElement.prototype as { scrollTop?: number }).scrollTop;
+      }
+    }
+  });
+
+  it("pairs a lone tool call with its result", () => {
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "assistant-tool-result",
+        role: "assistant",
+        parts: [
+          { type: "tool-call", call: { id: "call-1", name: "readRunTrace", input: {} } },
+          { type: "tool-result", result: { callId: "call-1", name: "readRunTrace", status: "success", output: { frames: 3 } } },
+        ],
+      },
+    ];
+
+    const { container } = render(<AssistantOperatorThread mode="dock" messages={messages} />);
+
+    expect(container.querySelector('[data-slot="tool-fallback-result"]')).toBeInTheDocument();
+    expect(screen.getByText(/"frames": 3/)).toBeInTheDocument();
   });
 
   it("renders structured tool results through the generated fallback result slot", () => {

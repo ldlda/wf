@@ -167,8 +167,7 @@ Implementation order:
     shows input/interruption/decision only, and resume/output/trace expose
     scroll-contained proof panes. Implementation:
     [`presentation demo proof composition`](historical/superpowers/plans/2026-07-09-presentation-demo-proof-composition.md).
-23. Future: presenter companion, final scene visuals, evidence assets, and
-    rehearsal timing.
+23. Future: presenter companion and defense evidence assets.
 24. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 25. Completed: presentation agent authoring story creates a canonical prepared
