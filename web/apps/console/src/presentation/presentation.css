@@ -1512,7 +1512,7 @@
 }
 
 .scene-body__authoring-node[data-authoring-past="true"] {
-  opacity: 0.76;
+  opacity: 1;
 }
 
 .scene-body__authoring-node small {
@@ -2367,7 +2367,7 @@
 .assistant-operator-thread[data-surface="dock"] {
   height: 100%;
   border-top: 1px solid var(--stage-line);
-  transition: height 200ms cubic-bezier(0.22, 1, 0.36, 1);
+  transition: opacity 180ms ease, border-color 180ms ease;
 }
 
 .assistant-operator-thread[data-surface="dock"] .assistant-thread {
@@ -3225,7 +3225,7 @@
   --authoring-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
   --authoring-muted: var(--color-editorial-muted, oklch(0.48 0.025 65));
   --authoring-rule: color-mix(in oklch, var(--authoring-muted) 32%, transparent);
-  grid-template-rows: auto minmax(0, 1fr) minmax(7rem, 30%);
+  grid-template-rows: auto minmax(0, 1fr) minmax(9rem, 34%);
   gap: 0;
   background: var(--authoring-paper);
   color: var(--authoring-ink);
@@ -3294,6 +3294,13 @@
   border-radius: 0.2rem;
   background: transparent;
   color: var(--authoring-ink);
+}
+
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger"],
+.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger"],
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger"],
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger"] {
+  text-transform: none;
 }
 
 .problem-loop-scene[data-problem-focus="tool-loop"] {

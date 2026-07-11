@@ -280,12 +280,15 @@ export const AssistantOperatorThread = ({
     const activeGroup = viewport
       ?.querySelector<HTMLElement>(`[data-tool-group-id="${activeToolGroupId}"]`);
     if (!viewport || !activeGroup) return;
-    const top = Math.max(
-      0,
-      activeGroup.offsetTop + activeGroup.offsetHeight - viewport.clientHeight,
+    const bottomAlignedTop = activeGroup.offsetTop + activeGroup.offsetHeight - viewport.clientHeight;
+    const dockCenteredTop = activeGroup.offsetTop - (viewport.clientHeight - activeGroup.offsetHeight) / 2;
+    const requestedTop = surface === "dock" ? dockCenteredTop : bottomAlignedTop;
+    const top = Math.min(
+      Math.max(0, requestedTop),
+      Math.max(0, viewport.scrollHeight - viewport.clientHeight),
     );
     viewport.scrollTop = top;
-  }, [activeToolGroupId, projected]);
+  }, [activeToolGroupId, projected, surface]);
 
   const setToolGroupOpen = useCallback((groupId: string, open: boolean) => {
     setToolGroupOverrides((current) => {

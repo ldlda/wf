@@ -253,11 +253,13 @@ Recommended next visual slices:
    deterministic replay fallback, current deep links, and reset instructions.
    Implementation:
    [`defense presentation rehearsal`](historical/superpowers/plans/2026-07-12-defense-presentation-rehearsal.md).
-9. Next: enlarge and simplify the focal proof in Scenes 7-9: authoring/repair,
-   agent handoff, and prepared lifecycle. Keep one dominant artifact per beat,
-   use the editorial surface, and avoid dark-blue panels outside run evidence.
-   Implementation plan:
-   [`Scenes 7-9 editorial focal proof`](superpowers/plans/2026-07-12-scenes-7-9-editorial-focal-proof.md).
+9. Completed: Scenes 7-9 now use one dominant factual artifact per beat on the
+   Editorial Canvas: authoring/repair evidence, an authentic light agent chat,
+   and a light prepared lifecycle canvas with synchronized secondary chat.
+   Implementation:
+   [`Scenes 7-9 editorial focal proof`](historical/superpowers/plans/2026-07-12-scenes-7-9-editorial-focal-proof.md).
+10. Next: revise the remaining visual outliers only when a screenshot identifies
+    a concrete hierarchy, overflow, or factual-readability problem.
 
 Presentation wishlist / defense readiness:
 
