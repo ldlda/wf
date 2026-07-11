@@ -214,7 +214,13 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByRole("button", { name: /run prepared workflow|run replay walkthrough/i })).toBeInTheDocument();
+    const actions = await screen.findAllByRole("button", {
+      name: /run prepared workflow|run replay walkthrough/i,
+    });
+    expect(actions.length).toBeGreaterThanOrEqual(1);
+    expect(
+      document.querySelector(".agent-handoff-scene .assistant-operator-thread__action button"),
+    ).toBeInTheDocument();
   });
 
   it("uses stored target for live presentation mode", async () => {

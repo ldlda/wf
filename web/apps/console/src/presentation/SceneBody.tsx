@@ -1,4 +1,5 @@
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
+import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
 import type { DemoApprovalActions } from "./demo-approval-actions.js";
 import { AgentHandoffScene } from "./authoring/AgentHandoffScene.js";
 import {
@@ -25,6 +26,7 @@ import { ProblemLoopScene } from "./opening/ProblemLoopScene.js";
 type SceneBodyProps = {
   readonly location: PresentationLocation;
   readonly demo: DemoTimelineController;
+  readonly timelineAgent?: TimelineAgentController | undefined;
   readonly selectedNodeId: string | null;
   readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
@@ -303,7 +305,7 @@ const assertNever = (value: never): never => {
   throw new Error(`Unexpected view: ${value}`);
 };
 
-export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions }: SceneBodyProps) => {
+export const SceneBody = ({ location, demo, timelineAgent, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions }: SceneBodyProps) => {
   const sceneId = location.kind === "main" ? location.sceneId : "positioning";
   const beatId = location.kind === "main" ? location.beatId : "landscape";
   const scene = findScene(sceneId) ?? findScene("thesis")!;
@@ -339,7 +341,7 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
     case "authoring":
       return <AuthoringScene scene={scene} beat={beat} />;
     case "agent":
-      return <AgentHandoffScene scene={scene} beat={beat} />;
+      return <AgentHandoffScene scene={scene} beat={beat} timelineAgent={timelineAgent} />;
       case "demo-lifecycle":
       return <PreparedAuthoringLifecycleScene scene={scene} beat={beat} />;
     case "demo":

@@ -1,5 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import type { TimelineAgentController } from "../../demo/agent/timelineAgent.js";
 import { findBeat, findScene } from "../storyboard.js";
 import { AgentHandoffScene } from "./AgentHandoffScene.js";
 
@@ -67,5 +68,30 @@ describe("AgentHandoffScene", () => {
     cleanup();
     renderBeat("handoff");
     expect(screen.queryByText("prepared workflow lifecycle")).not.toBeInTheDocument();
+  });
+
+  it("exposes the live prepared-workflow action inside the visible conversation", () => {
+    const runPreparedWorkflow = vi.fn();
+    const timelineAgent = {
+      messages: [],
+      canRun: true,
+      runLabel: "Run prepared workflow",
+      runPreparedWorkflow,
+      submitSelectedIssues: vi.fn(async () => {}),
+      cancelReview: vi.fn(async () => {}),
+    } as unknown as TimelineAgentController;
+
+    render(
+      <AgentHandoffScene
+        scene={findScene("agent-handoff")!}
+        beat={findBeat("agent-handoff", "request")!}
+        timelineAgent={timelineAgent}
+      />,
+    );
+
+    const action = screen.getByRole("button", { name: "Run prepared workflow" });
+    expect(action).toBeEnabled();
+    action.click();
+    expect(runPreparedWorkflow).toHaveBeenCalledOnce();
   });
 });

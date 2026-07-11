@@ -75,6 +75,7 @@ export const PresentationStage = ({
               <SceneBody
                 location={state.location}
                 demo={demo}
+                timelineAgent={timelineAgent}
                 selectedNodeId={state.selectedNodeId}
                 selectNode={selectNode}
                 openEvidence={openEvidence}

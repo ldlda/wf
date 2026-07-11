@@ -1,10 +1,12 @@
 import { AuthoringConversation } from "./AuthoringConversation.js";
 import type { AuthoringPhaseId } from "./authoring-recording.js";
+import type { TimelineAgentController } from "../../demo/agent/timelineAgent.js";
 import type { SceneBeatDefinition, SceneDefinition } from "../storyboard.js";
 
 type AgentHandoffSceneProps = {
   readonly scene: SceneDefinition;
   readonly beat: SceneBeatDefinition;
+  readonly timelineAgent?: TimelineAgentController | undefined;
 };
 
 /**
@@ -12,10 +14,10 @@ type AgentHandoffSceneProps = {
  *
  * The request beat shows the operator asking the agent to prepare a report;
  * the handoff beat reveals the full completed conversation with all phases.
- * Neither run actions nor approval actions are passed because this is a
- * prepared recording, not a live agent interaction.
+ * The conversation is a prepared recording, but the shared run action can
+ * start the configured live workflow when a target is available.
  */
-export const AgentHandoffScene = ({ beat }: AgentHandoffSceneProps) => {
+export const AgentHandoffScene = ({ beat, timelineAgent }: AgentHandoffSceneProps) => {
   const phase: AuthoringPhaseId = beat.id === "handoff" ? "deployment" : "discover";
   const phases: readonly { readonly id: AuthoringPhaseId; readonly label: string }[] = [
     { id: "discover", label: "Discover" },
@@ -46,6 +48,11 @@ export const AgentHandoffScene = ({ beat }: AgentHandoffSceneProps) => {
           throughPhase={phase}
           activePhase={phase}
           surface="stage"
+          runAction={timelineAgent ? {
+            label: timelineAgent.runLabel,
+            disabled: !timelineAgent.canRun,
+            run: () => { void timelineAgent.runPreparedWorkflow(); },
+          } : undefined}
         />
       </div>
     </section>
