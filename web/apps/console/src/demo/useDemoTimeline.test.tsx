@@ -332,6 +332,14 @@ describe("useDemoTimeline", () => {
 
     expect(result.current.state.phase).toBe("completed");
     expect(result.current.trace?.frames).toHaveLength(1);
+    expect(mockedCallOperation.mock.calls.map(([operation]) => operation)).toEqual([
+      "workflow.deployments.inspect",
+      "workflow.runs.start",
+      "workflow.runs.resume",
+      "workflow.runs.trace",
+    ]);
+    await act(async () => vi.advanceTimersByTimeAsync(1800));
+    expect(mockedCallOperation).toHaveBeenCalledTimes(4);
   });
 
   it("shows a failed phase when a live operation rejects", async () => {
@@ -439,6 +447,20 @@ describe("useDemoTimeline", () => {
     expect(result.current.state.phase).toBe("paused");
     expect(result.current.output?.created_issues).toHaveLength(1);
     expect(result.current.state.events[result.current.state.appliedCount - 1]?.stage).toBe("run_resume");
+  });
+
+  it("primes replay to trace_read with all canonical trace frames", () => {
+    const { result } = renderHook(() => useDemoTimeline("http://127.0.0.1:8765/rpc", vi.fn()));
+
+    act(() => result.current.start("replay"));
+    act(() => result.current.primeReplayToStage("trace_read"));
+
+    expect(result.current.state.events[result.current.state.appliedCount - 1]?.stage).toBe("trace_read");
+    expect(result.current.trace?.frames.map((frame) => frame.nodeId)).toEqual([
+      "list_documents",
+      "review_issues",
+      "finalise_report",
+    ]);
   });
 
   it("does not prime live timelines", () => {

@@ -232,6 +232,7 @@ describe("RunTraceFacts", () => {
 
     expect(screen.getByText("list_documents")).toBeDefined();
     expect(screen.getByText("review_issues")).toBeDefined();
+    expect(screen.getByText("2 captured")).toBeInTheDocument();
     expect(screen.getAllByText("captured as empty object").length).toBeGreaterThanOrEqual(2);
   });
 

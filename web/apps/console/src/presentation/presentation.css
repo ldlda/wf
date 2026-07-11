@@ -2206,6 +2206,13 @@
   color: var(--accent-cyan);
 }
 
+.run-facts-count {
+  margin-left: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.72em;
+  font-weight: 500;
+}
+
 .run-facts-dl {
   display: grid;
   grid-template-columns: auto 1fr;

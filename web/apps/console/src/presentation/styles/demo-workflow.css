@@ -1453,4 +1453,23 @@
   .guided-product-moment__trace-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+
+  .guided-product-moment[data-moment="trace"] .guided-product-moment__trace-grid {
+    grid-template-rows: minmax(0, 1fr) auto;
+  }
+
+  .guided-product-moment[data-moment="trace"] .run-facts-card[data-output-priority="summary"] {
+    max-height: 7.25rem;
+    overflow: auto;
+    padding: 0.65rem 0.8rem;
+  }
+
+  .guided-product-moment[data-moment="trace"] .run-facts-card[data-output-priority="summary"] h3 {
+    margin-bottom: 0.4rem;
+  }
+
+  .guided-product-moment[data-moment="trace"] .run-facts-card[data-output-priority="summary"] .run-facts-dl {
+    gap: 0.2rem 0.55rem;
+    font-size: 0.76rem;
+  }
 }

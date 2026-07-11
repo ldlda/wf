@@ -366,6 +366,22 @@ describe("PresentationRoute", () => {
 
     expect(await screen.findByRole("region", { name: /workflow trace frames/i })).toBeInTheDocument();
     expect(screen.queryByText("No trace frames captured.")).not.toBeInTheDocument();
+    expect(screen.getByText("list_documents")).toBeInTheDocument();
+    expect(screen.getByText("review_issues")).toBeInTheDocument();
+    expect(screen.getByText("finalise_report")).toBeInTheDocument();
+  });
+
+  it("keeps trace frames when navigating from output to trace", async () => {
+    window.location.hash = "#scene/resume-output-evidence/output";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("region", { name: /workflow output report/i })).toBeInTheDocument();
+    window.location.hash = "#scene/resume-output-evidence/trace";
+    fireEvent(window, new Event("hashchange"));
+
+    expect(await screen.findByText("finalise_report")).toBeInTheDocument();
+    expect(screen.queryByText("No trace frames captured.")).not.toBeInTheDocument();
   });
 
   it("navigates to Scene 8 request beat via hash", async () => {
