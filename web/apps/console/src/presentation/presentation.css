@@ -19,6 +19,16 @@
   --chat-width: 18rem;
 }
 
+.presentation-canvas[data-stage-theme="night"] .presentation-stage__primary {
+  background: var(--stage-canvas);
+  color: var(--text-primary);
+}
+
+.presentation-canvas[data-stage-theme="paper"] .presentation-stage__primary {
+  background: var(--color-editorial-paper, oklch(0.975 0.012 82));
+  color: var(--color-editorial-ink, oklch(0.19 0.015 65));
+}
+
 .presentation-stage {
   --presentation-footer-height: 2.5rem;
   position: relative;
@@ -1543,7 +1553,19 @@
 }
 
 .scene-body__authoring-evidence .authoring-visual {
-  min-height: 11rem;
+  min-height: 0;
+  overflow: auto;
+}
+
+.scene-body__authoring-evidence .authoring-visual--repair {
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 0.55rem 0.8rem;
+}
+
+.scene-body__authoring-evidence .authoring-repair__diagnostic,
+.scene-body__authoring-evidence .authoring-repair__correction {
+  min-height: 6.5rem;
+  padding: 0.75rem;
 }
 
 .scene-body__authoring-composition .scene-body__authoring-loop {
@@ -2834,6 +2856,9 @@
   min-height: 0;
   height: 100%;
   margin-inline: auto;
+  border-radius: 0.35rem;
+  background: var(--stage-canvas);
+  color: var(--text-primary);
 }
 
 .agent-handoff-scene__header {

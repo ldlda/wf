@@ -40,3 +40,8 @@
   container-name: presentation-canvas;
   container-type: inline-size;
 }
+
+.presentation-canvas[data-stage-theme="night"] {
+  background: oklch(0.12 0.025 250);
+  color: oklch(0.96 0.01 250);
+}

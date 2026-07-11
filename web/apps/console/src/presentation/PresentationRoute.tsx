@@ -13,7 +13,7 @@ import {
   presentationReducer,
 } from "./presentation-state.js";
 import { hashForLocation } from "./storyboard-navigation.js";
-import type { MainLocation } from "./storyboard.js";
+import { findScene, type MainLocation } from "./storyboard.js";
 import type { DemoApprovalActions, DemoApprovalUiState } from "./demo-approval-actions.js";
 import "./presentation.css";
 import "./styles/demo-workflow.css";
@@ -224,9 +224,13 @@ export const PresentationRoute = () => {
     [],
   );
 
+  const stageTheme = state.location.kind === "main"
+    ? findScene(state.location.sceneId)?.stageTheme ?? "paper"
+    : "paper";
+
   return (
     <main className="presentation-route" aria-label="lda.chat presentation" data-motion={state.motionDisabled ? "disabled" : "enabled"}>
-      <PresentationCanvas>
+      <PresentationCanvas stageTheme={stageTheme}>
         <PresentationStage
           state={state}
           demo={demo}
