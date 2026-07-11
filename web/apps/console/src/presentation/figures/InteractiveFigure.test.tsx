@@ -186,6 +186,8 @@ describe("InteractiveFigure", () => {
     renderFigure({ focusPath: [], size: "stage" });
     const figure = screen.getByRole("group", { name: /architecture/i });
     expect(figure).toHaveAttribute("data-figure-size", "stage");
+    expect(figure).toHaveAttribute("data-figure-layout", "layered");
+    expect(figure).toHaveAttribute("data-figure-focus-level", "0");
     expect(figure.querySelector(".interactive-figure__canvas")).toBeInTheDocument();
   });
 
@@ -205,6 +207,7 @@ describe("InteractiveFigure", () => {
       "data-pan-zoom",
       "enabled",
     );
+    expect(screen.getByRole("group", { name: /runtime detail/i })).toHaveAttribute("data-figure-focus-level", "1");
   });
 
   it("resets roving focus when focusPath changes", () => {

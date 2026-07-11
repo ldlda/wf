@@ -230,6 +230,8 @@ const InteractiveFigureInner = ({
       data-motion={motionDisabled ? "disabled" : "enabled"}
       data-figure-id={focus.figure.id}
       data-figure-size={size}
+      data-figure-layout={focus.figure.layout.kind}
+      data-figure-focus-level={focus.path.length}
       data-pan-zoom={graphInspectionEnabled ? "enabled" : "disabled"}
       onKeyDown={handleKeyDown}
     >
@@ -237,6 +239,8 @@ const InteractiveFigureInner = ({
         breadcrumbs={focus.breadcrumbs}
         onNavigate={handleBreadcrumbNavigate}
       />
+      {/* React Flow must measure nodes in its unscaled coordinate space. Keep
+          this canvas responsive instead of reintroducing a CSS scale wrapper. */}
       <div className="interactive-figure__canvas" ref={containerRef}>
         <ReactFlow
           nodes={rfNodes}

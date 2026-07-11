@@ -151,6 +151,10 @@
   height: 100%;
 }
 
+.interactive-figure[data-figure-size="stage"][data-figure-layout="flow"] .interactive-figure__canvas {
+  min-width: 72rem;
+}
+
 .interactive-figure[data-figure-size="stage"] .react-flow {
   border: 1px solid color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 42%, transparent);
   border-radius: 0.65rem;

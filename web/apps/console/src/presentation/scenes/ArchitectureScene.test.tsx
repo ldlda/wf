@@ -85,6 +85,7 @@ describe("ArchitectureScene", () => {
     renderArchitecture({ focusPath: [] });
     expect(screen.getByRole("group", { name: /architecture/i })).toHaveAttribute("data-figure-size", "stage");
     expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-visual-pass", "architecture-stage");
+    expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-architecture-focus", "system");
   });
 
   it("renders a directly linked nested provider view", () => {
@@ -94,5 +95,7 @@ describe("ArchitectureScene", () => {
     expect(screen.getByRole("group", { name: /configured providers/i })).toBeInTheDocument();
     expect(screen.getByText("MCP sources")).toBeInTheDocument();
     expect(screen.getByText("Python sources")).toBeInTheDocument();
+    expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-architecture-focus", "nested");
+    expect(screen.getByRole("group", { name: /configured providers/i })).toHaveAttribute("data-figure-focus-level", "2");
   });
 });

@@ -31,7 +31,13 @@ export const ArchitectureScene = ({
     : architectureCatalog;
 
   return (
-    <section className="architecture-scene" data-testid="architecture-scene" data-visual-pass="architecture-stage">
+    <section
+      className="architecture-scene"
+      data-testid="architecture-scene"
+      data-visual-pass="architecture-stage"
+      data-focus-level={focusPath.length}
+      data-architecture-focus={focusPath.length === 0 ? "system" : "nested"}
+    >
       <StageCaption eyebrow={`Act II · ${scene.claimClass}`} title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
