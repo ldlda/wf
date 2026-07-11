@@ -41,6 +41,19 @@ const statusCopy = (
   return "Run is paused. Submit resumes this same run.";
 };
 
+const hierarchyForMoment = (moment: ReturnType<typeof momentForBeat>) => {
+  switch (moment) {
+    case "approval":
+      return { primary: "interrupt-approval", support: "input-facts" };
+    case "resume":
+      return { primary: "resume-output", support: "resume-operation" };
+    case "output":
+      return { primary: "workflow-output", support: "none" };
+    case "trace":
+      return { primary: "trace-evidence", support: "output-summary" };
+  }
+};
+
 export const GuidedProductMoment = ({
   beat,
   demo,
@@ -50,12 +63,19 @@ export const GuidedProductMoment = ({
   openEvidence,
 }: GuidedProductMomentProps) => {
   const moment = momentForBeat(beat.id);
+  const hierarchy = hierarchyForMoment(moment);
   const lens = demoBeatLensForBeat(beat.id);
   const facts = projectDemoRunFacts(demo);
   const runResume = demo.state.events.find((event) => event.stage === "run_resume");
 
   return (
-    <section className="guided-product-moment" aria-label="current product moment" data-moment={moment}>
+    <section
+      className="guided-product-moment"
+      aria-label="current product moment"
+      data-moment={moment}
+      data-primary-surface={hierarchy.primary}
+      data-support-surface={hierarchy.support}
+    >
       <header className="guided-product-moment__header">
         <span>{lens.eyebrow}</span>
         <strong>{lens.headline}</strong>

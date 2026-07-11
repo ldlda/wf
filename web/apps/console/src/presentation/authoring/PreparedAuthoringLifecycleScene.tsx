@@ -38,6 +38,8 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthori
         className="prepared-lifecycle-scene"
         aria-label="prepared workflow authoring lifecycle"
         data-active-phase={beatId}
+        data-primary-surface="authoring-phase"
+        data-support-surface="prepared-chat"
       >
         <ol className="prepared-lifecycle-scene__rail" aria-label="authoring phase rail">
           {phases.map((phase) => (

@@ -72,6 +72,7 @@ describe("GuidedProductMoment", () => {
     );
 
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "approval");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-primary-surface", "interrupt-approval");
     expect(screen.getByText(/Run is paused/i)).toBeInTheDocument();
     expect(screen.getByText("Workflow input")).toBeInTheDocument();
     expect(screen.getByText("project-brief.md")).toBeInTheDocument();
@@ -92,6 +93,7 @@ describe("GuidedProductMoment", () => {
     );
 
     expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "resume");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-primary-surface", "resume-output");
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
   });
 
@@ -257,6 +259,7 @@ describe("GuidedProductMoment", () => {
       />,
     );
 
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-support-surface", "output-summary");
     expect(screen.getByRole("region", { name: /workflow trace proof/i })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: /workflow output summary/i })).toHaveAttribute("data-output-priority", "summary");
     expect(screen.queryByText("No trace frames captured.")).not.toBeInTheDocument();
