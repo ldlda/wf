@@ -294,9 +294,10 @@ Presentation wishlist / defense readiness:
         shows input/interruption/decision only, and resume/output/trace expose
         scroll-contained proof panes. Implementation:
         [`presentation demo proof composition`](historical/superpowers/plans/2026-07-09-presentation-demo-proof-composition.md).
-    12. Future: presentation craft pass for remaining motion, evidence receipt
-        placement, route-level caption contrast, and graph visual language after
-        Scene 10 is stable.
+    12. Active: harden the replay/live evidence handoff so the trace beat
+        consistently renders canonical frames without stale or empty state.
+        Implementation plan:
+        [`presentation evidence handoff`](superpowers/plans/2026-07-11-presentation-evidence-handoff.md).
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
