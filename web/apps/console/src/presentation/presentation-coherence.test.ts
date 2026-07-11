@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mainScenes } from "./storyboard.js";
 import {
+  beatVisualContractFor,
   coherenceForScene,
   demoSurfaceForBeat,
   sceneCoherenceMatrix,
@@ -56,5 +57,31 @@ describe("presentation coherence matrix", () => {
       primarySurface: "trace-evidence",
       supportSurface: "output-summary",
     });
+  });
+
+  it("defines a focal contract for the opening title", () => {
+    expect(beatVisualContractFor("thesis", "title")).toMatchObject({
+      mode: "focal",
+      primarySurface: "title-boundary",
+      supportSurface: "none",
+    });
+  });
+
+  it("defines semantic zoom for architecture and evidence staging for evaluation", () => {
+    expect(beatVisualContractFor("architecture", "node-use")).toMatchObject({
+      mode: "zoom",
+      primarySurface: "interactive-architecture",
+    });
+    expect(beatVisualContractFor("evaluation", "validity")).toMatchObject({
+      mode: "evidence",
+      primarySurface: "evaluation-validity",
+      supportSurface: "audit-reconciliation",
+    });
+  });
+
+  it("fails closed for an unknown scene beat", () => {
+    expect(() => beatVisualContractFor("unknown", "beat")).toThrow(
+      "No visual contract for unknown/beat",
+    );
   });
 });

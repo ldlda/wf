@@ -24,6 +24,16 @@ export type SupportSurface =
 
 export type ChatRole = "hidden" | "narration" | "approval" | "trace";
 
+export type BeatVisualMode = "focal" | "split" | "zoom" | "conversation" | "evidence";
+
+export type SceneBeatVisualContract = {
+  readonly sceneId: string;
+  readonly beatId: string;
+  readonly mode: BeatVisualMode;
+  readonly primarySurface: string;
+  readonly supportSurface: string;
+};
+
 export type SceneCoherenceEntry = {
   readonly sceneId: string;
   readonly primaryArtifact: PrimaryArtifact;
@@ -132,6 +142,40 @@ export const sceneCoherenceMatrix = [
     presenterFocus: "End on boundary and future layers without overclaiming an autonomous agent.",
   },
 ] as const satisfies readonly SceneCoherenceEntry[];
+
+const beatContracts = {
+  "thesis/title": { mode: "focal", primarySurface: "title-boundary", supportSurface: "none" },
+  "thesis/substrate": { mode: "split", primarySurface: "opening-decomposition", supportSurface: "none" },
+  "problem/direct-actions": { mode: "split", primarySurface: "tool-loop-transcript", supportSurface: "workflow-blueprint" },
+  "problem/missing-contracts": { mode: "split", primarySurface: "workflow-blueprint", supportSurface: "tool-loop-transcript" },
+  "architecture/client": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "none" },
+  "architecture/api": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "none" },
+  "architecture/runtime": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "none" },
+  "architecture/node-use": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "evidence-receipt" },
+  "authoring/discover": { mode: "evidence", primarySurface: "authoring-discovery", supportSurface: "authoring-loop" },
+  "authoring/author": { mode: "evidence", primarySurface: "authoring-draft", supportSurface: "authoring-loop" },
+  "authoring/diagnose": { mode: "evidence", primarySurface: "authoring-diagnostic", supportSurface: "authoring-loop" },
+  "authoring/repair": { mode: "evidence", primarySurface: "authoring-repair", supportSurface: "authoring-loop" },
+  "agent-handoff/request": { mode: "conversation", primarySurface: "prepared-conversation", supportSurface: "none" },
+  "agent-handoff/handoff": { mode: "conversation", primarySurface: "prepared-conversation", supportSurface: "none" },
+  "evaluation/cohort": { mode: "evidence", primarySurface: "evaluation-cohort", supportSurface: "none" },
+  "evaluation/validity": { mode: "evidence", primarySurface: "evaluation-validity", supportSurface: "audit-reconciliation" },
+  "evaluation/findings": { mode: "evidence", primarySurface: "evaluation-findings", supportSurface: "validity-boundary" },
+  "conclusion/limits": { mode: "evidence", primarySurface: "contribution-boundary", supportSurface: "non-claims" },
+  "conclusion/future": { mode: "evidence", primarySurface: "future-layers", supportSurface: "contribution-boundary" },
+  "conclusion/conclusion": { mode: "focal", primarySurface: "contribution-statement", supportSurface: "evidence-attachment" },
+  "conclusion/questions": { mode: "focal", primarySurface: "discussion-index", supportSurface: "none" },
+} as const satisfies Record<string, Omit<SceneBeatVisualContract, "sceneId" | "beatId">>;
+
+export const beatVisualContractFor = (
+  sceneId: string,
+  beatId: string,
+): SceneBeatVisualContract => {
+  const key = `${sceneId}/${beatId}`;
+  const contract = beatContracts[key];
+  if (!contract) throw new Error(`No visual contract for ${key}`);
+  return { sceneId, beatId, ...contract };
+};
 
 export const coherenceForScene = (sceneId: string): SceneCoherenceEntry => {
   const entry = sceneCoherenceMatrix.find((candidate) => candidate.sceneId === sceneId);
