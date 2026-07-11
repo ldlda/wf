@@ -42,6 +42,7 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthori
         data-active-phase={beatId}
         data-primary-surface="authoring-phase"
         data-support-surface="prepared-chat"
+        data-presentation-surface="editorial"
       >
         <ol className="prepared-lifecycle-scene__rail" aria-label="authoring phase rail">
           {phases.map((phase) => (

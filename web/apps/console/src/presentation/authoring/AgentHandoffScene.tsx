@@ -29,7 +29,7 @@ export const AgentHandoffScene = ({ beat, timelineAgent }: AgentHandoffSceneProp
   const activeIndex = phases.findIndex(({ id }) => id === phase);
 
   return (
-    <section className="agent-handoff-scene" aria-label="prepared agent handoff" data-handoff-phase={phase}>
+    <section className="agent-handoff-scene" aria-label="prepared agent handoff" data-handoff-phase={phase} data-presentation-surface="editorial">
       <header className="agent-handoff-scene__header">
         <span>Prepared replay</span>
         <strong>External agent → workflow substrate</strong>

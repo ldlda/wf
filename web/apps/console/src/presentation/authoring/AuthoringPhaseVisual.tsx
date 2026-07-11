@@ -15,7 +15,7 @@ type AuthoringPhaseVisualProps = {
 };
 
 const InventoryVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "inventory" }> }) => (
-  <section className="authoring-visual authoring-visual--inventory" aria-label="discovery evidence">
+  <section className="authoring-visual authoring-visual--inventory" aria-label="discovery evidence" data-presentation-surface="editorial">
     <div className="authoring-inventory__sources">
       {visual.sources.map((source) => (
         <div key={source}><Database aria-hidden="true" /><code>{source}</code></div>
@@ -31,7 +31,7 @@ const InventoryVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection[
 );
 
 const GraphVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "graph" }> }) => (
-  <section className="authoring-visual authoring-visual--graph" aria-label="draft graph evidence">
+  <section className="authoring-visual authoring-visual--graph" aria-label="draft graph evidence" data-presentation-surface="editorial">
     <div className="authoring-graph__node"><Database aria-hidden="true" /><strong>{visual.nodes[0]}</strong></div>
     <div className="authoring-graph__edge"><span>{visual.inputBinding}</span><ArrowRight aria-hidden="true" /></div>
     <div className="authoring-graph__node"><Workflow aria-hidden="true" /><strong>{visual.nodes[1]}</strong></div>
@@ -41,7 +41,7 @@ const GraphVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["vis
 );
 
 const RepairVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "repair" }> }) => (
-  <section className="authoring-visual authoring-visual--repair" aria-label="validation repair evidence">
+  <section className="authoring-visual authoring-visual--repair" aria-label="validation repair evidence" data-presentation-surface="editorial">
     <div className="authoring-repair__diagnostic"><AlertTriangle aria-hidden="true" /><span>Diagnostic</span><strong>{visual.diagnostic}</strong></div>
     <ArrowRight aria-hidden="true" />
     <div className="authoring-repair__correction"><Link2 aria-hidden="true" /><span>Repair</span><code>{visual.correction}</code></div>
@@ -50,7 +50,7 @@ const RepairVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["vi
 );
 
 const ArtifactVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "artifact" }> }) => (
-  <section className="authoring-visual authoring-visual--artifact" aria-label="artifact evidence">
+  <section className="authoring-visual authoring-visual--artifact" aria-label="artifact evidence" data-presentation-surface="editorial">
     <LockKeyhole aria-hidden="true" />
     <div><span>Immutable workflow artifact</span><strong>{visual.artifactId}</strong></div>
     <dl><div><dt>Version</dt><dd>Version {visual.version}</dd></div><div><dt>Requirements</dt><dd>{visual.requiredSources} local sources</dd></div></dl>
@@ -58,7 +58,7 @@ const ArtifactVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["
 );
 
 const BindingsVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "bindings" }> }) => (
-  <section className="authoring-visual authoring-visual--bindings" aria-label="deployment binding evidence">
+  <section className="authoring-visual authoring-visual--bindings" aria-label="deployment binding evidence" data-presentation-surface="editorial">
     <header><Link2 aria-hidden="true" /><div><span>Deployment</span><strong>{visual.deploymentId}</strong></div><b><CheckCircle2 aria-hidden="true" />{visual.status}</b></header>
     <div className="authoring-bindings__rows">
       {visual.bindings.map((binding) => (

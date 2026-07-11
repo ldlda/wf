@@ -15,6 +15,10 @@ const renderBeat = (beatId: string) => {
 describe("PreparedAuthoringLifecycleScene", () => {
   it("discover shows sources, capabilities, and schema", () => {
     renderBeat("discover");
+    expect(screen.getByRole("region", { name: "prepared workflow authoring lifecycle" })).toHaveAttribute(
+      "data-presentation-surface",
+      "editorial",
+    );
     expect(screen.getByText("Discover")).toBeInTheDocument();
     expect(screen.getAllByText(/sources|capabilities|schema/i).length).toBeGreaterThanOrEqual(1);
   });

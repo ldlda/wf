@@ -6,9 +6,23 @@ import { AuthoringPhaseVisual } from "./AuthoringPhaseVisual.js";
 afterEach(cleanup);
 
 describe("AuthoringPhaseVisual", () => {
+  it.each(["discover", "draft", "validate", "artifact", "deployment"] as const)(
+    "marks the %s visual as editorial",
+    (phase) => {
+      render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase(phase)} />);
+      expect(screen.getByRole("region", { name: /evidence/i })).toHaveAttribute(
+        "data-presentation-surface",
+        "editorial",
+      );
+    },
+  );
+
   it("shows source inventory and the inspected contract", () => {
     render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("discover")} />);
-    expect(screen.getByRole("region", { name: /discovery evidence/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /discovery evidence/i })).toHaveAttribute(
+      "data-presentation-surface",
+      "editorial",
+    );
     expect(screen.getByText("local.lda_docs")).toBeInTheDocument();
     expect(screen.getByText("local.lda_report")).toBeInTheDocument();
     expect(screen.getByText(/documents.*analysis/i)).toBeInTheDocument();

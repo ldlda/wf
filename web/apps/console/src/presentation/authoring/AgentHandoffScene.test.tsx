@@ -26,6 +26,10 @@ describe("AgentHandoffScene", () => {
       "data-handoff-phase",
       "discover",
     );
+    expect(screen.getByRole("region", { name: "prepared agent handoff" })).toHaveAttribute(
+      "data-presentation-surface",
+      "editorial",
+    );
     expect(screen.getByRole("log", { name: "prepared authoring conversation" })).toHaveAttribute(
       "data-surface",
       "stage",
