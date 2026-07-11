@@ -134,6 +134,12 @@ sessionStorage.removeItem("lda.workflowConsole.target");
 location.reload();
 ```
 
+When a stateful demo deep link is opened before this browser session has started
+a live run, the presentation selects the reviewed recording for that beat even
+if the loopback health probe succeeds. Start from the Scene 8 handoff action to
+run live; otherwise the typed interrupt, output, and trace links remain useful
+replay-backed entry points.
+
 ## Useful Deep Links
 
 - Title: `http://127.0.0.1:5173/present#scene/thesis/title`

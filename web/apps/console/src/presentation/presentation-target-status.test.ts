@@ -18,9 +18,22 @@ describe("presentationTargetHealth", () => {
       target: "http://127.0.0.1:8765/rpc",
       probe: "ready",
       liveActive: false,
+      replayActive: false,
     })).toMatchObject({
       kind: "ready",
       label: "Live target ready",
+    });
+  });
+
+  it("labels a reviewed replay selected alongside a healthy target", () => {
+    expect(presentationTargetHealth({
+      target: "http://127.0.0.1:8765/rpc",
+      probe: "ready",
+      liveActive: false,
+      replayActive: true,
+    })).toMatchObject({
+      kind: "replay",
+      label: "Replay evidence",
     });
   });
 

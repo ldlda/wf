@@ -231,15 +231,15 @@ describe("PresentationRoute", () => {
     expect(await screen.findByRole("button", { name: /run prepared workflow/i })).toBeInTheDocument();
   });
 
-  it("does not prime replay evidence on a live direct hash", async () => {
+  it("uses replay fallback for a live direct hash before a run starts", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
     window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByText(/Live target is ready/i)).toBeInTheDocument();
-    expect(screen.queryByText("Workflow input")).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+    expect(await screen.findByText(/Replay evidence is active/i)).toBeInTheDocument();
+    expect(await screen.findByText("Workflow input")).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: "Submit" })).toBeInTheDocument();
   });
 
   it("switches to replay evidence when a configured target fails health", async () => {

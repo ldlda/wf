@@ -56,6 +56,7 @@ export const usePresentationTargetStatus = (
     target: targetState.mode === "live" ? targetState.target : null,
     probe,
     liveActive: liveActive(demoState),
+    replayActive: demoState.mode === "replay",
     failureReason,
   });
 };

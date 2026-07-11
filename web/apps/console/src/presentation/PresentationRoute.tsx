@@ -58,6 +58,9 @@ export const PresentationRoute = () => {
     mode: presentationTarget.mode === "live" ? "live" : "replay",
     status: targetStatus,
   });
+  const requiredDemoStage = state.location.kind === "main"
+    ? requirementForDemoBeat(state.location.sceneId, state.location.beatId).requiredStage
+    : null;
 
   useEffect(() => {
     const hash = hashForLocation(state.location);
@@ -96,13 +99,21 @@ export const PresentationRoute = () => {
 
   useEffect(() => {
     if (demo.state.phase !== "ready") return;
-    // The resolved target owns the initial mode: a healthy loopback target must
-    // remain live, while an invalid or unreachable target starts from the
-    // offline recording. The health hook is the point where an HTTP target
-    // becomes known to be unreachable; URL shape alone is not enough.
-    const desiredMode = targetStatus.kind === "failed" ? "replay" : presentationTarget.mode;
+    // A direct evidence hash has no live run context to inspect. Use the
+    // reviewed recording until the handoff action creates a live timeline.
+    const directHashNeedsEvidence = requiredDemoStage !== null;
+    const shouldUseReplay = targetStatus.kind === "failed"
+      || (targetStatus.kind === "ready" && directHashNeedsEvidence);
+    const desiredMode = shouldUseReplay ? "replay" : presentationTarget.mode;
     if (demo.state.mode !== desiredMode) demo.setMode(desiredMode);
-  }, [demo.setMode, demo.state.mode, demo.state.phase, presentationTarget.mode, targetStatus.kind]);
+  }, [
+    demo.setMode,
+    demo.state.mode,
+    demo.state.phase,
+    presentationTarget.mode,
+    requiredDemoStage,
+    targetStatus.kind,
+  ]);
 
   useEffect(() => {
     if (demo.state.phase === "ready" && demo.state.mode === "replay") {
