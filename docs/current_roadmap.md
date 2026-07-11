@@ -261,6 +261,34 @@ Recommended next visual slices:
 10. Next: revise the remaining visual outliers only when a screenshot identifies
     a concrete hierarchy, overflow, or factual-readability problem.
 
+## Next: Scene 8–14 Defense Recomposition
+
+The next presentation work is intentionally split into five implementation
+slices followed by a rehearsal gate. The broader story-flow review remains a
+separate activity after these surfaces are stable.
+
+1. **Scene 8 chat entry:** replace the standalone run button with a full-screen
+   assistant-style chat entry. The composer/send action starts the first
+   prepared authoring conversation; it does not start the workflow run.
+2. **Scene 9 assistant modal:** remove the lower chat dock, give the prepared
+   lifecycle canvas the available stage, and expose the synchronized authoring
+   conversation through an assistant-ui modal anchored on the left.
+3. **Live/replay truth and run activation:** keep Scene 9 authoring evidence
+   recording-backed, make Scenes 10–12 consume the active live timeline when a
+   run exists, keep replay fallback for direct links or unavailable services,
+   scope the truth badge to demo scenes, move the prepared-run action to Scene
+   10, and correct the Scene 10 graph/proof projection.
+4. **Scene 11 compression:** reduce the typed-human-boundary scene to two
+   beats: interrupt context and approval decision. Cancellation remains a
+   decision outcome rather than a near-duplicate presentation beat.
+5. **Visual scale and color pass:** remove unwanted blue from Scenes 2 and 14,
+   shorten Scene 2's two-column composition, enlarge the focal diagrams in
+   Scenes 7, 9, 13, and 14, separate Scene 7 Validate from Repair visuals, and
+   improve Scene 1 title-box padding and contrast.
+6. **Rehearsal gate:** run all 14 scenes at 16:9 and 4:3, verify the Scene 8 →
+   Scene 11 → Scene 12 path in live and replay modes, then review the story
+   flow, coverage, and ordering separately.
+
 Presentation wishlist / defense readiness:
 
 - Completed: visual pass for Scenes 6, 7, and 10 fixed architecture figure
