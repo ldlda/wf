@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type { ToolCallMessagePartStatus } from "@assistant-ui/react";
 import {
   ToolFallbackArgs,
@@ -190,6 +190,7 @@ const AssistantMessageBody = ({
     rendered.push(
       <ToolGroupRoot
         key={`tool-group-${toolRunStart}`}
+        data-tool-group-id={groupId}
         {...(phaseLabel
           ? {
               open: openToolGroups.has(groupId),
@@ -252,6 +253,7 @@ export const AssistantOperatorThread = ({
   activeToolGroupId,
 }: AssistantOperatorThreadProps) => {
   const projected = useMemo(() => projectAgentMessagesForAssistant(messages), [messages]);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const [openToolGroups, setOpenToolGroups] = useState<ReadonlySet<string>>(
     () => new Set(activeToolGroupId ? [activeToolGroupId] : []),
   );
@@ -259,6 +261,21 @@ export const AssistantOperatorThread = ({
   useEffect(() => {
     if (activeToolGroupId) setOpenToolGroups(new Set([activeToolGroupId]));
   }, [activeToolGroupId]);
+
+  useEffect(() => {
+    if (!activeToolGroupId) return;
+    // The same transcript can be much taller than the Scene 9 dock. Keep the
+    // beat-owned group visible without maintaining a second scroll-state model.
+    const viewport = viewportRef.current;
+    const activeGroup = viewport
+      ?.querySelector<HTMLElement>(`[data-tool-group-id="${activeToolGroupId}"]`);
+    if (!viewport || !activeGroup) return;
+    const top = Math.max(
+      0,
+      activeGroup.offsetTop + activeGroup.offsetHeight - viewport.clientHeight,
+    );
+    viewport.scrollTop = top;
+  }, [activeToolGroupId, projected]);
 
   const setToolGroupOpen = useCallback((groupId: string, open: boolean) => {
     setOpenToolGroups((current) => {
@@ -283,7 +300,7 @@ export const AssistantOperatorThread = ({
       aria-label={ariaLabel}
     >
       <div className="assistant-thread">
-        <div className="assistant-thread__viewport">
+        <div ref={viewportRef} className="assistant-thread__viewport">
           {projected.map((message) => {
             if (message.role === "user") {
               return (

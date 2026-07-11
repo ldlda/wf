@@ -1,6 +1,6 @@
-import { useState } from "react";
 import { projectPreparedAuthoringPhase } from "./authoring-projection.js";
-import { AuthoringTracePanel } from "./AuthoringTracePanel.js";
+import { AuthoringConversation } from "./AuthoringConversation.js";
+import { AuthoringPhaseVisual } from "./AuthoringPhaseVisual.js";
 import type { AuthoringPhaseId } from "./authoring-recording.js";
 import type { SceneBeatDefinition, SceneDefinition } from "../storyboard.js";
 import { StageCaption } from "../StageCaption.js";
@@ -22,15 +22,11 @@ const phases: readonly { readonly id: AuthoringPhaseId; readonly label: string }
  * Scene 9 — Prepared workflow authoring lifecycle.
  *
  * Each beat shows a compact orientation rail and one dominant phase projection
- * sourced from the prepared authoring recording. A persistent "Agent trace"
- * trigger opens the AuthoringTracePanel overlay.
- *
- * The receipt bridges Scene 8's full conversation and Scene 9's separate
- * trace panel without morphing runtime-owned components.
+ * sourced from the prepared authoring recording. The same Scene 8 conversation
+ * remains below the canvas as a beat-synchronized assistant dock.
  */
 export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthoringLifecycleSceneProps) => {
   const beatId = beat.id as AuthoringPhaseId;
-  const [traceOpen, setTraceOpen] = useState(false);
   const projection = projectPreparedAuthoringPhase(beatId);
 
   return (
@@ -51,30 +47,17 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthori
           ))}
         </ol>
 
-        <article className="prepared-lifecycle-scene__projection">
-          <div className="prepared-lifecycle-scene__summary">
-            <p>{projection.summary}</p>
-          </div>
-          <div className="prepared-lifecycle-scene__commands">
-            {projection.commands.map((cmd, i) => (
-              <div key={i} className="prepared-lifecycle-scene__command">
-                <code>$ {cmd.command}</code>
-                <span className="prepared-lifecycle-scene__command-result" data-result={cmd.result}>
-                  {cmd.result === "success" ? "✓" : "⚡"} {cmd.result}
-                </span>
-              </div>
-            ))}
-          </div>
+        <article className="prepared-lifecycle-scene__projection" key={beatId}>
+          <AuthoringPhaseVisual projection={projection} />
         </article>
+        <div className="prepared-lifecycle-scene__dock">
+          <AuthoringConversation
+            throughPhase={beatId}
+            activePhase={beatId}
+            surface="dock"
+          />
+        </div>
       </section>
-      <div className="prepared-lifecycle-scene__receipt">
-        <AuthoringTracePanel
-          phase={beatId}
-          open={traceOpen}
-          onOpen={() => setTraceOpen(true)}
-          onClose={() => setTraceOpen(false)}
-        />
-      </div>
     </>
   );
 };

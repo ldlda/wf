@@ -1,6 +1,5 @@
 import { cleanup, render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { findBeat, findScene } from "../storyboard.js";
 import { PreparedAuthoringLifecycleScene } from "./PreparedAuthoringLifecycleScene.js";
 
@@ -35,30 +34,39 @@ describe("PreparedAuthoringLifecycleScene", () => {
   it("artifact shows immutable ID and version", () => {
     renderBeat("artifact");
     expect(screen.getByText("Artifact")).toBeInTheDocument();
-    expect(screen.getByText(/art_x9y8z7/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/lda_report_case_study/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("deployment shows bindings and validation", () => {
     renderBeat("deployment");
-    expect(screen.getByText("Deployment")).toBeInTheDocument();
-    expect(screen.getByText(/dep_m4n5p6/i)).toBeInTheDocument();
+    expect(screen.getAllByText("Deployment").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/lda_report_case_study\.default/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders an Agent trace trigger", () => {
-    renderBeat("discover");
-    expect(screen.getByRole("button", { name: "Agent trace" })).toBeInTheDocument();
+  it.each([
+    ["discover", "discovery evidence"],
+    ["draft", "draft graph evidence"],
+    ["validate", "validation repair evidence"],
+    ["artifact", "artifact evidence"],
+    ["deployment", "deployment binding evidence"],
+  ] as const)("renders %s as the primary phase visual", (beatId, label) => {
+    renderBeat(beatId);
+    expect(screen.getByRole("region", { name: label })).toBeInTheDocument();
   });
 
-  it("trace is initially closed", () => {
-    renderBeat("discover");
-    expect(screen.queryByRole("dialog", { name: "Authoring trace" })).not.toBeInTheDocument();
-  });
-
-  it("opens the trace panel when Agent trace is clicked", async () => {
-    const user = userEvent.setup();
+  it("keeps the same conversation as a synchronized bottom dock", () => {
     renderBeat("draft");
-    await user.click(screen.getByRole("button", { name: "Agent trace" }));
-    expect(screen.getByRole("dialog", { name: "Authoring trace" })).toBeInTheDocument();
+    const chat = screen.getByRole("log", { name: "prepared authoring conversation" });
+    expect(chat).toHaveAttribute("data-surface", "dock");
+    expect(screen.getByRole("button", { name: /draft.*3 tool calls/i }))
+      .toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("does not render the obsolete trace modal or receipt", () => {
+    renderBeat("validate");
+    expect(screen.queryByRole("button", { name: "Agent trace" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Authoring trace" })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("prepared authoring receipt")).not.toBeInTheDocument();
   });
 
   it("renders a compact orientation rail", () => {

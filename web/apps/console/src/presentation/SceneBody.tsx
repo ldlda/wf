@@ -1,5 +1,6 @@
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import type { DemoApprovalActions } from "./demo-approval-actions.js";
+import { AgentHandoffScene } from "./authoring/AgentHandoffScene.js";
 import {
   discussionBranches,
   findBeat,
@@ -256,15 +257,6 @@ const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
         );
       })}
     </div>
-    <p className="scene-body__evidence">{scene.evidencePointer}</p>
-  </>
-);
-
-const AgentHandoffScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
-  <>
-    <StageCaption eyebrow="Agent handoff" title={scene.title}>
-      <p>{beat.caption}</p>
-    </StageCaption>
     <p className="scene-body__evidence">{scene.evidencePointer}</p>
   </>
 );

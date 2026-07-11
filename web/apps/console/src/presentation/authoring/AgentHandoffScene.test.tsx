@@ -1,5 +1,5 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import { findBeat, findScene } from "../storyboard.js";
 import { AgentHandoffScene } from "./AgentHandoffScene.js";
 
@@ -11,6 +11,8 @@ const renderBeat = (beatId: "request" | "handoff") => {
 };
 
 describe("AgentHandoffScene", () => {
+  afterEach(cleanup);
+
   it("renders a log region named prepared authoring conversation", () => {
     renderBeat("request");
     expect(screen.getByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
@@ -30,6 +32,13 @@ describe("AgentHandoffScene", () => {
     expect(userMessages.length).toBeGreaterThanOrEqual(1);
     const assistantMessages = screen.getAllByText(/inspect|sources|capabilities|compile|deployment|artifact/i);
     expect(assistantMessages.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("interleaves prepared workflow tool groups with the handoff conversation", () => {
+    renderBeat("handoff");
+    expect(screen.getAllByText(/runWorkflowCommand/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /deployment.*2 tool calls/i }))
+      .toHaveAttribute("aria-expanded", "true");
   });
 
   it("does not render prepared workflow lifecycle content", () => {

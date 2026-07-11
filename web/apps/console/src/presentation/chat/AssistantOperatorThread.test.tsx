@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { AgentMessage } from "../../demo/agent/events.js";
@@ -138,6 +138,36 @@ describe("AssistantOperatorThread", () => {
     expect(screen.getByRole("log")).toHaveAttribute("data-surface", "dock");
     expect(screen.getByRole("button", { name: /validate.*1 tool call/i }))
       .toHaveAttribute("aria-expanded", "true");
+  });
+
+  it("scrolls the active authoring group into the dock viewport", async () => {
+    const setScrollTop = vi.fn();
+    Object.defineProperty(HTMLDivElement.prototype, "scrollTop", {
+      configurable: true,
+      get: () => 0,
+      set: setScrollTop,
+    });
+    const messages: ReadonlyArray<AgentMessage> = [
+      {
+        id: "authoring-draft-tools",
+        role: "assistant",
+        parts: [
+          { type: "tool-call", call: { id: "authoring-draft-command-0", name: "runWorkflowCommand", input: {} } },
+          { type: "tool-result", result: { callId: "authoring-draft-command-0", name: "runWorkflowCommand", status: "success", output: {} } },
+        ],
+      },
+    ];
+
+    render(
+      <AssistantOperatorThread
+        mode="dock"
+        surface="dock"
+        messages={messages}
+        activeToolGroupId="authoring-draft"
+      />,
+    );
+
+    await waitFor(() => expect(setScrollTop).toHaveBeenCalledWith(0));
   });
 
   it("renders structured tool results through the generated fallback result slot", () => {

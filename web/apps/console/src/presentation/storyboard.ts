@@ -169,8 +169,10 @@ export const mainScenes = defineScenes([
     stageTheme: "night",
     view: "agent",
     beats: [
-      sceneBeat("request", "Operator request", "A thin agent interface receives the report request.", { chatMode: "full", chatTheme: "light" }),
-      sceneBeat("handoff", "Prepared operation", "The interface delegates durable work to lda.chat.", { chatMode: "full", chatTheme: "light" }),
+      // Scene 8 renders its own full-screen prepared transcript in the primary
+      // region, so the persistent stage chat rail must stay out of the way.
+      sceneBeat("request", "Operator request", "A thin agent interface receives the report request.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("handoff", "Prepared operation", "The interface delegates durable work to lda.chat.", { chatMode: "hidden", chatTheme: "light" }),
     ],
   },
   {

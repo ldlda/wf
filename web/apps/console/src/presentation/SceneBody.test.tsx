@@ -429,7 +429,14 @@ describe("SceneBody", () => {
   it("renders Scene 9 artifact beat with compiled artifact evidence", () => {
     renderSceneBodyAtMainLocation("prepared-lifecycle", "artifact");
     expect(screen.getByText("Artifact")).toBeInTheDocument();
-    expect(screen.getByText(/art_x9y8z7/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/lda_report_case_study/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("routes Scene 8 through the prepared authoring conversation", () => {
+    renderSceneBodyAtMainLocation("agent-handoff", "handoff");
+
+    expect(screen.getByRole("log", { name: "prepared authoring conversation" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /deployment.*2 tool calls/i })).toBeInTheDocument();
   });
 
   it("renders evidence before discussion links so the chip lane cannot cover evidence text", () => {
