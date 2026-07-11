@@ -1,5 +1,4 @@
 export type ClaimClass = "motivation" | "implemented" | "evaluated" | "external-context" | "future-work";
-export type StageTheme = "paper" | "night";
 export type ChatTheme = "light" | "dark";
 export type ChatMode = "hidden" | "full" | "rail" | "dock";
 export type EvidencePresentation = "hidden" | "receipt" | "inspector";
@@ -39,7 +38,6 @@ export type SceneDefinition = {
   readonly title: string;
   readonly claimClass: ClaimClass;
   readonly evidencePointer: string;
-  readonly stageTheme: StageTheme;
   readonly view: SceneView;
   readonly beats: readonly SceneBeatDefinition[];
 };
@@ -68,7 +66,6 @@ export const mainScenes = defineScenes([
     title: "Thesis",
     claimClass: "implemented",
     evidencePointer: "Thesis Abstract and Introduction",
-    stageTheme: "paper",
     view: "narrative",
     beats: [
       sceneBeat("title", "Design and Implementation of lda.chat", "The project began as a pursuit of an AI agent for workspace automation."),
@@ -81,7 +78,6 @@ export const mainScenes = defineScenes([
     title: "The Problem",
     claimClass: "motivation",
     evidencePointer: "Thesis Problem Statement and Requirements",
-    stageTheme: "paper",
     view: "narrative",
     beats: [
       sceneBeat("direct-actions", "Direct actions are not reusable automation", "A tool loop can act without owning durable lifecycle records."),
@@ -94,7 +90,6 @@ export const mainScenes = defineScenes([
     title: "Positioning and Related Systems",
     claimClass: "motivation",
     evidencePointer: "Thesis Positioning and Related Systems",
-    stageTheme: "paper",
     view: "positioning",
     beats: [
       sceneBeat("landscape", "Different centers of gravity", "Tool loops, scripts, hosted automation, agent graphs, and MCP solve different parts of the problem."),
@@ -107,7 +102,6 @@ export const mainScenes = defineScenes([
     title: "Planner and Runtime",
     claimClass: "implemented",
     evidencePointer: "Thesis Architecture Overview",
-    stageTheme: "night",
     view: "boundary",
     beats: [
       sceneBeat("planner", "External planner", "The planner proposes and revises workflow structure."),
@@ -121,7 +115,6 @@ export const mainScenes = defineScenes([
     title: "Workflow Lifecycle",
     claimClass: "implemented",
     evidencePointer: "Thesis Workflow Lifecycle",
-    stageTheme: "night",
     view: "lifecycle",
     beats: [
       sceneBeat("draft", "Draft", "Mutable iterative authoring state."),
@@ -136,7 +129,6 @@ export const mainScenes = defineScenes([
     title: "Architecture Zoom",
     claimClass: "implemented",
     evidencePointer: "Thesis System Architecture; docs/project_map.md; docs/source_architecture.md",
-    stageTheme: "night",
     view: "architecture",
     beats: [
       sceneBeat("client", "Client operations", "Human and agent clients use the same public lifecycle surface.", { figure: { catalogId: "system-architecture", focusPath: [], activeNodeId: "client-operations" } }),
@@ -151,7 +143,6 @@ export const mainScenes = defineScenes([
     title: "Author, Validate, Repair",
     claimClass: "implemented",
     evidencePointer: "CLI documentation; draft authoring API; challenge UX findings",
-    stageTheme: "night",
     view: "authoring",
     beats: [
       sceneBeat("discover", "Discover", "Inspect capabilities and schemas before authoring."),
@@ -166,7 +157,6 @@ export const mainScenes = defineScenes([
     title: "Agent Handoff",
     claimClass: "implemented",
     evidencePointer: "Constrained demo agent and prepared replay recipe",
-    stageTheme: "night",
     view: "agent",
     beats: [
       // Scene 8 renders its own full-screen prepared transcript in the primary
@@ -181,7 +171,6 @@ export const mainScenes = defineScenes([
     title: "Prepared Workflow Lifecycle",
     claimClass: "implemented",
     evidencePointer: "examples/lda_report_workflow; deployment inspect replay evidence",
-    stageTheme: "night",
     view: "demo-lifecycle",
     beats: [
       sceneBeat("discover", "Discover capabilities", "Inspect available sources, capabilities, and schemas before authoring.", { chatMode: "hidden", chatTheme: "light" }),
@@ -197,7 +186,6 @@ export const mainScenes = defineScenes([
     title: "Run From Deployment",
     claimClass: "implemented",
     evidencePointer: "workflow.runs.start replay evidence",
-    stageTheme: "night",
     view: "demo",
     beats: [
       sceneBeat("input", "Workflow input", "The run starts from selected documents and an issue board path.", { chatMode: "hidden", chatTheme: "light" }),
@@ -211,7 +199,6 @@ export const mainScenes = defineScenes([
     title: "Typed Human Boundary",
     claimClass: "implemented",
     evidencePointer: "typed interrupt payload and resume contract",
-    stageTheme: "night",
     view: "demo",
     beats: [
       sceneBeat("interrupt", "Interrupt payload", "Execution reaches a declared issue-review boundary.", { chatMode: "hidden", chatTheme: "light" }),
@@ -225,7 +212,6 @@ export const mainScenes = defineScenes([
     title: "Resume, Output, Evidence",
     claimClass: "implemented",
     evidencePointer: "workflow.runs.resume, workflow output, and trace replay evidence",
-    stageTheme: "night",
     view: "demo",
     beats: [
       sceneBeat("resume", "Resume", "The submitted payload resumes the same persisted run.", { chatMode: "hidden", chatTheme: "light" }),
@@ -239,7 +225,6 @@ export const mainScenes = defineScenes([
     title: "Evaluation",
     claimClass: "evaluated",
     evidencePointer: "Thesis Evaluation and Appendix C",
-    stageTheme: "paper",
     view: "evaluation",
     beats: [
       sceneBeat("cohort", "36-trial cohort", "Two challenges, two hosted models, three profiles, and three waves.", { chatMode: "hidden" }),
@@ -253,7 +238,6 @@ export const mainScenes = defineScenes([
     title: "Limits and Conclusion",
     claimClass: "future-work",
     evidencePointer: "Thesis Limitations, Future Work, and Conclusion",
-    stageTheme: "paper",
     view: "conclusion",
     beats: [
       sceneBeat("limits", "Implemented boundary", "The prototype is not a production sandbox, scheduler, or broad agent benchmark.", { chatMode: "hidden" }),

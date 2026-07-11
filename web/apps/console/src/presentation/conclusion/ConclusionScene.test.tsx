@@ -8,7 +8,6 @@ const scene = {
   title: "Contribution and future work",
   claimClass: "future-work" as const,
   evidencePointer: "Thesis conclusion",
-  stageTheme: "night" as const,
   view: "conclusion" as const,
   beats: [],
 };

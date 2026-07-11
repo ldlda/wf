@@ -62,9 +62,16 @@ const DiscussionLinks = ({
   );
 };
 
+const actForSceneNumber = (sceneNumber: number): string => {
+  if (sceneNumber <= 3) return "I";
+  if (sceneNumber <= 12) return "II";
+  if (sceneNumber === 13) return "III";
+  return "IV";
+};
+
 const NarrativeScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => (
   <>
-    <StageCaption eyebrow={`Act ${scene.stageTheme === "paper" ? "I" : "II"} · ${scene.claimClass}`} title={scene.title}>
+    <StageCaption eyebrow={`Act ${actForSceneNumber(scene.number)} · ${scene.claimClass}`} title={scene.title}>
       <p>{beat.caption}</p>
     </StageCaption>
     <p className="scene-body__evidence">{scene.evidencePointer}</p>

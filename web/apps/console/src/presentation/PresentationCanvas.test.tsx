@@ -17,15 +17,9 @@ describe("PresentationCanvas", () => {
     const canvas = screen.getByTestId("presentation-canvas");
 
     expect(canvas).toHaveClass("presentation-canvas");
-    expect(canvas).toHaveAttribute("data-stage-theme", "paper");
+    expect(canvas).not.toHaveAttribute("data-stage-theme");
     expect(canvas.style.transform).toBe("");
     expect(canvas).toHaveTextContent("Scene");
-  });
-
-  it("applies the authored night stage theme without changing canvas geometry", () => {
-    render(<PresentationCanvas stageTheme="night"><div>Scene</div></PresentationCanvas>);
-
-    expect(screen.getByTestId("presentation-canvas")).toHaveAttribute("data-stage-theme", "night");
   });
 
   it("uses CSS ratio bounds instead of JavaScript scale calculations", () => {

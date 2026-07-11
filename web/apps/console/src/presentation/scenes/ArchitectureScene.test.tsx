@@ -37,7 +37,6 @@ const mockScene = {
   title: "Architecture Zoom",
   claimClass: "implemented" as const,
   evidencePointer: "Thesis System Architecture",
-  stageTheme: "night" as const,
   view: "architecture" as const,
   beats: [],
 };

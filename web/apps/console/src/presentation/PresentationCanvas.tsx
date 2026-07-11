@@ -1,12 +1,10 @@
 import type { ReactNode } from "react";
-import type { StageTheme } from "./storyboard.js";
 
 type PresentationCanvasProps = {
   readonly children: ReactNode;
-  readonly stageTheme?: StageTheme;
 };
 
-export const PresentationCanvas = ({ children, stageTheme = "paper" }: PresentationCanvasProps) => (
+export const PresentationCanvas = ({ children }: PresentationCanvasProps) => (
   <div className="presentation-viewport">
     {/*
       Keep the presentation as normal responsive DOM instead of scaling the
@@ -17,7 +15,6 @@ export const PresentationCanvas = ({ children, stageTheme = "paper" }: Presentat
     <div
       className="presentation-canvas"
       data-testid="presentation-canvas"
-      data-stage-theme={stageTheme}
     >
       {children}
     </div>

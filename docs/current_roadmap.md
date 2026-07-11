@@ -300,7 +300,7 @@ Presentation wishlist / defense readiness:
         [`presentation evidence handoff`](historical/superpowers/plans/2026-07-11-presentation-evidence-handoff.md).
    13. Completed: deck hierarchy pass gave Scenes 1, 2, 6, 7, 8-12, and 13-14
        one focal artifact per beat, reused factual authoring/demo projections,
-       applied storyboard stage themes, and froze Scenes 3-5. Implementation:
+       kept one editorial canvas, and froze Scenes 3-5. Implementation:
        [`defense deck hierarchy pass`](historical/superpowers/plans/2026-07-11-defense-deck-hierarchy-pass.md).
 - Presenter runbook:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers

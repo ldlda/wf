@@ -243,11 +243,11 @@ Chat is composed per-beat with four modes: `hidden`, `full`, `rail`, and `dock`.
 When `dock` is active, a floating button in the lower-left corner expands the
 chat to `rail`.
 
-#### Stage Themes
+#### Presentation Canvas
 
-Stage themes change by act: `paper` for scenes 1-3 and 13-14, `night` for
-scenes 4-12. Presenter controls allow overriding stage and chat themes
-independently during rehearsal.
+The presentation uses one warm Editorial Canvas across all scenes. Dark
+surfaces are local to product evidence such as chat, graphs, traces, and
+terminal-style operation blocks; they are not whole-stage themes.
 
 #### Discussion Branches
 

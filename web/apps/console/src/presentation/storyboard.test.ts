@@ -42,10 +42,7 @@ describe("defense storyboard catalog", () => {
     expect(findBeat("conclusion", "questions")?.chatMode).toBe("hidden");
   });
 
-  it("uses act-level stage themes and independent chat composition", () => {
-    expect(mainScenes.slice(0, 3).every((scene) => scene.stageTheme === "paper")).toBe(true);
-    expect(mainScenes.slice(3, 12).every((scene) => scene.stageTheme === "night")).toBe(true);
-    expect(mainScenes.slice(12).every((scene) => scene.stageTheme === "paper")).toBe(true);
+  it("uses one editorial canvas theme and independent chat composition", () => {
     expect(findBeat("agent-handoff", "request")?.chatMode).toBe("hidden");
     expect(findBeat("resume-output-evidence", "trace")?.chatMode).toBe("hidden");
   });

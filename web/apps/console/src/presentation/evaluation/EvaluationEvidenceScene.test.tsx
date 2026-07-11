@@ -8,7 +8,6 @@ const scene = {
   title: "Evaluation",
   claimClass: "evaluated" as const,
   evidencePointer: "Thesis Evaluation and Appendix C",
-  stageTheme: "paper" as const,
   view: "evaluation" as const,
   beats: [],
 };
