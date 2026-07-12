@@ -355,7 +355,7 @@ describe("SceneBody", () => {
     expect(loop).not.toHaveAttribute("data-readable-surface", "dark");
     expect(screen.getByText("Discover capability")).toBeInTheDocument();
     expect(screen.getByText("Author draft")).toBeInTheDocument();
-    expect(screen.getByText(/turns an agent proposal into a valid workflow/i)).toBeInTheDocument();
+    expect(screen.getByText(/operates on the mutable Draft.*external agent proposal.*Artifact, Deployment, and Run/i)).toBeInTheDocument();
     expect(screen.getByText("Validate and diagnose").closest("[data-authoring-active]")).toHaveAttribute("data-authoring-active", "true");
     expect(screen.getByText("Validate and diagnose").closest(".scene-body__authoring-node"))
       .not.toHaveAttribute("data-readable-surface", "dark");

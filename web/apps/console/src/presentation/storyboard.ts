@@ -145,10 +145,10 @@ export const mainScenes = defineScenes([
     evidencePointer: "CLI documentation; draft authoring API; challenge UX findings",
     view: "authoring",
     beats: [
-      sceneBeat("discover", "Discover", "This authoring loop turns an agent proposal into a valid workflow: discover, author, diagnose, repair. An external agent can use each step."),
-      sceneBeat("author", "Author", "This authoring loop turns an agent proposal into a valid workflow: discover, author, diagnose, repair. An external agent can use each step."),
-      sceneBeat("diagnose", "Diagnose", "This authoring loop turns an agent proposal into a valid workflow: discover, author, diagnose, repair. An external agent can use each step.", { evidencePresentation: "receipt" }),
-      sceneBeat("repair", "Repair", "This authoring loop turns an agent proposal into a valid workflow: discover, author, diagnose, repair. An external agent can use each step."),
+      sceneBeat("discover", "Discover", "This authoring loop operates on the mutable Draft: an external agent proposal becomes a valid workflow through discover, author, diagnose, and repair. Artifact, Deployment, and Run follow after validation."),
+      sceneBeat("author", "Author", "This authoring loop operates on the mutable Draft: an external agent proposal becomes a valid workflow through discover, author, diagnose, and repair. Artifact, Deployment, and Run follow after validation."),
+      sceneBeat("diagnose", "Diagnose", "This authoring loop operates on the mutable Draft: an external agent proposal becomes a valid workflow through discover, author, diagnose, and repair. Artifact, Deployment, and Run follow after validation.", { evidencePresentation: "receipt" }),
+      sceneBeat("repair", "Repair", "This authoring loop operates on the mutable Draft: an external agent proposal becomes a valid workflow through discover, author, diagnose, and repair. Artifact, Deployment, and Run follow after validation."),
     ],
   },
   {
