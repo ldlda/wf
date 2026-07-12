@@ -59,6 +59,7 @@ export const PresentationRoute = () => {
   const timelineAgent = useTimelineAgent(demo, {
     mode: presentationTarget.mode === "live" ? "live" : "replay",
     status: targetStatus,
+    liveTargetReady: targetStatusController.liveTargetReady,
   });
   const requiredDemoStage = state.location.kind === "main"
     ? requirementForDemoBeat(state.location.sceneId, state.location.beatId).requiredStage

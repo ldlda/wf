@@ -109,6 +109,37 @@ describe("useTimelineAgent", () => {
     expect(start).toHaveBeenCalledWith("replay");
   });
 
+  it("starts live explicitly from a direct replay view when the target is ready", async () => {
+    const start = vi.fn();
+    const demo = demoController({
+      state: { ...initialDemoTimelineState, mode: "replay" },
+      start,
+    });
+
+    const { result } = renderHook(() => useTimelineAgent(demo, {
+      mode: "live",
+      status: replayStatus,
+      liveTargetReady: true,
+    }));
+
+    expect(result.current.canRunLive).toBe(true);
+    await act(async () => result.current.runPreparedWorkflow("live"));
+
+    expect(start).toHaveBeenCalledWith("live");
+  });
+
+  it("does not offer an explicit live launch when health has failed", () => {
+    const start = vi.fn();
+    const demo = demoController({ start });
+    const { result } = renderHook(() => useTimelineAgent(demo, {
+      mode: "live",
+      status: failedStatus,
+      liveTargetReady: false,
+    }));
+
+    expect(result.current.canRunLive).toBe(false);
+  });
+
   it("submits selected issues from the current interrupt payload", async () => {
     const submitSelectedIssues = vi.fn(async () => {});
     const demo = demoController({

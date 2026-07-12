@@ -191,6 +191,7 @@ describe("OperatorChat", () => {
         timelineAgent={{
           messages: [],
           canRun: true,
+          canRunLive: true,
           runLabel: "Run prepared workflow",
           runPreparedWorkflow,
           submitSelectedIssues: vi.fn(async () => {}),
@@ -236,6 +237,7 @@ describe("OperatorChat", () => {
         timelineAgent={{
           messages: [],
           canRun: false,
+          canRunLive: false,
           runLabel: "Run prepared workflow",
           runPreparedWorkflow: vi.fn(async () => {}),
           submitSelectedIssues,

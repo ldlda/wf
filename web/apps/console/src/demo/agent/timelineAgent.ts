@@ -14,13 +14,15 @@ export type TimelineAgentMode = "live" | "replay";
 export type TimelineAgentOptions = {
   readonly mode: TimelineAgentMode;
   readonly status: PresentationTargetHealth;
+  readonly liveTargetReady?: boolean | undefined;
 };
 
 export type TimelineAgentController = {
   readonly messages: ReadonlyArray<AgentMessage>;
   readonly canRun: boolean;
+  readonly canRunLive: boolean;
   readonly runLabel: string;
-  readonly runPreparedWorkflow: () => Promise<void>;
+  readonly runPreparedWorkflow: (mode?: TimelineAgentMode) => Promise<void>;
   readonly submitSelectedIssues: () => Promise<void>;
   readonly requestRevision: () => Promise<void>;
 };
@@ -89,18 +91,23 @@ export const useTimelineAgent = (
 
   const runLabel = modeLabel === "live" ? "Run prepared workflow" : "Run replay walkthrough";
   const canRun = demo.canStart && !demo.inFlight && demo.state.phase !== "running";
+  const canRunLive = (options.liveTargetReady ?? (options.mode === "live" && (
+    options.status.kind === "ready" || options.status.kind === "active"
+  ))) && !demo.inFlight && demo.state.phase !== "running";
 
-  const runPreparedWorkflow = useCallback(async () => {
+  const runPreparedWorkflow = useCallback(async (requestedMode?: TimelineAgentMode) => {
+    const mode = requestedMode ?? modeLabel;
+    if (mode === "live" && !canRunLive) return;
     if (!demo.canStart || demo.inFlight || demo.state.phase === "running") return;
-    demo.start(modeLabel);
+    demo.start(mode);
     setMessages((current) => appendToolMessage(
       current,
       "timeline-agent-start",
       "startRun",
-      { mode: modeLabel },
+      { mode },
       { phase: "started" },
     ));
-  }, [demo, modeLabel]);
+  }, [canRunLive, demo, modeLabel]);
 
   const selectedIssueIds = useMemo(
     () => demo.interruptPayload?.proposed_issues.map((issue) => issue.id) ?? [],
@@ -135,6 +142,7 @@ export const useTimelineAgent = (
   return {
     messages,
     canRun,
+    canRunLive,
     runLabel,
     runPreparedWorkflow,
     submitSelectedIssues,
