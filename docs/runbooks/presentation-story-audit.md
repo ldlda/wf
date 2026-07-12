@@ -127,16 +127,22 @@ discussion answer look like core evidence.
 - **Visual:** No visual defect was recorded in the available rehearsal log. The
   matrix remains the acceptance checklist for both `1280x720` and `1024x768`.
 
-## Product Follow-ups
+## Rehearsal And Factual Follow-ups
 
-These are outside the story-flow acceptance pass and must not be presented as
-current proof:
+These are outside the story-flow acceptance pass and must be resolved or
+clearly labeled before claiming stronger evidence:
 
-- Add a factual input-file browser that distinguishes declared, selected, read,
-  and produced files.
 - Complete and record a stateful live run through approval, resume, output, and
   trace.
 - Decide whether the revision branch should preserve the submitted run identity
   or remain a separately labeled prepared recording.
+
+## Product Follow-ups
+
+These are missing capabilities, not rehearsal fixes, and must not be presented
+as current proof:
+
+- Add a factual input-file browser that distinguishes declared, selected, read,
+  and produced files.
 - Consider live agent execution, richer trace frames, and real source reads as
   future product layers, not rehearsal fixes.
