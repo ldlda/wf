@@ -281,19 +281,28 @@ export const authoringToolGroupId = (phase: AuthoringPhaseId): string =>
 export const projectPreparedAuthoringThread = (
   throughPhase: AuthoringPhaseId = "deployment",
   requestOverride?: string,
+  requestOverrides?: Readonly<Partial<Record<"validate" | "deployment", string>>>,
 ): readonly AgentMessage[] => {
   const finalPhaseIndex = recording.findIndex(({ phase }) => phase === throughPhase);
   if (finalPhaseIndex < 0) throw new Error(`unknown phase: ${throughPhase}`);
 
   let requestReplaced = false;
   return recording.slice(0, finalPhaseIndex + 1).flatMap((phase) => {
+    const phaseOverride =
+      phase.phase === "validate"
+        ? requestOverrides?.validate
+        : phase.phase === "deployment"
+          ? requestOverrides?.deployment
+          : undefined;
     const conversation = phase.conversation.map((turn, index) => {
-      const shouldReplaceRequest = requestOverride !== undefined && !requestReplaced && turn.role === "user";
-      if (shouldReplaceRequest) requestReplaced = true;
+      const shouldReplaceRequest =
+        turn.role === "user" &&
+        (phaseOverride !== undefined || (requestOverride !== undefined && !requestReplaced));
+      if (shouldReplaceRequest && phaseOverride === undefined) requestReplaced = true;
       return agentTextMessage(
         `authoring-${phase.phase}-message-${index}`,
         turn.role,
-        shouldReplaceRequest ? requestOverride : turn.text,
+        shouldReplaceRequest ? (phaseOverride ?? requestOverride ?? turn.text) : turn.text,
       );
     });
     const groupId = authoringToolGroupId(phase.phase);

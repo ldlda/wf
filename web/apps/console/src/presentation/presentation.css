@@ -3308,6 +3308,49 @@
   overflow: auto;
 }
 
+.presentation-assistant-pane__composer {
+  flex: 0 0 auto;
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.7rem 0.9rem 0.85rem;
+  border-top: 1px solid var(--stage-line);
+}
+
+.presentation-assistant-pane__composer label {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.presentation-assistant-pane__composer textarea {
+  min-height: 4.5rem;
+  resize: vertical;
+  font-size: 0.78rem;
+}
+
+.presentation-assistant-pane__composer-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.presentation-assistant-pane__composer-actions button {
+  height: 2rem;
+  padding-inline: 0.7rem;
+  font-size: 0.72rem;
+}
+
+.presentation-assistant-pane__composer-help,
+.presentation-assistant-pane__run-status {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 0.65rem;
+  line-height: 1.35;
+}
+
+.presentation-assistant-pane__run-status {
+  color: var(--accent-cyan);
+}
+
 .prepared-lifecycle-scene[data-presentation-surface="editorial"] {
   --authoring-paper: var(--color-editorial-paper, oklch(0.975 0.012 82));
   --authoring-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));

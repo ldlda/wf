@@ -1,7 +1,14 @@
+import { useReducer } from "react";
 import { projectPreparedAuthoringPhase } from "./authoring-projection.js";
 import { AuthoringPhaseVisual } from "./AuthoringPhaseVisual.js";
 import { PresentationAssistantPane } from "./PresentationAssistantPane.js";
 import type { AuthoringPhaseId } from "./authoring-recording.js";
+import {
+  initialScene9MessageState,
+  projectScene9Message,
+  projectScene9SubmittedOverrides,
+  scene9MessageReducer,
+} from "./scene9-message-state.js";
 import type { SceneBeatDefinition, SceneDefinition } from "../storyboard.js";
 import { StageCaption } from "../StageCaption.js";
 
@@ -25,6 +32,10 @@ const phases: readonly { readonly id: AuthoringPhaseId; readonly label: string }
  * projection sourced from the prepared authoring recording.
  */
 export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthoringLifecycleSceneProps) => {
+  const [messageState, dispatch] = useReducer(
+    scene9MessageReducer,
+    initialScene9MessageState,
+  );
   // Storyboard beats normally match these IDs. Discovery is a safe projection
   // if a future beat reaches this scene before its authoring mapping is added.
   const beatId = phases.find((phase) => phase.id === beat.id)?.id ?? "discover";
@@ -43,7 +54,18 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthori
         data-support-surface="prepared-chat"
         data-presentation-surface="editorial"
       >
-        <PresentationAssistantPane phase={beatId} />
+        <PresentationAssistantPane
+          phase={beatId}
+          message={projectScene9Message(messageState, beatId)}
+          submittedOverrides={projectScene9SubmittedOverrides(messageState)}
+          runRequested={messageState.runRequested}
+          onDraftChange={(draft) => dispatch({ type: "draft_edited", draft })}
+          onSubmit={() => {
+            if (beatId === "draft") dispatch({ type: "draft_submitted" });
+            if (beatId === "artifact") dispatch({ type: "artifact_submitted" });
+            if (beatId === "deployment") dispatch({ type: "run_requested" });
+          }}
+        />
         <div className="prepared-lifecycle-scene__presentation">
           <ol className="prepared-lifecycle-scene__rail" aria-label="authoring phase rail">
             {phases.map((phase) => (

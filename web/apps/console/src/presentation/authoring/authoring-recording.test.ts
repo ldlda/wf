@@ -178,4 +178,31 @@ describe("projectPreparedAuthoringThread", () => {
     ]);
     expect(overriddenTools).toEqual(canonicalTools);
   });
+
+  it("projects staged overrides onto their phase user turns", () => {
+    const messages = projectPreparedAuthoringThread("validate", undefined, {
+      validate: "Edited validation request",
+    });
+    const validateUser = messages.find(
+      (message) => message.id === "authoring-validate-message-0",
+    );
+
+    expect(validateUser?.parts).toEqual([{ type: "text", text: "Edited validation request" }]);
+  });
+
+  it("projects both staged overrides without changing tool messages", () => {
+    const canonical = projectPreparedAuthoringThread("deployment");
+    const overridden = projectPreparedAuthoringThread("deployment", undefined, {
+      validate: "Edited validation request",
+      deployment: "Edited deployment request",
+    });
+
+    expect(overridden.find((message) => message.id === "authoring-validate-message-0")?.parts)
+      .toEqual([{ type: "text", text: "Edited validation request" }]);
+    expect(overridden.find((message) => message.id === "authoring-deployment-message-0")?.parts)
+      .toEqual([{ type: "text", text: "Edited deployment request" }]);
+    expect(overridden.filter((message) => message.id.endsWith("-tools"))).toEqual(
+      canonical.filter((message) => message.id.endsWith("-tools")),
+    );
+  });
 });
