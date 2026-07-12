@@ -63,7 +63,7 @@ Expected: the new test fails because `storyboard.ts` still declares the `cancel`
 
 - [ ] **Step 3: Remove only the redundant storyboard beat**
 
-In `storyboard.ts`, delete the `sceneBeat("cancel", ...)` entry from `typed-human-boundary`. Keep the `interrupt` and `approval` captions and their hidden chat configuration unchanged.
+In `storyboard.ts`, delete the `sceneBeat("cancel", ...)` entry from `typed-human-boundary`. Keep the `interrupt` caption and both beats' hidden chat configuration unchanged; the `approval` caption may be clarified to describe both outcomes.
 
 Use copy that makes the decision beat cover both outcomes, for example:
 
