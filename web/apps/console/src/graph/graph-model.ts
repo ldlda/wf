@@ -36,8 +36,21 @@ export type WorkflowGraphModel = {
   readonly edges: ReadonlyArray<WorkflowGraphEdge>;
 };
 
-const NODE_WIDTH = 180;
-const NODE_HEIGHT = 60;
+export type WorkflowGraphLayoutOptions = {
+  readonly direction?: "TB" | "LR";
+  readonly nodeWidth?: number;
+  readonly nodeHeight?: number;
+  readonly nodesep?: number;
+  readonly ranksep?: number;
+};
+
+const DEFAULT_LAYOUT: Required<WorkflowGraphLayoutOptions> = {
+  direction: "TB",
+  nodeWidth: 180,
+  nodeHeight: 60,
+  nodesep: 50,
+  ranksep: 80,
+};
 
 const mapNodeKind = (type: string): WorkflowGraphNodeKind => {
   switch (type) {
@@ -88,17 +101,26 @@ export const buildWorkflowGraph = (
     nodes: ReadonlyArray<Record<string, unknown>>;
     edges: ReadonlyArray<Record<string, unknown>>;
   },
+  options: WorkflowGraphLayoutOptions = {},
 ): WorkflowGraphModel => {
+  const layout = { ...DEFAULT_LAYOUT, ...options };
   const sortedNodes = [...plan.nodes].sort((a, b) =>
     String(a.id).localeCompare(String(b.id)),
   );
 
   const g = new dagre.graphlib.Graph();
   g.setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: "TB", nodesep: 50, ranksep: 80 });
+  g.setGraph({
+    rankdir: layout.direction,
+    nodesep: layout.nodesep,
+    ranksep: layout.ranksep,
+  });
 
   for (const node of sortedNodes) {
-    g.setNode(String(node.id), { width: NODE_WIDTH, height: NODE_HEIGHT });
+    g.setNode(String(node.id), {
+      width: layout.nodeWidth,
+      height: layout.nodeHeight,
+    });
   }
 
   for (const edge of plan.edges) {
@@ -119,7 +141,10 @@ export const buildWorkflowGraph = (
         nodeRef: (node.node as string | null) ?? null,
         raw: node as Record<string, unknown>,
       },
-      position: { x: pos.x - NODE_WIDTH / 2, y: pos.y - NODE_HEIGHT / 2 },
+      position: {
+        x: pos.x - layout.nodeWidth / 2,
+        y: pos.y - layout.nodeHeight / 2,
+      },
     };
   });
 

@@ -95,6 +95,35 @@ describe("buildWorkflowGraph", () => {
     expect(okEdge?.label).toBe("ok");
   });
 
+  it("keeps the default layout top-to-bottom", () => {
+    const model = buildWorkflowGraph(samplePlan);
+    const open = model.nodes.find((node) => node.id === "open");
+    const end = model.nodes.find((node) => node.id === "__end__");
+
+    expect(open?.position.y).toBeLessThan(end?.position.y ?? 0);
+  });
+
+  it("supports horizontal layout options without changing edge labels", () => {
+    const model = buildWorkflowGraph(samplePlan, {
+      direction: "LR",
+      nodeWidth: 190,
+      nodeHeight: 72,
+      nodesep: 55,
+      ranksep: 100,
+    });
+    const open = model.nodes.find((node) => node.id === "open");
+    const end = model.nodes.find((node) => node.id === "__end__");
+
+    expect(open?.position.x).toBeLessThan(end?.position.x ?? 0);
+    expect(model.edges.map((edge) => edge.label)).toEqual([
+      "ok",
+      "ok",
+      "true",
+      "false",
+      "approved",
+    ]);
+  });
+
   it("assigns deterministic coordinates", () => {
     const model1 = buildWorkflowGraph(samplePlan);
     const model2 = buildWorkflowGraph(structuredClone(samplePlan));
