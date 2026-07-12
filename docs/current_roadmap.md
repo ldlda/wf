@@ -313,9 +313,9 @@ separate activity after these surfaces are stable.
    [`presentation visual scale and color pass plan`](historical/superpowers/plans/2026-07-12-presentation-visual-scale-color-pass.md).
 8. **Completed: defense rehearsal gate:** all 14 scenes have paired `1280x720`
    and `1024x768` replay captures, and the rehearsal matrix, log, and story
-   audit are recorded. The live end-to-end path remains blocked, and the full
-   web test command retains two existing PresentationRoute failures; neither
-   is being represented as passing evidence. Historical implementation plan:
+   audit are recorded. The live end-to-end path remains blocked, the prepared
+   revision branch has a separate recorded run identity, and the full web test
+   gate passes after route-contract stabilization. Historical implementation plan:
    [`defense rehearsal gate`](historical/superpowers/plans/2026-07-13-defense-rehearsal-gate.md).
    Route matrix: [`presentation rehearsal matrix`](runbooks/presentation-rehearsal-matrix.md);
    Story-flow audit: [`presentation story audit`](runbooks/presentation-story-audit.md);
