@@ -80,6 +80,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
       .toBeInTheDocument();
     expect(visual).toHaveAttribute("data-presentation-surface", "editorial");
     expect(visual).toHaveAttribute("data-visual-role", "authoring-phase");
+    expect(workspace.querySelector('[data-visual-role="lifecycle-primary"]')).toBe(visual.parentElement);
   });
 
   it("synchronizes the assistant phase, active group, rail, and visual", () => {

@@ -83,7 +83,11 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance }: Prep
             ))}
           </ol>
 
-          <article className="prepared-lifecycle-scene__projection" key={beatId}>
+          <article
+            className="prepared-lifecycle-scene__projection"
+            data-visual-role="lifecycle-primary"
+            key={beatId}
+          >
             <AuthoringPhaseVisual projection={projection} />
           </article>
         </div>

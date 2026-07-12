@@ -3586,7 +3586,7 @@
   --authoring-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
   --authoring-muted: var(--color-editorial-muted, oklch(0.48 0.025 65));
   --authoring-rule: color-mix(in oklch, var(--authoring-muted) 32%, transparent);
-  grid-template-columns: minmax(15rem, 0.35fr) minmax(0, 0.65fr);
+  grid-template-columns: minmax(13rem, 0.3fr) minmax(0, 0.7fr);
   gap: 0.8rem;
   background: var(--authoring-paper);
   color: var(--authoring-ink);
@@ -3613,7 +3613,7 @@
 
 .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__projection {
   margin: 0;
-  padding: 1rem 0;
+  padding: 1.35rem 1.4rem;
   border: 0;
   border-radius: 0;
   border-bottom: 1px solid var(--authoring-rule);
