@@ -3,9 +3,11 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { loadCanonicalDemoRecording } from "../demo/timeline/replay.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
+import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
 import type { DemoApprovalActions } from "./demo-approval-actions.js";
 import { DemoWorkflowScene } from "./DemoWorkflowScene.js";
 import { findBeat, findScene } from "./storyboard.js";
+import type { PresentationTargetHealth } from "./presentation-target-status.js";
 
 afterEach(() => cleanup());
 
@@ -53,6 +55,10 @@ const renderBeat = (
   options: {
     readonly openEvidence?: () => void;
     readonly approvalActions?: DemoApprovalActions;
+    readonly timelineAgent?: TimelineAgentController;
+    readonly targetStatus?: PresentationTargetHealth;
+    readonly retryHealth?: () => void;
+    readonly liveTargetReady?: boolean;
   } = {},
 ) => {
   const openEvidence = options.openEvidence ?? vi.fn();
@@ -64,8 +70,12 @@ const renderBeat = (
       demo={demo}
       selectedNodeId={null}
       selectNode={noop}
-      openEvidence={openEvidence}
-      approvalActions={options.approvalActions}
+          openEvidence={openEvidence}
+          approvalActions={options.approvalActions}
+          timelineAgent={options.timelineAgent}
+          targetStatus={options.targetStatus}
+          retryHealth={options.retryHealth}
+          liveTargetReady={options.liveTargetReady}
     />,
   );
   return { ...rendered, openEvidence };
@@ -79,6 +89,38 @@ describe("DemoWorkflowScene", () => {
     expect(screen.queryByLabelText("workflow graph")).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /view raw evidence/i }));
     expect(openEvidence).toHaveBeenCalledOnce();
+  });
+
+  it("exposes live launch only on the Scene 10 operation beat", async () => {
+    const runPreparedWorkflow = vi.fn(async () => {});
+    const targetStatus: PresentationTargetHealth = {
+      kind: "ready",
+      target: "http://127.0.0.1:8765/rpc",
+      label: "Live target ready",
+      detail: "127.0.0.1:8765",
+    };
+    const timelineAgent: TimelineAgentController = {
+      messages: [],
+      canRun: true,
+      canRunLive: true,
+      runLabel: "Run prepared workflow",
+      runPreparedWorkflow,
+      submitSelectedIssues: vi.fn(async () => {}),
+      requestRevision: vi.fn(async () => {}),
+    };
+
+    const operation = renderBeat("operation", "run-from-deployment", {
+      timelineAgent,
+      targetStatus,
+      liveTargetReady: true,
+      retryHealth: vi.fn(),
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Run prepared workflow" }));
+    expect(runPreparedWorkflow).toHaveBeenCalledWith("live");
+    operation.unmount();
+
+    renderBeat("graph");
+    expect(screen.queryByRole("region", { name: "prepared workflow launch" })).not.toBeInTheDocument();
   });
 
   it("keeps the run receipt visible when the graph takes over", () => {

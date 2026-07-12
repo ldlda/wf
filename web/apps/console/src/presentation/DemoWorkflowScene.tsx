@@ -21,6 +21,7 @@ import { StageCaption } from "./StageCaption.js";
 import type { SceneBeatDefinition, SceneDefinition } from "./storyboard.js";
 import type { PresentationTargetHealth } from "./presentation-target-status.js";
 import { WorkflowGraphStage } from "./WorkflowGraphStage.js";
+import { DemoRunLaunchControl } from "./DemoRunLaunchControl.js";
 
 type DemoWorkflowSceneProps = {
   readonly scene: SceneDefinition;
@@ -123,6 +124,15 @@ export const DemoWorkflowScene = ({
         data-support-surface={surface.supportSurface}
         aria-label="demo workflow stage"
       >
+          {beat.id === "operation" && timelineAgent && targetStatus && retryHealth ? (
+            <DemoRunLaunchControl
+              status={targetStatus}
+              liveTargetReady={liveTargetReady ?? false}
+              demo={demo}
+              timelineAgent={timelineAgent}
+              retryHealth={retryHealth}
+            />
+          ) : null}
           {isGuidedDemoMoment ? (
             <GuidedProductMoment
               beat={beat}

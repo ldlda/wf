@@ -88,6 +88,90 @@
   font-family: var(--font-mono, monospace);
 }
 
+.demo-run-launch-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.7rem;
+  border: 1px solid color-mix(in oklch, var(--accent-cyan) 32%, var(--stage-line));
+  border-radius: 0.75rem;
+  padding: 0.7rem 0.85rem;
+  background: color-mix(in oklch, var(--stage-surface) 84%, var(--accent-cyan));
+}
+
+.demo-run-launch-control__copy {
+  min-width: 0;
+}
+
+.demo-run-launch-control__eyebrow {
+  display: block;
+  margin-bottom: 0.15rem;
+  color: var(--accent-cyan);
+  font: 650 0.58rem/1 var(--font-mono, monospace);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.demo-run-launch-control__copy strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+}
+
+.demo-run-launch-control__copy p {
+  margin: 0.15rem 0 0;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.demo-run-launch-control__actions {
+  display: flex;
+  flex: 0 0 auto;
+  gap: 0.45rem;
+}
+
+.demo-run-launch-control__actions button {
+  border: 1px solid var(--stage-line);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.7rem;
+  color: var(--text-primary);
+  font: 650 0.68rem/1 var(--font-mono, monospace);
+  cursor: pointer;
+}
+
+.demo-run-launch-control__primary {
+  background: var(--accent-cyan);
+  color: oklch(0.12 0.03 250) !important;
+}
+
+.demo-run-launch-control__retry {
+  background: transparent;
+}
+
+.demo-run-launch-control__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+@container presentation-canvas (max-width: 760px) {
+  .demo-run-launch-control {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .demo-run-launch-control__actions {
+    width: 100%;
+  }
+
+  .demo-run-launch-control__actions button {
+    flex: 1;
+  }
+}
+
 /* Operation handoff: a single large receipt, not a stack of dashboard cards. */
 .presentation-route .operation-block--expanded {
   position: relative;
