@@ -57,7 +57,6 @@ describe("defense storyboard catalog", () => {
     expect(findBeat("run-from-deployment", "input")?.chatMode).toBe("hidden");
     expect(findBeat("run-from-deployment", "graph")?.chatMode).toBe("hidden");
     expect(findBeat("typed-human-boundary", "approval")?.chatMode).toBe("hidden");
-    expect(findBeat("typed-human-boundary", "cancel")?.chatMode).toBe("hidden");
     expect(findBeat("resume-output-evidence", "resume")?.chatMode).toBe("hidden");
     expect(findBeat("resume-output-evidence", "output")?.chatMode).toBe("hidden");
     expect(findBeat("resume-output-evidence", "trace")?.chatMode).toBe("hidden");
@@ -86,10 +85,19 @@ describe("defense storyboard catalog", () => {
     expect(findBeat("run-from-deployment", "graph")).toBeDefined();
     expect(findBeat("typed-human-boundary", "interrupt")).toBeDefined();
     expect(findBeat("typed-human-boundary", "approval")).toBeDefined();
-    expect(findBeat("typed-human-boundary", "cancel")).toBeDefined();
     expect(findBeat("resume-output-evidence", "resume")).toBeDefined();
     expect(findBeat("resume-output-evidence", "output")).toBeDefined();
     expect(findBeat("resume-output-evidence", "trace")).toBeDefined();
+  });
+
+  it("compresses Scene 11 into interrupt context and one operator decision beat", () => {
+    expect(findScene("typed-human-boundary")?.beats.map((beat) => beat.id)).toEqual([
+      "interrupt",
+      "approval",
+    ]);
+    expect(findBeat("typed-human-boundary", "interrupt")?.caption).toMatch(/boundary|interrupt/i);
+    expect(findBeat("typed-human-boundary", "approval")?.caption).toMatch(/decision|resume/i);
+    expect(findBeat("typed-human-boundary", "cancel")).toBeUndefined();
   });
 
   it("defines discussion branches across multiple scenes", () => {

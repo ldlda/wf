@@ -199,8 +199,12 @@ export const mainScenes = defineScenes([
     view: "demo",
     beats: [
       sceneBeat("interrupt", "Interrupt payload", "Execution reaches a declared issue-review boundary.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("approval", "Approval", "The operator reviews a schema-backed resume request.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("cancel", "Cancel path", "Replay cancellation stays honest and does not show submitted evidence.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat(
+        "approval",
+        "Approval",
+        "The operator makes a decision by choosing a submitted or revision-requested outcome for the paused run.",
+        { chatMode: "hidden", chatTheme: "light" },
+      ),
     ],
   },
   {
