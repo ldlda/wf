@@ -26,7 +26,6 @@ coverage/
 .nyc_output/
 
 # Local presentation screenshots
-web/apps/console/.visual-smoke/
 web/apps/console/.visual-smoke/rehearsal/
 
 # IDE/Editor Specific
