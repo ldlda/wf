@@ -14,12 +14,12 @@ describe("OpeningThesisScene", () => {
     const opening = screen.getByRole("region", { name: /thesis opening/i });
     expect(opening).toHaveAttribute("data-opening-focus", "title");
     expect(opening).toHaveAttribute("data-presentation-surface", "editorial");
-    expect(screen.getByRole("heading", { name: /The product goal: an AI agent for workspace automation/i }).parentElement)
+    expect(screen.getByRole("heading", { name: /An AI agent for workspace automation/i }).parentElement)
       .toHaveAttribute("data-visual-role", "title-hero");
     expect(screen.getByRole("heading", { name: /Design and Implementation of lda\.chat/i })).toBeInTheDocument();
-    expect(screen.getByText(/product goal.*AI agent.*workspace automation/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI agent for workspace automation is the product goal/i)).toBeInTheDocument();
     expect(screen.getByText(/implemented contribution.*typed workflow substrate/i)).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: /The product goal: an AI agent for workspace automation/i })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /An AI agent for workspace automation/i })).toBeInTheDocument();
     const roles = screen.getByRole("group", { name: "AI agent roles" });
     expect(roles).toHaveClass("opening-thesis__agent-system");
     expect(roles.querySelectorAll("[data-concept-emphasis]")).toHaveLength(3);

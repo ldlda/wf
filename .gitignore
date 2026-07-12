@@ -25,9 +25,6 @@ logs/
 coverage/
 .nyc_output/
 
-# Local presentation screenshots
-web/apps/console/.visual-smoke/rehearsal/
-
 # IDE/Editor Specific
 .vscode/
 .idea/
@@ -217,7 +214,7 @@ pyrightconfig.json
 .superpowers/
 
 # Local dependency source checkouts used for agent reference
-.repos/effect/
+.repos/
 
 
 # local config file

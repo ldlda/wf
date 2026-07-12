@@ -29,7 +29,7 @@ export const OpeningThesisScene = ({ scene, beat }: OpeningThesisSceneProps) => 
         >
           <header className="opening-thesis__statement" data-visual-role="title-hero">
             <p>Product goal</p>
-            <h2>The product goal: an AI agent for workspace automation.</h2>
+            <h2>An AI agent for workspace automation.</h2>
           </header>
           <div className="opening-thesis__statement opening-thesis__statement--contribution" data-visual-role="implementation-boundary">
             <p>Implementation boundary</p>
