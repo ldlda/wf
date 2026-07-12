@@ -73,6 +73,62 @@ afterEach(() => {
 });
 
 describe("PresentationRoute", () => {
+  const directHashRoutes = [
+    { hash: "#scene/thesis/title", heading: "Design and Implementation of lda.chat", hasDemoChrome: false },
+    { hash: "#scene/architecture/client", heading: "Architecture Zoom", hasDemoChrome: false },
+    { hash: "#scene/authoring/diagnose", heading: "Author, Validate, Repair", hasDemoChrome: false },
+    { hash: "#scene/prepared-lifecycle/discover", heading: "Prepared Workflow Lifecycle", hasDemoChrome: true },
+    { hash: "#scene/run-from-deployment/graph", heading: "Run From Deployment", hasDemoChrome: true },
+    { hash: "#scene/typed-human-boundary/approval", heading: "Typed Human Boundary", hasDemoChrome: true },
+    { hash: "#scene/resume-output-evidence/trace", heading: "Resume, Output, Evidence", hasDemoChrome: true },
+    { hash: "#scene/evaluation/cohort", heading: "Evaluation", hasDemoChrome: false },
+    { hash: "#scene/conclusion/questions", heading: "Thesis contribution", hasDemoChrome: false },
+  ] as const;
+
+  it.each(directHashRoutes)(
+    "renders $hash with heading $heading and expected demo chrome ownership",
+    async ({ hash, heading, hasDemoChrome }) => {
+      window.location.hash = hash;
+      const { PresentationRoute } = await import("./PresentationRoute.js");
+      render(<PresentationRoute />);
+
+      expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
+      const demoChrome = screen.queryByTestId("presentation-demo-rail");
+      expect(demoChrome !== null).toBe(hasDemoChrome);
+    },
+  );
+
+  it.each([
+    "#scene/thesis/title",
+    "#scene/problem/direct-actions",
+    "#scene/architecture/client",
+    "#scene/evaluation/cohort",
+    "#scene/conclusion/questions",
+  ])("does not leak live target or prepared-run chrome onto %s", async (hash) => {
+    window.location.hash = hash;
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("main", { name: /lda\.chat presentation/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText("presentation evidence mode")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Run prepared workflow" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Play replay walkthrough" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry live service" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "prepared workflow launch" })).not.toBeInTheDocument();
+  });
+
+  it("keeps prepared lifecycle chat and footer ownership without duplicating a run action", async () => {
+    window.location.hash = "#scene/prepared-lifecycle/discover";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("complementary", { name: /prepared authoring assistant/i })).toBeInTheDocument();
+    const footer = screen.getByRole("contentinfo", { name: /presentation footer/i });
+    expect(within(footer).getByRole("button", { name: /run prepared workflow|play replay walkthrough/i })).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: /run prepared workflow|play replay walkthrough/i })).toHaveLength(1);
+    expect(screen.queryByRole("region", { name: "prepared workflow launch" })).not.toBeInTheDocument();
+  });
+
   it("renders the presentation stage entry point", { timeout: 15000 }, async () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
