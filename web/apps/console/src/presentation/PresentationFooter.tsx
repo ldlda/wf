@@ -3,6 +3,7 @@ import { SceneProgress } from "./SceneProgress.js";
 import { EvidenceReceipt } from "./evidence/EvidenceReceipt.js";
 import { PresentationTruthBadge } from "./PresentationTruthBadge.js";
 import type { PresentationTargetHealth } from "./presentation-target-status.js";
+import { isDemoChromeScene } from "./presentation-demo-chrome.js";
 import type { MainLocation } from "./storyboard.js";
 
 type PresentationFooterProps = {
@@ -22,7 +23,7 @@ export const PresentationFooter = ({
 }: PresentationFooterProps) => (
   <footer className="presentation-footer" aria-label="presentation footer">
     <SceneProgress location={location} />
-    <PresentationTruthBadge status={targetStatus} />
+    {isDemoChromeScene(location.sceneId) && <PresentationTruthBadge status={targetStatus} />}
     <EvidenceReceipt
       records={evidence}
       visible={showEvidenceReceipt}

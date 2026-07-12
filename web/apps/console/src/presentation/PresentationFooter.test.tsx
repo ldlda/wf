@@ -41,4 +41,28 @@ describe("PresentationFooter", () => {
     expect(within(footer).getByText("3 / 4")).toBeInTheDocument();
     expect(within(footer).getByText(/workflow\.runs\.trace/)).toBeInTheDocument();
   });
+
+  it("hides target status outside the demo arc", () => {
+    render(
+      <PresentationFooter
+        location={{
+          kind: "main",
+          sceneId: "conclusion",
+          beatId: "questions",
+          focusPath: [],
+        }}
+        evidence={[]}
+        targetStatus={{
+          kind: "replay",
+          label: "Replay evidence",
+          detail: "reviewed recording",
+        }}
+        showEvidenceReceipt={false}
+        inspectEvidence={vi.fn()}
+      />,
+    );
+
+    const footer = screen.getByRole("contentinfo", { name: /presentation footer/i });
+    expect(within(footer).queryByLabelText("presentation evidence mode")).not.toBeInTheDocument();
+  });
 });

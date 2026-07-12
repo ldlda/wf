@@ -367,6 +367,16 @@ describe("PresentationRoute", () => {
     expect(mockedCallOperation).not.toHaveBeenCalledWith("workflow.health", expect.anything(), expect.anything());
   });
 
+  it("hides target status on a non-demo route", async () => {
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    window.location.hash = "#scene/conclusion/questions";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("contentinfo", { name: /presentation footer/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText("presentation evidence mode")).not.toBeInTheDocument();
+  });
+
   it("opens Scene 10 approval from the canonical hash", async () => {
     window.location.hash = "#scene/typed-human-boundary/approval";
     const { PresentationRoute } = await import("./PresentationRoute.js");
