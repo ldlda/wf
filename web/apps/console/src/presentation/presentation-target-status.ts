@@ -20,24 +20,14 @@ export const presentationTargetHealth = ({
   target,
   probe,
   liveActive,
-  replayActive = false,
   failureReason,
 }: {
   readonly target: string | null;
   readonly probe: TargetProbeState;
   readonly liveActive: boolean;
-  readonly replayActive?: boolean;
   readonly failureReason?: string | undefined;
 }): PresentationTargetHealth => {
   if (!target) {
-    return {
-      kind: "replay",
-      label: "Replay evidence",
-      detail: "reviewed recording",
-    };
-  }
-
-  if (replayActive && probe === "ready") {
     return {
       kind: "replay",
       label: "Replay evidence",

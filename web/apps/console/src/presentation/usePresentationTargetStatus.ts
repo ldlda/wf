@@ -37,7 +37,7 @@ export const usePresentationTargetStatus = (
     }
     if (!probeEnabled) {
       setProbe("none");
-      setFailureReason("deterministic Scene 8 replay");
+      setFailureReason(undefined);
       return;
     }
 
@@ -70,14 +70,11 @@ export const usePresentationTargetStatus = (
       target: null,
       probe: "none",
       liveActive: false,
-      replayActive: true,
-      failureReason: "deterministic Scene 8 replay",
     })
     : presentationTargetHealth({
       target: targetState.mode === "live" ? targetState.target : null,
       probe,
       liveActive: liveActive(demoState),
-      replayActive: demoState.mode === "replay",
       failureReason,
     });
 

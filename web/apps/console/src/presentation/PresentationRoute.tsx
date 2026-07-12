@@ -8,6 +8,7 @@ import { useDemoTimeline } from "../demo/useDemoTimeline.js";
 import { PresentationCanvas } from "./PresentationCanvas.js";
 import { PresentationStage } from "./PresentationStage.js";
 import { requirementForDemoBeat } from "./demo-beat-requirements.js";
+import { isDemoChromeScene } from "./presentation-demo-chrome.js";
 import {
   createInitialPresentationState,
   presentationReducer,
@@ -53,8 +54,13 @@ export const PresentationRoute = () => {
 
   const presentationTarget = useMemo(() => resolvePresentationTarget(), []);
   const demo = useDemoTimeline(presentationTarget.target, recordEvidence, recording);
-  const isScene8 = state.location.kind === "main" && state.location.sceneId === "agent-handoff";
-  const targetStatusController = usePresentationTargetStatus(presentationTarget, demo.state, !isScene8);
+  const probeEnabled = state.location.kind === "main"
+    && isDemoChromeScene(state.location.sceneId);
+  const targetStatusController = usePresentationTargetStatus(
+    presentationTarget,
+    demo.state,
+    probeEnabled,
+  );
   const targetStatus = targetStatusController.status;
   const timelineAgent = useTimelineAgent(demo, {
     mode: presentationTarget.mode === "live" ? "live" : "replay",

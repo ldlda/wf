@@ -18,22 +18,34 @@ describe("presentationTargetHealth", () => {
       target: "http://127.0.0.1:8765/rpc",
       probe: "ready",
       liveActive: false,
-      replayActive: false,
     })).toMatchObject({
       kind: "ready",
       label: "Live target ready",
+      detail: "127.0.0.1:8765",
     });
   });
 
-  it("labels a reviewed replay selected alongside a healthy target", () => {
+  it("keeps a healthy target ready while replay is active", () => {
     expect(presentationTargetHealth({
       target: "http://127.0.0.1:8765/rpc",
       probe: "ready",
       liveActive: false,
-      replayActive: true,
+    })).toMatchObject({
+      kind: "ready",
+      label: "Live target ready",
+      detail: "127.0.0.1:8765",
+    });
+  });
+
+  it("uses reviewed recording fallback when no target is configured", () => {
+    expect(presentationTargetHealth({
+      target: null,
+      probe: "none",
+      liveActive: false,
     })).toMatchObject({
       kind: "replay",
       label: "Replay evidence",
+      detail: "reviewed recording",
     });
   });
 

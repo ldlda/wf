@@ -282,10 +282,11 @@ describe("PresentationRoute", () => {
 
   it("uses stored target for live presentation mode", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    window.location.hash = "#scene/run-from-deployment/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByRole("button", { name: /run prepared workflow/i })).toBeInTheDocument();
+    expect(await screen.findAllByRole("button", { name: /run prepared workflow/i })).toHaveLength(2);
   });
 
   it("exposes an explicit live launch on the Scene 10 operation beat", async () => {
@@ -294,7 +295,9 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    const launch = await screen.findByRole("button", { name: "Run prepared workflow" });
+    const launches = await screen.findAllByRole("button", { name: "Run prepared workflow" });
+    const launch = launches.at(-1);
+    if (!launch) throw new Error("Expected a live workflow launch control");
     await userEvent.click(launch);
 
     await waitFor(() => {
@@ -309,7 +312,7 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByText(/Replay evidence is active/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Live target is ready/i)).toBeInTheDocument();
     expect(await screen.findByText("Workflow input")).toBeInTheDocument();
     expect(await screen.findByRole("button", { name: "Submit" })).toBeInTheDocument();
   });
@@ -331,6 +334,7 @@ describe("PresentationRoute", () => {
 
   it("updates the chat intro after the live health probe succeeds", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    window.location.hash = "#scene/run-from-deployment/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
@@ -347,10 +351,20 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByText(/Replay evidence is active/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Live target is ready/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Run prepared workflow" })).not.toBeInTheDocument();
-    expect(mockedCallOperation).not.toHaveBeenCalled();
+    expect(mockedCallOperation).toHaveBeenCalledWith("workflow.health", "http://127.0.0.1:8765/rpc", {});
+  });
+
+  it("does not probe a configured target on the title route", async () => {
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    mockedCallOperation.mockClear();
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(screen.getByRole("heading", { name: /Design and Implementation of lda\.chat/i })).toBeInTheDocument();
+    expect(mockedCallOperation).not.toHaveBeenCalledWith("workflow.health", expect.anything(), expect.anything());
   });
 
   it("opens Scene 10 approval from the canonical hash", async () => {

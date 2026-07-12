@@ -95,7 +95,17 @@ describe("usePresentationTargetStatus", () => {
     );
 
     await waitFor(() => expect(result.current.liveTargetReady).toBe(true));
-    expect(result.current.status.kind).toBe("replay");
+    expect(result.current.status.kind).toBe("ready");
+    expect(result.current.status.label).toBe("Live target ready");
+  });
+
+  it("does not probe when health probing is disabled", async () => {
+    const { result } = renderHook(() =>
+      usePresentationTargetStatus(target, replayState, false),
+    );
+
+    await waitFor(() => expect(result.current.status.kind).toBe("replay"));
+    expect(mockedCallOperation).not.toHaveBeenCalled();
   });
 
   it("retries health without changing replay playback", async () => {
