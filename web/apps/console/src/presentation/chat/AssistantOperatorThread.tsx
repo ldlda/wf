@@ -23,7 +23,6 @@ import {
 type AssistantOperatorThreadProps = {
   readonly mode: "hidden" | "full" | "rail" | "dock";
   readonly messages: ReadonlyArray<AgentMessage>;
-  readonly runAction?: { readonly label: string; readonly disabled: boolean; readonly run: () => void } | undefined;
   readonly scrollMode?: "active" | "start" | undefined;
   readonly submitApproval?: (() => void) | undefined;
   readonly requestRevision?: (() => void) | undefined;
@@ -250,7 +249,6 @@ const MessageBubble = ({
 export const AssistantOperatorThread = ({
   mode,
   messages,
-  runAction,
   scrollMode = "active",
   submitApproval,
   requestRevision,
@@ -304,11 +302,6 @@ export const AssistantOperatorThread = ({
     });
   }, []);
 
-  const handleRun = useCallback(() => {
-    if (!runAction || runAction.disabled) return;
-    runAction.run();
-  }, [runAction]);
-
   return (
     <section
       className="assistant-operator-thread"
@@ -345,13 +338,6 @@ export const AssistantOperatorThread = ({
           })}
         </div>
       </div>
-      {runAction ? (
-        <div className="assistant-operator-thread__action">
-          <button type="button" disabled={runAction.disabled} onClick={handleRun}>
-            {runAction.label}
-          </button>
-        </div>
-      ) : null}
     </section>
   );
 };

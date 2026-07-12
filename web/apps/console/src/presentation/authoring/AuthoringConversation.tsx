@@ -13,7 +13,6 @@ type AuthoringConversationProps = {
   readonly requestOverride?: string | undefined;
   readonly requestOverrides?: Scene9SubmittedOverrides | undefined;
   readonly scrollMode?: "active" | "start" | undefined;
-  readonly runAction?: { readonly label: string; readonly disabled: boolean; readonly run: () => void } | undefined;
 };
 
 /** Renders the same prepared conversation at full-stage or compact-dock scale. */
@@ -24,7 +23,6 @@ export const AuthoringConversation = ({
   requestOverride,
   requestOverrides,
   scrollMode,
-  runAction,
 }: AuthoringConversationProps) => (
   <AssistantOperatorThread
     mode={surface === "stage" ? "full" : "dock"}
@@ -33,6 +31,5 @@ export const AuthoringConversation = ({
     activeToolGroupId={authoringToolGroupId(activePhase)}
     scrollMode={scrollMode}
     ariaLabel="prepared authoring conversation"
-    runAction={runAction}
   />
 );

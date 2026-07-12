@@ -286,7 +286,7 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findAllByRole("button", { name: /run prepared workflow/i })).toHaveLength(2);
+    expect(await screen.findAllByRole("button", { name: /run prepared workflow/i })).toHaveLength(1);
   });
 
   it("owns the live run action in the footer rail", async () => {

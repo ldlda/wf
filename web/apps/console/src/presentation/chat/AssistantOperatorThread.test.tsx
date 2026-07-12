@@ -99,19 +99,10 @@ describe("AssistantOperatorThread", () => {
     expect(requestRevision).toHaveBeenCalledOnce();
   });
 
-  it("renders a chat-owned run action", async () => {
-    const user = userEvent.setup();
-    const run = vi.fn();
-    render(
-      <AssistantOperatorThread
-        mode="dock"
-        messages={[]}
-        runAction={{ label: "Run prepared workflow", disabled: false, run }}
-      />,
-    );
+  it("does not render a run action", () => {
+    render(<AssistantOperatorThread mode="dock" messages={[]} />);
 
-    await user.click(screen.getByRole("button", { name: /run prepared workflow/i }));
-    expect(run).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("button", { name: /run prepared workflow/i })).not.toBeInTheDocument();
   });
 
   it("labels and opens the synchronized authoring phase group", () => {

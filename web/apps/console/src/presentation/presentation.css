@@ -2505,16 +2505,6 @@
   }
 }
 
-.assistant-operator-thread__action button {
-  width: 100%;
-  border: 1px solid var(--accent-cyan);
-  border-radius: 0.65rem;
-  background: color-mix(in oklch, var(--accent-cyan) 13%, var(--stage-surface));
-  color: var(--text-primary);
-  padding: 0.55rem 0.7rem;
-  font: 700 0.8rem/1 var(--font-interface);
-}
-
 .assistant-thread,
 .assistant-thread__viewport {
   min-height: 0;
@@ -3285,13 +3275,6 @@
 .agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-fallback-trigger-chevron"],
 .agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread [data-slot="tool-group-trigger-chevron"] {
   color: var(--authoring-accent);
-}
-
-.agent-handoff-scene[data-presentation-surface="editorial"] .assistant-operator-thread__action button {
-  border-color: var(--authoring-accent);
-  border-radius: 0.2rem;
-  background: var(--authoring-accent);
-  color: var(--authoring-paper);
 }
 
 /* Keep the compact Scene 8 request surface centered inside the presentation canvas. */

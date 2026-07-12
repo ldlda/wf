@@ -64,8 +64,8 @@ const renderBeat = (
       demo={demo}
       selectedNodeId={null}
       selectNode={noop}
-          openEvidence={openEvidence}
-          approvalActions={options.approvalActions}
+      openEvidence={openEvidence}
+      approvalActions={options.approvalActions}
     />,
   );
   return { ...rendered, openEvidence };

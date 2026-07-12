@@ -181,8 +181,7 @@ describe("OperatorChat", () => {
     expect(screen.getByRole("button", { name: /presentation.selectWorkflowNode/i })).toBeInTheDocument();
   });
 
-  it("shows a chat-owned run prepared workflow action", async () => {
-    const user = userEvent.setup();
+  it("does not render the run prepared workflow action", () => {
     const runPreparedWorkflow = vi.fn(async () => {});
 
     render(
@@ -200,8 +199,8 @@ describe("OperatorChat", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: /run prepared workflow/i }));
-    expect(runPreparedWorkflow).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: /run prepared workflow/i })).not.toBeInTheDocument();
+    expect(runPreparedWorkflow).not.toHaveBeenCalled();
   });
 
   it("routes schema approval submit and revision request through the timeline agent when present", async () => {
