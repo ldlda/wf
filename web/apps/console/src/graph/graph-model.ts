@@ -13,6 +13,7 @@ export type WorkflowGraphNodeData = {
   readonly nodeId: string;
   readonly kind: WorkflowGraphNodeKind;
   readonly label: string;
+  readonly detail?: string | null;
   readonly nodeRef: string | null;
   readonly raw: Readonly<Record<string, unknown>>;
   readonly onSelect?: (nodeId: string) => void;
@@ -144,6 +145,7 @@ export const buildWorkflowGraph = (
         nodeId: id,
         kind: mapNodeKind(node.type as string),
         label: buildLabel(node, layout.label),
+        detail: typeof node.detail === "string" ? node.detail : null,
         nodeRef: (node.node as string | null) ?? null,
         raw: node as Record<string, unknown>,
       },

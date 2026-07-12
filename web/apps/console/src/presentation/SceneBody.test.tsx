@@ -380,6 +380,24 @@ describe("SceneBody", () => {
     expect(within(rail).getByRole("button", { name: /Hosted automation future-work/i })).toBeInTheDocument();
   });
 
+  it("keeps discussion rails out of workflow proof scenes", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "run-from-deployment", beatId: "graph", focusPath: [] };
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    expect(screen.queryByLabelText("defense discussion topics")).not.toBeInTheDocument();
+  });
+
   it("keeps discussion rail actions wired to branch ids", async () => {
     const user = userEvent.setup();
     const location: PresentationLocation = { kind: "main", sceneId: "positioning", beatId: "landscape", focusPath: [] };

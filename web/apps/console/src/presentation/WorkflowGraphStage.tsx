@@ -47,14 +47,15 @@ const PresentationFlowNode = ({ data }: NodeProps<Node<PresentationNodeData>>) =
       data-kind={data.kind}
       data-selected={data.selected}
       aria-pressed={data.selected}
-      aria-label={data.label}
+      aria-label={`${data.label}${data.detail ? `, ${data.detail}` : ""}`}
+      title={data.nodeRef ?? undefined}
       onClick={(event) => {
         event.stopPropagation();
         data.selectNode(data.nodeId);
       }}
     >
       <strong>{data.label}</strong>
-      {data.nodeRef && <small>{data.nodeRef}</small>}
+      <small>{data.detail ?? data.nodeRef ?? "workflow step"}</small>
     </button>
     <Handle type="source" position={Position.Right} />
   </>
@@ -72,10 +73,10 @@ const WorkflowGraphStageInner = ({
   const model = useMemo(
     () => buildWorkflowGraph(presentationWorkflowPlan, {
       direction: "LR",
-      nodeWidth: 190,
-      nodeHeight: 72,
-      nodesep: 55,
-      ranksep: 100,
+      nodeWidth: 150,
+      nodeHeight: 64,
+      nodesep: 35,
+      ranksep: 80,
       label: (node) => {
         if (typeof node.label === "string") return node.label;
         if (node.id === "review_issues") return "Review issues";
@@ -131,6 +132,11 @@ const WorkflowGraphStageInner = ({
       data-graph-variant={variant}
       data-graph-direction="horizontal"
     >
+      <div className="workflow-graph-stage__legend" aria-label="workflow graph node types">
+        <span data-kind="use"><i aria-hidden="true" />Action</span>
+        <span data-kind="interrupt"><i aria-hidden="true" />Human boundary</span>
+        <span data-kind="end"><i aria-hidden="true" />Outcome</span>
+      </div>
       {variant === "full" && proof && (
         <div className="workflow-graph-stage__proof" aria-label="workflow graph proof">
           <span><b>Run</b><code>{proof.runId ?? "run unavailable"}</code></span>
@@ -143,7 +149,7 @@ const WorkflowGraphStageInner = ({
         nodeTypes={nodeTypes}
         onNodeClick={handleNodeClick}
         fitView
-        fitViewOptions={{ padding: 0.12, minZoom: 0.45, maxZoom: 1 }}
+        fitViewOptions={{ padding: 0.02, minZoom: 0.5, maxZoom: 1 }}
         minZoom={0.25}
         maxZoom={1.5}
         nodesDraggable={false}

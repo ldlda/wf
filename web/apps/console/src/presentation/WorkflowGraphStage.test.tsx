@@ -49,7 +49,7 @@ describe("WorkflowGraphStage", () => {
     expect(graph).toHaveTextContent("Create issues");
     expect(graph).toHaveTextContent("Finalise");
     expect(graph).toHaveTextContent("Revision requested");
-    expect(graph).toHaveTextContent("completed");
+    expect(graph).toHaveTextContent("persisted run");
     expect(graph).not.toHaveTextContent("end_cancelled");
     expect(document.querySelectorAll(".workflow-graph-stage__node")).toHaveLength(10);
     expect(presentationWorkflowNodeIds).toEqual([
@@ -98,8 +98,9 @@ describe("WorkflowGraphStage", () => {
     expect(screen.queryByText("Current")).not.toBeInTheDocument();
     expect(screen.queryByText("Current interrupt")).not.toBeInTheDocument();
     expect(screen.queryByText("Queued")).not.toBeInTheDocument();
-    expect(screen.queryByText("Completed")).not.toBeInTheDocument();
-    expect(screen.queryByText("Human boundary")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("workflow graph node types")).toHaveTextContent("Action");
+    expect(screen.getByLabelText("workflow graph node types")).toHaveTextContent("Human boundary");
+    expect(screen.getByLabelText("workflow graph node types")).toHaveTextContent("Outcome");
   });
 
   it("keeps raw plan facts and canonical labeled edge order", () => {

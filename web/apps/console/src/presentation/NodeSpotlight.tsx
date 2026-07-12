@@ -22,9 +22,9 @@ export const NodeSpotlight = ({ nodeId, close }: NodeSpotlightProps) => {
   const node = presentationNodes.find((candidate) => candidate.id === nodeId);
   const label = node && "label" in node
     ? node.label
-    : node?.id === "review_issues"
+    : nodeId === "review_issues"
       ? "Review issues"
-      : node?.id ?? nodeId;
+      : nodeId;
 
   useEffect(() => {
     const previouslyFocused = document.activeElement instanceof HTMLElement

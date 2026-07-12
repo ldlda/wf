@@ -41,6 +41,13 @@ type SceneBodyProps = {
   readonly onScene9Advance?: (() => void) | undefined;
 };
 
+const workflowDemoSceneIds = new Set([
+  "prepared-lifecycle",
+  "run-from-deployment",
+  "typed-human-boundary",
+  "resume-output-evidence",
+]);
+
 const DiscussionLinks = ({
   sceneId,
   openDiscussion,
@@ -315,9 +322,12 @@ export const SceneBody = ({ location, demo, timelineAgent, selectedNodeId, selec
   const scene = findScene(sceneId) ?? findScene("thesis")!;
   const beat = findBeat(sceneId, beatId) ?? scene.beats[0]!;
 
-  // The questions beat renders its own grouped discussion index. Suppress the
-  // generic per-scene rail there so the same actions do not appear twice.
-  const showDiscussionRail = !(scene.id === "conclusion" && beat.id === "questions");
+  // The questions beat owns the full discussion index. Workflow demo scenes
+  // keep the product proof uncluttered; their discussion topics remain
+  // available from the global presenter controls.
+  const isWorkflowDemoScene = workflowDemoSceneIds.has(scene.id);
+  const showDiscussionRail = !(scene.id === "conclusion" && beat.id === "questions")
+    && !isWorkflowDemoScene;
   const discussionLinks = showDiscussionRail ? <DiscussionLinks sceneId={scene.id} openDiscussion={openDiscussion} /> : null;
   const content = (() => {
   switch (scene.view) {

@@ -164,8 +164,8 @@ describe("PresentationRoute", () => {
     window.location.hash = "#scene/run-from-deployment/graph";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
-    fireEvent.click(graphNodeByLabel(/issue review/i));
-    expect(screen.getByRole("dialog", { name: /issue review/i })).toBeInTheDocument();
+    fireEvent.click(graphNodeByLabel(/review issues/i));
+    expect(screen.getByRole("dialog", { name: /review issues/i })).toBeInTheDocument();
     expect(screen.getByText("Workflow node")).toBeInTheDocument();
   });
 
