@@ -24,8 +24,11 @@ paths, not file contents or a read operation.
 3. Make footer content derive from the current scene and beat, so backtracking
    cannot retain a previous beat's status or copy.
 4. Separate target health from demo playback mode.
-5. Keep the footer slot geometrically stable while target health is checking.
-6. Replace unsupported file claims with factual input-manifest language.
+5. Keep the footer slot geometrically stable while target health is checking or
+   the run changes phase.
+6. Make the prepared-run control available throughout the demo arc without
+   repeating large buttons inside individual scenes.
+7. Replace unsupported file claims with factual input-manifest language.
 
 ## Non-goals
 
@@ -33,21 +36,23 @@ paths, not file contents or a read operation.
   slice. Those require content-backed fixtures or a source-read operation.
 - Do not change the workflow graph, trace facts, approval form, or live RPC
   protocol.
-- Do not show target-health chrome on Scene 8's scripted agent handoff.
 - Do not make the presentation footer a second application navigation system.
 
 ## Demo scope
 
-Target chrome is visible only for the prepared workflow demo scenes:
+The demo control rail is visible only for the prepared workflow arc:
 
+- Scene 8: `agent-handoff`
 - Scene 9: `prepared-lifecycle`
 - Scene 10: `run-from-deployment`
 - Scene 11: `typed-human-boundary`
 - Scene 12: `resume-output-evidence`
 
-Scene 8 (`agent-handoff`) remains a target-free scripted conversation. All
-narrative, architecture, evaluation, conclusion, and discussion locations hide
-the target badge and demo actions.
+Scene 8 (`agent-handoff`) remains a scripted conversation, but gains the same
+small footer control rail so the presenter can start the prepared run without
+adding another large button to the chat composition. All narrative,
+architecture, evaluation, conclusion, and discussion locations hide the target
+badge and demo actions.
 
 ## State model
 
@@ -76,25 +81,28 @@ target-health badge.
 ## Footer composition
 
 `PresentationFooter` owns one stable demo slot between scene progress and the
-evidence receipt.
+evidence receipt. The slot is reserved for every Scene 8–12 location and is
+empty elsewhere.
 
 For non-demo scenes, the slot is absent and no target-health copy is rendered.
-For demo scenes, the slot is always present with a stable minimum width and
-height:
+For the demo arc, the slot is always present with a stable minimum width and
+height. It shows exactly one of these states:
 
-- Non-launch beats render a compact target badge:
-  - healthy: `Live target ready` / `127.0.0.1:8765`
-  - unavailable: `Replay fallback` / the failure reason
-  - checking: a compact checking state with the same footprint
-- The launch beat (`run-from-deployment` / `operation`) replaces the badge with
-  compact actions in the same slot:
-  - primary action: run live when healthy, otherwise play replay walkthrough
-  - secondary action: retry live service when retry is meaningful
-- Active or in-flight states keep the same slot and disable the relevant
-  actions rather than inserting a new panel.
+- Before execution: a compact primary action, `Run prepared workflow` when the
+  live target is healthy or `Play replay walkthrough` when it is unavailable.
+- While checking: a compact `Checking live service` state with the same
+  footprint.
+- While running: a non-interactive `Running workflow...` information label,
+  not a disabled button.
+- While paused at the typed boundary: `Run paused - review required`.
+- After completion: `Run complete`.
+- When retry is meaningful: a compact secondary `Retry live service` action may
+  sit beside the primary action without changing the slot's size.
 
-The large `DemoRunLaunchControl` section is removed from the Scene 10 content
-layout. Its behavior is preserved through the footer slot.
+The large `DemoRunLaunchControl` section is removed from scene content layouts.
+Its behavior is preserved through this footer rail. There is only one actual
+prepared-run action; chat remains explanatory and does not gain a duplicate
+run button.
 
 ## Input manifest language
 
@@ -112,12 +120,16 @@ current static rows.
 The implementation must test:
 
 - title and non-demo scenes render no target badge or demo controls;
-- Scene 8 renders no target badge or demo controls;
-- demo input/graph/approval/output beats render the compact target badge;
-- the launch beat renders footer actions and no in-scene launch panel;
+- every Scene 8–12 beat renders exactly one compact demo rail;
+- the pre-run demo rail renders the run action without an in-scene launch panel;
+- a running demo renders an information label instead of a disabled run button;
+- a paused demo renders the review-required information label;
+- a completed demo renders the terminal information label;
 - a healthy target remains `Live target ready` while the timeline is replaying;
 - failed health renders replay fallback only inside demo scope;
-- backtracking from launch to graph to title removes launch copy immediately;
+- backtracking between Scene 8–12 updates the rail from current state without
+  retaining stale copy;
+- backtracking from the demo arc to title removes the rail immediately;
 - checking does not change footer dimensions or mount a stale replay label;
 - input rows use `included in prepared run` and expose no unsupported button or
   preview affordance.
