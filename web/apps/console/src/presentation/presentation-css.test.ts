@@ -34,6 +34,9 @@ describe("presentation.css", () => {
     expect(breakpointBlock).toContain(".guided-product-moment__interrupt-grid");
     expect(breakpointBlock).toContain(".guided-product-moment__resume-grid");
     expect(breakpointBlock).toContain(".guided-product-moment__trace-grid");
+    expect(breakpointBlock).toMatch(
+      /\.guided-product-moment__(?:interrupt|resume|trace)-grid[\s\S]*?\{\s*grid-template-columns: minmax\(0, 1fr\);/,
+    );
     expect(breakpointBlock).not.toContain(".guided-product-moment__approval-grid");
   });
 
