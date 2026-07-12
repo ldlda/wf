@@ -316,13 +316,13 @@
 - Modify: `docs/current_roadmap.md`
 - Move: `docs/superpowers/plans/2026-07-13-defense-rehearsal-gate.md` to `docs/historical/superpowers/plans/2026-07-13-defense-rehearsal-gate.md`
 
-- [ ] **Step 1: Run the focused presentation checks.**
+- [x] **Step 1: Run the focused presentation checks.**
 
   ```powershell
   pnpm --dir web/apps/console test -- src/presentation/presentation-rehearsal.test.ts src/presentation/PresentationRoute.test.tsx
   ```
 
-- [ ] **Step 2: Run the complete web gate.**
+- [x] **Step 2: Run the complete web gate.**
 
   ```powershell
   pnpm --dir web test
@@ -333,14 +333,32 @@
 
   The known Vite chunk-size warning is acceptable if no new build failure appears.
 
-- [ ] **Step 3: Confirm the screenshot matrix.**
+- [x] **Step 3: Confirm the screenshot matrix.**
 
   Verify every matrix route has both viewport captures, no outer page scroll, no clipped headings, no unreadable labels, no accidental demo chrome, and no live claim in replay mode.
 
-- [ ] **Step 4: Request the two-axis review.**
+- [x] **Step 4: Request the two-axis review.**
 
   Review the complete range against this plan. Fix Critical and Important findings before archival; record Minor findings in the rehearsal log.
 
-- [ ] **Step 5: Archive and mark complete.**
+- [x] **Step 5: Archive and mark complete.**
 
   Update the roadmap to link the historical plan, rehearsal matrix, rehearsal log, and story audit. Move the plan only after the review and verification gates pass.
+
+#### Task 6 completion record
+
+- Focused presentation checks: 2 files, 68 tests passed.
+- Full web tests: RPC 52 passed and 6 skipped; console 735 passed and 2
+  failed across 92 files. The failures are a thesis-route timeout and a
+  duplicate-heading query in `PresentationRoute.test.tsx`.
+- Typecheck: passed for console, RPC, and server.
+- Build: passed. Vite emitted its known chunk-size warning for the 832.24 kB
+  minified JavaScript chunk over the 500 kB threshold.
+- Diff check: `git diff --check` passed.
+- Screenshot evidence: 42 manifest routes and 42 PNGs at each of
+  `1280x720` and `1024x768`; representative title and approval captures were
+  inspected at both sizes. The log remains authoritative for route-wide
+  operator observations.
+- Review outcome: matrix, log, and story-audit links were checked; the
+  existing FACTUAL replay run-identity deviation and BLOCKED live end-to-end
+  path remain open. No production code was changed for Task 6.
