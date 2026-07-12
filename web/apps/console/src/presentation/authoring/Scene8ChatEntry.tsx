@@ -30,7 +30,7 @@ export const Scene8ChatEntry = ({ state, dispatch }: Scene8ChatEntryProps) => {
       data-entry-phase={state.phase}
     >
       <div className="agent-handoff-scene__intro">
-        <span>Scene 8 · agent handoff</span>
+        <span>Agent handoff</span>
         <h1>What should the workflow author prepare?</h1>
         <p>Ask the external agent to inspect the available sources and capabilities before it authors the workflow.</p>
       </div>

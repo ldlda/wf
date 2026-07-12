@@ -266,7 +266,7 @@ Recommended next visual slices:
 
 ## Next: Scene 8–14 Defense Recomposition
 
-The next presentation work is intentionally split into five implementation
+The next presentation work is intentionally split into six implementation
 slices followed by a rehearsal gate. The broader story-flow review remains a
 separate activity after these surfaces are stable.
 
@@ -293,11 +293,16 @@ separate activity after these surfaces are stable.
     decision outcome rather than a near-duplicate presentation beat.
    Implementation plan:
    [`Scene 11 decision beat compression`](historical/superpowers/plans/2026-07-12-scene-11-decision-beat-compression.md).
-5. **Visual scale and color pass:** remove unwanted blue from Scenes 2 and 14,
+5. **Next: Scene 10 factual proof and graph composition:** remove misleading
+   output/trace claims, replace the hand-positioned graph with a large dark
+   horizontal Dagre/React Flow sequence graph, show selected input files, and
+   place live/replay launch inside the operation proof. Implementation plan:
+   [`Scene 10 factual graph and proof layout`](superpowers/plans/2026-07-12-scene-10-factual-graph-and-proof-layout.md).
+6. **Visual scale and color pass:** remove unwanted blue from Scenes 2 and 14,
    shorten Scene 2's two-column composition, enlarge the focal diagrams in
    Scenes 7, 9, 13, and 14, separate Scene 7 Validate from Repair visuals, and
    improve Scene 1 title-box padding and contrast.
-6. **Rehearsal gate:** run all 14 scenes at 16:9 and 4:3, verify the Scene 8 →
+7. **Rehearsal gate:** run all 14 scenes at 16:9 and 4:3, verify the Scene 8 →
    Scene 11 → Scene 12 path in live and replay modes, then review the story
    flow, coverage, and ordering separately.
 
