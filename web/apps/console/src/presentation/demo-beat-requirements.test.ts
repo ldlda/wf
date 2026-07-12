@@ -12,12 +12,18 @@ describe("requirementForDemoBeat", () => {
     ["run-from-deployment", "graph", "run_start"],
     ["typed-human-boundary", "interrupt", "interrupt"],
     ["typed-human-boundary", "approval", "interrupt"],
-    ["typed-human-boundary", "cancel", "interrupt"],
     ["resume-output-evidence", "resume", "run_resume"],
     ["resume-output-evidence", "output", "run_resume"],
     ["resume-output-evidence", "trace", "trace_read"],
   ] as const)("maps %s/%s to %s", (sceneId, beatId, stage) => {
     expect(requirementForDemoBeat(sceneId, beatId).requiredStage).toBe(stage);
+  });
+
+  it("has no requirement for the removed Scene 11 cancel beat", () => {
+    expect(requirementForDemoBeat("typed-human-boundary", "cancel")).toEqual({
+      requiredStage: null,
+      reason: "No demo replay state needed.",
+    });
   });
 
   it("returns no required stage for non-demo beats", () => {

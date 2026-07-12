@@ -42,10 +42,6 @@ const requirements: Readonly<Record<string, DemoBeatRequirement>> = {
     requiredStage: "interrupt",
     reason: "Approval beat needs the typed review payload before controls can act.",
   },
-  "typed-human-boundary/cancel": {
-    requiredStage: "interrupt",
-    reason: "Cancel beat needs the review payload but no submitted replay evidence.",
-  },
   "resume-output-evidence/resume": {
     requiredStage: "run_resume",
     reason: "Resume beat needs the recorded resume operation.",

@@ -87,4 +87,20 @@ describe("storyboard navigation", () => {
       focusPath: [],
     });
   });
+
+  it("advances Scene 11 directly from interrupt to approval, then Scene 12", () => {
+    const interrupt = { kind: "main", sceneId: "typed-human-boundary", beatId: "interrupt", focusPath: [] } as const;
+    const approval = { kind: "main", sceneId: "typed-human-boundary", beatId: "approval", focusPath: [] } as const;
+
+    expect(nextMainLocation(interrupt)).toEqual(approval);
+    expect(nextMainLocation(approval)).toMatchObject({
+      kind: "main",
+      sceneId: "resume-output-evidence",
+      beatId: "resume",
+    });
+  });
+
+  it("fails closed for the removed Scene 11 cancel hash", () => {
+    expect(locationFromHash("#scene/typed-human-boundary/cancel")).toEqual(defaultMainLocation);
+  });
 });
