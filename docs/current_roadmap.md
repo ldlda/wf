@@ -253,8 +253,10 @@ Recommended next visual slices:
    automation problem. Implementation:
    [`presentation opening title`](historical/superpowers/plans/2026-07-11-presentation-opening-title.md).
 8. Completed: harden the live/replay defense rehearsal path with visible live
-   start readiness, submitted and revision-requested same-run evidence,
+   start readiness, submitted and revision-requested outcome evidence,
    deterministic replay fallback, current deep links, and reset instructions.
+   The live contract is same-run; the prepared revision branch uses a separate
+   recording and is disclosed in the rehearsal log.
    Implementation:
    [`defense presentation rehearsal`](historical/superpowers/plans/2026-07-12-defense-presentation-rehearsal.md).
 9. Completed: Scenes 7-9 now use one dominant factual artifact per beat on the
