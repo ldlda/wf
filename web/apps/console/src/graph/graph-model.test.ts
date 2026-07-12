@@ -95,6 +95,19 @@ describe("buildWorkflowGraph", () => {
     expect(okEdge?.label).toBe("ok");
   });
 
+  it("accepts a presentation label override without changing node refs", () => {
+    const model = buildWorkflowGraph(samplePlan, {
+      label: (node) => node.id === "open" ? "Open page" : undefined,
+    });
+    const openNode = model.nodes.find((node) => node.id === "open");
+
+    expect(openNode?.data.label).toBe("Open page");
+    expect(openNode?.data.nodeRef).toBe("local.browser_click.open_click_page");
+    expect(model.nodes.find((node) => node.id === "wait")?.data.label).toBe(
+      "wait_for_click",
+    );
+  });
+
   it("keeps the default layout top-to-bottom", () => {
     const model = buildWorkflowGraph(samplePlan);
     const open = model.nodes.find((node) => node.id === "open");

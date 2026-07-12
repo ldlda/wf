@@ -791,97 +791,76 @@
 
 .workflow-graph-stage {
   position: relative;
-  min-height: 12rem;
+  min-height: 24rem;
   flex: 1;
-  border: 1px solid var(--stage-line);
-  background: var(--stage-canvas);
+  border: 1px solid oklch(0.3 0.035 250);
+  border-radius: 0.7rem;
+  background: oklch(0.13 0.025 250);
   overflow: hidden;
 }
 
-.workflow-graph-stage__connectors {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-}
-
-.workflow-graph-stage__connector {
-  stroke: var(--stage-line);
-  stroke-width: 2;
-  stroke-dasharray: 4 4;
-}
-
-.workflow-graph-stage__connector--active {
-  stroke: var(--accent-cyan);
-  stroke-dasharray: none;
-}
-
-.workflow-graph-stage__arrowhead {
-  fill: var(--stage-line);
-}
-
-.workflow-graph-stage__arrowhead--active {
-  fill: var(--accent-cyan);
-}
-
 .workflow-graph-stage__node {
-  position: absolute;
-  transform: translate(-50%, -50%);
-  border: 1px solid var(--stage-line);
-  background: var(--stage-surface);
+  display: grid;
+  width: 100%;
+  min-height: 4.5rem;
+  gap: 0.35rem;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid oklch(0.45 0.04 250);
+  border-radius: 0.45rem;
+  background: oklch(0.19 0.03 250);
   color: var(--text-primary);
-  padding: 0.5rem 0.7rem;
-  border-radius: 0.6rem;
-  font-size: 0.8rem;
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
-.workflow-graph-stage__node--completed {
-  background: oklch(0.18 0.02 250);
-  border-color: oklch(0.44 0.04 250);
-}
-
-.workflow-graph-stage__node--current {
-  border-color: var(--accent-cyan);
-  box-shadow: 0 0 0 2px oklch(0.72 0.17 195 / 0.3);
-}
-
-.workflow-graph-stage__node--interrupt {
-  border-color: var(--accent-amber);
-  box-shadow: 0 0 0 2px oklch(0.76 0.18 70 / 0.3);
-}
-
-.workflow-graph-stage__node--future {
-  opacity: 0.6;
-}
-
-.workflow-graph-stage__node-label {
-  display: block;
-}
-
-.workflow-graph-stage__node-state {
-  display: block;
-  font-size: 0.65rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  opacity: 0.8;
-}
-
-.workflow-graph-stage__node--current .workflow-graph-stage__node-state {
-  color: var(--accent-cyan);
-}
-
-.workflow-graph-stage__node--interrupt .workflow-graph-stage__node-state {
-  color: var(--accent-amber);
+.workflow-graph-stage[data-graph-direction="horizontal"] .react-flow__node {
+  width: 11.875rem;
+  min-height: 4.5rem;
 }
 
 .workflow-graph-stage__node[data-kind="interrupt"] {
   border-color: var(--accent-amber);
 }
 
+.workflow-graph-stage__node[data-kind="end"] {
+  border-color: oklch(0.5 0.025 250);
+  background: oklch(0.16 0.02 250);
+}
+
 .workflow-graph-stage__node[data-selected="true"] {
-  outline: 3px solid var(--accent-cyan);
+  outline: 2px solid var(--accent-cyan);
+}
+
+.workflow-graph-stage__node small {
+  color: var(--text-secondary);
+  font: 0.62rem/1.25 var(--font-evidence);
+  overflow-wrap: anywhere;
+}
+
+.workflow-graph-stage .react-flow__edge-text {
+  paint-order: stroke;
+  stroke: oklch(0.13 0.025 250);
+  stroke-width: 0.4rem;
+  stroke-linejoin: round;
+  fill: var(--text-primary);
+  font: 700 0.68rem/1 var(--font-evidence);
+}
+
+.workflow-graph-stage .react-flow__edge-path {
+  stroke: oklch(0.55 0.04 250);
+}
+
+.workflow-graph-stage .react-flow__edge--active .react-flow__edge-path {
+  stroke: var(--accent-cyan);
+}
+
+.workflow-graph-stage .react-flow__controls {
+  border-color: oklch(0.38 0.035 250);
+  box-shadow: none;
+}
+
+.workflow-graph-stage .react-flow__controls-button {
+  border-color: oklch(0.38 0.035 250);
+  background: oklch(0.2 0.03 250);
+  fill: var(--text-primary);
 }
 
 .node-spotlight {

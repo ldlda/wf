@@ -1,49 +1,34 @@
-export type PresentationNode = {
-  readonly id: string;
-  readonly label: string;
-  readonly detail: string;
-  readonly kind: "node" | "interrupt" | "end";
-  readonly x: number;
-  readonly y: number;
-};
+/**
+ * The presentation subset deliberately keeps workflow facts raw. Dagre owns
+ * every rendered coordinate; this module only chooses the factual story slice.
+ */
+export const presentationWorkflowPlan = {
+  nodes: [
+    { id: "reset_board", type: "node", node: "local.issue_board.reset_issue_board", label: "Reset issue board" },
+    { id: "read_docs", type: "node", node: "local.lda_docs.read_documents", label: "Read documents" },
+    { id: "analyze", type: "node", node: "local.lda_report.analyze_documents", label: "Analyze documents" },
+    { id: "build_report", type: "node", node: "local.lda_report.build_report", label: "Build report" },
+    { id: "draft_issues", type: "node", node: "local.lda_report.create_issue_drafts", label: "Draft issues" },
+    { id: "review_issues", type: "interrupt", kind: "issue_review" },
+    { id: "create_issues", type: "node", node: "local.issue_board.create_issues", label: "Create issues" },
+    { id: "finalise", type: "node", node: "local.lda_report.finalise_report", label: "Finalise report" },
+    { id: "revision_requested", type: "node", node: "local.lda_report.record_revision_request", label: "Revision requested" },
+    { id: "end_completed", type: "end", outcome: "completed" },
+  ],
+  edges: [
+    { from: "reset_board", to: "read_docs", outcome: "ok" },
+    { from: "read_docs", to: "analyze", outcome: "ok" },
+    { from: "analyze", to: "build_report", outcome: "ok" },
+    { from: "build_report", to: "draft_issues", outcome: "ok" },
+    { from: "draft_issues", to: "review_issues", outcome: "ok" },
+    { from: "review_issues", to: "create_issues", outcome: "submitted" },
+    { from: "create_issues", to: "finalise", outcome: "ok" },
+    { from: "finalise", to: "end_completed", outcome: "completed" },
+    { from: "review_issues", to: "revision_requested", outcome: "cancelled" },
+  ],
+} as const;
 
-export const presentationNodes: ReadonlyArray<PresentationNode> = [
-  { id: "read_docs", label: "Read docs", detail: "document source", kind: "node", x: 0, y: 120 },
-  { id: "reset_board", label: "Reset board", detail: "issue board", kind: "node", x: 190, y: 120 },
-  { id: "analyze", label: "Analyze", detail: "report source", kind: "node", x: 380, y: 120 },
-  { id: "build_report", label: "Build report", detail: "markdown", kind: "node", x: 570, y: 120 },
-  { id: "draft_issues", label: "Draft issues", detail: "proposals", kind: "node", x: 760, y: 120 },
-  { id: "review_issues", label: "Issue review", detail: "typed interrupt", kind: "interrupt", x: 950, y: 120 },
-  { id: "create_issues", label: "Create issues", detail: "selected only", kind: "node", x: 1140, y: 120 },
-  { id: "finalise", label: "Finalise", detail: "state output", kind: "node", x: 1330, y: 120 },
-  { id: "end_completed", label: "Completed", detail: "persisted run", kind: "end", x: 1520, y: 120 },
-  { id: "revision_requested", label: "Revision requested", detail: "operator branch", kind: "end", x: 950, y: 300 },
-];
+export const presentationWorkflowNodeIds = presentationWorkflowPlan.nodes.map((node) => node.id);
 
-export type PresentationHandle = "left" | "right" | "top" | "bottom";
-
-export type PresentationEdge = {
-  readonly from: string;
-  readonly to: string;
-  readonly fromHandle?: PresentationHandle;
-  readonly toHandle?: PresentationHandle;
-};
-
-const mainEdge = (from: string, to: string): PresentationEdge => ({
-  from,
-  to,
-  fromHandle: "right",
-  toHandle: "left",
-});
-
-export const presentationEdges: ReadonlyArray<PresentationEdge> = [
-  mainEdge("read_docs", "reset_board"),
-  mainEdge("reset_board", "analyze"),
-  mainEdge("analyze", "build_report"),
-  mainEdge("build_report", "draft_issues"),
-  mainEdge("draft_issues", "review_issues"),
-  mainEdge("review_issues", "create_issues"),
-  mainEdge("create_issues", "finalise"),
-  mainEdge("finalise", "end_completed"),
-  { from: "review_issues", to: "revision_requested", fromHandle: "bottom", toHandle: "top" },
-];
+// Kept as a raw-plan alias for the existing node spotlight consumer.
+export const presentationNodes = presentationWorkflowPlan.nodes;

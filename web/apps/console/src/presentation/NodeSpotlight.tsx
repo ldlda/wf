@@ -20,6 +20,11 @@ export const NodeSpotlight = ({ nodeId, close }: NodeSpotlightProps) => {
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const node = presentationNodes.find((candidate) => candidate.id === nodeId);
+  const label = node && "label" in node
+    ? node.label
+    : node?.id === "review_issues"
+      ? "Review issues"
+      : node?.id ?? nodeId;
 
   useEffect(() => {
     const previouslyFocused = document.activeElement instanceof HTMLElement
@@ -54,12 +59,12 @@ export const NodeSpotlight = ({ nodeId, close }: NodeSpotlightProps) => {
       className="node-spotlight"
       role="dialog"
       aria-modal="true"
-      aria-label={node.label}
+      aria-label={label}
       onKeyDown={handleKeyDown}
     >
       <button type="button" ref={closeButtonRef} onClick={close}>Close</button>
       <p>Workflow node</p>
-      <h2>{node.label}</h2>
+      <h2>{label}</h2>
       <p>{nodeDescription(node.id)}</p>
     </aside>
   );

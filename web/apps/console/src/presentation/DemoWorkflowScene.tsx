@@ -85,8 +85,6 @@ export const DemoWorkflowScene = ({
 
   const runProof = {
     runId: runStart?.resultingIds.runId ?? null,
-    planLabel: "10 plan nodes",
-    traceLabel: "3 trace frames",
     evidenceLabel: "JSON-RPC evidence",
   };
 

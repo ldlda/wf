@@ -177,8 +177,7 @@ describe("DemoWorkflowScene", () => {
   it("passes run proof into full graph beats", () => {
     const { unmount } = renderBeat("graph");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run_recorded_lda_report");
-    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("10 plan nodes");
-    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("3 trace frames");
+    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC evidence");
     unmount();
 
     renderBeat("output", "resume-output-evidence");

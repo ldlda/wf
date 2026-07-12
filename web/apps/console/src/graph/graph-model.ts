@@ -42,9 +42,10 @@ export type WorkflowGraphLayoutOptions = {
   readonly nodeHeight?: number;
   readonly nodesep?: number;
   readonly ranksep?: number;
+  readonly label?: (node: Readonly<Record<string, unknown>>) => string | undefined;
 };
 
-const DEFAULT_LAYOUT: Required<WorkflowGraphLayoutOptions> = {
+const DEFAULT_LAYOUT: Required<Omit<WorkflowGraphLayoutOptions, "label">> = {
   direction: "TB",
   nodeWidth: 180,
   nodeHeight: 60,
@@ -73,7 +74,12 @@ const mapNodeKind = (type: string): WorkflowGraphNodeKind => {
   }
 };
 
-const buildLabel = (node: Record<string, unknown>): string => {
+const buildLabel = (
+  node: Record<string, unknown>,
+  labelOverride?: WorkflowGraphLayoutOptions["label"],
+): string => {
+  const overriddenLabel = labelOverride?.(node);
+  if (overriddenLabel) return overriddenLabel;
   const type = node.type as string;
   if (type === "end") return (node.outcome as string) ?? "End";
   if (type === "condition") return "Condition";
@@ -137,7 +143,7 @@ export const buildWorkflowGraph = (
       data: {
         nodeId: id,
         kind: mapNodeKind(node.type as string),
-        label: buildLabel(node),
+        label: buildLabel(node, layout.label),
         nodeRef: (node.node as string | null) ?? null,
         raw: node as Record<string, unknown>,
       },

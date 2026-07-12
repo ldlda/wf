@@ -1,7 +1,10 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { WorkflowGraphStage } from "./WorkflowGraphStage.js";
-import { presentationEdges, presentationNodes } from "./workflow-graph-data.js";
+import {
+  presentationWorkflowPlan,
+  presentationWorkflowNodeIds,
+} from "./workflow-graph-data.js";
 
 afterEach(() => cleanup());
 
@@ -13,7 +16,7 @@ const graphNodeByLabel = (label: RegExp): HTMLElement => {
 };
 
 describe("WorkflowGraphStage", () => {
-  it("renders curated workflow nodes and allows node selection", async () => {
+  it("renders the factual workflow nodes and allows node selection", async () => {
     const selectNode = vi.fn();
     render(
       <WorkflowGraphStage
@@ -23,11 +26,11 @@ describe("WorkflowGraphStage", () => {
       />,
     );
 
-    fireEvent.click(graphNodeByLabel(/issue review/i));
+    fireEvent.click(graphNodeByLabel(/review issues/i));
     expect(selectNode).toHaveBeenCalledWith("review_issues");
   });
 
-  it("renders the prepared report workflow plan nodes", () => {
+  it("renders the ten-node prepared report workflow plan", () => {
     render(
       <WorkflowGraphStage
         execution={{ completedNodeIds: [], currentNodeId: "read_docs" }}
@@ -37,21 +40,33 @@ describe("WorkflowGraphStage", () => {
     );
 
     const graph = screen.getByRole("group", { name: /workflow graph/i });
-    expect(graph).toHaveTextContent("Read docs");
-    expect(graph).toHaveTextContent("Reset board");
+    expect(graph).toHaveTextContent("Read documents");
+    expect(graph).toHaveTextContent("Reset issue board");
     expect(graph).toHaveTextContent("Analyze");
     expect(graph).toHaveTextContent("Build report");
     expect(graph).toHaveTextContent("Draft issues");
-    expect(graph).toHaveTextContent("Issue review");
+    expect(graph).toHaveTextContent("Review issues");
     expect(graph).toHaveTextContent("Create issues");
     expect(graph).toHaveTextContent("Finalise");
     expect(graph).toHaveTextContent("Revision requested");
-    expect(graph).toHaveTextContent("Completed");
-    expect(graph).not.toHaveTextContent("Cancelled");
+    expect(graph).toHaveTextContent("completed");
+    expect(graph).not.toHaveTextContent("end_cancelled");
     expect(document.querySelectorAll(".workflow-graph-stage__node")).toHaveLength(10);
+    expect(presentationWorkflowNodeIds).toEqual([
+      "reset_board",
+      "read_docs",
+      "analyze",
+      "build_report",
+      "draft_issues",
+      "review_issues",
+      "create_issues",
+      "finalise",
+      "revision_requested",
+      "end_completed",
+    ]);
   });
 
-  it("labels graph proof as plan nodes and trace frames separately", () => {
+  it("does not render graph proof count chips", () => {
     render(
       <WorkflowGraphStage
         execution={{ completedNodeIds: ["read_docs"], currentNodeId: "analyze" }}
@@ -59,19 +74,16 @@ describe("WorkflowGraphStage", () => {
         selectNode={vi.fn()}
         proof={{
           runId: "run_recorded_lda_report",
-          planLabel: "10 plan nodes",
-          traceLabel: "3 trace frames",
           evidenceLabel: "JSON-RPC evidence",
         }}
       />,
     );
 
-    const proof = screen.getByLabelText("workflow graph proof");
-    expect(proof).toHaveTextContent("10 plan nodes");
-    expect(proof).toHaveTextContent("3 trace frames");
+    expect(screen.queryByText("10 plan nodes")).not.toBeInTheDocument();
+    expect(screen.queryByText("3 trace frames")).not.toBeInTheDocument();
   });
 
-  it("distinguishes completed, current interrupt, and future nodes semantically", () => {
+  it("does not render current-state markers or a state legend", () => {
     render(
       <WorkflowGraphStage
         execution={{
@@ -83,34 +95,29 @@ describe("WorkflowGraphStage", () => {
       />,
     );
 
-    const readDocs = graphNodeByLabel(/read docs/i);
-    const reviewIssues = graphNodeByLabel(/issue review/i);
-    const revisionReq = graphNodeByLabel(/revision requested/i);
-
-    expect(readDocs).toHaveAttribute("data-execution-state", "completed");
-    expect(reviewIssues).toHaveAttribute("data-execution-state", "current");
-    expect(reviewIssues).toHaveAttribute("data-current-interrupt", "true");
-    expect(reviewIssues).toHaveTextContent("Current interrupt");
-    expect(revisionReq).toHaveAttribute("data-execution-state", "future");
+    expect(screen.queryByText("Current")).not.toBeInTheDocument();
+    expect(screen.queryByText("Current interrupt")).not.toBeInTheDocument();
+    expect(screen.queryByText("Queued")).not.toBeInTheDocument();
+    expect(screen.queryByText("Completed")).not.toBeInTheDocument();
+    expect(screen.queryByText("Human boundary")).not.toBeInTheDocument();
   });
 
-  it("renders connectors between nodes", () => {
-    expect(presentationEdges).toHaveLength(9);
-    expect(presentationEdges).toContainEqual({
-      from: "read_docs",
-      to: "reset_board",
-      fromHandle: "right",
-      toHandle: "left",
-    });
-    expect(presentationEdges).toContainEqual({
-      from: "review_issues",
-      to: "revision_requested",
-      fromHandle: "bottom",
-      toHandle: "top",
-    });
+  it("keeps raw plan facts and canonical labeled edge order", () => {
+    expect(presentationWorkflowPlan.edges.map((edge) => `${edge.from}:${edge.outcome}:${edge.to}`)).toEqual([
+      "reset_board:ok:read_docs",
+      "read_docs:ok:analyze",
+      "analyze:ok:build_report",
+      "build_report:ok:draft_issues",
+      "draft_issues:ok:review_issues",
+      "review_issues:submitted:create_issues",
+      "create_issues:ok:finalise",
+      "finalise:completed:end_completed",
+      "review_issues:cancelled:revision_requested",
+    ]);
+    expect(presentationWorkflowPlan.nodes.every((node) => !("x" in node) && !("y" in node))).toBe(true);
   });
 
-  it("uses flow coordinates rather than viewport percentages", () => {
+  it("uses a horizontal graph with visible controls", () => {
     render(
       <WorkflowGraphStage
         execution={{ completedNodeIds: ["read_docs"], currentNodeId: "reset_board" }}
@@ -119,25 +126,23 @@ describe("WorkflowGraphStage", () => {
       />,
     );
 
-    for (const node of presentationNodes) {
-      expect(Number.isFinite(node.x)).toBe(true);
-      expect(Number.isFinite(node.y)).toBe(true);
-    }
+    expect(screen.getByRole("group", { name: "workflow graph" })).toHaveAttribute("data-graph-direction", "horizontal");
+    expect(screen.getByRole("button", { name: /zoom in/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /zoom out/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /fit view/i })).toBeInTheDocument();
   });
 
-  it("renders compact run proof inside the graph", () => {
+  it("renders the run identity without plan or trace count chips", () => {
     render(
       <WorkflowGraphStage
         execution={{ completedNodeIds: ["read_docs"], currentNodeId: "reset_board" }}
         selectedNodeId={null}
         selectNode={vi.fn()}
-        proof={{ runId: "run_recorded_lda_report", planLabel: "10 plan nodes", traceLabel: "3 trace frames", evidenceLabel: "JSON-RPC captured" }}
+        proof={{ runId: "run_recorded_lda_report", evidenceLabel: "JSON-RPC captured" }}
       />,
     );
 
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run_recorded_lda_report");
-    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("10 plan nodes");
-    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("3 trace frames");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("JSON-RPC captured");
   });
 
@@ -148,7 +153,7 @@ describe("WorkflowGraphStage", () => {
         selectedNodeId={null}
         selectNode={vi.fn()}
         variant="compact"
-        proof={{ runId: "run_recorded_lda_report", planLabel: "10 plan nodes", traceLabel: "3 trace frames", evidenceLabel: "JSON-RPC evidence" }}
+        proof={{ runId: "run_recorded_lda_report", evidenceLabel: "JSON-RPC evidence" }}
       />,
     );
 
@@ -174,12 +179,11 @@ describe("WorkflowGraphStage", () => {
         execution={{ completedNodeIds: [], currentNodeId: null }}
         selectedNodeId={null}
         selectNode={vi.fn()}
-        proof={{ runId: null, planLabel: "10 plan nodes", traceLabel: "trace label", evidenceLabel: "evidence label" }}
+        proof={{ runId: null, evidenceLabel: "evidence label" }}
       />,
     );
 
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("run unavailable");
-    expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("trace label");
     expect(screen.getByLabelText("workflow graph proof")).toHaveTextContent("evidence label");
   });
 });
