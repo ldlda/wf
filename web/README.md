@@ -195,12 +195,11 @@ the public JSON-RPC operations and record live evidence using the same
 DemoRunFacts projection. Raw protocol payloads are available through the
 evidence receipt and inspector.
 
-Scene 10's operation beat exposes the explicit `Run prepared workflow` action
-even when a direct link is currently showing replay evidence. With a healthy
-target, it starts the live chain through the existing `/api/rpc` proxy. If the
-health probe fails, the surface shows the failure reason, offers `Retry live
-service`, and keeps `Play replay walkthrough` as an explicit fallback. The
-presentation does not silently replace a live failure with recorded evidence.
+Scenes 8–12 share one compact footer demo rail. Scene 8 remains a local scripted conversation, with its chat composer as the main surface, while the rail owns `Run prepared workflow`, replay fallback, retry, running, paused, resuming, and completed labels.
+With a healthy target, the rail starts the live chain through the existing
+`/api/rpc` proxy; when health fails, it keeps `Play replay walkthrough` as an
+explicit fallback. The presentation does not silently replace a live failure
+with recorded evidence.
 
 For local live rehearsal, run both services:
 
@@ -369,14 +368,13 @@ workflow authoring RPC operations.
   the next execution slice.` and makes no run or RPC request.
 
 The authoring scenes consume deterministic prepared data and never call
-workflow authoring RPCs. Scene 8 also skips live target probing so its request
-and Send path remain fully local. Scene 9 ends at the truthful run-request
+workflow authoring RPCs. Scene 9 ends at the truthful run-request
 handoff; Scenes 10–12 own run activation, typed approval, resume, output, and
 trace evidence. No Scene 9 message submission starts a workflow run.
 
-### Demo Climax (Scenes 10–12)
+### Demo Climax (Scenes 8–12)
 
-Scenes 10 through 12 are the demo climax. They keep a continuity rail visible
+Scenes 8 through 12 are the demo climax. They keep a continuity rail visible
 while the prepared replay moves from persisted workflow run, to typed human
 interrupt, to resume/output/evidence. The rail and outcome panel are
 presentation-only projections over the committed replay; they do not add live

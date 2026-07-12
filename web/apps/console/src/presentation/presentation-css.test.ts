@@ -6,6 +6,16 @@ const css = readFileSync(join(import.meta.dirname, "presentation.css"), "utf8").
 const demoWorkflowCss = readFileSync(join(import.meta.dirname, "styles", "demo-workflow.css"), "utf8").replace(/\r\n/g, "\n");
 
 describe("presentation.css", () => {
+  it("keeps the demo footer rail compact and removes the old launch control", () => {
+    const railBlock = css.match(/\.presentation-demo-rail\s*\{(?<body>[\s\S]*?)\n\}/)?.groups?.body;
+
+    expect(railBlock).toContain("min-width: min(22rem, 42vw)");
+    expect(railBlock).toContain("min-height: 1.9rem");
+    expect(railBlock).toContain("display: flex");
+    expect(railBlock).toContain("align-items: center");
+    expect(demoWorkflowCss).not.toContain(".demo-run-launch-control");
+  });
+
   it("allows hidden primary-region scrolling for browser zoom overflow", () => {
     const primaryBlock = css.match(
       /\.presentation-stage__primary\s*\{\n  position: relative;(?<body>[\s\S]*?)\n\}/,

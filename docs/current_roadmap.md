@@ -293,12 +293,17 @@ separate activity after these surfaces are stable.
     decision outcome rather than a near-duplicate presentation beat.
    Implementation plan:
    [`Scene 11 decision beat compression`](historical/superpowers/plans/2026-07-12-scene-11-decision-beat-compression.md).
-5. **Next: Scene 10 factual proof and graph composition:** remove misleading
-   output/trace claims, replace the hand-positioned graph with a large dark
-   horizontal Dagre/React Flow sequence graph, show selected input files, and
-   place live/replay launch inside the operation proof. Implementation plan:
-   [`Scene 10 factual graph and proof layout`](superpowers/plans/2026-07-12-scene-10-factual-graph-and-proof-layout.md).
-6. **Visual scale and color pass:** remove unwanted blue from Scenes 2 and 14,
+5. **Completed: Scene 10 factual proof and graph composition:** the factual
+   graph, selected input files, and proof layout are now implemented. The
+   completed plan is [`Scene 10 factual graph and proof layout`](historical/superpowers/plans/2026-07-12-scene-10-factual-graph-and-proof-layout.md).
+   File-preview rendering remains explicitly deferred as a separate follow-up.
+6. **Completed: presentation demo-chrome ownership:** Scenes 8–12 share one
+   route-projected footer rail for run, replay fallback, retry, paused, and
+   terminal states. Design:
+   [`presentation demo-chrome ownership`](superpowers/specs/2026-07-12-demo-chrome-ownership-design.md).
+   Implementation:
+   [`presentation demo-chrome ownership plan`](superpowers/plans/2026-07-12-presentation-demo-chrome-ownership.md).
+7. **Visual scale and color pass:** remove unwanted blue from Scenes 2 and 14,
    shorten Scene 2's two-column composition, enlarge the focal diagrams in
    Scenes 7, 9, 13, and 14, separate Scene 7 Validate from Repair visuals, and
    improve Scene 1 title-box padding and contrast.

@@ -280,6 +280,46 @@ describe("PresentationRoute", () => {
     expect(screen.getAllByRole("button", { name: "Run prepared workflow" })).toHaveLength(1);
   });
 
+  it("backtracks across demo scenes without leaving stale footer chrome", async () => {
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    window.location.hash = "#scene/agent-handoff/request";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByRole("textbox", { name: /authoring request/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Run prepared workflow" })).toBeInTheDocument();
+
+    window.location.hash = "#scene/run-from-deployment/operation";
+    fireEvent(window, new Event("hashchange"));
+    expect(await screen.findByRole("button", { name: "Run prepared workflow" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "prepared workflow launch" })).not.toBeInTheDocument();
+
+    window.location.hash = "#scene/run-from-deployment/graph";
+    fireEvent(window, new Event("hashchange"));
+    expect(await screen.findByRole("heading", { name: /Run From Deployment/i })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "prepared workflow launch" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Replay evidence")).not.toBeInTheDocument();
+
+    window.location.hash = "#scene/thesis/title";
+    fireEvent(window, new Event("hashchange"));
+    expect(await screen.findByRole("heading", { name: /Design and Implementation of lda\.chat/i })).toBeInTheDocument();
+    expect(screen.queryByLabelText("presentation evidence mode")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Run prepared workflow" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry live service" })).not.toBeInTheDocument();
+    expect(screen.queryByTestId("presentation-demo-rail")).not.toBeInTheDocument();
+  });
+
+  it("removes the paused footer label after approval is submitted", async () => {
+    setReplayMode();
+    window.location.hash = "#scene/typed-human-boundary/approval";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    expect(await screen.findByText("Run paused - review required")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Submit" }));
+    expect(screen.queryByText("Run paused - review required")).not.toBeInTheDocument();
+  });
+
   it("uses stored target for live presentation mode", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
     window.location.hash = "#scene/run-from-deployment/operation";
