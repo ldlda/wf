@@ -11,6 +11,7 @@ import { PresentationFooter } from "./PresentationFooter.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import type { PresentationTargetHealth } from "./presentation-target-status.js";
+import { demoChromeFor } from "./presentation-demo-chrome.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { findScene, type MainLocation } from "./storyboard.js";
 
@@ -58,6 +59,20 @@ export const PresentationStage = ({
   const composition = compositionForState(state);
 
   const isMainScene = state.location.kind === "main";
+  // Keep the footer projection pure and derive it from the same state the scene consumes.
+  const demoRail = isMainScene
+    ? demoChromeFor({
+        sceneId: state.location.sceneId,
+        phase: demo.state.phase,
+        mode: demo.state.mode,
+        inFlight: demo.inFlight,
+        approvalState: approvalActions?.state ?? "ready",
+        targetStatus,
+        liveTargetReady,
+        canRun: timelineAgent?.canRun ?? false,
+        canRunLive: timelineAgent?.canRunLive ?? false,
+      })
+    : { kind: "hidden" as const };
   const activeSceneView = isMainScene
     ? findScene(state.location.sceneId)?.view ?? "unknown"
     : "discussion";
@@ -104,7 +119,9 @@ export const PresentationStage = ({
             <PresentationFooter
               location={state.location}
               evidence={evidence}
-              targetStatus={targetStatus}
+              demoRail={demoRail}
+              runPreparedWorkflow={timelineAgent?.runPreparedWorkflow}
+              retryHealth={retryHealth}
               showEvidenceReceipt={composition.evidencePresentation !== "hidden"}
               inspectEvidence={openEvidence}
             />

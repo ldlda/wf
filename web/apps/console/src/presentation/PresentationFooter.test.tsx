@@ -1,7 +1,7 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EvidenceRecord } from "../app/state.js";
-import type { PresentationTargetHealth } from "./presentation-target-status.js";
+import type { DemoChromePresentation } from "./presentation-demo-chrome.js";
 import { PresentationFooter } from "./PresentationFooter.js";
 
 afterEach(() => cleanup());
@@ -17,10 +17,8 @@ describe("PresentationFooter", () => {
       response: { result: { status: "completed" } },
       durationMs: 34,
     };
-    const replayHealth: PresentationTargetHealth = {
-      kind: "replay",
-      label: "Replay evidence",
-      detail: "reviewed recording",
+    const hiddenRail: DemoChromePresentation = {
+      kind: "hidden",
     };
     render(
       <PresentationFooter
@@ -31,7 +29,8 @@ describe("PresentationFooter", () => {
           focusPath: [],
         }}
         evidence={[evidence]}
-        targetStatus={replayHealth}
+        demoRail={hiddenRail}
+        retryHealth={vi.fn()}
         showEvidenceReceipt
         inspectEvidence={vi.fn()}
       />,
@@ -52,11 +51,8 @@ describe("PresentationFooter", () => {
           focusPath: [],
         }}
         evidence={[]}
-        targetStatus={{
-          kind: "replay",
-          label: "Replay evidence",
-          detail: "reviewed recording",
-        }}
+        demoRail={{ kind: "hidden" }}
+        retryHealth={vi.fn()}
         showEvidenceReceipt={false}
         inspectEvidence={vi.fn()}
       />,
@@ -64,5 +60,33 @@ describe("PresentationFooter", () => {
 
     const footer = screen.getByRole("contentinfo", { name: /presentation footer/i });
     expect(within(footer).queryByLabelText("presentation evidence mode")).not.toBeInTheDocument();
+  });
+
+  it("renders exactly one healthy demo rail for a demo location", () => {
+    render(
+      <PresentationFooter
+        location={{ kind: "main", sceneId: "agent-handoff", beatId: "request", focusPath: [] }}
+        evidence={[]}
+        demoRail={{
+          kind: "action",
+          mode: "live",
+          label: "Run prepared workflow",
+          status: {
+            kind: "ready",
+            target: "http://127.0.0.1:8765/rpc",
+            label: "Live target ready",
+            detail: "127.0.0.1:8765",
+          },
+          canRun: true,
+          canRetry: true,
+        }}
+        retryHealth={vi.fn()}
+        showEvidenceReceipt={false}
+        inspectEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getAllByTestId("presentation-demo-rail")).toHaveLength(1);
+    expect(screen.getByText("Live target ready")).toBeInTheDocument();
   });
 });

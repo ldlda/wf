@@ -1,15 +1,17 @@
 import type { EvidenceRecord } from "../app/state.js";
+import type { TimelineAgentMode } from "../demo/agent/timelineAgent.js";
 import { SceneProgress } from "./SceneProgress.js";
 import { EvidenceReceipt } from "./evidence/EvidenceReceipt.js";
-import { PresentationTruthBadge } from "./PresentationTruthBadge.js";
-import type { PresentationTargetHealth } from "./presentation-target-status.js";
-import { isDemoChromeScene } from "./presentation-demo-chrome.js";
+import type { DemoChromePresentation } from "./presentation-demo-chrome.js";
+import { PresentationDemoRail } from "./PresentationDemoRail.js";
 import type { MainLocation } from "./storyboard.js";
 
 type PresentationFooterProps = {
   readonly location: MainLocation;
   readonly evidence: readonly EvidenceRecord[];
-  readonly targetStatus: PresentationTargetHealth;
+  readonly demoRail: DemoChromePresentation;
+  readonly runPreparedWorkflow?: ((mode: TimelineAgentMode) => Promise<void>) | undefined;
+  readonly retryHealth: () => void;
   readonly showEvidenceReceipt: boolean;
   readonly inspectEvidence: () => void;
 };
@@ -17,13 +19,19 @@ type PresentationFooterProps = {
 export const PresentationFooter = ({
   location,
   evidence,
-  targetStatus,
+  demoRail,
+  runPreparedWorkflow,
+  retryHealth,
   showEvidenceReceipt,
   inspectEvidence,
 }: PresentationFooterProps) => (
   <footer className="presentation-footer" aria-label="presentation footer">
     <SceneProgress location={location} />
-    {isDemoChromeScene(location.sceneId) && <PresentationTruthBadge status={targetStatus} />}
+    <PresentationDemoRail
+      presentation={demoRail}
+      runPreparedWorkflow={runPreparedWorkflow}
+      retryHealth={retryHealth}
+    />
     <EvidenceReceipt
       records={evidence}
       visible={showEvidenceReceipt}

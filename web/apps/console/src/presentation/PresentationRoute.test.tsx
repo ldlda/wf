@@ -271,13 +271,13 @@ describe("PresentationRoute", () => {
     expect(screen.getByRole("button", { name: /inspect evidence/i })).toBeInTheDocument();
   });
 
-  it("renders the Scene 8 composer without a workflow run action", async () => {
+  it("renders the Scene 8 composer with one stable footer workflow action", async () => {
     window.location.hash = "#scene/agent-handoff/request";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
     expect(await screen.findByRole("textbox", { name: /authoring request/i })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Run prepared workflow" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Run prepared workflow" })).toHaveLength(1);
   });
 
   it("uses stored target for live presentation mode", async () => {
@@ -286,7 +286,7 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findAllByRole("button", { name: /run prepared workflow/i })).toHaveLength(2);
+    expect(await screen.findAllByRole("button", { name: /run prepared workflow/i })).toHaveLength(3);
   });
 
   it("exposes an explicit live launch on the Scene 10 operation beat", async () => {
@@ -353,7 +353,7 @@ describe("PresentationRoute", () => {
 
     expect(await screen.findByText(/Live target is ready/i)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Send" })).toBeEnabled();
-    expect(screen.queryByRole("button", { name: "Run prepared workflow" })).not.toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Run prepared workflow" })).toHaveLength(1);
     expect(mockedCallOperation).toHaveBeenCalledWith("workflow.health", "http://127.0.0.1:8765/rpc", {});
   });
 
