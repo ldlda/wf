@@ -131,6 +131,16 @@ describe("DemoWorkflowScene", () => {
     expect(screen.getByLabelText("workflow graph")).toBeInTheDocument();
   });
 
+  it("renders factual input files on the prepared workflow input beat", () => {
+    renderBeat("input");
+
+    const browser = screen.getByRole("region", { name: /workflow input files/i });
+    expect(within(browser).getByText("project-brief.md")).toBeInTheDocument();
+    expect(within(browser).getByText("architecture-notes.md")).toBeInTheDocument();
+    expect(within(browser).getByRole("group", { name: /workflow output/i })).toHaveTextContent("issue-board.json");
+    expect(screen.queryByRole("region", { name: /workflow input summary/i })).not.toBeInTheDocument();
+  });
+
   it("renders the guided interrupt contract via product moment in typed-human-boundary", () => {
     renderBeat("interrupt", "typed-human-boundary");
 

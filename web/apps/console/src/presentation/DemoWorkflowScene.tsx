@@ -16,7 +16,7 @@ import { GuidedProductMoment } from "./GuidedProductMoment.js";
 import { InterruptContractPreview } from "./InterruptContractPreview.js";
 import { NodeSpotlight } from "./NodeSpotlight.js";
 import { OperationBlock } from "./OperationBlock.js";
-import { RunInputFacts } from "./RunFactsPanel.js";
+import { RunInputFileBrowser } from "./RunInputFileBrowser.js";
 import { StageCaption } from "./StageCaption.js";
 import type { SceneBeatDefinition, SceneDefinition } from "./storyboard.js";
 import type { PresentationTargetHealth } from "./presentation-target-status.js";
@@ -160,7 +160,10 @@ export const DemoWorkflowScene = ({
 
               {beat.id === "input" && (
                 <div className="demo-workflow-stage__input-facts">
-                  <RunInputFacts facts={facts} />
+                  <RunInputFileBrowser
+                    selectedDocuments={facts.input.selectedDocuments}
+                    boardPath={facts.input.boardPath}
+                  />
                 </div>
               )}
 
