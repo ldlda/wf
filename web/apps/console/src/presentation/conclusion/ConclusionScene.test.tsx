@@ -76,9 +76,18 @@ describe("ConclusionScene", () => {
 
   it("states the closing boundary and recedes future branches", () => {
     render(<ConclusionScene scene={scene} beat={beat("conclusion")} />);
+    const map = screen.getByRole("region", { name: "thesis contribution boundary" });
+    const substrate = map.querySelector('[data-node-id="substrate"]');
+    const nonClaims = screen.getByRole("list", { name: "explicit non-claims" });
+    const future = screen.getByRole("list", { name: "future work layers" });
+
+    expect(map).toHaveAttribute("data-conclusion-focus", "conclusion");
+    expect(substrate).toHaveAttribute("data-contribution-focus", "primary");
     expect(screen.getByText("Planner proposes; runtime executes.")).toBeInTheDocument();
-    expect(screen.getByRole("list", { name: "future work layers" })).toHaveAttribute("data-state", "receded");
-    expect(screen.getByText("Planner proposes; runtime executes.")).toHaveAttribute("data-conclusion-support", "primary");
+    expect(screen.getByText("Planner proposes; runtime executes.")).toHaveAttribute("data-contribution-focus", "primary");
+    expect(nonClaims).toHaveAttribute("data-conclusion-support", "receded");
+    expect(future).toHaveAttribute("data-state", "receded");
+    expect(future).toHaveAttribute("data-conclusion-support", "receded");
   });
 
   it("attaches evidence vertically beneath the typed substrate rather than extending the contribution line", () => {

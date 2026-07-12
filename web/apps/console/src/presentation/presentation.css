@@ -152,20 +152,27 @@
 
 .evaluation-board[data-evaluation-focus="cohort"] {
   grid-template-columns: 1fr;
-  grid-template-areas: "cohort" "outcomes" "boundary";
+  grid-template-areas: "campaign" "boundary";
 }
 
 .evaluation-board[data-evaluation-focus="validity"] {
-  grid-template-areas: "cohort outcomes" "audit audit" "boundary boundary";
+  grid-template-areas: "campaign campaign" "audit audit" "boundary boundary";
 }
 
 .evaluation-board[data-evaluation-focus="findings"] {
   grid-template-columns: 1fr;
-  grid-template-areas: "findings" "boundary";
+  grid-template-areas: "campaign" "findings" "boundary";
+  min-height: 0;
+  align-content: start;
 }
 
-.evaluation-board__cohort { grid-area: cohort; }
-.evaluation-board__outcomes { grid-area: outcomes; }
+.evaluation-board__campaign-strip {
+  display: grid;
+  grid-area: campaign;
+  grid-template-columns: minmax(14rem, 0.8fr) minmax(20rem, 1.2fr);
+  min-width: 0;
+}
+
 .evaluation-board__audit { grid-area: audit; }
 .evaluation-board__findings { grid-area: findings; }
 .evaluation-board__boundary { grid-area: boundary; }
@@ -173,10 +180,17 @@
 .evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__audit,
 .evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__findings,
 .evaluation-board[data-evaluation-focus="validity"] .evaluation-board__findings,
-.evaluation-board[data-evaluation-focus="findings"] .evaluation-board__cohort,
-.evaluation-board[data-evaluation-focus="findings"] .evaluation-board__outcomes,
 .evaluation-board[data-evaluation-focus="findings"] .evaluation-board__audit {
   display: none;
+}
+
+.evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__campaign-strip {
+  grid-template-columns: 1fr;
+}
+
+.evaluation-board[data-evaluation-focus="findings"] .evaluation-board__campaign-strip {
+  /* grid-template-columns: minmax(12rem, 0.7fr) minmax(20rem, 1.3fr); */
+  /* difference between two beats -> shifting */
 }
 
 .evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__cohort {
@@ -186,8 +200,9 @@
 
 .evaluation-board[data-evaluation-focus="findings"] .evaluation-board__findings {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(2.4rem, auto));
   border-top: 0;
-  padding-block: 1.35rem;
+  padding-block: 0.95rem;
 }
 
 .evaluation-board[data-evaluation-beat="cohort"] .evaluation-board__cohort,
@@ -279,6 +294,7 @@
 .evaluation-board__findings {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(2.4rem, auto));
   gap: 0.45rem 0.8rem;
 }
 
@@ -302,11 +318,20 @@
 
 @media (max-width: 1080px) {
   .evaluation-board { grid-template-columns: minmax(12rem, 0.7fr) minmax(20rem, 1.3fr); }
+  .evaluation-board__campaign-strip { grid-template-columns: minmax(12rem, 0.7fr) minmax(20rem, 1.3fr); }
   .evaluation-board__cohort { border-right: 1px solid var(--evaluation-rule); }
   .evaluation-board__audit-row { grid-template-columns: 1fr; }
   .evaluation-board[data-evaluation-focus="cohort"],
   .evaluation-board[data-evaluation-focus="findings"] {
     grid-template-columns: 1fr;
+  }
+  .evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__campaign-strip,
+  .evaluation-board[data-evaluation-focus="findings"] .evaluation-board__campaign-strip {
+    grid-template-columns: 1fr;
+  }
+  .evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__cohort,
+  .evaluation-board[data-evaluation-focus="findings"] .evaluation-board__cohort {
+    border-right: 0;
   }
 }
 
@@ -520,9 +545,7 @@
 }
 
 .conclusion-map[data-conclusion-beat="limits"] .conclusion-map__future,
-.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__future,
-.conclusion-map[data-conclusion-beat="future"] .conclusion-map__non-claims,
-.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__non-claims {
+.conclusion-map[data-conclusion-beat="future"] .conclusion-map__non-claims {
   display: none;
 }
 
@@ -535,11 +558,59 @@
   margin-bottom: 0.2rem;
 }
 
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__node--substrate {
+  min-height: 7.5rem;
+  padding: 1rem 1.25rem;
+  border-width: 2px;
+  box-shadow: 0 0 0 0.25rem color-mix(in oklch, var(--conclusion-ink) 10%, transparent);
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] {
+  min-height: min(26rem, 62vh);
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__flow-unit--substrate-stack {
+  align-content: start;
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__node--evidence {
+  min-height: 3.6rem;
+  padding: 0.55rem 0.75rem;
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__node--evidence small {
+  font-size: 0.76rem;
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__non-claims li {
+  padding: 0.35rem 0.5rem;
+  font-size: 0.8rem;
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__future li {
+  gap: 0.35rem;
+  padding: 0.3rem 0.45rem;
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__future small {
+  display: none;
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__node--substrate strong {
+  font-size: clamp(1.35rem, 2.3vw, 1.75rem);
+}
+
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__non-claims,
+.conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__future {
+  opacity: 0.38;
+  transform: translateY(0.15rem);
+}
+
 .conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__statement {
-  padding-block: 1.1rem 0.45rem;
+  padding-block: 0.45rem 0.2rem;
   border-top-color: var(--conclusion-ink);
   color: var(--conclusion-ink);
-  font-size: 1.25rem;
+  font-size: clamp(1.45rem, 2.7vw, 2rem);
   font-style: normal;
   font-weight: 650;
   text-align: center;
@@ -2169,7 +2240,7 @@
   display: grid;
   flex: 1 1 auto;
   min-height: 0;
-  grid-template-rows: 8rem minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
   gap: 0.9rem;
 }
 
@@ -2215,6 +2286,7 @@
 
 .opening-thesis__statement h2 {
   margin: 0;
+  border-bottom: 0;
   color: var(--opening-ink);
   font: 800 clamp(2.85rem, 5.5vw, 4.2rem) / 0.94 var(--font-editorial);
   letter-spacing: -0.03em;

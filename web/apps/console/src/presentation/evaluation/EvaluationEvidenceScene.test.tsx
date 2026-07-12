@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { EvaluationEvidenceScene } from "./EvaluationEvidenceScene.js";
 
@@ -58,6 +58,19 @@ describe("EvaluationEvidenceScene", () => {
   it("renders six labelled finding icons without ranking language", () => {
     render(<EvaluationEvidenceScene scene={scene} beat={beat("findings")} />);
     const findings = screen.getByRole("list", { name: /ux gaps exposed by trials/i });
+    const board = screen.getByRole("group", { name: /evaluation evidence board/i });
+    const campaignStrip = screen.getByRole("group", { name: /campaign and outcome evidence strip/i });
+
+    expect(board).toHaveAttribute("data-evaluation-layout", "3x2-with-evidence-strip");
+    expect(findings).toHaveAttribute("data-grid-layout", "3x2");
+    expect(within(findings).getAllByRole("listitem")).toHaveLength(6);
+    expect(campaignStrip).toHaveAttribute("data-visual-role", "campaign-evidence");
+    expect(within(campaignStrip).getByText("36")).toBeInTheDocument();
+    expect(campaignStrip).toHaveTextContent(/3\s+waves/);
+    expect(
+      screen.getByText("Bounded longitudinal engineering evidence, not a controlled model comparison."),
+    ).toBeInTheDocument();
+
     expect(findings.querySelectorAll("svg")).toHaveLength(6);
     for (const label of [
       "Schema discovery",

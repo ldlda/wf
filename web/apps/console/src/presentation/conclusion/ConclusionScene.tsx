@@ -37,6 +37,7 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
         className="conclusion-map"
         aria-label="thesis contribution boundary"
         data-conclusion-beat={beatId}
+        data-conclusion-focus={beatId}
         data-visual-role="contribution-boundary"
         data-presentation-surface="editorial"
       >
@@ -56,6 +57,7 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
               className="conclusion-map__node conclusion-map__node--substrate"
               data-node-id={contributionNodes[1].id}
               data-emphasis="substrate"
+              data-contribution-focus={beatId === "conclusion" ? "primary" : "support"}
             >
               <span className="conclusion-map__node-index">02</span>
               <strong>{contributionNodes[1].label}</strong>
@@ -87,6 +89,7 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
           aria-label="explicit non-claims"
           data-emphasis={beatId === "limits" ? "limits" : "neutral"}
           data-conclusion-support={beatId === "limits" ? "primary" : "receded"}
+          data-state={beatId === "limits" ? "primary" : "receded"}
         >
           {nonClaims.map((claim) => <li key={claim}>{claim}</li>)}
         </ul>
@@ -111,7 +114,13 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
           })}
         </ul>
 
-        <p className="conclusion-map__statement" data-conclusion-support={beatId === "conclusion" ? "primary" : "receded"}>Planner proposes; runtime executes.</p>
+        <p
+          className="conclusion-map__statement"
+          data-conclusion-support={beatId === "conclusion" ? "primary" : "receded"}
+          data-contribution-focus={beatId === "conclusion" ? "primary" : "support"}
+        >
+          Planner proposes; runtime executes.
+        </p>
       </section>
       <p className="scene-body__evidence">{scene.evidencePointer}</p>
     </>
