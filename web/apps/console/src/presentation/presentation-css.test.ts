@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
 const css = readFileSync(join(import.meta.dirname, "presentation.css"), "utf8").replace(/\r\n/g, "\n");
+const demoWorkflowCss = readFileSync(join(import.meta.dirname, "styles", "demo-workflow.css"), "utf8").replace(/\r\n/g, "\n");
 
 describe("presentation.css", () => {
   it("allows hidden primary-region scrolling for browser zoom overflow", () => {
@@ -23,6 +24,17 @@ describe("presentation.css", () => {
       /\.evaluation-board\s*\{\s*grid-template-columns: minmax\(12rem, 0\.7fr\) minmax\(20rem, 1\.3fr\);/,
     );
     expect(breakpointBlock).toMatch(/\.evaluation-board__audit-row\s*\{\s*grid-template-columns: 1fr;/);
+  });
+
+  it("keeps the Scene 11 approval grid out of the 1050px stacking rule", () => {
+    const breakpointBlock = [...demoWorkflowCss.matchAll(
+      /@container presentation-canvas \(max-width: 1050px\) \{(?<body>[\s\S]*?)\n\}/g,
+    )].find((match) => match.groups?.body?.includes(".guided-product-moment__interrupt-grid"))?.groups?.body;
+
+    expect(breakpointBlock).toContain(".guided-product-moment__interrupt-grid");
+    expect(breakpointBlock).toContain(".guided-product-moment__resume-grid");
+    expect(breakpointBlock).toContain(".guided-product-moment__trace-grid");
+    expect(breakpointBlock).not.toContain(".guided-product-moment__approval-grid");
   });
 
   it("keeps the full evaluation board available to the scrollable stage", () => {

@@ -1585,7 +1585,6 @@
 }
 
 @container presentation-canvas (max-width: 1050px) {
-  .guided-product-moment__approval-grid,
   .guided-product-moment__interrupt-grid,
   .guided-product-moment__resume-grid,
   .guided-product-moment__trace-grid {
