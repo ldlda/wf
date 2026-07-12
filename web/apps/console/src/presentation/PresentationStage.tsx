@@ -108,9 +108,6 @@ export const PresentationStage = ({
                 }}
                 motionDisabled={state.motionDisabled}
                 approvalActions={approvalActions}
-                targetStatus={targetStatus}
-                retryHealth={retryHealth}
-                liveTargetReady={liveTargetReady}
                 onScene9Advance={onScene9Advance}
               />
             )}

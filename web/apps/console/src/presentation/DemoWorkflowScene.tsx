@@ -1,6 +1,5 @@
 import type { DemoEvent } from "../demo/timeline/models.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
-import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
 import {
   demoBeatLensForBeat,
   graphExecutionForBeat,
@@ -19,9 +18,7 @@ import { OperationBlock } from "./OperationBlock.js";
 import { RunInputFileBrowser } from "./RunInputFileBrowser.js";
 import { StageCaption } from "./StageCaption.js";
 import type { SceneBeatDefinition, SceneDefinition } from "./storyboard.js";
-import type { PresentationTargetHealth } from "./presentation-target-status.js";
 import { WorkflowGraphStage } from "./WorkflowGraphStage.js";
-import { DemoRunLaunchControl } from "./DemoRunLaunchControl.js";
 
 type DemoWorkflowSceneProps = {
   readonly scene: SceneDefinition;
@@ -31,10 +28,6 @@ type DemoWorkflowSceneProps = {
   readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
   readonly approvalActions?: DemoApprovalActions | undefined;
-  readonly timelineAgent?: TimelineAgentController | undefined;
-  readonly targetStatus?: PresentationTargetHealth | undefined;
-  readonly retryHealth?: (() => void) | undefined;
-  readonly liveTargetReady?: boolean | undefined;
 };
 
 type DemoWorkflowLayout = "operation" | "graph" | "interrupt" | "approval" | "evidence";
@@ -66,10 +59,6 @@ export const DemoWorkflowScene = ({
   selectNode,
   openEvidence,
   approvalActions,
-  timelineAgent,
-  targetStatus,
-  retryHealth,
-  liveTargetReady,
 }: DemoWorkflowSceneProps) => {
   const runStart = findEvent(demo, "run_start");
   const runResume = findEvent(demo, "run_resume");
@@ -122,15 +111,6 @@ export const DemoWorkflowScene = ({
         data-support-surface={surface.supportSurface}
         aria-label="demo workflow stage"
       >
-          {beat.id === "operation" && timelineAgent && targetStatus && retryHealth ? (
-            <DemoRunLaunchControl
-              status={targetStatus}
-              liveTargetReady={liveTargetReady ?? false}
-              demo={demo}
-              timelineAgent={timelineAgent}
-              retryHealth={retryHealth}
-            />
-          ) : null}
           {isGuidedDemoMoment ? (
             <GuidedProductMoment
               beat={beat}

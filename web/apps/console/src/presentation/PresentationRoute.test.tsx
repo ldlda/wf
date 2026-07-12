@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { callOperation } from "../connection/api.js";
@@ -286,19 +286,19 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findAllByRole("button", { name: /run prepared workflow/i })).toHaveLength(3);
+    expect(await screen.findAllByRole("button", { name: /run prepared workflow/i })).toHaveLength(2);
   });
 
-  it("exposes an explicit live launch on the Scene 10 operation beat", async () => {
+  it("owns the live run action in the footer rail", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
     window.location.hash = "#scene/run-from-deployment/operation";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    const launches = await screen.findAllByRole("button", { name: "Run prepared workflow" });
-    const launch = launches.at(-1);
-    if (!launch) throw new Error("Expected a live workflow launch control");
-    await userEvent.click(launch);
+    const footer = await screen.findByRole("contentinfo", { name: /presentation footer/i });
+    const runButton = within(footer).getByRole("button", { name: "Run prepared workflow" });
+    expect(screen.queryByRole("region", { name: "prepared workflow launch" })).not.toBeInTheDocument();
+    await userEvent.click(runButton);
 
     await waitFor(() => {
       expect(mockedCallOperation.mock.calls.some(([operation]) => operation === "workflow.deployments.inspect"))
@@ -406,7 +406,10 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    const runButton = await screen.findByRole("button", { name: /run replay walkthrough/i });
+    const footer = await screen.findByRole("contentinfo", { name: /presentation footer/i });
+    const runButton = within(footer).getByRole("button", { name: /play replay walkthrough/i });
+    expect(screen.queryByRole("region", { name: "prepared workflow launch" })).not.toBeInTheDocument();
+    expect(screen.queryByText("Retry live service")).not.toBeInTheDocument();
     await user.click(runButton);
     expect(await screen.findByLabelText("workflow.runs.start operation")).toBeInTheDocument();
   });

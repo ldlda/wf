@@ -22,7 +22,6 @@ import { projectPreparedAuthoringPhase } from "./authoring/authoring-projection.
 import type { AuthoringPhaseId } from "./authoring/authoring-recording.js";
 import { OpeningThesisScene } from "./opening/OpeningThesisScene.js";
 import { ProblemLoopScene } from "./opening/ProblemLoopScene.js";
-import type { PresentationTargetHealth } from "./presentation-target-status.js";
 
 type SceneBodyProps = {
   readonly location: PresentationLocation;
@@ -35,9 +34,6 @@ type SceneBodyProps = {
   readonly onFocusPathChange: (path: readonly string[]) => void;
   readonly motionDisabled: boolean;
   readonly approvalActions?: DemoApprovalActions | undefined;
-  readonly targetStatus?: PresentationTargetHealth | undefined;
-  readonly retryHealth?: (() => void) | undefined;
-  readonly liveTargetReady?: boolean | undefined;
   readonly onScene9Advance?: (() => void) | undefined;
 };
 
@@ -316,7 +312,7 @@ const assertNever = (value: never): never => {
   throw new Error(`Unexpected view: ${value}`);
 };
 
-export const SceneBody = ({ location, demo, timelineAgent, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions, targetStatus, retryHealth, liveTargetReady, onScene9Advance }: SceneBodyProps) => {
+export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions, onScene9Advance }: SceneBodyProps) => {
   const sceneId = location.kind === "main" ? location.sceneId : "positioning";
   const beatId = location.kind === "main" ? location.beatId : "landscape";
   const scene = findScene(sceneId) ?? findScene("thesis")!;
@@ -368,10 +364,6 @@ export const SceneBody = ({ location, demo, timelineAgent, selectedNodeId, selec
           selectNode={selectNode}
           openEvidence={openEvidence}
           approvalActions={approvalActions}
-          timelineAgent={timelineAgent}
-          targetStatus={targetStatus}
-          retryHealth={retryHealth}
-          liveTargetReady={liveTargetReady}
         />
       );
     case "evaluation":
