@@ -82,15 +82,16 @@ Implementation order:
    Implementation:
    [`React presentation mode plan`](historical/superpowers/plans/2026-07-03-react-presentation-mode.md).
 8. Completed: constrained demo agent that invokes one prepared recipe macro.
-   Live mode is deferred to a future slice; the prepared driver is replay-only
-   for now.
+   This agent driver remains replay-only. A separate presentation runtime added
+   live prepared-run activation in a later slice.
    Design:
    [`constrained demo agent`](superpowers/specs/2026-07-03-constrained-demo-agent-design.md).
    Implementation:
    [`constrained demo agent plan`](historical/superpowers/plans/2026-07-03-constrained-demo-agent.md).
-9. Completed: implement the approved 12-scene defense storyboard as a no-scroll
-   720p compositor. Content and evidence freeze before chat replacement, visual
-   polish, or motion tuning. Design:
+9. Completed: implement the original 12-scene defense storyboard as a no-scroll
+   720p compositor. Later slices expanded the current deck to 14 scenes. Content
+   and evidence freeze before chat replacement, visual polish, or motion tuning.
+   Design:
    [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
    Implementation:
    [`defense storyboard compositor plan`](historical/superpowers/plans/2026-07-04-defense-storyboard-compositor.md).
@@ -406,6 +407,13 @@ Presentation wishlist / defense readiness:
   [`defense presentation runbook`](runbooks/defense-presentation.md) covers
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
   timing, and short speaker notes for what to say if the live demo fails.
+  [`defense speech and claim audit`](runbooks/defense-speech-and-claim-audit.md)
+  provides the current 13-minute speech, evidence qualifications, and
+  prioritized 12-minute Q&A.
+  Planned follow-ups, in dependency order:
+  [`defense story reweighting`](superpowers/plans/2026-07-13-defense-story-reweighting.md),
+  [`Scenes 3-6 kernel choreography`](superpowers/plans/2026-07-13-scenes-3-6-kernel-choreography.md),
+  and [`read-only presenter route`](superpowers/plans/2026-07-13-read-only-presenter-route.md).
 - Defense Q&A branch set:
   [`defense Q&A runbook`](runbooks/defense-qna.md) collects answers for
   "Where is the AI agent?", evaluation validity, security boundaries, demo

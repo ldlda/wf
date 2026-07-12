@@ -241,22 +241,22 @@ Say:
 > can represent, validate, execute, interrupt, resume, and inspect a reusable
 > workflow.
 
-## Fifteen-Minute Timing
+## Twenty-Five-Minute Timing
 
-Target a 12-minute main path, leaving three minutes for questions.
+Target a 13-minute main path, leaving 12 minutes for questions.
 
 | Time | Segment | Notes |
 |---:|---|---|
-| 0:00-1:00 | Title and framing | AI-agent goal -> workflow substrate contribution |
-| 1:00-2:30 | Problem and positioning | Automation is hard; AI needs durable workflow contracts |
-| 2:30-4:00 | Planner/runtime boundary | External planner proposes; platform owns execution |
-| 4:00-5:30 | Lifecycle | Draft, artifact, deployment, run |
-| 5:30-7:00 | Architecture zoom | Client/API/runtime/NodeUse |
-| 7:00-8:30 | Authoring and repair | Discovery, schemas, diagnostics, repair hints |
-| 8:30-10:30 | Demo | Start, interrupt, approval/resume, trace |
-| 10:30-11:30 | Evaluation | 36 audited trials as bounded engineering evidence |
-| 11:30-12:00 | Limits and future work | Agent wrapper, security, scheduling, comparative studies |
-| 12:00-15:00 | Questions | Use prepared Q&A branches when available |
+| 0:00-1:30 | Title and problem | AI-agent goal becomes a workflow substrate contribution |
+| 1:30-5:20 | Positioning and architecture | Planner/runtime boundary, lifecycle, implementation, authoring |
+| 5:20-9:45 | Prepared demonstration | Request, deployment, start, interrupt, resume, output, trace |
+| 9:45-11:00 | Evaluation | 36 audited trials as bounded engineering evidence |
+| 11:00-12:30 | Limits and conclusion | Security, scheduling, evaluation, and agent-layer boundaries |
+| 12:30-13:00 | Transition buffer | Finish navigation and hand over to questions |
+| 13:00-25:00 | Questions | Use prepared Q&A branches when available |
+
+Use [`defense-speech-and-claim-audit.md`](defense-speech-and-claim-audit.md)
+for the rehearsed speech, evidence qualifications, and prioritized Q&A.
 
 ## Expected Hard Questions
 
@@ -301,8 +301,9 @@ Answer:
 
 ## Pre-Defense Checklist
 
-1. Start `/present` with the intended target and verify the Scene 8 `Run
-   prepared workflow` action is enabled when the live badge is ready.
+1. Start `/present` with the intended target. Verify Scene 8 submits the prepared
+   request, and verify the prepared-run action appears on the demo scenes when
+   the live badge is ready.
 2. Complete one submitted branch and confirm the same run reaches output and
    trace.
 3. Reload, complete one revision-requested branch, and confirm no issues plus
