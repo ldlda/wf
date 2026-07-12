@@ -34,6 +34,20 @@ describe("SceneProgress", () => {
     expect(screen.getByText("3 / 3")).toBeInTheDocument();
   });
 
+  it("shows the single Scene 8 beat position", () => {
+    const location: MainLocation = {
+      kind: "main",
+      sceneId: "agent-handoff",
+      beatId: "request",
+      focusPath: [],
+    };
+
+    render(<SceneProgress location={location} />);
+
+    expect(screen.getByText("8 / 14")).toBeInTheDocument();
+    expect(screen.getByText("1 / 1")).toBeInTheDocument();
+  });
+
   it("has an accessible label", () => {
     const location: MainLocation = {
       kind: "main",

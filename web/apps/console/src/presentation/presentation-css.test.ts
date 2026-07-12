@@ -45,6 +45,14 @@ describe("presentation.css", () => {
     expect(css).not.toMatch(/prepared-lifecycle-scene__dock[\s\S]*position:\s*(absolute|fixed)/);
   });
 
+  it("keeps every Scene 9 surface override on the clarity-focused 35/65 split", () => {
+    const scene9Rules = css.match(/\.prepared-lifecycle-scene[^{}]*\{[^}]*\}/g) ?? [];
+
+    expect(scene9Rules.filter((rule) => rule.includes("grid-template-columns:")).length).toBeGreaterThan(0);
+    expect(scene9Rules.join("\n")).not.toContain("1.65fr");
+    expect(scene9Rules.join("\n")).toMatch(/minmax\(15rem, 0\.35fr\)\s+minmax\(0, 0\.65fr\)/);
+  });
+
   it("keeps evidence inside a substrate stack from wide desktop through the 1080px breakpoint", () => {
     expect(css).toMatch(/\.conclusion-map__flow\s*\{\s*display: grid;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
     expect(css).toMatch(/\.conclusion-map__flow-unit--substrate-stack\s*\{[\s\S]*?grid-template-rows: auto auto;/);

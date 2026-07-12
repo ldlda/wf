@@ -18,7 +18,7 @@ export const SceneProgress = ({ location }: SceneProgressProps) => {
           {sceneIndex + 1} / {totalScenes}
         </span>
       )}
-      {totalBeats > 1 && (
+      {(totalBeats > 1 || location.sceneId === "agent-handoff") && (
         <span className="scene-progress__beat">
           {beatIndex >= 0 ? beatIndex + 1 : 1} / {totalBeats}
         </span>
