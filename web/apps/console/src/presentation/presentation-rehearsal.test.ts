@@ -20,6 +20,8 @@ const expectedBeats = {
 
 describe("presentation rehearsal storyboard", () => {
   it("keeps every scene count and canonical beat id aligned with the rehearsal", () => {
+    expect(new Set(mainScenes.map((scene) => scene.id))).toEqual(new Set(Object.keys(expectedBeats)));
+
     for (const [sceneId, beatIds] of Object.entries(expectedBeats)) {
       const scene = mainScenes.find((candidate) => candidate.id === sceneId);
       expect(scene, `missing rehearsal scene ${sceneId}`).toBeDefined();

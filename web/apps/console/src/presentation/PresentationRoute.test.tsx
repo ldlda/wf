@@ -77,6 +77,11 @@ describe("PresentationRoute", () => {
     { hash: "#scene/thesis/title", heading: "Design and Implementation of lda.chat", hasDemoChrome: false },
     { hash: "#scene/architecture/client", heading: "Architecture Zoom", hasDemoChrome: false },
     { hash: "#scene/authoring/diagnose", heading: "Author, Validate, Repair", hasDemoChrome: false },
+    {
+      hash: "#scene/agent-handoff/request",
+      heading: "What should the workflow author prepare?",
+      hasDemoChrome: true,
+    },
     { hash: "#scene/prepared-lifecycle/discover", heading: "Prepared Workflow Lifecycle", hasDemoChrome: true },
     { hash: "#scene/run-from-deployment/graph", heading: "Run From Deployment", hasDemoChrome: true },
     { hash: "#scene/typed-human-boundary/approval", heading: "Typed Human Boundary", hasDemoChrome: true },
@@ -93,8 +98,12 @@ describe("PresentationRoute", () => {
       render(<PresentationRoute />);
 
       expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
-      const demoChrome = screen.queryByTestId("presentation-demo-rail");
-      expect(demoChrome !== null).toBe(hasDemoChrome);
+      const footer = screen.getByRole("contentinfo", { name: /presentation footer/i });
+      const action = within(footer).queryByRole("button", {
+        name: /run prepared workflow|play replay walkthrough/i,
+      });
+      const status = within(footer).queryByRole("status");
+      expect(action !== null || status !== null).toBe(hasDemoChrome);
     },
   );
 

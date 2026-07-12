@@ -3,12 +3,13 @@
 ## Changed Files
 
 - `web/apps/console/src/presentation/presentation-rehearsal.test.ts`
-  - Added the pure rehearsal storyboard contract.
-  - Verifies all 14 current scene IDs, expected beat counts, and canonical beat IDs.
+  - Added an exact set comparison between `mainScenes` and the expected 14 scene IDs.
+  - Verifies expected beat counts and canonical beat IDs for every scene.
   - Failure messages identify the missing scene or `scene/beat` pair.
 - `web/apps/console/src/presentation/PresentationRoute.test.tsx`
-  - Added direct-hash coverage for the nine required routes.
+  - Added direct-hash coverage for the ten intended representative routes, including Scene 8 (`#scene/agent-handoff/request`).
   - Verifies visible accessible headings and demo-chrome ownership for Scenes 8 through 12.
+  - Uses the presentation footer's accessible action/status surfaces instead of `data-testid` for demo-chrome ownership.
   - Added no-accidental-chrome coverage for title, problem, architecture, evaluation, and conclusion routes.
   - Verifies prepared lifecycle assistant-pane ownership, footer ownership, and exactly one run action.
 
@@ -24,7 +25,7 @@
 ## Verification
 
 - `pnpm --dir web/apps/console test -- src/presentation/presentation-rehearsal.test.ts src/presentation/PresentationRoute.test.tsx`
-  - Passed: 2 test files, 67 tests.
+  - Passed: 2 test files, 68 tests.
 - `pnpm --dir web/apps/console typecheck`
   - Passed: `tsc -b --pretty false`.
 - `git diff --check`
