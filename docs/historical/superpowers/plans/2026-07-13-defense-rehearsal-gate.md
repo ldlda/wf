@@ -222,7 +222,10 @@
   2. Scene 9 staged messages progress through Discover, Draft, Validate, Artifact, and Deployment.
   3. Scene 10 exposes the run action and reaches the typed boundary.
   4. Scene 11 approval accepts a submitted outcome and a revision-requested outcome.
-  5. Scene 12 preserves the same run identity and shows output plus trace evidence.
+  5. Scene 12 shows output plus trace evidence; record whether the branch
+     preserves the same run identity. The current prepared revision recording
+     uses a separate run identity, while the live contract is intended to be
+     same-run.
 
 - [ ] **Step 2: Rehearse the live path.**
 
@@ -333,9 +336,12 @@
 
   The known Vite chunk-size warning is acceptable if no new build failure appears.
 
-- [x] **Step 3: Confirm the screenshot matrix.**
+- [x] **Step 3: Confirm the screenshot capture matrix.**
 
-  Verify every matrix route has both viewport captures, no outer page scroll, no clipped headings, no unreadable labels, no accidental demo chrome, and no live claim in replay mode.
+  Confirm every matrix route has both viewport captures. Representative routes
+  were inspected for outer page scroll, clipped headings, unreadable labels,
+  accidental demo chrome, and replay-mode live claims. A complete manual visual
+  inspection of all 84 captures remains a rehearsal follow-up.
 
 - [x] **Step 4: Request the two-axis review.**
 
