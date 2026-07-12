@@ -2344,7 +2344,7 @@
   border: 1px solid color-mix(in oklch, var(--stage-line) 62%, transparent);
   border-radius: 0.95rem;
   padding: 0.75rem;
-  height: min(23rem, 100%);
+  height: min(26rem, 100%);
   overflow: hidden;
   transition: opacity 220ms ease-out, transform 240ms ease-out, border-color 220ms ease-out;
 }
