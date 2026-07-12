@@ -57,6 +57,10 @@
   padding: 0;
 }
 
+.presentation-stage__primary > .agent-handoff-scene {
+  margin-inline: auto;
+}
+
 .presentation-stage {
   --presentation-footer-height: 2.5rem;
   position: relative;
