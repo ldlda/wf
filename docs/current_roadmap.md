@@ -314,6 +314,8 @@ separate activity after these surfaces are stable.
    Scene 11 → Scene 12 path in live and replay modes, then review the story
    flow, coverage, and ordering separately. Implementation plan:
    [`defense rehearsal gate`](superpowers/plans/2026-07-13-defense-rehearsal-gate.md).
+   Story-flow audit: [`presentation story audit`](runbooks/presentation-story-audit.md);
+   dated evidence: [`presentation rehearsal log`](runbooks/presentation-rehearsal-log.md).
 
 9. **Deferred: factual input file browser:** replace the Scene 10 input
    manifest-only view with a read-only browser backed by canonical prepared or
