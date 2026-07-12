@@ -2078,7 +2078,8 @@
 
 .opening-thesis-scene > .stage-caption {
   min-height: 0;
-  padding: 0.8rem 1rem;
+  border: 0;
+  padding: 1.05rem 1.25rem 0.6rem;
 }
 
 .opening-thesis-scene > .stage-caption h1 {
@@ -2094,7 +2095,7 @@
   min-height: 0;
   grid-template-rows: minmax(0, 1fr) auto;
   gap: 1rem;
-  padding: 0.5rem 1rem 0;
+  padding: 0.75rem 1.25rem 0.2rem;
 }
 
 .opening-thesis__statement {
@@ -2103,6 +2104,8 @@
   max-width: 48rem;
   min-height: 0;
   align-content: end;
+  border-top: 1px solid var(--opening-rule);
+  padding-top: clamp(1.1rem, 2.5vw, 1.8rem);
 }
 
 .opening-thesis__statement > p {
@@ -2116,7 +2119,7 @@
 .opening-thesis__statement h2 {
   margin: 0;
   color: var(--opening-ink);
-  font: 800 clamp(2.6rem, 5vw, 3.85rem) / 0.95 var(--font-editorial);
+  font: 800 clamp(2.85rem, 5.5vw, 4.2rem) / 0.94 var(--font-editorial);
   letter-spacing: -0.03em;
   text-wrap: balance;
 }
@@ -2236,8 +2239,8 @@
   flex: 1 1 auto;
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(24rem, 0.92fr) auto minmax(26rem, 1.08fr);
-  align-items: stretch;
+  grid-template-columns: minmax(0, 1.12fr) auto minmax(16rem, 0.88fr);
+  align-items: center;
   gap: 1rem;
   overflow: hidden;
 }
@@ -2248,6 +2251,7 @@
   border: 1px solid color-mix(in oklch, var(--stage-line) 62%, transparent);
   border-radius: 0.95rem;
   padding: 0.75rem;
+  height: min(23rem, 100%);
   overflow: hidden;
   transition: opacity 220ms ease-out, transform 240ms ease-out, border-color 220ms ease-out;
 }
@@ -2278,6 +2282,88 @@
 .problem-loop-scene[data-problem-focus="tool-loop"] .problem-chat-card,
 .problem-loop-scene[data-problem-focus="workflow-blueprint"] .problem-blueprint {
   border-color: color-mix(in oklch, var(--accent-cyan) 72%, var(--stage-line));
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] {
+  --problem-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
+  --problem-muted: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  --problem-paper: var(--color-editorial-paper, oklch(0.975 0.012 82));
+  --problem-rule: color-mix(in oklch, var(--problem-muted) 38%, transparent);
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-chat-card,
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint {
+  border-color: var(--problem-rule);
+  background: var(--problem-paper);
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-chat-card {
+  box-shadow: inset 0 0.2rem 0 var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint {
+  box-shadow: inset 0 0.2rem 0 var(--problem-muted);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-artifact-header span,
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-artifact-header h2,
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-artifact-header p,
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-artifact-note,
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-loop-scene__bridge {
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-artifact-header span {
+  color: var(--problem-muted);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-thread {
+  border-color: var(--problem-rule);
+  border-radius: 0.35rem;
+  background: color-mix(in oklch, var(--problem-paper) 92%, var(--problem-muted));
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-message[data-role="assistant"] {
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-message__user-bubble {
+  border-color: var(--problem-rule);
+  background: color-mix(in oklch, var(--problem-paper) 84%, var(--problem-muted));
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-root"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-root"] {
+  border-color: var(--problem-rule);
+  background: transparent;
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-trigger"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-trigger"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-trigger-icon"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-trigger-chevron"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-trigger-chevron"] {
+  color: var(--problem-muted);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint .concept-node {
+  border-color: var(--problem-rule);
+  background: color-mix(in oklch, var(--problem-paper) 88%, var(--problem-muted));
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint .concept-icon,
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint .concept-node__copy strong,
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint__proof li {
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint__proof li {
+  border-color: var(--problem-rule);
+  background: transparent;
 }
 
 .problem-artifact-header {

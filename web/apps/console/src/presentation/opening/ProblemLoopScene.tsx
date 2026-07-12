@@ -63,6 +63,7 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
         aria-label="chat tool loop versus reusable automation"
         data-problem-focus={automationBeat ? "workflow-blueprint" : "tool-loop"}
         data-support-state={automationBeat ? "receded" : "quiet"}
+        data-presentation-surface="editorial"
       >
         <article
           className="problem-chat-card"
