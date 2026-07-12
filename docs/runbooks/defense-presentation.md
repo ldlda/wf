@@ -143,6 +143,11 @@ replay-backed entry points.
 
 ## Useful Deep Links
 
+The [presentation rehearsal matrix](presentation-rehearsal-matrix.md) is the
+route checklist for rehearsal, not a new story or product contract. It covers
+every current storyboard beat and records the canonical route, speaking line,
+visual hierarchy, chat mode, evidence mode, and fallback route.
+
 - Title: `http://127.0.0.1:5173/present#scene/thesis/title`
 - Positioning: `http://127.0.0.1:5173/present#scene/positioning/landscape`
 - Architecture root: `http://127.0.0.1:5173/present#scene/architecture/client`
