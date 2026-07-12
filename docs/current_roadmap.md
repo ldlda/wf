@@ -289,8 +289,10 @@ separate activity after these surfaces are stable.
    scope the truth badge to demo scenes, move the prepared-run action to Scene
    10, and correct the Scene 10 graph/proof projection.
 4. **Scene 11 compression:** reduce the typed-human-boundary scene to two
-   beats: interrupt context and approval decision. Cancellation remains a
-   decision outcome rather than a near-duplicate presentation beat.
+    beats: interrupt context and approval decision. Cancellation remains a
+    decision outcome rather than a near-duplicate presentation beat.
+   Implementation plan:
+   [`Scene 11 decision beat compression`](superpowers/plans/2026-07-12-scene-11-decision-beat-compression.md).
 5. **Visual scale and color pass:** remove unwanted blue from Scenes 2 and 14,
    shorten Scene 2's two-column composition, enlarge the focal diagrams in
    Scenes 7, 9, 13, and 14, separate Scene 7 Validate from Repair visuals, and
