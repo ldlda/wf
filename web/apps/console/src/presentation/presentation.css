@@ -2972,26 +2972,20 @@
 
 /*
   Scene 8 — Agent handoff full-screen transcript.
-  Centers the conversation within the primary region with readable spacing.
+  Gives the full-screen conversation a readable stage with consistent spacing.
   Only the stage wrapper may fade/translate; Thread internals are not morphed.
 */
 .presentation-stage[data-scene-view="agent"] .presentation-stage__primary {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 1.15rem 1.5rem 0.85rem;
 }
 
 .presentation-stage[data-scene-view="agent"] .assistant-operator-thread {
   width: min(100%, 44rem);
   max-height: 100%;
-}
-
-.presentation-stage[data-scene-view="agent"] .presentation-stage__primary {
-  align-items: stretch;
-  justify-content: stretch;
-  padding: 1.15rem 1.5rem 0.85rem;
 }
 
 .agent-handoff-scene {

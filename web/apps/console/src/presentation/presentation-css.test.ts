@@ -54,6 +54,7 @@ describe("presentation.css", () => {
   });
 
   it("bounds Scene 9 conversation scrolling and recenters Scene 8 at compact stage widths", () => {
+    expect(css.match(/\.presentation-stage\[data-scene-view="agent"\] \.presentation-stage__primary\s*\{/g)).toHaveLength(2);
     expect(css).toMatch(
       /\.prepared-lifecycle-scene\[data-presentation-surface="editorial"\] \.presentation-assistant-pane__conversation\s*\{[\s\S]*?flex:\s*1 1 auto;[\s\S]*?min-height:\s*0;[\s\S]*?overflow:\s*auto;/,
     );
