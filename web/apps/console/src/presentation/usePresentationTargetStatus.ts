@@ -15,7 +15,7 @@ export type PresentationTargetStatusController = {
 };
 
 const liveActive = (state: DemoTimelineState): boolean =>
-  state.mode === "live" && state.phase !== "ready";
+  state.mode === "live" && ["running", "paused", "review"].includes(state.phase);
 
 export const usePresentationTargetStatus = (
   targetState: PresentationTargetState,

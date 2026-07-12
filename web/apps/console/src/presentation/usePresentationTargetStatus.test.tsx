@@ -38,6 +38,28 @@ describe("usePresentationTargetStatus", () => {
     expect(result.current.liveTargetReady).toBe(true);
   });
 
+  it("does not label a completed live run as active", async () => {
+    mockedCallOperation.mockResolvedValue({
+      ok: true as const,
+      operation: "workflow.health",
+      label: "Health",
+      interpreted: { status: "ok", storeRoot: "store" },
+      exchange: { request: {}, response: {} },
+      equivalentCli: "uv run wf status",
+      durationMs: 2,
+    });
+
+    const { result } = renderHook(() =>
+      usePresentationTargetStatus(target, {
+        ...initialDemoTimelineState,
+        phase: "completed",
+      }),
+    );
+
+    await waitFor(() => expect(result.current.status.kind).toBe("ready"));
+    expect(result.current.status.label).toBe("Live target ready");
+  });
+
   it("falls back to replay when health fails", async () => {
     mockedCallOperation.mockResolvedValue({
       ok: false as const,
