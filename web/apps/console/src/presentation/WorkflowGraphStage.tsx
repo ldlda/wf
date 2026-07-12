@@ -10,6 +10,7 @@ import {
   type Node,
   type NodeProps,
   type NodeTypes,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { buildWorkflowGraph, type WorkflowGraphNodeData } from "../graph/graph-model.js";
@@ -77,6 +78,8 @@ const PresentationFlowNode = ({ data }: NodeProps<Node<PresentationNodeData>>) =
 
 const nodeTypes: NodeTypes = { presentation: PresentationFlowNode };
 
+const graphFitOptions = { padding: 0.04, minZoom: 0.25, maxZoom: 1 } as const;
+
 const WorkflowGraphStageInner = ({
   execution,
   selectedNodeId,
@@ -137,6 +140,13 @@ const WorkflowGraphStageInner = ({
 
   const handleNodeClick = useCallback((_: MouseEvent, node: Node) => selectNode(node.id), [selectNode]);
 
+  const handleFlowInit = useCallback((instance: ReactFlowInstance<Node<PresentationNodeData>, Edge>) => {
+    // React Flow's initial fit can run before custom node dimensions settle.
+    // Refitting from onInit uses the initialized viewport, then one animation
+    // frame lets measured node bounds replace the pre-measurement bounds.
+    requestAnimationFrame(() => instance.fitView(graphFitOptions));
+  }, []);
+
   return (
     <div
       className="workflow-graph-stage"
@@ -162,8 +172,9 @@ const WorkflowGraphStageInner = ({
         edges={edges}
         nodeTypes={nodeTypes}
         onNodeClick={handleNodeClick}
+        onInit={handleFlowInit}
         fitView
-        fitViewOptions={{ padding: 0.08, minZoom: 0.42, maxZoom: 1 }}
+        fitViewOptions={graphFitOptions}
         minZoom={0.25}
         maxZoom={1.5}
         nodesDraggable={false}
