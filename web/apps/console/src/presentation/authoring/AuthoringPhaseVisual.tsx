@@ -12,6 +12,7 @@ import type { AuthoringPhaseProjection } from "./authoring-projection.js";
 
 type AuthoringPhaseVisualProps = {
   readonly projection: AuthoringPhaseProjection;
+  readonly focus?: "full" | "diagnose" | "repair";
 };
 
 const InventoryVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "inventory" }> }) => (
@@ -40,10 +41,22 @@ const GraphVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["vis
   </section>
 );
 
-const RepairVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "repair" }> }) => (
-  <section className="authoring-visual authoring-visual--repair" aria-label="validation repair evidence" data-presentation-surface="editorial" data-visual-role="authoring-phase">
+const RepairVisual = ({
+  visual,
+  focus,
+}: {
+  readonly visual: Extract<AuthoringPhaseProjection["visual"], { kind: "repair" }>;
+  readonly focus: "full" | "diagnose" | "repair";
+}) => (
+  <section
+    className="authoring-visual authoring-visual--repair"
+    aria-label="validation repair evidence"
+    data-presentation-surface="editorial"
+    data-visual-role="authoring-phase"
+    data-authoring-focus={focus}
+  >
     <div className="authoring-repair__diagnostic"><AlertTriangle aria-hidden="true" /><span>Diagnostic</span><strong>{visual.diagnostic}</strong></div>
-    <ArrowRight aria-hidden="true" />
+    <ArrowRight className="authoring-repair__connector" aria-hidden="true" />
     <div className="authoring-repair__correction"><Link2 aria-hidden="true" /><span>Repair</span><code>{visual.correction}</code></div>
     <div className="authoring-repair__status"><CheckCircle2 aria-hidden="true" /><strong>{visual.status}</strong></div>
   </section>
@@ -69,11 +82,11 @@ const BindingsVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["
 );
 
 /** Renders the factual product artifact appropriate to one authoring phase. */
-export const AuthoringPhaseVisual = ({ projection }: AuthoringPhaseVisualProps) => {
+export const AuthoringPhaseVisual = ({ projection, focus = "full" }: AuthoringPhaseVisualProps) => {
   switch (projection.visual.kind) {
     case "inventory": return <InventoryVisual visual={projection.visual} />;
     case "graph": return <GraphVisual visual={projection.visual} />;
-    case "repair": return <RepairVisual visual={projection.visual} />;
+    case "repair": return <RepairVisual visual={projection.visual} focus={focus} />;
     case "artifact": return <ArtifactVisual visual={projection.visual} />;
     case "bindings": return <BindingsVisual visual={projection.visual} />;
   }

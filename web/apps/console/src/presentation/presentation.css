@@ -1621,7 +1621,8 @@
 }
 
 .scene-body__authoring-node[data-authoring-active="true"] {
-  transform: translateY(-0.35rem);
+  z-index: 2;
+  transform: translateY(-0.35rem) scale(1.04);
   border-color: var(--accent-cyan);
   background: color-mix(in oklch, var(--accent-cyan) 8%, var(--authoring-paper, white));
 }
@@ -1662,7 +1663,7 @@
   overflow: hidden;
   border: 1px solid var(--authoring-rule, color-mix(in oklch, var(--authoring-muted) 32%, transparent));
   border-radius: 0.2rem;
-  padding: 0.8rem 1rem;
+  padding: 1rem 1.15rem;
   background: var(--authoring-paper, var(--color-editorial-paper, oklch(0.975 0.012 82)));
 }
 
@@ -1708,8 +1709,48 @@
 
 .scene-body__authoring-evidence .authoring-repair__diagnostic,
 .scene-body__authoring-evidence .authoring-repair__correction {
-  min-height: 6.5rem;
-  padding: 0.75rem;
+  min-height: 8rem;
+  padding: 1rem;
+}
+
+.scene-body__authoring-evidence .authoring-visual--inventory,
+.scene-body__authoring-evidence .authoring-visual--graph,
+.scene-body__authoring-evidence .authoring-visual--repair {
+  min-height: 15rem;
+}
+
+.scene-body__authoring-evidence .authoring-visual--graph .authoring-graph__node {
+  min-width: 12rem;
+  min-height: 8rem;
+}
+
+.scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="diagnose"] {
+  grid-template-columns: 1fr;
+}
+
+.scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__connector,
+.scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__correction,
+.scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__status {
+  display: none;
+}
+
+.scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__diagnostic {
+  grid-column: 1;
+  min-height: 12rem;
+}
+
+.scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="repair"] {
+  grid-template-columns: 1fr;
+}
+
+.scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__diagnostic,
+.scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__connector {
+  display: none;
+}
+
+.scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__correction {
+  grid-column: 1;
+  min-height: 12rem;
 }
 
 .scene-body__authoring-composition .scene-body__authoring-loop {

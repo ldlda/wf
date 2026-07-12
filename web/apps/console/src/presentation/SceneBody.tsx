@@ -278,7 +278,10 @@ const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
             <strong>{primaryCommand.title}</strong>
             <p>{projection.summary}</p>
           </header>
-          <AuthoringPhaseVisual projection={projection} />
+          <AuthoringPhaseVisual
+            projection={projection}
+            focus={beat.id === "diagnose" || beat.id === "repair" ? beat.id : "full"}
+          />
         </article>
         <div
           className="scene-body__authoring-loop"

@@ -346,6 +346,10 @@ describe("SceneBody", () => {
     expect(composition).toHaveAttribute("data-active-stage", "diagnose");
     expect(composition).toHaveAttribute("data-presentation-surface", "editorial");
     expect(screen.getByRole("article", { name: /validate product evidence/i })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(
+      "data-authoring-focus",
+      "diagnose",
+    );
     expect(screen.getByText("workflow.draft_workspaces.validate")).toBeInTheDocument();
     const loop = screen.getByLabelText("authoring phase loop");
     expect(loop).not.toHaveAttribute("data-readable-surface", "dark");
@@ -378,6 +382,27 @@ describe("SceneBody", () => {
     expect(within(rail).getByText("Defense questions")).toBeInTheDocument();
     expect(within(rail).getByRole("list")).toBeInTheDocument();
     expect(within(rail).getByRole("button", { name: /Hosted automation future-work/i })).toBeInTheDocument();
+  });
+
+  it("gives the repair beat its own correction visual", () => {
+    const location: PresentationLocation = { kind: "main", sceneId: "authoring", beatId: "repair", focusPath: [] };
+    render(
+      <SceneBody
+        location={location}
+        demo={demo}
+        selectedNodeId={null}
+        selectNode={noop}
+        openEvidence={noop}
+        openDiscussion={noop}
+        onFocusPathChange={noop}
+        motionDisabled={false}
+      />,
+    );
+
+    expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(
+      "data-authoring-focus",
+      "repair",
+    );
   });
 
   it("keeps discussion rails out of workflow proof scenes", () => {
