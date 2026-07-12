@@ -223,13 +223,14 @@ Then switch back to replay/deep-linked states.
 
 | Path | Operator action | Expected evidence |
 |---|---|---|
-| Submitted | Select issue rows, enter a comment, choose `Submit`. | The same run ID reaches `submitted`, report Markdown, created issues, and a completed trace. |
-| Revision requested | Enter a revision comment, choose `Request revision`. | The same run ID shows `Revision requested` in the UI, protocol evidence remains `cancelled`, the report says `Revision Requested`, no issues are created, and the trace contains `revision_requested` followed by `end_cancelled`. |
+| Submitted | Select issue rows, enter a comment, choose `Submit`. | The prepared recording reaches `submitted` with run ID `run_recorded_lda_report`, report Markdown, a created issue, and a completed trace. |
+| Revision requested | Enter a revision comment, choose `Request revision`. | The prepared recording shows `Revision requested`, protocol evidence remains `cancelled`, the report says `Revision Requested`, no issues are created, and the trace contains `revision_requested` followed by `end_cancelled`. Current recording uses run ID `run_recorded_lda_report_revision`; do not describe it as the same run until that recording is corrected. |
 | Replay fallback | Stop the server or force replay before loading the presentation. | The replay badge and canonical operation, output, and trace evidence remain available without port debugging. |
 
 `Request revision` is an intentional negative branch, not a terminal UI stop
-action. It resumes the same persisted run with an explicit negative decision
-and demonstrates the workflow's negative outcome.
+action. The live workflow contract resumes the persisted run with an explicit
+negative decision. The current prepared replay demonstrates the negative
+outcome with a separate recorded run identity, which is a known factual gap.
 
 ### If asked why the demo is prepared
 
