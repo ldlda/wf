@@ -12,7 +12,7 @@ import {
   createInitialPresentationState,
   presentationReducer,
 } from "./presentation-state.js";
-import { hashForLocation } from "./storyboard-navigation.js";
+import { hashForLocation, nextMainLocation } from "./storyboard-navigation.js";
 import type { MainLocation } from "./storyboard.js";
 import type { DemoApprovalActions, DemoApprovalUiState } from "./demo-approval-actions.js";
 import "./presentation.css";
@@ -232,6 +232,15 @@ export const PresentationRoute = () => {
     [],
   );
 
+  const handleScene9Advance = useCallback(() => {
+    if (
+      state.location.kind !== "main"
+      || state.location.sceneId !== "prepared-lifecycle"
+      || (state.location.beatId !== "draft" && state.location.beatId !== "artifact")
+    ) return;
+    dispatch({ type: "jump", location: nextMainLocation(state.location) });
+  }, [state.location]);
+
   const handleOpenDiscussion = useCallback(
     (branchId: string) => dispatch({ type: "open_discussion", branchId }),
     [],
@@ -253,6 +262,7 @@ export const PresentationRoute = () => {
           approvalActions={approvalActions}
           targetStatus={targetStatus}
           jump={handleJump}
+          onScene9Advance={handleScene9Advance}
           selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
           openEvidence={() => dispatch({ type: "set_evidence_presentation", presentation: "inspector" })}
           closeOverlay={() => dispatch({ type: "close_overlay" })}

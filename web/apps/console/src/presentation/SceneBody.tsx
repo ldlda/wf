@@ -34,6 +34,7 @@ type SceneBodyProps = {
   readonly onFocusPathChange: (path: readonly string[]) => void;
   readonly motionDisabled: boolean;
   readonly approvalActions?: DemoApprovalActions | undefined;
+  readonly onScene9Advance?: (() => void) | undefined;
 };
 
 const DiscussionLinks = ({
@@ -304,7 +305,7 @@ const assertNever = (value: never): never => {
   throw new Error(`Unexpected view: ${value}`);
 };
 
-export const SceneBody = ({ location, demo, timelineAgent, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions }: SceneBodyProps) => {
+export const SceneBody = ({ location, demo, timelineAgent, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions, onScene9Advance }: SceneBodyProps) => {
   const sceneId = location.kind === "main" ? location.sceneId : "positioning";
   const beatId = location.kind === "main" ? location.beatId : "landscape";
   const scene = findScene(sceneId) ?? findScene("thesis")!;
@@ -342,7 +343,7 @@ export const SceneBody = ({ location, demo, timelineAgent, selectedNodeId, selec
     case "agent":
       return <AgentHandoffScene scene={scene} beat={beat} />;
       case "demo-lifecycle":
-      return <PreparedAuthoringLifecycleScene scene={scene} beat={beat} />;
+      return <PreparedAuthoringLifecycleScene scene={scene} beat={beat} onAdvance={onScene9Advance} />;
     case "demo":
       return (
         <DemoWorkflowScene

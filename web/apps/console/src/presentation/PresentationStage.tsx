@@ -25,6 +25,7 @@ type PresentationStageProps = {
   readonly onRequestRevision?: (() => void) | undefined;
   readonly targetStatus: PresentationTargetHealth;
   readonly jump: (location: MainLocation) => void;
+  readonly onScene9Advance?: (() => void) | undefined;
   readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
   readonly closeOverlay: () => void;
@@ -43,6 +44,7 @@ export const PresentationStage = ({
   onRequestRevision,
   targetStatus,
   jump,
+  onScene9Advance,
   selectNode,
   openEvidence,
   closeOverlay,
@@ -87,6 +89,7 @@ export const PresentationStage = ({
                 }}
                 motionDisabled={state.motionDisabled}
                 approvalActions={approvalActions}
+                onScene9Advance={onScene9Advance}
               />
             )}
           </section>

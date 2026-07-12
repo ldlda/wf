@@ -15,6 +15,7 @@ import { StageCaption } from "../StageCaption.js";
 type PreparedAuthoringLifecycleSceneProps = {
   readonly scene: SceneDefinition;
   readonly beat: SceneBeatDefinition;
+  readonly onAdvance?: (() => void) | undefined;
 };
 
 const phases: readonly { readonly id: AuthoringPhaseId; readonly label: string }[] = [
@@ -31,7 +32,7 @@ const phases: readonly { readonly id: AuthoringPhaseId; readonly label: string }
  * Each beat shows a persistent prepared assistant beside one dominant phase
  * projection sourced from the prepared authoring recording.
  */
-export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthoringLifecycleSceneProps) => {
+export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance }: PreparedAuthoringLifecycleSceneProps) => {
   const [messageState, dispatch] = useReducer(
     scene9MessageReducer,
     initialScene9MessageState,
@@ -60,9 +61,16 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat }: PreparedAuthori
           submittedOverrides={projectScene9SubmittedOverrides(messageState)}
           runRequested={messageState.runRequested}
           onDraftChange={(draft) => dispatch({ type: "draft_edited", draft })}
-          onSubmit={() => {
-            if (beatId === "draft") dispatch({ type: "draft_submitted" });
-            if (beatId === "artifact") dispatch({ type: "artifact_submitted" });
+          onSubmit={(submittedText) => {
+            dispatch({ type: "draft_edited", draft: submittedText });
+            if (beatId === "draft") {
+              dispatch({ type: "draft_submitted" });
+              onAdvance?.();
+            }
+            if (beatId === "artifact") {
+              dispatch({ type: "artifact_submitted" });
+              onAdvance?.();
+            }
             if (beatId === "deployment") dispatch({ type: "run_requested" });
           }}
         />

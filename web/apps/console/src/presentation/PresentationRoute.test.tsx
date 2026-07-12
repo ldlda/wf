@@ -89,6 +89,68 @@ describe("PresentationRoute", () => {
     expect(await screen.findByLabelText("authoring phase rail")).toBeInTheDocument();
   });
 
+  it("advances Draft to Validate once and projects the edited request", async () => {
+    window.location.hash = "#scene/prepared-lifecycle/draft";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const message = screen.getByRole("textbox", { name: /message to authoring assistant/i });
+    await userEvent.clear(message);
+    await userEvent.type(message, "Check this edited draft request");
+    await userEvent.click(screen.getByRole("button", { name: /send message/i }));
+
+    expect(window.location.hash).toBe("#scene/prepared-lifecycle/validate");
+    expect(await screen.findByText("Check this edited draft request")).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i }))
+      .toHaveAttribute("data-phase", "validate");
+  });
+
+  it("advances Artifact to Deployment once and projects the edited request", async () => {
+    window.location.hash = "#scene/prepared-lifecycle/artifact";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const message = screen.getByRole("textbox", { name: /message to authoring assistant/i });
+    await userEvent.clear(message);
+    await userEvent.type(message, "Save this edited deployment request");
+    await userEvent.click(screen.getByRole("button", { name: /send message/i }));
+
+    expect(window.location.hash).toBe("#scene/prepared-lifecycle/deployment");
+    expect(await screen.findByText("Save this edited deployment request")).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i }))
+      .toHaveAttribute("data-phase", "deployment");
+  });
+
+  it("records a Deployment run request locally without an RPC", async () => {
+    window.location.hash = "#scene/prepared-lifecycle/deployment";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+    await screen.findByRole("textbox", { name: /message to authoring assistant/i });
+    mockedCallOperation.mockClear();
+
+    await userEvent.click(screen.getByRole("button", { name: /send message/i }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Run request prepared for the next execution slice.",
+    );
+    expect(mockedCallOperation.mock.calls.some(([operation]) => operation === "workflow.runs.start"))
+      .toBe(false);
+  });
+
+  it("keeps Validate submission on the current beat", async () => {
+    window.location.hash = "#scene/prepared-lifecycle/validate";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const message = screen.getByRole("textbox", { name: /message to authoring assistant/i });
+    await userEvent.type(message, "Keep validating this draft");
+    await userEvent.click(screen.getByRole("button", { name: /send message/i }));
+
+    expect(window.location.hash).toBe("#scene/prepared-lifecycle/validate");
+    expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i }))
+      .toHaveAttribute("data-phase", "validate");
+  });
+
   it("renders audience progress chrome without rail or mode label", async () => {
     setReplayMode();
     const { PresentationRoute } = await import("./PresentationRoute.js");
