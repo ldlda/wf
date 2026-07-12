@@ -93,9 +93,12 @@ describe("DemoWorkflowScene", () => {
     renderBeat("interrupt", "typed-human-boundary");
 
     const moment = screen.getByRole("region", { name: /current product moment/i });
-    expect(moment).toHaveAttribute("data-moment", "approval");
-    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(moment).toHaveAttribute("data-moment", "interrupt");
     expect(screen.getByText("Workflow input")).toBeInTheDocument();
+    expect(screen.getByText("Interrupt payload")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /operator resume decision/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Request revision" })).not.toBeInTheDocument();
   });
 
   it("carries the contract into Scene 10 approval via guided product moment", () => {
@@ -164,7 +167,9 @@ describe("DemoWorkflowScene", () => {
   it("renders approval and interrupt beats via guided product moment", () => {
     const interrupt = renderBeat("interrupt", "typed-human-boundary");
     expect(screen.queryByLabelText("workflow graph")).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "approval");
+    expect(screen.getByRole("region", { name: /current product moment/i })).toHaveAttribute("data-moment", "interrupt");
+    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Request revision" })).not.toBeInTheDocument();
     interrupt.unmount();
 
     renderBeat("approval", "typed-human-boundary");
@@ -209,10 +214,13 @@ describe("DemoWorkflowScene", () => {
     expect(screen.getByText("Workflow input")).toBeInTheDocument();
   });
 
-  it("renders interrupt decision form but no raw schema in guided product moment", () => {
+  it("renders interrupt facts but no decision controls in guided product moment", () => {
     renderBeat("interrupt", "typed-human-boundary");
     expect(screen.queryByText("Resume schema")).not.toBeInTheDocument();
-    expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(screen.getByText("Interrupt payload")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /operator resume decision/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Request revision" })).not.toBeInTheDocument();
     cleanup();
 
     renderBeat("approval", "typed-human-boundary");

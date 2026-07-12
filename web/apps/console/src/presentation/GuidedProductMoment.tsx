@@ -26,13 +26,20 @@ export type GuidedProductMomentProps = {
   readonly openEvidence: () => void;
 };
 
-const momentForBeat = (beatId: string): "approval" | "resume" | "output" | "trace" =>
-  beatId === "resume" || beatId === "output" || beatId === "trace" ? beatId : "approval";
+type GuidedProductMoment = "interrupt" | "approval" | "resume" | "output" | "trace";
+
+const momentForBeat = (beatId: string): GuidedProductMoment => {
+  if (beatId === "interrupt" || beatId === "approval" || beatId === "resume" || beatId === "output" || beatId === "trace") {
+    return beatId;
+  }
+  return "approval";
+};
 
 const statusCopy = (
   moment: ReturnType<typeof momentForBeat>,
   approvalActions?: DemoApprovalActions,
 ): string => {
+  if (moment === "interrupt") return "Run paused at the typed interrupt; inspect the context before deciding.";
   if (moment !== "approval") return "Same persisted run; inspect the proof below.";
   if (approvalActions?.state === "submitted") return "Submitted. Same run resumed.";
   if (approvalActions?.state === "revision_requested") {
@@ -43,6 +50,8 @@ const statusCopy = (
 
 const hierarchyForMoment = (moment: ReturnType<typeof momentForBeat>) => {
   switch (moment) {
+    case "interrupt":
+      return { primary: "interrupt-context", support: "input-facts" };
     case "approval":
       return { primary: "interrupt-approval", support: "input-facts" };
     case "resume":
@@ -88,6 +97,12 @@ export const GuidedProductMoment = ({
       </header>
 
       <div className="guided-product-moment__primary">
+        {moment === "interrupt" ? (
+          <div className="guided-product-moment__interrupt-grid">
+            <RunInputFacts facts={facts} density="compact" />
+            <InterruptPayloadFacts facts={facts} priority="primary" />
+          </div>
+        ) : null}
         {moment === "approval" && contract ? (
           <div className="guided-product-moment__approval-grid">
             <aside className="guided-product-moment__input-rail" aria-label="workflow input context">

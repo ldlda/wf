@@ -53,6 +53,26 @@ const demoWithAppliedCount = (appliedCount: number): DemoTimelineController => (
 });
 
 describe("GuidedProductMoment", () => {
+  it("renders interrupt context without decision controls", () => {
+    render(
+      <GuidedProductMoment
+        beat={findBeat("typed-human-boundary", "interrupt")!}
+        demo={demo}
+        contract={contract}
+        operation={null}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    const moment = screen.getByRole("region", { name: /current product moment/i });
+    expect(moment).toHaveAttribute("data-moment", "interrupt");
+    expect(screen.getByText("Workflow input")).toBeInTheDocument();
+    expect(screen.getByText("Interrupt payload")).toBeInTheDocument();
+    expect(screen.queryByRole("group", { name: /operator resume decision/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Submit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Request revision" })).not.toBeInTheDocument();
+  });
+
   it("makes approval the primary product decision with factual panels", () => {
     render(
       <GuidedProductMoment
