@@ -302,7 +302,7 @@ separate activity after these surfaces are stable.
    terminal states. Design:
    [`presentation demo-chrome ownership`](superpowers/specs/2026-07-12-demo-chrome-ownership-design.md).
    Implementation:
-   [`presentation demo-chrome ownership plan`](superpowers/plans/2026-07-12-presentation-demo-chrome-ownership.md).
+   [`presentation demo-chrome ownership plan`](historical/superpowers/plans/2026-07-12-presentation-demo-chrome-ownership.md).
 7. **Visual scale and color pass:** remove unwanted blue from Scenes 2 and 14,
    shorten Scene 2's two-column composition, enlarge the focal diagrams in
    Scenes 7, 9, 13, and 14, separate Scene 7 Validate from Repair visuals, and
