@@ -8,6 +8,12 @@ import {
   type TargetProbeState,
 } from "./presentation-target-status.js";
 
+export type PresentationTargetStatusController = {
+  readonly status: PresentationTargetHealth;
+  readonly retryHealth: () => void;
+  readonly liveTargetReady: boolean;
+};
+
 const liveActive = (state: DemoTimelineState): boolean =>
   state.mode === "live" && state.phase !== "ready";
 
@@ -15,11 +21,12 @@ export const usePresentationTargetStatus = (
   targetState: PresentationTargetState,
   demoState: DemoTimelineState,
   probeEnabled = true,
-): PresentationTargetHealth => {
+): PresentationTargetStatusController => {
   const [probe, setProbe] = useState<TargetProbeState>(
     targetState.mode === "live" ? "checking" : "none",
   );
   const [failureReason, setFailureReason] = useState<string | undefined>(undefined);
+  const [probeGeneration, setProbeGeneration] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,23 +63,30 @@ export const usePresentationTargetStatus = (
     return () => {
       cancelled = true;
     };
-  }, [probeEnabled, targetState]);
+  }, [probeEnabled, probeGeneration, targetState]);
 
-  if (!probeEnabled) {
-    return presentationTargetHealth({
+  const status = !probeEnabled
+    ? presentationTargetHealth({
       target: null,
       probe: "none",
       liveActive: false,
       replayActive: true,
       failureReason: "deterministic Scene 8 replay",
+    })
+    : presentationTargetHealth({
+      target: targetState.mode === "live" ? targetState.target : null,
+      probe,
+      liveActive: liveActive(demoState),
+      replayActive: demoState.mode === "replay",
+      failureReason,
     });
-  }
 
-  return presentationTargetHealth({
-    target: targetState.mode === "live" ? targetState.target : null,
-    probe,
-    liveActive: liveActive(demoState),
-    replayActive: demoState.mode === "replay",
-    failureReason,
-  });
+  const retryHealth = () => setProbeGeneration((generation) => generation + 1);
+  const liveTargetReady = targetState.mode === "live" && probe === "ready";
+
+  return {
+    status,
+    retryHealth,
+    liveTargetReady,
+  };
 };

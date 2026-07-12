@@ -54,7 +54,8 @@ export const PresentationRoute = () => {
   const presentationTarget = useMemo(() => resolvePresentationTarget(), []);
   const demo = useDemoTimeline(presentationTarget.target, recordEvidence, recording);
   const isScene8 = state.location.kind === "main" && state.location.sceneId === "agent-handoff";
-  const targetStatus = usePresentationTargetStatus(presentationTarget, demo.state, !isScene8);
+  const targetStatusController = usePresentationTargetStatus(presentationTarget, demo.state, !isScene8);
+  const targetStatus = targetStatusController.status;
   const timelineAgent = useTimelineAgent(demo, {
     mode: presentationTarget.mode === "live" ? "live" : "replay",
     status: targetStatus,
@@ -261,6 +262,8 @@ export const PresentationRoute = () => {
           timelineAgent={timelineAgent}
           approvalActions={approvalActions}
           targetStatus={targetStatus}
+          retryHealth={targetStatusController.retryHealth}
+          liveTargetReady={targetStatusController.liveTargetReady}
           jump={handleJump}
           onScene9Advance={handleScene9Advance}
           selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}

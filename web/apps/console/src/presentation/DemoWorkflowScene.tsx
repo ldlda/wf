@@ -1,5 +1,6 @@
 import type { DemoEvent } from "../demo/timeline/models.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
+import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
 import {
   demoBeatLensForBeat,
   graphExecutionForBeat,
@@ -18,6 +19,7 @@ import { OperationBlock } from "./OperationBlock.js";
 import { RunInputFacts } from "./RunFactsPanel.js";
 import { StageCaption } from "./StageCaption.js";
 import type { SceneBeatDefinition, SceneDefinition } from "./storyboard.js";
+import type { PresentationTargetHealth } from "./presentation-target-status.js";
 import { WorkflowGraphStage } from "./WorkflowGraphStage.js";
 
 type DemoWorkflowSceneProps = {
@@ -28,6 +30,10 @@ type DemoWorkflowSceneProps = {
   readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
   readonly approvalActions?: DemoApprovalActions | undefined;
+  readonly timelineAgent?: TimelineAgentController | undefined;
+  readonly targetStatus?: PresentationTargetHealth | undefined;
+  readonly retryHealth?: (() => void) | undefined;
+  readonly liveTargetReady?: boolean | undefined;
 };
 
 type DemoWorkflowLayout = "operation" | "graph" | "interrupt" | "approval" | "evidence";
@@ -59,6 +65,10 @@ export const DemoWorkflowScene = ({
   selectNode,
   openEvidence,
   approvalActions,
+  timelineAgent,
+  targetStatus,
+  retryHealth,
+  liveTargetReady,
 }: DemoWorkflowSceneProps) => {
   const runStart = findEvent(demo, "run_start");
   const runResume = findEvent(demo, "run_resume");

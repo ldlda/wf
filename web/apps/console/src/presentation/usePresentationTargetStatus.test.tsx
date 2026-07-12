@@ -6,6 +6,12 @@ import { usePresentationTargetStatus } from "./usePresentationTargetStatus.js";
 
 vi.mock("../connection/api.js", () => ({ callOperation: vi.fn() }));
 const mockedCallOperation = vi.mocked(callOperation);
+const target = { mode: "live" as const, target: "http://127.0.0.1:8765/rpc", source: "default" as const };
+const replayState = {
+  ...initialDemoTimelineState,
+  mode: "replay" as const,
+  phase: "paused" as const,
+};
 
 beforeEach(() => mockedCallOperation.mockReset());
 
@@ -23,12 +29,13 @@ describe("usePresentationTargetStatus", () => {
 
     const { result } = renderHook(() =>
       usePresentationTargetStatus(
-        { mode: "live", target: "http://127.0.0.1:8765/rpc", source: "default" },
+        target,
         initialDemoTimelineState,
       ),
     );
 
-    await waitFor(() => expect(result.current.kind).toBe("ready"));
+    await waitFor(() => expect(result.current.status.kind).toBe("ready"));
+    expect(result.current.liveTargetReady).toBe(true);
   });
 
   it("falls back to replay when health fails", async () => {
@@ -40,12 +47,60 @@ describe("usePresentationTargetStatus", () => {
 
     const { result } = renderHook(() =>
       usePresentationTargetStatus(
-        { mode: "live", target: "http://127.0.0.1:8765/rpc", source: "default" },
+        target,
         initialDemoTimelineState,
       ),
     );
 
-    await waitFor(() => expect(result.current.kind).toBe("failed"));
-    expect(result.current.label).toBe("Replay fallback");
+    await waitFor(() => expect(result.current.status.kind).toBe("failed"));
+    expect(result.current.status.label).toBe("Replay fallback");
+    expect(result.current.liveTargetReady).toBe(false);
+  });
+
+  it("keeps live target readiness visible while direct replay is active", async () => {
+    mockedCallOperation.mockResolvedValue({
+      ok: true as const,
+      operation: "workflow.health",
+      label: "Health",
+      interpreted: { status: "ok", storeRoot: "store" },
+      exchange: { request: {}, response: {} },
+      equivalentCli: "uv run wf status",
+      durationMs: 2,
+    });
+
+    const { result } = renderHook(() =>
+      usePresentationTargetStatus(target, replayState),
+    );
+
+    await waitFor(() => expect(result.current.status.kind).toBe("replay"));
+    expect(result.current.liveTargetReady).toBe(true);
+  });
+
+  it("retries health without changing replay playback", async () => {
+    mockedCallOperation
+      .mockResolvedValueOnce({
+        ok: false as const,
+        error: { code: "upstream_unreachable", message: "connection refused" },
+        exchange: { request: {}, response: {} },
+      })
+      .mockResolvedValueOnce({
+        ok: true as const,
+        operation: "workflow.health",
+        label: "Health",
+        interpreted: { status: "ok", storeRoot: "store" },
+        exchange: { request: {}, response: {} },
+        equivalentCli: "uv run wf status",
+        durationMs: 2,
+      });
+
+    const { result } = renderHook(() =>
+      usePresentationTargetStatus(target, replayState),
+    );
+
+    await waitFor(() => expect(result.current.status.kind).toBe("failed"));
+    act(() => result.current.retryHealth());
+    await waitFor(() => expect(result.current.liveTargetReady).toBe(true));
+    expect(result.current.status.kind).toBe("replay");
+    expect(mockedCallOperation).toHaveBeenCalledTimes(2);
   });
 });
