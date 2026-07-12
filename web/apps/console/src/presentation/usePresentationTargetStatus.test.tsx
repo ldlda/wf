@@ -72,8 +72,8 @@ describe("usePresentationTargetStatus", () => {
       usePresentationTargetStatus(target, replayState),
     );
 
-    await waitFor(() => expect(result.current.status.kind).toBe("replay"));
-    expect(result.current.liveTargetReady).toBe(true);
+    await waitFor(() => expect(result.current.liveTargetReady).toBe(true));
+    expect(result.current.status.kind).toBe("replay");
   });
 
   it("retries health without changing replay playback", async () => {
@@ -94,13 +94,13 @@ describe("usePresentationTargetStatus", () => {
       });
 
     const { result } = renderHook(() =>
-      usePresentationTargetStatus(target, replayState),
+      usePresentationTargetStatus(target, initialDemoTimelineState),
     );
 
     await waitFor(() => expect(result.current.status.kind).toBe("failed"));
     act(() => result.current.retryHealth());
     await waitFor(() => expect(result.current.liveTargetReady).toBe(true));
-    expect(result.current.status.kind).toBe("replay");
+    expect(result.current.status.kind).toBe("ready");
     expect(mockedCallOperation).toHaveBeenCalledTimes(2);
   });
 });

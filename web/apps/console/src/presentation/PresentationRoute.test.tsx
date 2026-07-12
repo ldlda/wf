@@ -288,6 +288,21 @@ describe("PresentationRoute", () => {
     expect(await screen.findByRole("button", { name: /run prepared workflow/i })).toBeInTheDocument();
   });
 
+  it("exposes an explicit live launch on the Scene 10 operation beat", async () => {
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
+    window.location.hash = "#scene/run-from-deployment/operation";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const launch = await screen.findByRole("button", { name: "Run prepared workflow" });
+    await userEvent.click(launch);
+
+    await waitFor(() => {
+      expect(mockedCallOperation.mock.calls.some(([operation]) => operation === "workflow.deployments.inspect"))
+        .toBe(true);
+    }, { timeout: 3000 });
+  });
+
   it("uses replay fallback for a live direct hash before a run starts", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
     window.location.hash = "#scene/typed-human-boundary/approval";
