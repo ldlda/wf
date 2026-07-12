@@ -5,7 +5,7 @@ import { RunInputFileBrowser } from "./RunInputFileBrowser.js";
 afterEach(() => cleanup());
 
 describe("RunInputFileBrowser", () => {
-  it("renders the selected docs paths as factual readable files", () => {
+  it("renders included docs paths as factual prepared-run files", () => {
     render(
       <RunInputFileBrowser
         selectedDocuments={["docs/project-brief.md", "docs/architecture-notes.md"]}
@@ -16,13 +16,16 @@ describe("RunInputFileBrowser", () => {
     const browser = screen.getByRole("region", { name: /workflow input files/i });
     expect(within(browser).getByRole("heading", { name: "docs/" })).toBeInTheDocument();
 
-    const files = within(browser).getByRole("list", { name: /selected for this run/i });
+    const files = within(browser).getByRole("list", { name: /included in prepared run/i });
     expect(within(files).getAllByRole("listitem")).toHaveLength(2);
+    expect(within(files).getAllByText(/included in prepared run/i)).toHaveLength(2);
+    expect(within(files).queryAllByRole("button")).toHaveLength(0);
+    expect(within(files).queryAllByRole("link")).toHaveLength(0);
     for (const path of ["docs/project-brief.md", "docs/architecture-notes.md"]) {
       const row = within(files).getByText(path).closest("li");
       expect(row).not.toBeNull();
       expect(row).toHaveAttribute("data-file-path", path);
-      expect(row).toHaveTextContent(/selected|read/i);
+      expect(row).toHaveTextContent(/included in prepared run/i);
     }
 
     const destination = within(browser).getByRole("group", { name: /workflow output/i });
