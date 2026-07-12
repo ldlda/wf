@@ -312,7 +312,8 @@ separate activity after these surfaces are stable.
    [`presentation visual scale and color pass plan`](historical/superpowers/plans/2026-07-12-presentation-visual-scale-color-pass.md).
 8. **Rehearsal gate:** run all 14 scenes at 16:9 and 4:3, verify the Scene 8 →
    Scene 11 → Scene 12 path in live and replay modes, then review the story
-   flow, coverage, and ordering separately.
+   flow, coverage, and ordering separately. Implementation plan:
+   [`defense rehearsal gate`](superpowers/plans/2026-07-13-defense-rehearsal-gate.md).
 
 9. **Deferred: factual input file browser:** replace the Scene 10 input
    manifest-only view with a read-only browser backed by canonical prepared or
