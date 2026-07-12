@@ -17,15 +17,17 @@ rehearsal pass.
 
 ### Checks
 
-| Classification | Mode | Route or target | Operator action | Observed result |
-|---|---|---|---|---|
-| PASS | replay | `/present#scene/thesis/title` | Open the presentation with the replay target selected. | The presentation entry route is reachable without requiring the workflow server. |
-| PASS | live health | `/api/health` | Request the web-server health endpoint. | `200` with `{"ok":true,"status":"ok"}`. |
-| PASS | live health | `/api/connect` -> `http://127.0.0.1:8765/rpc` | POST the configured RPC target to the web server. | `workflow.health` returned `status: ok`, a store root, and equivalent CLI `uv run wf status`. |
-| PASS | live health | `http://127.0.0.1:8765/rpc` | Confirm the target responds through the web server's connection path. | The JSON-RPC request/response exchange was captured successfully. |
-| BLOCKED | live end-to-end | Scene 10 -> Scene 12 | Start the prepared run, submit the approval form, and inspect output/trace. | The health path is verified, but this pass did not complete the stateful browser interaction. Do not claim this path was live-verified. |
-| BLOCKED | replay end-to-end | Scene 8 -> Scene 12 | Send the prepared request, advance authoring beats, approve/revise, then inspect output/trace. | Route/test and screenshot coverage exists; a complete human-operated browser pass was not captured in this log. |
-| PRODUCT | fallback | Scene 10 -> Scene 12 | Point the presentation at an unavailable target and continue. | Fallback behavior is documented and covered by route contracts, but the unavailable-target browser interaction still needs a final manual check. |
+| Classification | Viewport | Mode | Route or target | Operator action | Observed result |
+|---|---|---|---|---|---|
+| PASS | 1280x720 | replay | `/present#scene/agent-handoff/request` | Open the request route and click `Send`. | The prepared conversation appears with the user request, assistant narration, and four discovery tool calls; no run is claimed. |
+| PASS | 1280x720, 1024x768 | replay | `/present#scene/typed-human-boundary/approval` | Open the approval route. | The input files, typed interrupt payload, proposed issue, resume comment, `Submit`, and `Request revision` controls are visible. The footer reports `Run paused - review required`. |
+| PASS | 1280x720 | replay | Scene 11 -> Scene 12 | Click `Submit`. | The route changes to `resume`; the output shows `submitted`, `approved: true`, selected issue `risk-1`, and a created issue. |
+| FACTUAL | 1280x720 | replay | Scene 11 -> Scene 12 | Reload approval and click `Request revision`. | The route changes to `resume` and shows `cancelled`, `approved: false`, no selected issues, and a revision report. The replay uses `run_recorded_lda_report_revision`, so it does not preserve the submitted branch's run ID despite the same-run wording. |
+| PASS | 1280x720, 1024x768 | replay | `/present#scene/resume-output-evidence/trace` | Open the trace beat after the decision branches. | Recorded execution frames render, including `review_issues` interrupt/continuation and `end_cancelled`; the UI exposes the evidence inspector. |
+| PASS | 1024x768 | fallback | `/present#scene/typed-human-boundary/approval` | Set the presentation target to `http://127.0.0.1:1/rpc` and reload. | The approval route remains usable with the replay-backed payload and decision form; no live-ready badge is shown. The browser session target was restored afterward. |
+| PASS | command line | live health | `/api/health` | Request the web-server health endpoint. | `200` with `{"ok":true,"status":"ok"}`. |
+| PASS | command line | live health | `/api/connect` -> `http://127.0.0.1:8765/rpc` | POST the configured RPC target to the web server. | `workflow.health` returned `status: ok`, a store root, and equivalent CLI `uv run wf status`. |
+| BLOCKED | 1280x720 | live end-to-end | Scene 10 -> Scene 12 | Start the prepared run, submit the approval form, and inspect output/trace against the live server. | Live health is verified, but a complete stateful live browser path was not completed in this rehearsal. Do not claim live output or trace success. |
 
 ### Operator Interpretation
 
@@ -33,16 +35,16 @@ The live connection boundary is working. The evidence above proves that the
 presentation-side web server can reach the example workflow RPC server and
 decode `workflow.health`; it does not prove that a complete live run,
 interrupt/resume branch, output, or trace was completed during this rehearsal.
-Use the prepared replay for the defense unless the full stateful live path is
-rehearsed separately.
+The replay path is usable at both rehearsal viewports, but its revision branch
+currently uses a separate recorded run identity. Use the prepared replay for
+the defense unless the full stateful live path is rehearsed separately.
 
 ## Follow-up Checks
 
-1. Force replay with the session-storage command in
-   [`defense-presentation.md`](defense-presentation.md), then walk the Scene 8
-   request through the Scene 12 trace route.
+1. Decide whether the revision branch should preserve the submitted branch's
+   run identity or be presented as a separate prepared recording.
 2. With the example server running, start from the Scene 10 footer action and
-   record the run ID, approval payload, submitted/revision-requested outcome,
-   output, and trace frames.
-3. Point the target at an unused loopback port, reload, and record the exact
-   fallback badge and available route behavior.
+   record the live run ID, approval payload, submitted/revision-requested
+   outcome, output, and trace frames.
+3. Keep the unavailable-target fallback check in the pre-defense checklist so
+   its badge and route behavior can be rechecked after presentation changes.
