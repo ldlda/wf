@@ -199,7 +199,7 @@ const readOutputFacts = (
 
   const output = parseReportOutput(resumeInterpreted?.["output"] ?? completedInterpreted?.["output"]);
   if (!output) {
-    return { state: "not-created", message: "Output not created yet" };
+    return { state: "not-created", message: "No report output has been produced for this run." };
   }
   return {
     state: "created",

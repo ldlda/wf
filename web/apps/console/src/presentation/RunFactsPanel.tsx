@@ -121,8 +121,6 @@ export const RunOutputFacts = ({ facts, priority = "summary" }: RunOutputFactsPr
           </dd>
           <dt>Selected issue IDs</dt>
           <dd>{facts.output.output.selected_issue_ids.join(", ")}</dd>
-          <dt>Comment</dt>
-          <dd>{facts.output.output.comment ?? "none"}</dd>
         </dl>
         {priority === "report" ? (
           <div className="run-facts-scroll-region run-facts-scroll-region--markdown" role="region" aria-label="workflow markdown output">
@@ -147,11 +145,9 @@ const TraceFact = ({ label, value }: { readonly label: string; readonly value: s
 
 export const RunTraceFacts = ({ facts }: RunTraceFactsProps) => (
   <div className="run-facts-card run-trace-facts" role="region" aria-label="workflow trace proof">
-    <h3>
-      Trace frames <span className="run-facts-count">{facts.trace.frames.length} captured</span>
-    </h3>
+    <h3>Recorded execution trace</h3>
     {facts.trace.frames.length === 0 ? (
-      <p>No trace frames captured.</p>
+      <p>No trace entries recorded for this view.</p>
     ) : (
       <div className="run-facts-scroll-region run-facts-scroll-region--trace" role="region" aria-label="workflow trace frames">
         <ul className="run-facts-list">

@@ -166,8 +166,30 @@ describe("RunOutputFacts", () => {
 
     expect(screen.getByText("ISSUE-001")).toBeDefined();
     expect(screen.getByText("local://issue-board/ISSUE-001")).toBeDefined();
-    expect(screen.getByText("Create the selected issue.")).toBeDefined();
     expect(screen.getByRole("region", { name: /workflow markdown output/i })).toBeInTheDocument();
+  });
+
+  it("does not render a null output comment as a fake fact", () => {
+    const createdFacts = makeCreatedFacts("# Report");
+    if (createdFacts.output.state !== "created") {
+      throw new Error("Expected created output facts");
+    }
+
+    render(
+      <RunOutputFacts
+        facts={{
+          ...createdFacts,
+          output: {
+            ...createdFacts.output,
+            output: { ...createdFacts.output.output, comment: null },
+          },
+        }}
+        priority="report"
+      />,
+    );
+
+    expect(screen.queryByText("Comment")).not.toBeInTheDocument();
+    expect(screen.queryByText("none")).not.toBeInTheDocument();
   });
 
   it("renders output report as the primary scroll region", () => {
@@ -232,13 +254,25 @@ describe("RunTraceFacts", () => {
 
     expect(screen.getByText("list_documents")).toBeDefined();
     expect(screen.getByText("review_issues")).toBeDefined();
-    expect(screen.getByText("2 captured")).toBeInTheDocument();
     expect(screen.getAllByText("captured as empty object").length).toBeGreaterThanOrEqual(2);
     expect(screen.getAllByText("Resolved input").length).toBe(2);
     expect(screen.getAllByText("captured as empty object")[0]!.closest(".run-trace-frame__fact")).toHaveAttribute(
       "data-value-kind",
       "empty-object",
     );
+  });
+
+  it("does not summarize trace evidence with a frame count", () => {
+    render(<RunTraceFacts facts={makeTraceFacts(3)} />);
+
+    expect(screen.getByRole("heading", { name: "Recorded execution trace" })).toBeInTheDocument();
+    expect(screen.queryByText(/trace frames.*captured/i)).not.toBeInTheDocument();
+  });
+
+  it("uses an honest empty state when no trace entries are available", () => {
+    render(<RunTraceFacts facts={baseFacts} />);
+
+    expect(screen.getByText("No trace entries recorded for this view.")).toBeInTheDocument();
   });
 
   it("renders trace frames inside a scrollable list", () => {

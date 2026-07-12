@@ -112,7 +112,7 @@ describe("demo-run-facts", () => {
     const facts = projectDemoRunFacts(controller());
     expect(facts.output.state).toBe("not-created");
     if (facts.output.state === "not-created") {
-      expect(facts.output.message).toBe("Output not created yet");
+      expect(facts.output.message).toBe("No report output has been produced for this run.");
     }
   });
 
