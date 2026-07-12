@@ -171,8 +171,8 @@ Implementation order:
 24. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 25. Completed: presentation agent authoring story creates a canonical prepared
-    authoring recording, Scene 8 as an authentic full-screen conversation,
-    Scene 9 as a 5-phase lifecycle with synchronized chat dock, and route-level coverage
+    authoring recording, Scene 8 as an authentic single-beat full-screen
+    conversation, and Scene 9 as a 5-phase lifecycle with route-level coverage
     that never calls workflow authoring RPC operations during Scene 9
     navigation. Implementation:
     [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
@@ -202,14 +202,15 @@ Presentation visual audit, July 11:
 
 ## Completed: Presentation Recomposition And Authoring Story
 
-Scenes 8 and 9 are now implemented as authentic external-agent handoff and
-factual prepared-authoring proof. The canonical recording, full-screen Scene 8,
-Scene 9 lifecycle with a synchronized chat dock, five factual phase visuals,
-and route coverage are all in place. The obsolete receipt/trace modal was
-removed. Plans:
+Scenes 8 and 9 are now implemented as authentic external-agent request and
+factual prepared-authoring proof. Scene 8 is one local request-to-first-turn
+beat; its obsolete `/handoff` route fails closed. Scene 9 keeps a persistent
+prepared assistant pane beside five factual phase visuals in an adaptive
+approximately 35/65 split. The obsolete receipt/trace modal and lower chat dock
+were removed. Plans:
 [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md)
 and
-[`continuous authoring workspace`](historical/superpowers/plans/2026-07-11-continuous-authoring-workspace.md).
+[`Scene 9 assistant pane`](historical/superpowers/plans/2026-07-12-scene-9-assistant-modal.md).
 
 Recommended next visual slices:
 
@@ -272,9 +273,11 @@ separate activity after these surfaces are stable.
    reveals the first prepared authoring conversation without starting a
    workflow run. Implementation:
    [`Scene 8 chat entry`](historical/superpowers/plans/2026-07-12-scene-8-chat-entry.md).
-2. **Scene 9 assistant modal:** remove the lower chat dock, give the prepared
-   lifecycle canvas the available stage, and expose the synchronized authoring
-   conversation through an assistant-ui modal anchored on the left.
+2. **Completed: Scene 9 assistant pane:** replaced the lower chat dock with a
+   persistent prepared-agent pane on the left and a dominant adaptive phase
+   canvas on the right, starting near a 35/65 split. The Scene 8 handoff beat
+   was removed; the request route remains local and deterministic. Implementation:
+   [`Scene 9 assistant pane`](historical/superpowers/plans/2026-07-12-scene-9-assistant-modal.md).
 3. **Live/replay truth and run activation:** keep Scene 9 authoring evidence
    recording-backed, make Scenes 10–12 consume the active live timeline when a
    run exists, keep replay fallback for direct links or unavailable services,

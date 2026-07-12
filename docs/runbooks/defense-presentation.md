@@ -136,8 +136,9 @@ location.reload();
 
 When a stateful demo deep link is opened before this browser session has started
 a live run, the presentation selects the reviewed recording for that beat even
-if the loopback health probe succeeds. Start from the Scene 8 handoff action to
-run live; otherwise the typed interrupt, output, and trace links remain useful
+if the loopback health probe succeeds. Scene 8's request and Send action remain
+local replay behavior; start the live path from the Scene 10 run operation.
+Otherwise the typed interrupt, output, and trace links remain useful
 replay-backed entry points.
 
 ## Useful Deep Links

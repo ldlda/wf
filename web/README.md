@@ -172,8 +172,8 @@ The console exposes `/present`, a 720p no-scroll defense compositor for the
 prepared `lda_report_workflow` story. It renders a 14-scene, multi-beat
 storyboard (expanded from the original 12-scene defense plan; items 13 and 14
 now cover evaluation and closing) with an adaptive aspect-ratio canvas, stable
-stage regions, discussion branches, one editorial canvas, a chat dock, and keyboard
-navigation.
+stage regions, discussion branches, one editorial canvas, persistent scene-aware
+assistant surfaces, and keyboard navigation.
 
 The final presentation beats frame the evaluation as bounded evidence, make
 claim boundaries and future work explicit, and end on the canonical defense
@@ -184,11 +184,11 @@ execution evidence. Scene 8 is a single full-screen chat-entry beat: its
 prefilled request is submitted locally, then reveals the first deterministic
 user, assistant, and Discover tool group. It is deterministic replay, not a live
 LLM chat, and does not start a workflow run. Scene 9 breaks the prepared
-authoring into five phases with the same conversation contracted into a
-synchronized bottom dock. Each
-phase opens its matching prepared tool group beneath a factual source, graph,
-repair, artifact, or deployment view. Neither scene calls workflow authoring
-RPC operations — they consume deterministic prepared data. Scenes 10 through
+authoring into five phases with a persistent prepared-agent assistant pane on
+the left and a dominant phase canvas on the right. The adaptive split starts
+near 35/65 and keeps the matching prepared tool group synchronized with each
+factual source, graph, repair, artifact, or deployment view. Neither scene calls
+workflow authoring RPC operations — they consume deterministic prepared data. Scenes 10 through
 12 use the canonical replay by default when no live target is available. When
 the resolved target is healthy, the same prepared run flow can execute through
 the public JSON-RPC operations and record live evidence using the same
@@ -338,9 +338,11 @@ workflow authoring RPC operations.
   or workflow run.
 - **Scene 9 (Prepared Workflow Lifecycle)**: a five-phase lifecycle
   (discover, draft, validate, artifact, deployment) with a compact phase rail
-  and one dominant factual product projection per beat. The Scene 8 thread
-  remains visible as a compact bottom dock; its active tool group follows the
-  current beat. There is no detached trace modal or second transcript.
+  and one dominant factual product projection per beat. A persistent prepared
+  assistant pane stays visible on the left while the phase canvas remains
+  dominant on the right; the starting split is approximately 35/65 and adapts
+  to the available width. Its active tool group follows the current beat. There
+  is no lower chat dock, detached trace modal, or second transcript.
 
 The authoring scenes consume deterministic prepared data and never call
 workflow authoring RPCs. Scene 8 also skips live target probing so its request

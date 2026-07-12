@@ -71,8 +71,8 @@
 
 ## Task 4: Browser Acceptance And Responsive Review
 
-- [ ] Use the running `pnpm dev` server if available; do not start a duplicate server or terminate the user's RPC server.
-- [ ] Capture and inspect Scene 9 at 1280x720 and 1024x768 for at least these hashes:
+- [x] Use the running `pnpm dev` server if available; do not start a duplicate server or terminate the user's RPC server.
+- [x] Capture and inspect Scene 9 at 1280x720 and 1024x768 for at least these hashes:
 
   ```text
   #scene/prepared-lifecycle/discover
@@ -80,25 +80,25 @@
   #scene/prepared-lifecycle/deployment
   ```
 
-- [ ] Verify the split state: assistant pane is on the left, phase visual is on the right, both are simultaneously visible with no overlap, the right pane is visibly dominant, no lower chat dock or detached receipt/trace modal remains, and no body scrollbar appears.
-- [ ] Verify the assistant pane: title, current phase, prepared disclosure, conversation, and active tool group are readable; the pane scrolls internally if needed.
-- [ ] Verify beat changes update the active phase group and right-side visual together.
-- [ ] Verify Scene 8 direct request route still works, Send reveals Discover locally, and `/handoff` no longer resolves as a valid Scene 8 route.
-- [ ] Check browser console. The only accepted existing noise is the missing `/favicon.ico` request; there must be no React, modal, or layout errors.
-- [ ] Store screenshots only under the ignored `web/apps/console/.visual-smoke/` directory.
+- [x] Verify the split state: assistant pane is on the left, phase visual is on the right, both are simultaneously visible with no overlap, the right pane is visibly dominant, no lower chat dock or detached receipt/trace modal remains, and no body scrollbar appears.
+- [x] Verify the assistant pane: title, current phase, prepared disclosure, conversation, and active tool group are readable; the pane scrolls internally if needed.
+- [x] Verify beat changes update the active phase group and right-side visual together.
+- [x] Verify Scene 8 direct request route still works, Send reveals Discover locally, the footer shows `1 / 1`, and `/handoff` no longer resolves as a valid Scene 8 route.
+- [x] Check browser console. The only accepted existing noise is the missing `/favicon.ico` request; there must be no React, modal, or layout errors.
+- [x] Store screenshots only under the ignored `web/apps/console/.visual-smoke/` directory.
 
 ## Task 5: Documentation, Review, And Archive
 
-- [ ] Update `web/README.md` to describe Scene 8 as a single deterministic chat-entry beat and Scene 9 as a 35/65 phase canvas with a persistent prepared-agent assistant pane.
-- [ ] Update `docs/current_roadmap.md`: mark the Scene 9 assistant-modal slice complete, note the Scene 8 handoff-route removal, and link this plan after archiving.
-- [ ] Search for stale wording and selectors:
+- [x] Update `web/README.md` to describe Scene 8 as a single deterministic chat-entry beat and Scene 9 as a 35/65 phase canvas with a persistent prepared-agent assistant pane.
+- [x] Update `docs/current_roadmap.md`: mark the Scene 9 assistant-pane slice complete, note the Scene 8 handoff-route removal, and link this plan after archiving.
+- [x] Search for stale wording and selectors:
 
   ```powershell
   rg -n "agent-handoff/handoff|Prepared operation|handoff beat|bottom dock|synchronized chat dock|prepared-lifecycle-scene__dock" web docs skills
   ```
 
-- [ ] Run the repository review skill on the complete diff. Fix correctness and scope findings; document judgement-call deferrals.
-- [ ] Run the final verification gate:
+- [x] Run the repository review skill on the complete diff. Fix correctness and scope findings; document judgement-call deferrals.
+- [x] Run the final verification gate:
 
   ```powershell
   pnpm --dir web test
@@ -108,14 +108,14 @@
   git status --short
   ```
 
-- [ ] Move this plan to `docs/historical/superpowers/plans/2026-07-12-scene-9-assistant-modal.md` and commit documentation/archive changes as `docs: complete scene 9 assistant modal slice`.
+- [x] Move this plan to `docs/historical/superpowers/plans/2026-07-12-scene-9-assistant-modal.md` and commit documentation/archive changes as `docs: complete scene 9 assistant modal slice`.
 
 ## Self-Review Checklist
 
-- [ ] Scene 8 has no obsolete `/handoff` beat or full-transcript duplicate.
-- [ ] Scene 9 has one dominant right-side visual and one subordinate left assistant pane, both visible at once, not a lower dock or overlay modal.
+- [x] Scene 8 has no obsolete `/handoff` beat or full-transcript duplicate.
+- [x] Scene 9 has one dominant right-side visual and one subordinate left assistant pane, both visible at once, not a lower dock or overlay modal.
 - [ ] The assistant pane uses generated assistant-ui/shadcn primitives where compatible and does not introduce a runtime or transport.
-- [ ] The modal content is factual prepared replay, not implied live execution.
-- [ ] The current phase and active tool group stay synchronized across all five Scene 9 beats.
-- [ ] The two panes remain synchronized when navigating between all five Scene 9 beats.
-- [ ] 1280x720 and 1024x768 screenshots were inspected, not merely captured.
+- [x] The assistant content is factual prepared replay, not implied live execution.
+- [x] The current phase and active tool group stay synchronized across all five Scene 9 beats.
+- [x] The two panes remain synchronized when navigating between all five Scene 9 beats.
+- [x] 1280x720 and 1024x768 screenshots were inspected, not merely captured.

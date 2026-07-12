@@ -199,7 +199,7 @@ Add or update tests for:
 
 - Real LLM or AI SDK execution;
 - workflow run start or resume;
-- Scene 9 assistant modal;
+- Scene 9 persistent prepared-agent assistant pane;
 - truth-badge scoping;
 - Scene 11 beat compression;
 - changes to the overall story order;
