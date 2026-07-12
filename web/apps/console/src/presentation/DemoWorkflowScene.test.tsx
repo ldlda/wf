@@ -88,6 +88,22 @@ describe("DemoWorkflowScene", () => {
     expect(screen.queryByText("Retry live service")).not.toBeInTheDocument();
   });
 
+  it("presents Scene 10 graph as a ten-node horizontal workflow diagram", () => {
+    renderBeat("graph");
+
+    expect(screen.getByLabelText("demo workflow stage")).toHaveAttribute("data-graph-layout", "horizontal");
+    const graph = screen.getByRole("group", { name: /workflow graph/i });
+    expect(graph).toHaveAttribute("data-graph-layout", "horizontal");
+    expect(document.querySelectorAll('button[aria-label^="workflow node:"]')).toHaveLength(10);
+    expect(screen.getByText(/revision requested/i)).toBeInTheDocument();
+    expect(screen.queryByText(/cancel: no submitted output/i)).not.toBeInTheDocument();
+
+    const legend = screen.getByLabelText("workflow graph node types");
+    expect(legend).toHaveTextContent("Action");
+    expect(legend).toHaveTextContent("Human boundary");
+    expect(legend).toHaveTextContent("Outcome");
+  });
+
   it("keeps the run receipt visible when the graph takes over", () => {
     renderBeat("graph");
 

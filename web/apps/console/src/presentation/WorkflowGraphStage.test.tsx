@@ -66,6 +66,26 @@ describe("WorkflowGraphStage", () => {
     ]);
   });
 
+  it("exposes exactly the ten real workflow nodes as accessible controls", () => {
+    render(
+      <WorkflowGraphStage
+        execution={{ completedNodeIds: [], currentNodeId: null }}
+        selectedNodeId={null}
+        selectNode={vi.fn()}
+      />,
+    );
+
+    const graph = screen.getByRole("group", { name: /workflow graph/i });
+    // React Flow hides unmeasured node wrappers in jsdom, so assert the
+    // rendered button contract directly rather than depending on its role tree.
+    const workflowNodes = document.querySelectorAll<HTMLButtonElement>(
+      'button[aria-label^="workflow node:"]',
+    );
+    expect(workflowNodes).toHaveLength(10);
+    expect(screen.queryByText(/cancel: no submitted output/i)).not.toBeInTheDocument();
+    expect(graph).toHaveTextContent("Revision requested");
+  });
+
   it("does not render graph proof count chips", () => {
     render(
       <WorkflowGraphStage
@@ -127,7 +147,9 @@ describe("WorkflowGraphStage", () => {
       />,
     );
 
-    expect(screen.getByRole("group", { name: "workflow graph" })).toHaveAttribute("data-graph-direction", "horizontal");
+    const graph = screen.getByRole("group", { name: "workflow graph" });
+    expect(graph).toHaveAttribute("data-graph-direction", "horizontal");
+    expect(graph).toHaveAttribute("data-graph-layout", "horizontal");
     expect(screen.getByRole("button", { name: /zoom in/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /zoom out/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /fit view/i })).toBeInTheDocument();

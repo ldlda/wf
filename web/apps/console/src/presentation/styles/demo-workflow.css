@@ -366,6 +366,22 @@
   stroke-dasharray: 5 7;
 }
 
+.workflow-graph-stage .react-flow__edge-text {
+  paint-order: stroke;
+  stroke: oklch(0.105 0.02 250);
+  stroke-width: 0.38rem;
+  stroke-linejoin: round;
+  fill: var(--text-primary);
+  font: 700 0.68rem/1 var(--font-mono, monospace);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.workflow-graph-stage .react-flow__edge-textbg {
+  fill: oklch(0.105 0.02 250);
+  stroke: oklch(0.105 0.02 250);
+}
+
 .workflow-graph-stage__edge--active .react-flow__edge-path {
   stroke: var(--accent-cyan);
   stroke-width: 2.6;
@@ -423,6 +439,23 @@
   height: 0.42rem;
   border-radius: 50%;
   background: var(--stage-line);
+}
+
+.workflow-graph-stage__legend span[data-kind="use"] i {
+  border-radius: 0.12rem;
+  background: oklch(0.62 0.12 195);
+}
+
+.workflow-graph-stage__legend span[data-kind="interrupt"] i {
+  border-radius: 0.1rem;
+  background: var(--accent-amber);
+  transform: rotate(45deg);
+}
+
+.workflow-graph-stage__legend span[data-kind="end"] i {
+  width: 0.66rem;
+  border-radius: 999px;
+  background: oklch(0.68 0.025 250);
 }
 
 .workflow-graph-stage__legend i[data-state="current"] {
@@ -502,12 +535,12 @@
   position: relative;
   display: grid;
   gap: 0.25rem;
-  width: 9.2rem;
-  min-height: 4.15rem;
+  width: 11rem;
+  min-height: 4.75rem;
   transform: none;
   border: 1px solid var(--stage-line);
   border-radius: 0.7rem;
-  padding: 0.58rem 0.68rem;
+  padding: 0.68rem 0.78rem;
   background: oklch(0.15 0.025 250 / 0.96);
   color: var(--text-primary);
   text-align: left;
@@ -516,14 +549,14 @@
 }
 
 .presentation-route .workflow-graph-stage__node[data-kind="end"] {
-  min-height: 3.65rem;
+  min-height: 4.5rem;
   border-radius: 999px;
   place-content: center;
   text-align: center;
 }
 
 .workflow-graph-stage__node strong {
-  font-size: 0.84rem;
+  font-size: 0.9rem;
   line-height: 1.05;
   color: var(--text-primary);
 }
@@ -534,7 +567,7 @@
 }
 
 .workflow-graph-stage__node small {
-  font-size: 0.62rem;
+  font-size: 0.67rem;
 }
 
 .workflow-graph-stage__node-state {
@@ -928,7 +961,13 @@
   }
 
   .presentation-route .workflow-graph-stage__node {
-    width: 7rem;
+    width: 11rem;
+    padding-inline: 0.78rem;
+  }
+
+  .workflow-graph-stage[data-graph-variant="compact"] .workflow-graph-stage__node {
+    width: 8.25rem;
+    min-height: 4rem;
     padding-inline: 0.55rem;
   }
 }

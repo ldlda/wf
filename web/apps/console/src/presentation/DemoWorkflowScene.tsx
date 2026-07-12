@@ -107,6 +107,7 @@ export const DemoWorkflowScene = ({
         className="demo-workflow-stage"
         data-beat={beat.id}
         data-demo-layout={layout}
+        data-graph-layout={beat.id === "graph" ? "horizontal" : undefined}
         data-primary-surface={surface.primarySurface}
         data-support-surface={surface.supportSurface}
         aria-label="demo workflow stage"

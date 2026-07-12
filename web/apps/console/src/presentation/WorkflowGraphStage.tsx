@@ -34,6 +34,20 @@ type PresentationNodeData = WorkflowGraphNodeData & {
   readonly selectNode: (nodeId: string) => void;
 };
 
+const fullGraphLayout = {
+  nodeWidth: 176,
+  nodeHeight: 76,
+  nodesep: 72,
+  ranksep: 56,
+} as const;
+
+const compactGraphLayout = {
+  nodeWidth: 132,
+  nodeHeight: 64,
+  nodesep: 42,
+  ranksep: 52,
+} as const;
+
 const edgeActive = (edge: { source: string; target: string }, execution: GraphExecutionPresentation): boolean =>
   execution.completedNodeIds.includes(edge.source)
   && (execution.completedNodeIds.includes(edge.target) || execution.currentNodeId === edge.target);
@@ -47,7 +61,7 @@ const PresentationFlowNode = ({ data }: NodeProps<Node<PresentationNodeData>>) =
       data-kind={data.kind}
       data-selected={data.selected}
       aria-pressed={data.selected}
-      aria-label={`${data.label}${data.detail ? `, ${data.detail}` : ""}`}
+      aria-label={`workflow node: ${data.label}${data.detail ? `, ${data.detail}` : ""}`}
       title={data.nodeRef ?? undefined}
       onClick={(event) => {
         event.stopPropagation();
@@ -73,17 +87,16 @@ const WorkflowGraphStageInner = ({
   const model = useMemo(
     () => buildWorkflowGraph(presentationWorkflowPlan, {
       direction: "LR",
-      nodeWidth: 150,
-      nodeHeight: 64,
-      nodesep: 35,
-      ranksep: 80,
+      // Keep Dagre's dimensions in lockstep with the CSS node boxes so React
+      // Flow's measured handles stay attached when the graph is fit to view.
+      ...(variant === "compact" ? compactGraphLayout : fullGraphLayout),
       label: (node) => {
         if (typeof node.label === "string") return node.label;
         if (node.id === "review_issues") return "Review issues";
         return undefined;
       },
     }),
-    [],
+    [variant],
   );
 
   const nodes: Node<PresentationNodeData>[] = useMemo(
@@ -131,6 +144,7 @@ const WorkflowGraphStageInner = ({
       aria-label="workflow graph"
       data-graph-variant={variant}
       data-graph-direction="horizontal"
+      data-graph-layout="horizontal"
     >
       <div className="workflow-graph-stage__legend" aria-label="workflow graph node types">
         <span data-kind="use"><i aria-hidden="true" />Action</span>
@@ -149,7 +163,7 @@ const WorkflowGraphStageInner = ({
         nodeTypes={nodeTypes}
         onNodeClick={handleNodeClick}
         fitView
-        fitViewOptions={{ padding: 0.02, minZoom: 0.5, maxZoom: 1 }}
+        fitViewOptions={{ padding: 0.08, minZoom: 0.42, maxZoom: 1 }}
         minZoom={0.25}
         maxZoom={1.5}
         nodesDraggable={false}
