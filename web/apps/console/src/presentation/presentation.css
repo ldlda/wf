@@ -3186,6 +3186,18 @@
   color: var(--authoring-paper);
 }
 
+/* Keep the compact Scene 8 request surface centered inside the presentation canvas. */
+@media (max-width: 1100px) {
+  .presentation-stage[data-scene-view="agent"] .presentation-stage__primary {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .presentation-stage[data-scene-view="agent"] .agent-handoff-scene {
+    width: min(100%, 60rem);
+  }
+}
+
 /* Scene 9 — persistent assistant beside the dominant phase projection. */
 .prepared-lifecycle-scene {
   display: grid;
@@ -3395,6 +3407,12 @@
 .prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane {
   background: color-mix(in oklch, var(--authoring-paper) 92%, var(--authoring-muted));
   border-color: var(--authoring-rule);
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane__conversation {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
 }
 
 .prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane .assistant-operator-thread {

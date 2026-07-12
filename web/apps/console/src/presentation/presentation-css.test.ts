@@ -53,6 +53,15 @@ describe("presentation.css", () => {
     expect(scene9Rules.join("\n")).toMatch(/minmax\(15rem, 0\.35fr\)\s+minmax\(0, 0\.65fr\)/);
   });
 
+  it("bounds Scene 9 conversation scrolling and recenters Scene 8 at compact stage widths", () => {
+    expect(css).toMatch(
+      /\.prepared-lifecycle-scene\[data-presentation-surface="editorial"\] \.presentation-assistant-pane__conversation\s*\{[\s\S]*?flex:\s*1 1 auto;[\s\S]*?min-height:\s*0;[\s\S]*?overflow:\s*auto;/,
+    );
+    expect(css).toMatch(
+      /@media \(max-width: 1100px\)[\s\S]*?\.presentation-stage\[data-scene-view="agent"\] \.presentation-stage__primary\s*\{[\s\S]*?align-items:\s*center;[\s\S]*?justify-content:\s*center;/,
+    );
+  });
+
   it("keeps evidence inside a substrate stack from wide desktop through the 1080px breakpoint", () => {
     expect(css).toMatch(/\.conclusion-map__flow\s*\{\s*display: grid;\s*grid-template-columns: repeat\(3, minmax\(0, 1fr\)\);/);
     expect(css).toMatch(/\.conclusion-map__flow-unit--substrate-stack\s*\{[\s\S]*?grid-template-rows: auto auto;/);
