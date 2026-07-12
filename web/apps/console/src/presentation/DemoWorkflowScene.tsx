@@ -35,7 +35,7 @@ type DemoWorkflowLayout = "operation" | "graph" | "interrupt" | "approval" | "ev
 const layoutForBeat = (beatId: string): DemoWorkflowLayout => {
   if (beatId === "operation" || beatId === "resume") return "operation";
   if (beatId === "interrupt") return "interrupt";
-  if (beatId === "approval" || beatId === "cancel") return "approval";
+  if (beatId === "approval") return "approval";
   if (beatId === "trace" || beatId === "output") return "evidence";
   return "graph";
 };

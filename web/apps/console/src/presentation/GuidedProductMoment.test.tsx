@@ -79,6 +79,9 @@ describe("GuidedProductMoment", () => {
     expect(screen.getByText("project-brief.md")).toBeInTheDocument();
     expect(screen.getByText("issue-board.json")).toBeInTheDocument();
     expect(screen.getByRole("group", { name: /operator resume decision/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Submit" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Request revision" })).toBeEnabled();
+    expect(screen.getByText(/submitted\s*\/\s*cancelled/i)).toBeInTheDocument();
     expect(screen.queryByText("Output not created yet")).not.toBeInTheDocument();
   });
 

@@ -70,7 +70,7 @@ export const InterruptDecisionForm = ({
         <dt>Typed</dt>
         <dd>{interrupt.typed ? "yes" : "no"}</dd>
         <dt>Outcomes</dt>
-        <dd>{interrupt.outcomes.join(", ")}</dd>
+        <dd>{interrupt.outcomes.join(" / ")}</dd>
       </dl>
 
       {showReportPreview && interrupt.reportMarkdownPreview && (
