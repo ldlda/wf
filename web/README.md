@@ -344,9 +344,18 @@ workflow authoring RPC operations.
   to the available width. Its active tool group follows the current beat. There
   is no lower chat dock, detached trace modal, or second transcript.
 
+  One staged message box remains visible in every phase. Discover and Validate
+  start empty with useful placeholders; Draft and Artifact use the exact next
+  authoring prompts. Sending an edited Draft advances to Validate and preserves
+  that text as the projected user turn; sending an edited Artifact does the
+  same for Deployment. Deployment Send records only `Run request prepared for
+  the next execution slice.` and makes no run or RPC request.
+
 The authoring scenes consume deterministic prepared data and never call
 workflow authoring RPCs. Scene 8 also skips live target probing so its request
-and Send path remain fully local; later execution scenes own live-run behavior.
+and Send path remain fully local. Scene 9 ends at the truthful run-request
+handoff; Scenes 10–12 own run activation, typed approval, resume, output, and
+trace evidence. No Scene 9 message submission starts a workflow run.
 
 ### Demo Climax (Scenes 10–12)
 

@@ -211,6 +211,8 @@ were removed. Plans:
 [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md)
 and
 [`Scene 9 assistant pane`](historical/superpowers/plans/2026-07-12-scene-9-assistant-modal.md).
+The staged message-box completion is recorded in
+[`Scene 9 staged message box`](historical/superpowers/plans/2026-07-12-scene-9-staged-message-box.md).
 
 Recommended next visual slices:
 
@@ -273,11 +275,14 @@ separate activity after these surfaces are stable.
    reveals the first prepared authoring conversation without starting a
    workflow run. Implementation:
    [`Scene 8 chat entry`](historical/superpowers/plans/2026-07-12-scene-8-chat-entry.md).
-2. **Completed: Scene 9 assistant pane:** replaced the lower chat dock with a
-   persistent prepared-agent pane on the left and a dominant adaptive phase
-   canvas on the right, starting near a 35/65 split. The Scene 8 handoff beat
-   was removed; the request route remains local and deterministic. Implementation:
-   [`Scene 9 assistant pane`](historical/superpowers/plans/2026-07-12-scene-9-assistant-modal.md).
+2. **Completed: Scene 9 staged message box:** kept one message box visible
+   across Discover, Draft, Validate, Artifact, and Deployment; Draft and
+   Artifact Send advance the prepared lifecycle while preserving edited user
+   turns, and Deployment Send records a truthful local run request without
+   execution or RPC. Implementation:
+   [`Scene 9 staged message box`](historical/superpowers/plans/2026-07-12-scene-9-staged-message-box.md).
+   The boundary is explicit: Scenes 10–12 own run activation, approval,
+   resume, output, and trace evidence.
 3. **Live/replay truth and run activation:** keep Scene 9 authoring evidence
    recording-backed, make Scenes 10–12 consume the active live timeline when a
    run exists, keep replay fallback for direct links or unavailable services,
