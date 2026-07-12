@@ -51,6 +51,14 @@ describe("AuthoringPhaseVisual", () => {
     );
   });
 
+  it.each(["diagnose", "repair"] as const)("marks %s evidence as the primary visual", (focus) => {
+    render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("validate")} focus={focus} />);
+    expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(
+      "data-visual-role",
+      "primary",
+    );
+  });
+
   it("shows immutable artifact identity and version", () => {
     render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("artifact")} />);
     expect(screen.getByText("lda_report_case_study")).toBeInTheDocument();

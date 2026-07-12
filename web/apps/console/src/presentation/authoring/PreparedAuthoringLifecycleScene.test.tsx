@@ -73,14 +73,33 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(workspace).toContainElement(visual);
     expect(assistant).toHaveAttribute("data-phase", "draft");
     expect(assistant).toHaveAttribute("data-surface", "prepared-replay");
+    expect(assistant).toHaveAttribute("data-visual-role", "support");
     expect(assistant.querySelector('[data-surface="stage"]')).toBeInTheDocument();
     expect(workspace.querySelector(".prepared-lifecycle-scene__dock")).not.toBeInTheDocument();
     expect(workspace.querySelector("[role='dialog']")).not.toBeInTheDocument();
     expect(workspace.querySelector("[aria-label='authoring phase rail']"))
       .toBeInTheDocument();
     expect(visual).toHaveAttribute("data-presentation-surface", "editorial");
-    expect(visual).toHaveAttribute("data-visual-role", "authoring-phase");
+    expect(visual).toHaveAttribute("data-visual-role", "primary");
     expect(workspace.querySelector('[data-visual-role="lifecycle-primary"]')).toBe(visual.parentElement);
+    expect(workspace.querySelectorAll('[data-visual-role="lifecycle-primary"]')).toHaveLength(1);
+  });
+
+  it.each([
+    ["discover", "Discover"],
+    ["draft", "Draft"],
+    ["validate", "Validate"],
+    ["artifact", "Artifact"],
+    ["deployment", "Deployment"],
+  ] as const)("marks %s as the active lifecycle evidence beat", (beatId, label) => {
+    renderBeat(beatId);
+    const evidence = screen.getByRole("region", { name: /active lifecycle evidence/i });
+    const workspace = screen.getByRole("region", { name: "prepared workflow authoring lifecycle" });
+
+    expect(evidence).toHaveAttribute("data-visual-role", "lifecycle-primary");
+    expect(workspace.querySelectorAll('[data-visual-role="lifecycle-primary"]')).toHaveLength(1);
+    expect(screen.getByLabelText("authoring phase rail").querySelector('[data-active="true"]'))
+      .toHaveTextContent(label);
   });
 
   it("synchronizes the assistant phase, active group, rail, and visual", () => {

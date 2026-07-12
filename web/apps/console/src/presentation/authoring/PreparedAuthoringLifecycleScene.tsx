@@ -1,4 +1,4 @@
-import { useReducer } from "react";
+import { useLayoutEffect, useReducer, useRef } from "react";
 import { projectPreparedAuthoringPhase } from "./authoring-projection.js";
 import { AuthoringPhaseVisual } from "./AuthoringPhaseVisual.js";
 import { PresentationAssistantPane } from "./PresentationAssistantPane.js";
@@ -41,6 +41,15 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance }: Prep
   // if a future beat reaches this scene before its authoring mapping is added.
   const beatId = phases.find((phase) => phase.id === beat.id)?.id ?? "discover";
   const projection = projectPreparedAuthoringPhase(beatId);
+  const lifecycleRef = useRef<HTMLElement>(null);
+
+  useLayoutEffect(() => {
+    // The assistant owns its aside markup; decorate that existing boundary here
+    // so the scene can expose hierarchy metadata without widening its API.
+    lifecycleRef.current
+      ?.querySelector<HTMLElement>('[aria-label="prepared authoring assistant"]')
+      ?.setAttribute("data-visual-role", "support");
+  }, [beatId]);
 
   return (
     <>
@@ -49,6 +58,7 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance }: Prep
       </StageCaption>
       <section
         className="prepared-lifecycle-scene"
+        ref={lifecycleRef}
         aria-label="prepared workflow authoring lifecycle"
         data-active-phase={beatId}
         data-primary-surface="authoring-phase"
@@ -85,6 +95,8 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance }: Prep
 
           <article
             className="prepared-lifecycle-scene__projection"
+            role="region"
+            aria-label="active lifecycle evidence"
             data-visual-role="lifecycle-primary"
             key={beatId}
           >
