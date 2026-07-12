@@ -306,10 +306,18 @@ separate activity after these surfaces are stable.
 7. **Visual scale and color pass:** remove unwanted blue from Scenes 2 and 14,
    shorten Scene 2's two-column composition, enlarge the focal diagrams in
    Scenes 7, 9, 13, and 14, separate Scene 7 Validate from Repair visuals, and
-   improve Scene 1 title-box padding and contrast.
+   improve Scene 1 title-box padding and contrast. Design:
+   [`presentation visual scale and color pass`](superpowers/specs/2026-07-12-presentation-visual-scale-color-pass-design.md).
+   Implementation:
+   [`presentation visual scale and color pass plan`](superpowers/plans/2026-07-12-presentation-visual-scale-color-pass.md).
 8. **Rehearsal gate:** run all 14 scenes at 16:9 and 4:3, verify the Scene 8 →
    Scene 11 → Scene 12 path in live and replay modes, then review the story
    flow, coverage, and ordering separately.
+
+9. **Deferred: factual input file browser:** replace the Scene 10 input
+   manifest-only view with a read-only browser backed by canonical prepared or
+   live run facts. Distinguish declared, selected, read, and produced files;
+   do not imply file reads without evidence.
 
 Presentation wishlist / defense readiness:
 

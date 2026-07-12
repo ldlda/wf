@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Follow design spec: `docs/superpowers/specs/2026-07-08-defense-presentation-visual-pass-design.md`.
+- Follow design spec: `docs/historical/superpowers/specs/2026-07-08-defense-presentation-visual-pass-design.md`.
 - Do not change the 12-scene storyboard order.
 - Do not replace chat UI in this slice.
 - Do not add new dependencies.
