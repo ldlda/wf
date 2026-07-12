@@ -22,6 +22,20 @@ Capture the receipt state and open-inspector state at each viewport. Confirm
 no page scroll, unchanged primary geometry, bounded raw evidence, focus
 restoration, compact chat exclusion, and a clean browser console.
 
+## Repeatable Rehearsal Capture
+
+With the presentation dev server running, capture every canonical route at both
+supported rehearsal viewports:
+
+```powershell
+pwsh -File scripts/presentation-rehearsal.ps1
+```
+
+Review the generated screenshots in story order, then inspect any route that
+shows clipping, stale chrome, unreadable copy, or a changed primary visual.
+The runner waits for the settled route before each capture and writes ignored
+output under `web/apps/console/.visual-smoke/rehearsal/`.
+
 ## Automated Smoke
 
 ```bash

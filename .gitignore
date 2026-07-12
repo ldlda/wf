@@ -27,6 +27,7 @@ coverage/
 
 # Local presentation screenshots
 web/apps/console/.visual-smoke/
+web/apps/console/.visual-smoke/rehearsal/
 
 # IDE/Editor Specific
 .vscode/
