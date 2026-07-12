@@ -97,8 +97,10 @@ describe("PresentationRoute", () => {
       const { PresentationRoute } = await import("./PresentationRoute.js");
       render(<PresentationRoute />);
 
-      const headings = await screen.findAllByRole("heading", { name: heading });
-      expect(headings.length).toBeGreaterThan(0);
+      await waitFor(
+        () => expect(screen.getAllByRole("heading", { name: heading })).toHaveLength(1),
+        { timeout: 12000 },
+      );
       const footer = screen.getByRole("contentinfo", { name: /presentation footer/i });
       const action = within(footer).queryByRole("button", {
         name: /run prepared workflow|play replay walkthrough/i,

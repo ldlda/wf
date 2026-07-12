@@ -152,8 +152,9 @@ Implementation order:
     [`presentation live/replay truth plan`](historical/superpowers/plans/2026-07-09-presentation-live-replay-truth.md).
 20. Completed: Scene 10 now presents factual run state: workflow input,
     interrupt payload, operator resume decision, output, and trace frame facts.
-    Request revision resumes the same run through the negative outcome branch;
-    it does not create issues. Implementation:
+    The live workflow contract supports a same-run negative outcome; the
+    current prepared revision recording uses a separate run identity and is
+    documented as a factual follow-up. Implementation:
     [`Scene 10 factual run state`](historical/superpowers/plans/2026-07-09-scene-10-factual-run-state.md).
 21. Completed: presentation lifecycle story expansion splits the demo climax
     into prepared lifecycle, run start, typed human boundary, and
