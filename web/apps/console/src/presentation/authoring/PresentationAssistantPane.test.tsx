@@ -36,10 +36,21 @@ describe("PresentationAssistantPane", () => {
   it("renders a persistent prepared replay surface for the current phase", () => {
     renderPane("validate");
 
-    expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i })).toBeInTheDocument();
+    expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i })).not.toHaveAttribute(
+      "data-visual-role",
+    );
     expect(screen.getByRole("heading", { name: /authoring assistant/i })).toBeInTheDocument();
     expect(screen.getByText(/current phase: validate/i)).toBeInTheDocument();
     expect(screen.getByText(/prepared replay only/i)).toBeInTheDocument();
+  });
+
+  it("exposes an explicit support role when composed in the lifecycle scene", () => {
+    renderPane("validate", { visualRole: "support" });
+
+    expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i })).toHaveAttribute(
+      "data-visual-role",
+      "support",
+    );
   });
 
   it("keeps the active tool group synchronized with the phase", () => {

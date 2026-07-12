@@ -10,6 +10,7 @@ import type {
 
 export type PresentationAssistantPaneProps = {
   readonly phase: AuthoringPhaseId;
+  readonly visualRole?: "support";
   readonly message: Scene9MessageProjection;
   readonly submittedOverrides: Scene9SubmittedOverrides;
   readonly runRequested: string | null;
@@ -33,6 +34,7 @@ const phaseLabels: Readonly<Record<AuthoringPhaseId, string>> = {
  */
 export const PresentationAssistantPane = ({
   phase,
+  visualRole,
   message,
   submittedOverrides,
   runRequested,
@@ -67,6 +69,7 @@ export const PresentationAssistantPane = ({
       aria-label="prepared authoring assistant"
       data-phase={phase}
       data-surface="prepared-replay"
+      data-visual-role={visualRole}
     >
       <header className="presentation-assistant-pane__header">
         <p className="presentation-assistant-pane__eyebrow">Prepared workflow</p>

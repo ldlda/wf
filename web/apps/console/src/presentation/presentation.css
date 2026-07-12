@@ -1763,14 +1763,15 @@
 
 .scene-body__authoring-evidence .authoring-repair__diagnostic,
 .scene-body__authoring-evidence .authoring-repair__correction {
-  min-height: 8rem;
+  min-height: 0;
   padding: 1rem;
 }
 
 .scene-body__authoring-evidence .authoring-visual--inventory,
 .scene-body__authoring-evidence .authoring-visual--graph,
 .scene-body__authoring-evidence .authoring-visual--repair {
-  min-height: 15rem;
+  min-height: 0;
+  height: 100%;
 }
 
 .scene-body__authoring-evidence .authoring-visual--graph .authoring-graph__node {
@@ -1790,7 +1791,7 @@
 
 .scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__diagnostic {
   grid-column: 1;
-  min-height: 12rem;
+  min-height: 0;
 }
 
 .scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="repair"] {
@@ -1804,7 +1805,7 @@
 
 .scene-body__authoring-evidence .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__correction {
   grid-column: 1;
-  min-height: 12rem;
+  min-height: 0;
 }
 
 .scene-body__authoring-composition .scene-body__authoring-loop {
