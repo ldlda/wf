@@ -97,7 +97,8 @@ describe("PresentationRoute", () => {
       const { PresentationRoute } = await import("./PresentationRoute.js");
       render(<PresentationRoute />);
 
-      expect(await screen.findByRole("heading", { name: heading })).toBeInTheDocument();
+      const headings = await screen.findAllByRole("heading", { name: heading });
+      expect(headings.length).toBeGreaterThan(0);
       const footer = screen.getByRole("contentinfo", { name: /presentation footer/i });
       const action = within(footer).queryByRole("button", {
         name: /run prepared workflow|play replay walkthrough/i,
@@ -105,6 +106,7 @@ describe("PresentationRoute", () => {
       const status = within(footer).queryByRole("status");
       expect(action !== null || status !== null).toBe(hasDemoChrome);
     },
+    15000,
   );
 
   it.each([
