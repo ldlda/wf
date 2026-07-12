@@ -33,7 +33,12 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
       <StageCaption eyebrow={`Act IV · ${scene.claimClass}`} title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
-      <section className="conclusion-map" aria-label="thesis contribution boundary" data-conclusion-beat={beatId}>
+      <section
+        className="conclusion-map"
+        aria-label="thesis contribution boundary"
+        data-conclusion-beat={beatId}
+        data-visual-role="contribution-boundary"
+      >
         <div className="conclusion-map__flow" aria-label="contribution flow">
           <div className="conclusion-map__flow-unit conclusion-map__flow-unit--planner" data-flow-unit="planner">
             <div

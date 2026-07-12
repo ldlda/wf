@@ -13,6 +13,9 @@ describe("OpeningThesisScene", () => {
 
     const opening = screen.getByRole("region", { name: /thesis opening/i });
     expect(opening).toHaveAttribute("data-opening-focus", "title");
+    expect(opening).toHaveAttribute("data-presentation-surface", "editorial");
+    expect(screen.getByRole("heading", { name: "An AI Agent for Workspace Workflows" }).parentElement)
+      .toHaveAttribute("data-visual-role", "title-hero");
     expect(screen.getByRole("heading", { name: /Design and Implementation of lda\.chat/i })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "An AI Agent for Workspace Workflows" })).toBeInTheDocument();
     const roles = screen.getByRole("group", { name: "AI agent roles" });

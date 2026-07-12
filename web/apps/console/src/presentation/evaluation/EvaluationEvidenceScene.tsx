@@ -33,6 +33,7 @@ export const EvaluationEvidenceScene: FC<EvaluationEvidenceSceneProps> = ({ scen
         aria-label="evaluation evidence board"
         data-evaluation-beat={beatId}
         data-evaluation-focus={beatId}
+        data-visual-role="evaluation-summary"
       >
         <div className="evaluation-board__cohort" aria-label="campaign cohort equation">
           <span className="evaluation-board__cohort-total">{evaluationEvidence.totalTrials}</span>

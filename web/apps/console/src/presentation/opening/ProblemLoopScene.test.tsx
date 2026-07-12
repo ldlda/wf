@@ -16,6 +16,10 @@ describe("ProblemLoopScene", () => {
     expect(scene).toHaveAttribute("data-problem-focus", "tool-loop");
     expect(scene).toHaveAttribute("data-support-state", "quiet");
     const transcript = screen.getByRole("log", { name: /one-off assistant transcript/i });
+    expect(screen.getByRole("article", { name: /one-off chat and tool loop/i }))
+      .toHaveAttribute("data-visual-role", "conversation");
+    expect(screen.getByRole("group", { name: /durable workflow blueprint/i }))
+      .toHaveAttribute("data-visual-role", "automation");
     expect(transcript).toHaveClass("assistant-operator-thread");
     expect(within(transcript).getByText("Can you finish this workspace task?")).toBeInTheDocument();
     const toolButtons = within(transcript).getAllByRole("button", { name: /fetchData|transformPayload|writeOutput/i });

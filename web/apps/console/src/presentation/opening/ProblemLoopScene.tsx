@@ -68,6 +68,7 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
           className="problem-chat-card"
           data-problem-active={automationBeat ? "false" : "true"}
           data-problem-role="tool-loop"
+          data-visual-role="conversation"
           aria-label="one-off chat and tool loop"
         >
           <header className="problem-artifact-header">
@@ -89,6 +90,7 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
           aria-label="durable workflow blueprint"
           data-blueprint-active={automationBeat ? "true" : "false"}
           data-problem-role="workflow-blueprint"
+          data-visual-role="automation"
         >
           <header className="problem-artifact-header">
             <span>Reusable</span>

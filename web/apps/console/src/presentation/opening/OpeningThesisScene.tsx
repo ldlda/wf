@@ -17,6 +17,7 @@ export const OpeningThesisScene = ({ scene, beat }: OpeningThesisSceneProps) => 
         className="opening-thesis-scene"
         aria-label="thesis opening"
         data-opening-focus={contributionBeat ? "contribution" : "title"}
+        data-presentation-surface="editorial"
       >
         <StageCaption eyebrow="Title" title={title}>
           <p>{beat.caption}</p>
@@ -26,7 +27,7 @@ export const OpeningThesisScene = ({ scene, beat }: OpeningThesisSceneProps) => 
           data-opening-beat={beat.id}
           data-opening-focus={contributionBeat ? "contribution" : "title"}
         >
-          <header className="opening-thesis__statement">
+          <header className="opening-thesis__statement" data-visual-role="title-hero">
             <p>Product goal</p>
             <h2>An AI Agent for Workspace Workflows</h2>
           </header>

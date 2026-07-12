@@ -27,11 +27,13 @@ afterEach(() => cleanup());
 describe("EvaluationEvidenceScene", () => {
   it.each(["cohort", "validity", "findings"])("renders the persistent board for %s", (beatId) => {
     render(<EvaluationEvidenceScene scene={scene} beat={beat(beatId)} />);
-    expect(screen.getByRole("group", { name: /evaluation evidence board/i })).toHaveAttribute(
+    const board = screen.getByRole("group", { name: /evaluation evidence board/i });
+    expect(board).toHaveAttribute("data-visual-role", "evaluation-summary");
+    expect(board).toHaveAttribute(
       "data-evaluation-beat",
       beatId,
     );
-    expect(screen.getByRole("group", { name: /evaluation evidence board/i })).toHaveAttribute(
+    expect(board).toHaveAttribute(
       "data-evaluation-focus",
       beatId,
     );

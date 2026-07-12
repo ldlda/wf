@@ -28,6 +28,7 @@ describe("ConclusionScene", () => {
   it.each(["limits", "future", "conclusion", "questions"])("preserves the labelled contribution boundary for %s", (beatId) => {
     render(<ConclusionScene scene={scene} beat={beat(beatId)} />);
     const map = screen.getByRole("region", { name: "thesis contribution boundary" });
+    expect(map).toHaveAttribute("data-visual-role", "contribution-boundary");
     expect(map).toHaveAttribute("data-conclusion-beat", beatId);
     for (const label of [
       "External planner",

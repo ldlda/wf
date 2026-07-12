@@ -79,6 +79,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(workspace.querySelector("[aria-label='authoring phase rail']"))
       .toBeInTheDocument();
     expect(visual).toHaveAttribute("data-presentation-surface", "editorial");
+    expect(visual).toHaveAttribute("data-visual-role", "authoring-phase");
   });
 
   it("synchronizes the assistant phase, active group, rail, and visual", () => {
