@@ -111,6 +111,33 @@ describe("PresentationRoute", () => {
     15000,
   );
 
+  const visualRouteContracts = [
+    { hash: "#scene/thesis/title", heading: "Design and Implementation of lda.chat", primary: "thesis opening" },
+    { hash: "#scene/lifecycle/draft", heading: "Workflow Lifecycle", primary: "workflow lifecycle rail" },
+    { hash: "#scene/authoring/diagnose", heading: "Author, Validate, Repair", primary: "agent authoring loop" },
+    { hash: "#scene/prepared-lifecycle/validate", heading: "Prepared Workflow Lifecycle", primary: "prepared workflow authoring lifecycle" },
+    { hash: "#scene/run-from-deployment/graph", heading: "Run From Deployment", primary: "workflow graph" },
+    { hash: "#scene/evaluation/findings", heading: "Evaluation", primary: "evaluation evidence board" },
+    { hash: "#scene/conclusion/conclusion", heading: "Limits and Conclusion", primary: "thesis contribution boundary" },
+  ] as const;
+
+  it.each(visualRouteContracts)(
+    "keeps the primary visual contract for $hash",
+    async ({ hash, heading, primary }) => {
+      window.location.hash = hash;
+      const { PresentationRoute } = await import("./PresentationRoute.js");
+      render(<PresentationRoute />);
+
+      await waitFor(
+        () => expect(screen.getAllByRole("heading", { name: heading })).toHaveLength(1),
+        { timeout: 12000 },
+      );
+      expect(screen.getByLabelText(primary, { exact: true })).toBeInTheDocument();
+      expect(document.documentElement.scrollHeight).toBeLessThanOrEqual(window.innerHeight);
+    },
+    15000,
+  );
+
   it.each([
     "#scene/thesis/title",
     "#scene/problem/direct-actions",

@@ -264,8 +264,10 @@ Recommended next visual slices:
    and a light prepared lifecycle canvas with synchronized secondary chat.
    Implementation:
    [`Scenes 7-9 editorial focal proof`](historical/superpowers/plans/2026-07-12-scenes-7-9-editorial-focal-proof.md).
-10. Next: revise the remaining visual outliers only when a screenshot identifies
-    a concrete hierarchy, overflow, or factual-readability problem.
+10. Completed: revise the remaining visual outliers only when a screenshot
+    identifies a concrete hierarchy, overflow, or factual-readability problem.
+    Implementation:
+    [`presentation follow-up visual/story pass`](historical/superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
 
 ## Next: Scene 8–14 Defense Recomposition
 
@@ -328,12 +330,15 @@ separate activity after these surfaces are stable.
    live run facts. Distinguish declared, selected, read, and produced files;
    do not imply file reads without evidence.
 
-10. **Active plan: presentation follow-up visual/story pass:** clarify Scene 1
-    and the lifecycle-to-authoring narrative, give Scenes 7 and 9 a stronger
-    dominant artifact, make the Scene 10 graph easier to present, and densify
-    Evaluation and Conclusion beats without inventing evidence.
+10. **Completed: presentation follow-up visual/story pass:** clarified Scene 1
+    and the lifecycle-to-authoring narrative, gave Scenes 7 and 9 a stronger
+    dominant artifact, made the Scene 10 graph easier to present, and densified
+    Evaluation and Conclusion beats without inventing evidence. The dated
+    review records the remaining factual input-browser, live-E2E, and full
+    screenshot-inspection follow-ups:
+    [`presentation follow-up visual review`](runbooks/presentation-followup-visual-review.md).
     Implementation plan:
-    [`presentation follow-up visual/story pass`](superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
+    [`presentation follow-up visual/story pass`](historical/superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
 
 Presentation wishlist / defense readiness:
 

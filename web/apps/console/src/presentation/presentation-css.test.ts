@@ -62,7 +62,7 @@ describe("presentation.css", () => {
     )?.groups?.body;
 
     expect(sceneBlock).toContain("grid-template-columns:");
-    expect(sceneBlock).toMatch(/minmax\(15rem, 0\.35fr\).*minmax\(0, 0\.65fr\)/);
+    expect(sceneBlock).toMatch(/minmax\(12rem, 0\.26fr\).*minmax\(0, 0\.74fr\)/);
     expect(sceneBlock).toContain("min-height: 0");
     expect(sceneBlock).toContain("overflow: hidden");
     expect(sceneBlock).not.toContain("grid-template-rows:");
@@ -75,7 +75,7 @@ describe("presentation.css", () => {
 
     expect(scene9Rules.filter((rule) => rule.includes("grid-template-columns:")).length).toBeGreaterThan(0);
     expect(scene9Rules.join("\n")).not.toContain("1.65fr");
-    expect(scene9Rules.join("\n")).toMatch(/minmax\(15rem, 0\.35fr\)\s+minmax\(0, 0\.65fr\)/);
+    expect(scene9Rules.join("\n")).toMatch(/minmax\(12rem, 0\.26fr\)\s+minmax\(0, 0\.74fr\)/);
   });
 
   it("bounds Scene 9 conversation scrolling and recenters Scene 8 at compact stage widths", () => {

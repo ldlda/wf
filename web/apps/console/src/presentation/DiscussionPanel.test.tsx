@@ -80,17 +80,15 @@ describe("DiscussionPanel", () => {
     expect(screen.getByText("Where is the AI agent in this thesis?")).toBeDefined();
     expect(screen.getByText(/workflow substrate that external agents operate/i)).toBeDefined();
     expect(screen.getByText(/not a new planning algorithm/i)).toBeDefined();
-    expect(screen.getByText(/Answer directly first/i)).toBeDefined();
+    expect(screen.queryByText(/Answer directly first/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText("defense question")).toBeInTheDocument();
   });
 
-  it("renders speaker hints as presenter notes instead of answer content", () => {
+  it("keeps speaker hints out of the audience-facing discussion panel", () => {
     render(<DiscussionPanel branchId="where-is-ai-agent" onClose={onClose} />);
 
-    const note = screen.getByLabelText("presenter note");
-    expect(note).toHaveTextContent(/Answer directly first/i);
-    expect(note).toHaveTextContent(/Presenter note/i);
-    expect(note).toHaveClass("discussion-panel__presenter-note");
+    expect(screen.queryByLabelText("presenter note")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Answer directly first/i)).not.toBeInTheDocument();
   });
 
   it("separates Q&A answer, provenance, and presenter note regions", () => {
@@ -101,7 +99,7 @@ describe("DiscussionPanel", () => {
     expect(screen.getByLabelText("short defense answer")).toHaveTextContent(/workflow substrate/i);
     expect(screen.getByLabelText("answer expansion")).toHaveTextContent(/planning algorithm/i);
     expect(screen.getByLabelText("answer provenance")).toHaveTextContent(/Abstract/i);
-    expect(screen.getByLabelText("presenter note")).toHaveTextContent(/Answer directly first/i);
+    expect(screen.queryByLabelText("presenter note")).not.toBeInTheDocument();
   });
 
   it("uses context layout for non-Q&A discussion branches", () => {
