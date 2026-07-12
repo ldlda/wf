@@ -38,6 +38,7 @@ export const ConclusionScene: FC<ConclusionSceneProps> = ({ scene, beat }) => {
         aria-label="thesis contribution boundary"
         data-conclusion-beat={beatId}
         data-visual-role="contribution-boundary"
+        data-presentation-surface="editorial"
       >
         <div className="conclusion-map__flow" aria-label="contribution flow">
           <div className="conclusion-map__flow-unit conclusion-map__flow-unit--planner" data-flow-unit="planner">

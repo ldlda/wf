@@ -29,6 +29,7 @@ describe("EvaluationEvidenceScene", () => {
     render(<EvaluationEvidenceScene scene={scene} beat={beat(beatId)} />);
     const board = screen.getByRole("group", { name: /evaluation evidence board/i });
     expect(board).toHaveAttribute("data-visual-role", "evaluation-summary");
+    expect(board).toHaveAttribute("data-presentation-surface", "editorial");
     expect(board).toHaveAttribute(
       "data-evaluation-beat",
       beatId,

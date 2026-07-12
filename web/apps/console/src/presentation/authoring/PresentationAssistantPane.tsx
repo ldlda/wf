@@ -81,6 +81,7 @@ export const PresentationAssistantPane = ({
           throughPhase={phase}
           activePhase={phase}
           surface="stage"
+          scrollMode="start"
           requestOverrides={submittedOverrides}
         />
       </div>

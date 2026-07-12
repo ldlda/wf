@@ -127,6 +127,7 @@
   --evaluation-paper: oklch(0.96 0.018 85);
   --evaluation-rule: oklch(0.74 0.05 75);
   display: grid;
+  min-height: min(24rem, 58vh);
   grid-template-columns: minmax(14rem, 0.8fr) minmax(20rem, 1.2fr);
   gap: 0;
   margin: 0.25rem 0 0.5rem;
@@ -204,7 +205,7 @@
 }
 
 .evaluation-board__cohort-total {
-  font: 3.7rem/0.9 "Barlow Condensed", sans-serif;
+  font: 4.8rem/0.86 "Barlow Condensed", sans-serif;
   letter-spacing: -0.04em;
 }
 
@@ -247,7 +248,7 @@
 .evaluation-board__outcome--fail { border-color: oklch(0.58 0.16 25); }
 
 .evaluation-board__outcome strong {
-  font: 2.2rem/0.9 "Barlow Condensed", sans-serif;
+  font: 2.8rem/0.86 "Barlow Condensed", sans-serif;
 }
 
 .evaluation-board__outcome span,
@@ -354,6 +355,17 @@
   border-radius: 0.45rem;
   background: linear-gradient(135deg, oklch(0.17 0.03 250), oklch(0.13 0.025 250));
   color: oklch(0.93 0.015 250);
+}
+
+.conclusion-map[data-presentation-surface="editorial"] {
+  --conclusion-paper: var(--color-editorial-paper, oklch(0.975 0.012 82));
+  --conclusion-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
+  --conclusion-muted: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  --conclusion-rule: color-mix(in oklch, var(--conclusion-muted) 38%, transparent);
+  min-height: min(22rem, 56vh);
+  border-color: var(--conclusion-rule);
+  background: var(--conclusion-paper);
+  color: var(--conclusion-ink);
 }
 
 .conclusion-map__flow {
@@ -465,6 +477,45 @@
   padding: 0.65rem;
   border-top: 1px solid var(--stage-line);
   transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__node {
+  border-color: var(--conclusion-rule);
+  background: color-mix(in oklch, var(--conclusion-paper) 88%, var(--conclusion-muted));
+  color: var(--conclusion-ink);
+}
+
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__node[data-emphasis="substrate"] {
+  border-color: var(--conclusion-ink);
+  box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--conclusion-ink) 16%, transparent);
+}
+
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__node-index,
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__node small,
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__future small {
+  color: var(--conclusion-muted);
+}
+
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__flow-unit--planner::after,
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__flow-unit--substrate-stack::after,
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__node--evidence::before {
+  border-color: var(--conclusion-muted);
+  color: var(--conclusion-muted);
+}
+
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__non-claims li,
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__future li,
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__statement {
+  border-color: var(--conclusion-rule);
+  color: var(--conclusion-ink);
+}
+
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__future svg {
+  color: var(--conclusion-muted);
+}
+
+.conclusion-map[data-presentation-surface="editorial"] .conclusion-map__statement {
+  border-top-color: var(--conclusion-ink);
 }
 
 .conclusion-map[data-conclusion-beat="limits"] .conclusion-map__future,
@@ -3935,4 +3986,63 @@
 
 .authoring-bindings__rows code:last-child {
   color: var(--accent-cyan);
+}
+
+/* Keep the editorial problem comparison readable after the shared chat rules. */
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-operator-thread[data-surface="dock"] .assistant-thread,
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-thread {
+  border-color: var(--problem-rule);
+  background: color-mix(in oklch, var(--problem-paper) 92%, var(--problem-muted));
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-thread__viewport,
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-message[data-role="assistant"],
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-message[data-role="assistant"] p,
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-root"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-root"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-args-value"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-result-content"] {
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-args-value"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-result-content"] {
+  border-color: var(--problem-rule);
+  background: color-mix(in oklch, var(--problem-paper) 86%, var(--problem-muted));
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-trigger"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-trigger"] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--problem-muted);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-content"] > div,
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-content"] > div {
+  border-color: var(--problem-rule);
+  background: transparent;
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-content"] [data-slot="tool-fallback-root"] {
+  border-color: var(--problem-rule);
+  background: color-mix(in oklch, var(--problem-paper) 90%, var(--problem-muted));
+}
+
+@container presentation-canvas (max-width: 1050px) {
+  .problem-loop-scene[data-presentation-surface="editorial"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .problem-loop-scene[data-presentation-surface="editorial"] .problem-loop-scene__bridge {
+    display: none;
+  }
+
+  .problem-loop-scene[data-presentation-surface="editorial"] .problem-chat-card,
+  .problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint {
+    width: 100%;
+    height: min(22rem, 56vh);
+  }
 }
