@@ -94,8 +94,13 @@ height. It shows exactly one of these states:
   footprint.
 - While running: a non-interactive `Running workflow...` information label,
   not a disabled button.
-- While paused at the typed boundary: `Run paused - review required`.
+- While `demo.state.phase === "review"` on Scene 11
+  (`typed-human-boundary`): `Run paused - review required`. This is the only
+  scene that exposes the paused label.
 - After completion: `Run complete`.
+- After Submit or Deny/Revision is clicked, remove the paused label immediately;
+  the rail may show a short `Resuming workflow...` state while the operation is
+  in flight before returning to the next factual state.
 - When retry is meaningful: a compact secondary `Retry live service` action may
   sit beside the primary action without changing the slot's size.
 
@@ -123,7 +128,10 @@ The implementation must test:
 - every Scene 8–12 beat renders exactly one compact demo rail;
 - the pre-run demo rail renders the run action without an in-scene launch panel;
 - a running demo renders an information label instead of a disabled run button;
-- a paused demo renders the review-required information label;
+- Scene 11 alone renders the review-required information label while the
+  decision form is waiting;
+- submitting or denying/revising the decision removes the paused label before
+  the next scene is shown;
 - a completed demo renders the terminal information label;
 - a healthy target remains `Live target ready` while the timeline is replaying;
 - failed health renders replay fallback only inside demo scope;
