@@ -107,6 +107,8 @@ describe("DemoRunLaunchControl", () => {
       agent: timelineAgent(run),
     });
 
+    expect(screen.getByText("Live target ready")).toBeInTheDocument();
+    expect(screen.getByText("Direct view is replay; launch starts live operations.")).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: "Run prepared workflow" }));
 
     expect(run).toHaveBeenCalledWith("live");

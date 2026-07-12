@@ -30,6 +30,10 @@ export const DemoRunLaunchControl = ({
         ? "Run prepared workflow"
         : "Play replay walkthrough";
   const canLaunch = launchLive ? timelineAgent.canRunLive : timelineAgent.canRun;
+  const statusLabel = liveTargetReady ? "Live target ready" : status.label;
+  const statusDetail = liveTargetReady && status.kind === "replay"
+    ? "Direct view is replay; launch starts live operations."
+    : status.detail;
 
   return (
     <section
@@ -40,8 +44,8 @@ export const DemoRunLaunchControl = ({
     >
       <div className="demo-run-launch-control__copy" role="status" aria-live="polite">
         <span className="demo-run-launch-control__eyebrow">Prepared workflow</span>
-        <strong>{status.label}</strong>
-        <p>{status.detail}</p>
+        <strong>{statusLabel}</strong>
+        <p>{statusDetail}</p>
       </div>
       <div className="demo-run-launch-control__actions">
         <button
