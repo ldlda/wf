@@ -24,12 +24,13 @@
 
 **Files:**
 - Create: `docs/runbooks/presentation-rehearsal-matrix.md`
+- Create: `scripts/presentation-rehearsal-routes.json`
 - Modify: `docs/runbooks/defense-presentation.md`
 - Test: `web/apps/console/src/presentation/storyboard-navigation.test.ts`
 
 **Interfaces:**
 - Consumes: `mainScenes` and `hashForLocation` from `web/apps/console/src/presentation/storyboard-navigation.ts`.
-- Produces: one documented matrix covering all 14 scenes, every beat, the canonical hash, visual primary, expected chat mode, and the evidence/fallback note.
+- Produces: one documented matrix and one machine-readable route manifest covering all 14 scenes, every beat, the canonical hash, visual primary, expected chat mode, and the evidence/fallback note.
 
 - [ ] **Step 1: Enumerate the canonical route matrix from the storyboard.**
 
@@ -52,9 +53,22 @@
   conclusion: limits, future, conclusion, questions
   ```
 
+  Store the captureable route portion in `scripts/presentation-rehearsal-routes.json` as an array of objects with exactly these fields:
+
+  ```json
+  {
+    "sceneId": "problem",
+    "beatId": "direct-actions",
+    "route": "problem/direct-actions",
+    "fileStem": "02-problem-direct-actions"
+  }
+  ```
+
+  The JSON is an execution manifest, not a replacement for `mainScenes`. The coverage test in the next step must fail when it is missing a storyboard scene/beat or contains a route that no longer exists.
+
 - [ ] **Step 2: Add a route coverage assertion.**
 
-  In `storyboard-navigation.test.ts`, assert that every `mainScenes` scene has at least one canonical hash and that the expected scene/beat pairs above round-trip through `hashForLocation` and `locationFromHash`. Keep the assertions field-level and make a missing beat fail with its scene ID.
+  In `storyboard-navigation.test.ts`, import the JSON manifest and assert that every `mainScenes` scene/beat pair has exactly one manifest entry, that every manifest entry exists in `mainScenes`, and that each route round-trips through `hashForLocation` and `locationFromHash`. Keep the assertions field-level and make a missing beat fail with its scene ID.
 
 - [ ] **Step 3: Write the rehearsal matrix.**
 
@@ -76,7 +90,7 @@
 
   ```powershell
   pnpm --dir web/apps/console test -- src/presentation/storyboard-navigation.test.ts
-  git add docs/runbooks/presentation-rehearsal-matrix.md docs/runbooks/defense-presentation.md web/apps/console/src/presentation/storyboard-navigation.test.ts
+  git add docs/runbooks/presentation-rehearsal-matrix.md scripts/presentation-rehearsal-routes.json docs/runbooks/defense-presentation.md web/apps/console/src/presentation/storyboard-navigation.test.ts
   git commit -m "docs: define presentation rehearsal route matrix"
   ```
 
@@ -90,7 +104,7 @@
 - Modify: `docs/runbooks/presentation-visual-review.md`
 
 **Interfaces:**
-- Consumes: a running `pnpm --dir web dev` server at `http://127.0.0.1:5173` and the route matrix from Task 1.
+- Consumes: a running `pnpm --dir web dev` server at `http://127.0.0.1:5173` and `scripts/presentation-rehearsal-routes.json` from Task 1.
 - Produces: ignored screenshots under `web/apps/console/.visual-smoke/rehearsal/<viewport>/` with stable route-based names.
 
 - [ ] **Step 1: Define the capture inputs.**
@@ -103,7 +117,7 @@
   $Viewports = @("1280,720", "1024,768")
   ```
 
-  Use the complete matrix from Task 1. Do not hand-maintain a partial “interesting routes” list.
+  Load every route object from `scripts/presentation-rehearsal-routes.json`. Do not hand-maintain a partial “interesting routes” list in the PowerShell script.
 
 - [ ] **Step 2: Capture each route at both viewports.**
 
@@ -330,4 +344,3 @@
 - [ ] **Step 5: Archive and mark complete.**
 
   Update the roadmap to link the historical plan, rehearsal matrix, rehearsal log, and story audit. Move the plan only after the review and verification gates pass.
-
