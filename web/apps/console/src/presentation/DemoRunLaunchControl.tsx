@@ -30,6 +30,7 @@ export const DemoRunLaunchControl = ({
         ? "Run prepared workflow"
         : "Play replay walkthrough";
   const canLaunch = launchLive ? timelineAgent.canRunLive : timelineAgent.canRun;
+  const canRetryLive = status.kind !== "replay" || liveTargetReady;
   const statusLabel = liveTargetReady ? "Live target ready" : status.label;
   const statusDetail = liveTargetReady && status.kind === "replay"
     ? "Direct view is replay; launch starts live operations."
@@ -56,14 +57,16 @@ export const DemoRunLaunchControl = ({
         >
           {launchLabel}
         </button>
-        <button
-          type="button"
-          className="demo-run-launch-control__retry"
-          onClick={retryHealth}
-          disabled={isChecking}
-        >
-          Retry live service
-        </button>
+        {canRetryLive ? (
+          <button
+            type="button"
+            className="demo-run-launch-control__retry"
+            onClick={retryHealth}
+            disabled={isChecking}
+          >
+            Retry live service
+          </button>
+        ) : null}
       </div>
     </section>
   );

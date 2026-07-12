@@ -134,6 +134,13 @@ describe("DemoRunLaunchControl", () => {
     expect(retry).toHaveBeenCalledOnce();
   });
 
+  it("does not offer retry when no live target is configured", () => {
+    renderControl({ status: replayStatus, liveTargetReady: false });
+
+    expect(screen.getByRole("button", { name: "Play replay walkthrough" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Retry live service" })).not.toBeInTheDocument();
+  });
+
   it("keeps the action visible but disabled while health is checking", () => {
     renderControl({ status: checkingStatus, liveTargetReady: false });
 
