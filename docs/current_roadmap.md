@@ -328,6 +328,13 @@ separate activity after these surfaces are stable.
    live run facts. Distinguish declared, selected, read, and produced files;
    do not imply file reads without evidence.
 
+10. **Active plan: presentation follow-up visual/story pass:** clarify Scene 1
+    and the lifecycle-to-authoring narrative, give Scenes 7 and 9 a stronger
+    dominant artifact, make the Scene 10 graph easier to present, and densify
+    Evaluation and Conclusion beats without inventing evidence.
+    Implementation plan:
+    [`presentation follow-up visual/story pass`](superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
+
 Presentation wishlist / defense readiness:
 
 - Completed: visual pass for Scenes 6, 7, and 10 fixed architecture figure
