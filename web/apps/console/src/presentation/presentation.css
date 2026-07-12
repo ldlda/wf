@@ -537,8 +537,8 @@
 
 .conclusion-map[data-conclusion-beat="conclusion"] .conclusion-map__statement {
   padding-block: 1.1rem 0.45rem;
-  border-top-color: var(--accent-cyan);
-  color: var(--text-primary);
+  border-top-color: var(--conclusion-ink);
+  color: var(--conclusion-ink);
   font-size: 1.25rem;
   font-style: normal;
   font-weight: 650;
@@ -2412,10 +2412,12 @@
   color: var(--problem-muted);
 }
 
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-operator-thread[data-surface="dock"] .assistant-thread,
 .problem-loop-scene[data-presentation-surface="editorial"] .assistant-thread {
   border-color: var(--problem-rule);
   border-radius: 0.35rem;
   background: color-mix(in oklch, var(--problem-paper) 92%, var(--problem-muted));
+  color: var(--problem-ink);
 }
 
 .problem-loop-scene[data-presentation-surface="editorial"] .assistant-message[data-role="assistant"] {
@@ -2459,6 +2461,38 @@
   background: transparent;
 }
 
+/* Keep the compact assistant-ui transcript readable inside the fixed comparison card. */
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-thread__viewport,
+.problem-loop-scene[data-presentation-surface="editorial"] .assistant-message[data-role="assistant"] p,
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-args-value"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-result-content"] {
+  color: var(--problem-ink);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-args-value"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-result-content"] {
+  border-color: var(--problem-rule);
+  background: color-mix(in oklch, var(--problem-paper) 86%, var(--problem-muted));
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-trigger"],
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-trigger"] {
+  border-color: transparent;
+  background: transparent;
+  color: var(--problem-muted);
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-content"] > div,
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-content"] > div {
+  border-color: var(--problem-rule);
+  background: transparent;
+}
+
+.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-content"] [data-slot="tool-fallback-root"] {
+  border-color: var(--problem-rule);
+  background: color-mix(in oklch, var(--problem-paper) 90%, var(--problem-muted));
+}
+
 .problem-artifact-header {
   display: grid;
   gap: 0.18rem;
@@ -2490,7 +2524,31 @@
 
 .problem-chat-card__transcript {
   min-height: 0;
-  overflow: hidden;
+  overflow: auto;
+  scrollbar-width: none;
+}
+
+.problem-chat-card__transcript::-webkit-scrollbar {
+  display: none;
+}
+
+.problem-chat-card .assistant-thread__viewport {
+  padding: 0.45rem;
+}
+
+.problem-chat-card .assistant-message {
+  margin-bottom: 0.25rem;
+}
+
+.problem-chat-card .assistant-message__user-bubble {
+  padding: 0.35rem 0.55rem;
+  font-size: 0.72rem;
+}
+
+.problem-chat-card [data-slot="tool-group-trigger"],
+.problem-chat-card [data-slot="tool-fallback-trigger"] {
+  padding-block: 0.22rem;
+  font-size: 0.62rem;
 }
 
 .problem-blueprint .concept-rail {
@@ -2546,6 +2604,7 @@
   .problem-loop-scene__bridge {
     display: none;
   }
+
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3677,6 +3736,23 @@
 .prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane {
   background: color-mix(in oklch, var(--authoring-paper) 92%, var(--authoring-muted));
   border-color: var(--authoring-rule);
+  color: var(--authoring-ink);
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane__header > p,
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane__composer label,
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane__composer-help,
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane__run-status {
+  color: var(--authoring-muted);
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane__header h2 {
+  color: var(--authoring-ink);
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane__composer textarea::placeholder {
+  color: var(--authoring-muted);
+  opacity: 1;
 }
 
 .prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane__conversation {
@@ -3738,6 +3814,19 @@
 
 .problem-loop-scene[data-problem-focus="workflow-blueprint"] {
   grid-template-columns: minmax(17rem, 0.65fr) auto minmax(0, 1.35fr);
+}
+
+@container presentation-canvas (max-width: 1050px) {
+  .problem-loop-scene[data-presentation-surface="editorial"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .problem-loop-scene[data-presentation-surface="editorial"] .problem-chat-card,
+  .problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint {
+    width: 100%;
+    height: min(22rem, 56vh);
+  }
 }
 
 @keyframes authoring-canvas-enter {
@@ -3987,63 +4076,4 @@
 
 .authoring-bindings__rows code:last-child {
   color: var(--accent-cyan);
-}
-
-/* Keep the editorial problem comparison readable after the shared chat rules. */
-.problem-loop-scene[data-presentation-surface="editorial"] .assistant-operator-thread[data-surface="dock"] .assistant-thread,
-.problem-loop-scene[data-presentation-surface="editorial"] .assistant-thread {
-  border-color: var(--problem-rule);
-  background: color-mix(in oklch, var(--problem-paper) 92%, var(--problem-muted));
-  color: var(--problem-ink);
-}
-
-.problem-loop-scene[data-presentation-surface="editorial"] .assistant-thread__viewport,
-.problem-loop-scene[data-presentation-surface="editorial"] .assistant-message[data-role="assistant"],
-.problem-loop-scene[data-presentation-surface="editorial"] .assistant-message[data-role="assistant"] p,
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-root"],
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-root"],
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-args-value"],
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-result-content"] {
-  color: var(--problem-ink);
-}
-
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-args-value"],
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-result-content"] {
-  border-color: var(--problem-rule);
-  background: color-mix(in oklch, var(--problem-paper) 86%, var(--problem-muted));
-}
-
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-trigger"],
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-trigger"] {
-  border-color: transparent;
-  background: transparent;
-  color: var(--problem-muted);
-}
-
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-content"] > div,
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-fallback-content"] > div {
-  border-color: var(--problem-rule);
-  background: transparent;
-}
-
-.problem-loop-scene[data-presentation-surface="editorial"] [data-slot="tool-group-content"] [data-slot="tool-fallback-root"] {
-  border-color: var(--problem-rule);
-  background: color-mix(in oklch, var(--problem-paper) 90%, var(--problem-muted));
-}
-
-@container presentation-canvas (max-width: 1050px) {
-  .problem-loop-scene[data-presentation-surface="editorial"] {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    align-items: center;
-  }
-
-  .problem-loop-scene[data-presentation-surface="editorial"] .problem-loop-scene__bridge {
-    display: none;
-  }
-
-  .problem-loop-scene[data-presentation-surface="editorial"] .problem-chat-card,
-  .problem-loop-scene[data-presentation-surface="editorial"] .problem-blueprint {
-    width: 100%;
-    height: min(22rem, 56vh);
-  }
 }

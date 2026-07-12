@@ -303,13 +303,13 @@ separate activity after these surfaces are stable.
    [`presentation demo-chrome ownership`](superpowers/specs/2026-07-12-demo-chrome-ownership-design.md).
    Implementation:
    [`presentation demo-chrome ownership plan`](historical/superpowers/plans/2026-07-12-presentation-demo-chrome-ownership.md).
-7. **Visual scale and color pass:** remove unwanted blue from Scenes 2 and 14,
+7. **Completed: visual scale and color pass:** removed unwanted blue from Scenes 2 and 14,
    shorten Scene 2's two-column composition, enlarge the focal diagrams in
    Scenes 7, 9, 13, and 14, separate Scene 7 Validate from Repair visuals, and
    improve Scene 1 title-box padding and contrast. Design:
    [`presentation visual scale and color pass`](superpowers/specs/2026-07-12-presentation-visual-scale-color-pass-design.md).
    Implementation:
-   [`presentation visual scale and color pass plan`](superpowers/plans/2026-07-12-presentation-visual-scale-color-pass.md).
+   [`presentation visual scale and color pass plan`](historical/superpowers/plans/2026-07-12-presentation-visual-scale-color-pass.md).
 8. **Rehearsal gate:** run all 14 scenes at 16:9 and 4:3, verify the Scene 8 →
    Scene 11 → Scene 12 path in live and replay modes, then review the story
    flow, coverage, and ordering separately.

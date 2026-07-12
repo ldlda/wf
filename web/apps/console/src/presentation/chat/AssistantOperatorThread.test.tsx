@@ -217,6 +217,34 @@ describe("AssistantOperatorThread", () => {
     }
   });
 
+  it("can show the latest response in a static comparison transcript", async () => {
+    const setScrollTop = vi.fn();
+    const descriptors = {
+      scrollTop: Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "scrollTop"),
+      scrollHeight: Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "scrollHeight"),
+      clientHeight: Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "clientHeight"),
+    };
+
+    try {
+      Object.defineProperties(HTMLDivElement.prototype, {
+        scrollTop: { configurable: true, get: () => 0, set: setScrollTop },
+        scrollHeight: { configurable: true, get: () => 240 },
+        clientHeight: { configurable: true, get: () => 80 },
+      });
+      render(<AssistantOperatorThread mode="dock" messages={[]} scrollMode="end" />);
+
+      await waitFor(() => expect(setScrollTop).toHaveBeenCalledWith(160));
+    } finally {
+      for (const [name, descriptor] of Object.entries(descriptors)) {
+        if (descriptor) {
+          Object.defineProperty(HTMLDivElement.prototype, name, descriptor);
+        } else {
+          delete (HTMLDivElement.prototype as unknown as Record<string, unknown>)[name];
+        }
+      }
+    }
+  });
+
   it("pairs a lone tool call with its result", () => {
     const messages: ReadonlyArray<AgentMessage> = [
       {

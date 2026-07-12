@@ -23,7 +23,7 @@ import {
 type AssistantOperatorThreadProps = {
   readonly mode: "hidden" | "full" | "rail" | "dock";
   readonly messages: ReadonlyArray<AgentMessage>;
-  readonly scrollMode?: "active" | "start" | undefined;
+  readonly scrollMode?: "active" | "start" | "end" | undefined;
   readonly submitApproval?: (() => void) | undefined;
   readonly requestRevision?: (() => void) | undefined;
   readonly ariaLabel?: string | undefined;
@@ -273,13 +273,22 @@ export const AssistantOperatorThread = ({
   }, [activeToolGroupId, toolGroupOverrides]);
 
   useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+
+    // Static comparison transcripts should show their final answer; live
+    // presentation docks instead keep the beat-owned tool group in view.
+    if (!activeToolGroupId && scrollMode === "end") {
+      viewport.scrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
+      return;
+    }
     if (!activeToolGroupId) return;
+
     // The same transcript can be much taller than the Scene 9 dock. Keep the
     // beat-owned group visible without maintaining a second scroll-state model.
-    const viewport = viewportRef.current;
     const activeGroup = viewport
       ?.querySelector<HTMLElement>(`[data-tool-group-id="${activeToolGroupId}"]`);
-    if (!viewport || !activeGroup) return;
+    if (!activeGroup) return;
     const bottomAlignedTop = activeGroup.offsetTop + activeGroup.offsetHeight - viewport.clientHeight;
     const dockCenteredTop = activeGroup.offsetTop - (viewport.clientHeight - activeGroup.offsetHeight) / 2;
     const requestedTop = scrollMode === "start"

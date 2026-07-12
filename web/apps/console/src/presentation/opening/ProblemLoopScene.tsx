@@ -78,7 +78,12 @@ export const ProblemLoopScene = ({ scene, beat }: ProblemLoopSceneProps) => {
             <p>Good at getting through one request.</p>
           </header>
           <div className="problem-chat-card__transcript" aria-label="one-off assistant transcript" role="group">
-            <AssistantOperatorThread mode="dock" messages={oneOffToolLoopMessages} ariaLabel="one-off assistant transcript" />
+            <AssistantOperatorThread
+              mode="dock"
+              messages={oneOffToolLoopMessages}
+              scrollMode="end"
+              ariaLabel="one-off assistant transcript"
+            />
           </div>
           <p className="problem-artifact-note">The useful work lives in the conversation history.</p>
         </article>

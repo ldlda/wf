@@ -46,16 +46,16 @@ Files likely involved:
 
 Steps:
 
-- [ ] Add focused failing assertions for the title, problem, authoring,
+- [x] Add focused failing assertions for the title, problem, authoring,
   lifecycle, evaluation, and conclusion surfaces.
-- [ ] Assert semantic markers for the dominant visual and active beat rather
+- [x] Assert semantic markers for the dominant visual and active beat rather
   than fragile CSS pixel values.
-- [ ] Add regression assertions that these editorial scenes do not gain demo
+- [x] Add regression assertions that these editorial scenes do not gain demo
   footer controls, live target badges, or unexpected chat chrome.
-- [ ] Add CSS contract checks only for durable selectors/tokens that must not
+- [x] Add CSS contract checks only for durable selectors/tokens that must not
   regress, such as the neutral editorial surface and scene-specific layout
   markers.
-- [ ] Run the focused tests and confirm the new assertions fail for the
+- [x] Run the focused tests and confirm the new assertions fail for the
   intended reasons.
 
 Do not encode exact color strings or arbitrary pixel coordinates in tests.
@@ -73,17 +73,17 @@ Likely files:
 
 Steps:
 
-- [ ] Make the Scene 1 title beat title-first: one primary title treatment,
+- [x] Make the Scene 1 title beat title-first: one primary title treatment,
   more internal padding, stronger text contrast, and no duplicate framing.
-- [ ] Preserve the later Scene 1 substrate/decomposition content without
+- [x] Preserve the later Scene 1 substrate/decomposition content without
   forcing it into the title beat's dimensions.
-- [ ] Keep Scene 2's transcript in normal chat reading order: user request,
+- [x] Keep Scene 2's transcript in normal chat reading order: user request,
   agent/tool activity, observation, and answer.
-- [ ] Shorten the two Scene 2 columns so the right automation explanation does
+- [x] Shorten the two Scene 2 columns so the right automation explanation does
   not become a tall dashboard card.
-- [ ] Remove decorative blue from the editorial Scene 2 surface. Keep only
+- [x] Remove decorative blue from the editorial Scene 2 surface. Keep only
   state or focus colors that communicate something specific.
-- [ ] Verify both Scene 2 beats and the narrow canvas before moving on.
+- [x] Verify both Scene 2 beats and the narrow canvas before moving on.
 
 If the opening components need shared layout, extract a small semantic wrapper;
 do not create another generic card primitive.
@@ -101,16 +101,16 @@ Likely files:
 
 Steps:
 
-- [ ] Identify the existing authoring loop and its active beat mapping before
+- [x] Identify the existing authoring loop and its active beat mapping before
   changing markup.
-- [ ] Give the active phase a larger, readable visual while keeping the full
+- [x] Give the active phase a larger, readable visual while keeping the full
   loop as a compact orientation rail.
-- [ ] Make `validate` show a diagnostic/contract-checking visual.
-- [ ] Make `repair` show a correction/revision visual that is structurally
+- [x] Make `validate` show a diagnostic/contract-checking visual.
+- [x] Make `repair` show a correction/revision visual that is structurally
   distinct from `validate`.
-- [ ] Preserve factual command labels and existing icons; do not add invented
+- [x] Preserve factual command labels and existing icons; do not add invented
   tool output.
-- [ ] Add tests proving the active phase and the Validate/Repair visual
+- [x] Add tests proving the active phase and the Validate/Repair visual
   distinction.
 
 Avoid adding five equally sized cards. The point is a dominant phase plus a
@@ -129,14 +129,14 @@ Likely files:
 
 Steps:
 
-- [ ] Identify which surface is primary for each lifecycle beat: discovery,
+- [x] Identify which surface is primary for each lifecycle beat: discovery,
   draft, validate, artifact, and deployment.
-- [ ] Give the lifecycle visual most of the available stage area.
-- [ ] Keep the prepared assistant as supporting context, not a second equal
+- [x] Give the lifecycle visual most of the available stage area.
+- [x] Keep the prepared assistant as supporting context, not a second equal
   hero surface.
-- [ ] Preserve the current footer rail ownership and avoid adding another run
+- [x] Preserve the current footer rail ownership and avoid adding another run
   or live-status control.
-- [ ] Add layout/beat tests that verify the primary surface remains present and
+- [x] Add layout/beat tests that verify the primary surface remains present and
   the scene does not regress to the old crowded composition.
 
 Do not fold Scene 9 into the real live execution slice. This task is visual
@@ -155,15 +155,15 @@ Likely files:
 
 Steps:
 
-- [ ] Choose one dominant evaluation visual per beat: cohort, validity, and
+- [x] Choose one dominant evaluation visual per beat: cohort, validity, and
   findings should not be three near-identical text panels.
-- [ ] Increase the scale of the relevant diagram/stat treatment while keeping
+- [x] Increase the scale of the relevant diagram/stat treatment while keeping
   methodology limits legible as support.
-- [ ] Give the conclusion one clear contribution/limits visual rather than a
+- [x] Give the conclusion one clear contribution/limits visual rather than a
   dense summary wall.
-- [ ] Remove unnecessary blue from Scene 14 while preserving readable contrast.
-- [ ] Keep the Questions beat usable and free of accidental demo chrome.
-- [ ] Add tests for dominant-beat markers and conclusion surface behavior.
+- [x] Remove unnecessary blue from Scene 14 while preserving readable contrast.
+- [x] Keep the Questions beat usable and free of accidental demo chrome.
+- [x] Add tests for dominant-beat markers and conclusion surface behavior.
 
 Do not invent new evaluation numbers or claims. All visual labels must come
 from the storyboard or existing factual projections.
@@ -174,21 +174,21 @@ from the storyboard or existing factual projections.
 
 Steps:
 
-- [ ] Run focused presentation tests after each task.
-- [ ] Run the full web test suite:
+- [x] Run focused presentation tests after each task.
+- [x] Run the full web test suite:
   `pnpm --dir web test`.
-- [ ] Run typecheck:
+- [x] Run typecheck:
   `pnpm --dir web typecheck`.
-- [ ] Run build:
+- [x] Run build:
   `pnpm --dir web build`.
-- [ ] Capture screenshots for the representative routes at `1280x720` and
+- [x] Capture screenshots for the representative routes at `1280x720` and
   `1024x768`.
-- [ ] Confirm no accidental outer scroll, clipped title text, unreadable
+- [x] Confirm no accidental outer scroll, clipped title text, unreadable
   diagram labels, or duplicate chrome.
-- [ ] Re-run `git diff --check`.
-- [ ] Run the two-axis review before declaring completion.
-- [ ] Update `docs/current_roadmap.md` with the completed plan link.
-- [ ] Move this plan to
+- [x] Re-run `git diff --check`.
+- [x] Run the two-axis review before declaring completion.
+- [x] Update `docs/current_roadmap.md` with the completed plan link.
+- [x] Move this plan to
   `docs/historical/superpowers/plans/2026-07-12-presentation-visual-scale-color-pass.md`
   only after implementation and review are complete.
 
