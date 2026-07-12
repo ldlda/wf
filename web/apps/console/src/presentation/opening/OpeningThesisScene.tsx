@@ -29,8 +29,12 @@ export const OpeningThesisScene = ({ scene, beat }: OpeningThesisSceneProps) => 
         >
           <header className="opening-thesis__statement" data-visual-role="title-hero">
             <p>Product goal</p>
-            <h2>An AI Agent for Workspace Workflows</h2>
+            <h2>The product goal: an AI agent for workspace automation.</h2>
           </header>
+          <div className="opening-thesis__statement opening-thesis__statement--contribution" data-visual-role="implementation-boundary">
+            <p>Implementation boundary</p>
+            <h3>The implemented contribution: a typed workflow substrate that external agents can operate.</h3>
+          </div>
           <ConceptRail label="AI agent roles" className="opening-thesis__agent-system">
             <ConceptNode
               title="Planner"

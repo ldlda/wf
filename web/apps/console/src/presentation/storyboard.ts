@@ -68,8 +68,8 @@ export const mainScenes = defineScenes([
     evidencePointer: "Thesis Abstract and Introduction",
     view: "narrative",
     beats: [
-      sceneBeat("title", "Design and Implementation of lda.chat", "The project began as a pursuit of an AI agent for workspace automation."),
-      sceneBeat("substrate", "The substrate an agent needs", "The submitted contribution creates, validates, runs, and inspects reusable workflows."),
+      sceneBeat("title", "Design and Implementation of lda.chat", "AI agent for workspace automation is the product goal."),
+      sceneBeat("substrate", "The substrate an agent needs", "The implemented contribution: a typed workflow substrate that external agents can operate."),
     ],
   },
   {
@@ -117,10 +117,10 @@ export const mainScenes = defineScenes([
     evidencePointer: "Thesis Workflow Lifecycle",
     view: "lifecycle",
     beats: [
-      sceneBeat("draft", "Draft", "Mutable iterative authoring state."),
-      sceneBeat("artifact", "Artifact", "Immutable saved workflow definition."),
-      sceneBeat("deployment", "Deployment", "Logical requirements bound to concrete sources."),
-      sceneBeat("run", "Run", "Persisted execution, output, status, and trace."),
+      sceneBeat("draft", "Draft", "Draft, Artifact, Deployment, and Run are the durable vocabulary behind reusable automation."),
+      sceneBeat("artifact", "Artifact", "An immutable artifact carries the durable workflow definition forward."),
+      sceneBeat("deployment", "Deployment", "A deployment binds the durable workflow to concrete sources."),
+      sceneBeat("run", "Run", "A run records durable execution, output, status, and trace."),
     ],
   },
   {
@@ -145,10 +145,10 @@ export const mainScenes = defineScenes([
     evidencePointer: "CLI documentation; draft authoring API; challenge UX findings",
     view: "authoring",
     beats: [
-      sceneBeat("discover", "Discover", "Inspect capabilities and schemas before authoring."),
-      sceneBeat("author", "Author", "Focused operations build and connect the draft."),
-      sceneBeat("diagnose", "Diagnose", "Structured diagnostics identify invalid state.", { evidencePresentation: "receipt" }),
-      sceneBeat("repair", "Repair", "Repair hints lead to a valid compiled workflow."),
+      sceneBeat("discover", "Discover", "This authoring loop turns an agent proposal into a valid workflow: discover, author, diagnose, repair. An external agent can use each step."),
+      sceneBeat("author", "Author", "This authoring loop turns an agent proposal into a valid workflow: discover, author, diagnose, repair. An external agent can use each step."),
+      sceneBeat("diagnose", "Diagnose", "This authoring loop turns an agent proposal into a valid workflow: discover, author, diagnose, repair. An external agent can use each step.", { evidencePresentation: "receipt" }),
+      sceneBeat("repair", "Repair", "This authoring loop turns an agent proposal into a valid workflow: discover, author, diagnose, repair. An external agent can use each step."),
     ],
   },
   {
