@@ -283,11 +283,11 @@ separate activity after these surfaces are stable.
    [`Scene 9 staged message box`](historical/superpowers/plans/2026-07-12-scene-9-staged-message-box.md).
    The boundary is explicit: Scenes 10–12 own run activation, approval,
    resume, output, and trace evidence.
-3. **Live/replay truth and run activation:** keep Scene 9 authoring evidence
-   recording-backed, make Scenes 10–12 consume the active live timeline when a
-   run exists, keep replay fallback for direct links or unavailable services,
-   scope the truth badge to demo scenes, move the prepared-run action to Scene
-   10, and correct the Scene 10 graph/proof projection.
+3. **Completed: Live/replay truth and run activation:** Scene 10 exposes the
+   prepared-run action outside the hidden chat, retries the existing health
+   probe, starts live execution explicitly, and keeps direct links and failed
+   services on truthful replay evidence. Implementation:
+   [`presentation live/replay activation`](historical/superpowers/plans/2026-07-12-presentation-live-replay-activation.md).
 4. **Completed: Scene 11 compression:** reduce the typed-human-boundary scene to two
    beats: interrupt context and approval decision. Cancellation remains a
     decision outcome rather than a near-duplicate presentation beat.

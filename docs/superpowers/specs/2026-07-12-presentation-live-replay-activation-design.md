@@ -1,6 +1,6 @@
 # Presentation Live/Replay Activation Design
 
-**Status:** Proposed
+**Status:** Implemented
 
 ## Goal
 

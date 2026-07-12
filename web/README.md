@@ -195,6 +195,23 @@ the public JSON-RPC operations and record live evidence using the same
 DemoRunFacts projection. Raw protocol payloads are available through the
 evidence receipt and inspector.
 
+Scene 10's operation beat exposes the explicit `Run prepared workflow` action
+even when a direct link is currently showing replay evidence. With a healthy
+target, it starts the live chain through the existing `/api/rpc` proxy. If the
+health probe fails, the surface shows the failure reason, offers `Retry live
+service`, and keeps `Play replay walkthrough` as an explicit fallback. The
+presentation does not silently replace a live failure with recorded evidence.
+
+For local live rehearsal, run both services:
+
+```powershell
+pnpm --dir web dev
+uv run wf-rpc-server --config examples/lda_report_workflow/wf.config.json --host 127.0.0.1 --port 8765
+```
+
+The browser runs on `5173`, the console server proxy runs on `8787`, and the
+workflow RPC server listens on `8765/rpc`.
+
 The presentation chat surface is source-owned and follows the AI Elements
 conversation/message/tool/prompt-action model. It currently renders the
 prepared timeline agent and approval flow; a future AI SDK driver should target
