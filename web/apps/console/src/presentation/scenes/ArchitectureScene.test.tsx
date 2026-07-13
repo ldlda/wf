@@ -71,6 +71,17 @@ const renderArchitecture = (overrides: Partial<React.ComponentProps<typeof Archi
 afterEach(() => cleanup());
 
 describe("ArchitectureScene", () => {
+  it("keeps the overview beat neutral so the entire spine remains readable", () => {
+    renderArchitecture({
+      beat: { ...mockBeat, id: "overview" },
+      focusPath: [],
+      activeNodeId: null,
+    });
+
+    expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-architecture-beat", "overview");
+    expect(document.querySelector('.figure-node[data-active="true"]')).toBeNull();
+  });
+
   it("renders the architecture spine and expands the capability boundary", () => {
     const onFocusPathChange = vi.fn();
     renderArchitecture({ focusPath: [], onFocusPathChange });

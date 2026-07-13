@@ -368,7 +368,7 @@
 
 .architecture-scene .interactive-figure:has(.figure-node[data-active="true"])
   .figure-node:not([data-active="true"]) {
-  opacity: 0.48;
+  opacity: 0.76;
 }
 
 .architecture-scene .figure-node[data-active="true"] {

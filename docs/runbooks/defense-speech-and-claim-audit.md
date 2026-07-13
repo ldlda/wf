@@ -92,13 +92,13 @@ Keep Scene 5 conceptual. Scene 9 applies this vocabulary to the prepared example
 
 ### Scene 6: Zoom through the implemented architecture
 
-**Route:** `architecture/client`, `architecture/api`, `architecture/runtime`, then `architecture/node-use`  
+**Route:** `architecture/overview`, `architecture/client`, `architecture/api`, `architecture/runtime`, then `architecture/node-use`<br>
 **Time:** 3:55-4:50
 **Evidence:** Supported
 
 Say:
 
-> Human operators and external agents enter through the same public lifecycle surface. WorkflowApi owns lifecycle operations; JSON-RPC adapts requests without owning domain behavior. WorkflowServer composes records, provider-neutral capabilities, WorkflowApi, and the execution kernel; provider behavior remains outside the core. A NodeUse resolves bindings, invokes its NodeDef handler, reduces output into state, appends a trace frame, and routes the outcome.
+> First, the implemented architecture spine and its ownership boundaries. Humans and agents share one public lifecycle surface. WorkflowApi owns lifecycle operations; JSON-RPC only adapts transport. WorkflowServer composes records, capabilities, API, and kernel; providers remain outside the core. NodeUse invokes a NodeDef handler, reduces state, records trace, and routes the declared outcome.
 
 The NodeUse sequence is documented in the thesis runtime diagram and narrative ([lines 706-750](../thesis/system-design-implementation.md#workflow-core-model)).
 

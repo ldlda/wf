@@ -12,6 +12,7 @@
   {"sceneId":"lifecycle","beatId":"artifact","route":"lifecycle/artifact","fileStem":"05-lifecycle-artifact"},
   {"sceneId":"lifecycle","beatId":"deployment","route":"lifecycle/deployment","fileStem":"05-lifecycle-deployment"},
   {"sceneId":"lifecycle","beatId":"run","route":"lifecycle/run","fileStem":"05-lifecycle-run"},
+  {"sceneId":"architecture","beatId":"overview","route":"architecture/overview","fileStem":"06-architecture-overview"},
   {"sceneId":"architecture","beatId":"client","route":"architecture/client","fileStem":"06-architecture-client"},
   {"sceneId":"architecture","beatId":"api","route":"architecture/api","fileStem":"06-architecture-api"},
   {"sceneId":"architecture","beatId":"runtime","route":"architecture/runtime","fileStem":"06-architecture-runtime"},

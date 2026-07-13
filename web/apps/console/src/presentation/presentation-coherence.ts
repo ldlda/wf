@@ -148,6 +148,7 @@ const beatContracts = {
   "thesis/substrate": { mode: "split", primarySurface: "opening-decomposition", supportSurface: "none" },
   "problem/direct-actions": { mode: "split", primarySurface: "tool-loop-transcript", supportSurface: "workflow-blueprint" },
   "problem/missing-contracts": { mode: "split", primarySurface: "workflow-blueprint", supportSurface: "tool-loop-transcript" },
+  "architecture/overview": { mode: "focal", primarySurface: "interactive-architecture", supportSurface: "none" },
   "architecture/client": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "none" },
   "architecture/api": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "none" },
   "architecture/runtime": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "none" },

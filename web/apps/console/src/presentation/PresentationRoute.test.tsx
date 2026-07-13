@@ -75,6 +75,7 @@ afterEach(() => {
 describe("PresentationRoute", () => {
   const directHashRoutes = [
     { hash: "#scene/thesis/title", heading: "Design and Implementation of lda.chat", hasDemoChrome: false },
+    { hash: "#scene/architecture/overview", heading: "Architecture Zoom", hasDemoChrome: false },
     { hash: "#scene/architecture/client", heading: "Architecture Zoom", hasDemoChrome: false },
     { hash: "#scene/authoring/diagnose", heading: "Author, Validate, Repair", hasDemoChrome: false },
     {

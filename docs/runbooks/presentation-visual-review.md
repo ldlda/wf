@@ -4,7 +4,7 @@
 
 Open each URL in a browser at 100% zoom, 1280x720 viewport:
 
-1. **Scene 6 root**: `http://127.0.0.1:5173/present#scene/architecture/client`
+1. **Scene 6 root**: `http://127.0.0.1:5173/present#scene/architecture/overview`
 2. **Scene 6 runtime**: `http://127.0.0.1:5173/present#scene/architecture/runtime/focus/runtime-providers`
 3. **Scene 6 providers**: `http://127.0.0.1:5173/present#scene/architecture/runtime/focus/runtime-providers/configured-providers`
 4. **Console**: `http://127.0.0.1:5173/console`

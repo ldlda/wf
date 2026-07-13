@@ -132,6 +132,7 @@ export const mainScenes = defineScenes([
     evidencePointer: "Thesis System Architecture; docs/project_map.md; docs/source_architecture.md",
     view: "architecture",
     beats: [
+      sceneBeat("overview", "Architecture spine", "The implemented system separates its public surface, lifecycle records, provider boundary, and execution kernel.", { figure: { catalogId: "system-architecture", focusPath: [], activeNodeId: null } }),
       sceneBeat("client", "Client operations", "Human and agent clients use the same public lifecycle surface.", { figure: { catalogId: "system-architecture", focusPath: [], activeNodeId: "client-operations" } }),
       sceneBeat("api", "Transport and API", "JSON-RPC reaches WorkflowApi without owning domain behavior.", { figure: { catalogId: "system-architecture", focusPath: ["application-lifecycle"], activeNodeId: "workflow-api-boundary" } }),
       sceneBeat("runtime", "Runtime and providers", "The runtime resolves provider-neutral capabilities and stores lifecycle records.", { figure: { catalogId: "system-architecture", focusPath: ["runtime-providers"], activeNodeId: "configured-providers" } }),
