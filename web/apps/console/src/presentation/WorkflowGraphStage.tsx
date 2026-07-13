@@ -190,7 +190,7 @@ const WorkflowGraphStageInner = ({
         source: edge.source,
         target: edge.target,
         label: edge.label,
-        type: "smoothstep",
+        type: "default",
         animated: active,
         focusable: false,
         selectable: false,
