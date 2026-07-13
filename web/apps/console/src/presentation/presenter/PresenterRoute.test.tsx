@@ -13,8 +13,15 @@ describe("PresenterRoute", () => {
     window.location.hash = "#scene/thesis/title";
     render(<PresenterRoute />);
     expect(screen.getByRole("main", { name: /lda.chat presenter notes/i })).toBeInTheDocument();
-    expect(screen.getByText(/This project began with the goal/i)).toBeInTheDocument();
-    expect(screen.getByText("the system underneath the chat").tagName).toBe("STRONG");
+    expect(screen.getByRole("region", { name: "Beat goal" })).toHaveTextContent(
+      "Separate the AI-agent ambition from the implemented contribution.",
+    );
+    const anchorTerms = screen.getByRole("region", { name: "Anchor terms" });
+    expect(anchorTerms).toHaveTextContent("AI-agent goal");
+    expect(anchorTerms).toHaveTextContent("platform underneath");
+    expect(screen.getByRole("region", { name: "Suggested wording" })).toHaveTextContent(
+      "The title describes the original goal: an AI agent for workspace automation. My contribution is the platform underneath that agent.",
+    );
     expect(screen.getByRole("navigation", { name: /presenter note navigation/i })).toHaveTextContent("1 / 39");
     expect(screen.getByRole("link", { name: "Next →" })).toHaveAttribute("href", "#scene/thesis/substrate");
     expect(screen.getByRole("link", { name: /open audience slide/i })).toHaveAttribute("href", "/present#scene/thesis/title");
