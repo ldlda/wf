@@ -4020,20 +4020,6 @@
   }
 }
 
-/* Keep the wide stage editorial instead of turning the phase frame into a blank wall. */
-@container presentation-canvas (min-width: 1500px) {
-  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__presentation {
-    grid-template-rows: auto max-content;
-    align-content: start;
-  }
-
-  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame {
-    height: max-content;
-    max-height: min(34rem, 56vh);
-    overflow: visible;
-  }
-}
-
 @keyframes authoring-frame-content-enter {
   from { opacity: 0; }
   to { opacity: 1; }

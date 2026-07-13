@@ -247,24 +247,9 @@ describe("presentation.css", () => {
     expect(narrowAssistant).toContain("max-height: min(24rem, 60vh);");
   });
 
-  it("keeps wide lifecycle evidence compact instead of stretching into a sparse frame", () => {
-    const wideContainer = cssBlock(css, "@container presentation-canvas (min-width: 1500px)") ?? "";
-    const widePresentation = cssBlocks(
-      wideContainer,
-      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__presentation',
-    ).find((body) => body.includes("grid-template-rows: auto max-content;"));
-    const wideFrame = cssBlocks(
-      wideContainer,
-      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame',
-    ).find((body) => body.includes("height: max-content;"));
-
-    // The scene itself must retain its bounded rows so the chat pane cannot size from its transcript.
-    expect(wideContainer).not.toMatch(
-      /\.prepared-lifecycle-scene\[data-presentation-surface="editorial"\]\s*\{/,
-    );
-    expect(widePresentation).toContain("align-content: start;");
-    expect(wideFrame).toContain("max-height: min(34rem, 56vh);");
-    expect(wideFrame).toContain("overflow: visible;");
+  it("does not cap lifecycle evidence on wide presentation canvases", () => {
+    expect(css).not.toContain("@container presentation-canvas (min-width: 1500px)");
+    expect(css).not.toContain("max-height: min(34rem, 56vh);");
   });
 
   it("bounds prepared conversation scrolling and recenters the agent handoff at compact stage widths", () => {
