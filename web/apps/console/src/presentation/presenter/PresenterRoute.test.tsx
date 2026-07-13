@@ -44,6 +44,16 @@ describe("PresenterRoute", () => {
     expect(window.location.hash).toBe("#scene/thesis/substrate");
   });
 
+  it("advances from the latest hash during rapid consecutive navigation", () => {
+    window.location.hash = "#scene/thesis/title";
+    render(<PresenterRoute />);
+
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+    fireEvent.keyDown(window, { key: "ArrowRight" });
+
+    expect(window.location.hash).toBe("#scene/problem/direct-actions");
+  });
+
   it("renders Q&A speaker guidance only in presenter mode", () => {
     window.location.hash = "#discuss/where-is-ai-agent";
     render(<PresenterRoute />);

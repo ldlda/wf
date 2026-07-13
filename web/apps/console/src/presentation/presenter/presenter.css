@@ -36,7 +36,7 @@
 .presenter-sidebar__qna a:hover, .presenter-sidebar__qna a:focus-visible { color: #155b49; text-decoration: underline; text-underline-offset: 0.15em; }
 .presenter-sidebar__qna a[aria-current="page"] { color: #155b49; font-weight: 700; }
 
-.presenter-route__reader { min-width: 0; padding: 1.25rem clamp(1.5rem, 5vw, 6rem) 5rem; }
+.presenter-route__reader { min-width: 0; padding: 1.25rem clamp(1.5rem, 5vw, 6rem) 5rem; touch-action: pan-y; }
 .presenter-navigation { max-width: 72ch; min-height: 2.5rem; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; margin: 0 auto 2rem; border-bottom: 1px solid #d7d5d0; color: #67655f; font: 0.78rem "IBM Plex Mono", monospace; }
 .presenter-navigation a { color: #155b49; font-weight: 650; text-decoration: none; }
 .presenter-navigation a:last-child, .presenter-navigation > span:last-child { text-align: right; }

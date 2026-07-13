@@ -14,8 +14,10 @@ type PresenterShellProps = {
 };
 
 const isInteractiveSwipeTarget = (event: Event): boolean =>
-  event.target instanceof Element
-  && event.target.closest("a, button, input, textarea, select, [role='button'], [contenteditable='true'], pre, code") !== null;
+  event.target instanceof Element &&
+  event.target.closest(
+    "a, button, input, textarea, select, [role='button'], [contenteditable='true'], pre, code",
+  ) !== null;
 
 const RELEASE_DELTA_PX = 50;
 
@@ -30,21 +32,31 @@ export const PresenterShell = ({
   const readerRef = useRef<HTMLDivElement>(null);
   const swipeStartedInInteractiveContent = useRef(false);
   const bindSwipe = useDrag(
-    ({ event, first, last, movement: [deltaX, deltaY] }) => {
-      if (!(event instanceof PointerEvent) || event.pointerType !== "touch") return;
+    ({
+      event,
+      first,
+      last,
+      movement: [deltaX, deltaY],
+    }) => {
+      if (!(event instanceof PointerEvent) || event.pointerType !== "touch")
+        return;
       if (first) {
-        swipeStartedInInteractiveContent.current = isInteractiveSwipeTarget(event);
+        swipeStartedInInteractiveContent.current =
+          isInteractiveSwipeTarget(event);
       }
       if (!last || swipeStartedInInteractiveContent.current) return;
-      if (Math.abs(deltaX) < RELEASE_DELTA_PX || Math.abs(deltaX) <= Math.abs(deltaY)) return;
-
+      // threshold + 45deg angle check
+      if (
+        Math.abs(deltaX) < RELEASE_DELTA_PX ||
+        Math.abs(deltaX) <= Math.abs(deltaY)
+      )
+        return;
       if (deltaX < 0) onSwipeNext?.();
       else onSwipePrevious?.();
     },
     {
       filterTaps: true,
       pointer: { capture: false },
-      preventScroll: 0,
     },
   );
 
@@ -53,7 +65,10 @@ export const PresenterShell = ({
     // is a genuinely fresh page load that remains at the top.
     const frame = window.requestAnimationFrame(() => {
       if (window.scrollY === 0) {
-        readerRef.current?.scrollIntoView?.({ behavior: "auto", block: "start" });
+        readerRef.current?.scrollIntoView?.({
+          behavior: "auto",
+          block: "start",
+        });
       }
     });
     return () => window.cancelAnimationFrame(frame);
@@ -66,11 +81,7 @@ export const PresenterShell = ({
         covered={covered}
         activeDiscussionId={activeDiscussionId}
       />
-      <div
-        {...bindSwipe()}
-        ref={readerRef}
-        className="presenter-route__reader"
-      >
+      <div {...bindSwipe()} ref={readerRef} className="presenter-route__reader">
         {children}
       </div>
     </main>

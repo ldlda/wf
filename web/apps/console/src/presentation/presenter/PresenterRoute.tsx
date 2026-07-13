@@ -9,6 +9,13 @@ import "./presenter.css";
 
 const readHash = () => presenterNavigationFromHash(window.location.hash);
 
+const moveFromCurrentHash = (direction: "next" | "previous") => {
+  // Gesture and key events can arrive before hashchange rerenders this route.
+  // Resolve from the URL so rapid inputs advance instead of repeating one hop.
+  const destination = presenterNavigationFromHash(window.location.hash)[direction];
+  if (destination) window.location.hash = presenterHashForNote(destination);
+};
+
 export const PresenterRoute = () => {
   const [navigation, setNavigation] = useState(readHash);
   const [covered, setCovered] = useState<ReadonlySet<string>>(() => new Set());
@@ -25,7 +32,7 @@ export const PresenterRoute = () => {
       const destination = event.key === "ArrowRight" ? navigation.next : event.key === "ArrowLeft" ? navigation.previous : null;
       if (!destination) return;
       event.preventDefault();
-      window.location.hash = presenterHashForNote(destination);
+      moveFromCurrentHash(event.key === "ArrowRight" ? "next" : "previous");
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
@@ -43,10 +50,10 @@ export const PresenterRoute = () => {
       covered={covered}
       activeDiscussionId={navigation.location.kind === "discussion" ? navigation.location.branchId : null}
       onSwipeNext={nextNote
-        ? () => { window.location.hash = presenterHashForNote(nextNote); }
+        ? () => { moveFromCurrentHash("next"); }
         : undefined}
       onSwipePrevious={previousNote
-        ? () => { window.location.hash = presenterHashForNote(previousNote); }
+        ? () => { moveFromCurrentHash("previous"); }
         : undefined}
     >
       {navigation.note && (
