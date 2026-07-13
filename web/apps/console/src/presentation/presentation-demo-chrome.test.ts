@@ -52,7 +52,7 @@ describe("isDemoChromeScene", () => {
       expect(isDemoChromeScene(sceneId)).toBe(true);
     }
 
-    for (const sceneId of ["thesis", "architecture", "authoring", "evaluation", "conclusion"] as const) {
+    for (const sceneId of ["thesis", "architecture", "lifecycle", "evaluation", "conclusion"] as const) {
       expect(isDemoChromeScene(sceneId)).toBe(false);
     }
   });

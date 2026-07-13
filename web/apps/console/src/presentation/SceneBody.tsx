@@ -18,9 +18,6 @@ import { ConclusionScene } from "./conclusion/ConclusionScene.js";
 import { DefenseDiscussionIndex } from "./discussion/DefenseDiscussionIndex.js";
 import { EvaluationEvidenceScene } from "./evaluation/EvaluationEvidenceScene.js";
 import { ArchitectureScene } from "./scenes/ArchitectureScene.js";
-import { AuthoringPhaseVisual } from "./authoring/AuthoringPhaseVisual.js";
-import { projectPreparedAuthoringPhase } from "./authoring/authoring-projection.js";
-import type { AuthoringPhaseId } from "./authoring/authoring-recording.js";
 import { OpeningThesisScene } from "./opening/OpeningThesisScene.js";
 import { ProblemLoopScene } from "./opening/ProblemLoopScene.js";
 
@@ -35,7 +32,7 @@ type SceneBodyProps = {
   readonly onFocusPathChange: (path: readonly string[]) => void;
   readonly motionDisabled: boolean;
   readonly approvalActions?: DemoApprovalActions | undefined;
-  readonly onScene9Advance?: (() => void) | undefined;
+  readonly onPreparedLifecycleAdvance?: (() => void) | undefined;
 };
 
 const workflowDemoSceneIds = new Set([
@@ -289,94 +286,19 @@ const LifecycleScene = ({ scene, beat, motionDisabled }: ChoreographyProps) => {
   );
 };
 
-const authoringSteps = [
-  { id: "discover", label: "Discover capability", detail: "wf schema / cap inspect" },
-  { id: "author", label: "Author draft", detail: "wf draft create / add-step / bind" },
-  { id: "diagnose", label: "Validate and diagnose", detail: "structured diagnostics + repair hints" },
-  { id: "repair", label: "Repair", detail: "focused edit, no full rewrite" },
-  { id: "compile", label: "Compile or save", detail: "artifact / deployment / run" },
-] as const;
-
-// Scene 7 uses speaker-friendly beat names; the prepared recording keeps the
-// underlying product phases (`draft` and `validate`) as its canonical IDs.
-const authoringPhaseForBeat = (beatId: string): AuthoringPhaseId => {
-  if (beatId === "author") return "draft";
-  if (beatId === "diagnose" || beatId === "repair") return "validate";
-  return beatId as AuthoringPhaseId;
-};
-
-const AuthoringScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
-  const projection = projectPreparedAuthoringPhase(authoringPhaseForBeat(beat.id));
-  const primaryCommand = projection.commands[0];
-  // The prepared recording is the factual source for this public-operation label.
-  if (!primaryCommand) throw new Error(`Authoring phase ${projection.phase} has no public operation`);
-
-  return (
-    <>
-      <StageCaption eyebrow="Act II · implemented" title={scene.title}>
-        <p>{beat.caption}</p>
-      </StageCaption>
-      <section
-        className="scene-body__authoring-composition"
-        aria-label="agent authoring loop"
-        data-active-stage={beat.id}
-        data-presentation-surface="editorial"
-      >
-        <article className="scene-body__authoring-evidence" aria-label={`${projection.label} product evidence`}>
-          <header>
-            <span>Public operation</span>
-            <strong>{primaryCommand.title}</strong>
-            <p>{projection.summary}</p>
-          </header>
-          <AuthoringPhaseVisual
-            projection={projection}
-            focus={beat.id === "diagnose" || beat.id === "repair" ? beat.id : "full"}
-          />
-        </article>
-        <div
-          className="scene-body__authoring-loop"
-          aria-label="authoring phase loop"
-        >
-          <div className="scene-body__authoring-loop-rail" aria-hidden="true" />
-          {authoringSteps.map((step, i) => {
-            const isActive = beat.id === step.id;
-            const isPast = authoringSteps.findIndex((candidate) => candidate.id === beat.id) > i;
-            return (
-              <div
-                key={step.id}
-                className="scene-body__authoring-node"
-                data-authoring-active={isActive}
-                data-authoring-past={isPast}
-              >
-                <span className="scene-body__authoring-number">{i + 1}</span>
-                <strong>{step.label}</strong>
-                <small>{step.detail}</small>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-      <p className="scene-body__evidence">{scene.evidencePointer}</p>
-    </>
-  );
-};
-
 const assertNever = (value: never): never => {
   throw new Error(`Unexpected view: ${value}`);
 };
 
-export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions, onScene9Advance }: SceneBodyProps) => {
+export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions, onPreparedLifecycleAdvance }: SceneBodyProps) => {
   const sceneId = location.kind === "main" ? location.sceneId : "positioning";
   const beatId = location.kind === "main" ? location.beatId : "landscape";
   const scene = findScene(sceneId) ?? findScene("thesis")!;
   const beat = findBeat(sceneId, beatId) ?? scene.beats[0]!;
 
-  // The questions beat owns the full discussion index. Workflow demo scenes
-  // keep the product proof uncluttered; their discussion topics remain
-  // available from the global presenter controls.
   const isWorkflowDemoScene = workflowDemoSceneIds.has(scene.id);
   const showDiscussionRail = !(scene.id === "conclusion" && beat.id === "questions")
-    && !isWorkflowDemoScene;
+    && (!isWorkflowDemoScene || scene.id === "prepared-lifecycle");
   const discussionLinks = showDiscussionRail ? <DiscussionLinks sceneId={scene.id} openDiscussion={openDiscussion} /> : null;
   const content = (() => {
   switch (scene.view) {
@@ -401,12 +323,10 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
           motionDisabled={motionDisabled}
         />
       );
-    case "authoring":
-      return <AuthoringScene scene={scene} beat={beat} />;
     case "agent":
       return <AgentHandoffScene scene={scene} beat={beat} />;
-      case "demo-lifecycle":
-      return <PreparedAuthoringLifecycleScene scene={scene} beat={beat} onAdvance={onScene9Advance} />;
+    case "demo-lifecycle":
+      return <PreparedAuthoringLifecycleScene scene={scene} beat={beat} onAdvance={onPreparedLifecycleAdvance} />;
     case "demo":
       return (
         <DemoWorkflowScene

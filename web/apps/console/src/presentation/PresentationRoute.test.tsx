@@ -77,13 +77,13 @@ describe("PresentationRoute", () => {
     { hash: "#scene/thesis/title", heading: "Design and Implementation of lda.chat", hasDemoChrome: false },
     { hash: "#scene/architecture/overview", heading: "Architecture Zoom", hasDemoChrome: false },
     { hash: "#scene/architecture/client", heading: "Architecture Zoom", hasDemoChrome: false },
-    { hash: "#scene/authoring/diagnose", heading: "Author, Validate, Repair", hasDemoChrome: false },
+    { hash: "#scene/prepared-lifecycle/diagnose", heading: "Diagnose invalid draft", hasDemoChrome: true },
     {
       hash: "#scene/agent-handoff/request",
       heading: "What should the workflow author prepare?",
       hasDemoChrome: true,
     },
-    { hash: "#scene/prepared-lifecycle/discover", heading: "Prepared Workflow Lifecycle", hasDemoChrome: true },
+    { hash: "#scene/prepared-lifecycle/discover", heading: "Discover capabilities", hasDemoChrome: true },
     { hash: "#scene/run-from-deployment/graph", heading: "Run From Deployment", hasDemoChrome: true },
     { hash: "#scene/typed-human-boundary/approval", heading: "Typed Human Boundary", hasDemoChrome: true },
     { hash: "#scene/resume-output-evidence/trace", heading: "Resume, Output, Evidence", hasDemoChrome: true },
@@ -124,8 +124,8 @@ describe("PresentationRoute", () => {
   const visualRouteContracts = [
     { hash: "#scene/thesis/title", heading: "Design and Implementation of lda.chat", primary: "thesis opening" },
     { hash: "#scene/lifecycle/draft", heading: "Workflow Lifecycle", primary: "workflow lifecycle rail" },
-    { hash: "#scene/authoring/diagnose", heading: "Author, Validate, Repair", primary: "agent authoring loop" },
-    { hash: "#scene/prepared-lifecycle/validate", heading: "Prepared Workflow Lifecycle", primary: "prepared workflow authoring lifecycle" },
+    { hash: "#scene/prepared-lifecycle/diagnose", heading: "Diagnose invalid draft", primary: "prepared workflow authoring lifecycle" },
+    { hash: "#scene/prepared-lifecycle/repair", heading: "Apply targeted repair", primary: "prepared workflow authoring lifecycle" },
     { hash: "#scene/run-from-deployment/graph", heading: "Run From Deployment", primary: "workflow graph" },
     { hash: "#scene/evaluation/findings", heading: "Evaluation", primary: "evaluation evidence board" },
     { hash: "#scene/conclusion/conclusion", heading: "Limits and Conclusion", primary: "thesis contribution boundary" },
@@ -192,10 +192,10 @@ describe("PresentationRoute", () => {
     render(<PresentationRoute />);
     expect(screen.getByRole("textbox", { name: /authoring request/i })).toBeInTheDocument();
     await userEvent.keyboard("{ArrowRight}");
-    expect(await screen.findByLabelText("authoring phase rail")).toBeInTheDocument();
+    expect(await screen.findByLabelText("prepared authoring lifecycle")).toBeInTheDocument();
   });
 
-  it("advances Draft to Validate once and projects the edited request", async () => {
+  it("advances Draft to Diagnose once and projects the edited request", async () => {
     window.location.hash = "#scene/prepared-lifecycle/draft";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -205,10 +205,10 @@ describe("PresentationRoute", () => {
     await userEvent.type(message, "Check this edited draft request");
     await userEvent.click(screen.getByRole("button", { name: /send message/i }));
 
-    expect(window.location.hash).toBe("#scene/prepared-lifecycle/validate");
+    expect(window.location.hash).toBe("#scene/prepared-lifecycle/diagnose");
     expect(await screen.findByText("Check this edited draft request")).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i }))
-      .toHaveAttribute("data-phase", "validate");
+      .toHaveAttribute("data-phase", "diagnose");
   });
 
   it("advances Artifact to Deployment once and projects the edited request", async () => {
@@ -243,8 +243,8 @@ describe("PresentationRoute", () => {
       .toBe(false);
   });
 
-  it("keeps Validate submission on the current beat", async () => {
-    window.location.hash = "#scene/prepared-lifecycle/validate";
+  it("keeps Diagnose submission on the current beat", async () => {
+    window.location.hash = "#scene/prepared-lifecycle/diagnose";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
@@ -252,9 +252,9 @@ describe("PresentationRoute", () => {
     await userEvent.type(message, "Keep validating this draft");
     await userEvent.click(screen.getByRole("button", { name: /send message/i }));
 
-    expect(window.location.hash).toBe("#scene/prepared-lifecycle/validate");
+    expect(window.location.hash).toBe("#scene/prepared-lifecycle/diagnose");
     expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i }))
-      .toHaveAttribute("data-phase", "validate");
+      .toHaveAttribute("data-phase", "diagnose");
   });
 
   it("renders audience progress chrome without rail or mode label", async () => {
@@ -720,7 +720,8 @@ describe("PresentationRoute", () => {
   it.each([
     "#scene/prepared-lifecycle/discover",
     "#scene/prepared-lifecycle/draft",
-    "#scene/prepared-lifecycle/validate",
+    "#scene/prepared-lifecycle/diagnose",
+    "#scene/prepared-lifecycle/repair",
     "#scene/prepared-lifecycle/artifact",
     "#scene/prepared-lifecycle/deployment",
   ])("navigates to Scene 9 beat %s", async (hash) => {
@@ -728,7 +729,7 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByLabelText("authoring phase rail")).toBeInTheDocument();
+    expect(await screen.findByLabelText("prepared authoring lifecycle")).toBeInTheDocument();
   });
 
   it("navigating Scene 9 beats does not call workflow authoring RPC operations", async () => {
@@ -739,7 +740,7 @@ describe("PresentationRoute", () => {
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
 
-    expect(await screen.findByLabelText("authoring phase rail")).toBeInTheDocument();
+    expect(await screen.findByLabelText("prepared authoring lifecycle")).toBeInTheDocument();
     const authoringCalls = mockCallOp.mock.calls.filter((c) => c[0] !== "workflow.health");
     expect(authoringCalls).toHaveLength(0);
   });

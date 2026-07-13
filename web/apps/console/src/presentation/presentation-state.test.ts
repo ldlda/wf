@@ -237,7 +237,7 @@ describe("presentationReducer", () => {
   it("derives a receipt from beat metadata without opening an inspector", () => {
     const state = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "architecture", beatId: "node-use", focusPath: ["node-use"] },
+      location: { kind: "main", sceneId: "resume-output-evidence", beatId: "trace", focusPath: [] },
     });
     expect(compositionForState(state).evidencePresentation).toBe("receipt");
     expect(state.evidencePresentationOverride).toBeNull();
@@ -279,7 +279,7 @@ describe("presentationReducer", () => {
   it("closes the inspector and recomputes receipt state when the beat changes", () => {
     const atReceiptBeat = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "architecture", beatId: "node-use", focusPath: ["node-use"] },
+      location: { kind: "main", sceneId: "resume-output-evidence", beatId: "trace", focusPath: [] },
     });
     const opened = presentationReducer(atReceiptBeat, {
       type: "set_evidence_presentation",
@@ -293,7 +293,7 @@ describe("presentationReducer", () => {
   it("does not treat a receipt as an Escape-closeable overlay", () => {
     const receipt = presentationReducer(initialPresentationState, {
       type: "jump",
-      location: { kind: "main", sceneId: "authoring", beatId: "diagnose", focusPath: [] },
+      location: { kind: "main", sceneId: "prepared-lifecycle", beatId: "diagnose", focusPath: [] },
     });
     expect(presentationReducer(receipt, { type: "close_overlay" })).toEqual(receipt);
   });

@@ -146,6 +146,15 @@ describe("defense storyboard catalog", () => {
       "mcp-agent-scale",
       "not-just-scripts",
     ]);
+    expect(
+      discussionBranches
+        .filter((branch) => branch.parentSceneId === "prepared-lifecycle")
+        .map((branch) => branch.id),
+    ).toEqual(expect.arrayContaining([
+      "raw-plan-import",
+      "validation-diagnostics",
+      "why-schemas",
+    ]));
     for (const branch of discussionBranches) {
       expect(branch.title.length).toBeGreaterThan(0);
       expect(branch.summary.length).toBeGreaterThan(0);

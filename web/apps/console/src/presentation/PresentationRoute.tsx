@@ -263,7 +263,7 @@ export const PresentationRoute = () => {
     [],
   );
 
-  const handleScene9Advance = useCallback(() => {
+  const handlePreparedLifecycleAdvance = useCallback(() => {
     if (
       state.location.kind !== "main"
       || state.location.sceneId !== "prepared-lifecycle"
@@ -300,7 +300,7 @@ export const PresentationRoute = () => {
           retryHealth={targetStatusController.retryHealth}
           liveTargetReady={targetStatusController.liveTargetReady}
           jump={handleJump}
-          onScene9Advance={handleScene9Advance}
+          onPreparedLifecycleAdvance={handlePreparedLifecycleAdvance}
           selectNode={(nodeId) => dispatch({ type: "select_node", nodeId })}
           openEvidence={() => dispatch({ type: "set_evidence_presentation", presentation: "inspector" })}
           closeOverlay={() => dispatch({ type: "close_overlay" })}

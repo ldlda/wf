@@ -28,7 +28,7 @@ type PresentationStageProps = {
   readonly retryHealth: () => void;
   readonly liveTargetReady: boolean;
   readonly jump: (location: MainLocation) => void;
-  readonly onScene9Advance?: (() => void) | undefined;
+  readonly onPreparedLifecycleAdvance?: (() => void) | undefined;
   readonly selectNode: (nodeId: string | null) => void;
   readonly openEvidence: () => void;
   readonly closeOverlay: () => void;
@@ -49,7 +49,7 @@ export const PresentationStage = ({
   retryHealth,
   liveTargetReady,
   jump,
-  onScene9Advance,
+  onPreparedLifecycleAdvance,
   selectNode,
   openEvidence,
   closeOverlay,
@@ -108,7 +108,7 @@ export const PresentationStage = ({
                 }}
                 motionDisabled={state.motionDisabled}
                 approvalActions={approvalActions}
-                onScene9Advance={onScene9Advance}
+                onPreparedLifecycleAdvance={onPreparedLifecycleAdvance}
               />
             )}
           </section>

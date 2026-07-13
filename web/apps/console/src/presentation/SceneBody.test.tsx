@@ -368,40 +368,14 @@ describe("SceneBody", () => {
     expect(screen.getByLabelText("positioning map")).toHaveAttribute("data-positioning-active-region", "lda");
   });
 
-  it("renders Scene 7 as an agent authoring loop with beat-specific emphasis", () => {
-    const location: PresentationLocation = { kind: "main", sceneId: "authoring", beatId: "diagnose", focusPath: [] };
-    render(
-      <SceneBody
-        location={location}
-        demo={demo}
-        selectedNodeId={null}
-        selectNode={noop}
-        openEvidence={noop}
-        openDiscussion={noop}
-        onFocusPathChange={noop}
-        motionDisabled={false}
-      />,
-    );
+  it("renders Prepared Lifecycle with its migrated defense discussion rail", () => {
+    renderSceneBodyAtMainLocation("prepared-lifecycle", "diagnose");
 
-    const composition = screen.getByLabelText("agent authoring loop");
-    expect(composition).toHaveAttribute("data-active-stage", "diagnose");
-    expect(composition).toHaveAttribute("data-presentation-surface", "editorial");
-    expect(screen.getByRole("article", { name: /validate product evidence/i })).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(
-      "data-authoring-focus",
-      "diagnose",
-    );
-    expect(screen.getByText("workflow.draft_workspaces.validate")).toBeInTheDocument();
-    const loop = screen.getByLabelText("authoring phase loop");
-    expect(loop).not.toHaveAttribute("data-readable-surface", "dark");
-    expect(screen.getByText("Discover capability")).toBeInTheDocument();
-    expect(screen.getByText("Author draft")).toBeInTheDocument();
-    expect(screen.getByText(/operates on the mutable Draft.*external agent proposal.*Artifact, Deployment, and Run/i)).toBeInTheDocument();
-    expect(screen.getByText("Validate and diagnose").closest("[data-authoring-active]")).toHaveAttribute("data-authoring-active", "true");
-    expect(screen.getByText("Validate and diagnose").closest(".scene-body__authoring-node"))
-      .not.toHaveAttribute("data-readable-surface", "dark");
-    expect(within(loop).getByText("Repair")).toBeInTheDocument();
-    expect(within(loop).getByText("Compile or save")).toBeInTheDocument();
+    expect(screen.getByLabelText("prepared authoring lifecycle")).toBeInTheDocument();
+    const rail = screen.getByLabelText("defense discussion topics");
+    expect(within(rail).getByRole("button", { name: /Raw plan import/i })).toBeInTheDocument();
+    expect(within(rail).getByRole("button", { name: /Validation and diagnostics/i })).toBeInTheDocument();
+    expect(within(rail).getByRole("button", { name: /Why schemas matter/i })).toBeInTheDocument();
   });
 
   it("renders discussion branches as a labelled presenter rail", () => {
@@ -427,7 +401,7 @@ describe("SceneBody", () => {
   });
 
   it("gives the repair beat its own correction visual", () => {
-    const location: PresentationLocation = { kind: "main", sceneId: "authoring", beatId: "repair", focusPath: [] };
+    const location: PresentationLocation = { kind: "main", sceneId: "prepared-lifecycle", beatId: "repair", focusPath: [] };
     render(
       <SceneBody
         location={location}
@@ -441,14 +415,18 @@ describe("SceneBody", () => {
       />,
     );
 
-    expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(
-      "data-authoring-focus",
+    expect(screen.getByRole("region", { name: "active authoring operation" })).toHaveAttribute(
+      "data-authoring-step",
       "repair",
     );
   });
 
-  it("keeps discussion rails out of workflow proof scenes", () => {
-    const location: PresentationLocation = { kind: "main", sceneId: "run-from-deployment", beatId: "graph", focusPath: [] };
+  it.each([
+    ["run-from-deployment", "graph"],
+    ["typed-human-boundary", "approval"],
+    ["resume-output-evidence", "trace"],
+  ] as const)("keeps discussion rails out of %s proof scenes", (sceneId, beatId) => {
+    const location: PresentationLocation = { kind: "main", sceneId, beatId, focusPath: [] };
     render(
       <SceneBody
         location={location}
@@ -514,13 +492,13 @@ describe("SceneBody", () => {
 
   it("renders Scene 9 discover beat with prepared authoring phases", () => {
     renderSceneBodyAtMainLocation("prepared-lifecycle", "discover");
-    expect(screen.getByLabelText("authoring phase rail")).toBeInTheDocument();
-    expect(screen.getByText("Discover")).toBeInTheDocument();
+    expect(screen.getByLabelText("prepared authoring lifecycle")).toBeInTheDocument();
+    expect(screen.getAllByText("Discover").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders Scene 9 artifact beat with compiled artifact evidence", () => {
     renderSceneBodyAtMainLocation("prepared-lifecycle", "artifact");
-    expect(screen.getByText("Artifact")).toBeInTheDocument();
+    expect(screen.getAllByText("Artifact").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/lda_report_case_study/i).length).toBeGreaterThanOrEqual(1);
   });
 
