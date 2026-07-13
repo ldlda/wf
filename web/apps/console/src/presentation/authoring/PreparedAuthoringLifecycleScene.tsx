@@ -127,7 +127,7 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance, discus
               </div>
             </dl>
           </header>
-          <AuthoringPhaseVisual projection={projection} focus={projection.focus} />
+          <AuthoringPhaseVisual projection={projection} />
         </article>
       </div>
       {discussionRail && (

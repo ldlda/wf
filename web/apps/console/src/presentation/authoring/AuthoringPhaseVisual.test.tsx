@@ -1,88 +1,102 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { projectPreparedAuthoringPhase } from "./authoring-projection.js";
+import {
+  projectPreparedLifecycleStep,
+  type PreparedLifecycleStepId,
+} from "./authoring-projection.js";
 import { AuthoringPhaseVisual } from "./AuthoringPhaseVisual.js";
 
 afterEach(cleanup);
 
+const renderStep = (step: PreparedLifecycleStepId) =>
+  render(<AuthoringPhaseVisual projection={projectPreparedLifecycleStep(step)} />);
+
 describe("AuthoringPhaseVisual", () => {
-  it.each(["discover", "draft", "validate", "artifact", "deployment"] as const)(
-    "marks the %s visual as editorial",
-    (phase) => {
-      render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase(phase)} />);
-      expect(screen.getByRole("region", { name: /evidence/i })).toHaveAttribute(
-        "data-presentation-surface",
-        "editorial",
-      );
-    },
-  );
-
-  it("shows source inventory and the inspected contract", () => {
-    render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("discover")} />);
-    expect(screen.getByRole("region", { name: /discovery evidence/i })).toHaveAttribute(
-      "data-presentation-surface",
-      "editorial",
-    );
-    expect(screen.getByText("local.lda_docs")).toBeInTheDocument();
-    expect(screen.getByText("local.lda_report")).toBeInTheDocument();
-    expect(screen.getByText(/documents.*analysis/i)).toBeInTheDocument();
-  });
-
-  it("shows the declared draft graph and outcome route", () => {
-    render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("draft")} />);
-    expect(screen.getByRole("region", { name: /draft graph evidence/i })).toBeInTheDocument();
-    expect(screen.getByText("read_documents")).toBeInTheDocument();
-    expect(screen.getByText("analyze")).toBeInTheDocument();
-    expect(screen.getByText("ok → end")).toBeInTheDocument();
-  });
-
-  it("shows the validation diagnostic and repaired projection", () => {
-    render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("validate")} />);
-    expect(screen.getByText(/no state projection/i)).toBeInTheDocument();
-    expect(screen.getByText("analysis → state.analysis")).toBeInTheDocument();
-    expect(screen.getByText(/valid draft/i)).toBeInTheDocument();
-  });
-
-  it.each(["diagnose", "repair"] as const)("marks the %s authoring focus", (focus) => {
-    render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("validate")} focus={focus} />);
-    expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(
-      "data-authoring-focus",
-      focus,
+  it.each([
+    ["discover", "inventory", "source inventory result"],
+    ["draft", "draft", "draft structure result"],
+    ["diagnose", "diagnostic", "draft validation diagnostic"],
+    ["repair", "repair", "route repair result"],
+    ["artifact", "artifact", "immutable artifact result"],
+    ["deployment", "deployment", "runnable deployment result"],
+  ] as const)("renders %s as a factual %s result", (step, kind, label) => {
+    renderStep(step);
+    expect(screen.getByRole("region", { name: label })).toHaveAttribute(
+      "data-authoring-result",
+      kind,
     );
   });
 
-  it("keeps diagnosis and repair attached to the recorded validate phase", () => {
-    for (const focus of ["diagnose", "repair"] as const) {
-      render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("validate")} focus={focus} />);
+  it("renders total inventory separately from configured local sources", () => {
+    renderStep("discover");
+    const result = screen.getByRole("region", { name: /source inventory result/i });
 
-      expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(
-        "data-authoring-recording-phase",
-        "validate",
-      );
-      cleanup();
-    }
+    expect(within(result).getByText("6 total inventory sources")).toBeInTheDocument();
+    expect(within(result).getByRole("heading", { name: "Configured local sources (3)" })).toBeInTheDocument();
+    expect(within(result).getByText("local.lda_docs")).toBeInTheDocument();
+    expect(within(result).getByText("local.lda_report")).toBeInTheDocument();
+    expect(within(result).getByText("local.issue_board")).toBeInTheDocument();
+    expect(within(result).queryByText(/^6 configured local sources$/)).not.toBeInTheDocument();
   });
 
-  it.each(["diagnose", "repair"] as const)("marks %s evidence as the primary visual", (focus) => {
-    render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("validate")} focus={focus} />);
-    expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(
-      "data-visual-role",
-      "primary",
+  it("renders the draft revision, steps, and routes", () => {
+    renderStep("draft");
+    const result = screen.getByRole("region", { name: /draft structure result/i });
+
+    expect(within(result).getByText("Revision 2")).toBeInTheDocument();
+    expect(within(result).getByText("read_documents")).toBeInTheDocument();
+    expect(within(result).getByText("analyze")).toBeInTheDocument();
+    expect(within(result).getByText("read_documents.ok -> analyze")).toBeInTheDocument();
+    expect(within(result).getByText("analyze.ok -> __end__")).toBeInTheDocument();
+  });
+
+  it("renders the reviewed draft validation diagnostic", () => {
+    renderStep("diagnose");
+    const result = screen.getByRole("region", { name: /draft validation diagnostic/i });
+
+    expect(result).toHaveAttribute("data-authoring-result", "diagnostic");
+    expect(within(result).getByText("missing_outcome_edge")).toBeInTheDocument();
+    expect(within(result).getByText("nodes[analyze]")).toBeInTheDocument();
+    expect(within(result).getByText(/missing edges for outcomes.*ok/i)).toBeInTheDocument();
+    expect(within(result).getByText(/cannot prove where execution goes next/i)).toBeInTheDocument();
+    expect(within(result).getByText("Revision 3")).toBeInTheDocument();
+  });
+
+  it("renders route repair as a valid revision with compact prior context", () => {
+    renderStep("repair");
+    const result = screen.getByRole("region", { name: /route repair result/i });
+    const prior = within(result).getByRole("note", { name: /prior validation diagnostic/i });
+
+    expect(within(result).getByText("wf draft set-route lda_report_workflow --revision 3 --step analyze --outcome ok --to __end__")).toBeInTheDocument();
+    expect(within(result).getAllByText("Valid")).toHaveLength(2);
+    expect(within(result).getByText("Revision 4")).toBeInTheDocument();
+    expect(within(result).getByText("0 diagnostics")).toBeInTheDocument();
+    expect(within(prior).getByText(/reachable node is missing edges for outcomes.*ok/i)).toBeInTheDocument();
+    expect(result.querySelector("[data-result-primary='true']")).toContainElement(
+      within(result).getByText(/set-route/),
     );
   });
 
-  it("shows immutable artifact identity and version", () => {
-    render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("artifact")} />);
-    expect(screen.getByText("lda_report_case_study")).toBeInTheDocument();
-    expect(screen.getByText("Version 1")).toBeInTheDocument();
-    expect(screen.getByText(/immutable/i)).toBeInTheDocument();
+  it("renders immutable artifact identity and required sources", () => {
+    renderStep("artifact");
+    const result = screen.getByRole("region", { name: /immutable artifact result/i });
+
+    expect(within(result).getByText("lda_report_case_study")).toBeInTheDocument();
+    expect(within(result).getByText("Version 1")).toBeInTheDocument();
+    expect(within(result).getByText("Immutable")).toBeInTheDocument();
+    expect(within(result).getByText("local.lda_docs")).toBeInTheDocument();
+    expect(within(result).getByText("local.lda_report")).toBeInTheDocument();
+    expect(within(result).getByText("local.issue_board")).toBeInTheDocument();
   });
 
-  it("shows all concrete deployment bindings and validation", () => {
-    render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("deployment")} />);
-    expect(screen.getAllByText("local.lda_docs")).toHaveLength(2);
-    expect(screen.getAllByText("local.lda_report")).toHaveLength(2);
-    expect(screen.getAllByText("local.issue_board")).toHaveLength(2);
-    expect(screen.getByText(/deployment valid/i)).toBeInTheDocument();
+  it("renders runnable deployment identity and bindings", () => {
+    renderStep("deployment");
+    const result = screen.getByRole("region", { name: /runnable deployment result/i });
+
+    expect(within(result).getByText("lda_report_case_study.default")).toBeInTheDocument();
+    expect(within(result).getByText("Runnable")).toBeInTheDocument();
+    expect(within(result).getAllByText("local.lda_docs")).toHaveLength(2);
+    expect(within(result).getAllByText("local.lda_report")).toHaveLength(2);
+    expect(within(result).getAllByText("local.issue_board")).toHaveLength(2);
   });
 });

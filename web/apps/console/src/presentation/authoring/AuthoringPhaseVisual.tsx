@@ -1,98 +1,256 @@
 import {
   AlertTriangle,
-  ArrowRight,
   CheckCircle2,
   Database,
-  FileJson,
   Link2,
   LockKeyhole,
+  Route,
   Workflow,
 } from "lucide-react";
-import type { AuthoringPhaseProjection } from "./authoring-projection.js";
+import type { LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
+import type { PreparedLifecycleStepProjection } from "./authoring-projection.js";
+import { reviewedAuthoringEvidenceFor } from "./reviewed-authoring-evidence.js";
 
-type AuthoringPhaseVisualProps = {
-  readonly projection: AuthoringPhaseProjection;
-  readonly focus?: "full" | "diagnose" | "repair";
+type Evidence = PreparedLifecycleStepProjection["evidence"];
+type EvidenceOf<Kind extends Evidence["kind"]> = Extract<Evidence, { readonly kind: Kind }>;
+
+type ResultHeaderProps = {
+  readonly icon: LucideIcon;
+  readonly label: string;
+  readonly status: string;
+  readonly revision?: number;
 };
 
-const InventoryVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "inventory" }> }) => (
-  <section className="authoring-visual authoring-visual--inventory" aria-label="discovery evidence" data-presentation-surface="editorial" data-visual-role="primary">
-    <div className="authoring-inventory__sources">
-      {visual.sources.map((source) => (
-        <div key={source}><Database aria-hidden="true" /><code>{source}</code></div>
-      ))}
+const ResultHeader = ({ icon: Icon, label, status, revision }: ResultHeaderProps) => (
+  <header className="authoring-result__header">
+    <div className="authoring-result__heading">
+      <Icon aria-hidden="true" />
+      <div>
+        <span>{label}</span>
+        {revision !== undefined && <code>Revision {revision}</code>}
+      </div>
     </div>
-    <ArrowRight className="authoring-visual__arrow" aria-hidden="true" />
-    <div className="authoring-inventory__contract">
-      <strong><Workflow aria-hidden="true" /> Inspected capability</strong>
-      <code>{visual.capability}</code>
-      <span><FileJson aria-hidden="true" />{visual.contract}</span>
-    </div>
-  </section>
+    <strong>{status}</strong>
+  </header>
 );
 
-const GraphVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "graph" }> }) => (
-  <section className="authoring-visual authoring-visual--graph" aria-label="draft graph evidence" data-presentation-surface="editorial" data-visual-role="primary">
-    <div className="authoring-graph__node"><Database aria-hidden="true" /><strong>{visual.nodes[0]}</strong></div>
-    <div className="authoring-graph__edge"><span>{visual.inputBinding}</span><ArrowRight aria-hidden="true" /></div>
-    <div className="authoring-graph__node"><Workflow aria-hidden="true" /><strong>{visual.nodes[1]}</strong></div>
-    <div className="authoring-graph__route"><span>{visual.route}</span><ArrowRight aria-hidden="true" /></div>
-    <div className="authoring-graph__end">END</div>
-  </section>
-);
-
-const RepairVisual = ({
-  visual,
-  focus,
-  recordingPhase,
+const EvidenceRows = ({
+  rows,
 }: {
-  readonly visual: Extract<AuthoringPhaseProjection["visual"], { kind: "repair" }>;
-  readonly focus: "full" | "diagnose" | "repair";
-  readonly recordingPhase: AuthoringPhaseProjection["phase"];
+  readonly rows: readonly { readonly label: string; readonly value: ReactNode }[];
+}) => (
+  <dl className="authoring-result__rows">
+    {rows.map(({ label, value }) => (
+      <div key={label}>
+        <dt>{label}</dt>
+        <dd>{value}</dd>
+      </div>
+    ))}
+  </dl>
+);
+
+const StringList = ({ label, items }: { readonly label: string; readonly items: readonly string[] }) => (
+  <section className="authoring-result__list-section">
+    <h3>{label}</h3>
+    <ul>
+      {items.map((item) => (
+        <li key={item}><code>{item}</code></li>
+      ))}
+    </ul>
+  </section>
+);
+
+const ResultRoot = ({
+  kind,
+  label,
+  children,
+}: {
+  readonly kind: Evidence["kind"];
+  readonly label: string;
+  readonly children: ReactNode;
 }) => (
   <section
-    className="authoring-visual authoring-visual--repair"
-    aria-label="validation repair evidence"
+    className={`authoring-visual authoring-result authoring-result--${kind}`}
+    aria-label={label}
+    data-authoring-result={kind}
     data-presentation-surface="editorial"
     data-visual-role="primary"
-    data-authoring-focus={focus}
-    data-authoring-recording-phase={recordingPhase}
   >
-    <div className="authoring-repair__diagnostic"><AlertTriangle aria-hidden="true" /><span>Diagnostic</span><strong>{visual.diagnostic}</strong></div>
-    <ArrowRight className="authoring-repair__connector" aria-hidden="true" />
-    <div className="authoring-repair__correction"><Link2 aria-hidden="true" /><span>Repair</span><code>{visual.correction}</code></div>
-    <div className="authoring-repair__status"><CheckCircle2 aria-hidden="true" /><strong>{visual.status}</strong></div>
+    {children}
   </section>
 );
 
-const ArtifactVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "artifact" }> }) => (
-  <section className="authoring-visual authoring-visual--artifact" aria-label="artifact evidence" data-presentation-surface="editorial" data-visual-role="primary">
-    <LockKeyhole aria-hidden="true" />
-    <div><span>Immutable workflow artifact</span><strong>{visual.artifactId}</strong></div>
-    <dl><div><dt>Version</dt><dd>Version {visual.version}</dd></div><div><dt>Requirements</dt><dd>{visual.requiredSources} local sources</dd></div></dl>
-  </section>
-);
-
-const BindingsVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["visual"], { kind: "bindings" }> }) => (
-  <section className="authoring-visual authoring-visual--bindings" aria-label="deployment binding evidence" data-presentation-surface="editorial" data-visual-role="primary">
-    <header><Link2 aria-hidden="true" /><div><span>Deployment</span><strong>{visual.deploymentId}</strong></div><b><CheckCircle2 aria-hidden="true" />{visual.status}</b></header>
-    <div className="authoring-bindings__rows">
-      {visual.bindings.map((binding) => (
-        <div key={binding.requirement}><code>{binding.requirement}</code><ArrowRight aria-hidden="true" /><code>{binding.source}</code></div>
-      ))}
+const InventoryResult = ({ evidence }: { readonly evidence: EvidenceOf<"inventory"> }) => (
+  <ResultRoot kind={evidence.kind} label="source inventory result">
+    <ResultHeader
+      icon={Database}
+      label="SOURCE INVENTORY"
+      status={`${evidence.sourceCount} TOTAL SOURCES`}
+    />
+    <div className="authoring-result__body">
+      <EvidenceRows
+        rows={[
+          {
+            label: "Inventory",
+            value: <strong>{evidence.sourceCount} total inventory sources</strong>,
+          },
+          {
+            label: "Configured local sources",
+            value: <strong>{evidence.sources.length} configured local source IDs</strong>,
+          },
+        ]}
+      />
+      <StringList label={`Configured local sources (${evidence.sources.length})`} items={evidence.sources} />
+      <section className="authoring-result__contract">
+        <h3>Capability contract</h3>
+        <EvidenceRows
+          rows={[
+            { label: "Capability", value: <code>{evidence.capability.name}</code> },
+            { label: "Inputs", value: <code>{evidence.capability.inputs.join(", ")}</code> },
+            { label: "Outputs", value: <code>{evidence.capability.outputs.join(", ")}</code> },
+            { label: "Outcomes", value: <code>{evidence.capability.outcomes.join(", ")}</code> },
+          ]}
+        />
+      </section>
     </div>
-  </section>
+  </ResultRoot>
 );
 
-/** Renders the factual product artifact appropriate to one authoring phase. */
-export const AuthoringPhaseVisual = ({ projection, focus = "full" }: AuthoringPhaseVisualProps) => {
-  switch (projection.visual.kind) {
-    case "inventory": return <InventoryVisual visual={projection.visual} />;
-    case "graph": return <GraphVisual visual={projection.visual} />;
-    // Diagnose and repair deliberately share this factual validate visual while
-    // the lifecycle scene supplies the distinct recorded command and focus.
-    case "repair": return <RepairVisual visual={projection.visual} focus={focus} recordingPhase={projection.phase} />;
-    case "artifact": return <ArtifactVisual visual={projection.visual} />;
-    case "bindings": return <BindingsVisual visual={projection.visual} />;
+const DraftResult = ({ evidence }: { readonly evidence: EvidenceOf<"draft"> }) => (
+  <ResultRoot kind={evidence.kind} label="draft structure result">
+    <ResultHeader icon={Workflow} label="VALID DRAFT" status="Valid" revision={evidence.revision} />
+    <div className="authoring-result__body">
+      <EvidenceRows
+        rows={[
+          { label: "Workspace", value: <code>{evidence.workspaceId}</code> },
+          { label: "Steps", value: evidence.stepCount },
+          { label: "Routes", value: evidence.routeCount },
+        ]}
+      />
+      <StringList label="Steps" items={evidence.steps} />
+      <StringList label="Routes" items={evidence.routes} />
+    </div>
+  </ResultRoot>
+);
+
+const DiagnosticResult = ({ evidence }: { readonly evidence: EvidenceOf<"diagnostic"> }) => (
+  <ResultRoot kind={evidence.kind} label="draft validation diagnostic">
+    <ResultHeader
+      icon={AlertTriangle}
+      label="INVALID DRAFT"
+      status={evidence.status === "invalid" ? "Invalid" : evidence.status}
+      revision={evidence.revision}
+    />
+    <div className="authoring-result__body" data-result-primary="true">
+      <EvidenceRows
+        rows={[
+          { label: "Diagnostic", value: <code>{evidence.diagnostic.code}</code> },
+          { label: "Path", value: <code>{evidence.diagnostic.path}</code> },
+          { label: "Message", value: evidence.diagnostic.message },
+        ]}
+      />
+      <p className="authoring-result__explanation">{evidence.diagnostic.explanation}</p>
+    </div>
+  </ResultRoot>
+);
+
+const RepairResult = ({ evidence }: { readonly evidence: EvidenceOf<"repair"> }) => {
+  // The repair record keeps the successful result compact; prior invalid context
+  // comes from the same reviewed catalog and is never presented as a new result.
+  const priorEvidence = reviewedAuthoringEvidenceFor("diagnose");
+  if (priorEvidence.kind !== "diagnostic") {
+    throw new Error("reviewed repair context has an unexpected shape");
+  }
+
+  return (
+    <ResultRoot kind={evidence.kind} label="route repair result">
+      <ResultHeader
+        icon={Route}
+        label="ROUTE REPAIR"
+        status={evidence.status === "valid" ? "Valid" : evidence.status}
+        revision={evidence.toRevision}
+      />
+      <aside className="authoring-result__prior" role="note" aria-label="prior validation diagnostic">
+        <span>Prior validation</span>
+        <code>{priorEvidence.diagnostic.code} · {priorEvidence.diagnostic.path}</code>
+        <p>{priorEvidence.diagnostic.message}</p>
+      </aside>
+      <div className="authoring-result__body" data-result-primary="true">
+        <EvidenceRows
+          rows={[
+            { label: "Command", value: <code>{evidence.command}</code> },
+            { label: "Result", value: <strong>Valid</strong> },
+            { label: "Diagnostics", value: <strong>0 diagnostics</strong> },
+          ]}
+        />
+      </div>
+    </ResultRoot>
+  );
+};
+
+const ArtifactResult = ({ evidence }: { readonly evidence: EvidenceOf<"artifact"> }) => (
+  <ResultRoot kind={evidence.kind} label="immutable artifact result">
+    <ResultHeader icon={LockKeyhole} label="IMMUTABLE ARTIFACT" status="Immutable" />
+    <div className="authoring-result__body">
+      <EvidenceRows
+        rows={[
+          { label: "Artifact", value: <code>{evidence.artifactId}</code> },
+          { label: "Version", value: <strong>Version {evidence.version}</strong> },
+          { label: "Required sources", value: `${evidence.requiredSources.length} configured local sources` },
+        ]}
+      />
+      <StringList label="Required local sources" items={evidence.requiredSources} />
+    </div>
+  </ResultRoot>
+);
+
+const DeploymentResult = ({ evidence }: { readonly evidence: EvidenceOf<"deployment"> }) => (
+  <ResultRoot kind={evidence.kind} label="runnable deployment result">
+    <ResultHeader
+      icon={Link2}
+      label="RUNNABLE DEPLOYMENT"
+      status={evidence.status === "runnable" ? "Runnable" : evidence.status}
+    />
+    <div className="authoring-result__body">
+      <EvidenceRows
+        rows={[{ label: "Deployment", value: <code>{evidence.deploymentId}</code> }]}
+      />
+      <section className="authoring-result__list-section">
+        <h3>Bindings</h3>
+        <ul>
+          {evidence.bindings.map((binding) => (
+            <li key={binding.requirement}>
+              <code>{binding.requirement}</code>
+              <span aria-hidden="true">-&gt;</span>
+              <code>{binding.source}</code>
+            </li>
+          ))}
+        </ul>
+      </section>
+      <p className="authoring-result__status"><CheckCircle2 aria-hidden="true" /> Ready for a persisted run</p>
+    </div>
+  </ResultRoot>
+);
+
+/** Renders one audience-facing product result from the reviewed evidence union. */
+export const AuthoringPhaseVisual = ({
+  projection,
+}: {
+  readonly projection: PreparedLifecycleStepProjection;
+}) => {
+  switch (projection.evidence.kind) {
+    case "inventory":
+      return <InventoryResult evidence={projection.evidence} />;
+    case "draft":
+      return <DraftResult evidence={projection.evidence} />;
+    case "diagnostic":
+      return <DiagnosticResult evidence={projection.evidence} />;
+    case "repair":
+      return <RepairResult evidence={projection.evidence} />;
+    case "artifact":
+      return <ArtifactResult evidence={projection.evidence} />;
+    case "deployment":
+      return <DeploymentResult evidence={projection.evidence} />;
   }
 };

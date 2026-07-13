@@ -49,16 +49,18 @@ describe("PreparedAuthoringLifecycleScene", () => {
     const frame = screen.getByRole("region", { name: /active authoring operation/i });
     expect(frame).toHaveTextContent("workflow.draft_workspaces.validate");
     expect(frame).toHaveTextContent("wf draft validate lda_report_workflow");
-    expect(frame).toHaveTextContent(/structured missing-output diagnostic/i);
+    expect(frame).toHaveTextContent("missing_outcome_edge");
+    expect(frame).toHaveTextContent("nodes[analyze]");
+    expect(frame).toHaveTextContent(/missing edges for outcomes.*ok/i);
     expect(frame).toHaveAttribute("data-authoring-step", "diagnose");
-    expect(frame.querySelector('[data-authoring-focus="diagnose"]')).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
-      "data-authoring-focus",
-      "diagnose",
+    expect(frame).toHaveAttribute("data-recording-phase", "validate");
+    expect(screen.getByRole("region", { name: "draft validation diagnostic" })).toHaveAttribute(
+      "data-authoring-result",
+      "diagnostic",
     );
   });
 
-  it("repair shows the output-map operation over the same validation visual", () => {
+  it("repair shows the route repair operation and valid result", () => {
     const scene = findScene("prepared-lifecycle");
     const repairBeat = findBeat("prepared-lifecycle", "repair");
     if (!scene || !repairBeat) throw new Error("missing prepared-lifecycle/repair");
@@ -66,13 +68,16 @@ describe("PreparedAuthoringLifecycleScene", () => {
     const { rerender } = renderBeat("diagnose");
     rerender(<PreparedAuthoringLifecycleScene scene={scene} beat={repairBeat} />);
     const frame = screen.getByRole("region", { name: /active authoring operation/i });
-    expect(frame).toHaveTextContent("workflow.draft_workspaces.set_step_output_map");
-    expect(frame).toHaveTextContent(/wf draft set-output lda_report_workflow/i);
+    expect(frame).toHaveTextContent("workflow.draft_workspaces.set_route");
+    expect(frame).toHaveTextContent(/wf draft set-route lda_report_workflow --revision 3 --step analyze --outcome ok --to __end__/i);
+    expect(frame).toHaveTextContent("Valid");
+    expect(frame).toHaveTextContent("Revision 4");
+    expect(frame).toHaveTextContent("0 diagnostics");
     expect(frame).toHaveTextContent(/prepared workflow lifecycle/i);
     expect(frame).toHaveAttribute("data-authoring-step", "repair");
-    expect(frame.querySelector('[data-authoring-focus="repair"]')).toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
-      "data-authoring-focus",
+    expect(frame).toHaveAttribute("data-recording-phase", "validate");
+    expect(screen.getByRole("region", { name: "route repair result" })).toHaveAttribute(
+      "data-authoring-result",
       "repair",
     );
   });
@@ -91,12 +96,12 @@ describe("PreparedAuthoringLifecycleScene", () => {
   });
 
   it.each([
-    ["discover", "discovery evidence"],
-    ["draft", "draft graph evidence"],
-    ["diagnose", "validation repair evidence"],
-    ["repair", "validation repair evidence"],
-    ["artifact", "artifact evidence"],
-    ["deployment", "deployment binding evidence"],
+    ["discover", "source inventory result"],
+    ["draft", "draft structure result"],
+    ["diagnose", "draft validation diagnostic"],
+    ["repair", "route repair result"],
+    ["artifact", "immutable artifact result"],
+    ["deployment", "runnable deployment result"],
   ] as const)("renders %s as the primary phase visual", (beatId, label) => {
     renderBeat(beatId);
     expect(screen.getByRole("region", { name: label })).toBeInTheDocument();
@@ -108,7 +113,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
     const workspace = screen.getByRole("region", { name: "prepared workflow authoring lifecycle" });
     const assistant = screen.getByRole("complementary", { name: /prepared authoring assistant/i });
     const frame = screen.getByRole("region", { name: "active authoring operation" });
-    const visual = screen.getByRole("region", { name: "draft graph evidence" });
+    const visual = screen.getByRole("region", { name: "draft structure result" });
 
     expect(workspace).toContainElement(assistant);
     expect(workspace).toContainElement(frame);
@@ -191,7 +196,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
       .toHaveTextContent("Diagnose");
     const chat = screen.getByRole("log", { name: "prepared authoring conversation" });
     expect(chat).toHaveAttribute("data-surface", "stage");
-    expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
+    expect(screen.getByRole("region", { name: "draft validation diagnostic" })).toHaveAttribute(
       "data-presentation-surface",
       "editorial",
     );
@@ -246,7 +251,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
 
     render(<PreparedAuthoringLifecycleScene scene={scene} beat={unexpectedBeat} />);
 
-    expect(screen.getByRole("region", { name: "discovery evidence" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "source inventory result" })).toBeInTheDocument();
     expect(screen.getByRole("list", { name: /prepared authoring lifecycle/i }).querySelector("[data-active='true']"))
       .toHaveTextContent("Discover");
   });
