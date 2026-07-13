@@ -29,3 +29,17 @@
 
 - Planned message: `docs: move nodeuse to optional defense deep dive`
 - Commit: pending
+
+## Review Fix
+
+- Restored exact bidirectional route-manifest coverage in
+  `storyboard-navigation.test.ts`.
+- Synchronized `scripts/presentation-rehearsal-routes.json` to all 39 beats in
+  the active 13-scene storyboard, including `diagnose` and `repair`, while
+  removing stale `authoring/*`, `validate`, and `architecture/node-use` routes.
+- Synchronized the rehearsal matrix forward sequence with the same route set;
+  the NodeUse deep link remains only in the optional contingency/Q&A section.
+- Verification: focused presenter/navigation suite passed with 2 files and 20
+  tests; independent manifest check passed with 39 routes; `git diff --check`
+  passed.
+- Review-fix implementation commit: `05c7d7ce`
