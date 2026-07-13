@@ -7,7 +7,7 @@ Approved design direction for the next presentation slice.
 ## Problem
 
 The presentation currently renders the live-target truth badge in the footer of
-every main scene. It also renders launch controls inside the Scene 10 operation
+every main scene. It also renders launch controls inside the Scene 9 operation
 content. The target-health model mixes service availability with replay/live
 playback, so a healthy live service can appear as `Replay evidence` while a
 direct replay route is being primed. These independent state changes produce
@@ -42,13 +42,13 @@ paths, not file contents or a read operation.
 
 The demo control rail is visible only for the prepared workflow arc:
 
-- Scene 8: `agent-handoff`
-- Scene 9: `prepared-lifecycle`
-- Scene 10: `run-from-deployment`
-- Scene 11: `typed-human-boundary`
-- Scene 12: `resume-output-evidence`
+- Scene 7: `agent-handoff`
+- Scene 8: `prepared-lifecycle`
+- Scene 9: `run-from-deployment`
+- Scene 10: `typed-human-boundary`
+- Scene 11: `resume-output-evidence`
 
-Scene 8 (`agent-handoff`) remains a scripted conversation, but gains the same
+Scene 7 (`agent-handoff`) remains a scripted conversation, but gains the same
 small footer control rail so the presenter can start the prepared run without
 adding another large button to the chat composition. All narrative,
 architecture, evaluation, conclusion, and discussion locations hide the target
@@ -94,7 +94,7 @@ height. It shows exactly one of these states:
   footprint.
 - While running: a non-interactive `Running workflow...` information label,
   not a disabled button.
-- While `demo.state.phase === "review"` on Scene 11
+- While `demo.state.phase === "review"` on Scene 10
   (`typed-human-boundary`): `Run paused - review required`. This is the only
   scene that exposes the paused label.
 - After completion: `Run complete`.
@@ -125,17 +125,17 @@ current static rows.
 The implementation must test:
 
 - title and non-demo scenes render no target badge or demo controls;
-- every Scene 8–12 beat renders exactly one compact demo rail;
+- every Scene 7–11 beat renders exactly one compact demo rail;
 - the pre-run demo rail renders the run action without an in-scene launch panel;
 - a running demo renders an information label instead of a disabled run button;
-- Scene 11 alone renders the review-required information label while the
+- Scene 10 alone renders the review-required information label while the
   decision form is waiting;
 - submitting or denying/revising the decision removes the paused label before
   the next scene is shown;
 - a completed demo renders the terminal information label;
 - a healthy target remains `Live target ready` while the timeline is replaying;
 - failed health renders replay fallback only inside demo scope;
-- backtracking between Scene 8–12 updates the rail from current state without
+- backtracking between Scene 7–11 updates the rail from current state without
   retaining stale copy;
 - backtracking from the demo arc to title removes the rail immediately;
 - checking does not change footer dimensions or mount a stale replay label;

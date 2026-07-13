@@ -11,14 +11,14 @@ reviewed recording only through an explicit replay action or an unavailable
 service.
 
 This slice does not change the Scene 1/2 story, fact-check storyboard content,
-Scene 8/9 authoring recording, chat framework, or visual theme system.
+Scene 7/8 authoring recording, chat framework, or visual theme system.
 
 ## Current Problem
 
 The live timeline controller and RPC executor already exist, but the visible
-action is owned by `OperatorChat`. Scenes 10–12 currently hide that chat, so a
+action is owned by `OperatorChat`. Scenes 9–11 currently hide that chat, so a
 prepared run can be implemented without a visible way to start it. Direct
-Scene 10–12 hashes also prime replay state by design, while the target health
+Scene 9–11 hashes also prime replay state by design, while the target health
 status is only probed on mount. This makes the system look disconnected even
 when `wf-rpc-server` is running.
 
@@ -27,8 +27,8 @@ when `wf-rpc-server` is running.
 ### Launch surface
 
 Expose one compact prepared-run control in `PresentationFooter` throughout
-Scenes 8-12. It is demo chrome, not a reintroduced chat rail or a scene-owned
-launch panel. Scene 10 remains the semantic execution start even when the
+Scenes 7-11. It is demo chrome, not a reintroduced chat rail or a scene-owned
+launch panel. Scene 9 remains the semantic execution start even when the
 presenter starts or prepares the run from an earlier demo scene.
 
 The control communicates the current action:
@@ -85,12 +85,12 @@ discussion views should not gain a persistent live-service badge or run action.
 ## Acceptance Criteria
 
 1. With `wf-rpc-server` and the web server running, the compact footer rail on
-   Scenes 8-12 exposes `Run prepared workflow` and starts a live timeline.
+   Scenes 7-11 exposes `Run prepared workflow` and starts a live timeline.
 2. A live run records deployment inspection, run start, interrupt, resume, and
    trace evidence using the existing `callOperation` path.
 3. The typed approval form remains the only way to provide the resume decision;
    both submitted and revision-requested outcomes are sent to the live server.
-4. A direct Scene 10–12 hash without an active run still shows the reviewed
+4. A direct Scene 9–11 hash without an active run still shows the reviewed
    replay, not a fabricated live state.
 5. When health fails, the presenter sees the reason and an explicit replay
    action; no live operation is silently represented as replay evidence.
@@ -98,7 +98,7 @@ discussion views should not gain a persistent live-service badge or run action.
    recovered with retry, without reloading the page or reconnecting manually.
 7. The launch control cannot issue duplicate starts while an operation is in
    flight or a live run is already active.
-8. Scene 8 chat Send and Scene 9 staged messages remain deterministic authoring
+8. Scene 7 chat Send and Scene 8 staged messages remain deterministic authoring
    replay and do not call workflow authoring RPC operations. Their separate
    footer control may start the prepared run.
 
@@ -109,8 +109,8 @@ visibility, duplicate-start protection, explicit replay fallback, and live
 versus replay operation calls. A browser smoke run must verify:
 
 ```text
-Scene 10 operation -> live start -> interrupt -> approval -> resume -> trace
-Scene 10 direct hash with server unavailable -> explicit replay
+Scene 9 operation -> live start -> interrupt -> approval -> resume -> trace
+Scene 9 direct hash with server unavailable -> explicit replay
 server started after page load -> retry -> live-ready action
 ```
 

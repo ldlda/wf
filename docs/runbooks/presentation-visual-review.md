@@ -69,27 +69,28 @@ pnpm --filter @lda/console build
 
 Screenshots require human approval and are not pixel-diff tests.
 
-## Scene 9 Staged Message Review
+## Scene 8 Staged Message Review
 
-Review these five deep links at `1280x720` and `1024x768`, at 100% zoom:
+Review these six deep links at `1280x720` and `1024x768`, at 100% zoom:
 
 - `/present#scene/prepared-lifecycle/discover`
 - `/present#scene/prepared-lifecycle/draft`
-- `/present#scene/prepared-lifecycle/validate`
+- `/present#scene/prepared-lifecycle/diagnose`
+- `/present#scene/prepared-lifecycle/repair`
 - `/present#scene/prepared-lifecycle/artifact`
 - `/present#scene/prepared-lifecycle/deployment`
 
 Confirm that one labelled textarea remains visible in every phase, is empty in
-Discover and Validate, and contains the exact prepared prompt in Draft,
+Discover, and contains the exact prepared prompt in Draft, Diagnose, Repair,
 Artifact, and Deployment. Confirm the right phase projection remains dominant,
 the panes do not overlap, and `document.documentElement.scrollHeight` equals
 `clientHeight`. Reload direct hashes before capture: in dev mode, immediate
 screenshots during an in-place hash transition can catch the presentation
 animation between surfaces even though the settled/reloaded route is correct.
 
-Edit and Send in Draft, then verify Validate contains that exact edited user
-turn. Repeat from Artifact to Deployment. On Deployment, Send must show only
+Edit and Send in Draft, then verify Diagnose and Repair contain that exact edited
+user turn. Repeat from Artifact to Deployment. On Deployment, Send must show only
 `Run request prepared for the next execution slice.`; compare `/api/rpc`
 request counts before and after to confirm no execution call was made. Scenes
-10–12 own the subsequent run activation and live execution path; do not use
-Scene 9 to claim a run has started.
+9–11 own the subsequent run activation and live execution path; do not use
+Scene 8 to claim a run has started.

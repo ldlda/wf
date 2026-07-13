@@ -148,8 +148,8 @@ location.reload();
 
 When a stateful demo deep link is opened before this browser session has started
 a live run, the presentation selects the reviewed recording for that beat even
-if the loopback health probe succeeds. Scene 8's request and Send action remain
-local replay behavior; start the live path from the Scene 10 run operation.
+if the loopback health probe succeeds. Scene 7's request and Send action remain
+local replay behavior; start the live path from the Scene 9 run operation.
 Otherwise the typed interrupt, output, and trace links remain useful
 replay-backed entry points.
 
@@ -256,19 +256,19 @@ Say:
 
 ## Twenty-Five-Minute Timing
 
-Target an 11:45 must-say path plus 1:15 for navigation and demo transitions,
+Target an 11:00 must-say path plus 1:15 for navigation and demo transitions,
 leaving 12 minutes for questions.
 
 | Time | Segment | Notes |
 |---:|---|---|
 | 0:00-1:30 | Title and problem | AI-agent goal becomes a workflow substrate contribution |
 | 1:30-2:15 | Positioning | Adjacent systems and the prototype's narrower position |
-| 2:15-5:30 | Architecture and authoring | Planner/runtime boundary, lifecycle, implementation, authoring |
-| 5:30-8:30 | Prepared demonstration | Request, deployment, start, interrupt, resume, output, trace |
-| 8:30-10:30 | Evaluation | 36 audited trials as bounded engineering evidence |
-| 10:30-11:45 | Limits and conclusion | Security, scheduling, evaluation, and agent-layer boundaries |
-| 11:45-13:00 | Transition buffer | Navigation, interaction, and demo delay |
-| 13:00-25:00 | Questions | Use prepared Q&A branches when available |
+| 2:15-4:36 | Architecture and lifecycle | Planner/runtime boundary, lifecycle, and architecture |
+| 4:36-7:45 | Prepared demonstration | Request, authoring, deployment, start, interrupt, resume, output, trace |
+| 7:45-9:45 | Evaluation | 36 audited trials as bounded engineering evidence |
+| 9:45-11:00 | Limits and conclusion | Security, scheduling, evaluation, and agent-layer boundaries |
+| 11:00-12:15 | Transition buffer | Navigation, interaction, and demo delay |
+| 12:15-24:15 | Questions | Use prepared Q&A branches when available |
 
 Use [`defense-speech-and-claim-audit.md`](defense-speech-and-claim-audit.md)
 for the rehearsed speech, evidence qualifications, and prioritized Q&A.
@@ -316,7 +316,7 @@ Answer:
 
 ## Pre-Defense Checklist
 
-1. Start `/present` with the intended target. Verify Scene 8 submits the prepared
+1. Start `/present` with the intended target. Verify Scene 7 submits the prepared
    request, and verify the prepared-run action appears on the demo scenes when
    the live badge is ready.
 2. Complete one submitted branch and confirm the same run reaches output and

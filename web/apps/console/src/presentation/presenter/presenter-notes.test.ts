@@ -14,8 +14,10 @@ import {
 describe("presenter note catalog", () => {
   it("has exactly one note for every current storyboard beat", () => {
     const noteKeys = presenterNotes.map((note) => `${note.sceneId}/${note.beatId}`);
+    const canonicalKeys = mainScenes.flatMap((scene) => scene.beats.map((beat) => `${scene.id}/${beat.id}`));
 
     expect(new Set(noteKeys).size).toBe(noteKeys.length);
+    expect([...noteKeys].sort()).toEqual([...canonicalKeys].sort());
     for (const scene of mainScenes) {
       for (const beat of scene.beats) {
         const note = presenterBeatNoteFor(scene.id, beat.id);
@@ -24,7 +26,7 @@ describe("presenter note catalog", () => {
       }
     }
 
-    expect(noteKeys).toHaveLength(mainScenes.flatMap((scene) => scene.beats).length);
+    expect(noteKeys).toHaveLength(canonicalKeys.length);
   });
 
   it("keeps the planned scene timing and complete-deck cap", () => {
@@ -44,18 +46,33 @@ describe("presenter note catalog", () => {
       75,
     ]);
     expect(completeDeckTargetSeconds()).toBe(735);
-    expect(completeDeckTargetSeconds()).toBeLessThanOrEqual(780);
+    expect(completeDeckTargetSeconds()).toBeLessThanOrEqual(900);
+    expect(presenterSceneNotes("prepared-lifecycle")).toHaveLength(6);
+    for (const note of presenterSceneNotes("prepared-lifecycle")) {
+      expect(note.targetSeconds).toBeGreaterThanOrEqual(8);
+      expect(note.targetSeconds).toBeLessThanOrEqual(10);
+    }
+  });
+
+  it("keeps removed scene and beat IDs out of timed notes", () => {
+    expect(presenterNotes.some((note) => note.sceneId === ("authoring" as typeof mainScenes[number]["id"]))).toBe(false);
+    expect(presenterBeatNoteFor("prepared-lifecycle", "validate")).toBeUndefined();
+    expect(presenterBeatNoteFor("architecture", "node-use")).toBeUndefined();
+  });
+
+  it("describes structured diagnosis and the focused output-map repair", () => {
+    expect(presenterBeatNoteFor("prepared-lifecycle", "diagnose")?.mustSay).toMatch(/structured diagnostics/i);
+    expect(presenterBeatNoteFor("prepared-lifecycle", "repair")?.mustSay).toMatch(/focused output-map edit/i);
   });
 
   it("keeps NodeUse out of timed notes while retaining the architecture spine", () => {
-    expect(presenterBeatNoteFor("architecture", "node-use")).toBeUndefined();
     expect(presenterBeatNoteFor("architecture", "overview")).toBeDefined();
     expect(presenterBeatNoteFor("architecture", "api")).toBeDefined();
     expect(presenterBeatNoteFor("architecture", "runtime")).toBeDefined();
   });
 
   it("keeps the must-say speech within the defense word budget", () => {
-    expect(mainSpeechWordCount()).toBeGreaterThanOrEqual(750);
+    expect(mainSpeechWordCount()).toBeGreaterThanOrEqual(650);
     expect(mainSpeechWordCount()).toBeLessThanOrEqual(850);
   });
 

@@ -36,11 +36,11 @@ Design contracts:
 - [`self-describing interrupt contracts`](superpowers/specs/2026-07-01-self-describing-interrupt-contracts.md)
 - [`workflow console lifecycle explorer`](superpowers/specs/2026-07-02-workflow-console-lifecycle-explorer.md)
 - [`demo autoplay and replay`](superpowers/specs/2026-07-03-demo-autoplay-replay.md)
-- [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md)
+- [`defense presentation storyboard`](historical/superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md)
 - [`adaptive presentation canvas and evidence inspector`](superpowers/specs/2026-07-05-adaptive-presentation-canvas-design.md)
 - [`Scene 10 guided product moment`](superpowers/specs/2026-07-09-scene-10-guided-product-moment-design.md)
 - [`presentation live/replay truth`](superpowers/specs/2026-07-09-presentation-live-replay-truth-design.md)
-- [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md)
+- [`presentation lifecycle story expansion`](historical/superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md)
 - [`presentation opening visuals`](superpowers/specs/2026-07-10-presentation-opening-visuals-design.md)
 - [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md)
 
@@ -89,10 +89,10 @@ Implementation order:
    Implementation:
    [`constrained demo agent plan`](historical/superpowers/plans/2026-07-03-constrained-demo-agent.md).
 9. Completed: implement the original 12-scene defense storyboard as a no-scroll
-   720p compositor. Later slices expanded the current deck to 14 scenes. Content
+   720p compositor. Later slices expanded and then consolidated the current deck to 13 scenes. Content
    and evidence freeze before chat replacement, visual polish, or motion tuning.
    Design:
-   [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
+   [`defense presentation storyboard`](historical/superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
    Implementation:
    [`defense storyboard compositor plan`](historical/superpowers/plans/2026-07-04-defense-storyboard-compositor.md).
 10. Completed: make the workflow execution handoff the visual center of Scenes
@@ -105,7 +105,7 @@ Implementation order:
 11. Completed: replace whole-stage theme switching with one scalable Editorial
     Canvas and prove the reusable recursive Interactive Figure through Scene 6.
     Design:
-    [`defense presentation storyboard`](superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
+    [`defense presentation storyboard`](historical/superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
     Implementation:
     [`editorial canvas and Interactive Figure plan`](historical/superpowers/plans/2026-07-05-editorial-canvas-interactive-figure.md).
 12. Completed: adapt the logical presentation canvas continuously from `4:3` to
@@ -161,7 +161,7 @@ Implementation order:
     into prepared lifecycle, run start, typed human boundary, and
     resume/output/evidence scenes so Draft -> Artifact -> Deployment -> Run is
     visible before the run inspector details. Design:
-    [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
+    [`presentation lifecycle story expansion`](historical/superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
     Implementation:
     [`presentation lifecycle story expansion plan`](historical/superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
 22. Completed: presentation demo proof composition makes scenes 9-12 factual
@@ -173,12 +173,12 @@ Implementation order:
 24. Add a static slide/appendix shell only after presentation mode is clear.
     Astro remains an option, not the default next surface.
 25. Completed: presentation agent authoring story creates a canonical prepared
-    authoring recording, Scene 8 as an authentic single-beat full-screen
-    conversation, and Scene 9 as a 5-phase lifecycle with route-level coverage
-    that never calls workflow authoring RPC operations during Scene 9
+    authoring recording, Scene 7 as an authentic single-beat full-screen
+    conversation, and Scene 8 as a 6-beat lifecycle with route-level coverage
+    that never calls workflow authoring RPC operations during Scene 8
     navigation. Implementation:
     [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
-26. Completed: compress Scene 11 typed approval and Scene 12 resume/output/trace
+26. Completed: compress Scene 10 typed approval and Scene 11 resume/output/trace
     evidence into a decision-led, continuation-led presentation, and restore
     live prepared-run activation against the configured JSON-RPC target.
     Implementation plan:
@@ -192,14 +192,14 @@ Presentation visual audit, July 11:
   `Planner -> Tool surface -> Runner / platform`, then identifies the last
   role as the implemented contribution. Scene 2 remains responsible for the
   automation problem. Scenes 2, 6, and 7 retain their concrete focal artifacts,
-  and Scenes 8-10 share a prepared authoring/run spine. Implementation:
+  and Scenes 7-9 share a prepared authoring/run spine. Implementation:
   [`presentation opening title`](historical/superpowers/plans/2026-07-11-presentation-opening-title.md).
 - Completed: Scenes 11-12 now use decision-led approval, continuation-led
   resume/output, and compact factual trace rows so approval, resume, output,
   and trace remain factual without competing panels or repeated low-signal
   values. A healthy prepared target remains live; failed health probes switch
   the presentation back to the offline recording.
-- Completed: Scenes 13 and 14 now close with a bounded evaluation board,
+ - Completed: Scenes 12 and 13 now close with a bounded evaluation board,
   contribution boundary/future-work map, and canonical defense-question index.
 
 ## Completed: Presentation Recomposition And Authoring Story
@@ -224,7 +224,7 @@ Recommended next visual slices:
    [`presentation opening visuals`](superpowers/specs/2026-07-10-presentation-opening-visuals-design.md).
    Implementation:
    [`presentation opening visuals plan`](historical/superpowers/plans/2026-07-10-presentation-opening-visuals.md).
-2. Completed: Presentation coherence pass added a 14-scene visual matrix,
+2. Completed: Presentation coherence pass added a 13-scene visual matrix,
    corrected Scene 2's direct-action metaphor into a chat/tool transcript, and
    marked demo beats with primary/support surface metadata so Scenes 8-12 can
    keep one dominant product proof at a time. Implementation:
@@ -238,7 +238,7 @@ Recommended next visual slices:
    output, and trace beats read as product evidence without chat competing for
    space. Implementation:
    [`guided proof scene composition cleanup`](historical/superpowers/plans/2026-07-10-guided-proof-scene-composition-cleanup.md).
-5. Completed: Evidence and closing visuals make Scenes 13 and 14 readable as a
+5. Completed: Evidence and closing visuals make Scenes 12 and 13 readable as a
     defense artifact: bounded evaluation board, claim boundaries, future-work
     map, and canonical examiner-question index. Design:
     [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md).
@@ -271,7 +271,7 @@ Recommended next visual slices:
     Implementation:
     [`presentation follow-up visual/story pass`](historical/superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
 
-## Next: Scene 8–14 Defense Recomposition
+## Next: Scene 7–13 Defense Recomposition
 
 The next presentation work is intentionally split into six implementation
 slices followed by a rehearsal gate. The broader story-flow review remains a
@@ -312,14 +312,14 @@ separate activity after these surfaces are stable.
    [`presentation demo-chrome ownership`](superpowers/specs/2026-07-12-demo-chrome-ownership-design.md).
    Implementation:
    [`presentation demo-chrome ownership plan`](historical/superpowers/plans/2026-07-12-presentation-demo-chrome-ownership.md).
-7. **Completed: visual scale and color pass:** removed unwanted blue from Scenes 2 and 14,
+7. **Completed: visual scale and color pass:** removed unwanted blue from Scenes 2 and 13,
    shorten Scene 2's two-column composition, enlarge the focal diagrams in
-   Scenes 7, 9, 13, and 14, separate Scene 7 Validate from Repair visuals, and
+    Scenes 7, 8, 12, and 13, separate Diagnose from Repair visuals, and
    improve Scene 1 title-box padding and contrast. Design:
-   [`presentation visual scale and color pass`](superpowers/specs/2026-07-12-presentation-visual-scale-color-pass-design.md).
+    [`presentation visual scale and color pass`](historical/superpowers/specs/2026-07-12-presentation-visual-scale-color-pass-design.md).
    Implementation:
    [`presentation visual scale and color pass plan`](historical/superpowers/plans/2026-07-12-presentation-visual-scale-color-pass.md).
-8. **Completed: defense rehearsal gate:** all 14 scenes have paired `1280x720`
+8. **Completed: defense rehearsal gate:** all 13 scenes have paired `1280x720`
    and `1024x768` replay captures, and the rehearsal matrix, log, and story
    audit are recorded. The live end-to-end path remains blocked, the prepared
    revision branch has a separate recorded run identity, and the full web test
@@ -329,21 +329,26 @@ separate activity after these surfaces are stable.
    Story-flow audit: [`presentation story audit`](runbooks/presentation-story-audit.md);
    dated evidence: [`presentation rehearsal log`](runbooks/presentation-rehearsal-log.md).
 
-9. **Completed: factual input file browser:** Scene 10 presents the run-selected
+9. **Completed: factual input file browser:** Scene 9 presents the run-selected
    documents as a read-only browser with selectable prepared-fixture Markdown
    excerpts and a separately labelled output destination. The preview states
    that it is not execution evidence; the UI does not claim per-file reads
    because the current trace recording does not expose them.
 
 10. **Completed: presentation follow-up visual/story pass:** clarified Scene 1
-    and the lifecycle-to-authoring narrative, gave Scenes 7 and 9 a stronger
-    dominant artifact, made the Scene 10 graph easier to present, and densified
+     and the lifecycle-to-authoring narrative, gave Scenes 7 and 8 a stronger
+     dominant artifact, made the Scene 9 graph easier to present, and densified
     Evaluation and Conclusion beats without inventing evidence. The dated
     review records the remaining factual input-browser, live-E2E, and full
     screenshot-inspection follow-ups:
     [`presentation follow-up visual review`](runbooks/presentation-followup-visual-review.md).
     Implementation plan:
-    [`presentation follow-up visual/story pass`](historical/superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
+     [`presentation follow-up visual/story pass`](historical/superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
+11. **Pending: presenter speech and live documentation reconciliation:** the
+    typed catalog, live runbooks, README, and active contracts now use the
+    consolidated 13-scene story, but browser verification was not performed in
+    this slice. Keep this roadmap item pending until the presenter and audience
+    routes receive an explicit browser check.
 
 Presentation wishlist / defense readiness:
 
@@ -448,7 +453,7 @@ Presentation wishlist / defense readiness:
 - Completed: presentation lifecycle story expansion makes the demo climax less
   run-only by adding explicit prepared lifecycle scenes before the run,
   interrupt, output, and trace proof. Design:
-  [`presentation lifecycle story expansion`](superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
+   [`presentation lifecycle story expansion`](historical/superpowers/specs/2026-07-09-presentation-lifecycle-story-expansion-design.md).
   Implementation:
   [`presentation lifecycle story expansion plan`](historical/superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
 - Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,

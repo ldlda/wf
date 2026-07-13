@@ -32,9 +32,9 @@ factual or product follow-up rather than silently treating it as solved.
 | Scene 1 opening | Product goal, implementation boundary, and planner/tool-surface/runner decomposition are distinct. The opening caption remains editorial and borderless; its row sizes to content instead of clipping the lower padding. |
 | Scene 5 to 7 story | Lifecycle vocabulary now leads into authoring and repair rather than presenting authoring as an isolated diagnostic screen. |
 | Scenes 7 and 9 | Authoring and prepared-lifecycle evidence use a dominant artifact with secondary assistant/support surfaces. |
-| Scene 10 graph | The graph is horizontal, factual, selectable, draggable/zoomable, and fit to the initialized React Flow viewport. Outcome shapes and edge labels remain visible. |
-| Scene 13 findings | Six findings use a readable 3x2 layout with icons, campaign size, outcome counts, and the bounded-evidence statement visible together. |
-| Scene 14 conclusion | The typed substrate and closing boundary are dominant; non-claims and future-work layers recede without being removed from their own beats. |
+| Scene 9 graph | The graph is horizontal, factual, selectable, draggable/zoomable, and fit to the initialized React Flow viewport. Outcome shapes and edge labels remain visible. |
+| Scene 12 findings | Six findings use a readable 3x2 layout with icons, campaign size, outcome counts, and the bounded-evidence statement visible together. |
+| Scene 13 conclusion | The typed substrate and closing boundary are dominant; non-claims and future-work layers recede without being removed from their own beats. |
 
 ## Remaining Findings
 
@@ -50,7 +50,7 @@ factual or product follow-up rather than silently treating it as solved.
 
 ### PRODUCT
 
-- Live Scene 10-12 execution is health-checked and connectable, but still needs
+- Live Scene 9-11 execution is health-checked and connectable, but still needs
   a complete rehearsed start -> interrupt -> resume -> output -> trace path on
   the running workflow server.
 - The presentation chat remains a scripted/replay product surface. A live LLM

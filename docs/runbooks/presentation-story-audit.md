@@ -5,7 +5,7 @@ Audit date: 2026-07-13. This review uses the complete
 [rehearsal log](presentation-rehearsal-log.md), the
 [presentation runbook](defense-presentation.md), the
 [Q&A runbook](defense-qna.md), and the locally available private narrative
-notes in `random shit/`. The matrix covers all 14 scenes; the log records
+notes in `random shit/`. The matrix covers all 13 scenes; the log records
 targeted replay/fallback checks and does not establish a completed live
 end-to-end run.
 
@@ -42,54 +42,48 @@ end-to-end run.
 - Next action: keep
 
 ### Scene 6 — Architecture Zoom
-- Audience takeaway: The same public surface reaches API, runtime/providers, stores, and a typed NodeUse execution.
-- Visible proof: Client, API, runtime, and NodeUse focus beats provide a semantic zoom with package and operation evidence.
-- Missing or confusing: Four nested levels risk becoming a component tour unless each level answers what responsibility moves inward.
+- Audience takeaway: The same public surface reaches API, runtime/providers, stores, and the execution kernel.
+- Visible proof: Client, API, and runtime focus beats provide a semantic zoom with package and operation evidence.
+- Missing or confusing: Three nested levels risk becoming a component tour unless each level answers what responsibility moves inward. NodeUse remains an optional deep dive.
 - Next action: keep
 
-### Scene 7 — Author, Validate, Repair
-- Audience takeaway: Discovery and structured diagnostics reduce agent guessing during workflow authoring.
-- Visible proof: Discover, author, diagnose, and repair beats show the operation loop and repair guidance.
-- Missing or confusing: The repair result should be verbally connected to the valid artifact, not treated as another isolated tool call.
-- Next action: keep
-
-### Scene 8 — Agent Request
+### Scene 7 — Agent Request
 - Audience takeaway: A thin external-agent surface can request work without pretending to execute it.
-- Visible proof: Send reveals the prepared conversation and four discovery tool calls with no run claim.
+- Visible proof: Send reveals the prepared conversation and discovery tool calls with no run claim.
 - Missing or confusing: The chat surface could be mistaken for the thesis product unless the substrate remains the stated center.
 - Next action: keep
 
-### Scene 9 — Prepared Workflow Lifecycle
-- Audience takeaway: The request is translated into Discover, Draft, Validate, Artifact, and Deployment stages.
-- Visible proof: The phase rail, staged messages, and changing factual evidence advance across all five beats.
-- Missing or confusing: Deployment records a local run request but does not execute; that boundary needs an explicit spoken pause.
+### Scene 8 — Prepared Workflow Lifecycle
+- Audience takeaway: The request becomes six concise authoring stages: Discover, Draft, Diagnose, Repair, Artifact, and Deployment.
+- Visible proof: The phase rail, staged messages, structured diagnostic, focused output-map edit, and changing factual evidence advance across all six beats.
+- Missing or confusing: Deployment binds and validates three local sources but does not execute; that boundary needs an explicit spoken pause.
 - Next action: keep
 
-### Scene 10 — Run From Deployment
+### Scene 9 — Run From Deployment
 - Audience takeaway: Execution starts from a ready deployment through a public run operation.
 - Visible proof: Input, operation, and graph beats show selected inputs, `workflow.runs.start`, a run ID, and the typed boundary.
 - Missing or confusing: The live end-to-end path was blocked, so live output must not be implied from the replay-backed operation view.
-- Next action: factual fix
+- Next action: keep
 
-### Scene 11 — Typed Human Boundary
+### Scene 10 — Typed Human Boundary
 - Audience takeaway: A persisted run pauses at a typed issue-review decision with explicit submitted and revision-requested outcomes.
 - Visible proof: Interrupt payload, selected issue, comment field, and both decision controls are visible in replay.
 - Missing or confusing: The revision replay uses `run_recorded_lda_report_revision`, so “same run” wording is false for that branch.
 - Next action: factual fix
 
-### Scene 12 — Resume, Output, Evidence
+### Scene 11 — Resume, Output, Evidence
 - Audience takeaway: A decision leads to inspectable output and trace evidence for the workflow run.
 - Visible proof: Resume, output, and trace beats show status, report/issue result, interrupt continuation, and terminal frames.
 - Missing or confusing: Submitted replay continuity is demonstrated; live continuity and revision same-run continuity are not yet established.
 - Next action: factual fix
 
-### Scene 13 — Evaluation
+### Scene 12 — Evaluation
 - Audience takeaway: The 36 trials are bounded engineering evidence about operability and UX failure modes.
 - Visible proof: Cohort, validity, and findings beats separate audited evidence from benchmark-style claims.
 - Missing or confusing: The evaluation arrives after demo evidence, so the presenter must state that failures motivate the product-surface argument.
 - Next action: keep
 
-### Scene 14 — Limits and Conclusion
+### Scene 13 — Limits and Conclusion
 - Audience takeaway: The contribution is a useful substrate, not a production agent, scheduler, or broad benchmark.
 - Visible proof: Limits, future, conclusion, and questions beats distinguish implemented core from future layers.
 - Missing or confusing: Q&A must not begin before the contribution sentence and limitations have landed.
@@ -101,19 +95,19 @@ end-to-end run.
 
 - Scene 1 -> 2 works: the goal becomes the missing reusable-automation contracts.
 - Scene 5 -> 6 works if Deployment is the handoff: lifecycle vocabulary becomes the architecture that owns it.
-- Scene 7 -> 8 works: authoring/repair operations become a thin external-agent request surface.
-- Scene 8 -> 9 works and is not a duplicate: request/discovery becomes staged lifecycle evidence.
-- Scene 9 -> 10 is the critical boundary: Deployment prepares; Scene 10 alone starts execution. Keep the explicit no-run wording.
-- Scene 10 -> 11 -> 12 works as one climax in replay, but the revision branch has a factual run-identity defect and the live path is blocked.
-- Scene 13 -> 14 works: evaluation limits become the contribution and future-work close.
+- Scene 6 -> 7 works: architecture hands off to a bounded prepared request surface.
+- Scene 7 -> 8 works and is not a duplicate: request/discovery becomes staged lifecycle evidence.
+- Scene 8 -> 9 is the critical boundary: Deployment prepares; Scene 9 alone starts execution. Keep the explicit no-run wording.
+- Scene 9 -> 10 -> 11 works as one climax in replay, but the revision branch has a factual run-identity defect and the live path is blocked.
+- Scene 12 -> 13 works: evaluation limits become the contribution and future-work close.
 
 ### Order, Duplicated Beats, And Q&A
 
-The 14-scene order is coherent: motivation, positioning, boundary, vocabulary,
-architecture, authoring, then demo proof, evaluation, and limits. No duplicated
-demo beat was found. Scene 8 introduces the request, Scene 9 owns authoring and
-deployment, Scene 10 owns run activation, Scene 11 owns the decision, and Scene
-12 owns resume/output/trace. The Q&A branch belongs after Scene 14's Questions
+The 13-scene order is coherent: motivation, positioning, boundary, vocabulary,
+architecture, request, authoring, then demo proof, evaluation, and limits. No duplicated
+demo beat was found. Scene 7 introduces the request, Scene 8 owns authoring and
+deployment, Scene 9 owns run activation, Scene 10 owns the decision, and Scene
+11 owns resume/output/trace. The Q&A branch belongs after Scene 13's Questions
 beat; opening a prepared branch earlier would interrupt the argument and make a
 discussion answer look like core evidence.
 
@@ -122,7 +116,7 @@ discussion answer look like core evidence.
 - **Factual:** The revision-requested replay has a separate run ID while the
   surrounding same-run wording suggests continuity. Correct the recording or
   label that branch explicitly as a separate prepared recording.
-- **Factual:** The live health boundary passed, but live Scene 10 -> 12 was
+- **Factual:** The live health boundary passed, but live Scene 9 -> 11 was
   blocked. Do not present live output or trace as rehearsed evidence.
 - **Visual:** No visual defect was recorded in the available rehearsal log. The
   matrix remains the acceptance checklist for both `1280x720` and `1024x768`.

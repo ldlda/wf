@@ -6,7 +6,7 @@ Approved design contract for adapting the thesis presentation between `4:3`
 and `16:9` displays and replacing the persistent evidence drawer.
 
 This specification narrows and updates the geometry and evidence behavior in
-the [defense presentation storyboard](2026-07-04-defense-presentation-storyboard-design.md).
+the [historical defense presentation storyboard](../../historical/superpowers/specs/2026-07-04-defense-presentation-storyboard-design.md).
 The storyboard remains authoritative for narrative order, claims, and scene
 content.
 

@@ -169,9 +169,8 @@ both modes. Replay is visibly labeled and does not create real issues.
 ### Presentation Mode
 
 The console exposes `/present`, a 720p no-scroll defense compositor for the
-prepared `lda_report_workflow` story. It renders a 14-scene, multi-beat
-storyboard (expanded from the original 12-scene defense plan; items 13 and 14
-now cover evaluation and closing) with an adaptive aspect-ratio canvas, stable
+  prepared `lda_report_workflow` story. It renders a 13-scene, multi-beat
+  storyboard with an adaptive aspect-ratio canvas, stable
 stage regions, discussion branches, one editorial canvas, persistent scene-aware
 assistant surfaces, and keyboard navigation.
 
@@ -188,23 +187,23 @@ The final presentation beats frame the evaluation as bounded evidence, make
 claim boundaries and future work explicit, and end on the canonical defense
 discussion index rather than a benchmark or generic conclusion.
 
-Scenes 8 and 9 use the canonical prepared-authoring recording as their only
-execution evidence. Scene 8 is a single full-screen chat-entry beat: its
+Scenes 7 and 8 use the canonical prepared-authoring recording as their only
+execution evidence. Scene 7 is a single full-screen chat-entry beat: its
 prefilled request is submitted locally, then reveals the first deterministic
 user, assistant, and Discover tool group. It is deterministic replay, not a live
-LLM chat, and does not start a workflow run. Scene 9 breaks the prepared
-authoring into five phases with a persistent prepared-agent assistant pane on
+LLM chat, and does not start a workflow run. Scene 8 breaks the prepared
+authoring into six beats with a persistent prepared-agent assistant pane on
 the left and a dominant phase canvas on the right. The adaptive split starts
 near 35/65 and keeps the matching prepared tool group synchronized with each
 factual source, graph, repair, artifact, or deployment view. Neither scene calls
-workflow authoring RPC operations — they consume deterministic prepared data. Scenes 10 through
-12 use the canonical replay by default when no live target is available. When
+workflow authoring RPC operations — they consume deterministic prepared data. Scenes 9 through
+11 use the canonical replay by default when no live target is available. When
 the resolved target is healthy, the same prepared run flow can execute through
 the public JSON-RPC operations and record live evidence using the same
 DemoRunFacts projection. Raw protocol payloads are available through the
 evidence receipt and inspector.
 
-Scenes 8–12 share one compact footer demo rail. Scene 8 remains a local scripted conversation, with its chat composer as the main surface, while the rail owns `Run prepared workflow`, replay fallback, retry, running, paused, resuming, and completed labels.
+Scenes 7–11 share one compact footer demo rail. Scene 7 remains a local scripted conversation, with its chat composer as the main surface, while the rail owns `Run prepared workflow`, replay fallback, retry, running, paused, resuming, and completed labels.
 With a healthy target, the rail starts the live chain through the existing
 `/api/rpc` proxy; when health fails, it keeps `Play replay walkthrough` as an
 explicit fallback. The presentation does not silently replace a live failure
@@ -228,19 +227,19 @@ presentation timeline.
 
 The key deep-link-addressable defense states include:
 
-- `/present#scene/agent-handoff/request` — Scene 8, prepared authoring request
-- `/present#scene/prepared-lifecycle/discover` — Scene 9, discover phase
-- `/present#scene/prepared-lifecycle/draft` — Scene 9, draft phase
-- `/present#scene/prepared-lifecycle/deployment` — Scene 9, deployment phase
-- `/present#scene/run-from-deployment/operation` — Scene 10, run operation
-- `/present#scene/run-from-deployment/graph` — Scene 10, workflow graph
-- `/present#scene/typed-human-boundary/approval` — Scene 11, typed approval
-- `/present#scene/resume-output-evidence/resume` — Scene 12, resume proof
+- `/present#scene/agent-handoff/request` — Scene 7, prepared authoring request
+- `/present#scene/prepared-lifecycle/discover` — Scene 8, discover phase
+- `/present#scene/prepared-lifecycle/draft` — Scene 8, draft phase
+- `/present#scene/prepared-lifecycle/deployment` — Scene 8, deployment phase
+- `/present#scene/run-from-deployment/operation` — Scene 9, run operation
+- `/present#scene/run-from-deployment/graph` — Scene 9, workflow graph
+- `/present#scene/typed-human-boundary/approval` — Scene 10, typed approval
+- `/present#scene/resume-output-evidence/resume` — Scene 11, resume proof
 
 Legacy aliases from the earlier 12-scene plan (such as `workflow-demo` and
 `interrupt-evidence`) are replaced by the IDs above and no longer resolve.
 
-Scene 12 is factual by design. It projects the reviewed/live run into visible
+Scene 11 is factual by design. It projects the reviewed/live run into visible
 workflow input, interrupt payload, resume decision, output, and trace facts.
 Empty trace frame objects are shown as captured empty objects; absent fields are
 called out as not captured rather than replaced by generic placeholders.
@@ -351,39 +350,39 @@ The current prepared recipe can:
 This is intentionally not a general autonomous planner. A future server-side
 Vercel AI SDK driver can feed the same message-part interface.
 
-### Authoring Story (Scenes 8 and 9)
+### Authoring Story (Scenes 7 and 8)
 
-Scenes 8 and 9 are the prepared authoring story. They use deterministic data
+Scenes 7 and 8 are the prepared authoring story. They use deterministic data
 from the committed `projectPreparedAuthoring()` recording and never call
 workflow authoring RPC operations.
 
-- **Scene 8 (Agent Request)**: a single full-screen deterministic chat entry that
+- **Scene 7 (Agent Request)**: a single full-screen deterministic chat entry that
   pre-fills the report-authoring request. Send is local presentation state and
   reveals the first prepared Discover tool group. This is not a live LLM chat
   or workflow run.
-- **Scene 9 (Prepared Workflow Lifecycle)**: a five-phase lifecycle
-  (discover, draft, validate, artifact, deployment) with a compact phase rail
+- **Scene 8 (Prepared Workflow Lifecycle)**: a six-beat lifecycle
+  (discover, draft, diagnose, repair, artifact, deployment) with a compact phase rail
   and one dominant factual product projection per beat. A persistent prepared
   assistant pane stays visible on the left while the phase canvas remains
   dominant on the right; the starting split is approximately 35/65 and adapts
   to the available width. Its active tool group follows the current beat. There
   is no lower chat dock, detached trace modal, or second transcript.
 
-  One staged message box remains visible in every phase. Discover and Validate
-  start empty with useful placeholders; Draft and Artifact use the exact next
-  authoring prompts. Sending an edited Draft advances to Validate and preserves
+  One staged message box remains visible in every phase. Discover starts empty
+  with useful placeholders; Draft and Artifact use the exact next authoring
+  prompts. Sending an edited Draft advances through Diagnose and Repair and preserves
   that text as the projected user turn; sending an edited Artifact does the
   same for Deployment. Deployment Send records only `Run request prepared for
   the next execution slice.` and makes no run or RPC request.
 
 The authoring scenes consume deterministic prepared data and never call
-workflow authoring RPCs. Scene 9 ends at the truthful run-request
-handoff; Scenes 10–12 own run activation, typed approval, resume, output, and
-trace evidence. No Scene 9 message submission starts a workflow run.
+workflow authoring RPCs. Scene 8 ends at the truthful run-request handoff;
+Scenes 9–11 own run activation, typed approval, resume, output, and trace
+evidence. No Scene 8 message submission starts a workflow run.
 
-### Demo Climax (Scenes 8–12)
+### Demo Climax (Scenes 7–11)
 
-Scenes 8 through 12 are the demo climax. They keep a continuity rail visible
+Scenes 7 through 11 are the demo climax. They keep a continuity rail visible
 while the prepared replay moves from persisted workflow run, to typed human
 interrupt, to resume/output/evidence. The rail and outcome panel are
 presentation-only projections over the committed replay; they do not add live

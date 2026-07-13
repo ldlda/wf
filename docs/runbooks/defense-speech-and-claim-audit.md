@@ -1,6 +1,6 @@
 # Defense speech and claim audit
 
-This runbook gives you the must-say 11:45 defense speech, a 1:15 navigation buffer, and a prioritized 12-minute question period. It also marks claims that require qualification so the presentation stays aligned with the thesis and current implementation. The typed catalog at `web/apps/console/src/presentation/presenter/presenter-notes.ts` is the source for the must-say text.
+This runbook gives you the must-say 11:00 defense speech, a 1:15 navigation buffer, and a prioritized 12-minute question period. It also marks claims that require qualification so the presentation stays aligned with the thesis and current implementation. The typed catalog at `web/apps/console/src/presentation/presenter/presenter-notes.ts` is the source for the must-say text.
 
 ## Timing and evidence rules
 
@@ -11,18 +11,18 @@ Use these evidence labels while rehearsing. Do not read the labels aloud.
 - **Qualify**: accurate only within an explicit boundary
 - **Do not claim**: unsupported, untested, or excluded from scope
 
-Target 11:45 for the must-say speech. Keep 1:15 for navigation or demo delay; the complete deck target is 13:00. The question period then has 12 minutes.
+Target 11:00 for the must-say speech. Keep 1:15 for navigation or demo delay; the complete deck target is 12:15. The question period then has 12 minutes.
 
 | Segment | Target |
 | --- | ---: |
 | Scenes 1-2: goal and problem | 1:30 |
-| Scenes 3-7: positioning, model, and implementation | 3:15 |
-| Scenes 8-12: prepared demonstration | 3:00 |
-| Scene 13: evaluation | 2:00 |
-| Scene 14: limits and conclusion | 1:15 |
-| Must-say speech | 11:45 |
+| Scenes 3-6: positioning, model, and architecture | 3:06 |
+| Scenes 7-11: prepared demonstration | 3:09 |
+| Scene 12: evaluation | 2:00 |
+| Scene 13: limits and conclusion | 1:15 |
+| Must-say speech | 11:00 |
 | Navigation buffer | 1:15 |
-| Complete deck target | 13:00 |
+| Complete deck target | 12:15 |
 
 ## Main speech
 
@@ -92,32 +92,20 @@ Keep Scene 5 conceptual. Scene 9 applies this vocabulary to the prepared example
 
 ### Scene 6: Zoom through the implemented architecture
 
-**Route:** `architecture/overview`, `architecture/client`, `architecture/api`, `architecture/runtime`, then `architecture/node-use`<br>
-**Time:** 3:55-4:50
+**Route:** `architecture/overview`, `architecture/client`, `architecture/api`, then `architecture/runtime`<br>
+**Time:** 3:55-4:36
 **Evidence:** Supported
 
 Say:
 
-> First, the implemented architecture spine and its ownership boundaries. Humans and agents share one public lifecycle surface. WorkflowApi owns lifecycle operations; JSON-RPC only adapts transport. WorkflowServer composes records, capabilities, API, and kernel; providers remain outside the core. NodeUse invokes a NodeDef handler, reduces state, records trace, and routes the declared outcome.
+> First, the implemented architecture spine and its ownership boundaries. Humans and agents share one public lifecycle surface. WorkflowApi owns lifecycle operations; JSON-RPC only adapts transport. WorkflowServer composes records, capabilities, API, and kernel; providers remain outside the core.
 
-The NodeUse sequence is documented in the thesis runtime diagram and narrative ([lines 706-750](../thesis/system-design-implementation.md#workflow-core-model)).
+The optional NodeUse deep dive remains available through the architecture focus route and Q&A; it is not part of the timed forward sequence.
 
-### Scene 7: Explain agent-operable authoring
-
-**Route:** `authoring/discover`, `authoring/author`, `authoring/diagnose`, then `authoring/repair`  
-**Time:** 4:50-5:30
-**Evidence:** Supported, with qualification
-
-Say:
-
-> Before authoring, a client can discover sources, capabilities, and schemas instead of guessing at hidden interfaces. Focused operations let an external agent change a mutable Draft while preserving a clear lifecycle boundary. Validation returns structured diagnostics, affected paths, repair hints, and suggested next actions. These surfaces make invalid intermediate drafts repairable; they support a loop, but no hint guarantees success.
-
-Do not say that every repair hint guarantees a valid workflow. Say that diagnostics are designed to support repair loops and that targeted tests cover the implemented paths ([lines 909-962](../thesis/system-design-implementation.md#validation-and-diagnostics)). Mention the instruction layer if asked: skills and runbooks also affected operability ([lines 1505-1531](../thesis/system-design-implementation.md#agent-instruction-layer)).
-
-### Scene 8: Introduce the prepared demonstration honestly
+### Scene 7: Introduce the prepared demonstration honestly
 
 **Route:** `agent-handoff/request`  
-**Time:** 5:30-5:50
+**Time:** 4:36-4:56
 **Evidence:** Implementation extension
 
 Say:
@@ -126,22 +114,22 @@ Say:
 
 If replay is active, say: “This is the reviewed recording, not a live model planning this workflow.”
 
-### Scene 9: Show authoring and deployment without starting a run
+### Scene 8: Show the prepared lifecycle
 
-**Route:** all five `prepared-lifecycle/*` beats  
-**Time:** 5:50-6:35
-**Evidence:** Implementation extension
+**Route:** all six `prepared-lifecycle/*` beats
+**Time:** 4:56-5:50
+**Evidence:** Implementation extension; supported with qualification
 
 Say:
 
-> The later issue-review example first inspects configured local.lda_docs, report, and issue-board capabilities. It creates and edits a Draft for report generation, making the proposal visible before execution. It validates incomplete state, exposes a missing output binding, and applies a targeted repair. It saves the validated plan as immutable artifact lda_report_case_study version 1. This later issue-review example is richer than the thesis three-node deterministic report case study: it is an implementation extension built on the same platform. Deployment binds and validates a ready configuration but does not run the workflow.
+> It inspects sources, capabilities, and schemas rather than guessing at hidden interfaces. Focused operations modify mutable authoring state before execution. Structured diagnostics identify the missing output projection. One focused output-map edit resolves it; hints do not guarantee automatic repair. It saves the validated plan as immutable artifact lda_report_case_study version 1. Deployment binds and validates three local sources; execution starts in the next scene.
 
-This issue-review workflow is repository code under `examples/lda_report_workflow`. It is richer than the thesis’s documented three-node deterministic report case study. Call it a later demonstration built on the same platform, not the exact thesis case study.
+This later issue-review example is richer than the thesis case study; do not present its issue-board output as thesis output. Diagnostics support a repair loop but do not guarantee automatic repair.
 
-### Scene 10: Start the prepared workflow
+### Scene 9: Start the prepared workflow
 
 **Route:** `run-from-deployment/input`, `run-from-deployment/operation`, then `run-from-deployment/graph`  
-**Time:** 6:35-7:10
+**Time:** 5:50-6:25
 **Evidence:** Implementation extension; live-capable
 
 Say:
@@ -150,10 +138,10 @@ Say:
 
 If live execution has not been completed during rehearsal, say: “The operation view is replay-backed evidence of the prepared path. I am not presenting this as a newly completed live run.”
 
-### Scene 11: Present a typed interrupt, not a production approval system
+### Scene 10: Present a typed interrupt, not a production approval system
 
 **Route:** `typed-human-boundary/interrupt` then `typed-human-boundary/approval`  
-**Time:** 7:10-7:40
+**Time:** 6:25-6:55
 **Evidence:** Implementation extension; qualify
 
 Say:
@@ -162,22 +150,22 @@ Say:
 
 Do not call the negative path “deny without resuming.” Both outcomes resume execution through different workflow branches. Do not imply that the prepared revision recording preserves the submitted branch’s run identity.
 
-### Scene 12: Show output and inspectable evidence
+### Scene 11: Show output and inspectable evidence
 
 **Route:** `resume-output-evidence/resume`, `resume-output-evidence/output`, then `resume-output-evidence/trace`  
-**Time:** 7:40-8:30
+**Time:** 6:55-7:45
 **Evidence:** Implementation extension; replay continuity differs by branch
 
 Say:
 
 > On the submitted path, workflow.runs.resume continues the recorded interrupted Run. The workflow creates the report and issue-board changes, then records terminal output. Trace frames and protocol evidence remain inspectable; this is declared-boundary resumability, not arbitrary crash recovery or exactly-once execution. The revision replay is a separate prepared recording.
 
-For the submitted replay, the same run ID is demonstrated. The prepared revision replay currently uses `run_recorded_lda_report_revision`; describe it as a separate prepared branch recording. The thesis itself documents a separate three-node report case study without issue-board mutation, so identify these issue-board results as evidence from the later example implementation.
+For the submitted replay, the same run ID is demonstrated. The prepared revision replay currently uses `run_recorded_lda_report_revision`; describe it as a separate prepared branch recording.
 
-### Scene 13: Explain what the evaluation proves
+### Scene 12: Explain what the evaluation proves
 
 **Route:** `evaluation/cohort`, `evaluation/validity`, then `evaluation/findings`  
-**Time:** 8:30-10:30
+**Time:** 7:45-9:45
 **Evidence:** Supported, with strict qualification
 
 Say:
@@ -186,10 +174,10 @@ Say:
 
 The product and prompts evolved across waves. Call this longitudinal engineering evidence, not a controlled benchmark ([lines 1287-1339](../thesis/system-design-implementation.md#formative-agent-trial-findings)).
 
-### Scene 14: Close on the bounded contribution
+### Scene 13: Close on the bounded contribution
 
 **Route:** `conclusion/limits`, `conclusion/future`, `conclusion/conclusion`, then `conclusion/questions`  
-**Time:** 10:30-11:45
+**Time:** 9:45-11:00
 **Evidence:** Supported
 
 Say:
@@ -316,5 +304,5 @@ Start with the short answer. Expand only when the examiner continues.
 ## Presentation defects to resolve or avoid
 
 - The thesis’s deterministic report case study has three workflow nodes. The later presentation example has eleven plan nodes, while its simplified graph intentionally omits the terminal `end_cancelled` marker. Avoid quoting a graph-node count unless the distinction is relevant.
-- The live health probe does not establish a completed live Scene 10-12 rehearsal. Label replay-backed output and trace evidence as recorded.
+- The live health probe does not establish a completed live Scene 9-11 rehearsal. Label replay-backed output and trace evidence as recorded.
 - The revision replay has a separate run ID. Never use the submitted branch’s “same persisted run” wording for that branch.

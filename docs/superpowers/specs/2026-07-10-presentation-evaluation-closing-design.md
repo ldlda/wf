@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Scenes 13 and 14 close the defense with evidence, claim boundaries, and a clear
+Scenes 12 and 13 close the defense with evidence, claim boundaries, and a clear
 statement of the thesis contribution. They must not read as a model leaderboard
 or as a generic list of limitations. The ending should move from bounded
 evaluation evidence, through supported future work, back to the stable
@@ -92,9 +92,9 @@ The scene keeps the existing evidence pointer to the thesis Evaluation and
 Appendix C. The existing `evaluation-validity` discussion branch remains
 available from the scene discussion rail.
 
-## Scene 14: Boundary, Future Layers, And Questions
+## Scene 13: Boundary, Future Layers, And Questions
 
-Scene 14 uses a stable contribution line as its central visual:
+Scene 13 uses a stable contribution line as its central visual:
 
 ```text
 External planner -> typed workflow substrate -> deterministic runtime
@@ -165,7 +165,7 @@ canonical discussion-branch catalog; it must not duplicate branch titles or
 answers in a second data structure.
 
 The Questions beat is a reusable presentation component but is only exposed as
-the final Scene 14 beat in this slice. A future presenter shortcut may open it
+the final Scene 13 beat in this slice. A future presenter shortcut may open it
 globally without changing the component.
 
 ## Component Boundaries
@@ -239,11 +239,11 @@ Implementation follows test-driven development.
 
 Automated coverage must include:
 
-- exact Scene 13 cohort and outcome counts;
+- exact Scene 12 cohort and outcome counts;
 - absence of percentages and model-ranking language;
 - validity reconciliation counts and claim-boundary wording;
 - all six observed UX findings;
-- all three Scene 14 non-claims;
+- all three Scene 13 non-claims;
 - all five supported future-work branches;
 - stable closing contribution wording;
 - the fourth `questions` beat and direct hash route;
