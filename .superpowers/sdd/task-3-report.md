@@ -33,4 +33,4 @@
 
 ## Commit
 
-PENDING
+`8414b072` (`feat: unify prepared authoring lifecycle visual`)
