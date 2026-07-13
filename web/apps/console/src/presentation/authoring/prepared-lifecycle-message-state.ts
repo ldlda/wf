@@ -1,9 +1,13 @@
 import type { AuthoringPhaseId } from "./authoring-recording.js";
+import {
+  recordingPhaseForStep,
+  type PreparedLifecycleStepId,
+} from "./authoring-projection.js";
 
-export type Scene9MessagePhase = AuthoringPhaseId;
-export type Scene9DestinationPhase = "discover" | "validate" | "deployment";
+export type PreparedLifecycleMessagePhase = PreparedLifecycleStepId | AuthoringPhaseId;
+export type PreparedLifecycleDestinationPhase = "discover" | "validate" | "deployment";
 
-export const SCENE9_PHASE_PROMPTS: Readonly<Record<Scene9MessagePhase, string>> = {
+export const PREPARED_LIFECYCLE_PHASE_PROMPTS: Readonly<Record<AuthoringPhaseId, string>> = {
   discover: "",
   draft: "Is the draft valid? Can you check and fix any issues?",
   validate: "",
@@ -12,7 +16,7 @@ export const SCENE9_PHASE_PROMPTS: Readonly<Record<Scene9MessagePhase, string>> 
     "The deployment lda_report_case_study.default is saved and valid. Shall we run it now?",
 };
 
-export const SCENE9_PHASE_PLACEHOLDERS: Readonly<Record<Scene9MessagePhase, string>> = {
+export const PREPARED_LIFECYCLE_PHASE_PLACEHOLDERS: Readonly<Record<AuthoringPhaseId, string>> = {
   discover: "Ask about the workflow authoring process.",
   draft: "Review the prepared draft.",
   validate: "Ask about the draft validation results.",
@@ -20,23 +24,23 @@ export const SCENE9_PHASE_PLACEHOLDERS: Readonly<Record<Scene9MessagePhase, stri
   deployment: "Ask whether the saved deployment should run.",
 };
 
-export type Scene9SubmittedOverrides = Readonly<
-  Partial<Record<Scene9DestinationPhase, string>>
+export type PreparedLifecycleSubmittedOverrides = Readonly<
+  Partial<Record<PreparedLifecycleDestinationPhase, string>>
 >;
 
-export type Scene9MessageState = {
+export type PreparedLifecycleMessageState = {
   readonly draft: string;
-  readonly submittedOverrides: Scene9SubmittedOverrides;
+  readonly submittedOverrides: PreparedLifecycleSubmittedOverrides;
   readonly runRequested: string | null;
 };
 
-export const initialScene9MessageState: Scene9MessageState = {
+export const initialPreparedLifecycleMessageState: PreparedLifecycleMessageState = {
   draft: "",
   submittedOverrides: {},
   runRequested: null,
 };
 
-export type Scene9MessageAction =
+export type PreparedLifecycleMessageAction =
   | { readonly type: "draft_edited"; readonly draft: string }
   | { readonly type: "discover_submitted" }
   | { readonly type: "draft_submitted" }
@@ -46,9 +50,9 @@ export type Scene9MessageAction =
 const hasText = (text: string): boolean => text.trim().length > 0;
 
 const submitOverride = (
-  state: Scene9MessageState,
-  destination: Scene9DestinationPhase,
-): Scene9MessageState => {
+  state: PreparedLifecycleMessageState,
+  destination: PreparedLifecycleDestinationPhase,
+): PreparedLifecycleMessageState => {
   if (!hasText(state.draft) || state.submittedOverrides[destination] !== undefined) return state;
 
   return {
@@ -60,10 +64,10 @@ const submitOverride = (
   };
 };
 
-export const scene9MessageReducer = (
-  state: Scene9MessageState,
-  action: Scene9MessageAction,
-): Scene9MessageState => {
+export const preparedLifecycleMessageReducer = (
+  state: PreparedLifecycleMessageState,
+  action: PreparedLifecycleMessageAction,
+): PreparedLifecycleMessageState => {
   switch (action.type) {
     case "draft_edited":
       return state.runRequested === null ? { ...state, draft: action.draft } : state;
@@ -80,22 +84,25 @@ export const scene9MessageReducer = (
   }
 };
 
-export type Scene9MessageProjection = {
+export type PreparedLifecycleMessageProjection = {
   readonly draft: string;
   readonly prefill: string;
   readonly placeholder: string;
 };
 
-export const projectScene9Message = (
-  state: Scene9MessageState,
-  phase: Scene9MessagePhase,
-): Scene9MessageProjection => ({
-  draft: state.draft,
-  prefill: SCENE9_PHASE_PROMPTS[phase],
-  placeholder: SCENE9_PHASE_PLACEHOLDERS[phase],
-});
+export const projectPreparedLifecycleMessage = (
+  state: PreparedLifecycleMessageState,
+  step: PreparedLifecycleMessagePhase,
+): PreparedLifecycleMessageProjection => {
+  const phase = recordingPhaseForStep(step);
+  return {
+    draft: state.draft,
+    prefill: PREPARED_LIFECYCLE_PHASE_PROMPTS[phase],
+    placeholder: PREPARED_LIFECYCLE_PHASE_PLACEHOLDERS[phase],
+  };
+};
 
 /** Returns the transcript-facing request overrides by destination phase. */
-export const projectScene9SubmittedOverrides = (
-  state: Scene9MessageState,
-): Scene9SubmittedOverrides => state.submittedOverrides;
+export const projectPreparedLifecycleSubmittedOverrides = (
+  state: PreparedLifecycleMessageState,
+): PreparedLifecycleSubmittedOverrides => state.submittedOverrides;

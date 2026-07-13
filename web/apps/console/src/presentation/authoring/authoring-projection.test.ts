@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { projectPreparedAuthoring } from "./authoring-recording.js";
-import { projectPreparedAuthoringPhase } from "./authoring-projection.js";
+import {
+  projectPreparedAuthoringPhase,
+  projectPreparedLifecycleStep,
+  recordingPhaseForStep,
+} from "./authoring-projection.js";
 
 describe("projectPreparedAuthoringPhase", () => {
   it("projects the discover phase with sources, capabilities, schema", () => {
@@ -63,5 +67,38 @@ describe("projectPreparedAuthoringPhase", () => {
       expect(typeof cmd.summary).toBe("string");
       expect(["success", "diagnostic"]).toContain(cmd.result);
     }
+  });
+
+  it("splits one recorded validate phase into diagnosis and repair presentation steps", () => {
+    const diagnose = projectPreparedLifecycleStep("diagnose");
+    const repair = projectPreparedLifecycleStep("repair");
+
+    expect(diagnose.recordingPhase).toBe("validate");
+    expect(repair.recordingPhase).toBe("validate");
+    expect(diagnose.focus).toBe("diagnose");
+    expect(repair.focus).toBe("repair");
+    expect(diagnose.primaryCommand.title).toBe("workflow.draft_workspaces.validate");
+    expect(repair.primaryCommand.title).toBe("workflow.draft_workspaces.set_step_output_map");
+  });
+
+  it("projects six presentation steps from five recorded phases", () => {
+    const steps = [
+      "discover",
+      "draft",
+      "diagnose",
+      "repair",
+      "artifact",
+      "deployment",
+    ] as const;
+
+    expect(steps.map(recordingPhaseForStep)).toEqual([
+      "discover",
+      "draft",
+      "validate",
+      "validate",
+      "artifact",
+      "deployment",
+    ]);
+    expect(steps.map((step) => projectPreparedLifecycleStep(step).step)).toEqual(steps);
   });
 });

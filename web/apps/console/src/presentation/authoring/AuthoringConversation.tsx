@@ -4,14 +4,18 @@ import {
   projectPreparedAuthoringThread,
   type AuthoringPhaseId,
 } from "./authoring-recording.js";
-import type { Scene9SubmittedOverrides } from "./scene9-message-state.js";
+import {
+  recordingPhaseForStep,
+  type PreparedLifecycleStepId,
+} from "./authoring-projection.js";
+import type { PreparedLifecycleSubmittedOverrides } from "./prepared-lifecycle-message-state.js";
 
 type AuthoringConversationProps = {
-  readonly throughPhase: AuthoringPhaseId;
-  readonly activePhase: AuthoringPhaseId;
+  readonly throughPhase: PreparedLifecycleStepId | AuthoringPhaseId;
+  readonly activePhase: PreparedLifecycleStepId | AuthoringPhaseId;
   readonly surface: "stage" | "dock";
   readonly requestOverride?: string | undefined;
-  readonly requestOverrides?: Scene9SubmittedOverrides | undefined;
+  readonly requestOverrides?: PreparedLifecycleSubmittedOverrides | undefined;
   readonly scrollMode?: "active" | "start" | undefined;
 };
 
@@ -27,8 +31,12 @@ export const AuthoringConversation = ({
   <AssistantOperatorThread
     mode={surface === "stage" ? "full" : "dock"}
     surface={surface}
-    messages={projectPreparedAuthoringThread(throughPhase, requestOverride, requestOverrides)}
-    activeToolGroupId={authoringToolGroupId(activePhase)}
+    messages={projectPreparedAuthoringThread(
+      recordingPhaseForStep(throughPhase),
+      requestOverride,
+      requestOverrides,
+    )}
+    activeToolGroupId={authoringToolGroupId(recordingPhaseForStep(activePhase))}
     scrollMode={scrollMode}
     ariaLabel="prepared authoring conversation"
   />

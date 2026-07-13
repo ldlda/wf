@@ -1,5 +1,13 @@
 import { projectPreparedAuthoring, type AuthoringPhaseId, type PreparedAuthoringCommand } from "./authoring-recording.js";
 
+export type PreparedLifecycleStepId =
+  | "discover"
+  | "draft"
+  | "diagnose"
+  | "repair"
+  | "artifact"
+  | "deployment";
+
 export type AuthoringPhaseProjection = {
   readonly phase: AuthoringPhaseId;
   readonly beatId: string;
@@ -8,6 +16,13 @@ export type AuthoringPhaseProjection = {
   readonly proof: readonly string[];
   readonly commands: readonly PreparedAuthoringCommand[];
   readonly visual: AuthoringPhaseVisualModel;
+};
+
+export type PreparedLifecycleStepProjection = AuthoringPhaseProjection & {
+  readonly step: PreparedLifecycleStepId;
+  readonly recordingPhase: AuthoringPhaseId;
+  readonly focus: "full" | "diagnose" | "repair";
+  readonly primaryCommand: PreparedAuthoringCommand;
 };
 
 export type AuthoringPhaseVisualModel =
@@ -109,5 +124,36 @@ export const projectPreparedAuthoringPhase = (
     proof: found.proof,
     commands: found.commands,
     visual: visualForPhase(found.phase),
+  };
+};
+
+export const recordingPhaseForStep = (
+  step: PreparedLifecycleStepId | AuthoringPhaseId,
+): AuthoringPhaseId => {
+  if (step === "diagnose" || step === "repair") return "validate";
+  return step;
+};
+
+export const projectPreparedLifecycleStep = (
+  step: PreparedLifecycleStepId,
+): PreparedLifecycleStepProjection => {
+  const recordingPhase = recordingPhaseForStep(step);
+  const phase = projectPreparedAuthoringPhase(recordingPhase);
+  // Diagnose and repair are presentation choreography over one factual
+  // recording phase; they select distinct evidence without duplicating it.
+  const commandIndex = step === "repair" ? 1 : 0;
+  const primaryCommand = phase.commands[commandIndex];
+  if (primaryCommand === undefined) {
+    throw new Error(
+      `recorded phase "${recordingPhase}" has no command at index ${commandIndex} for presentation step "${step}"`,
+    );
+  }
+
+  return {
+    ...phase,
+    step,
+    recordingPhase,
+    focus: step === "diagnose" || step === "repair" ? step : "full",
+    primaryCommand,
   };
 };

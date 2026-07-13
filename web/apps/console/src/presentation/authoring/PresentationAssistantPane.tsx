@@ -4,34 +4,37 @@ import { Textarea } from "../../components/ui/textarea.js";
 import { AuthoringConversation } from "./AuthoringConversation.js";
 import type { AuthoringPhaseId } from "./authoring-recording.js";
 import type {
-  Scene9MessageProjection,
-  Scene9SubmittedOverrides,
-} from "./scene9-message-state.js";
+  PreparedLifecycleMessageProjection,
+  PreparedLifecycleSubmittedOverrides,
+} from "./prepared-lifecycle-message-state.js";
+import type { PreparedLifecycleStepId } from "./authoring-projection.js";
 import { PREPARED_COMPOSER_HELP, usePreparedComposerSubmit } from "./usePreparedComposerSubmit.js";
 
 export type PresentationAssistantPaneProps = {
-  readonly phase: AuthoringPhaseId;
+  readonly phase: PreparedLifecycleStepId | AuthoringPhaseId;
   readonly visualRole?: "support";
-  readonly message: Scene9MessageProjection;
-  readonly submittedOverrides: Scene9SubmittedOverrides;
+  readonly message: PreparedLifecycleMessageProjection;
+  readonly submittedOverrides: PreparedLifecycleSubmittedOverrides;
   readonly runRequested: string | null;
   readonly onDraftChange: (draft: string) => void;
   readonly onSubmit: (message: string) => void;
 };
 
-const phaseLabels: Readonly<Record<AuthoringPhaseId, string>> = {
+const phaseLabels: Readonly<Record<PreparedLifecycleStepId | AuthoringPhaseId, string>> = {
   discover: "Discover",
   draft: "Draft",
+  diagnose: "Diagnose",
+  repair: "Repair",
   validate: "Validate",
   artifact: "Artifact",
   deployment: "Deployment",
 };
 
 /**
- * Stable Scene 9 boundary for the prepared assistant surface.
+ * Stable prepared lifecycle boundary for the prepared assistant surface.
  *
  * The pane owns only the transient composer buffer. Submitted text is handed
- * back to the Scene 9 controller so the replay can project it later.
+ * back to the lifecycle controller so the replay can project it later.
  */
 export const PresentationAssistantPane = ({
   phase,
@@ -83,22 +86,22 @@ export const PresentationAssistantPane = ({
         />
       </div>
       <form className="presentation-assistant-pane__composer" onSubmit={submit}>
-        <label htmlFor="scene9-authoring-message">Message to authoring assistant</label>
+        <label htmlFor="prepared-lifecycle-authoring-message">Message to authoring assistant</label>
         <Textarea
-          id="scene9-authoring-message"
+          id="prepared-lifecycle-authoring-message"
           value={draft}
           placeholder={message.placeholder}
           disabled={runRequested !== null}
           onChange={(event) => updateDraft(event.target.value)}
           onKeyDown={handleKeyDown}
-          aria-describedby="scene9-authoring-message-help"
+          aria-describedby="prepared-lifecycle-authoring-message-help"
         />
         <div className="presentation-assistant-pane__composer-actions">
           <Button type="submit" disabled={!canSubmit}>
             Send message
           </Button>
         </div>
-        <p id="scene9-authoring-message-help" className="presentation-assistant-pane__composer-help">
+        <p id="prepared-lifecycle-authoring-message-help" className="presentation-assistant-pane__composer-help">
           {PREPARED_COMPOSER_HELP}
         </p>
         {runRequested !== null ? (

@@ -4,16 +4,16 @@ import type { ComponentProps } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PresentationAssistantPane } from "./PresentationAssistantPane.js";
 import {
-  SCENE9_PHASE_PLACEHOLDERS,
-  SCENE9_PHASE_PROMPTS,
-  initialScene9MessageState,
-  projectScene9Message,
-} from "./scene9-message-state.js";
+  PREPARED_LIFECYCLE_PHASE_PLACEHOLDERS,
+  PREPARED_LIFECYCLE_PHASE_PROMPTS,
+  initialPreparedLifecycleMessageState,
+  projectPreparedLifecycleMessage,
+} from "./prepared-lifecycle-message-state.js";
 
 afterEach(cleanup);
 
 const renderPane = (
-  phase: Parameters<typeof projectScene9Message>[1],
+  phase: Parameters<typeof projectPreparedLifecycleMessage>[1],
   options: Partial<ComponentProps<typeof PresentationAssistantPane>> = {},
 ) => {
   const onDraftChange = options.onDraftChange ?? (() => undefined);
@@ -22,7 +22,7 @@ const renderPane = (
   return render(
     <PresentationAssistantPane
       phase={phase}
-      message={projectScene9Message(initialScene9MessageState, phase)}
+      message={projectPreparedLifecycleMessage(initialPreparedLifecycleMessageState, phase)}
       submittedOverrides={{}}
       runRequested={null}
       onDraftChange={onDraftChange}
@@ -69,7 +69,7 @@ describe("PresentationAssistantPane", () => {
 
       const input = screen.getByRole("textbox", { name: /message to authoring assistant/i });
       expect(input).toHaveValue("");
-      expect(input).toHaveAttribute("placeholder", SCENE9_PHASE_PLACEHOLDERS[phase]);
+      expect(input).toHaveAttribute("placeholder", PREPARED_LIFECYCLE_PHASE_PLACEHOLDERS[phase]);
       expect(screen.getByRole("button", { name: /send message/i })).toBeDisabled();
     }
   });
@@ -80,7 +80,7 @@ describe("PresentationAssistantPane", () => {
       renderPane(phase);
 
       expect(screen.getByRole("textbox", { name: /message to authoring assistant/i }))
-        .toHaveValue(SCENE9_PHASE_PROMPTS[phase]);
+        .toHaveValue(PREPARED_LIFECYCLE_PHASE_PROMPTS[phase]);
     }
   });
 
