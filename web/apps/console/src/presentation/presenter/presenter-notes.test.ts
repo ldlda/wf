@@ -31,26 +31,44 @@ describe("presenter note catalog", () => {
 
   it("keeps the planned scene timing and complete-deck cap", () => {
     expect(mainScenes.map((scene) => presenterSceneNotes(scene.id).reduce((sum, note) => sum + note.targetSeconds, 0))).toEqual([
-      45,
-      45,
-      45,
-      55,
-      45,
-      41,
-      20,
-      54,
+      30,
+      30,
+      35,
+      40,
+      36,
+      32,
+      12,
+      42,
       35,
       30,
       50,
       120,
       75,
     ]);
-    expect(completeDeckTargetSeconds()).toBe(735);
+    expect(completeDeckTargetSeconds()).toBe(642);
     expect(completeDeckTargetSeconds()).toBeLessThanOrEqual(900);
-    expect(presenterSceneNotes("prepared-lifecycle")).toHaveLength(6);
-    for (const note of presenterSceneNotes("prepared-lifecycle")) {
-      expect(note.targetSeconds).toBeGreaterThanOrEqual(8);
-      expect(note.targetSeconds).toBeLessThanOrEqual(10);
+
+    const openingSceneIds = new Set([
+      "thesis",
+      "problem",
+      "positioning",
+      "planner-runtime",
+      "lifecycle",
+      "architecture",
+      "agent-handoff",
+      "prepared-lifecycle",
+    ]);
+
+    for (const note of presenterNotes) {
+      expect(note.goal.trim().length, `${note.sceneId}/${note.beatId}`).toBeGreaterThan(0);
+      expect(note.keywords.length, `${note.sceneId}/${note.beatId}`).toBeGreaterThanOrEqual(1);
+      expect(note.keywords.length, `${note.sceneId}/${note.beatId}`).toBeLessThanOrEqual(3);
+      expect(note.keywords.every((keyword) => keyword.trim().length > 0)).toBe(true);
+    }
+
+    for (const note of presenterNotes.filter((item) => openingSceneIds.has(item.sceneId))) {
+      const words = note.mustSay.replaceAll("**", "").trim().split(/\s+/);
+      expect(words.length, `${note.sceneId}/${note.beatId}`).toBeLessThanOrEqual(28);
     }
   });
 
@@ -60,9 +78,10 @@ describe("presenter note catalog", () => {
     expect(presenterBeatNoteFor("architecture", "node-use")).toBeUndefined();
   });
 
-  it("describes structured diagnosis and the focused output-map repair", () => {
-    expect(presenterBeatNoteFor("prepared-lifecycle", "diagnose")?.mustSay).toMatch(/structured diagnostics/i);
-    expect(presenterBeatNoteFor("prepared-lifecycle", "repair")?.mustSay).toMatch(/focused output-map edit/i);
+  it("describes the missing route and focused route repair", () => {
+    expect(presenterBeatNoteFor("prepared-lifecycle", "diagnose")?.mustSay).toMatch(/missing.*route/i);
+    expect(presenterBeatNoteFor("prepared-lifecycle", "repair")?.mustSay).toMatch(/adds.*route|route.*validation passes/i);
+    expect(presenterBeatNoteFor("prepared-lifecycle", "diagnose")?.mustSay).not.toMatch(/output projection/i);
   });
 
   it("keeps NodeUse out of timed notes while retaining the architecture spine", () => {
@@ -72,8 +91,8 @@ describe("presenter note catalog", () => {
   });
 
   it("keeps the must-say speech within the defense word budget", () => {
-    expect(mainSpeechWordCount()).toBeGreaterThanOrEqual(650);
-    expect(mainSpeechWordCount()).toBeLessThanOrEqual(850);
+    expect(mainSpeechWordCount()).toBeGreaterThanOrEqual(500);
+    expect(mainSpeechWordCount()).toBeLessThanOrEqual(700);
   });
 
   it("keeps the readable speech runbook synchronized with every must-say note", () => {
