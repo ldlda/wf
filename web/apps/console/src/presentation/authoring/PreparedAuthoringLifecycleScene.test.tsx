@@ -20,29 +20,56 @@ describe("PreparedAuthoringLifecycleScene", () => {
       "data-presentation-surface",
       "editorial",
     );
-    expect(screen.getByText("Discover")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: /prepared authoring lifecycle/i })).getByText("Discover"))
+      .toBeInTheDocument();
     expect(screen.getAllByText(/sources|capabilities|schema/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it("draft shows graph or routes", () => {
     renderBeat("draft");
-    expect(screen.getByText("Draft")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: /prepared authoring lifecycle/i })).getByText("Author"))
+      .toBeInTheDocument();
     expect(screen.getAllByText(/graph|routes/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("validate shows diagnosis and repair", () => {
-    renderBeat("validate");
+  it("diagnose shows the structured validation operation in its frame", () => {
+    renderBeat("diagnose");
     expect(screen.getByRole("region", { name: "prepared workflow authoring lifecycle" })).toHaveAttribute(
       "data-presentation-surface",
       "editorial",
     );
-    expect(screen.getByText("Validate")).toBeInTheDocument();
-    expect(screen.getAllByText(/diagnos|repair/i).length).toBeGreaterThanOrEqual(1);
+    const frame = screen.getByRole("region", { name: /active authoring operation/i });
+    expect(frame).toHaveTextContent("workflow.draft_workspaces.validate");
+    expect(frame).toHaveTextContent("wf draft validate lda_report_workflow");
+    expect(frame).toHaveTextContent(/structured missing-output diagnostic/i);
+    expect(frame).toHaveAttribute("data-authoring-step", "diagnose");
+    expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
+      "data-authoring-focus",
+      "diagnose",
+    );
+  });
+
+  it("repair shows the output-map operation over the same validation visual", () => {
+    const scene = findScene("prepared-lifecycle");
+    const repairBeat = findBeat("prepared-lifecycle", "repair");
+    if (!scene || !repairBeat) throw new Error("missing prepared-lifecycle/repair");
+
+    const { rerender } = renderBeat("diagnose");
+    rerender(<PreparedAuthoringLifecycleScene scene={scene} beat={repairBeat} />);
+    const frame = screen.getByRole("region", { name: /active authoring operation/i });
+    expect(frame).toHaveTextContent("workflow.draft_workspaces.set_step_output_map");
+    expect(frame).toHaveTextContent(/wf draft set-output lda_report_workflow/i);
+    expect(frame).toHaveAttribute("data-authoring-step", "repair");
+    expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
+      "data-authoring-focus",
+      "repair",
+    );
   });
 
   it("artifact shows immutable ID and version", () => {
     renderBeat("artifact");
-    expect(screen.getByText("Artifact")).toBeInTheDocument();
+    expect(within(screen.getByRole("list", { name: /prepared authoring lifecycle/i })).getByText("Artifact"))
+      .toBeInTheDocument();
     expect(screen.getAllByText(/lda_report_case_study/i).length).toBeGreaterThanOrEqual(1);
   });
 
@@ -55,7 +82,8 @@ describe("PreparedAuthoringLifecycleScene", () => {
   it.each([
     ["discover", "discovery evidence"],
     ["draft", "draft graph evidence"],
-    ["validate", "validation repair evidence"],
+    ["diagnose", "validation repair evidence"],
+    ["repair", "validation repair evidence"],
     ["artifact", "artifact evidence"],
     ["deployment", "deployment binding evidence"],
   ] as const)("renders %s as the primary phase visual", (beatId, label) => {
@@ -68,9 +96,11 @@ describe("PreparedAuthoringLifecycleScene", () => {
 
     const workspace = screen.getByRole("region", { name: "prepared workflow authoring lifecycle" });
     const assistant = screen.getByRole("complementary", { name: /prepared authoring assistant/i });
+    const frame = screen.getByRole("region", { name: "active authoring operation" });
     const visual = screen.getByRole("region", { name: "draft graph evidence" });
 
     expect(workspace).toContainElement(assistant);
+    expect(workspace).toContainElement(frame);
     expect(workspace).toContainElement(visual);
     expect(assistant).toHaveAttribute("data-phase", "draft");
     expect(assistant).toHaveAttribute("data-surface", "prepared-replay");
@@ -78,7 +108,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(assistant.querySelector('[data-surface="stage"]')).toBeInTheDocument();
     expect(workspace.querySelector(".prepared-lifecycle-scene__dock")).not.toBeInTheDocument();
     expect(workspace.querySelector("[role='dialog']")).not.toBeInTheDocument();
-    expect(workspace.querySelector("[aria-label='authoring phase rail']"))
+    expect(workspace.querySelector("[aria-label='prepared authoring lifecycle']"))
       .toBeInTheDocument();
     expect(visual).toHaveAttribute("data-presentation-surface", "editorial");
     expect(visual).toHaveAttribute("data-visual-role", "primary");
@@ -101,7 +131,8 @@ describe("PreparedAuthoringLifecycleScene", () => {
   it.each([
     ["draft", true],
     ["artifact", true],
-    ["validate", false],
+    ["diagnose", false],
+    ["repair", false],
     ["deployment", false],
   ] as const)("%s submission advances only when its beat owns the transition", async (beatId, advances) => {
     const user = userEvent.setup();
@@ -109,7 +140,9 @@ describe("PreparedAuthoringLifecycleScene", () => {
     renderBeat(beatId, onAdvance);
 
     const input = screen.getByRole("textbox", { name: /message to authoring assistant/i });
-    if (beatId === "validate") await user.type(input, "Review the validation result.");
+    if (beatId === "diagnose" || beatId === "repair") {
+      await user.type(input, "Review the validation result.");
+    }
     await user.click(screen.getByRole("button", { name: /send message/i }));
 
     expect(onAdvance).toHaveBeenCalledTimes(advances ? 1 : 0);
@@ -118,31 +151,33 @@ describe("PreparedAuthoringLifecycleScene", () => {
   it.each([
     ["discover", "Discover"],
     ["draft", "Draft"],
-    ["validate", "Validate"],
+    ["diagnose", "Diagnose"],
+    ["repair", "Repair"],
     ["artifact", "Artifact"],
     ["deployment", "Deployment"],
   ] as const)("marks %s as the active lifecycle evidence beat", (beatId, label) => {
     renderBeat(beatId);
-    const evidence = screen.getByRole("region", { name: /active lifecycle evidence/i });
+    const evidence = screen.getByRole("region", { name: /active authoring operation/i });
     const workspace = screen.getByRole("region", { name: "prepared workflow authoring lifecycle" });
 
     expect(evidence).toHaveAttribute("data-visual-role", "lifecycle-primary");
     expect(workspace.querySelectorAll('[data-visual-role="lifecycle-primary"]')).toHaveLength(1);
-    expect(screen.getByLabelText("authoring phase rail").querySelector('[data-active="true"]'))
+    expect(screen.getByRole("list", { name: /prepared authoring lifecycle/i }).querySelector('[data-active="true"]'))
       .toHaveTextContent(label);
   });
 
   it("synchronizes the assistant phase, active group, rail, and visual", () => {
-    renderBeat("validate");
+    renderBeat("diagnose");
 
     expect(screen.getByRole("complementary", { name: /prepared authoring assistant/i }))
-      .toHaveAttribute("data-phase", "validate");
+      .toHaveAttribute("data-phase", "diagnose");
     expect(screen.getByRole("button", { name: /validate.*2 tool calls/i }))
       .toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: /draft.*3 tool calls/i }))
       .toHaveAttribute("aria-expanded", "false");
-    expect(screen.getByLabelText("authoring phase rail").querySelector("[data-active='true']"))
-      .toHaveTextContent("Validate");
+    expect(screen.getByRole("list", { name: /prepared authoring lifecycle/i })
+      .querySelector("[data-active='true']"))
+      .toHaveTextContent("Diagnose");
     const chat = screen.getByRole("log", { name: "prepared authoring conversation" });
     expect(chat).toHaveAttribute("data-surface", "stage");
     expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
@@ -152,22 +187,25 @@ describe("PreparedAuthoringLifecycleScene", () => {
   });
 
   it("does not render the obsolete trace modal or receipt", () => {
-    renderBeat("validate");
+    renderBeat("diagnose");
     expect(screen.queryByRole("button", { name: "Agent trace" })).not.toBeInTheDocument();
     expect(screen.queryByRole("dialog", { name: "Authoring trace" })).not.toBeInTheDocument();
     expect(screen.queryByLabelText("prepared authoring receipt")).not.toBeInTheDocument();
   });
 
-  it("renders a compact orientation rail", () => {
+  it("renders the six-step prepared authoring lifecycle rail", () => {
     renderBeat("artifact");
-    const rail = screen.getByLabelText("authoring phase rail");
+    const rail = screen.getByRole("list", { name: /prepared authoring lifecycle/i });
     expect(rail).toBeInTheDocument();
-    expect(rail.children.length).toBeGreaterThanOrEqual(5);
+    expect(within(rail).getAllByRole("listitem")).toHaveLength(6);
+    expect(within(rail).getByText("Diagnose")).toBeInTheDocument();
+    expect(within(rail).getByText("Repair")).toBeInTheDocument();
+    expect(within(rail).getByText("Sources, capabilities, schemas")).toBeInTheDocument();
   });
 
   it("highlights the active phase in the rail", () => {
     renderBeat("deployment");
-    const rail = screen.getByLabelText("authoring phase rail");
+    const rail = screen.getByRole("list", { name: /prepared authoring lifecycle/i });
     const active = rail.querySelector("[data-active='true']");
     expect(active).toBeInTheDocument();
     expect(active).toHaveTextContent("Deployment");
@@ -181,7 +219,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
     render(<PreparedAuthoringLifecycleScene scene={scene} beat={unexpectedBeat} />);
 
     expect(screen.getByRole("region", { name: "discovery evidence" })).toBeInTheDocument();
-    expect(screen.getByLabelText("authoring phase rail").querySelector("[data-active='true']"))
+    expect(screen.getByRole("list", { name: /prepared authoring lifecycle/i }).querySelector("[data-active='true']"))
       .toHaveTextContent("Discover");
   });
 });

@@ -51,6 +51,18 @@ describe("AuthoringPhaseVisual", () => {
     );
   });
 
+  it("keeps diagnosis and repair attached to the recorded validate phase", () => {
+    for (const focus of ["diagnose", "repair"] as const) {
+      render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("validate")} focus={focus} />);
+
+      expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(
+        "data-authoring-recording-phase",
+        "validate",
+      );
+      cleanup();
+    }
+  });
+
   it.each(["diagnose", "repair"] as const)("marks %s evidence as the primary visual", (focus) => {
     render(<AuthoringPhaseVisual projection={projectPreparedAuthoringPhase("validate")} focus={focus} />);
     expect(screen.getByRole("region", { name: /validation repair evidence/i })).toHaveAttribute(

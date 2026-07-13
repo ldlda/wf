@@ -44,9 +44,11 @@ const GraphVisual = ({ visual }: { visual: Extract<AuthoringPhaseProjection["vis
 const RepairVisual = ({
   visual,
   focus,
+  recordingPhase,
 }: {
   readonly visual: Extract<AuthoringPhaseProjection["visual"], { kind: "repair" }>;
   readonly focus: "full" | "diagnose" | "repair";
+  readonly recordingPhase: AuthoringPhaseProjection["phase"];
 }) => (
   <section
     className="authoring-visual authoring-visual--repair"
@@ -54,6 +56,7 @@ const RepairVisual = ({
     data-presentation-surface="editorial"
     data-visual-role="primary"
     data-authoring-focus={focus}
+    data-authoring-recording-phase={recordingPhase}
   >
     <div className="authoring-repair__diagnostic"><AlertTriangle aria-hidden="true" /><span>Diagnostic</span><strong>{visual.diagnostic}</strong></div>
     <ArrowRight className="authoring-repair__connector" aria-hidden="true" />
@@ -86,7 +89,9 @@ export const AuthoringPhaseVisual = ({ projection, focus = "full" }: AuthoringPh
   switch (projection.visual.kind) {
     case "inventory": return <InventoryVisual visual={projection.visual} />;
     case "graph": return <GraphVisual visual={projection.visual} />;
-    case "repair": return <RepairVisual visual={projection.visual} focus={focus} />;
+    // Diagnose and repair deliberately share this factual validate visual while
+    // the lifecycle scene supplies the distinct recorded command and focus.
+    case "repair": return <RepairVisual visual={projection.visual} focus={focus} recordingPhase={projection.phase} />;
     case "artifact": return <ArtifactVisual visual={projection.visual} />;
     case "bindings": return <BindingsVisual visual={projection.visual} />;
   }

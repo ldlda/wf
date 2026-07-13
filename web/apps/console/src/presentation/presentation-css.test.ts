@@ -84,7 +84,7 @@ describe("presentation.css", () => {
     expect(boardBlock).toContain("flex-shrink: 0");
   });
 
-  it("keeps Scene 9 as a bounded adaptive split without a lower dock row", () => {
+  it("keeps Scene 9 as a bounded 26/74 split without a lower dock row", () => {
     const sceneBlock = css.match(
       /^\.prepared-lifecycle-scene\s*\{(?<body>[\s\S]*?)\n\}/m,
     )?.groups?.body;
@@ -98,12 +98,41 @@ describe("presentation.css", () => {
     expect(css).not.toMatch(/prepared-lifecycle-scene__dock[\s\S]*position:\s*(absolute|fixed)/);
   });
 
-  it("keeps every Scene 9 surface override on the clarity-focused 35/65 split", () => {
+  it("keeps every Scene 9 surface override on the editorial 26/74 split", () => {
     const scene9Rules = css.match(/\.prepared-lifecycle-scene[^{}]*\{[^}]*\}/g) ?? [];
 
     expect(scene9Rules.filter((rule) => rule.includes("grid-template-columns:")).length).toBeGreaterThan(0);
     expect(scene9Rules.join("\n")).not.toContain("1.65fr");
     expect(scene9Rules.join("\n")).toMatch(/minmax\(12rem, 0\.26fr\)\s+minmax\(0, 0\.74fr\)/);
+  });
+
+  it("gives the prepared lifecycle rail and operation frame the primary hierarchy", () => {
+    const frameRules = cssBlocks(css, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame');
+    const frameContent = cssBlock(css, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame > *');
+
+    expect(cssBlocks(css, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__rail')
+      .some((body) => body.includes("grid-template-columns: repeat(6, minmax(0, 1fr));"))).toBe(true);
+    expect(cssBlocks(css, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__rail')
+      .some((body) => body.includes("min-height: 5.4rem;"))).toBe(true);
+    expect(cssBlocks(css, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__rail li')
+      .some((body) => body.includes("opacity: 0.78;"))).toBe(true);
+    expect(cssBlocks(css, ".prepared-lifecycle-scene__rail li")
+      .some((body) => body.includes("font: 600 1rem/1.1 var(--font-interface);"))).toBe(true);
+    expect(css).toContain("font: 500 0.72rem/1.25 var(--font-interface);");
+    expect(frameRules.some((body) => body.includes("grid-template-rows: auto minmax(0, 1fr);"))).toBe(true);
+    expect(frameContent).toContain("animation: authoring-frame-content-enter 220ms");
+  });
+
+  it("keeps the lifecycle rail scrollable at narrow presentation widths", () => {
+    const compactRail = cssBlock(
+      cssBlock(css, "@container presentation-canvas (max-width: 1050px)") ?? "",
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__rail',
+    );
+
+    expect(compactRail).toContain("grid-template-columns: none;");
+    expect(compactRail).toContain("grid-auto-columns: minmax(9.5rem, 1fr);");
+    expect(compactRail).toContain("overflow-x: auto;");
+    expect(compactRail).toContain("scrollbar-width: none;");
   });
 
   it("bounds Scene 9 conversation scrolling and recenters Scene 8 at compact stage widths", () => {
