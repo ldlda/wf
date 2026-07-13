@@ -188,11 +188,6 @@
   grid-template-columns: 1fr;
 }
 
-.evaluation-board[data-evaluation-focus="findings"] .evaluation-board__campaign-strip {
-  /* grid-template-columns: minmax(12rem, 0.7fr) minmax(20rem, 1.3fr); */
-  /* difference between two beats -> shifting */
-}
-
 .evaluation-board[data-evaluation-focus="cohort"] .evaluation-board__cohort {
   border-right: 0;
   padding-block: 1.35rem 0.8rem;

@@ -281,28 +281,40 @@ export const authoringToolGroupId = (phase: AuthoringPhaseId): string =>
 export const projectPreparedAuthoringThread = (
   throughPhase: AuthoringPhaseId = "deployment",
   requestOverride?: string,
-  requestOverrides?: Readonly<Partial<Record<"validate" | "deployment", string>>>,
+  requestOverrides?: Readonly<Partial<Record<"discover" | "validate" | "deployment", string>>>,
 ): readonly AgentMessage[] => {
   const finalPhaseIndex = recording.findIndex(({ phase }) => phase === throughPhase);
   if (finalPhaseIndex < 0) throw new Error(`unknown phase: ${throughPhase}`);
 
   let requestReplaced = false;
+  const phaseOverrideApplied = new Set<AuthoringPhaseId>();
   return recording.slice(0, finalPhaseIndex + 1).flatMap((phase) => {
     const phaseOverride =
-      phase.phase === "validate"
+      phase.phase === "discover"
+        ? requestOverrides?.discover
+        : phase.phase === "validate"
         ? requestOverrides?.validate
         : phase.phase === "deployment"
           ? requestOverrides?.deployment
           : undefined;
     const conversation = phase.conversation.map((turn, index) => {
-      const shouldReplaceRequest =
-        turn.role === "user" &&
-        (phaseOverride !== undefined || (requestOverride !== undefined && !requestReplaced));
-      if (shouldReplaceRequest && phaseOverride === undefined) requestReplaced = true;
+      let replacement: string | undefined;
+      if (turn.role === "user" && phaseOverride !== undefined && !phaseOverrideApplied.has(phase.phase)) {
+        replacement = phaseOverride;
+        phaseOverrideApplied.add(phase.phase);
+      } else if (
+        turn.role === "user"
+        && phaseOverride === undefined
+        && requestOverride !== undefined
+        && !requestReplaced
+      ) {
+        replacement = requestOverride;
+        requestReplaced = true;
+      }
       return agentTextMessage(
         `authoring-${phase.phase}-message-${index}`,
         turn.role,
-        shouldReplaceRequest ? (phaseOverride ?? requestOverride ?? turn.text) : turn.text,
+        replacement ?? turn.text,
       );
     });
     const groupId = authoringToolGroupId(phase.phase);

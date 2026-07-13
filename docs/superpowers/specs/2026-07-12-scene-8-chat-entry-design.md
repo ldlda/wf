@@ -44,8 +44,10 @@ The old five-step phase rail is removed from Scene 8. The lifecycle sequence is
 shown by Scene 9, where the authoring canvas is the primary artifact and the
 conversation becomes a secondary modal.
 
-The standalone `Run prepared workflow` action is removed from Scene 8. The
-workflow-run action belongs to Slice 3 and will be exposed in Scene 10.
+The standalone in-scene `Run prepared workflow` action is removed from Scene 8.
+The later demo-chrome slice owns one compact footer rail across Scenes 8-12.
+That separate footer may expose the prepared-run action, while chat Send remains
+local and never starts a workflow.
 
 ### Chat Surface Boundary
 
@@ -77,7 +79,8 @@ On the Scene 8 request beat, render:
 - a composer with the request text prefilled:
   `We need to author a report workflow for the lda_report scenario. What sources and capabilities are available?`;
 - an enabled Send button;
-- no workflow operation, run ID, deployment ID, or live target action.
+- no workflow operation, run ID, deployment ID, or live target action inside
+  the chat surface. The separate demo footer rail may show target and run state.
 
 The prefilled text is editable. The scene does not require the presenter to
 retype the request during the defense.
@@ -110,8 +113,9 @@ The Scene 8 entry state is local presentation state. Reloading the request beat
 returns to the empty composer. The canonical authoring recording remains the
 source for all revealed turns.
 
-Scene 8 must work with no workflow server and must not change the live/replay
-target badge. The target badge remains scoped by the later demo truth slice.
+Scene 8 chat must work with no workflow server and must not change live/replay
+state. The later demo truth slice owns the separate footer badge and launch
+control across the demo arc.
 
 ### Responsive Behavior
 

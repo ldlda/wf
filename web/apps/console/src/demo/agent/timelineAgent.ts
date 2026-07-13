@@ -91,9 +91,15 @@ export const useTimelineAgent = (
 
   const runLabel = modeLabel === "live" ? "Run prepared workflow" : "Run replay walkthrough";
   const canRun = demo.canStart && !demo.inFlight && demo.state.phase !== "running";
-  const canRunLive = (options.liveTargetReady ?? (options.mode === "live" && (
+  // Live capability is about the target and timeline, not the selected display
+  // mode; callers can request a live run from a replay-backed slide explicitly.
+  const liveTargetReady = options.liveTargetReady ?? (
     options.status.kind === "ready" || options.status.kind === "active"
-  ))) && !demo.inFlight && demo.state.phase !== "running";
+  );
+  const canRunLive = liveTargetReady
+    && demo.canStart
+    && !demo.inFlight
+    && demo.state.phase !== "running";
 
   const runPreparedWorkflow = useCallback(async (requestedMode?: TimelineAgentMode) => {
     const mode = requestedMode ?? modeLabel;

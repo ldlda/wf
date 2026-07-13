@@ -63,6 +63,9 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance }: Prep
           onDraftChange={(draft) => dispatch({ type: "draft_edited", draft })}
           onSubmit={(submittedText) => {
             dispatch({ type: "draft_edited", draft: submittedText });
+            if (beatId === "discover") {
+              dispatch({ type: "discover_submitted" });
+            }
             if (beatId === "draft") {
               dispatch({ type: "draft_submitted" });
               onAdvance?.();

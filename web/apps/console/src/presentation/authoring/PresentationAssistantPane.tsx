@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type KeyboardEvent } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button.js";
 import { Textarea } from "../../components/ui/textarea.js";
 import { AuthoringConversation } from "./AuthoringConversation.js";
@@ -7,6 +7,7 @@ import type {
   Scene9MessageProjection,
   Scene9SubmittedOverrides,
 } from "./scene9-message-state.js";
+import { PREPARED_COMPOSER_HELP, usePreparedComposerSubmit } from "./usePreparedComposerSubmit.js";
 
 export type PresentationAssistantPaneProps = {
   readonly phase: AuthoringPhaseId;
@@ -52,16 +53,10 @@ export const PresentationAssistantPane = ({
     setDraft(nextDraft);
     onDraftChange(nextDraft);
   };
-  const submit = (event?: FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    if (canSubmit) onSubmit(draft);
-  };
-  const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
-      event.preventDefault();
-      submit();
-    }
-  };
+  const { submit, handleKeyDown } = usePreparedComposerSubmit(
+    canSubmit,
+    () => onSubmit(draft),
+  );
 
   return (
     <aside
@@ -104,7 +99,7 @@ export const PresentationAssistantPane = ({
           </Button>
         </div>
         <p id="scene9-authoring-message-help" className="presentation-assistant-pane__composer-help">
-          Shift+Enter adds a new line. This is a deterministic prepared replay, not a live model request.
+          {PREPARED_COMPOSER_HELP}
         </p>
         {runRequested !== null ? (
           <p role="status" className="presentation-assistant-pane__run-status">

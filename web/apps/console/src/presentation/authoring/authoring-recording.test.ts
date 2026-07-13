@@ -205,4 +205,20 @@ describe("projectPreparedAuthoringThread", () => {
       canonical.filter((message) => message.id.endsWith("-tools")),
     );
   });
+
+  it("keeps each staged override scoped to its phase", () => {
+    const messages = projectPreparedAuthoringThread("deployment", undefined, {
+      validate: "Edited validation request",
+      deployment: "Edited deployment request",
+    });
+    const userText = messages
+      .filter((message) => message.role === "user")
+      .map((message) => message.parts[0]?.type === "text" ? message.parts[0].text : "");
+
+    expect(userText).toEqual([
+      "We need to author a report workflow for the lda_report scenario. What sources and capabilities are available?",
+      "Edited validation request",
+      "Edited deployment request",
+    ]);
+  });
 });

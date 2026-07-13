@@ -1,15 +1,16 @@
-import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it } from "vitest";
+import { cleanup, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { findBeat, findScene } from "../storyboard.js";
 import { PreparedAuthoringLifecycleScene } from "./PreparedAuthoringLifecycleScene.js";
 
 afterEach(() => cleanup());
 
-const renderBeat = (beatId: string) => {
+const renderBeat = (beatId: string, onAdvance?: () => void) => {
   const scene = findScene("prepared-lifecycle");
   const beat = findBeat("prepared-lifecycle", beatId);
   if (!scene || !beat) throw new Error(`missing prepared-lifecycle/${beatId}`);
-  return render(<PreparedAuthoringLifecycleScene scene={scene} beat={beat} />);
+  return render(<PreparedAuthoringLifecycleScene scene={scene} beat={beat} onAdvance={onAdvance} />);
 };
 
 describe("PreparedAuthoringLifecycleScene", () => {
@@ -83,6 +84,35 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(visual).toHaveAttribute("data-visual-role", "primary");
     expect(workspace.querySelector('[data-visual-role="lifecycle-primary"]')).toBe(visual.parentElement);
     expect(workspace.querySelectorAll('[data-visual-role="lifecycle-primary"]')).toHaveLength(1);
+  });
+
+  it("projects a custom discover submission into the prepared conversation", async () => {
+    const user = userEvent.setup();
+    renderBeat("discover");
+
+    const input = screen.getByRole("textbox", { name: /message to authoring assistant/i });
+    await user.type(input, "Inspect the report source first.");
+    await user.click(screen.getByRole("button", { name: /send message/i }));
+
+    const conversation = screen.getByRole("log", { name: "prepared authoring conversation" });
+    expect(within(conversation).getByText("Inspect the report source first.")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["draft", true],
+    ["artifact", true],
+    ["validate", false],
+    ["deployment", false],
+  ] as const)("%s submission advances only when its beat owns the transition", async (beatId, advances) => {
+    const user = userEvent.setup();
+    const onAdvance = vi.fn();
+    renderBeat(beatId, onAdvance);
+
+    const input = screen.getByRole("textbox", { name: /message to authoring assistant/i });
+    if (beatId === "validate") await user.type(input, "Review the validation result.");
+    await user.click(screen.getByRole("button", { name: /send message/i }));
+
+    expect(onAdvance).toHaveBeenCalledTimes(advances ? 1 : 0);
   });
 
   it.each([

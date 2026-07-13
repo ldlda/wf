@@ -111,6 +111,15 @@ describe("PresentationRoute", () => {
     15000,
   );
 
+  it("exposes an application-owned readiness signal for rehearsal capture", async () => {
+    window.location.hash = "#scene/thesis/title";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const route = await screen.findByRole("main", { name: /lda\.chat presentation/i });
+    await waitFor(() => expect(route).toHaveAttribute("data-presentation-ready", "true"));
+  });
+
   const visualRouteContracts = [
     { hash: "#scene/thesis/title", heading: "Design and Implementation of lda.chat", primary: "thesis opening" },
     { hash: "#scene/lifecycle/draft", heading: "Workflow Lifecycle", primary: "workflow lifecycle rail" },

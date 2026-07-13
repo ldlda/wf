@@ -172,7 +172,13 @@ describe("AssistantOperatorThread", () => {
 
   it("can keep a first-stage group anchored at the start of the transcript", async () => {
     const setScrollTop = vi.fn();
-    const originalDescriptor = Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "scrollTop");
+    const descriptors = {
+      scrollTop: Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "scrollTop"),
+      scrollHeight: Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "scrollHeight"),
+      clientHeight: Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "clientHeight"),
+      offsetTop: Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetTop"),
+      offsetHeight: Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetHeight"),
+    };
     const messages: ReadonlyArray<AgentMessage> = [
       {
         id: "assistant-start-scroll-text",
@@ -192,10 +198,14 @@ describe("AssistantOperatorThread", () => {
     ];
 
     try {
-      Object.defineProperty(HTMLDivElement.prototype, "scrollTop", {
-        configurable: true,
-        get: () => 0,
-        set: setScrollTop,
+      Object.defineProperties(HTMLDivElement.prototype, {
+        scrollTop: { configurable: true, get: () => 0, set: setScrollTop },
+        scrollHeight: { configurable: true, get: () => 400 },
+        clientHeight: { configurable: true, get: () => 80 },
+      });
+      Object.defineProperties(HTMLElement.prototype, {
+        offsetTop: { configurable: true, get: () => 120 },
+        offsetHeight: { configurable: true, get: () => 40 },
       });
       render(
         <AssistantOperatorThread
@@ -209,10 +219,15 @@ describe("AssistantOperatorThread", () => {
 
       await waitFor(() => expect(setScrollTop).toHaveBeenCalledWith(0));
     } finally {
-      if (originalDescriptor) {
-        Object.defineProperty(HTMLDivElement.prototype, "scrollTop", originalDescriptor);
-      } else {
-        delete (HTMLDivElement.prototype as { scrollTop?: number }).scrollTop;
+      for (const [name, descriptor] of Object.entries(descriptors)) {
+        const prototype = name === "offsetTop" || name === "offsetHeight"
+          ? HTMLElement.prototype
+          : HTMLDivElement.prototype;
+        if (descriptor) {
+          Object.defineProperty(prototype, name, descriptor);
+        } else {
+          delete (prototype as unknown as Record<string, unknown>)[name];
+        }
       }
     }
   });

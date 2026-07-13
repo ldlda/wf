@@ -1,11 +1,17 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-import { SceneProgress } from "./SceneProgress.js";
+import { SceneProgress, shouldShowBeatCounter } from "./SceneProgress.js";
 import type { MainLocation } from "./storyboard.js";
 
 afterEach(() => cleanup());
 
 describe("SceneProgress", () => {
+  it("uses scene metadata for a single-beat counter", () => {
+    expect(shouldShowBeatCounter({ alwaysShowBeatCounter: true }, 1)).toBe(true);
+    expect(shouldShowBeatCounter({ alwaysShowBeatCounter: false }, 1)).toBe(false);
+    expect(shouldShowBeatCounter(undefined, 2)).toBe(true);
+  });
+
   it("shows scene and beat position for architecture/runtime", () => {
     const location: MainLocation = {
       kind: "main",

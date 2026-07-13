@@ -69,6 +69,19 @@ describe("scene 9 staged message state", () => {
     });
   });
 
+  it("stores discover submissions under the discover destination", () => {
+    const state = scene9MessageReducer(initialScene9MessageState, {
+      type: "draft_edited",
+      draft: "Inspect the report source first.",
+    });
+
+    expect(scene9MessageReducer(state, { type: "discover_submitted" })).toEqual({
+      draft: state.draft,
+      submittedOverrides: { discover: state.draft },
+      runRequested: null,
+    });
+  });
+
   it("ignores blank submits and keeps duplicate submits idempotent", () => {
     const blank = { ...initialScene9MessageState, draft: " \n\t" };
     expect(scene9MessageReducer(blank, { type: "draft_submitted" })).toBe(blank);

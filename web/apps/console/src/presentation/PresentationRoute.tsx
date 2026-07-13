@@ -43,6 +43,29 @@ export const PresentationRoute = () => {
       { type: "jump_hash", hash: initialHash },
     ),
   );
+  const [presentationReady, setPresentationReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let firstFrame = 0;
+    let secondFrame = 0;
+    setPresentationReady(false);
+    // Font metrics and two paint opportunities let measured diagrams settle
+    // before the rehearsal runner accepts the route as screenshot-ready.
+    const markReady = async () => {
+      await (document.fonts?.ready ?? Promise.resolve());
+      if (cancelled) return;
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => setPresentationReady(true));
+      });
+    };
+    void markReady();
+    return () => {
+      cancelled = true;
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+    };
+  }, [state.location]);
 
   const recording = useMemo(() => loadCanonicalDemoRecording(), []);
   const replayEvidence = useMemo(() => projectRecordingToEvidence(recording), [recording]);
@@ -260,7 +283,12 @@ export const PresentationRoute = () => {
   );
 
   return (
-    <main className="presentation-route" aria-label="lda.chat presentation" data-motion={state.motionDisabled ? "disabled" : "enabled"}>
+    <main
+      className="presentation-route"
+      aria-label="lda.chat presentation"
+      data-motion={state.motionDisabled ? "disabled" : "enabled"}
+      data-presentation-ready={presentationReady ? "true" : "false"}
+    >
       <PresentationCanvas>
         <PresentationStage
           state={state}

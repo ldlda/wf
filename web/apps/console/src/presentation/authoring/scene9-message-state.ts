@@ -1,7 +1,7 @@
 import type { AuthoringPhaseId } from "./authoring-recording.js";
 
 export type Scene9MessagePhase = AuthoringPhaseId;
-export type Scene9DestinationPhase = "validate" | "deployment";
+export type Scene9DestinationPhase = "discover" | "validate" | "deployment";
 
 export const SCENE9_PHASE_PROMPTS: Readonly<Record<Scene9MessagePhase, string>> = {
   discover: "",
@@ -38,6 +38,7 @@ export const initialScene9MessageState: Scene9MessageState = {
 
 export type Scene9MessageAction =
   | { readonly type: "draft_edited"; readonly draft: string }
+  | { readonly type: "discover_submitted" }
   | { readonly type: "draft_submitted" }
   | { readonly type: "artifact_submitted" }
   | { readonly type: "run_requested" };
@@ -66,6 +67,8 @@ export const scene9MessageReducer = (
   switch (action.type) {
     case "draft_edited":
       return state.runRequested === null ? { ...state, draft: action.draft } : state;
+    case "discover_submitted":
+      return submitOverride(state, "discover");
     case "draft_submitted":
       return submitOverride(state, "validate");
     case "artifact_submitted":
@@ -92,7 +95,7 @@ export const projectScene9Message = (
   placeholder: SCENE9_PHASE_PLACEHOLDERS[phase],
 });
 
-/** Keeps the transcript-facing map limited to the two staged handoff destinations. */
+/** Returns the transcript-facing request overrides by destination phase. */
 export const projectScene9SubmittedOverrides = (
   state: Scene9MessageState,
 ): Scene9SubmittedOverrides => state.submittedOverrides;

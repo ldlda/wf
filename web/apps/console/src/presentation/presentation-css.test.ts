@@ -5,6 +5,34 @@ import { describe, expect, it } from "vitest";
 const css = readFileSync(join(import.meta.dirname, "presentation.css"), "utf8").replace(/\r\n/g, "\n");
 const demoWorkflowCss = readFileSync(join(import.meta.dirname, "styles", "demo-workflow.css"), "utf8").replace(/\r\n/g, "\n");
 
+const cssBlocks = (source: string, selector: string): readonly string[] => {
+  const blocks: string[] = [];
+  let searchFrom = 0;
+  while (searchFrom < source.length) {
+    const selectorStart = source.indexOf(selector, searchFrom);
+    if (selectorStart < 0) break;
+    const openingBrace = source.indexOf("{", selectorStart);
+    if (openingBrace < 0) break;
+
+    let depth = 0;
+    for (let index = openingBrace; index < source.length; index += 1) {
+      if (source[index] === "{") depth += 1;
+      if (source[index] !== "}") continue;
+      depth -= 1;
+      if (depth === 0) {
+        blocks.push(source.slice(openingBrace + 1, index));
+        searchFrom = index + 1;
+        break;
+      }
+    }
+    if (searchFrom <= selectorStart) break;
+  }
+  return blocks;
+};
+
+const cssBlock = (source: string, selector: string): string | undefined =>
+  cssBlocks(source, selector).at(-1);
+
 describe("presentation.css", () => {
   it("keeps the demo footer rail compact and removes the old launch control", () => {
     const railBlock = css.match(/\.presentation-demo-rail\s*\{(?<body>[\s\S]*?)\n\}/)?.groups?.body;
@@ -80,16 +108,30 @@ describe("presentation.css", () => {
 
   it("bounds Scene 9 conversation scrolling and recenters Scene 8 at compact stage widths", () => {
     expect(css.match(/\.presentation-stage\[data-scene-view="agent"\] \.presentation-stage__primary\s*\{/g)).toHaveLength(2);
-    expect(css).toMatch(
-      /\.presentation-stage__primary > \.agent-handoff-scene\s*\{[\s\S]*?margin-inline:\s*auto;/,
+    expect(cssBlocks(css, ".presentation-stage__primary > .agent-handoff-scene")
+      .some((body) => body.includes("margin-inline: auto;"))).toBe(true);
+    expect(cssBlocks(css, ".agent-handoff-scene__intro")
+      .some((body) => body.includes("width: min(calc(100% - 3rem), 72rem);"))).toBe(true);
+    expect(cssBlocks(css, ".agent-handoff-scene__composer")
+      .some((body) => body.includes("width: min(calc(100% - 3rem), 72rem);"))).toBe(true);
+    const conversation = cssBlock(
+      css,
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane__conversation',
     );
-    expect(css).toMatch(/\.agent-handoff-scene__intro\s*\{[\s\S]*?width:\s*min\(calc\(100% - 3rem\), 72rem\);/);
-    expect(css).toMatch(/\.agent-handoff-scene__composer\s*\{[\s\S]*?width:\s*min\(calc\(100% - 3rem\), 72rem\);/);
-    expect(css).toMatch(
-      /\.prepared-lifecycle-scene\[data-presentation-surface="editorial"\] \.presentation-assistant-pane__conversation\s*\{[\s\S]*?flex:\s*1 1 auto;[\s\S]*?min-height:\s*0;[\s\S]*?overflow:\s*auto;/,
+    expect(conversation).toContain("flex: 1 1 auto;");
+    expect(conversation).toContain("min-height: 0;");
+    expect(conversation).toContain("overflow: auto;");
+    const compactAgentPrimary = cssBlock(
+      cssBlock(css, "@media (max-width: 1100px)") ?? "",
+      '.presentation-stage[data-scene-view="agent"] .presentation-stage__primary',
     );
-    expect(css).toMatch(
-      /@media \(max-width: 1100px\)[\s\S]*?\.presentation-stage\[data-scene-view="agent"\] \.presentation-stage__primary\s*\{[\s\S]*?align-items:\s*center;[\s\S]*?justify-content:\s*center;/,
+    expect(compactAgentPrimary).toContain("align-items: center;");
+    expect(compactAgentPrimary).toContain("justify-content: center;");
+  });
+
+  it("does not keep an empty findings campaign-strip ruleset", () => {
+    expect(css).not.toContain(
+      '.evaluation-board[data-evaluation-focus="findings"] .evaluation-board__campaign-strip {\n  /*',
     );
   });
 

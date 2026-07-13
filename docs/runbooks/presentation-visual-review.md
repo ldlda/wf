@@ -51,7 +51,7 @@ pnpm --filter @lda/console build
 3. 1280x720 uses a 1280x720 logical canvas
 4. Ratios outside 4:3 through 16:9 letterbox at the nearest supported ratio
 5. Warm Editorial Canvas unchanged across Scene 1 and Scene 6
-6. No scene rail, replay label, discussion button, or presenter controls
+6. Non-demo routes have no demo rail, replay label, discussion button, or presenter controls; Scenes 8-12 retain the approved compact demo footer rail
 7. Scene 6 root has one primary figure and no competing card grid
 8. Runtime & providers expands in place with breadcrumb
 9. Configured providers expands second level

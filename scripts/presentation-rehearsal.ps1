@@ -2,7 +2,8 @@
 param(
     [string]$BaseUrl = "http://127.0.0.1:5173",
     [string]$OutputRoot = "web/apps/console/.visual-smoke/rehearsal",
-    [string[]]$Viewports = @("1280,720", "1024,768")
+    [string[]]$Viewports = @("1280,720", "1024,768"),
+    [string]$ReadySelector = 'main[data-presentation-ready="true"]'
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,11 +41,17 @@ foreach ($Viewport in $Viewports) {
         Write-Host "$Viewport $Url -> $OutputPath"
         & pnpx --yes playwright screenshot `
             --viewport-size $Viewport `
-            --wait-for-timeout 800 `
+            --wait-for-selector $ReadySelector `
             $Url `
             $OutputPath
         if ($LASTEXITCODE -ne 0) {
             throw "Screenshot capture failed for $Url at $Viewport (exit code $LASTEXITCODE)"
+        }
+        if (-not (Test-Path -LiteralPath $OutputPath -PathType Leaf)) {
+            throw "Screenshot command reported success but did not write $OutputPath"
+        }
+        if ((Get-Item -LiteralPath $OutputPath).Length -le 0) {
+            throw "Screenshot command wrote an empty PNG: $OutputPath"
         }
     }
 }

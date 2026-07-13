@@ -128,6 +128,34 @@ describe("useTimelineAgent", () => {
     expect(start).toHaveBeenCalledWith("live");
   });
 
+  it("does not advertise live launch when the timeline cannot start", () => {
+    const demo = demoController({ canStart: false });
+    const { result } = renderHook(() => useTimelineAgent(demo, {
+      mode: "live",
+      status: readyStatus,
+    }));
+
+    expect(result.current.canRunLive).toBe(false);
+  });
+
+  it("uses target health for an explicit live launch regardless of selected mode", async () => {
+    const start = vi.fn();
+    const demo = demoController({
+      state: { ...initialDemoTimelineState, mode: "replay" },
+      start,
+    });
+
+    const { result } = renderHook(() => useTimelineAgent(demo, {
+      mode: "replay",
+      status: readyStatus,
+    }));
+
+    expect(result.current.canRunLive).toBe(true);
+    await act(async () => result.current.runPreparedWorkflow("live"));
+
+    expect(start).toHaveBeenCalledWith("live");
+  });
+
   it("does not offer an explicit live launch when health has failed", () => {
     const start = vi.fn();
     const demo = demoController({ start });

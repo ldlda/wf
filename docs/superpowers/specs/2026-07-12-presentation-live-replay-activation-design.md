@@ -26,9 +26,10 @@ when `wf-rpc-server` is running.
 
 ### Launch surface
 
-Expose a compact prepared-run control on Scene 10's `operation` beat. It is a
-scene-owned control, not a reintroduced chat rail. It must remain visible while
-the target is checking, ready, failed, or the live run is active.
+Expose one compact prepared-run control in `PresentationFooter` throughout
+Scenes 8-12. It is demo chrome, not a reintroduced chat rail or a scene-owned
+launch panel. Scene 10 remains the semantic execution start even when the
+presenter starts or prepares the run from an earlier demo scene.
 
 The control communicates the current action:
 
@@ -83,8 +84,8 @@ discussion views should not gain a persistent live-service badge or run action.
 
 ## Acceptance Criteria
 
-1. With `wf-rpc-server` and the web server running, Scene 10's operation beat
-   visibly exposes `Run prepared workflow` and starts a live timeline.
+1. With `wf-rpc-server` and the web server running, the compact footer rail on
+   Scenes 8-12 exposes `Run prepared workflow` and starts a live timeline.
 2. A live run records deployment inspection, run start, interrupt, resume, and
    trace evidence using the existing `callOperation` path.
 3. The typed approval form remains the only way to provide the resume decision;
@@ -97,8 +98,9 @@ discussion views should not gain a persistent live-service badge or run action.
    recovered with retry, without reloading the page or reconnecting manually.
 7. The launch control cannot issue duplicate starts while an operation is in
    flight or a live run is already active.
-8. Scene 8 and Scene 9 remain deterministic authoring replay and do not call
-   workflow authoring RPC operations.
+8. Scene 8 chat Send and Scene 9 staged messages remain deterministic authoring
+   replay and do not call workflow authoring RPC operations. Their separate
+   footer control may start the prepared run.
 
 ## Verification
 

@@ -1,4 +1,3 @@
-import type { FormEvent } from "react";
 import { Button } from "../../components/ui/button.js";
 import { Textarea } from "../../components/ui/textarea.js";
 import { AuthoringConversation } from "./AuthoringConversation.js";
@@ -7,6 +6,7 @@ import {
   type Scene8EntryAction,
   type Scene8EntryState,
 } from "./scene8-entry-state.js";
+import { PREPARED_COMPOSER_HELP, usePreparedComposerSubmit } from "./usePreparedComposerSubmit.js";
 
 type Scene8ChatEntryProps = {
   readonly state: Scene8EntryState;
@@ -17,11 +17,10 @@ type Scene8ChatEntryProps = {
 export const Scene8ChatEntry = ({ state, dispatch }: Scene8ChatEntryProps) => {
   const submitted = state.phase === "submitted";
   const canSubmit = canSubmitScene8Entry(state);
-
-  const submit = (event?: FormEvent<HTMLFormElement>) => {
-    event?.preventDefault();
-    if (canSubmit) dispatch({ type: "submit" });
-  };
+  const { submit, handleKeyDown } = usePreparedComposerSubmit(
+    canSubmit,
+    () => dispatch({ type: "submit" }),
+  );
 
   return (
     <section
@@ -43,12 +42,7 @@ export const Scene8ChatEntry = ({ state, dispatch }: Scene8ChatEntryProps) => {
           value={state.draft}
           disabled={submitted}
           onChange={(event) => dispatch({ type: "draft_changed", draft: event.target.value })}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" && !event.shiftKey) {
-              event.preventDefault();
-              submit();
-            }
-          }}
+          onKeyDown={handleKeyDown}
           aria-describedby="scene8-authoring-request-help"
         />
         <div className="agent-handoff-scene__composer-actions">
@@ -57,7 +51,7 @@ export const Scene8ChatEntry = ({ state, dispatch }: Scene8ChatEntryProps) => {
           </Button>
         </div>
         <p id="scene8-authoring-request-help" className="agent-handoff-scene__composer-help">
-          Shift+Enter adds a new line. This is a deterministic prepared replay, not a live model request.
+          {PREPARED_COMPOSER_HELP}
         </p>
       </form>
       {submitted ? (

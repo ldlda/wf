@@ -1,8 +1,14 @@
 import { findScene, mainScenes, type MainLocation } from "./storyboard.js";
+import type { SceneDefinition } from "./storyboard.js";
 
 type SceneProgressProps = {
   readonly location: MainLocation;
 };
+
+export const shouldShowBeatCounter = (
+  scene: Pick<SceneDefinition, "alwaysShowBeatCounter"> | undefined,
+  totalBeats: number,
+): boolean => totalBeats > 1 || scene?.alwaysShowBeatCounter === true;
 
 export const SceneProgress = ({ location }: SceneProgressProps) => {
   const scene = findScene(location.sceneId);
@@ -18,7 +24,7 @@ export const SceneProgress = ({ location }: SceneProgressProps) => {
           {sceneIndex + 1} / {totalScenes}
         </span>
       )}
-      {(totalBeats > 1 || location.sceneId === "agent-handoff") && (
+      {shouldShowBeatCounter(scene, totalBeats) && (
         <span className="scene-progress__beat">
           {beatIndex >= 0 ? beatIndex + 1 : 1} / {totalBeats}
         </span>

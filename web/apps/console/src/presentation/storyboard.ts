@@ -40,6 +40,7 @@ export type SceneDefinition = {
   readonly evidencePointer: string;
   readonly view: SceneView;
   readonly beats: readonly SceneBeatDefinition[];
+  readonly alwaysShowBeatCounter?: boolean;
 };
 
 const defineScenes = <const Scenes extends readonly SceneDefinition[]>(scenes: Scenes): Scenes => scenes;
@@ -158,6 +159,7 @@ export const mainScenes = defineScenes([
     claimClass: "implemented",
     evidencePointer: "Constrained demo agent and prepared replay recipe",
     view: "agent",
+    alwaysShowBeatCounter: true,
     beats: [
       sceneBeat("request", "Operator request", "A thin agent interface receives the report request.", { chatMode: "hidden", chatTheme: "light" }),
     ],

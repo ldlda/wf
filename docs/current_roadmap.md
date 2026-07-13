@@ -204,8 +204,8 @@ Presentation visual audit, July 11:
 
 ## Completed: Presentation Recomposition And Authoring Story
 
-Scenes 8 and 9 are now implemented as authentic external-agent request and
-factual prepared-authoring proof. Scene 8 is one local request-to-first-turn
+Scenes 8 and 9 now present an external-agent request through a scripted
+presentation surface and factual prepared-authoring proof. Scene 8 is one local request-to-first-turn
 beat; its obsolete `/handoff` route fails closed. Scene 9 keeps a persistent
 prepared assistant pane beside five factual phase visuals in an adaptive
 approximately 35/65 split. The obsolete receipt/trace modal and lower chat dock
@@ -244,8 +244,9 @@ Recommended next visual slices:
     [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md).
     Implementation:
     [`presentation evaluation and closing plan`](historical/superpowers/plans/2026-07-10-presentation-evaluation-closing.md).
-6. Completed: Presentation agent authoring story rebuilds Scenes 8 and 9 as
-    authentic external-agent handoff and factual prepared-authoring proof.
+6. Completed: Presentation agent authoring story rebuilds Scenes 8 and 9 as a
+    scripted surface representing an external-agent handoff and factual
+    prepared-authoring proof.
     Implementation:
     [`presentation agent authoring story plan`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md).
 7. Completed: Scene 1 now introduces the agent-shaped product goal through
@@ -261,7 +262,7 @@ Recommended next visual slices:
    Implementation:
    [`defense presentation rehearsal`](historical/superpowers/plans/2026-07-12-defense-presentation-rehearsal.md).
 9. Completed: Scenes 7-9 now use one dominant factual artifact per beat on the
-   Editorial Canvas: authoring/repair evidence, an authentic light agent chat,
+   Editorial Canvas: authoring/repair evidence, a scripted light agent chat,
    and a light prepared lifecycle canvas with synchronized secondary chat.
    Implementation:
    [`Scenes 7-9 editorial focal proof`](historical/superpowers/plans/2026-07-12-scenes-7-9-editorial-focal-proof.md).
@@ -287,12 +288,14 @@ separate activity after these surfaces are stable.
    turns, and Deployment Send records a truthful local run request without
    execution or RPC. Implementation:
    [`Scene 9 staged message box`](historical/superpowers/plans/2026-07-12-scene-9-staged-message-box.md).
-   The boundary is explicit: Scenes 10–12 own run activation, approval,
-   resume, output, and trace evidence.
-3. **Completed: Live/replay truth and run activation:** Scene 10 exposes the
-   prepared-run action outside the hidden chat, retries the existing health
-   probe, starts live execution explicitly, and keeps direct links and failed
-   services on truthful replay evidence. Implementation:
+   The boundary is explicit: the compact demo footer may start the prepared run
+   from Scenes 8–12, while Scenes 10–12 own run, decision, resume, output, and
+   trace evidence.
+3. **Completed: Live/replay truth and run activation:** the compact footer rail
+   across Scenes 8–12 exposes the prepared-run action, retries the existing
+   health probe, starts live execution explicitly, and keeps direct links and
+   failed services on truthful replay evidence. Scene 10 remains the semantic
+   start of execution evidence. Implementation:
    [`presentation live/replay activation`](historical/superpowers/plans/2026-07-12-presentation-live-replay-activation.md).
 4. **Completed: Scene 11 compression:** reduce the typed-human-boundary scene to two
    beats: interrupt context and approval decision. Cancellation remains a
