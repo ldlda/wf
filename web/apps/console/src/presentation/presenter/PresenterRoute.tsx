@@ -34,11 +34,20 @@ export const PresenterRoute = () => {
   const currentKey = navigation.note ? `${navigation.note.sceneId}/${navigation.note.beatId}` : null;
   const discussion = navigation.location.kind === "discussion" ? findDiscussionBranch(navigation.location.branchId) : undefined;
 
+  const nextNote = navigation.next;
+  const previousNote = navigation.previous;
+
   return (
     <PresenterShell
       current={navigation.note}
       covered={covered}
       activeDiscussionId={navigation.location.kind === "discussion" ? navigation.location.branchId : null}
+      onSwipeNext={nextNote
+        ? () => { window.location.hash = presenterHashForNote(nextNote); }
+        : undefined}
+      onSwipePrevious={previousNote
+        ? () => { window.location.hash = presenterHashForNote(previousNote); }
+        : undefined}
     >
       {navigation.note && (
         <PresenterNavigationBar

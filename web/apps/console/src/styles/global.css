@@ -35,7 +35,7 @@ html {
 
 body {
   margin: 0;
-  padding: 1.5rem;
+  padding: 0;
 }
 
 h1,
@@ -256,6 +256,7 @@ tbody tr:hover {
   grid-template-columns: minmax(24rem, 0.9fr) minmax(30rem, 1.1fr);
   gap: 1rem;
   align-items: start;
+  padding: 1.5rem;
 }
 
 .app-layout > section[aria-label="Connection"] {
