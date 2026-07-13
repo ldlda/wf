@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, type MouseEvent } from "react";
 import {
   Background,
   Controls,
@@ -114,6 +114,17 @@ const WorkflowGraphStageInner = ({
   variant = "full",
 }: WorkflowGraphStageProps) => {
   const { fitView } = useReactFlow<Node<PresentationNodeData>, Edge>();
+  const selectNodeRef = useRef(selectNode);
+
+  useEffect(() => {
+    selectNodeRef.current = selectNode;
+  }, [selectNode]);
+
+  // Inspector selection rerenders the parent. Keep the node callback stable so
+  // that rerender does not recreate baseNodes and erase user-dragged positions.
+  const handleSelectNode = useCallback((nodeId: string) => {
+    selectNodeRef.current(nodeId);
+  }, []);
   const model = useMemo(() => {
     const generated = buildWorkflowGraph(presentationWorkflowPlan, {
       direction: "LR",
@@ -149,12 +160,12 @@ const WorkflowGraphStageInner = ({
       selectable: false,
       data: {
         ...node.data,
-        selectNode,
+        selectNode: handleSelectNode,
         positionX: node.position.x,
         positionY: node.position.y,
       },
     })),
-    [model.nodes, selectNode],
+    [handleSelectNode, model.nodes],
   );
 
   const [nodes, setNodes, onNodesChange] = useNodesState(baseNodes);
