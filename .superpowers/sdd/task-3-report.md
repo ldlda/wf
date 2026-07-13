@@ -56,3 +56,23 @@
 ## Review Fix Commit
 
 `5f03fa31` (`fix: harden prepared lifecycle review fixes`)
+
+## Narrow Flow Correction
+
+- Fixed the remaining <=600px overlap by giving the prepared scene two `max-content` grid rows, `align-content: start`, `height: max-content`, `min-height: max-content`, and `flex: 0 0 auto`. The presentation and operation frame now contribute their intrinsic heights with `auto max-content` rows and visible overflow; the stage remains the outer vertical scroll owner, so the frame and presentation do not create nested vertical scroll traps.
+- Kept the assistant as the second grid row, aligned to its own start, with a bounded `min(24rem, 60vh)` height so its existing conversation scroll remains useful without allowing unrestricted max-content growth.
+- Added a narrow CSS regression contract for the winning grid rows, intrinsic sizing, flex behavior, visible overflow, bounded assistant, and the absence of frame/presentation `overflow: auto` rules.
+- Added the storyboard scene title as a small frame context label. The existing `scene` prop was retained because the current SceneBody caller supplies it and is outside this correction’s owned files; it is now used rather than remaining an unused interface seam, without restoring StageCaption.
+
+## Narrow Flow Verification
+
+- RED: the new <=600px contract failed before implementation because the scene had no intrinsic two-row sizing rule.
+- GREEN: focused Task 3 suite -> 3 files, 62 tests passed.
+- Relevant adjacent projection/recording/state/assistant/coherence batch -> 6 files, 59 tests passed.
+- Browser smoke with `playwright-cli`: at `480x720`, the presentation ended at approximately `y=756` and the assistant began at `y=765`, with no overlap; the stage primary owned the outer scroll and the frame/presentation had visible overflow. At `720x720`, the compact frame remained in-flow with the repair visual visible. At `1280x720`, the assistant measured `321px / 1248px = 25.7%` and the presentation `914px`, preserving the 26/74 editorial split.
+- `npx react-doctor@latest --verbose --scope changed` -> no issues, 100/100.
+- `git diff --check` -> clean before commit.
+
+## Narrow Flow Commit
+
+`3d51ac1a` (`fix: prevent prepared lifecycle narrow overlap`)
