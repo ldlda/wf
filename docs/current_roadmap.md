@@ -355,10 +355,11 @@ Presentation wishlist / defense readiness:
 
 ### Next: Simpler Speech And Factual Scene 8 Evidence
 
-1. Planned: simplify the timed presenter path through Scenes 1-8 to one spoken
-   idea per beat. Move terminology such as typed contracts, source resolution,
-   provider neutrality, and explicit resume boundaries into optional notes or
-   Q&A where it is easier to explain without rushing.
+1. Planned: give every beat one audience goal and one to three anchor terms,
+   then simplify the timed presenter path through Scenes 1-8 to one suggested
+   sentence per beat. Keep essential vocabulary such as Workflow API and
+   lifecycle record names, while moving detailed qualification into optional
+   notes or Q&A.
 2. Planned: replace Scene 8's inaccurate missing-output diagnostic and sparse
    visuals with compact product-result views based on reviewed `wf` output:
    `missing_outcome_edge` at `nodes[analyze]`, an exact `set-route` repair, and

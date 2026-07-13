@@ -16,8 +16,11 @@ This design separates two independently shippable changes:
 
 ## Speech Contract
 
-Each beat has one spoken idea. The presenter may use optional notes during Q&A,
-but the timed path does not require lists of architecture terms.
+Each beat has one audience goal, one to three anchor terms, and one suggested
+sentence. The anchor terms preserve the thesis vocabulary that identifies the
+beat; the sentence is rehearsal help, not a word-for-word obligation. The
+presenter may use optional notes during Q&A, but the timed path does not require
+lists of architecture terms.
 
 The simplified story is:
 
@@ -34,9 +37,11 @@ The simplified story is:
 8. The example discovers capabilities, authors a draft, diagnoses a missing
    route, repairs it, saves an artifact, and creates a deployment.
 
-Terms such as provider neutrality, typed contracts, source resolution, explicit
-resume boundaries, and NodeUse remain available in visuals, optional notes, and
-Q&A. They are not mandatory opening narration.
+Terms such as provider neutrality, Workflow API, Draft, Artifact, Deployment,
+Run, validation, and traces remain explicit anchor terms where they identify a
+slide's purpose. More detailed terms such as source resolution, explicit resume
+boundaries, and NodeUse remain available in visuals, optional notes, and Q&A.
+They are not mandatory opening narration.
 
 The target for Scenes 1-8 is approximately four minutes, including navigation.
 The complete must-say path should remain comfortably below the previous 11-minute
