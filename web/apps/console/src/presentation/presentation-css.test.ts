@@ -102,6 +102,10 @@ describe("presentation.css", () => {
   it("keeps the discussion row in the presentation column and stacks it before chat on mobile", () => {
     const discussion = cssBlocks(css, ".prepared-lifecycle-scene__discussion")
       .find((body) => body.includes("grid-area: discussion;"));
+    const discussionRail = cssBlocks(
+      css,
+      ".prepared-lifecycle-scene__discussion > .scene-body__discussion-links",
+    ).find((body) => body.includes("border-top: 0;"));
     const assistant = cssBlocks(css, ".prepared-lifecycle-scene > .presentation-assistant-pane")
       .find((body) => body.includes("grid-area: assistant;"));
     const presentation = cssBlocks(css, ".prepared-lifecycle-scene__presentation")
@@ -111,8 +115,12 @@ describe("presentation.css", () => {
       .find((body) => body.includes('grid-template-areas: "presentation" "discussion" "assistant";'));
 
     expect(discussion).toContain("grid-area: discussion;");
-    expect(discussion).not.toContain("background:");
-    expect(discussion).not.toContain("border:");
+    expect(discussion).toContain("margin: 0;");
+    expect(discussion).toContain("border: 0;");
+    expect(discussion).toContain("padding: 0;");
+    expect(discussion).toContain("background: transparent;");
+    expect(discussionRail).toContain("border-top: 0;");
+    expect(discussionRail).toContain("background: transparent;");
     expect(assistant).toContain("grid-area: assistant;");
     expect(presentation).toContain("grid-area: presentation;");
     expect(narrowScene).toContain('grid-template-areas: "presentation" "discussion" "assistant";');
@@ -241,8 +249,6 @@ describe("presentation.css", () => {
 
   it("keeps wide lifecycle evidence compact instead of stretching into a sparse frame", () => {
     const wideContainer = cssBlock(css, "@container presentation-canvas (min-width: 1500px)") ?? "";
-    const wideScene = cssBlocks(wideContainer, '.prepared-lifecycle-scene[data-presentation-surface="editorial"]')
-      .find((body) => body.includes("grid-template-rows: max-content auto;"));
     const widePresentation = cssBlocks(
       wideContainer,
       '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__presentation',
@@ -252,7 +258,10 @@ describe("presentation.css", () => {
       '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame',
     ).find((body) => body.includes("height: max-content;"));
 
-    expect(wideScene).toContain("align-content: start;");
+    // The scene itself must retain its bounded rows so the chat pane cannot size from its transcript.
+    expect(wideContainer).not.toMatch(
+      /\.prepared-lifecycle-scene\[data-presentation-surface="editorial"\]\s*\{/,
+    );
     expect(widePresentation).toContain("align-content: start;");
     expect(wideFrame).toContain("max-height: min(34rem, 56vh);");
     expect(wideFrame).toContain("overflow: visible;");

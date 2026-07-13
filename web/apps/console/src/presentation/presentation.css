@@ -3480,11 +3480,18 @@
   grid-area: discussion;
   min-width: 0;
   min-height: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
 }
 
 .prepared-lifecycle-scene__discussion > .scene-body__discussion-links {
   margin-top: 0;
+  border-top: 0;
   padding-top: 0.3rem;
+  background: transparent;
 }
 
 .prepared-lifecycle-scene__rail {
@@ -4015,11 +4022,6 @@
 
 /* Keep the wide stage editorial instead of turning the phase frame into a blank wall. */
 @container presentation-canvas (min-width: 1500px) {
-  .prepared-lifecycle-scene[data-presentation-surface="editorial"] {
-    grid-template-rows: max-content auto;
-    align-content: start;
-  }
-
   .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__presentation {
     grid-template-rows: auto max-content;
     align-content: start;
