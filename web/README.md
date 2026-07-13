@@ -364,7 +364,7 @@ workflow authoring RPC operations.
   (discover, draft, diagnose, repair, artifact, deployment) with a compact phase rail
   and one dominant factual product projection per beat. A persistent prepared
   assistant pane stays visible on the left while the phase canvas remains
-  dominant on the right; the starting split is approximately 35/65 and adapts
+  dominant on the right; the starting split is approximately 26/74 and adapts
   to the available width. Its active tool group follows the current beat. There
   is no lower chat dock, detached trace modal, or second transcript.
 

@@ -14,7 +14,7 @@ Open each URL in a browser at 100% zoom, 1280x720 viewport:
 Review these routes at `1024x768`, `1200x800`, and `1280x720`, always at 100%
 browser zoom:
 
-1. `/present#scene/architecture/node-use/focus/node-use`
+1. `/present#scene/architecture/overview/focus/node-use`
 2. `/present#scene/resume-output-evidence/trace`
 
 The logical canvas widths must be `960`, `1080`, and `1280` respectively.

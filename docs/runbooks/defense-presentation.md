@@ -166,7 +166,7 @@ visual hierarchy, chat mode, evidence mode, and fallback route.
 - Runtime providers:
   `http://127.0.0.1:5173/present#scene/architecture/runtime/focus/runtime-providers`
 - NodeUse:
-  `http://127.0.0.1:5173/present#scene/architecture/node-use/focus/node-use`
+  `http://127.0.0.1:5173/present#scene/architecture/overview/focus/node-use`
 - Agent handoff:
   `http://127.0.0.1:5173/present#scene/agent-handoff/request`
 - Prepared lifecycle:

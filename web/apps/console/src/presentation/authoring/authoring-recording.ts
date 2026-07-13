@@ -44,7 +44,7 @@ export type PreparedAuthoringPhase = {
   readonly label: string;
   readonly commands: readonly PreparedAuthoringCommand[];
   readonly conversation: readonly AuthoringConversationTurn[];
-  /** Compact factual projection for Scene 9; command detail stays in the trace panel. */
+  /** Compact factual projection for the prepared lifecycle presentation. */
   readonly proof: readonly string[];
 };
 
@@ -52,7 +52,7 @@ const unknownPhase = (phase: never): never => {
   throw new Error(`unknown phase: ${phase}`);
 };
 
-/** Maps a scene 9 beat ID to the corresponding authoring phase. */
+/** Maps a canonical recording beat ID to its authoring phase. */
 export const authoringPhaseForBeat = (beatId: AuthoringPhaseId): AuthoringPhaseId => {
   switch (beatId) {
     case "discover":
@@ -275,8 +275,8 @@ export const authoringToolGroupId = (phase: AuthoringPhaseId): string =>
 /**
  * Projects the prepared recording into one stable assistant transcript.
  *
- * IDs depend only on phase and command position so the full Scene 8 thread and
- * compact Scene 9 dock retain DOM/message identity while later phases appear.
+ * IDs depend only on phase and command position so the handoff thread and
+ * prepared lifecycle assistant retain DOM/message identity as phases appear.
  */
 export const projectPreparedAuthoringThread = (
   throughPhase: AuthoringPhaseId = "deployment",

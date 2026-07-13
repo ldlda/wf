@@ -205,11 +205,11 @@ Presentation visual audit, July 11:
 ## Completed: Presentation Recomposition And Authoring Story
 
 Scenes 7 and 8 now present an external-agent request through a scripted
-presentation surface and factual prepared-authoring proof. Scene 8 is one local request-to-first-turn
-beat; its obsolete `/handoff` route fails closed. Scene 8 keeps a persistent
-prepared assistant pane beside six factual phase visuals in an adaptive
-approximately 35/65 split. The obsolete receipt/trace modal and lower chat dock
-were removed. Plans:
+presentation surface and factual prepared-authoring proof. Scene 7 is one local
+request-to-first-turn beat; its obsolete `/handoff` route fails closed. Scene 8
+keeps a persistent prepared assistant pane beside six factual phase visuals in
+an adaptive approximately 26/74 split. The obsolete receipt/trace modal and
+lower chat dock were removed. Plans:
 [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md)
 and
 [`Scene 9 assistant pane`](historical/superpowers/plans/2026-07-12-scene-9-assistant-modal.md).
