@@ -194,7 +194,7 @@ user, assistant, and Discover tool group. It is deterministic replay, not a live
 LLM chat, and does not start a workflow run. Scene 8 breaks the prepared
 authoring into six beats with a persistent prepared-agent assistant pane on
 the left and a dominant phase canvas on the right. The adaptive split starts
-near 35/65 and keeps the matching prepared tool group synchronized with each
+near 26/74 and keeps the matching prepared tool group synchronized with each
 factual source, graph, repair, artifact, or deployment view. Neither scene calls
 workflow authoring RPC operations — they consume deterministic prepared data. Scenes 9 through
 11 use the canonical replay by default when no live target is available. When

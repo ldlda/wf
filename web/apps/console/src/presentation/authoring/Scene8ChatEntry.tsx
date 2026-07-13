@@ -13,7 +13,7 @@ type Scene8ChatEntryProps = {
   readonly dispatch: (action: Scene8EntryAction) => void;
 };
 
-/** Scene 8's deterministic request surface; submission reveals prepared data locally. */
+/** Deterministic agent-request surface; submission reveals prepared data locally. */
 export const Scene8ChatEntry = ({ state, dispatch }: Scene8ChatEntryProps) => {
   const submitted = state.phase === "submitted";
   const canSubmit = canSubmitScene8Entry(state);

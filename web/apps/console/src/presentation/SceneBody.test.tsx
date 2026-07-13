@@ -494,19 +494,19 @@ describe("SceneBody", () => {
     expect(openDiscussion).toHaveBeenCalledWith("where-is-ai-agent");
   });
 
-  it("renders Scene 9 discover beat with prepared authoring phases", () => {
+  it("renders the prepared lifecycle discover beat with authoring phases", () => {
     renderSceneBodyAtMainLocation("prepared-lifecycle", "discover");
     expect(screen.getByLabelText("prepared authoring lifecycle")).toBeInTheDocument();
     expect(screen.getAllByText("Discover").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders Scene 9 artifact beat with compiled artifact evidence", () => {
+  it("renders the prepared lifecycle artifact beat with compiled evidence", () => {
     renderSceneBodyAtMainLocation("prepared-lifecycle", "artifact");
     expect(screen.getAllByText("Artifact").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText(/lda_report_case_study/i).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("renders Scene 8 as the request entry beat", () => {
+  it("renders Agent Request as the request entry beat", () => {
     renderSceneBodyAtMainLocation("agent-handoff", "request");
 
     expect(screen.getByRole("textbox", { name: /authoring request/i })).toBeInTheDocument();

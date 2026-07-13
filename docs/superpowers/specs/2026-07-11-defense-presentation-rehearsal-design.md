@@ -23,7 +23,7 @@ With `wf-rpc-server` running against `examples/lda_report_workflow/wf.config.jso
 and the presentation target set to `http://127.0.0.1:8765/rpc`, the rehearsal
 path is:
 
-1. Open Scene 8 at `#scene/agent-handoff/request`.
+1. Open Scene 7 at `#scene/agent-handoff/request`.
 2. Use the visible `Run prepared workflow` action.
 3. Advance through the prepared lifecycle and run scenes to the typed approval.
 4. Choose all issue rows or a deliberate subset, add a comment, and submit.

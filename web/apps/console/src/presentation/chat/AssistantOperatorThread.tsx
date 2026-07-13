@@ -284,7 +284,7 @@ export const AssistantOperatorThread = ({
     }
     if (!activeToolGroupId) return;
 
-    // The same transcript can be much taller than the Scene 9 dock. Keep the
+    // The same transcript can be much taller than the prepared assistant pane. Keep the
     // beat-owned group visible without maintaining a second scroll-state model.
     const activeGroup = viewport
       ?.querySelector<HTMLElement>(`[data-tool-group-id="${activeToolGroupId}"]`);

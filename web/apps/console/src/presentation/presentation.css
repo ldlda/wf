@@ -3236,7 +3236,7 @@
 /* Responsive grid behavior lives in demo-workflow.css container query */
 
 /*
-  Scene 8 — Agent handoff full-screen transcript.
+  Agent handoff — full-screen transcript.
   Gives the full-screen conversation a readable stage with consistent spacing.
   Only the stage wrapper may fade/translate; Thread internals are not morphed.
 */
@@ -3384,7 +3384,7 @@
   color: var(--authoring-paper, var(--stage-canvas));
 }
 
-/* Scene 8 keeps the prepared thread intact but gives it an editorial reading surface. */
+/* Agent Request keeps the prepared thread intact but gives it an editorial reading surface. */
 .agent-handoff-scene[data-presentation-surface="editorial"] {
   --authoring-paper: var(--color-editorial-paper, oklch(0.975 0.012 82));
   --authoring-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
@@ -3438,7 +3438,7 @@
   color: var(--authoring-accent);
 }
 
-/* Keep the compact Scene 8 request surface centered inside the presentation canvas. */
+/* Keep the compact Agent Request surface centered inside the presentation canvas. */
 @media (max-width: 1100px) {
   .presentation-stage[data-scene-view="agent"] .presentation-stage__primary {
     align-items: center;

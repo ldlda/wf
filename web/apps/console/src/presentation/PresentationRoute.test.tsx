@@ -377,7 +377,7 @@ describe("PresentationRoute", () => {
     expect(screen.getByRole("button", { name: /inspect evidence/i })).toBeInTheDocument();
   });
 
-  it("renders the Scene 8 composer with one stable footer workflow action", async () => {
+  it("renders the Agent Request composer with one stable footer workflow action", async () => {
     window.location.hash = "#scene/agent-handoff/request";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -490,7 +490,7 @@ describe("PresentationRoute", () => {
     expect(screen.queryByText(/checking reachability/i)).not.toBeInTheDocument();
   });
 
-  it("keeps Scene 8 local with a configured target", async () => {
+  it("keeps Agent Request local with a configured target", async () => {
     window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
     window.location.hash = "#scene/agent-handoff/request";
     mockedCallOperation.mockClear();
@@ -706,7 +706,7 @@ describe("PresentationRoute", () => {
     expect(screen.queryByText("No trace frames captured.")).not.toBeInTheDocument();
   });
 
-  it("navigates to Scene 8 request beat via hash", async () => {
+  it("navigates to Agent Request via hash", async () => {
     window.location.hash = "#scene/agent-handoff/request";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -724,7 +724,7 @@ describe("PresentationRoute", () => {
     "#scene/prepared-lifecycle/repair",
     "#scene/prepared-lifecycle/artifact",
     "#scene/prepared-lifecycle/deployment",
-  ])("navigates to Scene 9 beat %s", async (hash) => {
+  ])("navigates to prepared lifecycle beat %s", async (hash) => {
     window.location.hash = hash;
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -732,7 +732,7 @@ describe("PresentationRoute", () => {
     expect(await screen.findByLabelText("prepared authoring lifecycle")).toBeInTheDocument();
   });
 
-  it("navigating Scene 9 beats does not call workflow authoring RPC operations", async () => {
+  it("navigating prepared lifecycle beats does not call workflow authoring RPC operations", async () => {
     const { callOperation } = await import("../connection/api.js");
     const mockCallOp = vi.mocked(callOperation);
     mockCallOp.mockClear();
