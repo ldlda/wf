@@ -111,6 +111,8 @@ describe("presentation.css", () => {
       .find((body) => body.includes('grid-template-areas: "presentation" "discussion" "assistant";'));
 
     expect(discussion).toContain("grid-area: discussion;");
+    expect(discussion).not.toContain("background:");
+    expect(discussion).not.toContain("border:");
     expect(assistant).toContain("grid-area: assistant;");
     expect(presentation).toContain("grid-area: presentation;");
     expect(narrowScene).toContain('grid-template-areas: "presentation" "discussion" "assistant";');
@@ -153,6 +155,7 @@ describe("presentation.css", () => {
 
   it("gives the prepared lifecycle rail and operation frame the primary hierarchy", () => {
     const frameRules = cssBlocks(css, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame');
+    const editorialFrame = frameRules.find((body) => body.includes("background: var(--authoring-paper);"));
     const frameContent = cssBlock(css, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame > *');
 
     expect(cssBlocks(css, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__rail')
@@ -165,6 +168,8 @@ describe("presentation.css", () => {
       .some((body) => body.includes("font: 600 1rem/1.1 var(--font-interface);"))).toBe(true);
     expect(css).toContain("font: 500 0.72rem/1.25 var(--font-interface);");
     expect(frameRules.some((body) => body.includes("grid-template-rows: auto minmax(0, 1fr);"))).toBe(true);
+    expect(editorialFrame).toContain("border: 0;");
+    expect(editorialFrame).not.toContain("border-bottom:");
     expect(frameContent).toContain("animation: authoring-frame-content-enter 220ms");
   });
 
