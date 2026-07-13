@@ -23,7 +23,7 @@ describe("SceneProgress", () => {
     render(<SceneProgress location={location} />);
 
     expect(screen.getByText("6 / 14")).toBeInTheDocument();
-    expect(screen.getByText("3 / 4")).toBeInTheDocument();
+    expect(screen.getByText("4 / 5")).toBeInTheDocument();
   });
 
   it("shows scene position for run-from-deployment/graph", () => {

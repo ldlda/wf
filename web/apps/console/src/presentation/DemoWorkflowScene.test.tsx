@@ -116,8 +116,8 @@ describe("DemoWorkflowScene", () => {
     renderBeat("input");
 
     const browser = screen.getByRole("region", { name: /workflow input files/i });
-    expect(within(browser).getByText("project-brief.md")).toBeInTheDocument();
-    expect(within(browser).getByText("architecture-notes.md")).toBeInTheDocument();
+    expect(within(browser).getByRole("button", { name: /project-brief\.md/i })).toBeInTheDocument();
+    expect(within(browser).getByRole("button", { name: /architecture-notes\.md/i })).toBeInTheDocument();
     expect(within(browser).getByRole("group", { name: /workflow output/i })).toHaveTextContent("issue-board.json");
     expect(screen.queryByRole("region", { name: /workflow input summary/i })).not.toBeInTheDocument();
   });

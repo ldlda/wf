@@ -329,10 +329,11 @@ separate activity after these surfaces are stable.
    Story-flow audit: [`presentation story audit`](runbooks/presentation-story-audit.md);
    dated evidence: [`presentation rehearsal log`](runbooks/presentation-rehearsal-log.md).
 
-9. **Deferred: factual input file browser:** replace the Scene 10 input
-   manifest-only view with a read-only browser backed by canonical prepared or
-   live run facts. Distinguish declared, selected, read, and produced files;
-   do not imply file reads without evidence.
+9. **Completed: factual input file browser:** Scene 10 presents the run-selected
+   documents as a read-only browser with selectable prepared-fixture Markdown
+   excerpts and a separately labelled output destination. The preview states
+   that it is not execution evidence; the UI does not claim per-file reads
+   because the current trace recording does not expose them.
 
 10. **Completed: presentation follow-up visual/story pass:** clarified Scene 1
     and the lifecycle-to-authoring narrative, gave Scenes 7 and 9 a stronger

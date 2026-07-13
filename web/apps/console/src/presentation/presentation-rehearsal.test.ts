@@ -7,7 +7,7 @@ const expectedBeats = {
   positioning: ["landscape", "lda-position"],
   "planner-runtime": ["planner", "runtime", "boundary"],
   lifecycle: ["draft", "artifact", "deployment", "run"],
-  architecture: ["client", "api", "runtime", "node-use"],
+  architecture: ["overview", "client", "api", "runtime", "node-use"],
   authoring: ["discover", "author", "diagnose", "repair"],
   "agent-handoff": ["request"],
   "prepared-lifecycle": ["discover", "draft", "validate", "artifact", "deployment"],
