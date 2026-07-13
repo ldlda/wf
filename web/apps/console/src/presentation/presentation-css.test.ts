@@ -84,7 +84,7 @@ describe("presentation.css", () => {
     expect(boardBlock).toContain("flex-shrink: 0");
   });
 
-  it("keeps Scene 9 as a bounded 26/74 split without a lower dock row", () => {
+  it("keeps the prepared lifecycle as a bounded 26/74 split without a lower dock row", () => {
     const sceneBlock = css.match(
       /^\.prepared-lifecycle-scene\s*\{(?<body>[\s\S]*?)\n\}/m,
     )?.groups?.body;
@@ -98,12 +98,39 @@ describe("presentation.css", () => {
     expect(css).not.toMatch(/prepared-lifecycle-scene__dock[\s\S]*position:\s*(absolute|fixed)/);
   });
 
-  it("keeps every Scene 9 surface override on the editorial 26/74 split", () => {
-    const scene9Rules = css.match(/\.prepared-lifecycle-scene[^{}]*\{[^}]*\}/g) ?? [];
+  it("asserts the winning editorial 26/74 split", () => {
+    const editorialScene = cssBlocks(
+      css,
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"]',
+    ).find((body) => body.includes("--authoring-paper") && body.includes("grid-template-columns:"));
 
-    expect(scene9Rules.filter((rule) => rule.includes("grid-template-columns:")).length).toBeGreaterThan(0);
-    expect(scene9Rules.join("\n")).not.toContain("1.65fr");
-    expect(scene9Rules.join("\n")).toMatch(/minmax\(12rem, 0\.26fr\)\s+minmax\(0, 0\.74fr\)/);
+    expect(editorialScene).toBeDefined();
+    expect(editorialScene).toMatch(/grid-template-columns: minmax\(12rem, 0\.26fr\) minmax\(0, 0\.74fr\)/);
+    expect(editorialScene).not.toContain("0.24fr");
+    expect(editorialScene).not.toContain("0.76fr");
+  });
+
+  it("scopes Diagnose and Repair focus styling to the prepared lifecycle frame", () => {
+    const preparedFrame = '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame';
+    const diagnose = cssBlocks(css, `${preparedFrame} .authoring-visual--repair[data-authoring-focus="diagnose"]`)
+      .find((body) => body.includes("grid-template-columns: minmax(0, 1fr);"));
+    const repair = cssBlocks(css, `${preparedFrame} .authoring-visual--repair[data-authoring-focus="repair"]`)
+      .find((body) => body.includes("grid-template-columns: minmax(0, 1fr);"));
+    const diagnoseEvidence = cssBlocks(
+      css,
+      `${preparedFrame} .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__diagnostic`,
+    ).find((body) => body.includes("border-inline-start: 3px solid"));
+    const repairEvidence = cssBlocks(
+      css,
+      `${preparedFrame} .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__correction`,
+    ).find((body) => body.includes("border-inline-start: 3px solid"));
+
+    expect(diagnose).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(diagnoseEvidence).toContain("border-inline-start: 3px solid");
+    expect(repair).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(repairEvidence).toContain("border-inline-start: 3px solid");
+    expect(css).toContain(`${preparedFrame} .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__correction`);
+    expect(css).toContain(`${preparedFrame} .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__status`);
   });
 
   it("gives the prepared lifecycle rail and operation frame the primary hierarchy", () => {
@@ -135,7 +162,33 @@ describe("presentation.css", () => {
     expect(compactRail).toContain("scrollbar-width: none;");
   });
 
-  it("bounds Scene 9 conversation scrolling and recenters Scene 8 at compact stage widths", () => {
+  it("keeps the operation frame readable at 720px and stacks presentation at 480px", () => {
+    const compactContainer = cssBlock(css, "@container presentation-canvas (max-width: 1050px)") ?? "";
+    const compactScene = cssBlocks(compactContainer, '.prepared-lifecycle-scene[data-presentation-surface="editorial"]')
+      .find((body) => body.includes("grid-template-columns: minmax(10.5rem, 0.28fr)"));
+    const compactFrame = cssBlocks(
+      compactContainer,
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame',
+    ).find((body) => body.includes("grid-template-rows: auto auto;"));
+    const compactRepair = cssBlocks(
+      compactContainer,
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair',
+    ).find((body) => body.includes("grid-template-columns: minmax(0, 1fr);"));
+    const narrowContainer = cssBlock(css, "@container presentation-canvas (max-width: 600px)") ?? "";
+    const narrowScene = cssBlocks(narrowContainer, ".prepared-lifecycle-scene")
+      .find((body) => body.includes("grid-template-columns: minmax(0, 1fr);") && body.includes("grid-template-areas:"));
+
+    expect(compactScene).toContain("overflow: visible;");
+    expect(compactFrame).toContain("grid-template-rows: auto auto;");
+    expect(compactFrame).toContain("min-height: 18rem;");
+    expect(compactFrame).toContain("overflow: visible;");
+    expect(compactRepair).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(compactRepair).toContain("min-width: 0;");
+    expect(narrowScene).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(narrowScene).toContain('grid-template-areas: "presentation" "assistant";');
+  });
+
+  it("bounds prepared conversation scrolling and recenters the agent handoff at compact stage widths", () => {
     expect(css.match(/\.presentation-stage\[data-scene-view="agent"\] \.presentation-stage__primary\s*\{/g)).toHaveLength(2);
     expect(cssBlocks(css, ".presentation-stage__primary > .agent-handoff-scene")
       .some((body) => body.includes("margin-inline: auto;"))).toBe(true);

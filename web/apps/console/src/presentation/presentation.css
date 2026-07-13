@@ -3674,7 +3674,7 @@
   }
 }
 
-/* Scene 9 — persistent assistant beside the dominant phase projection. */
+/* Prepared lifecycle — persistent assistant beside the dominant phase frame. */
 .prepared-lifecycle-scene {
   display: grid;
   grid-template-columns: minmax(12rem, 0.26fr) minmax(0, 0.74fr);
@@ -3831,20 +3831,6 @@
   font: 600 0.72rem/1.3 var(--font-mono);
 }
 
-.stage-caption:has(+ .prepared-lifecycle-scene) {
-  margin-bottom: 0.55rem;
-  padding: 0.75rem 1rem;
-}
-
-.stage-caption:has(+ .prepared-lifecycle-scene) h1 {
-  margin-block: 0.15rem 0.25rem;
-  font-size: 1.85rem;
-}
-
-.stage-caption:has(+ .prepared-lifecycle-scene) p {
-  margin: 0;
-}
-
 .presentation-assistant-pane {
   display: flex;
   min-width: 0;
@@ -3945,7 +3931,7 @@
   --authoring-ink: var(--color-editorial-ink, oklch(0.19 0.015 65));
   --authoring-muted: var(--color-editorial-muted, oklch(0.48 0.025 65));
   --authoring-rule: color-mix(in oklch, var(--authoring-muted) 32%, transparent);
-  grid-template-columns: minmax(12rem, 0.24fr) minmax(0, 0.76fr);
+  grid-template-columns: minmax(12rem, 0.26fr) minmax(0, 0.74fr);
   gap: 0.8rem;
   background: var(--authoring-paper);
   color: var(--authoring-ink);
@@ -4014,6 +4000,52 @@
 
 .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__detail {
   color: var(--authoring-muted);
+}
+
+/* Diagnose and Repair are distinct editorial cuts of the recorded validate phase. */
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="diagnose"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__diagnostic {
+  grid-column: 1;
+  min-height: 0;
+  border-inline-start: 3px solid var(--accent-amber);
+  background: color-mix(in oklch, var(--authoring-paper) 90%, var(--accent-amber));
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__connector,
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__correction,
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__status {
+  display: none;
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="repair"] {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto;
+  align-content: start;
+  gap: 0.75rem;
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__diagnostic,
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__connector {
+  display: none;
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__correction {
+  grid-column: 1;
+  min-height: 0;
+  border-inline-start: 3px solid var(--success);
+  background: color-mix(in oklch, var(--authoring-paper) 90%, var(--success));
+}
+
+.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__status {
+  grid-column: 1;
+  justify-content: flex-start;
+  color: var(--success);
 }
 
 .prepared-lifecycle-scene[data-presentation-surface="editorial"] .presentation-assistant-pane {
@@ -4107,6 +4139,7 @@
   .prepared-lifecycle-scene[data-presentation-surface="editorial"] {
     grid-template-columns: minmax(10.5rem, 0.28fr) minmax(0, 0.72fr);
     gap: 0.6rem;
+    overflow: visible;
   }
 
   .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__rail {
@@ -4118,12 +4151,52 @@
   }
 
   .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame {
+    grid-template-rows: auto auto;
+    min-height: 18rem;
+    height: auto;
     padding: 0.9rem;
+    overflow: visible;
+  }
+
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__presentation {
+    min-height: max-content;
+    overflow: visible;
   }
 
   .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame-header {
     grid-template-columns: minmax(0, 1fr);
     gap: 0.7rem;
+  }
+
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto;
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    gap: 0.7rem;
+    align-content: start;
+  }
+
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-repair__diagnostic,
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-repair__correction {
+    min-width: 0;
+    min-height: 0;
+    padding: 0.85rem;
+  }
+
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-repair__connector {
+    display: none;
+  }
+
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-repair__status {
+    grid-column: 1;
+    justify-content: flex-start;
+  }
+
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-repair__diagnostic strong,
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-repair__correction code {
+    overflow-wrap: anywhere;
   }
 
   .problem-loop-scene[data-presentation-surface="editorial"] {
@@ -4141,6 +4214,23 @@
 @keyframes authoring-frame-content-enter {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@container presentation-canvas (max-width: 600px) {
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "presentation" "assistant";
+    overflow: visible;
+  }
+
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] > .prepared-lifecycle-scene__presentation {
+    grid-area: presentation;
+  }
+
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] > .presentation-assistant-pane {
+    grid-area: assistant;
+    min-height: 14rem;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

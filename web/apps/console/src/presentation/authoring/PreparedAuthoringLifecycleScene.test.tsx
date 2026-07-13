@@ -43,6 +43,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(frame).toHaveTextContent("wf draft validate lda_report_workflow");
     expect(frame).toHaveTextContent(/structured missing-output diagnostic/i);
     expect(frame).toHaveAttribute("data-authoring-step", "diagnose");
+    expect(frame.querySelector('[data-authoring-focus="diagnose"]')).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
       "data-authoring-focus",
       "diagnose",
@@ -60,6 +61,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(frame).toHaveTextContent("workflow.draft_workspaces.set_step_output_map");
     expect(frame).toHaveTextContent(/wf draft set-output lda_report_workflow/i);
     expect(frame).toHaveAttribute("data-authoring-step", "repair");
+    expect(frame.querySelector('[data-authoring-focus="repair"]')).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
       "data-authoring-focus",
       "repair",
