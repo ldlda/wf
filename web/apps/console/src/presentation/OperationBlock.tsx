@@ -89,9 +89,10 @@ export const OperationBlock = ({
       <button
         type="button"
         className="operation-block__evidence-action"
+        aria-label="Inspect protocol receipt; view raw evidence"
         onClick={openEvidence}
       >
-        View raw evidence
+        Inspect protocol receipt
         <span aria-hidden="true">-&gt;</span>
       </button>
     </m.article>

@@ -23,6 +23,18 @@ describe("layoutFigure", () => {
     expect(position(layout, "discover").x).toBeLessThan(position(layout, "repair").x);
   });
 
+  it("supports named topologies for fan-in, loops, hubs, and sequence lanes", () => {
+    for (const kind of ["spine", "fan-in", "hub", "loop", "lanes"] as const) {
+      const layout = layoutFigure({
+        ...flowFigure,
+        id: `topology-${kind}`,
+        layout: { kind },
+      });
+      expect(layout.definition.layout.kind).toBe(kind);
+      expect(layout.nodes).toHaveLength(2);
+    }
+  });
+
   it("preserves explicit authored positions", () => {
     expect(position(layoutFigure(explicitFigure), "runtime")).toEqual({ x: 420, y: 180 });
   });
@@ -45,7 +57,7 @@ describe("layoutFigure", () => {
     const standardDelta = position(standard, "repair").x - position(standard, "discover").x;
     const stageDelta = position(stage, "repair").x - position(stage, "discover").x;
 
-    expect(FIGURE_NODE_DIMENSIONS.stage).toEqual({ width: 256, height: 112 });
+    expect(FIGURE_NODE_DIMENSIONS.stage).toEqual({ width: 256, height: 150 });
     expect(stageDelta - standardDelta).toBe(
       FIGURE_NODE_DIMENSIONS.stage.width - FIGURE_NODE_DIMENSIONS.standard.width,
     );

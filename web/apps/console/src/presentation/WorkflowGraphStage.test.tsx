@@ -150,9 +150,57 @@ describe("WorkflowGraphStage", () => {
     const graph = screen.getByRole("group", { name: "workflow graph" });
     expect(graph).toHaveAttribute("data-graph-direction", "horizontal");
     expect(graph).toHaveAttribute("data-graph-layout", "horizontal");
+    expect(graph).toHaveAttribute("data-graph-topology", "prepared-run-branches");
+    expect(graph).toHaveAttribute("data-pan-zoom", "enabled");
+    expect(graph).toHaveAttribute("data-node-drag", "enabled");
     expect(screen.getByRole("button", { name: /zoom in/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /zoom out/i })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /fit view/i })).toBeInTheDocument();
+  });
+
+  it("separates the submitted and revision branches in two-dimensional space", () => {
+    render(
+      <WorkflowGraphStage
+        execution={{ completedNodeIds: [], currentNodeId: null }}
+        selectedNodeId={null}
+        selectNode={vi.fn()}
+      />,
+    );
+
+    const nodePosition = (id: string) => {
+      const node = document.querySelector<HTMLElement>(
+        `.workflow-graph-stage__node[data-node-id="${id}"]`,
+      );
+      if (!node) throw new Error(`Missing workflow node ${id}`);
+      return { x: Number(node.dataset.positionX), y: Number(node.dataset.positionY) };
+    };
+
+    expect(nodePosition("create_issues").y).toBeLessThan(nodePosition("revision_requested").y);
+    expect(nodePosition("create_issues").x).toBe(nodePosition("finalise").x);
+    expect(nodePosition("finalise").x).toBe(nodePosition("end_completed").x);
+    expect(nodePosition("create_issues").y).toBeLessThan(nodePosition("finalise").y);
+    expect(nodePosition("finalise").y).toBeLessThan(nodePosition("end_completed").y);
+    expect(nodePosition("revision_requested").y).toBeGreaterThan(nodePosition("review_issues").y);
+  });
+
+  it("does not invent selected or current node treatment for the static graph", () => {
+    render(
+      <WorkflowGraphStage
+        execution={{ completedNodeIds: ["read_docs"], currentNodeId: "analyze" }}
+        selectedNodeId="analyze"
+        selectNode={vi.fn()}
+      />,
+    );
+
+    const nodes = document.querySelectorAll<HTMLButtonElement>(
+      'button[aria-label^="workflow node:"]',
+    );
+    expect(nodes).toHaveLength(10);
+    for (const node of nodes) {
+      expect(node).not.toHaveAttribute("data-selected");
+      expect(node).not.toHaveAttribute("aria-pressed");
+      expect(node).not.toHaveAttribute("data-execution-state");
+    }
   });
 
   it("renders the run identity without plan or trace count chips", () => {

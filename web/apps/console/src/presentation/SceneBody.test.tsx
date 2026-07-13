@@ -39,7 +39,12 @@ const demo: DemoTimelineController = {
 
 afterEach(() => cleanup());
 
-const renderSceneBodyAtMainLocation = (sceneId: MainLocation["sceneId"], beatId: string, openDiscussion = noop) => render(
+const renderSceneBodyAtMainLocation = (
+  sceneId: MainLocation["sceneId"],
+  beatId: string,
+  openDiscussion = noop,
+  motionDisabled = false,
+) => render(
   <SceneBody
     location={{ kind: "main", sceneId, beatId, focusPath: [] }}
     demo={demo}
@@ -48,7 +53,7 @@ const renderSceneBodyAtMainLocation = (sceneId: MainLocation["sceneId"], beatId:
     openEvidence={noop}
     openDiscussion={openDiscussion}
     onFocusPathChange={noop}
-    motionDisabled={false}
+    motionDisabled={motionDisabled}
   />,
 );
 
@@ -254,6 +259,42 @@ describe("SceneBody", () => {
     expect(withinRail.getByText("Deployment")).toBeInTheDocument();
     expect(withinRail.getByText("Run")).toBeInTheDocument();
     expect(withinRail.getByText("Source binding")).toBeInTheDocument();
+  });
+
+  it.each([
+    ["positioning", "landscape", "Positioning and Related Systems", "landscape"],
+    ["positioning", "lda-position", "Positioning and Related Systems", "lda"],
+    ["planner-runtime", "planner", "Planner and Runtime", "planner"],
+    ["planner-runtime", "runtime", "Planner and Runtime", "runtime"],
+    ["planner-runtime", "boundary", "Planner and Runtime", "boundary"],
+    ["lifecycle", "draft", "Workflow Lifecycle", "draft"],
+    ["lifecycle", "artifact", "Workflow Lifecycle", "artifact"],
+    ["lifecycle", "deployment", "Workflow Lifecycle", "deployment"],
+    ["lifecycle", "run", "Workflow Lifecycle", "run"],
+  ] as const)("exposes one primary visual contract for %s/%s", (sceneId, beatId, heading, active) => {
+    const { container } = renderSceneBodyAtMainLocation(sceneId, beatId);
+
+    expect(screen.getByRole("heading", { name: heading })).toBeInTheDocument();
+    const primaries = container.querySelectorAll('[data-visual-role="primary"]');
+    expect(primaries).toHaveLength(1);
+    expect(primaries[0]).toHaveAttribute("data-motion", "enabled");
+    expect(primaries[0]).toHaveAttribute(
+      sceneId === "positioning"
+        ? "data-positioning-active-region"
+        : sceneId === "planner-runtime"
+          ? "data-boundary-active"
+          : "data-lifecycle-active-stage",
+      active,
+    );
+  });
+
+  it("marks Scene 3-5 primary visuals as motion-disabled without hiding their comparisons", () => {
+    const { container } = renderSceneBodyAtMainLocation("planner-runtime", "runtime", noop, true);
+
+    const primary = container.querySelector('[data-visual-role="primary"]');
+    expect(primary).toHaveAttribute("data-motion", "disabled");
+    expect(within(primary as HTMLElement).getByText("Planner")).toBeInTheDocument();
+    expect(within(primary as HTMLElement).getByText("Runtime")).toBeInTheDocument();
   });
 
   it("updates the lifecycle explanation with the active beat", () => {

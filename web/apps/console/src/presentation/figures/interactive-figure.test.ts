@@ -11,6 +11,13 @@ import { describe, expect, it } from "vitest";
 describe("interactive-figure CSS", () => {
   it("styles node kinds with semantic colors", () => {
     expect(css).toContain("data-figure-node-kind");
+    expect(css).toContain("data-figure-shape");
+    expect(css).toContain("font-size: 18px");
+  });
+
+  it("disables figure transitions for reduced motion", () => {
+    expect(css).toContain("prefers-reduced-motion: reduce");
+    expect(css).toContain('data-motion="disabled"');
   });
 
   it("avoids pill-shaped cards outside the stage variant", () => {

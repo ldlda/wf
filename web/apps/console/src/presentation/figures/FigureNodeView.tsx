@@ -16,6 +16,11 @@ const kindLabel: Record<FigureNodeKind, string> = {
   runtime: "Runtime",
   boundary: "Boundary",
   evidence: "Evidence",
+  decision: "Decision",
+  terminal: "Terminal",
+  provider: "Provider",
+  lane: "Lane",
+  loop: "Loop",
 };
 
 export const FigureNodeView = ({

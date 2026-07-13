@@ -28,7 +28,7 @@ const event: DemoEvent = {
 };
 
 describe("OperationBlock", () => {
-  it("shows command, interpreted summary, and evidence action in expanded mode", () => {
+  it("shows command, interpreted summary, and protocol receipt action in expanded mode", () => {
     render(<OperationBlock event={event} variant="expanded" openEvidence={vi.fn()} />);
 
     expect(screen.getByText(/workflow.runs.start/i)).toBeInTheDocument();
@@ -37,6 +37,8 @@ describe("OperationBlock", () => {
     expect(screen.getAllByText(/interrupted/i).length).toBeGreaterThan(0);
     expect(screen.getByText(/issue_review/i)).toBeInTheDocument();
     expect(screen.getAllByText(/run_demo/i).length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /inspect protocol receipt/i })).toBeInTheDocument();
+    expect(screen.queryByText(/view raw evidence/i)).not.toBeInTheDocument();
   });
 
   it("shows compact receipt with operation, status, duration, and run id", () => {
@@ -53,7 +55,7 @@ describe("OperationBlock", () => {
     const openEvidence = vi.fn();
     render(<OperationBlock event={event} variant="expanded" openEvidence={openEvidence} />);
 
-    await userEvent.click(screen.getByText("View raw evidence"));
+    await userEvent.click(screen.getByRole("button", { name: /inspect protocol receipt/i }));
     expect(openEvidence).toHaveBeenCalledOnce();
   });
 

@@ -1489,6 +1489,15 @@
   min-height: 20rem;
 }
 
+/* Motion measures these grid children so the comparison axis stays visible while focus shifts. */
+.scene-body__positioning-map[data-positioning-active-region="landscape"] {
+  grid-template-columns: minmax(13rem, 0.9fr) minmax(20rem, 1.35fr) minmax(13rem, 0.9fr);
+}
+
+.scene-body__positioning-map[data-positioning-active-region="lda"] {
+  grid-template-columns: minmax(11rem, 0.78fr) minmax(23rem, 1.58fr) minmax(11rem, 0.78fr);
+}
+
 .scene-body__positioning-column {
   display: grid;
   align-content: start;
@@ -1567,7 +1576,7 @@
 }
 
 .scene-body__positioning-map[data-positioning-active-region="lda"] .scene-body__positioning-tile {
-  opacity: 0.58;
+  opacity: 0.74;
 }
 
 .scene-body__positioning-tile,
@@ -1590,6 +1599,18 @@
   min-height: 20rem;
 }
 
+.scene-body__boundary[data-boundary-active="planner"] {
+  grid-template-columns: minmax(0, 1.35fr) minmax(8rem, 0.24fr) minmax(0, 0.78fr);
+}
+
+.scene-body__boundary[data-boundary-active="runtime"] {
+  grid-template-columns: minmax(0, 0.78fr) minmax(8rem, 0.24fr) minmax(0, 1.35fr);
+}
+
+.scene-body__boundary[data-boundary-active="boundary"] {
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 0.42fr) minmax(0, 1fr);
+}
+
 .scene-body__boundary-pane {
   display: grid;
   align-content: center;
@@ -1602,7 +1623,7 @@
 }
 
 .scene-body__boundary-pane[data-boundary-emphasis="reduced"] {
-  opacity: 0.58;
+  opacity: 0.74;
 }
 
 .scene-body__boundary-pane {
@@ -1660,6 +1681,22 @@
   gap: 0.65rem;
   align-items: stretch;
   margin-top: 1.2rem;
+}
+
+.scene-body__lifecycle[data-lifecycle-active-stage="draft"] {
+  grid-template-columns: minmax(0, 1.55fr) repeat(3, minmax(0, 0.82fr));
+}
+
+.scene-body__lifecycle[data-lifecycle-active-stage="artifact"] {
+  grid-template-columns: minmax(0, 0.82fr) minmax(0, 1.55fr) repeat(2, minmax(0, 0.82fr));
+}
+
+.scene-body__lifecycle[data-lifecycle-active-stage="deployment"] {
+  grid-template-columns: repeat(2, minmax(0, 0.82fr)) minmax(0, 1.55fr) minmax(0, 0.82fr);
+}
+
+.scene-body__lifecycle[data-lifecycle-active-stage="run"] {
+  grid-template-columns: repeat(3, minmax(0, 0.82fr)) minmax(0, 1.55fr);
 }
 
 .scene-body__lifecycle-stage {
@@ -2045,6 +2082,30 @@
 
 .scene-body__lifecycle-current p {
   color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 76%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
+}
+
+.scene-body__lifecycle-optional {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.35rem;
+  border-top: 1px solid color-mix(in oklch, var(--color-editorial-muted, oklch(0.48 0.025 65)) 22%, transparent);
+  padding-top: 0.55rem;
+}
+
+.scene-body__lifecycle-optional span {
+  color: var(--color-editorial-muted, oklch(0.48 0.025 65));
+  font: 700 0.62rem/1 var(--font-mono, monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.scene-body__lifecycle-optional strong,
+.scene-body__lifecycle-optional p {
+  margin: 0;
+}
+
+.scene-body__lifecycle-optional strong {
+  font-family: var(--font-mono, monospace);
 }
 
 .scene-body__architecture {

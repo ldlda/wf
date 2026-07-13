@@ -42,7 +42,18 @@ const validCatalog: FigureCatalogDefinition = {
       nodes: [
         { id: "client", label: "Client operations", summary: "CLI callers", kind: "actor" },
         { id: "runtime", label: "Runtime & providers", summary: "WorkflowServer", kind: "runtime", childFigureId: "runtime-detail" },
-        { id: "leaf", label: "Leaf node", summary: "Non-expandable", kind: "artifact" },
+        {
+          id: "leaf",
+          label: "Leaf node",
+          summary: "Non-expandable",
+          kind: "artifact",
+          evidence: {
+            label: "Stored fact",
+            title: "Leaf evidence",
+            body: "The graph remains visible while this factual detail is inspected.",
+            facts: [{ label: "Pointer", value: "docs/example.md" }],
+          },
+        },
       ],
       edges: [{ id: "e1", from: "client", to: "runtime", label: "calls" }],
     },
@@ -191,12 +202,20 @@ describe("InteractiveFigure", () => {
     expect(figure.querySelector(".interactive-figure__canvas")).toBeInTheDocument();
   });
 
-  it("keeps root stage figures in presentation mode", () => {
+  it("opens leaf evidence without replacing the figure", () => {
+    renderFigure({ size: "stage" });
+    fireEvent.click(figureNode("leaf"));
+    expect(screen.getByRole("region", { name: /leaf node evidence/i })).toHaveTextContent("Leaf evidence");
+    expect(screen.getByRole("region", { name: /leaf node evidence/i })).toHaveTextContent("docs/example.md");
+    expect(figureNode("leaf")).toBeInTheDocument();
+  });
+
+  it("enables pan and zoom on the root architecture figure", () => {
     renderFigure({ focusPath: [], size: "stage" });
 
     expect(screen.getByRole("group", { name: /architecture/i })).toHaveAttribute(
       "data-pan-zoom",
-      "disabled",
+      "enabled",
     );
   });
 

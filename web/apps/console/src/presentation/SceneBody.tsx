@@ -1,3 +1,4 @@
+import { m } from "motion/react";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import type { TimelineAgentController } from "../demo/agent/timelineAgent.js";
 import type { DemoApprovalActions } from "./demo-approval-actions.js";
@@ -88,33 +89,51 @@ const NarrativeScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
   </>
 );
 
-const PositioningScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
+const choreographyTransition = (motionDisabled: boolean) => ({
+  duration: motionDisabled ? 0 : 0.34,
+  ease: [0.16, 1, 0.3, 1] as const,
+});
+
+type ChoreographyProps = {
+  readonly scene: SceneDefinition;
+  readonly beat: SceneBeatDefinition;
+  readonly motionDisabled: boolean;
+};
+
+const PositioningScene = ({ scene, beat, motionDisabled }: ChoreographyProps) => {
   const highlightLda = beat.id === "lda-position";
+  const transition = choreographyTransition(motionDisabled);
   return (
     <>
       <StageCaption eyebrow={`Act I · ${scene.claimClass}`} title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
-      <div
+      <m.div
+        layout
         className="scene-body__positioning-map"
         aria-label="positioning map"
         data-positioning-active-region={highlightLda ? "lda" : "landscape"}
+        data-visual-role="primary"
+        data-motion={motionDisabled ? "disabled" : "enabled"}
+        transition={transition}
       >
-        <section className="scene-body__positioning-column" aria-label="direct action patterns">
+        <m.section layout transition={transition} className="scene-body__positioning-column" aria-label="direct action patterns">
           <p className="scene-body__positioning-label">Direct action</p>
-          <article className="scene-body__positioning-tile">
+          <m.article layout transition={transition} className="scene-body__positioning-tile">
             <strong>Tool loops</strong>
             <span>Fast action, no durable lifecycle</span>
-          </article>
-          <article className="scene-body__positioning-tile">
+          </m.article>
+          <m.article layout transition={transition} className="scene-body__positioning-tile">
             <strong>Generated scripts</strong>
             <span>Inspectable code, weak deployment records</span>
-          </article>
-        </section>
-        <article
+          </m.article>
+        </m.section>
+        <m.article
+          layout
           className="scene-body__positioning-substrate"
           data-positioning-role="substrate"
           data-positioning-active={highlightLda ? "true" : "false"}
+          transition={transition}
         >
           <span className="scene-body__positioning-label">This thesis</span>
           <strong>lda.chat</strong>
@@ -124,23 +143,23 @@ const PositioningScene = ({ scene, beat }: { scene: SceneDefinition; beat: Scene
             <li>Validation</li>
             <li>Persisted records</li>
           </ul>
-        </article>
-        <section className="scene-body__positioning-column" aria-label="adjacent systems">
+        </m.article>
+        <m.section layout transition={transition} className="scene-body__positioning-column" aria-label="adjacent systems">
           <p className="scene-body__positioning-label">Adjacent systems</p>
-          <article className="scene-body__positioning-tile">
+          <m.article layout transition={transition} className="scene-body__positioning-tile">
             <strong>Hosted automation</strong>
             <span>Managed triggers and app integrations</span>
-          </article>
-          <article className="scene-body__positioning-tile">
+          </m.article>
+          <m.article layout transition={transition} className="scene-body__positioning-tile">
             <strong>Agent graphs</strong>
             <span>Durable planner loops</span>
-          </article>
-          <article className="scene-body__positioning-tile">
+          </m.article>
+          <m.article layout transition={transition} className="scene-body__positioning-tile">
             <strong>MCP</strong>
             <span>Capability protocol boundary</span>
-          </article>
-        </section>
-      </div>
+          </m.article>
+        </m.section>
+      </m.div>
       <p className="scene-body__evidence">{scene.evidencePointer}</p>
     </>
   );
@@ -152,17 +171,28 @@ const boundaryActiveForBeat = (beatId: string): "planner" | "runtime" | "boundar
   return "planner";
 };
 
-const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
+const BoundaryScene = ({ scene, beat, motionDisabled }: ChoreographyProps) => {
   const active = boundaryActiveForBeat(beat.id);
   const plannerActive = active === "planner" || active === "boundary";
   const runtimeActive = active === "runtime" || active === "boundary";
+  const transition = choreographyTransition(motionDisabled);
   return (
     <>
       <StageCaption eyebrow="Act II · implemented" title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
-      <div className="scene-body__boundary" aria-label="planner runtime boundary" data-boundary-active={active}>
-        <section
+      <m.div
+        layout
+        className="scene-body__boundary"
+        aria-label="planner runtime boundary"
+        data-boundary-active={active}
+        data-visual-role="primary"
+        data-motion={motionDisabled ? "disabled" : "enabled"}
+        transition={transition}
+      >
+        <m.section
+          layout
+          transition={transition}
           className="scene-body__boundary-pane"
           data-boundary-side="planner"
           data-boundary-emphasis={plannerActive ? "active" : "reduced"}
@@ -174,12 +204,14 @@ const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBea
             <li>Revises steps and bindings</li>
             <li>Chooses tools</li>
           </ul>
-        </section>
-        <div className="scene-body__boundary-seam" aria-label="workflow operation boundary">
+        </m.section>
+        <m.div layout transition={transition} className="scene-body__boundary-seam" aria-label="workflow operation boundary">
           <strong>CLI / JSON-RPC</strong>
           <span>typed workflow operations</span>
-        </div>
-        <section
+        </m.div>
+        <m.section
+          layout
+          transition={transition}
           className="scene-body__boundary-pane"
           data-boundary-side="runtime"
           data-boundary-emphasis={runtimeActive ? "active" : "reduced"}
@@ -192,8 +224,8 @@ const BoundaryScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBea
             <li>Records traces and run output</li>
             <li>Resumes from persisted state</li>
           </ul>
-        </section>
-      </div>
+        </m.section>
+      </m.div>
       <p className="scene-body__evidence">{scene.evidencePointer}</p>
     </>
   );
@@ -206,17 +238,28 @@ const lifecycleStages = [
   { id: "run", label: "Run", role: "Execution record and trace", detail: "Persist status, outputs, interrupts, and trace evidence." },
 ] as const;
 
-const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBeatDefinition }) => {
+const LifecycleScene = ({ scene, beat, motionDisabled }: ChoreographyProps) => {
   const activeIndex = Math.max(0, lifecycleStages.findIndex((stage) => stage.id === beat.id));
   const activeStage = lifecycleStages[activeIndex]!;
+  const transition = choreographyTransition(motionDisabled);
   return (
     <>
       <StageCaption eyebrow="Act II · implemented" title={scene.title}>
         <p>{beat.caption}</p>
       </StageCaption>
-      <div className="scene-body__lifecycle" aria-label="workflow lifecycle rail" data-lifecycle-active-stage={activeStage.id}>
+      <m.div
+        layout
+        className="scene-body__lifecycle"
+        aria-label="workflow lifecycle rail"
+        data-lifecycle-active-stage={activeStage.id}
+        data-visual-role="primary"
+        data-motion={motionDisabled ? "disabled" : "enabled"}
+        transition={transition}
+      >
         {lifecycleStages.map((stage, i) => (
-          <article
+          <m.article
+            layout
+            transition={transition}
             key={stage.id}
             className="scene-body__lifecycle-stage"
             data-lifecycle-active={i === activeIndex ? "true" : "false"}
@@ -226,13 +269,20 @@ const LifecycleScene = ({ scene, beat }: { scene: SceneDefinition; beat: SceneBe
             <strong>{stage.label}</strong>
             <small>{stage.role}</small>
             {i < lifecycleStages.length - 1 && <span className="scene-body__lifecycle-arrow">→</span>}
-          </article>
+          </m.article>
         ))}
-      </div>
+      </m.div>
       <aside className="scene-body__lifecycle-current" aria-label="current lifecycle state">
         <span>{activeStage.label}</span>
         <strong>{activeStage.role}</strong>
         <p>{activeStage.detail}</p>
+        {activeStage.id === "artifact" && (
+          <div className="scene-body__lifecycle-optional" aria-label="optional artifact path">
+            <span>Optional evidence path</span>
+            <strong>Raw plan -&gt; artifact</strong>
+            <p>A plan can be compiled into an immutable version; Draft is not mandatory.</p>
+          </div>
+        )}
       </aside>
       <p className="scene-body__evidence">{scene.evidencePointer}</p>
     </>
@@ -335,11 +385,11 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
       if (scene.id === "problem") return <ProblemLoopScene scene={scene} beat={beat} />;
       return <NarrativeScene scene={scene} beat={beat} />;
     case "positioning":
-      return <PositioningScene scene={scene} beat={beat} />;
+      return <PositioningScene scene={scene} beat={beat} motionDisabled={motionDisabled} />;
     case "boundary":
-      return <BoundaryScene scene={scene} beat={beat} />;
+      return <BoundaryScene scene={scene} beat={beat} motionDisabled={motionDisabled} />;
     case "lifecycle":
-      return <LifecycleScene scene={scene} beat={beat} />;
+      return <LifecycleScene scene={scene} beat={beat} motionDisabled={motionDisabled} />;
     case "architecture":
       return (
         <ArchitectureScene

@@ -2,6 +2,7 @@ import Dagre from "@dagrejs/dagre";
 import type {
   FigureDefinition,
   FigureEdgeDefinition,
+  FigureLayoutKind,
   FigureNodeDefinition,
 } from "./model.js";
 
@@ -23,13 +24,29 @@ export const FIGURE_NODE_DIMENSIONS: Record<FigureLayoutSize, {
 }> = {
   standard: { width: 236, height: 102 },
   wide: { width: 236, height: 102 },
-  stage: { width: 256, height: 112 },
+  stage: { width: 256, height: 150 },
 };
 
 export const NODE_WIDTH = FIGURE_NODE_DIMENSIONS.standard.width;
 export const NODE_HEIGHT = FIGURE_NODE_DIMENSIONS.standard.height;
-const NODESEP = 56;
-const RANKSEP = 88;
+const NODESEP = 72;
+// Presentation graphs need enough room for edge labels without forcing
+// fitView to shrink six-rank flows below projector-readable type.
+const RANKSEP = 68;
+
+const dagreOptions: Record<FigureLayoutKind, {
+  readonly rankdir: "TB" | "LR";
+  readonly ranker: "network-simplex" | "tight-tree" | "longest-path";
+}> = {
+  layered: { rankdir: "TB", ranker: "network-simplex" },
+  flow: { rankdir: "LR", ranker: "network-simplex" },
+  spine: { rankdir: "TB", ranker: "tight-tree" },
+  "fan-in": { rankdir: "LR", ranker: "network-simplex" },
+  hub: { rankdir: "TB", ranker: "network-simplex" },
+  loop: { rankdir: "TB", ranker: "network-simplex" },
+  lanes: { rankdir: "LR", ranker: "tight-tree" },
+  explicit: { rankdir: "TB", ranker: "network-simplex" },
+};
 
 export const layoutFigure = (
   figure: FigureDefinition,
@@ -55,7 +72,7 @@ const layoutDagre = (
 ): PositionedFigure => {
   const g = new Dagre.graphlib.Graph();
   g.setGraph({
-    rankdir: figure.layout.kind === "flow" ? "LR" : "TB",
+    ...dagreOptions[figure.layout.kind],
     nodesep: NODESEP,
     ranksep: RANKSEP,
   });

@@ -31,4 +31,18 @@ describe("presentationWorkflowPlan", () => {
       { from: "review_issues", to: "revision_requested", outcome: "cancelled" },
     ]);
   });
+
+  it("provides factual inspection contracts for every displayed node", () => {
+    for (const node of presentationWorkflowPlan.nodes) {
+      expect(node.capability, node.id).toBeTruthy();
+      expect(node.inputSummary, node.id).toBeTruthy();
+      expect(node.outputSummary, node.id).toBeTruthy();
+      expect(node.outcomes, node.id).not.toHaveLength(0);
+      expect(node.evidencePointer, node.id).toBeTruthy();
+    }
+
+    const interrupt = presentationWorkflowPlan.nodes.find((node) => node.id === "review_issues");
+    expect(interrupt?.schemaSummary).toMatch(/request: issue proposals/i);
+    expect(interrupt?.outcomes).toEqual(["submitted", "cancelled"]);
+  });
 });

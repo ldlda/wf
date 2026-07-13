@@ -6,14 +6,10 @@ type NodeSpotlightProps = {
   readonly close: () => void;
 };
 
-const nodeDescription = (nodeId: string): string => {
-  if (nodeId === "review_issues") {
-    return "Typed interrupt boundary. It exposes request and resume schemas, then waits for a submitted or cancelled outcome.";
-  }
-  if (nodeId === "create_issues") {
-    return "Workflow step that writes selected review items into the local issue-board source.";
-  }
-  return "Prepared report workflow step. The presentation graph is curated, but each node maps back to workflow or run evidence.";
+const kindLabel = (node: (typeof presentationNodes)[number]): string => {
+  if (node.type === "interrupt") return "Human boundary";
+  if (node.type === "end") return "Outcome";
+  return "Action";
 };
 
 export const NodeSpotlight = ({ nodeId, close }: NodeSpotlightProps) => {
@@ -52,6 +48,7 @@ export const NodeSpotlight = ({ nodeId, close }: NodeSpotlightProps) => {
   };
 
   if (!node) return null;
+  const schemaSummary = "schemaSummary" in node ? node.schemaSummary : null;
 
   return (
     <aside
@@ -60,12 +57,51 @@ export const NodeSpotlight = ({ nodeId, close }: NodeSpotlightProps) => {
       role="dialog"
       aria-modal="true"
       aria-label={label}
+      data-node-kind={node.type}
       onKeyDown={handleKeyDown}
     >
-      <button type="button" ref={closeButtonRef} onClick={close}>Close</button>
-      <p>Workflow node</p>
+      <header className="node-spotlight__header">
+        <div>
+          <p className="node-spotlight__eyebrow">Workflow node</p>
+          <span className="node-spotlight__kind">{kindLabel(node)}</span>
+        </div>
+        <button type="button" ref={closeButtonRef} onClick={close}>Close</button>
+      </header>
       <h2>{label}</h2>
-      <p>{nodeDescription(node.id)}</p>
+      <p className="node-spotlight__detail">{node.detail}</p>
+
+      <dl className="node-spotlight__facts">
+        <div>
+          <dt>Capability / boundary</dt>
+          <dd>{node.capability}</dd>
+        </div>
+        <div>
+          <dt>Input</dt>
+          <dd>{node.inputSummary}</dd>
+        </div>
+        <div>
+          <dt>Output</dt>
+          <dd>{node.outputSummary}</dd>
+        </div>
+        {schemaSummary && (
+          <div>
+            <dt>Schema summary</dt>
+            <dd>{schemaSummary}</dd>
+          </div>
+        )}
+      </dl>
+
+      <section className="node-spotlight__outcomes" aria-labelledby="node-spotlight-outcomes">
+        <h3 id="node-spotlight-outcomes">Outcomes</h3>
+        <ul>
+          {node.outcomes.map((outcome) => <li key={outcome}>{outcome}</li>)}
+        </ul>
+      </section>
+
+      <footer className="node-spotlight__evidence">
+        <span>Code / evidence pointer</span>
+        <code>{node.evidencePointer}</code>
+      </footer>
     </aside>
   );
 };

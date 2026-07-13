@@ -71,8 +71,7 @@ const renderArchitecture = (overrides: Partial<React.ComponentProps<typeof Archi
 afterEach(() => cleanup());
 
 describe("ArchitectureScene", () => {
-  it("renders the overview and expands Runtime & providers", async () => {
-    const user = userEvent.setup();
+  it("renders the architecture spine and expands the capability boundary", () => {
     const onFocusPathChange = vi.fn();
     renderArchitecture({ focusPath: [], onFocusPathChange });
     expect(screen.getByRole("heading", { name: /architecture/i })).toBeInTheDocument();
@@ -80,21 +79,55 @@ describe("ArchitectureScene", () => {
     expect(onFocusPathChange).toHaveBeenCalledWith(["runtime-providers"]);
   });
 
-  it("uses the stage figure presentation for the defense architecture scene", () => {
+  it("marks the figure as the one primary visual and exposes stable motion contracts", () => {
     renderArchitecture({ focusPath: [] });
-    expect(screen.getByRole("group", { name: /architecture/i })).toHaveAttribute("data-figure-size", "stage");
+    expect(screen.getByRole("group", { name: /architecture spine/i })).toHaveAttribute("data-figure-size", "stage");
     expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-visual-pass", "architecture-stage");
+    expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-visual-role", "primary");
+    expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-motion", "enabled");
     expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-architecture-focus", "system");
+  });
+
+  it("keeps the architecture heading stable when motion is disabled", () => {
+    renderArchitecture({ focusPath: [], motionDisabled: true });
+    expect(screen.getByRole("heading", { name: /architecture zoom/i })).toBeInTheDocument();
+    expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-motion", "disabled");
+    expect(screen.getByRole("group", { name: /architecture spine/i })).toHaveAttribute("data-motion", "disabled");
+  });
+
+  it("exposes the public surface, kernel loop, and lifecycle contracts at the spine", () => {
+    renderArchitecture({ focusPath: [] });
+    const spine = screen.getByRole("group", { name: /architecture spine/i });
+    expect(spine).toHaveTextContent("Front door and transport");
+    expect(spine).toHaveTextContent("Workflow API operations");
+    expect(spine).toHaveTextContent("WorkflowServer composition");
+    expect(spine).toHaveTextContent("wf_core execution loop");
+    expect(spine).toHaveTextContent("Lifecycle records");
+    expect(spine).toHaveTextContent("Capability inventory");
   });
 
   it("renders a directly linked nested provider view", () => {
     renderArchitecture({
       focusPath: ["runtime-providers", "configured-providers"],
     });
-    expect(screen.getByRole("group", { name: /configured providers/i })).toBeInTheDocument();
+    expect(screen.getByRole("group", { name: /configured provider boundary/i })).toBeInTheDocument();
     expect(screen.getByText("MCP sources")).toBeInTheDocument();
     expect(screen.getByText("Python sources")).toBeInTheDocument();
     expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-architecture-focus", "nested");
-    expect(screen.getByRole("group", { name: /configured providers/i })).toHaveAttribute("data-figure-focus-level", "2");
+    expect(screen.getByRole("group", { name: /configured provider boundary/i })).toHaveAttribute("data-figure-focus-level", "2");
+  });
+
+  it("shows the kernel loop and clickable NodeUse sequence as nested figures", () => {
+    const onFocusPathChange = vi.fn();
+    renderArchitecture({ focusPath: ["core-runtime"], onFocusPathChange });
+    expect(screen.getByRole("group", { name: /wf_core execution loop/i })).toHaveTextContent("Step kind");
+    fireEvent.click(screen.getByTestId("figure-node-dispatch-step-kind"));
+    expect(onFocusPathChange).toHaveBeenCalledWith(["core-runtime", "dispatch-step-kind"]);
+
+    cleanup();
+    renderArchitecture({ focusPath: ["core-runtime", "dispatch-step-kind"], onFocusPathChange });
+    expect(screen.getByRole("group", { name: /supported step kinds/i })).toHaveTextContent("NodeUse");
+    fireEvent.click(screen.getByTestId("figure-node-node-use"));
+    expect(onFocusPathChange).toHaveBeenCalledWith(["core-runtime", "dispatch-step-kind", "node-use"]);
   });
 });

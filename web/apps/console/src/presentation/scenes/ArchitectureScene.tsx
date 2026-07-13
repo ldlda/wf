@@ -35,6 +35,8 @@ export const ArchitectureScene = ({
       className="architecture-scene"
       data-testid="architecture-scene"
       data-visual-pass="architecture-stage"
+      data-visual-role="primary"
+      data-motion={motionDisabled ? "disabled" : "enabled"}
       data-focus-level={focusPath.length}
       data-architecture-focus={focusPath.length === 0 ? "system" : "nested"}
     >

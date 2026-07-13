@@ -1,43 +1,77 @@
 import { describe, expect, it } from "vitest";
-import { resolveFigureFocus } from "./focus.js";
 import { architectureCatalog } from "./architecture-catalog.js";
-import { layoutFigure } from "./layout.js";
+
+const figure = (id: string) => {
+  const result = architectureCatalog.figures.find((candidate) => candidate.id === id);
+  if (!result) throw new Error(`missing architecture figure: ${id}`);
+  return result;
+};
 
 describe("architectureCatalog", () => {
-  it("contains the conceptual architecture overview", () => {
-    const root = resolveFigureFocus(architectureCatalog, []).figure;
-    expect(root.layout.kind).toBe("flow");
-    expect(root.nodes.map((node) => node.label)).toEqual([
-      "Client operations",
-      "Application lifecycle",
-      "Runtime & providers",
+  it("keeps the thesis architecture spine as the root contract", () => {
+    const root = figure(architectureCatalog.rootFigureId);
+    expect(root.layout.kind).toBe("explicit");
+    if (root.layout.kind !== "explicit") throw new Error("architecture overview must use authored positions");
+    expect(root.layout.positions["node-use"]?.x).toBeGreaterThan(
+      root.layout.positions["core-runtime"]?.x ?? 0,
+    );
+    expect(root.nodes.map((node) => node.label)).toEqual(expect.arrayContaining([
+      "Front door and transport",
+      "Workflow API operations",
+      "WorkflowServer composition",
+      "wf_core execution loop",
+      "Lifecycle records",
+      "Capability inventory",
+    ]));
+  });
+
+  it("declares subject-appropriate topologies instead of repeated linear flows", () => {
+    expect(figure("client-surface-detail").layout.kind).toBe("fan-in");
+    expect(figure("workflow-api-detail").layout.kind).toBe("hub");
+    expect(figure("core-runtime-detail").layout.kind).toBe("flow");
+    expect(figure("node-use-detail").layout.kind).toBe("explicit");
+    expect(figure("configured-provider-detail").layout.kind).toBe("fan-in");
+  });
+
+  it("models the supported kernel branches and the provider-neutral boundary", () => {
+    const kernel = figure("core-runtime-detail");
+    expect(kernel.nodes.map((node) => node.label)).toEqual(expect.arrayContaining([
+      "Select ready frame",
+      "Step kind",
+      "Append trace frame",
+      "Route by outcome",
+    ]));
+    const stepKinds = figure("step-kind-detail");
+    expect(stepKinds.nodes.map((node) => node.label)).toEqual(expect.arrayContaining([
       "NodeUse",
+      "Condition",
+      "Foreach",
+      "Join",
+      "Subgraph",
+      "Interrupt",
+      "End",
+    ]));
+    const providers = figure("configured-provider-detail");
+    expect(providers.nodes.map((node) => node.label)).toEqual(expect.arrayContaining([
+      "Capability inventory",
+      "Built-in sources",
+      "MCP sources",
+      "Python sources",
+    ]));
+    expect(providers.edges.some((edge) => edge.from === "builtin-sources" && edge.to === "capability-inventory")).toBe(true);
+    expect(providers.edges.some((edge) => edge.from === "mcp-sources" && edge.to === "capability-inventory")).toBe(true);
+    expect(providers.edges.some((edge) => edge.from === "python-sources" && edge.to === "capability-inventory")).toBe(true);
+  });
+
+  it("keeps NodeUse as an explicit participant sequence with factual evidence", () => {
+    const sequence = figure("node-use-detail");
+    expect(sequence.nodes.map((node) => node.label)).toEqual([
+      "Runtime",
+      "Binding Resolver",
+      "NodeDef Handler",
+      "State Reducers",
+      "Trace Store",
     ]);
-  });
-
-  it("supports recursive runtime and provider expansion", () => {
-    expect(resolveFigureFocus(architectureCatalog, ["runtime-providers"]).figure.id)
-      .toBe("runtime-provider-detail");
-    expect(resolveFigureFocus(
-      architectureCatalog,
-      ["runtime-providers", "configured-providers"],
-    ).figure.id).toBe("configured-provider-detail");
-  });
-
-  it("lays out the architecture path horizontally for presentation", () => {
-    const root = resolveFigureFocus(architectureCatalog, []).figure;
-    const layout = layoutFigure(root);
-    const client = layout.nodes.find((node) => node.id === "client-operations");
-    const nodeUse = layout.nodes.find((node) => node.id === "node-use");
-    expect(client?.position.x).toBeLessThan(nodeUse?.position.x ?? 0);
-  });
-
-  it("gives every factual node an evidence pointer", () => {
-    for (const figure of architectureCatalog.figures) {
-      for (const node of figure.nodes) {
-        if (node.kind === "boundary") continue;
-        expect(node.evidencePointer, `${figure.id}/${node.id}`).toBeTruthy();
-      }
-    }
+    expect(sequence.nodes.every((node) => node.evidence !== undefined)).toBe(true);
   });
 });
