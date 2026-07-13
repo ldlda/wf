@@ -729,6 +729,14 @@
   list-style: none;
 }
 
+.node-spotlight .node-spotlight__outcomes {
+  border: 1px solid var(--stage-line);
+  border-radius: 0.55rem;
+  padding: 0.75rem;
+  background: oklch(0.105 0.02 250);
+  color: var(--text-primary);
+}
+
 .node-spotlight__outcomes li {
   border: 1px solid oklch(0.7 0.16 145 / 0.45);
   border-radius: 999px;
