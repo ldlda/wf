@@ -138,27 +138,49 @@ describe("presentation.css", () => {
     expect(editorialScene).not.toContain("0.76fr");
   });
 
-  it("scopes Diagnose and Repair focus styling to the prepared lifecycle frame", () => {
-    const preparedFrame = '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame';
-    const diagnose = cssBlocks(css, `${preparedFrame} .authoring-visual--repair[data-authoring-focus="diagnose"]`)
+  it("gives factual result roots a scrollable editorial hierarchy", () => {
+    const result = cssBlocks(css, ".authoring-result")
+      .find((body) => body.includes("grid-template-rows: auto minmax(0, 1fr);"));
+    const diagnostic = cssBlocks(css, ".authoring-result--diagnostic .authoring-result__body")
       .find((body) => body.includes("grid-template-columns: minmax(0, 1fr);"));
-    const repair = cssBlocks(css, `${preparedFrame} .authoring-visual--repair[data-authoring-focus="repair"]`)
-      .find((body) => body.includes("grid-template-columns: minmax(0, 1fr);"));
-    const diagnoseEvidence = cssBlocks(
+    const primaryDiagnostic = cssBlocks(
       css,
-      `${preparedFrame} .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__diagnostic`,
-    ).find((body) => body.includes("border-inline-start: 3px solid"));
-    const repairEvidence = cssBlocks(
+      '.authoring-result--diagnostic [data-result-primary="true"]',
+    ).find((body) => body.includes("min-width: 0;"));
+    const repair = cssBlocks(css, ".authoring-result--repair .authoring-result__body")
+      .find((body) => body.includes("gap: 1rem;"));
+    const repairCommand = cssBlocks(
       css,
-      `${preparedFrame} .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__correction`,
-    ).find((body) => body.includes("border-inline-start: 3px solid"));
+      '.authoring-result--repair [data-result-primary="true"] .authoring-result__rows > div:first-child',
+    ).find((body) => body.includes("border-block"));
+    const status = cssBlocks(css, ".authoring-result__header > strong")
+      .find((body) => body.includes("border: 1px solid"));
 
-    expect(diagnose).toContain("grid-template-columns: minmax(0, 1fr);");
-    expect(diagnoseEvidence).toContain("border-inline-start: 3px solid");
-    expect(repair).toContain("grid-template-columns: minmax(0, 1fr);");
-    expect(repairEvidence).toContain("border-inline-start: 3px solid");
-    expect(css).toContain(`${preparedFrame} .authoring-visual--repair[data-authoring-focus="diagnose"] .authoring-repair__correction`);
-    expect(css).toContain(`${preparedFrame} .authoring-visual--repair[data-authoring-focus="repair"] .authoring-repair__status`);
+    expect(result).toContain("min-height: 0;");
+    expect(result).toContain("overflow: auto;");
+    expect(diagnostic).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(primaryDiagnostic).toContain("min-width: 0;");
+    expect(repair).toContain("gap: 1rem;");
+    expect(repairCommand).toContain("border-block");
+    expect(status).toContain("border: 1px solid");
+    expect(css).not.toContain(".authoring-repair__");
+    expect(css).not.toContain(".authoring-visual--repair");
+  });
+
+  it("keeps result evidence internally scrollable and stacks metadata on narrow canvases", () => {
+    const compactContainer = cssBlock(css, "@container presentation-canvas (max-width: 1050px)") ?? "";
+    const narrowContainer = cssBlock(css, "@container presentation-canvas (max-width: 600px)") ?? "";
+    const compactResult = cssBlocks(compactContainer, ".authoring-result")
+      .find((body) => body.includes("overflow: auto;"));
+    const narrowBody = cssBlocks(narrowContainer, ".authoring-result__body")
+      .find((body) => body.includes("grid-template-columns: minmax(0, 1fr);"));
+    const narrowRows = cssBlocks(narrowContainer, ".authoring-result__rows")
+      .find((body) => body.includes("grid-template-columns: minmax(0, 1fr);"));
+
+    expect(compactResult).toContain("min-height: 0;");
+    expect(compactResult).toContain("overflow: auto;");
+    expect(narrowBody).toContain("grid-template-columns: minmax(0, 1fr);");
+    expect(narrowRows).toContain("grid-template-columns: minmax(0, 1fr);");
   });
 
   it("gives the prepared lifecycle rail and operation frame the primary hierarchy", () => {
@@ -201,10 +223,6 @@ describe("presentation.css", () => {
       compactContainer,
       '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame',
     ).find((body) => body.includes("grid-template-rows: auto auto;"));
-    const compactRepair = cssBlocks(
-      compactContainer,
-      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame .authoring-visual--repair',
-    ).find((body) => body.includes("grid-template-columns: minmax(0, 1fr);"));
     const narrowContainer = cssBlock(css, "@container presentation-canvas (max-width: 600px)") ?? "";
     const narrowScene = cssBlocks(narrowContainer, ".prepared-lifecycle-scene")
       .find((body) => body.includes("grid-template-columns: minmax(0, 1fr);") && body.includes("grid-template-areas:"));
@@ -225,8 +243,6 @@ describe("presentation.css", () => {
     expect(compactFrame).toContain("grid-template-rows: auto auto;");
     expect(compactFrame).toContain("min-height: 18rem;");
     expect(compactFrame).toContain("overflow: visible;");
-    expect(compactRepair).toContain("grid-template-columns: minmax(0, 1fr);");
-    expect(compactRepair).toContain("min-width: 0;");
     expect(narrowScene).toContain("grid-template-columns: minmax(0, 1fr);");
     expect(narrowScene).toContain('grid-template-areas: "presentation" "discussion" "assistant";');
     expect(narrowScene).toContain("grid-template-rows: max-content max-content max-content;");
