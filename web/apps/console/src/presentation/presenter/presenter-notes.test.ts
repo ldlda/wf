@@ -60,7 +60,10 @@ describe("presenter note catalog", () => {
     );
 
     for (const note of presenterNotes) {
-      expect(speech, `${note.sceneId}/${note.beatId}`).toContain(note.mustSay);
+      // Markdown emphasis is presenter-only typography; the runbook stores the
+      // same spoken words without requiring identical inline formatting.
+      const spokenText = note.mustSay.replaceAll("**", "");
+      expect(speech, `${note.sceneId}/${note.beatId}`).toContain(spokenText);
     }
   });
 

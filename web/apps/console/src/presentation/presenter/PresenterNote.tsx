@@ -28,7 +28,7 @@ export const PresenterNote = ({ note, cumulativeSeconds, next, covered, onCovere
 
       <section className="presenter-note__say" aria-labelledby="presenter-say">
         <span id="presenter-say">Say</span>
-        <p>{note.mustSay}</p>
+        <div className="presenter-note__markdown"><ReactMarkdown>{note.mustSay}</ReactMarkdown></div>
       </section>
 
       {note.warning && <aside className="presenter-note__warning"><strong>Warning</strong><p>{note.warning}</p></aside>}
@@ -60,10 +60,11 @@ export const PresenterNote = ({ note, cumulativeSeconds, next, covered, onCovere
       {next && (
         <section className="presenter-note__next" aria-label="Next beat preview">
           <span>Next · {formatPresenterTime(next.targetSeconds)}</span>
-          <p>{next.mustSay}</p>
+          <div className="presenter-note__next-copy"><ReactMarkdown>{next.mustSay}</ReactMarkdown></div>
           <a href={presenterHashForNote(next)}>Go to next beat</a>
         </section>
       )}
     </article>
   );
 };
+import ReactMarkdown from "react-markdown";

@@ -14,6 +14,9 @@ describe("PresenterRoute", () => {
     render(<PresenterRoute />);
     expect(screen.getByRole("main", { name: /lda.chat presenter notes/i })).toBeInTheDocument();
     expect(screen.getByText(/This project began with the goal/i)).toBeInTheDocument();
+    expect(screen.getByText("the system underneath the chat").tagName).toBe("STRONG");
+    expect(screen.getByRole("navigation", { name: /presenter note navigation/i })).toHaveTextContent("1 / 42");
+    expect(screen.getByRole("link", { name: "Next →" })).toHaveAttribute("href", "#scene/thesis/substrate");
     expect(screen.getByRole("link", { name: /open audience slide/i })).toHaveAttribute("href", "/present#scene/thesis/title");
     expect(screen.queryByText(/live target/i)).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /run prepared workflow/i })).not.toBeInTheDocument();

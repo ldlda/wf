@@ -181,6 +181,8 @@ cumulative timing, keeps optional detail/evidence/Q&A collapsed, and links to
 the corresponding audience slide in a new tab. It performs no workflow RPC,
 replay, live-target, or cross-window synchronization. Use ArrowLeft and
 ArrowRight to move between notes; covered checkboxes remain local to the page.
+Must-say notes support authored inline Markdown emphasis for rapid scanning, and
+the stable Previous/Next bar remains available at narrow viewport widths.
 
 The final presentation beats frame the evaluation as bounded evidence, make
 claim boundaries and future work explicit, and end on the canonical defense

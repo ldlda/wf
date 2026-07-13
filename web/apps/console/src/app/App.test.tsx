@@ -197,7 +197,7 @@ describe("App", () => {
     expect(screen.queryByLabelText("Lifecycle Explorer")).toBeNull();
   });
 
-  it("routes to read-only presenter notes separately from presentation mode", () => {
+  it("routes to read-only presenter notes separately from presentation mode", async () => {
     window.location.hash = "#scene/thesis/title";
     render(
       <MemoryRouter initialEntries={["/presenter"]}>
@@ -205,7 +205,7 @@ describe("App", () => {
       </MemoryRouter>,
     );
 
-    expect(screen.getByRole("main", { name: /lda.chat presenter notes/i })).toBeInTheDocument();
+    expect(await screen.findByRole("main", { name: /lda.chat presenter notes/i })).toBeInTheDocument();
     expect(screen.queryByRole("main", { name: /lda.chat presentation/i })).not.toBeInTheDocument();
   });
 });

@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import { findDiscussionBranch } from "../storyboard.js";
 import { PresenterNote } from "./PresenterNote.js";
+import { PresenterNavigationBar } from "./PresenterNavigationBar.js";
 import { PresenterShell } from "./PresenterShell.js";
+import { presenterNotes } from "./presenter-notes.js";
 import { presenterHashForNote, presenterNavigationFromHash } from "./presenter-navigation.js";
 import "./presenter.css";
 
@@ -34,7 +36,14 @@ export const PresenterRoute = () => {
 
   return (
     <PresenterShell current={navigation.note} covered={covered}>
-      <div className="presenter-route__help" aria-label="Presenter keyboard help">← previous · → next · disclosures stay local</div>
+      {navigation.note && (
+        <PresenterNavigationBar
+          currentIndex={navigation.index}
+          total={presenterNotes.length}
+          previous={navigation.previous}
+          next={navigation.next}
+        />
+      )}
       {navigation.note && (
         <PresenterNote
           note={navigation.note}
