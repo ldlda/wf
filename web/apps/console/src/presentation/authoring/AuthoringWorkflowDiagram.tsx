@@ -7,9 +7,12 @@ import {
   type Node,
   type NodeProps,
   type NodeTypes,
+  type ReactFlowInstance,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { CircleStop, Database, SquareFunction, TriangleAlert } from "lucide-react";
+import Dagre from "@dagrejs/dagre";
+import { CircleStop, Database, SquareFunction } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { ReviewedAuthoringEvidence } from "./reviewed-authoring-evidence.js";
 
 type WorkflowEvidence = Extract<
@@ -49,27 +52,55 @@ const AuthoringFlowNode = ({ id, data }: NodeProps<Node<AuthoringNodeData>>) => 
 
 const nodeTypes: NodeTypes = { authoring: AuthoringFlowNode };
 
-// Stable positions make Draft -> Diagnose -> Repair read as one changing object.
-const workflowNodes: Node<AuthoringNodeData>[] = [
+const NODE_WIDTH = 224;
+const NODE_HEIGHT = 76;
+const FIT_VIEW_OPTIONS = { padding: 0.16, minZoom: 0.55, maxZoom: 1.25, duration: 0 } as const;
+
+const workflowNodeDefinitions: Omit<Node<AuthoringNodeData>, "position">[] = [
   {
     id: "read_documents",
     type: "authoring",
-    position: { x: 0, y: 60 },
+    style: { width: NODE_WIDTH },
     data: { label: "read_documents", role: "source" },
   },
   {
     id: "analyze",
     type: "authoring",
-    position: { x: 310, y: 60 },
+    style: { width: NODE_WIDTH },
     data: { label: "analyze", role: "action" },
   },
   {
     id: "__end__",
     type: "authoring",
-    position: { x: 620, y: 60 },
+    style: { width: NODE_WIDTH },
     data: { label: "END", role: "outcome" },
   },
 ];
+
+const layoutWorkflowNodes = (): Node<AuthoringNodeData>[] => {
+  const graph = new Dagre.graphlib.Graph();
+  graph.setGraph({ rankdir: "LR", ranksep: 72, nodesep: 48, marginx: 0, marginy: 0 });
+  graph.setDefaultEdgeLabel(() => ({}));
+  for (const node of workflowNodeDefinitions) {
+    graph.setNode(node.id, { width: NODE_WIDTH, height: NODE_HEIGHT });
+  }
+  graph.setEdge("read_documents", "analyze", { width: 28, height: 22 });
+  // Reserve the widest label once so all three beats retain identical node positions.
+  graph.setEdge("analyze", "__end__", { width: 154, height: 24 });
+  Dagre.layout(graph);
+  return workflowNodeDefinitions.map((node) => {
+    const position = graph.node(node.id);
+    return {
+      ...node,
+      position: {
+        x: position.x - NODE_WIDTH / 2,
+        y: position.y - NODE_HEIGHT / 2,
+      },
+    };
+  });
+};
+
+const workflowNodes = layoutWorkflowNodes();
 
 const edgesForMode = (mode: AuthoringWorkflowMode): Edge[] => [
   {
@@ -79,18 +110,13 @@ const edgesForMode = (mode: AuthoringWorkflowMode): Edge[] => [
     label: "ok",
     className: "authoring-workflow-diagram__edge",
   },
-  ...(mode === "diagnostic"
-    ? []
-    : [
-        {
-          id: "analyze.ok",
-          source: "analyze",
-          target: "__end__",
-          label: mode === "repair" ? "restored · ok" : "ok",
-          animated: mode === "repair",
-          className: `authoring-workflow-diagram__edge${mode === "repair" ? " authoring-workflow-diagram__edge--restored" : ""}`,
-        },
-      ]),
+  {
+    id: "analyze.ok",
+    source: "analyze",
+    target: "__end__",
+    label: mode === "diagnostic" ? "Missing route · ok" : mode === "repair" ? "Route restored · ok" : "ok",
+    className: `authoring-workflow-diagram__edge${mode === "diagnostic" ? " authoring-workflow-diagram__edge--missing" : ""}${mode === "repair" ? " authoring-workflow-diagram__edge--restored" : ""}`,
+  },
 ];
 
 const accessibleLabelForMode = (mode: AuthoringWorkflowMode): string => {
@@ -99,19 +125,42 @@ const accessibleLabelForMode = (mode: AuthoringWorkflowMode): string => {
   return "Authoring workflow diagram: valid draft routes";
 };
 
-const AuthoringWorkflowDiagramInner = ({ mode }: AuthoringWorkflowDiagramProps) => (
-  <div
-    className="authoring-workflow-diagram"
-    role="img"
-    aria-label={accessibleLabelForMode(mode)}
-    data-workflow-mode={mode}
-  >
+const AuthoringWorkflowDiagramInner = ({ mode }: AuthoringWorkflowDiagramProps) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [flow, setFlow] = useState<ReactFlowInstance<Node<AuthoringNodeData>, Edge>>();
+
+  useEffect(() => {
+    if (!flow) return undefined;
+    let frame = window.requestAnimationFrame(() => void flow.fitView(FIT_VIEW_OPTIONS));
+    // Scene columns resize without remounting React Flow, so fit the settled box again.
+    const observer = typeof ResizeObserver === "undefined" || !containerRef.current
+      ? undefined
+      : new ResizeObserver(() => {
+          window.cancelAnimationFrame(frame);
+          frame = window.requestAnimationFrame(() => void flow.fitView(FIT_VIEW_OPTIONS));
+        });
+    if (containerRef.current) observer?.observe(containerRef.current);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      observer?.disconnect();
+    };
+  }, [flow, mode]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="authoring-workflow-diagram"
+      role="img"
+      aria-label={accessibleLabelForMode(mode)}
+      data-workflow-mode={mode}
+    >
     <ReactFlow
       nodes={workflowNodes}
       edges={edgesForMode(mode)}
       nodeTypes={nodeTypes}
+      onInit={setFlow}
       fitView
-      fitViewOptions={{ padding: 0.16, minZoom: 0.7, maxZoom: 1.25 }}
+      fitViewOptions={FIT_VIEW_OPTIONS}
       nodesDraggable={false}
       nodesConnectable={false}
       elementsSelectable={false}
@@ -121,24 +170,9 @@ const AuthoringWorkflowDiagramInner = ({ mode }: AuthoringWorkflowDiagramProps) 
       preventScrolling={false}
       proOptions={{ hideAttribution: true }}
     />
-    <div className="authoring-workflow-diagram__route-state" aria-hidden="true">
-      {mode === "diagnostic" ? (
-        <span className="authoring-workflow-diagram__missing-route">
-          <TriangleAlert />
-          <strong>Missing route</strong>
-          <small>analyze · ok</small>
-        </span>
-      ) : (
-        <span
-          data-authoring-edge-id="analyze.ok"
-          data-route-state={mode === "repair" ? "restored" : "present"}
-        >
-          {mode === "repair" ? "Route restored" : "Complete route"}
-        </span>
-      )}
-    </div>
   </div>
-);
+  );
+};
 
 /** Renders the same authored workflow while its route state changes between beats. */
 export const AuthoringWorkflowDiagram = (props: AuthoringWorkflowDiagramProps) => (

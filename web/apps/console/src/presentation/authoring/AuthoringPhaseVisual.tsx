@@ -173,11 +173,6 @@ const DiagnosticResult = ({ evidence }: { readonly evidence: EvidenceOf<"diagnos
             ]}
           />
           <p className="authoring-result__explanation">{evidence.diagnostic.explanation}</p>
-          <section className="authoring-result__fault-injection" role="note" aria-label={evidence.faultInjection.label}>
-            <span>{evidence.faultInjection.label}</span>
-            <code>{evidence.faultInjection.command}</code>
-            <p>Valid revision {evidence.faultInjection.fromRevision} became invalid revision {evidence.faultInjection.toRevision}.</p>
-          </section>
         </>
       )}
     />

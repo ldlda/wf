@@ -127,6 +127,24 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance, discus
               </div>
             </dl>
           </header>
+          {projection.evidence.kind === "diagnostic" && (
+            <aside
+              className="prepared-lifecycle-scene__setup-strip"
+              role="note"
+              aria-label={projection.evidence.faultInjection.label}
+            >
+              <span>Prepared setup</span>
+              <strong>
+                Valid revision {projection.evidence.faultInjection.fromRevision}
+                {" → remove analyze.ok → "}
+                invalid revision {projection.evidence.faultInjection.toRevision}
+              </strong>
+              <details>
+                <summary>Exact command</summary>
+                <code>{projection.evidence.faultInjection.command}</code>
+              </details>
+            </aside>
+          )}
           <AuthoringPhaseVisual projection={projection} />
         </article>
       </div>

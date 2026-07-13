@@ -52,6 +52,12 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(frame).toHaveTextContent("missing_outcome_edge");
     expect(frame).toHaveTextContent("nodes[analyze]");
     expect(frame).toHaveTextContent(/missing edges for outcomes.*ok/i);
+    const setup = within(frame).getByRole("note", { name: /prepared fault injection/i });
+    expect(setup).toHaveTextContent(/valid revision 2/i);
+    expect(setup).toHaveTextContent(/remove analyze\.ok/i);
+    expect(setup).toHaveTextContent(/invalid revision 3/i);
+    expect(within(screen.getByRole("region", { name: "draft validation diagnostic" }))
+      .queryByRole("note", { name: /prepared fault injection/i })).not.toBeInTheDocument();
     expect(frame).toHaveAttribute("data-authoring-step", "diagnose");
     expect(frame).toHaveAttribute("data-recording-phase", "validate");
     expect(screen.getByRole("region", { name: "draft validation diagnostic" })).toHaveAttribute(

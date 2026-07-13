@@ -36,9 +36,7 @@ describe("AuthoringWorkflowDiagram", () => {
   it("shows an absent analyze.ok route as the diagnostic headline", () => {
     renderDiagram("diagnose");
 
-    expect(screen.getByText("Missing route")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /analyze ok route is missing/i })).toBeInTheDocument();
-    expect(document.querySelector('[data-authoring-edge-id="analyze.ok"]')).not.toBeInTheDocument();
   });
 
   it("restores analyze.ok without retaining the missing-route marker", () => {
@@ -46,6 +44,15 @@ describe("AuthoringWorkflowDiagram", () => {
 
     expect(screen.getByRole("img", { name: /analyze ok route restored/i })).toBeInTheDocument();
     expect(screen.queryByText("Missing route")).not.toBeInTheDocument();
-    expect(document.querySelector('[data-authoring-edge-id="analyze.ok"]')).toBeInTheDocument();
+  });
+
+  it("reserves a wider rank for the route-state edge label", () => {
+    renderDiagram("repair");
+    const analyze = document.querySelector('[data-id="analyze"]');
+    const end = document.querySelector('[data-id="__end__"]');
+
+    expect(analyze).toHaveStyle({ width: "224px" });
+    expect(end).toHaveStyle({ width: "224px" });
+    expect(analyze?.getAttribute("style")).not.toEqual(end?.getAttribute("style"));
   });
 });

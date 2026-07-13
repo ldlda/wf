@@ -121,8 +121,9 @@ describe("PresentationRoute", () => {
     expect(within(result).getByText("missing_outcome_edge")).toBeInTheDocument();
     expect(within(result).getByText("nodes[analyze]")).toBeInTheDocument();
     expect(within(result).getByText(/missing edges for outcomes.*ok/i)).toBeInTheDocument();
-    expect(within(result).getByRole("note", { name: /prepared fault injection/i })).toHaveTextContent(
-      "wf draft remove-route lda_report_workflow --revision 2 --step analyze --outcome ok",
+    expect(within(result).queryByRole("note", { name: /prepared fault injection/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("note", { name: /prepared fault injection/i })).toHaveTextContent(
+      /valid revision 2.*remove analyze\.ok.*invalid revision 3/i,
     );
     expect(screen.queryByText(/missing output projection/i)).not.toBeInTheDocument();
   }, 15000);
