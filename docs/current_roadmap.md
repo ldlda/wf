@@ -353,17 +353,23 @@ separate activity after these surfaces are stable.
 
 Presentation wishlist / defense readiness:
 
-### Next: Simpler Speech And Factual Scene 8 Evidence
+### Next: Simpler Speech
 
 1. Planned: give every beat one audience goal and one to three anchor terms,
    then simplify the timed presenter path through Scenes 1-8 to one suggested
    sentence per beat. Keep essential vocabulary such as Workflow API and
    lifecycle record names, while moving detailed qualification into optional
    notes or Q&A.
-2. Planned: replace Scene 8's inaccurate missing-output diagnostic and sparse
-   visuals with compact product-result views based on reviewed `wf` output:
-   `missing_outcome_edge` at `nodes[analyze]`, an exact `set-route` repair, and
-   a valid follow-up result with no diagnostics.
+
+### Completed: Factual Scene 8 Evidence
+
+Scene 8 now presents six factual reviewed evidence variants. Diagnose records
+`missing_outcome_edge` at `nodes[analyze]` in revision 3; Repair records the
+exact `wf draft set-route lda_report_workflow --revision 3 --step analyze
+--outcome ok --to __end__` command and a valid revision 4 result with zero
+diagnostics. Direct-hash route assertions cover the Diagnose and Repair beats.
+Implementation:
+[`Scene 8 product evidence`](historical/superpowers/plans/2026-07-13-scene-8-product-evidence.md).
 
 Design:
 [`defense speech and Scene 8 product evidence`](superpowers/specs/2026-07-13-defense-speech-and-scene-8-evidence-design.md).

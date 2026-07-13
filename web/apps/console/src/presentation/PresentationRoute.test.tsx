@@ -112,6 +112,33 @@ describe("PresentationRoute", () => {
     15000,
   );
 
+  it("renders factual Diagnose evidence from its direct hash", async () => {
+    window.location.hash = "#scene/prepared-lifecycle/diagnose";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const result = await screen.findByRole("region", { name: "draft validation diagnostic" });
+    expect(within(result).getByText("missing_outcome_edge")).toBeInTheDocument();
+    expect(within(result).getByText("nodes[analyze]")).toBeInTheDocument();
+    expect(within(result).getByText(/missing edges for outcomes.*ok/i)).toBeInTheDocument();
+    expect(screen.queryByText(/missing output projection/i)).not.toBeInTheDocument();
+  }, 15000);
+
+  it("renders the exact route repair result from its direct hash", async () => {
+    window.location.hash = "#scene/prepared-lifecycle/repair";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const result = await screen.findByRole("region", { name: "route repair result" });
+    expect(within(result).getByText(
+      "wf draft set-route lda_report_workflow --revision 3 --step analyze --outcome ok --to __end__",
+      { exact: true },
+    )).toBeInTheDocument();
+    expect(result.querySelector(".authoring-result__header > strong")).toHaveTextContent("Valid");
+    expect(within(result).getByText("Revision 4", { exact: true })).toBeInTheDocument();
+    expect(within(result).getByText("0 diagnostics", { exact: true })).toBeInTheDocument();
+  }, 15000);
+
   it("exposes an application-owned readiness signal for rehearsal capture", async () => {
     window.location.hash = "#scene/thesis/title";
     const { PresentationRoute } = await import("./PresentationRoute.js");

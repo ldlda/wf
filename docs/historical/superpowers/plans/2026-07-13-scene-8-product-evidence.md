@@ -1,5 +1,9 @@
 # Scene 8 Product Evidence Implementation Plan
 
+> Historical: completed 2026-07-13. Scene 8 evidence, route assertions,
+> verification, and documentation closure are recorded in the historical plan
+> archive.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace Scene 8's inaccurate missing-output story and sparse prepared visuals with compact product-result views derived from reviewed `wf` output.
@@ -30,7 +34,7 @@
 - Produces: `ReviewedAuthoringEvidence`, `ReviewedAuthoringStep`, and `reviewedAuthoringEvidenceFor(step)`.
 - Consumed by: authoring recording/projection and Scene 8 visual components.
 
-- [ ] **Step 1: Write failing catalog tests**
+- [x] **Step 1: Write failing catalog tests**
 
 Test all six step IDs and pin the reviewed diagnostic/repair facts:
 
@@ -59,11 +63,11 @@ expect(reviewedAuthoringEvidenceFor("repair")).toMatchObject({
 
 Also assert that the serialized catalog does not contain `presentation_diag_probe`, `missing output projection`, or `no state projection`.
 
-- [ ] **Step 2: Run the catalog test and verify RED**
+- [x] **Step 2: Run the catalog test and verify RED**
 
 Run the new test directly. Expected: module-not-found failure.
 
-- [ ] **Step 3: Implement the discriminated union and catalog**
+- [x] **Step 3: Implement the discriminated union and catalog**
 
 Define these variants:
 
@@ -79,7 +83,7 @@ export type ReviewedAuthoringEvidence =
 
 Use the three local source IDs and `local.lda_report.analyze_documents` with input `documents`, output `analysis`, and outcome `ok`.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 ```powershell
 pnpm --dir web --filter @lda/console test -- src/presentation/authoring/reviewed-authoring-evidence.test.ts
@@ -101,7 +105,7 @@ git commit -m "feat: capture reviewed authoring evidence"
 - Consumes: `reviewedAuthoringEvidenceFor()` from Task 1.
 - Produces: factual command transcript and `PreparedLifecycleStepProjection.evidence`.
 
-- [ ] **Step 1: Write failing factual tests**
+- [x] **Step 1: Write failing factual tests**
 
 Replace obsolete assertions with:
 
@@ -116,11 +120,11 @@ expect(repair.evidence.kind).toBe("repair");
 
 Assert storyboard captions mention a missing `ok` route and a route repair, and do not mention a missing output projection.
 
-- [ ] **Step 2: Run focused tests and verify RED**
+- [x] **Step 2: Run focused tests and verify RED**
 
 Run the authoring recording, projection, and storyboard tests.
 
-- [ ] **Step 3: Update the validate recording**
+- [x] **Step 3: Update the validate recording**
 
 Use:
 
@@ -148,11 +152,11 @@ and:
 
 Change proof strings to `missing_outcome_edge`, `analyze.ok -> __end__`, and `revision 4: valid`.
 
-- [ ] **Step 4: Project reviewed evidence per presentation step**
+- [x] **Step 4: Project reviewed evidence per presentation step**
 
 Add `readonly evidence: ReviewedAuthoringEvidence` to `PreparedLifecycleStepProjection` and populate it with `reviewedAuthoringEvidenceFor(step)`. Stop constructing the obsolete `repair` visual with hardcoded output-map text; either replace `visual` with the evidence union or derive the visual from `evidence` in one place.
 
-- [ ] **Step 5: Update storyboard captions**
+- [x] **Step 5: Update storyboard captions**
 
 Use:
 
@@ -161,7 +165,7 @@ Validation returns a structured diagnostic because analyze has no route for its 
 One route edit sends analyze.ok to __end__; the follow-up validation is valid.
 ```
 
-- [ ] **Step 6: Run focused tests and commit**
+- [x] **Step 6: Run focused tests and commit**
 
 ```powershell
 pnpm --dir web --filter @lda/console test -- src/presentation/authoring/authoring-recording.test.ts src/presentation/authoring/authoring-projection.test.ts src/presentation/storyboard.test.ts
@@ -181,7 +185,7 @@ git commit -m "fix: use factual prepared validation evidence"
 - Consumes: `PreparedLifecycleStepProjection.evidence`.
 - Produces: accessible phase result regions with `data-authoring-result` values matching each evidence kind.
 
-- [ ] **Step 1: Write failing component tests**
+- [x] **Step 1: Write failing component tests**
 
 Pin the following audience-visible facts:
 
@@ -197,11 +201,11 @@ For Repair, assert the full command is visible, the status reads `Valid`, revisi
 
 Add one test per remaining phase for source count/capability contract, draft revision/steps/routes, immutable artifact identity, and runnable deployment bindings.
 
-- [ ] **Step 2: Run component tests and verify RED**
+- [x] **Step 2: Run component tests and verify RED**
 
 Run `AuthoringPhaseVisual.test.tsx` and `PreparedAuthoringLifecycleScene.test.tsx`.
 
-- [ ] **Step 3: Implement a shared result header and six evidence renderers**
+- [x] **Step 3: Implement a shared result header and six evidence renderers**
 
 Use one local `ResultHeader` component with icon, label, status, and optional revision. Render semantic `dl` rows for identifiers and counts, a plain list for sources/bindings, and `code` for commands/paths. Keep icons from the existing Lucide dependency: `Database`, `Workflow`, `AlertTriangle`, `Route`, `CheckCircle2`, `LockKeyhole`, and `Link2`.
 
@@ -224,11 +228,11 @@ wf draft set-route ... --to __end__
 VALID · REVISION 4 · 0 DIAGNOSTICS
 ```
 
-- [ ] **Step 4: Preserve the phase boundary in the scene wrapper**
+- [x] **Step 4: Preserve the phase boundary in the scene wrapper**
 
 Pass the full step projection to `AuthoringPhaseVisual`; do not make the visual infer Diagnose versus Repair from CSS alone. Retain `data-authoring-step`, `data-recording-phase`, and the stable assistant/frame sibling structure.
 
-- [ ] **Step 5: Run focused tests and commit**
+- [x] **Step 5: Run focused tests and commit**
 
 ```powershell
 pnpm --dir web --filter @lda/console test -- src/presentation/authoring/AuthoringPhaseVisual.test.tsx src/presentation/authoring/PreparedAuthoringLifecycleScene.test.tsx
@@ -246,7 +250,7 @@ git commit -m "feat: render Scene 8 product evidence"
 - Consumes: `data-authoring-result` hooks from Task 3.
 - Produces: responsive editorial result layouts within the existing full-height frame.
 
-- [ ] **Step 1: Add failing CSS contract tests**
+- [x] **Step 1: Add failing CSS contract tests**
 
 Assert that:
 
@@ -257,17 +261,17 @@ Assert that:
 - no wide `56vh` cap or content-sized scene row returns; and
 - the discussion rail remains transparent and borderless.
 
-- [ ] **Step 2: Run CSS tests and verify RED**
+- [x] **Step 2: Run CSS tests and verify RED**
 
 Run `presentation-css.test.ts` directly.
 
-- [ ] **Step 3: Implement restrained result styling**
+- [x] **Step 3: Implement restrained result styling**
 
 Use the existing editorial paper, ink, muted, rule, success, and amber tokens. Use one structural rule between result sections, no wide shadow, no nested rounded cards, and `font-mono` only for commands, codes, paths, IDs, and revisions. Give Diagnose and Repair enough scale to fill the right frame without stretching single lines across the full width.
 
 At narrow canvas widths, stack result metadata above the main evidence while preserving internal scrolling. Do not change the outer Scene 8 grid or assistant width in this task.
 
-- [ ] **Step 4: Run tests and commit**
+- [x] **Step 4: Run tests and commit**
 
 ```powershell
 pnpm --dir web --filter @lda/console test -- src/presentation/presentation-css.test.ts src/presentation/authoring/AuthoringPhaseVisual.test.tsx
@@ -280,17 +284,17 @@ git commit -m "style: compose Scene 8 product results"
 **Files:**
 - Modify if assertions need factual correction: `web/apps/console/src/presentation/PresentationRoute.test.tsx`
 - Modify: `docs/current_roadmap.md`
-- Move after completion: `docs/superpowers/plans/2026-07-13-scene-8-product-evidence.md` to `docs/historical/superpowers/plans/2026-07-13-scene-8-product-evidence.md`
+- Archived at: `docs/historical/superpowers/plans/2026-07-13-scene-8-product-evidence.md`
 
 **Interfaces:**
 - Consumes: completed Scene 8 evidence implementation.
 - Produces: route-level regression coverage and accurate roadmap state.
 
-- [ ] **Step 1: Add direct-hash route assertions**
+- [x] **Step 1: Add direct-hash route assertions**
 
 For `#scene/prepared-lifecycle/diagnose`, assert `missing_outcome_edge`, `nodes[analyze]`, and no `missing output projection`. For Repair, assert the exact set-route command and `Valid` revision `4` result.
 
-- [ ] **Step 2: Run the complete presentation test set**
+- [x] **Step 2: Run the complete presentation test set**
 
 ```powershell
 pnpm --dir web --filter @lda/console test -- src/presentation
@@ -302,7 +306,7 @@ git diff --check
 
 Expected: all tests pass, typecheck/build succeed, React Doctor reports no regression, and diff check is clean.
 
-- [ ] **Step 3: Perform browser smoke at three viewport sizes**
+- [x] **Step 3: Perform browser smoke at three viewport sizes**
 
 Capture all six routes at `1280x720`, `1024x768`, and `1920x1080`:
 
@@ -317,13 +321,13 @@ Capture all six routes at `1280x720`, `1024x768`, and `1920x1080`:
 
 For each viewport, confirm the scene and document do not overflow, the right result fills the available stage, the chat transcript scrolls internally, the composer remains anchored, and the discussion rail has no enclosing panel background/border.
 
-- [ ] **Step 4: Mark the roadmap item completed and archive the plan**
+- [x] **Step 4: Mark the roadmap item completed and archive the plan**
 
 Record the reviewed diagnostic code and route repair in the completion note. Update links to the historical plan path.
 
-- [ ] **Step 5: Commit closure**
+- [x] **Step 5: Commit closure**
 
 ```powershell
-git add web/apps/console/src/presentation docs/current_roadmap.md docs/superpowers/plans/2026-07-13-scene-8-product-evidence.md docs/historical/superpowers/plans/2026-07-13-scene-8-product-evidence.md
+git add web/apps/console/src/presentation/PresentationRoute.test.tsx docs/current_roadmap.md docs/historical/superpowers/plans/2026-07-13-scene-8-product-evidence.md
 git commit -m "docs: complete Scene 8 product evidence"
 ```
