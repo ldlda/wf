@@ -10,6 +10,8 @@ import {
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import type { PreparedLifecycleStepProjection } from "./authoring-projection.js";
+import { AuthoringLifecycleDiagram } from "./AuthoringLifecycleDiagram.js";
+import { AuthoringWorkflowDiagram } from "./AuthoringWorkflowDiagram.js";
 import { reviewedAuthoringEvidenceFor } from "./reviewed-authoring-evidence.js";
 
 type Evidence = PreparedLifecycleStepProjection["evidence"];
@@ -50,13 +52,11 @@ const EvidenceRows = ({
   </dl>
 );
 
-const StringList = ({ label, items }: { readonly label: string; readonly items: readonly string[] }) => (
+const RouteList = ({ routes }: { readonly routes: readonly string[] }) => (
   <section className="authoring-result__list-section">
-    <h3>{label}</h3>
+    <h3>Routes</h3>
     <ul>
-      {items.map((item) => (
-        <li key={item}><code>{item}</code></li>
-      ))}
+      {routes.map((route) => <li key={route}><code>{route}</code></li>)}
     </ul>
   </section>
 );
@@ -83,95 +83,108 @@ const ResultRoot = ({
   </section>
 );
 
+const ResultComposition = ({
+  diagramKind,
+  diagram,
+  receiptLabel,
+  receipt,
+}: {
+  readonly diagramKind: string;
+  readonly diagram: ReactNode;
+  readonly receiptLabel: string;
+  readonly receipt: ReactNode;
+}) => (
+  <div className="authoring-result__composition">
+    <div
+      className="authoring-result__diagram"
+      data-testid="authoring-primary-diagram"
+      data-diagram-kind={diagramKind}
+    >
+      {diagram}
+    </div>
+    <aside className="authoring-result__receipt" aria-label={receiptLabel}>
+      {receipt}
+    </aside>
+  </div>
+);
+
 const InventoryResult = ({ evidence }: { readonly evidence: EvidenceOf<"inventory"> }) => (
   <ResultRoot kind={evidence.kind} label="source inventory result">
-    <ResultHeader
-      icon={Database}
-      label="SOURCE INVENTORY"
-      status={`${evidence.sourceCount} TOTAL SOURCES`}
+    <ResultHeader icon={Database} label="SOURCE INVENTORY" status={`${evidence.sourceCount} TOTAL SOURCES`} />
+    <ResultComposition
+      diagramKind="inventory"
+      diagram={<AuthoringLifecycleDiagram evidence={evidence} />}
+      receiptLabel="source inventory technical receipt"
+      receipt={(
+        <>
+          <h3>Configured local sources ({evidence.sources.length})</h3>
+          <EvidenceRows
+            rows={[
+              { label: "Inventory", value: <strong>{evidence.sourceCount} total inventory sources</strong> },
+              { label: "Configured", value: <strong>{evidence.sources.length} configured local source IDs</strong> },
+              { label: "Inputs", value: <code>{evidence.capability.inputs.join(", ")}</code> },
+              { label: "Outputs", value: <code>{evidence.capability.outputs.join(", ")}</code> },
+              { label: "Outcomes", value: <code>{evidence.capability.outcomes.join(", ")}</code> },
+            ]}
+          />
+        </>
+      )}
     />
-    <div className="authoring-result__body">
-      <EvidenceRows
-        rows={[
-          {
-            label: "Inventory",
-            value: <strong>{evidence.sourceCount} total inventory sources</strong>,
-          },
-          {
-            label: "Configured local sources",
-            value: <strong>{evidence.sources.length} configured local source IDs</strong>,
-          },
-        ]}
-      />
-      <StringList label={`Configured local sources (${evidence.sources.length})`} items={evidence.sources} />
-      <section className="authoring-result__contract">
-        <h3>Capability contract</h3>
-        <EvidenceRows
-          rows={[
-            { label: "Capability", value: <code>{evidence.capability.name}</code> },
-            { label: "Inputs", value: <code>{evidence.capability.inputs.join(", ")}</code> },
-            { label: "Outputs", value: <code>{evidence.capability.outputs.join(", ")}</code> },
-            { label: "Outcomes", value: <code>{evidence.capability.outcomes.join(", ")}</code> },
-          ]}
-        />
-      </section>
-    </div>
   </ResultRoot>
 );
 
 const DraftResult = ({ evidence }: { readonly evidence: EvidenceOf<"draft"> }) => (
   <ResultRoot kind={evidence.kind} label="draft structure result">
     <ResultHeader icon={Workflow} label="VALID DRAFT" status="Valid" revision={evidence.revision} />
-    <div className="authoring-result__body">
-      <EvidenceRows
-        rows={[
-          { label: "Workspace", value: <code>{evidence.workspaceId}</code> },
-          { label: "Steps", value: evidence.stepCount },
-          { label: "Routes", value: evidence.routeCount },
-        ]}
-      />
-      <StringList label="Steps" items={evidence.steps} />
-      <StringList label="Routes" items={evidence.routes} />
-    </div>
+    <ResultComposition
+      diagramKind="workflow-draft"
+      diagram={<AuthoringWorkflowDiagram mode="draft" evidence={evidence} />}
+      receiptLabel="draft structure technical receipt"
+      receipt={(
+        <>
+          <EvidenceRows
+            rows={[
+              { label: "Workspace", value: <code>{evidence.workspaceId}</code> },
+              { label: "Steps", value: evidence.stepCount },
+              { label: "Routes", value: evidence.routeCount },
+            ]}
+          />
+          <RouteList routes={evidence.routes} />
+        </>
+      )}
+    />
   </ResultRoot>
 );
 
 const DiagnosticResult = ({ evidence }: { readonly evidence: EvidenceOf<"diagnostic"> }) => (
   <ResultRoot kind={evidence.kind} label="draft validation diagnostic">
-    <ResultHeader
-      icon={AlertTriangle}
-      label="INVALID DRAFT"
-      status={evidence.status === "invalid" ? "Invalid" : evidence.status}
-      revision={evidence.revision}
+    <ResultHeader icon={AlertTriangle} label="INVALID DRAFT" status="Invalid" revision={evidence.revision} />
+    <ResultComposition
+      diagramKind="workflow-diagnostic"
+      diagram={<AuthoringWorkflowDiagram mode="diagnostic" evidence={evidence} />}
+      receiptLabel="draft validation technical receipt"
+      receipt={(
+        <>
+          <EvidenceRows
+            rows={[
+              { label: "Diagnostic", value: <code>{evidence.diagnostic.code}</code> },
+              { label: "Path", value: <code>{evidence.diagnostic.path}</code> },
+              { label: "Message", value: evidence.diagnostic.message },
+            ]}
+          />
+          <p className="authoring-result__explanation">{evidence.diagnostic.explanation}</p>
+          <section className="authoring-result__fault-injection" role="note" aria-label={evidence.faultInjection.label}>
+            <span>{evidence.faultInjection.label}</span>
+            <code>{evidence.faultInjection.command}</code>
+            <p>Valid revision {evidence.faultInjection.fromRevision} became invalid revision {evidence.faultInjection.toRevision}.</p>
+          </section>
+        </>
+      )}
     />
-    <div className="authoring-result__body" data-result-primary="true">
-      <EvidenceRows
-        rows={[
-          { label: "Diagnostic", value: <code>{evidence.diagnostic.code}</code> },
-          { label: "Path", value: <code>{evidence.diagnostic.path}</code> },
-          { label: "Message", value: evidence.diagnostic.message },
-        ]}
-      />
-      <p className="authoring-result__explanation">{evidence.diagnostic.explanation}</p>
-    </div>
-    <aside
-      className="authoring-result__fault-injection"
-      role="note"
-      aria-label={evidence.faultInjection.label}
-    >
-      <span>{evidence.faultInjection.label}</span>
-      <code>{evidence.faultInjection.command}</code>
-      <p>
-        Revision {evidence.faultInjection.fromRevision} was valid; this prepared edit intentionally
-        produced invalid revision {evidence.faultInjection.toRevision} for diagnosis.
-      </p>
-    </aside>
   </ResultRoot>
 );
 
 const RepairResult = ({ evidence }: { readonly evidence: EvidenceOf<"repair"> }) => {
-  // The repair record keeps the successful result compact; prior invalid context
-  // comes from the same reviewed catalog and is never presented as a new result.
   const priorEvidence = reviewedAuthoringEvidenceFor("diagnose");
   if (priorEvidence.kind !== "diagnostic") {
     throw new Error("reviewed repair context has an unexpected shape");
@@ -179,26 +192,30 @@ const RepairResult = ({ evidence }: { readonly evidence: EvidenceOf<"repair"> })
 
   return (
     <ResultRoot kind={evidence.kind} label="route repair result">
-      <ResultHeader
-        icon={Route}
-        label="ROUTE REPAIR"
-        status={evidence.status === "valid" ? "Valid" : evidence.status}
-        revision={evidence.toRevision}
+      <ResultHeader icon={Route} label="ROUTE REPAIR" status="Valid" revision={evidence.toRevision} />
+      <ResultComposition
+        diagramKind="workflow-repair"
+        diagram={<AuthoringWorkflowDiagram mode="repair" evidence={evidence} />}
+        receiptLabel="route repair technical receipt"
+        receipt={(
+          <>
+            <aside className="authoring-result__prior" role="note" aria-label="prior validation diagnostic">
+              <span>Prior validation</span>
+              <code>{priorEvidence.diagnostic.code} · {priorEvidence.diagnostic.path}</code>
+              <p>{priorEvidence.diagnostic.message}</p>
+            </aside>
+            <div data-result-primary="true">
+              <EvidenceRows
+                rows={[
+                  { label: "Command", value: <code>{evidence.command}</code> },
+                  { label: "Result", value: <strong>Valid</strong> },
+                  { label: "Diagnostics", value: <strong>{evidence.diagnosticCount} diagnostics</strong> },
+                ]}
+              />
+            </div>
+          </>
+        )}
       />
-      <aside className="authoring-result__prior" role="note" aria-label="prior validation diagnostic">
-        <span>Prior validation</span>
-        <code>{priorEvidence.diagnostic.code} · {priorEvidence.diagnostic.path}</code>
-        <p>{priorEvidence.diagnostic.message}</p>
-      </aside>
-      <div className="authoring-result__body" data-result-primary="true">
-        <EvidenceRows
-          rows={[
-            { label: "Command", value: <code>{evidence.command}</code> },
-            { label: "Result", value: <strong>Valid</strong> },
-            { label: "Diagnostics", value: <strong>0 diagnostics</strong> },
-          ]}
-        />
-      </div>
     </ResultRoot>
   );
 };
@@ -206,53 +223,42 @@ const RepairResult = ({ evidence }: { readonly evidence: EvidenceOf<"repair"> })
 const ArtifactResult = ({ evidence }: { readonly evidence: EvidenceOf<"artifact"> }) => (
   <ResultRoot kind={evidence.kind} label="immutable artifact result">
     <ResultHeader icon={LockKeyhole} label="IMMUTABLE ARTIFACT" status="Immutable" />
-    <div className="authoring-result__body">
-      <EvidenceRows
-        rows={[
-          { label: "Artifact", value: <code>{evidence.artifactId}</code> },
-          { label: "Version", value: <strong>Version {evidence.version}</strong> },
-          { label: "Required sources", value: `${evidence.requiredSources.length} configured local sources` },
-        ]}
-      />
-      <StringList label="Required local sources" items={evidence.requiredSources} />
-    </div>
+    <ResultComposition
+      diagramKind="artifact"
+      diagram={<AuthoringLifecycleDiagram evidence={evidence} />}
+      receiptLabel="immutable artifact technical receipt"
+      receipt={(
+        <EvidenceRows
+          rows={[
+            { label: "Required sources", value: `${evidence.requiredSources.length} configured local sources` },
+          ]}
+        />
+      )}
+    />
   </ResultRoot>
 );
 
 const DeploymentResult = ({ evidence }: { readonly evidence: EvidenceOf<"deployment"> }) => (
   <ResultRoot kind={evidence.kind} label="runnable deployment result">
-    <ResultHeader
-      icon={Link2}
-      label="RUNNABLE DEPLOYMENT"
-      status={evidence.status === "runnable" ? "Runnable" : evidence.status}
+    <ResultHeader icon={Link2} label="RUNNABLE DEPLOYMENT" status={`${evidence.bindings.length} BINDINGS`} />
+    <ResultComposition
+      diagramKind="deployment"
+      diagram={<AuthoringLifecycleDiagram evidence={evidence} />}
+      receiptLabel="runnable deployment technical receipt"
+      receipt={(
+        <EvidenceRows
+          rows={[
+            { label: "Bindings", value: <strong>{evidence.bindings.length} valid bindings</strong> },
+            { label: "Next", value: <span className="authoring-result__status"><CheckCircle2 aria-hidden="true" />Ready for a persisted run</span> },
+          ]}
+        />
+      )}
     />
-    <div className="authoring-result__body">
-      <EvidenceRows
-        rows={[{ label: "Deployment", value: <code>{evidence.deploymentId}</code> }]}
-      />
-      <section className="authoring-result__list-section">
-        <h3>Bindings</h3>
-        <ul>
-          {evidence.bindings.map((binding) => (
-            <li key={binding.requirement}>
-              <code>{binding.requirement}</code>
-              <span aria-hidden="true">-&gt;</span>
-              <code>{binding.source}</code>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <p className="authoring-result__status"><CheckCircle2 aria-hidden="true" /> Ready for a persisted run</p>
-    </div>
   </ResultRoot>
 );
 
 /** Renders one audience-facing product result from the reviewed evidence union. */
-export const AuthoringPhaseVisual = ({
-  projection,
-}: {
-  readonly projection: PreparedLifecycleStepProjection;
-}) => {
+export const AuthoringPhaseVisual = ({ projection }: { readonly projection: PreparedLifecycleStepProjection }) => {
   switch (projection.evidence.kind) {
     case "inventory":
       return <InventoryResult evidence={projection.evidence} />;

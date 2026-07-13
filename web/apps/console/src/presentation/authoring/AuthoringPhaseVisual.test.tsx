@@ -27,6 +27,22 @@ describe("AuthoringPhaseVisual", () => {
     );
   });
 
+  it.each([
+    ["discover", "inventory"],
+    ["draft", "workflow-draft"],
+    ["diagnose", "workflow-diagnostic"],
+    ["repair", "workflow-repair"],
+    ["artifact", "artifact"],
+    ["deployment", "deployment"],
+  ] as const)("makes the %s diagram primary", (step, diagramKind) => {
+    renderStep(step);
+
+    expect(screen.getByTestId("authoring-primary-diagram")).toHaveAttribute(
+      "data-diagram-kind",
+      diagramKind,
+    );
+  });
+
   it("renders total inventory separately from configured local sources", () => {
     renderStep("discover");
     const result = screen.getByRole("region", { name: /source inventory result/i });
