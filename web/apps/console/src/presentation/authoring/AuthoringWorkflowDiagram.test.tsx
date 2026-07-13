@@ -1,0 +1,51 @@
+import { cleanup, render, screen, within } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
+import { projectPreparedLifecycleStep } from "./authoring-projection.js";
+import { AuthoringWorkflowDiagram } from "./AuthoringWorkflowDiagram.js";
+
+afterEach(cleanup);
+
+const renderDiagram = (step: "draft" | "diagnose" | "repair") => {
+  const projection = projectPreparedLifecycleStep(step);
+  if (
+    projection.evidence.kind !== "draft"
+    && projection.evidence.kind !== "diagnostic"
+    && projection.evidence.kind !== "repair"
+  ) {
+    throw new Error(`unexpected evidence for ${step}`);
+  }
+  return render(
+    <AuthoringWorkflowDiagram mode={step === "diagnose" ? "diagnostic" : step} evidence={projection.evidence} />,
+  );
+};
+
+describe("AuthoringWorkflowDiagram", () => {
+  it.each(["draft", "diagnose", "repair"] as const)(
+    "preserves workflow node identity in %s mode",
+    (step) => {
+      renderDiagram(step);
+      const diagram = screen.getByRole("img", { name: /authoring workflow diagram/i });
+
+      expect(within(diagram).getByText("read_documents")).toBeInTheDocument();
+      expect(within(diagram).getByText("analyze")).toBeInTheDocument();
+      expect(within(diagram).getByText("END")).toBeInTheDocument();
+      expect(diagram.querySelectorAll("[data-authoring-node-id]")).toHaveLength(3);
+    },
+  );
+
+  it("shows an absent analyze.ok route as the diagnostic headline", () => {
+    renderDiagram("diagnose");
+
+    expect(screen.getByText("Missing route")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /analyze ok route is missing/i })).toBeInTheDocument();
+    expect(document.querySelector('[data-authoring-edge-id="analyze.ok"]')).not.toBeInTheDocument();
+  });
+
+  it("restores analyze.ok without retaining the missing-route marker", () => {
+    renderDiagram("repair");
+
+    expect(screen.getByRole("img", { name: /analyze ok route restored/i })).toBeInTheDocument();
+    expect(screen.queryByText("Missing route")).not.toBeInTheDocument();
+    expect(document.querySelector('[data-authoring-edge-id="analyze.ok"]')).toBeInTheDocument();
+  });
+});
