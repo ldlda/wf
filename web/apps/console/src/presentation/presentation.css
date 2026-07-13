@@ -4377,6 +4377,10 @@
   white-space: normal;
 }
 
+.authoring-result--repair .authoring-result__prior > span {
+  white-space: nowrap;
+}
+
 .authoring-result--repair [data-result-primary="true"] .authoring-result__rows {
   grid-template-columns: minmax(12rem, 1.4fr) repeat(2, minmax(6rem, 0.6fr));
 }

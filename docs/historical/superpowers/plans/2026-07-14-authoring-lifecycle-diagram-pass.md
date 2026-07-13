@@ -47,7 +47,7 @@
 - Consumes: `Extract<ReviewedAuthoringEvidence, { readonly kind: "draft" | "diagnostic" | "repair" }>` from `reviewed-authoring-evidence.ts`.
 - Produces: `AuthoringWorkflowDiagram({ mode, evidence })`, with `mode: "draft" | "diagnostic" | "repair"` and an accessible region named `authoring workflow diagram`.
 
-- [ ] **Step 1: Write failing graph continuity tests**
+- [x] **Step 1: Write failing graph continuity tests**
 
 Create tests that render all three modes and assert the same node identities plus mode-specific route state:
 
@@ -76,7 +76,7 @@ it("restores analyze.ok without retaining the missing-route marker", () => {
 });
 ```
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run:
 
@@ -86,7 +86,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/authoring/Authorin
 
 Expected: FAIL because `AuthoringWorkflowDiagram` does not exist.
 
-- [ ] **Step 3: Implement the React Flow projection**
+- [x] **Step 3: Implement the React Flow projection**
 
 Use fixed logical node positions so all three beats preserve spatial continuity. Let React Flow own viewport scaling and connector rendering.
 
@@ -129,11 +129,11 @@ Render a large warning annotation in the space between `analyze` and `END` only 
 
 Add a comment explaining that stable positions preserve visual continuity between beats.
 
-- [ ] **Step 4: Run tests and verify GREEN**
+- [x] **Step 4: Run tests and verify GREEN**
 
 Run the focused test command from Step 2. Expected: PASS.
 
-- [ ] **Step 5: Commit the workflow diagram**
+- [x] **Step 5: Commit the workflow diagram**
 
 ```bash
 git add web/apps/console/src/presentation/authoring/AuthoringWorkflowDiagram.tsx web/apps/console/src/presentation/authoring/AuthoringWorkflowDiagram.test.tsx
@@ -152,7 +152,7 @@ git commit -m "feat: add continuous authoring workflow diagram"
 - Consumes: `Extract<ReviewedAuthoringEvidence, { readonly kind: "inventory" | "artifact" | "deployment" }>` directly.
 - Produces: `AuthoringLifecycleDiagram({ evidence })` with `data-lifecycle-diagram` equal to `inventory`, `artifact`, or `deployment`.
 
-- [ ] **Step 1: Write failing mapping tests**
+- [x] **Step 1: Write failing mapping tests**
 
 ```tsx
 it("shows configured sources feeding the discovered capability", () => {
@@ -180,7 +180,7 @@ it("maps every requirement to a concrete source and one deployment", () => {
 });
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -190,7 +190,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/authoring/Authorin
 
 Expected: FAIL because the component does not exist.
 
-- [ ] **Step 3: Implement three semantic mappings**
+- [x] **Step 3: Implement three semantic mappings**
 
 Render large, fixed structures with semantic HTML instead of a graph engine:
 
@@ -209,11 +209,11 @@ export const AuthoringLifecycleDiagram = ({ evidence }: Props) => {
 
 Use Lucide `Database`, `Braces`, `LockKeyhole`, `Cable`, and `PlayCircle` icons as supporting symbols. Use visible arrows only for real directional relationships. Artifact requirements remain visually connected to the artifact; Deployment uses three horizontal requirement-to-source rows converging on one deployment identity.
 
-- [ ] **Step 4: Run tests and verify GREEN**
+- [x] **Step 4: Run tests and verify GREEN**
 
 Run the focused test command from Step 2. Expected: PASS.
 
-- [ ] **Step 5: Commit the lifecycle mappings**
+- [x] **Step 5: Commit the lifecycle mappings**
 
 ```bash
 git add web/apps/console/src/presentation/authoring/AuthoringLifecycleDiagram.tsx web/apps/console/src/presentation/authoring/AuthoringLifecycleDiagram.test.tsx
@@ -232,7 +232,7 @@ git commit -m "feat: add authoring lifecycle transformation diagrams"
 - Consumes: diagram components from Tasks 1 and 2.
 - Produces: every evidence variant as `diagram + compact receipt`, while retaining existing region names and exact evidence text.
 
-- [ ] **Step 1: Add failing composition tests**
+- [x] **Step 1: Add failing composition tests**
 
 Extend the table-driven test to assert each result's diagram kind:
 
@@ -255,7 +255,7 @@ it.each([
 
 Also retain the existing factual assertions for IDs, revisions, diagnostic code/path, source requirements, bindings, and zero diagnostics.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -265,7 +265,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/authoring/Authorin
 
 Expected: FAIL because no primary diagram wrapper exists.
 
-- [ ] **Step 3: Recompose each result**
+- [x] **Step 3: Recompose each result**
 
 Keep `ResultHeader`, but replace full-body list layouts with:
 
@@ -286,7 +286,7 @@ Draft, Diagnose, and Repair use `AuthoringWorkflowDiagram`. Inventory, Artifact,
 
 Do not duplicate reviewed evidence into local constants.
 
-- [ ] **Step 4: Run focused authoring tests**
+- [x] **Step 4: Run focused authoring tests**
 
 ```bash
 pnpm --dir web --filter @lda/console test -- src/presentation/authoring/AuthoringWorkflowDiagram.test.tsx src/presentation/authoring/AuthoringLifecycleDiagram.test.tsx src/presentation/authoring/AuthoringPhaseVisual.test.tsx src/presentation/authoring/PreparedAuthoringLifecycleScene.test.tsx
@@ -294,7 +294,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/authoring/Authorin
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the composition**
+- [x] **Step 5: Commit the composition**
 
 ```bash
 git add web/apps/console/src/presentation/authoring/AuthoringPhaseVisual.tsx web/apps/console/src/presentation/authoring/AuthoringPhaseVisual.test.tsx
@@ -313,7 +313,7 @@ git commit -m "refactor: make lifecycle diagrams primary"
 - Consumes: `authoring-result__diagram`, `authoring-result__receipt`, `authoring-workflow-diagram`, and lifecycle mapping class contracts.
 - Produces: unclipped 1280x720 and 1024x768 layouts with large labels and secondary technical evidence.
 
-- [ ] **Step 1: Write failing CSS contract tests**
+- [x] **Step 1: Write failing CSS contract tests**
 
 Add assertions that the diagram owns flexible height, the receipt cannot dominate, and narrow layouts preserve horizontal readability:
 
@@ -330,7 +330,7 @@ expect(css).toContain(".authoring-workflow-diagram .react-flow__node");
 expect(css).toContain("@media (prefers-reduced-motion: reduce)");
 ```
 
-- [ ] **Step 2: Run CSS tests and verify RED**
+- [x] **Step 2: Run CSS tests and verify RED**
 
 ```bash
 pnpm --dir web --filter @lda/console test -- src/presentation/presentation-css.test.ts
@@ -338,7 +338,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/presentation-css.t
 
 Expected: FAIL because the new selectors do not exist.
 
-- [ ] **Step 3: Implement the visual hierarchy**
+- [x] **Step 3: Implement the visual hierarchy**
 
 Use a vertical result composition: compact header, flexible diagram, compact receipt. Target these presentation sizes:
 
@@ -354,7 +354,7 @@ At container widths below 1050px, keep workflow graphs horizontal in a contained
 
 Disable edge animation and all diagram transitions under both `prefers-reduced-motion: reduce` and the presentation's existing motion-disabled selector.
 
-- [ ] **Step 4: Run focused and route tests**
+- [x] **Step 4: Run focused and route tests**
 
 ```bash
 pnpm --dir web --filter @lda/console test -- src/presentation/presentation-css.test.ts src/presentation/authoring src/presentation/PresentationRoute.test.tsx
@@ -362,7 +362,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/presentation-css.t
 
 Expected: PASS.
 
-- [ ] **Step 5: Commit the visual hierarchy**
+- [x] **Step 5: Commit the visual hierarchy**
 
 ```bash
 git add web/apps/console/src/presentation/presentation.css web/apps/console/src/presentation/presentation-css.test.ts
@@ -383,7 +383,7 @@ git commit -m "style: clarify lifecycle diagrams at presentation distance"
 - Consumes: final rendered Scene 8 visuals.
 - Produces: truthful short presenter wording and completed roadmap state.
 
-- [ ] **Step 1: Run complete verification**
+- [x] **Step 1: Run complete verification**
 
 ```bash
 pnpm --dir web --filter @lda/console test -- src/presentation
@@ -393,7 +393,7 @@ pnpm --dir web --filter @lda/console build
 
 Expected: all tests pass, typecheck is clean, and build succeeds with only the known chunk-size warning.
 
-- [ ] **Step 2: Capture and inspect browser screenshots**
+- [x] **Step 2: Capture and inspect browser screenshots**
 
 Capture these routes at 1280x720:
 
@@ -414,7 +414,7 @@ Also capture Discover, Diagnose, and Deployment at 1024x768. For each screenshot
 - methods, IDs, and commands remain selectable and visible;
 - no old per-child reveal produces black or missing tiles.
 
-- [ ] **Step 3: Audit the Scene 8 speech against the visuals**
+- [x] **Step 3: Audit the Scene 8 speech against the visuals**
 
 Read the six short statements under Scene 8 in `docs/runbooks/defense-speech-and-claim-audit.md`. Keep them unchanged unless a statement no longer points to the dominant visual. If Diagnose needs adjustment, prefer:
 
@@ -424,11 +424,11 @@ Read the six short statements under Scene 8 in `docs/runbooks/defense-speech-and
 
 Do not add more technical clauses. Update `presentation-rehearsal-matrix.md` so its primary visual names are `source capability map`, `workflow graph`, `broken route`, `restored route`, `versioned artifact`, and `deployment binding map`.
 
-- [ ] **Step 4: Update roadmap and archive the plan**
+- [x] **Step 4: Update roadmap and archive the plan**
 
 Add one completed roadmap entry linking the design and historical plan. Move the active plan to the historical path after all verification passes.
 
-- [ ] **Step 5: Review and commit documentation**
+- [x] **Step 5: Review and commit documentation**
 
 Run:
 

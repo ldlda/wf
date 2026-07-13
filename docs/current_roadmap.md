@@ -376,6 +376,16 @@ Implementation:
 Design:
 [`defense speech and Scene 8 product evidence`](superpowers/specs/2026-07-13-defense-speech-and-scene-8-evidence-design.md).
 
+### Completed: Distance-Readable Scene 8 Diagrams
+
+Each prepared lifecycle beat now gives its primary meaning to a large diagram:
+source discovery, one continuous Draft/Diagnose/Repair workflow graph, artifact
+freezing, and deployment binding. Exact reviewed commands, diagnostics, IDs,
+and counts remain available as compact secondary receipts. Dagre reserves graph
+ranks for route-state labels, while React Flow refits after scene-column resize.
+Implementation:
+[`authoring lifecycle diagram pass`](historical/superpowers/plans/2026-07-14-authoring-lifecycle-diagram-pass.md).
+
 - Completed: visual pass for Scenes 6, 7, and 10 fixed architecture figure
   scale, authoring-loop clarity, interrupt/evidence emphasis, and presenter-note
   treatment. Implementation:
