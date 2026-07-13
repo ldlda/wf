@@ -239,6 +239,25 @@ describe("presentation.css", () => {
     expect(narrowAssistant).toContain("max-height: min(24rem, 60vh);");
   });
 
+  it("keeps wide lifecycle evidence compact instead of stretching into a sparse frame", () => {
+    const wideContainer = cssBlock(css, "@container presentation-canvas (min-width: 1500px)") ?? "";
+    const wideScene = cssBlocks(wideContainer, '.prepared-lifecycle-scene[data-presentation-surface="editorial"]')
+      .find((body) => body.includes("grid-template-rows: max-content auto;"));
+    const widePresentation = cssBlocks(
+      wideContainer,
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__presentation',
+    ).find((body) => body.includes("grid-template-rows: auto max-content;"));
+    const wideFrame = cssBlocks(
+      wideContainer,
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame',
+    ).find((body) => body.includes("height: max-content;"));
+
+    expect(wideScene).toContain("align-content: start;");
+    expect(widePresentation).toContain("align-content: start;");
+    expect(wideFrame).toContain("max-height: min(34rem, 56vh);");
+    expect(wideFrame).toContain("overflow: visible;");
+  });
+
   it("bounds prepared conversation scrolling and recenters the agent handoff at compact stage widths", () => {
     expect(css.match(/\.presentation-stage\[data-scene-view="agent"\] \.presentation-stage__primary\s*\{/g)).toHaveLength(2);
     expect(cssBlocks(css, ".presentation-stage__primary > .agent-handoff-scene")
