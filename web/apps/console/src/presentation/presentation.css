@@ -359,6 +359,27 @@
   margin: 0;
 }
 
+.architecture-scene .figure-node {
+  transition:
+    opacity 180ms ease-out,
+    border-color 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+.architecture-scene .interactive-figure:has(.figure-node[data-active="true"])
+  .figure-node:not([data-active="true"]) {
+  opacity: 0.48;
+}
+
+.architecture-scene .figure-node[data-active="true"] {
+  z-index: 1;
+  background: oklch(0.995 0.004 82);
+}
+
+.architecture-scene .figure-node__current-marker {
+  display: none;
+}
+
 .scene-body__evidence {
   flex-shrink: 0;
   margin: 0.55rem 0 0;

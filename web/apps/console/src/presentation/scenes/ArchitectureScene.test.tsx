@@ -117,6 +117,27 @@ describe("ArchitectureScene", () => {
     expect(screen.getByRole("group", { name: /configured provider boundary/i })).toHaveAttribute("data-figure-focus-level", "2");
   });
 
+  it("marks the current beat as a guided camera focus", () => {
+    renderArchitecture({
+      beat: { ...mockBeat, id: "api" },
+      focusPath: ["application-lifecycle"],
+      activeNodeId: "workflow-api-boundary",
+    });
+
+    expect(screen.getByTestId("architecture-scene")).toHaveAttribute("data-architecture-beat", "api");
+    expect(screen.getByTestId("figure-node-workflow-api-boundary")).toHaveAttribute("data-active", "true");
+  });
+
+  it("highlights the actual NodeDef handler during the NodeUse beat", () => {
+    renderArchitecture({
+      beat: { ...mockBeat, id: "node-use" },
+      focusPath: ["node-use"],
+      activeNodeId: "node-def-handler",
+    });
+
+    expect(screen.getByTestId("figure-node-node-def-handler")).toHaveAttribute("data-active", "true");
+  });
+
   it("shows the kernel loop and clickable NodeUse sequence as nested figures", () => {
     const onFocusPathChange = vi.fn();
     renderArchitecture({ focusPath: ["core-runtime"], onFocusPathChange });

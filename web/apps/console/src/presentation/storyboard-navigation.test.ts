@@ -111,6 +111,30 @@ describe("storyboard navigation", () => {
     expect(locationFromHash(hashForLocation(location))).toEqual(location);
   });
 
+  it("uses each architecture beat's authored focus for a plain direct hash", () => {
+    expect(locationFromHash("#scene/architecture/api")).toMatchObject({
+      focusPath: ["application-lifecycle"],
+    });
+    expect(locationFromHash("#scene/architecture/runtime")).toMatchObject({
+      focusPath: ["runtime-providers"],
+    });
+    expect(locationFromHash("#scene/architecture/node-use")).toMatchObject({
+      focusPath: ["node-use"],
+    });
+  });
+
+  it("round-trips an explicit root view for a beat with an authored nested focus", () => {
+    const rootView: MainLocation = {
+      kind: "main",
+      sceneId: "architecture",
+      beatId: "runtime",
+      focusPath: [],
+    };
+
+    expect(hashForLocation(rootView)).toBe("#scene/architecture/runtime/focus/~");
+    expect(locationFromHash(hashForLocation(rootView))).toEqual(rootView);
+  });
+
   it("decodes escaped focus segments and rejects malformed encoding", () => {
     expect(locationFromHash("#scene/architecture/runtime/focus/runtime%20providers"))
       .toMatchObject({ focusPath: ["runtime providers"] });

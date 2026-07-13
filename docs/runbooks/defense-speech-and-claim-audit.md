@@ -98,7 +98,7 @@ Keep Scene 5 conceptual. Scene 9 applies this vocabulary to the prepared example
 
 Say:
 
-> Human and agent clients use the same public lifecycle operations. JSON-RPC handles transport concerns and delegates to WorkflowApi rather than owning domain behavior. Server composition supplies stores, provider projections, and the runtime while the core remains independent of MCP and Python behavior. A NodeUse validates input, invokes a projected capability, checks its declared outcome, reduces output into state, appends a trace frame, and routes to the next edge.
+> Human operators and external agents enter through the same public lifecycle surface. WorkflowApi owns lifecycle operations; JSON-RPC adapts requests without owning domain behavior. WorkflowServer composes records, provider-neutral capabilities, WorkflowApi, and the execution kernel; provider behavior remains outside the core. A NodeUse resolves bindings, invokes its NodeDef handler, reduces output into state, appends a trace frame, and routes the outcome.
 
 The NodeUse sequence is documented in the thesis runtime diagram and narrative ([lines 706-750](../thesis/system-design-implementation.md#workflow-core-model)).
 

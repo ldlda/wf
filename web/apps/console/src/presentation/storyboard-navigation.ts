@@ -18,12 +18,23 @@ const flattenMainLocations = (): readonly MainLocation[] =>
     })),
   );
 
+const ROOT_FOCUS_SENTINEL = "~";
+
+const authoredFocusPath = (sceneId: string, beatId: string): readonly string[] =>
+  findScene(sceneId)?.beats.find((beat) => beat.id === beatId)?.figure?.focusPath ?? [];
+
 export const hashForLocation = (location: PresentationLocation): string => {
   if (location.kind === "discussion") {
     return `#discuss/${encodeURIComponent(location.branchId)}`;
   }
   const base = `#scene/${encodeURIComponent(location.sceneId)}/${encodeURIComponent(location.beatId)}`;
-  if (location.focusPath.length === 0) return base;
+  if (location.focusPath.length === 0) {
+    // Beats may open on an authored nested figure. The sentinel preserves an
+    // explicitly selected root view without making plain deep links ambiguous.
+    return authoredFocusPath(location.sceneId, location.beatId).length > 0
+      ? `${base}/focus/${ROOT_FOCUS_SENTINEL}`
+      : base;
+  }
   const segments = location.focusPath.map(encodeURIComponent).join("/");
   return `${base}/focus/${segments}`;
 };
@@ -42,7 +53,9 @@ export const locationFromHash = (hash: string): PresentationLocation => {
     try {
       sceneId = decodeURIComponent(sceneSegment);
       beatId = decodeURIComponent(beatSegment);
-      if (focusSegment !== undefined && focusSegment !== "") {
+      if (focusSegment === ROOT_FOCUS_SENTINEL) {
+        focusPath = [];
+      } else if (focusSegment !== undefined && focusSegment !== "") {
         focusPath = focusSegment.split("/").map(decodeURIComponent);
       }
     } catch {
@@ -50,6 +63,9 @@ export const locationFromHash = (hash: string): PresentationLocation => {
     }
     const scene = findScene(sceneId);
     if (scene && scene.beats.some((b) => b.id === beatId)) {
+      if (focusSegment === undefined) {
+        focusPath = [...authoredFocusPath(scene.id, beatId)];
+      }
       return { kind: "main", sceneId: scene.id as MainLocation["sceneId"], beatId, focusPath };
     }
     return defaultMainLocation;

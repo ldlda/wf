@@ -39,6 +39,7 @@ export const ArchitectureScene = ({
       data-motion={motionDisabled ? "disabled" : "enabled"}
       data-focus-level={focusPath.length}
       data-architecture-focus={focusPath.length === 0 ? "system" : "nested"}
+      data-architecture-beat={beat.id}
     >
       <StageCaption eyebrow={`Act II · ${scene.claimClass}`} title={scene.title}>
         <p>{beat.caption}</p>

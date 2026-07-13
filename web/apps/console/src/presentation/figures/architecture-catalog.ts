@@ -300,7 +300,7 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
         {
           id: "configured-providers",
           label: "Capability inventory",
-          summary: "Provider-neutral CapabilitySource map",
+          summary: "Provider-neutral source map",
           kind: "provider",
           icon: "layers",
           evidencePointer: "src/wf_platform/sources.py",
