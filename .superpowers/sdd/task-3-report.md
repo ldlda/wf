@@ -34,3 +34,25 @@
 ## Commit
 
 `8414b072` (`feat: unify prepared authoring lifecycle visual`)
+
+## Review Fixes
+
+- Scoped Diagnose and Repair presentation cuts to the prepared lifecycle operation frame, independent of the removed Scene 7 selectors. Diagnose now keeps only the diagnostic evidence with an amber leading rule; Repair keeps the correction and status evidence with a success leading rule. Component assertions verify both focus markers, and CSS assertions verify the prepared-frame scope and emphasis rules.
+- Fixed compact operation-frame overflow for the 720px container path by stacking the repair visual, allowing diagnostic/correction content to shrink and wrap, sizing the frame intrinsically, and releasing the prepared scene/frame/presentation clipping boundary into the stage scroll area. At 600px, the presentation stacks above the assistant and retains the horizontally scrollable six-step rail. CSS contracts cover the compact and narrow rules.
+- Changed the winning editorial surface override to `minmax(12rem, 0.26fr) minmax(0, 0.74fr)` and updated the regression test to select that later winning rule, rejecting the shadowed 24/76 split.
+- Removed the duplicate prepared `StageCaption` wrapper and its empty `{null}` child. Updated the stale Scene 9 component/CSS/test wording to prepared lifecycle terminology.
+- Kept the transitional `SceneView` union unchanged: its remaining `authoring` callers include the recording-oriented Scene 8 path and later Task 4 authoring-view work, so tightening it here would cross ownership.
+
+## Review Fix Verification
+
+- RED: the new CSS assertions initially failed because the lightweight CSS test helper selected descendant rules; the assertions were narrowed to the intended root/evidence rules.
+- GREEN: `pnpm --dir web --filter @lda/console test -- src/presentation/authoring/PreparedAuthoringLifecycleScene.test.tsx src/presentation/authoring/AuthoringPhaseVisual.test.tsx src/presentation/presentation-css.test.ts` -> 3 files, 62 tests passed.
+- Adjacent authoring/projection/recording/state checks -> 4 files, 42 tests passed.
+- `pnpm --dir web --filter @lda/console typecheck` -> expected 9 later Task 4 `authoring`/`SceneView` diagnostics only; no Task 3 file is reported.
+- `npx react-doctor@latest --verbose --scope changed` -> no issues, 100/100.
+- `git diff --check` -> clean before commit.
+- Browser smoke was not run; 720px and 480px behavior is covered by the compact/narrow CSS contracts and the existing scrollable stage behavior.
+
+## Review Fix Commit
+
+`5f03fa31` (`fix: harden prepared lifecycle review fixes`)
