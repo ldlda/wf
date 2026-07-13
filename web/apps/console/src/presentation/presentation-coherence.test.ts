@@ -68,9 +68,33 @@ describe("presentation coherence matrix", () => {
   });
 
   it("defines semantic zoom for architecture and evidence staging for evaluation", () => {
-    expect(beatVisualContractFor("architecture", "node-use")).toMatchObject({
+    expect(beatVisualContractFor("architecture", "runtime")).toMatchObject({
       mode: "zoom",
       primarySurface: "interactive-architecture",
+    });
+    expect(beatVisualContractFor("prepared-lifecycle", "discover")).toMatchObject({
+      mode: "evidence",
+      primarySurface: "prepared-discovery",
+    });
+    expect(beatVisualContractFor("prepared-lifecycle", "draft")).toMatchObject({
+      mode: "evidence",
+      primarySurface: "draft-graph",
+    });
+    expect(beatVisualContractFor("prepared-lifecycle", "diagnose")).toMatchObject({
+      mode: "evidence",
+      primarySurface: "prepared-diagnostic",
+    });
+    expect(beatVisualContractFor("prepared-lifecycle", "repair")).toMatchObject({
+      mode: "evidence",
+      primarySurface: "prepared-repair",
+    });
+    expect(beatVisualContractFor("prepared-lifecycle", "artifact")).toMatchObject({
+      mode: "evidence",
+      primarySurface: "artifact",
+    });
+    expect(beatVisualContractFor("prepared-lifecycle", "deployment")).toMatchObject({
+      mode: "evidence",
+      primarySurface: "deployment",
     });
     expect(beatVisualContractFor("evaluation", "validity")).toMatchObject({
       mode: "evidence",

@@ -5,7 +5,6 @@ export type PrimaryArtifact =
   | "boundary-diagram"
   | "lifecycle-rail"
   | "interactive-architecture"
-  | "authoring-loop"
   | "agent-handoff"
   | "prepared-lifecycle"
   | "workflow-graph"
@@ -86,13 +85,6 @@ export const sceneCoherenceMatrix = [
     presenterFocus: "Use the recursive architecture figure as the only primary artifact.",
   },
   {
-    sceneId: "authoring",
-    primaryArtifact: "authoring-loop",
-    supportSurface: "discussion-rail",
-    chatRole: "hidden",
-    presenterFocus: "Show the authoring loop without turning it into generic process cards.",
-  },
-  {
     sceneId: "agent-handoff",
     primaryArtifact: "agent-handoff",
     supportSurface: "none",
@@ -152,11 +144,12 @@ const beatContracts = {
   "architecture/client": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "none" },
   "architecture/api": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "none" },
   "architecture/runtime": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "none" },
-  "architecture/node-use": { mode: "zoom", primarySurface: "interactive-architecture", supportSurface: "evidence-receipt" },
-  "authoring/discover": { mode: "evidence", primarySurface: "authoring-discovery", supportSurface: "authoring-loop" },
-  "authoring/author": { mode: "evidence", primarySurface: "authoring-draft", supportSurface: "authoring-loop" },
-  "authoring/diagnose": { mode: "evidence", primarySurface: "authoring-diagnostic", supportSurface: "authoring-loop" },
-  "authoring/repair": { mode: "evidence", primarySurface: "authoring-repair", supportSurface: "authoring-loop" },
+  "prepared-lifecycle/discover": { mode: "evidence", primarySurface: "prepared-discovery", supportSurface: "none" },
+  "prepared-lifecycle/draft": { mode: "evidence", primarySurface: "draft-graph", supportSurface: "none" },
+  "prepared-lifecycle/diagnose": { mode: "evidence", primarySurface: "prepared-diagnostic", supportSurface: "none" },
+  "prepared-lifecycle/repair": { mode: "evidence", primarySurface: "prepared-repair", supportSurface: "none" },
+  "prepared-lifecycle/artifact": { mode: "evidence", primarySurface: "artifact", supportSurface: "none" },
+  "prepared-lifecycle/deployment": { mode: "evidence", primarySurface: "deployment", supportSurface: "none" },
   "agent-handoff/request": { mode: "conversation", primarySurface: "prepared-conversation", supportSurface: "none" },
   "evaluation/cohort": { mode: "evidence", primarySurface: "evaluation-cohort", supportSurface: "none" },
   "evaluation/validity": { mode: "evidence", primarySurface: "evaluation-validity", supportSurface: "audit-reconciliation" },

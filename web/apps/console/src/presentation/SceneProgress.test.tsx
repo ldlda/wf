@@ -22,8 +22,8 @@ describe("SceneProgress", () => {
 
     render(<SceneProgress location={location} />);
 
-    expect(screen.getByText("6 / 14")).toBeInTheDocument();
-    expect(screen.getByText("4 / 5")).toBeInTheDocument();
+    expect(screen.getByText("6 / 13")).toBeInTheDocument();
+    expect(screen.getByText("4 / 4")).toBeInTheDocument();
   });
 
   it("shows scene position for run-from-deployment/graph", () => {
@@ -36,11 +36,11 @@ describe("SceneProgress", () => {
 
     render(<SceneProgress location={location} />);
 
-    expect(screen.getByText("10 / 14")).toBeInTheDocument();
+    expect(screen.getByText("9 / 13")).toBeInTheDocument();
     expect(screen.getByText("3 / 3")).toBeInTheDocument();
   });
 
-  it("shows the single Scene 8 beat position", () => {
+  it("shows the single Scene 7 beat position", () => {
     const location: MainLocation = {
       kind: "main",
       sceneId: "agent-handoff",
@@ -50,7 +50,7 @@ describe("SceneProgress", () => {
 
     render(<SceneProgress location={location} />);
 
-    expect(screen.getByText("8 / 14")).toBeInTheDocument();
+    expect(screen.getByText("7 / 13")).toBeInTheDocument();
     expect(screen.getByText("1 / 1")).toBeInTheDocument();
   });
 

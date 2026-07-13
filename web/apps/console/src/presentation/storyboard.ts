@@ -9,7 +9,6 @@ export type SceneView =
   | "boundary"
   | "lifecycle"
   | "architecture"
-  | "authoring"
   | "agent"
   | "demo"
   | "demo-lifecycle"
@@ -136,26 +135,11 @@ export const mainScenes = defineScenes([
       sceneBeat("client", "Client operations", "Human and agent clients use the same public lifecycle surface.", { figure: { catalogId: "system-architecture", focusPath: [], activeNodeId: "client-operations" } }),
       sceneBeat("api", "Transport and API", "JSON-RPC reaches WorkflowApi without owning domain behavior.", { figure: { catalogId: "system-architecture", focusPath: ["application-lifecycle"], activeNodeId: "workflow-api-boundary" } }),
       sceneBeat("runtime", "Runtime and providers", "The runtime resolves provider-neutral capabilities and stores lifecycle records.", { figure: { catalogId: "system-architecture", focusPath: ["runtime-providers"], activeNodeId: "configured-providers" } }),
-      sceneBeat("node-use", "NodeUse", "One callable node validates input, invokes a capability, and reduces output into state.", { evidencePresentation: "receipt", figure: { catalogId: "system-architecture", focusPath: ["node-use"], activeNodeId: "node-def-handler" } }),
-    ],
-  },
-  {
-    id: "authoring",
-    number: 7,
-    title: "Author, Validate, Repair",
-    claimClass: "implemented",
-    evidencePointer: "CLI documentation; draft authoring API; challenge UX findings",
-    view: "authoring",
-    beats: [
-      sceneBeat("discover", "Discover", "This authoring loop operates on the mutable Draft: an external agent proposal becomes a valid workflow through discover, author, diagnose, and repair. Artifact, Deployment, and Run follow after validation."),
-      sceneBeat("author", "Author", "This authoring loop operates on the mutable Draft: an external agent proposal becomes a valid workflow through discover, author, diagnose, and repair. Artifact, Deployment, and Run follow after validation."),
-      sceneBeat("diagnose", "Diagnose", "This authoring loop operates on the mutable Draft: an external agent proposal becomes a valid workflow through discover, author, diagnose, and repair. Artifact, Deployment, and Run follow after validation.", { evidencePresentation: "receipt" }),
-      sceneBeat("repair", "Repair", "This authoring loop operates on the mutable Draft: an external agent proposal becomes a valid workflow through discover, author, diagnose, and repair. Artifact, Deployment, and Run follow after validation."),
     ],
   },
   {
     id: "agent-handoff",
-    number: 8,
+    number: 7,
     title: "Agent Request",
     claimClass: "implemented",
     evidencePointer: "Constrained demo agent and prepared replay recipe",
@@ -167,7 +151,7 @@ export const mainScenes = defineScenes([
   },
   {
     id: "prepared-lifecycle",
-    number: 9,
+    number: 8,
     title: "Prepared Workflow Lifecycle",
     claimClass: "implemented",
     evidencePointer: "examples/lda_report_workflow; deployment inspect replay evidence",
@@ -175,14 +159,25 @@ export const mainScenes = defineScenes([
     beats: [
       sceneBeat("discover", "Discover capabilities", "The later issue-review example inspects configured sources, capabilities, and schemas.", { chatMode: "hidden", chatTheme: "light" }),
       sceneBeat("draft", "Author draft", "Create and edit a Draft for report generation before execution.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("validate", "Validate and repair", "Validate incomplete state, diagnose a missing binding, and apply a targeted repair.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat(
+        "diagnose",
+        "Diagnose invalid draft",
+        "Validation returns a structured missing-output diagnostic before artifact creation.",
+        { chatMode: "hidden", chatTheme: "light" },
+      ),
+      sceneBeat(
+        "repair",
+        "Apply targeted repair",
+        "A focused output-map edit resolves the diagnostic and produces a valid Draft.",
+        { chatMode: "hidden", chatTheme: "light" },
+      ),
       sceneBeat("artifact", "Compile artifact", "Save the validated plan as an immutable artifact.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("deployment", "Deploy and validate", "Bind and validate a ready Deployment; the run begins in Scene 10. This implementation extension is richer than the thesis three-node case study.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("deployment", "Deploy and validate", "Bind and validate a ready Deployment; the run begins in Scene 9. This implementation extension is richer than the thesis three-node case study.", { chatMode: "hidden", chatTheme: "light" }),
     ],
   },
   {
     id: "run-from-deployment",
-    number: 10,
+    number: 9,
     title: "Run From Deployment",
     claimClass: "implemented",
     evidencePointer: "workflow.runs.start replay evidence",
@@ -195,7 +190,7 @@ export const mainScenes = defineScenes([
   },
   {
     id: "typed-human-boundary",
-    number: 11,
+    number: 10,
     title: "Typed Human Boundary",
     claimClass: "implemented",
     evidencePointer: "typed interrupt payload and resume contract",
@@ -212,7 +207,7 @@ export const mainScenes = defineScenes([
   },
   {
     id: "resume-output-evidence",
-    number: 12,
+    number: 11,
     title: "Resume, Output, Evidence",
     claimClass: "implemented",
     evidencePointer: "workflow.runs.resume, workflow output, and trace replay evidence",
@@ -225,7 +220,7 @@ export const mainScenes = defineScenes([
   },
   {
     id: "evaluation",
-    number: 13,
+    number: 12,
     title: "Evaluation",
     claimClass: "evaluated",
     evidencePointer: "Thesis Evaluation and Appendix C",
@@ -238,7 +233,7 @@ export const mainScenes = defineScenes([
   },
   {
     id: "conclusion",
-    number: 14,
+    number: 13,
     title: "Limits and Conclusion",
     claimClass: "future-work",
     evidencePointer: "Thesis Limitations, Future Work, and Conclusion",
@@ -405,7 +400,7 @@ export const discussionBranches = defineDiscussionBranches([
   },
   {
     id: "raw-plan-import",
-    parentSceneId: "authoring",
+    parentSceneId: "prepared-lifecycle",
     title: "Raw plan import",
     claimClass: "implemented",
     evidencePointer: "Thesis Authoring; raw plan import and compilation",
@@ -413,7 +408,7 @@ export const discussionBranches = defineDiscussionBranches([
   },
   {
     id: "validation-diagnostics",
-    parentSceneId: "authoring",
+    parentSceneId: "prepared-lifecycle",
     title: "Validation and diagnostics",
     claimClass: "implemented",
     evidencePointer: "Thesis Validation; diagnostic repair hints",
@@ -421,7 +416,7 @@ export const discussionBranches = defineDiscussionBranches([
   },
   {
     id: "why-schemas",
-    parentSceneId: "authoring",
+    parentSceneId: "prepared-lifecycle",
     title: "Why schemas matter",
     claimClass: "implemented",
     evidencePointer: "wf schema command; draft validation diagnostics; typed interrupt contracts",

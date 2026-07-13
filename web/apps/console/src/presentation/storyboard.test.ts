@@ -9,8 +9,8 @@ import {
 } from "./storyboard.js";
 
 describe("defense storyboard catalog", () => {
-  it("defines fourteen ordered main scenes with unique scene and beat ids", () => {
-    expect(mainScenes).toHaveLength(14);
+  it("defines thirteen ordered main scenes with unique scene and beat ids", () => {
+    expect(mainScenes).toHaveLength(13);
     expect(mainScenes.map((scene) => scene.id)).toEqual([
       "thesis",
       "problem",
@@ -18,7 +18,6 @@ describe("defense storyboard catalog", () => {
       "planner-runtime",
       "lifecycle",
       "architecture",
-      "authoring",
       "agent-handoff",
       "prepared-lifecycle",
       "run-from-deployment",
@@ -27,6 +26,22 @@ describe("defense storyboard catalog", () => {
       "evaluation",
       "conclusion",
     ]);
+    expect(findScene("architecture")?.beats.map((beat) => beat.id)).toEqual([
+      "overview",
+      "client",
+      "api",
+      "runtime",
+    ]);
+    expect(findScene("prepared-lifecycle")?.beats.map((beat) => beat.id)).toEqual([
+      "discover",
+      "draft",
+      "diagnose",
+      "repair",
+      "artifact",
+      "deployment",
+    ]);
+    expect(findScene("conclusion")?.number).toBe(13);
+    expect(findScene("authoring")).toBeUndefined();
     for (const scene of mainScenes) {
       expect(scene.beats.length).toBeGreaterThan(0);
       expect(new Set(scene.beats.map((beat) => beat.id)).size).toBe(scene.beats.length);
@@ -51,7 +66,8 @@ describe("defense storyboard catalog", () => {
   it("keeps chat out of the way during proof-heavy demo beats", () => {
     expect(findBeat("prepared-lifecycle", "discover")?.chatMode).toBe("hidden");
     expect(findBeat("prepared-lifecycle", "draft")?.chatMode).toBe("hidden");
-    expect(findBeat("prepared-lifecycle", "validate")?.chatMode).toBe("hidden");
+    expect(findBeat("prepared-lifecycle", "diagnose")?.chatMode).toBe("hidden");
+    expect(findBeat("prepared-lifecycle", "repair")?.chatMode).toBe("hidden");
     expect(findBeat("prepared-lifecycle", "artifact")?.chatMode).toBe("hidden");
     expect(findBeat("prepared-lifecycle", "deployment")?.chatMode).toBe("hidden");
     expect(findBeat("run-from-deployment", "input")?.chatMode).toBe("hidden");
@@ -63,29 +79,32 @@ describe("defense storyboard catalog", () => {
   });
 
   it("splits the demo climax into lifecycle, run, interrupt, and evidence scenes", () => {
-    expect(findScene("prepared-lifecycle")?.number).toBe(9);
-    expect(findScene("run-from-deployment")?.number).toBe(10);
-    expect(findScene("typed-human-boundary")?.number).toBe(11);
-    expect(findScene("resume-output-evidence")?.number).toBe(12);
-    expect(findScene("evaluation")?.number).toBe(13);
-    expect(findScene("conclusion")?.number).toBe(14);
+    expect(findScene("agent-handoff")?.number).toBe(7);
+    expect(findScene("prepared-lifecycle")?.number).toBe(8);
+    expect(findScene("run-from-deployment")?.number).toBe(9);
+    expect(findScene("typed-human-boundary")?.number).toBe(10);
+    expect(findScene("resume-output-evidence")?.number).toBe(11);
+    expect(findScene("evaluation")?.number).toBe(12);
+    expect(findScene("conclusion")?.number).toBe(13);
   });
 
   it("defines the lifecycle story beats before run evidence", () => {
     expect(findBeat("prepared-lifecycle", "discover")?.caption).toMatch(/sources|capabilities|schemas/i);
     expect(findBeat("prepared-lifecycle", "draft")?.caption).toMatch(/draft/i);
-    expect(findBeat("prepared-lifecycle", "validate")?.caption).toMatch(/diagnose|repair/i);
+    expect(findBeat("prepared-lifecycle", "diagnose")?.caption).toMatch(/diagnostic|missing-output/i);
+    expect(findBeat("prepared-lifecycle", "repair")?.caption).toMatch(/repair|valid Draft/i);
     expect(findBeat("prepared-lifecycle", "artifact")?.caption).toMatch(/compile|artifact/i);
     expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/deploy|bindings/i);
   });
 
-  it("keeps Scene 5 as vocabulary and moves applied lifecycle evidence to Scene 9", () => {
+  it("keeps Scene 5 as vocabulary and moves applied lifecycle evidence to Scene 8", () => {
     expect(findBeat("lifecycle", "draft")?.caption).toMatch(/^Draft is mutable authoring state\.$/);
     expect(findBeat("lifecycle", "artifact")?.caption).toMatch(/^Artifact is an immutable workflow definition\.$/);
     expect(findBeat("lifecycle", "deployment")?.caption).toMatch(/^Deployment binds an artifact version/);
     expect(findBeat("lifecycle", "run")?.caption).toMatch(/^Run records one execution/);
-    expect(findBeat("prepared-lifecycle", "validate")?.caption).toMatch(/incomplete|repair/i);
-    expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/ready|does not run|Scene 10/i);
+    expect(findBeat("prepared-lifecycle", "diagnose")?.caption).toMatch(/diagnostic|missing-output/i);
+    expect(findBeat("prepared-lifecycle", "repair")?.caption).toMatch(/repair|valid Draft/i);
+    expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/ready|does not run|Scene 9/i);
     expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/three-node|implementation extension/i);
   });
 
