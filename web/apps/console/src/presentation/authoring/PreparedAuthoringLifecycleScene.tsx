@@ -25,7 +25,7 @@ const steps = [
   { id: "discover", label: "Discover", detail: "Sources, capabilities, schemas" },
   { id: "draft", label: "Author", detail: "Create and edit mutable Draft" },
   { id: "diagnose", label: "Diagnose", detail: "Structured validation result" },
-  { id: "repair", label: "Repair", detail: "Focused output-map edit" },
+  { id: "repair", label: "Repair", detail: "Focused route edit" },
   { id: "artifact", label: "Artifact", detail: "Immutable versioned definition" },
   { id: "deployment", label: "Deployment", detail: "Bind and validate sources" },
 ] as const satisfies readonly {

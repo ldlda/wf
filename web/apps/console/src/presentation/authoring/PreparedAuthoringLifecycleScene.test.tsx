@@ -76,6 +76,9 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(frame).toHaveTextContent(/prepared workflow lifecycle/i);
     expect(frame).toHaveAttribute("data-authoring-step", "repair");
     expect(frame).toHaveAttribute("data-recording-phase", "validate");
+    const rail = screen.getByRole("list", { name: /prepared authoring lifecycle/i });
+    expect(within(rail).getByText("Focused route edit")).toBeInTheDocument();
+    expect(within(rail).queryByText(/output-map/i)).not.toBeInTheDocument();
     expect(screen.getByRole("region", { name: "route repair result" })).toHaveAttribute(
       "data-authoring-result",
       "repair",
