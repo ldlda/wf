@@ -16,12 +16,12 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
         kind: "explicit",
         positions: {
           "client-operations": { x: 0, y: 150 },
-          "application-lifecycle": { x: 300, y: 150 },
-          "workflow-server": { x: 600, y: 150 },
-          "lifecycle-records": { x: 900, y: 0 },
-          "runtime-providers": { x: 900, y: 150 },
-          "core-runtime": { x: 900, y: 300 },
-          "node-use": { x: 1200, y: 300 },
+          "application-lifecycle": { x: 360, y: 150 },
+          "workflow-server": { x: 720, y: 150 },
+          "lifecycle-records": { x: 1080, y: 0 },
+          "runtime-providers": { x: 1080, y: 180 },
+          "core-runtime": { x: 1080, y: 360 },
+          "node-use": { x: 1440, y: 360 },
         },
       },
       nodes: [
@@ -561,10 +561,10 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
         kind: "explicit",
         positions: {
           "runtime-lane": { x: 0, y: 120 },
-          "binding-resolver": { x: 310, y: 120 },
-          "node-def-handler": { x: 620, y: 120 },
-          "state-reducers": { x: 930, y: 120 },
-          "trace-store": { x: 1240, y: 120 },
+          "binding-resolver": { x: 400, y: 120 },
+          "node-def-handler": { x: 800, y: 120 },
+          "state-reducers": { x: 1200, y: 120 },
+          "trace-store": { x: 1600, y: 120 },
         },
       },
       nodes: [

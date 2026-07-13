@@ -194,7 +194,7 @@
 
 .interactive-figure[data-figure-size="stage"][data-figure-focus-level="0"] {
   --figure-node-width: 236px;
-  --figure-node-height: 120px;
+  --figure-node-height: 150px;
 }
 
 .interactive-figure[data-figure-size="stage"][data-figure-focus-level="0"] .figure-node__label {

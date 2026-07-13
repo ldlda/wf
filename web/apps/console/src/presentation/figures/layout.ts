@@ -23,7 +23,7 @@ export const FIGURE_NODE_DIMENSIONS: Record<FigureLayoutSize, {
   readonly height: number;
 }> = {
   standard: { width: 236, height: 102 },
-  wide: { width: 236, height: 120 },
+  wide: { width: 236, height: 150 },
   stage: { width: 256, height: 150 },
 };
 
