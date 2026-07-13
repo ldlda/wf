@@ -26,6 +26,25 @@ Scene 8 uses one continuous visual language across all six beats:
 The prepared assistant remains supporting context. It must not reclaim the
 screen area needed by the lifecycle diagram.
 
+## Presentation-Distance Hierarchy
+
+Every beat must communicate its main state change from presentation distance.
+The primary layer uses large shapes, short labels, and unmistakable spatial
+relationships. Exact method names, schema paths, IDs, revisions, commands, and
+messages belong to the secondary receipt layer.
+
+The screen must still make sense when the secondary text cannot be read:
+
+- Discover reads as sources feeding a typed capability;
+- Draft reads as a complete workflow;
+- Diagnose reads as a workflow with one visibly broken route;
+- Repair reads as that same route restored;
+- Artifact reads as a workflow frozen into a version;
+- Deployment reads as requirements bound into a runnable deployment.
+
+Technical evidence remains present and selectable, but it must not become the
+visual headline or compete with the diagram.
+
 ## Beat Compositions
 
 ### Discover
@@ -57,7 +76,9 @@ structure rather than a hidden chat transcript.
 
 Reuse the Draft graph in the same spatial arrangement. Render the
 `analyze.ok` route as an incomplete connection that stops before `END`. Place
-the typed diagnostic beside that break, including its code and path.
+one short, large label such as `Missing route` beside that break. Keep the typed
+diagnostic code, schema path, and message in the compact receipt rather than in
+the primary diagram.
 
 The prepared fault-injection command remains available as secondary evidence,
 but it must not compete with the broken route.
@@ -172,6 +193,10 @@ Add focused tests that assert:
 - Artifact preserves the exact artifact identity, version, and requirements;
 - Deployment maps every requirement to its configured source;
 - no visual introduces facts absent from reviewed evidence.
+
+The browser smoke review must also include a presentation-distance check: at
+the full-slide screenshot scale, a reviewer should identify the primary state
+change without reading receipt-sized text.
 
 Run the presentation tests, console typecheck, and production build. Capture all
 six beats at 1280x720 plus Discover, Diagnose, and Deployment at 1024x768.
