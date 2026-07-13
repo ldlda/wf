@@ -1,16 +1,24 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
 import { findBeat, findScene } from "../storyboard.js";
 import { PreparedAuthoringLifecycleScene } from "./PreparedAuthoringLifecycleScene.js";
 
 afterEach(() => cleanup());
 
-const renderBeat = (beatId: string, onAdvance?: () => void) => {
+const renderBeat = (beatId: string, onAdvance?: () => void, discussionRail?: ReactNode) => {
   const scene = findScene("prepared-lifecycle");
   const beat = findBeat("prepared-lifecycle", beatId);
   if (!scene || !beat) throw new Error(`missing prepared-lifecycle/${beatId}`);
-  return render(<PreparedAuthoringLifecycleScene scene={scene} beat={beat} onAdvance={onAdvance} />);
+  return render(
+    <PreparedAuthoringLifecycleScene
+      scene={scene}
+      beat={beat}
+      onAdvance={onAdvance}
+      discussionRail={discussionRail}
+    />,
+  );
 };
 
 describe("PreparedAuthoringLifecycleScene", () => {
@@ -204,6 +212,23 @@ describe("PreparedAuthoringLifecycleScene", () => {
     expect(within(rail).getByText("Diagnose")).toBeInTheDocument();
     expect(within(rail).getByText("Repair")).toBeInTheDocument();
     expect(within(rail).getByText("Sources, capabilities, schemas")).toBeInTheDocument();
+  });
+
+  it("places defense questions in a presentation-only grid row", () => {
+    renderBeat(
+      "diagnose",
+      undefined,
+      <aside aria-label="defense discussion topics">Defense questions</aside>,
+    );
+
+    const workspace = screen.getByRole("region", { name: "prepared workflow authoring lifecycle" });
+    const discussion = workspace.querySelector(".prepared-lifecycle-scene__discussion");
+
+    expect(discussion?.tagName).toBe("SECTION");
+    expect(discussion).toHaveAttribute("data-discussion-placement", "presentation-column");
+    expect(discussion?.parentElement).toBe(workspace);
+    expect(discussion).toContainElement(screen.getByLabelText("defense discussion topics"));
+    expect(workspace.querySelector(".presentation-assistant-pane")?.parentElement).toBe(workspace);
   });
 
   it("highlights the active phase in the rail", () => {

@@ -84,7 +84,7 @@ describe("presentation.css", () => {
     expect(boardBlock).toContain("flex-shrink: 0");
   });
 
-  it("keeps the prepared lifecycle as a bounded 26/74 split without a lower dock row", () => {
+  it("keeps the prepared lifecycle as a bounded 26/74 split with an explicit discussion row", () => {
     const sceneBlock = css.match(
       /^\.prepared-lifecycle-scene\s*\{(?<body>[\s\S]*?)\n\}/m,
     )?.groups?.body;
@@ -93,9 +93,27 @@ describe("presentation.css", () => {
     expect(sceneBlock).toMatch(/minmax\(12rem, 0\.26fr\).*minmax\(0, 0\.74fr\)/);
     expect(sceneBlock).toContain("min-height: 0");
     expect(sceneBlock).toContain("overflow: hidden");
-    expect(sceneBlock).not.toContain("grid-template-rows:");
+    expect(sceneBlock).toContain("grid-template-rows: minmax(0, 1fr) auto;");
+    expect(sceneBlock).toContain('grid-template-areas: "assistant presentation" "assistant discussion";');
     expect(css).not.toContain(".prepared-lifecycle-scene__dock");
     expect(css).not.toMatch(/prepared-lifecycle-scene__dock[\s\S]*position:\s*(absolute|fixed)/);
+  });
+
+  it("keeps the discussion row in the presentation column and stacks it before chat on mobile", () => {
+    const discussion = cssBlocks(css, ".prepared-lifecycle-scene__discussion")
+      .find((body) => body.includes("grid-area: discussion;"));
+    const assistant = cssBlocks(css, ".prepared-lifecycle-scene > .presentation-assistant-pane")
+      .find((body) => body.includes("grid-area: assistant;"));
+    const presentation = cssBlocks(css, ".prepared-lifecycle-scene__presentation")
+      .find((body) => body.includes("grid-area: presentation;"));
+    const narrowContainer = cssBlock(css, "@container presentation-canvas (max-width: 600px)") ?? "";
+    const narrowScene = cssBlocks(narrowContainer, ".prepared-lifecycle-scene")
+      .find((body) => body.includes('grid-template-areas: "presentation" "discussion" "assistant";'));
+
+    expect(discussion).toContain("grid-area: discussion;");
+    expect(assistant).toContain("grid-area: assistant;");
+    expect(presentation).toContain("grid-area: presentation;");
+    expect(narrowScene).toContain('grid-template-areas: "presentation" "discussion" "assistant";');
   });
 
   it("asserts the winning editorial 26/74 split", () => {
@@ -197,8 +215,8 @@ describe("presentation.css", () => {
     expect(compactRepair).toContain("grid-template-columns: minmax(0, 1fr);");
     expect(compactRepair).toContain("min-width: 0;");
     expect(narrowScene).toContain("grid-template-columns: minmax(0, 1fr);");
-    expect(narrowScene).toContain('grid-template-areas: "presentation" "assistant";');
-    expect(narrowScene).toContain("grid-template-rows: max-content max-content;");
+    expect(narrowScene).toContain('grid-template-areas: "presentation" "discussion" "assistant";');
+    expect(narrowScene).toContain("grid-template-rows: max-content max-content max-content;");
     expect(narrowScene).toContain("align-content: start;");
     expect(narrowScene).toContain("min-height: max-content;");
     expect(narrowScene).toContain("height: max-content;");
@@ -206,6 +224,8 @@ describe("presentation.css", () => {
     expect(narrowPresentation).toContain("grid-template-rows: auto max-content;");
     expect(narrowPresentation).toContain("overflow: visible;");
     expect(narrowPresentation).not.toContain("overflow: auto;");
+    expect(cssBlocks(narrowContainer, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] > .prepared-lifecycle-scene__discussion')
+      .some((body) => body.includes("align-self: start;"))).toBe(true);
     expect(narrowFrame).toContain("height: max-content;");
     expect(narrowFrame).toContain("overflow: visible;");
     expect(narrowFrame).not.toContain("overflow: auto;");

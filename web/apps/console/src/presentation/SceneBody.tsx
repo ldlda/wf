@@ -326,7 +326,14 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
     case "agent":
       return <AgentHandoffScene scene={scene} beat={beat} />;
     case "demo-lifecycle":
-      return <PreparedAuthoringLifecycleScene scene={scene} beat={beat} onAdvance={onPreparedLifecycleAdvance} />;
+      return (
+        <PreparedAuthoringLifecycleScene
+          scene={scene}
+          beat={beat}
+          onAdvance={onPreparedLifecycleAdvance}
+          discussionRail={scene.id === "prepared-lifecycle" ? discussionLinks : undefined}
+        />
+      );
     case "demo":
       return (
         <DemoWorkflowScene
@@ -353,7 +360,7 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
   return (
     <>
       {content}
-      {discussionLinks}
+      {scene.id === "prepared-lifecycle" ? null : discussionLinks}
     </>
   );
 };

@@ -1,4 +1,5 @@
 import { useReducer } from "react";
+import type { ReactNode } from "react";
 import {
   projectPreparedLifecycleStep,
   type PreparedLifecycleStepId,
@@ -17,6 +18,7 @@ type PreparedAuthoringLifecycleSceneProps = {
   readonly scene: SceneDefinition;
   readonly beat: SceneBeatDefinition;
   readonly onAdvance?: (() => void) | undefined;
+  readonly discussionRail?: ReactNode;
 };
 
 const steps = [
@@ -38,7 +40,7 @@ const steps = [
  * Each beat shows a persistent prepared assistant beside one dominant phase
  * projection sourced from the prepared authoring recording.
  */
-export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance }: PreparedAuthoringLifecycleSceneProps) => {
+export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance, discussionRail }: PreparedAuthoringLifecycleSceneProps) => {
   const [messageState, dispatch] = useReducer(
     preparedLifecycleMessageReducer,
     initialPreparedLifecycleMessageState,
@@ -128,6 +130,15 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance }: Prep
           <AuthoringPhaseVisual projection={projection} focus={projection.focus} />
         </article>
       </div>
+      {discussionRail && (
+        <section
+          className="prepared-lifecycle-scene__discussion"
+          data-discussion-placement="presentation-column"
+          aria-label="prepared lifecycle defense questions"
+        >
+          {discussionRail}
+        </section>
+      )}
     </section>
   );
 };

@@ -3454,6 +3454,8 @@
 .prepared-lifecycle-scene {
   display: grid;
   grid-template-columns: minmax(12rem, 0.26fr) minmax(0, 0.74fr);
+  grid-template-rows: minmax(0, 1fr) auto;
+  grid-template-areas: "assistant presentation" "assistant discussion";
   gap: 0.55rem;
   min-height: 0;
   flex: 1 1 auto;
@@ -3462,11 +3464,27 @@
 }
 
 .prepared-lifecycle-scene__presentation {
+  grid-area: presentation;
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+}
+
+.prepared-lifecycle-scene > .presentation-assistant-pane {
+  grid-area: assistant;
+}
+
+.prepared-lifecycle-scene__discussion {
+  grid-area: discussion;
+  min-width: 0;
+  min-height: 0;
+}
+
+.prepared-lifecycle-scene__discussion > .scene-body__discussion-links {
+  margin-top: 0;
+  padding-top: 0.3rem;
 }
 
 .prepared-lifecycle-scene__rail {
@@ -3480,11 +3498,6 @@
   border-radius: 0.45rem;
   overflow-x: auto;
   scrollbar-width: none;
-}
-
-.presentation-stage__primary > .prepared-lifecycle-scene + .scene-body__discussion-links {
-  margin-top: 0;
-  padding-top: 0.3rem;
 }
 
 .prepared-lifecycle-scene__rail::-webkit-scrollbar {
@@ -4009,8 +4022,8 @@
 @container presentation-canvas (max-width: 600px) {
   .prepared-lifecycle-scene[data-presentation-surface="editorial"] {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: max-content max-content;
-    grid-template-areas: "presentation" "assistant";
+    grid-template-rows: max-content max-content max-content;
+    grid-template-areas: "presentation" "discussion" "assistant";
     align-content: start;
     min-height: max-content;
     height: max-content;
@@ -4025,6 +4038,12 @@
     min-height: max-content;
     height: max-content;
     overflow: visible;
+  }
+
+  .prepared-lifecycle-scene[data-presentation-surface="editorial"] > .prepared-lifecycle-scene__discussion {
+    grid-area: discussion;
+    align-self: start;
+    min-height: 0;
   }
 
   .prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame {

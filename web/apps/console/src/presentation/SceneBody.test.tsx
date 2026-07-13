@@ -376,6 +376,10 @@ describe("SceneBody", () => {
     expect(within(rail).getByRole("button", { name: /Raw plan import/i })).toBeInTheDocument();
     expect(within(rail).getByRole("button", { name: /Validation and diagnostics/i })).toBeInTheDocument();
     expect(within(rail).getByRole("button", { name: /Why schemas matter/i })).toBeInTheDocument();
+    expect(rail.closest(".prepared-lifecycle-scene__discussion")).toHaveAttribute(
+      "data-discussion-placement",
+      "presentation-column",
+    );
   });
 
   it("renders discussion branches as a labelled presenter rail", () => {
