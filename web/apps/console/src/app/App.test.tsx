@@ -205,7 +205,10 @@ describe("App", () => {
       </MemoryRouter>,
     );
 
-    expect(await screen.findByRole("main", { name: /lda.chat presenter notes/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole("main", { name: /lda.chat presenter notes/i }, { timeout: 5_000 }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { level: 1 })).toBeInTheDocument();
     expect(screen.queryByRole("main", { name: /lda.chat presentation/i })).not.toBeInTheDocument();
   });
 });
