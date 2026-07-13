@@ -389,7 +389,7 @@
   }
 
   .workflow-graph-stage__node strong {
-    font-size: 1rem;
+    font-size: 0.94rem;
   }
 }
 
@@ -592,7 +592,7 @@
 }
 
 .workflow-graph-stage__node strong {
-  font-size: 1.125rem;
+  font-size: 1rem;
   line-height: 1.05;
   color: var(--text-primary);
 }
@@ -603,7 +603,7 @@
 }
 
 .workflow-graph-stage__node small {
-  font-size: 0.82rem;
+  font-size: 0.75rem;
 }
 
 .workflow-graph-stage__node-state {
