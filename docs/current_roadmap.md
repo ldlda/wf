@@ -419,8 +419,10 @@ Presentation wishlist / defense readiness:
   [`interactive graphs and Scenes 3-6 choreography`](historical/superpowers/plans/2026-07-13-scenes-3-6-kernel-choreography.md)
   adds restrained Scene 3-5 choreography, a semantic-zoom architecture map,
   the readable `wf_core` and NodeUse figures, and a factual prepared-run graph
-  inspector. The next follow-up is
-  [`read-only presenter route`](superpowers/plans/2026-07-13-read-only-presenter-route.md).
+  inspector. Completed:
+  [`read-only presenter route`](historical/superpowers/plans/2026-07-13-read-only-presenter-route.md)
+  provides a static speech, evidence, timing, fallback, and Q&A reader without
+  RPC, replay, or audience-window synchronization.
 - Defense Q&A branch set:
   [`defense Q&A runbook`](runbooks/defense-qna.md) collects answers for
   "Where is the AI agent?", evaluation validity, security boundaries, demo

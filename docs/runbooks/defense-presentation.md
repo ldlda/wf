@@ -74,6 +74,16 @@ Open:
 http://127.0.0.1:5173/present
 ```
 
+Open the read-only presenter notes on the presenter laptop or a second window:
+
+```text
+http://127.0.0.1:5173/presenter#scene/thesis/title
+```
+
+`/presenter` does not control `/present`. It is a static speech, evidence, and
+Q&A reader with local covered-state checkboxes. Use its “Open audience slide”
+links when you need to align the audience window manually.
+
 ### Console And Live Workflow Server
 
 Use this when showing `/console` or live RPC-backed workflow operations.
@@ -183,6 +193,9 @@ visual hierarchy, chat mode, evidence mode, and fallback route.
 - In interactive figures: `Tab` enters the current figure node, arrow keys move
   between nodes, `Enter` expands an expandable node, and `Escape` pops one
   figure focus level.
+- In `/presenter`: `ArrowRight` advances one presenter note and `ArrowLeft`
+  returns to the previous note. Disclosure controls and covered checkboxes are
+  local and do not affect the audience route.
 
 Avoid relying on undocumented shortcuts during the defense. If a control is not
 visible or listed here, treat it as rehearsal-only.

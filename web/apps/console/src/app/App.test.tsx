@@ -196,4 +196,16 @@ describe("App", () => {
     expect(screen.getByRole("main", { name: /lda.chat presentation/i })).toBeInTheDocument();
     expect(screen.queryByLabelText("Lifecycle Explorer")).toBeNull();
   });
+
+  it("routes to read-only presenter notes separately from presentation mode", () => {
+    window.location.hash = "#scene/thesis/title";
+    render(
+      <MemoryRouter initialEntries={["/presenter"]}>
+        <AppRoutes />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByRole("main", { name: /lda.chat presenter notes/i })).toBeInTheDocument();
+    expect(screen.queryByRole("main", { name: /lda.chat presentation/i })).not.toBeInTheDocument();
+  });
 });

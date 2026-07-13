@@ -110,13 +110,6 @@ export const DiscussionPanel = ({ branchId, onClose }: DiscussionPanelProps) => 
             <span>Evidence</span>
             <p>{branch.evidencePointer}</p>
           </section>
-          {/* // Not to show, just to know
-          branch.speakerHint && (
-            <aside className="discussion-panel__presenter-note" aria-label="presenter note">
-              <span>Presenter note</span>
-              <p>{branch.speakerHint}</p>
-            </aside>
-          ) */}
         </aside>
 
         <footer className="discussion-panel__actions" aria-label="discussion actions">

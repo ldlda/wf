@@ -175,6 +175,13 @@ now cover evaluation and closing) with an adaptive aspect-ratio canvas, stable
 stage regions, discussion branches, one editorial canvas, persistent scene-aware
 assistant surfaces, and keyboard navigation.
 
+The companion `/presenter` route is a read-only speech and Q&A reader. It uses
+the same `#scene/<scene>/<beat>` and `#discuss/<branch>` hashes, shows target and
+cumulative timing, keeps optional detail/evidence/Q&A collapsed, and links to
+the corresponding audience slide in a new tab. It performs no workflow RPC,
+replay, live-target, or cross-window synchronization. Use ArrowLeft and
+ArrowRight to move between notes; covered checkboxes remain local to the page.
+
 The final presentation beats frame the evaluation as bounded evidence, make
 claim boundaries and future work explicit, and end on the canonical defense
 discussion index rather than a benchmark or generic conclusion.

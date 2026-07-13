@@ -1392,8 +1392,7 @@
 }
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__answer-card span,
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__provenance span,
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__presenter-note span {
+.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__provenance span {
   color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 68%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
   font: 700 0.68rem/1 var(--font-interface);
 }
@@ -1405,7 +1404,6 @@
 }
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__provenance,
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__presenter-note,
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__detail {
   display: grid;
   gap: 0.35rem;
@@ -1416,17 +1414,11 @@
 }
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__provenance p,
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__presenter-note p,
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__detail p {
   margin: 0;
   color: color-mix(in oklch, var(--color-editorial-ink, oklch(0.19 0.015 65)) 84%, var(--color-editorial-muted, oklch(0.48 0.025 65)));
   font-size: 0.85rem;
   line-height: 1.38;
-}
-
-.discussion-panel[data-presentation-surface="editorial"] .discussion-panel__presenter-note {
-  border-style: dashed;
-  background: color-mix(in oklch, var(--color-human, oklch(0.68 0.17 55)) 8%, var(--color-editorial-paper, oklch(0.975 0.012 82)));
 }
 
 .discussion-panel[data-presentation-surface="editorial"] .discussion-panel__return {
