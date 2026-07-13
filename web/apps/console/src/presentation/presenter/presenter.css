@@ -46,9 +46,15 @@
 .presenter-note__header span, .presenter-note__timing { color: #67655f; font: 0.78rem "IBM Plex Mono", monospace; }
 .presenter-note h1, .presenter-qna h1 { margin: 0.25rem 0 0; font: 700 2.5rem/1 "Barlow Condensed", sans-serif; text-transform: uppercase; }
 .presenter-note__timing { display: grid; align-content: start; gap: 0.25rem; text-align: right; }
+.presenter-note__goal { margin: 2rem 0 1.35rem; }
+.presenter-note__goal > span, .presenter-note__anchors > span, .presenter-note__say > span { display: block; color: #67655f; font: 700 0.8rem "IBM Plex Mono", monospace; text-transform: uppercase; }
+.presenter-note__goal p { max-width: 58ch; margin: 0.45rem 0 0; color: #20201e; font-size: 1.62rem; font-weight: 650; line-height: 1.25; text-wrap: balance; }
+.presenter-note__anchors { margin-bottom: 2rem; padding: 0.8rem 0; border-block: 1px solid #d7d5d0; }
+.presenter-note__anchors ul { display: flex; flex-wrap: wrap; gap: 0.4rem 1.3rem; margin: 0.55rem 0 0; padding: 0; list-style: none; }
+.presenter-note__anchors li { color: #20201e; font: 0.82rem/1.4 "IBM Plex Mono", monospace; }
+.presenter-note__anchors li::before { margin-right: 0.45rem; color: #1e6b55; content: "•"; }
 .presenter-note__say { margin: 2rem 0; }
-.presenter-note__say > span { color: #1e6b55; font: 700 0.8rem "IBM Plex Mono", monospace; text-transform: uppercase; }
-.presenter-note__markdown p { margin: 0.55rem 0 0; font-size: 1.42rem; line-height: 1.58; text-wrap: pretty; }
+.presenter-note__markdown p { margin: 0.55rem 0 0; font-size: 1.28rem; line-height: 1.58; text-wrap: pretty; }
 .presenter-note__markdown strong, .presenter-note__next-copy strong { color: #155b49; font-weight: 750; }
 .presenter-note__warning, .presenter-note__fallback, .presenter-qna aside { margin: 1.2rem 0; padding: 0.8rem 0; border-block: 1px solid #a36919; }
 .presenter-note__fallback { border-color: #3c6380; }
@@ -72,6 +78,18 @@
   .presenter-sidebar { position: static; height: auto; max-height: 15rem; border-right: 0; border-bottom: 1px solid #d7d5d0; }
   .presenter-sidebar ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .presenter-navigation { position: sticky; top: 0; z-index: 3; margin-inline: -0.5rem; padding-inline: 0.5rem; background: #f7f7f5; }
+  .presenter-note__goal p { font-size: 1.42rem; }
+}
+
+@media (max-width: 560px) {
+  .presenter-route__reader { padding: 1rem 1rem 3.5rem; }
+  .presenter-note__header { flex-direction: column; gap: 0.8rem; }
+  .presenter-note h1 { font-size: 2.15rem; }
+  .presenter-note__timing { grid-auto-flow: column; justify-content: start; gap: 1rem; text-align: left; }
+  .presenter-note__goal { margin-top: 1.5rem; }
+  .presenter-note__goal p { font-size: 1.28rem; }
+  .presenter-note__markdown p { font-size: 1.12rem; }
+  .presenter-note__actions { align-items: flex-start; flex-direction: column; }
 }
 
 @media print {

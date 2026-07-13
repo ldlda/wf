@@ -26,8 +26,20 @@ export const PresenterNote = ({ note, cumulativeSeconds, next, covered, onCovere
         </div>
       </header>
 
+      <section className="presenter-note__goal" aria-labelledby="presenter-goal">
+        <span id="presenter-goal">Beat goal</span>
+        <p>{note.goal}</p>
+      </section>
+
+      <section className="presenter-note__anchors" aria-labelledby="presenter-anchors">
+        <span id="presenter-anchors">Anchor terms</span>
+        <ul>
+          {note.keywords.map((keyword) => <li key={keyword}>{keyword}</li>)}
+        </ul>
+      </section>
+
       <section className="presenter-note__say" aria-labelledby="presenter-say">
-        <span id="presenter-say">Say</span>
+        <span id="presenter-say">Suggested wording</span>
         <div className="presenter-note__markdown"><ReactMarkdown>{note.mustSay}</ReactMarkdown></div>
       </section>
 
