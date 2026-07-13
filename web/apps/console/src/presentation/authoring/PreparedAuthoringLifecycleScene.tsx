@@ -38,7 +38,7 @@ const steps = [
  * Each beat shows a persistent prepared assistant beside one dominant phase
  * projection sourced from the prepared authoring recording.
  */
-export const PreparedAuthoringLifecycleScene = ({ beat, onAdvance }: PreparedAuthoringLifecycleSceneProps) => {
+export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance }: PreparedAuthoringLifecycleSceneProps) => {
   const [messageState, dispatch] = useReducer(
     preparedLifecycleMessageReducer,
     initialPreparedLifecycleMessageState,
@@ -109,6 +109,7 @@ export const PreparedAuthoringLifecycleScene = ({ beat, onAdvance }: PreparedAut
         >
           <header className="prepared-lifecycle-scene__frame-header">
             <div>
+              <span className="prepared-lifecycle-scene__context">{scene.title}</span>
               <span className="prepared-lifecycle-scene__frame-step">{activeStep.label}</span>
               <h2>{beat.title}</h2>
               <p>{beat.caption}</p>

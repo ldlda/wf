@@ -177,6 +177,18 @@ describe("presentation.css", () => {
     const narrowContainer = cssBlock(css, "@container presentation-canvas (max-width: 600px)") ?? "";
     const narrowScene = cssBlocks(narrowContainer, ".prepared-lifecycle-scene")
       .find((body) => body.includes("grid-template-columns: minmax(0, 1fr);") && body.includes("grid-template-areas:"));
+    const narrowPresentation = cssBlocks(
+      narrowContainer,
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] > .prepared-lifecycle-scene__presentation',
+    ).find((body) => body.includes("height: max-content;"));
+    const narrowFrame = cssBlocks(
+      narrowContainer,
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame',
+    ).find((body) => body.includes("min-height: max-content;"));
+    const narrowAssistant = cssBlocks(
+      narrowContainer,
+      '.prepared-lifecycle-scene[data-presentation-surface="editorial"] > .presentation-assistant-pane',
+    ).find((body) => body.includes("height: min(24rem, 60vh);"));
 
     expect(compactScene).toContain("overflow: visible;");
     expect(compactFrame).toContain("grid-template-rows: auto auto;");
@@ -186,6 +198,20 @@ describe("presentation.css", () => {
     expect(compactRepair).toContain("min-width: 0;");
     expect(narrowScene).toContain("grid-template-columns: minmax(0, 1fr);");
     expect(narrowScene).toContain('grid-template-areas: "presentation" "assistant";');
+    expect(narrowScene).toContain("grid-template-rows: max-content max-content;");
+    expect(narrowScene).toContain("align-content: start;");
+    expect(narrowScene).toContain("min-height: max-content;");
+    expect(narrowScene).toContain("height: max-content;");
+    expect(narrowScene).toContain("flex: 0 0 auto;");
+    expect(narrowPresentation).toContain("grid-template-rows: auto max-content;");
+    expect(narrowPresentation).toContain("overflow: visible;");
+    expect(narrowPresentation).not.toContain("overflow: auto;");
+    expect(narrowFrame).toContain("height: max-content;");
+    expect(narrowFrame).toContain("overflow: visible;");
+    expect(narrowFrame).not.toContain("overflow: auto;");
+    expect(narrowAssistant).toContain("min-height: 14rem;");
+    expect(narrowAssistant).toContain("height: min(24rem, 60vh);");
+    expect(narrowAssistant).toContain("max-height: min(24rem, 60vh);");
   });
 
   it("bounds prepared conversation scrolling and recenters the agent handoff at compact stage widths", () => {

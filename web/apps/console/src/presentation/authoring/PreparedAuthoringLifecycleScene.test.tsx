@@ -60,6 +60,7 @@ describe("PreparedAuthoringLifecycleScene", () => {
     const frame = screen.getByRole("region", { name: /active authoring operation/i });
     expect(frame).toHaveTextContent("workflow.draft_workspaces.set_step_output_map");
     expect(frame).toHaveTextContent(/wf draft set-output lda_report_workflow/i);
+    expect(frame).toHaveTextContent(/prepared workflow lifecycle/i);
     expect(frame).toHaveAttribute("data-authoring-step", "repair");
     expect(frame.querySelector('[data-authoring-focus="repair"]')).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "validation repair evidence" })).toHaveAttribute(
