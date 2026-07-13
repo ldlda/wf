@@ -91,8 +91,12 @@ describe("defense storyboard catalog", () => {
   it("defines the lifecycle story beats before run evidence", () => {
     expect(findBeat("prepared-lifecycle", "discover")?.caption).toMatch(/sources|capabilities|schemas/i);
     expect(findBeat("prepared-lifecycle", "draft")?.caption).toMatch(/draft/i);
-    expect(findBeat("prepared-lifecycle", "diagnose")?.caption).toMatch(/diagnostic|missing-output/i);
-    expect(findBeat("prepared-lifecycle", "repair")?.caption).toMatch(/repair|valid Draft/i);
+    expect(findBeat("prepared-lifecycle", "diagnose")?.caption).toBe(
+      "Validation returns a structured diagnostic because analyze has no route for its ok outcome.",
+    );
+    expect(findBeat("prepared-lifecycle", "repair")?.caption).toBe(
+      "One route edit sends analyze.ok to __end__; the follow-up validation is valid.",
+    );
     expect(findBeat("prepared-lifecycle", "artifact")?.caption).toMatch(/compile|artifact/i);
     expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/deploy|bindings/i);
   });
@@ -102,8 +106,8 @@ describe("defense storyboard catalog", () => {
     expect(findBeat("lifecycle", "artifact")?.caption).toMatch(/^Artifact is an immutable workflow definition\.$/);
     expect(findBeat("lifecycle", "deployment")?.caption).toMatch(/^Deployment binds an artifact version/);
     expect(findBeat("lifecycle", "run")?.caption).toMatch(/^Run records one execution/);
-    expect(findBeat("prepared-lifecycle", "diagnose")?.caption).toMatch(/diagnostic|missing-output/i);
-    expect(findBeat("prepared-lifecycle", "repair")?.caption).toMatch(/repair|valid Draft/i);
+    expect(findBeat("prepared-lifecycle", "diagnose")?.caption).toContain("no route for its ok outcome");
+    expect(findBeat("prepared-lifecycle", "repair")?.caption).toContain("analyze.ok to __end__");
     expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/ready|does not run|Scene 9/i);
     expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/three-node|implementation extension/i);
   });

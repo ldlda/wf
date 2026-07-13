@@ -77,7 +77,7 @@ const recording: readonly PreparedAuthoringPhase[] = [
         command: "wf source list",
         summary: "List available capability sources",
         result: "success",
-        detail: "6 sources: local.lda_docs, local.lda_report, local.issue_board, and platform helpers.",
+        detail: "Inventory: 6 total sources; configured local sources: local.lda_docs, local.lda_report, local.issue_board; platform helpers are also available.",
       },
       {
         title: "workflow.capabilities.list",
@@ -165,14 +165,14 @@ const recording: readonly PreparedAuthoringPhase[] = [
         command: "wf draft validate lda_report_workflow",
         summary: "Validate the workflow draft",
         result: "diagnostic",
-        detail: "Diagnostic: analyze output 'analysis' has no state projection.",
+        detail: "missing_outcome_edge at nodes[analyze]: reachable node is missing edges for outcomes ['ok']",
       },
       {
-        title: "workflow.draft_workspaces.set_step_output_map",
-        command: "wf draft set-output lda_report_workflow --revision 2 --step analyze --map analysis=state.analysis",
-        summary: "Repair the missing output binding",
+        title: "workflow.draft_workspaces.set_route",
+        command: "wf draft set-route lda_report_workflow --revision 3 --step analyze --outcome ok --to __end__",
+        summary: "Restore the missing terminal route",
         result: "success",
-        detail: "Added analysis -> state.analysis. A follow-up draft validate reports a valid draft.",
+        detail: "Revision 4 validates with status valid and diagnostics [].",
       },
     ],
     conversation: [
@@ -186,9 +186,9 @@ const recording: readonly PreparedAuthoringPhase[] = [
       },
     ],
     proof: [
-      "analysis → state.analysis",
-      "diagnostic resolved",
-      "validated draft",
+      "missing_outcome_edge",
+      "analyze.ok -> __end__",
+      "revision 4: valid",
     ],
   },
   {

@@ -162,13 +162,13 @@ export const mainScenes = defineScenes([
       sceneBeat(
         "diagnose",
         "Diagnose invalid draft",
-        "Validation returns a structured missing-output diagnostic before artifact creation.",
+        "Validation returns a structured diagnostic because analyze has no route for its ok outcome.",
         { chatMode: "hidden", chatTheme: "light" },
       ),
       sceneBeat(
         "repair",
         "Apply targeted repair",
-        "A focused output-map edit resolves the diagnostic and produces a valid Draft.",
+        "One route edit sends analyze.ok to __end__; the follow-up validation is valid.",
         { chatMode: "hidden", chatTheme: "light" },
       ),
       sceneBeat("artifact", "Compile artifact", "Save the validated plan as an immutable artifact.", { chatMode: "hidden", chatTheme: "light" }),

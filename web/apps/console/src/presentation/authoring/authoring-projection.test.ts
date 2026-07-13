@@ -51,9 +51,9 @@ describe("projectPreparedAuthoringPhase", () => {
   it("keeps the validation diagnostic and repair command distinct", () => {
     const phase = projectPreparedAuthoringPhase("validate");
     const diagnosticCmd = phase.commands.find(
-      (cmd) => cmd.result === "diagnostic" && cmd.detail?.includes("no state projection"),
+      (cmd) => cmd.result === "diagnostic" && cmd.detail?.includes("missing_outcome_edge"),
     );
-    const repairCmd = phase.commands.find((cmd) => cmd.command.includes("draft set-output"));
+    const repairCmd = phase.commands.find((cmd) => cmd.command.includes("draft set-route"));
     expect(diagnosticCmd).toBeDefined();
     expect(repairCmd).toBeDefined();
     expect(diagnosticCmd).not.toBe(repairCmd);
@@ -78,7 +78,11 @@ describe("projectPreparedAuthoringPhase", () => {
     expect(diagnose.focus).toBe("diagnose");
     expect(repair.focus).toBe("repair");
     expect(diagnose.primaryCommand.title).toBe("workflow.draft_workspaces.validate");
-    expect(repair.primaryCommand.title).toBe("workflow.draft_workspaces.set_step_output_map");
+    expect(diagnose.primaryCommand.detail).toContain("missing_outcome_edge");
+    expect(repair.primaryCommand.title).toBe("workflow.draft_workspaces.set_route");
+    expect(repair.primaryCommand.command).toContain("--revision 3 --step analyze --outcome ok --to __end__");
+    expect(diagnose.evidence.kind).toBe("diagnostic");
+    expect(repair.evidence.kind).toBe("repair");
   });
 
   it("projects six presentation steps from five recorded phases", () => {

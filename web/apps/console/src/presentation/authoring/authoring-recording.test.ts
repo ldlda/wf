@@ -81,7 +81,7 @@ describe("projectPreparedAuthoring", () => {
       "workflow.draft_workspaces.add_step_from_capability",
       "workflow.draft_workspaces.get",
       "workflow.draft_workspaces.validate",
-      "workflow.draft_workspaces.set_step_output_map",
+      "workflow.draft_workspaces.set_route",
       "workflow.draft_workspaces.compile",
       "workflow.draft_workspaces.create_artifact",
       "workflow.artifacts.inspect",
@@ -110,6 +110,7 @@ describe("projectPreparedAuthoring", () => {
     expect(commands.some((command) => command === "wf schema")).toBe(true);
     expect(commands.some((command) => command.startsWith("wf draft add-step lda_report_workflow"))).toBe(true);
     expect(commands.some((command) => command === "wf draft validate lda_report_workflow")).toBe(true);
+    expect(commands.some((command) => command === "wf draft set-route lda_report_workflow --revision 3 --step analyze --outcome ok --to __end__")).toBe(true);
     expect(commands.some((command) => command === "wf draft compile lda_report_workflow")).toBe(true);
     expect(commands.some((command) => command === "wf artifact inspect lda_report_case_study --version 1")).toBe(true);
     expect(commands.some((command) => command.startsWith("wf deploy save lda_report_case_study.default"))).toBe(true);

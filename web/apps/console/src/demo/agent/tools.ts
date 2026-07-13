@@ -15,7 +15,7 @@ export type PreparedAuthoringToolName =
   | "workflow.draft_workspaces.add_step_from_capability"
   | "workflow.draft_workspaces.get"
   | "workflow.draft_workspaces.validate"
-  | "workflow.draft_workspaces.set_step_output_map"
+  | "workflow.draft_workspaces.set_route"
   | "workflow.draft_workspaces.compile"
   | "workflow.draft_workspaces.create_artifact"
   | "workflow.artifacts.inspect"

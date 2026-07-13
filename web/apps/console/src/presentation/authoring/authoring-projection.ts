@@ -1,4 +1,8 @@
 import { projectPreparedAuthoring, type AuthoringPhaseId, type PreparedAuthoringCommand } from "./authoring-recording.js";
+import {
+  reviewedAuthoringEvidenceFor,
+  type ReviewedAuthoringEvidence,
+} from "./reviewed-authoring-evidence.js";
 
 export type PreparedLifecycleStepId =
   | "discover"
@@ -23,6 +27,7 @@ export type PreparedLifecycleStepProjection = AuthoringPhaseProjection & {
   readonly recordingPhase: AuthoringPhaseId;
   readonly focus: "full" | "diagnose" | "repair";
   readonly primaryCommand: PreparedAuthoringCommand;
+  readonly evidence: ReviewedAuthoringEvidence;
 };
 
 export type AuthoringPhaseVisualModel =
@@ -74,12 +79,19 @@ const visualForPhase = (phase: AuthoringPhaseId): AuthoringPhaseVisualModel => {
         inputBinding: "state.documents → documents",
       };
     case "validate":
-      return {
-        kind: "repair",
-        diagnostic: "analysis has no state projection",
-        correction: "analysis → state.analysis",
-        status: "Valid draft",
-      };
+      {
+        const diagnostic = reviewedAuthoringEvidenceFor("diagnose");
+        const repair = reviewedAuthoringEvidenceFor("repair");
+        if (diagnostic.kind !== "diagnostic" || repair.kind !== "repair") {
+          throw new Error("reviewed validation evidence has an unexpected shape");
+        }
+        return {
+          kind: "repair",
+          diagnostic: `${diagnostic.diagnostic.code} at ${diagnostic.diagnostic.path}: ${diagnostic.diagnostic.message}`,
+          correction: repair.command,
+          status: `Revision ${repair.toRevision}: ${repair.status}`,
+        };
+      }
     case "artifact":
       return {
         kind: "artifact",
@@ -139,6 +151,7 @@ export const projectPreparedLifecycleStep = (
 ): PreparedLifecycleStepProjection => {
   const recordingPhase = recordingPhaseForStep(step);
   const phase = projectPreparedAuthoringPhase(recordingPhase);
+  const evidence = reviewedAuthoringEvidenceFor(step);
   // Diagnose and repair are presentation choreography over one factual
   // recording phase; they select distinct evidence without duplicating it.
   const commandIndex = step === "repair" ? 1 : 0;
@@ -155,5 +168,6 @@ export const projectPreparedLifecycleStep = (
     recordingPhase,
     focus: step === "diagnose" || step === "repair" ? step : "full",
     primaryCommand,
+    evidence,
   };
 };
