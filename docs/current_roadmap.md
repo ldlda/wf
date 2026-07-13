@@ -344,11 +344,12 @@ separate activity after these surfaces are stable.
     [`presentation follow-up visual review`](runbooks/presentation-followup-visual-review.md).
     Implementation plan:
      [`presentation follow-up visual/story pass`](historical/superpowers/plans/2026-07-13-presentation-followup-visual-story-pass.md).
-11. **Pending: presenter speech and live documentation reconciliation:** the
-    typed catalog, live runbooks, README, and active contracts now use the
-    consolidated 13-scene story, but browser verification was not performed in
-    this slice. Keep this roadmap item pending until the presenter and audience
-    routes receive an explicit browser check.
+11. Completed: presenter speech and live documentation reconciliation. The
+    typed catalog, live runbooks, README, and active contracts use the
+    consolidated 13-scene story. The audience route passed the 1280x720,
+    1024x768, and 1920x1080 browser gate, including the six-step lifecycle,
+    right-column discussion rail, and optional NodeUse deep link. Implementation:
+    [`consolidated authoring story`](historical/superpowers/plans/2026-07-13-consolidated-authoring-story.md).
 
 Presentation wishlist / defense readiness:
 
