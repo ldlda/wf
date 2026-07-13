@@ -35,7 +35,11 @@ export const PresenterRoute = () => {
   const discussion = navigation.location.kind === "discussion" ? findDiscussionBranch(navigation.location.branchId) : undefined;
 
   return (
-    <PresenterShell current={navigation.note} covered={covered}>
+    <PresenterShell
+      current={navigation.note}
+      covered={covered}
+      activeDiscussionId={navigation.location.kind === "discussion" ? navigation.location.branchId : null}
+    >
       {navigation.note && (
         <PresenterNavigationBar
           currentIndex={navigation.index}

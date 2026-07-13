@@ -43,5 +43,7 @@ describe("PresenterRoute", () => {
     expect(screen.getByRole("heading", { name: /Where is the AI agent/i })).toBeInTheDocument();
     expect(screen.getByText(/Answer directly first/i)).toBeInTheDocument();
     expect(screen.getByText(/Abstract; Chapter 1 framing/i)).toBeInTheDocument();
+    expect(screen.getByText(/Defense Q&A/i).closest("details")).toHaveAttribute("open");
+    expect(screen.getByRole("link", { name: /Where is the AI agent in this thesis/i })).toHaveAttribute("aria-current", "page");
   });
 });
