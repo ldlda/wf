@@ -31,7 +31,7 @@
 - Consumes: `presenterNotes`, `presenterSceneNotes()`, `mainSpeechWordCount()`.
 - Produces: regression constraints for the rewritten catalog.
 
-- [ ] **Step 1: Replace the old timing and word-budget expectations**
+- [x] **Step 1: Replace the old timing and word-budget expectations**
 
 Assert scene totals of `[30, 30, 35, 40, 36, 32, 12, 42, 35, 30, 50, 120, 75]`, a complete-deck target of `642` including the existing 75-second navigation buffer, and a `500-700` word budget. Check every beat has a non-empty `goal` and one to three non-empty `keywords`. Separately check that no suggested `mustSay` value in Scenes 1-8 exceeds 28 words.
 
@@ -60,7 +60,7 @@ for (const note of presenterNotes.filter((item) => openingSceneIds.has(item.scen
 }
 ```
 
-- [ ] **Step 2: Replace the obsolete diagnostic assertions**
+- [x] **Step 2: Replace the obsolete diagnostic assertions**
 
 ```ts
 expect(presenterBeatNoteFor("prepared-lifecycle", "diagnose")?.mustSay)
@@ -71,7 +71,7 @@ expect(presenterBeatNoteFor("prepared-lifecycle", "diagnose")?.mustSay)
   .not.toMatch(/output projection/i);
 ```
 
-- [ ] **Step 3: Run the focused test and verify RED**
+- [x] **Step 3: Run the focused test and verify RED**
 
 Run:
 
@@ -81,7 +81,7 @@ pnpm --dir web --filter @lda/console test -- src/presentation/presenter/presente
 
 Expected: failures for timing, word budget, maximum beat length, and the obsolete diagnostic text.
 
-- [ ] **Step 4: Commit the failing contract**
+- [x] **Step 4: Commit the failing contract**
 
 ```powershell
 git add web/apps/console/src/presentation/presenter/presenter-notes.test.ts
@@ -98,7 +98,7 @@ git commit -m "test: define simpler defense speech contract"
 - Consumes: `beatNote()` and the existing note metadata.
 - Produces: presenter goals, anchor terms, and suggested speech rendered by `/presenter`.
 
-- [ ] **Step 1: Set the new target seconds**
+- [x] **Step 1: Set the new target seconds**
 
 Use these per-beat values:
 
@@ -113,7 +113,7 @@ Use these per-beat values:
 // Scene 8: 7, 7, 7, 7, 7, 7
 ```
 
-- [ ] **Step 2: Extend the presenter note type and constructor**
+- [x] **Step 2: Extend the presenter note type and constructor**
 
 Add these required fields:
 
@@ -132,7 +132,7 @@ export type PresenterBeatNote = {
 Add `goal` and `keywords` parameters to `beatNote()` before `mustSay`. Keep
 `mustSay` as the existing field name to avoid unrelated navigation churn.
 
-- [ ] **Step 3: Add exact goals and keywords for every beat**
+- [x] **Step 3: Add exact goals and keywords for every beat**
 
 Use this catalog in storyboard order:
 
@@ -178,7 +178,7 @@ conclusion/conclusion: Goal "Restate the implemented contribution and planner-ru
 conclusion/questions: Goal "Open structured examiner discussion without introducing new claims." Keywords "defense questions", "evidence"
 ```
 
-- [ ] **Step 4: Replace the exact `mustSay` values for Scenes 1-8**
+- [x] **Step 4: Replace the exact `mustSay` values for Scenes 1-8**
 
 Use these sentences in storyboard order:
 
@@ -218,11 +218,11 @@ Finally, a deployment connects it to the three local sources it needs.
 
 Preserve the existing warnings, fallbacks, evidence pointers, and Q&A branch IDs. Move the existing qualification about fixed definitions/provider variability into `optionalDetail` on `planner-runtime/runtime` if it is not already represented by `warning`.
 
-- [ ] **Step 5: Run the focused test and verify only UI/runbook synchronization remains RED**
+- [x] **Step 5: Run the focused test and verify only UI/runbook synchronization remains RED**
 
 Run the focused presenter-note test. Expected: catalog/timing/word constraints pass; synchronization fails because the readable runbook still contains the old speech.
 
-- [ ] **Step 6: Commit the typed catalog rewrite**
+- [x] **Step 6: Commit the typed catalog rewrite**
 
 ```powershell
 git add web/apps/console/src/presentation/presenter/presenter-notes.ts web/apps/console/src/presentation/presenter/presenter-notes.test.ts
@@ -240,30 +240,30 @@ git commit -m "docs: simplify opening defense speech"
 - Consumes: `PresenterBeatNote.goal`, `keywords`, and `mustSay`.
 - Produces: a rehearsal surface that distinguishes the slide goal, anchor terms, and flexible wording.
 
-- [ ] **Step 1: Write failing presenter-note tests**
+- [x] **Step 1: Write failing presenter-note tests**
 
 Assert the current note renders regions labelled `Beat goal`, `Anchor terms`,
 and `Suggested wording`. Assert every keyword is visible and that the old label
 `Must say` is absent.
 
-- [ ] **Step 2: Run the focused test and verify RED**
+- [x] **Step 2: Run the focused test and verify RED**
 
 Run `PresenterNote.test.tsx` directly.
 
-- [ ] **Step 3: Render the three-level rehearsal hierarchy**
+- [x] **Step 3: Render the three-level rehearsal hierarchy**
 
 Render the goal first as one concise sentence, keywords second as a plain list
 of one to three strong terms, and the Markdown sentence under `Suggested
 wording`. Do not render keywords as decorative pills; use readable inline text
 or a compact list.
 
-- [ ] **Step 4: Style for desktop and mobile rehearsal**
+- [x] **Step 4: Style for desktop and mobile rehearsal**
 
 Keep the goal visually strongest, keywords high-contrast and scannable, and
 suggested wording readable but subordinate. Preserve the stable Previous/Next
 bar and existing Q&A sidebar.
 
-- [ ] **Step 5: Run tests and commit**
+- [x] **Step 5: Run tests and commit**
 
 ```powershell
 pnpm --dir web --filter @lda/console test -- src/presentation/presenter/PresenterNote.test.tsx
@@ -285,15 +285,15 @@ Add each beat's **Goal** and **Anchor terms** throughout the runbook. For Scenes
 1-8, also replace the **Suggested wording** with the exact plain-text version of
 Task 2's `mustSay` value so the existing synchronization test stays meaningful.
 
-- [ ] **Step 1: Update timing prose and table**
+- [x] **Step 1: Update timing prose and table**
 
 Change the must-say target from `11:00` to `9:27`, retain a `1:15` navigation buffer, and set the complete-deck target to `10:42`. Update the Scenes 1-8 segment times to match Task 2; leave Scenes 9-13 targets unchanged.
 
-- [ ] **Step 2: Replace the Scene 1-8 `Say:` blocks verbatim**
+- [x] **Step 2: Replace the Scene 1-8 `Say:` blocks verbatim**
 
 Use the exact plain-text versions of Task 2's sentences. Keep claim qualifications below each block; do not require the presenter to speak them.
 
-- [ ] **Step 3: Run verification**
+- [x] **Step 3: Run verification**
 
 ```powershell
 pnpm --dir web --filter @lda/console test -- src/presentation/presenter/presenter-notes.test.ts
@@ -303,11 +303,11 @@ git diff --check
 
 Expected: all presenter tests pass, typecheck is clean, and no whitespace errors are reported.
 
-- [ ] **Step 4: Verify `/presenter` at desktop and mobile widths**
+- [x] **Step 4: Verify `/presenter` at desktop and mobile widths**
 
 Open `/presenter#scene/planner-runtime/boundary` and `/presenter#scene/architecture/api` at `1280x720` and `390x844`. Confirm bold phrases remain readable, Previous/Next controls stay stable, and the simplified `mustSay` text does not overflow.
 
-- [ ] **Step 5: Commit the synchronized runbook**
+- [x] **Step 5: Commit the synchronized runbook**
 
 ```powershell
 git add docs/runbooks/defense-speech-and-claim-audit.md
@@ -324,15 +324,15 @@ git commit -m "docs: synchronize simplified defense runbook"
 - Consumes: verified implementation from Tasks 1-3.
 - Produces: accurate live roadmap status and historical implementation record.
 
-- [ ] **Step 1: Mark only the speech item completed**
+- [x] **Step 1: Mark only the speech item completed**
 
 Leave the Scene 8 evidence item planned until its separate plan is implemented.
 
-- [ ] **Step 2: Move this completed plan and verify links**
+- [x] **Step 2: Move this completed plan and verify links**
 
 Update the roadmap link to the historical path, run `git diff --check`, and confirm no live document points to the old active-plan path.
 
-- [ ] **Step 3: Commit docs closure**
+- [x] **Step 3: Commit docs closure**
 
 ```powershell
 git add docs/current_roadmap.md docs/superpowers/plans/2026-07-13-defense-speech-simplification.md docs/historical/superpowers/plans/2026-07-13-defense-speech-simplification.md

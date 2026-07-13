@@ -353,13 +353,15 @@ separate activity after these surfaces are stable.
 
 Presentation wishlist / defense readiness:
 
-### Next: Simpler Speech
+### Completed: Simpler Speech
 
-1. Planned: give every beat one audience goal and one to three anchor terms,
-   then simplify the timed presenter path through Scenes 1-8 to one suggested
+1. Completed: gave every beat one audience goal and one to three anchor terms,
+   then simplified the timed presenter path through Scenes 1-8 to one suggested
    sentence per beat. Keep essential vocabulary such as Workflow API and
    lifecycle record names, while moving detailed qualification into optional
-   notes or Q&A.
+   notes or Q&A. The current catalog contains a 9:27 must-say path with a
+   500-700 word budget and a 10:42 complete-deck target. Implementation:
+   [`defense speech simplification`](historical/superpowers/plans/2026-07-13-defense-speech-simplification.md).
 
 ### Completed: Factual Scene 8 Evidence
 
@@ -439,11 +441,11 @@ Design:
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
   timing, and short speaker notes for what to say if the live demo fails.
   [`defense speech and claim audit`](runbooks/defense-speech-and-claim-audit.md)
-  provides the current 11-minute speech plus navigation buffer, evidence qualifications, and
+  provides the current 9:27 speech plus navigation buffer, evidence qualifications, and
   prioritized 12-minute Q&A.
   Completed: [`defense story reweighting`](historical/superpowers/plans/2026-07-13-defense-story-reweighting.md)
-  now provides a typed 39-beat presenter-note catalog, a 650-850-word must-say
-  path, evidence warnings, and a 12:15 complete-deck timing contract. Completed:
+  now provides a typed 39-beat presenter-note catalog, a 500-700-word must-say
+  path, evidence warnings, and a 10:42 complete-deck timing contract. Completed:
   [`interactive graphs and Scenes 3-6 choreography`](historical/superpowers/plans/2026-07-13-scenes-3-6-kernel-choreography.md)
   adds restrained Scene 3-5 choreography, a semantic-zoom architecture map,
   the readable `wf_core` and NodeUse figures, and a factual prepared-run graph
