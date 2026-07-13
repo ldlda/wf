@@ -199,11 +199,17 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
           summary: "Discover and call workflow capabilities",
           kind: "operation",
           icon: "plug",
-          details: [
-            { label: "Methods", value: "list / inspect / call" },
-            { label: "Input", value: "qualified name + payload" },
-          ],
           evidencePointer: "src/wf_api/service.py",
+          evidence: {
+            label: "Public operations",
+            title: "Capability operations",
+            body: "Clients discover schemas before invoking one qualified capability through the same application facade.",
+            facts: [
+              { label: "Methods", value: "list / inspect / call" },
+              { label: "Call input", value: "qualified name + payload" },
+            ],
+            codePointer: "src/wf_api/service.py",
+          },
         },
         {
           id: "draft-operations",
@@ -211,8 +217,14 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
           summary: "Validate, compile, patch authoring state",
           kind: "operation",
           icon: "layers",
-          details: [{ label: "Methods", value: "validate / compile / patch" }],
           evidencePointer: "src/wf_api/service.py",
+          evidence: {
+            label: "Mutable lifecycle",
+            title: "Draft operations",
+            body: "Draft operations preserve editable authoring state while exposing validation and compilation as explicit transitions.",
+            facts: [{ label: "Methods", value: "create / patch / validate / compile" }],
+            codePointer: "src/wf_api/service.py",
+          },
         },
         {
           id: "artifact-operations",
@@ -220,8 +232,14 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
           summary: "Save immutable workflow versions",
           kind: "artifact",
           icon: "database",
-          details: [{ label: "Methods", value: "create / inspect / delete" }],
           evidencePointer: "src/wf_api/service.py",
+          evidence: {
+            label: "Immutable lifecycle",
+            title: "Artifact operations",
+            body: "Artifact operations create and inspect immutable workflow definitions independently of environment bindings.",
+            facts: [{ label: "Methods", value: "list / create / inspect" }],
+            codePointer: "src/wf_api/service.py",
+          },
         },
         {
           id: "deployment-operations",
@@ -229,8 +247,14 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
           summary: "Bind artifacts to concrete sources",
           kind: "operation",
           icon: "network",
-          details: [{ label: "Methods", value: "validate / save / inspect" }],
           evidencePointer: "src/wf_api/service.py",
+          evidence: {
+            label: "Binding lifecycle",
+            title: "Deployment operations",
+            body: "Deployment operations inspect and validate the concrete source bindings used to run an artifact version.",
+            facts: [{ label: "Methods", value: "list / inspect / validate" }],
+            codePointer: "src/wf_api/service.py",
+          },
         },
         {
           id: "run-operations",
@@ -238,8 +262,14 @@ export const architectureCatalog: FigureCatalogDefinition = defineFigureCatalog(
           summary: "Start, resume, inspect execution",
           kind: "runtime",
           icon: "repeat",
-          details: [{ label: "Methods", value: "start / resume / trace" }],
           evidencePointer: "src/wf_api/service.py",
+          evidence: {
+            label: "Execution lifecycle",
+            title: "Run operations",
+            body: "Run operations start deployment execution, resume declared boundaries, and expose persisted inspection evidence.",
+            facts: [{ label: "Methods", value: "list / start / resume / inspect / trace" }],
+            codePointer: "src/wf_api/service.py",
+          },
         },
         {
           id: "trace-output",

@@ -74,4 +74,22 @@ describe("architectureCatalog", () => {
     ]);
     expect(sequence.nodes.every((node) => node.evidence !== undefined)).toBe(true);
   });
+
+  it("keeps WorkflowApi nodes concise and moves operation facts into evidence spotlights", () => {
+    const api = figure("workflow-api-detail");
+    const operationIds = [
+      "capability-operations",
+      "draft-operations",
+      "artifact-operations",
+      "deployment-operations",
+      "run-operations",
+    ];
+
+    for (const nodeId of operationIds) {
+      const node = api.nodes.find((candidate) => candidate.id === nodeId);
+      expect(node?.details, nodeId).toBeUndefined();
+      expect(node?.evidence?.facts?.length, nodeId).toBeGreaterThan(0);
+      expect(node?.evidence?.codePointer, nodeId).toMatch(/^src\//);
+    }
+  });
 });

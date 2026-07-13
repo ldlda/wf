@@ -40,7 +40,14 @@ const validCatalog: FigureCatalogDefinition = {
       title: "Architecture",
       layout: { kind: "layered" },
       nodes: [
-        { id: "client", label: "Client operations", summary: "CLI callers", kind: "actor" },
+        {
+          id: "client",
+          label: "Client operations",
+          summary: "CLI callers",
+          kind: "actor",
+          details: [{ label: "Surface", value: "CLI / JSON-RPC" }],
+          evidencePointer: "src/client.ts",
+        },
         { id: "runtime", label: "Runtime & providers", summary: "WorkflowServer", kind: "runtime", childFigureId: "runtime-detail" },
         {
           id: "leaf",
@@ -208,6 +215,18 @@ describe("InteractiveFigure", () => {
     expect(screen.getByRole("region", { name: /leaf node evidence/i })).toHaveTextContent("Leaf evidence");
     expect(screen.getByRole("region", { name: /leaf node evidence/i })).toHaveTextContent("docs/example.md");
     expect(figureNode("leaf")).toBeInTheDocument();
+  });
+
+  it("projects evidence-backed leaf details into a spotlight instead of the node", () => {
+    renderFigure({ size: "stage" });
+
+    expect(figureNode("client")).not.toHaveTextContent("CLI / JSON-RPC");
+    fireEvent.click(figureNode("client"));
+
+    const evidence = screen.getByRole("region", { name: /client operations evidence/i });
+    expect(evidence).toHaveTextContent("CLI callers");
+    expect(evidence).toHaveTextContent("CLI / JSON-RPC");
+    expect(evidence).toHaveTextContent("src/client.ts");
   });
 
   it("enables pan and zoom on the root architecture figure", () => {

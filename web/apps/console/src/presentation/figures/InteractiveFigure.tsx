@@ -23,6 +23,7 @@ import type {
   FigureCatalogDefinition,
   FigureLayoutKind,
   FigureNodeDefinition,
+  FigureNodeEvidence,
   FigureNodeIcon,
   FigureNodeKind,
   FigureNodeShape,
@@ -64,6 +65,22 @@ type FigureNodeData = {
   readonly onActivate: (nodeId: string) => void;
   readonly onExpand: (nodeId: string) => void;
 };
+
+/**
+ * Builds the standard inspector payload for leaf nodes that already point to
+ * repository evidence. Catalog-authored evidence wins when a concept needs a
+ * richer explanation; otherwise the node's concise summary remains factual.
+ */
+const evidenceForNode = (node: FigureNodeDefinition): FigureNodeEvidence | undefined =>
+  node.evidence ?? (node.evidencePointer
+    ? {
+        label: "Code evidence",
+        title: node.label,
+        body: node.summary,
+        ...(node.details ? { facts: node.details } : {}),
+        codePointer: node.evidencePointer,
+      }
+    : undefined);
 
 const iconByName: Record<FigureNodeIcon, LucideIcon> = {
   users: Users,
@@ -285,37 +302,41 @@ const InteractiveFigureInner = ({
     focusedNodeIdRef.current = nodeId;
     setFocusedNodeId(nodeId);
     const node = layout.nodes.find((candidate) => candidate.id === nodeId);
-    setSelectedNodeId(node?.evidence || node?.details ? nodeId : null);
+    setSelectedNodeId(node && evidenceForNode(node) ? nodeId : null);
   }, [layout.nodes]);
 
   const selectedNode = selectedNodeId === null
     ? undefined
     : layout.nodes.find((node) => node.id === selectedNodeId);
+  const selectedEvidence = selectedNode ? evidenceForNode(selectedNode) : undefined;
 
   const rfNodes: Node[] = useMemo(
     () =>
-      layout.nodes.map((node) => ({
-        id: node.id,
-        type: "figure",
-        position: node.position,
-        data: {
-          nodeId: node.id,
-          label: node.label,
-          summary: node.summary,
-          kind: node.kind,
-          shape: node.shape ?? shapeByKind[node.kind],
-          icon: node.icon ?? null,
-          details: node.details,
-          evidence: node.evidence,
-          orientation: horizontalLayouts.has(layout.definition.layout.kind) ? "horizontal" : "vertical",
-          isActive: node.id === activeNodeId,
-          isFocused: node.id === focusedNodeId,
-          isSelected: node.id === selectedNodeId,
-          isExpandable: node.childFigureId !== undefined,
-          onActivate: handleActivateNode,
-          onExpand: handleExpand,
-        },
-      })),
+      layout.nodes.map((node) => {
+        const evidence = evidenceForNode(node);
+        return {
+          id: node.id,
+          type: "figure",
+          position: node.position,
+          data: {
+            nodeId: node.id,
+            label: node.label,
+            summary: node.summary,
+            kind: node.kind,
+            shape: node.shape ?? shapeByKind[node.kind],
+            icon: node.icon ?? null,
+            details: evidence ? undefined : node.details,
+            evidence,
+            orientation: horizontalLayouts.has(layout.definition.layout.kind) ? "horizontal" : "vertical",
+            isActive: node.id === activeNodeId,
+            isFocused: node.id === focusedNodeId,
+            isSelected: node.id === selectedNodeId,
+            isExpandable: node.childFigureId !== undefined,
+            onActivate: handleActivateNode,
+            onExpand: handleExpand,
+          },
+        };
+      }),
     [layout.definition.layout.kind, layout.nodes, activeNodeId, focusedNodeId, selectedNodeId, handleActivateNode, handleExpand],
   );
 
@@ -387,10 +408,10 @@ const InteractiveFigureInner = ({
             <FitViewOnLayoutChange layoutKey={focus.figure.id} />
           </ReactFlow>
         </div>
-        {selectedNode?.evidence && (
+        {selectedNode && selectedEvidence && (
           <aside className="figure-evidence" role="region" aria-label={`${selectedNode.label} evidence`}>
             <div className="figure-evidence__header">
-              <span className="figure-evidence__label">{selectedNode.evidence.label}</span>
+              <span className="figure-evidence__label">{selectedEvidence.label}</span>
               <button
                 type="button"
                 className="figure-evidence__close"
@@ -400,11 +421,11 @@ const InteractiveFigureInner = ({
                 Close
               </button>
             </div>
-            <h3>{selectedNode.evidence.title}</h3>
-            <p>{selectedNode.evidence.body}</p>
-            {selectedNode.evidence.facts && selectedNode.evidence.facts.length > 0 && (
+            <h3>{selectedEvidence.title}</h3>
+            <p>{selectedEvidence.body}</p>
+            {selectedEvidence.facts && selectedEvidence.facts.length > 0 && (
               <dl className="figure-evidence__facts">
-                {selectedNode.evidence.facts.map((fact) => (
+                {selectedEvidence.facts.map((fact) => (
                   <div key={`${fact.label}-${fact.value}`}>
                     <dt>{fact.label}</dt>
                     <dd>{fact.value}</dd>
@@ -412,8 +433,8 @@ const InteractiveFigureInner = ({
                 ))}
               </dl>
             )}
-            {selectedNode.evidence.codePointer && (
-              <code className="figure-evidence__pointer">{selectedNode.evidence.codePointer}</code>
+            {selectedEvidence.codePointer && (
+              <code className="figure-evidence__pointer">{selectedEvidence.codePointer}</code>
             )}
           </aside>
         )}
