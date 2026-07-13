@@ -46,7 +46,7 @@ agent?":
 8. **Demo transition.** Let chat/product elements enter when the system becomes
    concrete. The chat is a product surface, not the whole thesis.
 9. **Workflow demo.** Run or replay the report workflow through start,
-   interrupt, approval/resume, trace, and output.
+   interrupt, typed decision/resume, trace, and output.
 10. **Evaluation and limits.** Be explicit: 36 audited trials are engineering
     evidence, not a controlled model benchmark. The failures are part of the
     argument for better product surfaces.
@@ -163,7 +163,7 @@ visual hierarchy, chat mode, evidence mode, and fallback route.
   `http://127.0.0.1:5173/present#scene/prepared-lifecycle/discover`
 - Run operation:
   `http://127.0.0.1:5173/present#scene/run-from-deployment/operation`
-- Typed approval:
+- Typed interrupt decision:
   `http://127.0.0.1:5173/present#scene/typed-human-boundary/approval`
 - Resume proof:
   `http://127.0.0.1:5173/present#scene/resume-output-evidence/resume`
@@ -243,16 +243,18 @@ Say:
 
 ## Twenty-Five-Minute Timing
 
-Target a 13-minute main path, leaving 12 minutes for questions.
+Target an 11:45 must-say path plus 1:15 for navigation and demo transitions,
+leaving 12 minutes for questions.
 
 | Time | Segment | Notes |
 |---:|---|---|
 | 0:00-1:30 | Title and problem | AI-agent goal becomes a workflow substrate contribution |
-| 1:30-5:20 | Positioning and architecture | Planner/runtime boundary, lifecycle, implementation, authoring |
-| 5:20-9:45 | Prepared demonstration | Request, deployment, start, interrupt, resume, output, trace |
-| 9:45-11:00 | Evaluation | 36 audited trials as bounded engineering evidence |
-| 11:00-12:30 | Limits and conclusion | Security, scheduling, evaluation, and agent-layer boundaries |
-| 12:30-13:00 | Transition buffer | Finish navigation and hand over to questions |
+| 1:30-2:15 | Positioning | Adjacent systems and the prototype's narrower position |
+| 2:15-5:30 | Architecture and authoring | Planner/runtime boundary, lifecycle, implementation, authoring |
+| 5:30-8:30 | Prepared demonstration | Request, deployment, start, interrupt, resume, output, trace |
+| 8:30-10:30 | Evaluation | 36 audited trials as bounded engineering evidence |
+| 10:30-11:45 | Limits and conclusion | Security, scheduling, evaluation, and agent-layer boundaries |
+| 11:45-13:00 | Transition buffer | Navigation, interaction, and demo delay |
 | 13:00-25:00 | Questions | Use prepared Q&A branches when available |
 
 Use [`defense-speech-and-claim-audit.md`](defense-speech-and-claim-audit.md)
@@ -308,7 +310,7 @@ Answer:
    trace.
 3. Reload, complete one revision-requested branch, and confirm no issues plus
    the `revision_requested` and `end_cancelled` trace frames.
-4. Force replay, reload, and confirm the replay badge plus the direct approval
+4. Force replay, reload, and confirm the replay badge plus the direct decision
    and trace hashes still render.
 5. Restore the normal loopback target only if the live path will be shown.
 6. Walk through Scene 6 root, runtime providers, and NodeUse deep links.

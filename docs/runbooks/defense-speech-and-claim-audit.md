@@ -1,6 +1,6 @@
 # Defense speech and claim audit
 
-This runbook gives you a near-complete 13-minute defense speech and a prioritized 12-minute question period. It also marks claims that require qualification so the presentation stays aligned with the thesis and current implementation.
+This runbook gives you the must-say 11:45 defense speech, a 1:15 navigation buffer, and a prioritized 12-minute question period. It also marks claims that require qualification so the presentation stays aligned with the thesis and current implementation. The typed catalog at `web/apps/console/src/presentation/presenter/presenter-notes.ts` is the source for the must-say text.
 
 ## Timing and evidence rules
 
@@ -11,15 +11,18 @@ Use these evidence labels while rehearsing. Do not read the labels aloud.
 - **Qualify**: accurate only within an explicit boundary
 - **Do not claim**: unsupported, untested, or excluded from scope
 
-Target 12:30 for the rehearsed speech. Keep 30 seconds for navigation or demo delay. The question period then has 12 minutes.
+Target 11:45 for the must-say speech. Keep 1:15 for navigation or demo delay; the complete deck target is 13:00. The question period then has 12 minutes.
 
 | Segment | Target |
 | --- | ---: |
 | Scenes 1-2: goal and problem | 1:30 |
-| Scenes 3-7: positioning, model, and implementation | 4:00 |
-| Scenes 8-12: prepared demonstration | 4:30 |
-| Scene 13: evaluation | 1:15 |
+| Scenes 3-7: positioning, model, and implementation | 3:15 |
+| Scenes 8-12: prepared demonstration | 3:00 |
+| Scene 13: evaluation | 2:00 |
 | Scene 14: limits and conclusion | 1:15 |
+| Must-say speech | 11:45 |
+| Navigation buffer | 1:15 |
+| Complete deck target | 13:00 |
 
 ## Main speech
 
@@ -31,9 +34,9 @@ Target 12:30 for the rehearsed speech. Keep 30 seconds for navigation or demo de
 
 Say:
 
-> My project began with the goal in the title: an AI agent for creating and automating workspace workflows. While developing it, I found that the difficult engineering problem was not another chat interface or planning loop. It was the system underneath one.
+> This project began with the goal in the title: an AI agent for creating and automating workspace workflows. The difficult engineering problem became the system underneath the chat.
 >
-> The submitted contribution is `lda.chat` as a typed workflow substrate. An external agent can propose work, but the platform owns workflow definitions, validation, deployment bindings, execution records, traces, and explicit resume boundaries. The thesis therefore studies the infrastructure an agent needs, not a new autonomous planning algorithm.
+> The submitted contribution is a typed workflow substrate: an external planner can propose work while the platform owns definitions, validation, bindings, execution records, traces, and explicit resume boundaries.
 
 Keep the boundary explicit. The thesis states this distinction in the Abstract and Introduction ([thesis lines 109-121](../thesis/system-design-implementation.md#abstract) and [lines 145-181](../thesis/system-design-implementation.md#introduction)).
 
@@ -45,183 +48,153 @@ Keep the boundary explicit. The thesis states this distinction in the Abstract a
 
 Say:
 
-> A model can already call tools and complete a task. The problem appears when that task must become reusable automation. A tool transcript does not automatically give us a versioned definition, source bindings, validation, persisted execution, trace inspection, or a safe place to resume after an interruption.
+> A model can call tools and complete one task, but a tool transcript is not reusable automation.
 >
-> My research question became: how can an AI-agent-facing workflow platform represent, validate, execute, and persist reusable workspace automation while keeping planning separate from execution? The platform owns those durable contracts so the planner does not have to recreate them on every run.
+> Reuse needs schemas, source bindings, persistence, traces, and declared recovery boundaries, with planning kept separate from execution.
 
 Do not claim that direct tool use or generated scripts are inherently bad. The thesis argues that reusable operation needs additional lifecycle contracts ([lines 214-277](../thesis/system-design-implementation.md#problem-statement-and-requirements)).
 
 ### Scene 3: Position the work without claiming superiority
 
 **Route:** `positioning/landscape` then `positioning/lda-position`  
-**Time:** 1:30-2:10  
+**Time:** 1:30-2:15
 **Evidence:** Supported, with qualification
 
 Say:
 
-> Related systems have different centers of gravity. Direct tool loops optimize immediate action. Generated scripts package code. Hosted automation platforms provide mature operations. Agent graph frameworks organize planner behavior. Model Context Protocol exposes capabilities.
->
-> `lda.chat` does not claim to replace those systems or outperform them. Its narrower position is a typed, provider-neutral lifecycle for workflows authored or operated by external agents. MCP, Python sources, and built-in capabilities can enter the same workflow model, while the core runtime remains independent of provider-specific behavior.
+> Related systems have different centers of gravity: tool loops act now, scripts package code, hosted platforms operate workflows, agent graphs organize planners, and MCP exposes capabilities. lda.chat takes a narrower position: a typed, provider-neutral lifecycle for workflows authored or operated by external agents, not a replacement or superiority claim.
 
 Qualify provider neutrality as demonstrated for the three implemented source families. Do not present compatibility with arbitrary future providers as measured evidence ([lines 460-521](../thesis/system-design-implementation.md#source-model)).
 
 ### Scene 4: Draw the planner and runtime boundary
 
 **Route:** `planner-runtime/planner`, `planner-runtime/runtime`, then `planner-runtime/boundary`  
-**Time:** 2:10-2:55  
+**Time:** 2:15-3:10
 **Evidence:** Supported, with qualification
 
 Say:
 
-> The central architectural decision is the planner-runtime split. An external model or human proposes and revises workflow structure. The runtime validates the graph, resolves sources, executes steps, records state and traces, and resumes only through declared boundaries.
->
-> Clients cross this boundary through typed CLI and JSON-RPC operations. Both reach the same workflow API instead of importing runtime internals. This is what makes the system agent-operable: the public surface exposes schemas, diagnostics, and lifecycle operations in machine-readable form.
+> An external model or human proposes and revises workflow structure; this keeps planning outside the runtime. For fixed definitions and handler results, the runtime validates the graph, resolves sources, executes steps, records state and traces, and resumes only at declared boundaries. Typed CLI and JSON-RPC operations reach the same Workflow API, making schemas, diagnostics, and lifecycle state machine-readable without importing runtime internals.
 
 Say “deterministic core semantics for fixed definitions and handler results,” not “all execution is deterministic.” Remote calls, provider code, resource reads, and external side effects may be nondeterministic ([lines 808-821](../thesis/system-design-implementation.md#workflow-core)).
 
 ### Scene 5: Define the lifecycle vocabulary
 
 **Route:** `lifecycle/draft`, `lifecycle/artifact`, `lifecycle/deployment`, then `lifecycle/run`  
-**Time:** 2:55-3:35  
+**Time:** 3:10-3:55
 **Evidence:** Supported
 
 Say:
 
-> Four records separate concerns that are often collapsed together. A Draft is mutable authoring state. An Artifact is an immutable workflow definition. A Deployment binds an artifact version to concrete sources and runtime context. A Run records one execution, including status, diagnostics, output, trace, and an explicit stopped or interrupted state.
->
-> This separation lets the same artifact be deployed against different source environments, and it preserves what was defined separately from what was executed.
+> Draft is mutable authoring state. Artifact is an immutable workflow definition. Deployment binds an artifact version to concrete sources and runtime context. Run records one execution, including status, diagnostics, output, trace, and an explicit stopped or interrupted state.
 
 Keep Scene 5 conceptual. Scene 9 applies this vocabulary to the prepared example. Also note that raw plans can create artifacts without passing through Draft ([lines 629-660](../thesis/system-design-implementation.md#workflow-lifecycle)).
 
 ### Scene 6: Zoom through the implemented architecture
 
 **Route:** `architecture/client`, `architecture/api`, `architecture/runtime`, then `architecture/node-use`  
-**Time:** 3:35-4:35  
+**Time:** 3:55-4:50
 **Evidence:** Supported
 
 Say:
 
-> From the outside, human and agent clients use the same lifecycle operations. JSON-RPC handles transport concerns and delegates to the workflow API. Server composition supplies stores, source providers, and the runtime. The core owns workflow semantics without importing MCP or Python provider behavior.
->
-> At the execution level, a NodeUse resolves and validates its input, invokes a projected capability, verifies the declared outcome, reduces output into workflow state, appends a trace frame, and routes through the corresponding edge. Each zoom level answers a different responsibility rather than exposing one large service.
+> Human and agent clients use the same public lifecycle operations. JSON-RPC handles transport concerns and delegates to WorkflowApi rather than owning domain behavior. Server composition supplies stores, provider projections, and the runtime while the core remains independent of MCP and Python behavior. A NodeUse validates input, invokes a projected capability, checks its declared outcome, reduces output into state, appends a trace frame, and routes to the next edge.
 
 The NodeUse sequence is documented in the thesis runtime diagram and narrative ([lines 706-750](../thesis/system-design-implementation.md#workflow-core-model)).
 
 ### Scene 7: Explain agent-operable authoring
 
 **Route:** `authoring/discover`, `authoring/author`, `authoring/diagnose`, then `authoring/repair`  
-**Time:** 4:35-5:20  
+**Time:** 4:50-5:30
 **Evidence:** Supported, with qualification
 
 Say:
 
-> Agent operation needs more than command availability. Before authoring, a client can discover sources, capabilities, and schemas. It can then change a mutable draft through focused operations. Validation returns structured diagnostics, affected paths, repair hints, and suggested next actions.
->
-> These surfaces reduce guessing and make invalid intermediate drafts repairable. The evaluation showed why this mattered: agents inspected source code when the public surface omitted schemas or import operations, and those failures directly motivated product changes.
+> Before authoring, a client can discover sources, capabilities, and schemas instead of guessing at hidden interfaces. Focused operations let an external agent change a mutable Draft while preserving a clear lifecycle boundary. Validation returns structured diagnostics, affected paths, repair hints, and suggested next actions. These surfaces make invalid intermediate drafts repairable; they support a loop, but no hint guarantees success.
 
 Do not say that every repair hint guarantees a valid workflow. Say that diagnostics are designed to support repair loops and that targeted tests cover the implemented paths ([lines 909-962](../thesis/system-design-implementation.md#validation-and-diagnostics)). Mention the instruction layer if asked: skills and runbooks also affected operability ([lines 1505-1531](../thesis/system-design-implementation.md#agent-instruction-layer)).
 
 ### Scene 8: Introduce the prepared demonstration honestly
 
 **Route:** `agent-handoff/request`  
-**Time:** 5:20-5:50  
+**Time:** 5:30-5:50
 **Evidence:** Implementation extension
 
 Say:
 
-> I will now show a prepared demonstration built on the platform. The chat is a presentation interface, not the autonomous planner evaluated by the thesis. It translates a report request into the same public lifecycle operations an external agent could call.
->
-> The prepared path keeps the defense deterministic. It demonstrates product behavior and recorded evidence; it is not a fresh model-performance result.
+> I will now show a prepared demonstration built on this platform. The chat is a presentation interface, not the autonomous planner evaluated by the thesis. The chat translates a report request into the same public lifecycle operations an external agent could call. This prepared path demonstrates product behavior and recorded evidence, not a fresh model-performance result.
 
 If replay is active, say: “This is the reviewed recording, not a live model planning this workflow.”
 
 ### Scene 9: Show authoring and deployment without starting a run
 
 **Route:** all five `prepared-lifecycle/*` beats  
-**Time:** 5:50-6:55  
+**Time:** 5:50-6:35
 **Evidence:** Implementation extension
 
 Say:
 
-> The prepared workflow first discovers the configured `local.lda_docs`, report, and issue-board capabilities. It creates and edits a draft, validates incomplete state, applies the repair, saves an immutable artifact, then binds and validates a deployment.
->
-> Notice the lifecycle boundary: deployment records a ready configuration, but it does not execute the workflow. The run begins only in the next scene.
+> The later issue-review example first inspects configured local.lda_docs, report, and issue-board capabilities. It creates and edits a Draft for report generation, making the proposal visible before execution. It validates incomplete state, exposes a missing output binding, and applies a targeted repair. It saves the validated plan as immutable artifact lda_report_case_study version 1. This later issue-review example is richer than the thesis three-node deterministic report case study: it is an implementation extension built on the same platform. Deployment binds and validates a ready configuration but does not run the workflow.
 
 This issue-review workflow is repository code under `examples/lda_report_workflow`. It is richer than the thesis’s documented three-node deterministic report case study. Call it a later demonstration built on the same platform, not the exact thesis case study.
 
 ### Scene 10: Start the prepared workflow
 
 **Route:** `run-from-deployment/input`, `run-from-deployment/operation`, then `run-from-deployment/graph`  
-**Time:** 6:55-7:50  
+**Time:** 6:35-7:10
 **Evidence:** Implementation extension; live-capable
 
 Say:
 
-> The deployment receives selected local documents and an issue-board path. The public `workflow.runs.start` operation validates the input and deployment, creates a persisted run record, and begins the reusable graph.
->
-> The graph reads documents, analyzes them, builds a report, drafts proposed issues, and reaches a declared review interrupt before applying issue-board changes. The graph is the reusable artifact; the chat only initiated the lifecycle operations.
+> The deployment receives selected local documents and an issue-board path. The public workflow.runs.start operation validates the deployment and input, creates a persisted Run, and begins the reusable graph. The graph reads documents, analyzes them, builds a report, drafts proposed issues, and pauses at a declared review interrupt before issue-board changes.
 
 If live execution has not been completed during rehearsal, say: “The operation view is replay-backed evidence of the prepared path. I am not presenting this as a newly completed live run.”
 
 ### Scene 11: Present a typed interrupt, not a production approval system
 
 **Route:** `typed-human-boundary/interrupt` then `typed-human-boundary/approval`  
-**Time:** 7:50-8:35  
+**Time:** 7:10-7:40
 **Evidence:** Implementation extension; qualify
 
 Say:
 
-> Execution pauses at a typed `issue_review` interrupt. The interrupt record exposes the request payload, allowed outcomes, request schema, and resume schema. The interface can therefore render the decision from an explicit contract instead of relying on hidden application knowledge.
->
-> In this example, submitting continues to issue creation. Requesting revision selects the workflow’s `cancelled` outcome and follows the revision branch. This is a typed interrupt and resume mechanism, not a production approval, role, or policy system.
+> Execution pauses at a typed issue_review interrupt exposing request data, allowed outcomes, request schema, and resume schema. The operator chooses submitted or revision-requested; this is a typed interrupt and resume contract, not a production approval gate, role system, or policy engine.
 
 Do not call the negative path “deny without resuming.” Both outcomes resume execution through different workflow branches. Do not imply that the prepared revision recording preserves the submitted branch’s run identity.
 
 ### Scene 12: Show output and inspectable evidence
 
 **Route:** `resume-output-evidence/resume`, `resume-output-evidence/output`, then `resume-output-evidence/trace`  
-**Time:** 8:35-9:45  
+**Time:** 7:40-8:30
 **Evidence:** Implementation extension; replay continuity differs by branch
 
 Say:
 
-> On the submitted path, `workflow.runs.resume` continues the recorded interrupted run. The workflow creates the report and issue-board changes, records terminal output, and preserves trace frames and protocol evidence for inspection.
->
-> The important claim is inspectability at a declared boundary. It is not arbitrary mid-node crash recovery, exactly-once execution, or time-travel debugging.
+> On the submitted path, workflow.runs.resume continues the recorded interrupted Run. The workflow creates the report and issue-board changes, then records terminal output. Trace frames and protocol evidence remain inspectable; this is declared-boundary resumability, not arbitrary crash recovery or exactly-once execution. The revision replay is a separate prepared recording.
 
 For the submitted replay, the same run ID is demonstrated. The prepared revision replay currently uses `run_recorded_lda_report_revision`; describe it as a separate prepared branch recording. The thesis itself documents a separate three-node report case study without issue-board mutation, so identify these issue-board results as evidence from the later example implementation.
 
 ### Scene 13: Explain what the evaluation proves
 
 **Route:** `evaluation/cohort`, `evaluation/validity`, then `evaluation/findings`  
-**Time:** 9:45-11:00  
+**Time:** 8:30-10:30
 **Evidence:** Supported, with strict qualification
 
 Say:
 
-> The evaluation combines automated conformance tests, deterministic case studies, and a manually audited external-agent campaign. The campaign contains 36 trials across two challenges, two hosted models, three instruction profiles, and three longitudinal waves, with three attempts per cell.
->
-> Manual audit classified 27 as clean product-path passes, eight as invalid samples, and one as a failure. Invalid samples included contamination such as reading implementation files, prior artifacts, adjacent attempts, or evaluator state. That distinction matters because apparent task completion is not enough when an agent bypasses the intended product surface.
->
-> These results support feasibility and expose authoring and diagnostic gaps. They do not estimate general model success, compare models under stable conditions, or demonstrate token reduction, retry reduction, or superiority over other orchestration systems.
+> The evaluation combines conformance tests, deterministic case studies, and a manually audited external-agent campaign: 36 trials across two challenges, two hosted models, three instruction profiles, and three waves, with three attempts per cell. The author audit classified 27 trials as clean product-path passes, eight as invalid samples, and one as a failure. Invalid samples included contamination such as reading implementation files, prior artifacts, adjacent attempts, or evaluator state. Because prompts, product snapshots, and hosted conditions changed across waves, these results are longitudinal engineering evidence. They expose authoring and diagnostic gaps, not a benchmark of model success, token reduction, retry reduction, or superiority.
 
 The product and prompts evolved across waves. Call this longitudinal engineering evidence, not a controlled benchmark ([lines 1287-1339](../thesis/system-design-implementation.md#formative-agent-trial-findings)).
 
 ### Scene 14: Close on the bounded contribution
 
 **Route:** `conclusion/limits`, `conclusion/future`, `conclusion/conclusion`, then `conclusion/questions`  
-**Time:** 11:00-12:30  
+**Time:** 10:30-11:45
 **Evidence:** Supported
 
 Say:
 
-> The prototype has clear limits. Python sources are trusted in-process code. Stores are file-backed. Provider lifecycle management is incomplete. The system does not provide production authentication, role-based access control, sandboxing, scheduling, general fork-and-gather execution, arbitrary crash recovery, or a bundled autonomous planner.
->
-> Future work can add those operational layers, a live agent interface, transactional storage, richer debugging, and a controlled comparative evaluation. Those additions can build on the lifecycle and provider boundaries instead of moving planning logic into the runtime.
->
-> The contribution is therefore architectural and implemented: external planners can propose workflows; a typed platform can validate, bind, execute, persist, interrupt, resume, and inspect them through public operations. The prototype shows that this separation works across controlled built-in, MCP, and Python source examples.
->
-> Thank you. I welcome your questions.
+> The prototype uses trusted in-process Python and file-backed stores; it does not provide production authentication, RBAC, sandboxing, scheduling, arbitrary crash recovery, or a bundled autonomous planner. A live agent interface, transactional storage, richer debugging, security hardening, scheduling, and controlled comparative evaluation remain future work. The contribution is architectural and implemented: external planners can propose workflows while a typed platform validates, binds, executes, persists, interrupts, resumes, and inspects them through public operations. That boundary is the claim I will defend: reusable agent-operated automation is inspectable because planning and execution have explicit contracts. I welcome questions.
 
 ## Live and replay fallback wording
 
@@ -342,7 +315,6 @@ Start with the short answer. Expand only when the examiner continues.
 
 ## Presentation defects to resolve or avoid
 
-- The prepared authoring recording labels several actions with `workflow.draft_workspaces.*`, while the current JSON-RPC namespace is `workflow.drafts.*`. Until the recording is corrected, describe the visible entries as prepared lifecycle actions or CLI commands, not exact JSON-RPC method names.
 - The thesis’s deterministic report case study has three workflow nodes. The later presentation example has eleven plan nodes, while its simplified graph intentionally omits the terminal `end_cancelled` marker. Avoid quoting a graph-node count unless the distinction is relevant.
 - The live health probe does not establish a completed live Scene 10-12 rehearsal. Label replay-backed output and trace evidence as recorded.
 - The revision replay has a separate run ID. Never use the submitted branch’s “same persisted run” wording for that branch.

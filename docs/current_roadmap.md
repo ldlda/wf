@@ -413,10 +413,11 @@ Presentation wishlist / defense readiness:
   [`defense speech and claim audit`](runbooks/defense-speech-and-claim-audit.md)
   provides the current 13-minute speech, evidence qualifications, and
   prioritized 12-minute Q&A.
-  Planned follow-ups, in dependency order:
-  [`defense story reweighting`](superpowers/plans/2026-07-13-defense-story-reweighting.md),
-  [`Scenes 3-6 kernel choreography`](superpowers/plans/2026-07-13-scenes-3-6-kernel-choreography.md),
-  and [`read-only presenter route`](superpowers/plans/2026-07-13-read-only-presenter-route.md).
+  Completed: [`defense story reweighting`](historical/superpowers/plans/2026-07-13-defense-story-reweighting.md)
+  now provides a typed 42-beat presenter-note catalog, a 750-850-word must-say
+  path, evidence warnings, and a 13-minute timing contract. Remaining follow-ups,
+  in dependency order: [`interactive graphs and Scenes 3-6 choreography`](superpowers/plans/2026-07-13-scenes-3-6-kernel-choreography.md),
+  then [`read-only presenter route`](superpowers/plans/2026-07-13-read-only-presenter-route.md).
 - Defense Q&A branch set:
   [`defense Q&A runbook`](runbooks/defense-qna.md) collects answers for
   "Where is the AI agent?", evaluation validity, security boundaries, demo

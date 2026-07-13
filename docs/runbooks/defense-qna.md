@@ -476,13 +476,15 @@ run, and inspect workflows.
 
 ### What is the next highest-value product work?
 
-**Short answer:** Better presentation/chat primitives, schema-backed approval
-forms, and guided run gates.
+**Short answer:** Operational hardening and evaluation: transactional stores,
+provider lifecycle management, production auth and secrets, sandboxing, richer
+debugging, and controlled comparative evaluation.
 
-**Expanded answer:** The workflow substrate exists. The next product work is
-making the human/agent interface clearer: standard AI chat presentation,
-schema-driven interrupt forms, and beat-gated demo execution that prevents the
-UI from racing ahead of the explanation.
+**Expanded answer:** The presentation and chat surfaces now demonstrate the
+existing substrate. The next product work is to harden the surrounding
+operational boundaries and evaluation: transactional persistence, provider
+lifecycle management, authentication and secret handling, sandboxing, richer
+run debugging, and a controlled comparative study.
 
 **Point to:** Current roadmap wishlist.
 

@@ -418,6 +418,7 @@ describe("useDemoTimeline", () => {
 
     expect(result.current.state.phase).toBe("paused");
     expect(result.current.state.events[result.current.state.appliedCount - 1]?.stage).toBe("run_resume");
+    expect(result.current.recordingId).toBe("lda-report-revision-v1");
     expect(result.current.output?.approved).toBe(false);
     expect(result.current.output?.created_issues).toHaveLength(0);
     expect(result.current.trace).toBeNull();

@@ -118,10 +118,10 @@ export const mainScenes = defineScenes([
     evidencePointer: "Thesis Workflow Lifecycle",
     view: "lifecycle",
     beats: [
-      sceneBeat("draft", "Draft", "Draft, Artifact, Deployment, and Run are the durable vocabulary behind reusable automation."),
-      sceneBeat("artifact", "Artifact", "An immutable artifact carries the durable workflow definition forward."),
-      sceneBeat("deployment", "Deployment", "A deployment binds the durable workflow to concrete sources."),
-      sceneBeat("run", "Run", "A run records durable execution, output, status, and trace."),
+      sceneBeat("draft", "Draft", "Draft is mutable authoring state."),
+      sceneBeat("artifact", "Artifact", "Artifact is an immutable workflow definition."),
+      sceneBeat("deployment", "Deployment", "Deployment binds an artifact version to concrete sources."),
+      sceneBeat("run", "Run", "Run records one execution, including output, status, and trace."),
     ],
   },
   {
@@ -172,11 +172,11 @@ export const mainScenes = defineScenes([
     evidencePointer: "examples/lda_report_workflow; deployment inspect replay evidence",
     view: "demo-lifecycle",
     beats: [
-      sceneBeat("discover", "Discover capabilities", "Inspect available sources, capabilities, and schemas before authoring.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("draft", "Author draft", "Create a workflow draft with report generation steps and routes.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("validate", "Validate and repair", "Bind sources and validate the draft; diagnose and repair issues.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("artifact", "Compile artifact", "Compile the validated draft into an immutable artifact.", { chatMode: "hidden", chatTheme: "light" }),
-      sceneBeat("deployment", "Deploy and validate", "Save deployment bindings and validate readiness.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("discover", "Discover capabilities", "The later issue-review example inspects configured sources, capabilities, and schemas.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("draft", "Author draft", "Create and edit a Draft for report generation before execution.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("validate", "Validate and repair", "Validate incomplete state, diagnose a missing binding, and apply a targeted repair.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("artifact", "Compile artifact", "Save the validated plan as an immutable artifact.", { chatMode: "hidden", chatTheme: "light" }),
+      sceneBeat("deployment", "Deploy and validate", "Bind and validate a ready Deployment; the run begins in Scene 10. This implementation extension is richer than the thesis three-node case study.", { chatMode: "hidden", chatTheme: "light" }),
     ],
   },
   {
@@ -231,8 +231,8 @@ export const mainScenes = defineScenes([
     view: "evaluation",
     beats: [
       sceneBeat("cohort", "36-trial cohort", "Two challenges, two hosted models, three profiles, and three waves.", { chatMode: "hidden" }),
-      sceneBeat("validity", "Bounded validity", "Manual audit separates task completion from valid product-surface evidence.", { chatMode: "hidden" }),
-      sceneBeat("findings", "Longitudinal findings", "Trials exposed concrete authoring and diagnostic UX gaps.", { chatMode: "hidden" }),
+      sceneBeat("validity", "Bounded validity", "Author audit: 27 pass, 8 invalid, and 1 fail; task completion is separate from valid product-surface evidence.", { chatMode: "hidden" }),
+      sceneBeat("findings", "Longitudinal findings", "Changing prompts and product snapshots make this engineering evidence, not a model benchmark.", { chatMode: "hidden" }),
     ],
   },
   {

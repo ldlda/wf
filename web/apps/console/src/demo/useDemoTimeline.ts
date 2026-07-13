@@ -48,8 +48,10 @@ export type DemoTimelineController = {
   readonly primeReplayToStage: (stage: DemoEvent["stage"] | null) => void;
 };
 
-const deriveRecordingId = (state: DemoTimelineState): string | null =>
-  state.mode === "replay" ? "lda-report-success-v1" : null;
+const deriveRecordingId = (
+  mode: DemoMode,
+  activeRecording: DemoRecording | null,
+): string | null => mode === "replay" ? activeRecording?.recordingId ?? null : null;
 
 const deriveMissingMessage = (mode: DemoMode, target: string | null): string | null => {
   if (mode !== "live" || target !== null) return null;
@@ -349,7 +351,7 @@ export const useDemoTimeline = (
     output,
     trace,
     missingDeploymentMessage: deriveMissingMessage(state.mode, target),
-    recordingId: deriveRecordingId(state),
+    recordingId: deriveRecordingId(state.mode, activeRecording.current),
     canStart: state.mode === "replay" || target !== null,
     setMode,
     start,

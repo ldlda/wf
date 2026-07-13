@@ -615,7 +615,7 @@ describe("PresentationRoute", () => {
 
     expect(window.location.hash).toBe("#scene/resume-output-evidence/resume");
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
-    expect(screen.getByText(/Revision Requested/i)).toBeInTheDocument();
+    expect(screen.getByText(/separate prepared recording; no run-ID continuity is claimed/i)).toBeInTheDocument();
 
     window.location.hash = "#scene/resume-output-evidence/trace";
     window.dispatchEvent(new HashChangeEvent("hashchange"));

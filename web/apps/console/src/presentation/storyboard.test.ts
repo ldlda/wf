@@ -79,6 +79,22 @@ describe("defense storyboard catalog", () => {
     expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/deploy|bindings/i);
   });
 
+  it("keeps Scene 5 as vocabulary and moves applied lifecycle evidence to Scene 9", () => {
+    expect(findBeat("lifecycle", "draft")?.caption).toMatch(/^Draft is mutable authoring state\.$/);
+    expect(findBeat("lifecycle", "artifact")?.caption).toMatch(/^Artifact is an immutable workflow definition\.$/);
+    expect(findBeat("lifecycle", "deployment")?.caption).toMatch(/^Deployment binds an artifact version/);
+    expect(findBeat("lifecycle", "run")?.caption).toMatch(/^Run records one execution/);
+    expect(findBeat("prepared-lifecycle", "validate")?.caption).toMatch(/incomplete|repair/i);
+    expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/ready|does not run|Scene 10/i);
+    expect(findBeat("prepared-lifecycle", "deployment")?.caption).toMatch(/three-node|implementation extension/i);
+  });
+
+  it("makes the evaluation beat carry the audited counts and validity boundary", () => {
+    expect(findBeat("evaluation", "cohort")?.caption).toMatch(/36|two challenges|two hosted models|three waves/i);
+    expect(findBeat("evaluation", "validity")?.caption).toMatch(/27|8|1|audit/i);
+    expect(findBeat("evaluation", "findings")?.caption).toMatch(/changing|longitudinal|benchmark/i);
+  });
+
   it("defines focused run, interrupt, and evidence beats", () => {
     expect(findBeat("run-from-deployment", "input")).toBeDefined();
     expect(findBeat("run-from-deployment", "operation")).toBeDefined();

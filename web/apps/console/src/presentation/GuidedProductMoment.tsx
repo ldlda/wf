@@ -38,13 +38,16 @@ const momentForBeat = (beatId: string): GuidedProductMoment => {
 const statusCopy = (
   moment: ReturnType<typeof momentForBeat>,
   approvalActions?: DemoApprovalActions,
+  isReplay = false,
 ): string => {
   if (moment === "interrupt") return "Run paused at the typed interrupt; inspect the context before deciding.";
+  if (approvalActions?.state === "revision_requested") {
+    return isReplay
+      ? "Revision requested. Separate prepared recording; no run-ID continuity is claimed."
+      : "Revision requested. The live run resumes through its negative outcome branch.";
+  }
   if (moment !== "approval") return "Same persisted run; inspect the proof below.";
   if (approvalActions?.state === "submitted") return "Submitted. Same run resumed.";
-  if (approvalActions?.state === "revision_requested") {
-    return "Revision requested. The same run resumed through its negative outcome branch.";
-  }
   return "Run is paused. Submit resumes this same run.";
 };
 
@@ -76,8 +79,18 @@ export const GuidedProductMoment = ({
   const lens = demoBeatLensForBeat(beat.id);
   const facts = projectDemoRunFacts(demo);
   const runResume = demo.state.events.find((event) => event.stage === "run_resume");
-  const headline = moment === "resume" && approvalActions?.state === "revision_requested"
-    ? "The revision request continues the persisted run"
+  const revisionRequested = approvalActions?.state === "revision_requested";
+  // Replay revision evidence has a separate recording identity; do not let
+  // the normal submitted-branch lens imply continuity for that branch.
+  const eyebrow = revisionRequested
+    ? demo.state.mode === "replay"
+      ? "Prepared branch"
+      : "Live branch"
+    : lens.eyebrow;
+  const headline = revisionRequested
+    ? demo.state.mode === "replay"
+      ? "Separate prepared revision recording"
+      : "Live revision branch resumes the run"
     : lens.headline;
 
   return (
@@ -91,9 +104,9 @@ export const GuidedProductMoment = ({
       data-continuation-focus={moment === "resume" ? "output" : moment === "trace" ? "trace" : undefined}
     >
       <header className="guided-product-moment__header">
-        <span>{lens.eyebrow}</span>
+        <span>{eyebrow}</span>
         <strong>{headline}</strong>
-        <p>{statusCopy(moment, approvalActions)}</p>
+        <p>{statusCopy(moment, approvalActions, demo.state.mode === "replay")}</p>
       </header>
 
       <div className="guided-product-moment__primary">

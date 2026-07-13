@@ -122,6 +122,28 @@ describe("GuidedProductMoment", () => {
     expect(screen.getByLabelText("workflow.runs.resume operation")).toBeInTheDocument();
   });
 
+  it("labels a replay revision as a separate prepared recording", () => {
+    render(
+      <GuidedProductMoment
+        beat={findBeat("resume-output-evidence", "resume")!}
+        demo={demoWithAppliedCount(6)}
+        contract={contract}
+        operation={resumeOperation}
+        approvalActions={{
+          state: "revision_requested",
+          canSubmit: false,
+          canRequestRevision: false,
+          submit: vi.fn(async () => {}),
+          requestRevision: vi.fn(async () => {}),
+        }}
+        openEvidence={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/separate prepared recording/i)).toBeInTheDocument();
+    expect(screen.queryByText(/same run/i)).not.toBeInTheDocument();
+  });
+
   it("keeps approval focused on input and decision without pre-resume output", () => {
     render(
       <GuidedProductMoment
