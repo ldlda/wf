@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import rehearsalRoutes from "../../../../../scripts/presentation-rehearsal-routes.json";
 import {
   hashForLocation,
   locationFromHash,
@@ -24,8 +25,27 @@ describe("storyboard navigation", () => {
   });
 
   it("round-trips every current storyboard beat", () => {
+    const storyboardRoutes = mainScenes.flatMap((scene) =>
+      scene.beats.map((beat) => `${scene.id}/${beat.id}`),
+    );
+    const manifestRoutes = rehearsalRoutes.map((route) => `${route.sceneId}/${route.beatId}`);
+
+    expect(new Set(manifestRoutes).size).toBe(manifestRoutes.length);
+    expect(manifestRoutes).toHaveLength(storyboardRoutes.length);
+
     for (const scene of mainScenes) {
       for (const beat of scene.beats) {
+        const matchingRoutes = rehearsalRoutes.filter(
+          (route) => route.sceneId === scene.id && route.beatId === beat.id,
+        );
+        expect(matchingRoutes, `missing rehearsal route for scene ${scene.id}`).toHaveLength(1);
+        const route = matchingRoutes[0];
+        if (!route) continue;
+        expect(route).toMatchObject({
+          sceneId: scene.id,
+          beatId: beat.id,
+          route: `${scene.id}/${beat.id}`,
+        });
         expect(locationFromHash(hashForLocation({
           kind: "main",
           sceneId: scene.id,
@@ -40,6 +60,21 @@ describe("storyboard navigation", () => {
       }
     }
 
+    for (const route of rehearsalRoutes) {
+      expect(Object.keys(route).sort()).toEqual(["beatId", "fileStem", "route", "sceneId"]);
+      expect(storyboardRoutes).toContain(`${route.sceneId}/${route.beatId}`);
+      expect(locationFromHash(hashForLocation({
+        kind: "main",
+        sceneId: route.sceneId as MainLocation["sceneId"],
+        beatId: route.beatId,
+        focusPath: [],
+      }))).toMatchObject({
+        kind: "main",
+        sceneId: route.sceneId,
+        beatId: route.beatId,
+        focusPath: [],
+      });
+    }
   });
 
   it("parses the Questions beat location", () => {
