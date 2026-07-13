@@ -31,7 +31,6 @@ can be shown after selecting replay with the runbook's session-storage switch.
 | `architecture/client` | Human and agent clients use the same public lifecycle operations. | Architecture client node | System architecture figure | hidden | replay-only; Thesis System Architecture; `docs/project_map.md`; `docs/source_architecture.md` | `architecture/client` |
 | `architecture/api` | JSON-RPC handles transport concerns and delegates to WorkflowApi rather than owning domain behavior. | Architecture API node | Client operations | hidden | replay-only; Thesis System Architecture; `docs/project_map.md`; `docs/source_architecture.md` | `architecture/api` |
 | `architecture/runtime` | Server composition supplies stores, provider projections, and the runtime while the core remains independent of MCP and Python behavior. | Runtime/providers focus | Architecture overview | hidden | replay-only; Thesis System Architecture; `docs/project_map.md`; `docs/source_architecture.md` | `architecture/runtime` |
-| `architecture/node-use` | A NodeUse validates input, invokes a projected capability, checks its declared outcome, reduces output into state, appends a trace frame, and routes to the next edge. | NodeUse focus | Runtime/providers focus | hidden | replay-only; Thesis System Architecture; `docs/project_map.md`; `docs/source_architecture.md` | `architecture/node-use` |
 | `authoring/discover` | Before authoring, a client can discover sources, capabilities, and schemas instead of guessing at hidden interfaces. | Authoring discovery surface | Capability/schema list | hidden | replay-only; CLI documentation; draft authoring API; challenge UX findings | `authoring/discover` |
 | `authoring/author` | Focused operations let an external agent change a mutable Draft while preserving a clear lifecycle boundary. | Draft authoring surface | Workflow structure | hidden | replay-only; CLI documentation; draft authoring API; challenge UX findings | `authoring/author` |
 | `authoring/diagnose` | Validation returns structured diagnostics, affected paths, repair hints, and suggested next actions. | Diagnostic receipt | Draft authoring surface | hidden | replay-only; CLI documentation; draft authoring API; challenge UX findings | `authoring/diagnose` |
@@ -62,3 +61,12 @@ For live-capable and explicit-run beats, use the existing `Live Demo
 Fallbacks` section in [`defense-presentation.md`](defense-presentation.md) when
 the live target or RPC server is unavailable. The fallback routes above are
 replay evidence, not fresh live results.
+
+## Contingency And Q&A Routes
+
+These routes are optional deep dives and are not part of the timed forward
+sequence.
+
+| Route | Use |
+|---|---|
+| `#scene/architecture/overview/focus/node-use` | Explain the NodeUse callable-node path: validate input, invoke a projected capability, reduce output into state, append a trace frame, and route the declared outcome. |

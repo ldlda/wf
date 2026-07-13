@@ -34,18 +34,24 @@ describe("presenter note catalog", () => {
       45,
       55,
       45,
-      55,
-      40,
+      41,
       20,
-      45,
+      54,
       35,
       30,
       50,
       120,
       75,
     ]);
-    expect(completeDeckTargetSeconds()).toBe(780);
+    expect(completeDeckTargetSeconds()).toBe(735);
     expect(completeDeckTargetSeconds()).toBeLessThanOrEqual(780);
+  });
+
+  it("keeps NodeUse out of timed notes while retaining the architecture spine", () => {
+    expect(presenterBeatNoteFor("architecture", "node-use")).toBeUndefined();
+    expect(presenterBeatNoteFor("architecture", "overview")).toBeDefined();
+    expect(presenterBeatNoteFor("architecture", "api")).toBeDefined();
+    expect(presenterBeatNoteFor("architecture", "runtime")).toBeDefined();
   });
 
   it("keeps the must-say speech within the defense word budget", () => {

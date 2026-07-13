@@ -185,13 +185,6 @@ export const presenterNotes = [
     { qnaBranchIds: ["provider-security"] },
   ),
   beatNote(
-    "architecture",
-    "node-use",
-    14,
-    "NodeUse **invokes a NodeDef handler**, reduces state, records trace, and routes the declared outcome.",
-    ["Thesis Workflow Core Model"],
-  ),
-  beatNote(
     "agent-handoff",
     "request",
     20,

@@ -191,7 +191,7 @@ a step that calls a capability. Separating NodeUse from the broader dispatcher
 helps explain why the system can reason about schemas, bindings, local outputs,
 state updates, routes, and trace records.
 
-**Point to:** Scene 6 NodeUse deep link, core runtime diagrams.
+**Point to:** `#scene/architecture/overview/focus/node-use`, core runtime diagrams.
 
 ### Why provider-neutral sources?
 
