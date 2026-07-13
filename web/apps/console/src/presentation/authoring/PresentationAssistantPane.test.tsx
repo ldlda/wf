@@ -58,7 +58,7 @@ describe("PresentationAssistantPane", () => {
 
     expect(screen.getByRole("button", { name: /artifact.*3 tool calls/i }))
       .toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByRole("button", { name: /validate.*2 tool calls/i }))
+    expect(screen.getByRole("button", { name: /validate.*3 tool calls/i }))
       .toHaveAttribute("aria-expanded", "false");
   });
 

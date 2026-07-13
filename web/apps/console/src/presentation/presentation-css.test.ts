@@ -183,6 +183,17 @@ describe("presentation.css", () => {
     expect(narrowRows).toContain("grid-template-columns: minmax(0, 1fr);");
   });
 
+  it("bounds narrow lifecycle results to a viewport-relative scrollport", () => {
+    const narrowContainer = cssBlock(css, "@container presentation-canvas (max-width: 600px)") ?? "";
+    const narrowResult = cssBlocks(narrowContainer, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .authoring-result')
+      .find((body) => body.includes("max-height: min(34rem, 56vh);"));
+
+    expect(narrowResult).toContain("height: min(34rem, 56vh);");
+    expect(narrowResult).toContain("max-height: min(34rem, 56vh);");
+    expect(narrowResult).toContain("overflow: auto;");
+    expect(narrowResult).not.toContain("max-height: 100%;");
+  });
+
   it("gives the prepared lifecycle rail and operation frame the primary hierarchy", () => {
     const frameRules = cssBlocks(css, '.prepared-lifecycle-scene[data-presentation-surface="editorial"] .prepared-lifecycle-scene__frame');
     const editorialFrame = frameRules.find((body) => body.includes("background: var(--authoring-paper);"));
@@ -263,9 +274,10 @@ describe("presentation.css", () => {
     expect(narrowAssistant).toContain("max-height: min(24rem, 60vh);");
   });
 
-  it("does not cap lifecycle evidence on wide presentation canvases", () => {
+  it("does not add a wide-canvas lifecycle evidence cap", () => {
     expect(css).not.toContain("@container presentation-canvas (min-width: 1500px)");
-    expect(css).not.toContain("max-height: min(34rem, 56vh);");
+    const narrowContainer = cssBlock(css, "@container presentation-canvas (max-width: 600px)") ?? "";
+    expect(narrowContainer).toContain("max-height: min(34rem, 56vh);");
   });
 
   it("bounds prepared conversation scrolling and recenters the agent handoff at compact stage widths", () => {

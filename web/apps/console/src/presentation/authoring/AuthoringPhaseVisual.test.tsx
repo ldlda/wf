@@ -60,6 +60,9 @@ describe("AuthoringPhaseVisual", () => {
     expect(within(result).getByText(/missing edges for outcomes.*ok/i)).toBeInTheDocument();
     expect(within(result).getByText(/cannot prove where execution goes next/i)).toBeInTheDocument();
     expect(within(result).getByText("Revision 3")).toBeInTheDocument();
+    expect(within(result).getByRole("note", { name: /prepared fault injection/i })).toHaveTextContent(
+      "wf draft remove-route lda_report_workflow --revision 2 --step analyze --outcome ok",
+    );
   });
 
   it("renders route repair as a valid revision with compact prior context", () => {

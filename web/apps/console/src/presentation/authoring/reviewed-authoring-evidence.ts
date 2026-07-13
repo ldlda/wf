@@ -33,6 +33,12 @@ export type ReviewedAuthoringEvidence =
         readonly message: string;
         readonly explanation: string;
       };
+      readonly faultInjection: {
+        readonly command: string;
+        readonly fromRevision: 2;
+        readonly toRevision: 3;
+        readonly label: "prepared fault injection";
+      };
     }
   | {
       readonly kind: "repair";
@@ -106,6 +112,13 @@ const reviewedAuthoringEvidence: Readonly<
       path: "nodes[analyze]",
       message: "reachable node is missing edges for outcomes ['ok']",
       explanation: "The workflow cannot prove where execution goes next.",
+    },
+    faultInjection: {
+      command:
+        "wf draft remove-route lda_report_workflow --revision 2 --step analyze --outcome ok",
+      fromRevision: 2,
+      toRevision: 3,
+      label: "prepared fault injection",
     },
   },
   repair: {

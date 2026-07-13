@@ -80,6 +80,7 @@ describe("projectPreparedAuthoring", () => {
       "workflow.draft_workspaces.create_from_capability",
       "workflow.draft_workspaces.add_step_from_capability",
       "workflow.draft_workspaces.get",
+      "workflow.draft_workspaces.remove_route",
       "workflow.draft_workspaces.validate",
       "workflow.draft_workspaces.set_route",
       "workflow.draft_workspaces.compile",
@@ -109,6 +110,7 @@ describe("projectPreparedAuthoring", () => {
     expect(commands.some((command) => command === "wf cap inspect local.lda_report.analyze_documents")).toBe(true);
     expect(commands.some((command) => command === "wf schema")).toBe(true);
     expect(commands.some((command) => command.startsWith("wf draft add-step lda_report_workflow"))).toBe(true);
+    expect(commands.some((command) => command === "wf draft remove-route lda_report_workflow --revision 2 --step analyze --outcome ok")).toBe(true);
     expect(commands.some((command) => command === "wf draft validate lda_report_workflow")).toBe(true);
     expect(commands.some((command) => command === "wf draft set-route lda_report_workflow --revision 3 --step analyze --outcome ok --to __end__")).toBe(true);
     expect(commands.some((command) => command === "wf draft compile lda_report_workflow")).toBe(true);

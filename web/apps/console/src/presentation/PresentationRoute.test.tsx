@@ -121,6 +121,9 @@ describe("PresentationRoute", () => {
     expect(within(result).getByText("missing_outcome_edge")).toBeInTheDocument();
     expect(within(result).getByText("nodes[analyze]")).toBeInTheDocument();
     expect(within(result).getByText(/missing edges for outcomes.*ok/i)).toBeInTheDocument();
+    expect(within(result).getByRole("note", { name: /prepared fault injection/i })).toHaveTextContent(
+      "wf draft remove-route lda_report_workflow --revision 2 --step analyze --outcome ok",
+    );
     expect(screen.queryByText(/missing output projection/i)).not.toBeInTheDocument();
   }, 15000);
 
@@ -137,6 +140,16 @@ describe("PresentationRoute", () => {
     expect(result.querySelector(".authoring-result__header > strong")).toHaveTextContent("Valid");
     expect(within(result).getByText("Revision 4", { exact: true })).toBeInTheDocument();
     expect(within(result).getByText("0 diagnostics", { exact: true })).toBeInTheDocument();
+  }, 15000);
+
+  it("routes Diagnose to a bounded result scrollport on narrow canvases", async () => {
+    window.location.hash = "#scene/prepared-lifecycle/diagnose";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const result = await screen.findByRole("region", { name: "draft validation diagnostic" });
+    expect(result).toHaveAttribute("data-scrollport", "bounded-result");
+    expect(result).toHaveAttribute("data-scroll-bound", "viewport-relative");
   }, 15000);
 
   it("exposes an application-owned readiness signal for rehearsal capture", async () => {

@@ -31,7 +31,7 @@ describe("AuthoringConversation", () => {
 
     const log = screen.getByRole("log", { name: "prepared authoring conversation" });
     expect(log).toHaveAttribute("data-surface", "dock");
-    expect(screen.getByRole("button", { name: /validate.*2 tool calls/i }))
+    expect(screen.getByRole("button", { name: /validate.*3 tool calls/i }))
       .toHaveAttribute("aria-expanded", "true");
     expect(screen.getByRole("button", { name: /draft.*3 tool calls/i }))
       .toHaveAttribute("aria-expanded", "false");

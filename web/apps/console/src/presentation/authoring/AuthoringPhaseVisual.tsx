@@ -74,6 +74,8 @@ const ResultRoot = ({
     className={`authoring-visual authoring-result authoring-result--${kind}`}
     aria-label={label}
     data-authoring-result={kind}
+    data-scrollport="bounded-result"
+    data-scroll-bound="viewport-relative"
     data-presentation-surface="editorial"
     data-visual-role="primary"
   >
@@ -152,6 +154,18 @@ const DiagnosticResult = ({ evidence }: { readonly evidence: EvidenceOf<"diagnos
       />
       <p className="authoring-result__explanation">{evidence.diagnostic.explanation}</p>
     </div>
+    <aside
+      className="authoring-result__fault-injection"
+      role="note"
+      aria-label={evidence.faultInjection.label}
+    >
+      <span>{evidence.faultInjection.label}</span>
+      <code>{evidence.faultInjection.command}</code>
+      <p>
+        Revision {evidence.faultInjection.fromRevision} was valid; this prepared edit intentionally
+        produced invalid revision {evidence.faultInjection.toRevision} for diagnosis.
+      </p>
+    </aside>
   </ResultRoot>
 );
 

@@ -19,7 +19,6 @@ export type AuthoringPhaseProjection = {
   readonly summary: string;
   readonly proof: readonly string[];
   readonly commands: readonly PreparedAuthoringCommand[];
-  readonly visual: AuthoringPhaseVisualModel;
 };
 
 export type PreparedLifecycleStepProjection = AuthoringPhaseProjection & {
@@ -28,89 +27,6 @@ export type PreparedLifecycleStepProjection = AuthoringPhaseProjection & {
   readonly focus: "full" | "diagnose" | "repair";
   readonly primaryCommand: PreparedAuthoringCommand;
   readonly evidence: ReviewedAuthoringEvidence;
-};
-
-export type AuthoringPhaseVisualModel =
-  | {
-      readonly kind: "inventory";
-      readonly sources: readonly string[];
-      readonly capability: string;
-      readonly contract: string;
-    }
-  | {
-      readonly kind: "graph";
-      readonly nodes: readonly string[];
-      readonly route: string;
-      readonly inputBinding: string;
-    }
-  | {
-      readonly kind: "repair";
-      readonly diagnostic: string;
-      readonly correction: string;
-      readonly status: string;
-    }
-  | {
-      readonly kind: "artifact";
-      readonly artifactId: string;
-      readonly version: number;
-      readonly requiredSources: number;
-    }
-  | {
-      readonly kind: "bindings";
-      readonly deploymentId: string;
-      readonly bindings: readonly { readonly requirement: string; readonly source: string }[];
-      readonly status: string;
-    };
-
-const visualForPhase = (phase: AuthoringPhaseId): AuthoringPhaseVisualModel => {
-  switch (phase) {
-    case "discover":
-      return {
-        kind: "inventory",
-        sources: ["local.lda_docs", "local.lda_report", "local.issue_board"],
-        capability: "local.lda_report.analyze_documents",
-        contract: "documents → analysis",
-      };
-    case "draft":
-      return {
-        kind: "graph",
-        nodes: ["read_documents", "analyze"],
-        route: "ok → end",
-        inputBinding: "state.documents → documents",
-      };
-    case "validate":
-      {
-        const diagnostic = reviewedAuthoringEvidenceFor("diagnose");
-        const repair = reviewedAuthoringEvidenceFor("repair");
-        if (diagnostic.kind !== "diagnostic" || repair.kind !== "repair") {
-          throw new Error("reviewed validation evidence has an unexpected shape");
-        }
-        return {
-          kind: "repair",
-          diagnostic: `${diagnostic.diagnostic.code} at ${diagnostic.diagnostic.path}: ${diagnostic.diagnostic.message}`,
-          correction: repair.command,
-          status: `Revision ${repair.toRevision}: ${repair.status}`,
-        };
-      }
-    case "artifact":
-      return {
-        kind: "artifact",
-        artifactId: "lda_report_case_study",
-        version: 1,
-        requiredSources: 3,
-      };
-    case "deployment":
-      return {
-        kind: "bindings",
-        deploymentId: "lda_report_case_study.default",
-        bindings: [
-          { requirement: "local.lda_docs", source: "local.lda_docs" },
-          { requirement: "local.lda_report", source: "local.lda_report" },
-          { requirement: "local.issue_board", source: "local.issue_board" },
-        ],
-        status: "Deployment valid",
-      };
-  }
 };
 
 /**
@@ -135,7 +51,6 @@ export const projectPreparedAuthoringPhase = (
       .join(" ") || found.label,
     proof: found.proof,
     commands: found.commands,
-    visual: visualForPhase(found.phase),
   };
 };
 
@@ -154,7 +69,7 @@ export const projectPreparedLifecycleStep = (
   const evidence = reviewedAuthoringEvidenceFor(step);
   // Diagnose and repair are presentation choreography over one factual
   // recording phase; they select distinct evidence without duplicating it.
-  const commandIndex = step === "repair" ? 1 : 0;
+  const commandIndex = step === "repair" ? 2 : step === "diagnose" ? 1 : 0;
   const primaryCommand = phase.commands[commandIndex];
   if (primaryCommand === undefined) {
     throw new Error(

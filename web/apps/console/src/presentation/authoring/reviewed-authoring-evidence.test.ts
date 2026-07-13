@@ -34,6 +34,12 @@ describe("reviewed authoring evidence", () => {
         path: "nodes[analyze]",
         message: "reachable node is missing edges for outcomes ['ok']",
       },
+      faultInjection: {
+        command: "wf draft remove-route lda_report_workflow --revision 2 --step analyze --outcome ok",
+        fromRevision: 2,
+        toRevision: 3,
+        label: "prepared fault injection",
+      },
     });
 
     expect(reviewedAuthoringEvidenceFor("repair")).toMatchObject({

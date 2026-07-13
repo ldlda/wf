@@ -55,7 +55,7 @@ end-to-end run.
 
 ### Scene 8 — Prepared Workflow Lifecycle
 - Audience takeaway: The request becomes six concise authoring stages: Discover, Draft, Diagnose, Repair, Artifact, and Deployment.
-- Visible proof: The phase rail, staged messages, structured diagnostic, focused output-map edit, and changing factual evidence advance across all six beats.
+- Visible proof: Draft revision 2 is valid with `analyze.ok -> __end__`; the transcript explicitly labels a prepared fault injection, not an accidental discovery, using `wf draft remove-route lda_report_workflow --revision 2 --step analyze --outcome ok`, then shows invalid revision 3 with `missing_outcome_edge` and repairs it with the existing `wf draft set-route lda_report_workflow --revision 3 --step analyze --outcome ok --to __end__` command to valid revision 4.
 - Missing or confusing: Deployment binds and validates three local sources but does not execute; that boundary needs an explicit spoken pause.
 - Next action: keep
 
@@ -97,7 +97,7 @@ end-to-end run.
 - Scene 5 -> 6 works if Deployment is the handoff: lifecycle vocabulary becomes the architecture that owns it.
 - Scene 6 -> 7 works: architecture hands off to a bounded prepared request surface.
 - Scene 7 -> 8 works and is not a duplicate: request/discovery becomes staged lifecycle evidence.
-- Scene 8 -> 9 is the critical boundary: Deployment prepares; Scene 9 alone starts execution. Keep the explicit no-run wording.
+- Scene 8 -> 9 is the critical boundary: the prepared route-removal fault injection is repaired before Deployment; Deployment prepares, and Scene 9 alone starts execution. Keep the explicit no-run wording.
 - Scene 9 -> 10 -> 11 works as one climax in replay, but the revision branch has a factual run-identity defect and the live path is blocked.
 - Scene 12 -> 13 works: evaluation limits become the contribution and future-work close.
 

@@ -161,11 +161,21 @@ const recording: readonly PreparedAuthoringPhase[] = [
     label: "Validate",
     commands: [
       {
+        title: "workflow.draft_workspaces.remove_route",
+        command:
+          "wf draft remove-route lda_report_workflow --revision 2 --step analyze --outcome ok",
+        summary: "Prepare a validation fault injection by removing the terminal route",
+        result: "success",
+        detail:
+          "Prepared fault injection: intentionally remove analyze.ok from valid revision 2; this produces revision 3 invalid with missing_outcome_edge.",
+      },
+      {
         title: "workflow.draft_workspaces.validate",
         command: "wf draft validate lda_report_workflow",
         summary: "Validate the workflow draft",
         result: "diagnostic",
-        detail: "missing_outcome_edge at nodes[analyze]: reachable node is missing edges for outcomes ['ok']",
+        detail:
+          "Revision 3 is invalid: missing_outcome_edge at nodes[analyze]: reachable node is missing edges for outcomes ['ok']",
       },
       {
         title: "workflow.draft_workspaces.set_route",
@@ -182,7 +192,7 @@ const recording: readonly PreparedAuthoringPhase[] = [
       },
       {
         role: "assistant",
-        text: "Running diagnosis now. I'll bind the source and repair any issues found in the draft graph.",
+        text: "Revision 2 is valid. For this prepared validation path, I'll intentionally remove analyze.ok, validate the resulting revision 3, and then repair it.",
       },
     ],
     proof: [
