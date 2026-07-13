@@ -79,7 +79,7 @@ describe("presenter note catalog", () => {
   });
 
   it("describes the missing route and focused route repair", () => {
-    expect(presenterBeatNoteFor("prepared-lifecycle", "diagnose")?.mustSay).toMatch(/missing.*route/i);
+    expect(presenterBeatNoteFor("prepared-lifecycle", "diagnose")?.mustSay).toMatch(/no route.*ok outcome/i);
     expect(presenterBeatNoteFor("prepared-lifecycle", "repair")?.mustSay).toMatch(/adds.*route|route.*validation passes/i);
     expect(presenterBeatNoteFor("prepared-lifecycle", "diagnose")?.mustSay).not.toMatch(/output projection/i);
   });
