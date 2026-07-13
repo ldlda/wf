@@ -81,7 +81,7 @@ target-health badge.
 ## Footer composition
 
 `PresentationFooter` owns one stable demo slot between scene progress and the
-evidence receipt. The slot is reserved for every Scene 8–12 location and is
+evidence receipt. The slot is reserved for every Scene 7–11 location and is
 empty elsewhere.
 
 For non-demo scenes, the slot is absent and no target-health copy is rendered.

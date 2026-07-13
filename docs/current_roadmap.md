@@ -194,7 +194,7 @@ Presentation visual audit, July 11:
   automation problem. Scenes 2, 6, and 7 retain their concrete focal artifacts,
   and Scenes 7-9 share a prepared authoring/run spine. Implementation:
   [`presentation opening title`](historical/superpowers/plans/2026-07-11-presentation-opening-title.md).
-- Completed: Scenes 11-12 now use decision-led approval, continuation-led
+- Completed: Scenes 10-11 now use decision-led approval, continuation-led
   resume/output, and compact factual trace rows so approval, resume, output,
   and trace remain factual without competing panels or repeated low-signal
   values. A healthy prepared target remains live; failed health probes switch
@@ -204,10 +204,10 @@ Presentation visual audit, July 11:
 
 ## Completed: Presentation Recomposition And Authoring Story
 
-Scenes 8 and 9 now present an external-agent request through a scripted
+Scenes 7 and 8 now present an external-agent request through a scripted
 presentation surface and factual prepared-authoring proof. Scene 8 is one local request-to-first-turn
-beat; its obsolete `/handoff` route fails closed. Scene 9 keeps a persistent
-prepared assistant pane beside five factual phase visuals in an adaptive
+beat; its obsolete `/handoff` route fails closed. Scene 8 keeps a persistent
+prepared assistant pane beside six factual phase visuals in an adaptive
 approximately 35/65 split. The obsolete receipt/trace modal and lower chat dock
 were removed. Plans:
 [`presentation agent authoring story`](historical/superpowers/plans/2026-07-11-presentation-agent-authoring-story.md)
@@ -226,7 +226,7 @@ Recommended next visual slices:
    [`presentation opening visuals plan`](historical/superpowers/plans/2026-07-10-presentation-opening-visuals.md).
 2. Completed: Presentation coherence pass added a 13-scene visual matrix,
    corrected Scene 2's direct-action metaphor into a chat/tool transcript, and
-   marked demo beats with primary/support surface metadata so Scenes 8-12 can
+   marked demo beats with primary/support surface metadata so Scenes 7-11 can
    keep one dominant product proof at a time. Implementation:
    [`presentation coherence pass`](historical/superpowers/plans/2026-07-10-presentation-coherence-pass.md).
 3. Completed: Scene 2 visual craft pass made the one-off side read as a
@@ -244,7 +244,7 @@ Recommended next visual slices:
     [`presentation evaluation and closing`](superpowers/specs/2026-07-10-presentation-evaluation-closing-design.md).
     Implementation:
     [`presentation evaluation and closing plan`](historical/superpowers/plans/2026-07-10-presentation-evaluation-closing.md).
-6. Completed: Presentation agent authoring story rebuilds Scenes 8 and 9 as a
+6. Completed: Presentation agent authoring story rebuilds Scenes 7 and 8 as a
     scripted surface representing an external-agent handoff and factual
     prepared-authoring proof.
     Implementation:
@@ -289,12 +289,12 @@ separate activity after these surfaces are stable.
    execution or RPC. Implementation:
    [`Scene 9 staged message box`](historical/superpowers/plans/2026-07-12-scene-9-staged-message-box.md).
    The boundary is explicit: the compact demo footer may start the prepared run
-   from Scenes 8–12, while Scenes 10–12 own run, decision, resume, output, and
+    from Scenes 7–11, while Scenes 9–11 own run, decision, resume, output, and
    trace evidence.
 3. **Completed: Live/replay truth and run activation:** the compact footer rail
-   across Scenes 8–12 exposes the prepared-run action, retries the existing
-   health probe, starts live execution explicitly, and keeps direct links and
-   failed services on truthful replay evidence. Scene 10 remains the semantic
+    across Scenes 7–11 exposes the prepared-run action, retries the existing
+    health probe, starts live execution explicitly, and keeps direct links and
+    failed services on truthful replay evidence. Scene 9 remains the semantic
    start of execution evidence. Implementation:
    [`presentation live/replay activation`](historical/superpowers/plans/2026-07-12-presentation-live-replay-activation.md).
 4. **Completed: Scene 11 compression:** reduce the typed-human-boundary scene to two
@@ -306,7 +306,7 @@ separate activity after these surfaces are stable.
    graph, selected input files, and proof layout are now implemented. The
    completed plan is [`Scene 10 factual graph and proof layout`](historical/superpowers/plans/2026-07-12-scene-10-factual-graph-and-proof-layout.md).
    File-preview rendering remains explicitly deferred as a separate follow-up.
-6. **Completed: presentation demo-chrome ownership:** Scenes 8–12 share one
+6. **Completed: presentation demo-chrome ownership:** Scenes 7–11 share one
    route-projected footer rail for run, replay fallback, retry, paused, and
    terminal states. Design:
    [`presentation demo-chrome ownership`](superpowers/specs/2026-07-12-demo-chrome-ownership-design.md).
@@ -417,11 +417,11 @@ Presentation wishlist / defense readiness:
   exact URLs, keyboard controls, live RPC/demo fallback steps, story spine,
   timing, and short speaker notes for what to say if the live demo fails.
   [`defense speech and claim audit`](runbooks/defense-speech-and-claim-audit.md)
-  provides the current 13-minute speech, evidence qualifications, and
+  provides the current 11-minute speech plus navigation buffer, evidence qualifications, and
   prioritized 12-minute Q&A.
   Completed: [`defense story reweighting`](historical/superpowers/plans/2026-07-13-defense-story-reweighting.md)
-  now provides a typed 42-beat presenter-note catalog, a 750-850-word must-say
-  path, evidence warnings, and a 13-minute timing contract. Completed:
+  now provides a typed 39-beat presenter-note catalog, a 650-850-word must-say
+  path, evidence warnings, and a 12:15 complete-deck timing contract. Completed:
   [`interactive graphs and Scenes 3-6 choreography`](historical/superpowers/plans/2026-07-13-scenes-3-6-kernel-choreography.md)
   adds restrained Scene 3-5 choreography, a semantic-zoom architecture map,
   the readable `wf_core` and NodeUse figures, and a factual prepared-run graph
