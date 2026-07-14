@@ -65,9 +65,9 @@ export const PresenterRoute = () => {
         ? () => { moveFromCurrentHash("previous"); }
         : undefined}
     >
-      {navigation.note && (
+      {(navigation.note || discussion) && (
         <PresenterNavigationBar
-          currentIndex={navigation.index}
+          currentIndex={navigation.note ? navigation.index : null}
           total={presenterNotes.length}
           previous={navigation.previous}
           next={navigation.next}

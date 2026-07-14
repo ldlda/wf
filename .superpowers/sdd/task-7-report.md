@@ -47,3 +47,26 @@ Passed with no whitespace errors.
 ## Self-Review
 
 No critical or important findings. The change is limited to the presenter synchronization seam and tests. The untracked active LAN synchronization plan was not staged. The pre-existing intentional `presenter.css` mobile sticky-navigation edit was retained and verified as part of this task.
+
+## Important Finding Fix: Pairing Persistence On Q&A
+
+The original Task 7 render condition mounted `PresenterNavigationBar` only when `navigation.note` existed. Valid discussion hashes resolve with `note: null`, so Q&A content remained visible but the pairing controls, session-end action, and ended state disappeared.
+
+The stable navigation surface now renders for either a valid presenter note or a resolved discussion branch. Discussion routes pass a nullable progress index and display `Q&A`; Previous and Next remain disabled because no note or destination is fabricated. The existing Q&A content, hash parsing, local note navigation, and presenter mobile CSS are unchanged.
+
+TDD evidence:
+
+```text
+RED: pnpm --dir web --filter @lda/console test -- src/presentation/presenter/PresenterRoute.test.tsx
+1 test file failed; 1 failed and 9 passed (10 total).
+The regression test could not find the Pair presentation button on #discuss/where-is-ai-agent.
+
+GREEN: pnpm --dir web --filter @lda/console test -- src/presentation/presenter/PresenterRoute.test.tsx
+1 test file passed; 10 tests passed.
+
+FINAL: pnpm --dir web --filter @lda/console test -- src/presentation/presenter/PresenterRoute.test.tsx src/presentation/presenter/PresenterShell.test.tsx
+2 test files passed; 16 tests passed.
+
+pnpm --dir web --filter @lda/console typecheck
+@lda/presentation-sync build and console TypeScript project build passed.
+```

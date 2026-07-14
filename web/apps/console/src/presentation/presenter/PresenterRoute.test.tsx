@@ -178,4 +178,21 @@ describe("PresenterRoute", () => {
     expect(screen.getByText(/Defense Q&A/i).closest("details")).toHaveAttribute("open");
     expect(screen.getByRole("link", { name: /Where is the AI agent in this thesis/i })).toHaveAttribute("aria-current", "page");
   });
+
+  it("keeps pairing and ended-session state available on Q&A routes", () => {
+    mockedUsePresentationSync.mockReturnValue({
+      ...idleController(),
+      state: { kind: "ended", reason: "presenter_ended" },
+    });
+    window.location.hash = "#discuss/where-is-ai-agent";
+
+    render(<PresenterRoute />);
+
+    expect(screen.getByRole("heading", { name: /Where is the AI agent/i })).toBeInTheDocument();
+    const navigation = screen.getByRole("navigation", { name: /presenter note navigation/i });
+    expect(navigation).toHaveTextContent("Q&A");
+    expect(navigation.querySelectorAll('[aria-disabled="true"]')).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /pair presentation/i })).toBeInTheDocument();
+    expect(screen.getByText("The presenter ended this session.")).toBeInTheDocument();
+  });
 });

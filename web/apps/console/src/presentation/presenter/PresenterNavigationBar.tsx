@@ -4,7 +4,7 @@ import { PresentationPairingPanel } from "../sync/PresentationPairingPanel.js";
 import type { PresentationSyncController } from "../sync/presentation-sync-state.js";
 
 type PresenterNavigationBarProps = {
-  readonly currentIndex: number;
+  readonly currentIndex: number | null;
   readonly total: number;
   readonly previous: PresenterBeatNote | null;
   readonly next: PresenterBeatNote | null;
@@ -19,7 +19,7 @@ const DirectionLink = ({ note, children }: { readonly note: PresenterBeatNote | 
 export const PresenterNavigationBar = ({ currentIndex, total, previous, next, syncController }: PresenterNavigationBarProps) => (
   <nav className="presenter-navigation" aria-label="Presenter note navigation">
     <DirectionLink note={previous}>← Previous</DirectionLink>
-    <span>{currentIndex + 1} / {total}</span>
+    <span>{currentIndex === null ? "Q&A" : `${currentIndex + 1} / ${total}`}</span>
     <DirectionLink note={next}>Next →</DirectionLink>
     <PresentationPairingPanel role="presenter" controller={syncController} />
   </nav>
