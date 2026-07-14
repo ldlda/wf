@@ -15,6 +15,7 @@ import {
 } from "@lda/workflow-rpc";
 import { createApp, type RunOperation } from "./app.js";
 import { createPresentationRoomService } from "./presentation-sync/rooms.js";
+import { shutdownServer } from "./shutdown.js";
 import { WebSocketServer } from "ws";
 
 const port = Number(process.env.WEB_PORT ?? "8787");
@@ -75,12 +76,13 @@ expirySweep.unref();
 
 console.log(`workflow console server listening on http://${hostname}:${port}`);
 
+let shuttingDown = false;
 const shutdown = (signal: NodeJS.Signals) => {
+  if (shuttingDown) return;
+  shuttingDown = true;
   console.log(`received ${signal}, stopping workflow console server`);
   clearInterval(expirySweep);
-  wss.close();
-  server.close(() => process.exit(0));
-  setTimeout(() => process.exit(1), 5_000).unref();
+  shutdownServer({ server, wss, exit: (code) => process.exit(code) });
 };
 
 process.once("SIGINT", shutdown);

@@ -4,6 +4,7 @@ import type { PresentationPeer, PresentationRoomService } from "./rooms.js";
 import {
   createPresentationRoomService,
   EMPTY_ROOM_GRACE_MS,
+  PresentationRoomJoinError,
   ROOM_INACTIVITY_TTL_MS,
 } from "./rooms.js";
 
@@ -78,6 +79,27 @@ describe("createPresentationRoomService", () => {
     expect(joined.connectionToken).not.toBe(created.connectionToken);
   });
 
+  it("reports missing sessions and invalid roles with stable typed errors", () => {
+    const { service } = makeService();
+    const created = service.create({
+      role: "presenter",
+      initialHash: "#scene/thesis/title",
+    });
+
+    for (const [input, code] of [
+      [{ role: "audience" as const, code: "NOPE00" }, "session_not_found"],
+      [{ role: "presenter" as const, code: created.code }, "invalid_role"],
+    ] as const) {
+      try {
+        service.join(input);
+        throw new Error("expected join to fail");
+      } catch (error) {
+        expect(error).toBeInstanceOf(PresentationRoomJoinError);
+        expect((error as PresentationRoomJoinError).code).toBe(code);
+      }
+    }
+  });
+
   it("allocates unique room codes", () => {
     const { service } = makeService();
 
@@ -145,7 +167,7 @@ describe("createPresentationRoomService", () => {
 
     service.disconnect(created.connectionToken, oldPeer);
 
-    expect(service.publish(created.connectionToken, {
+    expect(service.publish(created.connectionToken, newPeer, {
       type: "location.publish",
       hash: "#scene/replacement-survives",
       baseRevision: 0,
@@ -158,19 +180,61 @@ describe("createPresentationRoomService", () => {
     });
   });
 
+  it("rejects publish and end commands from a replaced presenter peer", () => {
+    const { service } = makeService();
+    const created = service.create({ role: "presenter", initialHash: "#scene/one" });
+    const oldPeer = peer();
+    const replacement = peer();
+    service.connect(created.connectionToken, oldPeer);
+    service.connect(created.connectionToken, replacement);
+    replacement.send.mockClear();
+
+    expect(service.publish(created.connectionToken, oldPeer, {
+      type: "location.publish",
+      hash: "#scene/stale-peer",
+      baseRevision: 0,
+      messageId: "old-1",
+    })).toEqual({ kind: "not_connected" });
+    expect(service.end(created.connectionToken, oldPeer)).toEqual({
+      kind: "not_connected",
+    });
+    expect(replacement.close).not.toHaveBeenCalled();
+
+    expect(service.publish(created.connectionToken, replacement, {
+      type: "location.publish",
+      hash: "#scene/replacement-active",
+      baseRevision: 0,
+      messageId: "new-1",
+    }).kind).toBe("accepted");
+  });
+
+  it("does not let a replaced peer touch room activity", () => {
+    const { service, advance } = makeService();
+    const created = service.create({ role: "presenter", initialHash: "#scene/one" });
+    const oldPeer = peer();
+    const replacement = peer();
+    service.connect(created.connectionToken, oldPeer);
+    service.connect(created.connectionToken, replacement);
+
+    advance(ROOM_INACTIVITY_TTL_MS);
+    service.ping(created.connectionToken, oldPeer);
+
+    expect(service.sweepExpired()).toBe(1);
+  });
+
   it("accepts one publish and rejects a stale competing publish", () => {
     const { service, presenter, audience, presenterToken, audienceToken } =
       connectedRoom();
 
     expect(
-      service.publish(presenterToken, {
+      service.publish(presenterToken, presenter, {
         type: "location.publish",
         hash: "#scene/problem/direct-actions",
         baseRevision: 0,
         messageId: "presenter-1",
       }).kind,
     ).toBe("accepted");
-    expect(service.publish(audienceToken, {
+    expect(service.publish(audienceToken, audience, {
       type: "location.publish",
       hash: "#scene/positioning/landscape",
       baseRevision: 0,
@@ -205,7 +269,7 @@ describe("createPresentationRoomService", () => {
       presence: { presenters: 1, audience: 0 },
     });
     expect(audience.send).not.toHaveBeenCalled();
-    expect(service.publish(presenterToken, {
+    expect(service.publish(presenterToken, presenter, {
       type: "location.publish",
       hash: "#scene/after-disconnect",
       baseRevision: 0,
@@ -270,10 +334,10 @@ describe("createPresentationRoomService", () => {
   });
 
   it("counts ping as room activity", () => {
-    const { service, advance, presenterToken } = connectedRoom();
+    const { service, advance, presenter, presenterToken } = connectedRoom();
 
     advance(ROOM_INACTIVITY_TTL_MS - 1);
-    service.ping(presenterToken);
+    service.ping(presenterToken, presenter);
     advance(ROOM_INACTIVITY_TTL_MS - 1);
     expect(service.sweepExpired()).toBe(0);
     advance(1);
@@ -283,7 +347,7 @@ describe("createPresentationRoomService", () => {
   it("ends a room when the presenter terminates it", () => {
     const { service, presenter, audience, presenterToken } = connectedRoom();
 
-    expect(service.end(presenterToken)).toEqual({ kind: "ended" });
+    expect(service.end(presenterToken, presenter)).toEqual({ kind: "ended" });
     expect(presenter.send).toHaveBeenCalledWith({
       type: "session.ended",
       reason: "presenter_ended",
@@ -300,14 +364,14 @@ describe("createPresentationRoomService", () => {
     const { service, presenter, audience, audienceToken, presenterToken } =
       connectedRoom();
 
-    expect(service.end(audienceToken)).toEqual({ kind: "forbidden" });
+    expect(service.end(audienceToken, audience)).toEqual({ kind: "forbidden" });
     expect(audience.send).toHaveBeenCalledWith({
       type: "protocol.error",
       code: "forbidden",
       message: "only the presenter can end the session",
     });
     expect(presenter.send).not.toHaveBeenCalled();
-    expect(service.publish(presenterToken, {
+    expect(service.publish(presenterToken, presenter, {
       type: "location.publish",
       hash: "#scene/still-active",
       baseRevision: 0,
@@ -320,7 +384,7 @@ describe("createPresentationRoomService", () => {
     const first = connectRoom(service);
     const second = connectRoom(service);
 
-    expect(service.publish(first.presenterToken, {
+    expect(service.publish(first.presenterToken, first.presenter, {
       type: "location.publish",
       hash: "#scene/first-room",
       baseRevision: 0,

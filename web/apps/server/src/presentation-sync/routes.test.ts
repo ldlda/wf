@@ -164,6 +164,54 @@ describe("presentation synchronization routes", () => {
     });
     expect(missing.status).toBe(404);
     expect(await missing.json()).toMatchObject({ error: { code: "session_not_found" } });
+
+    const invalidRole = await postJson(origin, "/api/presentation-sync/sessions/join", {
+      role: "presenter",
+      code: created.code,
+    });
+    expect(invalidRole.status).toBe(400);
+    expect(await invalidRole.json()).toEqual({
+      error: {
+        code: "invalid_role",
+        message: "presentation room requires the opposite role",
+      },
+    });
+  });
+
+  it("ignores commands from a replaced presenter socket", async () => {
+    const { origin } = await startServer();
+    const presenterGrant = await grant(origin, "/api/presentation-sync/sessions", {
+      role: "presenter",
+      initialHash: "#scene/original",
+    });
+    const oldPresenter = await trackedConnect(origin, presenterGrant.connectionToken);
+    await expectMessage(oldPresenter, (message) => message.type === "location.snapshot");
+
+    const oldClose = once(oldPresenter, "close");
+    const replacement = await trackedConnect(origin, presenterGrant.connectionToken);
+    expect((await oldClose)[0]).toBe(4001);
+    oldPresenter.send(JSON.stringify({
+      type: "location.publish",
+      hash: "#scene/old-must-not-win",
+      baseRevision: 0,
+      messageId: "old-publish",
+    }));
+    oldPresenter.send(JSON.stringify({ type: "session.end" }));
+
+    replacement.send(JSON.stringify({
+      type: "location.publish",
+      hash: "#scene/replacement-wins",
+      baseRevision: 0,
+      messageId: "replacement-publish",
+    }));
+    await expectMessage(
+      replacement,
+      (message) =>
+        message.type === "location.snapshot" &&
+        message.snapshot.hash === "#scene/replacement-wins" &&
+        message.snapshot.revision === 1,
+    );
+    expect(replacement.readyState).toBe(WebSocket.OPEN);
   });
 
   it("synchronizes two real clients through reconnect and presenter shutdown", async () => {

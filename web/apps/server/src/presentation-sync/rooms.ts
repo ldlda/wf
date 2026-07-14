@@ -12,6 +12,16 @@ import {
 export const EMPTY_ROOM_GRACE_MS = 10 * 60 * 1_000;
 export const ROOM_INACTIVITY_TTL_MS = 2 * 60 * 60 * 1_000;
 
+export class PresentationRoomJoinError extends Error {
+  constructor(
+    readonly code: "session_not_found" | "invalid_role",
+    message: string,
+  ) {
+    super(message);
+    this.name = "PresentationRoomJoinError";
+  }
+}
+
 export type PresentationPeer = {
   readonly send: (message: ServerSyncMessage) => void;
   readonly close: (code: number, reason: string) => void;
@@ -204,10 +214,16 @@ export const createPresentationRoomService = (options: {
       const roomId = roomIdByCode.get(code);
       const room = roomId === undefined ? undefined : roomsById.get(roomId);
       if (room === undefined) {
-        throw new Error("presentation room not found");
+        throw new PresentationRoomJoinError(
+          "session_not_found",
+          "presentation room not found",
+        );
       }
       if (input.role === room.creatorRole) {
-        throw new Error("presentation room requires the opposite role");
+        throw new PresentationRoomJoinError(
+          "invalid_role",
+          "presentation room requires the opposite role",
+        );
       }
 
       const token = nextUnique(
@@ -272,6 +288,7 @@ export const createPresentationRoomService = (options: {
 
     publish(
       token: string,
+      peer: PresentationPeer,
       message: Extract<ClientSyncMessage, { type: "location.publish" }>,
     ): PublishResult {
       const membership = membershipByToken.get(token);
@@ -279,7 +296,7 @@ export const createPresentationRoomService = (options: {
       if (membership === undefined || room === undefined || !roomsById.has(room.id)) {
         return { kind: "not_found" };
       }
-      if (membership.peer === null) return { kind: "not_connected" };
+      if (membership.peer !== peer) return { kind: "not_connected" };
 
       room.lastActivityAt = now();
       if (message.baseRevision !== room.snapshot.revision) {
@@ -304,27 +321,27 @@ export const createPresentationRoomService = (options: {
       return { kind: "accepted", snapshot: room.snapshot };
     },
 
-    ping(token: string): void {
+    ping(token: string, peer: PresentationPeer): void {
       const membership = membershipByToken.get(token);
       const room = membership?.room;
       if (
         membership === undefined ||
         room === undefined ||
         !roomsById.has(room.id) ||
-        membership.peer === null
+        membership.peer !== peer
       ) {
         return;
       }
       room.lastActivityAt = now();
     },
 
-    end(token: string): EndResult {
+    end(token: string, peer: PresentationPeer): EndResult {
       const membership = membershipByToken.get(token);
       const room = membership?.room;
       if (membership === undefined || room === undefined || !roomsById.has(room.id)) {
         return { kind: "not_found" };
       }
-      if (membership.peer === null) return { kind: "not_connected" };
+      if (membership.peer !== peer) return { kind: "not_connected" };
       if (membership.role !== "presenter") {
         room.lastActivityAt = now();
         membership.peer.send({

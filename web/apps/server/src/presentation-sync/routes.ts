@@ -8,7 +8,11 @@ import {
   type SessionGrant,
 } from "@lda/presentation-sync";
 import type { Hono } from "hono";
-import type { PresentationPeer, PresentationRoomService } from "./rooms.js";
+import {
+  PresentationRoomJoinError,
+  type PresentationPeer,
+  type PresentationRoomService,
+} from "./rooms.js";
 
 type PresentationSyncDependencies = {
   readonly rooms: PresentationRoomService;
@@ -52,14 +56,10 @@ export const addPresentationSyncRoutes = (
       const grant: SessionGrant = rooms.join(decoded.value);
       return c.json(grant, 200);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "presentation room not found";
-      if (message.includes("opposite role")) {
-        return c.json({ error: { code: "invalid_role", message } }, 400);
-      }
-      return c.json(
-        { error: { code: "session_not_found", message: "presentation room not found" } },
-        404,
-      );
+      if (!(error instanceof PresentationRoomJoinError)) throw error;
+      return error.code === "invalid_role"
+        ? c.json({ error: { code: error.code, message: error.message } }, 400)
+        : c.json({ error: { code: error.code, message: error.message } }, 404);
     }
   });
 
@@ -103,13 +103,13 @@ export const addPresentationSyncRoutes = (
 
           switch (decoded.value.type) {
             case "location.publish":
-              rooms.publish(token, decoded.value);
+              rooms.publish(token, peer, decoded.value);
               break;
             case "ping":
-              rooms.ping(token);
+              rooms.ping(token, peer);
               break;
             case "session.end":
-              rooms.end(token);
+              rooms.end(token, peer);
               break;
           }
         },
