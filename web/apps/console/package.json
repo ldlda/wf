@@ -8,18 +8,20 @@
     "prebuild": "pnpm --filter @lda/presentation-sync build",
     "build": "tsc -b && vite build",
     "test": "vitest run",
+    "test:presentation-sync:e2e:install": "playwright install chromium",
+    "test:presentation-sync:e2e": "playwright test e2e/presentation-sync.spec.ts --workers=1",
     "pretypecheck": "pnpm --filter @lda/presentation-sync build",
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
-    "@lda/presentation-sync": "workspace:*",
     "@assistant-ui/react": "^0.14.26",
     "@dagrejs/dagre": "3.0.0",
     "@fontsource-variable/newsreader": "5.2.10",
     "@fontsource-variable/source-sans-3": "5.2.9",
     "@fontsource/barlow-condensed": "5.2.8",
     "@fontsource/ibm-plex-mono": "5.2.7",
+    "@lda/presentation-sync": "workspace:*",
     "@use-gesture/react": "^10.3.1",
     "@xyflow/react": "12.11.1",
     "class-variance-authority": "^0.7.1",
@@ -37,6 +39,7 @@
     "valibot": "1.4.2"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/vite": "4.3.2",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",

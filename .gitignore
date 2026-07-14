@@ -210,6 +210,9 @@ pyrightconfig.json
 # Local Superpowers/subagent progress ledgers
 .superpowers/
 
+# Playwright browser-test output
+web/apps/console/test-results/
+
 # Local dependency source checkouts used for agent reference
 .repos/
 

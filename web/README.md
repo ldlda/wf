@@ -38,6 +38,35 @@ pnpm --dir web start
 A single Hono process serves the built React application and API routes from
 `http://127.0.0.1:8787`.
 
+### LAN Presentation Rehearsal
+
+Build once, then bind the production Hono server to the laptop's LAN
+interfaces:
+
+```powershell
+pnpm --dir web build
+$env:WEB_HOST = "0.0.0.0"
+pnpm --dir web start
+```
+
+Open `http://<laptop-lan-ip>:8787/presenter` on the phone and
+`http://<laptop-lan-ip>:8787/present` on the audience display. Either route can
+**Start session** or **Join session**. Starting shows a six-character code, QR
+target, and opposite-route join link; the other device can scan the QR, open
+the link, or enter the code. Navigation is bidirectional, and the presenter
+route can end the session for every paired device.
+
+Rooms are short-lived and in memory. After a temporary disconnect or reload,
+the client reconnects and applies the latest server snapshot; that snapshot
+wins over navigation performed locally while offline. A server restart or room
+expiry requires a new session.
+
+This mode is for a **trusted LAN only**. The join code is not authentication,
+the built server does not provide TLS, and this runbook makes no
+public-internet security claim. Keep `wf-rpc-server` on loopback at port `8765`:
+browser workflow operations continue through the Hono boundary on port `8787`,
+so the workflow RPC server does not need a LAN binding.
+
 ## Commands
 
 | Command | Description |
@@ -48,6 +77,12 @@ A single Hono process serves the built React application and API routes from
 | `pnpm --dir web typecheck` | Run TypeScript type checking |
 | `pnpm --dir web build` | Build the React console for production |
 | `pnpm --dir web start` | Start the production Hono server |
+| `pnpm --dir web --filter @lda/console test:presentation-sync:e2e:install` | Install the Chromium binary required by the browser smoke test |
+| `pnpm --dir web --filter @lda/console test:presentation-sync:e2e` | Run isolated two-context presentation synchronization smoke tests against a built server |
+
+Run the E2E install command once after `pnpm install` on each clean development
+or CI machine. Playwright keeps the matching Chromium binary in its browser
+cache for subsequent smoke runs.
 
 ## Architecture
 
@@ -58,6 +93,7 @@ web/
     server/     Hono local server (API + static serving)
   packages/
     rpc/        Effect-based JSON-RPC client, schemas, and errors
+    presentation-sync/  Bounded presentation room wire contract
 ```
 
 The browser communicates with Hono at `/api/connect` and `/api/rpc`. Hono
@@ -174,12 +210,14 @@ The console exposes `/present`, a 720p no-scroll defense compositor for the
 stage regions, discussion branches, one editorial canvas, persistent scene-aware
 assistant surfaces, and keyboard navigation.
 
-The companion `/presenter` route is a read-only speech and Q&A reader. It uses
+The companion `/presenter` route is a speech and Q&A reader. It uses
 the same `#scene/<scene>/<beat>` and `#discuss/<branch>` hashes, shows target and
 cumulative timing, keeps optional detail/evidence/Q&A collapsed, and links to
 the corresponding audience slide in a new tab. It performs no workflow RPC,
-replay, live-target, or cross-window synchronization. Use ArrowLeft and
-ArrowRight to move between notes; covered checkboxes remain local to the page.
+replay, or live-target operations. Its shared pairing controller synchronizes
+canonical navigation hashes with `/present` through Hono without duplicating
+storyboard semantics. Use ArrowLeft and ArrowRight to move between notes;
+covered checkboxes remain local to the page.
 Must-say notes support authored inline Markdown emphasis for rapid scanning, and
 the stable Previous/Next bar remains available at narrow viewport widths.
 
@@ -331,7 +369,7 @@ discussion transitions.
 This plan deliberately defers:
 - AI Elements / Vercel AI chat primitives
 - Live LLM driver integration
-- Remote phone control
+- Public-internet presentation hosting, TLS, and authentication
 - Final visual polish and motion choreography
 
 ### Constrained Demo Agent

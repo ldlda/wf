@@ -28,6 +28,15 @@ For verified Python 3.14 dependency constraints and their removal criteria, see
 | `wf_sources_mcp` | MCP-as-upstream-source implementation: ids, registry DTOs, auth/catalog stores, discovery, SDK client/facade, runtime pool, wrappers. | `wf_server`, broker glue, MCP source tests. |
 | `wf_mcp` | MCP frontend/compatibility package: legacy `wf-mcp` entrypoints, broker glue, proxy/admin tools, and shims while extraction continues. | Compatibility callers and MCP transport work. |
 | `wf_cli` | Command-line frontend over local or remote workflow APIs. | Humans, scripts, agent skills. |
+| `@lda/presentation-sync` | Shared, bounded wire contract for ephemeral LAN presentation rooms. | Browser `@lda/console` and Hono `@lda/web-server`. |
+
+The TypeScript presentation synchronization boundary is deliberately narrow.
+`@lda/web-server` owns room creation, membership, revision ordering, expiry,
+presence, and termination. `@lda/console` owns storyboard and navigation
+semantics and publishes only canonical hashes through
+`@lda/presentation-sync`; no storyboard data or workflow operation enters the
+room service. Browser workflow operations remain behind the Hono server and
+can continue to reach a loopback-only workflow RPC server.
 
 ## Important Entry Points
 
