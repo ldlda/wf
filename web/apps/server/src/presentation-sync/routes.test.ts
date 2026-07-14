@@ -189,14 +189,15 @@ describe("presentation synchronization routes", () => {
 
     const oldClose = once(oldPresenter, "close");
     const replacement = await trackedConnect(origin, presenterGrant.connectionToken);
-    expect((await oldClose)[0]).toBe(4001);
     oldPresenter.send(JSON.stringify({
       type: "location.publish",
       hash: "#scene/old-must-not-win",
       baseRevision: 0,
       messageId: "old-publish",
     }));
+    oldPresenter.send(JSON.stringify({ type: "ping", nonce: "old-ping" }));
     oldPresenter.send(JSON.stringify({ type: "session.end" }));
+    expect((await oldClose)[0]).toBe(4001);
 
     replacement.send(JSON.stringify({
       type: "location.publish",
