@@ -7,6 +7,9 @@ import {
   type OperationName,
   type WorkflowHealthInterpreted,
 } from "@lda/workflow-rpc";
+import type { upgradeWebSocket } from "@hono/node-server";
+import { addPresentationSyncRoutes } from "./presentation-sync/routes.js";
+import type { PresentationRoomService } from "./presentation-sync/rooms.js";
 import { addStaticRoutes, validateConsoleRoot } from "./static.js";
 
 export type RunOperation = (
@@ -69,10 +72,16 @@ const mapErrorToStatus = (
 
 export function createApp(dependencies: {
   readonly runOperation: RunOperation;
+  readonly presentationSync: {
+    readonly rooms: PresentationRoomService;
+    readonly upgradeWebSocket: typeof upgradeWebSocket;
+  };
   readonly consoleRoot?: string;
 }): Hono {
-  const { runOperation, consoleRoot } = dependencies;
+  const { runOperation, presentationSync, consoleRoot } = dependencies;
   const app = new Hono();
+
+  addPresentationSyncRoutes(app, presentationSync);
 
   app.get("/api/health", (c) =>
     c.json({ ok: true, status: "ok" }),

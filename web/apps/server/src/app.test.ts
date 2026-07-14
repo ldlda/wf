@@ -1,5 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
+import { upgradeWebSocket } from "@hono/node-server";
 import { createApp, type RunOperation } from "./app.js";
+import { createPresentationRoomService } from "./presentation-sync/rooms.js";
 import type { OperationExchange } from "@lda/workflow-rpc";
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -31,7 +33,18 @@ const failRunner =
     });
   };
 
-const app = createApp({ runOperation: okRunner });
+const makeApp = (
+  dependencies: Omit<Parameters<typeof createApp>[0], "presentationSync">,
+) =>
+  createApp({
+    ...dependencies,
+    presentationSync: {
+      rooms: createPresentationRoomService(),
+      upgradeWebSocket,
+    },
+  });
+
+const app = makeApp({ runOperation: okRunner });
 
 describe("GET /api/health", () => {
   it("returns 200 with ok status", async () => {
@@ -76,7 +89,7 @@ describe("POST /api/connect", () => {
   });
 
   it("returns a decode error when health interpretation is malformed", async () => {
-    const malformedApp = createApp({
+    const malformedApp = makeApp({
       runOperation: async () => makeExchange({ interpreted: { status: "ok" } }),
     });
     const res = await malformedApp.request("/api/connect", {
@@ -147,7 +160,7 @@ describe("POST body size limit", () => {
 
 describe("error mapping", () => {
   it("maps upstream timeout to 504", async () => {
-    const timeoutApp = createApp({
+    const timeoutApp = makeApp({
       runOperation: failRunner("UpstreamTimeoutError", "timed out"),
     });
     const res = await timeoutApp.request("/api/rpc", {
@@ -170,7 +183,7 @@ describe("error mapping", () => {
   });
 
   it("maps upstream connection error to 502", async () => {
-    const connApp = createApp({
+    const connApp = makeApp({
       runOperation: failRunner("UpstreamConnectionError", "connection refused"),
     });
     const res = await connApp.request("/api/rpc", {
@@ -189,7 +202,7 @@ describe("error mapping", () => {
   });
 
   it("maps RpcRemoteError to 502 with rpc_remote_error", async () => {
-    const remoteApp = createApp({
+    const remoteApp = makeApp({
       runOperation: failRunner("RpcRemoteError", "method not found"),
     });
     const res = await remoteApp.request("/api/rpc", {
@@ -208,7 +221,7 @@ describe("error mapping", () => {
   });
 
   it("maps InvalidTargetError to 400", async () => {
-    const invalidApp = createApp({
+    const invalidApp = makeApp({
       runOperation: failRunner("InvalidTargetError", "bad target"),
     });
     const res = await invalidApp.request("/api/rpc", {
@@ -227,7 +240,7 @@ describe("error mapping", () => {
   });
 
   it("maps UnknownOperationError to 400", async () => {
-    const unknownApp = createApp({
+    const unknownApp = makeApp({
       runOperation: failRunner("UnknownOperationError", "no such op"),
     });
     const res = await unknownApp.request("/api/rpc", {
@@ -246,10 +259,10 @@ describe("error mapping", () => {
 
   it("never includes stack in error DTOs", async () => {
     const apps = [
-      createApp({ runOperation: failRunner("UpstreamTimeoutError", "t") }),
-      createApp({ runOperation: failRunner("UpstreamConnectionError", "c") }),
-      createApp({ runOperation: failRunner("RpcRemoteError", "r") }),
-      createApp({ runOperation: failRunner("InvalidTargetError", "i") }),
+      makeApp({ runOperation: failRunner("UpstreamTimeoutError", "t") }),
+      makeApp({ runOperation: failRunner("UpstreamConnectionError", "c") }),
+      makeApp({ runOperation: failRunner("RpcRemoteError", "r") }),
+      makeApp({ runOperation: failRunner("InvalidTargetError", "i") }),
     ];
     for (const a of apps) {
       const res = await a.request("/api/rpc", {
@@ -273,7 +286,7 @@ describe("static console routes", () => {
     fs.writeFileSync(path.join(consoleRoot, "index.html"), "<main>console</main>");
     fs.writeFileSync(path.join(consoleRoot, "assets", "app.js"), "console.log('ok')");
     try {
-      const staticApp = createApp({ runOperation: okRunner, consoleRoot });
+      const staticApp = makeApp({ runOperation: okRunner, consoleRoot });
 
       const index = await staticApp.request("/workflows");
       expect(index.status).toBe(200);

@@ -17,10 +17,12 @@
     "@lda/presentation-sync": "workspace:*",
     "@lda/workflow-rpc": "workspace:*",
     "effect": "3.21.4",
-    "hono": "4.12.27"
+    "hono": "4.12.27",
+    "ws": "8.21.0"
   },
   "devDependencies": {
     "@types/node": "26.1.0",
+    "@types/ws": "8.18.1",
     "tsx": "4.22.4",
     "vitest": "4.1.9"
   }

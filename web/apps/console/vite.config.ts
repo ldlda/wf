@@ -17,6 +17,8 @@ export default defineConfig({
       // Server must listen on this port (set via WEB_PORT env or default 8787)
       "/api": {
         target: `http://127.0.0.1:${backendPort}`,
+        // Presentation sync shares the API origin while Vite HMR keeps its own socket.
+        ws: true,
         configure: (proxy) => {
           proxy.on("error", (error, _request, response) => {
             if (response.headersSent) return;

@@ -1,5 +1,9 @@
 import { Effect } from "effect";
-import { serve } from "@hono/node-server";
+import {
+  serve,
+  upgradeWebSocket,
+  type WebSocketServerLike,
+} from "@hono/node-server";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +14,8 @@ import {
   type OperationName,
 } from "@lda/workflow-rpc";
 import { createApp, type RunOperation } from "./app.js";
+import { createPresentationRoomService } from "./presentation-sync/rooms.js";
+import { WebSocketServer } from "ws";
 
 const port = Number(process.env.WEB_PORT ?? "8787");
 if (Number.isNaN(port) || port < 1 || port > 65535) {
@@ -40,9 +46,12 @@ const runOperation: RunOperation = async (
   }).pipe(Effect.provide(liveLayer), Effect.runPromise);
 
 let app: ReturnType<typeof createApp>;
+const rooms = createPresentationRoomService();
+const wss = new WebSocketServer({ noServer: true });
 try {
   app = createApp({
     runOperation,
+    presentationSync: { rooms, upgradeWebSocket },
     ...(staticConsoleRoot ? { consoleRoot: staticConsoleRoot } : {}),
   });
 } catch (error) {
@@ -55,12 +64,21 @@ const server = serve({
   fetch: app.fetch,
   hostname,
   port,
+  // @types/ws makes noServer optional even though this instance fixes it to true.
+  websocket: { server: wss as WebSocketServerLike },
 });
+
+// Rooms are intentionally in-memory; this sweep enforces reconnect grace and
+// inactivity expiry without introducing persistence into the transport layer.
+const expirySweep = setInterval(() => rooms.sweepExpired(), 60_000);
+expirySweep.unref();
 
 console.log(`workflow console server listening on http://${hostname}:${port}`);
 
 const shutdown = (signal: NodeJS.Signals) => {
   console.log(`received ${signal}, stopping workflow console server`);
+  clearInterval(expirySweep);
+  wss.close();
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(1), 5_000).unref();
 };
