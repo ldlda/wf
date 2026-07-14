@@ -1,0 +1,23 @@
+{
+  "name": "@lda/presentation-sync",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "effect": "3.21.4"
+  },
+  "devDependencies": {
+    "@types/node": "26.1.0",
+    "vitest": "4.1.9"
+  }
+}
