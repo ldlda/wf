@@ -11,6 +11,7 @@ import { PresentationFooter } from "./PresentationFooter.js";
 import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import type { PresentationTargetHealth } from "./presentation-target-status.js";
+import type { PresentationSyncController } from "./sync/presentation-sync-state.js";
 import { demoChromeFor } from "./presentation-demo-chrome.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { findScene, type MainLocation } from "./storyboard.js";
@@ -34,6 +35,7 @@ type PresentationStageProps = {
   readonly closeOverlay: () => void;
   readonly openDiscussion: (branchId: string) => void;
   readonly closeDiscussion: () => void;
+  readonly syncController: PresentationSyncController;
 };
 
 export const PresentationStage = ({
@@ -55,6 +57,7 @@ export const PresentationStage = ({
   closeOverlay,
   openDiscussion,
   closeDiscussion,
+  syncController,
 }: PresentationStageProps) => {
   const composition = compositionForState(state);
 
@@ -126,6 +129,7 @@ export const PresentationStage = ({
               retryHealth={retryHealth}
               showEvidenceReceipt={composition.evidencePresentation !== "hidden"}
               inspectEvidence={openEvidence}
+              syncController={syncController}
             />
           )}
           <EvidenceInspector

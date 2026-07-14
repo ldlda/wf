@@ -1111,6 +1111,14 @@
   padding: 0;
 }
 
+.presentation-footer__utility {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
 .evidence-receipt {
   min-width: 0;
   display: flex;
@@ -1217,6 +1225,11 @@
 }
 
 @media (max-width: 640px) {
+  .presentation-footer__utility {
+    flex: 0 1 auto;
+    max-width: 52%;
+  }
+
   .presentation-demo-rail {
     min-width: 0;
     flex: 1 1 auto;

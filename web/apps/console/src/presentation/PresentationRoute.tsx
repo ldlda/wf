@@ -16,6 +16,7 @@ import {
 import { hashForLocation, nextMainLocation } from "./storyboard-navigation.js";
 import type { MainLocation } from "./storyboard.js";
 import type { DemoApprovalActions, DemoApprovalUiState } from "./demo-approval-actions.js";
+import { usePresentationSync } from "./sync/usePresentationSync.js";
 import "./presentation.css";
 import "./styles/demo-workflow.css";
 
@@ -43,6 +44,12 @@ export const PresentationRoute = () => {
       { type: "jump_hash", hash: initialHash },
     ),
   );
+  const canonicalHash = hashForLocation(state.location);
+  const presentationSync = usePresentationSync({
+    role: "audience",
+    currentHash: canonicalHash,
+    applyRemoteHash: (hash) => dispatch({ type: "jump_hash", hash }),
+  });
   const [presentationReady, setPresentationReady] = useState(false);
 
   useEffect(() => {
@@ -306,6 +313,7 @@ export const PresentationRoute = () => {
           closeOverlay={() => dispatch({ type: "close_overlay" })}
           openDiscussion={handleOpenDiscussion}
           closeDiscussion={handleCloseDiscussion}
+          syncController={presentationSync}
         />
       </PresentationCanvas>
     </main>

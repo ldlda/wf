@@ -32,6 +32,104 @@ const healthyResponse = {
   durationMs: 2,
 };
 
+const syncGrant = {
+  sessionId: "session-route",
+  code: "ABC123",
+  connectionToken: "token-route",
+  websocketPath: "/api/presentation-sync/ws" as const,
+  snapshot: { hash: "#scene/thesis/title", revision: 0 },
+};
+
+class SyncTestSocket {
+  static readonly OPEN = 1;
+  static readonly CLOSED = 3;
+  readonly sent: string[] = [];
+  readonly url: string;
+  readyState = 0;
+  onopen: (() => void) | null = null;
+  onmessage: ((event: { readonly data: unknown }) => void) | null = null;
+  onerror: (() => void) | null = null;
+  onclose: ((event: { readonly code: number; readonly reason: string }) => void) | null = null;
+
+  constructor(url: string, private readonly sockets: SyncTestSocket[]) {
+    this.url = url;
+    sockets.push(this);
+  }
+
+  send(message: string): void {
+    this.sent.push(message);
+  }
+
+  open(): void {
+    this.readyState = SyncTestSocket.OPEN;
+    this.onopen?.();
+  }
+
+  serverMessage(message: unknown): void {
+    this.onmessage?.({ data: JSON.stringify(message) });
+  }
+
+  close(code = 1000, reason = "closed"): void {
+    this.readyState = SyncTestSocket.CLOSED;
+    this.onclose?.({ code, reason });
+  }
+}
+
+const installSyncTransport = (serverAvailable = true) => {
+  const sockets: SyncTestSocket[] = [];
+  const fetch = vi.fn<typeof globalThis.fetch>();
+  if (serverAvailable) {
+    fetch.mockResolvedValue(new Response(JSON.stringify(syncGrant), { status: 201 }));
+  } else {
+    fetch.mockRejectedValue(new Error("The pairing server is unavailable."));
+  }
+  vi.stubGlobal("fetch", fetch);
+  vi.stubGlobal(
+    "WebSocket",
+    class extends SyncTestSocket {
+      constructor(url: string) {
+        super(url, sockets);
+      }
+    },
+  );
+  return { fetch, sockets };
+};
+
+const locationSnapshot = (hash: string, revision: number) => ({
+  type: "location.snapshot",
+  snapshot: { hash, revision },
+  originatingMessageId: null,
+});
+
+const presenceSnapshot = {
+  type: "presence.snapshot",
+  presence: { presenters: 1, audience: 1 },
+};
+
+const publishedMessages = (socket: SyncTestSocket | undefined) =>
+  socket?.sent
+    .map((message) => JSON.parse(message) as { readonly type?: string; readonly hash?: string })
+    .filter((message) => message.type === "location.publish") ?? [];
+
+const connectAudience = async (
+  user: ReturnType<typeof userEvent.setup>,
+  sockets: SyncTestSocket[],
+  initialHash = window.location.hash,
+): Promise<SyncTestSocket> => {
+  await user.click(screen.getByRole("button", { name: "Pair presentation" }));
+  await user.click(screen.getByRole("button", { name: "Start session" }));
+  await waitFor(() => expect(sockets).toHaveLength(1));
+  const socket = sockets[0];
+  if (socket === undefined) throw new Error("sync test socket was not created");
+  await act(async () => {
+    socket.open();
+    socket.serverMessage(locationSnapshot(initialHash, 0));
+    socket.serverMessage(presenceSnapshot);
+  });
+  await waitFor(() => expect(screen.getByRole("status", { name: "Connected" })).toBeInTheDocument());
+  return socket;
+};
+
 beforeAll(() => {
   mockedCallOperation.mockResolvedValue(healthyResponse);
 });
@@ -66,6 +164,7 @@ const graphNodeByLabel = (label: RegExp): HTMLElement => {
 
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   mockedCallOperation.mockReset();
   mockedCallOperation.mockResolvedValue(healthyResponse);
   window.sessionStorage.clear();
@@ -73,6 +172,97 @@ afterEach(() => {
 });
 
 describe("PresentationRoute", () => {
+  it("renders the uniform audience pairing panel on /present", { timeout: 15000 }, async () => {
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const panel = screen.getByRole("complementary", { name: "Presentation pairing" });
+    expect(panel).toHaveAttribute("data-role", "audience");
+    expect(within(panel).getByRole("button", { name: "Pair presentation" })).toBeInTheDocument();
+  });
+
+  it("publishes one complete hash for local ArrowRight navigation", async () => {
+    const user = userEvent.setup();
+    const { sockets } = installSyncTransport();
+    window.location.hash = "#scene/thesis/title";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const socket = await connectAudience(user, sockets);
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+
+    await waitFor(() => expect(window.location.hash).toBe("#scene/thesis/substrate"));
+    await waitFor(() => expect(publishedMessages(socket)).toHaveLength(1));
+    expect(publishedMessages(socket)[0]).toMatchObject({
+      type: "location.publish",
+      hash: "#scene/thesis/substrate",
+    });
+  });
+
+  it("publishes direct hashes and figure focus changes with their complete focus paths", async () => {
+    const user = userEvent.setup();
+    const { sockets } = installSyncTransport();
+    window.location.hash = "#scene/architecture/overview";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const socket = await connectAudience(user, sockets);
+    window.location.hash = "#scene/architecture/runtime/focus/runtime-providers/configured-providers";
+    await waitFor(() => expect(publishedMessages(socket)).toHaveLength(1));
+    expect(publishedMessages(socket)[0]?.hash)
+      .toBe("#scene/architecture/runtime/focus/runtime-providers/configured-providers");
+
+    window.location.hash = "#scene/architecture/overview";
+    await waitFor(() => expect(publishedMessages(socket)).toHaveLength(2));
+    await waitFor(() => expect(
+      Array.from(document.querySelectorAll<HTMLButtonElement>(".figure-node"))
+        .some((node) => /Capability inventory/.test(node.getAttribute("aria-label") ?? "")),
+    ).toBe(true));
+    const capabilityInventoryNode = Array.from(
+      document.querySelectorAll<HTMLButtonElement>(".figure-node"),
+    ).find((node) => /Capability inventory/.test(node.getAttribute("aria-label") ?? ""));
+    if (capabilityInventoryNode === undefined) throw new Error("capability inventory figure node is missing");
+    fireEvent.click(capabilityInventoryNode);
+    await waitFor(() => expect(publishedMessages(socket)).toHaveLength(3));
+    expect(publishedMessages(socket)[2]?.hash)
+      .toBe("#scene/architecture/overview/focus/runtime-providers");
+  });
+
+  it("applies a remote discussion hash through the existing discussion panel without echoing it", async () => {
+    const user = userEvent.setup();
+    const { sockets } = installSyncTransport();
+    window.location.hash = "#scene/thesis/title";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    const socket = await connectAudience(user, sockets);
+    await act(async () => {
+      socket.serverMessage(locationSnapshot("#discuss/hosted-automation", 1));
+    });
+
+    expect(await screen.findByRole("button", { name: /return to positioning/i })).toBeInTheDocument();
+    await waitFor(() => expect(window.location.hash).toBe("#discuss/hosted-automation"));
+    expect(publishedMessages(socket)).toHaveLength(0);
+  });
+
+  it("keeps local Space and ArrowRight navigation working when pairing fails", async () => {
+    const user = userEvent.setup();
+    const { fetch } = installSyncTransport(false);
+    window.location.hash = "#scene/thesis/title";
+    const { PresentationRoute } = await import("./PresentationRoute.js");
+    render(<PresentationRoute />);
+
+    await user.click(screen.getByRole("button", { name: "Pair presentation" }));
+    await user.click(screen.getByRole("button", { name: "Start session" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("The pairing server is unavailable.");
+    expect(fetch).toHaveBeenCalledOnce();
+
+    fireEvent.keyDown(document.body, { key: "ArrowRight" });
+    await waitFor(() => expect(window.location.hash).toBe("#scene/thesis/substrate"));
+    fireEvent.keyDown(document.body, { key: " " });
+    await waitFor(() => expect(window.location.hash).toBe("#scene/problem/direct-actions"));
+  });
+
   const directHashRoutes = [
     { hash: "#scene/thesis/title", heading: "Design and Implementation of lda.chat", hasDemoChrome: false },
     { hash: "#scene/architecture/overview", heading: "Architecture Zoom", hasDemoChrome: false },
