@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useLayoutEffect,
   useRef,
   useSyncExternalStore,
 } from "react";
@@ -53,6 +54,7 @@ type InternalController = PresentationSyncController & {
   readonly publish: (hash: string) => string | null;
   readonly restoreSavedGrant: () => SessionGrant | null;
   readonly restoreGrant: (grant: SessionGrant) => void;
+  readonly resumeJoinSession: (code: string) => void;
   readonly browserUrl: BrowserUrlState;
 };
 
@@ -60,6 +62,11 @@ type LastOperation =
   | { readonly kind: "create" }
   | { readonly kind: "join"; readonly code: string }
   | null;
+
+type PendingJoin = {
+  readonly code: string;
+  readonly promise: Promise<SessionGrant>;
+};
 
 const defaultBrowserDependencies = (): {
   readonly client: PresentationSyncClientDependencies;
@@ -149,6 +156,7 @@ const createController = (options: {
   let operationGeneration = 0;
   let currentGrant: SessionGrant | null = null;
   let lastOperation: LastOperation = null;
+  let pendingJoin: PendingJoin | null = null;
   const listeners = new Set<() => void>();
   const pendingMessageIds = new Set<string>();
 
@@ -284,19 +292,33 @@ const createController = (options: {
     }
   };
 
-  const joinSession = async (code: string): Promise<void> => {
+  const joinSession = async (
+    code: string,
+    reusePending = false,
+  ): Promise<void> => {
     const generation = beginOperation();
     const normalizedCode = normalizeJoinCode(code);
+    const reusableJoin =
+      reusePending && pendingJoin?.code === normalizedCode ? pendingJoin : null;
     lastOperation = { kind: "join", code: normalizedCode };
     currentGrant = null;
     pendingMessageIds.clear();
     options.client.leave();
     dispatch({ type: "start_join", code: normalizedCode });
+
+    let request: Promise<SessionGrant> | null = null;
     try {
-      const grant = await options.client.join(options.getRole(), normalizedCode);
+      request =
+        reusableJoin?.promise ?? options.client.join(options.getRole(), normalizedCode);
+      if (reusableJoin === null) {
+        pendingJoin = { code: normalizedCode, promise: request };
+      }
+      const grant = await request;
+      if (pendingJoin?.promise === request) pendingJoin = null;
       if (!isCurrentOperation(generation)) return;
       connectGrant(grant);
     } catch (error) {
+      if (request !== null && pendingJoin?.promise === request) pendingJoin = null;
       if (isCurrentOperation(generation)) {
         dispatch({
           type: "failed",
@@ -307,12 +329,16 @@ const createController = (options: {
     }
   };
 
+  const resumeJoinSession = (code: string): void => {
+    void joinSession(code, true);
+  };
+
   const retry = (): void => {
     if (lastOperation?.kind === "create") {
       void startSession();
       return;
     }
-    if (lastOperation?.kind === "join") void joinSession(lastOperation.code);
+    if (lastOperation?.kind === "join") void joinSession(lastOperation.code, false);
   };
 
   const leaveSession = (): void => {
@@ -364,6 +390,7 @@ const createController = (options: {
     publish,
     restoreSavedGrant,
     restoreGrant,
+    resumeJoinSession,
     browserUrl: options.browserUrl,
   };
 };
@@ -396,9 +423,12 @@ export const usePresentationSync = ({
   const applyRemoteHashRef = useRef(applyRemoteHash);
   const remoteHashInFlightRef = useRef<string | null>(null);
   const lastObservedHashRef = useRef(currentHash);
-  roleRef.current = role;
-  currentHashRef.current = currentHash;
-  applyRemoteHashRef.current = applyRemoteHash;
+
+  useLayoutEffect(() => {
+    roleRef.current = role;
+    currentHashRef.current = currentHash;
+    applyRemoteHashRef.current = applyRemoteHash;
+  }, [applyRemoteHash, currentHash, role]);
 
   const controllerRef = useRef<InternalController | null>(null);
   const pairCodeRef = useRef<string | null>(null);
@@ -437,7 +467,7 @@ export const usePresentationSync = ({
     else {
       const pairCode = pairCodeRef.current ?? pairCodeFromUrl(controller.browserUrl);
       pairCodeRef.current = pairCode;
-      if (pairCode !== null) void controller.joinSession(pairCode);
+      if (pairCode !== null) controller.resumeJoinSession(pairCode);
     }
     return () => controller.dispose();
   }, [controller, injectedClient]);

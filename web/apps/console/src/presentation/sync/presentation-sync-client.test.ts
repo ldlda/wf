@@ -125,6 +125,9 @@ describe("presentation sync client", () => {
         body: JSON.stringify({ role: "audience", code: "ABC123" }),
       }),
     );
+    expect(storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).toBeNull();
+
+    client.connect(grant, () => {});
     expect(storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).toContain(
       '"connectionToken":"token-1"',
     );

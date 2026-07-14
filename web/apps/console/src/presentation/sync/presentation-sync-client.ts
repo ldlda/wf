@@ -255,7 +255,6 @@ export const createPresentationSyncClient = (
 
     const decoded = decodeSessionGrant(responseText);
     if (!decoded.ok) throw new Error("server returned an invalid session grant");
-    saveGrant(decoded.value);
     return decoded.value;
   };
 

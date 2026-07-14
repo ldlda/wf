@@ -171,6 +171,55 @@ describe("usePresentationSync", () => {
     });
   });
 
+  it("uses committed props for stable actions and remote callbacks", async () => {
+    const { dependencies, sockets, fetch } = makeDependencies();
+    fetch.mockImplementation(async () => resolvedGrant());
+    const firstApply = vi.fn();
+    const secondApply = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ role, hash, applyRemoteHash }) =>
+        usePresentationSync({
+          role,
+          currentHash: hash,
+          applyRemoteHash,
+          dependencies,
+        }),
+      {
+        initialProps: {
+          role: "presenter" as "presenter" | "audience",
+          hash: "#scene/thesis/title",
+          applyRemoteHash: firstApply,
+        },
+      },
+    );
+
+    rerender({
+      role: "audience",
+      hash: "#scene/problem/direct-actions",
+      applyRemoteHash: secondApply,
+    });
+
+    await act(async () => {
+      await result.current.startSession();
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      "http://console.test/api/presentation-sync/sessions",
+      expect.objectContaining({
+        body: JSON.stringify({
+          role: "audience",
+          initialHash: "#scene/problem/direct-actions",
+        }),
+      }),
+    );
+
+    await act(async () => {
+      sockets[0]?.open();
+      sockets[0]?.serverMessage(snapshot("#scene/architecture/runtime", 1));
+    });
+    expect(firstApply).not.toHaveBeenCalled();
+    expect(secondApply).toHaveBeenCalledWith("#scene/architecture/runtime");
+  });
+
   it("applies a remote hash without publishing it back", async () => {
     const { dependencies, sockets, fetch } = makeDependencies();
     fetch.mockImplementation(async () => resolvedGrant());
@@ -437,7 +486,7 @@ describe("usePresentationSync", () => {
   });
 
   it("invalidates an in-flight operation when retry starts a newer operation", async () => {
-    const { dependencies, sockets, fetch } = makeDependencies();
+    const { dependencies, sockets, storage, fetch } = makeDependencies();
     const releases: Array<(response: Response) => void> = [];
     fetch.mockImplementation(
       () => new Promise<Response>((resolve) => releases.push(resolve)),
@@ -464,6 +513,7 @@ describe("usePresentationSync", () => {
       await settleAsync();
     });
     expect(sockets).toHaveLength(0);
+    expect(storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).toBeNull();
     expect(result.current.state).toMatchObject({ kind: "joining", code: "CCC333" });
 
     await act(async () => {
@@ -471,18 +521,19 @@ describe("usePresentationSync", () => {
       await settleAsync();
     });
     expect(sockets).toHaveLength(1);
+    expect(storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).not.toBeNull();
   });
 
   it("ignores a deferred result after leave, end, or unmount", async () => {
-    const makeDeferredHook = () => {
-      const { dependencies, sockets, fetch } = makeDependencies();
+    const makeDeferredHook = (role: "presenter" | "audience" = "presenter") => {
+      const { dependencies, sockets, storage, fetch } = makeDependencies();
       let resolvePending: ((response: Response) => void) | null = null;
       fetch.mockImplementation(
         () => new Promise<Response>((resolve) => { resolvePending = resolve; }),
       );
       const rendered = renderHook(() =>
         usePresentationSync({
-          role: "presenter",
+          role,
           currentHash: "#scene/thesis/title",
           applyRemoteHash: () => {},
           dependencies,
@@ -492,6 +543,7 @@ describe("usePresentationSync", () => {
         ...rendered,
         release: (response: Response) => resolvePending?.(response),
         sockets,
+        storage,
       };
     };
 
@@ -500,14 +552,16 @@ describe("usePresentationSync", () => {
     await act(async () => { left.result.current.leaveSession(); });
     await act(async () => { left.release(resolvedGrant()); await settleAsync(); });
     expect(left.sockets).toHaveLength(0);
+    expect(left.storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).toBeNull();
     expect(left.result.current.state).toEqual({ kind: "ended", reason: "left" });
     left.unmount();
 
-    const ended = makeDeferredHook();
-    await act(async () => { void ended.result.current.startSession(); });
+    const ended = makeDeferredHook("audience");
+    await act(async () => { void ended.result.current.joinSession("AAA111"); });
     await act(async () => { ended.result.current.endSession(); });
     await act(async () => { ended.release(resolvedGrant()); await settleAsync(); });
     expect(ended.sockets).toHaveLength(0);
+    expect(ended.storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).toBeNull();
     expect(ended.result.current.state).toEqual({
       kind: "ended",
       reason: "presenter_ended",
@@ -593,7 +647,7 @@ describe("usePresentationSync", () => {
     fetch.mockImplementation(
       () => new Promise<Response>((resolve) => releases.push(resolve)),
     );
-    const { unmount } = renderHook(
+    const { result, unmount } = renderHook(
       () =>
         usePresentationSync({
           role: "audience",
@@ -604,11 +658,17 @@ describe("usePresentationSync", () => {
       { reactStrictMode: true, wrapper: strictWrapper },
     );
 
-    expect(fetch).toHaveBeenCalledTimes(2);
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(releases).toHaveLength(1);
     releases[0]?.(resolvedGrant());
-    releases[1]?.(resolvedGrant());
     await act(async () => { await settleAsync(); });
     expect(sockets).toHaveLength(1);
+    await act(async () => {
+      sockets[0]?.open();
+      sockets[0]?.serverMessage(snapshot("#scene/thesis/title", 0));
+      sockets[0]?.serverMessage(presence(1, 1));
+    });
+    expect(result.current.state.kind).toBe("connected");
     unmount();
   });
 
