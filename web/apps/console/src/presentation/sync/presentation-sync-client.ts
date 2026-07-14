@@ -196,7 +196,9 @@ export const createPresentationSyncClient = (
       handleServerMessage(nextSocket, event.data);
     };
     nextSocket.onerror = () => {
-      if (nextSocket === socket && active) nextSocket.close(1006, "socket error");
+      // 1006 is reserved for browser-reported abnormal closes and cannot be
+      // supplied to WebSocket.close; closing without arguments uses 1000.
+      if (nextSocket === socket && active) nextSocket.close();
     };
     nextSocket.onclose = (event) => {
       if (nextSocket !== socket) return;

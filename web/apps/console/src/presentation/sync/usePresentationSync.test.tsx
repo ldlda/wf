@@ -1,6 +1,8 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
+import { StrictMode, type ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  createPresentationSyncClient,
   PRESENTATION_SYNC_GRANT_STORAGE_KEY,
   type PresentationSyncClientDependencies,
 } from "./presentation-sync-client.js";
@@ -112,6 +114,15 @@ const makeDependencies = () => {
 const resolvedGrant = () =>
   new Response(JSON.stringify(grant), { status: 201 });
 
+const strictWrapper = ({ children }: { readonly children: ReactNode }) => (
+  <StrictMode>{children}</StrictMode>
+);
+
+const settleAsync = async (): Promise<void> => {
+  await Promise.resolve();
+  await Promise.resolve();
+};
+
 const connectSession = async (
   result: { readonly current: ReturnType<typeof usePresentationSync> },
   sockets: FakeSocket[],
@@ -186,6 +197,37 @@ describe("usePresentationSync", () => {
     expect(sockets[0]?.sent.filter((message) =>
       JSON.parse(message).type === "location.publish",
     )).toHaveLength(0);
+  });
+
+  it("publishes an intervening local hash instead of keeping remote suppression armed", async () => {
+    const { dependencies, sockets, fetch } = makeDependencies();
+    fetch.mockImplementation(async () => resolvedGrant());
+    const applyRemoteHash = vi.fn();
+    const { result, rerender } = renderHook(
+      ({ hash }) =>
+        usePresentationSync({
+          role: "audience",
+          currentHash: hash,
+          applyRemoteHash,
+          dependencies,
+        }),
+      { initialProps: { hash: "#scene/thesis/title" } },
+    );
+
+    await connectSession(result, sockets);
+    await act(async () => {
+      sockets[0]?.serverMessage(snapshot("#scene/problem/direct-actions", 1));
+    });
+
+    rerender({ hash: "#scene/architecture/runtime" });
+
+    expect(sockets[0]?.sent.filter((message) =>
+      JSON.parse(message).type === "location.publish",
+    )).toHaveLength(1);
+    expect(JSON.parse(sockets[0]?.sent[0] ?? "{}")).toMatchObject({
+      type: "location.publish",
+      hash: "#scene/architecture/runtime",
+    });
   });
 
   it("applies stale rejection snapshots and does not echo convergence", async () => {
@@ -320,6 +362,254 @@ describe("usePresentationSync", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(sockets).toHaveLength(1);
     expect(result.current.state.kind).toBe("waiting");
+  });
+
+  it("ignores a stale create result after a newer create operation", async () => {
+    const { dependencies, sockets, fetch } = makeDependencies();
+    const releases: Array<(response: Response) => void> = [];
+    fetch.mockImplementation(
+      () => new Promise<Response>((resolve) => releases.push(resolve)),
+    );
+    const { result } = renderHook(() =>
+      usePresentationSync({
+        role: "presenter",
+        currentHash: "#scene/thesis/title",
+        applyRemoteHash: () => {},
+        dependencies,
+      }),
+    );
+
+    await act(async () => {
+      void result.current.startSession();
+      void result.current.startSession();
+    });
+    expect(releases).toHaveLength(2);
+
+    await act(async () => {
+      releases[0]?.(resolvedGrant());
+      await settleAsync();
+    });
+    expect(sockets).toHaveLength(0);
+    expect(result.current.state.kind).toBe("creating");
+
+    await act(async () => {
+      releases[1]?.(resolvedGrant());
+      await settleAsync();
+    });
+    expect(sockets).toHaveLength(1);
+    expect(result.current.state.kind).toBe("waiting");
+  });
+
+  it("ignores a stale join result after a newer join operation", async () => {
+    const { dependencies, sockets, fetch } = makeDependencies();
+    const releases: Array<(response: Response) => void> = [];
+    fetch.mockImplementation(
+      () => new Promise<Response>((resolve) => releases.push(resolve)),
+    );
+    const { result } = renderHook(() =>
+      usePresentationSync({
+        role: "audience",
+        currentHash: "#scene/thesis/title",
+        applyRemoteHash: () => {},
+        dependencies,
+      }),
+    );
+
+    await act(async () => {
+      void result.current.joinSession("AAA111");
+      void result.current.joinSession("BBB222");
+    });
+    expect(releases).toHaveLength(2);
+    expect(result.current.state).toMatchObject({ kind: "joining", code: "BBB222" });
+
+    await act(async () => {
+      releases[0]?.(resolvedGrant());
+      await settleAsync();
+    });
+    expect(sockets).toHaveLength(0);
+    expect(result.current.state).toMatchObject({ kind: "joining", code: "BBB222" });
+
+    await act(async () => {
+      releases[1]?.(resolvedGrant());
+      await settleAsync();
+    });
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("invalidates an in-flight operation when retry starts a newer operation", async () => {
+    const { dependencies, sockets, fetch } = makeDependencies();
+    const releases: Array<(response: Response) => void> = [];
+    fetch.mockImplementation(
+      () => new Promise<Response>((resolve) => releases.push(resolve)),
+    );
+    const { result } = renderHook(() =>
+      usePresentationSync({
+        role: "presenter",
+        currentHash: "#scene/thesis/title",
+        applyRemoteHash: () => {},
+        dependencies,
+      }),
+    );
+
+    await act(async () => {
+      void result.current.startSession();
+      result.current.retry();
+      void result.current.joinSession("CCC333");
+    });
+    expect(releases).toHaveLength(3);
+
+    await act(async () => {
+      releases[0]?.(resolvedGrant());
+      releases[1]?.(resolvedGrant());
+      await settleAsync();
+    });
+    expect(sockets).toHaveLength(0);
+    expect(result.current.state).toMatchObject({ kind: "joining", code: "CCC333" });
+
+    await act(async () => {
+      releases[2]?.(resolvedGrant());
+      await settleAsync();
+    });
+    expect(sockets).toHaveLength(1);
+  });
+
+  it("ignores a deferred result after leave, end, or unmount", async () => {
+    const makeDeferredHook = () => {
+      const { dependencies, sockets, fetch } = makeDependencies();
+      let resolvePending: ((response: Response) => void) | null = null;
+      fetch.mockImplementation(
+        () => new Promise<Response>((resolve) => { resolvePending = resolve; }),
+      );
+      const rendered = renderHook(() =>
+        usePresentationSync({
+          role: "presenter",
+          currentHash: "#scene/thesis/title",
+          applyRemoteHash: () => {},
+          dependencies,
+        }),
+      );
+      return {
+        ...rendered,
+        release: (response: Response) => resolvePending?.(response),
+        sockets,
+      };
+    };
+
+    const left = makeDeferredHook();
+    await act(async () => { void left.result.current.startSession(); });
+    await act(async () => { left.result.current.leaveSession(); });
+    await act(async () => { left.release(resolvedGrant()); await settleAsync(); });
+    expect(left.sockets).toHaveLength(0);
+    expect(left.result.current.state).toEqual({ kind: "ended", reason: "left" });
+    left.unmount();
+
+    const ended = makeDeferredHook();
+    await act(async () => { void ended.result.current.startSession(); });
+    await act(async () => { ended.result.current.endSession(); });
+    await act(async () => { ended.release(resolvedGrant()); await settleAsync(); });
+    expect(ended.sockets).toHaveLength(0);
+    expect(ended.result.current.state).toEqual({
+      kind: "ended",
+      reason: "presenter_ended",
+    });
+    ended.unmount();
+
+    const unmounted = makeDeferredHook();
+    await act(async () => { void unmounted.result.current.startSession(); });
+    unmounted.unmount();
+    await act(async () => { unmounted.release(resolvedGrant()); await settleAsync(); });
+    expect(unmounted.sockets).toHaveLength(0);
+  });
+
+  it("does not read browser globals when a complete client and dependency set is injected", () => {
+    const { dependencies, sockets } = makeDependencies();
+    const client = createPresentationSyncClient(dependencies);
+    const realWindow = globalThis.window;
+    vi.stubGlobal(
+      "window",
+      new Proxy(realWindow, {
+        get(target, property, receiver) {
+          if (
+            property === "fetch" ||
+            property === "sessionStorage" ||
+            property === "location" ||
+            property === "WebSocket" ||
+            property === "setTimeout" ||
+            property === "clearTimeout"
+          ) {
+            throw new Error(`unexpected browser dependency read: ${String(property)}`);
+          }
+          return Reflect.get(target, property, receiver);
+        },
+      }),
+    );
+    try {
+      const { unmount } = renderHook(() =>
+        usePresentationSync({
+          role: "audience",
+          currentHash: "#scene/thesis/title",
+          applyRemoteHash: () => {},
+          dependencies,
+          client,
+        }),
+      );
+      expect(sockets).toHaveLength(0);
+      unmount();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("reconnects a saved grant when Strict Mode replays the effect", () => {
+    const { dependencies, sockets, storage } = makeDependencies();
+    storage.setItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY, JSON.stringify(grant));
+    const { unmount } = renderHook(
+      () =>
+        usePresentationSync({
+          role: "audience",
+          currentHash: "#scene/thesis/title",
+          applyRemoteHash: () => {},
+          dependencies,
+        }),
+      { reactStrictMode: true, wrapper: strictWrapper },
+    );
+
+    expect(sockets).toHaveLength(2);
+    expect(sockets[0]?.readyState).toBe(FakeSocket.CLOSED);
+    expect(storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).not.toBeNull();
+    unmount();
+  });
+
+  it("re-runs query auto-join during Strict Mode effect replay", async () => {
+    const { dependencies, sockets, fetch } = makeDependencies();
+    const pairDependencies = {
+      ...dependencies,
+      location: {
+        search: "?pair=ab-c%20123",
+        href: "http://console.test/present?pair=ab-c%20123",
+      },
+    };
+    const releases: Array<(response: Response) => void> = [];
+    fetch.mockImplementation(
+      () => new Promise<Response>((resolve) => releases.push(resolve)),
+    );
+    const { unmount } = renderHook(
+      () =>
+        usePresentationSync({
+          role: "audience",
+          currentHash: "#scene/thesis/title",
+          applyRemoteHash: () => {},
+          dependencies: pairDependencies,
+        }),
+      { reactStrictMode: true, wrapper: strictWrapper },
+    );
+
+    expect(fetch).toHaveBeenCalledTimes(2);
+    releases[0]?.(resolvedGrant());
+    releases[1]?.(resolvedGrant());
+    await act(async () => { await settleAsync(); });
+    expect(sockets).toHaveLength(1);
+    unmount();
   });
 
   it("closes the socket and reconnect timer on unmount", async () => {

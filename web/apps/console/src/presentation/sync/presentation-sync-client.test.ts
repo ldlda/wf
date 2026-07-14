@@ -46,6 +46,7 @@ class FakeSocket {
   static readonly OPEN = 1;
   static readonly CLOSED = 3;
   readonly sent: string[] = [];
+  readonly closeCalls: Array<readonly [number | undefined, string | undefined]> = [];
   readyState = 0;
   onopen: (() => void) | null = null;
   onmessage: ((event: { readonly data: unknown }) => void) | null = null;
@@ -67,9 +68,10 @@ class FakeSocket {
     this.onmessage?.({ data: JSON.stringify(message) });
   }
 
-  close(code = 1000, reason = "closed"): void {
+  close(code?: number, reason?: string): void {
+    this.closeCalls.push([code, reason]);
     this.readyState = FakeSocket.CLOSED;
-    this.onclose?.({ code, reason });
+    this.onclose?.({ code: code ?? 1000, reason: reason ?? "closed" });
   }
 }
 
@@ -228,5 +230,17 @@ describe("presentation sync client", () => {
 
     expect(storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).toBeNull();
     expect(sockets).toHaveLength(1);
+  });
+
+  it("closes socket errors without using reserved close code 1006", () => {
+    const storage = new MemoryStorage();
+    const sockets: FakeSocket[] = [];
+    const client = createPresentationSyncClient(makeDependencies(storage, sockets));
+
+    client.connect(grant, () => {});
+    sockets[0]?.onerror?.();
+
+    expect(sockets[0]?.closeCalls).toEqual([[undefined, undefined]]);
+    expect(sockets[0]?.closeCalls.some(([code]) => code === 1006)).toBe(false);
   });
 });

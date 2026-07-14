@@ -40,6 +40,11 @@ type BrowserUrlState = {
   readonly history: { readonly replaceState: unknown };
 };
 
+const emptyBrowserUrlState: BrowserUrlState = {
+  location: { href: "http://localhost/", search: "" },
+  history: { replaceState: () => {} },
+};
+
 type InternalController = PresentationSyncController & {
   readonly subscribe: (listener: () => void) => () => void;
   readonly getSnapshot: () => PresentationSyncState;
@@ -78,11 +83,48 @@ const defaultBrowserDependencies = (): {
   };
 };
 
+const hasCompleteClientDependencies = (
+  dependencies: PresentationSyncHookDependencies | undefined,
+): dependencies is PresentationSyncClientDependencies &
+  Pick<PresentationSyncHookDependencies, "location" | "history"> =>
+  dependencies?.fetch !== undefined &&
+  dependencies.createWebSocket !== undefined &&
+  dependencies.storage !== undefined &&
+  dependencies.origin !== undefined &&
+  dependencies.protocol !== undefined &&
+  dependencies.setTimeout !== undefined &&
+  dependencies.clearTimeout !== undefined;
+
 const browserDependenciesFor = (
   dependencies: PresentationSyncHookDependencies | undefined,
-): { readonly client: PresentationSyncClientDependencies; readonly url: BrowserUrlState } => {
-  const defaults = defaultBrowserDependencies();
+  needsClient: boolean,
+): {
+  readonly client: PresentationSyncClientDependencies | null;
+  readonly url: BrowserUrlState;
+} => {
   const { location, history, ...clientOverrides } = dependencies ?? {};
+  const completeClient = hasCompleteClientDependencies(dependencies);
+  if (!needsClient) {
+    return {
+      client: null,
+      url: {
+        location: location ?? emptyBrowserUrlState.location,
+        history: history ?? emptyBrowserUrlState.history,
+      },
+    };
+  }
+
+  if (completeClient) {
+    return {
+      client: dependencies,
+      url: {
+        location: location ?? emptyBrowserUrlState.location,
+        history: history ?? emptyBrowserUrlState.history,
+      },
+    };
+  }
+
+  const defaults = defaultBrowserDependencies();
   return {
     client: { ...defaults.client, ...clientOverrides } as PresentationSyncClientDependencies,
     url: {
@@ -104,6 +146,7 @@ const createController = (options: {
 }): InternalController => {
   let state: PresentationSyncState = initialPresentationSyncState;
   let mounted = true;
+  let operationGeneration = 0;
   let currentGrant: SessionGrant | null = null;
   let lastOperation: LastOperation = null;
   const listeners = new Set<() => void>();
@@ -121,6 +164,14 @@ const createController = (options: {
     state = nextState;
     notify();
   };
+
+  const beginOperation = (): number => {
+    operationGeneration += 1;
+    return operationGeneration;
+  };
+
+  const isCurrentOperation = (generation: number): boolean =>
+    mounted && generation === operationGeneration;
 
   const applySnapshot = (snapshot: PresentationSnapshot): void => {
     if (snapshot.hash === options.getCurrentHash()) return;
@@ -209,6 +260,7 @@ const createController = (options: {
   };
 
   const startSession = async (): Promise<void> => {
+    const generation = beginOperation();
     lastOperation = { kind: "create" };
     currentGrant = null;
     pendingMessageIds.clear();
@@ -219,10 +271,10 @@ const createController = (options: {
         options.getRole(),
         options.getCurrentHash(),
       );
-      if (!mounted) return;
+      if (!isCurrentOperation(generation)) return;
       connectGrant(grant);
     } catch (error) {
-      if (mounted) {
+      if (isCurrentOperation(generation)) {
         dispatch({
           type: "failed",
           message: errorMessage(error),
@@ -233,6 +285,7 @@ const createController = (options: {
   };
 
   const joinSession = async (code: string): Promise<void> => {
+    const generation = beginOperation();
     const normalizedCode = normalizeJoinCode(code);
     lastOperation = { kind: "join", code: normalizedCode };
     currentGrant = null;
@@ -241,10 +294,10 @@ const createController = (options: {
     dispatch({ type: "start_join", code: normalizedCode });
     try {
       const grant = await options.client.join(options.getRole(), normalizedCode);
-      if (!mounted) return;
+      if (!isCurrentOperation(generation)) return;
       connectGrant(grant);
     } catch (error) {
-      if (mounted) {
+      if (isCurrentOperation(generation)) {
         dispatch({
           type: "failed",
           message: errorMessage(error),
@@ -263,6 +316,7 @@ const createController = (options: {
   };
 
   const leaveSession = (): void => {
+    beginOperation();
     currentGrant = null;
     pendingMessageIds.clear();
     options.client.leave();
@@ -270,6 +324,7 @@ const createController = (options: {
   };
 
   const endSession = (): void => {
+    beginOperation();
     currentGrant = null;
     pendingMessageIds.clear();
     options.client.end();
@@ -288,9 +343,9 @@ const createController = (options: {
   };
 
   const dispose = (): void => {
+    beginOperation();
     mounted = false;
     options.client.dispose();
-    listeners.clear();
   };
 
   return {
@@ -346,11 +401,14 @@ export const usePresentationSync = ({
   applyRemoteHashRef.current = applyRemoteHash;
 
   const controllerRef = useRef<InternalController | null>(null);
-  const autoJoinConsumedRef = useRef(false);
+  const pairCodeRef = useRef<string | null>(null);
   if (controllerRef.current === null) {
-    const browser = browserDependenciesFor(dependencies);
+    const browser = browserDependenciesFor(dependencies, injectedClient === undefined);
     const client =
-      injectedClient ?? createPresentationSyncClient(browser.client);
+      injectedClient ??
+      (browser.client === null
+        ? (() => { throw new Error("presentation sync client dependencies unavailable"); })()
+        : createPresentationSyncClient(browser.client));
     controllerRef.current = createController({
       client,
       getRole: () => roleRef.current,
@@ -374,13 +432,11 @@ export const usePresentationSync = ({
 
   useEffect(() => {
     controller.mount();
-    if (autoJoinConsumedRef.current) return () => controller.dispose();
-    autoJoinConsumedRef.current = true;
-
     const restoredGrant = controller.restoreSavedGrant();
     if (restoredGrant !== null) controller.restoreGrant(restoredGrant);
     else {
-      const pairCode = pairCodeFromUrl(controller.browserUrl);
+      const pairCode = pairCodeRef.current ?? pairCodeFromUrl(controller.browserUrl);
+      pairCodeRef.current = pairCode;
       if (pairCode !== null) void controller.joinSession(pairCode);
     }
     return () => controller.dispose();
@@ -389,9 +445,17 @@ export const usePresentationSync = ({
   useEffect(() => {
     const remoteHash = remoteHashInFlightRef.current;
     if (remoteHash !== null) {
-      lastObservedHashRef.current = currentHash;
-      if (remoteHash === currentHash) remoteHashInFlightRef.current = null;
-      return;
+      if (remoteHash === currentHash) {
+        lastObservedHashRef.current = currentHash;
+        remoteHashInFlightRef.current = null;
+        return;
+      }
+
+      // A rerender caused by connection state can observe the old hash before
+      // the route callback updates it. Keep suppression armed for that case,
+      // but treat a genuinely changed hash as local navigation.
+      if (lastObservedHashRef.current === currentHash) return;
+      remoteHashInFlightRef.current = null;
     }
 
     if (lastObservedHashRef.current === currentHash) return;
