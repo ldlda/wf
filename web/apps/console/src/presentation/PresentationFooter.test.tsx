@@ -2,19 +2,9 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { EvidenceRecord } from "../app/state.js";
 import type { DemoChromePresentation } from "./presentation-demo-chrome.js";
-import type { PresentationSyncController } from "./sync/presentation-sync-state.js";
 import { PresentationFooter } from "./PresentationFooter.js";
 
 afterEach(() => cleanup());
-
-const standaloneSyncController = (): PresentationSyncController => ({
-  state: { kind: "standalone" },
-  startSession: vi.fn(async () => {}),
-  joinSession: vi.fn(async () => {}),
-  retry: vi.fn(),
-  leaveSession: vi.fn(),
-  endSession: vi.fn(),
-});
 
 describe("PresentationFooter", () => {
   it("combines scene progress and evidence provenance", () => {
@@ -40,7 +30,6 @@ describe("PresentationFooter", () => {
         }}
         evidence={[evidence]}
         demoRail={hiddenRail}
-        syncController={standaloneSyncController()}
         retryHealth={vi.fn()}
         showEvidenceReceipt
         inspectEvidence={vi.fn()}
@@ -63,7 +52,6 @@ describe("PresentationFooter", () => {
         }}
         evidence={[]}
         demoRail={{ kind: "hidden" }}
-        syncController={standaloneSyncController()}
         retryHealth={vi.fn()}
         showEvidenceReceipt={false}
         inspectEvidence={vi.fn()}
@@ -92,7 +80,6 @@ describe("PresentationFooter", () => {
           canRun: true,
           canRetry: true,
         }}
-        syncController={standaloneSyncController()}
         retryHealth={vi.fn()}
         showEvidenceReceipt={false}
         inspectEvidence={vi.fn()}
@@ -103,7 +90,7 @@ describe("PresentationFooter", () => {
     expect(screen.getByText("Live target ready")).toBeInTheDocument();
   });
 
-  it("keeps audience pairing in the non-demo utility area beside one demo rail", () => {
+  it("keeps the footer focused on one demo rail without the pairing surface", () => {
     render(
       <PresentationFooter
         location={{ kind: "main", sceneId: "agent-handoff", beatId: "request", focusPath: [] }}
@@ -121,7 +108,6 @@ describe("PresentationFooter", () => {
           canRun: true,
           canRetry: true,
         }}
-        syncController={standaloneSyncController()}
         retryHealth={vi.fn()}
         showEvidenceReceipt={false}
         inspectEvidence={vi.fn()}
@@ -132,8 +118,8 @@ describe("PresentationFooter", () => {
     const utility = footer.querySelector<HTMLElement>(".presentation-footer__utility");
     expect(utility).not.toBeNull();
     if (utility === null) throw new Error("presentation utility area is missing");
-    expect(within(utility).getByRole("complementary", { name: "Presentation pairing" }))
-      .toHaveAttribute("data-role", "audience");
+    expect(within(utility).queryByRole("complementary", { name: "Presentation pairing" }))
+      .not.toBeInTheDocument();
     expect(screen.getAllByTestId("presentation-demo-rail")).toHaveLength(1);
   });
 });

@@ -178,6 +178,8 @@ describe("PresentationRoute", () => {
 
     const panel = screen.getByRole("complementary", { name: "Presentation pairing" });
     expect(panel).toHaveAttribute("data-role", "audience");
+    expect(panel.closest(".presentation-stage__sync")).not.toBeNull();
+    expect(panel.closest(".presentation-footer")).toBeNull();
     expect(within(panel).getByRole("button", { name: "Pair presentation" })).toBeInTheDocument();
   });
 

@@ -1077,6 +1077,12 @@
 .presentation-stage__chat { grid-area: chat; }
 .presentation-stage__primary { grid-area: primary; }
 
+/* The audience pairing control floats above the deck instead of competing with demo footer controls. */
+.presentation-stage__sync .presentation-pairing {
+  top: 1rem;
+  bottom: auto;
+}
+
 .presentation-footer {
   grid-area: footer;
   min-height: var(--presentation-footer-height);
@@ -1225,6 +1231,10 @@
 }
 
 @media (max-width: 640px) {
+  .presentation-stage__sync .presentation-pairing {
+    top: 0.5rem;
+  }
+
   .presentation-footer__utility {
     flex: 0 1 auto;
     max-width: 52%;

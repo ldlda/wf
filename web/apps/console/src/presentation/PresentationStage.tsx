@@ -12,6 +12,7 @@ import type { PresentationState } from "./presentation-state.js";
 import { compositionForState } from "./presentation-state.js";
 import type { PresentationTargetHealth } from "./presentation-target-status.js";
 import type { PresentationSyncController } from "./sync/presentation-sync-state.js";
+import { PresentationPairingPanel } from "./sync/PresentationPairingPanel.js";
 import { demoChromeFor } from "./presentation-demo-chrome.js";
 import type { DemoTimelineController } from "../demo/useDemoTimeline.js";
 import { findScene, type MainLocation } from "./storyboard.js";
@@ -89,6 +90,9 @@ export const PresentationStage = ({
           data-evidence-presentation={composition.evidencePresentation}
           data-scene-view={activeSceneView}
         >
+          <div className="presentation-stage__sync">
+            <PresentationPairingPanel role="audience" controller={syncController} />
+          </div>
           <aside className="presentation-stage__chat" aria-label="agent chat region">
             <OperatorChat state={state} messages={messages} timelineAgent={timelineAgent} onApprove={onApprove} onRequestRevision={onRequestRevision} />
           </aside>
@@ -129,7 +133,6 @@ export const PresentationStage = ({
               retryHealth={retryHealth}
               showEvidenceReceipt={composition.evidencePresentation !== "hidden"}
               inspectEvidence={openEvidence}
-              syncController={syncController}
             />
           )}
           <EvidenceInspector
