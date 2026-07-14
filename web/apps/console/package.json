@@ -3,13 +3,17 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "pnpm --filter @lda/presentation-sync build",
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
+    "prebuild": "pnpm --filter @lda/presentation-sync build",
     "build": "tsc -b && vite build",
     "test": "vitest run",
+    "pretypecheck": "pnpm --filter @lda/presentation-sync build",
     "typecheck": "tsc -b --pretty false",
     "preview": "vite preview --host 127.0.0.1"
   },
   "dependencies": {
+    "@lda/presentation-sync": "workspace:*",
     "@assistant-ui/react": "^0.14.26",
     "@dagrejs/dagre": "3.0.0",
     "@fontsource-variable/newsreader": "5.2.10",

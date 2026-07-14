@@ -35,6 +35,9 @@ importers:
       '@fontsource/ibm-plex-mono':
         specifier: 5.2.7
         version: 5.2.7
+      '@lda/presentation-sync':
+        specifier: workspace:*
+        version: link:../../packages/presentation-sync
       '@use-gesture/react':
         specifier: ^10.3.1
         version: 10.3.1(react@19.2.7)
