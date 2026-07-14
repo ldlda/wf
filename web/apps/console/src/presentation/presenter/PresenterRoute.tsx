@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { findDiscussionBranch } from "../storyboard.js";
+import { usePresentationSync } from "../sync/usePresentationSync.js";
 import { PresenterNote } from "./PresenterNote.js";
 import { PresenterNavigationBar } from "./PresenterNavigationBar.js";
 import { PresenterShell } from "./PresenterShell.js";
@@ -19,6 +20,14 @@ const moveFromCurrentHash = (direction: "next" | "previous") => {
 export const PresenterRoute = () => {
   const [navigation, setNavigation] = useState(readHash);
   const [covered, setCovered] = useState<ReadonlySet<string>>(() => new Set());
+  const presentationSync = usePresentationSync({
+    role: "presenter",
+    currentHash: window.location.hash || "#scene/thesis/title",
+    applyRemoteHash: (hash) => {
+      // Hash assignment keeps the existing parser as the single navigation path.
+      if (window.location.hash !== hash) window.location.hash = hash;
+    },
+  });
 
   useEffect(() => {
     const syncHash = () => setNavigation(readHash());
@@ -62,6 +71,7 @@ export const PresenterRoute = () => {
           total={presenterNotes.length}
           previous={navigation.previous}
           next={navigation.next}
+          syncController={presentationSync}
         />
       )}
       {navigation.note && (

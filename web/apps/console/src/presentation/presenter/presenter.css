@@ -37,9 +37,9 @@
 .presenter-sidebar__qna a[aria-current="page"] { color: #155b49; font-weight: 700; }
 
 .presenter-route__reader { min-width: 0; padding: 1.25rem clamp(1.5rem, 5vw, 6rem) 5rem; touch-action: pan-y; }
-.presenter-navigation { max-width: 72ch; min-height: 2.5rem; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 1rem; margin: 0 auto 2rem; border-bottom: 1px solid #d7d5d0; color: #67655f; font: 0.78rem "IBM Plex Mono", monospace; }
+.presenter-navigation { max-width: 72ch; min-height: 2.5rem; display: grid; grid-template-columns: 1fr auto 1fr auto; align-items: center; gap: 1rem; margin: 0 auto 2rem; border-bottom: 1px solid #d7d5d0; color: #67655f; font: 0.78rem "IBM Plex Mono", monospace; }
 .presenter-navigation a { color: #155b49; font-weight: 650; text-decoration: none; }
-.presenter-navigation a:last-child, .presenter-navigation > span:last-child { text-align: right; }
+.presenter-navigation > a:nth-child(3), .presenter-navigation > span:nth-child(3) { text-align: right; }
 .presenter-navigation [aria-disabled="true"] { opacity: 0.35; }
 .presenter-note, .presenter-qna { max-width: 72ch; margin: 0 auto; }
 .presenter-note__header { display: flex; justify-content: space-between; gap: 2rem; padding-bottom: 1rem; border-bottom: 2px solid #20201e; }
@@ -77,7 +77,26 @@
   .presenter-route { grid-template-columns: 1fr; }
   .presenter-sidebar { position: static; height: auto; max-height: 15rem; border-right: 0; border-bottom: 1px solid #d7d5d0; }
   .presenter-sidebar ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .presenter-navigation { position: sticky; top: 0; z-index: 3; margin-inline: -0.5rem; padding-inline: 0.5rem; background: #f7f7f5; }
+  .presenter-navigation {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    isolation: isolate;
+    padding-inline: 0.5rem;
+    border-bottom: 0;
+  }
+  /* Extend the sticky surface without replacing the nav's centered auto margins. */
+  .presenter-navigation::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 50%;
+    z-index: -1;
+    width: 100vw;
+    transform: translateX(-50%);
+    border-bottom: 1px solid #d7d5d0;
+    background: #f7f7f5;
+    pointer-events: none;
+  }
   .presenter-note__goal p { font-size: 1.42rem; }
 }
 
