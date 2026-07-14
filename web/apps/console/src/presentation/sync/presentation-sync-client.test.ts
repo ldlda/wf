@@ -235,6 +235,22 @@ describe("presentation sync client", () => {
     expect(sockets).toHaveLength(1);
   });
 
+  it("refuses to end while the socket is reconnecting", () => {
+    vi.useFakeTimers();
+    const storage = new MemoryStorage();
+    const sockets: FakeSocket[] = [];
+    const client = createPresentationSyncClient(makeDependencies(storage, sockets));
+
+    client.connect(grant, () => {});
+    sockets[0]?.open();
+    sockets[0]?.close(1006, "network");
+
+    expect(client.end()).toBe(false);
+    expect(storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).not.toBeNull();
+    vi.advanceTimersByTime(500);
+    expect(sockets).toHaveLength(2);
+  });
+
   it("closes socket errors without using reserved close code 1006", () => {
     const storage = new MemoryStorage();
     const sockets: FakeSocket[] = [];

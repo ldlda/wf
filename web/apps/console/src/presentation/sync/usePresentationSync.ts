@@ -157,6 +157,8 @@ const createController = (options: {
   let currentGrant: SessionGrant | null = null;
   let lastOperation: LastOperation = null;
   let pendingJoin: PendingJoin | null = null;
+  let pendingWaitingHash: string | null = null;
+  let waitingPublicationId: string | null = null;
   const listeners = new Set<() => void>();
   const pendingMessageIds = new Set<string>();
 
@@ -187,6 +189,23 @@ const createController = (options: {
     options.applyRemoteHash(snapshot.hash);
   };
 
+  const publishNow = (hash: string): string | null => {
+    if (
+      state.kind !== "waiting" &&
+      state.kind !== "connected"
+    ) {
+      return null;
+    }
+    const messageId = options.client.publish(hash, state.snapshot.revision);
+    if (messageId !== null) pendingMessageIds.add(messageId);
+    return messageId;
+  };
+
+  const flushWaitingPublication = (): void => {
+    if (pendingWaitingHash === null || waitingPublicationId !== null) return;
+    waitingPublicationId = publishNow(pendingWaitingHash);
+  };
+
   const handleClientEvent = (event: Parameters<PresentationSyncClient["connect"]>[1] extends (
     event: infer Event,
   ) => void
@@ -196,8 +215,14 @@ const createController = (options: {
 
     switch (event.type) {
       case "open":
+        if (state.kind === "waiting") flushWaitingPublication();
         return;
       case "reconnecting":
+        // Navigation during reconnect is deliberately not queued: the next
+        // server snapshot remains authoritative for convergence.
+        pendingWaitingHash = null;
+        waitingPublicationId = null;
+        pendingMessageIds.clear();
         dispatch({ type: "socket_reconnecting" });
         return;
       case "ended":
@@ -220,14 +245,35 @@ const createController = (options: {
           const isOwnPublish =
             message.originatingMessageId !== null &&
             pendingMessageIds.delete(message.originatingMessageId);
-          if (!isOwnPublish) applySnapshot(message.snapshot);
           dispatch({ type: "location_snapshot", snapshot: message.snapshot });
+          if (isOwnPublish) {
+            if (message.originatingMessageId === waitingPublicationId) {
+              waitingPublicationId = null;
+              if (pendingWaitingHash === message.snapshot.hash) {
+                pendingWaitingHash = null;
+              } else {
+                flushWaitingPublication();
+              }
+            }
+            return;
+          }
+          // The room's creation snapshot may arrive after the creator has
+          // published waiting navigation. Keep that local hash authoritative
+          // until the server accepts or rejects its publication.
+          if (pendingWaitingHash === null) applySnapshot(message.snapshot);
           return;
         }
         if (message.type === "location.rejected") {
           pendingMessageIds.delete(message.messageId);
-          applySnapshot(message.current);
           dispatch({ type: "location_rejected", snapshot: message.current });
+          if (message.messageId === waitingPublicationId) {
+            waitingPublicationId = null;
+            if (pendingWaitingHash !== null) {
+              flushWaitingPublication();
+              return;
+            }
+          }
+          applySnapshot(message.current);
           return;
         }
         if (message.type === "presence.snapshot") {
@@ -253,10 +299,13 @@ const createController = (options: {
   };
 
   const publish = (hash: string): string | null => {
-    if (state.kind !== "connected") return null;
-    const messageId = options.client.publish(hash, state.snapshot.revision);
-    if (messageId !== null) pendingMessageIds.add(messageId);
-    return messageId;
+    if (state.kind !== "waiting" && state.kind !== "connected") return null;
+    if (state.kind === "connected" && pendingWaitingHash === null) {
+      return publishNow(hash);
+    }
+    pendingWaitingHash = hash;
+    flushWaitingPublication();
+    return waitingPublicationId;
   };
 
   const restoreSavedGrant = (): SessionGrant | null =>
@@ -271,6 +320,8 @@ const createController = (options: {
     const generation = beginOperation();
     lastOperation = { kind: "create" };
     currentGrant = null;
+    pendingWaitingHash = null;
+    waitingPublicationId = null;
     pendingMessageIds.clear();
     options.client.leave();
     dispatch({ type: "start_create" });
@@ -302,6 +353,8 @@ const createController = (options: {
       reusePending && pendingJoin?.code === normalizedCode ? pendingJoin : null;
     lastOperation = { kind: "join", code: normalizedCode };
     currentGrant = null;
+    pendingWaitingHash = null;
+    waitingPublicationId = null;
     pendingMessageIds.clear();
     options.client.leave();
     dispatch({ type: "start_join", code: normalizedCode });
@@ -344,16 +397,20 @@ const createController = (options: {
   const leaveSession = (): void => {
     beginOperation();
     currentGrant = null;
+    pendingWaitingHash = null;
+    waitingPublicationId = null;
     pendingMessageIds.clear();
     options.client.leave();
     dispatch({ type: "left" });
   };
 
   const endSession = (): void => {
+    if (state.kind !== "connected" || !options.client.end()) return;
     beginOperation();
     currentGrant = null;
+    pendingWaitingHash = null;
+    waitingPublicationId = null;
     pendingMessageIds.clear();
-    options.client.end();
     dispatch({ type: "session_ended", reason: "presenter_ended" });
   };
 
@@ -490,7 +547,7 @@ export const usePresentationSync = ({
 
     if (lastObservedHashRef.current === currentHash) return;
     lastObservedHashRef.current = currentHash;
-    if (state.kind !== "connected") return;
+    if (state.kind !== "waiting" && state.kind !== "connected") return;
 
     controller.publish(currentHash);
   }, [controller, currentHash, state.kind]);

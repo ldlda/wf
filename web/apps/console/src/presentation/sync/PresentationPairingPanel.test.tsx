@@ -73,7 +73,7 @@ describe("PresentationPairingPanel", () => {
   });
 
   it("gives expanded state one root surface owner without a double-card contract", () => {
-    renderPanel("presenter", connectedState());
+    renderPanel("presenter", connectedState("waiting"));
 
     const panel = screen.getByRole("complementary", {
       name: "Presentation pairing",
@@ -143,7 +143,8 @@ describe("PresentationPairingPanel", () => {
 
   it("uses concise connected and reconnecting status copy", () => {
     const { rerender } = renderPanel("audience", connectedState("connected"));
-    expect(screen.getByRole("status", { name: "Connected" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pair presentation Connected/ }))
+      .toBeInTheDocument();
 
     rerender(
       <PresentationPairingPanel
@@ -151,7 +152,67 @@ describe("PresentationPairingPanel", () => {
         controller={controllerFor(connectedState("reconnecting"))}
       />,
     );
-    expect(screen.getByRole("status", { name: "Reconnecting" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pair presentation Reconnecting/ }))
+      .toBeInTheDocument();
+  });
+
+  it("collapses on connection and shows peer presence in the compact trigger", () => {
+    const { rerender } = renderPanel("presenter", connectedState("waiting"));
+    expect(screen.getByRole("button", { name: /Pair presentation/ }))
+      .toHaveAttribute("aria-expanded", "true");
+
+    rerender(
+      <PresentationPairingPanel
+        role="presenter"
+        controller={controllerFor(connectedState("connected"))}
+      />,
+    );
+
+    const trigger = screen.getByRole("button", {
+      name: /Pair presentation Connected 1 presenter · 2 audiences/,
+    });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByLabelText("Pairing QR code")).toBeNull();
+  });
+
+  it("allows the compact connected panel to be reopened manually", async () => {
+    const user = userEvent.setup();
+    renderPanel("presenter", connectedState());
+
+    const trigger = screen.getByRole("button", { name: /Pair presentation Connected/ });
+    expect(trigger).toHaveAttribute("aria-expanded", "false");
+    await user.click(trigger);
+
+    expect(trigger).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByLabelText("Pairing QR code")).toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      "failed",
+      { kind: "failed", message: "Socket unavailable", retryable: true } as const,
+      "Socket unavailable",
+    ],
+    [
+      "ended",
+      { kind: "ended", reason: "presenter_ended" } as const,
+      "The presenter ended this session.",
+    ],
+  ])("reopens %s details after connected collapse", (_kind, nextState, detail) => {
+    const { rerender } = renderPanel("presenter", connectedState());
+    expect(screen.getByRole("button", { name: /Pair presentation/ }))
+      .toHaveAttribute("aria-expanded", "false");
+
+    rerender(
+      <PresentationPairingPanel
+        role="presenter"
+        controller={controllerFor(nextState)}
+      />,
+    );
+
+    expect(screen.getByText(detail)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Pair presentation/ }))
+      .toHaveAttribute("aria-expanded", "true");
   });
 
   it("offers retry for a retryable failure", async () => {
@@ -180,6 +241,8 @@ describe("PresentationPairingPanel", () => {
     const user = userEvent.setup();
     const { controller } = renderPanel("presenter", connectedState());
 
+    await user.click(screen.getByRole("button", { name: /Pair presentation/ }));
+
     await user.click(screen.getByRole("button", { name: "End presentation" }));
     expect(screen.getByText("End presentation for everyone?")).toBeInTheDocument();
     expect(controller.endSession).not.toHaveBeenCalled();
@@ -190,6 +253,12 @@ describe("PresentationPairingPanel", () => {
 
   it("does not expose an end action to the audience", () => {
     renderPanel("audience", connectedState());
+
+    expect(screen.queryByRole("button", { name: /End presentation/ })).toBeNull();
+  });
+
+  it("does not expose presenter termination while reconnecting", () => {
+    renderPanel("presenter", connectedState("reconnecting"));
 
     expect(screen.queryByRole("button", { name: /End presentation/ })).toBeNull();
   });

@@ -136,6 +136,7 @@ describe("PresenterRoute", () => {
     mockedUsePresentationSync.mockReturnValue(controller);
     const { rerender } = render(<PresenterRoute />);
 
+    await userEvent.click(screen.getByRole("button", { name: /Pair presentation/ }));
     await userEvent.click(screen.getByRole("button", { name: "End presentation" }));
     await userEvent.click(screen.getByRole("button", { name: "End presentation now" }));
     expect(controller.endSession).toHaveBeenCalledOnce();

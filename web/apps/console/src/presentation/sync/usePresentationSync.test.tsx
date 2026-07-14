@@ -171,6 +171,86 @@ describe("usePresentationSync", () => {
     });
   });
 
+  it("publishes waiting navigation before a late join converges", async () => {
+    const creator = makeDependencies();
+    creator.fetch.mockImplementation(async () => resolvedGrant());
+    const applyCreatorHash = vi.fn();
+    const creatorView = renderHook(
+      ({ hash }) =>
+        usePresentationSync({
+          role: "presenter",
+          currentHash: hash,
+          applyRemoteHash: applyCreatorHash,
+          dependencies: creator.dependencies,
+        }),
+      { initialProps: { hash: "#scene/thesis/title" } },
+    );
+
+    await act(async () => {
+      await creatorView.result.current.startSession();
+    });
+    expect(creatorView.result.current.state.kind).toBe("waiting");
+
+    creatorView.rerender({ hash: "#scene/problem/direct-actions" });
+    expect(creator.sockets[0]?.sent).toHaveLength(0);
+
+    await act(async () => {
+      creator.sockets[0]?.open();
+    });
+    const publication = JSON.parse(creator.sockets[0]?.sent[0] ?? "{}");
+    expect(publication).toMatchObject({
+      type: "location.publish",
+      hash: "#scene/problem/direct-actions",
+      baseRevision: 0,
+    });
+
+    await act(async () => {
+      creator.sockets[0]?.serverMessage(snapshot("#scene/thesis/title", 0));
+    });
+    expect(applyCreatorHash).not.toHaveBeenCalled();
+
+    await act(async () => {
+      creator.sockets[0]?.serverMessage({
+        ...snapshot("#scene/problem/direct-actions", 1),
+        originatingMessageId: publication.messageId,
+      });
+    });
+
+    const lateGrant = {
+      ...grant,
+      connectionToken: "token-2",
+      snapshot: { hash: "#scene/problem/direct-actions", revision: 1 },
+    };
+    const lateJoin = makeDependencies();
+    lateJoin.fetch.mockImplementation(async () =>
+      new Response(JSON.stringify(lateGrant), { status: 200 }),
+    );
+    const applyLateHash = vi.fn();
+    const joinedView = renderHook(() =>
+      usePresentationSync({
+        role: "audience",
+        currentHash: "#scene/thesis/title",
+        applyRemoteHash: applyLateHash,
+        dependencies: lateJoin.dependencies,
+      }),
+    );
+
+    await act(async () => {
+      await joinedView.result.current.joinSession("ABC123");
+      lateJoin.sockets[0]?.open();
+      lateJoin.sockets[0]?.serverMessage(
+        snapshot("#scene/problem/direct-actions", 1),
+      );
+    });
+
+    expect(applyLateHash).toHaveBeenCalledWith(
+      "#scene/problem/direct-actions",
+    );
+    expect(joinedView.result.current.state).toMatchObject({
+      snapshot: { hash: "#scene/problem/direct-actions", revision: 1 },
+    });
+  });
+
   it("uses committed props for stable actions and remote callbacks", async () => {
     const { dependencies, sockets, fetch } = makeDependencies();
     fetch.mockImplementation(async () => resolvedGrant());
@@ -331,7 +411,7 @@ describe("usePresentationSync", () => {
     );
 
     await connectSession(result, sockets);
-    sockets[0]?.close(1006, "network");
+    act(() => sockets[0]?.close(1006, "network"));
     rerender({ hash: "#scene/problem/direct-actions" });
     expect(sockets[0]?.sent).toHaveLength(0);
 
@@ -349,6 +429,29 @@ describe("usePresentationSync", () => {
     expect(sockets[1]?.sent.filter((message) =>
       JSON.parse(message).type === "location.publish",
     )).toHaveLength(0);
+  });
+
+  it("does not report presenter termination while reconnecting", async () => {
+    vi.useFakeTimers();
+    const { dependencies, sockets, storage, fetch } = makeDependencies();
+    fetch.mockImplementation(async () => resolvedGrant());
+    const { result } = renderHook(() =>
+      usePresentationSync({
+        role: "presenter",
+        currentHash: "#scene/thesis/title",
+        applyRemoteHash: vi.fn(),
+        dependencies,
+      }),
+    );
+
+    await connectSession(result, sockets);
+    act(() => sockets[0]?.close(1006, "network"));
+    expect(result.current.state.kind).toBe("reconnecting");
+
+    act(() => result.current.endSession());
+
+    expect(result.current.state.kind).toBe("reconnecting");
+    expect(storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).not.toBeNull();
   });
 
   it("keeps local navigation standalone when session creation fails", async () => {
@@ -524,8 +627,8 @@ describe("usePresentationSync", () => {
     expect(storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).not.toBeNull();
   });
 
-  it("ignores a deferred result after leave, end, or unmount", async () => {
-    const makeDeferredHook = (role: "presenter" | "audience" = "presenter") => {
+  it("ignores a deferred result after leave or unmount", async () => {
+    const makeDeferredHook = () => {
       const { dependencies, sockets, storage, fetch } = makeDependencies();
       let resolvePending: ((response: Response) => void) | null = null;
       fetch.mockImplementation(
@@ -533,7 +636,7 @@ describe("usePresentationSync", () => {
       );
       const rendered = renderHook(() =>
         usePresentationSync({
-          role,
+          role: "presenter",
           currentHash: "#scene/thesis/title",
           applyRemoteHash: () => {},
           dependencies,
@@ -555,18 +658,6 @@ describe("usePresentationSync", () => {
     expect(left.storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).toBeNull();
     expect(left.result.current.state).toEqual({ kind: "ended", reason: "left" });
     left.unmount();
-
-    const ended = makeDeferredHook("audience");
-    await act(async () => { void ended.result.current.joinSession("AAA111"); });
-    await act(async () => { ended.result.current.endSession(); });
-    await act(async () => { ended.release(resolvedGrant()); await settleAsync(); });
-    expect(ended.sockets).toHaveLength(0);
-    expect(ended.storage.getItem(PRESENTATION_SYNC_GRANT_STORAGE_KEY)).toBeNull();
-    expect(ended.result.current.state).toEqual({
-      kind: "ended",
-      reason: "presenter_ended",
-    });
-    ended.unmount();
 
     const unmounted = makeDeferredHook();
     await act(async () => { void unmounted.result.current.startSession(); });

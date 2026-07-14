@@ -77,7 +77,9 @@ export const PresentationPairingPanel = ({
   controller,
 }: PresentationPairingPanelProps) => {
   const { state } = controller;
-  const [isOpen, setIsOpen] = useState(() => state.kind !== "standalone");
+  const [isOpen, setIsOpen] = useState(
+    () => state.kind !== "standalone" && state.kind !== "connected",
+  );
   const [code, setCode] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
   const [isConfirmingEnd, setIsConfirmingEnd] = useState(false);
@@ -87,10 +89,29 @@ export const PresentationPairingPanel = ({
   const inputId = `${idPrefix}-code`;
   const inputCode = state.kind === "joining" ? state.code : code;
   const normalizedInputCode = normalizeJoinCode(inputCode);
+  const compactPresence = state.kind === "connected"
+    ? `${pluralize(state.presence.presenters, "presenter")} · ${pluralize(state.presence.audience, "audience")}`
+    : null;
+  const triggerLabel = ["Pair presentation", status, compactPresence]
+    .filter((part) => part !== null)
+    .join(" ");
 
-  // Lifecycle and error states reopen after transitions so recovery and end details remain reachable despite manual collapse.
+  // Connection gets out of the deck's way once. Terminal details reopen, while
+  // same-state rerenders preserve a user's manual toggle choice.
   useEffect(() => {
-    if (state.kind !== "standalone") setIsOpen(true);
+    if (state.kind === "connected") {
+      setIsOpen(false);
+      return;
+    }
+    if (
+      state.kind === "creating" ||
+      state.kind === "joining" ||
+      state.kind === "waiting" ||
+      state.kind === "failed" ||
+      state.kind === "ended"
+    ) {
+      setIsOpen(true);
+    }
   }, [state.kind]);
 
   const openPanel = (): void => setIsOpen((open) => !open);
@@ -138,10 +159,15 @@ export const PresentationPairingPanel = ({
         type="button"
         aria-controls={panelId}
         aria-expanded={isOpen}
+        aria-label={triggerLabel}
         onClick={openPanel}
       >
         <span>Pair presentation</span>
-        {status && <span className="presentation-pairing__trigger-status">{status}</span>}
+        {status && (
+          <span className="presentation-pairing__trigger-status">
+            {compactPresence === null ? status : `${status} · ${compactPresence}`}
+          </span>
+        )}
       </button>
 
       {isOpen && (
@@ -235,7 +261,7 @@ export const PresentationPairingPanel = ({
                 <span className="presentation-pairing__copy-status" role="status" aria-live="polite">
                   {copyStatus}
                 </span>
-                {role === "presenter" && (
+                {role === "presenter" && state.kind === "connected" && (
                   <div className="presentation-pairing__end">
                     {isConfirmingEnd ? (
                       <div className="presentation-pairing__confirmation" role="alertdialog" aria-label="End presentation confirmation">

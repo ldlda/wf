@@ -302,14 +302,14 @@ export const createPresentationSyncClient = (
     return messageId;
   };
 
-  const end = (): void => {
+  const end = (): boolean => {
+    if (socket === null || !websocketIsOpen(socket) || !active) return false;
     active = false;
     clearReconnectTimer();
-    if (socket !== null && websocketIsOpen(socket)) {
-      socket.send(JSON.stringify({ type: "session.end" }));
-    }
+    socket.send(JSON.stringify({ type: "session.end" }));
     clearSavedGrant();
     closeSocket();
+    return true;
   };
 
   const leave = (): void => {

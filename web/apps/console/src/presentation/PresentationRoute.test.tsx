@@ -126,7 +126,9 @@ const connectAudience = async (
     socket.serverMessage(locationSnapshot(initialHash, 0));
     socket.serverMessage(presenceSnapshot);
   });
-  await waitFor(() => expect(screen.getByRole("status", { name: "Connected" })).toBeInTheDocument());
+  await waitFor(() => expect(screen.getByRole("button", {
+    name: /Pair presentation Connected 1 presenter · 1 audience/,
+  })).toHaveAttribute("aria-expanded", "false"));
   return socket;
 };
 
