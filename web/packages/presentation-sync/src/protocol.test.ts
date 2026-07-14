@@ -7,6 +7,7 @@ import {
   decodeCreateSessionRequest,
   decodeJoinSessionRequest,
   decodeServerSyncMessage,
+  decodeSessionGrant,
   isCanonicalPresentationHash,
   normalizeJoinCode,
 } from "./protocol.js";
@@ -236,5 +237,69 @@ describe("presentation sync protocol", () => {
       ok: false,
       error: "invalid_message",
     });
+  });
+
+  it("decodes a valid session grant", () => {
+    const grant = {
+      sessionId: "session-1",
+      code: "ABCD7X",
+      connectionToken: "token-1",
+      websocketPath: "/api/presentation-sync/ws",
+      snapshot: { hash: "#scene/thesis/title", revision: 0 },
+    };
+
+    expect(decodeSessionGrant(JSON.stringify(grant))).toEqual({
+      ok: true,
+      value: grant,
+    });
+  });
+
+  it.each([
+    {
+      snapshot: { hash: "#unknown/title", revision: 0 },
+    },
+    {
+      snapshot: { hash: "#scene/thesis/title", revision: -1 },
+    },
+    {
+      connectionToken: "",
+    },
+    {
+      connectionToken: "x".repeat(129),
+    },
+    {
+      websocketPath: "/api/presentation-sync/other",
+    },
+  ])("rejects invalid session grant field %#", (override) => {
+    const grant = {
+      sessionId: "session-1",
+      code: "ABCD7X",
+      connectionToken: "token-1",
+      websocketPath: "/api/presentation-sync/ws",
+      snapshot: { hash: "#scene/thesis/title", revision: 0 },
+      ...override,
+    };
+
+    expect(decodeSessionGrant(JSON.stringify(grant))).toEqual({
+      ok: false,
+      error: "invalid_message",
+    });
+  });
+
+  it("returns stable errors for malformed session grants", () => {
+    expect(decodeSessionGrant("not json")).toEqual({
+      ok: false,
+      error: "invalid_json",
+    });
+    expect(
+      decodeSessionGrant(
+        JSON.stringify({
+          sessionId: "session-1",
+          code: "ABCD7X",
+          connectionToken: "token-1",
+          websocketPath: "/api/presentation-sync/ws",
+        }),
+      ),
+    ).toEqual({ ok: false, error: "invalid_message" });
   });
 });

@@ -160,6 +160,21 @@ const JoinSessionRequestSchema = Schema.Struct({
   ),
 });
 
+const SessionCredentialSchema = Schema.String.pipe(
+  Schema.minLength(1),
+  Schema.maxLength(MAX_MESSAGE_ID_LENGTH),
+);
+const SessionCodeSchema = Schema.String.pipe(
+  Schema.filter((value) => value.length === JOIN_CODE_LENGTH),
+);
+const SessionGrantSchema = Schema.Struct({
+  sessionId: SessionCredentialSchema,
+  code: SessionCodeSchema,
+  connectionToken: SessionCredentialSchema,
+  websocketPath: Schema.Literal("/api/presentation-sync/ws"),
+  snapshot: SnapshotSchema,
+});
+
 const parseJson = (input: string): DecodeResult<unknown> => {
   // Measure UTF-8 bytes before parsing so websocket limits match transport size.
   if (new TextEncoder().encode(input).byteLength > MAX_SYNC_MESSAGE_BYTES) {
@@ -235,3 +250,7 @@ export const decodeJoinSessionRequest = (
     return { ok: false, error: "invalid_message" };
   }
 };
+
+export const decodeSessionGrant = (
+  input: string,
+): DecodeResult<SessionGrant> => decodeSchema(input, SessionGrantSchema);

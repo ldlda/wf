@@ -6,6 +6,7 @@ export {
   decodeCreateSessionRequest,
   decodeJoinSessionRequest,
   decodeServerSyncMessage,
+  decodeSessionGrant,
   isCanonicalPresentationHash,
   normalizeJoinCode,
 } from "./protocol.js";
