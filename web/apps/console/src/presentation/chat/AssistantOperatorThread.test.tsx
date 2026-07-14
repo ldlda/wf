@@ -232,7 +232,7 @@ describe("AssistantOperatorThread", () => {
     }
   });
 
-  it("can show the latest response in a static comparison transcript", async () => {
+  it("can show the latest response even when an authoring group is synchronized", async () => {
     const setScrollTop = vi.fn();
     const descriptors = {
       scrollTop: Object.getOwnPropertyDescriptor(HTMLDivElement.prototype, "scrollTop"),
@@ -246,7 +246,14 @@ describe("AssistantOperatorThread", () => {
         scrollHeight: { configurable: true, get: () => 240 },
         clientHeight: { configurable: true, get: () => 80 },
       });
-      render(<AssistantOperatorThread mode="dock" messages={[]} scrollMode="end" />);
+      render(
+        <AssistantOperatorThread
+          mode="dock"
+          messages={[]}
+          activeToolGroupId="authoring-deployment"
+          scrollMode="end"
+        />,
+      );
 
       await waitFor(() => expect(setScrollTop).toHaveBeenCalledWith(160));
     } finally {

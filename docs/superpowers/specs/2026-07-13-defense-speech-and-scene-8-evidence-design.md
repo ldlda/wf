@@ -92,7 +92,8 @@ execution goes next and recommends routing each missing outcome, using
 The reviewed repair is:
 
 ```text
-wf draft set-route lda_report_workflow \
+uv run wf --url http://127.0.0.1:8765/rpc \
+  draft set-route lda_report_workflow \
   --revision 3 \
   --step analyze \
   --outcome ok \

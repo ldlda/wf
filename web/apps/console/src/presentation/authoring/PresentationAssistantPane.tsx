@@ -58,7 +58,10 @@ export const PresentationAssistantPane = ({
   };
   const { submit, handleKeyDown } = usePreparedComposerSubmit(
     canSubmit,
-    () => onSubmit(draft),
+    () => {
+      onSubmit(draft);
+      setDraft("");
+    },
   );
 
   return (
@@ -74,7 +77,7 @@ export const PresentationAssistantPane = ({
         <h2>Authoring assistant</h2>
         <p>Current phase: {phaseLabels[phase]}</p>
         <p className="presentation-assistant-pane__disclosure">
-          Prepared replay only. No live actions or RPC calls.
+          Prepared assistant transcript. The final run request uses the configured demo target.
         </p>
       </header>
       <div className="presentation-assistant-pane__conversation">
@@ -83,6 +86,7 @@ export const PresentationAssistantPane = ({
           activePhase={phase}
           surface="stage"
           requestOverrides={submittedOverrides}
+          runRequested={runRequested}
         />
       </div>
       <form className="presentation-assistant-pane__composer" onSubmit={submit}>
@@ -106,7 +110,7 @@ export const PresentationAssistantPane = ({
         </p>
         {runRequested !== null ? (
           <p role="status" className="presentation-assistant-pane__run-status">
-            Run request prepared for the next execution slice.
+            Prepared run receipt added. Continue when you are ready.
           </p>
         ) : null}
       </form>

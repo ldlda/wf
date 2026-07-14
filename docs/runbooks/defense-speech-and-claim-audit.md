@@ -152,7 +152,7 @@ Say:
 >
 > Run is one recorded execution, including its status, output, and trace.
 
-Keep Scene 5 conceptual. Scene 9 applies this vocabulary to the prepared example. Also note that raw plans can create artifacts without passing through Draft ([lines 629-660](../thesis/system-design-implementation.md#workflow-lifecycle)).
+Keep Scene 5 conceptual. Scene 8 applies this vocabulary to the prepared example. Also note that raw plans can create artifacts without passing through Draft ([lines 629-660](../thesis/system-design-implementation.md#workflow-lifecycle)).
 
 ### Scene 6: Zoom through the implemented architecture
 
@@ -178,13 +178,13 @@ Keep Scene 5 conceptual. Scene 9 applies this vocabulary to the prepared example
 
 Say:
 
-> This is how those concepts are organized in the implementation.
+> Now I will show how those concepts map to the implementation.
 >
-> Humans and agents use the same public workflow operations.
+> At the top, humans and agents use the same public workflow operations.
 >
-> The Workflow API is the front door. It exposes lifecycle operations without exposing runtime internals.
+> Those operations enter through the Workflow API, the public boundary that keeps clients out of runtime internals.
 >
-> Behind it, the workflow server brings together stored records, available capabilities, and the execution core.
+> Behind that boundary, the workflow server brings together stored records, available capabilities, and the execution core.
 
 The optional NodeUse deep dive remains available through the architecture focus route and Q&A; it is not part of the timed forward sequence.
 
@@ -290,7 +290,7 @@ If live execution has not been completed during rehearsal, say: “The operation
 
 Say:
 
-> Execution pauses at a typed issue_review interrupt exposing request data, allowed outcomes, request schema, and resume schema. The operator chooses submitted or revision-requested; this is a typed interrupt and resume contract, not a production approval gate, role system, or policy engine.
+> Execution pauses at a typed issue_review interrupt exposing request data, allowed outcomes, request schema, and resume schema. The operator can Submit or Request revision. Both continue through declared workflow branches; this typed resume contract is not a production approval system.
 
 Do not call the negative path “deny without resuming.” Both outcomes resume execution through different workflow branches. Do not imply that the prepared revision recording preserves the submitted branch’s run identity.
 
@@ -314,9 +314,7 @@ Do not call the negative path “deny without resuming.” Both outcomes resume 
 
 Say:
 
-> On the submitted path, workflow.runs.resume continues the recorded interrupted Run. The workflow creates the report and issue-board changes, then records terminal output. Trace frames and protocol evidence remain inspectable; this is declared-boundary resumability, not arbitrary crash recovery or exactly-once execution. The revision replay is a separate prepared recording.
-
-For the submitted replay, the same run ID is demonstrated. The prepared revision replay currently uses `run_recorded_lda_report_revision`; describe it as a separate prepared branch recording.
+> On the submitted path, workflow.runs.resume continues the recorded interrupted Run. The workflow creates the report and issue-board changes, then records terminal output. Trace frames and protocol evidence remain inspectable; this is declared-boundary resumability, not arbitrary crash recovery or exactly-once execution.
 
 ### Scene 12: Explain what the evaluation proves
 
@@ -334,13 +332,13 @@ For the submitted replay, the same run ID is demonstrated. The prepared revision
 
 **Beat:** `evaluation/findings`
 **Goal:** State what the evaluation supports and what it cannot prove.
-**Anchor terms:** longitudinal evidence; not a benchmark
+**Anchor terms:** product evolved; not a benchmark
 
 Say:
 
-> The evaluation combines conformance tests, deterministic case studies, and a manually audited external-agent campaign: 36 trials across two challenges, two hosted models, three instruction profiles, and three waves, with three attempts per cell. The author audit classified 27 trials as clean product-path passes, eight as invalid samples, and one as a failure. Invalid samples included contamination such as reading implementation files, prior artifacts, adjacent attempts, or evaluator state. Because prompts, product snapshots, and hosted conditions changed across waves, these results are longitudinal engineering evidence. They expose authoring and diagnostic gaps, not a benchmark of model success, token reduction, retry reduction, or superiority.
+> The evaluation combines conformance tests, deterministic case studies, and a manually audited external-agent campaign. Each model, under each instruction profile, attempted each challenge three times, for 36 trials in total. The author audit then classified 27 trials as clean product-path passes, eight as invalid samples, and one as a failure. Invalid samples included contamination such as reading implementation files, prior artifacts, adjacent attempts, or evaluator state. But the prompts, product, and hosted conditions changed during the campaign. These results show what we learned while improving the product. They expose authoring and diagnostic gaps; they are not a benchmark of model success, token reduction, retry reduction, or superiority.
 
-The product and prompts evolved across waves. Call this longitudinal engineering evidence, not a controlled benchmark ([lines 1287-1339](../thesis/system-design-implementation.md#formative-agent-trial-findings)).
+The product and prompts evolved during the campaign. Say that the results show what was learned while improving the product; do not call them a controlled benchmark ([lines 1287-1339](../thesis/system-design-implementation.md#formative-agent-trial-findings)).
 
 ### Scene 13: Close on the bounded contribution
 
@@ -404,7 +402,7 @@ Start with the short answer. Expand only when the examiner continues.
 
 **Short answer:** They provide bounded engineering evidence about operability and failure modes, not a model benchmark.
 
-**Expanded answer:** The campaign used two challenges, two hosted models, three profiles, three waves, and three attempts per cell. The author manually audited product-path validity. Because prompts, product snapshots, and hosted conditions changed, the results support feasibility and longitudinal product learning, not stable model comparison or general success rates.
+**Expanded answer:** The campaign used two challenges, two hosted models, and three profiles. Each model under each profile attempted each challenge three times. The author manually audited product-path validity. Because prompts, product snapshots, and hosted conditions changed, the results support feasibility and product learning, not stable model comparison or general success rates.
 
 ### 5. Is the prepared replay honest?
 
@@ -469,7 +467,7 @@ Start with the short answer. Expand only when the examiner continues.
 | Submitted replay resumes the same run | Supported | Valid for the submitted recording |
 | Revision replay uses the same run | Do not claim | It is a separate prepared branch recording |
 | Resume provides arbitrary crash recovery | Do not claim | Resume works at explicit stopped or interrupted boundaries |
-| The 36 trials estimate model success | Do not claim | They are bounded longitudinal engineering evidence |
+| The 36 trials estimate model success | Do not claim | They are bounded evidence collected while the product evolved |
 | The campaign measured token or retry reduction | Do not claim | These remain unmeasured design hypotheses |
 | The system is production-secure or scheduled | Do not claim | Security hardening and scheduling remain future work |
 

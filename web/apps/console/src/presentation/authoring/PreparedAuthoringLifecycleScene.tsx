@@ -18,6 +18,7 @@ type PreparedAuthoringLifecycleSceneProps = {
   readonly scene: SceneDefinition;
   readonly beat: SceneBeatDefinition;
   readonly onAdvance?: (() => void) | undefined;
+  readonly onRunPreparedWorkflow?: (() => Promise<void>) | undefined;
   readonly discussionRail?: ReactNode;
 };
 
@@ -40,7 +41,7 @@ const steps = [
  * Each beat shows a persistent prepared assistant beside one dominant phase
  * projection sourced from the prepared authoring recording.
  */
-export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance, discussionRail }: PreparedAuthoringLifecycleSceneProps) => {
+export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance, onRunPreparedWorkflow, discussionRail }: PreparedAuthoringLifecycleSceneProps) => {
   const [messageState, dispatch] = useReducer(
     preparedLifecycleMessageReducer,
     initialPreparedLifecycleMessageState,
@@ -81,7 +82,12 @@ export const PreparedAuthoringLifecycleScene = ({ scene, beat, onAdvance, discus
             dispatch({ type: "artifact_submitted" });
             onAdvance?.();
           }
-          if (step === "deployment") dispatch({ type: "run_requested" });
+          if (step === "deployment") {
+            dispatch({ type: "run_requested" });
+            // This is the same mode-aware action as the footer control; the
+            // presentation remains on this beat so the presenter advances it.
+            void onRunPreparedWorkflow?.();
+          }
         }}
       />
       <div className="prepared-lifecycle-scene__presentation">

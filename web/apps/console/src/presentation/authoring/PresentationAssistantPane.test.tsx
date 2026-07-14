@@ -41,7 +41,8 @@ describe("PresentationAssistantPane", () => {
     );
     expect(screen.getByRole("heading", { name: /authoring assistant/i })).toBeInTheDocument();
     expect(screen.getByText(/current phase: validate/i)).toBeInTheDocument();
-    expect(screen.getByText(/prepared replay only/i)).toBeInTheDocument();
+    expect(screen.getByText(/prepared assistant transcript/i)).toBeInTheDocument();
+    expect(screen.getByText(/final run request uses the configured demo target/i)).toBeInTheDocument();
   });
 
   it("exposes an explicit support role when composed in the lifecycle scene", () => {
@@ -129,6 +130,15 @@ describe("PresentationAssistantPane", () => {
     cleanup();
     renderPane("deployment", { runRequested: "Run this deployment" });
     expect(screen.getByRole("button", { name: /send message/i })).toBeDisabled();
+    expect(screen.getByText("Run this deployment")).toBeInTheDocument();
+    expect(screen.getByText(/starting lda_report_case_study\.default with the prepared input/i))
+      .toBeInTheDocument();
+    const runTools = screen.getByRole("button", { name: /run.*1 tool call/i });
+    expect(runTools).toHaveAttribute("aria-expanded", "false");
+    await user.click(runTools);
+    await user.click(screen.getByRole("button", { name: /startRun/i }));
+    expect(screen.getByText(/run_recorded_lda_report/i)).toBeInTheDocument();
+    expect(screen.getByText(/paused at the typed issue-review boundary/i)).toBeInTheDocument();
   });
 
   it("renders submitted overrides while keeping the replay tools canonical", () => {

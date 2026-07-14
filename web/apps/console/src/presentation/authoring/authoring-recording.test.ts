@@ -4,6 +4,7 @@ import {
   authoringToolGroupId,
   projectPreparedAuthoring,
   projectPreparedAuthoringThread,
+  projectPreparedRunRequestExchange,
   type AuthoringPhaseId,
 } from "./authoring-recording.js";
 
@@ -223,5 +224,29 @@ describe("projectPreparedAuthoringThread", () => {
       "Edited validation request",
       "Edited deployment request",
     ]);
+  });
+});
+
+describe("projectPreparedRunRequestExchange", () => {
+  it("projects the prepared start receipt and typed interrupt without navigation actions", () => {
+    const messages = projectPreparedRunRequestExchange("Run the saved deployment.");
+    const parts = messages.flatMap((message) => message.parts);
+
+    expect(messages[0]).toMatchObject({ role: "user", parts: [{ text: "Run the saved deployment." }] });
+    expect(parts).toContainEqual(expect.objectContaining({
+      type: "tool-call",
+      call: expect.objectContaining({ name: "startRun" }),
+    }));
+    expect(parts).toContainEqual(expect.objectContaining({
+      type: "tool-result",
+      result: expect.objectContaining({
+        output: expect.objectContaining({
+          run_id: "run_recorded_lda_report",
+          status: "interrupted",
+          resume_readiness: "ready",
+        }),
+      }),
+    }));
+    expect(parts.some((part) => part.type === "presentation-action")).toBe(false);
   });
 });

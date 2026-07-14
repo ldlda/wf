@@ -80,15 +80,16 @@ export const GuidedProductMoment = ({
   const facts = projectDemoRunFacts(demo);
   const runResume = demo.state.events.find((event) => event.stage === "run_resume");
   const revisionRequested = approvalActions?.state === "revision_requested";
+  const isReplay = demo.state.mode === "replay";
   // Replay revision evidence has a separate recording identity; do not let
   // the normal submitted-branch lens imply continuity for that branch.
   const eyebrow = revisionRequested
-    ? demo.state.mode === "replay"
+    ? isReplay
       ? "Prepared branch"
       : "Live branch"
     : lens.eyebrow;
   const headline = revisionRequested
-    ? demo.state.mode === "replay"
+    ? isReplay
       ? "Separate prepared revision recording"
       : "Live revision branch resumes the run"
     : lens.headline;
@@ -106,7 +107,7 @@ export const GuidedProductMoment = ({
       <header className="guided-product-moment__header">
         <span>{eyebrow}</span>
         <strong>{headline}</strong>
-        <p>{statusCopy(moment, approvalActions, demo.state.mode === "replay")}</p>
+        <p>{statusCopy(moment, approvalActions, isReplay)}</p>
       </header>
 
       <div className="guided-product-moment__primary">

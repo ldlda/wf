@@ -354,5 +354,62 @@ export const projectPreparedAuthoringThread = (
   });
 };
 
+/**
+ * Projects the terminal prepared request into the same chat vocabulary as a
+ * live run, while retaining the stable replay run identity used by later scenes.
+ */
+export const projectPreparedRunRequestExchange = (
+  request: string,
+): readonly AgentMessage[] => {
+  const callId = "authoring-run-request-call";
+  return [
+    agentTextMessage("authoring-run-request-user", "user", request),
+    agentTextMessage(
+      "authoring-run-request-starting",
+      "assistant",
+      "Starting lda_report_case_study.default with the prepared input.",
+    ),
+    {
+      // The authoring prefix reuses the compact phase tool-group treatment;
+      // presenters can expand the real-shaped receipt only when useful.
+      id: "authoring-run-tools",
+      role: "assistant",
+      parts: [
+        agentToolCallPart(callId, "startRun", {
+          operation: "workflow.runs.start",
+          deployment_id: "lda_report_case_study.default",
+          input_file: "examples/lda_report_workflow/run-input.json",
+          equivalent_cli:
+            "uv run wf --url http://127.0.0.1:8765/rpc run start lda_report_case_study.default --input-file examples/lda_report_workflow/run-input.json",
+        }),
+        agentToolResultPart(callId, "startRun", "success", {
+          artifact_id: "lda_report_case_study",
+          artifact_version: 1,
+          deployment_id: "lda_report_case_study.default",
+          diagnostics: [],
+          interrupt: {
+            id: "interrupt:review_issues",
+            kind: "issue_review",
+            node_id: "review_issues",
+            outcomes: ["submitted", "cancelled"],
+            proposed_issue_count: 3,
+            resumable: true,
+            typed: true,
+          },
+          resume_readiness: "ready",
+          run_id: "run_recorded_lda_report",
+          status: "interrupted",
+          trace_count: 6,
+        }),
+      ],
+    },
+    agentTextMessage(
+      "authoring-run-request-paused",
+      "assistant",
+      "The run started and paused at the typed issue-review boundary. Three proposed issues are ready for review.",
+    ),
+  ];
+};
+
 /** Returns the full prepared authoring recording. */
 export const projectPreparedAuthoring = (): readonly PreparedAuthoringPhase[] => recording;

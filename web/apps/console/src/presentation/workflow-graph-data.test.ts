@@ -37,12 +37,23 @@ describe("presentationWorkflowPlan", () => {
       expect(node.capability, node.id).toBeTruthy();
       expect(node.inputSummary, node.id).toBeTruthy();
       expect(node.outputSummary, node.id).toBeTruthy();
-      expect(node.outcomes, node.id).not.toHaveLength(0);
       expect(node.evidencePointer, node.id).toBeTruthy();
+
+      if (node.type !== "end") {
+        expect(node.outcomes, node.id).toEqual(
+          presentationWorkflowPlan.edges
+            .filter((edge) => edge.from === node.id)
+            .map((edge) => edge.outcome),
+        );
+      }
     }
 
     const interrupt = presentationWorkflowPlan.nodes.find((node) => node.id === "review_issues");
     expect(interrupt?.schemaSummary).toMatch(/request: issue proposals/i);
     expect(interrupt?.outcomes).toEqual(["submitted", "cancelled"]);
+    expect(presentationWorkflowPlan.nodes.find((node) => node.id === "finalise")?.outcomes).toEqual([
+      "completed",
+    ]);
+    expect(presentationWorkflowPlan.nodes.find((node) => node.id === "revision_requested")?.outcomes).toEqual([]);
   });
 });

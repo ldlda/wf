@@ -57,6 +57,9 @@ const submitOverride = (
 
   return {
     ...state,
+    // The submitted text is preserved in the transcript override; leaving it
+    // in the composer would leak the previous phase's request into the next.
+    draft: "",
     submittedOverrides: {
       ...state.submittedOverrides,
       [destination]: state.draft,
@@ -79,7 +82,7 @@ export const preparedLifecycleMessageReducer = (
       return submitOverride(state, "deployment");
     case "run_requested":
       return state.runRequested === null && hasText(state.draft)
-        ? { ...state, runRequested: state.draft }
+        ? { ...state, draft: "", runRequested: state.draft }
         : state;
   }
 };

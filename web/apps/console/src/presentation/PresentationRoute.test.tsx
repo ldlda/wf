@@ -268,7 +268,8 @@ describe("PresentationRoute", () => {
       .toHaveAttribute("data-phase", "deployment");
   });
 
-  it("records a Deployment run request locally without an RPC", async () => {
+  it("starts the shared prepared workflow action without advancing the Deployment beat", async () => {
+    window.sessionStorage.setItem("lda.workflowConsole.target", "http://127.0.0.1:8765/rpc");
     window.location.hash = "#scene/prepared-lifecycle/deployment";
     const { PresentationRoute } = await import("./PresentationRoute.js");
     render(<PresentationRoute />);
@@ -277,11 +278,16 @@ describe("PresentationRoute", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /send message/i }));
 
-    expect(await screen.findByRole("status")).toHaveTextContent(
-      "Run request prepared for the next execution slice.",
-    );
-    expect(mockedCallOperation.mock.calls.some(([operation]) => operation === "workflow.runs.start"))
-      .toBe(false);
+    expect(await screen.findByText("Prepared run receipt added. Continue when you are ready."))
+      .toBeInTheDocument();
+    expect(window.location.hash).toBe("#scene/prepared-lifecycle/deployment");
+    expect(screen.getByText(/three proposed issues are ready for review/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(mockedCallOperation.mock.calls.some(([operation]) => operation === "workflow.deployments.inspect"))
+        .toBe(true);
+      expect(mockedCallOperation.mock.calls.some(([operation]) => operation === "workflow.runs.start"))
+        .toBe(true);
+    }, { timeout: 3000 });
   });
 
   it("keeps Diagnose submission on the current beat", async () => {

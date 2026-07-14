@@ -276,9 +276,9 @@ export const AssistantOperatorThread = ({
     const viewport = viewportRef.current;
     if (!viewport) return;
 
-    // Static comparison transcripts should show their final answer; live
-    // presentation docks instead keep the beat-owned tool group in view.
-    if (!activeToolGroupId && scrollMode === "end") {
+    // A terminal exchange must override phase anchoring so its result and
+    // final assistant response remain visible after the composer submits.
+    if (scrollMode === "end") {
       viewport.scrollTop = Math.max(0, viewport.scrollHeight - viewport.clientHeight);
       return;
     }

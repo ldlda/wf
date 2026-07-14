@@ -99,7 +99,7 @@ export const presentationWorkflowPlan = {
       capability: "State output",
       inputSummary: "Markdown report and issue-board state",
       outputSummary: "Completed run output",
-      outcomes: ["ok"],
+      outcomes: ["completed"],
       evidencePointer: "local.lda_report.finalise_report",
     },
     {
@@ -111,7 +111,7 @@ export const presentationWorkflowPlan = {
       capability: "Revision record",
       inputSummary: "Issue-review decision",
       outputSummary: "Recorded revision request",
-      outcomes: ["cancelled"],
+      outcomes: [],
       evidencePointer: "local.lda_report.record_revision_request",
     },
     {

@@ -34,7 +34,9 @@ export const RunInputFileBrowser = ({
               >
                 <span className="run-input-file-browser__icon" aria-hidden="true">md</span>
                 <code>{path}</code>
-                <span className="run-input-file-browser__marker">selected</span>
+                {path === visibleSelectedPath ? (
+                  <span className="run-input-file-browser__marker">selected</span>
+                ) : null}
               </button>
             </li>
           ))}

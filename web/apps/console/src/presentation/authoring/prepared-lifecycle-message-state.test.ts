@@ -43,14 +43,14 @@ describe("prepared lifecycle staged message state", () => {
     });
   });
 
-  it("preserves edited draft text exactly when submitting draft", () => {
+  it("preserves submitted text exactly and clears the composer draft", () => {
     const edited = preparedLifecycleMessageReducer(initialPreparedLifecycleMessageState, {
       type: "draft_edited",
       draft: "  Check only the report binding.  ",
     });
 
     expect(preparedLifecycleMessageReducer(edited, { type: "draft_submitted" })).toEqual({
-      draft: edited.draft,
+      draft: "",
       submittedOverrides: { validate: edited.draft },
       runRequested: null,
     });
@@ -63,7 +63,7 @@ describe("prepared lifecycle staged message state", () => {
     });
 
     expect(preparedLifecycleMessageReducer(state, { type: "artifact_submitted" })).toEqual({
-      draft: state.draft,
+      draft: "",
       submittedOverrides: { deployment: state.draft },
       runRequested: null,
     });
@@ -76,7 +76,7 @@ describe("prepared lifecycle staged message state", () => {
     });
 
     expect(preparedLifecycleMessageReducer(state, { type: "discover_submitted" })).toEqual({
-      draft: state.draft,
+      draft: "",
       submittedOverrides: { discover: state.draft },
       runRequested: null,
     });
@@ -106,6 +106,7 @@ describe("prepared lifecycle staged message state", () => {
     const requested = preparedLifecycleMessageReducer(state, { type: "run_requested" });
 
     expect(requested.runRequested).toBe("Run this deployment");
+    expect(requested.draft).toBe("");
     expect(requested.submittedOverrides).toEqual({});
     expect(preparedLifecycleMessageReducer(requested, { type: "run_requested" })).toBe(requested);
   });

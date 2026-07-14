@@ -6,7 +6,7 @@ type PreparedComposerSubmitHandlers = {
 };
 
 export const PREPARED_COMPOSER_HELP =
-  "Shift+Enter adds a new line. This is a deterministic prepared replay, not a live model request.";
+  "Shift+Enter adds a new line. Responses are prepared; the final run request may use the configured workflow target.";
 
 /** Shares the prepared-replay composer keyboard and form submission contract. */
 export const usePreparedComposerSubmit = (

@@ -30,15 +30,16 @@ describe("RunInputFileBrowser", () => {
 
     const files = within(browser).getByRole("list", { name: /included in prepared run/i });
     expect(within(files).getAllByRole("listitem")).toHaveLength(2);
-    expect(within(files).getAllByText("selected")).toHaveLength(2);
+    expect(within(files).getAllByText("selected")).toHaveLength(1);
     expect(within(files).getAllByRole("button")).toHaveLength(2);
     expect(within(files).queryAllByRole("link")).toHaveLength(0);
     for (const path of ["docs/project-brief.md", "docs/architecture-notes.md"]) {
       const row = within(files).getByText(path).closest("li");
       expect(row).not.toBeNull();
       expect(row).toHaveAttribute("data-file-path", path);
-      expect(row).toHaveTextContent(/selected/i);
     }
+    expect(within(files).getByText("docs/project-brief.md").closest("li")).toHaveTextContent(/selected/i);
+    expect(within(files).getByText("docs/architecture-notes.md").closest("li")).not.toHaveTextContent(/selected/i);
 
     const destination = within(browser).getByRole("group", { name: /workflow output/i });
     expect(destination).toHaveTextContent("artifacts/issue-board.json");
@@ -57,6 +58,11 @@ describe("RunInputFileBrowser", () => {
     expect(preview).toHaveTextContent(/architecture-notes\.md/i);
     expect(preview).toHaveTextContent(/fixture preview/i);
     expect(preview).toHaveTextContent(/not execution evidence/i);
+    expect(screen.getByRole("button", { name: /architecture-notes\.md/i })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(screen.getByRole("button", { name: /project-brief\.md/i })).not.toHaveTextContent(/selected/i);
   });
 
   it("shows an honest empty preview for files absent from the fixture catalog", () => {

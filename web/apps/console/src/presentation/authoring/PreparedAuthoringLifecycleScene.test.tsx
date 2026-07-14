@@ -7,7 +7,12 @@ import { PreparedAuthoringLifecycleScene } from "./PreparedAuthoringLifecycleSce
 
 afterEach(() => cleanup());
 
-const renderBeat = (beatId: string, onAdvance?: () => void, discussionRail?: ReactNode) => {
+const renderBeat = (
+  beatId: string,
+  onAdvance?: () => void,
+  discussionRail?: ReactNode,
+  onRunPreparedWorkflow?: () => Promise<void>,
+) => {
   const scene = findScene("prepared-lifecycle");
   const beat = findBeat("prepared-lifecycle", beatId);
   if (!scene || !beat) throw new Error(`missing prepared-lifecycle/${beatId}`);
@@ -16,6 +21,7 @@ const renderBeat = (beatId: string, onAdvance?: () => void, discussionRail?: Rea
       scene={scene}
       beat={beat}
       onAdvance={onAdvance}
+      onRunPreparedWorkflow={onRunPreparedWorkflow}
       discussionRail={discussionRail}
     />,
   );
@@ -171,6 +177,21 @@ describe("PreparedAuthoringLifecycleScene", () => {
     await user.click(screen.getByRole("button", { name: /send message/i }));
 
     expect(onAdvance).toHaveBeenCalledTimes(advances ? 1 : 0);
+  });
+
+  it("answers the terminal run request without advancing the presentation", async () => {
+    const user = userEvent.setup();
+    const onAdvance = vi.fn();
+    const onRunPreparedWorkflow = vi.fn().mockResolvedValue(undefined);
+    renderBeat("deployment", onAdvance, undefined, onRunPreparedWorkflow);
+
+    await user.click(screen.getByRole("button", { name: /send message/i }));
+
+    expect(screen.getByRole("textbox", { name: /message to authoring assistant/i })).toHaveValue("");
+    expect(screen.getByRole("button", { name: /run.*1 tool call/i })).toBeInTheDocument();
+    expect(screen.getByText(/three proposed issues are ready for review/i)).toBeInTheDocument();
+    expect(onRunPreparedWorkflow).toHaveBeenCalledOnce();
+    expect(onAdvance).not.toHaveBeenCalled();
   });
 
   it.each([

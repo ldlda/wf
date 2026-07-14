@@ -33,6 +33,7 @@ type SceneBodyProps = {
   readonly motionDisabled: boolean;
   readonly approvalActions?: DemoApprovalActions | undefined;
   readonly onPreparedLifecycleAdvance?: (() => void) | undefined;
+  readonly onRunPreparedWorkflow?: (() => Promise<void>) | undefined;
 };
 
 const workflowDemoSceneIds = new Set([
@@ -290,7 +291,7 @@ const assertNever = (value: never): never => {
   throw new Error(`Unexpected view: ${value}`);
 };
 
-export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions, onPreparedLifecycleAdvance }: SceneBodyProps) => {
+export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvidence, openDiscussion, onFocusPathChange, motionDisabled, approvalActions, onPreparedLifecycleAdvance, onRunPreparedWorkflow }: SceneBodyProps) => {
   const sceneId = location.kind === "main" ? location.sceneId : "positioning";
   const beatId = location.kind === "main" ? location.beatId : "landscape";
   const scene = findScene(sceneId) ?? findScene("thesis")!;
@@ -331,6 +332,7 @@ export const SceneBody = ({ location, demo, selectedNodeId, selectNode, openEvid
           scene={scene}
           beat={beat}
           onAdvance={onPreparedLifecycleAdvance}
+          onRunPreparedWorkflow={onRunPreparedWorkflow}
           discussionRail={scene.id === "prepared-lifecycle" ? discussionLinks : undefined}
         />
       );

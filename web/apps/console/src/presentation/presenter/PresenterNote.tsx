@@ -28,7 +28,7 @@ export const PresenterNote = ({ note, cumulativeSeconds, next, covered, onCovere
 
       <section className="presenter-note__goal" aria-labelledby="presenter-goal">
         <span id="presenter-goal">Beat goal</span>
-        <p>{note.goal}</p>
+        <div className="presenter-note__goal-copy"><ReactMarkdown>{note.goal}</ReactMarkdown></div>
       </section>
 
       <section className="presenter-note__anchors" aria-labelledby="presenter-anchors">

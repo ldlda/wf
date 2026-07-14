@@ -109,6 +109,11 @@ export const PresentationStage = ({
                 motionDisabled={state.motionDisabled}
                 approvalActions={approvalActions}
                 onPreparedLifecycleAdvance={onPreparedLifecycleAdvance}
+                onRunPreparedWorkflow={
+                  demoRail.kind === "action" && timelineAgent
+                    ? () => timelineAgent.runPreparedWorkflow(demoRail.mode)
+                    : undefined
+                }
               />
             )}
           </section>

@@ -114,7 +114,11 @@ describe("defense storyboard catalog", () => {
 
   it("makes the evaluation beat carry the audited counts and validity boundary", () => {
     expect(findBeat("evaluation", "cohort")?.caption).toMatch(/36|two challenges|two hosted models|three waves/i);
-    expect(findBeat("evaluation", "validity")?.caption).toMatch(/27|8|1|audit/i);
+    const validityCaption = findBeat("evaluation", "validity")?.caption ?? "";
+    expect(validityCaption).toMatch(/\b27\b/);
+    expect(validityCaption).toMatch(/\b8\b/);
+    expect(validityCaption).toMatch(/\b1\b/);
+    expect(validityCaption).toMatch(/audit/i);
     expect(findBeat("evaluation", "findings")?.caption).toMatch(/changing|longitudinal|benchmark/i);
   });
 

@@ -25,7 +25,9 @@ describe("PresenterNote", () => {
       />,
     );
 
-    expect(screen.getByRole("region", { name: "Beat goal" })).toHaveTextContent(note.goal);
+    const goal = screen.getByRole("region", { name: "Beat goal" });
+    expect(goal).toHaveTextContent(note.goal.replaceAll("**", ""));
+    expect(within(goal).getByText("one public operation").tagName).toBe("STRONG");
 
     const anchors = screen.getByRole("region", { name: "Anchor terms" });
     const anchorList = within(anchors).getByRole("list");
