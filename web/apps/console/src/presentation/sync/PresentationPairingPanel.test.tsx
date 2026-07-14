@@ -72,6 +72,20 @@ describe("PresentationPairingPanel", () => {
     expect(screen.getByRole("button", { name: "Join session" })).toBeInTheDocument();
   });
 
+  it("gives expanded state one root surface owner without a double-card contract", () => {
+    renderPanel("presenter", connectedState());
+
+    const panel = screen.getByRole("complementary", {
+      name: "Presentation pairing",
+    });
+    expect(panel).toHaveAttribute("data-surface-owner", "root");
+    expect(panel.querySelectorAll("[data-surface-owner]")).toHaveLength(0);
+    expect(panel.querySelector(".presentation-pairing__trigger"))
+      .not.toHaveAttribute("data-surface-owner");
+    expect(panel.querySelector(".presentation-pairing__body"))
+      .not.toHaveAttribute("data-surface-owner");
+  });
+
   it("disables creation and joining controls while an operation is in flight", () => {
     const { rerender } = renderPanel("presenter", { kind: "creating" });
     expect(screen.getByRole("button", { name: "Start session" })).toBeDisabled();

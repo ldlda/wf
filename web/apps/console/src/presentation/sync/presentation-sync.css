@@ -8,8 +8,13 @@
   font-family: var(--font-interface, "Source Sans 3", sans-serif);
 }
 
-.presentation-pairing__trigger,
-.presentation-pairing__body {
+.presentation-pairing[data-surface-owner="root"] {
+  border: 1px solid color-mix(in oklch, var(--color-editorial-ink, #20201e) 28%, transparent);
+  background: var(--color-editorial-paper, #f7f7f5);
+  box-shadow: 0 0.45rem 1.5rem rgb(32 32 30 / 12%);
+}
+
+.presentation-pairing[data-surface-owner="trigger"] .presentation-pairing__trigger {
   border: 1px solid color-mix(in oklch, var(--color-editorial-ink, #20201e) 28%, transparent);
   background: var(--color-editorial-paper, #f7f7f5);
   box-shadow: 0 0.45rem 1.5rem rgb(32 32 30 / 12%);
@@ -22,6 +27,9 @@
   width: 100%;
   gap: 1rem;
   padding: 0.65rem 0.8rem;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
   color: inherit;
   font: 700 0.85rem/1.1 var(--font-interface, "Source Sans 3", sans-serif);
   text-align: left;
@@ -40,7 +48,6 @@
 }
 
 .presentation-pairing__body {
-  margin-bottom: 0.35rem;
   padding: 0.85rem;
 }
 
@@ -71,7 +78,7 @@
   padding-top: 0.8rem;
 }
 
-.presentation-pairing button,
+.presentation-pairing__body button,
 .presentation-pairing input {
   min-height: 2.25rem;
   border: 1px solid color-mix(in oklch, var(--color-editorial-ink, #20201e) 32%, transparent);

@@ -88,6 +88,7 @@ export const PresentationPairingPanel = ({
   const inputCode = state.kind === "joining" ? state.code : code;
   const normalizedInputCode = normalizeJoinCode(inputCode);
 
+  // Lifecycle and error states reopen after transitions so recovery and end details remain reachable despite manual collapse.
   useEffect(() => {
     if (state.kind !== "standalone") setIsOpen(true);
   }, [state.kind]);
@@ -129,6 +130,7 @@ export const PresentationPairingPanel = ({
       data-open={isOpen}
       data-role={role}
       data-state={state.kind}
+      data-surface-owner={isOpen ? "root" : "trigger"}
       aria-label="Presentation pairing"
     >
       <button
