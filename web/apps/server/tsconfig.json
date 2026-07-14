@@ -10,5 +10,8 @@
     "types": ["node"]
   },
   "include": ["src"],
-  "references": [{ "path": "../../packages/rpc" }]
+  "references": [
+    { "path": "../../packages/rpc" },
+    { "path": "../../packages/presentation-sync" }
+  ]
 }

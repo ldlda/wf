@@ -3,17 +3,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "predev": "pnpm --filter @lda/workflow-rpc build",
+    "predev": "pnpm --filter @lda/workflow-rpc build && pnpm --filter @lda/presentation-sync build",
     "dev": "tsx src/index.ts",
-    "prebuild": "pnpm --filter @lda/workflow-rpc build",
+    "prebuild": "pnpm --filter @lda/workflow-rpc build && pnpm --filter @lda/presentation-sync build",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "test": "vitest run",
-    "pretypecheck": "pnpm --filter @lda/workflow-rpc build",
+    "pretypecheck": "pnpm --filter @lda/workflow-rpc build && pnpm --filter @lda/presentation-sync build",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@hono/node-server": "2.0.6",
+    "@lda/presentation-sync": "workspace:*",
     "@lda/workflow-rpc": "workspace:*",
     "effect": "3.21.4",
     "hono": "4.12.27"
