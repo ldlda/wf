@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ServerSyncMessage } from "@lda/presentation-sync";
-import type { PresentationPeer } from "./rooms.js";
+import type { PresentationPeer, PresentationRoomService } from "./rooms.js";
 import {
   createPresentationRoomService,
   EMPTY_ROOM_GRACE_MS,
@@ -35,8 +35,7 @@ const makeService = () => {
   };
 };
 
-const connectedRoom = () => {
-  const { service, advance } = makeService();
+const connectRoom = (service: PresentationRoomService) => {
   const created = service.create({
     role: "presenter",
     initialHash: "#scene/thesis/title",
@@ -52,12 +51,16 @@ const connectedRoom = () => {
   audience.close.mockClear();
   return {
     service,
-    advance,
     presenter,
     audience,
     presenterToken: created.connectionToken,
     audienceToken: joined.connectionToken,
   };
+};
+
+const connectedRoom = () => {
+  const { service, advance } = makeService();
+  return { ...connectRoom(service), advance };
 };
 
 describe("createPresentationRoomService", () => {
@@ -131,6 +134,30 @@ describe("createPresentationRoomService", () => {
     });
   });
 
+  it("does not disconnect a replacement when the old peer closes", () => {
+    const { service } = makeService();
+    const created = service.create({ role: "presenter", initialHash: "#scene/one" });
+    const oldPeer = peer();
+    const newPeer = peer();
+    service.connect(created.connectionToken, oldPeer);
+    service.connect(created.connectionToken, newPeer);
+    newPeer.send.mockClear();
+
+    service.disconnect(created.connectionToken, oldPeer);
+
+    expect(service.publish(created.connectionToken, {
+      type: "location.publish",
+      hash: "#scene/replacement-survives",
+      baseRevision: 0,
+      messageId: "replacement-1",
+    }).kind).toBe("accepted");
+    expect(newPeer.send).toHaveBeenCalledWith({
+      type: "location.snapshot",
+      snapshot: { hash: "#scene/replacement-survives", revision: 1 },
+      originatingMessageId: "replacement-1",
+    });
+  });
+
   it("accepts one publish and rejects a stale competing publish", () => {
     const { service, presenter, audience, presenterToken, audienceToken } =
       connectedRoom();
@@ -171,7 +198,7 @@ describe("createPresentationRoomService", () => {
     const { service, presenter, audience, presenterToken, audienceToken } =
       connectedRoom();
 
-    service.disconnect(audienceToken);
+    service.disconnect(audienceToken, audience);
 
     expect(presenter.send).toHaveBeenCalledWith({
       type: "presence.snapshot",
@@ -193,10 +220,11 @@ describe("createPresentationRoomService", () => {
       presenter,
       presenterToken,
       audienceToken,
+      audience,
     } = connectedRoom();
 
-    service.disconnect(presenterToken);
-    service.disconnect(audienceToken);
+    service.disconnect(presenterToken, presenter);
+    service.disconnect(audienceToken, audience);
     advance(EMPTY_ROOM_GRACE_MS - 1);
     expect(service.sweepExpired()).toBe(0);
 
@@ -206,10 +234,17 @@ describe("createPresentationRoomService", () => {
   });
 
   it("expires an empty room after the ten-minute grace", () => {
-    const { service, advance, presenterToken, audienceToken } = connectedRoom();
+    const {
+      service,
+      advance,
+      presenterToken,
+      presenter,
+      audienceToken,
+      audience,
+    } = connectedRoom();
 
-    service.disconnect(presenterToken);
-    service.disconnect(audienceToken);
+    service.disconnect(presenterToken, presenter);
+    service.disconnect(audienceToken, audience);
     advance(EMPTY_ROOM_GRACE_MS);
 
     expect(service.sweepExpired()).toBe(1);
@@ -281,10 +316,11 @@ describe("createPresentationRoomService", () => {
   });
 
   it("does not broadcast location changes between rooms", () => {
-    const first = connectedRoom();
-    const second = connectedRoom();
+    const { service } = makeService();
+    const first = connectRoom(service);
+    const second = connectRoom(service);
 
-    expect(first.service.publish(first.presenterToken, {
+    expect(service.publish(first.presenterToken, {
       type: "location.publish",
       hash: "#scene/first-room",
       baseRevision: 0,

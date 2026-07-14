@@ -245,14 +245,15 @@ export const createPresentationRoomService = (options: {
       return { kind: "connected", snapshot: room.snapshot, presence };
     },
 
-    disconnect(token: string): void {
+    disconnect(token: string, peer: PresentationPeer): void {
       const membership = membershipByToken.get(token);
       const room = membership?.room;
       if (
         membership === undefined ||
         room === undefined ||
         !roomsById.has(room.id) ||
-        membership.peer === null
+        membership.peer === null ||
+        membership.peer !== peer
       ) {
         return;
       }
