@@ -1,0 +1,286 @@
+.presentation-pairing {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 10;
+  width: min(22rem, calc(100vw - 2rem));
+  color: var(--color-editorial-ink, #20201e);
+  font-family: var(--font-interface, "Source Sans 3", sans-serif);
+}
+
+.presentation-pairing__trigger,
+.presentation-pairing__body {
+  border: 1px solid color-mix(in oklch, var(--color-editorial-ink, #20201e) 28%, transparent);
+  background: var(--color-editorial-paper, #f7f7f5);
+  box-shadow: 0 0.45rem 1.5rem rgb(32 32 30 / 12%);
+}
+
+.presentation-pairing__trigger {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  gap: 1rem;
+  padding: 0.65rem 0.8rem;
+  color: inherit;
+  font: 700 0.85rem/1.1 var(--font-interface, "Source Sans 3", sans-serif);
+  text-align: left;
+  cursor: pointer;
+}
+
+.presentation-pairing__trigger-status,
+.presentation-pairing__eyebrow,
+.presentation-pairing__status,
+.presentation-pairing__presence dt,
+.presentation-pairing__copy-status {
+  color: var(--color-editorial-muted, #67655f);
+  font: 0.68rem/1.2 var(--font-evidence, "IBM Plex Mono", monospace);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.presentation-pairing__body {
+  margin-bottom: 0.35rem;
+  padding: 0.85rem;
+}
+
+.presentation-pairing__header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-bottom: 0.65rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--color-editorial-ink, #20201e) 22%, transparent);
+}
+
+.presentation-pairing h2 {
+  margin: 0.2rem 0 0;
+  font: 700 1.35rem/0.95 "Barlow Condensed", sans-serif;
+  text-transform: uppercase;
+}
+
+.presentation-pairing__status {
+  max-width: 9rem;
+  color: var(--color-runtime, #1e6b55);
+  text-align: right;
+}
+
+.presentation-pairing__setup {
+  display: grid;
+  gap: 0.75rem;
+  padding-top: 0.8rem;
+}
+
+.presentation-pairing button,
+.presentation-pairing input {
+  min-height: 2.25rem;
+  border: 1px solid color-mix(in oklch, var(--color-editorial-ink, #20201e) 32%, transparent);
+  border-radius: 2px;
+  background: transparent;
+  color: inherit;
+  font: 0.82rem/1.1 var(--font-interface, "Source Sans 3", sans-serif);
+}
+
+.presentation-pairing button {
+  padding: 0.45rem 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.presentation-pairing button:hover:not(:disabled),
+.presentation-pairing button:focus-visible {
+  border-color: var(--color-runtime, #1e6b55);
+}
+
+.presentation-pairing button:disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.presentation-pairing__primary {
+  border-color: var(--color-runtime, #1e6b55) !important;
+  background: var(--color-runtime, #1e6b55) !important;
+  color: var(--color-editorial-paper, #f7f7f5) !important;
+}
+
+.presentation-pairing__divider {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  color: var(--color-editorial-muted, #67655f);
+  font: 0.68rem var(--font-evidence, "IBM Plex Mono", monospace);
+  text-transform: uppercase;
+}
+
+.presentation-pairing__divider::before,
+.presentation-pairing__divider::after {
+  flex: 1;
+  height: 1px;
+  background: color-mix(in oklch, var(--color-editorial-ink, #20201e) 18%, transparent);
+  content: "";
+}
+
+.presentation-pairing form label {
+  display: block;
+  margin-bottom: 0.3rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.presentation-pairing__join-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.45rem;
+}
+
+.presentation-pairing input {
+  width: 100%;
+  padding: 0.45rem 0.6rem;
+  font: 700 1rem var(--font-evidence, "IBM Plex Mono", monospace);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.presentation-pairing__active {
+  display: grid;
+  grid-template-columns: 9.5rem minmax(0, 1fr);
+  gap: 0.85rem;
+  padding-top: 0.8rem;
+}
+
+.presentation-pairing__qr {
+  display: grid;
+  place-items: center;
+  align-self: start;
+  padding: 0.45rem;
+  background: white;
+}
+
+.presentation-pairing__qr svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.presentation-pairing__details {
+  min-width: 0;
+}
+
+.presentation-pairing__instruction,
+.presentation-pairing__message p {
+  margin: 0;
+  color: var(--color-editorial-muted, #67655f);
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.presentation-pairing__code {
+  margin: 0.45rem 0 0;
+  font: 700 1.45rem/1 var(--font-evidence, "IBM Plex Mono", monospace);
+  letter-spacing: 0.16em;
+}
+
+.presentation-pairing__presence {
+  margin: 0.7rem 0 0;
+}
+
+.presentation-pairing__presence > div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.presentation-pairing__presence dd {
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.presentation-pairing__link-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.55rem;
+  margin-top: 0.8rem;
+}
+
+.presentation-pairing__link-row a {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-runtime, #1e6b55);
+  font: 0.68rem var(--font-evidence, "IBM Plex Mono", monospace);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.presentation-pairing__copy,
+.presentation-pairing__leave {
+  padding: 0.25rem 0.4rem !important;
+  font-size: 0.72rem !important;
+}
+
+.presentation-pairing__copy-status {
+  display: block;
+  min-height: 0.85rem;
+  margin-top: 0.35rem;
+  color: var(--color-runtime, #1e6b55);
+  text-transform: none;
+}
+
+.presentation-pairing__end {
+  margin-top: 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid color-mix(in oklch, var(--color-editorial-ink, #20201e) 18%, transparent);
+}
+
+.presentation-pairing__confirmation {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.presentation-pairing__confirmation strong {
+  font-size: 0.82rem;
+}
+
+.presentation-pairing__confirmation > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.presentation-pairing__message {
+  display: grid;
+  gap: 0.6rem;
+  padding-top: 0.8rem;
+}
+
+.presentation-pairing__message button {
+  justify-self: start;
+}
+
+.presentation-pairing :focus-visible {
+  outline: 2px solid var(--color-runtime, #1e6b55);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .presentation-pairing {
+    right: 0.5rem;
+    bottom: 0.5rem;
+    width: min(22rem, calc(100vw - 1rem));
+  }
+
+  .presentation-pairing__active {
+    grid-template-columns: 1fr;
+  }
+
+  .presentation-pairing__qr {
+    width: min(10rem, 100%);
+    justify-self: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .presentation-pairing * {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}
