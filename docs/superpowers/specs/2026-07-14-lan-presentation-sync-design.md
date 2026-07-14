@@ -247,4 +247,3 @@ Use two browser contexts against the LAN-style server:
 - Both clients converge after reconnecting or racing one update.
 - Ending from `/presenter` terminates the shared room.
 - Losing synchronization never breaks local presentation navigation.
-
