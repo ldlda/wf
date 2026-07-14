@@ -492,9 +492,11 @@ Implementation:
   [`presentation lifecycle story expansion plan`](historical/superpowers/plans/2026-07-09-presentation-lifecycle-story-expansion.md).
 - Evidence assets and rehearsal timing: prepare fallback screenshots/recordings,
   expected run states, and a timed walkthrough checklist for a 15-minute defense.
-- Presenter companion feasibility: decide whether phone/laptop control is local
-  only, same-network, or out-of-network; defer implementation until the core
-  presentation is stable.
+- Active design: LAN presentation synchronization pairs `/present` and
+  `/presenter` through an ephemeral bidirectional room with uniform code/QR/URL
+  pairing, revision-ordered location updates, reconnect behavior, and explicit
+  presenter termination. Public-internet TLS is not part of the first slice:
+  [`LAN presentation synchronization`](superpowers/specs/2026-07-14-lan-presentation-sync-design.md).
 
 Boundaries: this is not a production admin panel, generic visual workflow
 editor, scheduler, external Google Drive/mail integration, or benchmark evidence
