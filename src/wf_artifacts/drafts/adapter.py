@@ -111,6 +111,7 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
             default=step.match.default,
         ).entry
     if isinstance(step, DraftSubgraphStep):
+        # Preserve the declared boundary; artifact resolution/loading is platform work.
         node = SubgraphNode(
             id=step_id,
             type="subgraph",
