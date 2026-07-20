@@ -35,10 +35,12 @@ def _parse_map_flags(values: list[str] | None) -> dict[str, str]:
     )
 
 
-def _parse_output_map_flags(values: list[str] | None) -> dict[str, str]:
+def _parse_output_map_flags(
+    values: list[str] | None, *, option_name: str = "--bind-output"
+) -> dict[str, str]:
     parsed = _parse_assignment_flags(
         values,
-        option_name="--bind-output",
+        option_name=option_name,
         expected="LOCAL_OUTPUT=STATE_TARGET",
     )
     for local_output, state_target in parsed.items():
@@ -46,27 +48,33 @@ def _parse_output_map_flags(values: list[str] | None) -> dict[str, str]:
             LocalPath.parse(local_output)
         except PathResolutionError as exc:
             raise typer.BadParameter(
-                f"--bind-output source {local_output!r} must be a node-local "
+                f"{option_name} source {local_output!r} must be a node-local "
                 "output path such as value or ."
             ) from exc
         try:
             StatePath.parse(state_target)
         except PathResolutionError as exc:
             raise typer.BadParameter(
-                f"--bind-output target {state_target!r} must be a state path "
+                f"{option_name} target {state_target!r} must be a state path "
                 "such as state.value"
             ) from exc
     return parsed
 
 
-def _parse_step_input_map_flags(values: list[str] | None) -> dict[str, str]:
+def _parse_step_input_map_flags(
+    values: list[str] | None, *, option_name: str = "--map"
+) -> dict[str, str]:
     """Parse graph-source to bare-local input mappings for one draft step."""
-    parsed = _parse_map_flags(values)
+    parsed = _parse_assignment_flags(
+        values,
+        option_name=option_name,
+        expected="GRAPH_SOURCE=LOCAL_TARGET",
+    )
     for source, target in parsed.items():
         if target.startswith("local."):
             bare_target = target.removeprefix("local.")
             raise typer.BadParameter(
-                "--map target must be a bare local field; "
+                f"{option_name} target must be a bare local field; "
                 f"use {source}={bare_target}, not {source}={target}"
             )
     return parsed

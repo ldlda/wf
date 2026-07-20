@@ -290,6 +290,417 @@ def test_wf_draft_add_capability_calls_composed_local_handler(monkeypatch) -> No
     assert call["bind_outputs"] == {"value": "state.value"}
 
 
+def test_wf_draft_add_interrupt_builds_typed_contract(monkeypatch, tmp_path) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    request_schema = tmp_path / "request.json"
+    request_schema.write_text(
+        '{"type":"object","properties":{"issues":{"type":"array"}}}',
+        encoding="utf-8",
+    )
+    resume_schema = tmp_path / "resume.json"
+    resume_schema.write_text(
+        '{"type":"object","properties":{"selected":{"type":"array"}}}',
+        encoding="utf-8",
+    )
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "interrupt",
+            "workspace",
+            "--revision",
+            "1",
+            "--step",
+            "review",
+            "--kind",
+            "issue_review",
+            "--from-step",
+            "draft_issues",
+            "--request-schema-file",
+            str(request_schema),
+            "--resume-schema-file",
+            str(resume_schema),
+            "--request",
+            "state.issues=issues",
+            "--resume",
+            "selected=state.selected",
+            "--outcome",
+            "submitted",
+            "--outcome",
+            "cancelled",
+            "--route",
+            "submitted=create_issues",
+            "--route",
+            "cancelled=revise",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    call = calls[0]
+    assert call["workspace_id"] == "workspace"
+    assert call["incoming"].step_id == "draft_issues"
+    assert call["incoming"].outcome == "ok"
+    assert call["routes"] == {
+        "submitted": "create_issues",
+        "cancelled": "revise",
+    }
+    assert call["step"].model_dump(mode="json", by_alias=True) == {
+        "interrupt": {
+            "kind": "issue_review",
+            "request": [{"target": "issues", "path": "state.issues"}],
+            "resume": [{"source": "selected", "target": "state.selected"}],
+            "request_schema": {
+                "type": "object",
+                "properties": {"issues": {"type": "array"}},
+                "required": [],
+            },
+            "resume_schema": {
+                "type": "object",
+                "properties": {"selected": {"type": "array"}},
+                "required": [],
+            },
+            "outcomes": ["submitted", "cancelled"],
+        }
+    }
+
+
+def test_wf_draft_add_foreach_builds_concurrent_policy(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "foreach",
+            "workspace",
+            "--revision",
+            "1",
+            "--step",
+            "each_issue",
+            "--over",
+            "state.issues",
+            "--as",
+            "issue",
+            "--mode",
+            "concurrent",
+            "--item-error",
+            "collect",
+            "--collect-to",
+            "state.errors",
+            "--max-active",
+            "2",
+            "--max-outstanding",
+            "5",
+            "--route",
+            "loop=process_issue",
+            "--route",
+            "done=finish",
+            "--route",
+            "completed_with_errors=finish",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    call = calls[0]
+    assert call["step"].model_dump(mode="json", by_alias=True) == {
+        "foreach": {
+            "over": "state.issues",
+            "as": "issue",
+            "mode": "concurrent",
+            "item_error": {"action": "collect", "collect_to": "state.errors"},
+            "concurrent": {
+                "max_active": 2,
+                "max_outstanding": 5,
+                "interrupt": "quiesce",
+            },
+        }
+    }
+    assert call["routes"] == {
+        "loop": "process_issue",
+        "done": "finish",
+        "completed_with_errors": "finish",
+    }
+
+    defaults_result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "foreach",
+            "workspace",
+            "--revision",
+            "2",
+            "--step",
+            "each_default",
+            "--over",
+            "state.issues",
+            "--as",
+            "issue",
+            "--mode",
+            "concurrent",
+        ],
+    )
+    assert defaults_result.exit_code == 0, defaults_result.output
+    assert calls[1]["step"].foreach.concurrent is not None
+    assert calls[1]["step"].foreach.concurrent.max_active == 4
+    assert calls[1]["step"].foreach.concurrent.max_outstanding == 20
+
+
+def test_wf_draft_add_join_and_end_build_concrete_steps(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": len(calls) + 1, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+
+    join_result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "join",
+            "workspace",
+            "--revision",
+            "1",
+            "--step",
+            "joined",
+            "--from-step",
+            "each_issue",
+            "--from-outcome",
+            "done",
+            "--route",
+            "done=finish",
+        ],
+    )
+    end_result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "end",
+            "workspace",
+            "--revision",
+            "2",
+            "--step",
+            "finish",
+            "--outcome",
+            "completed",
+        ],
+    )
+
+    assert join_result.exit_code == 0, join_result.output
+    assert end_result.exit_code == 0, end_result.output
+    assert calls[0]["step"].model_dump(mode="json") == {"join": {}}
+    assert calls[0]["routes"] == {"done": "finish"}
+    assert calls[1]["step"].model_dump(mode="json") == {
+        "end": {"outcome": "completed"}
+    }
+    assert calls[1]["routes"] is None
+
+
+def test_wf_draft_add_control_commands_reject_invalid_input_before_api_call(
+    monkeypatch, tmp_path
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+    malformed_schema = tmp_path / "bad.json"
+    malformed_schema.write_text("{", encoding="utf-8")
+
+    malformed = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "interrupt",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "review",
+            "--kind",
+            "review",
+            "--request-schema-file",
+            str(malformed_schema),
+        ],
+    )
+    serial_limits = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "foreach",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "each",
+            "--over",
+            "state.items",
+            "--as",
+            "item",
+            "--max-active",
+            "2",
+        ],
+    )
+    duplicate_request = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "interrupt",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "review",
+            "--kind",
+            "review",
+            "--request",
+            "state.items=items",
+            "--request",
+            "state.items=other_items",
+        ],
+    )
+    duplicate_resume = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "interrupt",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "review",
+            "--kind",
+            "review",
+            "--resume",
+            "decision=state.decision",
+            "--resume",
+            "decision=state.other_decision",
+        ],
+    )
+    missing_collect_target = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "foreach",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "each",
+            "--over",
+            "state.items",
+            "--as",
+            "item",
+            "--item-error",
+            "collect",
+        ],
+    )
+    end_route = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "end",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "finish",
+            "--route",
+            "ok=__end__",
+        ],
+    )
+
+    assert malformed.exit_code == 2
+    assert "invalid JSON" in malformed.output
+    assert "Traceback" not in malformed.output
+    assert serial_limits.exit_code == 2
+    assert "concurrent" in serial_limits.output
+    assert "Traceback" not in serial_limits.output
+    assert duplicate_request.exit_code == 2
+    assert "duplicate --request" in duplicate_request.output
+    assert "Traceback" not in duplicate_request.output
+    assert duplicate_resume.exit_code == 2
+    assert "duplicate --resume" in duplicate_resume.output
+    assert "--bind-output" not in duplicate_resume.output
+    assert "Traceback" not in duplicate_resume.output
+    assert missing_collect_target.exit_code == 2
+    assert "collect item error policy requires collect_to" in missing_collect_target.output
+    assert "Traceback" not in missing_collect_target.output
+    assert end_route.exit_code == 2
+    assert "No such option" in end_route.output
+    assert "--route" in end_route.output
+    assert calls == []
+
+
+def test_wf_draft_add_control_command_help_is_type_specific() -> None:
+    interrupt = runner.invoke(app, ["draft", "add", "interrupt", "--help"])
+    foreach = runner.invoke(app, ["draft", "add", "foreach", "--help"])
+    join = runner.invoke(app, ["draft", "add", "join", "--help"])
+    end = runner.invoke(app, ["draft", "add", "end", "--help"])
+
+    assert interrupt.exit_code == foreach.exit_code == join.exit_code == end.exit_code == 0
+    assert "--request-schema-file" in interrupt.output
+    assert "--resume-schema-file" in interrupt.output
+    assert "--request" in interrupt.output
+    assert "--resume" in interrupt.output
+    assert "--outcome" in interrupt.output
+    assert "--max-active" not in interrupt.output
+    assert "--mode" in foreach.output
+    assert "--max-active" in foreach.output
+    assert "--max-outstanding" in foreach.output
+    assert "--item-error" in foreach.output
+    assert "--collect-to" in foreach.output
+    assert "--request-schema-file" not in foreach.output
+    assert "--from-step" in join.output
+    assert "--route" in join.output
+    assert "--request-schema-file" not in join.output
+    assert "--outcome" in end.output
+    assert "--route" not in end.output
+
+
 def test_wf_draft_help_does_not_list_old_add_step_from_capability() -> None:
     result = runner.invoke(app, ["draft", "--help"])
 

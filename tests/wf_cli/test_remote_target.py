@@ -1393,6 +1393,162 @@ def test_wf_draft_add_capability_uses_rpc_target(monkeypatch, tmp_path) -> None:
     assert "workflow.draft_workspaces.add_step" not in rpc_methods
 
 
+def test_wf_draft_add_control_steps_use_generic_rpc_target(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_methods: list[str] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_methods.append(method)
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+    request_schema = tmp_path / "request.json"
+    request_schema.write_text(
+        '{"type":"object","properties":{"value":{"type":"string"}}}',
+        encoding="utf-8",
+    )
+    resume_schema = tmp_path / "resume.json"
+    resume_schema.write_text(
+        '{"type":"object","properties":{"decision":{"type":"string"}}}',
+        encoding="utf-8",
+    )
+    cases = [
+        (
+            "interrupt",
+            [
+                "--kind",
+                "review",
+                "--request-schema-file",
+                str(request_schema),
+                "--resume-schema-file",
+                str(resume_schema),
+                "--request",
+                "input.value=value",
+                "--resume",
+                "decision=state.decision",
+                "--outcome",
+                "submitted",
+                "--outcome",
+                "cancelled",
+                "--route",
+                "submitted=__end__",
+                "--route",
+                "cancelled=__end__",
+            ],
+            {
+                "kind": "review",
+                "request": [{"target": "value", "path": "input.value"}],
+                "resume": [{"source": "decision", "target": "state.decision"}],
+                "request_schema": {
+                    "type": "object",
+                    "properties": {"value": {"type": "string"}},
+                    "required": [],
+                },
+                "resume_schema": {
+                    "type": "object",
+                    "properties": {"decision": {"type": "string"}},
+                    "required": [],
+                },
+                "outcomes": ["submitted", "cancelled"],
+            },
+        ),
+        (
+            "foreach",
+            [
+                "--over",
+                "input.items",
+                "--as",
+                "item",
+                "--mode",
+                "concurrent",
+                "--item-error",
+                "collect",
+                "--collect-to",
+                "state.errors",
+                "--max-active",
+                "2",
+                "--max-outstanding",
+                "5",
+                "--route",
+                "loop=call",
+                "--route",
+                "done=__end__",
+                "--route",
+                "completed_with_errors=__end__",
+            ],
+            {
+                "over": "input.items",
+                "as": "item",
+                "mode": "concurrent",
+                "item_error": {"action": "collect", "collect_to": "state.errors"},
+                "concurrent": {
+                    "max_active": 2,
+                    "max_outstanding": 5,
+                    "interrupt": "quiesce",
+                },
+            },
+        ),
+        ("join", ["--route", "done=__end__"], {}),
+        ("end", ["--outcome", "ok"], {"outcome": "ok"}),
+    ]
+
+    for command, command_args, expected in cases:
+        workspace_id = f"add_{command}_ws"
+        created = runner.invoke(
+            app,
+            [
+                *base_args,
+                "draft",
+                "create",
+                workspace_id,
+                "--capability",
+                "wf.std.constant",
+                "--name",
+                f"add_{command}",
+            ],
+        )
+        assert created.exit_code == 0, created.output
+
+        result = runner.invoke(
+            app,
+            [
+                *base_args,
+                "draft",
+                "add",
+                command,
+                workspace_id,
+                "--revision",
+                "1",
+                "--step",
+                command,
+                "--from-step",
+                "call",
+                *command_args,
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        assert json.loads(result.output)["revision"] == 2
+        assert rpc_methods[-1] == "workflow.draft_workspaces.add_step"
+        inspected = runner.invoke(
+            app,
+            [*base_args, "draft", "inspect", workspace_id, "--include-draft"],
+        )
+        assert inspected.exit_code == 0, inspected.output
+        persisted_step = json.loads(inspected.output)["draft"]["steps"][command]
+        actual_payload = persisted_step[command]
+        for field, value in expected.items():
+            assert actual_payload[field] == value
+
+
 def test_wf_draft_add_capability_reports_bare_output_target_without_traceback(
     monkeypatch, tmp_path
 ) -> None:
