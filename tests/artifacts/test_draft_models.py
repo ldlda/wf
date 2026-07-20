@@ -9,7 +9,9 @@ from wf_artifacts.drafts import (
     DraftChooseStep,
     DraftEndStep,
     DraftForeachStep,
+    DraftInterruptStep,
     DraftMatchStep,
+    DraftSubgraphStep,
     DraftUseStep,
     DraftWhenStep,
     WorkflowDraft,
@@ -79,6 +81,115 @@ def test_workflow_draft_accepts_legacy_interrupt_maps_but_dumps_canonical_bindin
         dumped["steps"]["approval"]["interrupt"]["resume"][0]["target"]
         == "state.approved"
     )
+
+
+def test_workflow_draft_preserves_typed_interrupt_contracts() -> None:
+    request_schema = {
+        "type": "object",
+        "properties": {"issues": {"type": "array"}},
+        "required": ["issues"],
+    }
+    resume_schema = {
+        "type": "object",
+        "properties": {"selected": {"type": "array"}},
+        "required": ["selected"],
+    }
+    draft = WorkflowDraft.model_validate(
+        {
+            **_keyed_echo_draft(),
+            "start": "review",
+            "steps": {
+                "review": {
+                    "interrupt": {
+                        "kind": "issue_review",
+                        "request_schema": request_schema,
+                        "resume_schema": resume_schema,
+                        "outcomes": ["submitted", "cancelled"],
+                    }
+                }
+            },
+        }
+    )
+
+    step = draft.steps["review"]
+    dumped = draft.model_dump(mode="json", by_alias=True)
+
+    assert isinstance(step, DraftInterruptStep)
+    assert step.interrupt.request_schema is not None
+    assert step.interrupt.request_schema.type == "object"
+    assert step.interrupt.request_schema.properties == {"issues": {"type": "array"}}
+    assert step.interrupt.resume_schema is not None
+    assert step.interrupt.resume_schema.required == ["selected"]
+    assert dumped["steps"]["review"]["interrupt"]["request_schema"] == request_schema
+    assert dumped["steps"]["review"]["interrupt"]["resume_schema"] == resume_schema
+
+
+def test_workflow_draft_rejects_non_object_interrupt_contracts() -> None:
+    with pytest.raises(ValidationError, match="interrupt schema must describe"):
+        WorkflowDraft.model_validate(
+            {
+                **_keyed_echo_draft(),
+                "start": "review",
+                "steps": {
+                    "review": {
+                        "interrupt": {
+                            "kind": "issue_review",
+                            "request_schema": {"type": "array"},
+                        }
+                    }
+                },
+            }
+        )
+
+
+def test_workflow_draft_preserves_subgraph_workflow_boundaries() -> None:
+    child_report = {
+        "workflow": {"artifact_id": "child_report", "version": 2},
+        "input_schema": {
+            "type": "object",
+            "properties": {"topic": {"type": "string"}},
+        },
+        "output_schema": {
+            "type": "object",
+            "properties": {"report": {"type": "string"}},
+        },
+        "input": [{"target": "topic", "path": "state.topic"}],
+        "output": [{"source": "report", "target": "state.report"}],
+        "outcomes": ["ok", "error"],
+    }
+    for step_id, subgraph in [
+        (
+            "child",
+            {"workflow": {"name": "child"}, "outcomes": ["ok"]},
+        ),
+        ("child_report", child_report),
+    ]:
+        draft = WorkflowDraft.model_validate(
+            {
+                **_keyed_echo_draft(),
+                "start": step_id,
+                "steps": {step_id: {"subgraph": subgraph}},
+            }
+        )
+
+        step = draft.steps[step_id]
+        dumped = draft.model_dump(mode="json", by_alias=True)
+
+        assert isinstance(step, DraftSubgraphStep)
+        dumped_subgraph = dumped["steps"][step_id]["subgraph"]
+        assert dumped_subgraph["workflow"] == subgraph["workflow"]
+        assert dumped_subgraph["outcomes"] == subgraph["outcomes"]
+        if step_id == "child_report":
+            assert dumped_subgraph["input_schema"]["type"] == "object"
+            assert dumped_subgraph["input_schema"]["properties"] == {
+                "topic": {"type": "string"}
+            }
+            assert dumped_subgraph["output_schema"]["type"] == "object"
+            assert dumped_subgraph["output_schema"]["properties"] == {
+                "report": {"type": "string"}
+            }
+            assert dumped_subgraph["input"] == child_report["input"]
+            assert dumped_subgraph["output"] == child_report["output"]
 
 
 def test_draft_step_requires_exactly_one_kind_key() -> None:

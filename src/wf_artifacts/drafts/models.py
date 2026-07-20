@@ -2,15 +2,17 @@ from __future__ import annotations
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from wf_core.models.conditions import Condition
+from wf_core.models.schemas import SchemaRef
 from wf_core.models.steps import (
     ForeachConcurrentPolicy,
     ForeachItemErrorPolicy,
     InputBinding,
     OutputBinding,
 )
+from wf_core.models.workflow_refs import WorkflowRef
 from wf_core.paths import GraphSourcePath
 
 JsonObject = dict[str, Any]
@@ -24,6 +26,7 @@ STEP_KIND_KEYS = frozenset(
         "when",
         "choose",
         "match",
+        "subgraph",
     }
 )
 
@@ -153,7 +156,17 @@ class DraftInterruptPayload(BaseModel):
     kind: str
     request: list[InputBinding] = Field(default_factory=list)
     resume: list[OutputBinding] = Field(default_factory=list)
+    request_schema: SchemaRef | None = None
+    resume_schema: SchemaRef | None = None
     outcomes: list[str] = Field(default_factory=lambda: ["submitted"])
+
+    @field_validator("request_schema", "resume_schema")
+    @classmethod
+    def _require_object_schema(cls, value: SchemaRef | None) -> SchemaRef | None:
+        """Keep explicit interrupt contracts distinct from untyped interrupts."""
+        if value is not None and value.type != "object":
+            raise ValueError("interrupt schema must describe a JSON object")
+        return value
 
     @model_validator(mode="before")
     @classmethod
@@ -182,6 +195,30 @@ class DraftInterruptStep(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     interrupt: DraftInterruptPayload
+
+
+class DraftSubgraphPayload(BaseModel):
+    """Declarative boundary contract for a referenced child workflow."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    workflow: WorkflowRef
+    desc: str | None = None
+    input_schema: SchemaRef = Field(default_factory=lambda: SchemaRef(type="object"))
+    output_schema: SchemaRef = Field(
+        default_factory=lambda: SchemaRef(type="object")
+    )
+    input: list[InputBinding] = Field(default_factory=list)
+    output: list[OutputBinding] = Field(default_factory=list)
+    outcomes: list[str] = Field(default_factory=lambda: ["ok"], min_length=1)
+
+
+class DraftSubgraphStep(BaseModel):
+    """Draft step that lowers to a native `SubgraphNode` boundary."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    subgraph: DraftSubgraphPayload
 
 
 class DraftJoinStep(BaseModel):
@@ -292,6 +329,7 @@ DraftStep = (
     | DraftWhenStep
     | DraftChooseStep
     | DraftMatchStep
+    | DraftSubgraphStep
 )
 
 

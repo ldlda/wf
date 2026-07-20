@@ -9,9 +9,11 @@ from wf_core import (
     ConditionNode,
     EndNode,
     ForeachNode,
+    InterruptNode,
     NodeDef,
     NodeUse,
     SchemaRef,
+    SubgraphNode,
     execute_workflow,
 )
 from wf_core.models.steps import InputValueBinding
@@ -478,6 +480,99 @@ def test_adapter_lowers_foreach_policy_through_builder() -> None:
     assert foreach.concurrent.max_outstanding == 4
     assert foreach.item_error.action == "collect"
     assert str(foreach.item_error.collect_to) == "state.item_errors"
+
+
+def test_adapter_lowers_typed_and_untyped_interrupt_steps() -> None:
+    request_schema = {
+        "type": "object",
+        "properties": {"issues": {"type": "array"}},
+        "required": ["issues"],
+    }
+    resume_schema = {
+        "type": "object",
+        "properties": {"selected": {"type": "array"}},
+        "required": ["selected"],
+    }
+    draft = WorkflowDraft.model_validate(
+        {
+            "name": "review",
+            "input_schema": {},
+            "state_schema": {"type": "object"},
+            "output_schema": {},
+            "start": "review",
+            "steps": {
+                "review": {
+                    "interrupt": {
+                        "kind": "issue_review",
+                        "request_schema": request_schema,
+                        "resume_schema": resume_schema,
+                        "outcomes": ["submitted", "cancelled"],
+                    }
+                },
+                "legacy": {"interrupt": {"kind": "legacy"}},
+            },
+            "routes": {
+                "review": {"submitted": "__end__", "cancelled": "__end__"},
+                "legacy": {"submitted": "__end__"},
+            },
+        }
+    )
+
+    workflow = build_workflow_from_draft(draft)
+
+    review = workflow.nodes[0]
+    legacy = workflow.nodes[1]
+    assert isinstance(review, InterruptNode)
+    assert review.request_schema == request_schema
+    assert review.resume_schema == resume_schema
+    assert review.has_explicit_contract is True
+    assert isinstance(legacy, InterruptNode)
+    assert legacy.has_explicit_contract is False
+
+
+def test_adapter_lowers_subgraph_step_without_resolving_artifact() -> None:
+    input_schema = {
+        "type": "object",
+        "properties": {"topic": {"type": "string"}},
+    }
+    output_schema = {
+        "type": "object",
+        "properties": {"report": {"type": "string"}},
+    }
+    draft = WorkflowDraft.model_validate(
+        {
+            "name": "parent",
+            "input_schema": {},
+            "state_schema": {"type": "object"},
+            "output_schema": {},
+            "start": "child",
+            "steps": {
+                "child": {
+                    "subgraph": {
+                        "workflow": {"artifact_id": "child_report", "version": 2},
+                        "input_schema": input_schema,
+                        "output_schema": output_schema,
+                        "input": [{"target": "topic", "path": "state.topic"}],
+                        "output": [
+                            {"source": "report", "target": "state.report"}
+                        ],
+                        "outcomes": ["ok", "error"],
+                    }
+                }
+            },
+            "routes": {"child": {"ok": "__end__", "error": "__end__"}},
+        }
+    )
+
+    workflow = build_workflow_from_draft(draft)
+    child = workflow.nodes[0]
+
+    assert isinstance(child, SubgraphNode)
+    assert child.workflow.artifact_id == "child_report"
+    assert child.workflow.version == 2
+    assert child.input_schema == SchemaRef.model_validate(input_schema)
+    assert child.output_schema == SchemaRef.model_validate(output_schema)
+    assert child.outcomes == ["ok", "error"]
 
 
 def test_validate_workflow_draft_reports_structured_output_destination_issue() -> None:

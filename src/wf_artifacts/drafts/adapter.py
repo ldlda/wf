@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from typing import Any
+
 from wf_authoring import WorkflowBuilder
 from wf_authoring.dsl import PathExpr
-from wf_core import JoinNode, Workflow
+from wf_core import JoinNode, SubgraphNode, Workflow
 from wf_core.paths import GraphSourcePath
 
 from .models import (
@@ -13,6 +15,7 @@ from .models import (
     DraftJoinStep,
     DraftMatchStep,
     DraftStep,
+    DraftSubgraphStep,
     DraftUseStep,
     DraftWhenStep,
     WorkflowDraft,
@@ -63,12 +66,23 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
             concurrent=step.foreach.concurrent,
         )
     if isinstance(step, DraftInterruptStep):
+        interrupt_kwargs: dict[str, Any] = {
+            "id": step_id,
+            "kind": step.interrupt.kind,
+            "request": step.interrupt.request,
+            "resume": step.interrupt.resume,
+            "outcomes": step.interrupt.outcomes,
+        }
+        if step.interrupt.request_schema is not None:
+            interrupt_kwargs["request_schema"] = step.interrupt.request_schema.model_dump(
+                mode="json", exclude_none=True
+            )
+        if step.interrupt.resume_schema is not None:
+            interrupt_kwargs["resume_schema"] = step.interrupt.resume_schema.model_dump(
+                mode="json", exclude_none=True
+            )
         return builder.interrupt(
-            id=step_id,
-            kind=step.interrupt.kind,
-            request=step.interrupt.request,
-            resume=step.interrupt.resume,
-            outcomes=step.interrupt.outcomes,
+            **interrupt_kwargs,
         )
     if isinstance(step, DraftJoinStep):
         node = JoinNode(id=step_id, type="join")
@@ -96,4 +110,12 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
             id=step_id,
             default=step.match.default,
         ).entry
+    if isinstance(step, DraftSubgraphStep):
+        node = SubgraphNode(
+            id=step_id,
+            type="subgraph",
+            **step.subgraph.model_dump(),
+        )
+        builder.nodes.append(node)
+        return node
     raise TypeError(f"unsupported draft step {type(step)!r}")
