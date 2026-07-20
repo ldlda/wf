@@ -3,6 +3,9 @@ from __future__ import annotations
 from collections.abc import Sequence
 from typing import Any, Literal
 
+from wf_api.surface import RouteSource
+from wf_artifacts.drafts.models import DraftStep
+
 from .base import RpcCaller
 
 
@@ -204,6 +207,32 @@ class RpcDraftClientMixin:
                 "routes": routes,
                 "input_map": input_map or {},
                 "bind_outputs": bind_outputs or {},
+            },
+        )
+
+    async def add_step(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        step: DraftStep,
+        incoming: RouteSource | None = None,
+        routes: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.add_step",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "step_id": step_id,
+                "step": step.model_dump(mode="json", by_alias=True),
+                "incoming": (
+                    None
+                    if incoming is None
+                    else {"step_id": incoming.step_id, "outcome": incoming.outcome}
+                ),
+                "routes": routes,
             },
         )
 

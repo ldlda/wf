@@ -3,9 +3,12 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
+import pytest
+from pydantic import TypeAdapter
 
 from wf_api.models import RawWorkflowPlan, TraceRange
-from wf_api.surface import WorkflowDraftSurface
+from wf_api.surface import RouteSource, WorkflowDraftSurface
+from wf_artifacts.drafts.models import DraftStep
 from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
@@ -623,6 +626,120 @@ async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> 
 
     assert result["revision"] == 2
     assert result["status"] == "valid"
+
+
+@pytest.mark.parametrize(
+    ("step_id", "step"),
+    [
+        ("use", TypeAdapter(DraftStep).validate_python({"use": "demo.echo"})),
+        (
+            "foreach",
+            TypeAdapter(DraftStep).validate_python(
+                {"foreach": {"over": "state.items", "as": "item"}}
+            ),
+        ),
+        (
+            "interrupt",
+            TypeAdapter(DraftStep).validate_python(
+                {
+                    "interrupt": {
+                    "kind": "approval",
+                    "request_schema": {"type": "object"},
+                    "resume_schema": {"type": "object"},
+                    }
+                }
+            ),
+        ),
+        ("join", TypeAdapter(DraftStep).validate_python({"join": {}})),
+        ("end", TypeAdapter(DraftStep).validate_python({"end": {}})),
+        (
+            "when",
+            TypeAdapter(DraftStep).validate_python(
+                {
+                    "when": {
+                    "if": {"op": "exists", "path": "state.ready"},
+                    "then": "next",
+                    }
+                }
+            ),
+        ),
+        (
+            "choose",
+            TypeAdapter(DraftStep).validate_python(
+                {
+                    "choose": {
+                    "clauses": [
+                        {"if": {"op": "exists", "path": "state.ready"}, "then": "next"}
+                    ]
+                    }
+                }
+            ),
+        ),
+        (
+            "match",
+            TypeAdapter(DraftStep).validate_python(
+                {
+                    "match": {
+                    "value": "state.status",
+                    "cases": [{"equals": "ready", "then": "next"}],
+                    }
+                }
+            ),
+        ),
+        (
+            "subgraph",
+            TypeAdapter(DraftStep).validate_python(
+                {
+                    "subgraph": {"workflow": {"artifact_id": "child", "version": 2}}
+                }
+            ),
+        ),
+    ],
+)
+async def test_rpc_client_add_step_preserves_all_typed_variants(
+    step_id: str, step: DraftStep
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"revision": 2}
+
+    result = await Client().add_step(
+        workspace_id="ws",
+        revision=1,
+        step_id=step_id,
+        step=step,
+        incoming=RouteSource(step_id="lookup"),
+        routes=None,
+    )
+
+    assert result == {"revision": 2}
+    request = calls[0]
+    assert request["method"] == "workflow.draft_workspaces.add_step"
+    assert request["params"]["step"] == step.model_dump(mode="json", by_alias=True)
+    assert request["params"]["incoming"] == {
+        "step_id": "lookup",
+        "outcome": "ok",
+    }
+    if step_id == "when":
+        assert request["params"]["step"]["when"]["if"]["op"] == "exists"
+    if step_id == "foreach":
+        assert request["params"]["step"]["foreach"]["as"] == "item"
+        assert "as_" not in request["params"]["step"]["foreach"]
+    if step_id == "interrupt":
+        assert request["params"]["step"]["interrupt"]["request_schema"][
+            "type"
+        ] == "object"
+        assert request["params"]["step"]["interrupt"]["resume_schema"][
+            "type"
+        ] == "object"
+    if step_id == "subgraph":
+        assert request["params"]["step"]["subgraph"]["workflow"] == {
+            "artifact_id": "child",
+            "version": 2,
+        }
 
 
 async def test_rpc_client_diagnoses_source(tmp_path) -> None:

@@ -3,6 +3,8 @@ from __future__ import annotations
 from typing import Any
 
 import httpx
+import pytest
+from pydantic import ValidationError
 
 from wf_api.models import RawWorkflowPlan
 from wf_config import WorkflowConfigFile
@@ -10,6 +12,7 @@ from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_server.config import build_workflow_server_from_workflow_config
 from wf_transport_rpc_http.app import create_rpc_app
+from wf_transport_rpc_http.models import AddDraftStepParams
 
 
 async def _rpc(
@@ -884,6 +887,180 @@ async def test_rpc_draft_workspace_add_step_from_capability(tmp_path) -> None:
     result = response["result"]
     assert result["revision"] == 2
     assert result["status"] == "valid"
+
+
+def test_add_draft_step_params_preserve_typed_step_json() -> None:
+    foreach = AddDraftStepParams.model_validate(
+        {
+            "workspace_id": "ws",
+            "revision": 1,
+            "step_id": "each",
+            "step": {"foreach": {"over": "state.items", "as": "item"}},
+            "incoming": {"step_id": "call"},
+        }
+    )
+    foreach_dump = foreach.model_dump(mode="json", by_alias=True)
+
+    assert foreach_dump["step"]["foreach"]["as"] == "item"
+    assert "as_" not in foreach_dump["step"]["foreach"]
+    assert foreach_dump["incoming"] == {"step_id": "call", "outcome": "ok"}
+
+    when = AddDraftStepParams.model_validate(
+        {
+            "workspace_id": "ws",
+            "revision": 1,
+            "step_id": "decide",
+            "step": {
+                "when": {
+                    "if": {"op": "exists", "path": "state.ready"},
+                    "then": "next",
+                }
+            },
+        }
+    )
+    assert when.model_dump(mode="json", by_alias=True)["step"]["when"]["if"] == {
+        "op": "exists",
+        "path": "state.ready",
+    }
+
+    interrupt = AddDraftStepParams.model_validate(
+        {
+            "workspace_id": "ws",
+            "revision": 1,
+            "step_id": "review",
+            "step": {
+                "interrupt": {
+                    "kind": "issue_review",
+                    "request_schema": {
+                        "type": "object",
+                        "properties": {"issues": {"type": "array"}},
+                    },
+                    "resume_schema": {
+                        "type": "object",
+                        "properties": {"selected": {"type": "array"}},
+                    },
+                },
+            },
+        }
+    )
+    interrupt_dump = interrupt.model_dump(mode="json", by_alias=True)
+    assert interrupt_dump["step"]["interrupt"]["request_schema"]["type"] == "object"
+    assert interrupt_dump["step"]["interrupt"]["resume_schema"]["type"] == "object"
+
+    subgraph = AddDraftStepParams.model_validate(
+        {
+            "workspace_id": "ws",
+            "revision": 1,
+            "step_id": "child",
+            "step": {
+                "subgraph": {"workflow": {"artifact_id": "child", "version": 2}}
+            },
+        }
+    )
+    assert subgraph.model_dump(mode="json", by_alias=True)["step"]["subgraph"][
+        "workflow"
+    ] == {"artifact_id": "child", "version": 2}
+
+
+def test_add_draft_step_params_reject_invalid_kind_and_route_source() -> None:
+    with pytest.raises(ValidationError):
+        AddDraftStepParams.model_validate(
+            {
+                "workspace_id": "ws",
+                "revision": 1,
+                "step_id": "bad",
+                "step": {"unknown": {}},
+            }
+        )
+
+    with pytest.raises(ValidationError):
+        AddDraftStepParams.model_validate(
+            {
+                "workspace_id": "ws",
+                "revision": 1,
+                "step_id": "bad",
+                "step": {"use": "demo.echo", "join": {}},
+            }
+        )
+
+    for incoming in ({"step_id": "", "outcome": "ok"}, {"step_id": "call", "outcome": ""}):
+        with pytest.raises(ValidationError):
+            AddDraftStepParams.model_validate(
+                {
+                    "workspace_id": "ws",
+                    "revision": 1,
+                    "step_id": "new",
+                    "step": {"join": {}},
+                    "incoming": incoming,
+                }
+            )
+
+
+async def test_rpc_draft_workspace_add_typed_step_round_trip(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "typed_step_ws",
+                "capability_name": "wf.std.constant",
+                "name": "typed_step",
+            },
+        )
+        added = await _rpc(
+            client,
+            "workflow.draft_workspaces.add_step",
+            {
+                "workspace_id": "typed_step_ws",
+                "revision": created["result"]["revision"],
+                "step_id": "review",
+                "step": {
+                    "interrupt": {
+                        "kind": "issue_review",
+                        "request_schema": {
+                            "type": "object",
+                            "properties": {"issues": {"type": "array"}},
+                        },
+                        "resume_schema": {
+                            "type": "object",
+                            "properties": {"selected": {"type": "array"}},
+                        },
+                        "outcomes": ["submitted", "cancelled"],
+                    }
+                },
+                "incoming": {"step_id": "call", "outcome": "ok"},
+                "routes": {"submitted": "__end__", "cancelled": "__end__"},
+            },
+        )
+        malformed = await _rpc(
+            client,
+            "workflow.draft_workspaces.add_step",
+            {
+                "workspace_id": "typed_step_ws",
+                "revision": added["result"]["revision"],
+                "step_id": "bad",
+                "step": {"unknown": {}},
+            },
+        )
+        fetched = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "typed_step_ws", "include_draft": True},
+        )
+
+    assert added["result"]["revision"] == created["result"]["revision"] + 1
+    assert added["result"]["status"] in {"valid", "invalid"}
+    assert "error" in malformed
+    assert fetched["result"]["revision"] == added["result"]["revision"]
+    assert "bad" not in fetched["result"]["draft"]["steps"]
+    review = fetched["result"]["draft"]["steps"]["review"]["interrupt"]
+    assert review["request_schema"]["type"] == "object"
+    assert review["resume_schema"]["properties"]["selected"] == {
+        "type": "array"
+    }
 
 
 async def test_rpc_diagnoses_source(tmp_path) -> None:

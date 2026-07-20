@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from wf_api.models import TraceRange
+from wf_artifacts.drafts.models import DraftStep
 
 
 class RpcParamsModel(BaseModel):
@@ -98,6 +99,20 @@ class SaveDeploymentParams(RpcParamsModel):
 
 class ListDraftWorkspacesParams(RpcParamsModel):
     pass
+
+
+class RouteSourceParams(RpcParamsModel):
+    step_id: str = Field(min_length=1)
+    outcome: str = Field(default="ok", min_length=1)
+
+
+class AddDraftStepParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    step: DraftStep
+    incoming: RouteSourceParams | None = None
+    routes: dict[str, str] | None = None
 
 
 class GetDraftWorkspaceParams(RpcParamsModel):

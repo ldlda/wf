@@ -4,10 +4,12 @@ from typing import Any
 
 import fastapi_jsonrpc as jsonrpc
 
+from wf_api.surface import RouteSource
 from wf_server import WorkflowServer
 
 from ..errors import WorkflowRpcError, raise_workflow_rpc_error
 from ..models import (
+    AddDraftStepParams,
     AddStepFromCapabilityParams,
     BindDraftParams,
     BranchDraftParams,
@@ -239,6 +241,33 @@ def register_methods(
                 routes=params.routes,
                 input_map=params.input_map,
                 bind_outputs=params.bind_outputs,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.add_step",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_draft_workspaces_add_step(
+        params: AddDraftStepParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            incoming = (
+                None
+                if params.incoming is None
+                else RouteSource(
+                    step_id=params.incoming.step_id,
+                    outcome=params.incoming.outcome,
+                )
+            )
+            return await server.api.add_step(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+                step=params.step,
+                incoming=incoming,
+                routes=params.routes,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
