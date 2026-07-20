@@ -6,88 +6,23 @@ from typing import Annotated, Literal
 
 import typer
 
+from wf_cli.commands import draft_add
+from wf_cli.commands.draft_options import (
+    _parse_map_flags,
+    _parse_route_flags,
+    _parse_step_input_map_flags,
+)
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
 from wf_cli.io import CliInputError, emit_json, parse_bindings, parse_json_value
 from wf_cli.remote_errors import run_cli_operation
-from wf_core.paths import LocalPath, PathResolutionError, StatePath
-
-
-def _parse_assignment_flags(
-    values: list[str] | None,
-    *,
-    option_name: str,
-    expected: str,
-) -> dict[str, str]:
-    parsed: dict[str, str] = {}
-    for item in values or []:
-        source, separator, target = item.partition("=")
-        if separator != "=" or not source or not target:
-            raise typer.BadParameter(f"{option_name} must use {expected}")
-        if source in parsed:
-            raise typer.BadParameter(f"duplicate {option_name} for {source!r}")
-        parsed[source] = target
-    return parsed
-
-
-def _parse_map_flags(values: list[str] | None) -> dict[str, str]:
-    return _parse_assignment_flags(
-        values,
-        option_name="--map",
-        expected="source=target",
-    )
-
-
-def _parse_output_map_flags(values: list[str] | None) -> dict[str, str]:
-    parsed = _parse_assignment_flags(
-        values,
-        option_name="--bind-output",
-        expected="LOCAL_OUTPUT=STATE_TARGET",
-    )
-    for local_output, state_target in parsed.items():
-        try:
-            LocalPath.parse(local_output)
-        except PathResolutionError as exc:
-            raise typer.BadParameter(
-                f"--bind-output source {local_output!r} must be a node-local "
-                "output path such as value or ."
-            ) from exc
-        try:
-            StatePath.parse(state_target)
-        except PathResolutionError as exc:
-            raise typer.BadParameter(
-                f"--bind-output target {state_target!r} must be a state path "
-                "such as state.value"
-            ) from exc
-    return parsed
-
-
-def _parse_step_input_map_flags(values: list[str] | None) -> dict[str, str]:
-    """Parse graph-source to bare-local input mappings for one draft step."""
-    parsed = _parse_map_flags(values)
-    for source, target in parsed.items():
-        if target.startswith("local."):
-            bare_target = target.removeprefix("local.")
-            raise typer.BadParameter(
-                "--map target must be a bare local field; "
-                f"use {source}={bare_target}, not {source}={target}"
-            )
-    return parsed
-
-
-def _parse_route_flags(values: list[str] | None) -> dict[str, str]:
-    return _parse_assignment_flags(
-        values,
-        option_name="--route",
-        expected="OUTCOME=TARGET",
-    )
-
 
 app = typer.Typer(
     name="draft",
     help="Create, inspect, patch, validate, and save draft workflows.",
     no_args_is_help=True,
 )
+app.add_typer(draft_add.app, name="add")
 
 
 @app.command("list")
@@ -438,88 +373,6 @@ def bind_draft(
                 step_id=step_id,
                 source_path=source_path,
                 target_path=target_path,
-            ),
-        )
-    )
-
-
-@app.command("add-step")
-def add_step_from_capability(
-    ctx: typer.Context,
-    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
-    revision: Annotated[
-        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
-    ],
-    step_id: Annotated[str, typer.Option("--step", help="New draft step id.")],
-    capability_name: Annotated[
-        str, typer.Option("--capability", help="Qualified capability name.")
-    ],
-    route_from_step: Annotated[
-        str | None,
-        typer.Option(
-            "--from-step",
-            help="Optional existing step whose outcome should route to this step.",
-        ),
-    ] = None,
-    route_from_outcome: Annotated[
-        str,
-        typer.Option("--from-outcome", help="Outcome on --from-step."),
-    ] = "ok",
-    route: Annotated[
-        list[str] | None,
-        typer.Option(
-            "--route",
-            help="Route mapping OUTCOME=TARGET. Repeat for multiple outcomes.",
-        ),
-    ] = None,
-    input_mapping: Annotated[
-        list[str] | None,
-        typer.Option(
-            "--input",
-            help=(
-                "Input binding SOURCE=LOCAL_TARGET. Repeat the flag for each "
-                "input; do not put multiple mappings after one --input."
-            ),
-        ),
-    ] = None,
-    output_mapping: Annotated[
-        list[str] | None,
-        typer.Option(
-            "--bind-output",
-            help=(
-                "Output binding LOCAL_OUTPUT=STATE_TARGET with state schema "
-                "projection. Repeat the flag for each output; do not put "
-                "multiple mappings after one --bind-output."
-            ),
-        ),
-    ] = None,
-) -> None:
-    """Add one capability-backed step with explicit route, input, and output wiring.
-
-    This command does not guess missing maps. Pass the route and bindings you
-    want, then run `wf draft validate <workspace_id>`.
-
-    Repeat the flag for multiple bindings:
-    `--input state.title=title --input state.summary=summary`
-    `--bind-output title=state.title --bind-output summary=state.summary`
-    """
-    input_map = _parse_map_flags(input_mapping)
-    bind_outputs = _parse_output_map_flags(output_mapping)
-    routes = _parse_route_flags(route)
-    context = load_cli_context(ctx)
-    emit_json(
-        run_cli_operation(
-            context,
-            context.handlers.add_step_from_capability(
-                workspace_id=workspace_id,
-                revision=revision,
-                step_id=step_id,
-                capability_name=capability_name,
-                route_from_step=route_from_step,
-                route_from_outcome=route_from_outcome,
-                routes=routes or None,
-                input_map=input_map,
-                bind_outputs=bind_outputs,
             ),
         )
     )

@@ -15,6 +15,7 @@ from wf_cli.context import CliContext, load_cli_context, load_local_cli_context
 from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
+from wf_transport_rpc_http.client.base import RpcClientTransport
 from wf_transport_rpc_http.client.sources import RpcSourceAdminClientMixin
 
 from .conftest import write_python_source_config
@@ -1324,11 +1325,19 @@ def test_wf_draft_bind_uses_rpc_target(monkeypatch, tmp_path) -> None:
     ]
 
 
-def test_wf_draft_add_step_from_capability_uses_rpc_target(
-    monkeypatch, tmp_path
-) -> None:
+def test_wf_draft_add_capability_uses_rpc_target(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_methods: list[str] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_methods.append(method)
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
     config_path = tmp_path / "wf.json"
     config_path.write_text('{"version": 1}', encoding="utf-8")
     runner = CliRunner()
@@ -1354,7 +1363,8 @@ def test_wf_draft_add_step_from_capability_uses_rpc_target(
         [
             *base_args,
             "draft",
-            "add-step",
+            "add",
+            "capability",
             "add_step_ws",
             "--revision",
             "1",
@@ -1379,9 +1389,11 @@ def test_wf_draft_add_step_from_capability_uses_rpc_target(
     payload = json.loads(result.output)
     assert payload["revision"] == 2
     assert payload["status"] == "valid"
+    assert rpc_methods[-1] == "workflow.draft_workspaces.add_step_from_capability"
+    assert "workflow.draft_workspaces.add_step" not in rpc_methods
 
 
-def test_wf_draft_add_step_reports_bare_output_target_without_traceback(
+def test_wf_draft_add_capability_reports_bare_output_target_without_traceback(
     monkeypatch, tmp_path
 ) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
@@ -1411,7 +1423,8 @@ def test_wf_draft_add_step_reports_bare_output_target_without_traceback(
         [
             *base_args,
             "draft",
-            "add-step",
+            "add",
+            "capability",
             "add_step_ws",
             "--revision",
             "1",
@@ -1576,7 +1589,8 @@ def test_wf_draft_forward_route_invalid_via_rpc(monkeypatch, tmp_path) -> None:
         [
             *base_args,
             "draft",
-            "add-step",
+            "add",
+            "capability",
             "fwd_ws",
             "--revision",
             "1",

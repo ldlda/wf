@@ -1,10 +1,34 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+from typing import Any
+
+import pytest
+import typer
 from typer.testing import CliRunner
 
 from wf_cli.app import app
+from wf_cli.commands.draft_options import parse_json_file, route_source
 
 runner = CliRunner()
+
+
+def test_draft_options_parse_json_file_reports_invalid_input(tmp_path) -> None:
+    path = tmp_path / "invalid.json"
+    path.write_text("{", encoding="utf-8")
+
+    with pytest.raises(typer.BadParameter, match="--schema-file: invalid JSON"):
+        parse_json_file(path, option_name="--schema-file")
+
+
+def test_draft_options_route_source_requires_an_incoming_step() -> None:
+    with pytest.raises(typer.BadParameter, match="--from-outcome requires --from-step"):
+        route_source(None, "error")
+
+    incoming = route_source("lookup", None)
+    assert incoming is not None
+    assert incoming.step_id == "lookup"
+    assert incoming.outcome == "ok"
 
 
 def test_wf_help_lists_lifecycle_groups() -> None:
@@ -137,6 +161,27 @@ def test_wf_draft_help_does_not_list_old_create_from_capability() -> None:
     assert "create-from-capability" not in result.output
 
 
+def test_wf_draft_add_help_lists_typed_step_commands_and_removes_flat_command() -> None:
+    result = runner.invoke(app, ["draft", "add", "--help"])
+
+    assert result.exit_code == 0
+    for name in (
+        "capability",
+        "interrupt",
+        "foreach",
+        "join",
+        "end",
+        "when",
+        "choose",
+        "match",
+        "subgraph",
+    ):
+        assert name in result.output
+
+    removed = runner.invoke(app, ["draft", "add-step", "--help"])
+    assert removed.exit_code != 0
+
+
 def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     input_result = runner.invoke(app, ["draft", "set-input", "--help"])
     output_result = runner.invoke(app, ["draft", "set-output", "--help"])
@@ -177,8 +222,8 @@ def test_wf_draft_bind_help_explains_direction() -> None:
     assert "set-input --merge" in help_text
 
 
-def test_wf_draft_add_step_help_explains_explicit_wiring() -> None:
-    result = runner.invoke(app, ["draft", "add-step", "--help"])
+def test_wf_draft_add_capability_help_explains_explicit_wiring() -> None:
+    result = runner.invoke(app, ["draft", "add", "capability", "--help"])
 
     assert result.exit_code == 0
     output = " ".join(result.output.split())
@@ -186,11 +231,63 @@ def test_wf_draft_add_step_help_explains_explicit_wiring() -> None:
     assert "--from-step" in output
     assert "--bind-output" in output
     assert "does not guess" in output
+    assert "projects its schemas and bindings" in output
+    assert "draft validate" in output
     assert "Repeat the flag" in output
     assert "--input state.title=title --input state.summary=summary" in output
     assert (
         "--bind-output title=state.title --bind-output summary=state.summary" in output
     )
+
+
+def test_wf_draft_add_capability_calls_composed_local_handler(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step_from_capability(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "capability",
+            "workspace",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--capability",
+            "demo.call",
+            "--from-step",
+            "start",
+            "--route",
+            "ok=__end__",
+            "--input",
+            "input.text=text",
+            "--bind-output",
+            "value=state.value",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    call = calls[0]
+    assert call["workspace_id"] == "workspace"
+    assert call["revision"] == 1
+    assert call["step_id"] == "call"
+    assert call["capability_name"] == "demo.call"
+    assert call["route_from_step"] == "start"
+    assert call["route_from_outcome"] == "ok"
+    assert call["routes"] == {"ok": "__end__"}
+    assert call["input_map"] == {"input.text": "text"}
+    assert call["bind_outputs"] == {"value": "state.value"}
 
 
 def test_wf_draft_help_does_not_list_old_add_step_from_capability() -> None:
@@ -221,7 +318,8 @@ def test_wf_draft_route_flags_reject_duplicate_outcomes() -> None:
         app,
         [
             "draft",
-            "add-step",
+            "add",
+            "capability",
             "ws",
             "--revision",
             "1",
