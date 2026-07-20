@@ -961,6 +961,86 @@ async def test_add_step_adds_missing_incoming_route_parent_atomically(
     assert workspace["draft"]["routes"]["echo"] == {"ok": "new_step"}
 
 
+@pytest.mark.asyncio
+async def test_add_step_distinguishes_missing_and_explicit_empty_routes(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_empty_routes")
+    draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    api = WorkflowApi(authoring.context)
+    await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
+
+    step_adapter = TypeAdapter(DraftStep)
+    step_without_routes = step_adapter.validate_python(
+        {"use": "demo.personal.echo_tool", "input": [], "output": []}
+    )
+    first = await api.add_step(
+        workspace_id="draft_ws",
+        revision=1,
+        step_id="no_routes",
+        step=step_without_routes,
+        routes=None,
+    )
+    assert first["revision"] == 2
+    after_none = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert "no_routes" not in after_none["draft"]["routes"]
+
+    step_with_empty_routes = step_adapter.validate_python(
+        {"use": "demo.personal.echo_tool", "input": [], "output": []}
+    )
+    second = await api.add_step(
+        workspace_id="draft_ws",
+        revision=2,
+        step_id="empty_routes",
+        step=step_with_empty_routes,
+        routes={},
+    )
+    assert second["revision"] == 3
+    after_empty = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert after_empty["draft"]["routes"]["empty_routes"] == {}
+
+
+@pytest.mark.asyncio
+async def test_add_step_rejects_unknown_incoming_outcome_without_mutation(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_bad_incoming")
+    draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    api = WorkflowApi(authoring.context)
+    await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
+
+    draft_store = authoring.drafts._draft_store()
+    assert isinstance(draft_store, FileDraftWorkspaceStore)
+    workspace_path = draft_store._workspace_path("draft_ws")
+    before_bytes = workspace_path.read_bytes()
+    before = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    step = TypeAdapter(DraftStep).validate_python(
+        {"use": "demo.personal.echo_tool", "input": [], "output": []}
+    )
+
+    with pytest.raises(ValueError, match="unknown incoming route outcome"):
+        await api.add_step(
+            workspace_id="draft_ws",
+            revision=1,
+            step_id="new_step",
+            step=step,
+            incoming=RouteSource("echo", "missing"),
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert workspace_path.read_bytes() == before_bytes
+    assert after["revision"] == before["revision"]
+    assert after["draft"] == before["draft"]
+
+
 async def _assert_add_step_rejected_without_mutation(
     api: WorkflowApi,
     draft_api: WorkflowDraftApi,

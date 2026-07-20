@@ -4,6 +4,8 @@ from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
+from pydantic import TypeAdapter
+
 from wf_artifacts.draft_workspaces.models import (
     WorkflowDraftWorkspace,
     summarize_draft_workspace,
@@ -185,8 +187,18 @@ class WorkflowDraftAuthoringApi:
                     f"{sorted(unknown_outcomes)!r}"
                 )
 
-        if incoming is not None and incoming.step_id not in steps:
-            raise ValueError(f"unknown incoming source step {incoming.step_id!r}")
+        if incoming is not None:
+            if incoming.step_id not in steps:
+                raise ValueError(f"unknown incoming source step {incoming.step_id!r}")
+            source_step = TypeAdapter(DraftStep).validate_python(
+                steps[incoming.step_id]
+            )
+            source_outcomes = self._draft_step_route_outcomes(source_step)
+            if source_outcomes is None or incoming.outcome not in source_outcomes:
+                raise ValueError(
+                    f"unknown incoming route outcome {incoming.outcome!r} for "
+                    f"source step {incoming.step_id!r}"
+                )
 
         patch: list[dict[str, Any]] = [
             {
