@@ -1063,6 +1063,53 @@ async def test_rpc_draft_workspace_add_typed_step_round_trip(tmp_path) -> None:
     }
 
 
+async def test_rpc_draft_workspace_add_untyped_interrupt_preserves_null_schemas(
+    tmp_path,
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_from_capability",
+            {
+                "workspace_id": "untyped_interrupt_ws",
+                "capability_name": "wf.std.constant",
+                "name": "untyped_interrupt",
+            },
+        )
+        added = await _rpc(
+            client,
+            "workflow.draft_workspaces.add_step",
+            {
+                "workspace_id": "untyped_interrupt_ws",
+                "revision": created["result"]["revision"],
+                "step_id": "pause",
+                "step": {
+                    "interrupt": {
+                        "kind": "approval",
+                        "request_schema": None,
+                        "resume_schema": None,
+                    }
+                },
+            },
+        )
+        fetched = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "untyped_interrupt_ws", "include_draft": True},
+        )
+
+    assert added["result"]["revision"] == created["result"]["revision"] + 1
+    interrupt = fetched["result"]["draft"]["steps"]["pause"]["interrupt"]
+    assert interrupt["request_schema"] is None
+    assert interrupt["resume_schema"] is None
+    assert fetched["result"]["draft"]["steps"]["pause"] == {
+        "interrupt": interrupt
+    }
+
+
 async def test_rpc_diagnoses_source(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

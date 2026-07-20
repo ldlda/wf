@@ -629,62 +629,94 @@ async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> 
 
 
 @pytest.mark.parametrize(
-    ("step_id", "step"),
+    ("step_id", "step", "expected_wire"),
     [
-        ("use", TypeAdapter(DraftStep).validate_python({"use": "demo.echo"})),
+        (
+            "use",
+            TypeAdapter(DraftStep).validate_python({"use": "demo.echo"}),
+            {"use": "demo.echo"},
+        ),
         (
             "foreach",
             TypeAdapter(DraftStep).validate_python(
                 {"foreach": {"over": "state.items", "as": "item"}}
             ),
+            {"over": "state.items", "as": "item"},
         ),
         (
             "interrupt",
             TypeAdapter(DraftStep).validate_python(
                 {
                     "interrupt": {
-                    "kind": "approval",
-                    "request_schema": {"type": "object"},
-                    "resume_schema": {"type": "object"},
+                        "kind": "approval",
+                        "request_schema": {"type": "object"},
+                        "resume_schema": {"type": "object"},
                     }
                 }
             ),
+            {
+                "kind": "approval",
+                "request": [],
+                "resume": [],
+                "request_schema": {"type": "object", "properties": {}, "required": []},
+                "resume_schema": {"type": "object", "properties": {}, "required": []},
+                "outcomes": ["submitted"],
+            },
         ),
-        ("join", TypeAdapter(DraftStep).validate_python({"join": {}})),
-        ("end", TypeAdapter(DraftStep).validate_python({"end": {}})),
+        ("join", TypeAdapter(DraftStep).validate_python({"join": {}}), {}),
+        ("end", TypeAdapter(DraftStep).validate_python({"end": {}}), {"outcome": "ok"}),
         (
             "when",
             TypeAdapter(DraftStep).validate_python(
                 {
                     "when": {
-                    "if": {"op": "exists", "path": "state.ready"},
-                    "then": "next",
+                        "if": {"op": "exists", "path": "state.ready"},
+                        "then": "next",
                     }
                 }
             ),
+            {
+                "if": {"op": "exists", "path": "state.ready"},
+                "then": "next",
+                "otherwise": "__end__",
+            },
         ),
         (
             "choose",
             TypeAdapter(DraftStep).validate_python(
                 {
                     "choose": {
-                    "clauses": [
-                        {"if": {"op": "exists", "path": "state.ready"}, "then": "next"}
-                    ]
+                        "clauses": [
+                            {
+                                "if": {"op": "exists", "path": "state.ready"},
+                                "then": "next",
+                            }
+                        ]
                     }
                 }
             ),
+            {
+                "clauses": [
+                    {"if": {"op": "exists", "path": "state.ready"}, "then": "next"}
+                ],
+                "default": "__end__",
+            },
         ),
         (
             "match",
             TypeAdapter(DraftStep).validate_python(
                 {
                     "match": {
-                    "value": "state.status",
-                    "cases": [{"equals": "ready", "then": "next"}],
+                        "value": "state.status",
+                        "cases": [{"equals": "ready", "then": "next"}],
                     }
                 }
             ),
+            {
+                "value": "state.status",
+                "cases": [{"equals": "ready", "then": "next"}],
+                "default": "__end__",
+            },
         ),
         (
             "subgraph",
@@ -693,11 +725,12 @@ async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> 
                     "subgraph": {"workflow": {"artifact_id": "child", "version": 2}}
                 }
             ),
+            {"workflow": {"artifact_id": "child", "version": 2}},
         ),
     ],
 )
 async def test_rpc_client_add_step_preserves_all_typed_variants(
-    step_id: str, step: DraftStep
+    step_id: str, step: DraftStep, expected_wire: dict[str, Any]
 ) -> None:
     calls: list[dict[str, Any]] = []
 
@@ -718,7 +751,10 @@ async def test_rpc_client_add_step_preserves_all_typed_variants(
     assert result == {"revision": 2}
     request = calls[0]
     assert request["method"] == "workflow.draft_workspaces.add_step"
-    assert request["params"]["step"] == step.model_dump(mode="json", by_alias=True)
+    wire_step = request["params"]["step"]
+    assert set(wire_step) == {step_id}
+    for field, expected_value in expected_wire.items():
+        assert wire_step[step_id][field] == expected_value
     assert request["params"]["incoming"] == {
         "step_id": "lookup",
         "outcome": "ok",
