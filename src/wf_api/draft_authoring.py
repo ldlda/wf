@@ -8,6 +8,18 @@ from wf_artifacts.draft_workspaces.models import (
     WorkflowDraftWorkspace,
     summarize_draft_workspace,
 )
+from wf_artifacts.drafts.models import (
+    DraftChooseStep,
+    DraftEndStep,
+    DraftForeachStep,
+    DraftInterruptStep,
+    DraftJoinStep,
+    DraftMatchStep,
+    DraftStep,
+    DraftSubgraphStep,
+    DraftUseStep,
+    DraftWhenStep,
+)
 from wf_core.models.steps import (
     InputBinding,
     OutputBinding,
@@ -119,6 +131,109 @@ class WorkflowDraftAuthoringApi:
             return None
         outcomes = getattr(spec, "outcomes", None)
         return tuple(outcomes) if outcomes is not None else None
+
+    def _draft_step_route_outcomes(self, step: DraftStep) -> set[str] | None:
+        """Return top-level route outcomes, or ``None`` for non-routable steps."""
+        if isinstance(step, DraftUseStep):
+            return set(self._outcomes_for_capability(step.use) or (DEFAULT_OK_OUTCOME,))
+        if isinstance(step, DraftForeachStep):
+            outcomes = {"loop", "done"}
+            if step.foreach.item_error.action in {"skip", "collect"}:
+                outcomes.add("completed_with_errors")
+            return outcomes
+        if isinstance(step, DraftInterruptStep):
+            return set(step.interrupt.outcomes)
+        if isinstance(step, DraftJoinStep):
+            return {"done"}
+        if isinstance(step, DraftSubgraphStep):
+            return set(step.subgraph.outcomes)
+        if isinstance(
+            step, (DraftEndStep, DraftWhenStep, DraftChooseStep, DraftMatchStep)
+        ):
+            return None
+        raise TypeError(f"unsupported draft step {type(step)!r}")
+
+    async def add_step(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        step: DraftStep,
+        incoming: RouteSource | None = None,
+        routes: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        """Add one typed draft step and optional route edits in one revision."""
+        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        steps = workspace.draft.get("steps")
+        if not isinstance(steps, dict):
+            raise ValueError("draft steps must be an object")
+        draft_routes = workspace.draft.get("routes")
+        if not isinstance(draft_routes, dict):
+            raise ValueError("draft routes must be an object")
+        if step_id in steps:
+            raise ValueError(f"draft step {step_id!r} already exists")
+
+        route_outcomes = self._draft_step_route_outcomes(step)
+        if routes is not None:
+            if route_outcomes is None:
+                raise ValueError(f"routes are not allowed for draft step {step_id!r}")
+            unknown_outcomes = set(routes) - route_outcomes
+            if unknown_outcomes:
+                raise ValueError(
+                    f"unknown route outcome(s) for draft step {step_id!r}: "
+                    f"{sorted(unknown_outcomes)!r}"
+                )
+
+        if incoming is not None and incoming.step_id not in steps:
+            raise ValueError(f"unknown incoming source step {incoming.step_id!r}")
+
+        patch: list[dict[str, Any]] = [
+            {
+                "op": "add",
+                "path": f"/steps/{escape_json_pointer(step_id)}",
+                "value": step.model_dump(mode="json", by_alias=True),
+            }
+        ]
+        if routes is not None:
+            patch.append(
+                {
+                    "op": "add",
+                    "path": f"/routes/{escape_json_pointer(step_id)}",
+                    "value": routes,
+                }
+            )
+        if incoming is not None:
+            source_routes = draft_routes.get(incoming.step_id)
+            if source_routes is None:
+                # JSON Patch cannot add a nested outcome until its parent exists.
+                patch.append(
+                    {
+                        "op": "add",
+                        "path": f"/routes/{escape_json_pointer(incoming.step_id)}",
+                        "value": {incoming.outcome: step_id},
+                    }
+                )
+            else:
+                if not isinstance(source_routes, dict):
+                    raise ValueError(
+                        f"routes for step {incoming.step_id!r} must be an object"
+                    )
+                patch.append(
+                    {
+                        "op": "add",
+                        "path": (
+                            f"/routes/{escape_json_pointer(incoming.step_id)}/"
+                            f"{escape_json_pointer(incoming.outcome)}"
+                        ),
+                        "value": step_id,
+                    }
+                )
+        return await self.drafts.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
+        )
 
     async def create_minimal_draft_workspace(
         self,
@@ -600,7 +715,7 @@ class WorkflowDraftAuthoringApi:
         *,
         workspace_id: str,
         revision: int,
-        branches: Sequence[DraftOutcomeRef],
+        branches: Sequence[RouteSource],
         target: str,
     ) -> dict[str, Any]:
         """Update the target for multiple (step, outcome) pairs atomically."""
@@ -801,8 +916,8 @@ class WorkflowDraftAuthoringApi:
 
 
 @dataclass(frozen=True)
-class DraftOutcomeRef:
-    """A reference to a specific outcome of a draft step."""
+class RouteSource:
+    """One source step/outcome pair used for atomic route edits."""
 
     step_id: str
-    outcome: str
+    outcome: str = DEFAULT_OK_OUTCOME

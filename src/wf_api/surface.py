@@ -4,7 +4,9 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Protocol
 
 from wf_artifacts import ArtifactKind
+from wf_artifacts.drafts.models import DraftStep
 
+from .draft_authoring import RouteSource
 from .runs import TraceRangeLike
 
 
@@ -145,6 +147,17 @@ class WorkflowDraftSurface(Protocol):
         routes: dict[str, str] | None = None,
         input_map: dict[str, str] | None = None,
         bind_outputs: dict[str, str] | None = None,
+    ) -> dict[str, Any]: ...
+
+    async def add_step(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        step: DraftStep,
+        incoming: RouteSource | None = None,
+        routes: dict[str, str] | None = None,
     ) -> dict[str, Any]: ...
 
     async def branch_draft(

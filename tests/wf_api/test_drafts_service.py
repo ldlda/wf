@@ -4,13 +4,14 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from pydantic import BaseModel
+from pydantic import BaseModel, TypeAdapter
 
 from tests.wf_mcp.test_support import echo_tool
-from wf_api.draft_authoring import DraftOutcomeRef, WorkflowDraftAuthoringApi
+from wf_api.draft_authoring import RouteSource, WorkflowDraftAuthoringApi
 from wf_api.drafts import WorkflowDraftApi
 from wf_api.service import WorkflowApi
 from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
+from wf_artifacts.drafts.models import DraftStep
 from wf_authoring import node
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
@@ -812,6 +813,305 @@ async def test_add_step_from_capability_rejects_existing_step_id(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("step_name", "step_payload"),
+    [
+        (
+            "use",
+            {
+                "use": "demo.personal.echo_tool",
+                "input": [],
+                "output": [],
+            },
+        ),
+        (
+            "foreach",
+            {"foreach": {"over": "state.items", "as": "item"}},
+        ),
+        (
+            "interrupt",
+            {"interrupt": {"kind": "review", "outcomes": ["submitted"]}},
+        ),
+        ("join", {"join": {}}),
+        ("end", {"end": {"outcome": "ok"}}),
+        (
+            "when",
+            {
+                "when": {
+                    "if": {"op": "exists", "path": "state.ready"},
+                    "then": "echo",
+                }
+            },
+        ),
+        (
+            "choose",
+            {
+                "choose": {
+                    "clauses": [
+                        {
+                            "if": {"op": "exists", "path": "state.ready"},
+                            "then": "echo",
+                        }
+                    ]
+                }
+            },
+        ),
+        (
+            "match",
+            {
+                "match": {
+                    "value": "state.status",
+                    "cases": [{"equals": "ready", "then": "echo"}],
+                }
+            },
+        ),
+        (
+            "subgraph",
+            {
+                "subgraph": {
+                    "workflow": {"name": "child"},
+                    "outcomes": ["ok"],
+                }
+            },
+        ),
+    ],
+)
+async def test_add_step_accepts_every_typed_draft_step(
+    tmp_path: Path,
+    step_name: str,
+    step_payload: dict[str, Any],
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / f"draft_add_{step_name}")
+    draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    api = WorkflowApi(authoring.context)
+    await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
+
+    step = TypeAdapter(DraftStep).validate_python(step_payload)
+    result = await api.add_step(
+        workspace_id="draft_ws",
+        revision=1,
+        step_id="new_step",
+        step=step,
+    )
+
+    assert result["revision"] == 2
+    workspace = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert workspace["draft"]["steps"]["new_step"] == step.model_dump(
+        mode="json", by_alias=True
+    )
+
+
+@pytest.mark.asyncio
+async def test_add_step_routes_incoming_and_outgoing_edges_atomically(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_routes")
+    draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    api = WorkflowApi(authoring.context)
+    await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
+
+    step = TypeAdapter(DraftStep).validate_python(
+        {"use": "demo.personal.echo_tool", "input": [], "output": []}
+    )
+    result = await api.add_step(
+        workspace_id="draft_ws",
+        revision=1,
+        step_id="new_step",
+        step=step,
+        incoming=RouteSource("echo", "ok"),
+        routes={"ok": "__end__"},
+    )
+
+    assert result["revision"] == 2
+    workspace = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert workspace["draft"]["routes"]["echo"]["ok"] == "new_step"
+    assert workspace["draft"]["routes"]["new_step"] == {"ok": "__end__"}
+
+
+@pytest.mark.asyncio
+async def test_add_step_adds_missing_incoming_route_parent_atomically(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_missing_parent")
+    draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    api = WorkflowApi(authoring.context)
+    draft = _echo_draft()
+    draft["routes"] = {}
+    await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=draft)
+
+    step = TypeAdapter(DraftStep).validate_python(
+        {"use": "demo.personal.echo_tool", "input": [], "output": []}
+    )
+    result = await api.add_step(
+        workspace_id="draft_ws",
+        revision=1,
+        step_id="new_step",
+        step=step,
+        incoming=RouteSource("echo", "ok"),
+    )
+
+    assert result["revision"] == 2
+    workspace = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert workspace["draft"]["routes"]["echo"] == {"ok": "new_step"}
+
+
+async def _assert_add_step_rejected_without_mutation(
+    api: WorkflowApi,
+    draft_api: WorkflowDraftApi,
+    *,
+    step_id: str = "new_step",
+    incoming: RouteSource | None = None,
+    routes: dict[str, str] | None = None,
+    message: str,
+) -> None:
+    before = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+
+    step = TypeAdapter(DraftStep).validate_python(
+        {"use": "demo.personal.echo_tool", "input": [], "output": []}
+    )
+    with pytest.raises(ValueError, match=message):
+        await api.add_step(
+            workspace_id="draft_ws",
+            revision=1,
+            step_id=step_id,
+            step=step,
+            incoming=incoming,
+            routes=routes,
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert after["revision"] == before["revision"]
+    assert after["draft"] == before["draft"]
+
+
+@pytest.mark.asyncio
+async def test_add_step_rejects_invalid_routing_inputs_atomically(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_errors")
+    draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    api = WorkflowApi(authoring.context)
+    await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
+
+    await _assert_add_step_rejected_without_mutation(
+        api,
+        draft_api,
+        incoming=RouteSource("missing", "ok"),
+        message="unknown incoming source",
+    )
+
+    await _assert_add_step_rejected_without_mutation(
+        api,
+        draft_api,
+        step_id="echo",
+        routes={"ok": "__end__"},
+        message="already exists",
+    )
+
+    await _assert_add_step_rejected_without_mutation(
+        api,
+        draft_api,
+        routes={"typo": "__end__"},
+        message="unknown route outcome",
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "step_payload",
+    [
+        {"end": {"outcome": "ok"}},
+        {
+            "when": {
+                "if": {"op": "exists", "path": "state.ready"},
+                "then": "echo",
+            }
+        },
+        {
+            "choose": {
+                "clauses": [
+                    {
+                        "if": {"op": "exists", "path": "state.ready"},
+                        "then": "echo",
+                    }
+                ]
+            }
+        },
+        {
+            "match": {
+                "value": "state.status",
+                "cases": [{"equals": "ready", "then": "echo"}],
+            }
+        },
+    ],
+)
+async def test_add_step_rejects_routes_for_non_routable_steps_atomically(
+    tmp_path: Path,
+    step_payload: dict[str, Any],
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_forbidden_routes")
+    draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    api = WorkflowApi(authoring.context)
+    await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
+
+    before = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    step = TypeAdapter(DraftStep).validate_python(step_payload)
+    with pytest.raises(ValueError, match="routes are not allowed"):
+        await api.add_step(
+            workspace_id="draft_ws",
+            revision=1,
+            step_id="new_step",
+            step=step,
+            routes={"ok": "__end__"},
+        )
+    after = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert after["revision"] == before["revision"]
+    assert after["draft"] == before["draft"]
+
+
+@pytest.mark.asyncio
+async def test_add_step_accepts_incomplete_declared_route_subset(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_partial_routes")
+    draft_api, service, authoring = _draft_api(artifact_store, register_echo=True)
+    service.register_specs("demo.personal", echo_tool, _snapshot_tool)
+    api = WorkflowApi(authoring.context)
+    await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
+
+    step = TypeAdapter(DraftStep).validate_python(
+        {"use": "demo.personal.snapshot_tool", "input": [], "output": []}
+    )
+    result = await api.add_step(
+        workspace_id="draft_ws",
+        revision=1,
+        step_id="new_step",
+        step=step,
+        routes={"ok": "__end__"},
+    )
+
+    assert result["revision"] == 2
+    workspace = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert workspace["draft"]["routes"]["new_step"] == {"ok": "__end__"}
+
+
+@pytest.mark.asyncio
 async def test_branch_draft_updates_routes_atomically(tmp_path: Path) -> None:
     artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_branch")
     api, _service, authoring = _draft_api(artifact_store, register_echo=True)
@@ -894,8 +1194,8 @@ async def test_handle_draft_updates_multiple_source_outcomes(tmp_path: Path) -> 
         workspace_id="handling",
         revision=1,
         branches=[
-            DraftOutcomeRef(step_id="lookup", outcome="error"),
-            DraftOutcomeRef(step_id="transform", outcome="error"),
+            RouteSource(step_id="lookup", outcome="error"),
+            RouteSource(step_id="transform", outcome="error"),
         ],
         target="__end__",
     )

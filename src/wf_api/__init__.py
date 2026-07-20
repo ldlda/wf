@@ -17,6 +17,7 @@ from .constants import (
     RUNTIME_ERROR_CAPABILITY,
 )
 from .deployments import WorkflowDeploymentApi
+from .draft_authoring import RouteSource
 from .drafts import WorkflowDraftApi
 from .durable_context import durable_workflow_api, require_workflow_stores
 from .listing import matches_query, paged_list_payload
@@ -88,6 +89,7 @@ __all__ = [
     "OutcomeCandidateKind",
     "RUNTIME_ERROR_CAPABILITY",
     "RawWorkflowPlan",
+    "RouteSource",
     "RuntimeDependencies",
     "TraceRange",
     "WorkflowAdminApi",

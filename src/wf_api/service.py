@@ -4,11 +4,12 @@ from collections.abc import Sequence
 from typing import Any
 
 from wf_artifacts import ArtifactKind
+from wf_artifacts.drafts.models import DraftStep
 
 from .artifacts import WorkflowArtifactApi
 from .capabilities import WorkflowCapabilityApi
 from .deployments import WorkflowDeploymentApi
-from .draft_authoring import DraftOutcomeRef, WorkflowDraftAuthoringApi
+from .draft_authoring import RouteSource, WorkflowDraftAuthoringApi
 from .drafts import WorkflowDraftApi
 from .models import RawWorkflowPlan
 from .operation_context import WorkflowOperationContext
@@ -428,6 +429,25 @@ class WorkflowApi:
             bind_outputs=bind_outputs,
         )
 
+    async def add_step(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        step: DraftStep,
+        incoming: RouteSource | None = None,
+        routes: dict[str, str] | None = None,
+    ) -> dict[str, Any]:
+        return await self.draft_authoring.add_step(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            step=step,
+            incoming=incoming,
+            routes=routes,
+        )
+
     async def branch_draft(
         self,
         *,
@@ -452,8 +472,7 @@ class WorkflowApi:
         target: str,
     ) -> dict[str, Any]:
         refs = [
-            DraftOutcomeRef(step_id=b["step_id"], outcome=b["outcome"])
-            for b in branches
+            RouteSource(step_id=b["step_id"], outcome=b["outcome"]) for b in branches
         ]
         return await self.draft_authoring.handle_draft(
             workspace_id=workspace_id,
