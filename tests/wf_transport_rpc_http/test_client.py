@@ -752,9 +752,13 @@ async def test_rpc_client_add_step_preserves_all_typed_variants(
     request = calls[0]
     assert request["method"] == "workflow.draft_workspaces.add_step"
     wire_step = request["params"]["step"]
-    assert set(wire_step) == {step_id}
+    if step_id == "use":
+        wire_payload = wire_step
+    else:
+        assert set(wire_step) == {step_id}
+        wire_payload = wire_step[step_id]
     for field, expected_value in expected_wire.items():
-        assert wire_step[step_id][field] == expected_value
+        assert wire_payload[field] == expected_value
     assert request["params"]["incoming"] == {
         "step_id": "lookup",
         "outcome": "ok",
