@@ -107,7 +107,7 @@ class WorkflowDraftAuthoringApi:
         workspace_id: str,
         revision: int,
     ) -> WorkflowDraftWorkspace | dict[str, Any]:
-        """Load a workspace for no-op edits while still enforcing optimistic locks."""
+        """Load a workspace and enforce optimistic locking before semantic preflight."""
         workspace = self.drafts._draft_store().get_workspace(workspace_id)
         if workspace.revision == revision:
             return workspace
@@ -330,7 +330,13 @@ class WorkflowDraftAuthoringApi:
         target_path: str,
     ) -> dict[str, Any]:
         """Bind a graph path to/from one capability local field, projecting missing schema when needed."""
-        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
         step = draft_step(workspace.draft, step_id)
         capability_name = step.get("use")
         if not isinstance(capability_name, str) or not capability_name:
@@ -535,7 +541,13 @@ class WorkflowDraftAuthoringApi:
         one revision so callers do not have to interleave add-step, route,
         input-map, state-schema, and output-map operations by hand.
         """
-        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
         steps = workspace.draft.get("steps")
         if not isinstance(steps, dict):
             raise ValueError("draft steps must be an object")

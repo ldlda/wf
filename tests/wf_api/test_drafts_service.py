@@ -536,6 +536,38 @@ async def test_patch_draft_workspace_updates_revision(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_patch_draft_workspace_stale_revision_does_not_mutate(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "drafts_patch_workspace_stale"
+    )
+    api, _service, _authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="echo_ws",
+        draft=_echo_draft(),
+    )
+    before = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+
+    result = await api.patch_draft_workspace(
+        workspace_id="echo_ws",
+        revision=2,
+        patch=[{"op": "replace", "path": "/name", "value": "must_not_apply"}],
+    )
+
+    after = await api.get_draft_workspace(
+        workspace_id="echo_ws",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
 async def test_draft_workspace_patch_helpers_update_revision_and_bindings(
     tmp_path: Path,
 ) -> None:
@@ -1282,6 +1314,51 @@ async def test_add_step_stale_revision_wins_over_content_preflight(
         workspace_id="draft_ws", include_draft=True
     )
     assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("operation", ["bind", "capability_add"])
+async def test_capability_aware_edits_stale_revision_wins_over_semantic_errors(
+    tmp_path: Path,
+    operation: str,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / f"draft_capability_stale_{operation}"
+    )
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(
+        workspace_id="draft_ws",
+        draft=_echo_draft(),
+    )
+    before = await api.get_draft_workspace(
+        workspace_id="draft_ws",
+        include_draft=True,
+    )
+
+    if operation == "bind":
+        result = await authoring.bind_draft(
+            workspace_id="draft_ws",
+            revision=2,
+            step_id="missing",
+            source_path="input.text",
+            target_path="local.text",
+        )
+    else:
+        result = await authoring.add_step_from_capability(
+            workspace_id="draft_ws",
+            revision=2,
+            step_id="new_step",
+            capability_name="missing.connection.unknown_tool",
+        )
+
+    after = await api.get_draft_workspace(
+        workspace_id="draft_ws",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["revision"] == before["revision"]
     assert result["diagnostics"][0]["code"] == "revision_conflict"
     assert after == before
 
