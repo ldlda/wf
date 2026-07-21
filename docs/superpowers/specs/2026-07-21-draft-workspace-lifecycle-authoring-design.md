@@ -222,14 +222,17 @@ revisioned workspace patch operation. Therefore:
 
 - stale revisions return `revision_conflict`;
 - stale requests do not mutate the workspace;
-- revision conflict is checked before content-dependent preflight;
+- after a request envelope is valid, revision conflict is checked before
+  validation that depends on current workspace content;
 - forward references and other representable invalid states consume one
   revision and return diagnostics;
 - replacing a field with an equal value still consumes one revision, matching
   ordinary JSON Patch behavior in this slice.
 
 Request-envelope errors such as no supplied contract field, an empty outcome
-list, duplicate outcomes, or a non-object schema are rejected without mutation.
+list, duplicate outcomes, or a non-object schema are rejected before workspace
+lookup and therefore may precede a stale-revision result. They never mutate the
+workspace.
 
 ## Testing
 
