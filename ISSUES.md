@@ -45,9 +45,9 @@
 - [ ] No focused operation declares workflow outcomes. `wf draft add end
   --outcome error` can add the terminal node, but core validation rejects it
   until the caller separately patches `/outcomes`.
-- [ ] No focused operation updates workflow input/state/output schemas or state
-  reducer declarations after workspace creation. These modeled workflow
-  contracts currently require RFC 6902 edits.
+- [ ] No focused operation updates workflow input/state/output schemas,
+  including reducer metadata carried by the state schema, after workspace
+  creation. These modeled workflow contracts currently require RFC 6902 edits.
 - [ ] The dedicated capability-step CLI cannot set `desc`, `retry`,
   `timeout_seconds`, or literal inputs at creation, and there is no focused
   update-step operation. The generic RPC step payload can represent these

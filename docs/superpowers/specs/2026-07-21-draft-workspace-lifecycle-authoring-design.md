@@ -152,7 +152,9 @@ produce exactly one new workspace revision.
 Schema documents are whole-field replacements, not deep merges. JSON Schema
 keywords such as `required`, `$defs`, unions, and nested `properties` do not
 have one safe generic merge rule. Callers that need field-level surgery retain
-the existing raw JSON Patch operation.
+the existing raw JSON Patch operation. State reducer declarations remain schema
+metadata and are preserved when supplied in a replacement `state_schema`; this
+slice does not invent a separate reducer-edit model.
 
 At least one contract field must be supplied. Supplied outcomes must contain at
 least one non-empty, unique value. Invalid request envelopes fail before
@@ -238,6 +240,7 @@ Tests must cover each interface rather than only the lowest-level helper.
 - capability-free creation stores the exact stable skeleton;
 - default schema objects are independent values;
 - custom schemas, outcomes, name, and title are preserved;
+- reducer metadata in a custom state schema is preserved unchanged;
 - duplicate workspace IDs return `workspace_exists`;
 - setting an existing start step can make a draft valid;
 - setting a missing start step persists an invalid forward reference;
