@@ -748,6 +748,77 @@ def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> Non
     assert '"status": "runnable"' in validated_deployment.output
 
 
+def test_wf_remote_capability_free_draft_lifecycle(monkeypatch, tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+    commands = [
+        ["draft", "create", "control_ws", "--name", "control"],
+        [
+            "draft",
+            "add",
+            "join",
+            "control_ws",
+            "--revision",
+            "1",
+            "--step",
+            "gate",
+            "--route",
+            "done=finish",
+        ],
+        [
+            "draft",
+            "set-start",
+            "control_ws",
+            "--revision",
+            "2",
+            "--step",
+            "gate",
+        ],
+        [
+            "draft",
+            "add",
+            "end",
+            "control_ws",
+            "--revision",
+            "3",
+            "--step",
+            "finish",
+            "--outcome",
+            "error",
+        ],
+        [
+            "draft",
+            "set-contract",
+            "control_ws",
+            "--revision",
+            "4",
+            "--outcome",
+            "error",
+        ],
+        ["draft", "validate", "control_ws"],
+    ]
+
+    results = [runner.invoke(app, [*base_args, *command]) for command in commands]
+    inspected = runner.invoke(
+        app,
+        [*base_args, "draft", "inspect", "control_ws", "--include-draft"],
+    )
+
+    for result in results:
+        assert result.exit_code == 0, result.output
+    assert '"status": "valid"' in results[-1].output
+    assert inspected.exit_code == 0, inspected.output
+    payload = json.loads(inspected.output)
+    assert payload["revision"] == 5
+    assert payload["draft"]["start"] == "gate"
+    assert payload["draft"]["outcomes"] == ["error"]
+    assert set(payload["draft"]["steps"]) == {"gate", "finish"}
+
+
 def test_wf_remote_run_resume_interrupted_deployment(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     asyncio.run(

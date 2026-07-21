@@ -151,7 +151,322 @@ def test_wf_draft_create_help_accepts_capability_option() -> None:
     assert result.exit_code == 0
     output = " ".join(result.output.split())
     assert "--capability" in output
+    assert "--name" in output
     assert "--title" in output
+    assert "--input-schema-file" in output
+    assert "--state-schema-file" in output
+    assert "--output-schema-file" in output
+    assert "--outcome" in output
+
+
+def test_wf_draft_lifecycle_command_help() -> None:
+    set_start = runner.invoke(app, ["draft", "set-start", "--help"])
+    set_contract = runner.invoke(app, ["draft", "set-contract", "--help"])
+
+    assert set_start.exit_code == 0
+    assert "--revision" in set_start.output
+    assert "--step" in set_start.output
+    assert set_contract.exit_code == 0
+    assert "--revision" in set_contract.output
+    assert "--input-schema-file" in set_contract.output
+    assert "--state-schema-file" in set_contract.output
+    assert "--output-schema-file" in set_contract.output
+    assert "--outcome" in set_contract.output
+
+
+def test_wf_draft_lifecycle_commands_dispatch_exact_fields(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    calls: list[tuple[str, dict[str, Any]]] = []
+
+    class FakeHandlers:
+        async def create_empty_draft_workspace(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(("create_empty", kwargs))
+            return {"revision": 1, "status": "invalid"}
+
+        async def create_draft_workspace_from_capability(
+            self, **kwargs: Any
+        ) -> dict[str, Any]:
+            calls.append(("create_capability", kwargs))
+            return {"revision": 1, "status": "valid"}
+
+        async def set_draft_start(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(("set_start", kwargs))
+            return {"revision": 2, "status": "invalid"}
+
+        async def set_draft_contract(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(("set_contract", kwargs))
+            return {"revision": 3, "status": "invalid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: context,
+    )
+    input_schema = tmp_path / "input.json"
+    state_schema = tmp_path / "state.json"
+    output_schema = tmp_path / "output.json"
+    input_schema.write_text('{"type":"object","properties":{}}', encoding="utf-8")
+    state_schema.write_text(
+        '{"type":"object","properties":{"items":{"type":"array",'
+        '"reducer":"wf.std.append"}}}',
+        encoding="utf-8",
+    )
+    output_schema.write_text(
+        '{"type":"object","properties":{"result":{"type":"string"}}}',
+        encoding="utf-8",
+    )
+
+    empty = runner.invoke(
+        app,
+        [
+            "draft",
+            "create",
+            "control_ws",
+            "--name",
+            "control",
+            "--title",
+            "Control",
+            "--input-schema-file",
+            str(input_schema),
+            "--state-schema-file",
+            str(state_schema),
+            "--output-schema-file",
+            str(output_schema),
+            "--outcome",
+            "submitted",
+            "--outcome",
+            "cancelled",
+        ],
+    )
+    capability = runner.invoke(
+        app,
+        [
+            "draft",
+            "create",
+            "capability_ws",
+            "--capability",
+            "wf.std.constant",
+            "--name",
+            "constant",
+        ],
+    )
+    started = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-start",
+            "control_ws",
+            "--revision",
+            "1",
+            "--step",
+            "gate",
+        ],
+    )
+    contracted = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-contract",
+            "control_ws",
+            "--revision",
+            "2",
+            "--state-schema-file",
+            str(state_schema),
+            "--outcome",
+            "submitted",
+            "--outcome",
+            "cancelled",
+        ],
+    )
+
+    assert empty.exit_code == 0, empty.output
+    assert capability.exit_code == 0, capability.output
+    assert started.exit_code == 0, started.output
+    assert contracted.exit_code == 0, contracted.output
+    assert calls == [
+        (
+            "create_empty",
+            {
+                "workspace_id": "control_ws",
+                "name": "control",
+                "title": "Control",
+                "input_schema": {"type": "object", "properties": {}},
+                "state_schema": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "reducer": "wf.std.append",
+                        }
+                    },
+                },
+                "output_schema": {
+                    "type": "object",
+                    "properties": {"result": {"type": "string"}},
+                },
+                "outcomes": ("submitted", "cancelled"),
+            },
+        ),
+        (
+            "create_capability",
+            {
+                "workspace_id": "capability_ws",
+                "capability_name": "wf.std.constant",
+                "name": "constant",
+                "title": None,
+            },
+        ),
+        (
+            "set_start",
+            {"workspace_id": "control_ws", "revision": 1, "step_id": "gate"},
+        ),
+        (
+            "set_contract",
+            {
+                "workspace_id": "control_ws",
+                "revision": 2,
+                "input_schema": None,
+                "state_schema": {
+                    "type": "object",
+                    "properties": {
+                        "items": {
+                            "type": "array",
+                            "reducer": "wf.std.append",
+                        }
+                    },
+                },
+                "output_schema": None,
+                "outcomes": ("submitted", "cancelled"),
+            },
+        ),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("arguments", "message"),
+    [
+        (["draft", "create", "ws"], "--name is required"),
+        (
+            [
+                "draft",
+                "create",
+                "ws",
+                "--capability",
+                "wf.std.constant",
+                "--outcome",
+                "ok",
+            ],
+            "only valid without --capability",
+        ),
+        (
+            ["draft", "set-contract", "ws", "--revision", "1"],
+            "requires at least one contract field",
+        ),
+        (
+            [
+                "draft",
+                "create",
+                "ws",
+                "--name",
+                "ws",
+                "--outcome",
+                "ok",
+                "--outcome",
+                "ok",
+            ],
+            "outcomes must be unique",
+        ),
+        (
+            [
+                "draft",
+                "set-contract",
+                "ws",
+                "--revision",
+                "1",
+                "--outcome",
+                "",
+            ],
+            "outcomes must not be blank",
+        ),
+    ],
+)
+def test_wf_draft_lifecycle_rejects_invalid_options_before_loading_context(
+    monkeypatch,
+    arguments: list[str],
+    message: str,
+) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(app, arguments)
+
+    assert result.exit_code != 0
+    assert message in result.output
+    assert "context loaded" not in result.output
+
+
+@pytest.mark.parametrize("value", ["[1]", '"schema"', "null"])
+def test_wf_draft_create_rejects_non_object_schema_files(
+    monkeypatch,
+    tmp_path,
+    value: str,
+) -> None:
+    schema = tmp_path / "schema.json"
+    schema.write_text(value, encoding="utf-8")
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "create",
+            "ws",
+            "--name",
+            "ws",
+            "--input-schema-file",
+            str(schema),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "--input-schema-file: expected a JSON object" in result.output
+    assert "context loaded" not in result.output
+
+
+def test_wf_draft_create_rejects_malformed_schema_file(
+    monkeypatch,
+    tmp_path,
+) -> None:
+    schema = tmp_path / "schema.json"
+    schema.write_text("{", encoding="utf-8")
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "create",
+            "ws",
+            "--name",
+            "ws",
+            "--input-schema-file",
+            str(schema),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "--input-schema-file: invalid JSON" in result.output
+    assert "context loaded" not in result.output
 
 
 def test_wf_draft_help_does_not_list_old_create_from_capability() -> None:

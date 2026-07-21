@@ -100,6 +100,14 @@ def parse_json_file(path: Path, *, option_name: str) -> Any:
         ) from exc
 
 
+def parse_json_object_file(path: Path, *, option_name: str) -> dict[str, Any]:
+    """Read a JSON object file used by a workflow schema option."""
+    value = parse_json_file(path, option_name=option_name)
+    if not isinstance(value, dict):
+        raise typer.BadParameter(f"{option_name}: expected a JSON object")
+    return value
+
+
 def route_source(from_step: str | None, from_outcome: str | None) -> RouteSource | None:
     if from_step is None:
         if from_outcome is not None:

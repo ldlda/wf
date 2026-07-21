@@ -11,6 +11,7 @@ from wf_cli.commands.draft_options import (
     _parse_map_flags,
     _parse_route_flags,
     _parse_step_input_map_flags,
+    parse_json_object_file,
 )
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
@@ -23,6 +24,18 @@ app = typer.Typer(
     no_args_is_help=True,
 )
 app.add_typer(draft_add.app, name="add")
+
+
+def _validate_outcomes(values: list[str] | None) -> tuple[str, ...] | None:
+    """Validate repeated outcome flags before loading local or remote context."""
+    if values is None:
+        return None
+    outcomes = tuple(value.strip() for value in values)
+    if any(not outcome for outcome in outcomes):
+        raise typer.BadParameter("outcomes must not be blank")
+    if len(set(outcomes)) != len(outcomes):
+        raise typer.BadParameter("outcomes must be unique")
+    return outcomes
 
 
 @app.command("list")
@@ -66,34 +79,106 @@ def inspect_draft(
 
 
 @app.command("create")
-def create_from_capability(
+def create_draft(
     ctx: typer.Context,
     workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
     capability_name: Annotated[
-        str,
+        str | None,
         typer.Option(
             "--capability",
-            help="Qualified capability name used to bootstrap the draft.",
+            help="Optional qualified capability used to bootstrap the draft.",
         ),
-    ],
+    ] = None,
     name: Annotated[
         str | None, typer.Option("--name", help="Draft workflow name.")
     ] = None,
     title: Annotated[
         str | None, typer.Option("--title", help="Workspace title.")
     ] = None,
+    input_schema_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--input-schema-file", help="Path to an input JSON Schema object."
+        ),
+    ] = None,
+    state_schema_file: Annotated[
+        Path | None,
+        typer.Option("--state-schema-file", help="Path to a state JSON Schema object."),
+    ] = None,
+    output_schema_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--output-schema-file", help="Path to an output JSON Schema object."
+        ),
+    ] = None,
+    outcome: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--outcome", help="Workflow outcome. Repeat for multiple outcomes."
+        ),
+    ] = None,
 ) -> None:
-    """Create a patchable draft workspace from one capability."""
+    """Create an empty draft or bootstrap one from a capability."""
+    contract_options = (
+        input_schema_file,
+        state_schema_file,
+        output_schema_file,
+        outcome,
+    )
+    if capability_name is not None and any(
+        value is not None for value in contract_options
+    ):
+        raise typer.BadParameter(
+            "only valid without --capability: schema and outcome options"
+        )
+    if capability_name is None and name is None:
+        raise typer.BadParameter("--name is required without --capability")
+
+    outcomes = _validate_outcomes(outcome)
+    input_schema = (
+        None
+        if input_schema_file is None
+        else parse_json_object_file(
+            input_schema_file, option_name="--input-schema-file"
+        )
+    )
+    state_schema = (
+        None
+        if state_schema_file is None
+        else parse_json_object_file(
+            state_schema_file, option_name="--state-schema-file"
+        )
+    )
+    output_schema = (
+        None
+        if output_schema_file is None
+        else parse_json_object_file(
+            output_schema_file, option_name="--output-schema-file"
+        )
+    )
     context = load_cli_context(ctx)
+    if capability_name is not None:
+        operation = context.handlers.create_draft_workspace_from_capability(
+            workspace_id=workspace_id,
+            capability_name=capability_name,
+            name=name,
+            title=title,
+        )
+    else:
+        assert name is not None  # Validated before context loading above.
+        operation = context.handlers.create_empty_draft_workspace(
+            workspace_id=workspace_id,
+            name=name,
+            title=title,
+            input_schema=input_schema,
+            state_schema=state_schema,
+            output_schema=output_schema,
+            outcomes=("ok",) if outcomes is None else outcomes,
+        )
     emit_json(
         run_cli_operation(
             context,
-            context.handlers.create_draft_workspace_from_capability(
-                workspace_id=workspace_id,
-                capability_name=capability_name,
-                name=name,
-                title=title,
-            ),
+            operation,
         )
     )
 
@@ -150,6 +235,109 @@ def set_draft_name(
                 workspace_id=workspace_id,
                 revision=revision,
                 name=name,
+            ),
+        )
+    )
+
+
+@app.command("set-start")
+def set_draft_start(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    step_id: Annotated[str, typer.Option("--step", help="New start step id.")],
+) -> None:
+    """Set the draft workflow's start step."""
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.set_draft_start(
+                workspace_id=workspace_id,
+                revision=revision,
+                step_id=step_id,
+            ),
+        )
+    )
+
+
+@app.command("set-contract")
+def set_draft_contract(
+    ctx: typer.Context,
+    workspace_id: Annotated[str, typer.Argument(help="Draft workspace id.")],
+    revision: Annotated[
+        int, typer.Option("--revision", min=1, help="Expected workspace revision.")
+    ],
+    input_schema_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--input-schema-file", help="Path to an input JSON Schema object."
+        ),
+    ] = None,
+    state_schema_file: Annotated[
+        Path | None,
+        typer.Option("--state-schema-file", help="Path to a state JSON Schema object."),
+    ] = None,
+    output_schema_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--output-schema-file", help="Path to an output JSON Schema object."
+        ),
+    ] = None,
+    outcome: Annotated[
+        list[str] | None,
+        typer.Option(
+            "--outcome", help="Workflow outcome. Repeat for multiple outcomes."
+        ),
+    ] = None,
+) -> None:
+    """Replace selected top-level workflow contract fields."""
+    if all(
+        value is None
+        for value in (
+            input_schema_file,
+            state_schema_file,
+            output_schema_file,
+            outcome,
+        )
+    ):
+        raise typer.BadParameter("set-contract requires at least one contract field")
+
+    outcomes = _validate_outcomes(outcome)
+    input_schema = (
+        None
+        if input_schema_file is None
+        else parse_json_object_file(
+            input_schema_file, option_name="--input-schema-file"
+        )
+    )
+    state_schema = (
+        None
+        if state_schema_file is None
+        else parse_json_object_file(
+            state_schema_file, option_name="--state-schema-file"
+        )
+    )
+    output_schema = (
+        None
+        if output_schema_file is None
+        else parse_json_object_file(
+            output_schema_file, option_name="--output-schema-file"
+        )
+    )
+    context = load_cli_context(ctx)
+    emit_json(
+        run_cli_operation(
+            context,
+            context.handlers.set_draft_contract(
+                workspace_id=workspace_id,
+                revision=revision,
+                input_schema=input_schema,
+                state_schema=state_schema,
+                output_schema=output_schema,
+                outcomes=outcomes,
             ),
         )
     )
