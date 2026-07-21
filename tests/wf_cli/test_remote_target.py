@@ -1420,6 +1420,20 @@ def test_wf_draft_add_control_steps_use_generic_rpc_target(monkeypatch, tmp_path
         '{"type":"object","properties":{"decision":{"type":"string"}}}',
         encoding="utf-8",
     )
+    condition_file = tmp_path / "condition.json"
+    condition_file.write_text(
+        '{"op":"exists","path":"state.value"}', encoding="utf-8"
+    )
+    clauses_file = tmp_path / "clauses.json"
+    clauses_file.write_text(
+        '[{"if":{"op":"exists","path":"state.value"},"then":"call"}]',
+        encoding="utf-8",
+    )
+    cases_file = tmp_path / "cases.json"
+    cases_file.write_text(
+        '[{"equals":"ready","then":"call"},{"equals":null,"then":"__end__"}]',
+        encoding="utf-8",
+    )
     cases = [
         (
             "interrupt",
@@ -1459,6 +1473,7 @@ def test_wf_draft_add_control_steps_use_generic_rpc_target(monkeypatch, tmp_path
                 },
                 "outcomes": ["submitted", "cancelled"],
             },
+            {"submitted": "__end__", "cancelled": "__end__"},
         ),
         (
             "foreach",
@@ -1495,12 +1510,92 @@ def test_wf_draft_add_control_steps_use_generic_rpc_target(monkeypatch, tmp_path
                     "interrupt": "quiesce",
                 },
             },
+            {
+                "loop": "call",
+                "done": "__end__",
+                "completed_with_errors": "__end__",
+            },
         ),
-        ("join", ["--route", "done=__end__"], {}),
-        ("end", ["--outcome", "ok"], {"outcome": "ok"}),
+        ("join", ["--route", "done=__end__"], {}, {"done": "__end__"}),
+        ("end", ["--outcome", "ok"], {"outcome": "ok"}, None),
+        (
+            "when",
+            [
+                "--condition-file",
+                str(condition_file),
+                "--then",
+                "call",
+                "--otherwise",
+                "__end__",
+            ],
+            {
+                "if": {"op": "exists", "path": "state.value"},
+                "then": "call",
+                "otherwise": "__end__",
+            },
+            None,
+        ),
+        (
+            "choose",
+            ["--clauses-file", str(clauses_file), "--default", "__end__"],
+            {
+                "clauses": [
+                    {
+                        "if": {"op": "exists", "path": "state.value"},
+                        "then": "call",
+                    }
+                ],
+                "default": "__end__",
+            },
+            None,
+        ),
+        (
+            "match",
+            [
+                "--value",
+                "state.value",
+                "--cases-file",
+                str(cases_file),
+                "--default",
+                "__end__",
+            ],
+            {
+                "value": "state.value",
+                "cases": [
+                    {"equals": "ready", "then": "call"},
+                    {"equals": None, "then": "__end__"},
+                ],
+                "default": "__end__",
+            },
+            None,
+        ),
+        (
+            "subgraph",
+            [
+                "--workflow-name",
+                "child",
+                "--input",
+                "input.value=value",
+                "--bind-output",
+                "value=state.child_value",
+                "--outcome",
+                "ok",
+                "--route",
+                "ok=__end__",
+            ],
+            {
+                "workflow": {"name": "child"},
+                "input": [{"target": "value", "path": "input.value"}],
+                "output": [
+                    {"source": "value", "target": "state.child_value"}
+                ],
+                "outcomes": ["ok"],
+            },
+            {"ok": "__end__"},
+        ),
     ]
 
-    for command, command_args, expected in cases:
+    for command, command_args, expected, expected_routes in cases:
         workspace_id = f"add_{command}_ws"
         created = runner.invoke(
             app,
@@ -1544,9 +1639,15 @@ def test_wf_draft_add_control_steps_use_generic_rpc_target(monkeypatch, tmp_path
         )
         assert inspected.exit_code == 0, inspected.output
         persisted_step = json.loads(inspected.output)["draft"]["steps"][command]
+        draft = json.loads(inspected.output)["draft"]
         actual_payload = persisted_step[command]
         for field, value in expected.items():
             assert actual_payload[field] == value
+        assert draft["routes"]["call"]["ok"] == command
+        if expected_routes is None:
+            assert command not in draft["routes"]
+        else:
+            assert draft["routes"][command] == expected_routes
 
 
 def test_wf_draft_add_capability_reports_bare_output_target_without_traceback(

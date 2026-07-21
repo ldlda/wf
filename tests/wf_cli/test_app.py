@@ -701,6 +701,379 @@ def test_wf_draft_add_control_command_help_is_type_specific() -> None:
     assert "--route" not in end.output
 
 
+def test_wf_draft_add_decisions_build_ordered_typed_steps(monkeypatch, tmp_path) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": len(calls) + 1, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+    condition_file = tmp_path / "condition.json"
+    condition_file.write_text(
+        '{"op":"exists","path":"state.report"}', encoding="utf-8"
+    )
+    clauses_file = tmp_path / "clauses.json"
+    clauses_file.write_text(
+        '[{"if":{"op":"exists","path":"state.report"},"then":"publish"},'
+        '{"if":{"op":"exists","path":"state.error"},"then":"revise"}]',
+        encoding="utf-8",
+    )
+    cases_file = tmp_path / "cases.json"
+    cases_file.write_text(
+        '[{"equals":"ready","then":"publish"},{"equals":2,"then":"retry"},'
+        '{"equals":true,"then":"approve"},{"equals":null,"then":"revise"}]',
+        encoding="utf-8",
+    )
+
+    invocations = [
+        [
+            "when",
+            "--condition-file",
+            str(condition_file),
+            "--then",
+            "publish",
+            "--otherwise",
+            "revise",
+        ],
+        [
+            "choose",
+            "--clauses-file",
+            str(clauses_file),
+            "--default",
+            "__end__",
+        ],
+        [
+            "match",
+            "--value",
+            "state.status",
+            "--cases-file",
+            str(cases_file),
+            "--default",
+            "__end__",
+        ],
+    ]
+    for revision, invocation in enumerate(invocations, start=1):
+        result = runner.invoke(
+            app,
+            [
+                "draft",
+                "add",
+                *invocation[:1],
+                "workspace",
+                "--revision",
+                str(revision),
+                "--step",
+                invocation[0],
+                "--from-step",
+                "start",
+                "--from-outcome",
+                "ok",
+                *invocation[1:],
+            ],
+        )
+        assert result.exit_code == 0, result.output
+
+    assert calls[0]["step"].model_dump(mode="json", by_alias=True) == {
+        "when": {
+            "if": {"op": "exists", "path": "state.report"},
+            "then": "publish",
+            "otherwise": "revise",
+        }
+    }
+    assert calls[1]["step"].model_dump(mode="json", by_alias=True) == {
+        "choose": {
+            "clauses": [
+                {
+                    "if": {"op": "exists", "path": "state.report"},
+                    "then": "publish",
+                },
+                {
+                    "if": {"op": "exists", "path": "state.error"},
+                    "then": "revise",
+                },
+            ],
+            "default": "__end__",
+        }
+    }
+    assert calls[2]["step"].model_dump(mode="json", by_alias=True) == {
+        "match": {
+            "value": "state.status",
+            "cases": [
+                {"equals": "ready", "then": "publish"},
+                {"equals": 2, "then": "retry"},
+                {"equals": True, "then": "approve"},
+                {"equals": None, "then": "revise"},
+            ],
+            "default": "__end__",
+        }
+    }
+    assert all(call["routes"] is None for call in calls)
+    assert all(call["incoming"].step_id == "start" for call in calls)
+
+
+def test_wf_draft_add_decisions_reject_bad_files_and_generic_routes(
+    monkeypatch, tmp_path
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+    empty_clauses = tmp_path / "empty.json"
+    empty_clauses.write_text("[]", encoding="utf-8")
+    object_cases = tmp_path / "object.json"
+    object_cases.write_text("{}", encoding="utf-8")
+    condition_file = tmp_path / "condition.json"
+    condition_file.write_text(
+        '{"op":"exists","path":"state.report"}', encoding="utf-8"
+    )
+
+    empty = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "choose",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "choose",
+            "--clauses-file",
+            str(empty_clauses),
+        ],
+    )
+    non_array = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "match",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "match",
+            "--value",
+            "state.status",
+            "--cases-file",
+            str(object_cases),
+        ],
+    )
+    generic_route = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "when",
+            "ws",
+            "--revision",
+            "1",
+            "--step",
+            "when",
+            "--condition-file",
+            str(condition_file),
+            "--then",
+            "yes",
+            "--route",
+            "true=yes",
+        ],
+    )
+
+    assert empty.exit_code == 2
+    assert "Traceback" not in empty.output
+    assert non_array.exit_code == 2
+    assert "Traceback" not in non_array.output
+    assert generic_route.exit_code == 2
+    assert "--route" in generic_route.output
+    assert calls == []
+
+
+def test_wf_draft_add_subgraph_builds_name_and_artifact_contracts(
+    monkeypatch, tmp_path
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": len(calls) + 1, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+    input_schema = tmp_path / "input.json"
+    input_schema.write_text(
+        '{"type":"object","properties":{"topic":{"type":"string"}}}',
+        encoding="utf-8",
+    )
+    output_schema = tmp_path / "output.json"
+    output_schema.write_text(
+        '{"type":"object","properties":{"report":{"type":"string"}}}',
+        encoding="utf-8",
+    )
+
+    named = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "subgraph",
+            "workspace",
+            "--revision",
+            "1",
+            "--step",
+            "child",
+            "--workflow-name",
+            "child_workflow",
+            "--description",
+            "Generate the child report.",
+            "--input-schema-file",
+            str(input_schema),
+            "--output-schema-file",
+            str(output_schema),
+            "--input",
+            "state.topic=topic",
+            "--bind-output",
+            "report=state.report",
+            "--outcome",
+            "ok",
+            "--outcome",
+            "error",
+            "--route",
+            "ok=publish",
+            "--route",
+            "error=revise",
+        ],
+    )
+    artifact = runner.invoke(
+        app,
+        [
+            "draft",
+            "add",
+            "subgraph",
+            "workspace",
+            "--revision",
+            "2",
+            "--step",
+            "saved_child",
+            "--artifact-id",
+            "child_report",
+            "--artifact-version",
+            "2",
+        ],
+    )
+
+    assert named.exit_code == 0, named.output
+    assert artifact.exit_code == 0, artifact.output
+    named_payload = calls[0]["step"].model_dump(mode="json", by_alias=True)[
+        "subgraph"
+    ]
+    assert named_payload["workflow"] == {"name": "child_workflow"}
+    assert named_payload["desc"] == "Generate the child report."
+    assert named_payload["input_schema"]["properties"] == {
+        "topic": {"type": "string"}
+    }
+    assert named_payload["output_schema"]["properties"] == {
+        "report": {"type": "string"}
+    }
+    assert named_payload["input"] == [
+        {"target": "topic", "path": "state.topic"}
+    ]
+    assert named_payload["output"] == [
+        {"source": "report", "target": "state.report"}
+    ]
+    assert named_payload["outcomes"] == ["ok", "error"]
+    assert calls[0]["routes"] == {"ok": "publish", "error": "revise"}
+    artifact_payload = calls[1]["step"].model_dump(mode="json", by_alias=True)[
+        "subgraph"
+    ]
+    assert artifact_payload["workflow"] == {
+        "artifact_id": "child_report",
+        "version": 2,
+    }
+    assert artifact_payload["outcomes"] == ["ok"]
+
+
+def test_wf_draft_add_subgraph_rejects_invalid_reference_combinations(
+    monkeypatch,
+) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def add_step(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr(
+        "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
+    )
+    invalid_refs = [
+        [],
+        ["--workflow-name", " "],
+        ["--workflow-name", "child", "--artifact-id", "saved", "--artifact-version", "1"],
+        ["--artifact-id", "saved"],
+        ["--artifact-version", "1"],
+    ]
+
+    for ref_args in invalid_refs:
+        result = runner.invoke(
+            app,
+            [
+                "draft",
+                "add",
+                "subgraph",
+                "workspace",
+                "--revision",
+                "1",
+                "--step",
+                "child",
+                *ref_args,
+            ],
+        )
+        assert result.exit_code == 2
+        assert "Traceback" not in result.output
+
+    assert calls == []
+
+
+def test_wf_draft_add_decision_and_subgraph_help_is_type_specific() -> None:
+    when = runner.invoke(app, ["draft", "add", "when", "--help"])
+    choose = runner.invoke(app, ["draft", "add", "choose", "--help"])
+    match = runner.invoke(app, ["draft", "add", "match", "--help"])
+    subgraph = runner.invoke(app, ["draft", "add", "subgraph", "--help"])
+
+    assert when.exit_code == choose.exit_code == match.exit_code == subgraph.exit_code == 0
+    assert "--condition-file" in when.output
+    assert "--then" in when.output
+    assert "--route" not in when.output
+    assert "--clauses-file" in choose.output
+    assert "--default" in choose.output
+    assert "--route" not in choose.output
+    assert "--value" in match.output
+    assert "--cases-file" in match.output
+    assert "--route" not in match.output
+    assert "--workflow-name" in subgraph.output
+    assert "--artifact-id" in subgraph.output
+    assert "--artifact-version" in subgraph.output
+    assert "--input-schema-file" in subgraph.output
+    assert "--output-schema-file" in subgraph.output
+    assert "--route" in subgraph.output
+
+
 def test_wf_draft_help_does_not_list_old_add_step_from_capability() -> None:
     result = runner.invoke(app, ["draft", "--help"])
 

@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import click
 import pytest
 import typer
+from typer.core import TyperCommand
 
 from wf_api import WorkflowApi
 from wf_cli.context import (
@@ -22,7 +22,7 @@ from .conftest import write_python_source_config
 
 
 def _typer_context(obj: object | None) -> typer.Context:
-    ctx = typer.Context(click.Command("wf"))
+    ctx = typer.Context(TyperCommand(name="wf"))
     ctx.obj = obj
     return ctx
 

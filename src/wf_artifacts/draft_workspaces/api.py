@@ -133,7 +133,7 @@ def _canonical_draft_if_valid(
     """
     if validation_status != "valid":
         return draft
-    return WorkflowDraft.model_validate(draft).model_dump(mode="json")
+    return WorkflowDraft.model_validate(draft).model_dump(mode="json", by_alias=True)
 
 
 def _revision_conflict_payload(
