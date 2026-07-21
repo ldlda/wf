@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pydantic import BaseModel, TypeAdapter
@@ -138,6 +138,332 @@ async def test_create_draft_workspace_creates_workspace(tmp_path: Path) -> None:
     assert fetched["workspace_id"] == "echo_ws"
     assert fetched["title"] == "Echo Workspace"
     assert fetched["draft"]["steps"]["echo"]["use"] == "demo.personal.echo_tool"
+
+
+@pytest.mark.asyncio
+async def test_create_empty_draft_workspace_persists_invalid_skeleton(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_empty")
+    _drafts, _service, authoring = _draft_api(artifact_store)
+    facade = WorkflowApi(authoring.context)
+
+    created = await facade.create_empty_draft_workspace(
+        workspace_id="control_first",
+        name="control_first",
+        title="Control First",
+    )
+    stored = await facade.get_draft_workspace(
+        workspace_id="control_first",
+        include_draft=True,
+    )
+
+    assert created["revision"] == 1
+    assert created["status"] == "invalid"
+    assert created["diagnostics"]
+    assert stored["title"] == "Control First"
+    assert stored["draft"] == {
+        "name": "control_first",
+        "input_schema": {"type": "object", "properties": {}},
+        "state_schema": {"type": "object", "properties": {}},
+        "output_schema": {"type": "object", "properties": {}},
+        "outcomes": ["ok"],
+        "output": [],
+        "start": "",
+        "steps": {},
+        "routes": {},
+    }
+
+
+@pytest.mark.asyncio
+async def test_create_empty_draft_workspace_preserves_custom_contract(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_contract")
+    _drafts, _service, authoring = _draft_api(artifact_store)
+    facade = WorkflowApi(authoring.context)
+    input_schema = {
+        "type": "object",
+        "properties": {"topic": {"type": "string"}},
+    }
+    state_schema = {
+        "type": "object",
+        "properties": {
+            "issues": {
+                "type": "array",
+                "items": {"type": "string"},
+                "x-reducer": "append",
+            }
+        },
+    }
+    output_schema = {
+        "type": "object",
+        "properties": {"report": {"type": "string"}},
+    }
+
+    await facade.create_empty_draft_workspace(
+        workspace_id="custom_contract",
+        name="custom_contract",
+        title="Custom Contract",
+        input_schema=input_schema,
+        state_schema=state_schema,
+        output_schema=output_schema,
+        outcomes=("submitted", "cancelled"),
+    )
+    input_schema["properties"]["late"] = {"type": "boolean"}
+    stored = await facade.get_draft_workspace(
+        workspace_id="custom_contract",
+        include_draft=True,
+    )
+
+    assert stored["title"] == "Custom Contract"
+    assert stored["draft"]["input_schema"] == {
+        "type": "object",
+        "properties": {"topic": {"type": "string"}},
+    }
+    assert stored["draft"]["state_schema"] == state_schema
+    assert stored["draft"]["output_schema"] == output_schema
+    assert stored["draft"]["outcomes"] == ["submitted", "cancelled"]
+
+
+@pytest.mark.asyncio
+async def test_create_empty_draft_workspace_isolates_default_schemas(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_schema_isolation")
+    _drafts, _service, authoring = _draft_api(artifact_store)
+    facade = WorkflowApi(authoring.context)
+    input_schema = {
+        "type": "object",
+        "properties": {"topic": {"type": "string"}},
+    }
+
+    await facade.create_empty_draft_workspace(
+        workspace_id="isolated",
+        name="isolated",
+        input_schema=input_schema,
+    )
+    input_schema["properties"]["late"] = {"type": "boolean"}
+    stored = await facade.get_draft_workspace(
+        workspace_id="isolated",
+        include_draft=True,
+    )
+    stored["draft"]["state_schema"]["properties"]["state_only"] = {"type": "string"}
+
+    assert stored["draft"]["input_schema"] == {
+        "type": "object",
+        "properties": {"topic": {"type": "string"}},
+    }
+    assert stored["draft"]["output_schema"] == {
+        "type": "object",
+        "properties": {},
+    }
+
+
+@pytest.mark.asyncio
+async def test_create_empty_draft_workspace_reports_duplicate_conflict(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_conflict")
+    _drafts, _service, authoring = _draft_api(artifact_store)
+    facade = WorkflowApi(authoring.context)
+    await facade.create_empty_draft_workspace(
+        workspace_id="control_first",
+        name="control_first",
+    )
+
+    duplicate = await facade.create_empty_draft_workspace(
+        workspace_id="control_first",
+        name="replacement",
+    )
+
+    assert duplicate["status"] == "conflict"
+    assert duplicate["diagnostics"][0]["code"] == "workspace_exists"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "contract",
+    [
+        {"input_schema": cast(Any, [])},
+        {"outcomes": ()},
+        {"outcomes": cast(Any, (1,))},
+        {"outcomes": ("ok", " ")},
+        {"outcomes": ("ok", "ok")},
+    ],
+)
+async def test_create_empty_draft_workspace_rejects_invalid_contract_before_mutation(
+    tmp_path: Path,
+    contract: dict[str, Any],
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_create_rejected")
+    _drafts, _service, authoring = _draft_api(artifact_store)
+    facade = WorkflowApi(authoring.context)
+
+    with pytest.raises(ValueError):
+        await facade.create_empty_draft_workspace(
+            workspace_id="rejected",
+            name="rejected",
+            **contract,
+        )
+
+    assert await facade.list_draft_workspaces() == {"workspaces": []}
+
+
+@pytest.mark.asyncio
+async def test_set_draft_start_and_contract_replace_top_level_fields_atomically(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "drafts_set_lifecycle")
+    _drafts, _service, authoring = _draft_api(artifact_store)
+    facade = WorkflowApi(authoring.context)
+    await facade.create_empty_draft_workspace(
+        workspace_id="control_first",
+        name="control_first",
+        input_schema={
+            "type": "object",
+            "properties": {"topic": {"type": "string"}},
+        },
+    )
+    state_schema = {
+        "type": "object",
+        "properties": {
+            "issues": {
+                "type": "array",
+                "items": {"type": "string"},
+                "x-reducer": "append",
+            }
+        },
+    }
+    output_schema = {
+        "type": "object",
+        "properties": {"report": {"type": "string"}},
+    }
+
+    forward = await facade.set_draft_start(
+        workspace_id="control_first",
+        revision=1,
+        step_id="gate",
+    )
+    contract = await facade.set_draft_contract(
+        workspace_id="control_first",
+        revision=2,
+        state_schema=state_schema,
+        output_schema=output_schema,
+        outcomes=("submitted", "cancelled"),
+    )
+    stored = await facade.get_draft_workspace(
+        workspace_id="control_first",
+        include_draft=True,
+    )
+
+    assert forward["revision"] == 2
+    assert forward["status"] == "invalid"
+    assert contract["revision"] == 3
+    assert stored["draft"]["start"] == "gate"
+    assert stored["draft"]["input_schema"] == {
+        "type": "object",
+        "properties": {"topic": {"type": "string"}},
+    }
+    assert stored["draft"]["state_schema"] == state_schema
+    assert stored["draft"]["output_schema"] == output_schema
+    assert stored["draft"]["outcomes"] == ["submitted", "cancelled"]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("operation", "arguments"),
+    [
+        ("start", {"step_id": " "}),
+        ("start", {"step_id": cast(Any, 1)}),
+        ("contract", {}),
+        ("contract", {"state_schema": cast(Any, [])}),
+        ("contract", {"outcomes": ()}),
+        ("contract", {"outcomes": cast(Any, (1,))}),
+        ("contract", {"outcomes": ("ok", " ")}),
+        ("contract", {"outcomes": ("ok", "ok")}),
+    ],
+)
+async def test_lifecycle_edits_reject_invalid_envelopes_without_mutation(
+    tmp_path: Path,
+    operation: str,
+    arguments: dict[str, Any],
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / f"drafts_lifecycle_rejected_{operation}"
+    )
+    _drafts, _service, authoring = _draft_api(artifact_store)
+    facade = WorkflowApi(authoring.context)
+    await facade.create_empty_draft_workspace(
+        workspace_id="control_first",
+        name="control_first",
+    )
+    before = await facade.get_draft_workspace(
+        workspace_id="control_first",
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError):
+        if operation == "start":
+            await facade.set_draft_start(
+                workspace_id="control_first",
+                revision=2,
+                **arguments,
+            )
+        else:
+            await facade.set_draft_contract(
+                workspace_id="control_first",
+                revision=2,
+                **arguments,
+            )
+
+    after = await facade.get_draft_workspace(
+        workspace_id="control_first",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("operation", ["start", "contract"])
+async def test_lifecycle_edits_report_stale_revision_without_mutation(
+    tmp_path: Path,
+    operation: str,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / f"drafts_lifecycle_stale_{operation}"
+    )
+    _drafts, _service, authoring = _draft_api(artifact_store)
+    facade = WorkflowApi(authoring.context)
+    await facade.create_empty_draft_workspace(
+        workspace_id="control_first",
+        name="control_first",
+    )
+    before = await facade.get_draft_workspace(
+        workspace_id="control_first",
+        include_draft=True,
+    )
+
+    if operation == "start":
+        result = await facade.set_draft_start(
+            workspace_id="control_first",
+            revision=2,
+            step_id="gate",
+        )
+    else:
+        result = await facade.set_draft_contract(
+            workspace_id="control_first",
+            revision=2,
+            outcomes=("submitted", "cancelled"),
+        )
+
+    after = await facade.get_draft_workspace(
+        workspace_id="control_first",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
 
 
 @pytest.mark.asyncio

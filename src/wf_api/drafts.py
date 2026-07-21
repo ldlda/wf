@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from copy import deepcopy
 from typing import Any
 
 from wf_artifacts import (
@@ -45,6 +46,30 @@ from .draft_payloads import (
 )
 from .operation_context import WorkflowOperationContext
 from .schema_projection import project_property_to_schema_path
+
+
+def _empty_object_schema() -> dict[str, Any]:
+    """Return one fresh unconstrained object schema for an empty draft."""
+    return {"type": "object", "properties": {}}
+
+
+def _validated_schema_object(value: object, *, field_name: str) -> dict[str, Any]:
+    """Return an isolated schema object after validating the public envelope."""
+    if not isinstance(value, dict):
+        raise ValueError(f"{field_name} must be a JSON object")
+    return deepcopy(value)
+
+
+def _validated_workflow_outcomes(outcomes: Sequence[str]) -> list[str]:
+    """Return ordered public outcomes after rejecting unusable contracts."""
+    values = list(outcomes)
+    if not values:
+        raise ValueError("workflow outcomes must contain at least one value")
+    if any(not isinstance(value, str) or not value.strip() for value in values):
+        raise ValueError("workflow outcomes must not contain blank values")
+    if len(set(values)) != len(values):
+        raise ValueError("workflow outcomes must be unique")
+    return values
 
 
 class WorkflowDraftApi:
@@ -148,6 +173,60 @@ class WorkflowDraftApi:
             title=title,
         )
 
+    async def create_empty_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        name: str,
+        title: str | None = None,
+        input_schema: dict[str, Any] | None = None,
+        state_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        outcomes: Sequence[str] = ("ok",),
+    ) -> dict[str, Any]:
+        """Create an intentionally invalid, capability-free draft workspace.
+
+        The empty entry point is persisted so callers can assemble the graph in
+        later revisions while retaining normal workspace diagnostics.
+        """
+        draft = {
+            "name": name,
+            "input_schema": (
+                _empty_object_schema()
+                if input_schema is None
+                else _validated_schema_object(
+                    input_schema,
+                    field_name="input_schema",
+                )
+            ),
+            "state_schema": (
+                _empty_object_schema()
+                if state_schema is None
+                else _validated_schema_object(
+                    state_schema,
+                    field_name="state_schema",
+                )
+            ),
+            "output_schema": (
+                _empty_object_schema()
+                if output_schema is None
+                else _validated_schema_object(
+                    output_schema,
+                    field_name="output_schema",
+                )
+            ),
+            "outcomes": _validated_workflow_outcomes(outcomes),
+            "output": [],
+            "start": "",
+            "steps": {},
+            "routes": {},
+        }
+        return await self.create_draft_workspace(
+            workspace_id=workspace_id,
+            draft=draft,
+            title=title,
+        )
+
     async def get_draft_workspace(
         self,
         *,
@@ -221,6 +300,70 @@ class WorkflowDraftApi:
             workspace_id=workspace_id,
             revision=revision,
             patch=[{"op": "replace", "path": "/name", "value": name}],
+        )
+
+    async def set_draft_start(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+    ) -> dict[str, Any]:
+        """Select an entry point, including a forward-referenced step id."""
+        if not isinstance(step_id, str) or not step_id.strip():
+            raise ValueError("draft start step id must not be blank")
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=[{"op": "replace", "path": "/start", "value": step_id}],
+        )
+
+    async def set_draft_contract(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        input_schema: dict[str, Any] | None = None,
+        state_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        outcomes: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
+        """Replace supplied top-level contract fields in one draft revision.
+
+        Complete schema replacement is intentional: deep merging JSON Schema
+        would make reducer metadata and required-field removal ambiguous.
+        """
+        patch: list[dict[str, Any]] = []
+        for field_name, schema in (
+            ("input_schema", input_schema),
+            ("state_schema", state_schema),
+            ("output_schema", output_schema),
+        ):
+            if schema is not None:
+                patch.append(
+                    {
+                        "op": "replace",
+                        "path": f"/{field_name}",
+                        "value": _validated_schema_object(
+                            schema,
+                            field_name=field_name,
+                        ),
+                    }
+                )
+        if outcomes is not None:
+            patch.append(
+                {
+                    "op": "replace",
+                    "path": "/outcomes",
+                    "value": _validated_workflow_outcomes(outcomes),
+                }
+            )
+        if not patch:
+            raise ValueError("set_draft_contract requires at least one contract field")
+        return await self.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
         )
 
     async def set_draft_route(

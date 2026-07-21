@@ -263,6 +263,27 @@ class WorkflowApi:
             title=title,
         )
 
+    async def create_empty_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        name: str,
+        title: str | None = None,
+        input_schema: dict[str, Any] | None = None,
+        state_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        outcomes: Sequence[str] = ("ok",),
+    ) -> dict[str, Any]:
+        return await self.drafts.create_empty_draft_workspace(
+            workspace_id=workspace_id,
+            name=name,
+            title=title,
+            input_schema=input_schema,
+            state_schema=state_schema,
+            output_schema=output_schema,
+            outcomes=outcomes,
+        )
+
     async def get_draft_workspace(
         self,
         *,
@@ -319,6 +340,38 @@ class WorkflowApi:
             workspace_id=workspace_id,
             revision=revision,
             name=name,
+        )
+
+    async def set_draft_start(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+    ) -> dict[str, Any]:
+        return await self.drafts.set_draft_start(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+        )
+
+    async def set_draft_contract(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        input_schema: dict[str, Any] | None = None,
+        state_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        outcomes: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
+        return await self.drafts.set_draft_contract(
+            workspace_id=workspace_id,
+            revision=revision,
+            input_schema=input_schema,
+            state_schema=state_schema,
+            output_schema=output_schema,
+            outcomes=outcomes,
         )
 
     async def set_draft_route(
