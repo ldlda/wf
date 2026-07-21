@@ -51,11 +51,10 @@
 
 ## Draft revision semantics
 
-- [ ] Semantic draft edits do not consistently check the expected revision
-  before reading and validating current content. `add_step` now gates preflight
-  on the revision, but bind, capability-add, branch/handle, and remove helpers
-  can report a current-content error to a stale caller instead of the canonical
-  `revision_conflict` result.
+- [x] Semantic draft edits consistently check the expected revision before
+  reading current draft content or capability metadata. After request-envelope
+  validation, stale callers receive the canonical `revision_conflict` result;
+  mutation-time revision checking remains the final race-safe guard.
 
 ## TypeScript JSON-RPC coverage
 

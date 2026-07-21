@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Follow [`draft semantic revision precedence design`](../specs/2026-07-22-draft-semantic-revision-precedence-design.md).
+- Follow [`draft semantic revision precedence design`](../../../superpowers/specs/2026-07-22-draft-semantic-revision-precedence-design.md).
 - Request-envelope validation that does not read workspace or catalog state remains before revision preflight.
 - After envelope validation, stale revision conflict wins over all workspace-content and capability-catalog errors.
 - Missing-workspace behavior remains unchanged.
@@ -42,7 +42,7 @@
 - Produces: unchanged `bind_draft(...) -> dict[str, Any]` and `add_step_from_capability(...) -> dict[str, Any]` behavior, with revision preflight before `draft_step`, schema projection, or capability lookup.
 - Preserves: `WorkflowDraftApi.patch_draft_workspace(...)` as the final mutation-time guard.
 
-- [ ] **Step 1: Add a direct characterization test for the final mutation guard**
+- [x] **Step 1: Add a direct characterization test for the final mutation guard**
 
   Add this test near `test_patch_draft_workspace_updates_revision` in `tests/wf_api/test_drafts_service.py`:
 
@@ -79,7 +79,7 @@
       assert after == before
   ```
 
-- [ ] **Step 2: Run the mutation-guard characterization**
+- [x] **Step 2: Run the mutation-guard characterization**
 
   Run:
 
@@ -89,7 +89,7 @@
 
   Expected: PASS before production changes. This pins the existing second revision check that the semantic preflight must not replace.
 
-- [ ] **Step 3: Add failing stale-versus-capability-semantic tests**
+- [x] **Step 3: Add failing stale-versus-capability-semantic tests**
 
   Add this test near `test_add_step_stale_revision_wins_over_content_preflight`:
 
@@ -139,7 +139,7 @@
       assert after == before
   ```
 
-- [ ] **Step 4: Run the new semantic-precedence test and confirm it is red**
+- [x] **Step 4: Run the new semantic-precedence test and confirm it is red**
 
   Run:
 
@@ -149,7 +149,7 @@
 
   Expected: FAIL because `bind_draft` raises for the missing step and `add_step_from_capability` raises during unknown capability lookup before returning a conflict.
 
-- [ ] **Step 5: Generalize the shared revision helper documentation**
+- [x] **Step 5: Generalize the shared revision helper documentation**
 
   In `WorkflowDraftAuthoringApi._workspace_if_revision_matches`, replace the no-op-specific docstring with:
 
@@ -159,7 +159,7 @@
 
   Keep its return shape and diagnostic construction unchanged.
 
-- [ ] **Step 6: Gate `bind_draft` before draft and catalog inspection**
+- [x] **Step 6: Gate `bind_draft` before draft and catalog inspection**
 
   Replace the direct workspace load at the start of `bind_draft` with:
 
@@ -175,7 +175,7 @@
 
   Leave all subsequent `draft_step`, capability lookup, path parsing, schema projection, and patch construction unchanged.
 
-- [ ] **Step 7: Gate `add_step_from_capability` before draft and catalog inspection**
+- [x] **Step 7: Gate `add_step_from_capability` before draft and catalog inspection**
 
   Replace the direct workspace load at the start of `add_step_from_capability` with:
 
@@ -191,7 +191,7 @@
 
   This block must precede `workspace.draft.get("steps")` and `self.context.specs.get_qualified_spec(capability_name)`.
 
-- [ ] **Step 8: Run focused capability-aware tests**
+- [x] **Step 8: Run focused capability-aware tests**
 
   Run:
 
@@ -201,7 +201,7 @@
 
   Expected: PASS. Existing current-revision bind and capability-add success/error tests must remain unchanged.
 
-- [ ] **Step 9: Run focused quality checks**
+- [x] **Step 9: Run focused quality checks**
 
   Run:
 
@@ -213,7 +213,7 @@
 
   Expected: all commands exit 0.
 
-- [ ] **Step 10: Commit Task 1**
+- [x] **Step 10: Commit Task 1**
 
   ```powershell
   git add src/wf_api/draft_authoring.py tests/wf_api/test_drafts_service.py
@@ -231,7 +231,7 @@
 - Produces: unchanged `branch_draft`, `handle_draft`, `remove_draft_route`, `remove_draft_step`, and `remove_draft_binding` signatures with one early revision gate each.
 - Preserves: the request-envelope `remove_draft_binding` selection check before workspace lookup and all current-revision no-op summaries without revision increments.
 
-- [ ] **Step 1: Add failing stale-versus-content-semantic tests**
+- [x] **Step 1: Add failing stale-versus-content-semantic tests**
 
   Add these tests in the branch/handle and remove-helper section of `tests/wf_api/test_drafts_service.py`:
 
@@ -336,7 +336,7 @@
       assert after == before
   ```
 
-- [ ] **Step 2: Run the new route/removal tests and confirm the semantic cases are red**
+- [x] **Step 2: Run the new route/removal tests and confirm the semantic cases are red**
 
   Run:
 
@@ -346,7 +346,7 @@
 
   Expected: the five parameterized semantic-precedence cases FAIL under current code; the request-envelope test PASSes and guards the intended exception ordering.
 
-- [ ] **Step 3: Introduce one reusable early-gate pattern in all five helpers**
+- [x] **Step 3: Introduce one reusable early-gate pattern in all five helpers**
 
   In each of `branch_draft`, `handle_draft`, `remove_draft_route`, and `remove_draft_step`, replace the first direct workspace load or pre-content no-op branch with:
 
@@ -369,7 +369,7 @@
 
   Then insert the same early-gate block immediately after it. No other helper in this task has request-envelope validation that must remain ahead of revision preflight.
 
-- [ ] **Step 4: Simplify no-op exits to use the checked workspace**
+- [x] **Step 4: Simplify no-op exits to use the checked workspace**
 
   Replace each late `_workspace_if_revision_matches` call in no-op branches with:
 
@@ -388,7 +388,7 @@
 
   Do not add a revision increment for any no-op.
 
-- [ ] **Step 5: Run the route/removal precedence and existing no-op tests**
+- [x] **Step 5: Run the route/removal precedence and existing no-op tests**
 
   Run:
 
@@ -398,7 +398,7 @@
 
   Expected: PASS, including existing no-op tests and malformed current-revision binding tests.
 
-- [ ] **Step 6: Run the complete draft service suite**
+- [x] **Step 6: Run the complete draft service suite**
 
   Run:
 
@@ -408,7 +408,7 @@
 
   Expected: PASS with no current-revision response-shape regressions.
 
-- [ ] **Step 7: Run focused quality checks**
+- [x] **Step 7: Run focused quality checks**
 
   Run:
 
@@ -420,7 +420,7 @@
 
   Expected: all commands exit 0.
 
-- [ ] **Step 8: Commit Task 2**
+- [x] **Step 8: Commit Task 2**
 
   ```powershell
   git add src/wf_api/draft_authoring.py tests/wf_api/test_drafts_service.py
@@ -439,7 +439,7 @@
 - Consumes: the unchanged public API/RPC/client/CLI contracts and corrected delegated conflict behavior from Tasks 1-2.
 - Produces: verified behavior, one closed issue, one live-roadmap completion entry, and one archived implementation plan.
 
-- [ ] **Step 1: Run the relevant API/RPC/client/CLI regression suites**
+- [x] **Step 1: Run the relevant API/RPC/client/CLI regression suites**
 
   Run:
 
@@ -449,7 +449,7 @@
 
   Expected: PASS. These suites confirm that unchanged transports continue delegating the conflict envelope rather than rewriting it.
 
-- [ ] **Step 2: Run final Python quality gates**
+- [x] **Step 2: Run final Python quality gates**
 
   Run:
 
@@ -462,7 +462,7 @@
 
   Expected: every command exits 0. Do not broaden the implementation merely to silence unrelated pre-existing findings; report any such finding before changing scope.
 
-- [ ] **Step 3: Run independent code review against the design contract**
+- [x] **Step 3: Run independent code review against the design contract**
 
   Use the `code-review` skill to review the Task 1-2 diff against `docs/superpowers/specs/2026-07-22-draft-semantic-revision-precedence-design.md`. Require the reviewer to check:
 
@@ -475,7 +475,7 @@
 
   Fix any Critical or Important finding, rerun the focused suite and quality gates, and commit the fix separately with a specific `fix:` message.
 
-- [ ] **Step 4: Close only the verified issue**
+- [x] **Step 4: Close only the verified issue**
 
   Replace the `Draft revision semantics` item in `ISSUES.md` with:
 
@@ -490,7 +490,7 @@
 
   Leave the data-shaping, step-metadata, and TypeScript JSON-RPC coverage items unchecked.
 
-- [ ] **Step 5: Record completion in the live roadmap**
+- [x] **Step 5: Record completion in the live roadmap**
 
   Add this entry beside the other completed draft-authoring work in `docs/current_roadmap.md`:
 
@@ -502,7 +502,7 @@
     [`draft semantic revision precedence`](historical/superpowers/plans/2026-07-22-draft-semantic-revision-precedence.md).
   ```
 
-- [ ] **Step 6: Archive the completed plan and update this checklist**
+- [x] **Step 6: Archive the completed plan and update this checklist**
 
   Mark every completed checkbox in this plan, then run:
 
@@ -513,14 +513,14 @@
 
   Expected: the spec remains live under `docs/superpowers/specs/`; the roadmap points to the historical plan; no live document points to the old active-plan path.
 
-- [ ] **Step 7: Commit the verified documentation state**
+- [x] **Step 7: Commit the verified documentation state**
 
   ```powershell
   git add ISSUES.md docs/current_roadmap.md docs/superpowers/plans/2026-07-22-draft-semantic-revision-precedence.md docs/historical/superpowers/plans/2026-07-22-draft-semantic-revision-precedence.md
   git commit -m "docs: complete draft revision precedence"
   ```
 
-- [ ] **Step 8: Confirm final repository state**
+- [x] **Step 8: Confirm final repository state**
 
   Run:
 

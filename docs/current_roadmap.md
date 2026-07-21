@@ -544,6 +544,11 @@ clear operator feedback before adding more architecture.
   revisioned workspace, set its entry point, and replace whole workflow
   schemas or outcomes without RFC 6902 patches. Implementation:
   [`draft workspace lifecycle authoring`](historical/superpowers/plans/2026-07-21-draft-workspace-lifecycle-authoring.md).
+- Completed: semantic draft edits now gate workspace and capability preflight
+  on the expected revision, so stale callers consistently receive
+  `revision_conflict` while the patch path retains its mutation-time race
+  guard. Implementation:
+  [`draft semantic revision precedence`](historical/superpowers/plans/2026-07-22-draft-semantic-revision-precedence.md).
 - Completed: `wf draft set-input` and `wf draft set-output` now accept
   `--merge`, preserving existing bindings when agents split map edits across
   multiple revisions.
