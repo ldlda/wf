@@ -166,7 +166,13 @@ class WorkflowDraftAuthoringApi:
         routes: dict[str, str] | None = None,
     ) -> dict[str, Any]:
         """Add one typed draft step and optional route edits in one revision."""
-        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
         steps = workspace.draft.get("steps")
         if not isinstance(steps, dict):
             raise ValueError("draft steps must be an object")

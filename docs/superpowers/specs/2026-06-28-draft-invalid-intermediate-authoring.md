@@ -11,7 +11,7 @@ helpers behave too much like final validation gates. In challenge runs, agents
 tried:
 
 ```powershell
-wf draft add-step browser_click `
+wf draft add capability browser_click `
   --revision 1 `
   --step wait `
   --capability local.browser_click.wait_for_click `
@@ -66,7 +66,7 @@ Expected behavior:
 
 ## Acceptance Criteria
 
-- A focused test proves `wf draft add-step --route ok=collect` persists an
+- A focused test proves `wf draft add capability --route ok=collect` persists an
   invalid workspace when `collect` does not exist yet.
 - A follow-up edit that adds `collect` can make the same workspace valid.
 - `wf draft save` and `wf draft compile` continue to reject the invalid

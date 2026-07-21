@@ -205,9 +205,7 @@ class DraftSubgraphPayload(BaseModel):
     workflow: WorkflowRef
     desc: str | None = None
     input_schema: SchemaRef = Field(default_factory=lambda: SchemaRef(type="object"))
-    output_schema: SchemaRef = Field(
-        default_factory=lambda: SchemaRef(type="object")
-    )
+    output_schema: SchemaRef = Field(default_factory=lambda: SchemaRef(type="object"))
     input: list[InputBinding] = Field(default_factory=list)
     output: list[OutputBinding] = Field(default_factory=list)
     outcomes: list[str] = Field(default_factory=lambda: ["ok"], min_length=1)

@@ -74,8 +74,8 @@ def _add_step(builder: WorkflowBuilder, step_id: str, step: DraftStep):
             "outcomes": step.interrupt.outcomes,
         }
         if step.interrupt.request_schema is not None:
-            interrupt_kwargs["request_schema"] = step.interrupt.request_schema.model_dump(
-                mode="json", exclude_none=True
+            interrupt_kwargs["request_schema"] = (
+                step.interrupt.request_schema.model_dump(mode="json", exclude_none=True)
             )
         if step.interrupt.resume_schema is not None:
             interrupt_kwargs["resume_schema"] = step.interrupt.resume_schema.model_dump(

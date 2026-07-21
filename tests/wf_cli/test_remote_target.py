@@ -1393,7 +1393,9 @@ def test_wf_draft_add_capability_uses_rpc_target(monkeypatch, tmp_path) -> None:
     assert "workflow.draft_workspaces.add_step" not in rpc_methods
 
 
-def test_wf_draft_add_control_steps_use_generic_rpc_target(monkeypatch, tmp_path) -> None:
+def test_wf_draft_add_control_steps_use_generic_rpc_target(
+    monkeypatch, tmp_path
+) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)
     rpc_methods: list[str] = []
@@ -1421,9 +1423,7 @@ def test_wf_draft_add_control_steps_use_generic_rpc_target(monkeypatch, tmp_path
         encoding="utf-8",
     )
     condition_file = tmp_path / "condition.json"
-    condition_file.write_text(
-        '{"op":"exists","path":"state.value"}', encoding="utf-8"
-    )
+    condition_file.write_text('{"op":"exists","path":"state.value"}', encoding="utf-8")
     clauses_file = tmp_path / "clauses.json"
     clauses_file.write_text(
         '[{"if":{"op":"exists","path":"state.value"},"then":"call"}]',
@@ -1586,9 +1586,7 @@ def test_wf_draft_add_control_steps_use_generic_rpc_target(monkeypatch, tmp_path
             {
                 "workflow": {"name": "child"},
                 "input": [{"target": "value", "path": "input.value"}],
-                "output": [
-                    {"source": "value", "target": "state.child_value"}
-                ],
+                "output": [{"source": "value", "target": "state.child_value"}],
                 "outcomes": ["ok"],
             },
             {"ok": "__end__"},

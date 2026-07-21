@@ -233,6 +233,7 @@ def test_wf_draft_add_capability_help_explains_explicit_wiring() -> None:
     assert "does not guess" in output
     assert "projects its schemas and bindings" in output
     assert "draft validate" in output
+    assert "wf draft add capability report_ws" in output
     assert "Repeat the flag" in output
     assert "--input state.title=title --input state.summary=summary" in output
     assert (
@@ -521,9 +522,7 @@ def test_wf_draft_add_join_and_end_build_concrete_steps(monkeypatch) -> None:
     assert end_result.exit_code == 0, end_result.output
     assert calls[0]["step"].model_dump(mode="json") == {"join": {}}
     assert calls[0]["routes"] == {"done": "finish"}
-    assert calls[1]["step"].model_dump(mode="json") == {
-        "end": {"outcome": "completed"}
-    }
+    assert calls[1]["step"].model_dump(mode="json") == {"end": {"outcome": "completed"}}
     assert calls[1]["routes"] is None
 
 
@@ -667,7 +666,9 @@ def test_wf_draft_add_control_commands_reject_invalid_input_before_api_call(
     assert "--bind-output" not in duplicate_resume.output
     assert "Traceback" not in duplicate_resume.output
     assert missing_collect_target.exit_code == 2
-    assert "collect item error policy requires collect_to" in missing_collect_target.output
+    assert (
+        "collect item error policy requires collect_to" in missing_collect_target.output
+    )
     assert "Traceback" not in missing_collect_target.output
     assert end_route.exit_code == 2
     assert "No such option" in end_route.output
@@ -681,7 +682,9 @@ def test_wf_draft_add_control_command_help_is_type_specific() -> None:
     join = runner.invoke(app, ["draft", "add", "join", "--help"])
     end = runner.invoke(app, ["draft", "add", "end", "--help"])
 
-    assert interrupt.exit_code == foreach.exit_code == join.exit_code == end.exit_code == 0
+    assert (
+        interrupt.exit_code == foreach.exit_code == join.exit_code == end.exit_code == 0
+    )
     assert "--request-schema-file" in interrupt.output
     assert "--resume-schema-file" in interrupt.output
     assert "--request" in interrupt.output
@@ -701,7 +704,9 @@ def test_wf_draft_add_control_command_help_is_type_specific() -> None:
     assert "--route" not in end.output
 
 
-def test_wf_draft_add_decisions_build_ordered_typed_steps(monkeypatch, tmp_path) -> None:
+def test_wf_draft_add_decisions_build_ordered_typed_steps(
+    monkeypatch, tmp_path
+) -> None:
     calls: list[dict[str, Any]] = []
 
     class FakeHandlers:
@@ -714,9 +719,7 @@ def test_wf_draft_add_decisions_build_ordered_typed_steps(monkeypatch, tmp_path)
         "wf_cli.commands.draft_add.load_cli_context", lambda _ctx: context
     )
     condition_file = tmp_path / "condition.json"
-    condition_file.write_text(
-        '{"op":"exists","path":"state.report"}', encoding="utf-8"
-    )
+    condition_file.write_text('{"op":"exists","path":"state.report"}', encoding="utf-8")
     clauses_file = tmp_path / "clauses.json"
     clauses_file.write_text(
         '[{"if":{"op":"exists","path":"state.report"},"then":"publish"},'
@@ -835,9 +838,7 @@ def test_wf_draft_add_decisions_reject_bad_files_and_generic_routes(
     object_cases = tmp_path / "object.json"
     object_cases.write_text("{}", encoding="utf-8")
     condition_file = tmp_path / "condition.json"
-    condition_file.write_text(
-        '{"op":"exists","path":"state.report"}', encoding="utf-8"
-    )
+    condition_file.write_text('{"op":"exists","path":"state.report"}', encoding="utf-8")
 
     empty = runner.invoke(
         app,
@@ -978,23 +979,15 @@ def test_wf_draft_add_subgraph_builds_name_and_artifact_contracts(
 
     assert named.exit_code == 0, named.output
     assert artifact.exit_code == 0, artifact.output
-    named_payload = calls[0]["step"].model_dump(mode="json", by_alias=True)[
-        "subgraph"
-    ]
+    named_payload = calls[0]["step"].model_dump(mode="json", by_alias=True)["subgraph"]
     assert named_payload["workflow"] == {"name": "child_workflow"}
     assert named_payload["desc"] == "Generate the child report."
-    assert named_payload["input_schema"]["properties"] == {
-        "topic": {"type": "string"}
-    }
+    assert named_payload["input_schema"]["properties"] == {"topic": {"type": "string"}}
     assert named_payload["output_schema"]["properties"] == {
         "report": {"type": "string"}
     }
-    assert named_payload["input"] == [
-        {"target": "topic", "path": "state.topic"}
-    ]
-    assert named_payload["output"] == [
-        {"source": "report", "target": "state.report"}
-    ]
+    assert named_payload["input"] == [{"target": "topic", "path": "state.topic"}]
+    assert named_payload["output"] == [{"source": "report", "target": "state.report"}]
     assert named_payload["outcomes"] == ["ok", "error"]
     assert calls[0]["routes"] == {"ok": "publish", "error": "revise"}
     artifact_payload = calls[1]["step"].model_dump(mode="json", by_alias=True)[
@@ -1024,7 +1017,14 @@ def test_wf_draft_add_subgraph_rejects_invalid_reference_combinations(
     invalid_refs = [
         [],
         ["--workflow-name", " "],
-        ["--workflow-name", "child", "--artifact-id", "saved", "--artifact-version", "1"],
+        [
+            "--workflow-name",
+            "child",
+            "--artifact-id",
+            "saved",
+            "--artifact-version",
+            "1",
+        ],
         ["--artifact-id", "saved"],
         ["--artifact-version", "1"],
     ]
@@ -1056,7 +1056,9 @@ def test_wf_draft_add_decision_and_subgraph_help_is_type_specific() -> None:
     match = runner.invoke(app, ["draft", "add", "match", "--help"])
     subgraph = runner.invoke(app, ["draft", "add", "subgraph", "--help"])
 
-    assert when.exit_code == choose.exit_code == match.exit_code == subgraph.exit_code == 0
+    assert (
+        when.exit_code == choose.exit_code == match.exit_code == subgraph.exit_code == 0
+    )
     assert "--condition-file" in when.output
     assert "--then" in when.output
     assert "--route" not in when.output
@@ -1072,6 +1074,10 @@ def test_wf_draft_add_decision_and_subgraph_help_is_type_specific() -> None:
     assert "--input-schema-file" in subgraph.output
     assert "--output-schema-file" in subgraph.output
     assert "--route" in subgraph.output
+
+    for result in (when, choose, match, subgraph):
+        assert "Example:" in result.output
+        assert "draft validate WS" in result.output
 
 
 def test_wf_draft_help_does_not_list_old_add_step_from_capability() -> None:

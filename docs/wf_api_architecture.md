@@ -169,8 +169,17 @@ frontends. Internally, they should prefer typed models from `wf_core`,
 `WorkflowDraftApi` owns draft workspace lifecycle, validation, compilation,
 JSON Patch application, and focused low-level map edits. `WorkflowDraftAuthoringApi`
 is the semantic authoring layer above it: capability-aware bootstrap, bind,
-add-step, branch, handle, and remove helpers lower intent into ordinary draft
-workspace patches while preserving revision checks.
+typed step insertion, branch, handle, and remove helpers lower intent into
+ordinary draft workspace patches while preserving revision checks.
+
+`workflow.draft_workspaces.add_step` accepts a discriminated `DraftStep` value,
+while `step_id` remains the separate map key chosen by the caller. The operation
+atomically inserts that step plus an optional incoming `RouteSource` and any
+top-level outcome routes, so a failed structural check does not partially wire
+the graph. Decision targets for `when`, `choose`, and `match` remain embedded in
+their typed payloads. The composed `add_step_from_capability` operation remains
+separate because it also resolves capability metadata, projects schemas, and
+requires complete declared-outcome coverage.
 
 ## Relationship To wf_core
 

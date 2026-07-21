@@ -149,7 +149,7 @@ authoring intent.
 
 ### Add Step From Capability
 
-`add-step` atomically adds:
+`add capability` atomically adds:
 
 - one capability-backed `use` step;
 - explicit input bindings;
@@ -160,7 +160,7 @@ authoring intent.
 The outgoing CLI option is repeatable:
 
 ```powershell
-wf draft add-step WORKSPACE `
+wf draft add capability WORKSPACE `
   --revision 4 `
   --step second_echo `
   --capability everything.default.echo `

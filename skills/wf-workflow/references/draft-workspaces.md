@@ -74,7 +74,7 @@ If a patch returns `revision_conflict`, fetch the workspace again and retry
 against the latest revision.
 
 Forward routes in drafts are allowed as invalid intermediate state. If
-`wf draft add-step --route ok=collect` returns `status: invalid`, add the
+`wf draft add capability --route ok=collect` returns `status: invalid`, add the
 missing `collect` step next, then run `wf draft validate`. Do not save or
 compile until validation is valid.
 
@@ -88,6 +88,7 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_step_output_map`
 - `set_workflow_output_map`
 - `bind_draft`
+- `add_step`
 - `add_step_from_capability`
 - `branch_draft`
 - `handle_draft`
@@ -109,7 +110,9 @@ wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --
 wf draft compile <workspace_id>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
-wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft add interrupt <workspace_id> --revision <n> --step review --kind issue_review --request-schema-file request.schema.json --resume-schema-file resume.schema.json --outcome submitted --outcome cancelled --route submitted=next --route cancelled=revise
+wf draft add when <workspace_id> --revision <n> --step decide --condition-file condition.json --then next --otherwise revise
 ```
 
 `set-workflow-output` maps a graph source path (`input.*`, `state.*`, or
@@ -163,7 +166,8 @@ wf draft validate <workspace_id>
   `--route OUTCOME=TARGET` for each outcome; when omitted and the capability
   declares a single outcome, that outcome routes to `__end__`. Multi-outcome
   capabilities require exact route coverage; missing or unknown outcomes are
-  rejected before mutation. When `add-step --route` rejects an outcome, the
+  rejected before mutation. When `wf draft add capability --route` rejects an
+  outcome, the
   error reports declared outcomes and direct add/remove repair guidance. Remove
   unknown route entries and add one route for each missing declared outcome. It
   still requires explicit choices; if you do not
@@ -173,13 +177,23 @@ wf draft validate <workspace_id>
   capability input schema.
 
 ```bash
-wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --input input.other=other --bind-output result=state.result --bind-output title=state.title
+wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --input input.other=other --bind-output result=state.result --bind-output title=state.title
 wf draft validate <workspace_id>
 ```
 
 Repeat `--input` and `--bind-output` once per mapping. Do not write
 `--bind-output title=state.title summary=state.summary`; the second mapping is
 an unexpected extra argument because it is not attached to its own flag.
+
+- `add_step`
+
+  Adds any typed `DraftStep` with optional incoming and outgoing route wiring in
+  one revision. The CLI exposes one command per kind under `wf draft add`:
+  `interrupt`, `foreach`, `join`, `end`, `when`, `choose`, `match`, and
+  `subgraph`. Decision targets are embedded and reject `--route`. Interrupts
+  and subgraphs preserve JSON Schema boundary contracts. Invalid intermediate
+  drafts remain saveable in the workspace but must pass `wf draft validate`
+  before compile or artifact save.
 
 - `branch_draft`
 

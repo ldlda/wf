@@ -50,7 +50,9 @@ wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --
 wf draft compile <workspace_id>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
-wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft add interrupt <workspace_id> --revision <n> --step review --kind issue_review --outcome submitted --outcome cancelled --route submitted=next --route cancelled=revise
+wf draft add when <workspace_id> --revision <n> --step decide --condition-file condition.json --then next --otherwise revise
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
 
@@ -105,7 +107,7 @@ projection. Use `input/state -> local` for step inputs and `local ->
 state/output` for step outputs. It requires a capability-backed step with
 `use`; use JSON Patch for non-capability/control draft steps.
 
-To add a capability step, prefer `wf draft add-step` over raw
+To add a capability step, prefer `wf draft add capability` over raw
 JSON Patch when the route, input bindings, and output-to-state bindings are
 known. It is explicit and does not guess missing maps.
 If a capability has multiple outcomes, pass one `--route OUTCOME=TARGET` for
@@ -114,8 +116,14 @@ Repeat `--input` and `--bind-output` once per mapping. Do not put multiple
 mappings after one flag.
 
 ```bash
-wf draft add-step <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --input state.title=title --input state.summary=summary --bind-output markdown=state.markdown --bind-output title=state.title
+wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --input state.title=title --input state.summary=summary --bind-output markdown=state.markdown --bind-output title=state.title
 ```
+
+Use the matching `wf draft add <kind>` command for control steps. `when`,
+`choose`, and `match` embed their targets and do not accept `--route`.
+Interrupt and subgraph commands preserve their explicit schema contracts.
+Intermediate drafts may remain `status: invalid`; run `wf draft validate`
+after the intended steps and routes are present.
 
 `wf draft compile` prints the raw plan JSON directly on success. Do not expect a
 top-level `compiled_plan` key from the CLI output.
@@ -145,7 +153,7 @@ top-level `compiled_plan` key from the CLI output.
 - Do not use planning-session specs or implementation plans as user-facing runtime guidance.
 - `set-input --map` is `GRAPH_SOURCE=BARE_LOCAL_FIELD`; never prefix the target
   with `local.`.
-- For `add-step --route`, route only outcomes reported by `wf cap inspect` or
+- For `wf draft add capability --route`, route only outcomes reported by `wf cap inspect` or
   the command error's `declared_outcomes` field.
 - Do not confuse draft shape with raw plan shape: drafts use `steps/routes/use`;
   raw plans use `nodes/edges/node`.

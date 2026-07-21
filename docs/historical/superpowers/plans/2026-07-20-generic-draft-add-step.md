@@ -54,7 +54,7 @@
 - Produces: `DraftSubgraphPayload`, `DraftSubgraphStep`, expanded `DraftInterruptPayload`, and updated `DraftStep`.
 - Produces: adapter lowering to `InterruptNode` and `SubgraphNode` with contracts intact.
 
-- [ ] **Step 1: Write failing model tests for typed interrupt contracts**
+- [x] **Step 1: Write failing model tests for typed interrupt contracts**
 
 Add a draft containing:
 
@@ -79,7 +79,7 @@ Add a draft containing:
 
 Assert the parsed fields and `model_dump(mode="json", by_alias=True)` preserve both schemas.
 
-- [ ] **Step 2: Write failing model tests for subgraph boundaries**
+- [x] **Step 2: Write failing model tests for subgraph boundaries**
 
 Cover both workflow reference forms:
 
@@ -97,13 +97,13 @@ Cover both workflow reference forms:
 
 Assert `DraftSubgraphStep` is selected and aliases round-trip.
 
-- [ ] **Step 3: Run model tests and confirm red**
+- [x] **Step 3: Run model tests and confirm red**
 
 Run: `uv run pytest tests/artifacts/test_draft_models.py -q`
 
 Expected: failures for forbidden interrupt schema fields and unknown `subgraph` kind.
 
-- [ ] **Step 4: Implement the draft model fields and union member**
+- [x] **Step 4: Implement the draft model fields and union member**
 
 Import `SchemaRef` and `WorkflowRef`, add `subgraph` to `STEP_KIND_KEYS`, add the payload/step classes from the approved design, and append `DraftSubgraphStep` to `DraftStep`. Add to `DraftInterruptPayload`:
 
@@ -116,7 +116,7 @@ Add a field validator that accepts `None` and rejects a supplied schema unless
 `schema.type == "object"`. This keeps untyped interrupts untyped while
 validating explicit contracts at draft parse time.
 
-- [ ] **Step 5: Write failing adapter tests**
+- [x] **Step 5: Write failing adapter tests**
 
 Assert `build_workflow_from_draft` produces:
 
@@ -130,7 +130,7 @@ assert child.output_schema == output_schema
 assert child.outcomes == ["ok", "error"]
 ```
 
-- [ ] **Step 6: Implement adapter lowering**
+- [x] **Step 6: Implement adapter lowering**
 
 Build interrupt keyword arguments so `request_schema`/`resume_schema` are
 omitted when `None`; passing object defaults would incorrectly set
@@ -149,7 +149,7 @@ return node
 
 Use an explicit `isinstance(step, DraftSubgraphStep)` branch before the final `TypeError`.
 
-- [ ] **Step 7: Verify and commit**
+- [x] **Step 7: Verify and commit**
 
 Run:
 
@@ -182,7 +182,7 @@ git commit -m "feat: complete draft step model parity"
 - Consumes: `DraftStep` including `DraftSubgraphStep` from Task 1.
 - Produces: `RouteSource` and `WorkflowApiSurface.add_step(*, workspace_id, revision, step_id, step, incoming, routes)`.
 
-- [ ] **Step 1: Rename the internal route value object**
+- [x] **Step 1: Rename the internal route value object**
 
 Replace `DraftOutcomeRef` with:
 
@@ -197,7 +197,7 @@ class RouteSource:
 
 Update `handle_draft`, `WorkflowApi.handle_draft`, imports, and existing tests. Do not retain an alias because all callers are repository-owned.
 
-- [ ] **Step 2: Write failing parameterized insertion tests**
+- [x] **Step 2: Write failing parameterized insertion tests**
 
 Parameterize the nine payloads (`use`, `foreach`, `interrupt`, `join`, `end`, `when`, `choose`, `match`, `subgraph`). For each, call:
 
@@ -213,7 +213,7 @@ result = await api.add_step(
 
 Use a Pydantic `TypeAdapter(DraftStep)` in the test and assert revision `2` plus the canonical dumped payload under `draft.steps.new_step`.
 
-- [ ] **Step 3: Write failing atomic routing/error tests**
+- [x] **Step 3: Write failing atomic routing/error tests**
 
 Cover:
 
@@ -225,7 +225,7 @@ Cover:
 - incomplete but valid route subsets accepted;
 - each failure leaves revision and draft bytes unchanged.
 
-- [ ] **Step 4: Implement declared-outcome validation**
+- [x] **Step 4: Implement declared-outcome validation**
 
 Add a private helper with exhaustive `isinstance` branches:
 
@@ -251,7 +251,7 @@ def _draft_step_route_outcomes(self, step: DraftStep) -> set[str] | None:
 
 `None` means top-level routes are forbidden, not unknown.
 
-- [ ] **Step 5: Implement `WorkflowDraftAuthoringApi.add_step`**
+- [x] **Step 5: Implement `WorkflowDraftAuthoringApi.add_step`**
 
 Build a patch only after all checks pass:
 
@@ -294,11 +294,11 @@ return await self.drafts.patch_draft_workspace(
 
 Check `steps`, `routes`, duplicate id, incoming source existence, forbidden routes, and unknown route keys before this call.
 
-- [ ] **Step 6: Expose the method through service and surface**
+- [x] **Step 6: Expose the method through service and surface**
 
 Use the exact signature from the design in both `WorkflowApi` and `WorkflowApiSurface`. The service method delegates to `self.draft_authoring.add_step` without converting the typed step back to a raw dict.
 
-- [ ] **Step 7: Verify and commit**
+- [x] **Step 7: Verify and commit**
 
 Run:
 
@@ -329,7 +329,7 @@ git commit -m "feat: add atomic generic draft step insertion"
 - Consumes: `WorkflowApiSurface.add_step`, `DraftStep`, and `RouteSource` from Task 2.
 - Produces: method `workflow.draft_workspaces.add_step` and remote client parity.
 
-- [ ] **Step 1: Write failing RPC parameter tests**
+- [x] **Step 1: Write failing RPC parameter tests**
 
 Add:
 
@@ -350,7 +350,7 @@ class AddDraftStepParams(RpcParamsModel):
 
 Before implementation, tests should attempt to import the models and validate a foreach alias (`as`), a when alias (`if`), typed interrupt schemas, and a subgraph artifact reference. Add malformed tests for unknown/multiple kind keys and blank route-source fields.
 
-- [ ] **Step 2: Implement parameter models and canonical serialization tests**
+- [x] **Step 2: Implement parameter models and canonical serialization tests**
 
 Import `DraftStep` from `wf_artifacts.drafts`. Assert:
 
@@ -360,11 +360,11 @@ assert dumped["step"]["foreach"]["as"] == "item"
 assert "as_" not in dumped["step"]["foreach"]
 ```
 
-- [ ] **Step 3: Write a failing server round-trip test**
+- [x] **Step 3: Write a failing server round-trip test**
 
 Call `workflow.draft_workspaces.add_step` against a temporary store with a typed interrupt step, incoming source, and routes. Assert one revision increment and preserved request/resume schemas. Add a malformed RPC request and assert the workspace is unchanged.
 
-- [ ] **Step 4: Register the method**
+- [x] **Step 4: Register the method**
 
 Add to `methods/drafts.py`:
 
@@ -397,7 +397,7 @@ async def workflow_draft_workspaces_add_step(
         raise_workflow_rpc_error(exc)
 ```
 
-- [ ] **Step 5: Write failing client request-shape tests**
+- [x] **Step 5: Write failing client request-shape tests**
 
 Use the existing recording transport fixture. Assert exact method name and payload:
 
@@ -409,7 +409,7 @@ assert request["params"]["incoming"] == {"step_id": "lookup", "outcome": "ok"}
 
 Parameterize all nine variants so alias/schema/reference fields cannot be dropped.
 
-- [ ] **Step 6: Implement the client method**
+- [x] **Step 6: Implement the client method**
 
 The client accepts typed values and dumps aliases explicitly:
 
@@ -441,7 +441,7 @@ async def add_step(
     )
 ```
 
-- [ ] **Step 7: Verify and commit**
+- [x] **Step 7: Verify and commit**
 
 Run:
 
@@ -472,7 +472,7 @@ git commit -m "feat: expose generic draft steps over rpc"
 - Consumes: `WorkflowApiSurface.add_step` and existing `add_step_from_capability`.
 - Produces: `draft_add.app` registered as `wf draft add` and migrated `capability` command.
 
-- [ ] **Step 1: Write failing command-tree tests**
+- [x] **Step 1: Write failing command-tree tests**
 
 Assert:
 
@@ -486,7 +486,7 @@ removed = runner.invoke(app, ["draft", "add-step", "--help"])
 assert removed.exit_code != 0
 ```
 
-- [ ] **Step 2: Extract only shared parser helpers**
+- [x] **Step 2: Extract only shared parser helpers**
 
 Move `_parse_assignment_flags`, `_parse_map_flags`, `_parse_output_map_flags`, `_parse_step_input_map_flags`, and `_parse_route_flags` from `drafts.py` into `draft_options.py`. Add:
 
@@ -511,7 +511,7 @@ def route_source(from_step: str | None, from_outcome: str | None) -> RouteSource
 
 Keep imports updated so existing draft commands retain identical parsing.
 
-- [ ] **Step 3: Create and register the subgroup**
+- [x] **Step 3: Create and register the subgroup**
 
 In `draft_add.py`:
 
@@ -525,7 +525,7 @@ app = typer.Typer(
 
 In `drafts.py`, import `draft_add` and register `app.add_typer(draft_add.app, name="add")` after constructing the draft app.
 
-- [ ] **Step 4: Move the capability command without changing behavior**
+- [x] **Step 4: Move the capability command without changing behavior**
 
 Register the existing body as `@app.command("capability")`. Keep all current
 capability options and call `context.handlers.add_step_from_capability` with
@@ -534,7 +534,7 @@ fields, parsed routes, input map, and output bindings exactly as the removed
 command does. Its docstring must state that it also projects schemas/bindings
 and recommend `wf draft validate`.
 
-- [ ] **Step 5: Verify local and remote capability behavior**
+- [x] **Step 5: Verify local and remote capability behavior**
 
 Update old CLI tests from:
 
@@ -550,7 +550,7 @@ wf draft add capability WORKSPACE --revision REVISION --step STEP --capability Q
 
 Keep assertions on request payload, projected schemas, route errors, and revision unchanged. Add a remote test proving it still calls `workflow.draft_workspaces.add_step_from_capability`, not generic insertion.
 
-- [ ] **Step 6: Verify and commit**
+- [x] **Step 6: Verify and commit**
 
 Run:
 
@@ -579,7 +579,7 @@ git commit -m "feat: group draft add commands"
 - Consumes: generic `add_step`, parsing helpers, and concrete draft models.
 - Produces: four type-specific commands with local/remote parity.
 
-- [ ] **Step 1: Add a private command dispatcher and failing delegation tests**
+- [x] **Step 1: Add a private command dispatcher and failing delegation tests**
 
 Use one helper so every command has identical transport behavior:
 
@@ -611,7 +611,7 @@ def _submit_step(
 
 Tests must invoke both local fake handlers and `--url` RPC targets and assert the concrete model received by `add_step`.
 
-- [ ] **Step 2: Implement `interrupt` with schema and binding validation**
+- [x] **Step 2: Implement `interrupt` with schema and binding validation**
 
 Construct:
 
@@ -640,7 +640,7 @@ DraftInterruptStep(interrupt=DraftInterruptPayload(
 
 Use the repository's existing binding payload/model helpers rather than duplicating path conversion. Tests cover two outcomes, both schemas, aliases, duplicate flags, malformed files, and no API call after parse failure.
 
-- [ ] **Step 3: Implement `foreach` and validate policy relationships**
+- [x] **Step 3: Implement `foreach` and validate policy relationships**
 
 Construct `DraftForeachPayload` from `--over`, `--as`, `--mode`, and:
 
@@ -658,11 +658,11 @@ concurrent = (
 
 Reject concurrent limits in serial mode with `typer.BadParameter`; rely on Pydantic to require `collect_to` for collect behavior. Route tests cover `loop`, `done`, and `completed_with_errors`.
 
-- [ ] **Step 4: Implement `join` and `end`**
+- [x] **Step 4: Implement `join` and `end`**
 
 `join` constructs `DraftJoinStep(join={})` and accepts routes. `end` constructs `DraftEndStep(end=DraftEndPayload(outcome=outcome))`, exposes no `--route`, and passes `routes=None`.
 
-- [ ] **Step 5: Pin per-command help and error surfaces**
+- [x] **Step 5: Pin per-command help and error surfaces**
 
 For each command assert `--help` lists its own fields and does not list unrelated fields. Specifically:
 
@@ -671,7 +671,7 @@ For each command assert `--help` lists its own fields and does not list unrelate
 - join has only common routing flags;
 - end has `--outcome` but no `--route`.
 
-- [ ] **Step 6: Verify and commit**
+- [x] **Step 6: Verify and commit**
 
 Run:
 
@@ -701,7 +701,7 @@ git commit -m "feat: add draft control step commands"
 - Consumes: `_submit_step`, JSON-file parsing, and draft models from prior tasks.
 - Produces: `when`, `choose`, `match`, and `subgraph` commands.
 
-- [ ] **Step 1: Write failing `when` tests and implement the command**
+- [x] **Step 1: Write failing `when` tests and implement the command**
 
 Given `condition.json`:
 
@@ -721,7 +721,7 @@ DraftWhenStep(when=DraftWhenPayload(
 
 The command must not expose `--route` because targets are embedded.
 
-- [ ] **Step 2: Write failing `choose` tests and implement the command**
+- [x] **Step 2: Write failing `choose` tests and implement the command**
 
 `--clauses-file` contains a JSON array. Validate with
 `TypeAdapter(list[DraftChooseClause]).validate_python(value)`, then construct
@@ -729,7 +729,7 @@ The command must not expose `--route` because targets are embedded.
 Tests cover ordered clauses, canonical `if` alias output, an empty array, a
 non-array document, and no generic routes.
 
-- [ ] **Step 3: Write failing `match` tests and implement the command**
+- [x] **Step 3: Write failing `match` tests and implement the command**
 
 `--cases-file` contains a JSON array. Validate with
 `TypeAdapter(list[DraftMatchCase])`, then construct:
@@ -744,7 +744,7 @@ DraftMatchStep(match=DraftMatchPayload(
 
 Tests preserve scalar `equals` values (`str`, `int`, `bool`, `None`) and ordered targets.
 
-- [ ] **Step 4: Write failing subgraph reference tests**
+- [x] **Step 4: Write failing subgraph reference tests**
 
 Cover:
 
@@ -756,7 +756,7 @@ Cover:
 
 All invalid combinations must fail before `add_step` is called.
 
-- [ ] **Step 5: Implement subgraph construction**
+- [x] **Step 5: Implement subgraph construction**
 
 Build the reference explicitly:
 
@@ -777,7 +777,7 @@ else:
 
 Then construct `DraftSubgraphPayload` with optional schema files, canonical input/output bindings, outcomes defaulting to `['ok']`, and description. Pass repeatable routes through `_submit_step`.
 
-- [ ] **Step 6: Verify all nine commands and remote parity**
+- [x] **Step 6: Verify all nine commands and remote parity**
 
 Add a parameterized remote test that invokes every generic command and asserts method `workflow.draft_workspaces.add_step`, canonical step payload aliases, incoming route source, and routes. Keep capability in a separate assertion because it intentionally calls the composed method.
 
@@ -789,7 +789,7 @@ uv run ruff check src/wf_cli/commands tests/wf_cli
 uv run basedpyright src/wf_cli/commands tests/wf_cli --level error
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/wf_cli/commands/draft_add.py tests/wf_cli
@@ -814,7 +814,7 @@ git commit -m "feat: add draft decision and subgraph commands"
 - Consumes: all implemented commands and method names.
 - Produces: accurate live docs and a clean, archived implementation record.
 
-- [ ] **Step 1: Search live references before editing**
+- [x] **Step 1: Search live references before editing**
 
 Run:
 
@@ -825,7 +825,7 @@ rg -n -F 'add_step_from_capability' docs skills --glob '!docs/historical/**'
 
 Classify each reference: migrate command examples; retain API references when they describe the composed capability helper; do not rewrite thesis/history solely for naming.
 
-- [ ] **Step 2: Update user-facing CLI and skill documentation**
+- [x] **Step 2: Update user-facing CLI and skill documentation**
 
 Document the command tree and at least these complete examples:
 
@@ -846,11 +846,11 @@ wf draft add when report_ws --revision 3 --step decide \
 
 Explain that `when`/`choose`/`match` embed targets and do not accept `--route`, while invalid intermediate drafts remain saveable and should be checked with `wf draft validate`.
 
-- [ ] **Step 3: Update API architecture and roadmap**
+- [x] **Step 3: Update API architecture and roadmap**
 
 Document `workflow.draft_workspaces.add_step`, the `DraftStep` boundary, separate map-key `step_id`, atomic route wiring, and the continued role of `add_step_from_capability`. Mark the roadmap slice complete only after verification.
 
-- [ ] **Step 4: Resolve tracked issues honestly**
+- [x] **Step 4: Resolve tracked issues honestly**
 
 Change the three items in `ISSUES.md` to checked entries only if tests prove:
 
@@ -862,7 +862,7 @@ Change the three items in `ISSUES.md` to checked entries only if tests prove:
 
 Add any newly discovered out-of-scope defects as unchecked, reproducible statements.
 
-- [ ] **Step 5: Run focused regression suites**
+- [x] **Step 5: Run focused regression suites**
 
 ```bash
 uv run pytest tests/artifacts/test_draft_models.py tests/artifacts/test_draft_adapter.py tests/wf_api/test_drafts_service.py tests/wf_transport_rpc_http/test_app.py tests/wf_transport_rpc_http/test_client.py tests/wf_cli/test_app.py tests/wf_cli/test_remote_target.py -q
@@ -870,7 +870,7 @@ uv run pytest tests/artifacts/test_draft_models.py tests/artifacts/test_draft_ad
 
 Expected: all pass.
 
-- [ ] **Step 6: Run the repository quality gate**
+- [x] **Step 6: Run the repository quality gate**
 
 ```bash
 uv run ruff check
@@ -881,11 +881,11 @@ git diff --check
 
 If formatting fails, run `uv run ruff format`, inspect the diff, and rerun all four checks. Do not claim the full `uv run pytest -q` suite unless it is actually run; the focused matrix above is the required test gate for this slice.
 
-- [ ] **Step 7: Review and archive**
+- [x] **Step 7: Review and archive**
 
 Run the `requesting-code-review` skill against the design/spec and this plan. Fix Critical/Important findings, rerun affected checks, tick completed plan checkboxes, then move the plan to the matching historical path and update live links.
 
-- [ ] **Step 8: Commit documentation and issue closure**
+- [x] **Step 8: Commit documentation and issue closure**
 
 ```bash
 git add docs skills ISSUES.md

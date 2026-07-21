@@ -145,6 +145,10 @@ def add_step_from_capability(
     This command does not guess missing maps. Pass the route and bindings you
     want, then run `wf draft validate <workspace_id>`.
 
+    Example:
+    `wf draft add capability report_ws --revision 1 --step render
+    --capability local.report.render --route ok=__end__`
+
     Repeat the flag for multiple bindings:
     `--input state.title=title --input state.summary=summary`
     `--bind-output title=state.title --bind-output summary=state.summary`
@@ -222,7 +226,11 @@ def add_interrupt_step(
         typer.Option("--route", help="Route mapping OUTCOME=TARGET. Repeat as needed."),
     ] = None,
 ) -> None:
-    """Add a typed interrupt and its request/resume contract."""
+    """Add a typed interrupt and its request/resume contract.
+
+    Example: `wf draft add interrupt WS --revision 1 --step review --kind review`.
+    Run `wf draft validate WS` after editing.
+    """
     request_map = _parse_step_input_map_flags(request, option_name="--request")
     resume_map = _parse_output_map_flags(resume, option_name="--resume")
     routes = _parse_route_flags(route)
@@ -287,9 +295,7 @@ def add_foreach_step(
     over: Annotated[
         str, typer.Option("--over", help="Graph path containing the item list.")
     ],
-    as_: Annotated[
-        str, typer.Option("--as", help="Context key for the current item.")
-    ],
+    as_: Annotated[str, typer.Option("--as", help="Context key for the current item.")],
     mode: Annotated[
         Literal["serial", "concurrent"],
         typer.Option("--mode", help="Item admission mode."),
@@ -324,7 +330,11 @@ def add_foreach_step(
         typer.Option("--route", help="Route mapping OUTCOME=TARGET. Repeat as needed."),
     ] = None,
 ) -> None:
-    """Add a foreach loop with explicit item and concurrency policies."""
+    """Add a foreach loop with explicit item and concurrency policies.
+
+    Example: `wf draft add foreach WS --revision 1 --step each --over state.items --as item`.
+    Run `wf draft validate WS` after editing.
+    """
     if mode == "serial" and (max_active is not None or max_outstanding is not None):
         raise typer.BadParameter(
             "--max-active and --max-outstanding require --mode concurrent"
@@ -389,7 +399,11 @@ def add_join_step(
         typer.Option("--route", help="Route mapping OUTCOME=TARGET. Repeat as needed."),
     ] = None,
 ) -> None:
-    """Add a join step."""
+    """Add a join step.
+
+    Example: `wf draft add join WS --revision 1 --step joined --route done=__end__`.
+    Run `wf draft validate WS` after editing.
+    """
     _submit_step(
         ctx,
         workspace_id=workspace_id,
@@ -421,7 +435,11 @@ def add_end_step(
         typer.Option("--from-outcome", help="Outcome on --from-step (default: ok)."),
     ] = None,
 ) -> None:
-    """Add an explicit terminal outcome step."""
+    """Add an explicit terminal outcome step.
+
+    Example: `wf draft add end WS --revision 1 --step finish --outcome ok`.
+    Run `wf draft validate WS` after editing.
+    """
     try:
         step = DraftEndStep(end=DraftEndPayload(outcome=outcome))
     except ValidationError as exc:
@@ -461,7 +479,11 @@ def add_when_step(
         typer.Option("--from-outcome", help="Outcome on --from-step (default: ok)."),
     ] = None,
 ) -> None:
-    """Add a boolean decision whose targets are embedded in the step."""
+    """Add a boolean decision whose targets are embedded in the step.
+
+    Example: `wf draft add when WS --revision 1 --step decide --condition-file condition.json --then next`.
+    Run `wf draft validate WS` after editing.
+    """
     try:
         condition = _condition_adapter.validate_python(
             parse_json_file(condition_file, option_name="--condition-file")
@@ -508,7 +530,11 @@ def add_choose_step(
         typer.Option("--from-outcome", help="Outcome on --from-step (default: ok)."),
     ] = None,
 ) -> None:
-    """Add an ordered first-true decision with embedded targets."""
+    """Add an ordered first-true decision with embedded targets.
+
+    Example: `wf draft add choose WS --revision 1 --step decide --clauses-file clauses.json`.
+    Run `wf draft validate WS` after editing.
+    """
     try:
         clauses = _choose_clauses_adapter.validate_python(
             parse_json_file(clauses_file, option_name="--clauses-file")
@@ -554,7 +580,11 @@ def add_match_step(
         typer.Option("--from-outcome", help="Outcome on --from-step (default: ok)."),
     ] = None,
 ) -> None:
-    """Add an ordered scalar match decision with embedded targets."""
+    """Add an ordered scalar match decision with embedded targets.
+
+    Example: `wf draft add match WS --revision 1 --step decide --value state.status --cases-file cases.json`.
+    Run `wf draft validate WS` after editing.
+    """
     try:
         cases = _match_cases_adapter.validate_python(
             parse_json_file(cases_file, option_name="--cases-file")
@@ -637,7 +667,11 @@ def add_subgraph_step(
         typer.Option("--route", help="Route mapping OUTCOME=TARGET. Repeat as needed."),
     ] = None,
 ) -> None:
-    """Add a child-workflow boundary with an explicit reference and contract."""
+    """Add a child-workflow boundary with an explicit reference and contract.
+
+    Example: `wf draft add subgraph WS --revision 1 --step child --workflow-name child`.
+    Run `wf draft validate WS` after editing.
+    """
     if workflow_name is not None:
         if artifact_id is not None or artifact_version is not None:
             raise typer.BadParameter(

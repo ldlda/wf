@@ -23,12 +23,15 @@ validated, runnable deployment.
      local input/output property. It declares the matching schema and merges
      the binding in one revision-checked edit.
    - When adding a new capability-backed step, prefer:
+
      ```bash
-      wf draft add-step ...
+     wf draft add capability ...
      wf draft validate <workspace_id>
      ```
-     Use raw `wf draft patch` only when changing structure that no focused helper
-     covers.
+
+     For control flow, use the corresponding typed `wf draft add <kind>`
+     command. Use raw `wf draft patch` only when changing structure that no
+     focused helper covers.
    - Use JSON Patch only for general structural edits.
 6. Save an artifact.
    - Draft artifact:

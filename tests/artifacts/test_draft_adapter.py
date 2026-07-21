@@ -553,9 +553,7 @@ def test_adapter_lowers_subgraph_step_without_resolving_artifact() -> None:
                         "input_schema": input_schema,
                         "output_schema": output_schema,
                         "input": [{"target": "topic", "path": "state.topic"}],
-                        "output": [
-                            {"source": "report", "target": "state.report"}
-                        ],
+                        "output": [{"source": "report", "target": "state.report"}],
                         "outcomes": ["ok", "error"],
                     }
                 }

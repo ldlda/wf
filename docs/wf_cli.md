@@ -389,21 +389,27 @@ The command combines two common edits:
 
 Use `set-route` separately for outcome routing.
 
-### Add A Capability Step To A Draft
+### Add Typed Steps To A Draft
 
-Use `wf draft add-step` when adding a new capability-backed step
-to an existing draft. The command is explicit: it does not guess missing maps.
+Use `wf draft add` to add one typed step to an existing draft:
+
+```text
+capability  interrupt  foreach  join  end
+when        choose     match    subgraph
+```
+
+The capability command is explicit: it does not guess missing maps.
 Explicit top-level `--input input.x=x` and `--input state.x=x` mappings project
 the corresponding workflow input/state schema fields from the capability input
 schema.
 When the capability declares multiple outcomes, provide exactly one
 `--route OUTCOME=TARGET` for each declared outcome. Missing or unknown outcomes
-are rejected before the draft is mutated. When `add-step --route` rejects an
+are rejected before the draft is mutated. When `add capability --route` rejects an
 outcome, use the declared outcomes and repair text from the error. Remove
 unknown route entries and add one route for each missing declared outcome.
 
 ```bash
-wf draft add-step report_ws \
+wf draft add capability report_ws \
   --revision 3 \
   --step render \
   --capability local.report.render_markdown_report \
@@ -416,6 +422,39 @@ wf draft add-step report_ws \
   --bind-output markdown=state.markdown \
   --bind-output title=state.title
 ```
+
+Interrupts preserve explicit request and resume contracts:
+
+```bash
+wf draft add interrupt report_ws \
+  --revision 4 \
+  --step review \
+  --kind issue_review \
+  --request-schema-file request.schema.json \
+  --resume-schema-file resume.schema.json \
+  --outcome submitted \
+  --outcome cancelled \
+  --from-step draft_issues \
+  --from-outcome ok \
+  --route submitted=create_issues \
+  --route cancelled=revision_requested
+```
+
+Decision steps embed their targets and therefore do not accept `--route`:
+
+```bash
+wf draft add when report_ws \
+  --revision 5 \
+  --step decide \
+  --condition-file has-report.json \
+  --then publish \
+  --otherwise revise
+```
+
+`choose` reads an ordered clause array from `--clauses-file`; `match` reads an
+ordered scalar case array from `--cases-file`. `subgraph` accepts either
+`--workflow-name` or an immutable `--artifact-id` plus `--artifact-version`,
+along with explicit boundary schemas and bindings.
 
 Repeat `--input` and `--bind-output` once per mapping. Do not put multiple
 mappings after a single flag; `--bind-output title=state.title

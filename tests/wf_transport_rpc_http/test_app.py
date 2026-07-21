@@ -952,9 +952,7 @@ def test_add_draft_step_params_preserve_typed_step_json() -> None:
             "workspace_id": "ws",
             "revision": 1,
             "step_id": "child",
-            "step": {
-                "subgraph": {"workflow": {"artifact_id": "child", "version": 2}}
-            },
+            "step": {"subgraph": {"workflow": {"artifact_id": "child", "version": 2}}},
         }
     )
     assert subgraph.model_dump(mode="json", by_alias=True)["step"]["subgraph"][
@@ -983,7 +981,10 @@ def test_add_draft_step_params_reject_invalid_kind_and_route_source() -> None:
             }
         )
 
-    for incoming in ({"step_id": "", "outcome": "ok"}, {"step_id": "call", "outcome": ""}):
+    for incoming in (
+        {"step_id": "", "outcome": "ok"},
+        {"step_id": "call", "outcome": ""},
+    ):
         with pytest.raises(ValidationError):
             AddDraftStepParams.model_validate(
                 {
@@ -1058,9 +1059,7 @@ async def test_rpc_draft_workspace_add_typed_step_round_trip(tmp_path) -> None:
     assert "bad" not in fetched["result"]["draft"]["steps"]
     review = fetched["result"]["draft"]["steps"]["review"]["interrupt"]
     assert review["request_schema"]["type"] == "object"
-    assert review["resume_schema"]["properties"]["selected"] == {
-        "type": "array"
-    }
+    assert review["resume_schema"]["properties"]["selected"] == {"type": "array"}
 
 
 async def test_rpc_draft_workspace_add_untyped_interrupt_preserves_null_schemas(
@@ -1105,9 +1104,7 @@ async def test_rpc_draft_workspace_add_untyped_interrupt_preserves_null_schemas(
     interrupt = fetched["result"]["draft"]["steps"]["pause"]["interrupt"]
     assert interrupt["request_schema"] is None
     assert interrupt["resume_schema"] is None
-    assert fetched["result"]["draft"]["steps"]["pause"] == {
-        "interrupt": interrupt
-    }
+    assert fetched["result"]["draft"]["steps"]["pause"] == {"interrupt": interrupt}
 
 
 async def test_rpc_diagnoses_source(tmp_path) -> None:

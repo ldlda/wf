@@ -721,9 +721,7 @@ async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> 
         (
             "subgraph",
             TypeAdapter(DraftStep).validate_python(
-                {
-                    "subgraph": {"workflow": {"artifact_id": "child", "version": 2}}
-                }
+                {"subgraph": {"workflow": {"artifact_id": "child", "version": 2}}}
             ),
             {"workflow": {"artifact_id": "child", "version": 2}},
         ),
@@ -769,12 +767,12 @@ async def test_rpc_client_add_step_preserves_all_typed_variants(
         assert request["params"]["step"]["foreach"]["as"] == "item"
         assert "as_" not in request["params"]["step"]["foreach"]
     if step_id == "interrupt":
-        assert request["params"]["step"]["interrupt"]["request_schema"][
-            "type"
-        ] == "object"
-        assert request["params"]["step"]["interrupt"]["resume_schema"][
-            "type"
-        ] == "object"
+        assert (
+            request["params"]["step"]["interrupt"]["request_schema"]["type"] == "object"
+        )
+        assert (
+            request["params"]["step"]["interrupt"]["resume_schema"]["type"] == "object"
+        )
     if step_id == "subgraph":
         assert request["params"]["step"]["subgraph"]["workflow"] == {
             "artifact_id": "child",

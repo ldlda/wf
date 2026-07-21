@@ -933,6 +933,34 @@ async def test_add_step_routes_incoming_and_outgoing_edges_atomically(
 
 
 @pytest.mark.asyncio
+async def test_add_step_stale_revision_wins_over_content_preflight(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "draft_add_stale")
+    draft_api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    api = WorkflowApi(authoring.context)
+    await draft_api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
+    before = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    step = TypeAdapter(DraftStep).validate_python({"join": {}})
+
+    result = await api.add_step(
+        workspace_id="draft_ws",
+        revision=2,
+        step_id="echo",
+        step=step,
+    )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="draft_ws", include_draft=True
+    )
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
 async def test_add_step_adds_missing_incoming_route_parent_atomically(
     tmp_path: Path,
 ) -> None:

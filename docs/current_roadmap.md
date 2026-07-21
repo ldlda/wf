@@ -550,12 +550,12 @@ clear operator feedback before adding more architecture.
   output-to-state helper and reducing manual draft patch repairs in agent
   challenge runs.
 - Completed: draft CLI vocabulary now uses `wf draft create --capability` and
-  `wf draft add-step --capability`, replacing the longer
-  `*-from-capability` commands that agents repeatedly guessed around.
-- Completed: `wf draft add-step` inserts one explicit
-  capability-backed step with route, input, and output-to-state schema/binding
-  wiring in a single revision, reducing brittle JSON Patch authoring for
-  multi-step workflows. Accepts `--route OUTCOME=TARGET` for multi-outcome steps.
+  the typed `wf draft add <kind>` command tree. All nine draft step kinds have
+  dedicated commands; capability insertion retains schema projection, while
+  interrupt and subgraph commands preserve their explicit boundary contracts.
+  Generic insertion is exposed through Python and JSON-RPC with atomic incoming
+  and outgoing route wiring. Implementation:
+  [`generic draft step authoring`](historical/superpowers/plans/2026-07-20-generic-draft-add-step.md).
 - Completed: `wf draft branch` and `wf draft handle` provide atomic route
   editing for existing draft steps without rewriting the full routes object.
 - Completed: `wf draft compile` returns the compiled raw plan plus required
@@ -786,7 +786,7 @@ stable.
   [`required-only wrapper inputs`](historical/superpowers/plans/2026-06-29-required-only-wrapper-inputs.md).
 - Completed: `wf draft set-input` rejects `local.x` targets before RPC and
   shows the equivalent bare-target mapping.
-- Completed: `wf draft add-step --route` errors include declared outcomes and
+- Completed: `wf draft add capability --route` errors include declared outcomes and
   direct add/remove repair guidance.
 - Completed: repeated idempotent `wf draft bind input/state -> local` behavior
   is covered by regression tests.
