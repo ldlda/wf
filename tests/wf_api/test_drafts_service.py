@@ -1803,6 +1803,75 @@ async def test_handle_draft_no_change_still_checks_revision(tmp_path: Path) -> N
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "operation",
+    ["branch", "handle", "remove_route", "remove_step", "remove_binding"],
+)
+async def test_route_and_remove_edits_stale_revision_wins_over_semantic_errors(
+    tmp_path: Path,
+    operation: str,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / f"draft_route_remove_stale_{operation}"
+    )
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    draft = _echo_draft()
+    if operation in {"branch", "handle", "remove_route"}:
+        draft["routes"] = "not-an-object"
+    elif operation == "remove_step":
+        draft["steps"] = "not-an-object"
+    await api.create_draft_workspace(workspace_id="draft_ws", draft=draft)
+    before = await api.get_draft_workspace(
+        workspace_id="draft_ws",
+        include_draft=True,
+    )
+
+    if operation == "branch":
+        result = await authoring.branch_draft(
+            workspace_id="draft_ws",
+            revision=2,
+            step_id="echo",
+            routes={"error": "__end__"},
+        )
+    elif operation == "handle":
+        result = await authoring.handle_draft(
+            workspace_id="draft_ws",
+            revision=2,
+            branches=[RouteSource(step_id="echo", outcome="error")],
+            target="__end__",
+        )
+    elif operation == "remove_route":
+        result = await authoring.remove_draft_route(
+            workspace_id="draft_ws",
+            revision=2,
+            step_id="echo",
+            outcome="ok",
+        )
+    elif operation == "remove_step":
+        result = await authoring.remove_draft_step(
+            workspace_id="draft_ws",
+            revision=2,
+            step_id="echo",
+        )
+    else:
+        result = await authoring.remove_draft_binding(
+            workspace_id="draft_ws",
+            revision=2,
+            step_id="missing",
+            inputs=("text",),
+        )
+
+    after = await api.get_draft_workspace(
+        workspace_id="draft_ws",
+        include_draft=True,
+    )
+    assert result["status"] == "conflict"
+    assert result["revision"] == before["revision"]
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    assert after == before
+
+
+@pytest.mark.asyncio
 async def test_add_step_from_capability_infers_single_outcome_route(
     tmp_path: Path,
 ) -> None:
@@ -2064,6 +2133,37 @@ async def test_remove_draft_binding_removes_input_and_output_bindings(
     assert fetched["draft"]["steps"]["echo"]["output"] == [
         {"source": "echoed", "target": "state.echoed"}
     ]
+
+
+@pytest.mark.asyncio
+async def test_remove_draft_binding_envelope_error_precedes_revision_check(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(
+        tmp_path / "draft_remove_binding_envelope_precedence"
+    )
+    api, _service, authoring = _draft_api(artifact_store, register_echo=True)
+    await api.create_draft_workspace(workspace_id="draft_ws", draft=_echo_draft())
+    before = await api.get_draft_workspace(
+        workspace_id="draft_ws",
+        include_draft=True,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="pass at least one input or output binding to remove",
+    ):
+        await authoring.remove_draft_binding(
+            workspace_id="draft_ws",
+            revision=2,
+            step_id="echo",
+        )
+
+    after = await api.get_draft_workspace(
+        workspace_id="draft_ws",
+        include_draft=True,
+    )
+    assert after == before
 
 
 @pytest.mark.asyncio

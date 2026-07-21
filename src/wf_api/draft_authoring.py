@@ -712,7 +712,13 @@ class WorkflowDraftAuthoringApi:
         routes: dict[str, str],
     ) -> dict[str, Any]:
         """Atomically set routes for one step, preserving unspecified outcomes."""
-        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
         draft_routes = workspace.draft.get("routes", {})
         if not isinstance(draft_routes, dict):
             raise ValueError("draft routes must be an object")
@@ -721,13 +727,7 @@ class WorkflowDraftAuthoringApi:
             raise ValueError(f"routes for step {step_id!r} must be an object")
         merged = {**existing, **routes}
         if merged == existing:
-            checked = self._workspace_if_revision_matches(
-                workspace_id=workspace_id,
-                revision=revision,
-            )
-            if isinstance(checked, dict):
-                return checked
-            return summarize_draft_workspace(checked)
+            return summarize_draft_workspace(workspace)
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -749,15 +749,15 @@ class WorkflowDraftAuthoringApi:
         target: str,
     ) -> dict[str, Any]:
         """Update the target for multiple (step, outcome) pairs atomically."""
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
         if not branches:
-            checked = self._workspace_if_revision_matches(
-                workspace_id=workspace_id,
-                revision=revision,
-            )
-            if isinstance(checked, dict):
-                return checked
-            return summarize_draft_workspace(checked)
-        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+            return summarize_draft_workspace(workspace)
         draft_routes = workspace.draft.get("routes", {})
         if not isinstance(draft_routes, dict):
             raise ValueError("draft routes must be an object")
@@ -786,13 +786,7 @@ class WorkflowDraftAuthoringApi:
                 }
             )
         if not patch:
-            checked = self._workspace_if_revision_matches(
-                workspace_id=workspace_id,
-                revision=revision,
-            )
-            if isinstance(checked, dict):
-                return checked
-            return summarize_draft_workspace(checked)
+            return summarize_draft_workspace(workspace)
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -808,7 +802,13 @@ class WorkflowDraftAuthoringApi:
         outcome: str,
     ) -> dict[str, Any]:
         """Remove one route; missing routes are revision-checked no-ops."""
-        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
         draft_routes = workspace.draft.get("routes", {})
         if not isinstance(draft_routes, dict):
             raise ValueError("draft routes must be an object")
@@ -816,13 +816,7 @@ class WorkflowDraftAuthoringApi:
         if not isinstance(step_routes, dict):
             raise ValueError(f"routes for step {step_id!r} must be an object")
         if outcome not in step_routes:
-            checked = self._workspace_if_revision_matches(
-                workspace_id=workspace_id,
-                revision=revision,
-            )
-            if isinstance(checked, dict):
-                return checked
-            return summarize_draft_workspace(checked)
+            return summarize_draft_workspace(workspace)
         return await self.drafts.patch_draft_workspace(
             workspace_id=workspace_id,
             revision=revision,
@@ -845,18 +839,18 @@ class WorkflowDraftAuthoringApi:
         step_id: str,
     ) -> dict[str, Any]:
         """Remove a step and its own route map; inbound routes are left explicit."""
-        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
         steps = workspace.draft.get("steps", {})
         if not isinstance(steps, dict):
             raise ValueError("draft steps must be an object")
         if step_id not in steps:
-            checked = self._workspace_if_revision_matches(
-                workspace_id=workspace_id,
-                revision=revision,
-            )
-            if isinstance(checked, dict):
-                return checked
-            return summarize_draft_workspace(checked)
+            return summarize_draft_workspace(workspace)
         patch = [
             {
                 "op": "remove",
@@ -889,7 +883,13 @@ class WorkflowDraftAuthoringApi:
         """Remove selected local input/output bindings from one draft step."""
         if not inputs and not outputs:
             raise ValueError("pass at least one input or output binding to remove")
-        workspace = self.drafts._draft_store().get_workspace(workspace_id)
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
         step = draft_step(workspace.draft, step_id)
         current_inputs = step.get("input", [])
         current_outputs = step.get("output", [])
@@ -914,13 +914,7 @@ class WorkflowDraftAuthoringApi:
             item for item in current_outputs if item.get("source") not in output_sources
         ]
         if next_inputs == current_inputs and next_outputs == current_outputs:
-            checked = self._workspace_if_revision_matches(
-                workspace_id=workspace_id,
-                revision=revision,
-            )
-            if isinstance(checked, dict):
-                return checked
-            return summarize_draft_workspace(checked)
+            return summarize_draft_workspace(workspace)
         patch: list[dict[str, Any]] = []
         if next_inputs != current_inputs:
             patch.append(
