@@ -70,6 +70,18 @@ class WorkflowDraftSurface(Protocol):
         error_message_source: Any | None = None,
     ) -> dict[str, Any]: ...
 
+    async def create_empty_draft_workspace(
+        self,
+        *,
+        workspace_id: str,
+        name: str,
+        title: str | None = None,
+        input_schema: dict[str, Any] | None = None,
+        state_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        outcomes: Sequence[str] = ("ok",),
+    ) -> dict[str, Any]: ...
+
     async def patch_draft_workspace(
         self,
         *,
@@ -84,6 +96,25 @@ class WorkflowDraftSurface(Protocol):
         workspace_id: str,
         revision: int,
         name: str,
+    ) -> dict[str, Any]: ...
+
+    async def set_draft_start(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+    ) -> dict[str, Any]: ...
+
+    async def set_draft_contract(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        input_schema: dict[str, Any] | None = None,
+        state_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        outcomes: Sequence[str] | None = None,
     ) -> dict[str, Any]: ...
 
     async def set_draft_route(

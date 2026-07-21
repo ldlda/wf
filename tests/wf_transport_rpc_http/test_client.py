@@ -8,7 +8,12 @@ from pydantic import TypeAdapter
 
 from wf_api.models import RawWorkflowPlan, TraceRange
 from wf_api.surface import RouteSource, WorkflowDraftSurface
-from wf_artifacts.drafts.models import DraftStep
+from wf_artifacts.drafts.models import (
+    DraftEndPayload,
+    DraftEndStep,
+    DraftJoinStep,
+    DraftStep,
+)
 from wf_core import END
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
@@ -325,6 +330,133 @@ async def test_rpc_workflow_client_draft_workspace_lifecycle(tmp_path) -> None:
     assert validated["status"] in {"valid", "invalid"}
     assert patched["revision"] == created["revision"] + 1
     assert artifact["artifact_id"] == "client_ws_art"
+
+
+async def test_rpc_client_sends_exact_draft_lifecycle_payloads() -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"revision": len(calls)}
+
+    client = Client()
+    state_schema = {
+        "type": "object",
+        "properties": {"status": {"type": "string"}},
+    }
+
+    await client.create_empty_draft_workspace(
+        workspace_id="ws",
+        name="control_first",
+        title="Control First",
+        outcomes=("ok", "error"),
+    )
+    await client.set_draft_start(workspace_id="ws", revision=1, step_id="gate")
+    await client.set_draft_contract(
+        workspace_id="ws",
+        revision=2,
+        state_schema=state_schema,
+        outcomes=("ok", "error"),
+    )
+
+    assert calls == [
+        {
+            "method": "workflow.draft_workspaces.create_empty",
+            "params": {
+                "workspace_id": "ws",
+                "name": "control_first",
+                "title": "Control First",
+                "input_schema": None,
+                "state_schema": None,
+                "output_schema": None,
+                "outcomes": ["ok", "error"],
+            },
+        },
+        {
+            "method": "workflow.draft_workspaces.set_start",
+            "params": {"workspace_id": "ws", "revision": 1, "step_id": "gate"},
+        },
+        {
+            "method": "workflow.draft_workspaces.set_contract",
+            "params": {
+                "workspace_id": "ws",
+                "revision": 2,
+                "input_schema": None,
+                "state_schema": state_schema,
+                "output_schema": None,
+                "outcomes": ["ok", "error"],
+            },
+        },
+    ]
+
+
+async def test_rpc_client_builds_capability_free_draft_lifecycle(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://test",
+    ) as http_client:
+        client = RpcWorkflowApiClient(
+            url="http://test/rpc",
+            timeout_seconds=5,
+            http_client=http_client,
+        )
+        created = await client.create_empty_draft_workspace(
+            workspace_id="control_first",
+            name="control_first",
+        )
+        joined = await client.add_step(
+            workspace_id="control_first",
+            revision=created["revision"],
+            step_id="gate",
+            step=DraftJoinStep(join={}),
+            routes={"done": "finish"},
+        )
+        started = await client.set_draft_start(
+            workspace_id="control_first",
+            revision=joined["revision"],
+            step_id="gate",
+        )
+        ended = await client.add_step(
+            workspace_id="control_first",
+            revision=started["revision"],
+            step_id="finish",
+            step=DraftEndStep(end=DraftEndPayload(outcome="error")),
+        )
+        contracted = await client.set_draft_contract(
+            workspace_id="control_first",
+            revision=ended["revision"],
+            outcomes=("error",),
+        )
+        stale = await client.set_draft_start(
+            workspace_id="control_first",
+            revision=ended["revision"],
+            step_id="finish",
+        )
+        validated = await client.validate_draft_workspace(workspace_id="control_first")
+        compiled = await client.compile_draft_workspace(workspace_id="control_first")
+        inspected = await client.get_draft_workspace(
+            workspace_id="control_first",
+            include_draft=True,
+        )
+
+    assert created["revision"] == 1
+    assert joined["revision"] == 2
+    assert started["revision"] == 3
+    assert ended["revision"] == 4
+    assert contracted["revision"] == 5
+    assert stale["status"] == "conflict"
+    assert stale["diagnostics"][0]["code"] == "revision_conflict"
+    assert validated["status"] == "valid"
+    assert compiled["compiled_plan"]["start"] == "gate"
+    assert inspected["draft"]["start"] == "gate"
+    assert inspected["draft"]["steps"] == {
+        "gate": {"join": {}},
+        "finish": {"end": {"outcome": "error"}},
+    }
 
 
 def test_rpc_client_satisfies_draft_surface_static_shape() -> None:

@@ -60,6 +60,30 @@ class RpcDraftClientMixin:
             },
         )
 
+    async def create_empty_draft_workspace(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        name: str,
+        title: str | None = None,
+        input_schema: dict[str, Any] | None = None,
+        state_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        outcomes: Sequence[str] = ("ok",),
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.create_empty",
+            {
+                "workspace_id": workspace_id,
+                "name": name,
+                "title": title,
+                "input_schema": input_schema,
+                "state_schema": state_schema,
+                "output_schema": output_schema,
+                "outcomes": list(outcomes),
+            },
+        )
+
     async def patch_draft_workspace(
         self: RpcCaller,
         *,
@@ -82,6 +106,40 @@ class RpcDraftClientMixin:
         return await self._call(
             "workflow.draft_workspaces.set_name",
             {"workspace_id": workspace_id, "revision": revision, "name": name},
+        )
+
+    async def set_draft_start(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.set_start",
+            {"workspace_id": workspace_id, "revision": revision, "step_id": step_id},
+        )
+
+    async def set_draft_contract(
+        self: RpcCaller,
+        *,
+        workspace_id: str,
+        revision: int,
+        input_schema: dict[str, Any] | None = None,
+        state_schema: dict[str, Any] | None = None,
+        output_schema: dict[str, Any] | None = None,
+        outcomes: Sequence[str] | None = None,
+    ) -> dict[str, Any]:
+        return await self._call(
+            "workflow.draft_workspaces.set_contract",
+            {
+                "workspace_id": workspace_id,
+                "revision": revision,
+                "input_schema": input_schema,
+                "state_schema": state_schema,
+                "output_schema": output_schema,
+                "outcomes": None if outcomes is None else list(outcomes),
+            },
         )
 
     async def set_draft_route(
