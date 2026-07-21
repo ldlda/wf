@@ -18,9 +18,13 @@ low-level escape hatch or you already have a complete compiler/generated plan.
 2. Inspect one candidate with `wf cap inspect`.
 3. Call one candidate with `wf cap call` when payload shape or upstream source
    reachability is uncertain.
-4. Create a patchable draft workspace with
-   `wf draft create <workspace_id> --capability <qualified_name>`.
-5. Patch targeted fields with focused draft commands or JSON Patch.
+4. Create a patchable draft workspace with `wf draft create <workspace_id>
+   --capability <qualified_name>` when the first step is a known capability, or
+   with `wf draft create <workspace_id> --name <name>` for a control-first,
+   interrupt-first, end-first, or subgraph-first graph.
+5. Set the entry point or whole workflow contract with `wf draft set-start` and
+   `wf draft set-contract` when needed, then patch other targeted fields with
+   focused commands or JSON Patch.
 6. Validate with `wf draft validate`.
 7. Save an artifact with `wf draft save`, or import a complete raw plan with
    `wf artifact create-from-plan`.
@@ -38,6 +42,11 @@ low-level escape hatch or you already have a complete compiler/generated plan.
 - Treat wrapper hints as scaffolding, not semantic truth.
 - Use draft workspaces for iterative authoring; avoid rewriting full drafts.
 - Prefer focused draft edit commands before hand-writing JSON Patch.
+- Treat `set-contract` schema files and repeated outcomes as whole-field
+  replacements, not merges.
+- Prefer `draft bind` or `draft add capability` when selected schema fields
+  should be projected from a known node contract. Reserve JSON Patch for
+  field-level schema surgery not covered by focused operations.
 - If a complete raw JSON/YAML plan already exists, the CLI escape hatch is
   `wf artifact create-from-plan`; do not write helper scripts that call
   internal APIs directly.

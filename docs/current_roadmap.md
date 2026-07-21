@@ -539,6 +539,11 @@ clear operator feedback before adding more architecture.
 - Completed: focused draft edit helpers are exposed through RPC/CLI, and
   `wf deploy create` is accepted as an alias for `wf deploy save`. Docs now
   distinguish draft shape from raw plan shape for agent authoring.
+- Completed: capability-free draft lifecycle authoring now spans the Python
+  API, JSON-RPC, remote client, and `wf` CLI. Callers can create an empty
+  revisioned workspace, set its entry point, and replace whole workflow
+  schemas or outcomes without RFC 6902 patches. Implementation:
+  [`draft workspace lifecycle authoring`](historical/superpowers/plans/2026-07-21-draft-workspace-lifecycle-authoring.md).
 - Completed: `wf draft set-input` and `wf draft set-output` now accept
   `--merge`, preserving existing bindings when agents split map edits across
   multiple revisions.

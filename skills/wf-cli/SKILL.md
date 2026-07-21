@@ -34,10 +34,13 @@ wf cap list --format ids
 wf cap inspect <capability>
 wf cap call <capability> --input '{"field":"value"}'
 
+wf draft create <workspace_id> --name <name>
 wf draft create <workspace_id> --capability <capability>
 wf draft inspect <workspace_id> --include-draft
 wf draft patch <workspace_id> --revision <n> --input-file patch.json
 wf draft set-name <workspace_id> --revision <n> --name <name>
+wf draft set-start <workspace_id> --revision <n> --step <step_id>
+wf draft set-contract <workspace_id> --revision <n> --state-schema-file state.schema.json --outcome ok --outcome error
 wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome <outcome> --to <target>
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.text=text
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
@@ -51,10 +54,24 @@ wf draft compile <workspace_id>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
 wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
 wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
-wf draft add interrupt <workspace_id> --revision <n> --step review --kind issue_review --outcome submitted --outcome cancelled --route submitted=next --route cancelled=revise
+wf draft add interrupt <workspace_id> --revision <n> --step review --kind issue_review \
+  --request-schema-file request.schema.json --resume-schema-file resume.schema.json \
+  --outcome submitted --outcome cancelled --route submitted=next --route cancelled=revise
 wf draft add when <workspace_id> --revision <n> --step decide --condition-file condition.json --then next --otherwise revise
 wf draft validate <workspace_id>
 wf draft save <workspace_id> --artifact <artifact_id> --version <n> --title <title>
+
+Choose `draft create --capability` when the first step should derive its
+contract and wrapper hints from a known capability. Choose `draft create
+--name` for control-first, interrupt-first, end-first, or subgraph-first
+authoring. An empty draft is expected to remain invalid until its start, steps,
+routes, and contract agree.
+
+`draft set-contract` replaces each supplied top-level schema or the complete
+outcomes list; it does not deep-merge schemas. Prefer `draft bind` or `draft add
+capability` when selected fields should be projected from a known node
+contract. Use JSON Patch only for field-level schema surgery not covered by a
+focused operation.
 
 Draft creation auto-binds required capability inputs only. Optional inputs are
 reported in wrapper-hint notes; bind them explicitly only when the workflow

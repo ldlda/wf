@@ -60,7 +60,7 @@
 - Produces: `WorkflowDraftSurface.set_draft_contract(...)`.
 - Consumes: existing `WorkflowDraftApi.create_draft_workspace` and `patch_draft_workspace` revision semantics.
 
-- [ ] **Step 1: Write failing empty-workspace API tests**
+- [x] **Step 1: Write failing empty-workspace API tests**
 
 Add tests using `_draft_api(...)`, then construct the facade explicitly with
 `facade = WorkflowApi(authoring.context)`. Pin the complete stored shape, not
@@ -95,7 +95,7 @@ assert stored["draft"] == {
 
 Add a second test with custom schemas, ordered outcomes, reducer metadata under a state property, and title. Assert the stored payload equals the supplied dictionaries. Mutate one original schema after creation and assert the other defaults/stored schemas did not change.
 
-- [ ] **Step 2: Write failing conflict and envelope-validation tests**
+- [x] **Step 2: Write failing conflict and envelope-validation tests**
 
 Cover:
 
@@ -107,7 +107,7 @@ Cover:
 
 For each rejected envelope, assert `list_draft_workspaces()` remains empty.
 
-- [ ] **Step 3: Write failing start and contract edit tests**
+- [x] **Step 3: Write failing start and contract edit tests**
 
 Cover these behaviors:
 
@@ -142,7 +142,7 @@ Fetch the full draft and assert input schema is unchanged, supplied fields are c
 Use otherwise-valid stale requests in those two tests. Invalid request
 envelopes are expected to fail before revision lookup.
 
-- [ ] **Step 4: Run the focused API tests and confirm red**
+- [x] **Step 4: Run the focused API tests and confirm red**
 
 Run:
 
@@ -152,7 +152,7 @@ uv run pytest tests/wf_api/test_drafts_service.py -q
 
 Expected: new tests fail because `WorkflowApi` and `WorkflowDraftSurface` do not expose the three lifecycle methods.
 
-- [ ] **Step 5: Implement lifecycle validation and mutation in `WorkflowDraftApi`**
+- [x] **Step 5: Implement lifecycle validation and mutation in `WorkflowDraftApi`**
 
 Add small private helpers in `src/wf_api/drafts.py`:
 
@@ -202,11 +202,11 @@ if not patch:
 return await self.patch_draft_workspace(..., patch=patch)
 ```
 
-- [ ] **Step 6: Expose exact delegation through `WorkflowApi` and `WorkflowDraftSurface`**
+- [x] **Step 6: Expose exact delegation through `WorkflowApi` and `WorkflowDraftSurface`**
 
 Add all three signatures from the design to the protocol and facade. Use `Sequence[str]` in Python interfaces; convert only at serialization/storage seams. Keep method names identical across concrete and protocol types.
 
-- [ ] **Step 7: Verify and commit Task 1**
+- [x] **Step 7: Verify and commit Task 1**
 
 Run:
 
@@ -239,7 +239,7 @@ git commit -m "feat: add draft lifecycle authoring operations"
 - Produces: `CreateEmptyDraftWorkspaceParams`, `SetDraftStartParams`, and `SetDraftContractParams`.
 - Produces: JSON-RPC methods `workflow.draft_workspaces.create_empty`, `.set_start`, and `.set_contract`.
 
-- [ ] **Step 1: Write failing RPC registration and dispatch tests**
+- [x] **Step 1: Write failing RPC registration and dispatch tests**
 
 Extend the draft RPC app tests to call:
 
@@ -264,7 +264,7 @@ contracted = await _rpc(client, "workflow.draft_workspaces.set_contract", {
 
 Assert method results use revisions 1, 2, and 3; creation and the forward start are invalid but persisted; inspection shows the replaced contract.
 
-- [ ] **Step 2: Write failing RPC envelope tests**
+- [x] **Step 2: Write failing RPC envelope tests**
 
 Use `_rpc` to submit:
 
@@ -276,7 +276,7 @@ Use `_rpc` to submit:
 
 Assert each returns a JSON-RPC parameter/error response and inspection proves the workspace revision did not change.
 
-- [ ] **Step 3: Run the focused server tests and confirm red**
+- [x] **Step 3: Run the focused server tests and confirm red**
 
 Run:
 
@@ -286,7 +286,7 @@ uv run pytest tests/wf_transport_rpc_http/test_app.py -q
 
 Expected: unknown-method failures for the three new method names.
 
-- [ ] **Step 4: Implement typed request models**
+- [x] **Step 4: Implement typed request models**
 
 In `models.py`, import `Self` from `typing`, then add Pydantic request models
 with `Field(min_length=1)` for ids/names, `revision >= 1`, optional schema
@@ -318,14 +318,14 @@ class SetDraftContractParams(RpcParamsModel):
 
 Use a shared local outcome validator for create and set-contract request models. The API repeats validation deliberately because same-process callers do not pass through Pydantic RPC models.
 
-- [ ] **Step 5: Register three thin server methods**
+- [x] **Step 5: Register three thin server methods**
 
 Import the models in `methods/drafts.py`. Each handler catches the same expected exception set as neighboring draft methods and delegates exact fields to `server.api` without rebuilding draft JSON inside the transport adapter.
 
 Re-export the three request models from `wf_transport_rpc_http.__init__` and add
 them to `__all__`, matching the package's existing public DTO convention.
 
-- [ ] **Step 6: Verify and commit Task 2**
+- [x] **Step 6: Verify and commit Task 2**
 
 Run:
 
@@ -355,7 +355,7 @@ git commit -m "feat: expose draft lifecycle rpc methods"
 - Consumes: the JSON-RPC methods from Task 2.
 - Produces: `RpcDraftClientMixin` implementations satisfying the expanded `WorkflowDraftSurface`.
 
-- [ ] **Step 1: Write failing request-payload tests**
+- [x] **Step 1: Write failing request-payload tests**
 
 Follow the existing lightweight recording-client pattern and assert exact methods and params for all three calls. Pin that tuples become ordered JSON lists:
 
@@ -373,7 +373,7 @@ assert request == {
 }
 ```
 
-- [ ] **Step 2: Write the failing complete remote lifecycle test**
+- [x] **Step 2: Write the failing complete remote lifecycle test**
 
 Against an in-process `create_rpc_app(server)` and real `RpcWorkflowApiClient`:
 
@@ -388,7 +388,7 @@ Assert the final validation result is valid, revision increased exactly once per
 edit, `compile_draft_workspace()` returns a compiled plan whose start is `gate`,
 and an inspected full draft contains no capability bootstrap step.
 
-- [ ] **Step 3: Run client tests and confirm red**
+- [x] **Step 3: Run client tests and confirm red**
 
 Run:
 
@@ -398,11 +398,11 @@ uv run pytest tests/wf_transport_rpc_http/test_client.py -q
 
 Expected: static protocol shape/type failures or missing client methods.
 
-- [ ] **Step 4: Implement the remote mixin methods**
+- [x] **Step 4: Implement the remote mixin methods**
 
 Add direct `_call(...)` methods adjacent to capability-backed creation and existing focused setters. Serialize `Sequence[str]` using `list(outcomes)` and include all optional contract keys explicitly, matching existing client payload conventions.
 
-- [ ] **Step 5: Verify static surface parity and commit Task 3**
+- [x] **Step 5: Verify static surface parity and commit Task 3**
 
 Run:
 
@@ -434,7 +434,7 @@ git commit -m "feat: add remote draft lifecycle client"
 - Consumes: the expanded `WorkflowDraftSurface` implemented locally and remotely.
 - Produces: dual-mode `wf draft create`, `wf draft set-start`, and `wf draft set-contract`.
 
-- [ ] **Step 1: Write failing help and handler-dispatch tests**
+- [x] **Step 1: Write failing help and handler-dispatch tests**
 
 Update create help expectations and add new help tests. Pin these options:
 
@@ -452,7 +452,7 @@ Use fake handlers to assert:
 - set-start forwards workspace/revision/step;
 - set-contract preserves omitted fields as `None` and passes ordered outcomes.
 
-- [ ] **Step 2: Write failing CLI validation tests**
+- [x] **Step 2: Write failing CLI validation tests**
 
 Cover:
 
@@ -465,7 +465,7 @@ Cover:
 
 Assert concise Click/Typer parameter errors and assert fake handlers receive no call.
 
-- [ ] **Step 3: Write the failing remote CLI lifecycle test**
+- [x] **Step 3: Write the failing remote CLI lifecycle test**
 
 Use `_patch_rpc_client_to_server` and the `--url http://test/rpc` pattern. Run:
 
@@ -480,7 +480,7 @@ wf draft validate control_ws
 
 Assert every command succeeds, final status is valid, final revision is 5, start is `gate`, outcomes are `['error']`, and steps contain exactly `gate` and `finish`.
 
-- [ ] **Step 4: Run CLI tests and confirm red**
+- [x] **Step 4: Run CLI tests and confirm red**
 
 Run:
 
@@ -490,7 +490,7 @@ uv run pytest tests/wf_cli/test_app.py tests/wf_cli/test_remote_target.py -q
 
 Expected: missing options/commands and missing handler-method failures.
 
-- [ ] **Step 5: Add a reusable JSON-object file parser**
+- [x] **Step 5: Add a reusable JSON-object file parser**
 
 Build on `parse_json_file` in `draft_options.py`:
 
@@ -505,7 +505,7 @@ def parse_json_object_file(path: Path, *, option_name: str) -> dict[str, Any]:
 
 Do not add schema merging or JSON Schema semantic validation in the CLI.
 
-- [ ] **Step 6: Implement dual-mode create**
+- [x] **Step 6: Implement dual-mode create**
 
 Rename the Python function from `create_from_capability` to `create_draft`. Make `--capability` optional. Parse schema files only after checking mode-specific option rules:
 
@@ -527,11 +527,11 @@ else:
 
 Keep loading the protocol-neutral CLI context so both branches work locally and remotely.
 
-- [ ] **Step 7: Implement `set-start` and `set-contract`**
+- [x] **Step 7: Implement `set-start` and `set-contract`**
 
 Add adjacent focused commands. Reject duplicate/blank outcomes at the CLI edge for concise feedback, while preserving API/RPC validation. `set-contract` must reject an empty option set before loading the context. Pass complete schema dictionaries and `tuple(outcomes)` to the surface.
 
-- [ ] **Step 8: Verify and commit Task 4**
+- [x] **Step 8: Verify and commit Task 4**
 
 Run:
 
@@ -565,7 +565,7 @@ git commit -m "feat: add draft lifecycle cli commands"
 - Documents: the exact capability-free CLI lifecycle and whole-contract replacement semantics.
 - Closes: only the four implemented items under `Draft workspace lifecycle parity` for empty creation, entry point, workflow outcomes, and workflow schemas/reducer metadata.
 
-- [ ] **Step 1: Update workflow draft documentation**
+- [x] **Step 1: Update workflow draft documentation**
 
 Add a capability-free flow before the current capability bootstrap flow:
 
@@ -580,7 +580,7 @@ wf draft validate report_ws
 
 Explain that revision 1 is intentionally invalid, forward entry points persist with diagnostics, schema files replace whole schemas, and capability binding projection remains preferable when deriving selected fields from a known node contract.
 
-- [ ] **Step 2: Update both agent skills**
+- [x] **Step 2: Update both agent skills**
 
 Teach agents to choose:
 
@@ -590,7 +590,7 @@ Teach agents to choose:
 - `bind` or capability-add projection for selected node-schema fields;
 - raw patch only for field-level schema surgery not covered by focused operations.
 
-- [ ] **Step 3: Update roadmap and issues**
+- [x] **Step 3: Update roadmap and issues**
 
 Add a completed roadmap item linking to the historical plan path. Check exactly these `ISSUES.md` items:
 
@@ -601,7 +601,7 @@ Add a completed roadmap item linking to the historical plan path. Check exactly 
 
 Leave step metadata, data-shaping, revision consistency, and TypeScript parity unchecked.
 
-- [ ] **Step 4: Run focused functional verification**
+- [x] **Step 4: Run focused functional verification**
 
 Run:
 
@@ -611,7 +611,7 @@ uv run pytest tests/wf_api/test_drafts_service.py tests/wf_transport_rpc_http/te
 
 Expected: all selected tests pass.
 
-- [ ] **Step 5: Run the Python quality gate**
+- [x] **Step 5: Run the Python quality gate**
 
 Run:
 
@@ -624,7 +624,7 @@ git diff --check
 
 Expected: all commands exit 0.
 
-- [ ] **Step 6: Run independent review and fix valid findings**
+- [x] **Step 6: Run independent review and fix valid findings**
 
 Review against:
 
@@ -636,7 +636,7 @@ Review against:
 
 Re-run the smallest affected test command after each fix, then repeat Steps 4 and 5.
 
-- [ ] **Step 7: Archive the completed plan and commit**
+- [x] **Step 7: Archive the completed plan and commit**
 
 Move the plan only after implementation and verification are complete:
 

@@ -627,7 +627,45 @@ Stateless draft tools require the caller to resend the whole draft. Draft
 workspaces are the preferred LLM authoring flow when a client will patch a
 workflow over several turns.
 
-The workspace flow is:
+### Capability-Free CLI Flow
+
+Create an empty workspace when the workflow begins with control flow, an
+interrupt, an end step, or a subgraph rather than a capability:
+
+```bash
+wf draft create report_ws --name report_workflow
+wf draft add join report_ws --revision 1 --step gate --route done=finish
+wf draft set-start report_ws --revision 2 --step gate
+wf draft add end report_ws --revision 3 --step finish --outcome error
+wf draft set-contract report_ws --revision 4 --outcome error
+wf draft validate report_ws
+```
+
+Revision 1 is intentionally incomplete and therefore invalid. Draft edits
+persist representable intermediate states together with diagnostics, so an
+entry point or route may refer forward to a step that a later revision adds.
+The final validation is the gate before saving an artifact.
+
+Pass `--input-schema-file`, `--state-schema-file`, or
+`--output-schema-file` to `draft create` or `draft set-contract` when the
+workflow contract is explicit. Each file must contain one JSON object. These
+options replace the complete selected schema; repeated `--outcome` flags
+replace the complete public outcome list. State-schema replacement preserves
+JSON Schema annotations such as reducer metadata exactly as supplied.
+
+Use capability-backed creation when the first step should derive its contract
+and wrapper hints from a known capability:
+
+```bash
+wf draft create report_ws --capability local.lda_docs.read_documents
+```
+
+For selected fields from a capability contract, prefer `wf draft add
+capability` or `wf draft bind` so schema projection remains tied to that node.
+Use `set-contract` for deliberate whole-schema/outcome replacement. Reserve
+JSON Patch for field-level schema surgery that focused commands do not cover.
+
+The capability-bootstrap MCP workspace flow is:
 
 1. `wf.workflow.create_minimal_draft_workspace`
 2. `wf.workflow.get_draft_workspace`
@@ -664,6 +702,8 @@ artifact kind to `wrapper` so clients do not need to pass `kind` manually.
 For routine edits, prefer focused commands over hand-written JSON Patch:
 
 ```bash
+wf draft set-start <workspace_id> --revision <n> --step <step_id>
+wf draft set-contract <workspace_id> --revision <n> --input-schema-file input.schema.json --state-schema-file state.schema.json --output-schema-file output.schema.json --outcome ok
 wf draft set-name <workspace_id> --revision <n> --name <name>
 wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome ok --to <target_step_or___end__>
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.text=text

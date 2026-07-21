@@ -35,19 +35,15 @@
 
 ## Draft workspace lifecycle parity
 
-- [ ] No capability-free draft workspace creation is exposed through the
-  transport-facing API, JSON-RPC, or CLI. Control-first, interrupt-first, and
-  subgraph-first workflows must bootstrap from an unrelated capability or be
-  created through a lower-level raw document path.
-- [ ] No focused operation changes the draft entry point. `WorkflowBuilder`
-  exposes `set_entry_point`, while workspace callers must patch `/start`
-  directly after replacing the bootstrap step.
-- [ ] No focused operation declares workflow outcomes. `wf draft add end
-  --outcome error` can add the terminal node, but core validation rejects it
-  until the caller separately patches `/outcomes`.
-- [ ] No focused operation updates workflow input/state/output schemas,
-  including reducer metadata carried by the state schema, after workspace
-  creation. These modeled workflow contracts currently require RFC 6902 edits.
+- [x] Capability-free draft workspace creation is exposed through the
+  transport-facing API, JSON-RPC, and CLI for control-first, interrupt-first,
+  end-first, and subgraph-first authoring.
+- [x] A focused revision-checked operation changes the draft entry point
+  without patching `/start` directly.
+- [x] A focused contract operation replaces the complete declared workflow
+  outcomes list.
+- [x] A focused contract operation replaces workflow input/state/output
+  schemas, preserving reducer metadata carried by the supplied state schema.
 - [ ] The dedicated capability-step CLI cannot set `desc`, `retry`,
   `timeout_seconds`, or literal inputs at creation, and there is no focused
   update-step operation. The generic RPC step payload can represent these
