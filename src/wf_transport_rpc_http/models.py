@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from wf_api.models import TraceRange
 from wf_artifacts.drafts.models import DraftStep
@@ -80,6 +80,31 @@ class CreateDraftFromCapabilityParams(RpcParamsModel):
     error_message_source: Any | None = None
 
 
+def _validate_workflow_outcomes(outcomes: list[str]) -> None:
+    """Reject outcome lists that cannot form a public workflow contract."""
+    if not outcomes:
+        raise ValueError("workflow outcomes must contain at least one value")
+    if any(not outcome.strip() for outcome in outcomes):
+        raise ValueError("workflow outcomes must not contain blank values")
+    if len(set(outcomes)) != len(outcomes):
+        raise ValueError("workflow outcomes must be unique")
+
+
+class CreateEmptyDraftWorkspaceParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    name: str = Field(min_length=1)
+    title: str | None = None
+    input_schema: dict[str, Any] | None = None
+    state_schema: dict[str, Any] | None = None
+    output_schema: dict[str, Any] | None = None
+    outcomes: list[str] = Field(default_factory=lambda: ["ok"])
+
+    @model_validator(mode="after")
+    def validate_outcomes(self) -> Self:
+        _validate_workflow_outcomes(self.outcomes)
+        return self
+
+
 class PatchDraftParams(RpcParamsModel):
     draft: dict[str, Any]
     patch: list[dict[str, Any]]
@@ -130,6 +155,41 @@ class SetDraftNameParams(RpcParamsModel):
     workspace_id: str = Field(min_length=1)
     revision: int = Field(ge=1)
     name: str = Field(min_length=1)
+
+
+class SetDraftStartParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def validate_step_id(self) -> Self:
+        if not self.step_id.strip():
+            raise ValueError("draft start step id must not be blank")
+        return self
+
+
+class SetDraftContractParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    input_schema: dict[str, Any] | None = None
+    state_schema: dict[str, Any] | None = None
+    output_schema: dict[str, Any] | None = None
+    outcomes: list[str] | None = None
+
+    @model_validator(mode="after")
+    def validate_contract_edit(self) -> Self:
+        fields = (
+            self.input_schema,
+            self.state_schema,
+            self.output_schema,
+            self.outcomes,
+        )
+        if all(value is None for value in fields):
+            raise ValueError("set_contract requires at least one contract field")
+        if self.outcomes is not None:
+            _validate_workflow_outcomes(self.outcomes)
+        return self
 
 
 class SetDraftRouteParams(RpcParamsModel):

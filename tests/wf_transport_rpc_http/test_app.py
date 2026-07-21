@@ -316,6 +316,118 @@ async def test_rpc_draft_workspace_methods(tmp_path) -> None:
     assert artifact["result"]["artifact_id"] == "remote_artifact"
 
 
+async def test_rpc_draft_workspace_lifecycle_methods(tmp_path) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        created = await _rpc(
+            client,
+            "workflow.draft_workspaces.create_empty",
+            {
+                "workspace_id": "rpc_control",
+                "name": "rpc_control",
+                "title": "RPC Control",
+            },
+        )
+        started = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_start",
+            {
+                "workspace_id": "rpc_control",
+                "revision": 1,
+                "step_id": "gate",
+            },
+        )
+        contracted = await _rpc(
+            client,
+            "workflow.draft_workspaces.set_contract",
+            {
+                "workspace_id": "rpc_control",
+                "revision": 2,
+                "state_schema": {"type": "object", "properties": {}},
+                "outcomes": ["error"],
+            },
+        )
+        inspected = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "rpc_control", "include_draft": True},
+        )
+
+    assert created["result"]["revision"] == 1
+    assert created["result"]["status"] == "invalid"
+    assert started["result"]["revision"] == 2
+    assert started["result"]["status"] == "invalid"
+    assert contracted["result"]["revision"] == 3
+    assert inspected["result"]["title"] == "RPC Control"
+    assert inspected["result"]["draft"]["start"] == "gate"
+    assert inspected["result"]["draft"]["state_schema"] == {
+        "type": "object",
+        "properties": {},
+    }
+    assert inspected["result"]["draft"]["outcomes"] == ["error"]
+
+
+@pytest.mark.parametrize(
+    ("method", "params"),
+    [
+        (
+            "workflow.draft_workspaces.set_contract",
+            {"workspace_id": "rpc_control", "revision": 1},
+        ),
+        (
+            "workflow.draft_workspaces.set_contract",
+            {"workspace_id": "rpc_control", "revision": 1, "outcomes": []},
+        ),
+        (
+            "workflow.draft_workspaces.set_contract",
+            {
+                "workspace_id": "rpc_control",
+                "revision": 1,
+                "outcomes": ["ok", "ok"],
+            },
+        ),
+        (
+            "workflow.draft_workspaces.set_start",
+            {"workspace_id": "rpc_control", "revision": 1, "step_id": " "},
+        ),
+        (
+            "workflow.draft_workspaces.set_contract",
+            {
+                "workspace_id": "rpc_control",
+                "revision": 1,
+                "state_schema": [],
+            },
+        ),
+    ],
+)
+async def test_rpc_draft_lifecycle_rejects_invalid_envelope_without_mutation(
+    tmp_path,
+    method: str,
+    params: dict[str, Any],
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    await server.api.create_empty_draft_workspace(
+        workspace_id="rpc_control",
+        name="rpc_control",
+    )
+    app = create_rpc_app(server)
+    transport = httpx.ASGITransport(app=app)
+    async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+        rejected = await _rpc(client, method, params)
+        inspected = await _rpc(
+            client,
+            "workflow.draft_workspaces.get",
+            {"workspace_id": "rpc_control", "include_draft": True},
+        )
+
+    assert rejected["error"]["code"] == -32602
+    assert inspected["result"]["revision"] == 1
+    assert inspected["result"]["draft"]["start"] == ""
+    assert inspected["result"]["draft"]["outcomes"] == ["ok"]
+
+
 async def test_rpc_draft_workspace_delete(tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     app = create_rpc_app(server)

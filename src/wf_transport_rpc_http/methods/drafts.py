@@ -16,6 +16,7 @@ from ..models import (
     CompileDraftWorkspaceParams,
     CreateArtifactFromWorkspaceParams,
     CreateDraftFromCapabilityParams,
+    CreateEmptyDraftWorkspaceParams,
     CreateWrapperFromWorkspaceParams,
     DeleteDraftWorkspaceParams,
     GetDraftWorkspaceParams,
@@ -26,8 +27,10 @@ from ..models import (
     RemoveDraftBindingParams,
     RemoveDraftRouteParams,
     RemoveDraftStepParams,
+    SetDraftContractParams,
     SetDraftNameParams,
     SetDraftRouteParams,
+    SetDraftStartParams,
     SetStepInputMapParams,
     SetStepOutputMapParams,
     SetWorkflowOutputMapParams,
@@ -106,6 +109,26 @@ def register_methods(
             raise_workflow_rpc_error(exc)
 
     @entrypoint.method(
+        name="workflow.draft_workspaces.create_empty",
+        errors=[WorkflowRpcError],
+    )
+    async def workflow_draft_workspaces_create_empty(
+        params: CreateEmptyDraftWorkspaceParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.create_empty_draft_workspace(
+                workspace_id=params.workspace_id,
+                name=params.name,
+                title=params.title,
+                input_schema=params.input_schema,
+                state_schema=params.state_schema,
+                output_schema=params.output_schema,
+                outcomes=params.outcomes,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
         name="workflow.draft_workspaces.patch", errors=[WorkflowRpcError]
     )
     async def workflow_draft_workspaces_patch(
@@ -131,6 +154,39 @@ def register_methods(
                 workspace_id=params.workspace_id,
                 revision=params.revision,
                 name=params.name,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.set_start", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_set_start(
+        params: SetDraftStartParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.set_draft_start(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                step_id=params.step_id,
+            )
+        except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
+            raise_workflow_rpc_error(exc)
+
+    @entrypoint.method(
+        name="workflow.draft_workspaces.set_contract", errors=[WorkflowRpcError]
+    )
+    async def workflow_draft_workspaces_set_contract(
+        params: SetDraftContractParams = RpcParams(),
+    ) -> dict[str, Any]:
+        try:
+            return await server.api.set_draft_contract(
+                workspace_id=params.workspace_id,
+                revision=params.revision,
+                input_schema=params.input_schema,
+                state_schema=params.state_schema,
+                output_schema=params.output_schema,
+                outcomes=params.outcomes,
             )
         except (ValueError, KeyError, LookupError, FileNotFoundError) as exc:
             raise_workflow_rpc_error(exc)
