@@ -49,7 +49,7 @@
 
 - Preserves: `set_step_output_map(..., merge=...)` unchanged as a compatibility operation.
 
-- [ ] **Step 1: Write failing canonical replacement and fan-out tests**
+- [x] **Step 1: Write failing canonical replacement and fan-out tests**
 
   Add tests alongside the canonical input-binding tests. Use an existing test
   capability whose output schema contains a nested object, or register one with
@@ -102,7 +102,7 @@
   ]
   ```
 
-- [ ] **Step 2: Write failing schema projection tests**
+- [x] **Step 2: Write failing schema projection tests**
 
   Cover nested source-to-target projection, whole-payload `.` projection,
   exact-equivalent existing target acceptance, and incompatible existing target
@@ -132,7 +132,7 @@
   Verify the complete capability output object appears below
   `state_schema.properties.raw_result`.
 
-- [ ] **Step 3: Write failing semantic-error and revision tests**
+- [x] **Step 3: Write failing semantic-error and revision tests**
 
   Add cases for:
 
@@ -157,7 +157,7 @@
       await api.set_step_output_bindings(...)
   ```
 
-- [ ] **Step 4: Run focused API tests and confirm RED**
+- [x] **Step 4: Run focused API tests and confirm RED**
 
   Run:
 
@@ -168,7 +168,7 @@
   Expected: failures because `WorkflowApi.set_step_output_bindings` does not
   exist.
 
-- [ ] **Step 5: Add output overlap and patch helpers**
+- [x] **Step 5: Add output overlap and patch helpers**
 
   In `src/wf_api/draft_authoring.py`, add focused helpers beside the input
   equivalents:
@@ -218,7 +218,7 @@
   ancestry checks. Keep this comment at the helper call because the type seam
   is otherwise non-obvious.
 
-- [ ] **Step 6: Implement canonical output replacement**
+- [x] **Step 6: Implement canonical output replacement**
 
   Add `WorkflowDraftAuthoringApi.set_step_output_bindings`:
 
@@ -308,13 +308,13 @@
   target, and source so incompatible-schema diagnostics satisfy the public
   error contract.
 
-- [ ] **Step 7: Expose the operation through the API protocol and service**
+- [x] **Step 7: Expose the operation through the API protocol and service**
 
   Add the same `Sequence[OutputBinding]` signature to `WorkflowApiSurface` and
   delegate from `WorkflowApi` to `self.draft_authoring` exactly as the canonical
   input operation does.
 
-- [ ] **Step 8: Add compile-and-run fan-out coverage**
+- [x] **Step 8: Add compile-and-run fan-out coverage**
 
   In `tests/core/test_atomic_state_patches.py`, add a focused
   `apply_output_bindings` regression where one local source is bound to two
@@ -322,7 +322,7 @@
   test separately proves the same canonical list compiles. Do not only inspect
   serialized draft JSON.
 
-- [ ] **Step 9: Run API and runtime tests**
+- [x] **Step 9: Run API and runtime tests**
 
   Run:
 
@@ -332,7 +332,7 @@
 
   Expected: PASS.
 
-- [ ] **Step 10: Commit Task 1**
+- [x] **Step 10: Commit Task 1**
 
   ```bash
   git add src/wf_api/draft_authoring.py src/wf_api/surface.py src/wf_api/service.py tests/wf_api/test_drafts_service.py tests/core/test_atomic_state_patches.py
@@ -365,7 +365,7 @@
 
   and remote client method `set_step_output_bindings(...)`.
 
-- [ ] **Step 1: Write failing RPC application tests**
+- [x] **Step 1: Write failing RPC application tests**
 
   Add a request containing duplicate sources and ordered distinct targets:
 
@@ -390,7 +390,7 @@
   marker. These must return JSON-RPC invalid-params errors without invoking the
   semantic method.
 
-- [ ] **Step 2: Write failing remote client tests**
+- [x] **Step 2: Write failing remote client tests**
 
   Call the typed client with two `OutputBinding` values sharing a source. Assert
   the recorded wire method and JSON payload exactly:
@@ -405,7 +405,7 @@
   ]
   ```
 
-- [ ] **Step 3: Run RPC tests and confirm RED**
+- [x] **Step 3: Run RPC tests and confirm RED**
 
   ```bash
   uv run pytest tests/wf_transport_rpc_http/test_app.py tests/wf_transport_rpc_http/test_client.py -q -k "step_output"
@@ -413,13 +413,13 @@
 
   Expected: unknown method/model/client failures.
 
-- [ ] **Step 4: Add the typed parameter model and exports**
+- [x] **Step 4: Add the typed parameter model and exports**
 
   Import `OutputBinding` in `models.py`, define
   `SetStepOutputBindingsParams`, and add it to `wf_transport_rpc_http.__init__`
   imports and `__all__`.
 
-- [ ] **Step 5: Register the JSON-RPC method**
+- [x] **Step 5: Register the JSON-RPC method**
 
   In `methods/drafts.py`, register:
 
@@ -442,12 +442,12 @@
   Follow the existing decorator signature exactly if it differs from this
   abbreviated example.
 
-- [ ] **Step 6: Add the remote client method**
+- [x] **Step 6: Add the remote client method**
 
   Mirror `set_step_input_bindings` and serialize each binding with
   `model_dump(mode="json")`. Do not lower through `output_map`.
 
-- [ ] **Step 7: Run RPC tests**
+- [x] **Step 7: Run RPC tests**
 
   ```bash
   uv run pytest tests/wf_transport_rpc_http/test_app.py tests/wf_transport_rpc_http/test_client.py -q
@@ -455,7 +455,7 @@
 
   Expected: PASS.
 
-- [ ] **Step 8: Commit Task 2**
+- [x] **Step 8: Commit Task 2**
 
   ```bash
   git add src/wf_transport_rpc_http tests/wf_transport_rpc_http
@@ -488,7 +488,7 @@
 
   and MCP tool `wf.workflow.set_step_output_bindings`.
 
-- [ ] **Step 1: Write failing request-model tests**
+- [x] **Step 1: Write failing request-model tests**
 
   Validate ordered fan-out and reject malformed canonical records:
 
@@ -511,25 +511,25 @@
   ]
   ```
 
-- [ ] **Step 2: Write failing handler and discovery tests**
+- [x] **Step 2: Write failing handler and discovery tests**
 
   Use the workflow-surface handler fake to assert the tool delegates once with
   typed bindings in order. Add the tool name to server discovery/config tests
   and the always-visible proxy list assertion.
 
-- [ ] **Step 3: Run focused MCP tests and confirm RED**
+- [x] **Step 3: Run focused MCP tests and confirm RED**
 
   ```bash
   uv run pytest tests/wf_mcp/workflow_surface/test_drafts.py tests/wf_mcp/server/test_tools.py tests/wf_mcp/server/test_config.py -q -k "output_bindings or tools or config"
   ```
 
-- [ ] **Step 4: Add the MCP request model**
+- [x] **Step 4: Add the MCP request model**
 
   Define `SetStepOutputBindingsRequest` beside the map request and describe it
   as complete ordered replacement. Reuse `DraftOutputBindings`; do not define a
   second union or path-map type.
 
-- [ ] **Step 5: Register the MCP tool**
+- [x] **Step 5: Register the MCP tool**
 
   Add:
 
@@ -556,12 +556,12 @@
 
   Follow local registration and result-conversion conventions exactly.
 
-- [ ] **Step 6: Pin the tool in proxy discovery**
+- [x] **Step 6: Pin the tool in proxy discovery**
 
   Add `wf.workflow.set_step_output_bindings` beside input bindings in
   `_SEARCH_ALWAYS_VISIBLE_TOOL_NAMES`.
 
-- [ ] **Step 7: Run MCP tests**
+- [x] **Step 7: Run MCP tests**
 
   ```bash
   uv run pytest tests/wf_mcp/workflow_surface/test_drafts.py tests/wf_mcp/server/test_tools.py tests/wf_mcp/server/test_config.py -q
@@ -569,7 +569,7 @@
 
   Expected: PASS.
 
-- [ ] **Step 8: Commit Task 3**
+- [x] **Step 8: Commit Task 3**
 
   ```bash
   git add src/wf_mcp tests/wf_mcp
@@ -600,7 +600,7 @@
 
 - Keeps: `wf draft set-output`; no new command name.
 
-- [ ] **Step 1: Write failing parser tests**
+- [x] **Step 1: Write failing parser tests**
 
   Add tests proving repeated sources remain separate and file order is exact:
 
@@ -621,7 +621,7 @@
   invalid local source syntax, and non-state targets as concise
   `typer.BadParameter` errors.
 
-- [ ] **Step 2: Write failing local command tests**
+- [x] **Step 2: Write failing local command tests**
 
   Cover:
 
@@ -634,7 +634,7 @@
   - `--merge --map` dispatching to `set_step_output_map` only;
   - duplicate-source fan-out dispatching to `set_step_output_bindings` only.
 
-- [ ] **Step 3: Write failing remote-target tests**
+- [x] **Step 3: Write failing remote-target tests**
 
   Run the same repeated-source and file modes with `--target`. Assert the RPC
   method is exactly
@@ -642,13 +642,13 @@
   order preserved. Retain one compatibility `--merge` assertion for
   `set_step_output_map`.
 
-- [ ] **Step 4: Run focused CLI tests and confirm RED**
+- [x] **Step 4: Run focused CLI tests and confirm RED**
 
   ```bash
   uv run pytest tests/wf_cli/test_app.py tests/wf_cli/test_remote_target.py -q -k "set_output"
   ```
 
-- [ ] **Step 5: Add output binding parsers**
+- [x] **Step 5: Add output binding parsers**
 
   In `draft_options.py`, import `OutputBinding`, add a
   `TypeAdapter(list[OutputBinding])`, parse ordered flags directly rather than
@@ -682,7 +682,7 @@
   `parse_step_output_bindings_file` validates `parse_json_file(...)` through the
   adapter exactly as the input file parser does.
 
-- [ ] **Step 6: Rework `wf draft set-output` dispatch**
+- [x] **Step 6: Rework `wf draft set-output` dispatch**
 
   Add `--bindings-file: Path | None` and `--clear: bool`. Use this mode matrix:
 
@@ -707,7 +707,7 @@
   bindings and `set_step_output_bindings`. The no-flags case must no longer
   silently clear outputs; clearing requires `--clear`.
 
-- [ ] **Step 7: Update command help tests**
+- [x] **Step 7: Update command help tests**
 
   Pin direction and semantics:
 
@@ -718,7 +718,7 @@
   --merge compatibility-only and potentially lossy
   ```
 
-- [ ] **Step 8: Run CLI tests**
+- [x] **Step 8: Run CLI tests**
 
   ```bash
   uv run pytest tests/wf_cli/test_app.py tests/wf_cli/test_remote_target.py -q
@@ -726,7 +726,7 @@
 
   Expected: PASS.
 
-- [ ] **Step 9: Commit Task 4**
+- [x] **Step 9: Commit Task 4**
 
   ```bash
   git add src/wf_cli tests/wf_cli
@@ -751,7 +751,7 @@
 - Consumes: all completed implementation tasks and their verified command names.
 - Produces: current user/agent guidance, accurate issue state, archived checked plan, and a final verification report.
 
-- [ ] **Step 1: Update issue language without falsely closing map loss**
+- [x] **Step 1: Update issue language without falsely closing map loss**
 
   Keep the combined issue unchecked and revise it to state:
 
@@ -764,7 +764,7 @@
   Leave workflow-output literals, nested workflow-output projection, focused
   step updates, and TypeScript parity unchecked.
 
-- [ ] **Step 2: Update CLI and agent documentation**
+- [x] **Step 2: Update CLI and agent documentation**
 
   Replace descriptions that say `set-output` replaces a map with canonical-list
   language. Include examples for repeated-source fan-out, file round-trip,
@@ -787,13 +787,13 @@
   Explicitly warn that `--merge --map` is compatibility-only and may collapse
   existing fan-out.
 
-- [ ] **Step 3: Update RPC/MCP operation inventories**
+- [x] **Step 3: Update RPC/MCP operation inventories**
 
   Add `workflow.draft_workspaces.set_step_output_bindings` and
   `wf.workflow.set_step_output_bindings` to user-facing inventories and examples
   near their input counterparts.
 
-- [ ] **Step 4: Run focused matrix verification**
+- [x] **Step 4: Run focused matrix verification**
 
   ```bash
   uv run pytest \
@@ -810,7 +810,7 @@
 
   Expected: PASS with only already-known dependency deprecation warnings.
 
-- [ ] **Step 5: Run static verification**
+- [x] **Step 5: Run static verification**
 
   ```bash
   uv run ruff check
@@ -821,13 +821,13 @@
 
   Expected: all clean.
 
-- [ ] **Step 6: Run independent review**
+- [x] **Step 6: Run independent review**
 
   Use the repository code-review skill against the pre-slice commit. Fix every
   Critical or Important finding. Record Minor deferrals with concrete reasons
   in the final report.
 
-- [ ] **Step 7: Update roadmap and archive this plan**
+- [x] **Step 7: Update roadmap and archive this plan**
 
   Add a completed roadmap entry linking to:
 
@@ -838,14 +838,14 @@
   Check every completed plan box, move the plan under `docs/historical/`, and
   verify no live link still points to its old location.
 
-- [ ] **Step 8: Commit documentation and completion state**
+- [x] **Step 8: Commit documentation and completion state**
 
   ```bash
   git add ISSUES.md skills docs
   git commit -m "docs: complete atomic step output bindings"
   ```
 
-- [ ] **Step 9: Final repository check**
+- [x] **Step 9: Final repository check**
 
   ```bash
   git status --short

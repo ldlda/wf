@@ -85,6 +85,7 @@ Prefer focused helpers over JSON Patch for common edits:
 - `set_draft_name`
 - `set_draft_route`
 - `set_step_input_map`
+- `set_step_output_bindings`
 - `set_step_output_map`
 - `set_workflow_output_map`
 - `bind_draft`
@@ -105,6 +106,8 @@ wf draft set-input <workspace_id> --revision <n> --step <step_id> --bindings-fil
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --clear
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
+wf draft set-output <workspace_id> --revision <n> --step <step_id> --bindings-file bindings.json
+wf draft set-output <workspace_id> --revision <n> --step <step_id> --clear
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
 wf draft set-workflow-output <workspace_id> --revision <n> --map state.value=result
 wf draft set-workflow-output <workspace_id> --revision <n> --merge --map state.other=other
@@ -156,9 +159,28 @@ survive. Existing literal bindings are retained during a map-only merge.
 maps to graph target `state.text`.
 
 Without `--merge`, `set-input` replaces the whole ordered binding list;
-`set-output` and `set-workflow-output` replace their whole maps. Use repeated
-flags in one command for a complete replacement. Use `--merge` only for the
-compatibility map adapters.
+`set-output` replaces its complete ordered canonical binding list. Repeated
+sources are valid fan-out when their state targets differ. Use the canonical
+file form for a lossless round-trip, or `--clear` to replace the list with no
+bindings:
+
+```bash
+wf draft set-output WS --revision 4 --step analyze \
+  --map report.title=state.report.title \
+  --map report.title=state.audit.title
+
+wf draft inspect WS --include-draft |
+  jq '.draft.steps.analyze.output' > output-bindings.json
+
+wf draft set-output WS --revision 5 --step analyze \
+  --bindings-file output-bindings.json
+
+wf draft set-output WS --revision 6 --step analyze --clear
+```
+
+`--merge --map` is compatibility-only and may collapse existing fan-out. Use
+it only when a lossy map edit is acceptable. `set-workflow-output` retains its
+map replacement behavior and is a separate workflow-boundary operation.
 
 `bind input.title -> local.report.title` is schema-aware and idempotent when
 `input.title` is already declared. Bind names both rooted endpoints explicitly.

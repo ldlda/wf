@@ -151,6 +151,8 @@ Focused repair helpers:
 
 - `wf.workflow.set_draft_name`
 - `wf.workflow.set_draft_route`
+- `wf.workflow.set_step_input_bindings`
+- `wf.workflow.set_step_output_bindings`
 - `wf.workflow.set_step_input_map`
 - `wf.workflow.set_step_output_map`
 
@@ -543,7 +545,7 @@ resending the full draft each turn.
 | Fetch current draft workspace | `wf.workflow.get_draft_workspace` |
 | Patch current draft workspace | `wf.workflow.patch_draft_workspace` |
 | Refresh validation without changing revision | `wf.workflow.validate_draft_workspace` |
-| Change common draft fields without JSON Patch | `wf.workflow.set_draft_name`, `wf.workflow.set_draft_route`, `wf.workflow.set_step_input_map`, `wf.workflow.set_step_output_map` |
+| Change common draft fields without JSON Patch | `wf.workflow.set_draft_name`, `wf.workflow.set_draft_route`, `wf.workflow.set_step_input_bindings`, `wf.workflow.set_step_output_bindings`, `wf.workflow.set_step_input_map`, `wf.workflow.set_step_output_map` |
 | Save final workspace as artifact | `wf.workflow.create_artifact_from_workspace` |
 | Save final workspace as callable wrapper | `wf.workflow.create_wrapper_from_workspace` |
 | Clean up a draft workspace | `wf.workflow.delete_draft_workspace` |

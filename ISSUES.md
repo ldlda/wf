@@ -20,12 +20,9 @@
 - [x] Focused draft authoring can add or replace literal node-input bindings
   comparable to `WorkflowBuilder.use(input=[{"target": ..., "value": ...}])`
   through canonical API, RPC, MCP, and CLI surfaces.
-- [ ] Focused step input/output maps collapse valid canonical fan-out bindings.
-  A source-to-target dictionary cannot represent one graph source feeding two
-  local inputs, or one local output feeding two state targets; a later merge can
-  therefore rewrite a valid binding list into a lossy map. Canonical step-input
-  replacement now preserves fan-out, but compatibility map readers/writers and
-  focused step-output maps remain lossy.
+- [ ] Compatibility step input/output maps can still collapse valid canonical
+  fan-out bindings. Canonical input and output replacement preserve ordered
+  fan-out, but later compatibility-map merges remain inherently lossy.
 - [ ] Focused workflow-output authoring cannot add or update literal output
   bindings even though `WorkflowDraft.output` accepts canonical value bindings.
 - [ ] Workflow output schema projection skips nested sources such as

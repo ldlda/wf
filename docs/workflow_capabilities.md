@@ -312,9 +312,10 @@ For the copy-less wrapper authoring path, use:
    `wrapper_hints`.
 2. `wf.workflow.create_draft_workspace_from_capability` to create a patchable
    draft workspace from those hints.
-3. Focused patch helpers such as `wf.workflow.set_step_input_map`,
-   `wf.workflow.set_step_output_map`, and `wf.workflow.set_draft_route` to fix
-   low-confidence hints or explicit `missing_decisions`.
+3. Focused patch helpers such as `wf.workflow.set_step_input_bindings`,
+   `wf.workflow.set_step_output_bindings`, their compatibility map adapters,
+   and `wf.workflow.set_draft_route` to fix low-confidence hints or explicit
+   `missing_decisions`.
 4. `wf.workflow.validate_draft_workspace` to refresh diagnostics.
 5. `wf.workflow.create_wrapper_from_workspace` to save the wrapper artifact.
 6. `wf.workflow.call_capability` with `workflow.<artifact_id>.v<version>` to

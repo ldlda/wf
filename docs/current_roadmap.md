@@ -810,6 +810,11 @@ stable.
   projection, local/remote CLI modes, JSON-RPC, and MCP. Compatibility map
   merge remains available but intentionally lossy. Implementation plan:
   [`atomic step input bindings`](historical/superpowers/plans/2026-07-22-atomic-step-input-bindings.md).
+- Completed: capability-aware canonical step-output replacement now preserves
+  ordered repeated-source fan-out, projects missing state schemas atomically,
+  and is available through Python, JSON-RPC, MCP, and local/remote CLI modes.
+  Compatibility map merges remain available but inherently lossy. Implementation
+  plan: [`atomic step output bindings`](historical/superpowers/plans/2026-07-23-atomic-step-output-bindings.md).
 
 Agent evaluation cohort status and policy:
 
