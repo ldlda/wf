@@ -1723,6 +1723,36 @@ async def test_set_step_output_bindings_rejects_semantic_errors_without_mutation
 
 
 @pytest.mark.asyncio
+async def test_set_step_output_bindings_reports_invalid_source_before_overlap(
+    tmp_path: Path,
+) -> None:
+    _draft_api_instance, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "invalid_source_before_overlap",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=r"bindings\[0\]\.source 'report\.missing' is not declared",
+    ):
+        await api.set_step_output_bindings(
+            workspace_id="invalid_source_before_overlap",
+            revision=1,
+            step_id="render",
+            bindings=[
+                OutputBinding(
+                    source=LocalPath.parse("report.missing"),
+                    target=StatePath.parse("state.report.title"),
+                ),
+                OutputBinding(
+                    source=LocalPath.parse("report.title"),
+                    target=StatePath.parse("state.report.title"),
+                ),
+            ],
+        )
+
+
+@pytest.mark.asyncio
 async def test_set_step_output_bindings_rejects_incompatible_existing_target(
     tmp_path: Path,
 ) -> None:
@@ -2449,6 +2479,63 @@ async def test_set_step_input_bindings_compiles_and_assembles_nested_payload(
 
     assert run.error is None
     assert run.trace[0].output == {"rendered": "Thesis|Evidence|markdown"}
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_compile_and_execute_source_fan_out(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, api = await _create_structured_binding_api(
+        tmp_path,
+        "execute_output_fan_out",
+    )
+    input_result = await api.set_step_input_bindings(
+        workspace_id="execute_output_fan_out",
+        revision=1,
+        step_id="report",
+        bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.input("title"),
+                target=LocalPath.of("request", "title"),
+            ),
+            InputPathBinding(
+                path=GraphSourcePath.input("body"),
+                target=LocalPath.of("request", "body"),
+            ),
+            InputValueBinding(
+                target=LocalPath.of("request", "format"),
+                value="markdown",
+            ),
+        ],
+    )
+    await api.set_step_output_bindings(
+        workspace_id="execute_output_fan_out",
+        revision=input_result["revision"],
+        step_id="report",
+        bindings=[
+            OutputBinding(
+                source=LocalPath.parse("rendered"),
+                target=StatePath.parse("state.report"),
+            ),
+            OutputBinding(
+                source=LocalPath.parse("rendered"),
+                target=StatePath.parse("state.audit"),
+            ),
+        ],
+    )
+
+    compiled = await draft_api.compile_draft_workspace(
+        workspace_id="execute_output_fan_out"
+    )
+    plan = RawWorkflowPlan.model_validate(compiled["compiled_plan"])
+    run = await service.run_workflow_from_plan(
+        plan,
+        {"title": "Thesis", "body": "Evidence"},
+    )
+
+    assert run.error is None
+    assert run.state["report"] == "Thesis|Evidence|markdown"
+    assert run.state["audit"] == "Thesis|Evidence|markdown"
 
 
 @pytest.mark.asyncio

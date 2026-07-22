@@ -110,8 +110,18 @@ def project_schema_path_to_schema_path(
             raise ValueError(
                 f"schema path {'.'.join(target_parts[: index + 1])!r} is not an object"
             )
-        _ensure_object_schema(child, ".".join(target_parts[: index + 1]))
-        parent = child
+        target_label = ".".join(target_parts[: index + 1])
+        # Mutate the referenced definition rather than adding sibling schema
+        # keywords beside $ref, which path lookup intentionally does not merge.
+        resolved_child = _resolve_local_reference(
+            projected,
+            child,
+            label=target_label,
+        )
+        if not isinstance(resolved_child, dict):
+            raise ValueError(f"schema path {target_label!r} is not mutable")
+        _ensure_object_schema(resolved_child, target_label)
+        parent = resolved_child
 
     properties = _properties_for_object(
         parent, ".".join(target_parts[:-1]) or "target_schema"

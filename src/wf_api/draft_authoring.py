@@ -525,17 +525,11 @@ class WorkflowDraftAuthoringApi:
             spec.output_schema_contract or spec.output_model.model_json_schema()
         )
 
-        targets = [str(binding.target) for binding in bindings]
-        if has_overlapping_paths(targets):
-            raise _overlapping_output_targets_error(bindings)
-
-        projected_state = _draft_schema(workspace.draft, "state_schema")
         for index, binding in enumerate(bindings):
-            source_parts = binding.source.parts
             try:
                 schema_fragment_at_path(
                     capability_schema,
-                    source_parts,
+                    binding.source.parts,
                     label="capability output schema",
                 )
             except ValueError as exc:
@@ -544,6 +538,13 @@ class WorkflowDraftAuthoringApi:
                     f"is not declared by capability {capability_name!r}: {exc}"
                 ) from exc
 
+        targets = [str(binding.target) for binding in bindings]
+        if has_overlapping_paths(targets):
+            raise _overlapping_output_targets_error(bindings)
+
+        projected_state = _draft_schema(workspace.draft, "state_schema")
+        for index, binding in enumerate(bindings):
+            source_parts = binding.source.parts
             target_parts = binding.target.parts
             try:
                 projected_state = project_schema_path_to_schema_path(

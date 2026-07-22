@@ -427,6 +427,30 @@ def test_project_schema_path_traverses_legacy_definitions_reference() -> None:
     assert "Report" in projected["definitions"]
 
 
+def test_project_schema_path_traverses_target_defs_reference() -> None:
+    projected = project_schema_path_to_schema_path(
+        target_schema={
+            "type": "object",
+            "properties": {"report": {"$ref": "#/$defs/Report"}},
+            "$defs": {
+                "Report": {
+                    "type": "object",
+                    "properties": {},
+                }
+            },
+        },
+        source_schema={
+            "type": "object",
+            "properties": {"title": {"type": "string"}},
+        },
+        source_parts=("title",),
+        target_parts=("report", "title"),
+    )
+
+    assert projected["properties"]["report"] == {"$ref": "#/$defs/Report"}
+    assert projected["$defs"]["Report"]["properties"]["title"] == {"type": "string"}
+
+
 def test_schema_path_exists_follows_local_defs() -> None:
     schema = {
         "type": "object",

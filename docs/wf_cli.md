@@ -371,11 +371,14 @@ For single-field `input.*` and `state.*` sources, the command projects missing
 top-level `output_schema` fields from the source schema. More complex or
 undeclared paths still rely on `wf draft validate` diagnostics.
 
-By default, `set-input` replaces the complete ordered input-binding list, while
-`set-output` and `set-workflow-output` replace their complete maps. Use repeated
-flags in one command when you know the complete replacement. Use `--merge` only
-for compatibility map edits; they cannot add literals or preserve canonical
-ordering and repeated-source fan-out.
+By default, `set-input` and `set-output` replace complete ordered canonical
+binding lists, while `set-workflow-output` replaces its complete map. Repeated
+`set-output --map LOCAL_SOURCE=STATE_TARGET` flags preserve their order and may
+repeat a source to fan it out to several state targets. Use
+`set-output --bindings-file` for an exported canonical list and `--clear` for an
+explicit empty replacement. Use `--merge --map` only for compatibility output
+map edits; that path cannot preserve canonical ordering or repeated-source
+fan-out.
 
 ### Bind A Step Path
 
