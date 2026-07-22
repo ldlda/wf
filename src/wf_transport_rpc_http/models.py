@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from wf_api.models import TraceRange
 from wf_artifacts.drafts.models import DraftStep
-from wf_core.models.steps import InputBinding
+from wf_core.models.steps import InputBinding, OutputBinding
 
 
 class RpcParamsModel(BaseModel):
@@ -214,6 +214,13 @@ class SetStepInputBindingsParams(RpcParamsModel):
     revision: int = Field(ge=1)
     step_id: str = Field(min_length=1)
     bindings: list[InputBinding]
+
+
+class SetStepOutputBindingsParams(RpcParamsModel):
+    workspace_id: str = Field(min_length=1)
+    revision: int = Field(ge=1)
+    step_id: str = Field(min_length=1)
+    bindings: list[OutputBinding]
 
 
 class SetStepOutputMapParams(RpcParamsModel):

@@ -15,8 +15,8 @@ from wf_artifacts.drafts.models import (
     DraftStep,
 )
 from wf_core import END
-from wf_core.models.steps import InputPathBinding, InputValueBinding
-from wf_core.paths import GraphSourcePath, LocalPath
+from wf_core.models.steps import InputPathBinding, InputValueBinding, OutputBinding
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
 from wf_transport_rpc_http.client.drafts import RpcDraftClientMixin
@@ -729,6 +729,39 @@ async def test_rpc_client_serializes_canonical_step_input_bindings() -> None:
             ],
         },
     )
+
+
+async def test_rpc_client_serializes_step_output_bindings() -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"revision": 3}
+
+    client = Client()
+
+    await client.set_step_output_bindings(
+        workspace_id="client_ws",
+        revision=2,
+        step_id="analyze",
+        bindings=[
+            OutputBinding(
+                source=LocalPath.parse("report.title"),
+                target=StatePath.parse("state.report.title"),
+            ),
+            OutputBinding(
+                source=LocalPath.parse("report.title"),
+                target=StatePath.parse("state.audit.title"),
+            ),
+        ],
+    )
+
+    assert calls[-1]["method"] == "workflow.draft_workspaces.set_step_output_bindings"
+    assert calls[-1]["params"]["bindings"] == [
+        {"source": "report.title", "target": "state.report.title"},
+        {"source": "report.title", "target": "state.audit.title"},
+    ]
 
 
 async def test_rpc_client_draft_remove_methods(tmp_path) -> None:
