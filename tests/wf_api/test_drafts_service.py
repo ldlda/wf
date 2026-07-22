@@ -15,8 +15,8 @@ from wf_api.service import WorkflowApi
 from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
 from wf_artifacts.drafts.models import DraftStep
 from wf_authoring import node
-from wf_core.models.steps import InputPathBinding, InputValueBinding
-from wf_core.paths import GraphSourcePath, LocalPath
+from wf_core.models.steps import InputPathBinding, InputValueBinding, OutputBinding
+from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.models import ConnectionConfig
@@ -86,6 +86,7 @@ class _NestedReportInput(BaseModel):
 
 
 class _ReportOutputValue(BaseModel):
+    title: str
     markdown: str
 
 
@@ -96,7 +97,10 @@ class _NestedReportOutput(BaseModel):
 @node(name="nested_report", outcomes=("ok",))
 def _nested_report(payload: _NestedReportInput) -> _NestedReportOutput:
     return _NestedReportOutput(
-        report=_ReportOutputValue(markdown=f"# {payload.report.title}")
+        report=_ReportOutputValue(
+            title=payload.report.title,
+            markdown=f"# {payload.report.title}",
+        )
     )
 
 
@@ -203,6 +207,41 @@ async def _create_structured_binding_api(
     await draft_api.create_draft_workspace(
         workspace_id=workspace_id,
         draft=_structured_report_draft(),
+    )
+    return draft_api, service, WorkflowApi(authoring.context)
+
+
+async def _create_nested_output_binding_api(
+    tmp_path: Path,
+    workspace_id: str,
+) -> tuple[WorkflowDraftApi, WfMcpService, WorkflowApi]:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / workspace_id),
+        register_echo=True,
+    )
+    service.register_specs(
+        "demo.personal",
+        replace(
+            _nested_report,
+            output_schema_contract={
+                "type": "object",
+                "properties": {
+                    "report": {
+                        "type": "object",
+                        "properties": {
+                            "title": {"type": "string"},
+                            "markdown": {"type": "string"},
+                        },
+                        "required": ["title", "markdown"],
+                    }
+                },
+                "required": ["report"],
+            },
+        ),
+    )
+    await draft_api.create_draft_workspace(
+        workspace_id=workspace_id,
+        draft=_nested_report_draft(),
     )
     return draft_api, service, WorkflowApi(authoring.context)
 
@@ -1504,6 +1543,395 @@ async def test_set_step_input_bindings_preserves_source_fan_out(tmp_path: Path) 
         {"target": "request.title", "path": "state.report.title"},
         {"target": "audit.title", "path": "state.report.title"},
     ]
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_replaces_in_order_and_preserves_source_fan_out(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "draft-output-bindings",
+    )
+
+    result = await api.set_step_output_bindings(
+        workspace_id="draft-output-bindings",
+        revision=1,
+        step_id="render",
+        bindings=[
+            OutputBinding(
+                source=LocalPath.parse("report.title"),
+                target=StatePath.parse("state.report.title"),
+            ),
+            OutputBinding(
+                source=LocalPath.parse("report.title"),
+                target=StatePath.parse("state.audit.title"),
+            ),
+        ],
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="draft-output-bindings",
+        include_draft=True,
+    )
+
+    assert result["revision"] == 2
+    assert inspected["draft"]["steps"]["render"]["output"] == [
+        {"source": "report.title", "target": "state.report.title"},
+        {"source": "report.title", "target": "state.audit.title"},
+    ]
+    state_schema = inspected["draft"]["state_schema"]
+    assert state_schema["properties"]["report"]["properties"]["title"] == {
+        "type": "string"
+    }
+    assert state_schema["properties"]["audit"]["properties"]["title"] == {
+        "type": "string"
+    }
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_projects_whole_capability_payload(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "whole-output-binding",
+    )
+
+    await api.set_step_output_bindings(
+        workspace_id="whole-output-binding",
+        revision=1,
+        step_id="render",
+        bindings=[
+            OutputBinding(
+                source=LocalPath.root(),
+                target=StatePath.parse("state.raw_result"),
+            )
+        ],
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="whole-output-binding",
+        include_draft=True,
+    )
+
+    raw_result_schema = inspected["draft"]["state_schema"]["properties"]["raw_result"]
+    assert raw_result_schema["type"] == "object"
+    assert raw_result_schema["properties"]["report"]["properties"]["title"] == {
+        "type": "string"
+    }
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_accepts_exact_existing_target_and_is_noop(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "equivalent-output-binding",
+    )
+    binding = OutputBinding(
+        source=LocalPath.parse("report.title"),
+        target=StatePath.parse("state.report.title"),
+    )
+    first = await api.set_step_output_bindings(
+        workspace_id="equivalent-output-binding",
+        revision=1,
+        step_id="render",
+        bindings=[binding],
+    )
+    second = await api.set_step_output_bindings(
+        workspace_id="equivalent-output-binding",
+        revision=first["revision"],
+        step_id="render",
+        bindings=[binding],
+    )
+
+    assert first["revision"] == 2
+    assert second["revision"] == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("bindings", "message"),
+    [
+        (
+            [
+                OutputBinding(
+                    source=LocalPath.parse("report.missing"),
+                    target=StatePath.parse("state.report.missing"),
+                )
+            ],
+            r"bindings\[0\]\.source 'report\.missing' is not declared",
+        ),
+        (
+            [
+                OutputBinding(
+                    source=LocalPath.parse("report.title"),
+                    target=StatePath.parse("state.report.title"),
+                ),
+                OutputBinding(
+                    source=LocalPath.parse("report.markdown"),
+                    target=StatePath.parse("state.report.title"),
+                ),
+            ],
+            r"bindings\[0\]\.target 'state\.report\.title' overlaps "
+            r"bindings\[1\]\.target 'state\.report\.title'",
+        ),
+        (
+            [
+                OutputBinding(
+                    source=LocalPath.parse("report.title"),
+                    target=StatePath.parse("state.report"),
+                ),
+                OutputBinding(
+                    source=LocalPath.parse("report.markdown"),
+                    target=StatePath.parse("state.report.title"),
+                ),
+            ],
+            r"bindings\[0\]\.target 'state\.report' overlaps "
+            r"bindings\[1\]\.target 'state\.report\.title'",
+        ),
+    ],
+)
+async def test_set_step_output_bindings_rejects_semantic_errors_without_mutation(
+    tmp_path: Path,
+    bindings: list[OutputBinding],
+    message: str,
+) -> None:
+    workspace_id = f"invalid_output_bindings_{len(message)}"
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        workspace_id,
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        await api.set_step_output_bindings(
+            workspace_id=workspace_id,
+            revision=1,
+            step_id="render",
+            bindings=bindings,
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_rejects_incompatible_existing_target(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "incompatible-output-binding",
+    )
+    await draft_api.patch_draft_workspace(
+        workspace_id="incompatible-output-binding",
+        revision=1,
+        patch=[
+            {
+                "op": "replace",
+                "path": "/state_schema",
+                "value": {
+                    "type": "object",
+                    "properties": {
+                        "report": {
+                            "type": "object",
+                            "properties": {"title": {"type": "integer"}},
+                        }
+                    },
+                },
+            }
+        ],
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="incompatible-output-binding",
+        include_draft=True,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            r"bindings\[0\]\.target 'state\.report\.title' cannot receive "
+            r"source 'report\.title'"
+        ),
+    ):
+        await api.set_step_output_bindings(
+            workspace_id="incompatible-output-binding",
+            revision=2,
+            step_id="render",
+            bindings=[
+                OutputBinding(
+                    source=LocalPath.parse("report.title"),
+                    target=StatePath.parse("state.report.title"),
+                )
+            ],
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="incompatible-output-binding",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_clears_outputs_without_removing_projection(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "clear-output-bindings",
+    )
+    first = await api.set_step_output_bindings(
+        workspace_id="clear-output-bindings",
+        revision=1,
+        step_id="render",
+        bindings=[
+            OutputBinding(
+                source=LocalPath.parse("report.title"),
+                target=StatePath.parse("state.report.title"),
+            )
+        ],
+    )
+    cleared = await api.set_step_output_bindings(
+        workspace_id="clear-output-bindings",
+        revision=first["revision"],
+        step_id="render",
+        bindings=[],
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="clear-output-bindings",
+        include_draft=True,
+    )
+
+    assert cleared["revision"] == 3
+    assert inspected["draft"]["steps"]["render"]["output"] == []
+    assert (
+        inspected["draft"]["state_schema"]["properties"]["report"]["properties"][
+            "title"
+        ]["type"]
+        == "string"
+    )
+    assert set(
+        inspected["draft"]["state_schema"]["properties"]["report"]["properties"][
+            "title"
+        ]
+    ) == {"type"}
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_rejects_missing_step_without_mutation(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "missing-output-step",
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="missing-output-step",
+        include_draft=True,
+    )
+
+    with pytest.raises(KeyError, match="missing"):
+        await api.set_step_output_bindings(
+            workspace_id="missing-output-step",
+            revision=1,
+            step_id="missing",
+            bindings=[],
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="missing-output-step",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_output_bindings_rejects_non_capability_step_without_mutation(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        "non-capability-output-step",
+    )
+    await draft_api.patch_draft_workspace(
+        workspace_id="non-capability-output-step",
+        revision=1,
+        patch=[{"op": "replace", "path": "/steps/render", "value": {"join": {}}}],
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id="non-capability-output-step",
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match="does not declare a capability use"):
+        await api.set_step_output_bindings(
+            workspace_id="non-capability-output-step",
+            revision=2,
+            step_id="render",
+            bindings=[],
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="non-capability-output-step",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "bindings",
+    [
+        [
+            OutputBinding(
+                source=LocalPath.parse("report.missing"),
+                target=StatePath.parse("state.report.missing"),
+            )
+        ],
+        [
+            OutputBinding(
+                source=LocalPath.parse("report.title"),
+                target=StatePath.parse("state.report"),
+            ),
+            OutputBinding(
+                source=LocalPath.parse("report.markdown"),
+                target=StatePath.parse("state.report.title"),
+            ),
+        ],
+    ],
+)
+async def test_set_step_output_bindings_stale_revision_precedes_semantic_errors(
+    tmp_path: Path,
+    bindings: list[OutputBinding],
+) -> None:
+    draft_api, _service, api = await _create_nested_output_binding_api(
+        tmp_path,
+        f"stale-output-binding-{len(bindings)}",
+    )
+    workspace_id = f"stale-output-binding-{len(bindings)}"
+
+    result = await api.set_step_output_bindings(
+        workspace_id=workspace_id,
+        revision=2,
+        step_id="render",
+        bindings=bindings,
+    )
+
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+    assert inspected["revision"] == 1
 
 
 @pytest.mark.asyncio

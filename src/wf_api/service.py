@@ -5,7 +5,7 @@ from typing import Any
 
 from wf_artifacts import ArtifactKind
 from wf_artifacts.drafts.models import DraftStep
-from wf_core.models.steps import InputBinding
+from wf_core.models.steps import InputBinding, OutputBinding
 
 from .artifacts import WorkflowArtifactApi
 from .capabilities import WorkflowCapabilityApi
@@ -418,6 +418,21 @@ class WorkflowApi:
         bindings: Sequence[InputBinding],
     ) -> dict[str, Any]:
         return await self.draft_authoring.set_step_input_bindings(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            bindings=bindings,
+        )
+
+    async def set_step_output_bindings(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        bindings: Sequence[OutputBinding],
+    ) -> dict[str, Any]:
+        return await self.draft_authoring.set_step_output_bindings(
             workspace_id=workspace_id,
             revision=revision,
             step_id=step_id,

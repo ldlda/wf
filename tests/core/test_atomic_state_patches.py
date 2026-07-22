@@ -182,6 +182,24 @@ def test_full_workflow_execution_writes_canonical_output_bindings() -> None:
     assert run.trace[0].state_changes["state.person.name"] == "Ada"
 
 
+def test_output_bindings_apply_one_source_to_multiple_state_targets() -> None:
+    workflow = _workflow()
+    state = {"person": {"name": "old"}}
+
+    apply_output_bindings(
+        workflow,
+        [
+            _binding("person.name", "state.person.name"),
+            _binding("person.name", "state.person.extra"),
+        ],
+        {"person": {"name": "Ada"}},
+        state,
+    )
+
+    assert state["person"]["name"] == "Ada"
+    assert state["person"]["extra"] == "Ada"
+
+
 def test_build_output_patch_does_not_mutate_until_commit() -> None:
     workflow = _workflow(fields={"person.name": StateField(type="string")})
     state = {"person": {"name": "old"}}

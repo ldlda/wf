@@ -102,6 +102,24 @@ def _overlapping_input_targets_error(
     raise AssertionError("overlap error requested without overlapping targets")
 
 
+def _overlapping_output_targets_error(
+    bindings: Sequence[OutputBinding],
+) -> ValueError:
+    """Describe the first overlapping state-target pair with stable indexes."""
+    for left_index, left in enumerate(bindings):
+        for right_index in range(left_index + 1, len(bindings)):
+            right = bindings[right_index]
+            # StatePath is a separate typed path, so serialized state.* values
+            # provide the shared synthetic root expected by paths_overlap.
+            if paths_overlap(str(left.target), str(right.target)):
+                return ValueError(
+                    f"bindings[{left_index}].target {str(left.target)!r} "
+                    f"overlaps bindings[{right_index}].target "
+                    f"{str(right.target)!r}"
+                )
+    raise AssertionError("overlap error requested without overlapping targets")
+
+
 def _step_input_bindings_patch(
     *,
     workspace: WorkflowDraftWorkspace,
@@ -122,6 +140,27 @@ def _step_input_bindings_patch(
         {
             "op": "replace",
             "path": f"/steps/{escape_json_pointer(step_id)}/input",
+            "value": bindings,
+        }
+    )
+    return patch
+
+
+def _step_output_bindings_patch(
+    *,
+    workspace: WorkflowDraftWorkspace,
+    step_id: str,
+    bindings: list[dict[str, Any]],
+    state_schema: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Build one atomic patch for state schema and canonical step outputs."""
+    patch: list[dict[str, Any]] = []
+    if workspace.draft.get("state_schema", {}) != state_schema:
+        patch.append({"op": "replace", "path": "/state_schema", "value": state_schema})
+    patch.append(
+        {
+            "op": "replace",
+            "path": f"/steps/{escape_json_pointer(step_id)}/output",
             "value": bindings,
         }
     )
@@ -457,6 +496,85 @@ class WorkflowDraftAuthoringApi:
             workspace_id=workspace_id,
             revision=revision,
             patch=patch,
+        )
+
+    async def set_step_output_bindings(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        bindings: Sequence[OutputBinding],
+    ) -> dict[str, Any]:
+        """Replace one capability step's canonical output bindings atomically."""
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
+        step = draft_step(workspace.draft, step_id)
+        capability_name = step.get("use")
+        if not isinstance(capability_name, str) or not capability_name:
+            raise ValueError(
+                f"draft step {step_id!r} does not declare a capability use"
+            )
+        spec = self.context.specs.get_qualified_spec(capability_name)
+        capability_schema = (
+            spec.output_schema_contract or spec.output_model.model_json_schema()
+        )
+
+        targets = [str(binding.target) for binding in bindings]
+        if has_overlapping_paths(targets):
+            raise _overlapping_output_targets_error(bindings)
+
+        projected_state = _draft_schema(workspace.draft, "state_schema")
+        for index, binding in enumerate(bindings):
+            source_parts = binding.source.parts
+            try:
+                schema_fragment_at_path(
+                    capability_schema,
+                    source_parts,
+                    label="capability output schema",
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    f"bindings[{index}].source {str(binding.source)!r} "
+                    f"is not declared by capability {capability_name!r}: {exc}"
+                ) from exc
+
+            target_parts = binding.target.parts
+            try:
+                projected_state = project_schema_path_to_schema_path(
+                    target_schema=projected_state,
+                    source_schema=capability_schema,
+                    source_parts=source_parts,
+                    target_parts=target_parts,
+                    allow_existing_equivalent=True,
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    f"bindings[{index}].target {str(binding.target)!r} "
+                    f"cannot receive source {str(binding.source)!r}: {exc}"
+                ) from exc
+
+        payload = [binding.model_dump(mode="json") for binding in bindings]
+        if (
+            step.get("output", []) == payload
+            and workspace.draft.get("state_schema", {}) == projected_state
+        ):
+            return summarize_draft_workspace(workspace)
+
+        return await self.drafts.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=_step_output_bindings_patch(
+                workspace=workspace,
+                step_id=step_id,
+                bindings=payload,
+                state_schema=projected_state,
+            ),
         )
 
     async def bind_draft(
