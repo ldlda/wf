@@ -103,7 +103,9 @@ async def test_registered_output_bindings_tool_delegates_typed_bindings_once(
     )
     service = WfMcpService(
         store=FileStore(tmp_path / "tool_invocation_store"),
-        artifact_store=FileWorkflowArtifactStore(tmp_path / "tool_invocation_artifacts"),
+        artifact_store=FileWorkflowArtifactStore(
+            tmp_path / "tool_invocation_artifacts"
+        ),
         draft_workspace_store=FileDraftWorkspaceStore(
             tmp_path / "tool_invocation_drafts"
         ),

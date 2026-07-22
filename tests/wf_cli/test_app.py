@@ -9,32 +9,21 @@ import typer
 from typer.testing import CliRunner
 
 from wf_cli.app import app
-from wf_cli.commands import draft_options
 from wf_cli.commands.draft_options import (
     parse_json_file,
     parse_step_input_binding_flags,
     parse_step_input_bindings_file,
     parse_step_input_value_flags,
+    parse_step_output_binding_flags,
+    parse_step_output_bindings_file,
     route_source,
 )
 
 runner = CliRunner()
 
 
-def _parse_step_output_binding_flags(values: list[str] | None):
-    parser = getattr(draft_options, "parse_step_output_binding_flags", None)
-    assert callable(parser), "step output binding flag parser is not available"
-    return parser(values)
-
-
-def _parse_step_output_bindings_file(path):
-    parser = getattr(draft_options, "parse_step_output_bindings_file", None)
-    assert callable(parser), "step output bindings file parser is not available"
-    return parser(path)
-
-
 def test_draft_options_parse_step_output_bindings_preserves_source_fan_out() -> None:
-    bindings = _parse_step_output_binding_flags(
+    bindings = parse_step_output_binding_flags(
         [
             "report.title=state.report.title",
             "report.title=state.audit.title",
@@ -61,7 +50,7 @@ def test_draft_options_parse_step_output_bindings_file_preserves_order(
         encoding="utf-8",
     )
 
-    bindings = _parse_step_output_bindings_file(path)
+    bindings = parse_step_output_bindings_file(path)
 
     assert [binding.model_dump(mode="json") for binding in bindings] == [
         {"source": "report.title", "target": "state.report.title"},
@@ -89,7 +78,7 @@ def test_draft_options_parse_step_output_bindings_file_rejects_invalid_payload(
     path.write_text(json.dumps(payload), encoding="utf-8")
 
     with pytest.raises(typer.BadParameter) as exc_info:
-        _parse_step_output_bindings_file(path)
+        parse_step_output_bindings_file(path)
 
     assert expected_text in str(exc_info.value).lower()
     assert "traceback" not in str(exc_info.value).lower()
@@ -653,7 +642,7 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "input.title=report.title" in input_help
     assert "LOCAL_SOURCE=STATE_TARGET" in output_help
     assert "ordered canonical JSON array" in output_help
-    assert "replace with no bindings" in output_help
+    assert "replace with no bindings" in output_help.lower()
     assert "compatibility-only and potentially lossy" in output_help
     assert "draft validate" in output_help
     assert "replaces the full workflow output map" in workflow_output_help

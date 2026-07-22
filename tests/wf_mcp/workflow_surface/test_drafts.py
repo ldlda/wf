@@ -361,8 +361,14 @@ def test_workflow_surface_sets_ordered_canonical_step_output_bindings(
             revision=created["revision"],
             step_id="call",
             bindings=[
-                OutputBinding(source="value", target="state.report"),
-                OutputBinding(source="value", target="state.audit"),
+                OutputBinding(
+                    source=LocalPath.parse("value"),
+                    target=StatePath.parse("state.report"),
+                ),
+                OutputBinding(
+                    source=LocalPath.parse("value"),
+                    target=StatePath.parse("state.audit"),
+                ),
             ],
         )
     )

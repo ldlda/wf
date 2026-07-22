@@ -682,6 +682,7 @@ def test_wf_remote_draft_artifact_deploy_lifecycle(monkeypatch, tmp_path) -> Non
             "call",
             "--map",
             "value=state.missing",
+            "--merge",
         ],
     )
     assert invalid_patch.exit_code == 0, invalid_patch.output
@@ -1174,7 +1175,7 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
             "--step",
             "call",
             "--map",
-            "value=state.value",
+            "value=state.primary",
         ],
     )
     input_merged = runner.invoke(
@@ -1238,7 +1239,7 @@ def test_wf_draft_focused_edit_commands_use_rpc_target(monkeypatch, tmp_path) ->
     assert draft["steps"]["call"]["output"] == [
         {
             "source": "value",
-            "target": "state.value",
+            "target": "state.primary",
         },
         {
             "source": "extra",
