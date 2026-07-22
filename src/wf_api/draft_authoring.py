@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
+from copy import deepcopy
 from dataclasses import dataclass
 from typing import Any
 
@@ -22,8 +23,11 @@ from wf_artifacts.drafts.models import (
     DraftUseStep,
     DraftWhenStep,
 )
+from wf_core.local_paths import has_overlapping_paths, paths_overlap
 from wf_core.models.steps import (
     InputBinding,
+    InputPathBinding,
+    InputValueBinding,
     OutputBinding,
 )
 from wf_core.paths import (
@@ -58,7 +62,9 @@ from .operation_context import WorkflowOperationContext
 from .schema_projection import (
     project_output_property_to_state_schema,
     project_schema_path_to_schema_path,
+    schema_fragment_at_path,
     schema_path_exists,
+    validate_json_value_at_schema_path,
 )
 
 
@@ -70,6 +76,56 @@ def _graph_parts(path: str) -> tuple[str, tuple[str, ...]]:
 def _local_parts(path: str) -> tuple[str, ...]:
     """Parse a CLI local-root path as the rootless core LocalPath value."""
     return LocalPath.parse(path.removeprefix("local.")).parts
+
+
+def _draft_schema(draft: Mapping[str, Any], key: str) -> dict[str, Any]:
+    """Return an isolated mutable copy of one draft schema document."""
+    value = draft.get(key, {})
+    if not isinstance(value, dict):
+        raise ValueError(f"draft {key} must be an object")
+    return deepcopy(value)
+
+
+def _overlapping_input_targets_error(
+    bindings: Sequence[InputBinding],
+) -> ValueError:
+    """Describe the first overlapping binding pair with stable input indexes."""
+    for left_index, left in enumerate(bindings):
+        for right_index in range(left_index + 1, len(bindings)):
+            right = bindings[right_index]
+            if paths_overlap(left.target, right.target):
+                return ValueError(
+                    f"bindings[{left_index}].target {str(left.target)!r} "
+                    f"overlaps bindings[{right_index}].target "
+                    f"{str(right.target)!r}"
+                )
+    raise AssertionError("overlap error requested without overlapping targets")
+
+
+def _step_input_bindings_patch(
+    *,
+    workspace: WorkflowDraftWorkspace,
+    step_id: str,
+    bindings: list[dict[str, Any]],
+    input_schema: dict[str, Any],
+    state_schema: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """Build one atomic patch for schemas and canonical step input bindings."""
+    patch: list[dict[str, Any]] = []
+    for key, value in (
+        ("input_schema", input_schema),
+        ("state_schema", state_schema),
+    ):
+        if workspace.draft.get(key, {}) != value:
+            patch.append({"op": "replace", "path": f"/{key}", "value": value})
+    patch.append(
+        {
+            "op": "replace",
+            "path": f"/steps/{escape_json_pointer(step_id)}/input",
+            "value": bindings,
+        }
+    )
+    return patch
 
 
 class WorkflowDraftAuthoringApi:
@@ -300,6 +356,107 @@ class WorkflowDraftAuthoringApi:
             workspace_id=workspace_id,
             title=title,
             draft=draft,
+        )
+
+    async def set_step_input_bindings(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        bindings: Sequence[InputBinding],
+    ) -> dict[str, Any]:
+        """Replace one capability step's canonical input bindings atomically."""
+        checked = self._workspace_if_revision_matches(
+            workspace_id=workspace_id,
+            revision=revision,
+        )
+        if isinstance(checked, dict):
+            return checked
+        workspace = checked
+        step = draft_step(workspace.draft, step_id)
+        capability_name = step.get("use")
+        if not isinstance(capability_name, str) or not capability_name:
+            raise ValueError(
+                f"draft step {step_id!r} does not declare a capability use"
+            )
+        spec = self.context.specs.get_qualified_spec(capability_name)
+        capability_schema = (
+            spec.input_schema_contract or spec.input_model.model_json_schema()
+        )
+
+        targets = [binding.target for binding in bindings]
+        if has_overlapping_paths(targets):
+            raise _overlapping_input_targets_error(bindings)
+
+        projected_input = _draft_schema(workspace.draft, "input_schema")
+        projected_state = _draft_schema(workspace.draft, "state_schema")
+        for index, binding in enumerate(bindings):
+            target_parts = binding.target.parts
+            try:
+                schema_fragment_at_path(
+                    capability_schema,
+                    target_parts,
+                    label="capability input schema",
+                )
+            except ValueError as exc:
+                raise ValueError(
+                    f"bindings[{index}].target {str(binding.target)!r} "
+                    f"is not declared by capability {capability_name!r}: {exc}"
+                ) from exc
+
+            if isinstance(binding, InputValueBinding):
+                if not target_parts and not isinstance(binding.value, Mapping):
+                    raise ValueError(
+                        f"bindings[{index}].value for target '.' must be a JSON object"
+                    )
+                validate_json_value_at_schema_path(
+                    schema=capability_schema,
+                    parts=target_parts,
+                    value=binding.value,
+                    label=f"bindings[{index}].value",
+                )
+                continue
+
+            if isinstance(binding, InputPathBinding):
+                source = binding.path
+                if source.root == "context":
+                    continue
+                target_schema = (
+                    projected_input if source.root == "input" else projected_state
+                )
+                if not schema_path_exists(target_schema, source.parts):
+                    target_schema = project_schema_path_to_schema_path(
+                        target_schema=target_schema,
+                        source_schema=capability_schema,
+                        source_parts=target_parts,
+                        target_parts=source.parts,
+                        allow_existing_equivalent=True,
+                    )
+                if source.root == "input":
+                    projected_input = target_schema
+                else:
+                    projected_state = target_schema
+
+        payload = [binding.model_dump(mode="json") for binding in bindings]
+        if (
+            step.get("input", []) == payload
+            and workspace.draft.get("input_schema", {}) == projected_input
+            and workspace.draft.get("state_schema", {}) == projected_state
+        ):
+            return summarize_draft_workspace(workspace)
+
+        patch = _step_input_bindings_patch(
+            workspace=workspace,
+            step_id=step_id,
+            bindings=payload,
+            input_schema=projected_input,
+            state_schema=projected_state,
+        )
+        return await self.drafts.patch_draft_workspace(
+            workspace_id=workspace_id,
+            revision=revision,
+            patch=patch,
         )
 
     async def bind_draft(

@@ -5,6 +5,7 @@ from typing import Any, Protocol
 
 from wf_artifacts import ArtifactKind
 from wf_artifacts.drafts.models import DraftStep
+from wf_core.models.steps import InputBinding
 
 from .draft_authoring import RouteSource
 from .runs import TraceRangeLike
@@ -135,6 +136,15 @@ class WorkflowDraftSurface(Protocol):
         step_id: str,
         input_map: dict[str, str],
         merge: bool = False,
+    ) -> dict[str, Any]: ...
+
+    async def set_step_input_bindings(
+        self,
+        *,
+        workspace_id: str,
+        revision: int,
+        step_id: str,
+        bindings: Sequence[InputBinding],
     ) -> dict[str, Any]: ...
 
     async def set_step_output_map(

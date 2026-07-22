@@ -1,18 +1,22 @@
 from __future__ import annotations
 
+from dataclasses import replace
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import pytest
-from pydantic import BaseModel, TypeAdapter
+from pydantic import BaseModel, Field, TypeAdapter
 
 from tests.wf_mcp.test_support import echo_tool
 from wf_api.draft_authoring import RouteSource, WorkflowDraftAuthoringApi
 from wf_api.drafts import WorkflowDraftApi
+from wf_api.models import RawWorkflowPlan
 from wf_api.service import WorkflowApi
 from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
 from wf_artifacts.drafts.models import DraftStep
 from wf_authoring import node
+from wf_core.models.steps import InputPathBinding, InputValueBinding
+from wf_core.paths import GraphSourcePath, LocalPath
 from wf_mcp.broker import WfMcpService
 from wf_mcp.broker.service.workflow_operation_context import context_from_service
 from wf_mcp.models import ConnectionConfig
@@ -114,6 +118,55 @@ def _nested_report_draft() -> dict[str, Any]:
     }
 
 
+class _StructuredRequest(BaseModel):
+    title: str
+    body: str
+    format: Literal["markdown", "json"]
+    note: str | None = None
+
+
+class _StructuredAudit(BaseModel):
+    title: str = ""
+
+
+class _StructuredReportInput(BaseModel):
+    request: _StructuredRequest
+    audit: _StructuredAudit = Field(default_factory=_StructuredAudit)
+
+
+class _StructuredReportOutput(BaseModel):
+    rendered: str
+
+
+@node(name="structured_report", outcomes=("ok",))
+def _structured_report(payload: _StructuredReportInput) -> _StructuredReportOutput:
+    return _StructuredReportOutput(
+        rendered=(
+            f"{payload.request.title}|{payload.request.body}|{payload.request.format}"
+        )
+    )
+
+
+def _structured_report_draft(
+    capability_name: str = "demo.personal.structured_report",
+) -> dict[str, Any]:
+    return {
+        "name": "structured_report",
+        "input_schema": {"type": "object", "properties": {}},
+        "state_schema": {"type": "object", "properties": {}},
+        "output_schema": {"type": "object", "properties": {}},
+        "start": "report",
+        "steps": {
+            "report": {
+                "use": capability_name,
+                "input": [],
+                "output": [],
+            }
+        },
+        "routes": {"report": {"ok": "__end__"}},
+    }
+
+
 def _draft_api(
     artifact_store: FileWorkflowArtifactStore,
     *,
@@ -136,6 +189,22 @@ def _draft_api(
         service,
         WorkflowDraftAuthoringApi(context, WorkflowDraftApi(context)),
     )
+
+
+async def _create_structured_binding_api(
+    tmp_path: Path,
+    workspace_id: str,
+) -> tuple[WorkflowDraftApi, WfMcpService, WorkflowApi]:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / workspace_id),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _structured_report)
+    await draft_api.create_draft_workspace(
+        workspace_id=workspace_id,
+        draft=_structured_report_draft(),
+    )
+    return draft_api, service, WorkflowApi(authoring.context)
 
 
 @pytest.mark.asyncio
@@ -1361,6 +1430,443 @@ async def test_bind_draft_stale_revision_precedes_nested_local_path_error(
 
     assert result["status"] == "conflict"
     assert result["diagnostics"][0]["code"] == "revision_conflict"
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_replaces_structured_inputs_in_order(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_structured_binding_api(
+        tmp_path,
+        "structured_input",
+    )
+
+    result = await api.set_step_input_bindings(
+        workspace_id="structured_input",
+        revision=1,
+        step_id="report",
+        bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.state("report", "title"),
+                target=LocalPath.of("request", "title"),
+            ),
+            InputPathBinding(
+                path=GraphSourcePath.state("report", "markdown"),
+                target=LocalPath.of("request", "body"),
+            ),
+            InputValueBinding(
+                target=LocalPath.of("request", "format"),
+                value="markdown",
+            ),
+        ],
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="structured_input",
+        include_draft=True,
+    )
+
+    assert result["revision"] == 2
+    assert inspected["draft"]["steps"]["report"]["input"] == [
+        {"target": "request.title", "path": "state.report.title"},
+        {"target": "request.body", "path": "state.report.markdown"},
+        {"target": "request.format", "value": "markdown"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_preserves_source_fan_out(tmp_path: Path) -> None:
+    draft_api, _service, api = await _create_structured_binding_api(
+        tmp_path,
+        "input_fan_out",
+    )
+
+    await api.set_step_input_bindings(
+        workspace_id="input_fan_out",
+        revision=1,
+        step_id="report",
+        bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.state("report", "title"),
+                target=LocalPath.of("request", "title"),
+            ),
+            InputPathBinding(
+                path=GraphSourcePath.state("report", "title"),
+                target=LocalPath.of("audit", "title"),
+            ),
+        ],
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="input_fan_out",
+        include_draft=True,
+    )
+
+    assert inspected["draft"]["steps"]["report"]["input"] == [
+        {"target": "request.title", "path": "state.report.title"},
+        {"target": "audit.title", "path": "state.report.title"},
+    ]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("bindings", "message"),
+    [
+        (
+            [
+                InputValueBinding(
+                    target=LocalPath.of("request", "missing"),
+                    value="value",
+                )
+            ],
+            r"bindings\[0\]\.target 'request.missing' is not declared",
+        ),
+        (
+            [
+                InputValueBinding(
+                    target=LocalPath.of("request", "title"),
+                    value="first",
+                ),
+                InputValueBinding(
+                    target=LocalPath.of("request", "title"),
+                    value="second",
+                ),
+            ],
+            r"bindings\[0\]\.target 'request.title' overlaps bindings\[1\]",
+        ),
+        (
+            [
+                InputValueBinding(
+                    target=LocalPath.of("request"),
+                    value={
+                        "title": "Report",
+                        "body": "Body",
+                        "format": "markdown",
+                    },
+                ),
+                InputValueBinding(
+                    target=LocalPath.of("request", "title"),
+                    value="Report",
+                ),
+            ],
+            r"bindings\[0\]\.target 'request' overlaps bindings\[1\]",
+        ),
+        (
+            [
+                InputValueBinding(
+                    target=LocalPath.of("request", "format"),
+                    value="html",
+                )
+            ],
+            r"bindings\[0\]\.value does not satisfy schema at 'request.format'",
+        ),
+        (
+            [InputValueBinding(target=LocalPath.root(), value="not-an-object")],
+            r"bindings\[0\]\.value for target '\.' must be a JSON object",
+        ),
+    ],
+)
+async def test_set_step_input_bindings_rejects_semantic_errors_without_mutation(
+    tmp_path: Path,
+    bindings: list[InputPathBinding | InputValueBinding],
+    message: str,
+) -> None:
+    workspace_id = f"invalid_bindings_{len(message)}"
+    draft_api, _service, api = await _create_structured_binding_api(
+        tmp_path,
+        workspace_id,
+    )
+    before = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match=message):
+        await api.set_step_input_bindings(
+            workspace_id=workspace_id,
+            revision=1,
+            step_id="report",
+            bindings=bindings,
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_rejects_remote_target_reference_without_mutation(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "remote_binding_target"),
+        register_echo=True,
+    )
+    remote_spec = replace(
+        _structured_report,
+        name="remote_structured_report",
+        input_schema_contract={
+            "type": "object",
+            "properties": {"request": {"$ref": "https://example.com/request.json"}},
+        },
+    )
+    service.register_specs("demo.personal", remote_spec)
+    await draft_api.create_draft_workspace(
+        workspace_id="remote_target",
+        draft=_structured_report_draft("demo.personal.remote_structured_report"),
+    )
+    api = WorkflowApi(authoring.context)
+    before = await draft_api.get_draft_workspace(
+        workspace_id="remote_target",
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match="unsupported reference"):
+        await api.set_step_input_bindings(
+            workspace_id="remote_target",
+            revision=1,
+            step_id="report",
+            bindings=[
+                InputValueBinding(
+                    target=LocalPath.of("request"),
+                    value={},
+                )
+            ],
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="remote_target",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_rejects_non_capability_step_without_mutation(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "non_capability_binding"),
+        register_echo=True,
+    )
+    draft = _structured_report_draft()
+    draft["steps"]["report"] = {"join": {}}
+    await draft_api.create_draft_workspace(workspace_id="non_capability", draft=draft)
+    api = WorkflowApi(authoring.context)
+    before = await draft_api.get_draft_workspace(
+        workspace_id="non_capability",
+        include_draft=True,
+    )
+
+    with pytest.raises(ValueError, match="does not declare a capability use"):
+        await api.set_step_input_bindings(
+            workspace_id="non_capability",
+            revision=1,
+            step_id="report",
+            bindings=[],
+        )
+
+    after = await draft_api.get_draft_workspace(
+        workspace_id="non_capability",
+        include_draft=True,
+    )
+    assert after == before
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "binding",
+    [
+        InputValueBinding(target=LocalPath.of("missing"), value="value"),
+        InputValueBinding(
+            target=LocalPath.of("request", "format"),
+            value="html",
+        ),
+    ],
+)
+async def test_set_step_input_bindings_stale_revision_wins_over_semantic_errors(
+    tmp_path: Path,
+    binding: InputValueBinding,
+) -> None:
+    draft_api, _service, api = await _create_structured_binding_api(
+        tmp_path,
+        f"stale_binding_{len(str(binding.target))}",
+    )
+    workspace_id = f"stale_binding_{len(str(binding.target))}"
+
+    result = await api.set_step_input_bindings(
+        workspace_id=workspace_id,
+        revision=2,
+        step_id="report",
+        bindings=[binding],
+    )
+
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id=workspace_id,
+        include_draft=True,
+    )
+    assert inspected["revision"] == 1
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_projects_whole_capability_payload(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_structured_binding_api(
+        tmp_path,
+        "whole_payload_binding",
+    )
+
+    await api.set_step_input_bindings(
+        workspace_id="whole_payload_binding",
+        revision=1,
+        step_id="report",
+        bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.input("payload"),
+                target=LocalPath.root(),
+            )
+        ],
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="whole_payload_binding",
+        include_draft=True,
+    )
+
+    payload_schema = inspected["draft"]["input_schema"]["properties"]["payload"]
+    assert payload_schema["properties"]["request"]["$ref"].endswith(
+        "/_StructuredRequest"
+    )
+    assert inspected["draft"]["steps"]["report"]["input"] == [
+        {"target": ".", "path": "input.payload"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_projects_input_and_state_but_not_context(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_structured_binding_api(
+        tmp_path,
+        "multi_schema_binding",
+    )
+
+    await api.set_step_input_bindings(
+        workspace_id="multi_schema_binding",
+        revision=1,
+        step_id="report",
+        bindings=[
+            InputPathBinding(
+                path=GraphSourcePath.input("title"),
+                target=LocalPath.of("request", "title"),
+            ),
+            InputPathBinding(
+                path=GraphSourcePath.state("body"),
+                target=LocalPath.of("request", "body"),
+            ),
+            InputValueBinding(
+                target=LocalPath.of("request", "format"),
+                value="markdown",
+            ),
+            InputPathBinding(
+                path=GraphSourcePath.context("prior_outcome"),
+                target=LocalPath.of("request", "note"),
+            ),
+        ],
+    )
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="multi_schema_binding",
+        include_draft=True,
+    )
+    draft = inspected["draft"]
+
+    assert draft["input_schema"]["properties"]["title"]["type"] == "string"
+    assert draft["state_schema"]["properties"]["body"]["type"] == "string"
+    assert set(draft["input_schema"]["properties"]) == {"title"}
+    assert set(draft["state_schema"]["properties"]) == {"body"}
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_accepts_explicit_null_and_exact_noop(
+    tmp_path: Path,
+) -> None:
+    draft_api, _service, api = await _create_structured_binding_api(
+        tmp_path,
+        "null_and_noop_binding",
+    )
+    bindings = [
+        InputValueBinding(
+            target=LocalPath.of("request", "note"),
+            value=None,
+        )
+    ]
+
+    first = await api.set_step_input_bindings(
+        workspace_id="null_and_noop_binding",
+        revision=1,
+        step_id="report",
+        bindings=bindings,
+    )
+    second = await api.set_step_input_bindings(
+        workspace_id="null_and_noop_binding",
+        revision=first["revision"],
+        step_id="report",
+        bindings=bindings,
+    )
+
+    assert first["revision"] == 2
+    assert second["revision"] == 2
+    inspected = await draft_api.get_draft_workspace(
+        workspace_id="null_and_noop_binding",
+        include_draft=True,
+    )
+    assert inspected["draft"]["steps"]["report"]["input"] == [
+        {"target": "request.note", "value": None}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_set_step_input_bindings_compiles_and_assembles_nested_payload(
+    tmp_path: Path,
+) -> None:
+    draft_api, service, api = await _create_structured_binding_api(
+        tmp_path,
+        "execute_structured_binding",
+    )
+    bindings = [
+        InputPathBinding(
+            path=GraphSourcePath.input("title"),
+            target=LocalPath.of("request", "title"),
+        ),
+        InputPathBinding(
+            path=GraphSourcePath.input("body"),
+            target=LocalPath.of("request", "body"),
+        ),
+        InputValueBinding(
+            target=LocalPath.of("request", "format"),
+            value="markdown",
+        ),
+    ]
+    await api.set_step_input_bindings(
+        workspace_id="execute_structured_binding",
+        revision=1,
+        step_id="report",
+        bindings=bindings,
+    )
+
+    compiled = await draft_api.compile_draft_workspace(
+        workspace_id="execute_structured_binding"
+    )
+    plan = RawWorkflowPlan.model_validate(compiled["compiled_plan"])
+    run = await service.run_workflow_from_plan(
+        plan,
+        {"title": "Thesis", "body": "Evidence"},
+    )
+
+    assert run.error is None
+    assert run.trace[0].output == {"rendered": "Thesis|Evidence|markdown"}
 
 
 @pytest.mark.asyncio
