@@ -241,7 +241,7 @@
 - Preserves: `WorkflowDraftAuthoringApi.bind_draft(...)` request and response signatures.
 - Produces: complete nested `LocalPath` values in existing input/output binding payloads.
 
-- [ ] **Step 1: Add a nested capability fixture with Pydantic-style definitions**
+- [x] **Step 1: Add a nested capability fixture with Pydantic-style definitions**
 
   Add this test-only capability beside the existing echo/snapshot fixtures in `tests/wf_api/test_drafts_service.py`:
 
@@ -275,7 +275,7 @@
   service.register_specs("demo.personal", _nested_report)
   ```
 
-- [ ] **Step 2: Add failing input/state-to-local tests**
+- [x] **Step 2: Add failing input/state-to-local tests**
 
   Add tests that call:
 
@@ -312,7 +312,7 @@
 
   For the state case, assert the nested state schema remains valid and the stored target is exactly `report.title`.
 
-- [ ] **Step 3: Add failing nested local-output tests**
+- [x] **Step 3: Add failing nested local-output tests**
 
   Cover both supported directions:
 
@@ -343,13 +343,13 @@
 
   Also assert both `state_schema` and `output_schema` contain the projected nested string schema.
 
-- [ ] **Step 4: Add failure atomicity and revision-precedence tests**
+- [x] **Step 4: Add failure atomicity and revision-precedence tests**
 
   Add one current-revision test using `local.report.missing -> state.report.missing`. Assert the complete path appears in the `ValueError`, then fetch the workspace and assert `revision == 1` and the step output remains unchanged.
 
   Add one stale-revision test with the same invalid nested path after first moving the workspace to revision 2. Assert the returned diagnostic code is `revision_conflict` and no nested-path `ValueError` escapes.
 
-- [ ] **Step 5: Run the new API tests and confirm the one-field restriction fails**
+- [x] **Step 5: Run the new API tests and confirm the one-field restriction fails**
 
   Run:
 
@@ -359,7 +359,7 @@
 
   Expected: nested local endpoints fail with `local path must name one capability field`.
 
-- [ ] **Step 6: Replace root-field handling with complete local parts**
+- [x] **Step 6: Replace root-field handling with complete local parts**
 
   In `WorkflowDraftAuthoringApi.bind_draft`:
 
@@ -391,7 +391,7 @@
   }
   ```
 
-- [ ] **Step 7: Run focused API and canonical-model regressions**
+- [x] **Step 7: Run focused API and canonical-model regressions**
 
   Run:
 
@@ -404,7 +404,7 @@
 
   Expected: nested and existing single-field cases pass, and canonical nested mapping validation remains green.
 
-- [ ] **Step 8: Commit focused nested bind support**
+- [x] **Step 8: Commit focused nested bind support**
 
   ```bash
   git add src/wf_api/draft_authoring.py tests/wf_api/test_drafts_service.py

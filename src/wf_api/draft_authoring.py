@@ -58,6 +58,7 @@ from .operation_context import WorkflowOperationContext
 from .schema_projection import (
     project_output_property_to_state_schema,
     project_property_to_schema_path,
+    project_schema_path_to_schema_path,
     schema_path_exists,
 )
 
@@ -65,13 +66,6 @@ from .schema_projection import (
 def _graph_parts(path: str) -> tuple[str, tuple[str, ...]]:
     parsed = GraphSourcePath.parse(path)
     return parsed.root, parsed.parts
-
-
-def _local_field(path: str) -> str:
-    parts = _local_parts(path)
-    if len(parts) != 1:
-        raise ValueError("local path must name one capability field")
-    return parts[0]
 
 
 def _local_parts(path: str) -> tuple[str, ...]:
@@ -318,7 +312,7 @@ class WorkflowDraftAuthoringApi:
         source_path: str,
         target_path: str,
     ) -> dict[str, Any]:
-        """Bind a graph path to/from one capability local field, projecting missing schema when needed."""
+        """Bind a graph path to or from one capability-local path."""
         checked = self._workspace_if_revision_matches(
             workspace_id=workspace_id,
             revision=revision,
@@ -354,7 +348,7 @@ class WorkflowDraftAuthoringApi:
             target_root, target_parts = _graph_parts(target_path)
 
         if target_root == "local" and source_root in {"input", "state"}:
-            local_field = _local_field(target_path)
+            local_path = format_toml_path_segments(target_parts)
             input_schema = (
                 spec.input_schema_contract or spec.input_model.model_json_schema()
             )
@@ -365,15 +359,15 @@ class WorkflowDraftAuthoringApi:
             if schema_path_exists(target_schema, source_parts):
                 projected = target_schema
             else:
-                projected = project_property_to_schema_path(
+                projected = project_schema_path_to_schema_path(
                     target_schema=target_schema,
                     source_schema=input_schema,
-                    source_field=local_field,
+                    source_parts=target_parts,
                     target_parts=source_parts,
                 )
             input_map = {
                 **_input_map_from_payload(step.get("input", [])),
-                source_path: local_field,
+                source_path: local_path,
             }
             return await self.drafts.patch_draft_workspace(
                 workspace_id=workspace_id,
@@ -389,7 +383,7 @@ class WorkflowDraftAuthoringApi:
             )
 
         if source_root == "local" and target_root == "output":
-            local_field = _local_field(source_path)
+            local_path = format_toml_path_segments(source_parts)
             output_schema_source = (
                 spec.output_schema_contract or spec.output_model.model_json_schema()
             )
@@ -399,10 +393,10 @@ class WorkflowDraftAuthoringApi:
             state_schema = workspace.draft.get("state_schema", {})
             if not isinstance(state_schema, dict):
                 raise ValueError("draft state_schema must be an object")
-            projected_state = project_property_to_schema_path(
+            projected_state = project_schema_path_to_schema_path(
                 target_schema=state_schema,
                 source_schema=output_schema_source,
-                source_field=local_field,
+                source_parts=source_parts,
                 target_parts=target_parts,
                 allow_existing_equivalent=True,
             )
@@ -410,10 +404,10 @@ class WorkflowDraftAuthoringApi:
             output_schema = workspace.draft.get("output_schema", {})
             if not isinstance(output_schema, dict):
                 raise ValueError("draft output_schema must be an object")
-            projected_output = project_property_to_schema_path(
+            projected_output = project_schema_path_to_schema_path(
                 target_schema=output_schema,
                 source_schema=output_schema_source,
-                source_field=local_field,
+                source_parts=source_parts,
                 target_parts=target_parts,
                 allow_existing_equivalent=True,
             )
@@ -421,10 +415,10 @@ class WorkflowDraftAuthoringApi:
             current_output_map = self.drafts._step_output_map(
                 workspace_id=workspace_id, step_id=step_id
             )
-            previous_state_path = current_output_map.get(local_field)
+            previous_state_path = current_output_map.get(local_path)
             output_map = {
                 **current_output_map,
-                local_field: state_path_str,
+                local_path: state_path_str,
             }
 
             existing_output = workspace.draft.get("output")
@@ -474,17 +468,17 @@ class WorkflowDraftAuthoringApi:
             )
 
         if source_root == "local" and target_root == "state":
-            local_field = _local_field(source_path)
+            local_path = format_toml_path_segments(source_parts)
             output_schema = (
                 spec.output_schema_contract or spec.output_model.model_json_schema()
             )
             target_schema = workspace.draft.get("state_schema", {})
             if not isinstance(target_schema, dict):
                 raise ValueError("draft state_schema must be an object")
-            projected = project_property_to_schema_path(
+            projected = project_schema_path_to_schema_path(
                 target_schema=target_schema,
                 source_schema=output_schema,
-                source_field=local_field,
+                source_parts=source_parts,
                 target_parts=target_parts,
                 allow_existing_equivalent=True,
             )
@@ -492,7 +486,7 @@ class WorkflowDraftAuthoringApi:
                 **self.drafts._step_output_map(
                     workspace_id=workspace_id, step_id=step_id
                 ),
-                local_field: target_path,
+                local_path: target_path,
             }
             return await self.drafts.patch_draft_workspace(
                 workspace_id=workspace_id,

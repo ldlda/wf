@@ -73,6 +73,47 @@ def _snapshot_tool(payload: _SnapshotInput) -> _SnapshotOutput:
     return _SnapshotOutput(after=_Snapshot(clicked=True))
 
 
+class _ReportInputValue(BaseModel):
+    title: str
+
+
+class _NestedReportInput(BaseModel):
+    report: _ReportInputValue
+
+
+class _ReportOutputValue(BaseModel):
+    markdown: str
+
+
+class _NestedReportOutput(BaseModel):
+    report: _ReportOutputValue
+
+
+@node(name="nested_report", outcomes=("ok",))
+def _nested_report(payload: _NestedReportInput) -> _NestedReportOutput:
+    return _NestedReportOutput(
+        report=_ReportOutputValue(markdown=f"# {payload.report.title}")
+    )
+
+
+def _nested_report_draft() -> dict[str, Any]:
+    return {
+        "name": "nested_report",
+        "input_schema": {"type": "object", "properties": {}},
+        "state_schema": {"type": "object", "properties": {}},
+        "output_schema": {"type": "object", "properties": {}},
+        "start": "render",
+        "steps": {
+            "render": {
+                "use": "demo.personal.nested_report",
+                "input": [],
+                "output": [],
+            }
+        },
+        "routes": {"render": {"ok": "__end__"}},
+    }
+
+
 def _draft_api(
     artifact_store: FileWorkflowArtifactStore,
     *,
@@ -1083,6 +1124,243 @@ async def test_bind_draft_output_to_nested_state_projects_state_schema(
     assert workspace["draft"]["steps"]["snap"]["output"] == [
         {"source": "after", "target": "state.session.after"}
     ]
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_projects_nested_local_input_schema(tmp_path: Path) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "nested_local_input"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    await api.create_draft_workspace(
+        workspace_id="nested",
+        draft=_nested_report_draft(),
+    )
+
+    result = await authoring.bind_draft(
+        workspace_id="nested",
+        revision=1,
+        step_id="render",
+        source_path="input.title",
+        target_path="local.report.title",
+    )
+    workspace = await api.get_draft_workspace(workspace_id="nested", include_draft=True)
+    draft = workspace["draft"]
+
+    assert result["revision"] == 2
+    assert draft["input_schema"]["properties"]["title"]["type"] == "string"
+    assert draft["steps"]["render"]["input"] == [
+        {"target": "report.title", "path": "input.title"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_reuses_nested_state_for_nested_local_input(
+    tmp_path: Path,
+) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "nested_local_state_input"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    draft = _nested_report_draft()
+    draft["state_schema"] = {
+        "type": "object",
+        "properties": {
+            "report": {
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+            }
+        },
+    }
+    await api.create_draft_workspace(workspace_id="nested", draft=draft)
+
+    result = await authoring.bind_draft(
+        workspace_id="nested",
+        revision=1,
+        step_id="render",
+        source_path="state.report.title",
+        target_path="local.report.title",
+    )
+    workspace = await api.get_draft_workspace(workspace_id="nested", include_draft=True)
+
+    assert result["revision"] == 2
+    assert workspace["draft"]["steps"]["render"]["input"] == [
+        {"target": "report.title", "path": "state.report.title"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_projects_nested_local_output_to_state(tmp_path: Path) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "nested_local_output_state"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    await api.create_draft_workspace(
+        workspace_id="nested",
+        draft=_nested_report_draft(),
+    )
+
+    result = await authoring.bind_draft(
+        workspace_id="nested",
+        revision=1,
+        step_id="render",
+        source_path="local.report.markdown",
+        target_path="state.report.markdown",
+    )
+    workspace = await api.get_draft_workspace(workspace_id="nested", include_draft=True)
+    draft = workspace["draft"]
+
+    assert result["revision"] == 2
+    assert draft["steps"]["render"]["output"] == [
+        {"source": "report.markdown", "target": "state.report.markdown"}
+    ]
+    assert (
+        draft["state_schema"]["properties"]["report"]["properties"]["markdown"]["type"]
+        == "string"
+    )
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_lowers_nested_local_output_to_public_output(
+    tmp_path: Path,
+) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "nested_local_public_output"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    await api.create_draft_workspace(
+        workspace_id="nested",
+        draft=_nested_report_draft(),
+    )
+
+    result = await authoring.bind_draft(
+        workspace_id="nested",
+        revision=1,
+        step_id="render",
+        source_path="local.report.markdown",
+        target_path="output.report.markdown",
+    )
+    workspace = await api.get_draft_workspace(workspace_id="nested", include_draft=True)
+    draft = workspace["draft"]
+
+    assert result["revision"] == 2
+    assert draft["steps"]["render"]["output"] == [
+        {"source": "report.markdown", "target": "state.report.markdown"}
+    ]
+    assert draft["output"] == [
+        {"path": "state.report.markdown", "target": "report.markdown"}
+    ]
+    assert (
+        draft["state_schema"]["properties"]["report"]["properties"]["markdown"]["type"]
+        == "string"
+    )
+    assert (
+        draft["output_schema"]["properties"]["report"]["properties"]["markdown"]["type"]
+        == "string"
+    )
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_rebinds_nested_local_public_output(tmp_path: Path) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "rebind_nested_local_public_output"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    await api.create_draft_workspace(
+        workspace_id="nested",
+        draft=_nested_report_draft(),
+    )
+    first = await authoring.bind_draft(
+        workspace_id="nested",
+        revision=1,
+        step_id="render",
+        source_path="local.report.markdown",
+        target_path="output.report.markdown",
+    )
+
+    second = await authoring.bind_draft(
+        workspace_id="nested",
+        revision=first["revision"],
+        step_id="render",
+        source_path="local.report.markdown",
+        target_path="output.published.markdown",
+    )
+    workspace = await api.get_draft_workspace(workspace_id="nested", include_draft=True)
+
+    assert second["revision"] == 3
+    assert workspace["draft"]["steps"]["render"]["output"] == [
+        {"source": "report.markdown", "target": "state.published.markdown"}
+    ]
+    assert workspace["draft"]["output"] == [
+        {"path": "state.published.markdown", "target": "published.markdown"}
+    ]
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_rejects_missing_nested_local_output_without_mutation(
+    tmp_path: Path,
+) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "missing_nested_local_output"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    await api.create_draft_workspace(
+        workspace_id="nested",
+        draft=_nested_report_draft(),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="source schema path 'report.missing' is not declared",
+    ):
+        await authoring.bind_draft(
+            workspace_id="nested",
+            revision=1,
+            step_id="render",
+            source_path="local.report.missing",
+            target_path="state.report.missing",
+        )
+    workspace = await api.get_draft_workspace(workspace_id="nested", include_draft=True)
+
+    assert workspace["revision"] == 1
+    assert workspace["draft"]["steps"]["render"]["output"] == []
+
+
+@pytest.mark.asyncio
+async def test_bind_draft_stale_revision_precedes_nested_local_path_error(
+    tmp_path: Path,
+) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "stale_nested_local_output"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    await api.create_draft_workspace(
+        workspace_id="nested",
+        draft=_nested_report_draft(),
+    )
+    await api.patch_draft_workspace(
+        workspace_id="nested",
+        revision=1,
+        patch=[{"op": "replace", "path": "/name", "value": "nested_v2"}],
+    )
+
+    result = await authoring.bind_draft(
+        workspace_id="nested",
+        revision=1,
+        step_id="render",
+        source_path="local.report.missing",
+        target_path="state.report.missing",
+    )
+
+    assert result["status"] == "conflict"
+    assert result["diagnostics"][0]["code"] == "revision_conflict"
 
 
 @pytest.mark.asyncio
