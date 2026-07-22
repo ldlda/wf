@@ -1,13 +1,22 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
 
 import pytest
+from fastmcp import FastMCP
+from fastmcp.client import Client
+from fastmcp.client.transports.memory import FastMCPTransport
 
+from wf_artifacts import FileDraftWorkspaceStore, FileWorkflowArtifactStore
+from wf_core.models.steps import OutputBinding
+from wf_mcp.broker import WfMcpService
 from wf_mcp.models import BrokerConfig
 from wf_mcp.server import create_server_client
+from wf_mcp.storage import FileStore
+from wf_mcp.workflow_surface.tools import register_workflow_tools
 
-from .conftest import assert_safe_tool_maps, server_config
+from .conftest import assert_safe_tool_maps, server_config, structured
 
 
 @pytest.mark.asyncio
@@ -66,6 +75,70 @@ async def test_server_search_mode_pins_stable_control_and_workflow_tools() -> No
         assert "wf.workflow.patch_draft" not in names
         assert "wf.admin.call_tool" not in names
         assert "fixture.personal.echo_tool" not in names
+
+
+@pytest.mark.asyncio
+async def test_registered_output_bindings_tool_delegates_typed_bindings_once(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class RecordingWorkflowHandler:
+        def __init__(self) -> None:
+            self.calls: list[dict[str, Any]] = []
+
+        async def set_step_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            self.calls.append(kwargs)
+            return {
+                "workspace_id": kwargs["workspace_id"],
+                "revision": kwargs["revision"] + 1,
+                "status": "valid",
+                "diagnostics": [],
+                "summary": {},
+            }
+
+    recorder = RecordingWorkflowHandler()
+    monkeypatch.setattr(
+        "wf_mcp.workflow_surface.tools.WorkflowApi",
+        lambda _context: recorder,
+    )
+    service = WfMcpService(
+        store=FileStore(tmp_path / "tool_invocation_store"),
+        artifact_store=FileWorkflowArtifactStore(tmp_path / "tool_invocation_artifacts"),
+        draft_workspace_store=FileDraftWorkspaceStore(
+            tmp_path / "tool_invocation_drafts"
+        ),
+    )
+    server = FastMCP("task-3-tool-test")
+    register_workflow_tools(server, service)
+
+    async with Client(FastMCPTransport(server)) as client:
+        result = await client.call_tool(
+            "wf.workflow.set_step_output_bindings",
+            {
+                "request": {
+                    "workspace_id": "draft-output",
+                    "revision": 4,
+                    "step_id": "analyze",
+                    "bindings": [
+                        {"source": "report.title", "target": "state.report.title"},
+                        {"source": "report.title", "target": "state.audit.title"},
+                    ],
+                }
+            },
+        )
+
+    assert structured(result)["revision"] == 5
+    assert len(recorder.calls) == 1
+    call = recorder.calls[0]
+    assert call["workspace_id"] == "draft-output"
+    assert call["revision"] == 4
+    assert call["step_id"] == "analyze"
+    bindings = call["bindings"]
+    assert all(isinstance(binding, OutputBinding) for binding in bindings)
+    assert [str(binding.source) for binding in bindings] == [
+        "report.title",
+        "report.title",
+    ]
 
 
 @pytest.mark.asyncio
