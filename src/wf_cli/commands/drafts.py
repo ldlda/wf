@@ -9,12 +9,15 @@ import typer
 from wf_cli.commands import draft_add
 from wf_cli.commands.draft_options import (
     _parse_map_flags,
+    _parse_output_map_flags,
     _parse_route_flags,
     _parse_step_input_map_flags,
     parse_json_object_file,
     parse_step_input_binding_flags,
     parse_step_input_bindings_file,
     parse_step_input_value_flags,
+    parse_step_output_binding_flags,
+    parse_step_output_bindings_file,
 )
 from wf_cli.context import load_cli_context_from_typer as load_cli_context
 from wf_cli.formats import ListOutputFormat, emit_list_payload
@@ -500,38 +503,87 @@ def set_step_output_map(
         list[str] | None,
         typer.Option(
             "--map",
-            help="One output binding LOCAL_SOURCE=STATE_TARGET. Repeat in one command.",
+            help=(
+                "LOCAL_SOURCE=STATE_TARGET canonical output binding. Repeat to "
+                "replace the ordered list."
+            ),
         ),
     ] = None,
+    bindings_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--bindings-file",
+            help="Replace with an ordered canonical JSON array of output bindings.",
+        ),
+    ] = None,
+    clear: Annotated[
+        bool,
+        typer.Option("--clear", help="Replace with no bindings."),
+    ] = False,
     merge: Annotated[
         bool,
         typer.Option(
             "--merge",
-            help="Preserve existing output bindings and add/update the passed --map entries.",
+            help=(
+                "Compatibility-only and potentially lossy: preserve existing "
+                "bindings and add/update --map entries."
+            ),
         ),
     ] = False,
 ) -> None:
-    """Set one step's output map without writing JSON Patch manually.
+    """Replace one step's ordered output bindings without writing JSON Patch manually.
 
-    Default behavior replaces the full output map for this step. Pass all
-    desired --map entries in one command for a complete replacement. Use
-    --merge only when adding or updating entries across a later revision.
+    By default, ``--map LOCAL_SOURCE=STATE_TARGET`` replaces the complete
+    ordered canonical binding list. ``--bindings-file`` accepts an ordered
+    canonical JSON array, and ``--clear`` replaces with no bindings. Use
+    ``--merge`` only with ``--map`` for compatibility-only and potentially
+    lossy map edits.
 
     Run `wf draft validate <workspace_id>` after map edits; validation reports
     unresolved paths and conflicting writes.
     """
-    output_map = _parse_map_flags(mapping)
+    has_maps = bool(mapping)
+    has_file = bindings_file is not None
+    selected_modes = sum((has_maps, has_file, clear))
+    if selected_modes == 0:
+        raise typer.BadParameter("provide --map, --bindings-file, or --clear")
+    if selected_modes > 1:
+        raise typer.BadParameter(
+            "--bindings-file and --clear cannot be combined with --map"
+        )
+    if merge and (has_file or clear):
+        raise typer.BadParameter(
+            "--merge is supported only for compatibility map-only edits"
+        )
+
     context = load_cli_context(ctx)
+    if merge:
+        output_map = _parse_output_map_flags(mapping)
+        operation = context.handlers.set_step_output_map(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            output_map=output_map,
+            merge=True,
+        )
+    else:
+        bindings = (
+            parse_step_output_bindings_file(bindings_file)
+            if bindings_file is not None
+            else []
+            if clear
+            else parse_step_output_binding_flags(mapping)
+        )
+        operation = context.handlers.set_step_output_bindings(
+            workspace_id=workspace_id,
+            revision=revision,
+            step_id=step_id,
+            bindings=bindings,
+        )
     emit_json(
         run_cli_operation(
             context,
-            context.handlers.set_step_output_map(
-                workspace_id=workspace_id,
-                revision=revision,
-                step_id=step_id,
-                output_map=output_map,
-                merge=merge,
-            ),
+            operation,
         )
     )
 

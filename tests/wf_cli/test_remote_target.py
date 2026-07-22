@@ -1530,6 +1530,100 @@ def test_wf_draft_set_input_replaces_canonical_bindings_over_rpc(
     assert rpc_methods.count("workflow.draft_workspaces.set_step_input_bindings") == 1
 
 
+def test_wf_draft_set_output_replaces_canonical_bindings_over_rpc(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    rpc_calls: list[tuple[str, dict[str, Any]]] = []
+    original_call = RpcClientTransport._call
+
+    async def recording_call(
+        self: RpcClientTransport, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
+        rpc_calls.append((method, params))
+        return await original_call(self, method, params)
+
+    monkeypatch.setattr(RpcClientTransport, "_call", recording_call)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    bindings_path = tmp_path / "output-bindings.json"
+    bindings_path.write_text(
+        json.dumps(
+            [
+                {"source": "value", "target": "state.report"},
+                {"source": "value", "target": "state.audit"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "output_bindings_ws",
+            "--capability",
+            "wf.std.constant",
+            "--name",
+            "output_bindings",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+    rpc_calls.clear()
+
+    replaced = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-output",
+            "output_bindings_ws",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--bindings-file",
+            str(bindings_path),
+        ],
+    )
+
+    assert replaced.exit_code == 0, replaced.output
+    assert [method for method, _params in rpc_calls] == [
+        "workflow.draft_workspaces.set_step_output_bindings"
+    ]
+    assert rpc_calls[0][1]["bindings"] == [
+        {"source": "value", "target": "state.report"},
+        {"source": "value", "target": "state.audit"},
+    ]
+
+    rpc_calls.clear()
+    merged = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-output",
+            "output_bindings_ws",
+            "--revision",
+            "2",
+            "--step",
+            "call",
+            "--map",
+            "value=state.compat",
+            "--merge",
+        ],
+    )
+
+    assert merged.exit_code == 0, merged.output
+    assert [method for method, _params in rpc_calls] == [
+        "workflow.draft_workspaces.set_step_output_map"
+    ]
+
+
 def test_wf_draft_add_capability_uses_rpc_target(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)

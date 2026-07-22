@@ -8,10 +8,16 @@ import typer
 from pydantic import TypeAdapter, ValidationError
 
 from wf_api.surface import RouteSource
-from wf_core.models.steps import InputBinding, InputPathBinding, InputValueBinding
+from wf_core.models.steps import (
+    InputBinding,
+    InputPathBinding,
+    InputValueBinding,
+    OutputBinding,
+)
 from wf_core.paths import GraphSourcePath, LocalPath, PathResolutionError, StatePath
 
 _INPUT_BINDINGS_ADAPTER = TypeAdapter(list[InputBinding])
+_OUTPUT_BINDINGS_ADAPTER = TypeAdapter(list[OutputBinding])
 
 
 def _parse_assignment_flags(
@@ -164,6 +170,37 @@ def parse_step_input_bindings_file(path: Path) -> list[InputBinding]:
     """Read and validate an ordered canonical input-binding list."""
     try:
         return _INPUT_BINDINGS_ADAPTER.validate_python(
+            parse_json_file(path, option_name="--bindings-file")
+        )
+    except ValidationError as exc:
+        raise validation_error_as_bad_parameter(exc) from exc
+
+
+def parse_step_output_binding_flags(
+    values: list[str] | None,
+) -> list[OutputBinding]:
+    """Parse ordered local-to-state outputs without collapsing fan-out."""
+    bindings: list[OutputBinding] = []
+    for item in values or []:
+        source, separator, target = item.partition("=")
+        if separator != "=" or not source or not target:
+            raise typer.BadParameter("--map must use LOCAL_SOURCE=STATE_TARGET")
+        try:
+            bindings.append(
+                OutputBinding(
+                    source=LocalPath.parse(source),
+                    target=StatePath.parse(target),
+                )
+            )
+        except (PathResolutionError, ValidationError) as exc:
+            raise typer.BadParameter(str(exc)) from exc
+    return bindings
+
+
+def parse_step_output_bindings_file(path: Path) -> list[OutputBinding]:
+    """Read and validate an ordered canonical output-binding list."""
+    try:
+        return _OUTPUT_BINDINGS_ADAPTER.validate_python(
             parse_json_file(path, option_name="--bindings-file")
         )
     except ValidationError as exc:

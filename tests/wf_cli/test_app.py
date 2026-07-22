@@ -9,6 +9,7 @@ import typer
 from typer.testing import CliRunner
 
 from wf_cli.app import app
+from wf_cli.commands import draft_options
 from wf_cli.commands.draft_options import (
     parse_json_file,
     parse_step_input_binding_flags,
@@ -18,6 +19,80 @@ from wf_cli.commands.draft_options import (
 )
 
 runner = CliRunner()
+
+
+def _parse_step_output_binding_flags(values: list[str] | None):
+    parser = getattr(draft_options, "parse_step_output_binding_flags", None)
+    assert callable(parser), "step output binding flag parser is not available"
+    return parser(values)
+
+
+def _parse_step_output_bindings_file(path):
+    parser = getattr(draft_options, "parse_step_output_bindings_file", None)
+    assert callable(parser), "step output bindings file parser is not available"
+    return parser(path)
+
+
+def test_draft_options_parse_step_output_bindings_preserves_source_fan_out() -> None:
+    bindings = _parse_step_output_binding_flags(
+        [
+            "report.title=state.report.title",
+            "report.title=state.audit.title",
+        ]
+    )
+
+    assert [binding.model_dump(mode="json") for binding in bindings] == [
+        {"source": "report.title", "target": "state.report.title"},
+        {"source": "report.title", "target": "state.audit.title"},
+    ]
+
+
+def test_draft_options_parse_step_output_bindings_file_preserves_order(
+    tmp_path,
+) -> None:
+    path = tmp_path / "output-bindings.json"
+    path.write_text(
+        json.dumps(
+            [
+                {"source": "report.title", "target": "state.report.title"},
+                {"source": "report.title", "target": "state.audit.title"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    bindings = _parse_step_output_bindings_file(path)
+
+    assert [binding.model_dump(mode="json") for binding in bindings] == [
+        {"source": "report.title", "target": "state.report.title"},
+        {"source": "report.title", "target": "state.audit.title"},
+    ]
+
+
+@pytest.mark.parametrize(
+    ("payload", "expected_text"),
+    [
+        ({"source": "report.title", "target": "state.title"}, "list"),
+        ([{"target": "state.title"}], "source"),
+        (
+            [{"source": "report.title", "target": "state.title", "extra": 1}],
+            "extra",
+        ),
+        ([{"source": "report..title", "target": "state.title"}], "path"),
+        ([{"source": "report.title", "target": "title"}], "unknown path root"),
+    ],
+)
+def test_draft_options_parse_step_output_bindings_file_rejects_invalid_payload(
+    tmp_path, payload, expected_text: str
+) -> None:
+    path = tmp_path / "invalid-output-bindings.json"
+    path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(typer.BadParameter) as exc_info:
+        _parse_step_output_bindings_file(path)
+
+    assert expected_text in str(exc_info.value).lower()
+    assert "traceback" not in str(exc_info.value).lower()
 
 
 def test_draft_options_parse_json_file_reports_invalid_input(tmp_path) -> None:
@@ -576,8 +651,10 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "input.text=text" in input_help
     assert "input.text=local.text" in input_help
     assert "input.title=report.title" in input_help
-    assert "replaces the full output map" in output_help
-    assert "Use --merge only" in output_help
+    assert "LOCAL_SOURCE=STATE_TARGET" in output_help
+    assert "ordered canonical JSON array" in output_help
+    assert "replace with no bindings" in output_help
+    assert "compatibility-only and potentially lossy" in output_help
     assert "draft validate" in output_help
     assert "replaces the full workflow output map" in workflow_output_help
     assert "Use --merge only" in workflow_output_help
@@ -1815,3 +1892,214 @@ def test_wf_draft_set_input_rejects_malformed_local_path(monkeypatch) -> None:
     assert result.exit_code == 2
     assert "rootless node-local path" in result.output
     assert "context loaded" not in result.output
+
+
+def test_wf_draft_set_output_replaces_repeated_maps_with_canonical_bindings(
+    monkeypatch,
+) -> None:
+    binding_calls: list[dict[str, Any]] = []
+    map_calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_step_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            binding_calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+        async def set_step_output_map(self, **kwargs: Any) -> dict[str, Any]:
+            map_calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-output",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--map",
+            "report.title=state.report.title",
+            "--map",
+            "report.title=state.audit.title",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert map_calls == []
+    assert [
+        binding.model_dump(mode="json") for binding in binding_calls[0]["bindings"]
+    ] == [
+        {"source": "report.title", "target": "state.report.title"},
+        {"source": "report.title", "target": "state.audit.title"},
+    ]
+
+
+def test_wf_draft_set_output_replaces_from_bindings_file(monkeypatch, tmp_path) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_step_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    bindings_path = tmp_path / "output-bindings.json"
+    bindings_path.write_text(
+        json.dumps(
+            [
+                {"source": "report.title", "target": "state.report.title"},
+                {"source": "report.title", "target": "state.audit.title"},
+            ]
+        ),
+        encoding="utf-8",
+    )
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-output",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--bindings-file",
+            str(bindings_path),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert [binding.model_dump(mode="json") for binding in calls[0]["bindings"]] == [
+        {"source": "report.title", "target": "state.report.title"},
+        {"source": "report.title", "target": "state.audit.title"},
+    ]
+
+
+def test_wf_draft_set_output_clear_sends_empty_binding_list(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_step_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-output",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--clear",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls[0]["bindings"] == []
+
+
+@pytest.mark.parametrize(
+    ("extra_args", "expected_error"),
+    [
+        ([], "provide --map, --bindings-file, or --clear"),
+        (
+            ["--bindings-file", "bindings.json", "--map", "value=state.value"],
+            "cannot be combined with --map",
+        ),
+        (
+            ["--clear", "--map", "value=state.value"],
+            "cannot be combined with --map",
+        ),
+        (
+            ["--merge", "--bindings-file", "bindings.json"],
+            "--merge is supported only for compatibility map-only edits",
+        ),
+        (
+            ["--merge", "--clear"],
+            "--merge is supported only for compatibility map-only edits",
+        ),
+    ],
+)
+def test_wf_draft_set_output_rejects_invalid_mode_combinations(
+    monkeypatch, extra_args: list[str], expected_error: str
+) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-output",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            *extra_args,
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "context loaded" not in result.output
+    assert expected_error in " ".join(result.output.split())
+
+
+def test_wf_draft_set_output_merge_keeps_compatibility_map_handler(monkeypatch) -> None:
+    binding_calls: list[dict[str, Any]] = []
+    map_calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_step_output_bindings(self, **kwargs: Any) -> dict[str, Any]:
+            binding_calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+        async def set_step_output_map(self, **kwargs: Any) -> dict[str, Any]:
+            map_calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-output",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--map",
+            "value=state.value",
+            "--merge",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert binding_calls == []
+    assert map_calls == [
+        {
+            "workspace_id": "report_ws",
+            "revision": 1,
+            "step_id": "render",
+            "output_map": {"value": "state.value"},
+            "merge": True,
+        }
+    ]
