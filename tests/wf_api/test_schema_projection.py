@@ -5,6 +5,8 @@ import pytest
 from wf_api.schema_projection import (
     project_output_property_to_state_schema,
     project_property_to_schema_path,
+    project_schema_path_to_schema_path,
+    schema_path_exists,
 )
 
 
@@ -192,4 +194,150 @@ def test_project_schema_property_rejects_non_object_ancestor() -> None:
             },
             source_field="after",
             target_parts=("session", "after"),
+        )
+
+
+def test_project_schema_path_copies_inline_nested_source() -> None:
+    projected = project_schema_path_to_schema_path(
+        target_schema={"type": "object", "properties": {}},
+        source_schema={
+            "type": "object",
+            "properties": {
+                "report": {
+                    "type": "object",
+                    "properties": {"title": {"type": "string"}},
+                }
+            },
+        },
+        source_parts=("report", "title"),
+        target_parts=("document", "title"),
+    )
+
+    assert projected["properties"]["document"]["properties"]["title"] == {
+        "type": "string"
+    }
+
+
+def test_project_schema_path_traverses_pydantic_defs_reference() -> None:
+    projected = project_schema_path_to_schema_path(
+        target_schema={"type": "object", "properties": {}},
+        source_schema={
+            "type": "object",
+            "properties": {"report": {"$ref": "#/$defs/Report"}},
+            "$defs": {
+                "Report": {
+                    "type": "object",
+                    "properties": {"markdown": {"$ref": "#/$defs/Markdown"}},
+                },
+                "Markdown": {"type": "string", "minLength": 1},
+            },
+        },
+        source_parts=("report", "markdown"),
+        target_parts=("report", "markdown"),
+    )
+
+    assert projected["properties"]["report"]["properties"]["markdown"] == {
+        "$ref": "#/$defs/Markdown"
+    }
+    assert projected["$defs"]["Markdown"]["minLength"] == 1
+
+
+def test_project_schema_path_traverses_legacy_definitions_reference() -> None:
+    projected = project_schema_path_to_schema_path(
+        target_schema={"type": "object", "properties": {}},
+        source_schema={
+            "type": "object",
+            "properties": {"report": {"$ref": "#/definitions/Report"}},
+            "definitions": {
+                "Report": {
+                    "type": "object",
+                    "properties": {"title": {"type": "string"}},
+                }
+            },
+        },
+        source_parts=("report", "title"),
+        target_parts=("title",),
+    )
+
+    assert projected["properties"]["title"] == {"type": "string"}
+    assert "Report" in projected["definitions"]
+
+
+def test_schema_path_exists_follows_local_defs() -> None:
+    schema = {
+        "type": "object",
+        "properties": {"report": {"$ref": "#/$defs/Report"}},
+        "$defs": {
+            "Report": {
+                "type": "object",
+                "properties": {"title": {"type": "string"}},
+            }
+        },
+    }
+
+    assert schema_path_exists(schema, ("report", "title")) is True
+    assert schema_path_exists(schema, ("report", "missing")) is False
+
+
+def test_project_schema_path_rejects_missing_nested_source() -> None:
+    with pytest.raises(
+        ValueError,
+        match="source schema path 'report.missing' is not declared",
+    ):
+        project_schema_path_to_schema_path(
+            target_schema={"type": "object", "properties": {}},
+            source_schema={
+                "type": "object",
+                "properties": {"report": {"type": "object", "properties": {}}},
+            },
+            source_parts=("report", "missing"),
+            target_parts=("value",),
+        )
+
+
+def test_project_schema_path_rejects_scalar_source_ancestor() -> None:
+    with pytest.raises(
+        ValueError,
+        match="source schema path 'report' is not an object",
+    ):
+        project_schema_path_to_schema_path(
+            target_schema={"type": "object", "properties": {}},
+            source_schema={
+                "type": "object",
+                "properties": {"report": {"type": "string"}},
+            },
+            source_parts=("report", "title"),
+            target_parts=("title",),
+        )
+
+
+def test_project_schema_path_rejects_remote_reference() -> None:
+    with pytest.raises(
+        ValueError,
+        match="unsupported reference 'https://example.com/report.json'",
+    ):
+        project_schema_path_to_schema_path(
+            target_schema={"type": "object", "properties": {}},
+            source_schema={
+                "type": "object",
+                "properties": {"report": {"$ref": "https://example.com/report.json"}},
+            },
+            source_parts=("report", "title"),
+            target_parts=("title",),
+        )
+
+
+def test_project_schema_path_rejects_remote_reference_at_selected_leaf() -> None:
+    with pytest.raises(
+        ValueError,
+        match="unsupported reference 'https://example.com/report.json'",
+    ):
+        project_schema_path_to_schema_path(
+            target_schema={"type": "object", "properties": {}},
+            source_schema={
+                "type": "object",
+                "properties": {"report": {"$ref": "https://example.com/report.json"}},
+            },
+            source_parts=("report",),
+            target_parts=("report",),
         )

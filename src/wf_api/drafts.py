@@ -45,7 +45,7 @@ from .draft_payloads import (
     output_bindings_payload as _draft_output_bindings_payload,
 )
 from .operation_context import WorkflowOperationContext
-from .schema_projection import project_property_to_schema_path
+from .schema_projection import project_property_to_schema_path, schema_path_exists
 
 
 def _empty_object_schema() -> dict[str, Any]:
@@ -541,7 +541,7 @@ class WorkflowDraftApi:
                 target_parts = parse_toml_path_segments(target)
             except ValueError:
                 continue
-            if _schema_path_exists(projected, target_parts):
+            if schema_path_exists(projected, target_parts):
                 continue
             try:
                 source_path = GraphSourcePath.parse(source)
@@ -597,18 +597,6 @@ def _workflow_source_schema(
     else:
         return None
     return schema if isinstance(schema, dict) else None
-
-
-def _schema_path_exists(schema: Mapping[str, Any], parts: Sequence[str]) -> bool:
-    current: Any = schema
-    for part in parts:
-        if not isinstance(current, Mapping):
-            return False
-        properties = current.get("properties")
-        if not isinstance(properties, Mapping) or part not in properties:
-            return False
-        current = properties[part]
-    return True
 
 
 def _draft_input_maps(

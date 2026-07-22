@@ -36,7 +36,7 @@
 - Preserves: `project_property_to_schema_path(...)` as a root-property compatibility wrapper.
 - Removes: private duplicate `_schema_path_exists` implementations from `wf_api.drafts` and `wf_api.draft_authoring`.
 
-- [ ] **Step 1: Add failing tests for inline and referenced nested source paths**
+- [x] **Step 1: Add failing tests for inline and referenced nested source paths**
 
   Extend `tests/wf_api/test_schema_projection.py` imports with the two new public operations, then add these cases:
 
@@ -109,7 +109,7 @@
       assert "Report" in projected["definitions"]
   ```
 
-- [ ] **Step 2: Add failing tests for existence and precise failures**
+- [x] **Step 2: Add failing tests for existence and precise failures**
 
   Add tests that pin the bounded behavior:
 
@@ -175,7 +175,7 @@
 
   Retain the existing target-conflict and equivalent-target tests; they are regression coverage for the generalized operation.
 
-- [ ] **Step 3: Run the schema tests and confirm the new imports fail**
+- [x] **Step 3: Run the schema tests and confirm the new imports fail**
 
   Run:
 
@@ -185,7 +185,7 @@
 
   Expected: collection fails because `schema_path_exists` and `project_schema_path_to_schema_path` are not exported yet.
 
-- [ ] **Step 4: Implement one bounded path resolver and the generalized projector**
+- [x] **Step 4: Implement one bounded path resolver and the generalized projector**
 
   In `src/wf_api/schema_projection.py`:
 
@@ -198,7 +198,7 @@
 
   The implementation must retain the selected leaf unchanged. For example, when the leaf is `{"$ref": "#/$defs/Markdown"}`, copy that reference and merge the source definition blocks rather than replacing the leaf with the resolved definition.
 
-- [ ] **Step 5: Replace both duplicate existence helpers with the shared function**
+- [x] **Step 5: Replace both duplicate existence helpers with the shared function**
 
   In `src/wf_api/drafts.py` and `src/wf_api/draft_authoring.py`:
 
@@ -208,7 +208,7 @@
 
   Delete each private `_schema_path_exists` definition and replace its callers with `schema_path_exists(...)`. Remove now-unused `Mapping` or `Sequence` imports only when no other symbol in that module needs them.
 
-- [ ] **Step 6: Run focused tests and quality checks**
+- [x] **Step 6: Run focused tests and quality checks**
 
   Run:
 
@@ -221,7 +221,7 @@
 
   Expected: all schema projection and draft service tests pass; all quality checks are clean.
 
-- [ ] **Step 7: Commit the shared schema operation**
+- [x] **Step 7: Commit the shared schema operation**
 
   ```bash
   git add src/wf_api/schema_projection.py src/wf_api/drafts.py src/wf_api/draft_authoring.py tests/wf_api/test_schema_projection.py

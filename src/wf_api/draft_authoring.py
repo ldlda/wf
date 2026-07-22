@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -58,6 +58,7 @@ from .operation_context import WorkflowOperationContext
 from .schema_projection import (
     project_output_property_to_state_schema,
     project_property_to_schema_path,
+    schema_path_exists,
 )
 
 
@@ -76,18 +77,6 @@ def _local_field(path: str) -> str:
 def _local_parts(path: str) -> tuple[str, ...]:
     """Parse a CLI local-root path as the rootless core LocalPath value."""
     return LocalPath.parse(path.removeprefix("local.")).parts
-
-
-def _schema_path_exists(schema: Mapping[str, Any], parts: Sequence[str]) -> bool:
-    current: Any = schema
-    for part in parts:
-        if not isinstance(current, Mapping):
-            return False
-        properties = current.get("properties")
-        if not isinstance(properties, Mapping) or part not in properties:
-            return False
-        current = properties[part]
-    return True
 
 
 class WorkflowDraftAuthoringApi:
@@ -373,7 +362,7 @@ class WorkflowDraftAuthoringApi:
             target_schema = workspace.draft.get(schema_key, {})
             if not isinstance(target_schema, dict):
                 raise ValueError(f"draft {schema_key} must be an object")
-            if _schema_path_exists(target_schema, source_parts):
+            if schema_path_exists(target_schema, source_parts):
                 projected = target_schema
             else:
                 projected = project_property_to_schema_path(
@@ -628,7 +617,7 @@ class WorkflowDraftAuthoringApi:
                 if source_root == "input"
                 else projected_state_schema
             )
-            if _schema_path_exists(target_schema, source_parts):
+            if schema_path_exists(target_schema, source_parts):
                 continue
             projected = project_property_to_schema_path(
                 target_schema=target_schema,
