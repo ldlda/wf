@@ -16,6 +16,7 @@ from wf_artifacts.drafts.models import (
 )
 from wf_core import END
 from wf_core.models.steps import InputPathBinding, InputValueBinding
+from wf_core.paths import GraphSourcePath, LocalPath
 from wf_server import build_local_static_workflow_server
 from wf_transport_rpc_http import RpcWorkflowApiClient, create_rpc_app
 from wf_transport_rpc_http.client.drafts import RpcDraftClientMixin
@@ -705,8 +706,14 @@ async def test_rpc_client_serializes_canonical_step_input_bindings() -> None:
         revision=2,
         step_id="call",
         bindings=[
-            InputPathBinding(path="state.title", target="request.title"),
-            InputValueBinding(target="request.format", value="markdown"),
+            InputPathBinding(
+                path=GraphSourcePath.state("title"),
+                target=LocalPath.of("request", "title"),
+            ),
+            InputValueBinding(
+                target=LocalPath.of("request", "format"),
+                value="markdown",
+            ),
         ],
     )
 
