@@ -37,7 +37,6 @@ from wf_core.models.steps import (
 from wf_core.models.workflow_refs import WorkflowRef
 
 from .draft_options import (
-    _parse_map_flags,
     _parse_output_map_flags,
     _parse_route_flags,
     _parse_step_input_map_flags,
@@ -149,11 +148,12 @@ def add_step_from_capability(
     `wf draft add capability report_ws --revision 1 --step render
     --capability local.report.render --route ok=__end__`
 
-    Repeat the flag for multiple bindings:
-    `--input state.title=title --input state.summary=summary`
+    Local input targets are rootless node-local paths. Repeat the flag for
+    multiple bindings:
+    `--input state.title=report.title --input state.summary=report.summary`
     `--bind-output title=state.title --bind-output summary=state.summary`
     """
-    input_map = _parse_map_flags(input_mapping)
+    input_map = _parse_step_input_map_flags(input_mapping, option_name="--input")
     bind_outputs = _parse_output_map_flags(output_mapping)
     routes = _parse_route_flags(route)
     context = load_cli_context(ctx)

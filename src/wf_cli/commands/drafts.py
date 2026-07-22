@@ -399,7 +399,10 @@ def set_step_input_map(
     --map entries in one command for a complete replacement. Use --merge only
     when adding or updating entries across a later revision.
 
-    Targets are bare node-local field names. Use `--map input.text=text`, not
+    Targets are rootless node-local paths. For example, use
+    `--map input.title=report.title`, not
+    `--map input.title=local.report.title`.
+    Single-field targets remain valid: use `--map input.text=text`, not
     `--map input.text=local.text`.
 
     Run `wf draft validate <workspace_id>` after map edits; validation reports
@@ -536,11 +539,17 @@ def bind_draft(
     step_id: Annotated[str, typer.Option("--step", help="Draft step id.")],
     source_path: Annotated[
         str,
-        typer.Option("--from", help="Source path, for example input.x or local.y."),
+        typer.Option(
+            "--from",
+            help="Explicit source endpoint, such as input.title or local.report.title.",
+        ),
     ],
     target_path: Annotated[
         str,
-        typer.Option("--to", help="Target path, for example local.x or state.y."),
+        typer.Option(
+            "--to",
+            help="Explicit target endpoint, such as local.report.title or state.x.",
+        ),
     ],
 ) -> None:
     """Bind a capability step path and project missing schema when needed.
@@ -549,6 +558,8 @@ def bind_draft(
     state/output for step outputs. If the workflow schema field already exists,
     the command reuses it and updates the step binding. For pure input-map edits
     where schema is already known, `wf draft set-input --merge` is also valid.
+    Bind endpoints are rooted, including nested paths such as
+    `input.title -> local.report.title`.
     Run `wf draft validate <workspace_id>` after this command.
     """
     context = load_cli_context(ctx)

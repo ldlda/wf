@@ -1424,6 +1424,44 @@ async def test_add_step_from_capability_wires_route_inputs_and_state_outputs(
 
 
 @pytest.mark.asyncio
+async def test_add_step_from_capability_projects_nested_local_input(
+    tmp_path: Path,
+) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "nested_capability_input"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    draft = _nested_report_draft()
+    draft["steps"] = {}
+    draft["routes"] = {}
+    await api.create_draft_workspace(workspace_id="nested_add", draft=draft)
+
+    result = await authoring.add_step_from_capability(
+        workspace_id="nested_add",
+        revision=1,
+        step_id="render",
+        capability_name="demo.personal.nested_report",
+        routes={"ok": "__end__"},
+        input_map={"input.title": "report.title"},
+        bind_outputs={},
+    )
+    workspace = await api.get_draft_workspace(
+        workspace_id="nested_add", include_draft=True
+    )
+    validated = await api.validate_draft_workspace(workspace_id="nested_add")
+
+    assert result["revision"] == 2
+    assert workspace["draft"]["input_schema"]["properties"]["title"]["type"] == (
+        "string"
+    )
+    assert workspace["draft"]["steps"]["render"]["input"] == [
+        {"target": "report.title", "path": "input.title"}
+    ]
+    assert validated["status"] == "valid", validated["diagnostics"]
+
+
+@pytest.mark.asyncio
 async def test_add_step_from_capability_rejects_existing_step_id(
     tmp_path: Path,
 ) -> None:

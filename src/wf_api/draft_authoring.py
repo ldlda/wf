@@ -57,7 +57,6 @@ from .drafts import (
 from .operation_context import WorkflowOperationContext
 from .schema_projection import (
     project_output_property_to_state_schema,
-    project_property_to_schema_path,
     project_schema_path_to_schema_path,
     schema_path_exists,
 )
@@ -603,7 +602,7 @@ class WorkflowDraftAuthoringApi:
                 local_parts = LocalPath.parse(local_path).parts
             except ValueError:
                 continue
-            if source_root not in {"input", "state"} or len(local_parts) != 1:
+            if source_root not in {"input", "state"}:
                 continue
             schema_key = "input_schema" if source_root == "input" else "state_schema"
             target_schema = (
@@ -613,10 +612,10 @@ class WorkflowDraftAuthoringApi:
             )
             if schema_path_exists(target_schema, source_parts):
                 continue
-            projected = project_property_to_schema_path(
+            projected = project_schema_path_to_schema_path(
                 target_schema=target_schema,
                 source_schema=input_schema,
-                source_field=local_parts[0],
+                source_parts=local_parts,
                 target_parts=source_parts,
                 allow_existing_equivalent=True,
             )

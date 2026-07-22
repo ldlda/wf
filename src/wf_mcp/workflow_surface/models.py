@@ -270,10 +270,16 @@ class BindDraftRequest(BaseModel):
     revision: int = Field(ge=1, description="Expected current workspace revision.")
     step_id: NonEmptyString = Field(description="Capability-backed draft step id.")
     source_path: NonEmptyString = Field(
-        description="Source path, for example input.x or local.y."
+        description=(
+            "Explicit source endpoint, for example input.title or "
+            "local.report.markdown."
+        )
     )
     target_path: NonEmptyString = Field(
-        description="Target path, for example local.x or state.y."
+        description=(
+            "Explicit target endpoint, for example local.report.title or "
+            "state.report.markdown."
+        )
     )
 
 
@@ -303,7 +309,7 @@ class AddStepFromCapabilityRequest(BaseModel):
     )
     input_map: DraftPathMap = Field(
         default_factory=dict,
-        description="Graph source path to node-local target field.",
+        description="Graph source path to rootless node-local target path.",
     )
     bind_outputs: DraftPathMap = Field(
         default_factory=dict,

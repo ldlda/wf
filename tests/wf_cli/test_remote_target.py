@@ -1396,6 +1396,58 @@ def test_wf_draft_bind_uses_rpc_target(monkeypatch, tmp_path) -> None:
     ]
 
 
+def test_wf_draft_set_input_preserves_nested_target_over_rpc(
+    monkeypatch, tmp_path
+) -> None:
+    server = build_local_static_workflow_server(tmp_path / "store")
+    _patch_rpc_client_to_server(monkeypatch, server)
+    config_path = tmp_path / "wf.json"
+    config_path.write_text('{"version": 1}', encoding="utf-8")
+    runner = CliRunner()
+    base_args = ["--config", str(config_path), "--url", "http://test/rpc"]
+    created = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "create",
+            "nested_input_ws",
+            "--capability",
+            "wf.std.constant",
+            "--name",
+            "nested_input",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+
+    result = runner.invoke(
+        app,
+        [
+            *base_args,
+            "draft",
+            "set-input",
+            "nested_input_ws",
+            "--revision",
+            "1",
+            "--step",
+            "call",
+            "--map",
+            "input.value=payload.value",
+        ],
+    )
+    inspected = runner.invoke(
+        app,
+        [*base_args, "draft", "inspect", "nested_input_ws", "--include-draft"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert inspected.exit_code == 0, inspected.output
+    draft = json.loads(inspected.output)["draft"]
+    assert draft["steps"]["call"]["input"] == [
+        {"target": "payload.value", "path": "input.value"}
+    ]
+
+
 def test_wf_draft_add_capability_uses_rpc_target(monkeypatch, tmp_path) -> None:
     server = build_local_static_workflow_server(tmp_path / "store")
     _patch_rpc_client_to_server(monkeypatch, server)

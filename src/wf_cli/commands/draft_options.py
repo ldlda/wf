@@ -64,7 +64,7 @@ def _parse_output_map_flags(
 def _parse_step_input_map_flags(
     values: list[str] | None, *, option_name: str = "--map"
 ) -> dict[str, str]:
-    """Parse graph-source to bare-local input mappings for one draft step."""
+    """Parse graph-source to rootless node-local mappings for one draft step."""
     parsed = _parse_assignment_flags(
         values,
         option_name=option_name,
@@ -74,9 +74,16 @@ def _parse_step_input_map_flags(
         if target.startswith("local."):
             bare_target = target.removeprefix("local.")
             raise typer.BadParameter(
-                f"{option_name} target must be a bare local field; "
+                f"{option_name} target must be a rootless node-local path; "
                 f"use {source}={bare_target}, not {source}={target}"
             )
+        try:
+            LocalPath.parse(target)
+        except PathResolutionError as exc:
+            raise typer.BadParameter(
+                f"{option_name} target must be a rootless node-local path; "
+                f"got {target!r}; use report.title or ."
+            ) from exc
     return parsed
 
 

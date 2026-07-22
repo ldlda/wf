@@ -432,7 +432,7 @@
 - Preserves: `add_step_from_capability(..., input_map: dict[str, str] | None, ...)` and all transport envelopes.
 - Produces: validated rootless local map targets such as `report.title` in CLI commands.
 
-- [ ] **Step 1: Add failing capability-add API coverage**
+- [x] **Step 1: Add failing capability-add API coverage**
 
   In `tests/wf_api/test_drafts_service.py`, add a test that creates an empty-schema draft and calls:
 
@@ -450,7 +450,7 @@
 
   Assert revision 2, stored target `report.title`, and projected workflow input schema `title: string`. Validate or compile the resulting draft through the existing draft validation API and assert `status == "valid"`.
 
-- [ ] **Step 2: Add failing CLI parser and help tests**
+- [x] **Step 2: Add failing CLI parser and help tests**
 
   In `tests/wf_cli/test_app.py`, add assertions that:
 
@@ -461,7 +461,7 @@
   - `wf draft bind --help` describes explicit rooted endpoints such as `local.report.title`;
   - set-input and capability-add help describe rootless local paths such as `report.title`.
 
-- [ ] **Step 3: Add failing transport preservation tests**
+- [x] **Step 3: Add failing transport preservation tests**
 
   In `tests/wf_transport_rpc_http/test_app.py` and `tests/wf_transport_rpc_http/test_client.py`, extend the existing bind and add-capability tests with nested values. Assert request delegation and stored results preserve:
 
@@ -473,7 +473,7 @@
 
   In `tests/wf_cli/test_remote_target.py`, assert the remote CLI emits the existing JSON-RPC method names and unchanged nested strings. Do not add new RPC models or methods.
 
-- [ ] **Step 4: Run focused tests and confirm nested projection/help failures**
+- [x] **Step 4: Run focused tests and confirm nested projection/help failures**
 
   Run:
 
@@ -483,7 +483,7 @@
 
   Expected: the add-capability test fails because nested local input paths are skipped; CLI validation/help assertions fail until implemented.
 
-- [ ] **Step 5: Project nested capability input paths instead of skipping them**
+- [x] **Step 5: Project nested capability input paths instead of skipping them**
 
   In `WorkflowDraftAuthoringApi.add_step_from_capability`:
 
@@ -495,7 +495,7 @@
 
   Invalid canonical paths may retain current request-layer behavior, but a valid nested local path must never silently skip schema projection.
 
-- [ ] **Step 6: Validate rootless local targets and clarify help**
+- [x] **Step 6: Validate rootless local targets and clarify help**
 
   In `_parse_step_input_map_flags`, retain the rooted-target repair first, then validate each rootless target:
 
@@ -518,7 +518,7 @@
 
   Update only descriptions in `BindDraftRequest` and the capability-add request model in `src/wf_mcp/workflow_surface/models.py`; do not alter fields or add validation models.
 
-- [ ] **Step 7: Run API, RPC, client, and CLI tests**
+- [x] **Step 7: Run API, RPC, client, and CLI tests**
 
   Run:
 
@@ -531,7 +531,7 @@
 
   Expected: all focused layers pass with no request-schema changes.
 
-- [ ] **Step 8: Commit nested capability-map and surface support**
+- [x] **Step 8: Commit nested capability-map and surface support**
 
   ```bash
   git add src/wf_api/draft_authoring.py src/wf_cli/commands/draft_options.py src/wf_cli/commands/drafts.py src/wf_cli/commands/draft_add.py src/wf_mcp/workflow_surface/models.py tests/wf_api/test_drafts_service.py tests/wf_transport_rpc_http/test_app.py tests/wf_transport_rpc_http/test_client.py tests/wf_cli/test_app.py tests/wf_cli/test_remote_target.py

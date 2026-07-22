@@ -802,7 +802,7 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
                 "workspace_id": "focused_ws",
                 "revision": 3,
                 "step_id": "call",
-                "input_map": {"input.value": "value"},
+                "input_map": {"input.value": "payload.value"},
             },
         )
         output_mapped = await _rpc(
@@ -866,7 +866,7 @@ async def test_rpc_draft_workspace_focused_edit_methods(tmp_path) -> None:
     assert draft["routes"]["call"]["ok"] == "__end__"
     assert draft["steps"]["call"]["input"] == [
         {
-            "target": "value",
+            "target": "payload.value",
             "path": "input.value",
         },
         {

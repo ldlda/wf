@@ -760,6 +760,34 @@ async def test_rpc_client_draft_workspace_add_step_from_capability(tmp_path) -> 
     assert result["status"] == "valid"
 
 
+async def test_rpc_client_preserves_nested_local_path_strings() -> None:
+    calls: list[dict[str, Any]] = []
+
+    class Client(RpcDraftClientMixin):
+        async def _call(self, method: str, params: dict[str, object]):
+            calls.append({"method": method, "params": params})
+            return {"revision": 2}
+
+    client = Client()
+    await client.bind_draft(
+        workspace_id="ws",
+        revision=1,
+        step_id="render",
+        source_path="input.title",
+        target_path="local.report.title",
+    )
+    await client.add_step_from_capability(
+        workspace_id="ws",
+        revision=2,
+        step_id="render",
+        capability_name="demo.report",
+        input_map={"input.title": "report.title"},
+    )
+
+    assert calls[0]["params"]["target_path"] == "local.report.title"
+    assert calls[1]["params"]["input_map"] == {"input.title": "report.title"}
+
+
 @pytest.mark.parametrize(
     ("step_id", "step", "expected_wire"),
     [

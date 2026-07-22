@@ -515,6 +515,7 @@ def test_wf_draft_map_help_explains_replace_merge_and_validate() -> None:
     assert "draft validate" in input_help
     assert "input.text=text" in input_help
     assert "input.text=local.text" in input_help
+    assert "input.title=report.title" in input_help
     assert "replaces the full output map" in output_help
     assert "Use --merge only" in output_help
     assert "draft validate" in output_help
@@ -535,6 +536,7 @@ def test_wf_draft_bind_help_explains_direction() -> None:
     assert "validate" in help_text
     assert "project missing schema" in help_text
     assert "set-input --merge" in help_text
+    assert "local.report.title" in help_text
 
 
 def test_wf_draft_add_capability_help_explains_explicit_wiring() -> None:
@@ -550,7 +552,7 @@ def test_wf_draft_add_capability_help_explains_explicit_wiring() -> None:
     assert "draft validate" in output
     assert "wf draft add capability report_ws" in output
     assert "Repeat the flag" in output
-    assert "--input state.title=title --input state.summary=summary" in output
+    assert "--input state.title=report.title" in output
     assert (
         "--bind-output title=state.title --bind-output summary=state.summary" in output
     )
@@ -587,7 +589,7 @@ def test_wf_draft_add_capability_calls_composed_local_handler(monkeypatch) -> No
             "--route",
             "ok=__end__",
             "--input",
-            "input.text=text",
+            "input.text=report.text",
             "--bind-output",
             "value=state.value",
         ],
@@ -602,7 +604,7 @@ def test_wf_draft_add_capability_calls_composed_local_handler(monkeypatch) -> No
     assert call["route_from_step"] == "start"
     assert call["route_from_outcome"] == "ok"
     assert call["routes"] == {"ok": "__end__"}
-    assert call["input_map"] == {"input.text": "text"}
+    assert call["input_map"] == {"input.text": "report.text"}
     assert call["bind_outputs"] == {"value": "state.value"}
 
 
@@ -1487,6 +1489,62 @@ def test_wf_draft_set_input_rejects_local_prefixed_target() -> None:
 
     assert result.exit_code == 2
     output = " ".join(result.output.split())
-    assert "bare local field" in output
+    assert "rootless node-local path" in output
     assert "input.text=text" in output
     assert "input.text=local.text" in output
+
+
+def test_wf_draft_set_input_accepts_nested_rootless_target(monkeypatch) -> None:
+    calls: list[dict[str, Any]] = []
+
+    class FakeHandlers:
+        async def set_step_input_map(self, **kwargs: Any) -> dict[str, Any]:
+            calls.append(kwargs)
+            return {"revision": 2, "status": "valid"}
+
+    context = SimpleNamespace(handlers=FakeHandlers(), verbose=False)
+    monkeypatch.setattr("wf_cli.commands.drafts.load_cli_context", lambda _ctx: context)
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-input",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--map",
+            "input.title=report.title",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert calls[0]["input_map"] == {"input.title": "report.title"}
+
+
+def test_wf_draft_set_input_rejects_malformed_local_path(monkeypatch) -> None:
+    monkeypatch.setattr(
+        "wf_cli.commands.drafts.load_cli_context",
+        lambda _ctx: (_ for _ in ()).throw(AssertionError("context loaded")),
+    )
+
+    result = runner.invoke(
+        app,
+        [
+            "draft",
+            "set-input",
+            "report_ws",
+            "--revision",
+            "1",
+            "--step",
+            "render",
+            "--map",
+            "input.title=report..title",
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "rootless node-local path" in result.output
+    assert "context loaded" not in result.output
