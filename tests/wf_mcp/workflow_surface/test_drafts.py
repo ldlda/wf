@@ -3,6 +3,9 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
+import pytest
+from pydantic import ValidationError
+
 from wf_artifacts import (
     FileDraftWorkspaceStore,
     FileWorkflowArtifactStore,
@@ -17,6 +20,7 @@ from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
 from wf_mcp.workflow_surface.models import (
     CreateMinimalDraftWorkspaceRequest,
     SetStepInputBindingsRequest,
+    SetStepOutputBindingsRequest,
 )
 
 from ..test_support import echo_tool
@@ -295,6 +299,82 @@ def test_set_step_input_bindings_request_accepts_path_value_and_null() -> None:
     assert request.bindings[0].path == GraphSourcePath.input("items")
     assert isinstance(request.bindings[1], InputValueBinding)
     assert request.bindings[1].value is None
+
+
+def test_set_step_output_bindings_request_preserves_ordered_source_fan_out() -> None:
+    request = SetStepOutputBindingsRequest.model_validate(
+        {
+            "workspace_id": "draft-output",
+            "revision": 4,
+            "step_id": "analyze",
+            "bindings": [
+                {"source": "report.title", "target": "state.report.title"},
+                {"source": "report.title", "target": "state.audit.title"},
+            ],
+        }
+    )
+
+    assert [str(binding.source) for binding in request.bindings] == [
+        "report.title",
+        "report.title",
+    ]
+
+
+def test_set_step_output_bindings_request_rejects_malformed_canonical_record() -> None:
+    with pytest.raises(ValidationError):
+        SetStepOutputBindingsRequest.model_validate(
+            {
+                "workspace_id": "draft-output",
+                "revision": 4,
+                "step_id": "analyze",
+                "bindings": [{"source": "report.title"}],
+            }
+        )
+
+
+def test_workflow_surface_sets_ordered_canonical_step_output_bindings(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_output_bindings")
+    service = WfMcpService(
+        store=FileStore(tmp_path / "surface_output_bindings_mcp"),
+        artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            tmp_path / "surface_output_bindings_mcp"
+        ),
+    )
+    h = WorkflowSurfaceHandlers(service)
+    created = asyncio.run(
+        h.create_minimal_draft_workspace(
+            workspace_id="echo_draft",
+            name="echo_draft",
+            capability_name="wf.std.constant",
+            input_schema={"type": "object"},
+            state_schema={"fields": {"report": {}, "audit": {}}},
+            output_schema={"type": "object"},
+        )
+    )
+
+    result = asyncio.run(
+        h.set_step_output_bindings(
+            workspace_id="echo_draft",
+            revision=created["revision"],
+            step_id="call",
+            bindings=[
+                OutputBinding(source="value", target="state.report"),
+                OutputBinding(source="value", target="state.audit"),
+            ],
+        )
+    )
+    inspected = asyncio.run(
+        h.get_draft_workspace(workspace_id="echo_draft", include_draft=True)
+    )
+
+    assert result["revision"] == created["revision"] + 1
+    assert inspected["draft"]["steps"]["call"]["output"] == [
+        {"source": "value", "target": "state.report"},
+        {"source": "value", "target": "state.audit"},
+    ]
 
 
 def test_workflow_surface_sets_ordered_canonical_step_input_bindings(

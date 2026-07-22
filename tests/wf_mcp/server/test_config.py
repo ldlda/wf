@@ -55,6 +55,7 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             assert "wf.workflow.set_draft_name" in names
             assert "wf.workflow.set_draft_route" in names
             assert "wf.workflow.set_step_input_bindings" in names
+            assert "wf.workflow.set_step_output_bindings" in names
             assert "wf.workflow.set_step_input_map" in names
             assert "wf.workflow.set_step_output_map" in names
             assert "wf.workflow.set_workflow_output_map" in names
@@ -125,6 +126,14 @@ def test_server_exposes_upstream_admin_and_workflow_tools() -> None:
             set_bindings_request = set_bindings_schema["properties"]["request"]
             assert "bindings" in set_bindings_request["properties"]
             assert "merge" not in set_bindings_request["properties"]
+            set_output_bindings_schema = tools_by_name[
+                "wf.workflow.set_step_output_bindings"
+            ].inputSchema
+            set_output_bindings_request = set_output_bindings_schema["properties"][
+                "request"
+            ]
+            assert "bindings" in set_output_bindings_request["properties"]
+            assert "merge" not in set_output_bindings_request["properties"]
             set_workflow_output_schema = tools_by_name[
                 "wf.workflow.set_workflow_output_map"
             ].inputSchema

@@ -37,6 +37,7 @@ from .models import (
     SetDraftRouteRequest,
     SetStepInputBindingsRequest,
     SetStepInputMapRequest,
+    SetStepOutputBindingsRequest,
     SetStepOutputMapRequest,
     SetWorkflowOutputMapRequest,
     TraceRange,
@@ -457,6 +458,26 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
     ) -> DraftWorkspaceResult:
         return DraftWorkspaceResult.model_validate(
             await handlers.set_step_input_bindings(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                bindings=request.bindings,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.set_step_output_bindings",
+        title="Set Step Output Bindings",
+        description=(
+            "Replace one capability step's complete ordered output bindings. "
+            "Repeated sources are valid fan-out; state targets must not overlap."
+        ),
+    )
+    async def set_step_output_bindings(
+        request: SetStepOutputBindingsRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.set_step_output_bindings(
                 workspace_id=request.workspace_id,
                 revision=request.revision,
                 step_id=request.step_id,
