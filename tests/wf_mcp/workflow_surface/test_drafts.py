@@ -8,13 +8,16 @@ from wf_artifacts import (
     FileWorkflowArtifactStore,
     WorkflowDeployment,
 )
-from wf_core.models.steps import InputPathBinding, OutputBinding
+from wf_core.models.steps import InputPathBinding, InputValueBinding, OutputBinding
 from wf_core.paths import GraphSourcePath, LocalPath, StatePath
 from wf_mcp.broker import WfMcpService
 from wf_mcp.models import ConnectionConfig
 from wf_mcp.storage import FileStore
 from wf_mcp.workflow_surface import WorkflowSurfaceHandlers
-from wf_mcp.workflow_surface.models import CreateMinimalDraftWorkspaceRequest
+from wf_mcp.workflow_surface.models import (
+    CreateMinimalDraftWorkspaceRequest,
+    SetStepInputBindingsRequest,
+)
 
 from ..test_support import echo_tool
 from .conftest import (
@@ -267,6 +270,79 @@ def test_minimal_draft_request_accepts_structural_error_message_source() -> None
     assert isinstance(request.error_message_source, GraphSourcePath)
     assert request.error_message_source.root == "state"
     assert request.error_message_source.parts == ("error_message",)
+
+
+def test_set_step_input_bindings_request_accepts_path_value_and_null() -> None:
+    request = SetStepInputBindingsRequest.model_validate(
+        {
+            "workspace_id": "concat_draft",
+            "revision": 1,
+            "step_id": "call",
+            "bindings": [
+                {
+                    "target": {"root": "local", "parts": ["items"]},
+                    "path": {"root": "input", "parts": ["items"]},
+                },
+                {
+                    "target": {"root": "local", "parts": ["separator"]},
+                    "value": None,
+                },
+            ],
+        }
+    )
+
+    assert isinstance(request.bindings[0], InputPathBinding)
+    assert request.bindings[0].path == GraphSourcePath.input("items")
+    assert isinstance(request.bindings[1], InputValueBinding)
+    assert request.bindings[1].value is None
+
+
+def test_workflow_surface_sets_ordered_canonical_step_input_bindings(
+    tmp_path: Path,
+) -> None:
+    artifact_store = FileWorkflowArtifactStore(tmp_path / "surface_input_bindings")
+    service = WfMcpService(
+        store=FileStore(tmp_path / "surface_input_bindings_mcp"),
+        artifact_store=artifact_store,
+        draft_workspace_store=FileDraftWorkspaceStore(
+            tmp_path / "surface_input_bindings_mcp"
+        ),
+    )
+    h = WorkflowSurfaceHandlers(service)
+    created = asyncio.run(
+        h.create_draft_workspace_from_capability(
+            workspace_id="concat_draft",
+            capability_name="wf.std.concat",
+            name="concat_draft",
+        )
+    )
+
+    result = asyncio.run(
+        h.set_step_input_bindings(
+            workspace_id="concat_draft",
+            revision=created["revision"],
+            step_id="call",
+            bindings=[
+                InputPathBinding(
+                    target=LocalPath.of("items"),
+                    path=GraphSourcePath.input("items"),
+                ),
+                InputValueBinding(
+                    target=LocalPath.of("separator"),
+                    value="\n",
+                ),
+            ],
+        )
+    )
+    inspected = asyncio.run(
+        h.get_draft_workspace(workspace_id="concat_draft", include_draft=True)
+    )
+
+    assert result["revision"] == created["revision"] + 1
+    assert inspected["draft"]["steps"]["call"]["input"] == [
+        {"target": "items", "path": "input.items"},
+        {"target": "separator", "value": "\n"},
+    ]
 
 
 def test_workflow_surface_accepts_canonical_bindings_for_minimal_workspace(

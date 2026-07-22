@@ -48,6 +48,7 @@ _SEARCH_ALWAYS_VISIBLE_TOOL_NAMES = [
     "wf.workflow.validate_draft_workspace",
     "wf.workflow.set_draft_name",
     "wf.workflow.set_draft_route",
+    "wf.workflow.set_step_input_bindings",
     "wf.workflow.set_step_input_map",
     "wf.workflow.set_step_output_map",
     "wf.workflow.set_workflow_output_map",

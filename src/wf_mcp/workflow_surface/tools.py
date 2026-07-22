@@ -35,6 +35,7 @@ from .models import (
     RunDeploymentResult,
     SetDraftNameRequest,
     SetDraftRouteRequest,
+    SetStepInputBindingsRequest,
     SetStepInputMapRequest,
     SetStepOutputMapRequest,
     SetWorkflowOutputMapRequest,
@@ -439,6 +440,27 @@ def register_workflow_tools(server: FastMCP[Any], service: WfMcpService) -> None
                 step_id=request.step_id,
                 input_map=request.input_map,
                 merge=request.merge,
+            )
+        )
+
+    @server.tool(
+        name="wf.workflow.set_step_input_bindings",
+        title="Set Step Input Bindings",
+        description=(
+            "Replace one capability step's complete canonical input-binding list "
+            "atomically. Supports graph-path and literal bindings; inspect the "
+            "draft first because replacement is not a merge."
+        ),
+    )
+    async def set_step_input_bindings(
+        request: SetStepInputBindingsRequest,
+    ) -> DraftWorkspaceResult:
+        return DraftWorkspaceResult.model_validate(
+            await handlers.set_step_input_bindings(
+                workspace_id=request.workspace_id,
+                revision=request.revision,
+                step_id=request.step_id,
+                bindings=request.bindings,
             )
         )
 

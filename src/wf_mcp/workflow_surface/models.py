@@ -230,6 +230,15 @@ class SetStepInputMapRequest(BaseModel):
     )
 
 
+class SetStepInputBindingsRequest(BaseModel):
+    """Replace one step's complete canonical input-binding list."""
+
+    workspace_id: WorkspaceId
+    revision: int = Field(ge=1, description="Expected current workspace revision.")
+    step_id: NonEmptyString
+    bindings: DraftInputBindings
+
+
 class SetStepOutputMapRequest(BaseModel):
     """Typed MCP request for replacing or merging one step output map."""
 
