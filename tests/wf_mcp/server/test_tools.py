@@ -135,9 +135,9 @@ async def test_registered_output_bindings_tool_delegates_typed_bindings_once(
     assert call["step_id"] == "analyze"
     bindings = call["bindings"]
     assert all(isinstance(binding, OutputBinding) for binding in bindings)
-    assert [str(binding.source) for binding in bindings] == [
-        "report.title",
-        "report.title",
+    assert [(str(binding.source), str(binding.target)) for binding in bindings] == [
+        ("report.title", "state.report.title"),
+        ("report.title", "state.audit.title"),
     ]
 
 
