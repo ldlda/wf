@@ -99,7 +99,7 @@ CLI equivalents:
 ```bash
 wf draft set-name <workspace_id> --revision <n> --name <name>
 wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome ok --to <target>
-wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.text=text
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.title=report.title
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
@@ -108,9 +108,9 @@ wf draft set-workflow-output <workspace_id> --revision <n> --merge --map state.o
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
-wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.report.markdown --to state.report.markdown
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.title --to local.report.title
+wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.title=report.title --bind-output result=state.result
 wf draft add interrupt <workspace_id> --revision <n> --step review --kind issue_review --request-schema-file request.schema.json --resume-schema-file resume.schema.json --outcome submitted --outcome cancelled --route submitted=next --route cancelled=revise
 wf draft add when <workspace_id> --revision <n> --step decide --condition-file condition.json --then next --otherwise revise
 ```
@@ -121,9 +121,10 @@ wf draft add when <workspace_id> --revision <n> --step decide --condition-file c
 For single-field `input.*` and `state.*` sources, missing public output schema
 fields are projected automatically from the source schema.
 
-`set-input` direction: `input.text=text` means graph source `input.text` maps to
-node-local target `local.text`. Targets are bare node-local field names; never
-prefix the target with `local.`.
+`set-input` direction: `input.title=report.title` means graph source
+`input.title` maps to node-local target `local.report.title`. Targets are
+rootless node-local paths; never prefix the target with `local.`. Existing
+single-field targets such as `input.text=text` remain valid.
 
 `set-output` direction: `text=state.text` means node-local source `local.text`
 maps to graph target `state.text`.
@@ -133,10 +134,11 @@ the whole map for that step or output scope. Use repeated `--map` flags in one
 command for a complete replacement. Use `--merge` only when adding/updating
 entries over multiple revisions.
 
-`bind input.x -> local.x` is schema-aware and idempotent when `input.x` is
-already declared. Use it for repair hints or schema projection. Use
-`set-input --merge --map input.x=x` when you only need to update a step input
-map.
+`bind input.title -> local.report.title` is schema-aware and idempotent when
+`input.title` is already declared. Bind names both rooted endpoints explicitly.
+Use it for repair hints or schema projection. Use
+`set-input --merge --map input.title=report.title` when you only need to update
+a step input map; that command already implies the local side.
 
 - `bind_draft`
 
@@ -152,9 +154,9 @@ map.
   workflow boundary.
 
 ```bash
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to output.<field>
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.report.markdown --to state.report.markdown
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.title --to local.report.title
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.report.markdown --to output.report.markdown
 wf draft validate <workspace_id>
 ```
 
@@ -172,9 +174,9 @@ wf draft validate <workspace_id>
   unknown route entries and add one route for each missing declared outcome. It
   still requires explicit choices; if you do not
   know a map, inspect the capability or run validation rather than guessing.
-  Explicit top-level `--input input.x=x` and `--input state.x=x` mappings
-  project the corresponding workflow input/state schema fields from the
-  capability input schema.
+  Explicit `--input input.title=report.title` and
+  `--input state.title=report.title` mappings project the corresponding
+  workflow input/state schema paths from the nested capability input schema.
 
 ```bash
 wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --input input.other=other --bind-output result=state.result --bind-output title=state.title

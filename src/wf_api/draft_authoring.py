@@ -604,6 +604,10 @@ class WorkflowDraftAuthoringApi:
                 continue
             if source_root not in {"input", "state"}:
                 continue
+            if not local_parts:
+                # `.` binds the whole graph value to the whole node input. It has
+                # no capability-property path from which to project one field.
+                continue
             schema_key = "input_schema" if source_root == "input" else "state_schema"
             target_schema = (
                 projected_input_schema

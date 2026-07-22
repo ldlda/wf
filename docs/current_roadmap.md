@@ -549,6 +549,11 @@ clear operator feedback before adding more architecture.
   `revision_conflict` while the patch path retains its mutation-time race
   guard. Implementation:
   [`draft semantic revision precedence`](historical/superpowers/plans/2026-07-22-draft-semantic-revision-precedence.md).
+- Completed: focused draft bind and capability-step insertion now preserve
+  nested node-local paths and project nested capability schemas through one
+  shared bounded JSON Schema path module. CLI and agent guidance distinguish
+  rooted bind endpoints from implied rootless map targets. Implementation:
+  [`nested local draft bindings`](historical/superpowers/plans/2026-07-22-nested-local-draft-bindings.md).
 - Completed: `wf draft set-input` and `wf draft set-output` now accept
   `--merge`, preserving existing bindings when agents split map edits across
   multiple revisions.

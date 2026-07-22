@@ -555,7 +555,7 @@
 - Closes only: nested bind rejection, capability-add nested projection skip, and stale CLI/agent guidance.
 - Leaves open: structured-input assembly, literals, fan-out maps, nested workflow-output source projection, metadata/update-step, and TypeScript parity.
 
-- [ ] **Step 1: Update CLI and agent-facing examples**
+- [x] **Step 1: Update CLI and agent-facing examples**
 
   Replace “bare field” wording with “rootless node-local path” in all three live user-facing documents. Include both forms together:
 
@@ -569,7 +569,7 @@
 
   Explain that `wf draft bind` names both rooted endpoints, while `set-input` and capability-add already imply the local side and therefore accept rootless targets. Do not claim support for literals, fan-out, or atomic object assembly.
 
-- [ ] **Step 2: Update issue and roadmap state precisely**
+- [x] **Step 2: Update issue and roadmap state precisely**
 
   In `ISSUES.md`, check only these three entries:
 
@@ -585,7 +585,7 @@
   historical/superpowers/plans/2026-07-22-nested-local-draft-bindings.md
   ```
 
-- [ ] **Step 3: Run the complete focused verification matrix**
+- [x] **Step 3: Run the complete focused verification matrix**
 
   Run:
 
@@ -599,7 +599,7 @@
 
   Expected: all focused tests and static checks pass. The pytest count may increase as tests are added; report exact totals rather than copying a planned count.
 
-- [ ] **Step 4: Run an independent two-axis review**
+- [x] **Step 4: Run an independent two-axis review**
 
   Use the `requesting-code-review` skill against the implementation start commit. Review:
 
@@ -608,7 +608,7 @@
 
   Fix Critical and Important findings, rerun affected focused tests, and record any intentional Minor deferrals in the final report.
 
-- [ ] **Step 5: Archive the completed plan and commit documentation**
+- [x] **Step 5: Archive the completed plan and commit documentation**
 
   After all checks pass:
 

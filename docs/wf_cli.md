@@ -328,9 +328,11 @@ wf draft compile concat_ws
 ```
 
 `set-input` maps graph source paths to node-local input fields:
-`input.text=text` means `input.text -> local.text`. Targets are bare
-node-local field names: write `--map input.text=text`, not
-`--map input.text=local.text`.
+`input.title=report.title` means
+`input.title -> local.report.title`. Targets are rootless node-local paths:
+write `--map input.title=report.title`, not
+`--map input.title=local.report.title`. Existing single-field targets such as
+`input.text=text` remain valid.
 
 `set-output` maps node-local output fields to workflow state paths:
 `text=state.text` means `local.text -> state.text`.
@@ -360,8 +362,14 @@ use `input.*` or `state.*` to `local.*` for step inputs, and `local.*` to
 wf draft bind concat_ws --revision 9 --step call --from local.value --to state.value
 wf draft bind concat_ws --revision 9 --step call --from input.text --to local.text
 wf draft bind concat_ws --revision 9 --step call --from local.result --to output.result
+wf draft bind report_ws --revision 2 --step render --from input.title --to local.report.title
+wf draft set-input report_ws --revision 3 --step render --map input.title=report.title
 wf draft validate concat_ws
 ```
+
+`bind` names both endpoints, so nested local paths use the explicit `local.`
+root. `set-input` and `draft add capability --input` already imply the local
+side and therefore use rootless targets such as `report.title`.
 
 If the workflow schema field already exists, `bind` reuses it and only updates
 the step binding. Use `set-input --merge` for pure input-map edits when no
@@ -383,7 +391,7 @@ wf draft set-workflow-output report_ws --revision 6 --map state.markdown=markdow
 
 The command combines two common edits:
 
-- It copies the selected capability local field schema into the workflow input,
+- It copies the selected capability local path schema into the workflow input,
   state, or output schema at the graph path.
 - It merges the matching step input or output binding.
 

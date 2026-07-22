@@ -42,7 +42,7 @@ wf draft set-name <workspace_id> --revision <n> --name <name>
 wf draft set-start <workspace_id> --revision <n> --step <step_id>
 wf draft set-contract <workspace_id> --revision <n> --state-schema-file state.schema.json --outcome ok --outcome error
 wf draft set-route <workspace_id> --revision <n> --step <step_id> --outcome <outcome> --to <target>
-wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.text=text
+wf draft set-input <workspace_id> --revision <n> --step <step_id> --map input.title=report.title
 wf draft set-input <workspace_id> --revision <n> --step <step_id> --merge --map input.other=other
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --map text=state.text
 wf draft set-output <workspace_id> --revision <n> --step <step_id> --merge --map other=state.other
@@ -51,9 +51,9 @@ wf draft set-workflow-output <workspace_id> --revision <n> --merge --map state.o
 wf draft branch <workspace_id> --revision <n> --step <step_id> --route ok=__end__ --route error=fail
 wf draft handle <workspace_id> --revision <n> --to fail --branch lookup:error --branch transform:error
 wf draft compile <workspace_id>
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.<field> --to state.<field>
-wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.<field> --to local.<field>
-wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.text=text --bind-output result=state.result
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from local.report.markdown --to state.report.markdown
+wf draft bind <workspace_id> --revision <n> --step <step_id> --from input.title --to local.report.title
+wf draft add capability <workspace_id> --revision <n> --step <step_id> --capability <qualified_name> --from-step <prev> --from-outcome ok --route ok=__end__ --route error=fail --input input.title=report.title --bind-output result=state.result
 wf draft add interrupt <workspace_id> --revision <n> --step review --kind issue_review \
   --request-schema-file request.schema.json --resume-schema-file resume.schema.json \
   --outcome submitted --outcome cancelled --route submitted=next --route cancelled=revise
@@ -79,6 +79,11 @@ should expose them. Use `wf draft bind --from input.x --to local.x` for an
 existing step when schema projection may be needed; it is safe if the schema
 field already exists. Use `wf draft set-input --merge --map input.x=x` for a
 pure input-map edit when the workflow schema is already declared.
+
+`wf draft bind` names both endpoints explicitly, so local paths keep the
+`local.` root. `set-input` and `draft add capability --input` already imply the
+local side, so their targets are rootless paths: write
+`input.title=report.title`, not `input.title=local.report.title`.
 
 `wf draft set-workflow-output` projects missing public output schema fields for
 single-field `input.*` and `state.*` sources. Prefer it for final workflow

@@ -1462,6 +1462,39 @@ async def test_add_step_from_capability_projects_nested_local_input(
 
 
 @pytest.mark.asyncio
+async def test_add_step_from_capability_preserves_whole_payload_input(
+    tmp_path: Path,
+) -> None:
+    api, service, authoring = _draft_api(
+        FileWorkflowArtifactStore(tmp_path / "whole_payload_capability_input"),
+        register_echo=True,
+    )
+    service.register_specs("demo.personal", _nested_report)
+    draft = _nested_report_draft()
+    draft["steps"] = {}
+    draft["routes"] = {}
+    await api.create_draft_workspace(workspace_id="whole_payload", draft=draft)
+
+    result = await authoring.add_step_from_capability(
+        workspace_id="whole_payload",
+        revision=1,
+        step_id="render",
+        capability_name="demo.personal.nested_report",
+        routes={"ok": "__end__"},
+        input_map={"input.payload": "."},
+        bind_outputs={},
+    )
+    workspace = await api.get_draft_workspace(
+        workspace_id="whole_payload", include_draft=True
+    )
+
+    assert result["revision"] == 2
+    assert workspace["draft"]["steps"]["render"]["input"] == [
+        {"target": ".", "path": "input.payload"}
+    ]
+
+
+@pytest.mark.asyncio
 async def test_add_step_from_capability_rejects_existing_step_id(
     tmp_path: Path,
 ) -> None:
